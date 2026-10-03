@@ -1,0 +1,23 @@
+id: ban-validation-error-catch
+valid:
+  - |
+    try:
+        value = parse(raw)
+    except ValueError as exc:
+        raise RuntimeError(str(exc)) from exc
+invalid:
+  - |
+    try:
+        model = Model.model_validate(raw)
+    except ValidationError:
+        model = None
+  - |
+    try:
+        model = Model.model_validate(raw)
+    except ValidationError as exc:
+        model = fallback
+  - |
+    try:
+        model = Model.model_validate(raw)
+    except pydantic.ValidationError:
+        pass

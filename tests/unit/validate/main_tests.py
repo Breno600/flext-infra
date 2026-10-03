@@ -20,23 +20,28 @@ from tests import c
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import t
 
+class TestsFlextInfraValidateMain:
+    """Test inventory, scan, and CLI routing subcommands with real services."""
 
-def _cli(*args: str) -> int:
-    """Run validate routing through the canonical infra CLI."""
-    return infra_main(["validate", *args])
+    @staticmethod
+    def _cli(*args: str) -> int:
+        """Run validate routing through the canonical infra CLI.
 
+        Returns:
+            The resulting ``int``.
 
-class TestMainInventory:
-    """Test inventory subcommand with real services."""
+        """
+        return infra_main(["validate", *args])
 
-    def test_success(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_success(tmp_path: Path) -> None:
         """Inventory succeeds with empty workspace."""
         result = FlextInfraInventoryService(repository_root=tmp_path).execute()
         tm.that(result.success, eq=True)
 
-    def test_with_output_dir(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_with_output_dir(tmp_path: Path) -> None:
         """Inventory succeeds with output directory."""
         output = tmp_path / "output"
         output.mkdir()
@@ -44,11 +49,8 @@ class TestMainInventory:
         result = result.execute()
         tm.that(result.success, eq=True)
 
-
-class TestMainScan:
-    """Test scan subcommand with real services."""
-
-    def test_no_violations(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_no_violations(tmp_path: Path) -> None:
         """Scan returns success when no violations found."""
         (tmp_path / "test.txt").write_text("hello world")
         result = FlextInfraTextPatternScanner(
@@ -61,7 +63,8 @@ class TestMainScan:
         result = result.execute()
         tm.that(result.success, eq=True)
 
-    def test_with_violations(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_with_violations(tmp_path: Path) -> None:
         """Scan returns failure when violations found."""
         (tmp_path / "test.txt").write_text("TODO fix this")
         result = FlextInfraTextPatternScanner(
@@ -74,23 +77,19 @@ class TestMainScan:
         result = result.execute()
         tm.that(result.failure, eq=True)
 
-
-class TestMainCliRouting:
-    """Test main() CLI routing via subprocess."""
-
     def test_help_flag(self) -> None:
         """--help returns 0."""
-        tm.that(_cli("--help"), eq=0)
+        tm.that(self._cli("--help"), eq=0)
 
     def test_inventory_routing(self, tmp_path: Path) -> None:
         """Inventory subcommand routes correctly."""
-        result = _cli("inventory", "--repository-root", str(tmp_path))
+        result = self._cli("inventory", "--repository-root", str(tmp_path))
         tm.that({0, 1}, has=result)
 
     def test_scan_routing(self, tmp_path: Path) -> None:
         """Scan subcommand routes correctly."""
         (tmp_path / "test.txt").write_text("content")
-        result = _cli(
+        result = self._cli(
             "scan",
             "--repository-root",
             str(tmp_path),
@@ -103,15 +102,15 @@ class TestMainCliRouting:
 
     def test_no_command_returns_1(self) -> None:
         """No subcommand returns exit code 1."""
-        tm.that(_cli(), eq=1)
+        tm.that(self._cli(), eq=1)
 
     def test_unknown_command_returns_error(self) -> None:
         """Unknown subcommand returns non-zero exit code."""
-        tm.that(_cli("unknown"), ne=0)
+        tm.that(self._cli("unknown"), ne=0)
 
     def test_skill_validate_routing(self, tmp_path: Path) -> None:
         """skill-validate subcommand routes correctly."""
-        result = _cli(
+        result = self._cli(
             "skill-validate",
             "--skill",
             "test-skill",
@@ -122,8 +121,5 @@ class TestMainCliRouting:
 
     def test_stub_validate_routing(self, tmp_path: Path) -> None:
         """stub-validate subcommand routes correctly."""
-        result = _cli("stub-validate", "--repository-root", str(tmp_path))
+        result = self._cli("stub-validate", "--repository-root", str(tmp_path))
         tm.that({0, 1}, has=result)
-
-
-__all__: t.StrSequence = []

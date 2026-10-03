@@ -1,4 +1,8 @@
-"""Shared fixtures for the declarative project-layout engine tests."""
+"""Shared fixtures for the declarative project-layout engine tests.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -10,13 +14,21 @@ from tests import u
 
 
 def build_loose_project(tmp_path: Path, name: str = "flext-demo") -> Path:
-    """Create a minimal project carrying one violation of each layout kind."""
+    """Create a minimal project carrying one violation of each layout kind.
+
+    Returns:
+        The resulting ``Path``.
+
+    """
     project = tmp_path / name
     package_dir = project / "src" / name.replace("-", "_")
     package_dir.mkdir(parents=True)
     (package_dir / "__init__.py").write_text("", encoding="utf-8")
+    # The project's identity is its declared [project].name, so the fixture
+    # declares the name it was asked for — never a directory-derived guess.
     (project / "pyproject.toml").write_text(
-        "[project]\nname='flext-demo'\nversion='0.1.0'\n", encoding="utf-8"
+        f"[project]\nname='{name}'\nversion='0.1.0'\n",
+        encoding="utf-8",
     )
     (project / "README.md").write_text("# demo\n", encoding="utf-8")
     guides = project / "guides"
@@ -26,17 +38,26 @@ def build_loose_project(tmp_path: Path, name: str = "flext-demo") -> Path:
     (project / "output.log").write_text("log-line\n", encoding="utf-8")
     (project / "loose.txt").write_text("unknown\n", encoding="utf-8")
     u.Tests.declare_workspace_projects(tmp_path, (name,))
+    # A layout plan reads tracked state from the project's own repository;
+    # the fixture never borrows an enclosing checkout's index.
+    u.Tests.initialize_git_repo(project)
     return project
 
 
 def layout_engine(
-    repository_root: Path, *, apply_changes: bool = False
+    repository_root: Path,
+    *,
+    apply_changes: bool = False,
 ) -> FlextInfraCodegenLayout:
     """Build the layout service over one fixture repository root.
 
     Apply mode journals through the generation transaction, whose receipt
     resolves the Git identity of the owning checkout, so the fixture root is
     initialized as a repository exactly like every governed checkout.
+
+    Returns:
+        The resulting ``FlextInfraCodegenLayout``.
+
     """
     if not (repository_root / ".git").exists():
         provider = u.Tests.provider()
@@ -61,13 +82,16 @@ def layout_engine(
                         u.Tests.initialize_git_repo(member, origin_url=member_url)
                         u.Tests.write_project_beads_config(member, member.name)
     return FlextInfraCodegenLayout(
-        repository_root=repository_root, apply_changes=apply_changes
+        repository_root=repository_root,
+        apply_changes=apply_changes,
     )
 
 
 def archive_root() -> str:
-    """Archive root from the same typed SSOT the engine consumes."""
+    """Archive root from the same typed SSOT the engine consumes.
+
+    Returns:
+        The resulting ``str``.
+
+    """
     return config.Infra.codegen.layout.archive_root
-
-
-__all__: list[str] = ["archive_root", "build_loose_project", "layout_engine"]

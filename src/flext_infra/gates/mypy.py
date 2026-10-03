@@ -1,14 +1,18 @@
-"""FLEXT mypy quality gate."""
+"""FLEXT mypy quality gate.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
+import ast
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, m, t, u
-
-from .base_gate import FlextInfraGate
+from flext_infra import c, config, m, t, u
+from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -28,7 +32,12 @@ class FlextInfraMypyGate(FlextInfraGate):
 
     @staticmethod
     def _config_exclude(config_path: Path) -> re.Pattern[str] | None:
-        """Return the compiled [tool.mypy].exclude regex, if configured."""
+        """Return the compiled [tool.mypy].exclude regex, if configured.
+
+        Returns:
+            The compiled [tool.mypy].exclude regex, if configured.
+
+        """
         doc = u.Cli.toml_read(config_path)
         if doc is None:
             return None
@@ -45,7 +54,12 @@ class FlextInfraMypyGate(FlextInfraGate):
 
     @staticmethod
     def _has_real_module(directory: Path) -> bool:
-        """True when the dir holds a Python module other than __init__.py."""
+        """True when the dir holds a Python module other than __init__.py.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         for py_file in directory.rglob(c.Infra.EXT_PYTHON_GLOB):
             if py_file.name != c.Infra.INIT_PY:
                 return True
@@ -53,16 +67,24 @@ class FlextInfraMypyGate(FlextInfraGate):
 
     @override
     def _get_check_dirs(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
-        """Check local Python roots directly instead of recursively scanning ``.``."""
+        """Check local Python roots directly instead of recursively scanning ``.``.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         # Empty or explicitly excluded roots are omitted because Mypy aborts
         # when they are passed positionally.
         exclude = self._config_exclude(self._resolve_config(project_dir, ctx))
         discovered_dirs = [
             directory
             for directory in self._dirs_with_py(
-                project_dir, c.Infra.CHECK_DIRS_REPOSITORY
+                project_dir,
+                config.Infra.source_scan.roots,
             )
             if self._has_real_module(project_dir / directory)
             and (exclude is None or not exclude.match(f"{directory}/"))
@@ -76,9 +98,15 @@ class FlextInfraMypyGate(FlextInfraGate):
             return [*discovered_dirs, *root_files]
         return []
 
-    def _resolve_config(self, project_dir: Path, ctx: m.Infra.GateContext) -> Path:
-        """Resolve Mypy settings from the project, then the workspace."""
-        pyproject_name: str = c.Infra.PYPROJECT_FILENAME
+    @staticmethod
+    def _resolve_config(project_dir: Path, ctx: m.Infra.GateContext) -> Path:
+        """Resolve Mypy settings from the project, then the workspace.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
+        pyproject_name: str = c.PYPROJECT_FILENAME
         proj_py = project_dir / pyproject_name
         doc = u.Cli.toml_read(proj_py)
         if doc is not None:
@@ -93,40 +121,80 @@ class FlextInfraMypyGate(FlextInfraGate):
 
     @override
     def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Build check command."""
-        cfg = self._resolve_config(project_dir, ctx)
-        return u.Infra.mypy_limited_command(
-            self._python_module_command(
-                c.Infra.MYPY,
-                *check_dirs,
-                "--config-file",
-                str(cfg),
-                "--output",
-                c.Infra.OUTPUT_JSON,
-                "--no-error-summary",
-                "--no-color-output",
-                "--linecoverage-report",
-                str(self._check_report_path(project_dir, ctx).parent),
-            )
-        )
+        """Build check command.
 
-    @override
-    def _check_report_path(self, project_dir: Path, ctx: m.Infra.GateContext) -> Path:
-        """Keep Mypy's native source inventory within the existing report root."""
-        return ctx.reports_dir / f"{project_dir.name}-mypy" / "coverage.json"
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            ValueError: If Mypy profile output requires an absolute path in an existing
+                directory.
+
+        """
+        cfg = self._resolve_config(project_dir, ctx)
+        profile_output = u.Cli.process_env().get(c.Infra.MYPY_PROFILE_OUTPUT_ENV)
+        destination = None
+        if profile_output is not None:
+            destination = Path(profile_output)
+            if not destination.is_absolute() or not destination.parent.is_dir():
+                msg = (
+                    "Mypy profile output requires an absolute path "
+                    "in an existing directory"
+                )
+                raise ValueError(msg)
+        return u.Infra.mypy_limited_command(
+            m.Infra.MypyInvocation(
+                targets=tuple(project_dir / target for target in check_dirs),
+                config_file=cfg,
+                report_json=True,
+                profile_output=destination,
+            ),
+        )
 
     @override
     def _validate_check_report(
-        self, project_dir: Path, ctx: m.Infra.GateContext, targets: t.StrSequence
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        targets: t.StrSequence,
     ) -> None:
-        """Account for every submitted target using Mypy's native source set."""
-        report = m.Infra.MypyCoverageReport.model_validate_json(
-            self._check_report_path(project_dir, ctx).read_text(encoding="utf-8"),
-            strict=True,
+        """Account for every submitted target from Mypy's native build trace.
+
+        Raises:
+            TypeError: If Mypy native source path is not a string.
+            ValueError: If Mypy native build trace contains no selected sources; or if
+                Mypy native build trace lacks completion evidence; or if Malformed Mypy
+                native source entry; or if Mypy native report did not account for
+                target; or if Mypy native report contains an unsubmitted source.
+
+        """
+        _ = ctx
+        source_lines = (
+            line for line in result.stderr.splitlines() if "Found source:" in line
         )
-        sources = tuple(Path(source).resolve() for source in report.lines)
+        sources: list[Path] = []
+        for line in source_lines:
+            match = re.search(r"Found source:\s+BuildSource\(path=(.+?), module=", line)
+            if match is None:
+                msg = f"Malformed Mypy native source entry: {line}"
+                raise ValueError(msg)
+            raw_path = ast.literal_eval(match.group(1))
+            if not isinstance(raw_path, str):
+                msg = f"Mypy native source path is not a string: {line}"
+                raise TypeError(msg)
+            sources.append((project_dir / raw_path).resolve())
+        if not sources:
+            msg = "Mypy native build trace contains no selected sources"
+            raise ValueError(msg)
+        if not any("Build finished in " in line for line in result.stderr.splitlines()):
+            msg = "Mypy native build trace lacks completion evidence"
+            raise ValueError(msg)
         submitted = tuple((project_dir / target).resolve() for target in targets)
         for target in submitted:
             if not any(
@@ -145,29 +213,53 @@ class FlextInfraMypyGate(FlextInfraGate):
 
     @override
     def _check_timeout(self, project_dir: Path, ctx: m.Infra.GateContext) -> int:
-        """Keep the outer runner alive through the controlled Mypy deadline."""
-        _ = project_dir, ctx
-        return u.Infra.mypy_runner_timeout()
+        """Keep the outer runner alive through the controlled Mypy deadline.
+
+        Returns:
+            The resulting ``int``.
+
+        """
+        _ = ctx
+        return u.Infra.mypy_runner_timeout_for_project(project_dir)
 
     @override
     def _check_env(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.StrMapping | None:
-        """Check env."""
-        _ = project_dir
+        """Run Mypy against the project's shared analysis cache.
+
+        Returns:
+            The resulting ``t.StrMapping | None``.
+
+        """
+        overrides = {
+            c.Infra.MypyCacheEnvironment.CACHE_DIR.value: str(
+                u.Infra.mypy_cache_directory(project_dir),
+            ),
+        }
         typings_generated = ctx.repository_root / c.Infra.DIR_TYPINGS / "generated"
-        if not typings_generated.is_dir():
-            return None
-        base_env = u.Cli.process_env()
-        existing = base_env.get("MYPYPATH", "")
-        mypy_path = str(typings_generated) + (f":{existing}" if existing else "")
-        return u.Cli.process_env(overrides={"MYPYPATH": mypy_path})
+        if typings_generated.is_dir():
+            existing = u.Cli.process_env().get("MYPYPATH", "")
+            overrides["MYPYPATH"] = str(typings_generated) + (
+                f":{existing}" if existing else ""
+            )
+        return u.Cli.process_env(overrides=overrides)
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Parse check output."""
+        """Parse check output.
+
+        Returns:
+            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+
+        """
         _ = ctx
         issues: t.MutableSequenceOf[m.Infra.Issue] = []
         if resource_diagnostic := u.Infra.mypy_failure_diagnostic(result):
@@ -175,7 +267,7 @@ class FlextInfraMypyGate(FlextInfraGate):
                 False,
                 (
                     m.Infra.Issue(
-                        file=c.Infra.PYPROJECT_FILENAME,
+                        file=c.PYPROJECT_FILENAME,
                         line=1,
                         column=1,
                         code="mypy-resource-limit",
@@ -185,33 +277,55 @@ class FlextInfraMypyGate(FlextInfraGate):
                 ),
             )
         for raw_line in result.stdout.splitlines():
-            diagnostic = m.Infra.MypyDiagnostic.model_validate_json(
-                raw_line, strict=True
+            if not raw_line.strip():
+                continue
+            validated: p.Result[m.Infra.MypyDiagnostic] = u.validate_value(
+                m.Infra.MypyDiagnostic,
+                raw_line,
+                from_json=True,
+                strict=True,
             )
+            if validated.failure:
+                return False, (
+                    self._malformed_report_issue(
+                        f"{validated.error}\nstdout: {raw_line}\n"
+                        f"stderr: {result.stderr}",
+                        tool=c.Infra.MYPY,
+                        file=str(project_dir),
+                    ),
+                )
+            diagnostic = validated.value
             issues.append(
                 m.Infra.Issue(
                     file=diagnostic.file,
                     line=diagnostic.line,
                     column=diagnostic.column,
                     code=diagnostic.code or "",
-                    message=diagnostic.message,
+                    message=(
+                        f"{diagnostic.message}\n{diagnostic.hint}"
+                        if diagnostic.hint
+                        else diagnostic.message
+                    ),
                     severity=diagnostic.severity,
-                )
+                ),
             )
         issues.extend(self._checker_stderr_issues(result, project_dir))
         if (not issues) and not u.Cli.process_succeeded(result.outcome):
             message = (result.stderr or result.stdout).strip()
             if not message:
-                message = f"mypy exited with code {result.outcome.raw_return_code} without JSON diagnostics"
+                message = (
+                    f"mypy exited with code {result.outcome.raw_return_code} "
+                    f"without JSON diagnostics"
+                )
             issues.append(
                 m.Infra.Issue(
-                    file=c.Infra.PYPROJECT_FILENAME,
+                    file=c.PYPROJECT_FILENAME,
                     line=1,
                     column=1,
                     code="mypy-exec",
                     message=message,
                     severity=c.Infra.ERROR,
-                )
+                ),
             )
         return (
             u.Cli.process_succeeded(result.outcome)

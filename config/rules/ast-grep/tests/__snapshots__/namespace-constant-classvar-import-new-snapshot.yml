@@ -1,0 +1,34 @@
+id: namespace-constant-classvar-import-new
+snapshots:
+  ? |
+    from __future__ import annotations
+    from flext_tests import FlextTestsConstants
+    class C:
+        class Tests(FlextTestsConstants.Tests):
+            EXPECTED_DATA_COUNT: int = 3
+  : fixed: |
+      from __future__ import annotations
+
+      from typing import ClassVar
+      from flext_tests import FlextTestsConstants
+      class C:
+          class Tests(FlextTestsConstants.Tests):
+              EXPECTED_DATA_COUNT: int = 3
+    labels:
+    - source: from __future__ import annotations
+      style: primary
+      start: 0
+      end: 34
+    - source: 'EXPECTED_DATA_COUNT: int = 3'
+      style: secondary
+      start: 140
+      end: 168
+    - source: |
+        from __future__ import annotations
+        from flext_tests import FlextTestsConstants
+        class C:
+            class Tests(FlextTestsConstants.Tests):
+                EXPECTED_DATA_COUNT: int = 3
+      style: secondary
+      start: 0
+      end: 169

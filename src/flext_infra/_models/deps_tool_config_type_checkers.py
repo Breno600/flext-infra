@@ -1,13 +1,16 @@
-"""Pyright and Pyrefly tool configuration models for the deps subpackage."""
+"""Pyright and Pyrefly tool configuration models for the deps subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from typing import Annotated, ClassVar
 
-from flext_core import m
-from flext_infra import c, t
+from flext_cli import m
 
-from ._defaults import ImmutableEmptyMapping
+from flext_infra import c, t
 
 
 class FlextInfraModelsDepsToolConfigTypeCheckers:
@@ -20,7 +23,8 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
             """One evidence-backed diagnostic override for an existing path."""
 
             root: Annotated[
-                t.NonEmptyStr, m.Field(description="Project-relative override root.")
+                t.NonEmptyStr,
+                m.Field(description="Project-relative override root."),
             ]
             report_private_usage: Annotated[
                 str,
@@ -40,7 +44,8 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
             model_config: ClassVar[m.ConfigDict] = m.ConfigDict(populate_by_name=True)
 
             root: Annotated[
-                str, m.Field(description="Execution environment root path.")
+                str,
+                m.Field(description="Execution environment root path."),
             ]
             report_private_usage: Annotated[
                 str,
@@ -70,7 +75,8 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
             source_dir: Annotated[
                 str,
                 m.Field(
-                    alias="source-dir", description="Primary source directory name."
+                    alias="source-dir",
+                    description="Primary source directory name.",
                 ),
             ]
             project_root: Annotated[
@@ -91,7 +97,9 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
                 t.StrSequence,
                 m.Field(
                     alias="test-like-dirs",
-                    description="Env dirs that should include project root in extraPaths.",
+                    description=(
+                        "Env dirs that should include project root in extraPaths."
+                    ),
                 ),
             ]
             default_excludes: Annotated[
@@ -119,7 +127,10 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
                 t.StrSequence,
                 m.Field(
                     alias="ignored-diagnostic-globs",
-                    description="Pyright ignore globs for files that remain on search paths but must not emit diagnostics.",
+                    description=(
+                        "Pyright ignore globs for files that remain on "
+                        "search paths but must not emit diagnostics."
+                    ),
                 ),
             ]
             diagnostic_path_overrides: Annotated[
@@ -128,42 +139,44 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
                 ],
                 m.Field(
                     alias="diagnostic-path-overrides",
-                    description="Existing path roots with evidence-backed diagnostic overrides.",
+                    description=(
+                        "Existing path roots with evidence-backed diagnostic overrides."
+                    ),
                 ),
             ] = ()
             source_report_private_usage: Annotated[
                 str,
                 m.Field(
                     alias="source-report-private-usage",
-                    description="reportPrivateUsage value for source-dir execution envs.",
+                    description=(
+                        "reportPrivateUsage value for source-dir execution envs."
+                    ),
                 ),
             ]
             test_like_report_private_usage: Annotated[
                 str,
                 m.Field(
                     alias="test-like-report-private-usage",
-                    description="reportPrivateUsage value for test-like execution envs.",
+                    description=(
+                        "reportPrivateUsage value for test-like execution envs."
+                    ),
                 ),
             ]
             other_report_private_usage: Annotated[
                 str,
                 m.Field(
                     alias="other-report-private-usage",
-                    description="reportPrivateUsage value for non-source/non-test-like envs.",
-                ),
-            ]
-            venv_name: Annotated[
-                str,
-                m.Field(
-                    alias="venv-name",
-                    description="Virtualenv directory name shared across pyright configs.",
+                    description=(
+                        "reportPrivateUsage value for non-source/non-test-like envs."
+                    ),
                 ),
             ]
 
         strict_settings: Annotated[
             t.StrMapping,
             m.Field(
-                alias="strict-settings", description="Pyright strict baseline options."
+                alias="strict-settings",
+                description="Pyright strict baseline options.",
             ),
         ]
         extended_settings: Annotated[
@@ -172,35 +185,7 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
                 alias="extended-settings",
                 description="Pyright extended settings options.",
             ),
-        ] = m.Field(default_factory=ImmutableEmptyMapping)
-        lazy_import_suppressions: Annotated[
-            t.StrMapping,
-            m.Field(
-                alias="lazy-import-suppressions",
-                description="Pyright rules suppressed in ALL envs due to lazy import pattern.",
-            ),
-        ] = m.Field(default_factory=ImmutableEmptyMapping)
-        global_suppression_rationales: Annotated[
-            t.StrMapping,
-            m.Field(
-                alias="global-suppression-rationales",
-                description="Global Pyright exclusions mapped to verified facade-FLEXT rationales.",
-            ),
-        ] = m.Field(default_factory=ImmutableEmptyMapping)
-        source_env_suppressions: Annotated[
-            t.StrMapping,
-            m.Field(
-                alias="source-env-suppressions",
-                description="Additional pyright rules suppressed in source env only.",
-            ),
-        ] = m.Field(default_factory=ImmutableEmptyMapping)
-        test_like_env_suppressions: Annotated[
-            t.StrMapping,
-            m.Field(
-                alias="test-like-env-suppressions",
-                description="Additional pyright rules suppressed in test-like envs.",
-            ),
-        ] = m.Field(default_factory=ImmutableEmptyMapping)
+        ]
         path_rules: Annotated[
             FlextInfraModelsDepsToolConfigTypeCheckers.PyrightConfig.PathRulesConfig,
             m.Field(
@@ -218,7 +203,8 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
             source_dir: Annotated[
                 str,
                 m.Field(
-                    alias="source-dir", description="Primary source directory name."
+                    alias="source-dir",
+                    description="Primary source directory name.",
                 ),
             ]
             project_root: Annotated[
@@ -267,14 +253,18 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
                 t.StrSequence,
                 m.Field(
                     alias="project-shared-search-paths",
-                    description="Additional shared workspace paths for declared_repository pyrefly search-path.",
+                    description=(
+                        "Additional shared workspace paths "
+                        "for declared_repository pyrefly search-path."
+                    ),
                 ),
             ]
 
         python_version: Annotated[
             str,
             m.Field(
-                alias="python-version", description="Pyrefly python-version baseline."
+                alias="python-version",
+                description="Pyrefly python-version baseline.",
             ),
         ]
         disable_project_excludes_heuristics: Annotated[

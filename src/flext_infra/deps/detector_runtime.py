@@ -1,4 +1,8 @@
-"""Runtime execution for dependency detector CLI."""
+"""Runtime execution for dependency detector CLI.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,14 +11,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, p, u
-
-from ._detector_runtime_steps import FlextInfraDependencyDetectorRuntimeSteps
+from flext_infra import c, m, p, u
+from flext_infra.deps._detector_runtime_steps import (
+    FlextInfraDependencyDetectorRuntimeSteps,
+)
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping, MutableMapping
+    from collections.abc import Mapping, MutableMapping
 
-    from flext_infra import m, t
+    from flext_infra import t
 
 
 class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSteps):
@@ -23,83 +28,70 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
     def __init__(
         self,
         detector: p.Infra.DetectorRuntime,
-        workspace_report_factory: Callable[..., p.Infra.WorkspaceReport],
-        dependency_limits_factory: Callable[..., m.Infra.DependencyLimitsInfo],
-        pip_check_factory: Callable[..., m.Infra.PipCheckReport],
+        deps: p.Infra.DepsService,
     ) -> None:
-        """Store runtime collaborators used by dependency detection orchestration."""
+        """Receive the reporting command and the dependency-analysis port."""
         self._detector = detector
-        self._workspace_report_factory = workspace_report_factory
-        self._dependency_limits_factory = dependency_limits_factory
-        self._pip_check_factory = pip_check_factory
+        self._deps = deps
 
     def run(self, params: m.Infra.DetectCommand) -> p.Result[bool]:
-        """Execute dependency detection and generate workspace report (orchestrator)."""
-        detector = self._detector
+        """Execute dependency detection and generate workspace report (orchestrator).
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         root = params.repository_root
-        venv_relative = Path(c.Infra.VENV_BIN_REL)
-        venv_bin = (
-            Path(
-                os.environ.get(
-                    "UV_PROJECT_ENVIRONMENT", str(root / venv_relative.parent)
-                )
-            )
-            / venv_relative.name
+        # The environment under inspection is the repository's own; an ambient
+        # UV_PROJECT_ENVIRONMENT would silently redirect detection elsewhere.
+        venv_bin = u.Infra.runtime_environment_dir(root) / (
+            "Scripts" if os.name == "nt" else "bin"
         )
         env_result = self._validate_environment(params, root, venv_bin)
         if env_result.failure:
             return r[bool].from_failure(env_result)
         projects, limits_path = env_result.value
         do_typings = params.typings or params.apply_typings
-        projects_report: MutableMapping[
-            str, MutableMapping[str, t.Infra.InfraValue]
-        ] = {}
-        report_model = self._workspace_report_factory(
+        projects_report: MutableMapping[str, MutableMapping[str, t.JsonValue]] = {}
+        report_model = m.Infra.WorkspaceDependencyReport(
             workspace=str(root),
             projects=projects_report,
             pip_check=None,
             dependency_limits=None,
         )
-        deps_service = detector.deps
-        typing_deps = (
-            deps_service
-            if isinstance(deps_service, p.Infra.TypingsDepsService)
-            else None
-        )
         if do_typings:
-            limits_setup = self._configure_typings_limits(
-                typing_deps, limits_path, report_model
-            )
+            limits_setup = self._configure_typings_limits(limits_path, report_model)
             if limits_setup.failure:
                 return r[bool].from_failure(limits_setup)
         for project_path in projects:
             project_result = self._run_project_detection(
                 project_path,
-                deps_service=deps_service,
-                typing_deps=typing_deps,
                 venv_bin=venv_bin,
                 limits_path=limits_path,
                 params=params,
-                do_typings=do_typings,
                 projects_report=projects_report,
             )
             if project_result.failure:
                 return r[bool].from_failure(project_result)
-        pip_check_result = self._run_pip_check(
-            deps_service, root, venv_bin, params, report_model
-        )
+        pip_check_result = self._run_pip_check(root, venv_bin, params, report_model)
         if pip_check_result.failure:
             return r[bool].from_failure(pip_check_result)
         pip_ok = pip_check_result.value
         if params.output_format == c.Cli.OutputFormats.JSON:
             return r[bool].ok(True)
         write_result = self._write_workspace_report(
-            params, root, report_model, projects_report
+            params,
+            root,
+            report_model,
+            projects_report,
         )
         if write_result.failure:
             return r[bool].from_failure(write_result)
         return self._summarize_run(
-            projects, projects_report, pip_ok=pip_ok, params=params
+            projects,
+            projects_report,
+            pip_ok=pip_ok,
+            params=params,
         )
 
     def _write_workspace_report(
@@ -107,9 +99,14 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
         params: m.Infra.DetectCommand,
         root: Path,
         report_model: p.Infra.WorkspaceReport,
-        projects_report: Mapping[str, Mapping[str, t.Infra.InfraValue]],
+        projects_report: Mapping[str, Mapping[str, t.JsonValue]],
     ) -> p.Result[Path]:
-        """Render and persist the canonical workspace dependency report JSON."""
+        """Render and persist the canonical workspace dependency report JSON.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
+        """
         out_path: Path = params.output_path or u.Cli.resolve_report_path(
             root,
             c.Infra.PROJECT,
@@ -137,15 +134,21 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
     def _summarize_run(
         self,
         projects: t.SequenceOf[Path],
-        projects_report: Mapping[str, Mapping[str, t.Infra.InfraValue]],
+        projects_report: Mapping[str, Mapping[str, t.JsonValue]],
         *,
         pip_ok: bool,
         params: m.Infra.DetectCommand,
     ) -> p.Result[bool]:
-        """Aggregate deptry counts, log the summary, decide overall pass/fail."""
+        """Aggregate deptry counts, log the summary, decide overall pass/fail.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         total_issues = sum(
             u.Cli.json_pick_int(
-                u.Cli.json_as_mapping(payload.get(c.Infra.DEPTRY)), "raw_count"
+                u.Cli.json_as_mapping(payload.get(c.Infra.DEPTRY)),
+                "raw_count",
             )
             for payload in projects_report.values()
         )

@@ -1,61 +1,151 @@
 # AGENTS.md — flext-infra
 
-This repository is a standalone authority. Never climb to a parent checkout or
-fetch remote instructions, build files, roots, environments, or runtimes.
-Provider governance may add a minimal prelude, but this repository owns the
-package-specific body below.
+> **Parent workspace law** lives in [`../AGENTS.md`](../AGENTS.md) — read it first.
+> Composition: global skills + parent/root `AGENTS.md` + this scope delta. Do not
+> re-embed universal law.
+>
+> **Standalone / independent mode:** when `../AGENTS.md` does not resolve, pin the
+> parent raw `AGENTS.md` URL to the same branch/release as this package (never
+> `main`): <https://raw.githubusercontent.com/flext-sh/flext/0.12.0-dev/AGENTS.md>
 
 <!-- AIHUB-AGENTS-SCOPE-LOCAL-BEGIN -->
+
 **Package:** `flext_infra` · ~82k src LOC · deps: `flext-cli`, `flext-core`
 
 ## Overview
 
-Build/tooling package for codegen, workspace conformance, dependency modernization, and declarative enforcement. Drives canonical Make verbs; generates package facets and `[MANAGED]` pyproject sections. Not a runtime dependency — reach via CLI or pytest plugin (only `flext-tests` may depend on it).
+Build/tooling package for codegen, workspace conformance, dependency modernization, and
+declarative enforcement. Drives canonical Make verbs; generates package facets and
+`[MANAGED]` pyproject sections. Not a runtime dependency — reach via CLI or pytest
+plugin (only `flext-tests` may depend on it).
 
 ## Structure
 
 ```text
 src/flext_infra/
-├── api.py cli.py __main__.py iteration.py
-├── codegen/ detectors/ fixers/ transformers/ rules/ schemas/ templates/
-├── config/ deps/ gates/ check/ validate/ docs/ github/ maintenance/
-├── release/ workspace/ services/ _enforcement/
+├── api.py cli.py __main__.py base.py git.py worktree.py promoted.py
+├── codegen/ codemod/ refactor/ detectors/ fixers/ transformers/ templates/
+├── deps/ gates/ check/ validate/ docs/ maintenance/
+├── release/ workspace/ services/ _enforcement/ _promoted/
 ├── constants.py typings.py protocols.py models.py utilities.py
 └── _constants/ _typings/ _protocols/ _models/ _utilities/
 ```
 
 ## Code Map
 
-| Symbol | Kind | Location | Role |
-| --- | --- | --- | --- |
-| `FlextInfra` | class | `api.py` | Rope workspace / health facade |
-| `FlextInfraCli` | class | `cli.py` | CLI entry |
-| `FlextInfraEnforcementEngine` | class | `_enforcement/engine.py` | catalog-backed enforcement |
-| `FlextInfraCodegenPipeline` | class | `codegen/pipeline.py` | codegen pipeline |
-| `FlextInfraPyprojectModernizer` | class | `deps/modernizer.py` | managed pyproject enforcement |
+| Symbol                          | Kind  | Location                  | Role                                                     |
+| ------------------------------- | ----- | ------------------------- | -------------------------------------------------------- |
+| `FlextInfra`                    | class | `api.py`                  | Rope workspace / health facade                           |
+| `FlextInfraCli`                 | class | `cli.py`                  | CLI entry                                                |
+| `FlextInfraEnforcementEngine`   | class | `_enforcement/engine.py`  | catalog-backed enforcement                               |
+| `FlextInfraCodegenPipeline`     | class | `codegen/pipeline.py`     | codegen pipeline                                         |
+| `FlextInfraPyprojectModernizer` | class | `deps/modernizer.py`      | managed pyproject enforcement                            |
+| `FlextInfraCodegenConform`      | class | `codegen/conform.py`      | body-less conform facade over `codegen/_conform/base.py` |
+| `FlextInfraConfigModels`        | class | `_models/_config/base.py` | config model facade over `_models/_config/*` families    |
+| `FlextInfraPromoted`            | class | `promoted.py`             | promoted command framework facade                        |
+
+## Promoted command framework
+
+Repository-owned `scripts/<verb>/<WHAT>.{py,sh}` commands declare a `/// flext-command`
+header and are reached only through `make <verb> WHAT=<action>` when the repository
+declares `script_dispatch`.
+
+- `FlextInfraPromoted` (`promoted.py`) composes registry state, discovery and dispatch
+  from `_promoted/{registry,discovery,dispatch}.py`. `main(argv)` is the dispatcher
+  entry; `dispatch(registry, verb, what)` receives WHAT already resolved once at the CLI
+  boundary.
+- Stateless primitives are `u.Infra.promoted_*` (`_utilities/_promoted/`):
+  `promoted_main`, `promoted_run`, `promoted_workspace_spec(root)`,
+  `promoted_discovered_workspace_spec`, `promoted_find_owner_root` (the start directory
+  itself is a valid owner), `promoted_render_help(registry, selector)` with `verb` or
+  `verb/what`, and `promoted_validate_command_contract`. Dynamic command parameters are
+  read through `u.Infra.env_value`.
+- Vocabulary is `c.Infra.Promoted*` (`_constants/promoted*.py`); the registry contract
+  is `p.Infra.PromotedRegistry`.
+- An empty, `help` or undeclared `all` WHAT renders the verb help; a verb that declares
+  an `all` command still runs it.
 
 ## Conventions (specific to this package)
 
-- Rules-as-data: policy in `rules/*.yaml` + `config/*.yaml` (Pydantic); add a YAML row, not a detector class.
-- Codegen owns facets / `py.typed` / `[MANAGED]` sections — change SSOT/templates, run the generator; never hand-edit output.
-- Enforcement target is rope-semantic (ADR-005); some detectors still use AST — verify before claiming AST is banned.
-- Config/settings canonical pattern: ADR-012.
+- Rules-as-data: policy in `rules/*.yaml` + `config/*.yaml` (Pydantic); add a YAML row,
+  not a detector class.
+- Codegen owns facets / `py.typed` / `[MANAGED]` sections — change SSOT/templates, run
+  the generator; never hand-edit output.
+- Lazy exports reject competing owners of one published name in a package. Identical
+  class names in independent modules or packages are valid; declarations that are not
+  published do not compete for export ownership.
+- Enforcement target is rope-semantic (ADR-005); some detectors still use AST — verify
+  before claiming AST is banned.
+- Config/settings canonical pattern: ADR-005 §§1–2 and `_settings.py`/`_config.py`
+  docstrings (flext-z0zkq; fleet follow-up flext-la3z5).
 - Codemod governance (ast-grep + make mod): ADR-014.
+- Family-wrapper flattening preserves the domain prefix in every promoted name.
+  Rope identity owns rewrites in executable references and quoted type positions,
+  including generic bases and deferred annotations. Ordinary strings, `Literal`
+  values, and `Annotated` metadata retain their payloads. Using the wrapper itself
+  as an entity type preserves that wrapper instead of emitting a partial cutover.
+
+## Recovering this work
+
+For the namespace/runtime stabilization, start with
+`docs/roadmap/namespace-automation-handoff-2026-09-14.md`. Its opening table records the
+latest operator scope, branch/PR, measured runtime, first failed gate and next action;
+its body links the execution plan, ADRs and canonical Beads. Read that context before
+restarting discovery. Historical receipts do not validate a changed revision.
+`docs/guides/execution-context.md` defines how to keep this context useful without
+creating another tracker.
 
 ## Commands
 
+Correct runtime behavior is the authority. Exercise the real setup, generation and
+consumer paths first, then make tests verify that contract. Never alter the environment
+to preserve an obsolete fixture or treat a passing test as proof of integrated runtime
+behavior.
+
+Generation performs one transaction per invocation. A changed source fails with its
+original diagnostic after authenticated rollback; it is never replanned automatically.
+Journal contention waits only for native EACCES/EAGAIN/EWOULDBLOCK and retains the lock file's
+identity. Other lease errors escape unchanged. Every Mise warning and failed declared
+entrypoint blocks publication; no message classifier converts either to success.
+
+Configuration declares `latest`; only `make upg` resolves newer releases and writes
+the committed `uv.lock` and `mise.lock`. `make setup` installs frozen from those locks
+(the CI path). Generation and runtime verbs use those installed identities without
+installing or upgrading tools, and ignore host Mise tool declarations. Fix the
+configuration/templates when the lifecycle is wrong; do not install, resolve or
+synchronize dependencies manually. `APPLY` stays removed. Git dependencies follow
+each repository's declared integration branch tip unless `project.dependency_revisions`
+in `config/workspace.yaml` declares a full commit SHA for that external provider
+dependency. Codegen renders these pins into every dependency group and the matching uv
+transitive overrides; local workspace members cannot be overridden. Publish the validated change through
+a merge-commit PR into that integration branch and verify the remote merge SHA before
+claiming delivery.
+
+Every checkout owns its physical `.venv` directory. Setup and runtime verbs reject
+symlinked environments before bootstrap, environment activation, or hooks; they never
+borrow another checkout's environment or editable sources. Caller environment and
+command-line variables cannot redirect the derived workspace or interpreter paths.
+Attached members use only their containing workspace's environment. Managed base
+interpreter symlinks inside the environment remain valid; the environment itself must
+belong to this workspace.
+
 ```bash
+make setup
 make check
 make test
 make build
 ```
+
 <!-- AIHUB-AGENTS-SCOPE-LOCAL-END -->
 
 <!-- AIHUB-GOVERNANCE-INSTRUCTIONS-BEGIN -->
 <!-- AIHUB-GOVERNANCE-CAPSULE v1 sha256:e1b7a9ae088643bf660b78ff1aea55d49076ec46518707976d77c78ed23db5db -->
+
 # Generated session governance capsule
 
-This projection is derived by `agentsctl sync`; edit canonical `AGENTS.md`, `rules/`, `skills/`, or `commands/`, never this output. The operator's newest request has precedence. Provider hooks are delivery mechanisms, not policy owners.
+This projection is derived by `agentsctl sync`; edit canonical `AGENTS.md`, `rules/`,
+`skills/`, or `commands/`, never this output. The operator's newest request has
+precedence. Provider hooks are delivery mechanisms, not policy owners.
 
 ## Rule `architecture/engineering-core`
 
@@ -65,124 +155,113 @@ For every implementation:
 
 1. Research repository owners, dependencies, and canonical documentation.
 2. Remove scope without a current requirement or consumer (YAGNI).
-3. Elect one writable authority; every other copy is a generated projection
-   (SSOT).
+3. Elect one writable authority; every other copy is a generated projection (SSOT).
 4. Apply SOLID only to a responsibility or dependency boundary under change.
 5. Implement through the owner and simplify without weakening behavior.
 6. Remove duplication and god components; recheck YAGNI, SSOT, SOLID.
-7. Exercise runtime behavior, run every applicable native gate, and complete
-   the approved landing cycle before changing phase.
+7. Exercise runtime behavior, run every applicable native gate, and complete the
+   approved landing cycle before changing phase.
 
-At a cross-boundary failure, prove the producer contract and output. Fix its
-owner when invalid or the receiver when it conforms. Never alter a correct
-adjacent owner for an invalid consumer; symptom workarounds are defects.
+At a cross-boundary failure, prove the producer contract and output. Fix its owner when
+invalid or the receiver when it conforms. Never alter a correct adjacent owner for an
+invalid consumer; symptom workarounds are defects.
 
-Hardcodes, normalized failure, failover, retry, fallback, compatibility,
-partial execution, keyring, and unevidenced success are defects. Typed owners
-keep defaults. The first exception escapes its CLI with traceback and cause.
+Hardcodes, normalized failure, failover, retry, fallback, compatibility, partial
+execution, keyring, and unevidenced success are defects. Typed owners keep defaults. The
+first exception escapes its CLI with traceback and cause.
 
 Git, runtime, build, and tests are baseline. Auxiliary tracking is a capability.
-Auxiliary capabilities apply only when authorized and selected; installation
-never selects. Do not load, probe, or gate dormant capabilities. Invalid
-selected authorization, configuration, readiness, or result fails without
-fallback. Require only non-derivable values.
+Auxiliary capabilities apply only when authorized and selected; installation never
+selects. Do not load, probe, or gate dormant capabilities. Invalid selected
+authorization, configuration, readiness, or result fails without fallback. Require only
+non-derivable values.
 
-An external token validation without its token is not executed and is recorded
-as `NOT EXECUTED`, never green; it does not block offline gates, landing, or
-post-merge proof. Direct invocation selects it: the token becomes required and
-any failure escapes without skip, catch, fallback, or normalization.
+An external token validation without its token is not executed and is recorded as
+`NOT EXECUTED`, never green; it does not block offline gates, landing, or post-merge
+proof. Direct invocation selects it: the token becomes required and any failure escapes
+without skip, catch, fallback, or normalization.
 
-Compose with generalized ownership,
-strict execution,
-runtime evidence,
-storage isolation,
-security closure.
+Compose with generalized ownership, strict execution, runtime evidence, storage
+isolation, security closure.
 
 ## Rule `coordination/fix-forward-collaboration`
 
 # Adopt the current state and collaborate by fix-forward
 
-Treat every current authorized-repository change as owned input regardless of
-provenance or age. Re-read shared files, attribute overlapping intent, preserve
-compatible contributions, and adopt them through the integration lane. The
-combined result is the target; provenance never exempts a defect from fix-forward.
+Treat every current authorized-repository change as owned input regardless of provenance
+or age. Re-read shared files, attribute overlapping intent, preserve compatible
+contributions, and adopt them through the integration lane. The combined result is the
+target; provenance never exempts a defect from fix-forward.
 
-Preserve unmanifested provider output, generated destinations, external files,
-and ambiguous objects without promoting them to canonical input. Bulk adoption
-or replacement requires divergent-object adjudication.
+Preserve unmanifested provider output, generated destinations, external files, and
+ambiguous objects without promoting them to canonical input. Bulk adoption or
+replacement requires divergent-object adjudication.
 
-Never stash, reset, restore, revert, rebase, force-push, roll back code/history,
-or replace shared files to remove work. Fix the canonical owner forward.
-Transaction rollback may undo only its failing invocation's effects.
+Never stash, reset, restore, revert, rebase, force-push, roll back code/history, or
+replace shared files to remove work. Fix the canonical owner forward. Transaction
+rollback may undo only its failing invocation's effects.
 
-A severe conflict exists only when two current intentions require incompatible
-behavior or when preserving both would violate a higher authority. Stop before
-the conflicting effect, present both intentions and their evidence, and ask the
-operator one precise question. Ordinary overlap, divergence, a red gate, or
-integration work is not severe: reconcile, validate, and continue forward.
-Unexpected state requires fresh preflight; it proves no actor or intention and
-never authorizes an unchanged retry.
+A severe conflict exists only when two current intentions require incompatible behavior
+or when preserving both would violate a higher authority. Stop before the conflicting
+effect, present both intentions and their evidence, and ask the operator one precise
+question. Ordinary overlap, divergence, a red gate, or integration work is not severe:
+reconcile, validate, and continue forward. Unexpected state requires fresh preflight; it
+proves no actor or intention and never authorizes an unchanged retry.
 
-Compose this invariant with shared-file coordination,
-operator precedence,
-plan adoption, and
-the destructive Git guard.
+Compose this invariant with shared-file coordination, operator precedence, plan
+adoption, and the destructive Git guard.
 
 ## Rule `coordination/operator-precedence`
 
 # Newest operator instruction wins; adjust artifacts to it
 
 Authority order: operator request > declared orchestration contract > canonical
-tracker > ADRs > skills > docs, and newest supersedes oldest. On conflict,
-adjust the lower or older artifact to match; never override the operator to
-satisfy stale guidance.
+tracker > ADRs > skills > docs, and newest supersedes oldest. On conflict, adjust the
+lower or older artifact to match; never override the operator to satisfy stale guidance.
 
-While orchestration and tracker runtimes are suspended, do not invoke them.
-Create no substitute tracker or ledger, preserve implementation evidence only
-in separately authorized Git/PR/CI, and leave phase closure open.
+While orchestration and tracker runtimes are suspended, do not invoke them. Create no
+substitute tracker or ledger, preserve implementation evidence only in separately
+authorized Git/PR/CI, and leave phase closure open.
 
-Exact operator authorization naming targets, disposition, recovery, and
-validation survives interruption, divergence, and red gates; re-preflight and
-continue. Ask only when the effect expands beyond it or two evidenced current
-intentions conflict. State alone proves no intention, actor, or process.
+Exact operator authorization naming targets, disposition, recovery, and validation
+survives interruption, divergence, and red gates; re-preflight and continue. Ask only
+when the effect expands beyond it or two evidenced current intentions conflict. State
+alone proves no intention, actor, or process.
 
 ## Rule `coordination/session-governance`
 
 # Rehydrate governance at every agent context boundary
 
-Static provider instructions own the complete standing contract. Provider hooks
-refresh a compact governance capsule at every native equivalent of session
-start, prompt submission, context compaction, and subagent start. A hook is a
-delivery mechanism generated by optionless `agentsctl sync`; it is never a
-policy owner, public command, fallback, daemon, or second runtime path.
+Static provider instructions own the complete standing contract. Provider hooks refresh
+a compact governance capsule at every native equivalent of session start, prompt
+submission, context compaction, and subagent start. A hook is a delivery mechanism
+generated by optionless `agentsctl sync`; it is never a policy owner, public command,
+fallback, daemon, or second runtime path.
 
-At session start, load the current operator and repository instructions before
-work. At each prompt, apply the newest operator intent and route only the skills
-material to that request. After compaction, restore the active goal, evidence,
-scope, exclusions, accepted concurrent work, first red gate, and next action.
-Every subagent inherits the current authority, fix-forward contract, and a
-bounded assignment; it may not discard, stash, roll back, or overwrite another
-actor's work.
+At session start, load the current operator and repository instructions before work. At
+each prompt, apply the newest operator intent and route only the skills material to that
+request. After compaction, restore the active goal, evidence, scope, exclusions,
+accepted concurrent work, first red gate, and next action. Every subagent inherits the
+current authority, fix-forward contract, and a bounded assignment; it may not discard,
+stash, roll back, or overwrite another actor's work.
 
-Provider capability is explicit in `config/projections.json`. An exact native
-event is used when available. A documented per-turn or pre-model equivalent is
-used when it is the provider's only delivery point, and observational events
-remain observational. Never claim an exact lifecycle semantic that the provider
-does not expose. Declarative instructions and projected skills/rules remain the
-standing guarantee when a hook can only observe or advise.
+Provider capability is explicit in `config/projections.json`. An exact native event is
+used when available. A documented per-turn or pre-model equivalent is used when it is
+the provider's only delivery point, and observational events remain observational. Never
+claim an exact lifecycle semantic that the provider does not expose. Declarative
+instructions and projected skills/rules remain the standing guarantee when a hook can
+only observe or advise.
 
-Compose with operator precedence,
-fix-forward collaboration,
-strict execution, and
+Compose with operator precedence, fix-forward collaboration, strict execution, and
 runtime evidence.
 
 ## Rule `ethics/professional-integrity`
 
 # Professional integrity is absolute
 
-Never lie, fabricate evidence, hide a blocker, bypass a gate, or patch a symptom
-only to make a check pass. Fix the generalized root cause with full context and
-report exact command, working directory, exit code and decisive output.
+Never lie, fabricate evidence, hide a blocker, bypass a gate, or patch a symptom only to
+make a check pass. Fix the generalized root cause with full context and report exact
+command, working directory, exit code and decisive output.
 
 ## Rule `runtime/strict-execution`
 
@@ -199,60 +278,62 @@ Every project and projected agent applies all of these policies together:
 - no keyring;
 - zero residue.
 
-The policies are cumulative. A project rule may make them narrower or reject
-more inputs; it cannot relax, catch, normalize, skip, defer, or route around any
-of them. Existing opposing behavior is a blocking violation to exterminate at
-its owner, never grandfathered compatibility.
+The policies are cumulative. A project rule may make them narrower or reject more
+inputs; it cannot relax, catch, normalize, skip, defer, or route around any of them.
+Existing opposing behavior is a blocking violation to exterminate at its owner, never
+grandfathered compatibility.
 
-Resolve gate applicability before invocation. A dormant external-token gate is
-not executed; selecting or invoking it applies every policy above.
+Resolve gate applicability before invocation. A dormant external-token gate is not
+executed; selecting or invoking it applies every policy above.
 
 ## Rule `workflow/canonical-commands`
 
 # Run agent functions only through the optionless CLI
 
 `agentsctl` is the sole agent-runtime facade: `help`, `doctor`, `check`, `sync`,
-`evaluate`, `secure`, `clean`, and `live`. Each invocation has exactly one verb
-and no option, argument, mode, selector, alias, or compatibility syntax.
+`evaluate`, `secure`, `clean`, and `live`. Each invocation has exactly one verb and no
+option, argument, mode, selector, alias, or compatibility syntax.
 
-Make is development support and gate composition. A Make target that needs
-runtime behavior invokes one public `agentsctl` verb; it never imports a private
-runtime function, reconstructs orchestration, or creates a second API.
+Make is development support and gate composition. A Make target that needs runtime
+behavior invokes one public `agentsctl` verb; it never imports a private runtime
+function, reconstructs orchestration, or creates a second API.
 
 Ad hoc shell, inline Python, diagnostics, and test helpers used as operational
-substitutes never import or execute private agent runtime. Repository and GitHub
-work uses its declared `make`, `git`, and `gh` owner, never an executable
-lower-level substitute.
+substitutes never import or execute private agent runtime. Repository and GitHub work
+uses its declared `make`, `git`, and `gh` owner, never an executable lower-level
+substitute.
 
-A broken or out-of-pattern command is a defect to fix at its owner and rerun
-through the same surface. Bypasses are blocking violations, not warnings.
+A broken or out-of-pattern command is a defect to fix at its owner and rerun through the
+same surface. Bypasses are blocking violations, not warnings.
 
 ## Rule `workflow/runtime-is-reality`
 
 # Reality is the running system; tests are checks, not the SSOT
 
-Validate against the real declared runtime (CLI, daemon, config, or public API)
-and exercise the actual feature—type and lint green are necessary, not
-sufficient.
+Validate against the real declared runtime (CLI, daemon, config, or public API) and
+exercise the actual feature—type and lint green are necessary, not sufficient.
 
-- A test that only passes by keeping removed or legacy artifacts is wrong: fix or
-  delete the test; never restore legacy just to make it pass.
-- A config/settings test that breaks when a valid SSOT value changes is defective.
-  Test contracts and derivations across arbitrary valid inputs; goldens may lock
-  generated structure, never mutable config-owned values.
+- A test that only passes by keeping removed or legacy artifacts is wrong: fix or delete
+  the test; never restore legacy just to make it pass.
+- A config/settings test that breaks when a valid SSOT value changes is defective. Test
+  contracts and derivations across arbitrary valid inputs; goldens may lock generated
+  structure, never mutable config-owned values.
 - A missing facade constant fails only at runtime — import and run the real path.
-- Before concluding root cause, prove the running or installed artifact matches
-  the declared authoritative revision or release. An editable checkout, local
-  cache, generated copy, or stale environment is not evidence of remote/runtime
-  behavior until identity is verified.
-- Use the newest released version of every required tool. Every diagnostic it
-  emits is blocking. A cap, downgrade, substitution, suppression, compatibility
-  classification, or false-positive classification requires prior operator
-  discussion, reproducible evidence, and explicit authorization; without all
-  three, correct the owner and rerun that released version.
+- Before concluding root cause, prove the running or installed artifact matches the
+  declared authoritative revision or release. An editable checkout, local cache,
+  generated copy, or stale environment is not evidence of remote/runtime behavior until
+  identity is verified.
+- Use the newest released version of every required tool. Every diagnostic it emits is
+  blocking. A cap, downgrade, substitution, suppression, compatibility classification,
+  or false-positive classification requires prior operator discussion, reproducible
+  evidence, and explicit authorization; without all three, correct the owner and rerun
+  that released version.
 
 ## Capability indexes
 
-Skills: caveman, context-canary, fix-forward-collaboration, governance-audit, operator-correction-learning, plan-focus-recovery, sprint-closure, strategic-compact, verification-loop
-Commands: add-language-rules, database-migration, feature-development, ghi-list, pr-list, ralph-loop, security-triage, synthesize-governance
+Skills: caveman, context-canary, fix-forward-collaboration, governance-audit,
+operator-correction-learning, plan-focus-recovery, sprint-closure, strategic-compact,
+verification-loop Commands: add-language-rules, database-migration, feature-development,
+ghi-list, pr-list, ralph-loop, security-triage, synthesize-governance
+
 <!-- AIHUB-GOVERNANCE-INSTRUCTIONS-END -->

@@ -1,4 +1,8 @@
-"""Export-collision resolution for the lazy-init planner."""
+"""Export-collision resolution for the lazy-init planner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -22,14 +26,21 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
         def _module_file(self, module_path: str) -> Path | None: ...
 
     def _target_score(self, name: str, target: t.StrPair) -> int:
-        """Score a candidate export target to break collision ties."""
+        """Score a candidate export target to break collision ties.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         module_path, attr = target
         score = 0
         module_file = self._module_file(module_path)
         if module_file is None:
             return score
-        convention = self.rope_workspace.convention(module_file)
-        policy = convention.module_policy
+        policy = u.Infra.publication_policy(
+            module_file,
+            rope_project=self.rope_workspace.rope_project,
+        )
         if policy.expected_alias == name:
             score += 100
         elif policy.expected_family and name.endswith(policy.expected_family):
@@ -50,7 +61,9 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
         declared_exports = self.rope_workspace.exports(
             module_file,
             export_options=m.Infra.ExportOptions(
-                allow_assignments=True, allow_functions=True, require_explicit_all=True
+                allow_assignments=True,
+                allow_functions=True,
+                require_explicit_all=True,
             ),
         )
         if name in declared_exports:
@@ -61,7 +74,7 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
             score -= 80
         part_number = module_file.stem.rpartition("_part_")[2]
         if part_number.isdecimal():
-            # flext-pulj (codex): the final public facade owns the external
+            # The final public facade owns the external
             # class identity; numbered implementation parts only rank among
             # themselves when no facade candidate exists.
             score -= 50
@@ -71,9 +84,17 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
         return final_score
 
     def _pick_preferred_target(
-        self, name: str, existing: t.StrPair, target: t.StrPair
+        self,
+        name: str,
+        existing: t.StrPair,
+        target: t.StrPair,
     ) -> t.StrPair:
-        """Return the higher-scored of two competing export targets."""
+        """Return the higher-scored of two competing export targets.
+
+        Returns:
+            The higher-scored of two competing export targets.
+
+        """
         existing_score = self._target_score(name, existing)
         target_score = self._target_score(name, target)
         if target_score > existing_score:
@@ -88,23 +109,77 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
         if existing is None or existing == target:
             index[name] = target
             return
-        # flext-j47u (codex): MutableLazyAliasMap values are always StrPair.
+        # MutableLazyAliasMap values are always StrPair.
         winner = self._pick_preferred_target(name, existing, target)
         if self._is_intentional_reexport(existing, target):
-            index[name] = winner
+            index[name] = self._published_reexport_target(
+                existing,
+                target,
+                score_winner=winner,
+            )
             return
         self._collision_count += 1
         u.Cli.error(
             f"export collision for {name!r}: {existing} vs {target}; "
-            f"candidate selected for complete inventory: {winner}"
+            f"candidate selected for complete inventory: {winner}",
         )
         index[name] = winner
 
+    def _published_reexport_target(
+        self,
+        a: t.StrPair,
+        b: t.StrPair,
+        *,
+        score_winner: t.StrPair,
+    ) -> t.StrPair:
+        """Elect the published facade path of one re-export pair.
+
+        An intentional re-export pair is one symbol surfacing through two
+        module paths — a public facade and a deeper private implementation
+        module. Both resolve to the same object, but the root's
+        declared-root publication filter drops any path that carries a
+        private segment, so electing the deeper private path removes the
+        name from the facade entirely even though the member's own
+        ``__all__`` declares it. The path with fewer private segments is
+        the published surface and must win; a shallower path outranks a
+        nested one on a privacy tie, because the member's canonical
+        surface is the one closest to its root. Package initializers are
+        never elected here — their re-export decision stays with the
+        implementation score, which penalizes self-pointing alias groups
+        to keep lazy resolution from importing the package through itself.
+
+        Returns:
+            The resulting ``t.StrPair``.
+
+        """
+        a_parts = self._module_parts(a[0])
+        b_parts = self._module_parts(b[0])
+        a_file = self._module_file(a[0])
+        b_file = self._module_file(b[0])
+        if (
+            a_file is None
+            or b_file is None
+            or c.Infra.INIT_PY in {a_file.name, b_file.name}
+        ):
+            return score_winner
+        a_private = len(self._private_segments(a_parts))
+        b_private = len(self._private_segments(b_parts))
+        if a_private != b_private:
+            return a if a_private < b_private else b
+        if len(a_parts) != len(b_parts):
+            return a if len(a_parts) < len(b_parts) else b
+        return score_winner
+
     def _is_intentional_reexport(self, a: t.StrPair, b: t.StrPair) -> bool:
-        """Return whether one module is a root-namespace stub re-exporting from the other."""
+        """Return whether one module is a root-namespace stub re-exporting the other.
+
+        Returns:
+            Whether one module is a root-namespace stub re-exporting from the other.
+
+        """
         if self._is_flext_part_reexport(a, b):
             return True
-        # flext-pulj (codex): root typing sidecars are removed; real source
+        # Root typing sidecars are removed; real source
         # owners now participate in the normal collision policy.
         if self._is_private_facade_reexport(a, b):
             return True
@@ -132,7 +207,12 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
         )
 
     def _is_package_root_reexport(self, a: t.StrPair, b: t.StrPair) -> bool:
-        """Return whether a package root republishes its direct facade owner."""
+        """Return whether a package root republishes its direct facade owner.
+
+        Returns:
+            Whether a package root republishes its direct facade owner.
+
+        """
         if a[1] != b[1]:
             return False
         for root_target, child_target in ((a, b), (b, a)):
@@ -144,7 +224,8 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
             if root_file is None or root_file.name != "__init__.py":
                 continue
             declared_exports = self.rope_workspace.exports(
-                root_file, export_options=m.Infra.ExportOptions(allow_assignments=True)
+                root_file,
+                export_options=m.Infra.ExportOptions(allow_assignments=True),
             )
             if attr in declared_exports:
                 return True
@@ -181,12 +262,22 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
 
     @staticmethod
     def _module_parts(module_path: str) -> t.VariadicTuple[str]:
-        """Return normalized dotted module path parts."""
+        """Return normalized dotted module path parts.
+
+        Returns:
+            Normalized dotted module path parts.
+
+        """
         return tuple(part for part in module_path.split(".") if part)
 
     @staticmethod
     def _part_family_index(parts: t.StrSequence) -> int:
-        """Return the index of the private ``*_parts`` package segment."""
+        """Return the index of the private ``*_parts`` package segment.
+
+        Returns:
+            The index of the private ``*_parts`` package segment.
+
+        """
         for index, part in enumerate(parts[:-1]):
             if part.startswith("_") and part.endswith("_parts"):
                 return index
@@ -194,12 +285,22 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
 
     @staticmethod
     def _is_part_leaf(module_stem: str) -> bool:
-        """Return whether a module stem is an FLEXT implementation part."""
+        """Return whether a module stem is an FLEXT implementation part.
+
+        Returns:
+            Whether a module stem is an FLEXT implementation part.
+
+        """
         return "_part_" in module_stem
 
     @classmethod
     def _is_flext_part_reexport(cls, a: t.StrPair, b: t.StrPair) -> bool:
-        """Return whether targets are the same logical FLEXT owner split into parts."""
+        """Return whether targets are the same logical FLEXT owner split into parts.
+
+        Returns:
+            Whether targets are the same logical FLEXT owner split into parts.
+
+        """
         if a[1] != b[1]:
             return False
         a_parts = cls._module_parts(a[0])
@@ -235,7 +336,12 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
 
     @classmethod
     def _is_private_facade_reexport(cls, a: t.StrPair, b: t.StrPair) -> bool:
-        """Return whether a public facade re-exports a private implementation module."""
+        """Return whether a public facade re-exports a private implementation module.
+
+        Returns:
+            Whether a public facade re-exports a private implementation module.
+
+        """
         if a[1] != b[1]:
             return False
         for pub_mod, priv_mod in ((a[0], b[0]), (b[0], a[0])):
@@ -255,7 +361,12 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
 
     @classmethod
     def _private_segments(cls, parts: t.StrSequence) -> frozenset[t.Pair[int, str]]:
-        """Return private implementation segments with their path positions."""
+        """Return private implementation segments with their path positions.
+
+        Returns:
+            Private implementation segments with their path positions.
+
+        """
         return frozenset(
             (index, part)
             for index, part in enumerate(parts[1:], start=1)
@@ -264,7 +375,12 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
 
     @classmethod
     def _is_test_collection_collision(cls, a: t.StrPair, b: t.StrPair) -> bool:
-        """Return whether duplicate generated test collection names are benign."""
+        """Return whether duplicate generated test collection names are benign.
+
+        Returns:
+            Whether duplicate generated test collection names are benign.
+
+        """
         if a[1] != b[1] or not a[1].startswith("Tests"):
             return False
         a_parts = cls._module_parts(a[0])
@@ -273,7 +389,12 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
 
     @staticmethod
     def _publish(name: str, *, allow_main: bool) -> bool:
-        """Return whether a name should be published in the lazy __init__."""
+        """Return whether a name should be published in the lazy __init__.
+
+        Returns:
+            Whether a name should be published in the lazy __init__.
+
+        """
         return (
             not name.startswith("_")
             and name not in c.Infra.INFRA_ONLY_EXPORTS

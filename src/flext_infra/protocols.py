@@ -10,20 +10,18 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import Protocol, runtime_checkable
+from flext_cli import FlextCliProtocols
 
-from flext_cli import p
-
-from ._protocols.base import FlextInfraProtocolsBase
-from ._protocols.check import FlextInfraProtocolsCheck
-from ._protocols.deps import FlextInfraProtocolsDeps
-from ._protocols.docs import FlextInfraProtocolsDocs
-from ._protocols.promoted import FlextInfraProtocolsPromoted
-from ._protocols.rope import FlextInfraProtocolsRope
-from ._protocols.rope_runtime import FlextInfraProtocolsRopeRuntime
+from flext_infra._protocols.base import FlextInfraProtocolsBase
+from flext_infra._protocols.check import FlextInfraProtocolsCheck
+from flext_infra._protocols.deps import FlextInfraProtocolsDeps
+from flext_infra._protocols.docs import FlextInfraProtocolsDocs
+from flext_infra._protocols.promoted import FlextInfraProtocolsPromoted
+from flext_infra._protocols.rope import FlextInfraProtocolsRope
+from flext_infra._protocols.rope_runtime import FlextInfraProtocolsRopeRuntime
 
 
-class FlextInfraProtocols(p):
+class FlextInfraProtocols(FlextCliProtocols):
     """Structural contracts for flext-infra utilities and services.
 
     All parent protocols (Result, Config, DI, Service, etc.) are inherited
@@ -31,7 +29,6 @@ class FlextInfraProtocols(p):
     protocols live as nested classes below.
     """
 
-    @runtime_checkable
     class Infra(
         FlextInfraProtocolsCheck,
         FlextInfraProtocolsDeps,
@@ -40,7 +37,6 @@ class FlextInfraProtocols(p):
         FlextInfraProtocolsRopeRuntime,
         FlextInfraProtocolsRope,
         FlextInfraProtocolsBase,
-        Protocol,
     ):
         """Infra-specific structural protocol definitions."""
 

@@ -1,0 +1,230 @@
+id: facade-base-by-class-name
+snapshots:
+  ? |
+    from flext_cli import m
+    class FlextMeltanoModels(m):
+        pass
+    m = FlextMeltanoModels
+  : labels:
+    - source: m = FlextMeltanoModels
+      style: primary
+      start: 62
+      end: 84
+    - source: m
+      style: secondary
+      start: 62
+      end: 63
+    - source: FlextMeltanoModels
+      style: secondary
+      start: 66
+      end: 84
+    - source: |
+        from flext_cli import m
+        class FlextMeltanoModels(m):
+            pass
+        m = FlextMeltanoModels
+      style: secondary
+      start: 0
+      end: 85
+    - source: m = FlextMeltanoModels
+      style: secondary
+      start: 62
+      end: 84
+    - source: m
+      style: secondary
+      start: 22
+      end: 23
+    - source: from flext_cli import m
+      style: secondary
+      start: 0
+      end: 23
+    - source: |
+        from flext_cli import m
+        class FlextMeltanoModels(m):
+            pass
+        m = FlextMeltanoModels
+      style: secondary
+      start: 0
+      end: 85
+    - source: FlextMeltanoModels
+      style: secondary
+      start: 30
+      end: 48
+    - source: m
+      style: secondary
+      start: 49
+      end: 50
+    - source: m
+      style: secondary
+      start: 49
+      end: 50
+    - source: |-
+        class FlextMeltanoModels(m):
+            pass
+      style: secondary
+      start: 24
+      end: 61
+    - source: |
+        from flext_cli import m
+        class FlextMeltanoModels(m):
+            pass
+        m = FlextMeltanoModels
+      style: secondary
+      start: 0
+      end: 85
+  ? |
+    from flext_cli import t as _cli_t
+    class FlextInfraTypes(_cli_t):
+        pass
+    t: type[FlextInfraTypes] = FlextInfraTypes
+  : labels:
+    - source: 't: type[FlextInfraTypes] = FlextInfraTypes'
+      style: primary
+      start: 74
+      end: 116
+    - source: t
+      style: secondary
+      start: 74
+      end: 75
+    - source: FlextInfraTypes
+      style: secondary
+      start: 101
+      end: 116
+    - source: |
+        from flext_cli import t as _cli_t
+        class FlextInfraTypes(_cli_t):
+            pass
+        t: type[FlextInfraTypes] = FlextInfraTypes
+      style: secondary
+      start: 0
+      end: 117
+    - source: 't: type[FlextInfraTypes] = FlextInfraTypes'
+      style: secondary
+      start: 74
+      end: 116
+    - source: t
+      style: secondary
+      start: 22
+      end: 23
+    - source: _cli_t
+      style: secondary
+      start: 27
+      end: 33
+    - source: t as _cli_t
+      style: secondary
+      start: 22
+      end: 33
+    - source: from flext_cli import t as _cli_t
+      style: secondary
+      start: 0
+      end: 33
+    - source: |
+        from flext_cli import t as _cli_t
+        class FlextInfraTypes(_cli_t):
+            pass
+        t: type[FlextInfraTypes] = FlextInfraTypes
+      style: secondary
+      start: 0
+      end: 117
+    - source: FlextInfraTypes
+      style: secondary
+      start: 40
+      end: 55
+    - source: _cli_t
+      style: secondary
+      start: 56
+      end: 62
+    - source: _cli_t
+      style: secondary
+      start: 56
+      end: 62
+    - source: |-
+        class FlextInfraTypes(_cli_t):
+            pass
+      style: secondary
+      start: 34
+      end: 73
+    - source: |
+        from flext_cli import t as _cli_t
+        class FlextInfraTypes(_cli_t):
+            pass
+        t: type[FlextInfraTypes] = FlextInfraTypes
+      style: secondary
+      start: 0
+      end: 117
+  ? |
+    from flext_tests import FlextTestsModels
+    from flext_infra import m
+    class TestsFlextInfraModels(FlextTestsModels, m):
+        pass
+    m = TestsFlextInfraModels
+  : labels:
+    - source: m = TestsFlextInfraModels
+      style: primary
+      start: 126
+      end: 151
+    - source: m
+      style: secondary
+      start: 126
+      end: 127
+    - source: TestsFlextInfraModels
+      style: secondary
+      start: 130
+      end: 151
+    - source: |
+        from flext_tests import FlextTestsModels
+        from flext_infra import m
+        class TestsFlextInfraModels(FlextTestsModels, m):
+            pass
+        m = TestsFlextInfraModels
+      style: secondary
+      start: 0
+      end: 152
+    - source: m = TestsFlextInfraModels
+      style: secondary
+      start: 126
+      end: 151
+    - source: m
+      style: secondary
+      start: 65
+      end: 66
+    - source: from flext_infra import m
+      style: secondary
+      start: 41
+      end: 66
+    - source: |
+        from flext_tests import FlextTestsModels
+        from flext_infra import m
+        class TestsFlextInfraModels(FlextTestsModels, m):
+            pass
+        m = TestsFlextInfraModels
+      style: secondary
+      start: 0
+      end: 152
+    - source: TestsFlextInfraModels
+      style: secondary
+      start: 73
+      end: 94
+    - source: m
+      style: secondary
+      start: 113
+      end: 114
+    - source: m
+      style: secondary
+      start: 113
+      end: 114
+    - source: |-
+        class TestsFlextInfraModels(FlextTestsModels, m):
+            pass
+      style: secondary
+      start: 67
+      end: 125
+    - source: |
+        from flext_tests import FlextTestsModels
+        from flext_infra import m
+        class TestsFlextInfraModels(FlextTestsModels, m):
+            pass
+        m = TestsFlextInfraModels
+      style: secondary
+      start: 0
+      end: 152

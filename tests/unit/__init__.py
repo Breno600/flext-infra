@@ -1,17 +1,19 @@
 # AUTO-GENERATED FILE — Regenerate with: make gen
-"""Tests.unit package."""
+"""Tests.unit package.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core.lazy import build_lazy_import_map, install_lazy_exports
+from flext_core import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from flext_tests import c, d, e, h, m, p, r, s, t, td, tf, tk, tm, tv, u, x
-
-    from . import (
+    from tests.unit import (
         _utilities,
         check,
         codegen,
@@ -21,6 +23,7 @@ if TYPE_CHECKING:
         detectors,
         discovery,
         docs,
+        gates,
         github,
         io,
         maintenance,
@@ -31,77 +34,27 @@ if TYPE_CHECKING:
         validate,
         workspace,
     )
-    from .fixtures import (
-        cached_runner_project,
-        deptry_report_payload,
-        models_resource,
-        modernizer_workspace,
-        modernizer_workspace_with_projects,
-        policy_violation_project,
-        real_docs_project,
-        real_makefile_project,
-        real_python_package,
-        real_toml_project,
-        real_workspace,
-        rope_workspace,
-        services_resource,
-        tool_config_document,
-    )
-    from .fixtures_git import real_git_repo
-    from .runner_service import RealSubprocessRunner
-    from .workspace_factory import TestsFlextInfraWorkspaceFactory
+
 __all__: tuple[str, ...] = (
-    "RealSubprocessRunner",
-    "TestsFlextInfraWorkspaceFactory",
     "_utilities",
-    "c",
-    "cached_runner_project",
     "check",
     "codegen",
     "codemod",
     "container",
-    "d",
     "deps",
-    "deptry_report_payload",
     "detectors",
     "discovery",
     "docs",
-    "e",
+    "gates",
     "github",
-    "h",
     "io",
-    "m",
     "maintenance",
-    "models_resource",
-    "modernizer_workspace",
-    "modernizer_workspace_with_projects",
-    "p",
-    "policy_violation_project",
     "promoted",
-    "r",
-    "real_docs_project",
-    "real_git_repo",
-    "real_makefile_project",
-    "real_python_package",
-    "real_toml_project",
-    "real_workspace",
     "refactor",
     "release",
-    "rope_workspace",
-    "s",
-    "services_resource",
-    "t",
-    "td",
-    "tf",
-    "tk",
-    "tm",
-    "tool_config_document",
     "transformers",
-    "tv",
-    "u",
     "validate",
     "workspace",
-    "x",
 )
 
 _LAZY_IMPORTS = MappingProxyType(
@@ -116,56 +69,20 @@ _LAZY_IMPORTS = MappingProxyType(
             ".detectors": ("detectors",),
             ".discovery": ("discovery",),
             ".docs": ("docs",),
-            ".fixtures": (
-                "cached_runner_project",
-                "deptry_report_payload",
-                "models_resource",
-                "modernizer_workspace",
-                "modernizer_workspace_with_projects",
-                "policy_violation_project",
-                "real_docs_project",
-                "real_makefile_project",
-                "real_python_package",
-                "real_toml_project",
-                "real_workspace",
-                "rope_workspace",
-                "services_resource",
-                "tool_config_document",
-            ),
-            ".fixtures_git": ("real_git_repo",),
+            ".gates": ("gates",),
             ".github": ("github",),
             ".io": ("io",),
             ".maintenance": ("maintenance",),
             ".promoted": ("promoted",),
             ".refactor": ("refactor",),
             ".release": ("release",),
-            ".runner_service": ("RealSubprocessRunner",),
             ".transformers": ("transformers",),
             ".validate": ("validate",),
             ".workspace": ("workspace",),
-            ".workspace_factory": ("TestsFlextInfraWorkspaceFactory",),
-            "flext_tests": (
-                "c",
-                "d",
-                "e",
-                "h",
-                "m",
-                "p",
-                "r",
-                "s",
-                "t",
-                "td",
-                "tf",
-                "tk",
-                "tm",
-                "tv",
-                "u",
-                "x",
-            ),
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,
-    )
+    ),
 )
 
 install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

@@ -1,0 +1,11 @@
+id: runtime-abc-needs-runtime-import
+valid:
+  - |
+    from collections.abc import Sequence
+
+    def check(value: object) -> bool:
+        return isinstance(value, Sequence)
+invalid:
+  - |
+    def check(value: object) -> bool:
+        return isinstance(value, Sequence)

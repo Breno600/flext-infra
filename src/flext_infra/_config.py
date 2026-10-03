@@ -7,32 +7,71 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import ClassVar
+from typing import override
 
 from flext_cli.config import FlextCliConfig
 
-from ._models.config import FlextInfraConfigModels
+from flext_infra._constants.codegen_project import FlextInfraConstantsCodegenProject
+from flext_infra._models._config.base import FlextInfraConfigModels
 
 
-class _FlextInfraConfig(FlextCliConfig):
+class FlextInfraConfig(FlextCliConfig):
     """Declarative flext-infra config loaded and validated once."""
 
-    # NOTE (multi-agent, flext-wkii.9 + flext-wkii.17 / agent: codex): direct
-    # config.Infra is the only codegen information surface; no accessor method.
-    # NOTE (flext-sltx): CONFIG_DIR stays the relative default so
-    # flext-core FlextConfig._config_dir() resolves the packaged flext_infra/config
-    # in a wheel install AND the repo-root config/ in an editable source checkout.
-    # An absolute parents[2] value broke every git-dep/wheel consumer (config poison).
-    CONFIG_DIR: ClassVar[str] = "config"
+    # Direct config.Infra is the only codegen information surface; no accessor
+    # method.
     Infra: FlextInfraConfigModels.Infra
 
     @classmethod
     def ssot_config_dir(cls) -> Path:
-        """Public resolution of the packaged/workspace ``config/`` directory."""
+        """Public resolution of the packaged/workspace ``config/`` directory.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         return cls._config_dir()
 
+    @classmethod
+    @override
+    def _config_files(cls) -> list[Path]:
+        """Tracked configs and operator overlays first, the local file last.
 
-config: _FlextInfraConfig = _FlextInfraConfig()
+        The sorted glob would discover the local override file in first
+        position (``.local`` sorts before ``.yaml``), where it would lose
+        every scalar collision; it is filtered out of the discovered set and
+        appended explicitly exactly once so it merges with the highest
+        precedence of any file source. The governed repository's tracked org
+        layer is appended after it, so a checkout root always speaks with the
+        last word on its own org data.
+
+        Returns:
+            The resulting ``list[Path]``.
+
+        """
+        files = [
+            item
+            for item in super()._config_files()
+            if item.name
+            != FlextInfraConstantsCodegenProject.CODEGEN_LOCAL_OVERRIDES_FILENAME
+        ]
+        local = (
+            cls._config_dir()
+            / FlextInfraConstantsCodegenProject.CODEGEN_LOCAL_OVERRIDES_FILENAME
+        )
+        if local.is_file():
+            files.append(local)
+        org = (
+            Path.cwd()
+            / FlextInfraConstantsCodegenProject.CODEGEN_CONFIG_DIR
+            / FlextInfraConstantsCodegenProject.CODEGEN_ORG_OVERRIDES_FILENAME
+        )
+        if org.is_file():
+            files.append(org)
+        return files
+
+
+# The public singleton keeps its type through circular facade analysis.
+config: FlextInfraConfig = FlextInfraConfig.fetch_global()
 """Pre-instantiated frozen config singleton — ``from flext_infra import config``."""
-
-__all__: list[str] = ["config"]
+__all__: list[str] = ["FlextInfraConfig", "config"]

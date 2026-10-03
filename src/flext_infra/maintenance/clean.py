@@ -20,14 +20,17 @@ from flext_infra.base import s
 if TYPE_CHECKING:
     from flext_infra import p, t
 
-logger = u.fetch_logger(__name__)
-
 
 class FlextInfraCleanService(s[int]):
     """Report or remove broken links below the managed workspace container."""
 
     def _broken_worktree_links(self) -> t.VariadicTuple[Path]:
-        """Return broken symlinks left below the managed worktree container."""
+        """Return broken symlinks left below the managed worktree container.
+
+        Returns:
+            Broken symlinks left below the managed worktree container.
+
+        """
         worktrees_root = self.repository_root / c.Infra.WORKTREES_DIRNAME
         if not worktrees_root.is_dir():
             return ()
@@ -39,7 +42,12 @@ class FlextInfraCleanService(s[int]):
 
     @override
     def execute(self) -> p.Result[int]:
-        """Report broken managed links, removing them when apply is requested."""
+        """Report broken managed links, removing them when apply is requested.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
+        """
         if not self.repository_root.is_dir():
             return r[int].fail(f"workspace is not a directory: {self.repository_root}")
         targets = self._broken_worktree_links()

@@ -1,0 +1,37 @@
+id: facade-import-from-own-package
+snapshots:
+  ? |
+    from flext_cli import u
+    from flext_infra import c, m, p, t
+    value = u.Infra.layout(root)
+  : fixed: |
+      from flext_infra import u
+      from flext_infra import c, m, p, t
+      value = u.Infra.layout(root)
+    labels:
+    - source: from flext_cli import u
+      style: primary
+      start: 0
+      end: 23
+    - source: from flext_infra import c, m, p, t
+      style: secondary
+      start: 24
+      end: 58
+    - source: |
+        from flext_cli import u
+        from flext_infra import c, m, p, t
+        value = u.Infra.layout(root)
+      style: secondary
+      start: 0
+      end: 88
+    - source: u.Infra
+      style: secondary
+      start: 67
+      end: 74
+    - source: |
+        from flext_cli import u
+        from flext_infra import c, m, p, t
+        value = u.Infra.layout(root)
+      style: secondary
+      start: 0
+      end: 88

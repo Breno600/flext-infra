@@ -1,0 +1,26 @@
+id: ban-getattr-private-probe
+snapshots:
+  present = hasattr(handler, "_private_state"):
+    labels:
+    - source: hasattr(handler, "_private_state")
+      style: primary
+      start: 10
+      end: 44
+  raw = getattr(source, "_bootstrap_options", None):
+    labels:
+    - source: getattr(source, "_bootstrap_options", None)
+      style: primary
+      start: 6
+      end: 49
+  resolver = getattr(obj, "_get_service_settings_type", None):
+    labels:
+    - source: getattr(obj, "_get_service_settings_type", None)
+      style: primary
+      start: 11
+      end: 59
+  setattr(obj, "_cache", value):
+    labels:
+    - source: setattr(obj, "_cache", value)
+      style: primary
+      start: 0
+      end: 29

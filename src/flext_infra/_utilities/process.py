@@ -1,4 +1,8 @@
-"""Canonical process-exit classification and hermetic child-environment utilities."""
+"""Canonical process-exit classification utilities.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,15 +11,50 @@ from typing import TYPE_CHECKING
 from flext_infra import c
 
 if TYPE_CHECKING:
-    from flext_infra import t
+    from flext_infra import p, t
 
 
 class FlextInfraUtilitiesProcess:
-    """Normalize external process exits and derive hermetic child environments."""
+    """Normalize external process exits without discarding their status."""
+
+    @staticmethod
+    def tool_outcome(
+        outcome: p.Cli.ProcessOutcome,
+        *,
+        findings: int,
+        findings_exit_codes: t.VariadicTuple[int],
+    ) -> c.Infra.ToolOutcome:
+        """Classify one completed tool run as clean, findings or error.
+
+        A tool completes cleanly with a success status and nothing reported,
+        and completes with findings when it reports what it found under a
+        success status or under a findings status it declares. Any other
+        status, a timeout, a signal, or a findings status without a reported
+        finding is an error.
+
+        Returns:
+            The outcome the run ended with.
+
+        """
+        if outcome.timed_out or outcome.forwarded_signal is not None:
+            return c.Infra.ToolOutcome.ERROR
+        status = outcome.raw_return_code
+        if status == c.Cli.EXIT_CODE_SUCCESS:
+            return (
+                c.Infra.ToolOutcome.FINDINGS if findings else c.Infra.ToolOutcome.CLEAN
+            )
+        if status in findings_exit_codes and findings:
+            return c.Infra.ToolOutcome.FINDINGS
+        return c.Infra.ToolOutcome.ERROR
 
     @staticmethod
     def process_exit_classification(exit_code: int) -> str:
-        """Classify a process exit without discarding its original status."""
+        """Classify a process exit without discarding its original status.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         if exit_code == c.Infra.PROCESS_TIMEOUT_EXIT_CODE:
             return "timeout"
         if exit_code < 0:
@@ -23,27 +62,6 @@ class FlextInfraUtilitiesProcess:
         if exit_code > c.Infra.PROCESS_SIGNAL_EXIT_OFFSET:
             return f"signal={exit_code - c.Infra.PROCESS_SIGNAL_EXIT_OFFSET}"
         return "failure"
-
-    @staticmethod
-    def make_hermetic_env_remove_keys() -> t.StrSequence:
-        """Return every Make-owned variable a gate child process must not inherit.
-
-        GNU make exports command-line assignments (``APPLY=Y``) and its own
-        recursion state to every child, so pytest and any ``make`` a test
-        spawns would otherwise see the outer verb's selectors and refuse
-        (``verb help is read-only and does not accept APPLY``). The generated
-        Makefile is selector-free — no public inputs — so the set is derived
-        from the declared owners only: the orchestrator recursion keys, the
-        settings identity variable, the pytest-specific keys, and the host
-        color-forcing signal. No list is repeated here.
-        """
-        ordered: dict[str, None] = dict.fromkeys((
-            *c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
-            c.Infra.ENV_VAR_STANDALONE,
-            *c.Infra.PYTEST_INHERITED_ENV_REMOVE_KEYS,
-            c.Infra.ENV_VAR_FORCE_COLOR,
-        ))
-        return tuple(ordered)
 
 
 __all__: list[str] = ["FlextInfraUtilitiesProcess"]

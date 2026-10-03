@@ -32,24 +32,33 @@ class FlextInfraTextPatternScanner(s[bool]):
     include: Annotated[
         t.StrSequence,
         m.Field(
-            default_factory=tuple, description="Glob patterns included in the scan."
+            default_factory=tuple,
+            description="Glob patterns included in the scan.",
         ),
     ] = m.Field(default_factory=tuple)
     exclude: Annotated[
         t.StrSequence,
         m.Field(
-            default_factory=tuple, description="Glob patterns excluded from the scan."
+            default_factory=tuple,
+            description="Glob patterns excluded from the scan.",
         ),
     ] = m.Field(default_factory=tuple)
     match: Annotated[
-        c.Infra.MatchMode, m.Field(description="Violation mode (present or absent)")
+        c.Infra.MatchMode,
+        m.Field(description="Violation mode (present or absent)"),
     ] = c.Infra.MatchMode.PRESENT
 
     @staticmethod
     def _count_matches(
-        files: t.SequenceOf[Path], regex: t.Infra.RegexPattern
+        files: t.SequenceOf[Path],
+        regex: t.RegexPattern,
     ) -> p.Result[int]:
-        """Count regex matches across files; surface any unreadable file as failure."""
+        """Count regex matches across files; surface any unreadable file as failure.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
+        """
         total = 0
         for file_path in files:
             read = u.Cli.files_read_text(file_path)
@@ -86,18 +95,28 @@ class FlextInfraTextPatternScanner(s[bool]):
             return r[t.ScalarMapping].fail(error)
         try:
             return self._scan_validated(
-                scan_root, pattern, includes, excludes or (), match_mode
+                scan_root,
+                pattern,
+                includes,
+                excludes or (),
+                match_mode,
             )
         except c.Infra.REGEX_ERROR as exc:
             return r[t.ScalarMapping].fail(
-                f"invalid regex pattern: {exc}", exception=exc
+                f"invalid regex pattern: {exc}",
+                exception=exc,
             )
         except c.EXC_OS_TYPE_VALUE as exc:
             return r[t.ScalarMapping].fail_op("text pattern scan", exc)
 
     @staticmethod
     def _violation_count(matches: int, match_mode: c.Infra.MatchMode) -> int:
-        """Return violation count for the selected match mode."""
+        """Return violation count for the selected match mode.
+
+        Returns:
+            Violation count for the selected match mode.
+
+        """
         if match_mode == c.Infra.MatchMode.PRESENT:
             return matches
         return 0 if matches > 0 else 1
@@ -110,10 +129,17 @@ class FlextInfraTextPatternScanner(s[bool]):
         excludes: t.StrSequence,
         match_mode: c.Infra.MatchMode,
     ) -> p.Result[t.ConfigurationMapping]:
-        """Scan a validated root with a compiled regex."""
+        """Scan a validated root with a compiled regex.
+
+        Returns:
+            The resulting ``p.Result[t.ConfigurationMapping]``.
+
+        """
         regex = c.Infra.compile_multiline(pattern)
         files = u.Infra.iter_matching_files(
-            scan_root, includes=includes, excludes=excludes
+            scan_root,
+            includes=includes,
+            excludes=excludes,
         )
         matches_result = self._count_matches(files, regex)
         if matches_result.failure:
@@ -128,7 +154,12 @@ class FlextInfraTextPatternScanner(s[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute the text-pattern scan CLI flow."""
+        """Execute the text-pattern scan CLI flow.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         result = self.scan(
             self.repository_root,
             self.pattern,
@@ -145,7 +176,12 @@ class FlextInfraTextPatternScanner(s[bool]):
 
     @staticmethod
     def _validate_scan_inputs(scan_root: Path, includes: t.StrSequence) -> str | None:
-        """Return an error message if scan inputs are invalid, else None."""
+        """Return an error message if scan inputs are invalid, else None.
+
+        Returns:
+            An error message if scan inputs are invalid, else None.
+
+        """
         if not scan_root.exists() or not scan_root.is_dir():
             return f"scan_root directory does not exist: {scan_root}"
         if not includes:

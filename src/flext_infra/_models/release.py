@@ -1,4 +1,8 @@
-"""Domain models for the release subpackage."""
+"""Domain models for the release subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,9 +11,8 @@ from typing import Annotated, Self
 
 from flext_core import m, u
 from flext_infra import t
-
-from .._constants.release import FlextInfraConstantsRelease as cr
-from .mixins import FlextInfraModelsMixins as mm
+from flext_infra._constants import FlextInfraConstantsRelease as cr
+from flext_infra._models import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsRelease:
@@ -19,10 +22,12 @@ class FlextInfraModelsRelease:
         """Immutable committed source identity used by one project build."""
 
         commit_oid: Annotated[
-            t.Infra.ReleaseCommitOid, m.Field(description="Source commit object ID")
+            t.Infra.ReleaseCommitOid,
+            m.Field(description="Source commit object ID"),
         ]
         source_date_epoch: Annotated[
-            t.NonNegativeInt, m.Field(description="Source commit Unix epoch")
+            t.NonNegativeInt,
+            m.Field(description="Source commit Unix epoch"),
         ]
 
     class BuildPolicy(m.StrictBoundaryModel):
@@ -49,10 +54,12 @@ class FlextInfraModelsRelease:
         """Immutable artifact emitted by one release build."""
 
         path: Annotated[
-            t.Infra.ReleaseAbsolutePath, m.Field(description="Artifact absolute path")
+            t.Infra.ReleaseAbsolutePath,
+            m.Field(description="Artifact absolute path"),
         ]
         kind: Annotated[
-            t.Infra.ReleaseArtifactKind, m.Field(description="wheel or sdist")
+            t.Infra.ReleaseArtifactKind,
+            m.Field(description="wheel or sdist"),
         ]
         sha256: Annotated[
             t.Infra.ReleaseArtifactSha256,
@@ -61,7 +68,15 @@ class FlextInfraModelsRelease:
 
         @u.model_validator(mode="after")
         def validate_kind_filename(self) -> Self:
-            """Require the declared artifact kind to match its immutable filename."""
+            """Require the declared artifact kind to match its immutable filename.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If artifact kind does not match filename.
+
+            """
             name = Path(self.path).name
             valid = (self.kind == "wheel" and name.endswith(".whl")) or (
                 self.kind == "sdist" and name.endswith(".tar.gz")
@@ -71,18 +86,38 @@ class FlextInfraModelsRelease:
                 raise ValueError(msg)
             return self
 
+    class ArtifactExpectation(m.StrictBoundaryModel):
+        """Committed identity, source license and distribution boundary to prove."""
+
+        project: Annotated[t.NonEmptyStr, m.Field(description="Distribution name")]
+        version: Annotated[t.NonEmptyStr, m.Field(description="Distribution version")]
+        license_sha256: Annotated[
+            t.Infra.ReleaseArtifactSha256,
+            m.Field(description="Committed source LICENSE SHA-256"),
+        ]
+        allowed_roots: Annotated[
+            t.StrTuple,
+            m.Field(description="Validated public source roots in the sdist"),
+        ]
+        versions: Annotated[
+            t.StrMapping,
+            m.Field(description="Resolved internal dependency versions"),
+        ]
+
     class BuildRecord(mm.ProjectNameMixin, m.StrictBoundaryModel):
         """Base model for build result data."""
 
         path: Annotated[
-            t.Infra.ReleaseAbsolutePath, m.Field(description="Project absolute path")
+            t.Infra.ReleaseAbsolutePath,
+            m.Field(description="Project absolute path"),
         ]
         exit_code: Annotated[
             t.StrictInt,
             m.Field(description="Artifact build command exit code, including signals"),
         ]
         log: Annotated[
-            t.Infra.ReleaseAbsolutePath, m.Field(description="Build log absolute path")
+            t.Infra.ReleaseAbsolutePath,
+            m.Field(description="Build log absolute path"),
         ]
         artifacts: Annotated[
             t.VariadicTuple[FlextInfraModelsRelease.BuildArtifact],
@@ -103,7 +138,15 @@ class FlextInfraModelsRelease:
 
         @u.model_validator(mode="after")
         def validate_provenance(self) -> Self:
-            """Require source provenance to be complete whenever it is available."""
+            """Require source provenance to be complete whenever it is available.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If build record source provenance must be complete.
+
+            """
             values = (
                 self.commit_oid,
                 self.source_date_epoch,
@@ -117,14 +160,17 @@ class FlextInfraModelsRelease:
             return self
 
     class ReleasePlan(m.StrictBoundaryModel):
-        """The protocol's decision for one repository, derived and never typed by hand."""
+        """The protocol's decision for one repository,
+        derived and never typed by hand."""
 
         current: Annotated[
-            t.NonEmptyStr, m.Field(description="Version declared by pyproject.toml")
+            t.NonEmptyStr,
+            m.Field(description="Version declared by pyproject.toml"),
         ]
         next: Annotated[t.NonEmptyStr, m.Field(description="Version to release")]
         bump: Annotated[
-            cr.VersionBump, m.Field(description="Bump derived from merged PRs")
+            cr.VersionBump,
+            m.Field(description="Bump derived from merged PRs"),
         ]
         previous_tag: Annotated[
             t.NonEmptyStr | None,
@@ -163,10 +209,12 @@ class FlextInfraModelsRelease:
 
         version: Annotated[t.NonEmptyStr, m.Field(description="Release version")]
         total: Annotated[
-            t.NonNegativeInt, m.Field(description="Total projects attempted")
+            t.NonNegativeInt,
+            m.Field(description="Total projects attempted"),
         ]
         failures: Annotated[
-            t.NonNegativeInt, m.Field(description="Total projects with non-zero exit")
+            t.NonNegativeInt,
+            m.Field(description="Total projects with non-zero exit"),
         ]
         records: Annotated[
             t.VariadicTuple[FlextInfraModelsRelease.BuildRecord],
@@ -184,7 +232,20 @@ class FlextInfraModelsRelease:
 
         @u.model_validator(mode="after")
         def validate_manifest(self) -> Self:
-            """Require totals, project identity, outcomes, and artifacts to agree."""
+            """Require totals, project identity, outcomes, and artifacts to agree.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If build report total does not match record count; or if
+                    build report failures do not match record outcomes; or if build
+                    report contains duplicate projects; or if non-dry build report
+                    contains no projects; or if failed build contains artifacts; or if
+                    dry-run build contains artifacts; or if successful build lacks wheel
+                    and sdist; or if successful build lacks source provenance.
+
+            """
             if self.total != len(self.records):
                 msg = "build report total does not match record count"
                 raise ValueError(msg)
@@ -230,15 +291,18 @@ class FlextInfraModelsRelease:
         mm.VersionTagMixin,
         m.ArbitraryTypesModel,
     ):
-        """Resolved input of one release phase: the repository, its declared version and its tag."""
+        """Resolved input of one release phase: the repository,
+        its declared version and its tag."""
 
         dry_run: Annotated[bool, m.Field(description="Dry run flag")] = False
         phase: Annotated[cr.ReleasePhase, m.Field(description="Release phase")]
         index: Annotated[
-            bool, m.Field(description="Publish verified artifacts to the package index")
+            bool,
+            m.Field(description="Publish verified artifacts to the package index"),
         ] = False
         pr_title: Annotated[
-            str, m.Field(description="Pull-request title to validate, when known")
+            str,
+            m.Field(description="Pull-request title to validate, when known"),
         ] = ""
 
 

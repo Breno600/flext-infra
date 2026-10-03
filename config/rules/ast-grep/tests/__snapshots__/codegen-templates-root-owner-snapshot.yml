@@ -1,0 +1,30 @@
+id: codegen-templates-root-owner
+snapshots:
+  ? |
+    from flext_infra import u
+    templates_root = (
+        self._package_root() / "templates" / codegen.templates.root
+    ).resolve()
+  : fixed: |
+      from flext_infra import u
+      templates_root = u.Infra.codegen_templates_root(codegen)
+    labels:
+    - source: |-
+        (
+            self._package_root() / "templates" / codegen.templates.root
+        ).resolve()
+      style: primary
+      start: 43
+      end: 120
+    - source: from flext_infra import u
+      style: secondary
+      start: 0
+      end: 25
+    - source: |
+        from flext_infra import u
+        templates_root = (
+            self._package_root() / "templates" / codegen.templates.root
+        ).resolve()
+      style: secondary
+      start: 0
+      end: 121

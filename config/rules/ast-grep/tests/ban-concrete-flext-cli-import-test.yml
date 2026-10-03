@@ -1,0 +1,8 @@
+id: ban-concrete-flext-cli-import
+valid:
+  - from flext_cli import cli, c, m, p, t, u
+  - from other import FlextCliThing
+  - from flext_cli.api import FlextCli
+invalid:
+  - from flext_cli import FlextCliConstants
+  - from flext_cli import m, FlextCliModels as M

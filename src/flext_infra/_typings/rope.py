@@ -10,8 +10,7 @@ from ast import Import, ImportFrom
 from collections.abc import Callable
 
 from flext_core import t
-
-from .._protocols.rope_runtime import FlextInfraProtocolsRopeRuntime
+from flext_infra._protocols.rope_runtime import FlextInfraProtocolsRopeRuntime
 
 
 class FlextInfraTypesRope:
@@ -26,6 +25,7 @@ class FlextInfraTypesRope:
     type RopePyName = FlextInfraProtocolsRopeRuntime.RopePyName
     type RopeAssignedName = FlextInfraProtocolsRopeRuntime.RopeAssignedName
     type RopePyObject = FlextInfraProtocolsRopeRuntime.RopePyObject
+    type RopeAstNode = FlextInfraProtocolsRopeRuntime.RopeAstNode
     type RopeScope = FlextInfraProtocolsRopeRuntime.RopeScope
     type RopeFromImport = FlextInfraProtocolsRopeRuntime.RopeFromImport
     type RopeNormalImport = FlextInfraProtocolsRopeRuntime.RopeNormalImport
@@ -38,7 +38,8 @@ class FlextInfraTypesRope:
     type RopeOccurrenceFinder = FlextInfraProtocolsRopeRuntime.RopeOccurrenceFinder
 
     type RopeTransformFn = Callable[
-        [RopeProject, RopeResource], t.Pair[str, t.StrSequence]
+        [RopeProject, RopeResource],
+        t.Pair[str, t.StrSequence],
     ]
 
 

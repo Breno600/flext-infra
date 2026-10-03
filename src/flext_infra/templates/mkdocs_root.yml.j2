@@ -7,29 +7,7 @@ repo_name: {{ repo_name }}
 repo_url: {{ repo_url }}
 {{ mk.site_components(exclude_docs_block, exclude_plugin_block, mkdocstrings_paths_block) }}
 
-nav:
-  - Home: index.md
-  - Knowledge Index: knowledge-index.md
-  - Architecture:
-      - Overview: architecture/README.md
-      - arc42: architecture/arc42/README.md
-      - Code Communities: architecture/communities/index.md
-      - CRG Risk Reports:
-          - Dead Code: architecture/crg-reports/dead-code.md
-          - Architecture Risk: architecture/crg-reports/architecture.md
-          - Large Functions: architecture/crg-reports/large-functions.md
-  - Standards:
-      - Documentation: standards/documentation.md
-      - Docstrings: standards/docstrings/README.md
-  - Guides: guides/README.md
-  - Projects: projects/README.md
-  - API Reference:
-      - Index: api-reference/README.md
-      - Foundation: api-reference/foundation.md
-      - Types: api/types.md
-      - API Overview: api-reference/generated/overview.md
-  - Project Catalog: projects/generated/catalog.md
-  - Version Policy: version-policy.md
-
+# MkDocs discovers the complete documentation tree, including maintained pages.
+# A fixed three-page nav silently omitted guides, standards, and decisions.
 {{ mk.not_in_nav_block() }}
 {{ mk.validation_block() }}

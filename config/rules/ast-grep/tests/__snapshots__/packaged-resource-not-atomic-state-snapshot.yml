@@ -1,0 +1,12 @@
+id: packaged-resource-not-atomic-state
+snapshots:
+  state = u.Cli.atomic_read_binary_file_state(Path(__file__).parent / name, required=True):
+    labels:
+    - source: u.Cli.atomic_read_binary_file_state(Path(__file__).parent / name, required=True)
+      style: primary
+      start: 8
+      end: 88
+    - source: __file__
+      style: secondary
+      start: 49
+      end: 57

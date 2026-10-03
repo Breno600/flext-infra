@@ -6,6 +6,9 @@ legitimately integrate on different branches (for example ``dev`` and
 closed on every repository whose integration branch differs from the provider
 default. The canonical baseline is the integration branch the repository really
 publishes, discovered from Git itself.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -28,11 +31,12 @@ class TestsFlextInfraRepositoryBaselineBranch:
             test_u.Cli.run_checked(
                 ["git", "update-ref", f"refs/remotes/origin/{branch}", "HEAD"],
                 cwd=repository_root,
-            )
+            ),
         )
 
     def test_baseline_follows_the_published_integration_branch(
-        self, infra_git_repo: Path
+        self,
+        infra_git_repo: Path,
     ) -> None:
         """The derived baseline is the integration branch the repository has."""
         # A repository that publishes ONLY `dev` must resolve to `dev`, proving
@@ -45,8 +49,9 @@ class TestsFlextInfraRepositoryBaselineBranch:
         for reference in seeded.value.split():
             tm.ok(
                 test_u.Cli.run_checked(
-                    ["git", "update-ref", "-d", reference], cwd=infra_git_repo
-                )
+                    ["git", "update-ref", "-d", reference],
+                    cwd=infra_git_repo,
+                ),
             )
         self._seed_remote_branch(infra_git_repo, "dev")
 
@@ -55,8 +60,9 @@ class TestsFlextInfraRepositoryBaselineBranch:
         tm.ok(resolved)
         tm.that(resolved.value, eq="dev")
 
+    @staticmethod
     def test_baseline_fails_closed_without_any_integration_branch(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """A checkout without a published integration branch never guesses."""
         empty = tmp_path / "no-integration-branch"
@@ -83,15 +89,17 @@ class TestsFlextInfraRepositoryBaselineBranch:
         for reference in seeded.value.split():
             tm.ok(
                 test_u.Cli.run_checked(
-                    ["git", "update-ref", "-d", reference], cwd=infra_git_repo
-                )
+                    ["git", "update-ref", "-d", reference],
+                    cwd=infra_git_repo,
+                ),
             )
         # Both are published, so only the declared order can decide between them.
         self._seed_remote_branch(infra_git_repo, "dev")
         self._seed_remote_branch(infra_git_repo, "9.9.9-dev")
 
         declared = u.Infra.repository_baseline_branch(
-            infra_git_repo, preference=("9.9.9-dev", "develop", "dev")
+            infra_git_repo,
+            preference=("9.9.9-dev", "develop", "dev"),
         )
 
         tm.ok(declared)
@@ -103,6 +111,3 @@ class TestsFlextInfraRepositoryBaselineBranch:
 
         tm.ok(builtin)
         tm.that(builtin.value, eq="dev")
-
-
-__all__: tuple[str, ...] = ()

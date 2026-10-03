@@ -16,13 +16,12 @@ from tests import u
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import t
 
-
-class TestScannerHelpers:
+class TestsFlextInfraScannerHelpers:
     """Tests for scanner helper methods."""
 
-    def test_iter_matching_files_glob_patterns(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_iter_matching_files_glob_patterns(tmp_path: Path) -> None:
         """Canonical file selection respects include/exclude glob patterns."""
         u.Tests.git_bootstrap(tmp_path, ("init",))
         (tmp_path / "file1.py").write_text("")
@@ -32,11 +31,14 @@ class TestScannerHelpers:
         included = u.Infra.iter_matching_files(tmp_path, includes=["*.py"])
         tm.that(len(included), eq=3)
         excluded = u.Infra.iter_matching_files(
-            tmp_path, includes=["*.py"], excludes=["test*"]
+            tmp_path,
+            includes=["*.py"],
+            excludes=["test*"],
         )
         tm.that(len(excluded), eq=2)
 
-    def test_iter_matching_files_skips_directories(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_iter_matching_files_skips_directories(tmp_path: Path) -> None:
         """Canonical file selection skips directories."""
         u.Tests.git_bootstrap(tmp_path, ("init",))
         (tmp_path / "file.txt").write_text("")
@@ -44,8 +46,9 @@ class TestScannerHelpers:
         files = u.Infra.iter_matching_files(tmp_path, includes=["*"])
         tm.that(len(files), eq=1)
 
+    @staticmethod
     def test_iter_matching_files_prefers_git_tracked_files(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Canonical file selection prefers tracked files when Git is active."""
         u.Tests.git_bootstrap(tmp_path, ("init",))
@@ -62,8 +65,9 @@ class TestScannerHelpers:
 
         tm.that(files, eq=[tracked_file, untracked_file])
 
+    @staticmethod
     def test_iter_matching_files_excludes_git_ignored_explicit_scope(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """An ignored nested scope cannot bypass its ancestor repository policy."""
         init_result = u.Cli.run_raw(["git", "init"], cwd=tmp_path)
@@ -79,8 +83,9 @@ class TestScannerHelpers:
 
         tm.that(files, eq=[])
 
+    @staticmethod
     def test_tracked_scope_refreshes_dirty_files_between_scans(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """A long-running pipeline observes files created after its first scan."""
         init_result = u.Cli.run_raw(["git", "init"], cwd=tmp_path)
@@ -97,8 +102,9 @@ class TestScannerHelpers:
 
         tm.that(infra_u.Infra.git_tracked_scope_paths(source), eq=[first, second])
 
+    @staticmethod
     def test_tracked_scope_refreshes_repository_identity_after_git_init(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """A process observes repository identity created after its first scan."""
         source = tmp_path / "src"
@@ -113,8 +119,9 @@ class TestScannerHelpers:
 
         tm.that(infra_u.Infra.git_tracked_scope_paths(source), eq=[unmanaged])
 
+    @staticmethod
     def test_empty_git_scope_does_not_fall_back_to_filesystem_scan(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """A valid empty Git scope stays distinct from an external scope."""
         init_result = u.Cli.run_raw(["git", "init"], cwd=tmp_path)
@@ -124,6 +131,3 @@ class TestScannerHelpers:
         scope.mkdir()
 
         tm.that(infra_u.Infra.git_tracked_scope_paths(scope), eq=[])
-
-
-__all__: t.StrSequence = []

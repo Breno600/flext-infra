@@ -1,22 +1,22 @@
-"""Bootstrap-safe namespace constants."""
+"""Bootstrap-safe namespace constants.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
-from types import MappingProxyType
-from typing import TYPE_CHECKING, Final
-
-if TYPE_CHECKING:
-    from flext_infra import t
+from typing import ClassVar
 
 
 class FlextInfraConstantsNamespace:
     """Namespace constants shared by bootstrap-sensitive utilities."""
 
-    NAMESPACE_SETTINGS_FILE_NAMES: Final[frozenset[str]] = frozenset({
+    NAMESPACE_SETTINGS_FILE_NAMES: ClassVar[frozenset[str]] = frozenset({
         "settings.py",
         "_settings.py",
     })
-    NAMESPACE_PROTECTED_FILES: Final[frozenset[str]] = frozenset({
+    NAMESPACE_PROTECTED_FILES: ClassVar[frozenset[str]] = frozenset({
         "settings.py",
         "_settings.py",
         "typings.py",
@@ -27,132 +27,6 @@ class FlextInfraConstantsNamespace:
         "conftest.py",
         "py.typed",
     })
-    NAMESPACE_LAYER_ORDER: Final[t.VariadicTuple[str]] = (
-        "settings",
-        "config",
-        "c",
-        "t",
-        "p",
-        "m",
-        "u",
-        "base",
-        "services",
-        "api",
-        "cli",
-    )
-    NAMESPACE_OPERATION_FACADES: Final[t.VariadicTuple[str]] = (
-        "r",
-        "e",
-        "x",
-        "h",
-        "d",
-        "s",
-    )
-    # Carve-out D1 (decision A, handoff §1.3): settings/config owners (the only
-    # rank-0/1 layers that declare nested Pydantic namespace-models) may import
-    # the declaration facades m/t/u at runtime — BaseModel/Field/typings/
-    # MappingKV/JSON/JsonValue and model_validator — exactly the canonical
-    # Flext<X>Settings pattern (e.g. flext-auth/_settings.py, flext-api/_settings).
-    # Direct ``pydantic`` stays prohibited (ENFORCE-070): flext-core is the sole
-    # owner of pydantic. c/p and the operational facades r/e/x/h/d/s are NOT
-    # covered by this carve-out and remain forward-only (TYPE_CHECKING).
-    NAMESPACE_SETTINGS_IMPORT_ALLOWED_OWNERS: Final[t.VariadicTuple[str]] = (
-        "settings",
-        "config",
-    )
-    # Platform service-facade singletons emitted by codegen (api.py.j2:20
-    # ``{{ alias }} = {{ class_stem }}.fetch_global()``) and the canonical
-    # base/services/config/settings layers. These expose a bottom singleton
-    # ``alias = Class.fetch_global()`` (plain Assign or typed AnnAssign) which
-    # the structure rule must recognize as canonical, not a banned module alias.
-    # Handoff §1.2 layer order: ...base->services->api->cli; settings/config are
-    # the rank-0/1 layers (rank-0/1 layers that declare the Flext<X>Settings).
-    NAMESPACE_PLATFORM_FACADE_SINGLETONS: Final[t.MappingKV[str, t.StrPair]] = (
-        MappingProxyType({
-            "api.py": ("api", ""),
-            "base.py": ("s", "ServiceBase"),
-            "_config.py": ("config", "Config"),
-            "config.py": ("config", "Config"),
-            "_settings.py": ("settings", "Settings"),
-            "settings.py": ("settings", "Settings"),
-        })
-    )
-    "Canonical platform facade file name -> (alias, class-name suffix)."
-    NAMESPACE_LAYER_BY_FILE: Final[MappingProxyType[str, str]] = MappingProxyType({
-        "settings.py": "settings",
-        "_settings.py": "settings",
-        "config.py": "config",
-        "_config.py": "config",
-        "constants.py": "c",
-        "typings.py": "t",
-        "protocols.py": "p",
-        "models.py": "m",
-        "utilities.py": "u",
-        "base.py": "base",
-        "api.py": "api",
-        "cli.py": "cli",
-    })
-    NAMESPACE_LAYER_BY_FAMILY: Final[MappingProxyType[str, str]] = MappingProxyType({
-        "_constants": "c",
-        "_typings": "t",
-        "_protocols": "p",
-        "_models": "m",
-        "_utilities": "u",
-        "services": "services",
-    })
-    NAMESPACE_BANNED_ANNOTATIONS: Final[frozenset[str]] = frozenset({
-        "Any",
-        "Optional",
-        "dict",
-        "object",
-    })
-    NAMESPACE_PYDANTIC_V1_MEMBERS: Final[frozenset[str]] = frozenset({
-        "dict",
-        "json",
-        "parse_obj",
-        "parse_raw",
-        "validator",
-        "root_validator",
-    })
-    # The subset reached by bare name rather than through a model instance:
-    # `@validator(...)` is imported from pydantic and called directly, while
-    # `dict`, `json`, `parse_obj` and `parse_raw` are only Pydantic when they
-    # appear as an attribute -- as bare names they are the builtins.
-    NAMESPACE_PYDANTIC_V1_DECORATORS: Final[frozenset[str]] = frozenset({
-        "validator",
-        "root_validator",
-    })
-    NAMESPACE_SERVICE_LOCATOR_NAMES: Final[frozenset[str]] = frozenset({
-        "container",
-        "get_service",
-        "locator",
-        "resolve_service",
-        "service_locator",
-    })
-    NAMESPACE_LOGICAL_STATEMENT_KINDS: Final[frozenset[str]] = frozenset({
-        "AnnAssign",
-        "Assert",
-        "Assign",
-        "AsyncFor",
-        "AsyncFunctionDef",
-        "AsyncWith",
-        "AugAssign",
-        "ClassDef",
-        "Delete",
-        "For",
-        "FunctionDef",
-        "If",
-        "Match",
-        "Raise",
-        "Return",
-        "Try",
-        "TypeAlias",
-        "While",
-        "With",
-        "Yield",
-        "YieldFrom",
-    })
-    NAMESPACE_MAX_LOGICAL_LOC: Final[int] = 200
 
 
 __all__: list[str] = ["FlextInfraConstantsNamespace"]

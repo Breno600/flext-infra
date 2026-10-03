@@ -12,8 +12,8 @@ read it before opening a pull request.
 git clone {{ flext_git_base_url }}/flext.git
 cd flext
 make setup
-make check 
-make test 
+make check
+make test
 ```
 
 ## Development Workflow
@@ -36,22 +36,36 @@ Use conventional commit messages:
 ## Testing
 
 - Test public facades only — no mocks, no internal-method assertions.
-- Shared fixtures live in `flext-tests` (`tm`/`tv`/`tt` facades).
+- Shared fixtures live in `flext-tests` (the `tm` matchers and the `td`/`tf`/`tk` helpers).
 - Tests use the unified `conftest.py` — no per-test setup duplication.
 - Tests assert observable behavior, never implementation details.
 
 ```bash
-make test 
+make test
 ```
+
+`make test` runs the incremental scope with the persistent external Testmon cache.
+For the complete suite, including external and CI-excluded markers, run:
+
+```bash
+make test-full
+```
+
+The full verb first runs the incremental phase, then the complete phase. Both share
+one database and one absolute deadline. The first failure stops the operation.
+External tests retain their required services and authentication. Each phase emits
+its own receipts; warnings include selection, inventory, and execution counts.
+Zero execution is accepted only as a typed, integrity-checked incremental cache hit,
+never as tests passed. Never invoke the underlying test runner directly.
 
 ## Code Quality
 
 All quality gates run through canonical `make` verbs:
 
 ```bash
-make check 
-make fmt 
-make conform 
+make check
+make fmt
+make gen
 ```
 
 - **Ruff** — lint + format (enforced via `make check `)

@@ -1,0 +1,28 @@
+id: pydantic-mappingproxy-default-factory
+# `valid` MUST NOT match: the default already comes from a factory, the
+# proxy is a ClassVar constant or a module-level value pydantic never copies,
+# or the construct is text rather than code.
+valid:
+  - |
+    class Spec:
+        captures: Annotated[
+            t.JsonMapping,
+            m.Field(default_factory=lambda: MappingProxyType({}), description="d"),
+        ]
+  - |
+    class Constants:
+        GATE_KINDS: ClassVar[t.MappingKV[str, str]] = MappingProxyType({"a": "b"})
+  - _LAZY_IMPORTS = MappingProxyType({})
+  - |
+    """A docstring mentioning field: Annotated[X, Y] = MappingProxyType({})."""
+# `invalid` MUST match: an annotated pydantic field whose default is a proxy.
+invalid:
+  - |
+    class Spec:
+        standalone_check_gates: Annotated[
+            Mapping[t.NonEmptyStr, t.NonEmptyStr],
+            m.Field(description="Public Make verb to checker gate mapping"),
+        ] = MappingProxyType({})
+  - |
+    class Spec:
+        overrides: Annotated[t.StrMapping, m.Field(description="d")] = MappingProxyType({"k": "v"})

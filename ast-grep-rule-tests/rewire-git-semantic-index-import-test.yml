@@ -1,5 +1,0 @@
-id: rewire-git-semantic-index-module
-valid:
-  - from flext_infra._utilities._git.semantic_index import ImportedName
-invalid:
-  - from flext_infra._utilities._git.semantic import ImportedName

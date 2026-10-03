@@ -1,0 +1,44 @@
+# Detection-only companion of release-family-owner-is-release-module.
+#
+# That rule rewires a consumer from the artifact copy of the release family to
+# its elected owner, but ast-grep cannot conditionally insert the import the
+# new name needs — the same constraint that keeps
+# rewire-logging-get-logger-missing-u-import detection-only. Declarations
+# resolve strictly in this project (model_rebuild is prohibited), so an
+# unbound namespace name is not a lint warning: the Pydantic model is never
+# fully defined and the whole package stops importing.
+#
+# The module that declares the namespace is excluded: there the name is a
+# definition, not a consumer binding, and demanding an import of itself
+# would be a false positive.
+#
+# Bind the namespace first; the rewiring rule is then safe to apply.
+id: release-family-owner-missing-import
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  all:
+    - pattern: FlextInfraConfigModelsRelease.$ATTR
+    - inside:
+        kind: module
+        stopBy: end
+        not:
+          has:
+            stopBy: end
+            matches: config-models-release-imported
+    - inside:
+        kind: module
+        stopBy: end
+        not:
+          has:
+            stopBy: end
+            kind: class_definition
+            has:
+              field: name
+              regex: "^FlextInfraConfigModelsRelease$"
+message: >-
+  This module names the release config namespace without binding it; the
+  declaration cannot resolve and the package fails to import.

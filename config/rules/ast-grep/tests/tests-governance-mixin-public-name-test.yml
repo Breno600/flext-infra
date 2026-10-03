@@ -1,0 +1,11 @@
+id: tests-governance-mixin-public-name
+valid:
+  - |
+    from flext_tests import FlextTestsModuleGovernanceMixin
+    class TestsGov(FlextTestsModuleGovernanceMixin):
+        pass
+invalid:
+  - |
+    from flext_tests.utilities import ModuleGovernanceMixin
+    class TestsGov(ModuleGovernanceMixin):
+        pass

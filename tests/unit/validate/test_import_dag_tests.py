@@ -1,4 +1,8 @@
-"""Behavior tests for the strict test import DAG guard."""
+"""Behavior tests for the strict test import DAG guard.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -13,16 +17,19 @@ from tests import m
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from tests import t
 
-class TestsTestImportDag:
+
+class TestsFlextInfraImportDag:
     """Verify allowed and forbidden package-test import edges."""
 
     @staticmethod
-    def _project(tmp_path: Path, files: dict[str, str]) -> Path:
+    def _project(tmp_path: Path, files: t.MappingKV[str, str]) -> Path:
         project = tmp_path / "sample"
         (project / "pyproject.toml").parent.mkdir(parents=True, exist_ok=True)
         (project / "pyproject.toml").write_text(
-            '[project]\nname = "sample"\nversion = "0.0.1"\n', encoding="utf-8"
+            '[project]\nname = "sample"\nversion = "0.0.1"\n',
+            encoding="utf-8",
         )
         for relative, source in files.items():
             target = project / relative
@@ -44,17 +51,23 @@ class TestsTestImportDag:
         ],
     )
     def test_forbidden_edges_fail(
-        self, tmp_path: Path, source: str, imported: str
+        self,
+        tmp_path: Path,
+        source: str,
+        imported: str,
     ) -> None:
+        """Test forbidden edges fail."""
         project = self._project(tmp_path, {source: imported})
         report: m.Infra.ValidationReport = tm.ok(
-            FlextInfraValidateTestImportDag().build_report(project)
+            FlextInfraValidateTestImportDag().build_report(project),
         )
         tm.that(report.passed, eq=False)
 
     def test_forward_facets_and_type_checking_reverse_edges_pass(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test forward facets and type checking reverse edges pass."""
         project = self._project(
             tmp_path,
             {
@@ -71,9 +84,6 @@ class TestsTestImportDag:
             },
         )
         report: m.Infra.ValidationReport = tm.ok(
-            FlextInfraValidateTestImportDag().build_report(project)
+            FlextInfraValidateTestImportDag().build_report(project),
         )
         tm.that(report.passed, eq=True)
-
-
-__all__: list[str] = []
