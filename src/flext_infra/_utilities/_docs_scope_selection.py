@@ -1,4 +1,8 @@
-"""Docs scope selection helpers."""
+"""Docs scope selection helpers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import m
-
-from .docs_scope import FlextInfraUtilitiesDocsScope
+from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -24,14 +27,22 @@ class FlextInfraUtilitiesDocsScopeSelectionMixin:
         selected_names: t.StrSequence,
         output_dir: Path | str,
     ) -> t.SequenceOf[m.Infra.DocScope]:
-        """Build docs scopes for selected project names."""
+        """Build docs scopes for selected project names.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.DocScope]``.
+
+        """
         project_by_name = FlextInfraUtilitiesDocsScopeSelectionMixin._project_by_name(
-            discovered
+            discovered,
         )
         scopes: list[m.Infra.DocScope] = []
         for name in selected_names:
             scope = FlextInfraUtilitiesDocsScopeSelectionMixin._selected_scope(
-                repository_root, name, project_by_name, output_dir
+                repository_root,
+                name,
+                project_by_name,
+                output_dir,
             )
             if scope is not None:
                 scopes.append(scope)
@@ -44,21 +55,35 @@ class FlextInfraUtilitiesDocsScopeSelectionMixin:
         project_by_name: MutableMapping[str, m.Infra.ProjectInfo],
         output_dir: Path | str,
     ) -> m.Infra.DocScope | None:
-        """Build one selected scope from discovery or a local path."""
+        """Build one selected scope from discovery or a local path.
+
+        Returns:
+            The resulting ``m.Infra.DocScope | None``.
+
+        """
         selected = project_by_name.get(name)
         if selected is not None:
             return FlextInfraUtilitiesDocsScopeSelectionMixin._doc_scope(
-                project=selected, output_dir=output_dir, repository_root=repository_root
+                project=selected,
+                output_dir=output_dir,
+                repository_root=repository_root,
             )
         return FlextInfraUtilitiesDocsScopeSelectionMixin._optional_path_scope(
-            repository_root, name, output_dir
+            repository_root,
+            name,
+            output_dir,
         )
 
     @staticmethod
     def _project_by_name(
         discovered: t.SequenceOf[m.Infra.ProjectInfo],
     ) -> MutableMapping[str, m.Infra.ProjectInfo]:
-        """Index discovered projects by canonical and directory names."""
+        """Index discovered projects by canonical and directory names.
+
+        Returns:
+            The resulting ``MutableMapping[str, m.Infra.ProjectInfo]``.
+
+        """
         project_by_name: MutableMapping[str, m.Infra.ProjectInfo] = {}
         for project in discovered:
             project_by_name.setdefault(project.name, project)
@@ -67,32 +92,55 @@ class FlextInfraUtilitiesDocsScopeSelectionMixin:
 
     @staticmethod
     def _optional_path_scope(
-        repository_root: Path, name: str, output_dir: Path | str
+        repository_root: Path,
+        name: str,
+        output_dir: Path | str,
     ) -> m.Infra.DocScope | None:
-        """Build a selected path scope when it is a local pyproject project."""
+        """Build a selected path scope when it is a local pyproject project.
+
+        Returns:
+            The resulting ``m.Infra.DocScope | None``.
+
+        Raises:
+            ValueError: If docs project selector escapes repository; or if
+                ``roots.failure``.
+
+        """
         relative = Path(name)
         if relative.is_absolute() or ".." in relative.parts:
             msg = f"docs project selector escapes repository: {name}"
             raise ValueError(msg)
         project_root = repository_root / relative
         roots = FlextInfraUtilitiesDocsScope.docs_repository_roots(
-            repository_root, (project_root,)
+            repository_root,
+            (project_root,),
         )
         if roots.failure:
             raise ValueError(
-                roots.error or f"docs project path is unsafe: {project_root}"
+                roots.error or f"docs project path is unsafe: {project_root}",
             )
         if project_root not in roots.value:
             return None
         if not FlextInfraUtilitiesDocsScope.project_state(project_root).payload:
             return None
         return FlextInfraUtilitiesDocsScopeSelectionMixin._governed_scope(
-            project_root, output_dir, repository_root=repository_root
+            project_root,
+            output_dir,
+            repository_root=repository_root,
         )
 
     @staticmethod
     def _report_directory(project_root: Path, output_dir: Path | str) -> Path:
-        """Return one lexical report path owned by its project root."""
+        """Return one lexical report path owned by its project root.
+
+        Returns:
+            One lexical report path owned by its project root.
+
+        Raises:
+            ValueError: If docs output directory must be relative to each project root,
+                got.
+
+        """
         relative = Path(output_dir)
         if relative.is_absolute() or ".." in relative.parts:
             # Each scope anchors its own reports under its own root, so the
@@ -108,15 +156,24 @@ class FlextInfraUtilitiesDocsScopeSelectionMixin:
 
     @staticmethod
     def _doc_scope(
-        *, project: m.Infra.ProjectInfo, output_dir: Path | str, repository_root: Path
+        *,
+        project: m.Infra.ProjectInfo,
+        output_dir: Path | str,
+        repository_root: Path,
     ) -> m.Infra.DocScope:
-        """Build one canonical docs scope model."""
+        """Build one canonical docs scope model.
+
+        Returns:
+            The resulting ``m.Infra.DocScope``.
+
+        """
         resolved = project.path
         return m.Infra.DocScope(
             name=project.name,
             path=resolved,
             report_dir=FlextInfraUtilitiesDocsScopeSelectionMixin._report_directory(
-                resolved, output_dir
+                resolved,
+                output_dir,
             ),
             project_class=project.project_class,
             package_name=project.package_name,
@@ -125,25 +182,38 @@ class FlextInfraUtilitiesDocsScopeSelectionMixin:
 
     @staticmethod
     def _governed_scope(
-        project_root: Path, output_dir: Path | str, *, repository_root: Path
+        project_root: Path,
+        output_dir: Path | str,
+        *,
+        repository_root: Path,
     ) -> m.Infra.DocScope:
-        """Build docs scope for a governed project root."""
+        """Build docs scope for a governed project root.
+
+        Returns:
+            The resulting ``m.Infra.DocScope``.
+
+        """
         payload = FlextInfraUtilitiesDocsScope.project_payload(project_root)
         docs_meta = FlextInfraUtilitiesDocsScope.docs_meta_from_payload(payload)
         project_name = FlextInfraUtilitiesDocsScope.project_name_from_payload(
-            project_root, payload
+            project_root,
+            payload,
         )
         return m.Infra.DocScope(
             name=project_name,
             path=project_root,
             report_dir=FlextInfraUtilitiesDocsScopeSelectionMixin._report_directory(
-                project_root, output_dir
+                project_root,
+                output_dir,
             ),
             project_class=FlextInfraUtilitiesDocsScope.classify_project_from_meta(
-                project_name, docs_meta
+                project_name,
+                docs_meta,
             ),
             package_name=FlextInfraUtilitiesDocsScope.package_name_from_payload(
-                project_root, payload, docs_meta
+                project_root,
+                payload,
+                docs_meta,
             ),
             repository_root_override=repository_root,
         )

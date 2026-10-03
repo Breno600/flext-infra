@@ -5,6 +5,9 @@ subject that a merged pull request leaves on its merge commit, writes the
 version only through the protocol, and identifies a release by one tag shape.
 These are external contracts (Conventional Commits, PEP 440, Git), so they are
 constants rather than configuration.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -40,14 +43,15 @@ class FlextInfraConstantsRelease:
         MAJOR = "major"
 
     VERSION_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^version\s*=\s*['\"](.+?)['\"]", re.MULTILINE
+        r"^version\s*=\s*['\"](.+?)['\"]",
+        re.MULTILINE,
     )
     CONVENTIONAL_SUBJECT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?P<type>[a-z]+)(?:\([^)]+\))?(?P<breaking>!)?: \S"
+        r"^(?P<type>[a-z]+)(?:\([^)]+\))?(?P<breaking>!)?: \S",
     )
     "Conventional Commits subject: ``type(scope)!: description``."
     PULL_REQUEST_MERGE_SUBJECT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^Merge pull request #\d+\b"
+        r"^Merge pull request #\d+\b",
     )
     "GitHub's default merge subject, which carries no release information."
     TAG_FORMAT: ClassVar[str] = "v{version}"
@@ -55,7 +59,7 @@ class FlextInfraConstantsRelease:
     "One bot-owned lane per repository; the open release pull request lives here."
     RELEASE_COMMIT_SUBJECT: ClassVar[str] = "chore(release): v{version}"
     RELEASE_COMMIT_SUBJECT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^chore\(release\): v(?P<version>\S+?)(?: \(#\d+\))?$"
+        r"^chore\(release\): v(?P<version>\S+?)(?: \(#\d+\))?$",
     )
     "The release commit as Git carries it: GitHub appends ` (#N)` when merging."
     RELEASE_PLAN_FILENAME: ClassVar[str] = "plan.json"
@@ -65,7 +69,7 @@ class FlextInfraConstantsRelease:
     RELEASE_NOTES_CONTINUATION_INDENT: ClassVar[str] = "  "
     "Continuation indent aligning a wrapped bullet's text under its marker."
     MARKDOWN_INLINE_ESCAPE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"([\\`*_\[\]<>~|])"
+        r"([\\`*_\[\]<>~|])",
     )
     "Inline markdown punctuation escaped so an untrusted subject renders literally."
     RELEASE_REPORT_FILENAME: ClassVar[str] = "build-report.json"
@@ -105,10 +109,12 @@ class FlextInfraConstantsRelease:
     RELEASE_SDIST_ROOT_DIRS: ClassVar[frozenset[str]] = frozenset({"config", "src"})
     RELEASE_SDIST_ROOT_FILES: ClassVar[frozenset[str]] = frozenset({
         ".gitignore",
-        # A project may ship its governance agent manifest as one declared
-        # runtime asset at the sdist root (ai-hub embeds AGENTS.md for the
-        # agents it deploys); the build hook force-includes it by name.
+        # A project may ship its governance agent manifests as declared
+        # runtime assets at the sdist root (a consumer may embed AGENTS.md
+        # and CLAUDE.md for the agents it deploys); the build hook
+        # force-includes them by name.
         "agents.md",
+        "claude.md",
         "pkg-info",
         "pyproject.toml",
     })

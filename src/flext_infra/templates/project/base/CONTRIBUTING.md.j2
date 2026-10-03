@@ -36,7 +36,7 @@ Use conventional commit messages:
 ## Testing
 
 - Test public facades only — no mocks, no internal-method assertions.
-- Shared fixtures live in `flext-tests` (`tm`/`tv`/`tt` facades).
+- Shared fixtures live in `flext-tests` (the `tm` matchers and the `td`/`tf`/`tk` helpers).
 - Tests use the unified `conftest.py` — no per-test setup duplication.
 - Tests assert observable behavior, never implementation details.
 

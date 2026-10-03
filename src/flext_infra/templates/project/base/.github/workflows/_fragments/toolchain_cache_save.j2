@@ -6,6 +6,5 @@
           path: |
             {{ make.clean.cache_dirs | join("\n            ") }}
             ~/.cache/uv
-            ~/.cache/pyright
             ~/.local/share/mise
           key: {% raw %}${{ runner.os }}-{% endraw %}{{ python_version }}{% raw %}-tools-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml') }}{% endraw %}

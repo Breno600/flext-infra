@@ -1,4 +1,8 @@
-"""Public API contract tests for flext_infra facades."""
+"""Public API contract tests for flext_infra facades.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -12,11 +16,13 @@ import flext_infra
 class TestsFlextInfraPublicApi:
     """Exercise the root public package metadata against its pyproject."""
 
-    def test_public_runtime_metadata_matches_public_constants(self) -> None:
+    @staticmethod
+    def test_public_runtime_metadata_matches_public_constants() -> None:
+        """Test public runtime metadata matches public constants."""
         metadata = tm.ok(
             flext_infra.u.Infra.read_project_metadata_result(
-                Path(__file__).resolve().parents[2]
-            )
+                Path(__file__).resolve().parents[2],
+            ),
         )
 
         tm.that(flext_infra.__title__, eq=metadata.project.name)

@@ -14,6 +14,7 @@ from tests import p
 class TestsFlextInfraInfraProtocols:
     """Test p class import and structure."""
 
-    def test_flext_infra_protocols_is_importable(self) -> None:
+    @staticmethod
+    def test_flext_infra_protocols_is_importable() -> None:
         """Test that p can be imported."""
         tm.that(p, none=False)

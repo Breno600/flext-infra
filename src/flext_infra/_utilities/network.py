@@ -1,4 +1,8 @@
-"""Stdlib HTTP owner: reachability preflight and authenticated text requests."""
+"""Stdlib HTTP owner: reachability preflight and authenticated text requests.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -18,7 +22,15 @@ class FlextInfraUtilitiesNetwork:
 
     @staticmethod
     def _connection(url: str, *, timeout_seconds: float) -> HTTPConnection:
-        """Open one connection for an ``http``/``https`` URL, or raise."""
+        """Open one connection for an ``http``/``https`` URL, or raise.
+
+        Returns:
+            The resulting ``HTTPConnection``.
+
+        Raises:
+            ValueError: If HTTP exchange requires an http(s) URL, got.
+
+        """
         parts = urlsplit(url)
         if parts.scheme not in {"http", "https"} or not parts.hostname:
             msg = f"HTTP exchange requires an http(s) URL, got {url!r}"
@@ -35,16 +47,22 @@ class FlextInfraUtilitiesNetwork:
         can succeed. Only a connection failure or a timeout means offline. The
         endpoint must be ``http`` or ``https``; any other scheme is a caller
         defect and raises.
+
+        Returns:
+            Whether one HEAD request receives any HTTP answer in time.
+
         """
         connection = FlextInfraUtilitiesNetwork._connection(
-            url, timeout_seconds=timeout_seconds
+            url,
+            timeout_seconds=timeout_seconds,
         )
         try:
             connection.request("HEAD", urlsplit(url).path or "/")
             connection.getresponse()
         except (HTTPException, OSError) as exc:
             return r[bool].fail(
-                f"endpoint {url!r} did not respond: {exc}", exception=exc
+                f"endpoint {url!r} did not respond: {exc}",
+                exception=exc,
             )
         else:
             return r[bool].ok(True)
@@ -67,9 +85,14 @@ class FlextInfraUtilitiesNetwork:
         status, a connection failure, or a timeout fails with the status and
         body the server sent. The token travels only in the ``Authorization``
         header and never appears in a failure message.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
         """
         connection = FlextInfraUtilitiesNetwork._connection(
-            url, timeout_seconds=timeout_seconds
+            url,
+            timeout_seconds=timeout_seconds,
         )
         encoded = urlencode(tuple(form))
         path = urlsplit(url).path or "/"
@@ -90,7 +113,7 @@ class FlextInfraUtilitiesNetwork:
             connection.close()
         if not HTTPStatus.OK <= response.status < HTTPStatus.MULTIPLE_CHOICES:
             return r[str].fail(
-                f"{method} {url} answered HTTP {response.status}: {text.strip()}"
+                f"{method} {url} answered HTTP {response.status}: {text.strip()}",
             )
         return r[str].ok(text)
 

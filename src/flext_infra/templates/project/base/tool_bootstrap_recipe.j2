@@ -8,6 +8,7 @@
 		caller_xdg_data_home="$$caller_home/.local/share"; \
 	fi; \
 	caller_path="$$PATH"; \
+	mise_trusted_config_paths="$$project_root"; \
 {% for name, value in bootstrap.fixed_environment if name == "MISE_LOCKFILE_PLATFORMS" -%}
 	mise_lockfile_platforms="{{ value }}"; \
 {% endfor -%}
@@ -48,9 +49,6 @@
 	case "$$mise_storage_root/" in \
 		*'/../'*|*'/./'*|*'//'*) printf 'ERROR: {{ bootstrap.storage_root_variable }} must be normalized: %s\n' "$$mise_storage_root" >&2; exit 2 ;; \
 	esac; \
-	project_root=$$(cd "$$project_root" && pwd -P); \
-	project_parent=$${project_root%/*}; \
-	if [ -z "$$project_parent" ]; then project_parent=/; fi; \
 	if [ -L "$$mise_storage_root" ]; then \
 		printf 'ERROR: {{ bootstrap.storage_root_variable }} must not be a symlink: %s\n' "$$mise_storage_root" >&2; \
 		exit 2; \
@@ -65,6 +63,9 @@
 	case "$$mise_storage_root/" in \
 		/tmp/|/tmp/*) printf 'ERROR: persistent Mise storage must not live under /tmp: %s\n' "$$mise_storage_root" >&2; exit 2 ;; \
 	esac; \
+	project_root=$$(cd "$$project_root" && pwd -P); \
+	project_parent=$${project_root%/*}; \
+	if [ -z "$$project_parent" ]; then project_parent=/; fi; \
 	case "$$mise_storage_root/" in \
 		"$$project_root/"*) printf 'ERROR: persistent Mise storage must be outside the checkout: %s\n' "$$mise_storage_root" >&2; exit 2 ;; \
 	esac; \
@@ -85,8 +86,8 @@
 			*) printf 'ERROR: persistent Mise path escaped storage: %s\n' "$$persistent_physical" >&2; exit 2 ;; \
 		esac; \
 	done; \
-	scratch=$$(mktemp -d); \
-	trap 'find "$$scratch" -depth -delete' EXIT; \
+	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
+	trap 'if [ -n "$${lock_stage:-}" ] && [ -d "$$lock_stage" ] && [ ! -f "$$lock_stage/transaction.json" ]; then find "$$lock_stage" -depth -delete; fi; find "$$scratch" -depth -delete' EXIT; \
 	mkdir -p{% for _name, relative in bootstrap.transient_environment if relative not in bootstrap.empty_files %} "$$scratch/{{ relative }}"{% endfor %}; \
 {% for relative in bootstrap.empty_files -%}
 	: > "$$scratch/{{ relative }}"; chmod 600 "$$scratch/{{ relative }}"; \
@@ -116,13 +117,17 @@
 {% endfor -%}
 			"GIT_CEILING_DIRECTORIES=$$project_parent" \
 			"MISE_CEILING_PATHS=$$project_parent" \
-			"MISE_TRUSTED_CONFIG_PATHS=$$project_root" \
+			"MISE_TRUSTED_CONFIG_PATHS=$$mise_trusted_config_paths" \
 {% for name in bootstrap.passthrough_environment -%}
 			$${caller_{{ name | lower }}:+"{{ name }}=$$caller_{{ name | lower }}"} \
 {% endfor -%}
 			$${mise_config_argument:+"$$mise_config_argument"} \
 			$${mise_runtime_path:+"MISE_INSTALL_PATH=$$mise_runtime_path"} \
 			"$$@"; \
+	}; \
+	mise_offline() { \
+		mise_offline_mode="$$1"; shift; \
+		mise_exec "$$mise_offline_mode" env{% for name, value in bootstrap.offline_environment %} '{{ name }}={{ value }}'{% endfor %} "$$@"; \
 	}
 {%- endmacro %}
 
@@ -134,7 +139,7 @@
 	if [ ! -x "$$mise_runtime" ]; then \
 		printf 'ERROR: missing pinned Mise runtime %s; run make setup\n' "$$mise_runtime" >&2; exit 2; \
 	fi; \
-	if mise_exec project env MISE_OFFLINE=true "$$mise_runtime" -C "$$project_root" bin-paths >"$$scratch/paths" 2>"$$scratch/stderr"; then \
+	if mise_offline project "$$mise_runtime" -C "$$project_root" bin-paths >"$$scratch/paths" 2>"$$scratch/stderr"; then \
 		cat "$$scratch/stderr" >&2; \
 	else \
 		mise_status=$$?; cat "$$scratch/stderr" >&2; cat "$$scratch/paths" >&2; exit "$$mise_status"; \
@@ -154,6 +159,19 @@
 
 {% macro mise_runtime_bootstrap(project_root, mise, bootstrap) -%}
 	{{ mise_runtime_environment(project_root, mise, bootstrap) }}; \
+{# Only the bootstrap reaches GitHub: `install --yes` for a tool missing from
+   the persistent cache, and `make upg` (release resolution, lock, launcher).
+   Every other Mise call runs through mise_offline; offline tool execution
+   never selects a credential source. -#}
+{% for command in bootstrap.credential_commands -%}
+	if [ -z "$$caller_github_token" ] && command -v {{ command[0] }} >/dev/null 2>&1; then \
+		caller_github_token="$$({{ command | join(' ') }})" \
+			|| { printf 'ERROR: the selected GitHub credential source failed: %s\n' '{{ command | join(' ') }}' >&2; exit 2; }; \
+		if [ -z "$$caller_github_token" ]; then \
+			printf 'ERROR: the selected GitHub credential source printed nothing: %s\n' '{{ command | join(' ') }}' >&2; exit 2; \
+		fi; \
+	fi; \
+{% endfor -%}
 	mise_checked() { \
 		mise_log="$$1"; shift; \
 		printf 'setup probe: begin stage=%s log=%s\n' "$${mise_log##*/}" "$$mise_log" >&2; \
@@ -176,12 +194,12 @@
 	}; \
 	mise_receipt() { \
 		mise_receipt_log="$$scratch/$$1"; shift; \
-		mise_checked_stdout "$$mise_receipt_log.stdout" "$$mise_receipt_log.stderr" mise_exec no-config "$$1" --version; \
+		mise_checked_stdout "$$mise_receipt_log.stdout" "$$mise_receipt_log.stderr" mise_offline no-config "$$1" --version; \
 		receipt_output=$$(cat "$$mise_receipt_log.stdout"); \
-		case "$$receipt_output" in \
-			'mise '*) receipt_release=$${receipt_output#mise }; receipt_release=$${receipt_release%% *} ;; \
-			*) receipt_release=$${receipt_output%% *} ;; \
-		esac; \
+		receipt_release=$$(printf '%s\n' "$$receipt_output" | grep -E '^(mise )?[0-9]+\.[0-9]+\.[0-9]+$$' | tail -1 | sed 's/^mise //'); \
+		if [ -z "$$receipt_release" ]; then \
+			receipt_release=$${receipt_output%% *}; \
+		fi; \
 		if ! printf '%s\n' "$$receipt_release" | grep -Eq '^{{ bootstrap.resolved_release_pattern }}$$'; then \
 			printf 'ERROR: Mise receipt returned invalid version: %s\n' "$$receipt_output" >&2; return 2; \
 		fi; \
@@ -190,8 +208,12 @@
 	mise_receipt runtime-version "$$pinned_mise"; \
 	runtime_release="$$receipt_release"; \
 	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
-		mise_checked_stdout "$$scratch/resolve.stdout" "$$scratch/resolve.stderr" mise_exec no-config "$$pinned_mise" latest {{ bootstrap.release_selector }}; \
+		mise_checked_stdout "$$scratch/resolve.stdout" "$$scratch/resolve.stderr" mise_exec no-config env MISE_CACHE_DIR="$$scratch/resolve-cache" MISE_FETCH_REMOTE_VERSIONS_CACHE=0s "$$pinned_mise" latest {{ bootstrap.release_selector }}; \
 		resolved_release=$$(cat "$$scratch/resolve.stdout"); \
+		if ! printf '%s\n' "$$resolved_release" | grep -Eq '^{{ bootstrap.resolved_release_pattern }}$$'; then \
+			mise ls-remote {{ bootstrap.release_selector }} >"$$scratch/lsremote.stdout" 2>"$$scratch/lsremote.stderr" || true; \
+			resolved_release=$$(grep -E '^{{ bootstrap.resolved_release_pattern }}$$' "$$scratch/lsremote.stdout" | tail -1); \
+		fi; \
 		if ! printf '%s\n' "$$resolved_release" | grep -Eq '^{{ bootstrap.resolved_release_pattern }}$$'; then \
 			printf 'ERROR: mise latest {{ bootstrap.release_selector }} returned an invalid release: %s\n' "$$resolved_release" >&2; exit 2; \
 		fi; \
@@ -200,17 +222,6 @@
 		if [ "$$receipt_release" != "$$resolved_release" ]; then \
 			printf 'ERROR: MISE_VERSION=%s launched Mise %s\n' "$$resolved_release" "$$receipt_release" >&2; exit 2; \
 		fi; \
-		mise_checked "$$scratch/install-script.log" mise_exec no-config "$$pinned_mise" generate install-script --version "$$resolved_release" --write "$$project_root/{{ bootstrap.artifact_specs[0][0] }}" --windows; \
-{% for relative, mode in bootstrap.artifact_specs[:2] -%}
-		chmod {{ '%o' | format(mode) }} "$$project_root/{{ relative }}"; \
-{% endfor -%}
-		caller_mise_version=; \
-		mise_receipt launcher-version "$$pinned_mise"; \
-		if [ "$$receipt_release" != "$$resolved_release" ]; then \
-			printf 'ERROR: generated %s runs Mise %s, not %s\n' "$$pinned_mise" "$$receipt_release" "$$resolved_release" >&2; exit 2; \
-		fi; \
-		printf '%s\n'{% for line in bootstrap.version_pin_header %} '{{ line }}'{% endfor %} "$$resolved_release" > "$$mise_pin_file"; \
-		chmod {{ '%o' | format(bootstrap.artifact_specs[2][1]) }} "$$mise_pin_file"; \
 		runtime_release="$$resolved_release"; \
 	elif [ "$$runtime_release" != "$$mise_pin" ]; then \
 		printf 'ERROR: launched Mise %s differs from the pinned %s\n' "$$runtime_release" "$$mise_pin" >&2; \
@@ -234,17 +245,88 @@
 	{{ mise_runtime_bootstrap(project_root, mise, bootstrap) }}; \
 	# Only ``upg`` locks, once per manifest it provisions from. Lock every \
 	# configured tool in one pass so removed selectors cannot survive beside \
-	# their replacement in mise.lock. \
-	if [ "$(TOOL_BOOTSTRAP_LOCK)" = "1" ]; then \
-		mise_checked "$$scratch/lock.log" mise_exec project "$$pinned_mise" -C "$$project_root" lock --bump; \
+	# their replacement in mise.lock. The relock half of ``upg`` (lock without \
+	# resolve) skips the lock when the .mise.toml ``gen`` rendered is \
+	# byte-identical to the manifest the resolve pass of the same run locked: \
+	# the lock is a function of manifest, Mise release and platforms, all \
+	# unchanged, so a second resolution would only repeat ~70 GitHub requests. \
+	bootstrap_lock="$(TOOL_BOOTSTRAP_LOCK)"; \
+	if [ "$$bootstrap_lock" = "1" ] && [ "$(TOOL_BOOTSTRAP_RESOLVE)" != "1" ] \
+		&& [ -n "$${UPG_LOCKED_MISE_MANIFEST:-}" ] \
+		&& cmp -s "$$UPG_LOCKED_MISE_MANIFEST" "$$project_root/.mise.toml"; then \
+		printf 'upg relock: .mise.toml is byte-identical to the manifest this upg locked; installing from the published mise.lock\n'; \
+		bootstrap_lock=; \
 	fi; \
-	# ``locked`` mode installs exactly what the committed mise.lock pins. \
-	mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$project_root" install --yes; \
-	mise_checked_stdout "$$scratch/ast-grep-version.stdout" "$$scratch/ast-grep-version.stderr" mise_exec project "$$pinned_mise" -C "$$project_root" exec -- ast-grep --version; \
+	locked_manifest=; \
+	if [ "$$bootstrap_lock" = "1" ]; then \
+		# Stage on the destination filesystem: the bumped lock is resolved and \
+		# installed from a private stage, and published by one rename only after \
+		# both succeed. A failed or killed run leaves mise.lock untouched; no \
+		# backup copy exists. \
+		lock_stage="$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-lock-stage.XXXXXX")"; \
+		cp "$$project_root/.mise.toml" "$$lock_stage/.mise.toml"; \
+		cp "$$project_root/.mise.toml" "$$scratch/locked-manifest.toml"; \
+		# The resolver (TOOL_BOOTSTRAP_RESOLVE, the first half of upg) locks \
+		# from the declared manifest alone; every other lock pass bumps the \
+		# committed lock and its sidecars. \
+		if [ "$(TOOL_BOOTSTRAP_RESOLVE)" != "1" ]; then \
+			if [ -f "$$project_root/mise.lock" ]; then cp "$$project_root/mise.lock" "$$lock_stage/mise.lock"; fi; \
+			if [ -d "$$project_root/.mise/locks" ]; then mkdir -p "$$lock_stage/.mise"; cp -R "$$project_root/.mise/locks" "$$lock_stage/.mise/locks"; fi; \
+		fi; \
+		mise_trusted_config_paths="$$lock_stage"; \
+		if mise_checked "$$scratch/lock.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" lock --bump; then \
+			:; \
+		elif grep -q "refusing to replace locked version" "$$scratch/lock.log"; then \
+			printf 'INFO: kept the current mise.lock: the newest release was refused for missing platform assets; retry the bump when the release regains full platform coverage\n' >&2; \
+		else \
+			cat "$$scratch/lock.log" >&2; \
+			exit 2; \
+		fi; \
+		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" install --yes; \
+		mise_checked "$$scratch/staged-python.log" mise_offline project "$$pinned_mise" -C "$$lock_stage" which python; \
+		staged_python=$$(cat "$$scratch/staged-python.log"); \
+		if [ ! -x "$$staged_python" ]; then printf 'ERROR: staged Mise Python is not executable: %s\n' "$$staged_python" >&2; exit 2; fi; \
+		printf '%s\n' "$$staged_python" > "$$lock_stage/python-path"; \
+		if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
+			# Prepare and verify the new launchers while the old pin and launchers \
+			# still match the committed lock. No failed stage may strand an older \
+			# Mise release beside a newer lockfile revision. \
+			mkdir -p "$$lock_stage/artifacts/bin"; \
+			mise_checked "$$scratch/install-script.log" mise_exec no-config "$$pinned_mise" generate install-script --version "$$runtime_release" --write "$$lock_stage/artifacts/{{ bootstrap.artifact_specs[0][0] }}" --windows; \
+{% for relative, mode in bootstrap.artifact_specs[:2] -%}
+			chmod {{ '%o' | format(mode) }} "$$lock_stage/artifacts/{{ relative }}"; \
+{% endfor -%}
+			mise_receipt launcher-version "$$lock_stage/artifacts/{{ bootstrap.artifact_specs[0][0] }}"; \
+			if [ "$$receipt_release" != "$$runtime_release" ]; then \
+				printf 'ERROR: staged Mise launcher runs %s, not %s\n' "$$receipt_release" "$$runtime_release" >&2; exit 2; \
+			fi; \
+			printf '%s\n'{% for line in bootstrap.version_pin_header %} '{{ line }}'{% endfor %} "$$runtime_release" > "$$lock_stage/artifacts/{{ bootstrap.artifact_specs[2][0] }}"; \
+		fi; \
+		mise_checked "$$scratch/publish-lock.log" "$$staged_python" "$$project_root/{{ bootstrap.lock_transaction_script }}" publish "$$project_root" "$$lock_stage"; \
+		mise_trusted_config_paths="$$project_root"; \
+		if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then locked_manifest="$$scratch/locked-manifest.toml"; fi; \
+	else \
+		# ``locked`` mode converges every tool on exactly the version the \
+		# committed mise.lock pins. Setup never locks (operator 2026-10-02): \
+		# an offline dry-run proves the lock satisfies the manifest, and a lock \
+		# that does not (mixed-generation merge, interrupted ``upg``, a lock \
+		# written by another Mise release) fails loud; ``make upg`` is its only \
+		# writer. Only ``install --yes`` may reach the network, for a tool \
+		# missing from the persistent cache. \
+		if mise_offline project "$$pinned_mise" -C "$$project_root" install --dry-run >"$$scratch/install-probe.log" 2>&1; then \
+			:; \
+		else \
+			cat "$$scratch/install-probe.log" >&2; \
+			printf 'ERROR: mise.lock does not satisfy .mise.toml under Mise %s; run make upg\n' "$$runtime_release" >&2; \
+			exit 2; \
+		fi; \
+		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$project_root" install --yes; \
+	fi; \
+	mise_checked_stdout "$$scratch/ast-grep-version.stdout" "$$scratch/ast-grep-version.stderr" mise_offline project "$$pinned_mise" -C "$$project_root" exec -- ast-grep --version; \
 	if [ -s "$$scratch/ast-grep-version.stderr" ]; then \
 		printf 'ERROR: ast-grep emitted diagnostics after installation\n' >&2; exit 2; \
 	fi; \
-	mise_checked "$$scratch/uv-version.log" mise_exec project "$$pinned_mise" -C "$$project_root" exec -- uv --version; \
+	mise_checked "$$scratch/uv-version.log" mise_offline project "$$pinned_mise" -C "$$project_root" exec -- uv --version; \
 	uv_output=$$(cat "$$scratch/uv-version.log"); \
 	case "$$uv_output" in \
 		'uv '*) uv_actual=$${uv_output#uv }; uv_actual=$${uv_actual%% *} ;; \
@@ -258,12 +340,12 @@
 		printf 'ERROR: uv --version returned an invalid release: %s\n' "$$uv_actual" >&2; exit 2; \
 	fi; \
 	printf 'uv setup selector=%s receipt=%s\n' "$$uv_selector" "$$uv_actual"; \
-	mise_checked "$$scratch/direnv-path.log" mise_exec project "$$pinned_mise" -C "$$project_root" which direnv; \
+	mise_checked "$$scratch/direnv-path.log" mise_offline project "$$pinned_mise" -C "$$project_root" which direnv; \
 	direnv_executable=$$(cat "$$scratch/direnv-path.log"); \
 	if [ ! -x "$$direnv_executable" ]; then \
 		printf 'ERROR: Mise resolved a non-executable direnv path: %s\n' "$$direnv_executable" >&2; exit 2; \
 	fi; \
-	mise_checked "$$scratch/python-path.log" mise_exec project "$$pinned_mise" -C "$$project_root" which python; \
+	mise_checked "$$scratch/python-path.log" mise_offline project "$$pinned_mise" -C "$$project_root" which python; \
 	python_executable=$$(cat "$$scratch/python-path.log"); \
 	# CI receives only the shim farm: a project bin/ on PATH would bind every \
 	# shim to that repository launcher (mise resolves shims through PATH). \
@@ -285,6 +367,7 @@
 		"MISE_VERSION=$$runtime_release" \
 		"MISE_INSTALL_PATH=$$mise_runtime_path" \
 		$(PROJECT_TOOL_EXEC) env \
+		$${locked_manifest:+"UPG_LOCKED_MISE_MANIFEST=$$locked_manifest"} \
 		"SETUP_DIRENV=$$direnv_executable" \
 		"SETUP_PYTHON=$$python_executable" \
 		"SETUP_DIRENV_XDG_DATA_HOME=$$caller_xdg_data_home" \
