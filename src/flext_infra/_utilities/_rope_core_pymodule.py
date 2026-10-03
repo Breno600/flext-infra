@@ -1,11 +1,15 @@
-"""Rope PyModule / identifier helpers — extracted concern of FlextInfraUtilitiesRopeCore."""
+"""Rope PyModule / identifier helpers — concern of FlextInfraUtilitiesRopeCore.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 import re
 from typing import TYPE_CHECKING, ClassVar
 
-from .rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -22,7 +26,10 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
 
     @staticmethod
     def find_identifier_offset_in_lines(
-        lines: t.SequenceOf[str], *, line: int, symbol: str
+        lines: t.SequenceOf[str],
+        *,
+        line: int,
+        symbol: str,
     ) -> int | None:
         """Return the absolute offset of one exact identifier token on a line.
 
@@ -31,6 +38,10 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
         substring inside another token or keyword, e.g. ``except ... as e``.
         This helper resolves the first exact identifier token equal to ``symbol``
         on the reported line.
+
+        Returns:
+            The absolute offset of one exact identifier token on a line.
+
         """
         if line < 1 or line > len(lines):
             return None
@@ -39,7 +50,7 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
         for (
             match
         ) in FlextInfraUtilitiesRopeCorePyModuleMixin._IDENTIFIER_PATTERN.finditer(
-            source_line
+            source_line,
         ):
             if match.group(0) == symbol:
                 offset: int = line_start + match.start()
@@ -48,9 +59,18 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
 
     @staticmethod
     def resolve_pymodule(
-        rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
+        rope_project: t.Infra.RopeProject,
+        resource: t.Infra.RopeResource,
     ) -> t.Infra.RopePyModule:
-        """Resolve one concrete rope PyModule through the validated API boundary."""
+        """Resolve one concrete rope PyModule through the validated API boundary.
+
+        Returns:
+            The resulting ``t.Infra.RopePyModule``.
+
+        Raises:
+            TypeError: If rope project returned non-PyModule.
+
+        """
         pymodule = rope_project.get_pymodule(resource)
         if not FlextInfraUtilitiesRopeRuntime.pymodule(pymodule):
             msg = "rope project returned non-PyModule"
@@ -60,14 +80,24 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
 
     @staticmethod
     def resolve_module_imports(
-        rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
+        rope_project: t.Infra.RopeProject,
+        resource: t.Infra.RopeResource,
     ) -> t.Infra.RopeModuleImports:
-        """Resolve the module import table, raising when rope cannot build it."""
+        """Resolve the module import table, raising when rope cannot build it.
+
+        Returns:
+            The resulting ``t.Infra.RopeModuleImports``.
+
+        Raises:
+            RuntimeError: If rope module import table unavailable for.
+
+        """
         try:
             module_imports = FlextInfraUtilitiesRopeRuntime.module_imports_for_pymodule(
                 rope_project,
                 FlextInfraUtilitiesRopeCorePyModuleMixin.resolve_pymodule(
-                    rope_project, resource
+                    rope_project,
+                    resource,
                 ),
             )
         except (

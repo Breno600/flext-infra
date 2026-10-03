@@ -1,4 +1,8 @@
-"""Read scoped index and exact working bytes without changing the source."""
+"""Read scoped index and exact working bytes without changing the source.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -10,10 +14,9 @@ from typing import TYPE_CHECKING
 from git import GitCommandError
 
 from flext_core import r
-from flext_infra import m, t
-
-from .repo import FlextInfraUtilitiesGitRepo
-from .worktree_io import FlextInfraUtilitiesGitWorktreeIO
+from flext_infra import c, m, t
+from flext_infra._utilities._git.repo import FlextInfraUtilitiesGitRepo
+from flext_infra._utilities._git.worktree_io import FlextInfraUtilitiesGitWorktreeIO
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -51,22 +54,30 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
             msg = f"capture requires a regular file or symlink: {relative}"
             raise ValueError(msg)
         with FlextInfraUtilitiesGitWorktreeIO.git_stdin(
-            cls._state_file_bytes(path)
+            cls._state_file_bytes(path),
         ) as stream:
             oid = cls._repo(root).git.hash_object("--stdin", istream=stream)
         return m.Infra.GitWorktreeFileState(
-            path=relative, mode=git_mode, permissions=stat.S_IMODE(mode), oid=oid
+            path=relative,
+            mode=git_mode,
+            permissions=stat.S_IMODE(mode),
+            oid=oid,
         )
 
     @classmethod
     def _state_snapshot_index(
-        cls, root: Path, paths: t.SequenceOf[Path]
+        cls,
+        root: Path,
+        paths: t.SequenceOf[Path],
     ) -> t.VariadicTuple[m.Infra.GitWorktreeIndexEntry]:
         repo = cls._repo(root)
         pathspecs = cls._state_pathspecs(paths)
         for row in repo.git.ls_files("-v", "-z", "--", *pathspecs).split("\0"):
             if row and (row[0].islower() or row[0] == "S"):
-                msg = "capture requires index entries without assume-unchanged or skip-worktree flags"
+                msg = (
+                    "capture requires index entries without assume-unchanged "
+                    "or skip-worktree flags"
+                )
                 raise ValueError(msg)
         entries: list[m.Infra.GitWorktreeIndexEntry] = []
         for row in repo.git.ls_files("--stage", "-z", "--", *pathspecs).split("\0"):
@@ -78,7 +89,7 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
                 msg = f"capture requires resolved index entries: {raw_path}"
                 raise ValueError(msg)
             entries.append(
-                m.Infra.GitWorktreeIndexEntry(path=Path(raw_path), mode=mode, oid=oid)
+                m.Infra.GitWorktreeIndexEntry(path=Path(raw_path), mode=mode, oid=oid),
             )
         intent_views = tuple(
             repo.git.diff("--cached", "--name-only", visibility, "--", *pathspecs)
@@ -91,7 +102,9 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
 
     @classmethod
     def _state_head_entries(
-        cls, root: Path, paths: t.SequenceOf[Path]
+        cls,
+        root: Path,
+        paths: t.SequenceOf[Path],
     ) -> t.VariadicTuple[m.Infra.GitWorktreeIndexEntry]:
         rows = (
             cls._repo(root).git.ls_tree("-r", "--full-tree", "-z", "HEAD")
@@ -120,10 +133,19 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
         repo = cls._repo(root)
         pathspecs = cls._state_pathspecs(paths)
         raw_paths = repo.git.ls_files(
-            "--cached", "--others", "--exclude-standard", "-z", "--", *pathspecs
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "-z",
+            "--",
+            *pathspecs,
         )
         head_paths = repo.git.ls_files(
-            "--cached", "--with-tree=HEAD", "-z", "--", *pathspecs
+            "--cached",
+            "--with-tree=HEAD",
+            "-z",
+            "--",
+            *pathspecs,
         )
         candidates = sorted(
             {
@@ -136,9 +158,13 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
         gitlinks = {
             entry.path: entry.oid
             for entry in (*cls._state_head_entries(root, paths), *entries)
-            if entry.mode == "160000"
+            if entry.mode == c.Infra.GIT_GITLINK_MODE_TEXT
         }
-        indexed_gitlinks = {entry.path for entry in entries if entry.mode == "160000"}
+        indexed_gitlinks = {
+            entry.path
+            for entry in entries
+            if entry.mode == c.Infra.GIT_GITLINK_MODE_TEXT
+        }
         for path in (*paths, *candidates):
             for parent in path.parents:
                 if (root / parent).is_symlink() and parent not in candidates:
@@ -155,12 +181,12 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
                 files.append(
                     m.Infra.GitWorktreeFileState(
                         path=path,
-                        mode="160000",
+                        mode=c.Infra.GIT_GITLINK_MODE_TEXT,
                         permissions=0,
                         oid=cls._repo(candidate).head.commit.hexsha
                         if (candidate / ".git").exists()
                         else gitlinks[path],
-                    )
+                    ),
                 )
             elif candidate.is_dir() and not candidate.is_symlink():
                 if (candidate / ".git").exists():
@@ -174,7 +200,8 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
 
     @classmethod
     def _state_snapshot(
-        cls, request: m.Infra.GitWorktreeStateRequest
+        cls,
+        request: m.Infra.GitWorktreeStateRequest,
     ) -> m.Infra.GitWorktreeStateSnapshot:
         root = request.repo_root.resolve()
         repo = cls._repo(root)
@@ -192,8 +219,8 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
         head = repo.head.commit.hexsha
         retained = tuple(
             sorted(
-                {repo.commit(oid).hexsha for oid in request.retained_commits} - {head}
-            )
+                {repo.commit(oid).hexsha for oid in request.retained_commits} - {head},
+            ),
         )
         return m.Infra.GitWorktreeStateSnapshot(
             repo_root=root,
@@ -208,9 +235,15 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
 
     @classmethod
     def git_snapshot_worktree_state(
-        cls, request: m.Infra.GitWorktreeStateRequest
+        cls,
+        request: m.Infra.GitWorktreeStateRequest,
     ) -> p.Result[m.Infra.GitWorktreeStateSnapshot]:
-        """Measure owned index entries and raw files, without writing Git objects."""
+        """Measure owned index entries and raw files, without writing Git objects.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitWorktreeStateSnapshot]``.
+
+        """
         try:
             snapshot = cls._state_snapshot(request)
         except (GitCommandError, OSError, ValueError) as exc:
@@ -219,13 +252,21 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
 
     @classmethod
     def git_verify_worktree_state(
-        cls, snapshot: m.Infra.GitWorktreeStateSnapshot, destination_root: Path
+        cls,
+        snapshot: m.Infra.GitWorktreeStateSnapshot,
+        destination_root: Path,
     ) -> p.Result[bool]:
-        """Return false for layer differences, fail on foreign identity or read errors."""
+        """Return false for layer differences, fail on foreign identity or read errors.
+
+        Returns:
+            False for layer differences, fail on foreign identity or read errors.
+
+        """
         observed = cls.git_snapshot_worktree_state(
             m.Infra.GitWorktreeStateRequest(
-                repo_root=destination_root, paths=snapshot.paths
-            )
+                repo_root=destination_root,
+                paths=snapshot.paths,
+            ),
         )
         if observed.failure:
             return r[bool].from_failure(observed)
@@ -234,7 +275,7 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
             return r[bool].fail("captured repository identity or HEAD does not match")
         return r[bool].ok(
             actual.index_entries == snapshot.index_entries
-            and actual.files == snapshot.files
+            and actual.files == snapshot.files,
         )
 
 

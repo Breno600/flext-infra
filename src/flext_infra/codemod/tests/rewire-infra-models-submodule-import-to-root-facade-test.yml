@@ -1,5 +1,0 @@
-id: rewire-infra-models-submodule-import-to-root-facade
-valid:
-  - from flext_infra import m
-invalid:
-  - from flext_infra.models import m

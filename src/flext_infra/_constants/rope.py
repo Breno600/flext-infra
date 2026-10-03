@@ -63,7 +63,7 @@ class FlextInfraConstantsRope:
         OTHER = "other"
         "Any statement not matched by a more specific category."
 
-    # NOTE (flext-0ftd.3.10.2.4): runtime engine types and exception-boundary
+    # NOTE: runtime engine types and exception-boundary
     # tuples live in u.Infra (FlextInfraUtilitiesRopeRuntimeTypes), not in the
     # constants layer, to keep c.Infra declarative and cycle-free.
 

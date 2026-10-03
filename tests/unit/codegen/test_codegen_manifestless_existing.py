@@ -1,4 +1,8 @@
-"""Public regression coverage for manifestless existing repositories."""
+"""Public regression coverage for manifestless existing repositories.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,7 +11,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import config
+from flext_infra import config, infra
 from flext_infra.codegen import FlextInfraCodegenConform
 from flext_infra.workspace import FlextInfraWorkspaceDetector
 from tests import c, u
@@ -19,9 +23,13 @@ from tests import c, u
 # ceiling, so a real hang still aborts at the declared wall.
 @pytest.mark.slow
 class TestsFlextInfraCodegenManifestlessExisting:
+    """Tests for ``FlextInfraCodegenManifestlessExisting``."""
+
+    @staticmethod
     def test_existing_root_uses_pep621_metadata_for_managed_artifacts(
-        self, infra_git_repo: Path
+        infra_git_repo: Path,
     ) -> None:
+        """Test existing root uses pep621 metadata for managed artifacts."""
         root = infra_git_repo
         repository = u.Tests.repository_ref(config.Infra.name)
         # Why: LICENSE has no generator and is genuinely exists_or_absent.
@@ -58,35 +66,47 @@ class TestsFlextInfraCodegenManifestlessExisting:
         # never a copy of the whole production package.
         manifest = tm.not_none(u.Cli.toml_mapping_from_text(pyproject_source))
         project_table = u.Cli.json_as_mapping(
-            u.Cli.toml_mapping_child(manifest, "project")
+            u.Cli.toml_mapping_child(manifest, "project"),
         )
         entry_groups = u.Cli.json_as_mapping(
-            u.Cli.toml_mapping_child(project_table, "entry-points")
+            u.Cli.toml_mapping_child(project_table, "entry-points"),
         )
         declared_groups = (
             u.Cli.json_as_mapping(u.Cli.toml_mapping_child(project_table, "scripts")),
             u.Cli.json_as_mapping(
-                u.Cli.toml_mapping_child(project_table, "gui-scripts")
+                u.Cli.toml_mapping_child(project_table, "gui-scripts"),
             ),
             *(u.Cli.json_as_mapping(group) for group in entry_groups.values()),
         )
-        targets: dict[Path, set[str]] = {}
+        # A dotted target (``Class.member``) resolves through attribute access,
+        # so the seeded class carries each declared member.
+        targets: dict[Path, dict[str, set[str]]] = {}
         for entries in declared_groups:
             for target in entries.values():
                 module_name, _, attribute = str(target).partition(":")
                 module_path = (
                     root / c.Infra.DEFAULT_SRC_DIR / Path(*module_name.split("."))
                 ).with_suffix(".py")
-                targets.setdefault(module_path, set()).add(attribute.split(".")[0])
-        for module_path, attributes in targets.items():
+                owner, _, member = attribute.partition(".")
+                members = targets.setdefault(module_path, {}).setdefault(owner, set())
+                if member:
+                    members.add(member)
+        for module_path, owners in targets.items():
             tm.ok(
                 u.Cli.atomic_write_text_file(
                     module_path,
                     "".join(
-                        f"class {attribute}:\n    pass\n\n\n"
-                        for attribute in sorted(attributes)
+                        f"class {owner}:\n"
+                        + (
+                            "".join(
+                                f"    {member} = None\n" for member in sorted(members)
+                            )
+                            or "    pass\n"
+                        )
+                        + "\n\n"
+                        for owner, members in sorted(owners.items())
                     ),
-                )
+                ),
             )
         vscode_settings = root / ".vscode" / "settings.json"
         vscode_settings.parent.mkdir()
@@ -94,7 +114,7 @@ class TestsFlextInfraCodegenManifestlessExisting:
             u.Cli.atomic_write_text_file(
                 vscode_settings,
                 tm.ok(u.Cli.files_read_text(Path.cwd() / ".vscode" / "settings.json")),
-            )
+            ),
         )
         for relative, content in seeded.items():
             tm.ok(u.Cli.atomic_write_text_file(root / relative, content))
@@ -104,7 +124,7 @@ class TestsFlextInfraCodegenManifestlessExisting:
             u.Cli.run_checked(
                 ["git", "commit", "-q", "--no-verify", "-m", "Seed manifestless tree"],
                 cwd=root,
-            )
+            ),
         )
 
         derived = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
@@ -118,38 +138,9 @@ class TestsFlextInfraCodegenManifestlessExisting:
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.APPLY,
         )
-        tm.ok(FlextInfraCodegenConform.execute_request(request))
-        generated_pyproject = tm.ok(u.Cli.files_read_text(root / "pyproject.toml"))
-        declared_flext_namespaces = set(
-            u.Infra.flext_dependency_namespaces_from_payload(
-                u.Tests.toml_payload(generated_pyproject)
-            )
-        )
-        tm.that(declared_flext_namespaces, empty=False)
-        tm.that(
-            declared_flext_namespaces,
-            has=custom_dev_requirement.partition(">=")[0].replace("-", "_"),
-        )
-        known_first_party = set(
-            u.Tests.toml_strings_at(
-                generated_pyproject,
-                "tool",
-                "ruff",
-                "lint",
-                "isort",
-                "known-first-party",
-            )
-        )
-        tm.that(
-            known_first_party,
-            eq={
-                *config.Infra.tooling.tools.deptry.known_first_party,
-                *u.Infra.discover_first_party_namespaces(root),
-                *declared_flext_namespaces,
-            },
-        )
+        tm.ok(infra.codegen_conform(request))
         initial_plan = tm.ok(
-            FlextInfraCodegenConform(repository_root=root).plan(request)
+            FlextInfraCodegenConform(repository_root=root).plan(request),
         )
         plans = {
             file.path.relative_to(root).as_posix(): file for file in initial_plan.files
@@ -176,7 +167,7 @@ class TestsFlextInfraCodegenManifestlessExisting:
         for required in ("Makefile", ".mise.toml", ".python-version", ".gitignore"):
             tm.that(u.Infra.codegen_file_requires_effect(plans[required]), eq=False)
 
-        tm.ok(FlextInfraCodegenConform.execute_request(request))
+        tm.ok(infra.codegen_conform(request))
         tm.that((root / ".env.example").exists(), eq=False)
         for relative, content in preserved.items():
             tm.that((root / relative).read_text(encoding="utf-8"), eq=content)
@@ -184,7 +175,7 @@ class TestsFlextInfraCodegenManifestlessExisting:
         for required in ("Makefile", ".mise.toml", ".python-version", ".gitignore"):
             tm.that((root / required).is_file(), eq=True)
         fixed_point = FlextInfraCodegenConform(repository_root=root).plan(
-            request.model_copy(update={"mode": c.Infra.CodegenConformMode.CHECK})
+            request.model_copy(update={"mode": c.Infra.CodegenConformMode.CHECK}),
         )
         verified = tm.ok(fixed_point)
         tm.that(
@@ -196,8 +187,9 @@ class TestsFlextInfraCodegenManifestlessExisting:
             eq=(),
         )
 
+    @staticmethod
     def test_root_distribution_owns_its_dependency_profile(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """The tree's root declares no flext runtime dependency and still conforms.
 
@@ -249,11 +241,12 @@ class TestsFlextInfraCodegenManifestlessExisting:
                 "dependencies = []\n"
                 "\n[dependency-groups]\n"
                 f"dev = [{dev_group}]\n",
-            )
+            ),
         )
         u.Tests.write_project_beads_config(root, distribution)
         u.Tests.initialize_git_repo(
-            root, origin_url=u.Tests.repository_ref(distribution).url
+            root,
+            origin_url=u.Tests.repository_ref(distribution).url,
         )
 
         plan = tm.ok(
@@ -263,11 +256,11 @@ class TestsFlextInfraCodegenManifestlessExisting:
                     what=c.Infra.CodegenConformSurface.PYPROJECT,
                     scope=c.Infra.CodegenConformScope.SELF,
                     mode=c.Infra.CodegenConformMode.CHECK,
-                )
-            )
+                ),
+            ),
         )
         rendered = u.Tests.codegen_file_text(
-            next(file for file in plan.files if file.path.name == "pyproject.toml")
+            next(file for file in plan.files if file.path.name == "pyproject.toml"),
         )
         owned_runtime = tuple(
             dependency
@@ -276,7 +269,7 @@ class TestsFlextInfraCodegenManifestlessExisting:
         )
         tm.that(
             set(owned_runtime).issubset(
-                u.Tests.toml_strings_at(rendered, "project", "dependencies")
+                u.Tests.toml_strings_at(rendered, "project", "dependencies"),
             ),
             eq=True,
         )

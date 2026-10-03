@@ -1,0 +1,36 @@
+# Shape only; the engine applies no context to this rule.
+id: ban-loose-module-object
+valid:
+  - |
+    class FlextFooConstants:
+        LIMIT = 3
+    c = FlextFooConstants
+    __all__ = ["FlextFooConstants", "c"]
+  - |
+    def main() -> None:
+        return None
+  - |
+    T = TypeVar("T")
+  - |
+    Alias: TypeAlias = int
+  - |
+    __version__ = "1"
+invalid:
+  - |
+    def helper() -> int:
+        return 1
+  - |
+    @cache
+    def helper() -> int:
+        return 1
+  - |
+    LIMIT = 3
+  - |
+    logger = u.fetch_logger(__name__)
+  - |
+    NAMES: frozenset[str] = frozenset({"a"})
+  - |
+    class First:
+        pass
+    class Second:
+        pass

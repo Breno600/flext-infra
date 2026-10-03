@@ -1,12 +1,17 @@
-"""Promoted-command contract and invocation validation."""
+"""Promoted-command contract and invocation validation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 from flext_infra import c
-
-from .workspace import FlextInfraUtilitiesPromotedWorkspace
+from flext_infra._utilities._promoted.workspace import (
+    FlextInfraUtilitiesPromotedWorkspace,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -38,7 +43,8 @@ class FlextInfraUtilitiesPromotedInvocation(FlextInfraUtilitiesPromotedWorkspace
 
     @classmethod
     def promoted_validate_command_contract(
-        cls, command: p.Infra.PromotedCommand
+        cls,
+        command: p.Infra.PromotedCommand,
     ) -> None:
         """Require the incident safety parameters on incident-domain mutations."""
         if (
@@ -56,7 +62,9 @@ class FlextInfraUtilitiesPromotedInvocation(FlextInfraUtilitiesPromotedWorkspace
 
     @classmethod
     def promoted_validate_all_choices(
-        cls, verb: str, commands: t.MappingKV[str, p.Infra.PromotedCommand]
+        cls,
+        verb: str,
+        commands: t.MappingKV[str, p.Infra.PromotedCommand],
     ) -> None:
         """Validate the WHAT choices declared on a verb's ``all`` command.
 
@@ -83,7 +91,7 @@ class FlextInfraUtilitiesPromotedInvocation(FlextInfraUtilitiesPromotedWorkspace
                 what
                 for what, command in commands.items()
                 if cls.promoted_find_owner_root(command.path) == owner
-            )
+            ),
         )
         if declared != actual:
             cls.promoted_fail(
@@ -96,9 +104,15 @@ class FlextInfraUtilitiesPromotedInvocation(FlextInfraUtilitiesPromotedWorkspace
 
     @staticmethod
     def promoted_param_value(
-        param: p.Infra.PromotedParam, command: p.Infra.PromotedCommand
+        param: p.Infra.PromotedParam,
+        command: p.Infra.PromotedCommand,
     ) -> str:
-        """Return one parameter value: the command WHAT, the environment, or default."""
+        """Return one parameter value: the command WHAT, the environment, or default.
+
+        Returns:
+            One parameter value: the command WHAT, the environment, or default.
+
+        """
         from flext_infra import u
 
         if param.name == c.Infra.PromotedSelector.WHAT:
