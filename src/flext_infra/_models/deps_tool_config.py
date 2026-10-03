@@ -129,7 +129,10 @@ class FlextInfraModelsDepsToolConfig(
 
             """
             if (self.workers is None) == (self.cpu_fraction is None):
-                msg = "PytestWorkerCeiling requires exactly one of workers or cpu_fraction"
+                msg = (
+                    "PytestWorkerCeiling requires exactly one of"
+                    " workers or cpu_fraction"
+                )
                 raise ValueError(msg)
             return self
 
@@ -165,7 +168,10 @@ class FlextInfraModelsDepsToolConfig(
             m.Field(
                 alias="run-timeout-seconds",
                 gt=0,
-                description="Fleet-default wall-clock maximum for one testmon runner operation.",
+                description=(
+                    "Fleet-default wall-clock maximum for one testmon runner"
+                    " operation."
+                ),
             ),
         ]
         run_timeout_overrides: Annotated[
@@ -202,7 +208,9 @@ class FlextInfraModelsDepsToolConfig(
             Literal["function", "class", "module", "package", "session"],
             m.Field(
                 alias="asyncio-default-fixture-loop-scope",
-                description="Explicit event-loop lifetime for asynchronous pytest fixtures.",
+                description=(
+                    "Explicit event-loop lifetime for asynchronous pytest fixtures."
+                ),
             ),
         ]
         progress_args: Annotated[
@@ -424,7 +432,9 @@ class FlextInfraModelsDepsToolConfig(
 
         @property
         def slow_suite_stop_reserve_seconds(self) -> int:
-            """Derive the slow-phase reserve: in-flight items bounded by the slow ceiling."""
+            """Derive the slow-phase reserve: in-flight items bounded
+            by the slow ceiling.
+            """
             return (
                 self.xdist_items_per_worker * self.slow_timeout_seconds
                 + self.termination_grace_seconds
@@ -620,7 +630,9 @@ class FlextInfraModelsDepsToolConfig(
             m.Field(
                 alias="exclude-also",
                 default_factory=tuple,
-                description="Coverage report line patterns excluded from runtime coverage.",
+                description=(
+                    "Coverage report line patterns excluded from runtime coverage."
+                ),
             ),
         ]
         omit: Annotated[

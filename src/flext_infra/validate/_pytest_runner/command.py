@@ -82,7 +82,9 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         self,
         *,
         serial: bool = False,
-        execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
+        execution_mode: c.Infra.PytestExecutionMode = (
+            c.Infra.PytestExecutionMode.INCREMENTAL
+        ),
     ) -> float:
         """Derive the graceful suite stop instant from the entrypoint deadline.
 
@@ -115,7 +117,9 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
     def ci_excluded_markers(
         self,
         *,
-        execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
+        execution_mode: c.Infra.PytestExecutionMode = (
+            c.Infra.PytestExecutionMode.INCREMENTAL
+        ),
     ) -> t.StrTuple:
         """Use the same CI token as generated workflows and pre-commit hooks.
 
@@ -240,7 +244,9 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         report_log: Path,
         manifest_path: Path,
         complete: bool = False,
-        execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
+        execution_mode: c.Infra.PytestExecutionMode = (
+            c.Infra.PytestExecutionMode.INCREMENTAL
+        ),
     ) -> t.VariadicTuple[str]:
         """Build the read-only argv that resolves the testmon selection once.
 
@@ -304,7 +310,9 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         selection_plan: m.Infra.PytestSelectionPlan | None = None,
         *,
         serialize: bool = False,
-        execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
+        execution_mode: c.Infra.PytestExecutionMode = (
+            c.Infra.PytestExecutionMode.INCREMENTAL
+        ),
     ) -> t.VariadicTuple[str]:
         """Build the testmon suite argv (never the cov plugin).
 
@@ -418,6 +426,9 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
 
         """
         pytest = config.Infra.tooling.tools.pytest
+        suite_stop = self.suite_stop_monotonic(
+            serial=serial, execution_mode=execution_mode
+        )
         return (
             sys.executable,
             "-m",
@@ -435,7 +446,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             *pytest.progress_args,
             *pytest.report_args,
             f"--timeout={pytest.case_timeout_seconds}",
-            f"{c.Infra.PYTEST_SUITE_STOP_OPTION}={self.suite_stop_monotonic(serial=serial, execution_mode=execution_mode)!r}",
+            f"{c.Infra.PYTEST_SUITE_STOP_OPTION}={suite_stop!r}",
             f"--maxfail={pytest.max_failures}",
             f"--junitxml={report_dir / 'junit.xml'}",
             f"--report-log={report_dir / 'events.jsonl'}",

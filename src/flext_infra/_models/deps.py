@@ -169,7 +169,9 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             bool,
             m.Field(
                 alias="rewrite-constraints",
-                description="Rewrite dependency constraints from the provisioned runtime",
+                description=(
+                    "Rewrite dependency constraints from the provisioned runtime"
+                ),
             ),
         ] = False
 
@@ -231,7 +233,9 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             t.StrSequence | None,
             m.Field(
                 default=None,
-                description="Declared analysis exclusions; None derives workspace globs",
+                description=(
+                    "Declared analysis exclusions; None derives workspace globs"
+                ),
             ),
         ]
         generated_python_roots: Annotated[
@@ -257,7 +261,9 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         repository_namespace_packages: Annotated[
             t.StrTuple,
             m.Field(
-                description="Implicit namespace directories shipped from the repository root",
+                description=(
+                    "Implicit namespace directories shipped from the repository root"
+                ),
             ),
         ] = ()
         packaged_data_paths: Annotated[
@@ -267,13 +273,18 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         packaged_data_excludes: Annotated[
             t.StrTuple,
             m.Field(
-                description="Repository-relative files omitted from declared data directories",
+                description=(
+                    "Repository-relative files omitted"
+                    " from declared data directories"
+                ),
             ),
         ] = ()
         planned_data_files: Annotated[
             t.StrTuple,
             m.Field(
-                description="Exact scaffold file destinations planned before publication",
+                description=(
+                    "Exact scaffold file destinations planned before publication"
+                ),
             ),
         ] = ()
         declared_python_dirs: Annotated[
