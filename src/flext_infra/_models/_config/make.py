@@ -571,6 +571,7 @@ class FlextInfraConfigModelsMake:
     class MakeSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Complete generated Makefile public and extension contract."""
 
+
         class TestmonCachePolicySpec(FlextInfraConfigModelsContract.ConfigContract):
             """Declarative Actions-cache policy for the shared testmon database.
         check_gate_suspensions: Annotated[
