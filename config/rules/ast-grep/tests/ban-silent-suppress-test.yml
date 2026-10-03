@@ -1,0 +1,26 @@
+id: ban-silent-suppress
+valid:
+  - |
+    with nullcontext():
+        run()
+  - |
+    from mylib import suppress
+    with suppress(KeyError):
+        run()
+invalid:
+  - |
+    import contextlib
+    with contextlib.suppress(KeyError):
+        run()
+  - |
+    import contextlib as cl
+    with cl.suppress(OSError):
+        run()
+  - |
+    from contextlib import nullcontext, suppress
+    with suppress(KeyError):
+        run()
+  - |
+    from contextlib import suppress as quiet
+    with quiet(KeyError):
+        run()

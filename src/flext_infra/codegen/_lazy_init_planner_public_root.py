@@ -1,4 +1,8 @@
-"""Root public-export decisions for the lazy-init planner."""
+"""Root public-export decisions for the lazy-init planner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -62,12 +66,13 @@ class FlextInfraCodegenLazyInitPlannerPublicRootMixin:
         return public_export_names, filtered_lazy_map
 
     def _declared_root_contract(
-        self, context: m.Infra.LazyInitPackageContext
+        self,
+        context: m.Infra.LazyInitPackageContext,
     ) -> frozenset[str] | None:
         if context.generated_init or not context.init_path.is_file():
             return None
-        # If the project declares subpackages (e.g. services/), root aggregates from sources;
-        # only single-directory/flat projects can declare an ABI filter via manual __init__.py.
+        # With declared subpackages (e.g. services/), root aggregates from sources;
+        # only flat projects can declare an ABI filter via a manual __init__.py.
         entry = self.rope_workspace.package(context.pkg_dir)
         if entry is not None and entry.descendant_child_dirs:
             return None
@@ -75,7 +80,8 @@ class FlextInfraCodegenLazyInitPlannerPublicRootMixin:
         resource = self.rope_workspace.resource(constants_path)
         if resource is not None:
             imports = u.Infra.resolve_declared_module_imports(
-                self.rope_workspace.rope_project, resource
+                self.rope_workspace.rope_project,
+                resource,
             )
             if any(
                 name != "annotations" and not target.startswith("__future__")
@@ -86,7 +92,7 @@ class FlextInfraCodegenLazyInitPlannerPublicRootMixin:
             self.rope_workspace.exports(
                 context.init_path,
                 export_options=m.Infra.ExportOptions(allow_assignments=True),
-            )
+            ),
         )
         return contract or None
 
@@ -112,7 +118,8 @@ class FlextInfraCodegenLazyInitPlannerPublicRootMixin:
         ):
             return True
         return not FlextInfraCodegenLazyInitPlannerPublicRootMixin._is_private_owner(
-            module_path, root_pkg=root_pkg
+            module_path,
+            root_pkg=root_pkg,
         )
 
     @staticmethod
@@ -121,6 +128,10 @@ class FlextInfraCodegenLazyInitPlannerPublicRootMixin:
 
         Any underscore-prefixed source segment below the root marks the owner as
         private; its symbols stay behind their facade and never widen the root ABI.
+
+        Returns:
+            Whether a module below ``root_pkg`` sits behind a private segment.
+
         """
         if not module_path.startswith(f"{root_pkg}."):
             return False
@@ -129,14 +140,19 @@ class FlextInfraCodegenLazyInitPlannerPublicRootMixin:
 
     @staticmethod
     def _is_facade_root(context: m.Infra.LazyInitPackageContext) -> bool:
-        """Return whether a package is a public project root or the tests facade root."""
+        """Return whether a package is a public project root or the tests facade root.
+
+        Returns:
+            Whether a package is a public project root or the tests facade root.
+
+        """
         is_public_project_root = bool(
             context.pkg_dir.parent.name == c.Infra.DEFAULT_SRC_DIR
             and context.current_pkg
             and "." not in context.current_pkg
-            # Why (flext-27a9e.1, multi-agent): governed consumers such as ai_hub
+            # Why: governed consumer packages
             # are first-class project roots; package prefixes are not architecture.
-            and u.Infra.matches_project_namespace_package(context.current_pkg)
+            and u.Infra.matches_project_namespace_package(context.current_pkg),
         )
         is_test_facade_root = (
             context.current_pkg == c.Infra.DIR_TESTS

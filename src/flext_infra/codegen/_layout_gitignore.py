@@ -1,4 +1,4 @@
-"""Gitignore ownership for the layout engine apply path (flext-0wuz).
+"""Gitignore ownership for the layout engine apply path.
 
 Codegen-managed projects converge through the canonical conform render (one
 owner, one template); unmanaged or external projects receive idempotent
@@ -14,19 +14,25 @@ from pathlib import Path
 
 from flext_core import r
 from flext_infra import c, config, m, p, t, u
+from flext_infra.codegen._layout_plan import FlextInfraCodegenLayoutPlanMixin
+from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
-from ._layout_plan import FlextInfraCodegenLayoutPlanMixin
-from ._mise_artifacts_publication import publish_file_plan
 
 
 class FlextInfraCodegenLayoutGitignoreMixin:
     """Ensure the layout gitignore patterns for one project directory."""
 
     def _apply_gitignore(
-        self, project_dir: Path, patterns: t.StrSequence
+        self,
+        project_dir: Path,
+        patterns: t.StrSequence,
     ) -> p.Result[t.Infra.LayoutStatus]:
-        """Ensure gitignore patterns via the canonical render or appending."""
+        """Ensure gitignore patterns via the canonical render or appending.
+
+        Returns:
+            The resulting ``p.Result[t.Infra.LayoutStatus]``.
+
+        """
         managed = self._managed_profile(project_dir)
         if managed.failure:
             return r[t.Infra.LayoutStatus].from_failure(managed)
@@ -35,15 +41,22 @@ class FlextInfraCodegenLayoutGitignoreMixin:
             return self._apply_gitignore_managed(project_dir, profile)
         return self._apply_gitignore_append(project_dir, patterns)
 
+    @staticmethod
     def _apply_gitignore_managed(
-        self, project_dir: Path, profile: c.Infra.MakeProfile
+        project_dir: Path,
+        profile: c.Infra.MakeProfile,
     ) -> p.Result[t.Infra.LayoutStatus]:
-        """Write the canonical rendered gitignore for a governed project."""
+        """Write the canonical rendered gitignore for a governed project.
+
+        Returns:
+            The resulting ``p.Result[t.Infra.LayoutStatus]``.
+
+        """
         rendered = u.Infra.render_project_gitignore(
             config.Infra.codegen,
             profile=profile,
             project_name=FlextInfraCodegenLayoutPlanMixin.layout_project_name(
-                project_dir
+                project_dir,
             ),
             project_dir=project_dir,
         )
@@ -71,16 +84,23 @@ class FlextInfraCodegenLayoutGitignoreMixin:
             owner="codegen",
             policy="full",
         )
-        written = publish_file_plan(planned, phase="layout")
+        written = FlextInfraMisePublication.publish_file_plan(planned, phase="layout")
         if written.failure:
             return r[t.Infra.LayoutStatus].from_failure(written)
         applied_status: t.Infra.LayoutStatus = "applied"
         return r[t.Infra.LayoutStatus].ok(applied_status)
 
+    @staticmethod
     def _apply_gitignore_append(
-        self, project_dir: Path, patterns: t.StrSequence
+        project_dir: Path,
+        patterns: t.StrSequence,
     ) -> p.Result[t.Infra.LayoutStatus]:
-        """Append missing patterns for an unmanaged or external project."""
+        """Append missing patterns for an unmanaged or external project.
+
+        Returns:
+            The resulting ``p.Result[t.Infra.LayoutStatus]``.
+
+        """
         gitignore_path = project_dir / c.Infra.GITIGNORE
         current = ""
         if gitignore_path.is_file():
@@ -116,7 +136,7 @@ class FlextInfraCodegenLayoutGitignoreMixin:
             owner="codegen",
             policy="merge",
         )
-        written = publish_file_plan(planned, phase="layout")
+        written = FlextInfraMisePublication.publish_file_plan(planned, phase="layout")
         if written.failure:
             return r[t.Infra.LayoutStatus].from_failure(written)
         applied_status: t.Infra.LayoutStatus = "applied"
@@ -124,14 +144,20 @@ class FlextInfraCodegenLayoutGitignoreMixin:
 
     @staticmethod
     def _managed_profile(project_dir: Path) -> p.Result[c.Infra.MakeProfile | None]:
-        """Make profile when the project is governed by a workspace."""
+        """Make profile when the project is governed by a workspace.
+
+        Returns:
+            The resulting ``p.Result[c.Infra.MakeProfile | None]``.
+
+        """
         workspace = FlextInfraWorkspaceDetector.load_workspace_spec(
-            u.Infra.resolve_repository_root_or_cwd(project_dir)
+            u.Infra.resolve_repository_root_or_cwd(project_dir),
         )
         if workspace.failure:
             return r[c.Infra.MakeProfile | None].from_failure(workspace)
         target = FlextInfraWorkspaceDetector.conform_target(
-            project_dir, workspace.value
+            project_dir,
+            workspace.value,
         )
         if target.failure:
             return r[c.Infra.MakeProfile | None].from_failure(target)

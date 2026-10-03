@@ -1,27 +1,46 @@
 # AUTO-GENERATED FILE — Regenerate with: make gen
-"""Flext Infra.codegen. Conform package."""
+"""Flext Infra.codegen. Conform package.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core.lazy import build_lazy_import_map, install_lazy_exports
+from flext_core import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from .artifact_render import FlextInfraCodegenConformArtifactRender
-    from .beads_routes import FlextInfraCodegenConformBeadsRoutes
-    from .bootstrap import FlextInfraCodegenConformBootstrap
-    from .context_render import FlextInfraCodegenConformContextRender
-    from .docs_ownership import FlextInfraCodegenConformDocsOwnership
-    from .execute import FlextInfraCodegenConformExecute
-    from .existing_plan import FlextInfraCodegenConformExistingPlan
-    from .file_plans import FlextInfraCodegenConformFilePlans
-    from .gitignore import FlextInfraCodegenConformGitignore
-    from .plan import FlextInfraCodegenConformPlan
-    from .pyproject_policy import FlextInfraCodegenConformPyprojectPolicy
-    from .scaffold_plan import FlextInfraCodegenConformScaffoldPlan
-
+    from flext_infra.codegen._conform.artifact_render import (
+        FlextInfraCodegenConformArtifactRender,
+    )
+    from flext_infra.codegen._conform.beads_routes import (
+        FlextInfraCodegenConformBeadsRoutes,
+    )
+    from flext_infra.codegen._conform.bootstrap import FlextInfraCodegenConformBootstrap
+    from flext_infra.codegen._conform.context_render import (
+        FlextInfraCodegenConformContextRender,
+    )
+    from flext_infra.codegen._conform.docs_ownership import (
+        FlextInfraCodegenConformDocsOwnership,
+    )
+    from flext_infra.codegen._conform.execute import FlextInfraCodegenConformExecute
+    from flext_infra.codegen._conform.existing_plan import (
+        FlextInfraCodegenConformExistingPlan,
+    )
+    from flext_infra.codegen._conform.file_plans import (
+        FlextInfraCodegenConformFilePlans,
+    )
+    from flext_infra.codegen._conform.gitignore import FlextInfraCodegenConformGitignore
+    from flext_infra.codegen._conform.plan import FlextInfraCodegenConformPlan
+    from flext_infra.codegen._conform.pyproject_policy import (
+        FlextInfraCodegenConformPyprojectPolicy,
+    )
+    from flext_infra.codegen._conform.scaffold_plan import (
+        FlextInfraCodegenConformScaffoldPlan,
+    )
 
 __all__: tuple[str, ...] = (
     "FlextInfraCodegenConformArtifactRender",
@@ -56,7 +75,7 @@ _LAZY_IMPORTS = MappingProxyType(
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,
-    )
+    ),
 )
 
 install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

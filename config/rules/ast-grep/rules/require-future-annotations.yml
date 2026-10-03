@@ -1,0 +1,167 @@
+# Family file for the universal module-hygiene rules: all share the same
+# governed Python surface, so the files/ignores scan scope stays in one owner
+# file. Each document is one rule; the rule ID is the contract.
+id: require-future-annotations
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/.git/**"
+  - "**/.venv/**"
+  - "**/legado/**"
+  - "**/legacy/**"
+  - "**/node_modules/**"
+  - "**/*_pb2.py"
+  - "**/*_pb2_grpc.py"
+metadata:
+  relocation: future-annotations
+rule:
+  kind: module
+  not:
+    has:
+      pattern: from __future__ import annotations
+      stopBy: end
+message: >-
+  Python modules must declare `from __future__ import annotations`; the
+  insertion point depends on module docstrings, shebangs, encoding markers and
+  other future imports, so the rope future-annotations relocation inserts it,
+  not a token fix.
+---
+id: ban-star-import-src
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/.git/**"
+  - "**/.venv/**"
+  - "**/legado/**"
+  - "**/legacy/**"
+  - "**/node_modules/**"
+  - "**/*_pb2.py"
+  - "**/*_pb2_grpc.py"
+rule:
+  kind: import_from_statement
+  has:
+    kind: wildcard_import
+    stopBy: end
+message: >-
+  Star imports are forbidden; enumerate the public symbols after semantic
+  reference discovery. Detection remains strict because a textual expansion
+  cannot prove the imported module's runtime export contract.
+---
+# The runtime `serialize_as_any=True` flag applies duck-typed serialization to
+# every value in the call, not only to model subclasses. Pydantic 2.13+
+# provides `polymorphic_serialization=True` for subclass exposure and the
+# per-field `SerializeAsAny[...]` annotation for genuine duck-typed fields.
+id: ban-serialize-as-any-flag
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/.git/**"
+  - "**/.venv/**"
+  - "**/legado/**"
+  - "**/legacy/**"
+  - "**/node_modules/**"
+  - "**/*_pb2.py"
+  - "**/*_pb2_grpc.py"
+rule:
+  kind: keyword_argument
+  regex: '^serialize_as_any\s*=\s*True$'
+  inside:
+    kind: argument_list
+    inside:
+      any:
+        - pattern: $OBJ.model_dump($$$ARGS)
+        - pattern: $OBJ.model_dump_json($$$ARGS)
+        - pattern: $OBJ.dump_python($$$ARGS)
+        - pattern: $OBJ.dump_json($$$ARGS)
+message: >-
+  The `serialize_as_any=True` call flag applies to every value. Use
+  `polymorphic_serialization=True` for model subclasses or the per-field
+  `SerializeAsAny[...]` annotation through the `m` facade.
+---
+# `__all__`, when a module declares it, closes the module: it is the last
+# top-level statement unless a later statement consumes it (the generated
+# lazy-init install_lazy_exports call reads it), so the export contract is
+# read after every name it lists exists. Moving a statement across others is
+# a semantic move, not a token fix: the module-end phase of make mod applies it.
+id: require-all-last
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/.git/**"
+  - "**/.venv/**"
+  - "**/legado/**"
+  - "**/legacy/**"
+  - "**/node_modules/**"
+  - "**/*_pb2.py"
+  - "**/*_pb2_grpc.py"
+rule:
+  kind: expression_statement
+  inside:
+    kind: module
+  has:
+    kind: assignment
+    has:
+      field: left
+      regex: ^__all__$
+  precedes:
+    stopBy: end
+    regex: \S
+    not:
+      kind: comment
+  not:
+    precedes:
+      stopBy: end
+      has:
+        kind: identifier
+        regex: ^__all__$
+        stopBy: end
+message: >-
+  `__all__` must be the module's last statement unless a later statement
+  consumes it; the module-end phase of make mod moves the declaration there.
+---
+# The copyright notice closes the module docstring: the summary leads, the
+# module's own text follows it, and the notice paragraph (the copyright line
+# and its SPDX line) is the docstring's last lines. The SPDX line ends the
+# notice, so any text after it means the notice is not last. Moving a
+# paragraph inside a docstring is a semantic move, not a token fix: the
+# notice-last phase of make mod applies it.
+id: require-notice-last
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/.git/**"
+  - "**/.venv/**"
+  - "**/legado/**"
+  - "**/legacy/**"
+  - "**/node_modules/**"
+  - "**/*_pb2.py"
+  - "**/*_pb2_grpc.py"
+rule:
+  kind: string_content
+  regex: 'SPDX-License-Identifier:[^\n]*\n\s*\S'
+  inside:
+    kind: string
+    inside:
+      kind: expression_statement
+      inside:
+        kind: module
+      not:
+        follows:
+          stopBy: end
+          regex: \S
+          not:
+            kind: comment
+message: >-
+  The copyright notice must be the last lines of the module docstring; the
+  notice-last phase of make mod moves the notice paragraph after the rest of
+  the docstring text.
