@@ -42,7 +42,7 @@ class FlextInfraCProfileReport(s[bool]):
     run_receipt: Annotated[
         Path | None,
         m.Field(
-            description="Explicit parent profile receipt for a collection profiling run",
+            description="Parent profile receipt for a collection profiling run",
         ),
     ] = None
 

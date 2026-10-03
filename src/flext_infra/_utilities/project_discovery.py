@@ -181,8 +181,8 @@ class FlextInfraUtilitiesProjectDiscovery(
 
         Args:
             repository_root: Root directory to start search from.
-            scan_dirs: Directory names indicating a project exists (e.g., "src", "tests").
-                Must be frozenset for use as constant. Defaults to standard project dirs.
+            scan_dirs: Directory names indicating a project (e.g., "src", "tests").
+                Must be a frozenset constant. Defaults to standard project dirs.
 
         Returns:
             Project roots sorted by their ``.gitmodules`` declaration order.
@@ -309,9 +309,10 @@ class FlextInfraUtilitiesProjectDiscovery(
     def governed_project_roots(cls, repository_root: Path) -> t.SequenceOf[Path]:
         """Return the repositories a verb run at ``repository_root`` governs.
 
-        Every repository evaluates and rewrites only itself: a workspace root consumes its declared members as
-        installed libraries and never scans, checks, or rewrites them; each
-        member runs its own verbs in its own repository.
+        Every repository evaluates and rewrites only itself: a workspace root
+        consumes its declared members as installed libraries and never scans,
+        checks, or rewrites them; each member runs its own verbs in its own
+        repository.
 
         Returns:
             The repositories a verb run at ``repository_root`` governs.

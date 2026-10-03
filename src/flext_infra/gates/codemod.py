@@ -242,7 +242,7 @@ class FlextInfraCodemodGate(FlextInfraGate):
             raise ValueError(msg)
         expected_stderr = (
             f"Error: {error_count} error(s) found in code.\n"
-            "Help: Scan succeeded and found error level diagnostics in the codebase.\n\n"
+            "Help: Scan succeeded; error-level diagnostics found in the codebase.\n\n"
             if error_count
             else ""
         )

@@ -40,7 +40,9 @@ class FlextInfraConfigModelsBeads:
         custom_issue_types: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                description="Repository-owned custom types beyond the Gas City baseline",
+                description=(
+                    "Repository-owned custom types beyond the Gas City baseline"
+                ),
             ),
         ] = ()
 

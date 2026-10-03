@@ -44,7 +44,8 @@ class FlextInfraUtilitiesIterationWorkspace(FlextInfraUtilitiesIterationDirector
         )
         if invalid_root is not None:
             return r[t.SequenceOf[Path]].fail(
-                f"python file iteration failed: project root is not a directory: {invalid_root}",
+                f"python file iteration failed: project root "
+                f"is not a directory: {invalid_root}",
             )
         try:
             files = {
@@ -76,7 +77,10 @@ class FlextInfraUtilitiesIterationWorkspace(FlextInfraUtilitiesIterationDirector
             return tuple(
                 file_path
                 for source_root in source_roots
-                for file_path in FlextInfraUtilitiesIterationDirectory.iter_directory_python_files(
+                for file_path in (
+                    FlextInfraUtilitiesIterationDirectory
+                    .iter_directory_python_files
+                )(
                     source_root,
                 )
             )

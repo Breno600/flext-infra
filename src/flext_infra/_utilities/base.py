@@ -237,13 +237,16 @@ class FlextInfraUtilitiesBase:
         if any(not rule_id or "|" in rule_id for rule_id in selected_rule_ids):
             msg = "ast-grep rule IDs must be nonempty literal IDs"
             raise ValueError(msg)
+        rule_pattern = "|".join(
+            re.escape(rule_id) for rule_id in sorted(selected_rule_ids)
+        )
         command = [
             c.Infra.SG,
             c.Infra.SCAN,
             c.Infra.SG_CONFIG_FLAG,
             str(config_path),
             c.Infra.SG_FILTER_FLAG,
-            rf"^(?:{'|'.join(re.escape(rule_id) for rule_id in sorted(selected_rule_ids))})$",
+            f"^(?:{rule_pattern})$",
         ]
         if json_stream:
             command.append("--json=stream")

@@ -97,7 +97,8 @@ class FlextInfraBootstrap:
                         if time.monotonic() >= deadline:
                             raise ValueError(
                                 "Mise transaction mutex is held elsewhere for over "
-                                f"{FlextInfraBootstrap.MUTEX_TIMEOUT_SECONDS:.0f}s: {mutex}",
+                                f"{FlextInfraBootstrap.MUTEX_TIMEOUT_SECONDS:.0f}s: "
+                                f"{mutex}",
                             ) from None
                         time.sleep(0.2)
             try:
@@ -323,7 +324,10 @@ class FlextInfraBootstrap:
 
     @classmethod
     def _recover_artifacts(
-        cls, project: Path, stage: Path, journal: dict[str, str],
+        cls,
+        project: Path,
+        stage: Path,
+        journal: dict[str, str],
     ) -> None:
         old_refs = cls._journal_artifacts(journal, "old_artifacts")
         new_refs = cls._journal_artifacts(journal, "new_artifacts")
@@ -769,7 +773,8 @@ class FlextInfraBootstrap:
             sys.stderr.write(completed.stderr)
             diagnostics = (completed.stdout + completed.stderr).strip()
             raise ValueError(
-                f"Mise exited {completed.returncode}: {' '.join(arguments)}\n{diagnostics}",
+                f"Mise exited {completed.returncode}: "
+                f"{' '.join(arguments)}\n{diagnostics}",
             )
         if "mise WARN" in completed.stdout or "mise WARN" in completed.stderr:
             sys.stderr.write(completed.stderr)
@@ -801,7 +806,9 @@ class FlextInfraBootstrap:
 
     @staticmethod
     def _staged_lock_satisfies(
-        runtime: Path, stage: Path, environment: dict[str, str],
+        runtime: Path,
+        stage: Path,
+        environment: dict[str, str],
     ) -> bool:
         """Prove the staged lock satisfies the manifest without mutating tools.
 
@@ -853,7 +860,8 @@ class FlextInfraBootstrap:
         for name, payload in seeds:
             stage = Path(
                 tempfile.mkdtemp(
-                    prefix=f".{project.name}.mise-lock-stage.", dir=project.parent,
+                    prefix=f".{project.name}.mise-lock-stage.",
+                    dir=project.parent,
                 ),
             )
             scratch = Path(tempfile.mkdtemp(prefix="mise-reconcile."))
@@ -862,7 +870,11 @@ class FlextInfraBootstrap:
                 if payload is not None:
                     (stage / "mise.lock").write_bytes(payload)
                 environment = cls._mise_environment(
-                    storage, stage, scratch, cooldown, platforms,
+                    storage,
+                    stage,
+                    scratch,
+                    cooldown,
+                    platforms,
                 )
                 try:
                     cls._run(runtime, ["-C", str(stage), "lock"], environment)
@@ -899,7 +911,8 @@ class FlextInfraBootstrap:
                         Path(locks).replace(parked / "locks")
                     cls.publish(project, stage)
                 print(
-                    f"reconcile: published the {name} mise.lock Mise {release} satisfies",
+                    f"reconcile: published the {name} mise.lock "
+                    f"Mise {release} satisfies",
                 )
                 return
             finally:

@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core.lazy import build_lazy_import_map, install_lazy_exports
+from flext_core import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra._models._config.artifact import FlextInfraConfigModelsArtifact
@@ -27,7 +27,6 @@ if TYPE_CHECKING:
     from flext_infra._models._config.static import FlextInfraConfigModelsStatic
     from flext_infra._models._config.templates import FlextInfraConfigModelsTemplates
     from flext_infra._models._config.workspace import FlextInfraConfigModelsWorkspace
-
 
 __all__: tuple[str, ...] = (
     "FlextInfraConfigModels",

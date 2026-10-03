@@ -1,4 +1,8 @@
-"""Shared authenticated SonarCloud web API boundary for maintenance services."""
+"""Shared authenticated SonarCloud web API boundary for maintenance services.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,7 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, settings, t, u
-
-from ..base import s
+from flext_infra.base import s
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -24,20 +27,24 @@ class FlextInfraSonarcloudClient[TResult: t.Cli.ResultValue](s[TResult]):
         if token is None or not token.get_secret_value().strip():
             return r[t.SecretStr].fail(
                 "SONAR_TOKEN is required in the process environment and must "
-                "not be empty or whitespace"
+                "not be empty or whitespace",
             )
         raw = token.get_secret_value()
         if raw != raw.strip():
             return r[t.SecretStr].fail(
-                "SONAR_TOKEN carries surrounding whitespace; supply the exact token"
+                "SONAR_TOKEN carries surrounding whitespace; supply the exact token",
             )
         return r[t.SecretStr].ok(token)
 
     @staticmethod
     def project_key(repository_root: Path) -> p.Result[str]:
-        """Derive ``<organization>_<repository>`` from the checkout's origin."""
+        """Derive ``<organization>_<repository>`` from the checkout's origin.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+        """
         origin = u.Infra.git_remote_url(
-            m.Infra.GitRemoteUrlRequest(repo_root=repository_root)
+            m.Infra.GitRemoteUrlRequest(repo_root=repository_root),
         )
         if origin.failure:
             return r[str].from_failure(origin)
@@ -45,10 +52,10 @@ class FlextInfraSonarcloudClient[TResult: t.Cli.ResultValue](s[TResult]):
         organization, _, repository = identity.partition("/")
         if not organization or not repository or "/" in repository:
             return r[str].fail(
-                f"origin does not identify an organization and repository: {identity}"
+                f"origin does not identify an organization and repository: {identity}",
             )
         return r[str].ok(
-            f"{organization}{c.Infra.SONARCLOUD_PROJECT_KEY_SEPARATOR}{repository}"
+            f"{organization}{c.Infra.SONARCLOUD_PROJECT_KEY_SEPARATOR}{repository}",
         )
 
     @staticmethod
@@ -60,7 +67,11 @@ class FlextInfraSonarcloudClient[TResult: t.Cli.ResultValue](s[TResult]):
         path: str,
         form: t.SequenceOf[t.Pair[str, str]],
     ) -> p.Result[str]:
-        """Send one authenticated request to the configured web API origin."""
+        """Send one authenticated request to the configured web API origin.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+        """
         return u.Infra.http_bearer_text(
             method,
             f"{api_url}{path}",

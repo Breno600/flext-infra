@@ -202,13 +202,17 @@ class FlextInfraAccessorMigrationReportMixin:
         ]
         for tool in report.lint_tools:
             lines.append(
-                f"lint-totals:{tool} before={report.lint_before_totals.get(tool, 0)} after={report.lint_after_totals.get(tool, 0)} new={report.new_lint_error_totals.get(tool, 0)}",
+                f"lint-totals:{tool} "
+                f"before={report.lint_before_totals.get(tool, 0)} "
+                f"after={report.lint_after_totals.get(tool, 0)} "
+                f"new={report.new_lint_error_totals.get(tool, 0)}",
             )
         for file_report in report.files:
             lines.append(f"\n{file_report.file}")
             for change in file_report.automated_changes:
                 lines.append(
-                    f"  auto:{change.line} {change.original_name} -> {change.replacement_name}",
+                    f"  auto:{change.line} {change.original_name} "
+                    f"-> {change.replacement_name}",
                 )
             for warning in file_report.warnings:
                 target = (
