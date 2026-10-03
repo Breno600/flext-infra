@@ -1,4 +1,8 @@
-"""Census duplicate grouping and object/analysis filters."""
+"""Census duplicate grouping and object/analysis filters.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -25,7 +29,12 @@ class FlextInfraRefactorCensusFiltersMixin:
     def _duplicate_groups(
         project_objects: t.VariadicTuple[t.SequenceOf[m.Infra.Object]],
     ) -> t.VariadicTuple[m.Infra.DuplicateGroup]:
-        """Duplicate groups."""
+        """Duplicate groups.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.DuplicateGroup]``.
+
+        """
 
         def object_location(item: m.Infra.Object) -> t.Triple[str, str, int]:
             return item.project, item.file_path, item.line
@@ -64,7 +73,12 @@ class FlextInfraRefactorCensusFiltersMixin:
         selected_families: frozenset[str],
         selected_kinds: frozenset[str] | None,
     ) -> bool:
-        """Return whether one inventory object passes the kind and family filters."""
+        """Return whether one inventory object passes the kind and family filters.
+
+        Returns:
+            Whether one inventory object passes the kind and family filters.
+
+        """
         if selected_kinds and item.kind not in selected_kinds:
             return False
         if not selected_families:
@@ -85,6 +99,10 @@ class FlextInfraRefactorCensusFiltersMixin:
 
         ``selected_rules`` is a precomputed frozenset of ``rule_names``;
         callers in hot loops MUST pass it to avoid per-call set construction.
+
+        Returns:
+            The resulting ``bool``.
+
         """
         if selected_rules is None:
             return rule_names is None or rule in frozenset(rule_names)

@@ -1,4 +1,8 @@
-"""Docs project discovery and canonical descriptor construction."""
+"""Docs project discovery and canonical descriptor construction.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,10 +13,11 @@ from typing import TYPE_CHECKING
 
 from flext_core.result import FlextResult as r
 from flext_infra import c, m, t
-
-from ._docs_scope_policy import FlextInfraUtilitiesDocsScopePolicyMixin
-from .git import FlextInfraUtilitiesGit
-from .project_discovery import FlextInfraUtilitiesProjectDiscovery
+from flext_infra._utilities._docs_scope_policy import (
+    FlextInfraUtilitiesDocsScopePolicyMixin,
+)
+from flext_infra._utilities.git import FlextInfraUtilitiesGit
+from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
 
 if TYPE_CHECKING:
     from flext_infra import FlextInfraProtocols as p
@@ -28,7 +33,12 @@ class FlextInfraUtilitiesDocsScopeProjectsMixin(
         repository_root: Path,
         names: t.StrSequence,
     ) -> p.Result[t.SequenceOf[m.Infra.ProjectInfo]]:
-        """Resolve project names through repository-local topology only."""
+        """Resolve project names through repository-local topology only.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.ProjectInfo]]``.
+
+        """
         owner = FlextInfraUtilitiesDocsScopeProjectsMixin
         discovered = owner.discover_projects(repository_root)
         if discovered.failure:
@@ -69,7 +79,15 @@ class FlextInfraUtilitiesDocsScopeProjectsMixin(
     def workspace_declared_repository_path_set(
         repository_root: Path,
     ) -> frozenset[Path]:
-        """Return lexical subprojects freshly read from this root's manifest."""
+        """Return lexical subprojects freshly read from this root's manifest.
+
+        Returns:
+            Lexical subprojects freshly read from this root's manifest.
+
+        Raises:
+            ValueError: If ``declared.failure``.
+
+        """
         root = FlextInfraUtilitiesDocsScopeProjectsMixin.absolute_lexical(
             repository_root,
         )
@@ -84,7 +102,12 @@ class FlextInfraUtilitiesDocsScopeProjectsMixin(
         *,
         workspace_declared_repositories: frozenset[Path],
     ) -> m.Infra.ProjectInfo | None:
-        """Build one canonical project descriptor for one discovered project root."""
+        """Build one canonical project descriptor for one discovered project root.
+
+        Returns:
+            The resulting ``m.Infra.ProjectInfo | None``.
+
+        """
         entry = FlextInfraUtilitiesDocsScopeProjectsMixin.absolute_lexical(entry)
         project_state = FlextInfraUtilitiesDocsScopeProjectsMixin.project_state(entry)
         project_section = project_state.payload.get("project")
@@ -144,7 +167,12 @@ class FlextInfraUtilitiesDocsScopeProjectsMixin(
     def discover_projects(
         repository_root: Path,
     ) -> p.Result[t.SequenceOf[m.Infra.ProjectInfo]]:
-        """Discover the root or projects declared by its own ``.gitmodules``."""
+        """Discover the root or projects declared by its own ``.gitmodules``.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.ProjectInfo]]``.
+
+        """
         owner = FlextInfraUtilitiesDocsScopeProjectsMixin
         roots = owner.docs_repository_roots(repository_root)
         if roots.failure:

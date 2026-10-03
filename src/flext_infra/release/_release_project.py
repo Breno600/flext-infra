@@ -1,4 +1,8 @@
-"""Release project build: one committed project to one attested artifact set."""
+"""Release project build: one committed project to one attested artifact set.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,8 +12,7 @@ from tempfile import TemporaryDirectory
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
-
-from ._release_metadata import FlextInfraReleaseMetadataMixin
+from flext_infra.release._release_metadata import FlextInfraReleaseMetadataMixin
 
 
 class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
@@ -22,7 +25,12 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         target: t.Pair[str, Path],
         versions: t.StrMapping,
     ) -> p.Result[m.Infra.BuildRecord]:
-        """Build one project; its fail-loud error becomes its failed, logged record."""
+        """Build one project; its fail-loud error becomes its failed, logged record.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.BuildRecord]``.
+
+        """
         name = target[0]
         log = self._release_dir(ctx.repository_root, ctx.tag) / f"build-{name}.log"
         try:
@@ -62,6 +70,10 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         The project's hook stays the sole owner of the input names and of
         failing when one is missing; a project without ``dist/`` stages
         unchanged.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         del cls
         source = project_path / "dist"
@@ -88,7 +100,12 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         versions: t.StrMapping,
         temporary: Path,
     ) -> p.Result[m.Infra.BuildRecord]:
-        """Stage, render, build, validate and persist one project in ``temporary``."""
+        """Stage, render, build, validate and persist one project in ``temporary``.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.BuildRecord]``.
+
+        """
         name, path = target
         output_dir = self._release_dir(ctx.repository_root, ctx.tag)
         log, stage = output_dir / f"build-{name}.log", temporary / "source"
@@ -113,7 +130,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         hatch = u.Cli.toml_table_child(tool, "hatch") if tool is not None else None
         if hatch is None:
             return r[m.Infra.BuildRecord].fail(
-                "rendered release metadata lost Hatch build targets"
+                "rendered release metadata lost Hatch build targets",
             )
         boundary = self._sdist_boundary(hatch)
         if boundary.failure:
@@ -146,7 +163,9 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
             timeout=c.Infra.TIMEOUT_LONG,
             env={
                 c.Infra.SOURCE_DATE_EPOCH: str(snapshot.source_date_epoch),
-                c.Infra.UV_HTTP_CONNECT_TIMEOUT: c.Infra.UV_RELEASE_HTTP_CONNECT_TIMEOUT,
+                c.Infra.UV_HTTP_CONNECT_TIMEOUT: (
+                    c.Infra.UV_RELEASE_HTTP_CONNECT_TIMEOUT
+                ),
                 c.Infra.UV_HTTP_TIMEOUT: c.Infra.UV_RELEASE_HTTP_TIMEOUT,
                 c.Infra.UV_HTTP_RETRIES: c.Infra.UV_RELEASE_HTTP_RETRIES,
             },
@@ -190,11 +209,18 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
 
     @classmethod
     def _persist_artifacts(
-        cls, dist: Path, destination: Path, expectation: m.Infra.ArtifactExpectation
+        cls,
+        dist: Path,
+        destination: Path,
+        expectation: m.Infra.ArtifactExpectation,
     ) -> p.Result[t.VariadicTuple[m.Infra.BuildArtifact]]:
         """Validate exactly one wheel and one sdist, then persist the set atomically.
 
         An existing set is immutable: it is accepted only byte for byte.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.BuildArtifact]]``.
+
         """
         result_type = r[t.VariadicTuple[m.Infra.BuildArtifact]]
         try:
@@ -216,12 +242,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
             )
         built: t.MutableSequenceOf[m.Infra.BuildArtifact] = []
         for source in sources:
-            validated = cls._validate_artifact(
-                source,
-                identity,
-                license_sha256,
-                versions,
-            )
+            validated = cls._validate_artifact(source, expectation)
             if validated.failure:
                 return result_type.from_failure(validated)
             kind, digest = validated.value

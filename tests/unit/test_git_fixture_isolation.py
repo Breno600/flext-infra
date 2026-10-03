@@ -1,4 +1,8 @@
-"""Regression coverage for real Git fixture process isolation."""
+"""Regression coverage for real Git fixture process isolation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -11,10 +15,13 @@ from tests import c, u as test_u
 
 
 class TestsFlextInfraGitFixtureIsolation:
+    """Tests for ``FlextInfraGitFixtureIsolation``."""
+
+    @staticmethod
     def test_initialize_git_repo_ignores_inherited_git_local_environment(
-        self,
         tmp_path: Path,
     ) -> None:
+        """Test initialize git repo ignores inherited git local environment."""
         poison = tmp_path / "poison"
         poison.mkdir()
         tm.ok(u.Cli.run_checked(["git", "init", "-b", "main"], cwd=poison))

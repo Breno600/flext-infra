@@ -1,4 +1,8 @@
-"""Conformance planning for existing repositories and governed artifacts."""
+"""Conformance planning for existing repositories and governed artifacts.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,13 +12,16 @@ from pathlib import Path
 from typing import Literal
 
 from flext_core import r
-
-from ... import c, m, p, t, u
-from ...deps import FlextInfraPyprojectModernizer
-from ...services.codegen import FlextInfraCodegen
-from ...workspace.environment_contracts import FlextInfraWorkspaceEnvironmentContracts
-from .._mise_artifacts_cold_start import FlextInfraMiseColdStart
-from .artifact_render import FlextInfraCodegenConformArtifactRender
+from flext_infra import c, m, p, t, u
+from flext_infra.codegen._conform.artifact_render import (
+    FlextInfraCodegenConformArtifactRender,
+)
+from flext_infra.codegen._mise_artifacts_cold_start import FlextInfraMiseColdStart
+from flext_infra.deps import FlextInfraPyprojectModernizer
+from flext_infra.services.codegen import FlextInfraCodegen
+from flext_infra.workspace.environment_contracts import (
+    FlextInfraWorkspaceEnvironmentContracts,
+)
 
 
 class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRender):
@@ -28,7 +35,12 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         codegen: m.Infra.CodegenConfigSpec,
         contract: m.Infra.CodegenConformSurfaceContract,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
-        """Conform every declared managed surface in an existing repository."""
+        """Conform every declared managed surface in an existing repository.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
+
+        """
         root = target.root
         repository = target.repository
         if contract.destinations == frozenset(c.Infra.ARTIFACT_NAMES):
@@ -50,12 +62,15 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 "PEP 621 project name does not match catalog distribution: "
                 f"{dist} != {repository.distribution}",
             )
-        if contract.destinations == frozenset({c.Infra.MAKEFILE_FILENAME}):
-            return self._plan_existing_makefile(target, workspace, codegen)
+        if contract.destinations == c.Infra.MAKEFILE_BOOTSTRAP_DESTINATIONS:
+            return self._plan_existing_bootstrap(target, workspace, codegen)
         docs_config = (Path(c.Infra.DIR_DOCS) / c.Infra.DOCS_CONFIG_FILENAME).as_posix()
         if contract.destinations == frozenset({docs_config}):
             return self._plan_existing_docs_config(
-                target, workspace, codegen, docs_config
+                target,
+                workspace,
+                codegen,
+                docs_config,
             )
         managed_artifacts = u.Infra.snapshot_committed_project_managed_artifacts(root)
         if managed_artifacts.failure:
@@ -145,55 +160,69 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             planned.extend(custom_result.value)
         return r[t.SequenceOf[m.Infra.CodegenFilePlan]].ok(tuple(planned))
 
-    def _plan_existing_makefile(
+    def _plan_existing_bootstrap(
         self,
         target: m.Infra.RepositoryConformTarget,
         workspace: m.Infra.WorkspaceSpec,
         codegen: m.Infra.CodegenConfigSpec,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
-        """Render the bootstrap Make surface before sibling checkouts exist."""
-        destination = c.Infra.MAKEFILE_FILENAME
-        entries = tuple(
-            entry
-            for entry in codegen.templates.entries
-            if entry.destination == destination
-            and entry.delegate == c.Infra.TemplateDelegate.RENDER
-            and target.make_profile in entry.profiles
-        )
-        if len(entries) != 1 or entries[0].source is None:
-            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
-                "Makefile requires exactly one render template for its profile",
-            )
-        managed = tuple(
-            item for item in codegen.managed_files if item.path == Path(destination)
-        )
-        if len(managed) != 1:
-            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
-                "Makefile requires exactly one managed-file declaration",
-            )
+        """Render the bootstrap Make surface before sibling checkouts exist.
+
+        Every destination of the surface renders from the one Makefile spec:
+        the lock publisher the bootstrap runs reads only its Mise contract.
+
+        Returns:
+            One file plan per bootstrap destination, in destination order.
+
+        """
         context = self._makefile_render_spec(target, workspace, codegen)
         if context.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(context)
-        rendered = u.Cli.template_render(
-            u.Infra.codegen_templates_root(codegen) / entries[0].source,
-            context.value,
-        )
-        if rendered.failure:
-            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(rendered)
-        conflict_marker = u.Infra.first_merge_conflict_marker(rendered.value)
-        if conflict_marker is not None:
-            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
-                f"rendered Makefile contains a merge conflict marker: {conflict_marker}",
+        plans: list[m.Infra.CodegenFilePlan] = []
+        for destination in sorted(c.Infra.MAKEFILE_BOOTSTRAP_DESTINATIONS):
+            entries = tuple(
+                entry
+                for entry in codegen.templates.entries
+                if entry.destination == destination
+                and entry.delegate == c.Infra.TemplateDelegate.RENDER
+                and target.make_profile in entry.profiles
             )
-        plan = self.file_plan(
-            target.root,
-            destination,
-            rendered.value,
-            mode=managed[0].mode,
-        )
-        if plan.failure:
-            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(plan)
-        return r[t.SequenceOf[m.Infra.CodegenFilePlan]].ok((plan.value,))
+            if len(entries) != 1 or entries[0].source is None:
+                return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
+                    f"{destination} requires exactly one render template "
+                    "for its profile",
+                )
+            managed = tuple(
+                item for item in codegen.managed_files if item.path == Path(destination)
+            )
+            if len(managed) != 1:
+                return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
+                    f"{destination} requires exactly one managed-file declaration",
+                )
+            rendered = u.Cli.template_render(
+                u.Infra.codegen_templates_root(codegen) / entries[0].source,
+                context.value,
+            )
+            if rendered.failure:
+                return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
+                    rendered,
+                )
+            conflict_marker = u.Infra.first_merge_conflict_marker(rendered.value)
+            if conflict_marker is not None:
+                return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
+                    f"rendered {destination} contains a merge conflict marker: "
+                    f"{conflict_marker}",
+                )
+            plan = self.file_plan(
+                target.root,
+                destination,
+                rendered.value,
+                mode=managed[0].mode,
+            )
+            if plan.failure:
+                return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(plan)
+            plans.append(plan.value)
+        return r[t.SequenceOf[m.Infra.CodegenFilePlan]].ok(tuple(plans))
 
     def _plan_existing_docs_config(
         self,
@@ -202,7 +231,12 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         codegen: m.Infra.CodegenConfigSpec,
         destination: str,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
-        """Render the declared docs policy before consumers parse its projection."""
+        """Render the declared docs policy before consumers parse its projection.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
+
+        """
         entries = tuple(
             entry
             for entry in codegen.templates.entries
@@ -215,7 +249,8 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         )
         if len(entries) != 1 or entries[0].source is None or len(managed) != 1:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
-                f"docs config requires one declared render template and owner: {destination}"
+                f"docs config requires one declared render template "
+                f"and owner: {destination}",
             )
         template = u.Infra.codegen_templates_root(codegen) / entries[0].source
         source = u.Cli.atomic_read_binary_file_state(template, required=True)
@@ -244,7 +279,12 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         render_inputs: m.Infra.CodegenRenderInputs,
         contract: m.Infra.CodegenConformSurfaceContract,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
-        """Render configured overwrite-owned templates for an existing tree."""
+        """Render the managed-file templates for an existing tree.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
+
+        """
         target = render_inputs.target
         workspace = render_inputs.workspace
         codegen = render_inputs.codegen
@@ -277,7 +317,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                     and profile is c.Infra.MakeProfile.WORKSPACE
                 )
             )
-            if managed.path == Path(c.Infra.CUSTOM_MAKE_FILENAME) or pyproject_skipped:
+            if pyproject_skipped:
                 continue
             entries = tuple(
                 entry
@@ -289,7 +329,8 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 continue
             if len(entries) != 1:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
-                    f"managed file requires exactly one render template: {managed.path}",
+                    f"managed file requires exactly one render template: "
+                    f"{managed.path}",
                 )
             entry = entries[0]
             if entry.source is None:
@@ -304,9 +345,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                     f"managed destination escapes repository root: {entry.destination}",
                 )
             path = (root / relative).resolve()
-            try:
-                path.relative_to(root.resolve())
-            except ValueError:
+            if not path.is_relative_to(root.resolve()):
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
                     f"managed destination escapes repository root: {entry.destination}",
                 )
@@ -366,7 +405,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 recorded = self.with_planned_pyproject(render_inputs, rendered_content)
                 if recorded.failure:
                     return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
-                        recorded
+                        recorded,
                     )
                 render_inputs = recorded.value
             conflict_marker = u.Infra.first_merge_conflict_marker(rendered_content)
@@ -395,7 +434,15 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         *,
         profile: str | None = None,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
-        """Validate the handwritten Make surface against its profile contract."""
+        """Validate the handwritten Make surface against its profile contract.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
+
+        Raises:
+            ValueError: If rendered.
+
+        """
         policy = config.make.custom_handler_policies.get(
             profile or "",
             config.make.custom_handler_policy,
@@ -453,6 +500,10 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         Only the ``ALL`` surface completes the full governed set; the
         pyproject-scoped surfaces (``DEPENDENCIES``/``PYPROJECT``) keep the plan
         restricted to what their own planners already produced.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
+
         """
         root = target.root
         profile = target.make_profile

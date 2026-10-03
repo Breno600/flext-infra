@@ -1,4 +1,8 @@
-"""FLEXT infrastructure workspace checker."""
+"""FLEXT infrastructure workspace checker.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,11 +12,12 @@ from typing import ClassVar, override
 
 from flext_core import r
 from flext_infra import c, config, m, p, t, u
-
-from ..base import FlextInfraServiceBase
-from ._workspace_check_reports import FlextInfraWorkspaceCheckReportsMixin
-from .gate_registry import FlextInfraGateRegistry
-from .workspace_check_gates import FlextInfraWorkspaceCheckGatesMixin
+from flext_infra.base import FlextInfraServiceBase
+from flext_infra.check._workspace_check_reports import (
+    FlextInfraWorkspaceCheckReportsMixin,
+)
+from flext_infra.check.gate_registry import FlextInfraGateRegistry
+from flext_infra.check.workspace_check_gates import FlextInfraWorkspaceCheckGatesMixin
 
 
 class FlextInfraWorkspaceChecker(
@@ -25,10 +30,6 @@ class FlextInfraWorkspaceChecker(
     _repository_root: Path
     _registry: FlextInfraGateRegistry
     _default_reports_dir: Path
-    rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
-        exclude=True,
-        description="Shared Rope cycle injected by api.py",
-    )
     model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
         validate_by_name=True,
         validate_by_alias=True,
@@ -49,14 +50,24 @@ class FlextInfraWorkspaceChecker(
 
     @staticmethod
     def parse_tool_args(raw: str | None) -> t.StrSequence:
-        """Parse extra gate arguments passed as a shell-style string."""
+        """Parse extra gate arguments passed as a shell-style string.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         if raw is None:
             return list[str]()
         return [item for item in shlex.split(raw) if item]
 
     @staticmethod
     def resolve_gates(gates: t.StrSequence) -> p.Result[list[str]]:
-        """Validate exact, unique requested gate names without normalization."""
+        """Validate exact, unique requested gate names without normalization.
+
+        Returns:
+            The resulting ``p.Result[list[str]]``.
+
+        """
         if not gates:
             return r[list[str]].fail("ERROR: at least one quality gate is required")
         resolved: list[str] = []
@@ -72,11 +83,21 @@ class FlextInfraWorkspaceChecker(
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute."""
+        """Execute.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return r[bool].fail("Use execute_command() directly")
 
     def execute_payload(self, params: m.Infra.RunCommand) -> p.Result[bool]:
-        """Execute quality gates from the canonical check command payload."""
+        """Execute quality gates from the canonical check command payload.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         project_targets_result = self._resolve_project_targets(params)
         if project_targets_result.failure:
             return r[bool].from_failure(project_targets_result)
@@ -132,6 +153,10 @@ class FlextInfraWorkspaceChecker(
         Every repository evaluates only itself: an
         omitted ``--projects`` never widens to the declared members, and a root
         that is not a project fails loud through the topology owner.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.CheckProjectTarget]]``.
+
         """
         requested = params.project_names
         if requested:
@@ -155,13 +180,23 @@ class FlextInfraWorkspaceChecker(
         )
 
     def format(self, project_dir: Path) -> p.Result[m.Infra.GateResult]:
-        """Run format checks for one project."""
+        """Run format checks for one project.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GateResult]``.
+
+        """
         return r[m.Infra.GateResult].ok(
             self._run_gate(c.Infra.FORMAT, project_dir).result,
         )
 
     def lint(self, project_dir: Path) -> p.Result[m.Infra.GateResult]:
-        """Run lint checks for one project."""
+        """Run lint checks for one project.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GateResult]``.
+
+        """
         return r[m.Infra.GateResult].ok(
             self._run_gate(c.Infra.LINT, project_dir).result,
         )
@@ -171,7 +206,12 @@ class FlextInfraWorkspaceChecker(
         project: str,
         gates: t.StrSequence,
     ) -> p.Result[t.SequenceOf[m.Infra.ProjectResult]]:
-        """Run selected gates for one project."""
+        """Run selected gates for one project.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.ProjectResult]]``.
+
+        """
         return self.run_projects([project], list(gates))
 
     def run_projects(
@@ -183,7 +223,12 @@ class FlextInfraWorkspaceChecker(
         fail_fast: bool = c.Infra.CHECK_FAIL_FAST_DEFAULT,
         ctx: m.Infra.GateContext | None = None,
     ) -> p.Result[t.SequenceOf[m.Infra.ProjectResult]]:
-        """Run selected gates for multiple projects."""
+        """Run selected gates for multiple projects.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.ProjectResult]]``.
+
+        """
         resolved_gates_result = self.resolve_gates(gates)
         if resolved_gates_result.failure:
             return r[t.SequenceOf[m.Infra.ProjectResult]].from_failure(
@@ -218,51 +263,24 @@ class FlextInfraWorkspaceChecker(
             return r[t.SequenceOf[m.Infra.ProjectResult]].fail(
                 "gate context fail_fast disagrees with the requested project policy",
             )
-        rope_outcomes_result = self._run_rope_gate_cycle(targets, resolved_gates)
-        if rope_outcomes_result.failure:
-            return r[t.SequenceOf[m.Infra.ProjectResult]].from_failure(
-                rope_outcomes_result,
-            )
         outcome = self._run_project_loop(
             targets,
             resolved_gates,
             effective_ctx,
-            rope_outcomes=rope_outcomes_result.value,
             fail_fast=fail_fast,
         )
         return self._write_reports_and_summary(resolved_gates, report_base, outcome)
-
-    def _run_rope_gate_cycle(
-        self,
-        targets: t.SequenceOf[m.Infra.CheckProjectTarget],
-        gates: t.StrSequence,
-    ) -> p.Result[t.VariadicTuple[m.Infra.RopeCallbackOutcome]]:
-        """Execute every Rope-backed gate callback in one workspace cycle."""
-        callbacks: t.MutableSequenceOf[m.Infra.RopeCallbackBinding] = []
-        for target in targets:
-            for gate_id in gates:
-                gate = self._registry.create(gate_id, self._repository_root)
-                if isinstance(gate, p.Infra.RopeCheckGate):
-                    callbacks.append(gate.rope_callback_binding(target.path, self.rope))
-        if not callbacks:
-            return r[t.VariadicTuple[m.Infra.RopeCallbackOutcome]].ok(())
-        cycle_result = self.rope.cycle(
-            tuple(callbacks),
-            project_names=tuple(target.path.resolve().name for target in targets),
-        )
-        if cycle_result.failure:
-            return r[t.VariadicTuple[m.Infra.RopeCallbackOutcome]].from_failure(
-                cycle_result,
-            )
-        return r[t.VariadicTuple[m.Infra.RopeCallbackOutcome]].ok(
-            cycle_result.value.outcomes,
-        )
 
     def _project_targets(
         self,
         projects: t.StrSequence | t.SequenceOf[m.Infra.CheckProjectTarget],
     ) -> t.SequenceOf[m.Infra.CheckProjectTarget]:
-        """Return typed project targets from public names or internal selections."""
+        """Return typed project targets from public names or internal selections.
+
+        Returns:
+            Typed project targets from public names or internal selections.
+
+        """
         targets: list[m.Infra.CheckProjectTarget] = []
         for project in projects:
             if isinstance(project, m.Infra.CheckProjectTarget):

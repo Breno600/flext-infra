@@ -1,4 +1,8 @@
-"""Census removal of unreferenced objects: dry-run preview and apply."""
+"""Census removal of unreferenced objects: dry-run preview and apply.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,15 +12,16 @@ from typing import TYPE_CHECKING
 
 from flext_infra import m, u
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
-
-from ._census_apply_formatting import FlextInfraRefactorCensusApplyFormattingMixin
+from flext_infra.refactor._census_apply_formatting import (
+    FlextInfraRefactorCensusApplyFormattingMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p, t
 
 
 class FlextInfraRefactorCensusRemovalMixin(
-    FlextInfraRefactorCensusApplyFormattingMixin
+    FlextInfraRefactorCensusApplyFormattingMixin,
 ):
     """Preview and apply the inventory's removal candidates through gates.
 
@@ -24,8 +29,6 @@ class FlextInfraRefactorCensusRemovalMixin(
     what the workspace object inventory proved unused, which no code-shape
     rule can see.
     """
-
-    _census_validate_log: ClassVar[p.Logger] = u.fetch_logger(__name__)
 
     if TYPE_CHECKING:
         dry_run: bool
@@ -48,6 +51,13 @@ class FlextInfraRefactorCensusRemovalMixin(
 
         A gate rejection is reported as a ``preview_rejected`` finding of the
         project; with ``fail_fast`` it stops the census instead.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.ProjectReport]``.
+
+        Raises:
+            RuntimeError: If removal preview rejected.
+
         """
         validated_reports: list[m.Infra.ProjectReport] = []
         # Preview writes are restored before the next candidate, so one shared
@@ -96,23 +106,35 @@ class FlextInfraRefactorCensusRemovalMixin(
                         "violations_total": len(validated_violations),
                         "removal_candidate_count": len(validated_candidates),
                         "removal_candidates": tuple(validated_candidates),
-                    }
-                )
+                    },
+                ),
             )
         return tuple(validated_reports)
 
     def _apply_removal_candidates(
-        self, rope: p.Infra.RopeWorkspaceDsl, report: m.Infra.WorkspaceReport
+        self,
+        rope: p.Infra.RopeWorkspaceDsl,
+        report: m.Infra.WorkspaceReport,
     ) -> bool:
         """Remove every candidate through its gates; a failed removal escapes.
 
         Returns whether any file changed. The touched files are normalized and
         the lazy initializers are re-planned before the Rope session reloads.
+
+        Returns:
+            The resulting ``bool``.
+
+        Raises:
+            RuntimeError: If removal apply failed for.
+
         """
         touched_paths: set[Path] = set()
         for candidate in report.removal_candidates:
             apply_result = u.Infra.apply_simple_removal_candidate(
-                rope, self.root, candidate, gates=self.dry_run_gate_names
+                rope,
+                self.root,
+                candidate,
+                gates=self.dry_run_gate_names,
             )
             if apply_result.failure:
                 msg = (

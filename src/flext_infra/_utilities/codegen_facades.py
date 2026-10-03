@@ -1,4 +1,8 @@
-"""Discovery-driven projection of utility owners onto the public facade."""
+"""Discovery-driven projection of utility owners onto the public facade.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,10 +12,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from flext_infra import c
-
-from .rope_core import FlextInfraUtilitiesRopeCore
-from .rope_module_patch import FlextInfraUtilitiesRopeModulePatch
-from .rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.rope_module_patch import FlextInfraUtilitiesRopeModulePatch
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -27,6 +31,13 @@ class FlextInfraUtilitiesCodegenFacades:
         The owner of a facade letter is the module that publishes it in its own
         ``__all__`` (generator law p.1); it is derived from the package, never
         from a letter-to-filename table. ``None`` means no module declares it.
+
+        Returns:
+            The package module that declares facade letter ``family``.
+
+        Raises:
+            ValueError: If facade letter.
+
         """
         owners = tuple(
             module
@@ -34,7 +45,7 @@ class FlextInfraUtilitiesCodegenFacades:
             if module.name != c.Infra.INIT_PY
             and family
             in FlextInfraUtilitiesRopeModulePatch.facade_letter_names_source(
-                module.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+                module.read_text(encoding=c.Cli.ENCODING_DEFAULT),
             )
         )
         if len(owners) > 1:
@@ -58,9 +69,19 @@ class FlextInfraUtilitiesCodegenFacades:
         Protocol references ``p.<Namespace>.<Type>`` select nested declarations.
         The corresponding private family selects unique owners. Existing
         facade content remains unchanged except for missing imports and bases.
+
+        Returns:
+            The resulting ``str | None``.
+
+        Raises:
+            ValueError: If utility owners in; or if ambiguous.
+
         """
         facade_path = cls.facade_module_path(pkg_dir, family)
-        owners_dir = pkg_dir / c.Infra.FAMILY_DIRECTORIES[family]
+        owners_dir = (
+            pkg_dir
+            / FlextInfraUtilitiesCodegenNamespace.facade_families()[family].directory
+        )
         owners_exist = owners_dir.is_dir()
         # Why: only owners-without-facade is incomplete -- the owners would have
         # no public surface at all. A facade with no owners directory is the
@@ -305,9 +326,11 @@ class FlextInfraUtilitiesCodegenFacades:
         # instead made every generated consumer facade import from flext-infra,
         # a module that does not exist in the consumer's own distribution.
         lines = source.splitlines(keepends=True)
+        directory = FlextInfraUtilitiesCodegenNamespace.facade_families()[
+            family
+        ].directory
         rendered = [
-            f"from {package}.{c.Infra.FAMILY_DIRECTORIES[family]}.{module} import (\n"
-            f"    {class_name},\n)\n"
+            f"from {package}.{directory}.{module} import (\n    {class_name},\n)\n"
             for module, class_name in additions
         ]
         lines[facade.lineno - 1 : facade.lineno - 1] = [*rendered, "\n"]

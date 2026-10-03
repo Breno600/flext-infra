@@ -1,4 +1,8 @@
-"""Command payload mixin for flext-infra service bases."""
+"""Command payload mixin for flext-infra service bases.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -25,7 +29,12 @@ class FlextInfraCommandPayloadMixin:
         output_dir: Path | None
 
     def command_payload(self) -> t.JsonMapping:
-        """Return the normalized shared command payload once."""
+        """Return the normalized shared command payload once.
+
+        Returns:
+            The normalized shared command payload once.
+
+        """
         payload: t.MutableJsonMapping = {
             "repository_root": str(self.repository_root),
             "apply_changes": self.apply_changes,

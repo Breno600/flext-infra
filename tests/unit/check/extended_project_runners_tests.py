@@ -16,24 +16,19 @@ from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
-
 
 class TestsFlextInfraExtendedProjectRunners:
     """Exercise runner behavior through the public checker API only."""
 
     # Why (suite budget): full-suite xdist can stall durable atomic report writes
     # beyond the default case timeout while the nested checker publishes reports.
+    @staticmethod
     @pytest.mark.slow
     def test_run_projects_records_requested_gates(
-        self,
         real_python_package: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
-        checker = FlextInfraWorkspaceChecker(
-            repository_root=real_python_package.parent,
-            rope=rope_workspace,
-        )
+        """Test run projects records requested gates."""
+        checker = FlextInfraWorkspaceChecker(repository_root=real_python_package.parent)
         result = checker.run_projects(
             [real_python_package.name],
             ["lint", "pyrefly"],
@@ -47,17 +42,14 @@ class TestsFlextInfraExtendedProjectRunners:
         tm.that({"lint", "pyrefly"} <= set(result.value[0].gates), eq=True)
         tm.that("format" in set(result.value[0].gates), eq=False)
 
+    @staticmethod
     @pytest.mark.parametrize("gate_method", ["lint", "format"])
     def test_public_method_returns_gate_result(
-        self,
         gate_method: str,
         real_python_package: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
-        checker = FlextInfraWorkspaceChecker(
-            repository_root=real_python_package.parent,
-            rope=rope_workspace,
-        )
+        """Test public method returns gate result."""
+        checker = FlextInfraWorkspaceChecker(repository_root=real_python_package.parent)
         result = (
             checker.lint(real_python_package)
             if gate_method == "lint"

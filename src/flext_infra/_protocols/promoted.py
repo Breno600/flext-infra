@@ -2,6 +2,9 @@
 
 Structural contracts for the frozen models in ``m.Infra.Promoted*`` — leaf
 code annotates with these protocols, never with the concrete models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

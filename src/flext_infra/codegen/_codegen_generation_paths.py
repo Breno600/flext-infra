@@ -1,4 +1,8 @@
-"""Path and publication helpers for lazy-init generation."""
+"""Path and publication helpers for lazy-init generation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -16,12 +20,22 @@ class FlextInfraCodegenGenerationPathsMixin:
     # Only canonical path/publication decisions remain here.
     @staticmethod
     def _is_module_or_package_export(attr_name: str) -> bool:
-        """Return whether an entry exports a module or package name."""
+        """Return whether an entry exports a module or package name.
+
+        Returns:
+            Whether an entry exports a module or package name.
+
+        """
         return not attr_name
 
     @staticmethod
     def _is_private_subpackage_source(module_path: str) -> bool:
-        """Return whether a symbol's owner lives in a private subpackage."""
+        """Return whether a symbol's owner lives in a private subpackage.
+
+        Returns:
+            Whether a symbol's owner lives in a private subpackage.
+
+        """
         return any(
             segment.startswith("_")
             and not segment.startswith("__")
@@ -34,7 +48,12 @@ class FlextInfraCodegenGenerationPathsMixin:
         export_name: str,
         lazy_filtered: t.LazyAliasMap,
     ) -> bool:
-        """Return whether a root export belongs in the frozen ``__all__`` ABI."""
+        """Return whether a root export belongs in the frozen ``__all__`` ABI.
+
+        Returns:
+            Whether a root export belongs in the frozen ``__all__`` ABI.
+
+        """
         if export_name in c.Infra.INFRA_ONLY_EXPORTS | c.Infra.PUBLISHED_ALL_EXCLUDE:
             return False
         target = lazy_filtered.get(export_name)
@@ -56,12 +75,22 @@ class FlextInfraCodegenGenerationPathsMixin:
 
     @staticmethod
     def _is_root_namespace_package(current_pkg: str) -> bool:
-        """Return whether a package name is a root namespace."""
+        """Return whether a package name is a root namespace.
+
+        Returns:
+            Whether a package name is a root namespace.
+
+        """
         return bool(current_pkg) and "." not in current_pkg
 
     @staticmethod
     def _is_public_api_root_namespace(current_pkg: str) -> bool:
-        """Return whether ``current_pkg`` owns a generated facade-root contract."""
+        """Return whether ``current_pkg`` owns a generated facade-root contract.
+
+        Returns:
+            Whether ``current_pkg`` owns a generated facade-root contract.
+
+        """
         return FlextInfraCodegenGenerationPathsMixin._is_root_namespace_package(
             current_pkg,
         ) and (
@@ -71,7 +100,12 @@ class FlextInfraCodegenGenerationPathsMixin:
 
     @staticmethod
     def _is_local_module(mod: str, root_name: str) -> bool:
-        """Return whether ``mod`` is local to ``root_name``."""
+        """Return whether ``mod`` is local to ``root_name``.
+
+        Returns:
+            Whether ``mod`` is local to ``root_name``.
+
+        """
         return (
             mod.startswith(".")
             or not root_name
@@ -80,7 +114,12 @@ class FlextInfraCodegenGenerationPathsMixin:
 
     @staticmethod
     def _relative_owned_module(current_pkg: str, mod: str) -> str:
-        """Resolve a same-owner ancestor or sibling without a private absolute import."""
+        """Resolve a same-owner ancestor or sibling without a private absolute import.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         current_parts = current_pkg.split(".")
         module_parts = mod.split(".")
         common = 0
@@ -91,8 +130,39 @@ class FlextInfraCodegenGenerationPathsMixin:
         return "." * (len(current_parts) - common + 1) + ".".join(module_parts[common:])
 
     @staticmethod
+    def _absolute_import_module(package: str, mod: str) -> str:
+        """Resolve a package-relative module path to its absolute import form.
+
+        One leading dot names ``package`` itself, as Python resolves a relative
+        import inside that package's initializer. Generated import statements
+        are always absolute; only lazy-map data keeps the compact form.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            ValueError: If relative module.
+
+        """
+        if not mod.startswith("."):
+            return mod
+        level = len(mod) - len(mod.lstrip("."))
+        parts = package.split(".")
+        if not package or level > len(parts):
+            msg = f"relative module {mod!r} escapes package {package!r}"
+            raise ValueError(msg)
+        base = parts[: len(parts) - level + 1]
+        tail = mod[level:]
+        return ".".join((*base, tail) if tail else base)
+
+    @staticmethod
     def _compact_lazy_module_path(current_pkg: str, mod: str) -> str:
-        """Compact a lazy module path relative to ``current_pkg`` when valid."""
+        """Compact a lazy module path relative to ``current_pkg`` when valid.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         if not current_pkg or mod.startswith("."):
             return mod
         if mod.split(".", maxsplit=1)[0] == current_pkg.split(".", maxsplit=1)[0]:
@@ -120,7 +190,12 @@ class FlextInfraCodegenGenerationPathsMixin:
         mod: str,
         local_package_root: str | None,
     ) -> str:
-        """Normalize local TYPE_CHECKING owners to package-relative imports."""
+        """Normalize local TYPE_CHECKING owners to package-relative imports.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         if not local_package_root:
             return mod
         if mod.startswith("."):
@@ -157,6 +232,10 @@ class FlextInfraCodegenGenerationPathsMixin:
         path in static declarations and the runtime lazy map. Cross-project
         owners remain absolute. Relative imports require a package context so
         Python can resolve their declared owner.
+
+        Raises:
+            ValueError: If relative TYPE_CHECKING import.
+
         """
         if mod.startswith(".") and not local_package_root:
             exports = ", ".join(name for name, _ in items)
@@ -167,11 +246,16 @@ class FlextInfraCodegenGenerationPathsMixin:
             raise ValueError(msg)
 
     @staticmethod
-    def _format_root_package_docstring(current_pkg: str) -> str:
-        """Format a generated package docstring."""
+    def _format_root_package_docstring(current_pkg: str, notice: str) -> str:
+        """Format a generated package docstring carrying the copyright notice.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         label = current_pkg.replace("_", " ").replace("-", " ").strip()
         package_name = " ".join(word.capitalize() for word in label.split())
-        return f'"""{package_name} package."""'
+        return f'"""{package_name} package.\n\n{notice}\n"""'
 
 
 __all__: list[str] = ["FlextInfraCodegenGenerationPathsMixin"]

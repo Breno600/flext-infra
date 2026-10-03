@@ -1,3 +1,9 @@
+"""Test protected edit module.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -12,14 +18,15 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraUtilitiesProtectedEdit:
+    @staticmethod
     @pytest.fixture(autouse=True)
-    def provisioned_workspace(self, tmp_path: Path) -> None:
+    def provisioned_workspace(tmp_path: Path) -> None:
         """The edited workspace is a checkout whose environment owns the tools."""
         u.Tests.provision_checkout(tmp_path)
 
+    @staticmethod
     @pytest.mark.parametrize("batch", [False, True])
     def test_invalid_ruff_configuration_propagates_and_restores_source(
-        self,
         tmp_path: Path,
         *,
         batch: bool,
@@ -72,13 +79,13 @@ class TestsFlextInfraUtilitiesProtectedEdit:
             protected_write()
         tm.that(py_file.read_text(encoding=c.Cli.ENCODING_DEFAULT), eq=original)
 
+    @staticmethod
     @pytest.mark.parametrize("batch", [False, True])
     @pytest.mark.parametrize(
         ("introduced", "nonfixable"),
         [(False, False), (True, False), (True, True)],
     )
     def test_normalization_repairs_only_files_with_new_findings(
-        self,
         tmp_path: Path,
         *,
         batch: bool,
@@ -156,8 +163,8 @@ class TestsFlextInfraUtilitiesProtectedEdit:
             eq=updated_source.rstrip("\n"),
         )
 
+    @staticmethod
     def test_pyrefly_snapshot_uses_the_edited_projects_config(
-        self,
         tmp_path: Path,
     ) -> None:
         """Protected validation never inherits the orchestrator's Pyrefly config."""
@@ -173,8 +180,8 @@ class TestsFlextInfraUtilitiesProtectedEdit:
         tm.that(commands["pyrefly"], has="--config")
         tm.that(commands["pyrefly"], has=str(config_path))
 
+    @staticmethod
     def test_preview_source_writes_restores_original_sources_after_preview(
-        self,
         tmp_path: Path,
     ) -> None:
         py_file = tmp_path / "sample.py"
@@ -205,8 +212,8 @@ class TestsFlextInfraUtilitiesProtectedEdit:
         tests_dir.mkdir()
         self._assert_protected_source_write(tests_dir / "test_placeholder.py", tmp_path)
 
+    @staticmethod
     def test_protected_source_writes_applies_request_options(
-        self,
         tmp_path: Path,
     ) -> None:
         left_file = tmp_path / "left.py"

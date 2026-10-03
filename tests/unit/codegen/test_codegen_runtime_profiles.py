@@ -1,4 +1,8 @@
-"""Declared profiles and complete CUSTOM requirements survive public generation."""
+"""Declared profiles and complete CUSTOM requirements survive public generation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -14,6 +18,9 @@ from tests import u
 
 
 class TestsFlextInfraCodegenRuntimeProfiles:
+    """Tests for ``FlextInfraCodegenRuntimeProfiles``."""
+
+    @staticmethod
     @pytest.mark.parametrize(
         "upstream",
         tuple(
@@ -24,7 +31,6 @@ class TestsFlextInfraCodegenRuntimeProfiles:
     )
     @pytest.mark.parametrize("composed", [False, True])
     def test_declared_profile_restores_runtime_and_preserves_custom_specs(
-        self,
         tmp_path: Path,
         upstream: str,
         *,
@@ -184,7 +190,8 @@ class TestsFlextInfraCodegenRuntimeProfiles:
         for path, content in protected.items():
             tm.that(path.read_bytes(), eq=content)
 
-    def test_custom_policy_can_be_explicitly_disabled(self) -> None:
+    @staticmethod
+    def test_custom_policy_can_be_explicitly_disabled() -> None:
         """An empty preservation policy still elects only the rendered requirements."""
         rendered = '[project]\nname = "sample"\ndependencies = ["owned>=2"]\n'
         live = '[project]\nname = "sample"\ndependencies = ["external[extra]>=1"]\n'
@@ -196,8 +203,9 @@ class TestsFlextInfraCodegenRuntimeProfiles:
             eq=("owned>=2",),
         )
 
+    @staticmethod
     @pytest.mark.parametrize("invalid", ['["external>=1", 42]', '"external>=1"'])
-    def test_invalid_custom_requirements_are_not_discarded(self, invalid: str) -> None:
+    def test_invalid_custom_requirements_are_not_discarded(invalid: str) -> None:
         """Composition rejects malformed arrays rather than filtering their entries."""
         rendered = '[project]\nname = "sample"\ndependencies = ["owned>=2"]\n'
         live = f'[project]\nname = "sample"\ndependencies = {invalid}\n'

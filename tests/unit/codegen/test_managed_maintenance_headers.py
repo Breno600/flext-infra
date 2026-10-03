@@ -1,4 +1,8 @@
-"""Contracts for continuously managed artifact maintenance headers."""
+"""Contracts for continuously managed artifact maintenance headers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -56,7 +60,8 @@ class TestsFlextInfraManagedMaintenanceHeaders:
         tm.that(pyproject_fields.get("@flext-adjust", ""), has="overwrite_project_keys")
         tm.that(pyproject_fields.get("@flext-adjust", ""), has="conflict_sections")
 
-    def test_pyproject_header_is_a_fixed_point(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_pyproject_header_is_a_fixed_point(tmp_path: Path) -> None:
         """Recomposing a published pyproject keeps exactly one header."""
         root = tmp_path / "fixture-project"
         first = u.Tests.scaffold_text(root, c.PYPROJECT_FILENAME)

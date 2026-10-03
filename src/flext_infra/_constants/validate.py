@@ -1,4 +1,8 @@
-"""Centralized constants for the core subpackage."""
+"""Centralized constants for the core subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -98,7 +102,7 @@ class FlextInfraConstantsSharedInfra:
     MAKEFILE_FILENAME: ClassVar[str] = "Makefile"
     GITMODULES: ClassVar[str] = ".gitmodules"
     GITMODULE_MANAGED_KEY: ClassVar[str] = "flext-managed"
-    "``.gitmodules`` key whose explicit non-``true`` value opts a member out of governance."
+    "``.gitmodules`` key whose non-``true`` value opts a member out of governance."
     FOLLOW_SUPERPROJECT_BRANCH: ClassVar[str] = "."
     GITIGNORE: ClassVar[str] = ".gitignore"
     PRE_COMMIT_CONFIG_FILENAME: ClassVar[str] = ".pre-commit-config.yaml"
@@ -113,6 +117,9 @@ class FlextInfraConstantsSharedInfra:
     SONARCLOUD_ISSUE_IGNORE_KEY: ClassVar[str] = "sonar.issue.ignore.multicriteria"
     "Server-side PROPERTY_SET that automatic analysis honors for issue exclusions."
     SONARCLOUD_API_AUTH_VALIDATE_PATH: ClassVar[str] = "/api/authentication/validate"
+    SONARCLOUD_API_ISSUES_SEARCH_PATH: ClassVar[str] = "/api/issues/search"
+    SONARCLOUD_ISSUES_SEARCH_LIMIT: ClassVar[int] = 10000
+    "Maximum result window documented by SonarSource for issue search."
     SONARCLOUD_API_SETTINGS_VALUES_PATH: ClassVar[str] = "/api/settings/values"
     SONARCLOUD_API_SETTINGS_SET_PATH: ClassVar[str] = "/api/settings/set"
     SONARCLOUD_API_SETTINGS_RESET_PATH: ClassVar[str] = "/api/settings/reset"
@@ -177,23 +184,6 @@ class FlextInfraConstantsSharedInfra:
     DIR_TESTS: ClassVar[str] = "tests"
     DIR_EXAMPLES: ClassVar[str] = "examples"
     DIR_SCRIPTS: ClassVar[str] = "scripts"
-    # Runtime-exempt surfaces, matched on path parts RELATIVE to the scanned
-    # repository root (X-75): an ancestor directory name never grants an
-    # exemption. Scope exclusions (state/cache dirs) belong to the source-scan
-    # ignore list, not here.
-    TIER_WHITELIST_NON_RUNTIME_DIR_PARTS: ClassVar[frozenset[str]] = frozenset({
-        DIR_TESTS,
-        DIR_EXAMPLES,
-        DIR_SCRIPTS,
-        "evaluate",
-    })
-    TIER_WHITELIST_SETTINGS_MODULE_LIBRARIES: ClassVar[frozenset[str]] = frozenset({
-        "pydantic_settings"
-    })
-    TIER_WHITELIST_LEAF_CONFIG_FILES: ClassVar[frozenset[str]] = frozenset({
-        "_config.py"
-    })
-    "Leaf config modules (e.g. a consumer's _config.py) that own their external-library"
     "imports directly as the bottom of the c/t/p/m/u chain."
     DIR_TYPINGS: ClassVar[str] = "typings"
     DIR_DOCS: ClassVar[str] = "docs"

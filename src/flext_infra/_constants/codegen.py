@@ -15,10 +15,12 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, ClassVar
 
-from .._constants.codegen_detection import FlextInfraConstantsCodegenDetection
-from .._constants.codegen_lazy import FlextInfraConstantsCodegenLazy
-from .._constants.codegen_render_names import FlextInfraConstantsCodegenRenderNames
-from .workspace import FlextInfraConstantsWorkspace
+from flext_infra._constants.codegen_detection import FlextInfraConstantsCodegenDetection
+from flext_infra._constants.codegen_lazy import FlextInfraConstantsCodegenLazy
+from flext_infra._constants.codegen_render_names import (
+    FlextInfraConstantsCodegenRenderNames,
+)
+from flext_infra._constants.workspace import FlextInfraConstantsWorkspace
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -92,7 +94,7 @@ class FlextInfraConstantsCodegen(
         ("models.py", "Models", "FlextTestsModels", "Test models"),
         ("utilities.py", "Utilities", "FlextTestsUtilities", "Test utilities"),
     )
-    "Base module definitions for tests/: (filename, class_suffix, base_class, docstring)."
+    "Base module definitions for tests/: (filename, class_suffix, base_class, doc)."
     # Canonical root config/settings pair: a
     # private `_config.py`/`_settings.py` module exporting the singleton.
     # Consumed by the scaffold generator.
@@ -100,14 +102,12 @@ class FlextInfraConstantsCodegen(
         ("_config.py", "Config", "FlextConfig", "Runtime config"),
         ("_settings.py", "Settings", "FlextSettings", "Runtime settings"),
     )
-    "Runtime singleton modules for src/: (filename, class_suffix, base_class, docstring)."
+    "Runtime singleton modules for src/: (filename, class_suffix, base_class, doc)."
     VIOLATION_PATTERN: ClassVar[t.RegexPattern] = re.compile(
-        r"\[(?P<rule>NS-(?:[A-Z]+|\d{3}))-\d{3}\]\s+"
+        r"\[(?P<rule>[a-z0-9][a-z0-9-]*)\]\s+"
         r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)",
     )
-    "Regex to parse violation strings: [NS-RULE-NNN] path:line — message."
-    PROTOCOL_MODEL_LINE_BUDGET: ClassVar[int] = 170
-    "Line budget of one generated structural-protocol module chunk."
+    "Regex to parse violation strings: [rule-id] path:line — message."
     PROTOCOL_MODEL_MINIMAL_BODY_LINES: ClassVar[int] = 3
     "Header lines of a generated protocol class; at or below it the body is empty."
     LAZY_IMPORTS_BINDING: ClassVar[str] = "_LAZY_IMPORTS"
@@ -124,7 +124,6 @@ class FlextInfraConstantsCodegen(
     "Canonical Unix Mise launcher filename."
     MISE_WINDOWS_LAUNCHER_FILENAME: ClassVar[str] = "mise.cmd"
     "Canonical Windows Mise launcher filename."
-    "UTC basic stamp for `{filename}.{stamp}.bak` written before gen apply."
     CODEGEN_TRANSACTION_LOCK_FILENAME: ClassVar[str] = "flext-infra-codegen.lock"
     "Worktree-specific administrative lock for complete generation."
     CODEGEN_TRANSACTION_LOCK_MODE: ClassVar[int] = 0o600
@@ -132,13 +131,6 @@ class FlextInfraConstantsCodegen(
     MISE_COLD_START_DIRECTORY: ClassVar[str] = "templates/bootstrap"
     "Package-local byte copy of flext-infra's own upg-written triple (cold start)."
 
-    # 2026.9.17 crashes during the launcher generation (unwrap-on-None in its
-    # script builder); the fleet bootstrap stays on the last known good
-    # release until upstream ships a fixed one. Revert to the bare selector
-    # ("github:jdx/mise") when that release lands.
-    MISE_KNOWN_GOOD_RELEASE: ClassVar[str] = "2026.9.16"
-    MISE_RELEASE_SELECTOR: ClassVar[str] = f"github:jdx/mise@{MISE_KNOWN_GOOD_RELEASE}"
-    "Tool selector `make upg` resolves through the pinned mise (`mise latest`)."
     MISE_LATEST_RESOLUTION_MARKER: ClassVar[str] = "releases/latest"
     "Live-resolution endpoint a pinned, offline launcher must never contain."
     MISE_LAUNCHER_BAKED_RELEASE_PATTERNS: ClassVar[t.StrMapping] = MappingProxyType({
@@ -150,7 +142,8 @@ class FlextInfraConstantsCodegen(
         "# @flext-generated: upg",
         (
             "# @flext-owner: flext-infra/src/flext_infra/templates/project/base/"
-            f"tool_bootstrap_recipe.j2 (mise latest {MISE_RELEASE_SELECTOR})"
+            "tool_bootstrap_recipe.j2 (toolchain.mise_selector and"
+            " toolchain.mise_version in flext-infra/config/codegen.yaml)"
         ),
         (
             "# @flext-adjust: never hand-edit; bin/mise and bin/mise.cmd are"
@@ -194,6 +187,13 @@ class FlextInfraConstantsCodegen(
         ("MISE_GITHUB_OAUTH_OPEN_BROWSER", "false"),
     )
     "Fixed fail-closed settings shared by every generated Mise invocation."
+    MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT: ClassVar[t.VariadicTuple[t.Pair[str, str]]] = (
+        ("MISE_OFFLINE", "true"),
+    )
+    (
+        "Network policy of every generated Mise call except a missing-tool "
+        "install and the `make upg` resolution: cached state answers it, or it fails."
+    )
     MISE_BOOTSTRAP_TRANSIENT_ENVIRONMENT: ClassVar[
         t.VariadicTuple[t.Pair[str, str]]
     ] = (
@@ -246,12 +246,9 @@ class FlextInfraConstantsCodegen(
         "PATHEXT",
         "SYSTEMROOT",
         "WINDIR",
-        # Credential and network-policy keys the lock-time provenance fetch
-        # requires: without them the shared-host GitHub rate limit fails the
-        # lock generation closed. Reinjection stays explicit (allowlist).
+        # The one GitHub credential variable (optional) and the network
+        # policy key the lock-time provenance fetch reads.
         "GITHUB_TOKEN",
-        "GH_TOKEN",
-        "MISE_GITHUB_CREDENTIAL_COMMAND",
         "MISE_HTTP_TIMEOUT",
         "FLEXT_MYPY_PROFILE_OUTPUT",
         # The generated launchers bake their release; the bootstrap passes the

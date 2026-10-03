@@ -1,4 +1,8 @@
-"""Auto-fix, consolidation, and namespace policy models."""
+"""Auto-fix, consolidation, and namespace policy models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,9 +11,9 @@ from typing import Annotated, ClassVar, Literal
 
 from flext_cli import m
 
-from ... import t
-from .. import FlextInfraModelsMixins as mm
-from .scaffold import FlextInfraModelsCodegenScaffoldModels
+from flext_infra import t
+from flext_infra._models import FlextInfraModelsMixins as mm
+from flext_infra._models._codegen.scaffold import FlextInfraModelsCodegenScaffoldModels
 
 
 class FlextInfraModelsCodegenFixModels:
@@ -70,6 +74,40 @@ class FlextInfraModelsCodegenFixModels:
             m.Field(default_factory=tuple, description="Per-file processing results"),
         ]
 
+    class FacadeFamily(m.ContractModel):
+        """One facade family the core package declares (c, t, p, m, u)."""
+
+        letter: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Facade letter of the import-layer order"),
+        ]
+        module: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Stem of the facade module declaring the letter"),
+        ]
+        suffix: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Facade class suffix past the shared class stem"),
+        ]
+
+        @m.computed_field
+        @property
+        def directory(self) -> str:
+            """Private family package beside the facade module."""
+            return f"_{self.module}"
+
+        @m.computed_field
+        @property
+        def directories(self) -> frozenset[str]:
+            """Public and private family package directory names."""
+            return frozenset({self.module, f"_{self.module}"})
+
+        @m.computed_field
+        @property
+        def file_names(self) -> frozenset[str]:
+            """Public and private facade module file names."""
+            return frozenset({f"{self.module}.py", f"_{self.module}.py"})
+
     class NamespaceModulePolicy(m.ArbitraryTypesModel):
         """Derived gen-init policy for one governed module."""
 
@@ -99,11 +137,16 @@ class FlextInfraModelsCodegenFixModels:
         ] = None
         inherited_namespaces: t.StrSequence = m.Field(
             default_factory=tuple,
-            description="Nested class attributes inherited unchanged through the actual facade MRO.",
+            description=(
+                "Nested class attributes inherited unchanged "
+                "through the actual facade MRO."
+            ),
         )
         is_internal_namespace: bool = m.Field(
             default=False,
-            description="Whether the facade belongs to a discovered non-public root tier.",
+            description=(
+                "Whether the facade belongs to a discovered non-public root tier."
+            ),
         )
         family_tokens: t.StrSequence = m.Field(
             default_factory=tuple,
@@ -264,5 +307,10 @@ class FlextInfraModelsCodegenFixModels:
         ]
 
         def __hash__(self) -> int:
-            """Hash by stable business identity so keys work in sets and frozensets."""
+            """Hash by stable business identity so keys work in sets and frozensets.
+
+            Returns:
+                The resulting ``int``.
+
+            """
             return hash((self.module, self.rule, self.content_hash))

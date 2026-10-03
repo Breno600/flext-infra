@@ -1,4 +1,8 @@
-"""Declarative base for schema-loaded Mise toolchain records."""
+"""Declarative base for schema-loaded Mise toolchain records.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

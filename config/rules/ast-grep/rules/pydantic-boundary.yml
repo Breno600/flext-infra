@@ -169,3 +169,39 @@ message: >-
   `json.loads` + `model_validate` double-parses the payload. Use
   `Model.model_validate_json(raw)` (or the cached `TypeAdapter` factory
   with `validate_json`) so parsing and validation run in one pass.
+---
+# Pydantic copies every field default it cannot prove immutable
+# (``smart_deepcopy``), and ``types.MappingProxyType`` cannot be deep-copied
+# ("TypeError: cannot pickle 'mappingproxy' object"). A field declared
+# ``Annotated[..., m.Field(...)] = MappingProxyType(...)`` therefore validates
+# only while every input carries the field: the first document that omits it
+# crashes the model. Observed: a consumer codegen overlay without
+# ``make.standalone_check_gates`` stopped ``deps modernize`` during
+# ``make upg``. A ``default_factory`` builds a fresh proxy per instance and is
+# never copied, the form the catalog's models already use.
+#
+# Only annotated pydantic fields match: the ``Annotated[`` constraint keeps
+# ``ClassVar`` constants and module-level proxies, which pydantic never copies,
+# out of reach.
+id: pydantic-mappingproxy-default-factory
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/.git/**"
+  - "**/.venv/**"
+  - "**/legado/**"
+  - "**/legacy/**"
+  - "**/node_modules/**"
+  - "**/*_pb2.py"
+  - "**/*_pb2_grpc.py"
+rule:
+  pattern: "$NAME: $TYPE = MappingProxyType($ARG)"
+constraints:
+  TYPE:
+    regex: "^Annotated\\["
+fix: "$NAME: $TYPE = m.Field(default_factory=lambda: MappingProxyType($ARG))"
+message: >-
+  A pydantic field default must be deep-copyable. Build a MappingProxyType
+  default through `m.Field(default_factory=lambda: MappingProxyType(...))`.
