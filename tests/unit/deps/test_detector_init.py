@@ -1,4 +1,8 @@
-"""Test detector init behavior."""
+"""Test detector init behavior.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -12,7 +16,8 @@ from flext_infra import m
 class TestsFlextInfraDepsDetectorInit:
     """Test flext infra deps detector init behavior."""
 
-    def test_detect_command_normalizes_public_fields(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_detect_command_normalizes_public_fields(tmp_path: Path) -> None:
         """Verify detect command normalizes public fields."""
         output_path = tmp_path / "out.json"
         params = m.Infra.DetectCommand(
@@ -38,15 +43,16 @@ class TestsFlextInfraDepsDetectorInit:
         tm.that(params.apply_typings, eq=True)
         tm.that(str(params.limits_path), eq=str(Path("/custom/limits.toml").resolve()))
 
+    @staticmethod
     def test_detect_command_project_names_with_single_project(
-        self,
         tmp_path: Path,
     ) -> None:
         """Verify detect command project names with single project."""
         params = m.Infra.DetectCommand(repository_root=tmp_path, projects=["test-proj"])
         tm.that(params.project_names, eq=["test-proj"])
 
-    def test_detect_command_project_names_split_csv(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_detect_command_project_names_split_csv(tmp_path: Path) -> None:
         """Verify detect command project names split csv."""
         params = m.Infra.DetectCommand(
             repository_root=tmp_path,
@@ -54,7 +60,8 @@ class TestsFlextInfraDepsDetectorInit:
         )
         tm.that(params.project_names, eq=["proj-a", "proj-b", "proj-c"])
 
-    def test_detect_command_without_project_filter(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_detect_command_without_project_filter(tmp_path: Path) -> None:
         """Verify detect command without project filter."""
         params = m.Infra.DetectCommand(repository_root=tmp_path)
         tm.that(params.project_names, eq=None)

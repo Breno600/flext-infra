@@ -1,4 +1,8 @@
-"""Gate measurement and ast-grep batch execution for the mod safety circuit."""
+"""Gate measurement and ast-grep batch execution for the mod safety circuit.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -10,19 +14,12 @@ from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 
 from flext_core import r
-
-from .. import c, m, p, settings, t, u
-from ..detectors import FlextInfraLspDiagnosticsDetector
-from ..gates import (
-    FlextInfraPyreflyGate,
-    FlextInfraRuffFormatGate,
-    FlextInfraRuffLintGate,
-)
-from . import FlextInfraCodemodSnapshotReconciler
+from flext_infra import c, m, p, settings, t, u
+from flext_infra.codemod import FlextInfraCodemodSnapshotReconciler
 
 
 class FlextInfraModGateEngine:
-    """Execute ast-grep rewrites and strict static/LSP validation."""
+    """Execute ast-grep rewrites and measure the catalog findings they leave."""
 
     @classmethod
     def validate_rule_fixtures(
@@ -36,6 +33,10 @@ class FlextInfraModGateEngine:
         removed rule or deleted test case fails the owned-inventory check. The
         change they record is made explicit by ``make mod-snapshots`` and lands
         as a reviewed commit, so ``make mod`` cannot accept rewritten output.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         for config_root, owner_rules, owner_is_governed in cls._fixture_owners(
             root,
@@ -98,6 +99,10 @@ class FlextInfraModGateEngine:
         scratch so removed rules and deleted cases leave no residue. The
         returned changes are the reviewed diff; inherited providers keep the
         snapshots their owner ships.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
         """
         changes: list[str] = []
         for config_root, owner_rules, owner_is_governed in cls._fixture_owners(
@@ -136,12 +141,49 @@ class FlextInfraModGateEngine:
         return r[t.StrSequence].ok(tuple(changes))
 
     @staticmethod
+    def _governs(governed_root: Path, config_root: Path) -> bool:
+        """Whether the governed repository itself tracks this rule provider.
+
+        Git owns the answer: an installed provider (``site-packages``) or a
+        member checkout lies outside, or untracked by, the governed repository,
+        while the repository's own catalog is tracked wherever it lives.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
+        provider = (config_root / c.Infra.CODEMOD_CONFIG_FILENAME).resolve()
+        if not provider.is_relative_to(governed_root):
+            return False
+        return (
+            u.Infra
+            .git_is_tracked(
+                m.Infra.GitRelativePathRequest(
+                    repo_root=governed_root,
+                    relative_path=provider.relative_to(governed_root).as_posix(),
+                ),
+            )
+            .unwrap()
+            .value
+        )
+
+    @classmethod
     def _fixture_owners(
+        cls,
         root: Path,
         rules: t.SequenceOf[Path],
     ) -> t.SequenceOf[t.Triple[Path, t.SequenceOf[Path], bool]]:
-        """Group rules by fixture owner and mark the owners this root governs."""
-        governed_roots = frozenset(
+        """Group rules by fixture owner and mark the owners this root governs.
+
+        Returns:
+            The resulting ``t.SequenceOf[t.Triple[Path, t.SequenceOf[Path], bool]]``.
+
+        Raises:
+            ValueError: If discovered ast-grep rules have no fixture owner; or if rule
+                fixture scratch must be outside its source root.
+
+        """
+        governed_roots = tuple(
             project.resolve() for project in u.Infra.governed_project_roots(root)
         )
         rules_by_owner: MutableMapping[Path, list[Path]] = {}
@@ -157,11 +199,13 @@ class FlextInfraModGateEngine:
             if scratch.resolve().is_relative_to(config_root.resolve()):
                 msg = "rule fixture scratch must be outside its source root"
                 raise ValueError(msg)
-            owner_root = u.Infra.project_root(config_root)
             owners.append((
                 config_root,
                 tuple(owner_rules),
-                owner_root is not None and owner_root.resolve() in governed_roots,
+                any(
+                    cls._governs(governed_root, config_root)
+                    for governed_root in governed_roots
+                ),
             ))
         scratch.mkdir(parents=True, exist_ok=True)
         return tuple(owners)
@@ -173,7 +217,12 @@ class FlextInfraModGateEngine:
         temp_root: Path,
         regenerate_snapshots: bool = False,
     ) -> None:
-        """Copy declared ast-grep inputs only, rejecting links and special files."""
+        """Copy declared ast-grep inputs only, rejecting links and special files.
+
+        Raises:
+            ValueError: If ast-grep fixture must be a regular file or directory.
+
+        """
         directories = FlextInfraCodemodSnapshotReconciler.fixture_directories(
             config_root,
         )
@@ -225,7 +274,12 @@ class FlextInfraModGateEngine:
 
     @staticmethod
     def _rule_documents(rule: Path) -> t.VariadicTuple[str]:
-        """Return every non-empty YAML document in one rule file."""
+        """Return every non-empty YAML document in one rule file.
+
+        Returns:
+            Every non-empty YAML document in one rule file.
+
+        """
         documents = tuple(rule.read_text(encoding="utf-8").split("\n---"))
         return tuple(
             document.strip("\n")
@@ -244,7 +298,13 @@ class FlextInfraModGateEngine:
         temp_root: Path,
         owner_rules: t.SequenceOf[Path],
     ) -> None:
-        """Replace multi-document rule files with single-document temp copies."""
+        """Replace multi-document rule files with single-document temp copies.
+
+        Raises:
+            RuntimeError: If ``parsed.failure``; or if ast-grep rule document missing
+                required id.
+
+        """
         source_rules = set(owner_rules)
         directories = FlextInfraCodemodSnapshotReconciler.fixture_directories(
             config_root,
@@ -282,6 +342,10 @@ class FlextInfraModGateEngine:
         Rules, utilities and tests are inputs of the regeneration and are never
         written back. A committed snapshot the regeneration did not produce
         belongs to a removed rule or test and is removed with the rest.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
         """
         pattern = f"*{c.Infra.CODEMOD_SNAPSHOT_SUFFIX}"
         changes: list[str] = []
@@ -320,9 +384,14 @@ class FlextInfraModGateEngine:
         *,
         finding_exit_code: int | None = None,
     ) -> p.Result[p.Cli.CommandOutput]:
-        """Run one AST tool and preserve its documented finding status."""
+        """Run one AST tool and preserve its documented finding status.
+
+        Returns:
+            The resulting ``p.Result[p.Cli.CommandOutput]``.
+
+        """
         sys.stderr.write(
-            f"mod: start {' '.join(command[:2])} arguments={max(0, len(command) - 2)}\n",
+            f"mod: start {' '.join(command[:2])} args={max(0, len(command) - 2)}\n",
         )
         sys.stderr.flush()
         run = u.Cli.run_raw(command, cwd=root, timeout=c.Infra.TIMEOUT_SHORT)
@@ -356,12 +425,22 @@ class FlextInfraModGateEngine:
 
     @staticmethod
     def _path_depth(path: Path) -> int:
-        """Return path depth for deterministic deepest-owner selection."""
+        """Return path depth for deterministic deepest-owner selection.
+
+        Returns:
+            Path depth for deterministic deepest-owner selection.
+
+        """
         return len(path.parts)
 
     @staticmethod
     def _validate_finding_receipt(stderr: str, errors: int) -> p.Result[bool]:
-        """Authenticate ast-grep's exact error-finding stderr receipt."""
+        """Authenticate ast-grep's exact error-finding stderr receipt.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         expected = "\n".join((
             c.Infra.AST_GREP_ERROR_FINDING_RECEIPT.format(count=errors),
             c.Infra.AST_GREP_ERROR_FINDING_HELP,
@@ -385,7 +464,15 @@ class FlextInfraModGateEngine:
         predicates ast-grep cannot see (standard library, own package, runtime
         closure, the file's declared facade family); the syntactic match is a
         finding only when every condition holds.
+
+        Returns:
+            The resulting ``m.Infra.ModScanReport``.
+
         """
+        facts = u.Infra.codemod_project_facts(
+            root,
+            tuple(rules_by_id[entry.rule_id] for entry in report.entries),
+        )
         entries = tuple(
             entry
             for entry in report.entries
@@ -394,25 +481,60 @@ class FlextInfraModGateEngine:
                 rules_by_id[entry.rule_id],
                 entry.file,
                 FlextInfraModGateEngine._captures(entry.payload),
+                facts,
             )
         )
         if len(entries) == len(report.entries):
             return report
+        return FlextInfraModGateEngine.recounted(entries)
+
+    @staticmethod
+    def recounted(
+        entries: t.VariadicTuple[m.Infra.ModScanFinding],
+    ) -> m.Infra.ModScanReport:
+        """Return the scan report of exactly these findings, classes recounted.
+
+        Returns:
+            The scan report of exactly these findings, classes recounted.
+
+        """
         classes = [entry.classification for entry in entries]
         return m.Infra.ModScanReport(
             findings=len(entries),
             actionable=classes.count(c.Infra.ModScanFindingClass.ACTIONABLE),
             detection_only=classes.count(c.Infra.ModScanFindingClass.DETECTION_ONLY),
             non_actionable_with_fix=classes.count(
-                c.Infra.ModScanFindingClass.NON_ACTIONABLE_WITH_FIX
+                c.Infra.ModScanFindingClass.NON_ACTIONABLE_WITH_FIX,
             ),
             files=frozenset(entry.file for entry in entries),
             entries=entries,
         )
 
+    @classmethod
+    def authored(cls, report: m.Infra.ModScanReport) -> m.Infra.ModScanReport:
+        """Return the findings mod may rewrite: a generated source is never one.
+
+        A generator finding stays blocking evidence for its generator; it never
+        holds back the rewrites of the authored sources.
+
+        Returns:
+            The findings mod may rewrite: a generated source is never one.
+
+        """
+        return cls.recounted(
+            tuple(
+                entry for entry in report.entries if entry.source_owner != "generator"
+            ),
+        )
+
     @staticmethod
     def _captures(payload: t.JsonMapping) -> t.JsonMapping:
-        """Return one finding's single and transformed metavariables."""
+        """Return one finding's single and transformed metavariables.
+
+        Returns:
+            One finding's single and transformed metavariables.
+
+        """
         meta = payload.get("metaVariables")
         captures: t.MutableMappingKV[str, t.JsonValue] = {}
         if isinstance(meta, Mapping):
@@ -435,6 +557,10 @@ class FlextInfraModGateEngine:
         over-matching after an unrelated edit, is otherwise invisible — the
         cascade simply rewrites more or less than its author proved. Rules
         that declare no receipt are unconstrained.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         counts: MutableMapping[str, int] = {}
         for entry in report.entries:
@@ -458,7 +584,12 @@ class FlextInfraModGateEngine:
         fixable_ids: frozenset[str],
         source_states: Mapping[Path, m.Cli.AtomicFileState],
     ) -> p.Result[m.Infra.ModScanReport]:
-        """Validate every JSONL finding without dropping malformed output."""
+        """Validate every JSONL finding without dropping malformed output.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ModScanReport]``.
+
+        """
         findings = 0
         actionable_findings = 0
         detection_only_findings = 0
@@ -609,39 +740,13 @@ class FlextInfraModGateEngine:
         sys.stderr.flush()
 
     @classmethod
-    def validate(cls, root: Path) -> p.Result[bool]:
-        """Require full-scope canonical formatting, Ruff, Pyrefly, and LSP health."""
-        resolved_root = root.resolve()
-        project_roots = u.Infra.governed_project_roots(resolved_root)
-        for index, owner in enumerate(project_roots, start=1):
-            sys.stderr.write(
-                f"mod: validate project {index}/{len(project_roots)} {owner}\n",
-            )
-            sys.stderr.flush()
-            context = m.Infra.GateContext(
-                repository_root=owner,
-                reports_dir=owner / c.Infra.REPORTS_DIR_NAME,
-                check_only=True,
-            )
-            for gate_type in (
-                FlextInfraRuffFormatGate,
-                FlextInfraRuffLintGate,
-                FlextInfraPyreflyGate,
-            ):
-                execution = gate_type(owner).check(owner, context)
-                if not execution.result.passed:
-                    return r[bool].fail(
-                        "\n".join((execution.raw_output, *execution.result.errors)),
-                    )
-            files = u.Infra.iter_python_files(
-                m.Infra.SourceScanRequest(project_roots=(owner,)),
-            ).unwrap()
-            FlextInfraLspDiagnosticsDetector.validate(owner, files).unwrap()
-        return r[bool].ok(True)
-
-    @classmethod
     def scan(cls, root: Path, *, fix: bool) -> p.Result[m.Infra.ModScanReport]:
-        """Scan or apply every ruleset elected by the composed rule-plan SSOT."""
+        """Scan or apply every ruleset elected by the composed rule-plan SSOT.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ModScanReport]``.
+
+        """
         planned = u.Infra.codemod_rule_plan(root)
         if planned.failure:
             return r[m.Infra.ModScanReport].from_failure(planned)
@@ -729,7 +834,7 @@ class FlextInfraModGateEngine:
             return r[m.Infra.ModScanReport].from_failure(receipt)
         cls._report_evidence(receipt.value)
         if fix:
-            from .batch_replacements import FlextInfraModReplacements
+            from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
 
             published = FlextInfraModReplacements.publish(root, complete_report)
             if published.failure:

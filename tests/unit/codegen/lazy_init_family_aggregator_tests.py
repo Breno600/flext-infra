@@ -11,6 +11,9 @@ the alphabetically-first re-export in the aggregator's list, the aggregator
 tied the real owner's collision score and won the tie-break, dropping the
 real ``constants.py``-owned class and alias entirely from the generated root
 ``__init__.py``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -25,8 +28,8 @@ from tests import c, u
 class TestsFlextInfraLazyInitFamilyAggregator:
     """A multi-name aggregator module never wins family/alias ownership."""
 
+    @staticmethod
     def test_aggregator_sidecar_never_shadows_real_constants_owner(
-        self,
         tmp_path: Path,
     ) -> None:
         """The real ``constants.py`` owner survives a re-export aggregator."""
@@ -76,7 +79,8 @@ class TestsFlextInfraLazyInitFamilyAggregator:
 
         tm.that(
             generated,
-            has="from .constants import FlextTestAggConstants, FlextTestAggConstants as c",
+            has=f"from {package_root.name}.constants import FlextTestAggConstants, c",
         )
+        tm.that(generated, lacks="FlextTestAggConstants as c")
         tm.that(generated, has='".constants": ("FlextTestAggConstants", "c")')
         tm.that(generated, lacks="_exports_typing_aggregate")

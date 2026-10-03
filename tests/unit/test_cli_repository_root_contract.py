@@ -1,4 +1,8 @@
-"""Generated Make scope options must match the real CLI route contract."""
+"""Generated Make scope options must match the real CLI route contract.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -14,9 +18,17 @@ from tests import u
 
 
 class TestsFlextInfraCliRepositoryRootContract:
+    """Tests for ``FlextInfraCliRepositoryRootContract``."""
+
+    @staticmethod
     @pytest.fixture
-    def rendered_makefile(self, tmp_path: Path) -> str:
-        """Use the conform owner and typed fixtures, not a copied Make recipe."""
+    def rendered_makefile(tmp_path: Path) -> str:
+        """Use the conform owner and typed fixtures, not a copied Make recipe.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         repository = u.Tests.repository_ref("scope-contract-fixture")
         request = u.Tests.conform_request(
             tmp_path,
@@ -40,6 +52,7 @@ class TestsFlextInfraCliRepositoryRootContract:
             ),
         )
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("group", "command", "generated_command"),
         [
@@ -53,7 +66,6 @@ class TestsFlextInfraCliRepositoryRootContract:
         ],
     )
     def test_generated_scope_matches_route_and_help(
-        self,
         rendered_makefile: str,
         group: str,
         command: str,

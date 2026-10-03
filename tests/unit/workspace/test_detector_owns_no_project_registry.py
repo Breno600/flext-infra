@@ -1,4 +1,8 @@
-"""Topology comes from each repository, never from an internal project registry."""
+"""Topology comes from each repository, never from an internal project registry.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -15,7 +19,12 @@ class TestsFlextInfraDetectorOwnsNoProjectRegistry:
 
     @staticmethod
     def _standalone(root: Path, *, name: str) -> Path:
-        """Create a real Git repository that flext-infra has never heard of."""
+        """Create a real Git repository that flext-infra has never heard of.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             name,

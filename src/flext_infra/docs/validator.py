@@ -1,12 +1,15 @@
-"""Documentation validator service."""
+"""Documentation validator service.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
 from flext_infra import c, m, u
-
-from .base import FlextInfraDocServiceBase
+from flext_infra.docs.base import FlextInfraDocServiceBase
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -21,7 +24,12 @@ class FlextInfraDocValidator(FlextInfraDocServiceBase):
         self,
         request: m.Infra.DocsGenerateRequest,
     ) -> p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]:
-        """Validate documentation across the repository root and governed projects."""
+        """Validate documentation across the repository root and governed projects.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]``.
+
+        """
         return self.run_scoped_docs(
             request.repository_root,
             projects=request.projects,
@@ -31,7 +39,12 @@ class FlextInfraDocValidator(FlextInfraDocServiceBase):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute the configured docs validation flow."""
+        """Execute the configured docs validation flow.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         result = self.validate_workspace(
             m.Infra.DocsGenerateRequest(
                 repository_root=self.repository_root,
@@ -45,8 +58,14 @@ class FlextInfraDocValidator(FlextInfraDocServiceBase):
             failure_predicate=lambda report: report.result == c.Infra.ResultStatus.FAIL,
         )
 
-    def _run_adr_skill_check(self, repository_root: Path) -> t.Pair[int, t.StrSequence]:
-        """Run the ADR skill validation check for the root docs scope."""
+    @staticmethod
+    def _run_adr_skill_check(repository_root: Path) -> t.Pair[int, t.StrSequence]:
+        """Run the ADR skill validation check for the root docs scope.
+
+        Returns:
+            The resulting ``t.Pair[int, t.StrSequence]``.
+
+        """
         required_skills = u.Infra.docs_load_required_skills(repository_root).unwrap()
         skills_root = repository_root / ".agents/skills"
         missing: list[str] = []
@@ -64,7 +83,12 @@ class FlextInfraDocValidator(FlextInfraDocServiceBase):
         *,
         apply_mode: bool,
     ) -> m.Infra.DocsPhaseReport:
-        """Validate one docs scope and persist the standard reports."""
+        """Validate one docs scope and persist the standard reports.
+
+        Returns:
+            The resulting ``m.Infra.DocsPhaseReport``.
+
+        """
         status = c.Infra.ResultStatus.OK
         messages: list[str] = []
         missing_adr_skills: t.StrSequence = []

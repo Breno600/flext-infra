@@ -1,4 +1,8 @@
-"""Observable public collection-policy contract of the cached-pytest runtime."""
+"""Observable public collection-policy contract of the cached-pytest runtime.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -15,9 +19,9 @@ from tests.unit.validate.pytest_runner_support import profile_parent, runner_for
 class TestsFlextInfraPytestCollectionPolicy:
     """Keep collection findings loud, accounted, and identity-preserving."""
 
+    @staticmethod
     @pytest.mark.slow
     def test_collection_policy_error_fails_loud_and_names_the_offender(
-        self,
         policy_violation_project: Path,
     ) -> None:
         """A collection-time policy error rejects the run and names the offender."""
@@ -28,11 +32,11 @@ class TestsFlextInfraPytestCollectionPolicy:
 
         tm.that(str(raised.value), has=["FLEXT slow timeout policy", "test_policy.py"])
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("profile_collection", [False, True])
     @pytest.mark.parametrize("finding", ["warning", "module-skip", "module-error"])
     def test_collection_findings_block_before_suite_execution(
-        self,
         cached_runner_project: Path,
         finding: str,
         *,
@@ -100,12 +104,14 @@ class TestsFlextInfraPytestCollectionPolicy:
             assert pstats.Stats(str(profile)).get_stats_profile().func_profiles
             parent = cached_runner_project / ".reports" / "profiles" / "pytest.pstats"
             assert pstats.Stats(str(parent)).get_stats_profile().func_profiles
-            assert not parent.with_suffix(".pstats.json").exists()
+            # A blocked collection is a profiled run too: the parent binds the
+            # receipt this invocation wrote before the collection failed.
+            assert parent.with_suffix(".pstats.json").is_file()
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("homonym", [False, True])
     def test_serial_collection_warning_blocks_and_preserves_identity(
-        self,
         cached_runner_project: Path,
         *,
         homonym: bool,
@@ -151,9 +157,9 @@ class TestsFlextInfraPytestCollectionPolicy:
         tm.that(identity.category, eq=category)
         tm.that(identity.category_module, eq="runner_sample.notices")
 
+    @staticmethod
     @pytest.mark.slow
     def test_warm_inventory_captures_warnings_from_stable_modules(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """A file omitted by testmon remains covered by complete collection policy."""
@@ -187,9 +193,9 @@ class TestsFlextInfraPytestCollectionPolicy:
         tm.that(diagnostics.warning_lines[0], contains="stable inventory finding")
         tm.that((context.parent / "suite-outcome.json").exists(), eq=False)
 
+    @staticmethod
     @pytest.mark.slow
     def test_coverage_pass_fails_loud_on_collection_policy_error(
-        self,
         policy_violation_project: Path,
     ) -> None:
         """The coverage inventory rejects the same collection policy violation."""

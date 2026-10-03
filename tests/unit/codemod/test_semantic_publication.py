@@ -1,4 +1,8 @@
-"""Real public semantic publication, identity and rollback contracts."""
+"""Real public semantic publication, identity and rollback contracts.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -46,6 +50,7 @@ class TestsSemanticPublication:
         *,
         raises: bool,
     ) -> None:
+        """Test rejected semantic acceptance rolls back every file."""
         plans = self._plans(mod_workspace)
         failure = RuntimeError("semantic acceptance rejected")
 
@@ -101,6 +106,7 @@ class TestsSemanticPublication:
         *,
         linked: bool,
     ) -> None:
+        """Test changed later identity prevents earlier publication."""
         first, second = self._plans(mod_workspace)
         if linked:
             actual = second.path.with_suffix(".actual")
@@ -122,6 +128,7 @@ class TestsSemanticPublication:
         self,
         mod_workspace: Path,
     ) -> None:
+        """Test generated later plan rejects authored earlier plan."""
         first, second = self._plans(mod_workspace)
         u.Cli.atomic_write_text_file(
             second.path,
@@ -145,6 +152,7 @@ class TestsSemanticPublication:
         tm.that(first.path.read_bytes(), eq=first.before.content)
 
     def test_none_content_preserves_the_file(self, mod_workspace: Path) -> None:
+        """Test none content preserves the file."""
         first, _ = self._plans(mod_workspace)
         noop = first.model_copy(update={"desired_content": None, "desired_mode": None})
         tm.that(
@@ -158,10 +166,11 @@ class TestsSemanticPublication:
         )
         tm.that(first.path.read_bytes(), eq=first.before.content)
 
+    @staticmethod
     def test_declared_template_input_is_not_its_generated_projection(
-        self,
         mod_workspace: Path,
     ) -> None:
+        """Test declared template input is not its generated projection."""
         template_root = mod_workspace / "templates"
         template_root.mkdir()
         declared = template_root / "declared.j2"
@@ -226,6 +235,7 @@ class TestsSemanticPublication:
         self,
         mod_workspace: Path,
     ) -> None:
+        """Test real formatter rejects later source before any publication."""
         plans = self._plans(mod_workspace)
         edits = tuple(
             m.Infra.SemanticMigrationEdit(
@@ -245,6 +255,7 @@ class TestsSemanticPublication:
         self,
         mod_workspace: Path,
     ) -> None:
+        """Test real semantic caller commits normalized source idempotently."""
         first, _ = self._plans(mod_workspace)
         edit = m.Infra.SemanticMigrationEdit(
             file_path=first.path,

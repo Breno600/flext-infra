@@ -1,4 +1,8 @@
-"""Transactional CSV campaigns using existing Rope and publication primitives."""
+"""Transactional CSV campaigns using existing Rope and publication primitives.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,10 +12,9 @@ from pathlib import Path
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
+from flext_infra.codemod._rename_sources import FlextInfraRenameSources
+from flext_infra.codemod._rename_symbols import FlextInfraRenameSymbols
 from flext_infra.transformers import FlextInfraSemanticPublication
-
-from ._rename_sources import FlextInfraRenameSources
-from ._rename_symbols import FlextInfraRenameSymbols
 
 
 class FlextInfraApplyRenames:
@@ -79,7 +82,12 @@ class FlextInfraApplyRenames:
         cls,
         params: m.Infra.ApplyRenamesInput,
     ) -> p.Result[m.Infra.ApplyRenamesReport]:
-        """Apply one declared campaign; check and verification share the planner."""
+        """Apply one declared campaign; check and verification share the planner.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ApplyRenamesReport]``.
+
+        """
         roots = tuple(sorted({Path(value).resolve() for value in params.roots}))
         for root in roots:
             if not root.is_dir():
@@ -115,13 +123,13 @@ class FlextInfraApplyRenames:
                 ).unwrap()
                 if current_driver != driver:
                     return r[bool].fail(
-                        f"rename campaign driver changed during publication: {csv_path}",
+                        f"rename campaign driver changed during publish: {csv_path}",
                     )
                 _fresh, remaining = cls._plan(params, roots, pairs)
                 pending = remaining
                 if remaining:
                     return r[bool].fail(
-                        f"CSV campaign post-scan found {remaining} pending source edits",
+                        f"CSV campaign post-scan found {remaining} pending edits",
                     )
                 return r[bool].ok(True)
 

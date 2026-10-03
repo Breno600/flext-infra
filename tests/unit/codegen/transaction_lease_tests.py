@@ -1,4 +1,8 @@
-"""Public transaction ownership across real processes and attached repositories."""
+"""Public transaction ownership across real processes and attached repositories.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -24,9 +28,9 @@ if TYPE_CHECKING:
 class TestsFlextInfraTransactionLease:
     """Keep live journal recovery behind the shared physical scope lease."""
 
+    @staticmethod
     @pytest.mark.parametrize("boundary", ["service", "cli"])
     def test_native_acquisition_denial_escapes_without_waiting(
-        self,
         tmp_path: Path,
         boundary: str,
     ) -> None:
@@ -91,6 +95,10 @@ class TestsFlextInfraTransactionLease:
         ``Path`` specialization at the call site (a second, independent type
         variable on ``ok`` itself), so a concretely annotated wrapper is the
         typed fix rather than widening ``run_locked``'s signature.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
         """
         return r[Path].ok(scope)
 

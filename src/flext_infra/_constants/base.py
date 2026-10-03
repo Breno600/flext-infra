@@ -9,9 +9,9 @@ from __future__ import annotations
 from enum import StrEnum, unique
 from typing import TYPE_CHECKING, ClassVar
 
-from .make import FlextInfraConstantsMake
-from .source_code import FlextInfraConstantsSourceCode
-from .validate import FlextInfraConstantsSharedInfra
+from flext_infra._constants.make import FlextInfraConstantsMake
+from flext_infra._constants.source_code import FlextInfraConstantsSourceCode
+from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -55,6 +55,8 @@ class FlextInfraConstantsBase(
     "Top-level [project] section key."
     DEPENDENCIES: ClassVar[str] = "dependencies"
     "Dependencies key within project or poetry sections."
+    DYNAMIC: ClassVar[str] = "dynamic"
+    "PEP 621 [project] key listing fields a build backend supplies."
     DEPENDENCY_GROUPS: ClassVar[str] = "dependency-groups"
     "PEP 735 dependency-groups table key."
     OPTIONAL_DEPENDENCIES: ClassVar[str] = "optional-dependencies"
@@ -87,12 +89,12 @@ class FlextInfraConstantsBase(
     "Mypy tool section key."
     PYRIGHT: ClassVar[str] = "pyright"
     "Pyright tool section key."
-    PYRIGHT_LANGSERVER: ClassVar[str] = "pyright-langserver"
-    "Pyright Language Server Protocol executable."
     PYTEST: ClassVar[str] = "pytest"
     "Pytest tool section key."
     RUFF: ClassVar[str] = "ruff"
     "Ruff tool section key."
+    RUFF_INVALID_SYNTAX: ClassVar[str] = "invalid-syntax"
+    "Rule name Ruff gives a module it cannot parse."
     DEPTRY: ClassVar[str] = "deptry"
     "Deptry tool section key."
     ISORT: ClassVar[str] = "isort"
@@ -238,8 +240,6 @@ class FlextInfraConstantsBase(
         "--require-hashes",
     )
     "Fail-closed isolated build of one release artifact from staged source."
-    JSON_RPC_VERSION: ClassVar[str] = "2.0"
-    "Canonical JSON-RPC protocol version used by LSP transports."
     GATE_ATTESTATION_SCHEMA: ClassVar[str] = "https://flext.sh/attestations/gates/v1"
     "Canonical schema identifier for signed gate attestations."
     UV_HTTP_CONNECT_TIMEOUT: ClassVar[str] = "UV_HTTP_CONNECT_TIMEOUT"

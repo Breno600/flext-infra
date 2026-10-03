@@ -1,4 +1,8 @@
-"""Centralized constants for the core subpackage."""
+"""Centralized constants for the core subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -98,7 +102,7 @@ class FlextInfraConstantsSharedInfra:
     MAKEFILE_FILENAME: ClassVar[str] = "Makefile"
     GITMODULES: ClassVar[str] = ".gitmodules"
     GITMODULE_MANAGED_KEY: ClassVar[str] = "flext-managed"
-    "``.gitmodules`` key whose explicit non-``true`` value opts a member out of governance."
+    "``.gitmodules`` key whose non-``true`` value opts a member out of governance."
     FOLLOW_SUPERPROJECT_BRANCH: ClassVar[str] = "."
     GITIGNORE: ClassVar[str] = ".gitignore"
     PRE_COMMIT_CONFIG_FILENAME: ClassVar[str] = ".pre-commit-config.yaml"
@@ -113,6 +117,9 @@ class FlextInfraConstantsSharedInfra:
     SONARCLOUD_ISSUE_IGNORE_KEY: ClassVar[str] = "sonar.issue.ignore.multicriteria"
     "Server-side PROPERTY_SET that automatic analysis honors for issue exclusions."
     SONARCLOUD_API_AUTH_VALIDATE_PATH: ClassVar[str] = "/api/authentication/validate"
+    SONARCLOUD_API_ISSUES_SEARCH_PATH: ClassVar[str] = "/api/issues/search"
+    SONARCLOUD_ISSUES_SEARCH_LIMIT: ClassVar[int] = 10000
+    "Maximum result window documented by SonarSource for issue search."
     SONARCLOUD_API_SETTINGS_VALUES_PATH: ClassVar[str] = "/api/settings/values"
     SONARCLOUD_API_SETTINGS_SET_PATH: ClassVar[str] = "/api/settings/set"
     SONARCLOUD_API_SETTINGS_RESET_PATH: ClassVar[str] = "/api/settings/reset"

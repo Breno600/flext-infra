@@ -1,4 +1,8 @@
-"""Provider, repository source, and CI private-submodule models."""
+"""Provider, repository source, and CI private-submodule models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,9 +10,9 @@ from typing import Annotated, ClassVar, Self
 
 from flext_cli import m, u
 
-from ... import t
-from ..._constants import FlextInfraConstantsSharedInfra
-from .contract import FlextInfraConfigModelsContract
+from flext_infra import t
+from flext_infra._constants import FlextInfraConstantsSharedInfra
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
 
 
 class FlextInfraConfigModelsProvider:
@@ -98,7 +102,8 @@ class FlextInfraConfigModelsProvider:
     class CiPrivateSubmoduleDeployKeySpec(
         FlextInfraConfigModelsContract.ConfigContract,
     ):
-        """One read-only deploy key that unlocks a private workspace subproject in CI."""
+        """One read-only deploy key that unlocks
+        a private workspace subproject in CI."""
 
         secret: Annotated[
             t.NonEmptyStr,
@@ -109,7 +114,9 @@ class FlextInfraConfigModelsProvider:
         submodule: Annotated[
             t.NonEmptyStr,
             m.Field(
-                description="gitmodules submodule name (git config submodule.<name>.url)",
+                description=(
+                    "gitmodules submodule name (git config submodule.<name>.url)"
+                ),
             ),
         ]
         path: Annotated[
@@ -151,7 +158,9 @@ class FlextInfraConfigModelsProvider:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 min_length=1,
-                description="Pinned official SSH host-key lines used only in runner temp",
+                description=(
+                    "Pinned official SSH host-key lines used only in runner temp"
+                ),
             ),
         ]
 
@@ -171,7 +180,17 @@ class FlextInfraConfigModelsProvider:
 
         @u.model_validator(mode="after")
         def _validate_private_submodule_identity(self) -> Self:
-            """Keep path, key, and host identities complete and unambiguous."""
+            """Keep path, key, and host identities complete and unambiguous.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If private submodule deploy-key paths must exactly match
+                    paths; or if private submodule; or if private submodule known_hosts
+                    must pin github.com ssh-ed25519.
+
+            """
             key_paths = tuple(key.path for key in self.deploy_keys)
             if key_paths != self.paths:
                 msg = "private submodule deploy-key paths must exactly match paths"

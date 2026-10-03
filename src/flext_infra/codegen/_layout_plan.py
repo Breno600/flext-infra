@@ -31,6 +31,10 @@ class FlextInfraCodegenLayoutPlanMixin:
         declares, never by the directory it happens to be checked out in: a
         linked worktree (``.claude/worktrees/<lane>``) or a renamed clone is
         the same project and inherits the same keep-list.
+
+        Returns:
+            The project's declared identity, ``[project].name``.
+
         """
         pyproject_path = project_dir / c.PYPROJECT_FILENAME
         return u.Infra.project_name_from_payload(
@@ -39,7 +43,12 @@ class FlextInfraCodegenLayoutPlanMixin:
         )
 
     def plan_project(self, project_dir: Path) -> m.Infra.LayoutProjectReport:
-        """Classify every root entry of one project without writing anything."""
+        """Classify every root entry of one project without writing anything.
+
+        Returns:
+            The resulting ``m.Infra.LayoutProjectReport``.
+
+        """
         spec = self._layout_spec
         project_name = self.layout_project_name(project_dir)
         override = self._resolve_override(spec, project_name)
@@ -76,7 +85,12 @@ class FlextInfraCodegenLayoutPlanMixin:
         spec: m.Infra.LayoutSpec,
         project_name: str,
     ) -> m.Infra.LayoutProjectOverrideSpec | None:
-        """Resolve override by directory name or logical name without leading dot."""
+        """Resolve override by directory name or logical name without leading dot.
+
+        Returns:
+            The resulting ``m.Infra.LayoutProjectOverrideSpec | None``.
+
+        """
         override = spec.project_overrides.get(project_name)
         if override is not None:
             return override
@@ -85,14 +99,22 @@ class FlextInfraCodegenLayoutPlanMixin:
             return spec.project_overrides.get(logical)
         return None
 
+    @staticmethod
     def _allowed_root_names(
-        self,
         spec: m.Infra.LayoutSpec,
         project_dir: Path,
         project_name: str,
         override: m.Infra.LayoutProjectOverrideSpec | None,
     ) -> frozenset[str]:
-        """Canonical root names for one project, profile extras included."""
+        """Canonical root names for one project, profile extras included.
+
+        Returns:
+            The resulting ``frozenset[str]``.
+
+        Raises:
+            ValueError: If ``declared.failure``.
+
+        """
         allowed = {
             *spec.canonical_root_files,
             *spec.canonical_root_dotfiles,
@@ -117,7 +139,12 @@ class FlextInfraCodegenLayoutPlanMixin:
         override: m.Infra.LayoutProjectOverrideSpec | None,
         name: str,
     ) -> bool:
-        """Whether a root entry is skipped by specials or project ignore globs."""
+        """Whether a root entry is skipped by specials or project ignore globs.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         if name in spec.special_root_dirs:
             return True
         if override is None:
@@ -132,6 +159,10 @@ class FlextInfraCodegenLayoutPlanMixin:
 
         Declared ``keep_root_files`` are owned too: they are exempt from the
         generic loose-root classification instead of being archived or moved.
+
+        Returns:
+            The resulting ``frozenset[str]``.
+
         """
         if override is None:
             return frozenset()
@@ -148,7 +179,12 @@ class FlextInfraCodegenLayoutPlanMixin:
         project_name: str,
         entry: Path,
     ) -> m.Infra.LayoutFinding:
-        """Classify one non-canonical root entry into move/archive/review."""
+        """Classify one non-canonical root entry into move/archive/review.
+
+        Returns:
+            The resulting ``m.Infra.LayoutFinding``.
+
+        """
         name = entry.name
         if entry.is_dir() and name in spec.move_docs_dirs:
             return self._finding("move", name, f"{spec.docs_target}/{name}")
@@ -188,7 +224,12 @@ class FlextInfraCodegenLayoutPlanMixin:
         override: m.Infra.LayoutProjectOverrideSpec,
         project_dir: Path,
     ) -> t.SequenceOf[m.Infra.LayoutFinding]:
-        """Explicit per-project moves whose nested source still exists."""
+        """Explicit per-project moves whose nested source still exists.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.LayoutFinding]``.
+
+        """
         return tuple(
             self._finding("move", move.source, move.target)
             for move in override.moves
@@ -201,7 +242,12 @@ class FlextInfraCodegenLayoutPlanMixin:
         override: m.Infra.LayoutProjectOverrideSpec,
         project_dir: Path,
     ) -> t.SequenceOf[m.Infra.LayoutFinding]:
-        """Override directories archived once override moves have emptied them."""
+        """Override directories archived once override moves have emptied them.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.LayoutFinding]``.
+
+        """
         findings: list[m.Infra.LayoutFinding] = []
         move_sources = {move.source for move in override.moves}
         for name in override.archive_empty_dirs:
@@ -229,7 +275,12 @@ class FlextInfraCodegenLayoutPlanMixin:
         override: m.Infra.LayoutProjectOverrideSpec | None,
         project_dir: Path,
     ) -> t.SequenceOf[m.Infra.LayoutFinding]:
-        """Missing ``.gitignore`` patterns required by the layout SSOT."""
+        """Missing ``.gitignore`` patterns required by the layout SSOT.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.LayoutFinding]``.
+
+        """
         required = [f"{spec.archive_root}/"]
         if override is not None:
             required.extend(override.gitignore_additions)
@@ -255,7 +306,12 @@ class FlextInfraCodegenLayoutPlanMixin:
         *,
         message: str | None = None,
     ) -> m.Infra.LayoutFinding:
-        """Build one typed finding with a canonical message."""
+        """Build one typed finding with a canonical message.
+
+        Returns:
+            The resulting ``m.Infra.LayoutFinding``.
+
+        """
         messages: t.MappingKV[t.Infra.LayoutRule, str] = {
             "move": f"move {path} -> {target}",
             "archive": f"archive {path} -> {target}",

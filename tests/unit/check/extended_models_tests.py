@@ -12,8 +12,16 @@ from tests import m, t
 
 
 class TestsFlextInfraModels:
-    def _sample_issues(self) -> t.Triple[m.Infra.Issue, m.Infra.Issue, m.Infra.Issue]:
-        """Build three distinct sample gate issues for summary assertions."""
+    """Tests for ``FlextInfraModels``."""
+
+    @staticmethod
+    def _sample_issues() -> t.Triple[m.Infra.Issue, m.Infra.Issue, m.Infra.Issue]:
+        """Build three distinct sample gate issues for summary assertions.
+
+        Returns:
+            The resulting ``t.Triple[m.Infra.Issue, m.Infra.Issue, m.Infra.Issue]``.
+
+        """
         issue1 = m.Infra.Issue(
             file="a.py",
             line=1,
@@ -45,7 +53,8 @@ class TestsFlextInfraModels:
     # this outer class — a nested class does not inherit the outer one, so calling
     # _sample_issues via a throwaway instance was external private-member access
     # (ruff SLF001).
-    def test_formatted_with_code(self) -> None:
+    @staticmethod
+    def test_formatted_with_code() -> None:
         """Test _m.Infra.Issue.formatted property with a code."""
         issue = m.Infra.Issue(
             file="test.py",
@@ -58,7 +67,8 @@ class TestsFlextInfraModels:
         tm.that(issue.formatted, contains="[E001]")
         tm.that(issue.formatted, contains="test.py:10:5")
 
-    def test_formatted_without_code(self) -> None:
+    @staticmethod
+    def test_formatted_without_code() -> None:
         """Test _m.Infra.Issue.formatted property without a code."""
         issue = m.Infra.Issue(
             file="test.py",
@@ -70,7 +80,8 @@ class TestsFlextInfraModels:
         )
         tm.that(issue.formatted, contains="test.py:10:5")
 
-    def test_run_command_splits_csv_gate_in_sequence_payload(self) -> None:
+    @staticmethod
+    def test_run_command_splits_csv_gate_in_sequence_payload() -> None:
         """Test run-command gate parsing for check workflows."""
         command = m.Infra.RunCommand.model_validate({
             "projects": ["flext-core"],
@@ -111,7 +122,8 @@ class TestsFlextInfraModels:
         )
         tm.that(project.total_findings, eq=3)
 
-    def test_warning_findings_count_like_every_finding(self) -> None:
+    @staticmethod
+    def test_warning_findings_count_like_every_finding() -> None:
         """A warning that fails the gate is counted like any other finding.
 
         Every finding blocks, so the gate result carrying a warning is failed
@@ -139,7 +151,8 @@ class TestsFlextInfraModels:
         tm.that(project.total_findings, eq=1)
         tm.that(project.passed, eq=False)
 
-    def test_passed_all_gates_pass(self) -> None:
+    @staticmethod
+    def test_passed_all_gates_pass() -> None:
         """Test _ProjectResult.passed when all gates pass."""
         gate1 = m.Infra.GateResult(
             gate="lint",
@@ -163,7 +176,8 @@ class TestsFlextInfraModels:
         )
         tm.that(project.passed, eq=True)
 
-    def test_passed_one_gate_fails(self) -> None:
+    @staticmethod
+    def test_passed_one_gate_fails() -> None:
         """Test _ProjectResult.passed when one gate fails."""
         gate1 = m.Infra.GateResult(
             gate="lint",

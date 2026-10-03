@@ -15,9 +15,8 @@ from typing import TYPE_CHECKING, Annotated, ClassVar, override
 
 from flext_core import r
 from flext_infra import c, m, u
-
-from ..base import s
-from ._pytest_diag_xml import FlextInfraPytestDiagXmlMixin
+from flext_infra.base import s
+from flext_infra.validate._pytest_diag_xml import FlextInfraPytestDiagXmlMixin
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -64,6 +63,11 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
 
         Every reported node must show one setup and one teardown phase, plus a
         call phase whenever setup passed; a missing or repeated phase fails.
+
+        Raises:
+            ValueError: If pytest report log contains no events; or if incomplete pytest
+                lifecycle.
+
         """
         lines = report_log.read_text(encoding=c.Cli.ENCODING_DEFAULT).splitlines()
         if not lines:
@@ -162,19 +166,34 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
         cls,
         report_log: Path,
     ) -> p.Result[m.Infra.PytestDiagnostics]:
-        """Read collection-only evidence through the same runtime event boundary."""
+        """Read collection-only evidence through the same runtime event boundary.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.PytestDiagnostics]``.
+
+        """
         diag = m.Infra.DiagResult()
         cls._extract_report_events(report_log, diag)
         return r.ok(cls._diagnostics_model(diag))
 
     @staticmethod
     def _read_log_text(log_path: Path) -> str:
-        """Read the required pytest log without exception normalization."""
+        """Read the required pytest log without exception normalization.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return log_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
 
     @staticmethod
     def _diagnostics_model(diag: m.Infra.DiagResult) -> m.Infra.PytestDiagnostics:
-        """Convert mutable extraction state to the canonical diagnostics model."""
+        """Convert mutable extraction state to the canonical diagnostics model.
+
+        Returns:
+            The resulting ``m.Infra.PytestDiagnostics``.
+
+        """
         return m.Infra.PytestDiagnostics(
             failed_count=len(diag.failed_cases),
             error_count=len(diag.error_cases),
@@ -199,7 +218,12 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
         *,
         report_log: Path,
     ) -> p.Result[m.Infra.PytestDiagnostics]:
-        """Extract pytest diagnostics after input normalization."""
+        """Extract pytest diagnostics after input normalization.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.PytestDiagnostics]``.
+
+        """
         self._read_log_text(log_path)
         diag = m.Infra.DiagResult()
         self._parse_xml(junit_path, diag)
@@ -208,7 +232,12 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute the pytest diagnostics CLI flow."""
+        """Execute the pytest diagnostics CLI flow.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         diagnostics = self.extract(
             self.junit,
             self.log_path,

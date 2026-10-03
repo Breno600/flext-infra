@@ -1,0 +1,26 @@
+id: ban-local-import-alias
+snapshots:
+  from pkg import m as models:
+    labels:
+    - source: m as models
+      style: primary
+      start: 16
+      end: 27
+    - source: pkg
+      style: secondary
+      start: 5
+      end: 8
+    - source: from pkg import m as models
+      style: secondary
+      start: 0
+      end: 27
+  import pkg.models as models:
+    labels:
+    - source: pkg.models as models
+      style: primary
+      start: 7
+      end: 27
+    - source: pkg.models
+      style: secondary
+      start: 7
+      end: 17

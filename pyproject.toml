@@ -417,7 +417,12 @@ quote-style = "double"
 skip-magic-trailing-comma = false
 
 [tool.ruff.lint]
-extend-safe-fixes = []
+extend-safe-fixes = ["camelcase-imported-as-lowercase", "relative-imports"]
+ignore = [
+  "camelcase-imported-as-lowercase",
+  "typing-only-standard-library-import",
+  "typing-only-third-party-import",
+]
 select = ["ALL"]
 unfixable = [
   "duplicate-value",
@@ -459,7 +464,75 @@ known-first-party = ["flext_core", "flext_infra"]
 split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
-"**/__init__.py" = ["TC004"]
+"**/__init__.py" = [
+  "non-empty-init-module",
+  "runtime-import-in-type-checking-block",
+  "typing-only-first-party-import",
+  "unused-import",
+]
+"scripts/**" = [
+  "any-type",
+  "avoidable-escaped-quote",
+  "banned-api",
+  "blank-line-after-function",
+  "boolean-default-value-positional-argument",
+  "boolean-type-hint-positional-argument",
+  "builtin-open",
+  "commented-out-code",
+  "error-instead-of-exception",
+  "f-string-in-exception",
+  "if-exp-instead-of-or-operator",
+  "import-private-name",
+  "invalid-module-name",
+  "literal-membership",
+  "logging-string-concat",
+  "magic-value-comparison",
+  "manual-list-comprehension",
+  "manual-list-copy",
+  "missing-blank-line-after-summary",
+  "missing-maxsplit-arg",
+  "multi-line-summary-first-line",
+  "multiple-starts-ends-with",
+  "non-lowercase-variable-in-function",
+  "noqa-comments",
+  "os-path-abspath",
+  "os-path-dirname",
+  "os-path-exists",
+  "os-path-join",
+  "path-constructor-current-directory",
+  "print",
+  "raise-vanilla-args",
+  "raw-string-in-exception",
+  "read-whole-file",
+  "relative-imports",
+  "repeated-append",
+  "runtime-cast-value",
+  "shebang-not-executable",
+  "start-process-with-partial-path",
+  "subprocess-without-shell-equals-true",
+  "suspicious-subprocess-import",
+  "undocumented-public-class",
+  "undocumented-public-function",
+  "undocumented-public-init",
+  "undocumented-public-method",
+  "unnecessary-multiline-docstring",
+  "unsorted-dunder-all",
+  "unspecified-encoding",
+  "unused-function-argument",
+  "unused-noqa",
+  "used-dummy-variable",
+  "verbose-raise",
+  "write-whole-file",
+]
+"scripts/**/*.py" = [
+  "commented-out-code",
+  "line-too-long",
+  "typing-only-first-party-import",
+]
+"tests/**/*.py" = ["assert"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.tomlsort]
 all = true
@@ -481,6 +554,7 @@ whitelines = 1
 
 [tool.uv]
 link-mode = "copy"
+constraint-dependencies = ["mypy<2.4.0"]
 environments = ["sys_platform == 'linux'", "sys_platform == 'darwin'"]
 
 [[tool.uv.exclude-dependencies]]

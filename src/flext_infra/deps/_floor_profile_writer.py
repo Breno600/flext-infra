@@ -1,4 +1,8 @@
-"""Runtime-derived dependency floors written back to the codegen SSOT."""
+"""Runtime-derived dependency floors written back to the codegen SSOT.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -16,7 +20,17 @@ class FlextInfraDepsFloorProfileWriter:
 
     @staticmethod
     def _source_paths(root: Path) -> t.SequenceOf[Path]:
-        """Elect the local owner from the caller's typed workspace declaration."""
+        """Elect the local owner from the caller's typed workspace declaration.
+
+        Returns:
+            The resulting ``t.SequenceOf[Path]``.
+
+        Raises:
+            ValueError: If ambiguous dependency floor owners in; or if dependency floor
+                configuration is outside workspace; or if dependency floor owner is not
+                writable in this workspace.
+
+        """
         root = root.resolve()
         manifests = u.Infra.load_workspace_manifest(root).unwrap()
         relative = Path(c.Infra.CODEGEN_CONFIG_DIR) / c.Infra.CODEGEN_CONFIG_FILENAME
@@ -28,7 +42,10 @@ class FlextInfraDepsFloorProfileWriter:
                     continue
                 owner = (root / member.path).resolve()
                 if not owner.is_relative_to(root) or member.read_only:
-                    message = f"dependency floor owner is not writable in this workspace: {owner}"
+                    message = (
+                        f"dependency floor owner is not writable "
+                        f"in this workspace: {owner}"
+                    )
                     raise ValueError(message)
                 owners.append(owner)
             if manifest.repository.distribution == config.Infra.name and not owners:
@@ -61,6 +78,18 @@ class FlextInfraDepsFloorProfileWriter:
         route consults the installed package location.
 
         Returns a list of change descriptions for the deps report.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            TypeError: If dependency profile must be a mapping in; or if ``not
+                isinstance(reqs, list)``; or if ``not isinstance(req, str)``.
+            ValueError: If ``loaded.failure``; or if Infra section missing in; or if
+                Infra.codegen section missing in; or if Infra.codegen.scaffold section
+                missing in; or if Infra.codegen.scaffold.project section missing in; or
+                if dependency_profiles missing or not a list in.
+
         """
         sources = cls._source_paths(root)
         if not sources:
