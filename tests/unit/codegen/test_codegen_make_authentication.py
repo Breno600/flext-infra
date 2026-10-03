@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from tests import c, t, u
+from tests import c, p, t, u
 
 pytestmark = pytest.mark.slow
 
@@ -20,10 +20,17 @@ class TestsFlextInfraCodegenMakeAuthentication:
     """Prove the one credential reaches tools and local operations need none."""
 
     @staticmethod
-    def test_make_exports_the_one_credential_to_real_mise(
+    def _probe_credential(
         tmp_path: Path,
-    ) -> None:
-        """A generated public verb passes GITHUB_TOKEN and never an alias of it."""
+        expected: str,
+        env: t.StrMapping,
+    ) -> p.Cli.CommandOutput:
+        """Run a public verb whose tool child asserts every credential name.
+
+        Returns:
+            The successful make process output.
+
+        """
         project_root, _ = u.Tests.render_make_environment(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,
@@ -31,9 +38,9 @@ class TestsFlextInfraCodegenMakeAuthentication:
         tm.ok(u.Tests.create_python_environment(project_root))
         (project_root / "auth_probe.py").write_text(
             "import os, sys\n"
-            "assert os.environ['GITHUB_TOKEN'] == sys.argv[1]\n"
-            "assert not {'GH_TOKEN', 'MISE_GITHUB_TOKEN', 'GITHUB_API_TOKEN'}"
-            " & set(os.environ)\n"
+            "assert all(os.environ[name] == sys.argv[1] for name in "
+            "('GITHUB_TOKEN', 'GH_TOKEN', 'MISE_GITHUB_TOKEN'))\n"
+            "assert 'GITHUB_API_TOKEN' not in os.environ\n"
             "print('environment-authenticated')\n",
             encoding="utf-8",
         )
@@ -44,18 +51,11 @@ class TestsFlextInfraCodegenMakeAuthentication:
             '"$(EXPECTED_CREDENTIAL)"\n',
             encoding="utf-8",
         )
-        selected = "fixture-github-token"
         process = tm.ok(
             u.Tests.run_isolated_make(
                 ["--no-print-directory", "status"],
                 cwd=project_root,
-                env={
-                    "GITHUB_TOKEN": selected,
-                    "EXPECTED_CREDENTIAL": selected,
-                    "GH_TOKEN": "alias-must-not-reach-tools",
-                    "MISE_GITHUB_TOKEN": "alias-must-not-reach-tools",
-                    "GITHUB_API_TOKEN": "alias-must-not-reach-tools",
-                },
+                env={"EXPECTED_CREDENTIAL": expected, **env},
             ),
         )
         tm.that(
@@ -64,7 +64,58 @@ class TestsFlextInfraCodegenMakeAuthentication:
             msg=process.stdout + process.stderr,
         )
         tm.that(process.stdout, has="environment-authenticated")
-        tm.that(process.stdout + process.stderr, lacks=selected)
+        tm.that(process.stdout + process.stderr, lacks=expected)
+        return process
+
+    @staticmethod
+    def test_make_exports_the_caller_credential_under_every_name(
+        tmp_path: Path,
+    ) -> None:
+        """GITHUB_TOKEN wins and replaces every inherited alias."""
+        selected = "fixture-github-token"
+        TestsFlextInfraCodegenMakeAuthentication._probe_credential(
+            tmp_path,
+            selected,
+            {
+                "GITHUB_TOKEN": selected,
+                "GH_TOKEN": "stale-alias",
+                "MISE_GITHUB_TOKEN": "stale-alias",
+                "GITHUB_API_TOKEN": "stale-alias",
+            },
+        )
+
+    @staticmethod
+    @pytest.mark.parametrize("alias", ["GH_TOKEN", "MISE_GITHUB_TOKEN"])
+    def test_make_promotes_an_alias_when_github_token_is_absent(
+        tmp_path: Path,
+        alias: str,
+    ) -> None:
+        """A caller that supplies only an alias authenticates every tool."""
+        selected = "fixture-alias-token"
+        TestsFlextInfraCodegenMakeAuthentication._probe_credential(
+            tmp_path,
+            selected,
+            {alias: selected},
+        )
+
+    @staticmethod
+    def test_make_reads_the_declared_credential_command(tmp_path: Path) -> None:
+        """Without a caller credential, gh's stored token authenticates every tool."""
+        selected = "fixture-gh-stored-token"
+        gh_config = tmp_path / "gh-config"
+        gh_config.mkdir()
+        (gh_config / "hosts.yml").write_text(
+            "github.com:\n"
+            f"    oauth_token: {selected}\n"
+            "    user: fixture\n"
+            "    git_protocol: https\n",
+            encoding="utf-8",
+        )
+        TestsFlextInfraCodegenMakeAuthentication._probe_credential(
+            tmp_path / "project",
+            selected,
+            {"GH_CONFIG_DIR": str(gh_config)},
+        )
 
     @staticmethod
     @pytest.mark.parametrize("verb", ["status", "help", "clean"])
@@ -84,7 +135,6 @@ class TestsFlextInfraCodegenMakeAuthentication:
             u.Tests.run_isolated_make(
                 ["--no-print-directory", verb],
                 cwd=project_root,
-                env={"MISE_GITHUB_TOKEN": "alias-must-not-reach-tools"},
             ),
         )
         tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
@@ -114,7 +164,6 @@ class TestsFlextInfraCodegenMakeAuthentication:
             u.Tests.run_isolated_make(
                 ["--no-print-directory", "setup"],
                 cwd=project_root,
-                env={"MISE_GITHUB_TOKEN": "alias-must-not-reach-tools"},
             ),
         )
         tm.that(

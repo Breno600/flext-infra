@@ -161,17 +161,8 @@
 	{{ mise_runtime_environment(project_root, mise, bootstrap) }}; \
 {# Only the bootstrap reaches GitHub: `install --yes` for a tool missing from
    the persistent cache, and `make upg` (release resolution, lock, launcher).
-   Every other Mise call runs through mise_offline; offline tool execution
-   never selects a credential source. -#}
-{% for command in bootstrap.credential_commands -%}
-	if [ -z "$$caller_github_token" ] && command -v {{ command[0] }} >/dev/null 2>&1; then \
-		caller_github_token="$$({{ command | join(' ') }})" \
-			|| { printf 'ERROR: the selected GitHub credential source failed: %s\n' '{{ command | join(' ') }}' >&2; exit 2; }; \
-		if [ -z "$$caller_github_token" ]; then \
-			printf 'ERROR: the selected GitHub credential source printed nothing: %s\n' '{{ command | join(' ') }}' >&2; exit 2; \
-		fi; \
-	fi; \
-{% endfor -%}
+   Every other Mise call runs through mise_offline. The Makefile preamble owns
+   the credential selection; the passthrough carries it into env -i. -#}
 	mise_checked() { \
 		mise_log="$$1"; shift; \
 		printf 'setup probe: begin stage=%s log=%s\n' "$${mise_log##*/}" "$$mise_log" >&2; \

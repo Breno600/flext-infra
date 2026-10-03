@@ -249,9 +249,12 @@ class FlextInfraConstantsCodegen(
         "PATHEXT",
         "SYSTEMROOT",
         "WINDIR",
-        # The one GitHub credential variable (optional) and the network
-        # policy key the lock-time provenance fetch reads.
+        # The one GitHub credential under every name its readers use
+        # (optional) and the network policy key the lock-time provenance
+        # fetch reads.
         "GITHUB_TOKEN",
+        "GH_TOKEN",
+        "MISE_GITHUB_TOKEN",
         "MISE_HTTP_TIMEOUT",
         "FLEXT_MYPY_PROFILE_OUTPUT",
         # The generated launchers bake their release; the bootstrap passes the
