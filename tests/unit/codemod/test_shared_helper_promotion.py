@@ -1,4 +1,8 @@
-"""Public runtime contracts for promotion of shared test behavior."""
+"""Public runtime contracts for promotion of shared test behavior.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -11,7 +15,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import infra
-from flext_infra.transformers import publish_semantic_file_plans
+from flext_infra.transformers import FlextInfraSemanticPublication
 from tests import c, m, t, u
 
 
@@ -21,6 +25,9 @@ class TestsFlextInfraSharedHelperPromotion:
     @staticmethod
     def _workspace(tmp_path: Path, *, reexport: bool) -> t.Triple[Path, Path, str]:
         root, _ = u.Tests.create_lazy_init_workspace(tmp_path)
+        # Promotion publishes through the codegen transaction, which coordinates
+        # only inside an exact Git worktree root, exactly as in production.
+        u.Tests.initialize_git_repo(root)
         tier = root / c.Infra.DIR_TESTS
         suite = tier / "unit"
         fixtures = suite / "_fixtures"
@@ -83,6 +90,9 @@ class TestsFlextInfraSharedHelperPromotion:
             encoding="utf-8",
         )
         tm.ok(u.Tests.materialize_lazy_init(u.Tests.create_lazy_init_service(root)))
+        # Semantic publication runs inside a codegen transaction, which only
+        # coordinates through a real repository rooted at the project.
+        u.Tests.initialize_git_repo(root)
         return root, source, helper
 
     @staticmethod
@@ -103,6 +113,7 @@ class TestsFlextInfraSharedHelperPromotion:
         quoted_only: bool,
         lexical_collision: bool,
     ) -> None:
+        """Test original identity moves without effects until publication."""
         root, source, helper = self._workspace(tmp_path, reexport=reexport)
         if quoted_only:
             (root / c.Infra.DIR_TESTS / "unit" / "consumer.py").unlink()
@@ -115,7 +126,7 @@ class TestsFlextInfraSharedHelperPromotion:
                     rope.rope_project,
                     rope.rope_project.get_pymodule(resource),
                     rope.convention(
-                        root / c.Infra.DIR_TESTS / c.Infra.UTILITIES_PY
+                        root / c.Infra.DIR_TESTS / c.Infra.UTILITIES_PY,
                     ).module_name,
                     helper,
                 )
@@ -161,17 +172,27 @@ class TestsFlextInfraSharedHelperPromotion:
             path: path.read_text(encoding="utf-8") for path in root.rglob("*.py")
         }
         with infra.rope_workspace(root) as rope:
+            if lexical_collision:
+                # A collision is a planning defect: it escapes loud, before any
+                # effect, instead of being folded into a failed result.
+                with pytest.raises(
+                    ValueError,
+                    match="shadowed quoted type destination",
+                ):
+                    u.Infra.plan_semantic_cutover(
+                        c.Infra.SemanticCutoverPhase.CLASS_NESTING,
+                        rope_workspace=rope,
+                        sources=sources,
+                    )
+                for path, original in sources.items():
+                    tm.that(path.read_text(encoding="utf-8"), eq=original)
+                tm.that(self._run(root, probe), eq=before)
+                return
             result = u.Infra.plan_semantic_cutover(
                 c.Infra.SemanticCutoverPhase.CLASS_NESTING,
                 rope_workspace=rope,
                 sources=sources,
             )
-            if lexical_collision:
-                tm.fail(result, has="shadowed quoted type destination")
-                for path, original in sources.items():
-                    tm.that(path.read_text(encoding="utf-8"), eq=original)
-                tm.that(self._run(root, probe), eq=before)
-                return
             edits = tm.ok(result)
             tm.that(edits, empty=False)
             proposed = dict(sources)
@@ -182,7 +203,7 @@ class TestsFlextInfraSharedHelperPromotion:
                         c.Infra.SemanticCutoverPhase.CLASS_NESTING,
                         rope_workspace=rope,
                         sources=proposed,
-                    )
+                    ),
                 ),
                 empty=True,
             )
@@ -195,8 +216,9 @@ class TestsFlextInfraSharedHelperPromotion:
                 before=(
                     state := tm.ok(
                         u.Cli.atomic_read_binary_file_state(
-                            edit.file_path, required=True
-                        )
+                            edit.file_path,
+                            required=True,
+                        ),
                     )
                 ),
                 desired_content=edit.updated_source.encode(),
@@ -205,7 +227,12 @@ class TestsFlextInfraSharedHelperPromotion:
             )
             for edit in edits
         )
-        tm.ok(publish_semantic_file_plans(plans, repository_root=root))
+        tm.ok(
+            FlextInfraSemanticPublication.publish_semantic_file_plans(
+                plans,
+                repository_root=root,
+            ),
+        )
         tm.ok(u.Tests.materialize_lazy_init(u.Tests.create_lazy_init_service(root)))
         tm.that(self._run(root, probe), eq=before)
         identity = (
@@ -222,8 +249,12 @@ class TestsFlextInfraSharedHelperPromotion:
 
     @pytest.mark.parametrize("test_case", [False, True])
     def test_unused_helpers_and_real_test_cases_keep_their_declared_owner(
-        self, tmp_path: Path, *, test_case: bool
+        self,
+        tmp_path: Path,
+        *,
+        test_case: bool,
     ) -> None:
+        """Test unused helpers and real test cases keep their declared owner."""
         root, source, helper = self._workspace(tmp_path, reexport=True)
         if test_case:
             source.write_text(
@@ -247,32 +278,106 @@ class TestsFlextInfraSharedHelperPromotion:
                         c.Infra.SemanticCutoverPhase.CLASS_NESTING,
                         rope_workspace=rope,
                         sources=sources,
-                    )
+                    ),
                 ),
                 empty=True,
             )
         for path, original in sources.items():
             tm.that(path.read_text(encoding="utf-8"), eq=original)
 
-    def test_two_declared_utilities_owners_fail_without_changing_consumers(
-        self, tmp_path: Path
+    def test_private_support_with_nested_behavior_moves_to_utilities(
+        self,
+        tmp_path: Path,
     ) -> None:
-        root, _, _ = self._workspace(tmp_path, reexport=True)
-        tier = root / c.Infra.DIR_TESTS
-        u.Tests.write_lazy_init_namespace_module(
-            tier / "other.py", class_name="OtherUtilities", alias="u"
+        """Test private support with nested behavior moves to utilities."""
+        root, source, helper = self._workspace(tmp_path, reexport=False)
+        destination = source.parent.parent / "_support.py"
+        source.unlink()
+        destination.write_text(
+            f"class {helper}:\n"
+            "    class Nested:\n"
+            "        @staticmethod\n"
+            "        def value() -> str:\n"
+            "            return 'shared behavior'\n",
+            encoding="utf-8",
         )
+        consumer = root / c.Infra.DIR_TESTS / "unit" / "consumer.py"
+        consumer.write_text(
+            f"from tests.unit._support import {helper}\n\n"
+            f"VALUE = {helper}.Nested.value()\n",
+            encoding="utf-8",
+        )
+        (root / c.Infra.DIR_TESTS / "unit" / "quoted.py").unlink()
         sources = {
             path: path.read_text(encoding="utf-8") for path in root.rglob("*.py")
         }
         with infra.rope_workspace(root) as rope:
-            tm.fail(
+            edits = tm.ok(
                 u.Infra.plan_semantic_cutover(
                     c.Infra.SemanticCutoverPhase.CLASS_NESTING,
                     rope_workspace=rope,
                     sources=sources,
                 ),
-                has="requires one utilities facade",
+            )
+        plans = tuple(
+            m.Infra.SemanticFilePlan(
+                project=root,
+                path=edit.file_path,
+                before=(
+                    state := tm.ok(
+                        u.Cli.atomic_read_binary_file_state(
+                            edit.file_path,
+                            required=True,
+                        ),
+                    )
+                ),
+                desired_content=edit.updated_source.encode(),
+                desired_mode=state.mode,
+                changes=edit.changes,
+            )
+            for edit in edits
+        )
+        tm.ok(
+            FlextInfraSemanticPublication.publish_semantic_file_plans(
+                plans,
+                repository_root=root,
+            ),
+        )
+        tm.ok(u.Tests.materialize_lazy_init(u.Tests.create_lazy_init_service(root)))
+        tm.that(
+            self._run(
+                root,
+                "from tests import u\n"
+                "from tests.unit.consumer import VALUE\n"
+                f"assert VALUE == u.{helper}.Nested.value()\n"
+                "print(VALUE)\n",
+            ),
+            eq="shared behavior",
+        )
+
+    def test_two_declared_utilities_owners_fail_without_changing_consumers(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Test two declared utilities owners fail without changing consumers."""
+        root, _, _ = self._workspace(tmp_path, reexport=True)
+        tier = root / c.Infra.DIR_TESTS
+        u.Tests.write_lazy_init_namespace_module(
+            tier / "other.py",
+            class_name="OtherUtilities",
+            alias="u",
+        )
+        sources = {
+            path: path.read_text(encoding="utf-8") for path in root.rglob("*.py")
+        }
+        with (
+            infra.rope_workspace(root) as rope,
+            pytest.raises(ValueError, match="requires one utilities facade"),
+        ):
+            u.Infra.plan_semantic_cutover(
+                c.Infra.SemanticCutoverPhase.CLASS_NESTING,
+                rope_workspace=rope,
+                sources=sources,
             )
         for path, original in sources.items():
             tm.that(path.read_text(encoding="utf-8"), eq=original)

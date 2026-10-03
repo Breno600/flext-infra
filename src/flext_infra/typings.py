@@ -14,13 +14,12 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import collections.abc
-from pathlib import Path
 
 from flext_cli import FlextCliTypes
 
-from ._typings.adapters import FlextInfraTypesAdapters
-from ._typings.base import FlextInfraTypesBase
-from ._typings.rope import FlextInfraTypesRope
+from flext_infra._typings.adapters import FlextInfraTypesAdapters
+from flext_infra._typings.base import FlextInfraTypesBase
+from flext_infra._typings.rope import FlextInfraTypesRope
 
 
 class FlextInfraTypes(FlextCliTypes):
@@ -45,5 +44,3 @@ class FlextInfraTypes(FlextCliTypes):
 t = FlextInfraTypes
 
 __all__: list[str] = ["FlextInfraTypes", "t"]
-
-type DocsRenderedArtifactTuple = t.Triple[Path, Path, str | None]

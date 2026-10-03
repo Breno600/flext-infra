@@ -1,12 +1,18 @@
-"""Canonical Python module header analysis and import injection."""
+"""Canonical Python module header analysis and import injection.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 import ast
+from collections.abc import MutableMapping
 
 from flext_infra import c, t
-
-from .transformer_header_parser import FlextInfraUtilitiesTransformerHeaderParser
+from flext_infra._utilities.transformer_header_parser import (
+    FlextInfraUtilitiesTransformerHeaderParser,
+)
 
 
 class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderParser):
@@ -14,7 +20,12 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
 
     @classmethod
     def ensure_future_annotations(cls, source: str) -> str:
-        """Return source with exactly one correctly positioned future import."""
+        """Return source with exactly one correctly positioned future import.
+
+        Returns:
+            Source with exactly one correctly positioned future import.
+
+        """
         module = ast.parse(source)
         imports = [
             node
@@ -58,9 +69,23 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
 
     @classmethod
     def ensure_alias_import(
-        cls, source: str, module: str, alias: str, *, runtime_required: bool = False
+        cls,
+        source: str,
+        module: str,
+        alias: str,
+        *,
+        runtime_required: bool = False,
     ) -> str:
-        """Honor the consumer's runtime requirement when introducing an alias."""
+        """Honor the consumer's runtime requirement when introducing an alias.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            ValueError: If canonical import alias must be non-empty; or if canonical
+                alias.
+
+        """
         if not alias:
             msg = "canonical import alias must be non-empty"
             raise ValueError(msg)
@@ -98,22 +123,33 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
         return f"{source[:offset]}{line}{source[offset:]}"
 
     @staticmethod
-    def has_runtime_alias_import(source: str, alias: str) -> bool:
-        """Prove availability from the unconditional import header only."""
+    def has_runtime_alias_import(source: str, alias: str | None = None) -> bool:
+        """Prove one or any canonical facade alias in the runtime import header.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         module = ast.parse(source)
         header = (
             module.body[1:] if ast.get_docstring(module) is not None else module.body
         )
+        expected = (
+            frozenset({alias}) if alias is not None else c.ENFORCEMENT_CANONICAL_ALIASES
+        )
         for node in header:
             if not isinstance(node, ast.ImportFrom | ast.Import):
                 return False
-            if any((name.asname or name.name) == alias for name in node.names):
+            if any((name.asname or name.name) in expected for name in node.names):
                 return True
         return False
 
     @classmethod
     def _alias_import_under_type_checking(
-        cls, source: str, module: str, alias: str
+        cls,
+        source: str,
+        module: str,
+        alias: str,
     ) -> str | None:
         """Place an annotation-only facade import inside ``if TYPE_CHECKING:``.
 
@@ -124,6 +160,10 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
         ever read by a type checker, so the import belongs in the type-checking
         block, which is also what the facade law prescribes. Returns None when
         the module has no such block to extend.
+
+        Returns:
+            The resulting ``str | None``.
+
         """
         if "from __future__ import annotations" not in source:
             return None
@@ -152,10 +192,14 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
 
         Without a block to extend, the injector fell through to a module-level
         import, which is exactly what breaks a module the package imports while
-        initialising itself (flext-dk13k): ``__version__.py`` then raised
+        initialising itself: ``__version__.py`` then raised
         ImportError on a partially initialised package. Deferred annotations
         make the alias a type-checker-only read, so the block is the correct
         destination and the facade law prescribes it.
+
+        Returns:
+            The resulting ``str``.
+
         """
         info = cls._parse_header(source)
         offset = info.span.last_import_end or max(
@@ -177,7 +221,12 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
 
     @staticmethod
     def _imports_type_checking(source: str) -> bool:
-        """Return whether the module already imports ``TYPE_CHECKING``."""
+        """Return whether the module already imports ``TYPE_CHECKING``.
+
+        Returns:
+            Whether the module already imports ``TYPE_CHECKING``.
+
+        """
         module = ast.parse(source)
         for node in ast.walk(module):
             if not isinstance(node, ast.ImportFrom) or node.module != "typing":
@@ -188,7 +237,12 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
 
     @staticmethod
     def alias_used(source: str, alias: str) -> bool:
-        """Return whether ``alias`` is used as a standalone dotted identifier."""
+        """Return whether ``alias`` is used as a standalone dotted identifier.
+
+        Returns:
+            Whether ``alias`` is used as a standalone dotted identifier.
+
+        """
         return (
             c.Infra.compile(rf"\b{c.Infra.escape(alias)}\.(?![0-9])").search(source)
             is not None
@@ -202,16 +256,16 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
         header scan stops at the first non-header statement, so an alias
         imported in that block read as absent and a duplicate was injected
         next to it. This proves a lexical declaration only; callers requiring
-        runtime availability use ``has_runtime_alias_import``.
+        runtime availability use ``has_runtime_alias_import``. Source that does
+        not parse raises its ``SyntaxError``.
+
+        Returns:
+            Whether ``alias`` is already bound by a ``from`` import.
+
         """
-        try:
-            module = ast.parse(source)
-        except SyntaxError:
-            info = cls._parse_header(source)
-            return alias in info.aliases
         return any(
             (name.asname or name.name) == alias
-            for node in ast.walk(module)
+            for node in ast.walk(ast.parse(source))
             if isinstance(node, ast.ImportFrom | ast.Import)
             for name in node.names
         )
@@ -224,9 +278,13 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
         built, so an alias used there is a runtime dependency even though the
         syntax is an annotation. Deferring such an alias under
         ``if TYPE_CHECKING:`` made ``_SmellData.model_validate_json`` raise
-        ``PydanticUserError`` during package import (flext-dk13k).
+        ``PydanticUserError`` during package import.
+
+        Returns:
+            Ids of class-body annotations a model resolves at runtime.
+
         """
-        parents: dict[int, ast.AST] = {}
+        parents: MutableMapping[int, ast.AST] = {}
         for parent in ast.walk(module):
             for child in ast.iter_child_nodes(parent):
                 parents[id(child)] = parent
@@ -255,7 +313,11 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
 
         Class-body annotations on a runtime model are excluded from that set:
         the model resolves them at import time, so the alias must stay
-        importable at runtime (flext-dk13k).
+        importable at runtime.
+
+        Returns:
+            The resulting ``bool``.
+
         """
         module = ast.parse(source)
         runtime_ids = (
@@ -296,7 +358,12 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
 
     @staticmethod
     def alias_locally_bound(source: str, alias: str) -> bool:
-        """Return whether a module-level definition or assignment owns an alias."""
+        """Return whether a module-level definition or assignment owns an alias.
+
+        Returns:
+            Whether a module-level definition or assignment owns an alias.
+
+        """
         escaped = c.Infra.escape(alias)
         pattern = c.Infra.compile(
             rf"^(?:{escaped}\s*(?::[^=\n]+)?=(?!=)|(?:class|def)\s+{escaped}\b)",
@@ -306,7 +373,12 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
 
     @staticmethod
     def _remove_future_annotations_lines(source: str) -> str:
-        """Strip every ``from __future__ import annotations`` line."""
+        """Strip every ``from __future__ import annotations`` line.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return "".join(
             line
             for line in source.splitlines(keepends=True)

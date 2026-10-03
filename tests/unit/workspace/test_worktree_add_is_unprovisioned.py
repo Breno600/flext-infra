@@ -1,4 +1,8 @@
-"""Worktree ADD creates a checkout without owning project lane lifecycle."""
+"""Worktree ADD creates a checkout and leaves provisioning to the work saga.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -13,15 +17,19 @@ from tests import u
 class TestsFlextInfraWorktreeAddIsUnprovisioned:
     """ADD materializes a checkout only; it never runs the lane's own setup."""
 
-    def test_worktree_add_does_not_run_setup(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_worktree_add_does_not_run_setup(tmp_path: Path) -> None:
+        """Test worktree add does not run setup."""
         repository = tmp_path / "repository"
         repository.mkdir()
         (repository / "pyproject.toml").write_text(
-            '[project]\nname = "fixture"\nversion = "0.1.0"\n', encoding="utf-8"
+            '[project]\nname = "fixture"\nversion = "0.1.0"\n',
+            encoding="utf-8",
         )
         marker = "setup-ran"
         (repository / "Makefile").write_text(
-            ".PHONY: setup\nsetup:\n\t@touch $(CURDIR)/setup-ran\n", encoding="utf-8"
+            ".PHONY: setup\nsetup:\n\t@touch $(CURDIR)/setup-ran\n",
+            encoding="utf-8",
         )
         u.Tests.initialize_git_repo(repository)
 
@@ -33,8 +41,8 @@ class TestsFlextInfraWorktreeAddIsUnprovisioned:
                     branch="feature/unprovisioned",
                     base="HEAD",
                     apply_changes=True,
-                ).execute()
-            )
+                ).execute(),
+            ),
         )
 
         tm.that(lane.is_dir(), eq=True)

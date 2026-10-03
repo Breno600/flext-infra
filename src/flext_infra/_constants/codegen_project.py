@@ -3,8 +3,8 @@
 Per ADR-005 this is the single source of truth describing *which* templates make
 up a new project and *where* each lands. The engine (``u.Cli.template_render_dir``,
 flext-cli) is policy-free; this manifest + the rope-derived context carry all the
-FLEXT naming policy. Adding a file or a kind is a data edit here + a ``.j2`` drop
-in ``templates/``.
+FLEXT naming policy. Template-backed artifacts use ``.j2`` sources; typed
+manifest artifacts serialize their Pydantic contract in the scaffold cycle.
 
 Output paths use ``{token}`` placeholders (resolved by the service from rope) so
 the engine never sees FLEXT naming. NOTE: the large-row form migrates to
@@ -19,6 +19,8 @@ from __future__ import annotations
 from enum import StrEnum, unique
 from typing import TYPE_CHECKING, ClassVar, Literal
 
+from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
+
 if TYPE_CHECKING:
     from flext_infra import t
 
@@ -28,11 +30,19 @@ class FlextInfraConstantsCodegenProject:
 
     CODEGEN_LOCAL_OVERRIDES_FILENAME: ClassVar[str] = "codegen-overrides.local.yaml"
     CODEGEN_ORG_OVERRIDES_FILENAME: ClassVar[str] = "codegen-org.yaml"
+    CODEGEN_CLI_MODULE_FILENAME: ClassVar[str] = "cli.py"
 
     # These enums define the
     # one public conform contract shared by new and existing repositories. The
     # declarative values live in config/codegen.yaml; constants only type the
     # closed vocabulary used by models and CLI dispatch.
+
+    @unique
+    class TemplateDelegate(StrEnum):
+        """Rendering owner for a scaffold catalog entry."""
+
+        RENDER = "render"
+        MANIFEST = "manifest"
 
     @unique
     class CodegenConformScope(StrEnum):
@@ -48,7 +58,9 @@ class FlextInfraConstantsCodegenProject:
 
         ALL = "all"
         DEPENDENCIES = "dependencies"
+        DOCS_CONFIG = "docs-config"
         MAKEFILE = "makefile"
+        MISE_TRIPLE = "mise-triple"
         PYPROJECT = "pyproject"
 
     @unique
@@ -129,6 +141,45 @@ class FlextInfraConstantsCodegenProject:
     BEADS_DIRECTORY_MODE: ClassVar[int] = 0o700
     BEADS_LOCAL_VERSION_FILENAME: ClassVar[str] = ".local_version"
     BEADS_LAST_TOUCHED_FILENAME: ClassVar[str] = "last-touched"
+    BEADS_RUNTIME_ENTRY_NAMES: ClassVar[frozenset[str]] = frozenset({
+        # Provenance: bd's own `.beads/.gitignore`. These are the live Dolt
+        # server and daemon runtime entries bd writes beside the ledger: they
+        # are projections of ledger truth, never composed output, so the
+        # composed-project verify must tolerate them exactly as it tolerates
+        # the passive `issues.jsonl`/`interactions.jsonl` exports.
+        "dolt",
+        "embeddeddolt",
+        "proxieddb",
+        "bd.sock",
+        "bd.sock.startlock",
+        "sync-state.json",
+        "push-state.json",
+        "daemon.lock",
+        "daemon.log",
+        "daemon.pid",
+        "ephemeral.sqlite3",
+        "ephemeral.sqlite3-journal",
+        "ephemeral.sqlite3-shm",
+        "ephemeral.sqlite3-wal",
+        "dolt-server.activity",
+        "dolt-server-config.yaml",
+        "dolt-server.lock",
+        "dolt-server.log",
+        "dolt-server.pid",
+        "dolt-server.port",
+        "dolt-pprof",
+        "proxied_server_client_info.json",
+        ".env",
+        ".exclusive-lock",
+        ".sync.lock",
+        # The bd client serializes every gate transaction through this marker
+        # beside the ledger (measured: a members' gen failed composition on a
+        # hours-stale zero-byte `dolt.gate.lock` whose holder had died). Same
+        # class as `.exclusive-lock`/`.sync.lock`: a projection of ledger
+        # operation, never composed output.
+        "dolt.gate.lock",
+    })
+    "bd-owned Dolt/daemon runtime entries the composed-project verify tolerates."
     BEADS_CONFIG_VERSION: ClassVar[Literal[1]] = 1
     CONFORM_NAMESPACE_TABLE: ClassVar[t.VariadicTuple[str]] = (
         "tool",
@@ -144,20 +195,16 @@ class FlextInfraConstantsCodegenProject:
     ``u.Cli.toml_dot_path``; it is never written a second time.
     """
 
-    CONFORM_SOURCE_RACE_CYCLES: ClassVar[int] = 3
-    "Bounded conform convergence attempts after a mid-cycle source mutation."
     DOCS_SOURCE_STATE_RACE_MARKER: ClassVar[str] = (
         "docs source state changed during planning"
     )
     """Emitted by ``docs_verify_sources`` when one snapshotted docs source
-    changes content or physical identity inside the planning window; consumed
-    by the conform convergence classifier."""
+    changes content or physical identity inside the planning window."""
     DOCS_SOURCE_TOPOLOGY_RACE_MARKER: ClassVar[str] = (
         "docs source topology changed during planning"
     )
     """Emitted by ``docs_verify_sources`` when the discovered docs source set
-    gains or loses a file inside the planning window; consumed by the conform
-    convergence classifier."""
+    gains or loses a file inside the planning window."""
     CONFIG_SNAPSHOT_ROOT_RACE_MARKER: ClassVar[str] = (
         "project root changed during config snapshot"
     )
@@ -168,21 +215,21 @@ class FlextInfraConstantsCodegenProject:
     )
     """Emitted by ``snapshot_config_sources`` when the ``config/*.yaml`` set
     changes while its managed-artifact config is snapshotted."""
-    CONFORM_SOURCE_RACE_MARKERS: ClassVar[t.VariadicTuple[str]] = (
-        "atomic source changed",
-        "atomic destination parent is missing",
-        "atomic source has conflicting snapshots",
-        DOCS_SOURCE_STATE_RACE_MARKER,
-        DOCS_SOURCE_TOPOLOGY_RACE_MARKER,
-        CONFIG_SNAPSHOT_ROOT_RACE_MARKER,
-        CONFIG_SNAPSHOT_TOPOLOGY_RACE_MARKER,
-    )
-    "Failure signatures meaning the tree mutated under one locked conform cycle."
-
     WORKSPACE_MANIFEST_FILENAME: ClassVar[str] = "workspace.yaml"
     WORKSPACE_MANIFEST_VERSION: ClassVar[int] = 3
     UV_LOCK_FILENAME: ClassVar[str] = "uv.lock"
     MISE_LOCK_FILENAME: ClassVar[str] = "mise.lock"
+    MISE_LOCK_TRANSACTION_SCRIPT: ClassVar[str] = "bin/mise-lock-transaction.py"
+    "Generated publisher the Makefile bootstrap runs to commit a staged mise.lock."
+    MAKEFILE_BOOTSTRAP_DESTINATIONS: ClassVar[frozenset[str]] = frozenset({
+        FlextInfraConstantsSharedInfra.MAKEFILE_FILENAME,
+        MISE_LOCK_TRANSACTION_SCRIPT,
+    })
+    "The Makefile surface: the Makefile and the lock publisher its bootstrap runs."
+    MISE_LOCK_ANNOTATION: ClassVar[str] = "~"
+    "Lockfile cache-key fragment (``<version>~<hash>``); never a selector."
+    MISE_MOVING_SELECTOR: ClassVar[str] = "latest"
+    "Selector resolved only by ``make upg`` into the committed ``mise.lock``."
     GIT_URL_SUFFIX: ClassVar[str] = ".git"
     "Canonical clone-URL suffix every governed RepositoryRef URL carries."
     CUSTOM_MAKE_FILENAME: ClassVar[str] = "custom.mk"

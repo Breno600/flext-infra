@@ -1,4 +1,8 @@
-"""Persistent coordination-state lifecycle for Mise transactions."""
+"""Persistent coordination-state lifecycle for Mise transactions.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -10,9 +14,12 @@ from typing import TYPE_CHECKING, Literal
 
 from flext_core import r
 from flext_infra import c, m, u
-
-from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
-from ._mise_artifacts_verification import FlextInfraMiseArtifactsVerification as verify
+from flext_infra.codegen._mise_artifacts_files import (
+    FlextInfraMiseArtifactsFiles as files,
+)
+from flext_infra.codegen._mise_artifacts_verification import (
+    FlextInfraMiseArtifactsVerification as verify,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -33,6 +40,13 @@ class FlextInfraMiseArtifactsState:
         `FileNotFoundError`, failing generation for every new project. What will
         host it is its nearest existing ancestor, which is what the rename
         actually has to satisfy.
+
+        Returns:
+            The filesystem device that will host ``path``.
+
+        Raises:
+            FileNotFoundError: If no existing ancestor hosts the destination.
+
         """
         for candidate in (path, *path.parents):
             if candidate.exists():
@@ -42,29 +56,50 @@ class FlextInfraMiseArtifactsState:
 
     @classmethod
     def _project_depth(
-        cls, item: m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant
+        cls,
+        item: m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
     ) -> int:
-        """Order the narrowest project owner before its ancestors."""
+        """Order the narrowest project owner before its ancestors.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         return -len(item.root.parts)
 
     @classmethod
     def _directory_cleanup_order(
-        cls, item: m.Infra.CodegenJournalDirectory
+        cls,
+        item: m.Infra.CodegenJournalDirectory,
     ) -> t.Pair[int, str]:
-        """Order journaled directory cleanup from descendants to ancestors."""
+        """Order journaled directory cleanup from descendants to ancestors.
+
+        Returns:
+            The resulting ``t.Pair[int, str]``.
+
+        """
         return cls._relative_order(item.path)
 
     @classmethod
     def plan_transaction_directories(
-        cls, layout: m.Infra.MiseToolchainWorkspaceLayout
+        cls,
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
+        *,
+        destinations: t.VariadicTuple[Path] = (),
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenJournalDirectory]]:
-        """Prove every transaction path absent before journal publication."""
+        """Prove every transaction path absent before journal publication.
+
+        Returns:
+            The resulting
+                ``p.Result[t.VariadicTuple[m.Infra.CodegenJournalDirectory]]``.
+
+        """
         roots: list[Path] = []
         for project in layout.projects:
             transaction_root = project.transaction_root
             if transaction_root is None:
                 return r[tuple[m.Infra.CodegenJournalDirectory, ...]].fail(
-                    "Mise mutating layout has no transaction root"
+                    "Mise mutating layout has no transaction root",
                 )
             try:
                 destination_devices = {
@@ -73,23 +108,28 @@ class FlextInfraMiseArtifactsState:
                         project.artifacts.config,
                         project.artifacts.unix_launcher,
                         project.artifacts.windows_launcher,
+                        project.artifacts.version_pin,
                     )
                 }
                 project_device = cls._hosting_device(project.root)
             except OSError as exc:
                 return r[tuple[m.Infra.CodegenJournalDirectory, ...]].fail_op(
-                    "inspect Mise staging filesystem", exc
+                    "inspect Mise staging filesystem",
+                    exc,
                 )
             if destination_devices != {project_device}:
                 return r[tuple[m.Infra.CodegenJournalDirectory, ...]].fail(
-                    f"Mise state is not on destination filesystem: {project.selector}"
+                    f"Mise state is not on destination filesystem: {project.selector}",
                 )
             roots.append(transaction_root)
         roots.extend(
             participant.transaction_root for participant in layout.file_participants
         )
         temporary = cls.plan_directories(
-            layout, phase="transaction", requested=tuple(roots), disposition="temporary"
+            layout,
+            phase="transaction",
+            requested=tuple(roots),
+            disposition="temporary",
         )
         if temporary.failure:
             return temporary
@@ -101,12 +141,27 @@ class FlextInfraMiseArtifactsState:
                     project.artifacts.config,
                     project.artifacts.unix_launcher,
                     project.artifacts.windows_launcher,
+                    project.artifacts.version_pin,
                 )
                 if artifact.parent != project.root
-            )
+            ),
+        )
+        project_roots = {item.root for item in files.transaction_participants(layout)}
+        parents = tuple(
+            dict.fromkeys((
+                *parents,
+                *(
+                    path.parent
+                    for path in destinations
+                    if path.parent not in project_roots
+                ),
+            )),
         )
         generated = cls.plan_directories(
-            layout, phase="mise", requested=parents, disposition="generated"
+            layout,
+            phase="mise",
+            requested=parents,
+            disposition="generated",
         )
         if generated.failure:
             return generated
@@ -121,7 +176,12 @@ class FlextInfraMiseArtifactsState:
         directories: t.VariadicTuple[m.Infra.CodegenJournalDirectory],
         publications: t.VariadicTuple[m.Infra.CodegenStagedFile],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile]]:
-        """Bind absent destinations only to parents created by this journal."""
+        """Bind absent destinations only to parents created by this journal.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile]]``.
+
+        """
         result_type = r[tuple[m.Infra.CodegenStagedFile, ...]]
         bound: list[m.Infra.CodegenStagedFile] = []
         for publication in publications:
@@ -142,7 +202,10 @@ class FlextInfraMiseArtifactsState:
                     before.parent_inode,
                 ) != (parent.device, parent.inode):
                     return result_type.fail(
-                        f"generation destination parent differs from journal: {before.path}"
+                        (
+                            f"generation destination parent differs "
+                            f"from journal: {before.path}"
+                        ),
                     )
                 bound.append(publication)
                 continue
@@ -153,7 +216,10 @@ class FlextInfraMiseArtifactsState:
                 or parent.inode is None
             ):
                 return result_type.fail(
-                    f"generation destination has no created parent authority: {before.path}"
+                    (
+                        f"generation destination has no created "
+                        f"parent authority: {before.path}"
+                    ),
                 )
             expected = m.Cli.AtomicFileState.model_validate({
                 **before.model_dump(),
@@ -165,13 +231,16 @@ class FlextInfraMiseArtifactsState:
                 return result_type.from_failure(observed)
             if observed.value != expected:
                 return result_type.fail(
-                    f"generation destination changed after parent creation: {before.path}"
+                    (
+                        f"generation destination changed "
+                        f"after parent creation: {before.path}"
+                    ),
                 )
             bound.append(
                 m.Infra.CodegenStagedFile.model_validate({
                     **publication.model_dump(),
                     "before": expected,
-                })
+                }),
             )
         return result_type.ok(tuple(bound))
 
@@ -184,22 +253,28 @@ class FlextInfraMiseArtifactsState:
         requested: t.VariadicTuple[Path],
         disposition: Literal["temporary", "generated"],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenJournalDirectory]]:
-        """Return unique missing paths after descriptor-authenticated preflight."""
+        """Return unique missing paths after descriptor-authenticated preflight.
+
+        Returns:
+            Unique missing paths after descriptor-authenticated preflight.
+
+        """
         result_type = r[tuple[m.Infra.CodegenJournalDirectory, ...]]
         if len(set(requested)) != len(requested):
             return result_type.fail(f"duplicate {phase} directory request")
         projects = tuple(
-            sorted(files.transaction_participants(layout), key=cls._project_depth)
+            sorted(files.transaction_participants(layout), key=cls._project_depth),
         )
         planned: MutableMapping[Path, m.Infra.CodegenJournalDirectory] = {}
         for target in requested:
             path = target.expanduser().absolute()
             project = next(
-                (item for item in projects if path.is_relative_to(item.root)), None
+                (item for item in projects if path.is_relative_to(item.root)),
+                None,
             )
             if project is None or path == project.root:
                 return result_type.fail(
-                    f"{phase} directory escapes its project: {path}"
+                    f"{phase} directory escapes its project: {path}",
                 )
             chain = u.Cli.atomic_plan_directory_chain(path)
             if chain.failure:
@@ -211,7 +286,7 @@ class FlextInfraMiseArtifactsState:
                 )
                 if owner is None or directory == owner.root:
                     return result_type.fail(
-                        f"{phase} directory has no project owner: {directory}"
+                        f"{phase} directory has no project owner: {directory}",
                     )
                 relative = files.transaction_relative(layout, directory)
                 if relative.failure:
@@ -219,7 +294,8 @@ class FlextInfraMiseArtifactsState:
                 before: m.Cli.AtomicDirectoryState | None = None
                 if directory.parent == chain.value.anchor_path:
                     observed = u.Cli.atomic_read_empty_directory_state(
-                        directory, required=False
+                        directory,
+                        required=False,
                     )
                     if observed.failure:
                         return result_type.from_failure(observed)
@@ -228,7 +304,10 @@ class FlextInfraMiseArtifactsState:
                         observed.value.parent_inode,
                     ) != (chain.value.anchor_device, chain.value.anchor_inode):
                         return result_type.fail(
-                            f"{phase} directory anchor changed during planning: {directory}"
+                            (
+                                f"{phase} directory anchor changed "
+                                f"during planning: {directory}"
+                            ),
                         )
                     before = observed.value
                 entry = m.Infra.CodegenJournalDirectory(
@@ -245,7 +324,7 @@ class FlextInfraMiseArtifactsState:
                     previous.disposition,
                 ) != (entry.phase, entry.project, entry.disposition):
                     return result_type.fail(
-                        f"generation directory has conflicting owners: {directory}"
+                        f"generation directory has conflicting owners: {directory}",
                     )
                 if previous is None or (previous.before is None and before is not None):
                     planned[directory] = entry
@@ -259,12 +338,19 @@ class FlextInfraMiseArtifactsState:
         directories: t.VariadicTuple[m.Infra.CodegenJournalDirectory],
         entry: m.Infra.CodegenJournalDirectory,
     ) -> p.Result[m.Infra.CodegenJournalDirectory]:
-        """Create one durable intent and return its exact physical identity."""
+        """Create one durable intent and return its exact physical identity.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenJournalDirectory]``.
+
+        """
         result_type = r[m.Infra.CodegenJournalDirectory]
         if entry.created is not None or entry not in directories:
             return result_type.fail(f"invalid directory creation cursor: {entry.path}")
         target = files.resolve_transaction(
-            layout, entry.path, purpose="journaled generation directory"
+            layout,
+            entry.path,
+            purpose="journaled generation directory",
         )
         if target.failure:
             return result_type.from_failure(target)
@@ -278,7 +364,7 @@ class FlextInfraMiseArtifactsState:
         )
         if project is None or not target.value.is_relative_to(project.root):
             return result_type.fail(
-                f"journaled directory differs from its project: {entry.path}"
+                f"journaled directory differs from its project: {entry.path}",
             )
         before = entry.before
         if before is None:
@@ -298,10 +384,11 @@ class FlextInfraMiseArtifactsState:
                 or parent_entry.created.inode is None
             ):
                 return result_type.fail(
-                    f"journaled directory parent has no durable identity: {entry.path}"
+                    f"journaled directory parent has no durable identity: {entry.path}",
                 )
             observed = u.Cli.atomic_read_empty_directory_state(
-                target.value, required=False
+                target.value,
+                required=False,
             )
             if observed.failure:
                 return result_type.from_failure(observed)
@@ -311,14 +398,15 @@ class FlextInfraMiseArtifactsState:
                 parent_entry.created.inode,
             ):
                 return result_type.fail(
-                    f"journaled directory parent changed before creation: {entry.path}"
+                    f"journaled directory parent changed before creation: {entry.path}",
                 )
         elif before.path != target.value:
             return result_type.fail(
-                f"journaled absent state belongs to another path: {entry.path}"
+                f"journaled absent state belongs to another path: {entry.path}",
             )
         created = u.Cli.atomic_create_empty_directory_guarded(
-            before, permission_mode=0o700 if entry.disposition == "temporary" else 0o755
+            before,
+            permission_mode=0o700 if entry.disposition == "temporary" else 0o755,
         )
         if created.failure:
             return result_type.from_failure(created)
@@ -331,27 +419,40 @@ class FlextInfraMiseArtifactsState:
             if rolled_back.failure:
                 return result_type.fail(
                     f"validate created directory identity failed: {validated.error}; "
-                    f"compensation failed: {rolled_back.error}"
+                    f"compensation failed: {rolled_back.error}",
                 )
             return result_type.fail_op(
-                "validate created directory identity", validated.error
+                "validate created directory identity",
+                validated.error,
             )
         return result_type.ok(validated.value)
 
     @classmethod
     def compensate_created_directory(
-        cls, entry: m.Infra.CodegenJournalDirectory
+        cls,
+        entry: m.Infra.CodegenJournalDirectory,
     ) -> p.Result[bool]:
-        """Remove only the exact empty directory returned by this invocation."""
+        """Remove only the exact empty directory returned by this invocation.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         if entry.created is None:
             return r[bool].fail(f"directory has no created identity: {entry.path}")
         return u.Cli.atomic_delete_empty_directory_guarded(entry.created)
 
     @classmethod
     def journal_state(
-        cls, layout: m.Infra.MiseToolchainWorkspaceLayout
+        cls,
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
-        """Read the typed Git-owned journal without creating filesystem state."""
+        """Read the typed Git-owned journal without creating filesystem state.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]``.
+
+        """
         result_type = r[tuple[m.Cli.AtomicFileState, ...]]
         snapshot = files.read_state(layout.journal_path, required=False)
         if snapshot.failure:
@@ -360,16 +461,31 @@ class FlextInfraMiseArtifactsState:
 
     @classmethod
     def journal_snapshot(
-        cls, states: t.VariadicTuple[m.Cli.AtomicFileState]
+        cls,
+        states: t.VariadicTuple[m.Cli.AtomicFileState],
     ) -> m.Cli.AtomicFileState | None:
-        """Return the optional journal snapshot from its non-null result payload."""
+        """Return the optional journal snapshot from its non-null result payload.
+
+        Returns:
+            The optional journal snapshot from its non-null result payload.
+
+        """
         return states[0] if states else None
 
     @classmethod
     def transaction_residue(
-        cls, layout: m.Infra.MiseToolchainWorkspaceLayout
+        cls,
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
     ) -> t.VariadicTuple[Path]:
-        """Return every transaction-prefixed child or unsafe state-root alias."""
+        """Return every transaction-prefixed child or unsafe state-root alias.
+
+        An unreadable state root is a read failure, never classified as
+        residue; the read error escapes.
+
+        Returns:
+            Every transaction-prefixed child or unsafe state-root alias.
+
+        """
         residue: list[Path] = []
         for project in files.transaction_participants(layout):
             state_root = project.root / c.Infra.MISE_ARTIFACTS_STATE_DIRECTORY
@@ -378,15 +494,11 @@ class FlextInfraMiseArtifactsState:
             if state_root.is_symlink():
                 residue.append(state_root)
                 continue
-            try:
-                root_state = state_root.lstat()
-                if not stat.S_ISDIR(root_state.st_mode) or cls._is_reparse(root_state):
-                    residue.append(state_root)
-                    continue
-                children = tuple(state_root.iterdir())
-            except OSError:
+            root_state = state_root.lstat()
+            if not stat.S_ISDIR(root_state.st_mode) or cls._is_reparse(root_state):
                 residue.append(state_root)
                 continue
+            children = tuple(state_root.iterdir())
             residue.extend(
                 child
                 for child in children
@@ -402,7 +514,12 @@ class FlextInfraMiseArtifactsState:
         *,
         include_generated: bool,
     ) -> p.Result[bool]:
-        """Remove authenticated temporary trees and authorized empty directories."""
+        """Remove authenticated temporary trees and authorized empty directories.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         topology = verify.journal_topology(layout, journal)
         if topology.failure:
             return topology
@@ -425,7 +542,10 @@ class FlextInfraMiseArtifactsState:
             )
             if entry is None or entry.created is None:
                 return r[bool].fail(
-                    f"transaction root has no durable physical identity: {relative.value}"
+                    (
+                        f"transaction root has no durable "
+                        f"physical identity: {relative.value}"
+                    ),
                 )
             if entry.manifest is None:
                 # A created directory receipt owns only that empty directory,
@@ -452,7 +572,9 @@ class FlextInfraMiseArtifactsState:
         )
         for entry in sorted(removable, key=cls._directory_cleanup_order, reverse=True):
             target = files.resolve_transaction(
-                layout, entry.path, purpose="journaled cleanup directory"
+                layout,
+                entry.path,
+                purpose="journaled cleanup directory",
             )
             if target.failure:
                 return r[bool].from_failure(target)
@@ -460,7 +582,10 @@ class FlextInfraMiseArtifactsState:
                 continue
             if entry.created is None:
                 return r[bool].fail(
-                    f"journaled directory exists without durable identity: {entry.path}"
+                    (
+                        f"journaled directory exists "
+                        f"without durable identity: {entry.path}"
+                    ),
                 )
             if cls._hosts_lease_lock(layout, target.value):
                 # The journal lease lock file persists by identity across
@@ -483,7 +608,9 @@ class FlextInfraMiseArtifactsState:
                 }
 
                 def _journaled_resident(
-                    resident: Path, journaled: set[str], preserved: set[str]
+                    resident: Path,
+                    journaled: set[str],
+                    preserved: set[str],
                 ) -> p.Result[bool]:
                     selector = files.transaction_relative(layout, resident)
                     if selector.failure:
@@ -496,7 +623,7 @@ class FlextInfraMiseArtifactsState:
                     # descendant's own guard already authenticated its subtree.
                     prefix = relative + "/"
                     return r[bool].ok(
-                        any(candidate.startswith(prefix) for candidate in preserved)
+                        any(candidate.startswith(prefix) for candidate in preserved),
                     )
 
                 authenticated = r[bool].ok(True)
@@ -513,11 +640,28 @@ class FlextInfraMiseArtifactsState:
 
     @staticmethod
     def _hosts_lease_lock(
-        layout: m.Infra.MiseToolchainWorkspaceLayout, directory: Path
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
+        directory: Path,
     ) -> bool:
-        """Keep the journal lease lock's file identity across transactions."""
-        lock_path = layout.journal_path.with_name(f"{layout.journal_path.name}.lock")
-        return lock_path.is_relative_to(directory)
+        """Keep journal and participant lease identities across transactions.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
+        lease_paths = (
+            layout.journal_path,
+            *(
+                participant.root
+                / c.Infra.TRANSACTION_STATE_DIRNAME
+                / c.Infra.JOURNAL_NAME
+                for participant in layout.file_participants
+            ),
+        )
+        return any(
+            lease.with_name(f"{lease.name}.lock").is_relative_to(directory)
+            for lease in lease_paths
+        )
 
     @classmethod
     def validate_transaction_roots(
@@ -525,7 +669,12 @@ class FlextInfraMiseArtifactsState:
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         journal: m.Infra.CodegenTransactionJournal,
     ) -> p.Result[bool]:
-        """Authenticate the sole journal-derived staging root in every project."""
+        """Authenticate the sole journal-derived staging root in every project.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         expected = {
             project.transaction_root
             for project in files.transaction_participants(layout)
@@ -534,7 +683,7 @@ class FlextInfraMiseArtifactsState:
         unexpected = sorted(set(cls.transaction_residue(layout)) - expected)
         if unexpected:
             return r[bool].fail(
-                f"foreign generation transaction residue exists: {unexpected[0]}"
+                f"foreign generation transaction residue exists: {unexpected[0]}",
             )
         for project in files.transaction_participants(layout):
             transaction_root = project.transaction_root
@@ -559,29 +708,48 @@ class FlextInfraMiseArtifactsState:
                 != transaction.value
             ):
                 return r[bool].fail(
-                    f"Mise transaction root identity is not journaled: {relative.value}"
+                    (
+                        f"Mise transaction root identity "
+                        f"is not journaled: {relative.value}"
+                    ),
                 )
             if recorded.manifest is None:
                 empty = u.Cli.atomic_read_empty_directory_state(
-                    transaction_root, required=True
+                    transaction_root,
+                    required=True,
                 )
                 if empty.failure:
                     return r[bool].from_failure(empty)
                 if empty.value != recorded.created:
                     return r[bool].fail(
-                        f"unmanifested transaction root identity changed: {relative.value}"
+                        (
+                            f"unmanifested transaction root "
+                            f"identity changed: {relative.value}"
+                        ),
                     )
             else:
                 authorized = verify.authorized_cleanup_manifest(
-                    layout, journal, recorded
+                    layout,
+                    journal,
+                    recorded,
                 )
                 if authorized.failure:
                     return r[bool].from_failure(authorized)
+        # Foreign residents inside recorded temporary trees never block the
+        # restore itself. The journal receipt authenticates the destinations;
+        # staging residue revokes only the cleanup, which still fails closed
+        # after the rollback (guarded deletion refuses unmanifested or
+        # non-empty trees), so a mixed recovery retains the journal and the
+        # foreign bytes instead of stranding published destinations behind
+        # them. Pre-restore authentication of every recorded tree and resident
+        # aborted the rollback before it started, which replaced the tested
+        # mixed outcome with a lost publication.
         return r[bool].ok(True)
 
     @classmethod
     def _validate_transaction_root(
-        cls, target: Path
+        cls,
+        target: Path,
     ) -> p.Result[t.Pair[int, int] | bool]:
         if not target.exists() and not target.is_symlink():
             return r[tuple[int, int] | bool].ok(False)
@@ -593,17 +761,18 @@ class FlextInfraMiseArtifactsState:
             or target.is_symlink()
         ):
             return r[tuple[int, int] | bool].fail(
-                f"refusing invalid Mise transaction target: {target}"
+                f"refusing invalid Mise transaction target: {target}",
             )
         try:
             state = target.lstat()
         except OSError as exc:
             return r[tuple[int, int] | bool].fail_op(
-                "inspect Mise transaction target", exc
+                "inspect Mise transaction target",
+                exc,
             )
         if not stat.S_ISDIR(state.st_mode) or cls._is_reparse(state):
             return r[tuple[int, int] | bool].fail(
-                f"Mise transaction target is not physical: {target}"
+                f"Mise transaction target is not physical: {target}",
             )
         return r[tuple[int, int] | bool].ok((state.st_dev, state.st_ino))
 

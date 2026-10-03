@@ -1,4 +1,8 @@
-"""Text-scan fixture pattern constants for FLEXT infra tests."""
+"""Text-scan fixture pattern constants for FLEXT infra tests.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -10,7 +14,7 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraConstantsScanMixin:
-    """Log, scanner, and lazy-init export scan fixture patterns."""
+    """Log and scanner fixture patterns."""
 
     LOG_NOISE_LINES: ClassVar[t.StrSequence] = (
         "make[1]: Nothing to be done",
@@ -34,8 +38,8 @@ class TestsFlextInfraConstantsScanMixin:
         ("warning: ignoring duplicate", 0),
         ("Success: 5 passed", 0),
     )
-    LOG_ERROR_PREFIX_RE: ClassVar[t.Infra.RegexPattern] = _re.compile(
-        r"^(ERROR|FAIL|error|E\s+AssertionError|FAILED)"
+    LOG_ERROR_PREFIX_RE: ClassVar[t.RegexPattern] = _re.compile(
+        r"^(ERROR|FAIL|error|E\s+AssertionError|FAILED)",
     )
     LOG_MIXED_SCENARIO_LINES: ClassVar[t.StrSequence] = (
         "make[1]: running",
@@ -44,12 +48,7 @@ class TestsFlextInfraConstantsScanMixin:
         "FAIL: test broken",
         "Total: 2 failed",
     )
-    SCANNER_HELLO_RE: ClassVar[t.Infra.RegexPattern] = _re.compile(
-        r"hello", _re.MULTILINE
-    )
-    LAZY_INIT_EXPORT_NAME_RE: ClassVar[t.Infra.RegexPattern] = _re.compile(
-        r'["\']([^"\']+)["\']'
-    )
+    SCANNER_HELLO_RE: ClassVar[t.RegexPattern] = _re.compile(r"hello", _re.MULTILINE)
 
 
 __all__: list[str] = ["TestsFlextInfraConstantsScanMixin"]

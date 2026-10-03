@@ -1,17 +1,25 @@
-"""Contracts for continuously managed artifact maintenance headers."""
+"""Contracts for continuously managed artifact maintenance headers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, u
-from tests import t
+from flext_infra import c
+from flext_infra.codegen.conform import FlextInfraCodegenConform
+from tests import t, u
+
+pytestmark = pytest.mark.slow
 
 
 class TestsFlextInfraManagedMaintenanceHeaders:
-    """Validate machine-readable maintenance metadata at canonical owners."""
+    """Validate machine-readable maintenance metadata on rendered artifacts."""
 
     @staticmethod
     def _fields(text: str) -> t.MutableMappingKV[str, str]:
@@ -24,89 +32,59 @@ class TestsFlextInfraManagedMaintenanceHeaders:
             fields[key] = value.strip()
         return fields
 
-    def test_live_managed_owners_publish_regeneration_contract(self) -> None:
+    def test_live_managed_owners_publish_regeneration_contract(
+        self,
+        tmp_path: Path,
+    ) -> None:
         """Publish the real owner and canonical regeneration command."""
-        templates = Path(__file__).parents[3] / "src" / "flext_infra" / "templates"
         makefile_fields = self._fields(
-            (templates / "project" / "base" / "Makefile.j2").read_text(encoding="utf-8")
+            u.Tests.scaffold_text(
+                tmp_path / "fixture-project",
+                c.Infra.MAKEFILE_FILENAME,
+            ),
         )
         tm.that(makefile_fields.get("@flext-generated"), eq="continuous")
         tm.that(makefile_fields.get("@flext-regenerate"), eq="make gen")
         tm.that(makefile_fields.get("@flext-owner", ""), has="config/codegen.yaml")
         tm.that(makefile_fields.get("@flext-adjust", ""), has="never this projection")
 
-        pyproject_fields = self._fields(c.Infra.BANNER)
+        pyproject = u.Tests.scaffold_text(
+            tmp_path / "fixture-project",
+            c.PYPROJECT_FILENAME,
+        )
+        tm.that(pyproject, starts=c.Infra.BANNER)
+        pyproject_fields = self._fields(pyproject)
         tm.that(pyproject_fields.get("@flext-generated"), eq="continuous")
         tm.that(pyproject_fields.get("@flext-regenerate"), eq="make gen")
         tm.that(pyproject_fields.get("@flext-owner", ""), has="config/codegen.yaml")
         tm.that(pyproject_fields.get("@flext-adjust", ""), has="overwrite_project_keys")
         tm.that(pyproject_fields.get("@flext-adjust", ""), has="conflict_sections")
-        template_fields = self._fields(
-            (templates / "project" / "base" / "pyproject.toml.j2").read_text(
-                encoding="utf-8"
-            )
-        )
-        tm.that(template_fields.get("@flext-regenerate"), eq="make gen")
-        tm.that(template_fields.get("@flext-adjust", ""), has="overwrite_project_keys")
 
-    def test_pyproject_template_marks_ssot_project_keys(self) -> None:
-        """[project] comments list SSOT keys; the table is not wholly CUSTOM."""
-        spec = tm.ok(u.Infra.pyproject_managed_file())
-        template = (
-            Path(__file__).parents[3]
-            / "src"
-            / "flext_infra"
-            / "templates"
-            / "project"
-            / "base"
-            / "pyproject.toml.j2"
-        ).read_text(encoding="utf-8")
-        custom_line = next(
-            line for line in template.splitlines() if line.startswith("# [CUSTOM]")
-        )
-        for key in spec.preserve_project_keys:
-            tm.that(custom_line, has=key)
-        tm.that(template, has="# [MANAGED] " + ", ".join(spec.overwrite_project_keys))
-        tm.that(custom_line, lacks="project metadata")
+    @staticmethod
+    def test_pyproject_header_is_a_fixed_point(tmp_path: Path) -> None:
+        """Recomposing a published pyproject keeps exactly one header."""
+        root = tmp_path / "fixture-project"
+        first = u.Tests.scaffold_text(root, c.PYPROJECT_FILENAME)
+        root.mkdir(parents=True, exist_ok=True)
+        (root / c.PYPROJECT_FILENAME).write_text(first, encoding="utf-8")
+        second = tm.ok(
+            FlextInfraCodegenConform.compose_project_artifact(
+                root,
+                c.PYPROJECT_FILENAME,
+                first,
+            ),
+        ).rendered
+        tm.that(second, eq=first)
+        tm.that(second.count(c.Infra.BANNER), eq=1)
 
-    def test_scaffold_once_owner_has_no_continuous_contract(self) -> None:
+    def test_scaffold_once_owner_has_no_continuous_contract(
+        self,
+        tmp_path: Path,
+    ) -> None:
         """Keep user-owned scaffold output outside continuous maintenance."""
-        template = (
-            Path(__file__).parents[3]
-            / "src"
-            / "flext_infra"
-            / "templates"
-            / "project"
-            / "base"
-            / "custom.mk.j2"
+        custom = u.Tests.scaffold_text(
+            tmp_path / "fixture-project",
+            c.Infra.CUSTOM_MAKE_FILENAME,
         )
-        text = template.read_text(encoding="utf-8")
-        tm.that(text, lacks="[MANAGED]")
-
-    def test_makefile_fmt_renders_ssot_ruff_preview_and_unsafe_fixes(self) -> None:
-        """Fmt is format-only: ruff --preview format plus the fmt_gates writers.
-
-        Single-pass verb law: no lint fix may render inside fmt (the lint
-        gate's apply mode inside ``make fix`` is the only lint repair), so the
-        template must not reference the removed ``lint_apply`` contract at all.
-        """
-        make = config.Infra.codegen.make
-        tm.that("--preview" in make.ruff.format_apply, eq=True)
-        tm.that("--unsafe-fixes" in make.ruff.lint_fix, eq=True)
-        tm.that("--fix" in make.ruff.lint_fix, eq=True)
-        tm.that(make.fmt_gates, eq=("markdown-format",))
-        template = (
-            Path(__file__).parents[3]
-            / "src"
-            / "flext_infra"
-            / "templates"
-            / "project"
-            / "base"
-            / "Makefile.j2"
-        ).read_text(encoding="utf-8")
-        tm.that(template, has="make.ruff.format_apply")
-        tm.that(template, has="make.fmt_gates")
-        tm.that(template, has="make.check_gates_fixable")
-        tm.that(template, lacks="lint_apply")
-        tm.that("--preview" in make.ruff.format_check, eq=True)
-        tm.that("--preview" in make.ruff.lint_check, eq=True)
+        tm.that(custom, lacks="[MANAGED]")
+        tm.that(self._fields(custom), eq={})

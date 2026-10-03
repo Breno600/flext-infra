@@ -1,4 +1,8 @@
-"""Validation helpers for docs services."""
+"""Validation helpers for docs services.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,10 +13,9 @@ from flext_cli import u
 
 from flext_core import r
 from flext_infra import c, t
-
-from .docs import FlextInfraUtilitiesDocs
-from .docs_api import FlextInfraUtilitiesDocsApi
-from .docs_scope import FlextInfraUtilitiesDocsScope
+from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
+from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
+from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -25,41 +28,49 @@ class FlextInfraUtilitiesDocsValidate:
 
     @staticmethod
     def docs_has_adr_reference(skill_path: Path) -> bool:
-        """Return whether a skill file contains an ADR reference."""
+        """Return whether a skill file contains an ADR reference.
+
+        Returns:
+            Whether a skill file contains an ADR reference.
+
+        """
         text = skill_path.read_text(
-            encoding=c.Cli.ENCODING_DEFAULT, errors=c.Infra.IGNORE
+            encoding=c.Cli.ENCODING_DEFAULT,
+            errors=c.Infra.IGNORE,
         )
         return "adr" in text.lower()
 
     @staticmethod
     def docs_extract_required_skills(
-        payload: t.JsonPayload | t.MappingKV[str, t.Infra.InfraValue],
-    ) -> p.Result[t.Infra.InfraSequence]:
+        payload: t.JsonPayload | t.MappingKV[str, t.JsonValue],
+    ) -> p.Result[t.JsonList]:
         """Extract the configured required skills list from architecture settings.
 
         ``r.ok(list)`` when the configuration block is present and well
         shaped, ``r.fail(reason)`` otherwise. Callers that want to treat
         absence as "no override" can collapse with ``unwrap_or(())``.
+
+        Returns:
+            The resulting ``p.Result[t.JsonList]``.
+
         """
         match payload:
             case Mapping() as outer:
                 pass
             case _:
-                return r[t.Infra.InfraSequence].fail("payload is not a mapping")
+                return r[t.JsonList].fail("payload is not a mapping")
         match outer.get("docs_validation"):
             case Mapping() as inner:
                 pass
             case _:
-                return r[t.Infra.InfraSequence].fail(
-                    "docs_validation block missing or not a mapping"
+                return r[t.JsonList].fail(
+                    "docs_validation block missing or not a mapping",
                 )
         match inner.get("required_skills"):
             case list() as configured:
-                return r[t.Infra.InfraSequence].ok(configured)
+                return r[t.JsonList].ok(configured)
             case _:
-                return r[t.Infra.InfraSequence].fail(
-                    "required_skills missing or not a list"
-                )
+                return r[t.JsonList].fail("required_skills missing or not a list")
 
     @staticmethod
     def docs_load_required_skills(repository_root: Path) -> p.Result[t.StrSequence]:
@@ -70,6 +81,10 @@ class FlextInfraUtilitiesDocsValidate:
         ``docs_validation`` block, invalid ``required_skills`` payload)
         propagates as ``r.fail(...)`` so callers see the config defect
         instead of a silent empty list — fail-fast over fail-quiet.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
         """
         settings = repository_root / "docs/architecture/architecture_config.json"
         if not settings.exists():
@@ -84,15 +99,19 @@ class FlextInfraUtilitiesDocsValidate:
         )
 
     @staticmethod
-    def _validate_required_skills(
-        raw: t.Infra.InfraSequence,
-    ) -> p.Result[t.StrSequence]:
-        """Validate ``required_skills`` payload against the canonical adapter."""
+    def _validate_required_skills(raw: t.JsonList) -> p.Result[t.StrSequence]:
+        """Validate ``required_skills`` payload against the canonical adapter.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
+        """
         try:
             validated: t.StrSequence = t.Infra.STR_SEQ_ADAPTER.validate_python(
-                raw, strict=True
+                raw,
+                strict=True,
             )
-        except c.EXC_BROAD_RUNTIME as exc:
+        except c.ValidationError as exc:
             return r[t.StrSequence].fail(
                 f"invalid required_skills configuration: {exc}",
                 error_code="required_skills_validation",
@@ -102,7 +121,15 @@ class FlextInfraUtilitiesDocsValidate:
 
     @staticmethod
     def docs_missing_required_paths(scope: m.Infra.DocScope) -> t.StrSequence:
-        """Return required docs paths that are still missing from one scope."""
+        """Return required docs paths that are still missing from one scope.
+
+        The scope label is the only topology input: the scope builder assigns
+        ``root`` from the manifest's typed role (``is_fleet_umbrella``).
+
+        Returns:
+            Required docs paths that are still missing from one scope.
+
+        """
         if scope.name == c.Infra.RK_ROOT:
             required = [
                 "README.md",
@@ -114,6 +141,14 @@ class FlextInfraUtilitiesDocsValidate:
             ]
         else:
             required = list(FlextInfraUtilitiesDocsScope.required_project_files())
+        if not scope.package_name:
+            # The api-reference generated surface is the mkdocstrings product
+            # over an importable package; a package-less scope (a workspace
+            # orchestrator root) has no generator that can produce it, so
+            # requiring it is an unsatisfiable contract, not a docs defect.
+            required = [
+                rel_path for rel_path in required if "/generated/" not in rel_path
+            ]
         missing: t.MutableSequenceOf[str] = []
         for rel_path in sorted(set(required)):
             if not (scope.path / rel_path).exists():
@@ -122,7 +157,12 @@ class FlextInfraUtilitiesDocsValidate:
 
     @staticmethod
     def docs_contract_messages(scope: m.Infra.DocScope) -> t.StrSequence:
-        """Return public API contract problems for one governed project scope."""
+        """Return public API contract problems for one governed project scope.
+
+        Returns:
+            Public API contract problems for one governed project scope.
+
+        """
         if scope.name == c.Infra.RK_ROOT or not scope.package_name:
             return []
         messages: t.MutableSequenceOf[str] = []
@@ -132,11 +172,12 @@ class FlextInfraUtilitiesDocsValidate:
         if not init_path.exists():
             messages.append(
                 "missing public package init: "
-                f"{init_path.relative_to(scope.path).as_posix()}"
+                f"{init_path.relative_to(scope.path).as_posix()}",
             )
             return messages
         contract = FlextInfraUtilitiesDocsApi.public_contract(
-            scope.path, scope.package_name
+            scope.path,
+            scope.package_name,
         )
         if not contract.get("modules") and not contract.get("exports"):
             messages.append("empty public API contract from package exports")
@@ -149,6 +190,10 @@ class FlextInfraUtilitiesDocsValidate:
         ``r.ok(True)`` when a TODO file was written, ``r.ok(False)`` when
         the call is a no-op (root scope or non-apply mode), ``r.fail(...)``
         when the underlying ``write_text`` raises.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         if scope.name == c.Infra.RK_ROOT or not apply_mode:
             return r[bool].ok(False)
@@ -156,7 +201,7 @@ class FlextInfraUtilitiesDocsValidate:
         content = (
             "# TODOS\n\n"
             "- [ ] Resolve documentation validation findings from "
-            "`.reports/docs/validate-report.md`.\n"
+            f"`{c.Infra.DEFAULT_DOCS_OUTPUT_DIR}/{c.Infra.DOCS_VALIDATE_REPORT_FILENAME}`.\n"
         )
         try:
             _ = path.write_text(content, encoding=c.Cli.ENCODING_DEFAULT)
@@ -166,15 +211,16 @@ class FlextInfraUtilitiesDocsValidate:
 
     @staticmethod
     def docs_write_validate_reports(
-        scope: m.Infra.DocScope, report: m.Infra.DocsPhaseReport
+        scope: m.Infra.DocScope,
+        report: m.Infra.DocsPhaseReport,
     ) -> None:
         """Persist the standard validate summary and markdown report."""
         _ = u.Cli.json_write(
-            scope.report_dir / "validate-summary.json",
+            scope.report_dir / c.Infra.DOCS_VALIDATE_SUMMARY_FILENAME,
             {c.Infra.RK_SUMMARY: report.model_dump(mode="json")},
         )
         _ = FlextInfraUtilitiesDocs.write_markdown(
-            scope.report_dir / "validate-report.md",
+            scope.report_dir / c.Infra.DOCS_VALIDATE_REPORT_FILENAME,
             [
                 "# Docs Validate Report",
                 "",

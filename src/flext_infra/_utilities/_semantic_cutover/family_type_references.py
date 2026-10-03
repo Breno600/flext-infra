@@ -1,4 +1,8 @@
-"""Quoted type references resolved in the original Rope lexical scope."""
+"""Quoted type references resolved in the original Rope lexical scope.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,9 +10,12 @@ import ast
 from collections.abc import Iterator
 
 from flext_infra import c, m, p, t
-
-from ..rope_runtime_modules import FlextInfraUtilitiesRopeRuntimeModules
-from ..rope_runtime_refactors import FlextInfraUtilitiesRopeRuntimeRefactors
+from flext_infra._utilities.rope_runtime_modules import (
+    FlextInfraUtilitiesRopeRuntimeModules,
+)
+from flext_infra._utilities.rope_runtime_refactors import (
+    FlextInfraUtilitiesRopeRuntimeRefactors,
+)
 
 
 class FlextInfraUtilitiesSemanticFamilyTypeReferences:
@@ -16,7 +23,12 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
 
     @classmethod
     def type_expression_ranges(cls, source: str) -> frozenset[t.Pair[int, int]]:
-        """Expose the same structural roots to concrete-syntax consumer adapters."""
+        """Expose the same structural roots to concrete-syntax consumer adapters.
+
+        Returns:
+            The resulting ``frozenset[t.Pair[int, int]]``.
+
+        """
         return frozenset(
             cls._expression_range(source, expression)
             for expression, _line in cls._annotation_roots(ast.parse(source))
@@ -25,40 +37,35 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
     @classmethod
     def _family_quoted_rewrites(
         cls,
-        project: p.Infra.RopeProject,
         resource: p.Infra.RopeResource,
         source: str,
         *,
-        owner_name: str,
-        wrapper: p.Infra.RopePyName,
-        names: t.MappingKV[str, str],
+        flatten: m.Infra.FamilyWrapperFlatten,
     ) -> t.Pair[bool, t.VariadicTuple[m.Infra.SourceRewrite]]:
         runtime = FlextInfraUtilitiesRopeRuntimeModules
-        module = project.get_pymodule(resource)
+        module = flatten.project.get_pymodule(resource)
         edits: list[m.Infra.SourceRewrite] = []
         for annotation, declaration_line in cls._annotation_roots(ast.parse(source)):
             start, _end = cls._expression_range(source, annotation)
             scope = runtime.scope_at(module, start, declaration_line=declaration_line)
-            for node in cls._type_nodes(annotation, project, scope):
+            for node in cls._type_nodes(annotation, flatten.project, scope):
                 if not isinstance(node, ast.Constant) or not isinstance(
-                    node.value, str
+                    node.value,
+                    str,
                 ):
                     continue
                 blocked, updated = cls._quoted_type_source(
                     node.value,
-                    project,
                     resource,
                     scope,
-                    owner_name=owner_name,
-                    wrapper=wrapper,
-                    names=names,
+                    flatten=flatten,
                 )
                 if blocked:
                     return (True, ())
                 if updated != node.value:
                     start, end = cls._expression_range(source, node)
                     edits.append(
-                        m.Infra.SourceRewrite(start=start, end=end, text=repr(updated))
+                        m.Infra.SourceRewrite(start=start, end=end, text=repr(updated)),
                     )
         return (False, tuple(edits))
 
@@ -66,29 +73,27 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
     def _quoted_type_source(
         cls,
         source: str,
-        project: p.Infra.RopeProject,
         resource: p.Infra.RopeResource,
         scope: p.Infra.RopeScope,
         *,
-        owner_name: str,
-        wrapper: p.Infra.RopePyName,
-        names: t.MappingKV[str, str],
+        flatten: m.Infra.FamilyWrapperFlatten,
     ) -> t.Pair[bool, str]:
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         nodes = tuple(
-            cls._type_nodes(ast.parse(source, mode="eval").body, project, scope)
+            cls._type_nodes(
+                ast.parse(source, mode="eval").body,
+                flatten.project,
+                scope,
+            ),
         )
         edits: list[m.Infra.SourceRewrite] = []
         for node in nodes:
             blocked, edit = cls._quoted_node_rewrite(
                 node,
                 source,
-                project,
                 resource,
                 scope,
-                owner_name=owner_name,
-                wrapper=wrapper,
-                names=names,
+                flatten=flatten,
             )
             if blocked:
                 return (True, source)
@@ -98,10 +103,15 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
             start, end = cls._expression_range(source, node)
             if not any(
                 edit.start <= start and end <= edit.end for edit in edits
-            ) and runtime.same_name(wrapper, runtime.resolve_symbol(scope, node)):
+            ) and runtime.same_name(
+                flatten.wrapper,
+                runtime.resolve_symbol(scope, node),
+            ):
                 return (True, source)
         change = FlextInfraUtilitiesRopeRuntimeRefactors.content_change(
-            resource, source, edits
+            resource,
+            source,
+            edits,
         )
         return (False, change.new_contents)
 
@@ -110,26 +120,26 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
         cls,
         node: ast.expr,
         source: str,
-        project: p.Infra.RopeProject,
         resource: p.Infra.RopeResource,
         scope: p.Infra.RopeScope,
         *,
-        owner_name: str,
-        wrapper: p.Infra.RopePyName,
-        names: t.MappingKV[str, str],
+        flatten: m.Infra.FamilyWrapperFlatten,
     ) -> t.Pair[bool, m.Infra.SourceRewrite | None]:
-        """Resolve one selected node; nested strings retain their original scope."""
+        """Resolve one selected node; nested strings retain their original scope.
+
+        Returns:
+            The resulting ``t.Pair[bool, m.Infra.SourceRewrite | None]``.
+
+        """
         runtime = FlextInfraUtilitiesRopeRuntimeModules
+        names = flatten.names
         start, end = cls._expression_range(source, node)
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
             blocked, updated = cls._quoted_type_source(
                 node.value,
-                project,
                 resource,
                 scope,
-                owner_name=owner_name,
-                wrapper=wrapper,
-                names=names,
+                flatten=flatten,
             )
             if blocked or updated == node.value:
                 return (blocked, None)
@@ -138,17 +148,23 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
                 m.Infra.SourceRewrite(start=start, end=end, text=repr(updated)),
             )
         if isinstance(node, ast.Attribute) and runtime.same_name(
-            wrapper, runtime.resolve_symbol(scope, node.value)
+            flatten.wrapper,
+            runtime.resolve_symbol(scope, node.value),
         ):
             if node.attr not in names:
                 return (True, None)
-            text = cls._promoted_attribute(node, scope, owner_name, names[node.attr])
+            text = cls._promoted_attribute(
+                node,
+                scope,
+                flatten.owner_name,
+                names[node.attr],
+            )
             return (False, m.Infra.SourceRewrite(start=start, end=end, text=text))
         if (
             isinstance(node, ast.Name)
             and node.id in names
             and runtime.same_name(
-                wrapper.get_object().get_attribute(node.id),
+                flatten.wrapper.get_object().get_attribute(node.id),
                 runtime.resolve_symbol(scope, node),
             )
         ):
@@ -160,9 +176,17 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
 
     @staticmethod
     def _promoted_attribute(
-        node: ast.Attribute, scope: p.Infra.RopeScope, owner_name: str, name: str
+        node: ast.Attribute,
+        scope: p.Infra.RopeScope,
+        owner_name: str,
+        name: str,
     ) -> str:
-        """Keep an explicit parent or the method's owning class after promotion."""
+        """Keep an explicit parent or the method's owning class after promotion.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         if isinstance(node.value, ast.Attribute):
             return f"{ast.unparse(node.value.value)}.{name}"
         if scope.get_kind() == c.Infra.RopeScopeKind.FUNCTION:
@@ -171,7 +195,8 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
 
     @classmethod
     def _annotation_roots(
-        cls, module: ast.Module
+        cls,
+        module: ast.Module,
     ) -> Iterator[t.Pair[ast.expr, int | None]]:
         for node in ast.walk(module):
             if isinstance(node, ast.AnnAssign):
@@ -190,7 +215,12 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
     def _type_parameter_annotations(
         node: ast.TypeVar | ast.ParamSpec | ast.TypeVarTuple,
     ) -> Iterator[t.Pair[ast.expr, int | None]]:
-        """Yield a type parameter's bound before its optional default."""
+        """Yield a type parameter's bound before its optional default.
+
+        Yields:
+            Each ``t.Pair[ast.expr, int | None]``.
+
+        """
         if isinstance(node, ast.TypeVar) and node.bound is not None:
             yield (node.bound, None)
         if node.default_value is not None:
@@ -200,7 +230,12 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
     def _function_annotations(
         node: ast.FunctionDef | ast.AsyncFunctionDef,
     ) -> Iterator[t.Pair[ast.expr, int | None]]:
-        """Yield each parameter and return annotation in declaration order."""
+        """Yield each parameter and return annotation in declaration order.
+
+        Yields:
+            Each ``t.Pair[ast.expr, int | None]``.
+
+        """
         arguments = (
             *node.args.posonlyargs,
             *node.args.args,
@@ -216,7 +251,10 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
 
     @classmethod
     def _type_nodes(
-        cls, node: ast.expr, project: p.Infra.RopeProject, scope: p.Infra.RopeScope
+        cls,
+        node: ast.expr,
+        project: p.Infra.RopeProject,
+        scope: p.Infra.RopeScope,
     ) -> Iterator[ast.expr]:
         yield node
         if isinstance(node, ast.Subscript):
@@ -251,12 +289,12 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
         start = sum(map(len, lines[: expression.lineno - 1])) + len(
             lines[expression.lineno - 1]
             .encode("utf-8")[: expression.col_offset]
-            .decode("utf-8")
+            .decode("utf-8"),
         )
         end = sum(map(len, lines[: expression.end_lineno - 1])) + len(
             lines[expression.end_lineno - 1]
             .encode("utf-8")[: expression.end_col_offset]
-            .decode("utf-8")
+            .decode("utf-8"),
         )
         return (start, end)
 

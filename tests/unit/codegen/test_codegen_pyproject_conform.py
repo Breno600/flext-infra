@@ -1,4 +1,8 @@
-"""Public behavior tests for topology-aware pyproject conformance."""
+"""Public behavior tests for topology-aware pyproject conformance.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -13,8 +17,14 @@ from tests import t, u as test_u
 
 
 class TestsFlextInfraCodegenPyprojectConform:
+    """Tests for ``FlextInfraCodegenPyprojectConform``."""
+
+    @staticmethod
     def _repository(
-        self, distribution: str, *, role: c.Infra.MakeProfile, path: str
+        distribution: str,
+        *,
+        role: c.Infra.MakeProfile,
+        path: str,
     ) -> m.Infra.RepositoryRef:
         provider = test_u.Tests.provider()
         return m.Infra.RepositoryRef(
@@ -31,14 +41,38 @@ class TestsFlextInfraCodegenPyprojectConform:
             read_only=False,
         )
 
-    def _workspace(self) -> m.Infra.WorkspaceSpec:
+    def _workspace(
+        self,
+        *,
+        role: c.Infra.MakeProfile = c.Infra.MakeProfile.WORKSPACE,
+    ) -> m.Infra.WorkspaceSpec:
         return test_u.Tests.workspace_spec(
-            self._repository("workspace", role=c.Infra.MakeProfile.WORKSPACE, path="."),
+            self._repository("workspace", role=role, path="."),
             subprojects=(
                 self._repository(
-                    "flext-core", role=c.Infra.MakeProfile.STANDALONE, path="flext-core"
+                    "flext-core",
+                    role=c.Infra.MakeProfile.STANDALONE,
+                    path="flext-core",
                 ),
             ),
+        )
+
+    @staticmethod
+    def _uv_resolution(
+        toolchain: m.Infra.ToolchainSpec,
+        exclusions: t.VariadicTuple[m.Infra.UvScopedDependencyExclusionSpec] = (),
+    ) -> m.Infra.UvResolutionSpec:
+        """Route the toolchain's uv resolver keys the way conform declares them.
+
+        Returns:
+            The resulting ``m.Infra.UvResolutionSpec``.
+
+        """
+        return m.Infra.UvResolutionSpec(
+            link_mode=toolchain.uv_link_mode,
+            constraint_dependencies=tuple(toolchain.uv_constraint_dependencies),
+            exclude_dependencies=exclusions,
+            environments=tuple(toolchain.uv_environments),
         )
 
     @staticmethod
@@ -49,6 +83,10 @@ class TestsFlextInfraCodegenPyprojectConform:
         context root; every other project must carry its declared direct Git
         source (the scaffold seeds exactly this line), so the same SSOT floor
         set is rendered the way a real detached checkout declares it.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
         """
         branch = test_u.Tests.provider_branch()
         return tuple(
@@ -64,7 +102,8 @@ class TestsFlextInfraCodegenPyprojectConform:
         )
 
     def test_leaf_conformance_preserves_parent_workspace_execution(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A generated leaf remains usable from its declared parent workspace."""
         parent = tmp_path / "parent"
@@ -77,17 +116,16 @@ class TestsFlextInfraCodegenPyprojectConform:
             encoding="utf-8",
         )
         workspace = test_u.Tests.workspace_spec(
-            self._repository("member", role=c.Infra.MakeProfile.STANDALONE, path=".")
+            self._repository("member", role=c.Infra.MakeProfile.STANDALONE, path="."),
         )
         rendered = tm.ok(
             u.Infra.pyproject_conform(
                 '[project]\nname = "member"\nversion = "1.0"\n'
                 'requires-python = ">=3.13"\ndependencies = []\n',
                 workspace=workspace,
-                workspace_mode=c.Infra.MakeProfile.STANDALONE,
-                toolchain=config.Infra.codegen.toolchain,
                 required_dev_dependencies=(),
-            )
+                uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
+            ),
         )
         (root / "pyproject.toml").write_text(rendered, encoding="utf-8")
         tm.ok(
@@ -104,14 +142,15 @@ class TestsFlextInfraCodegenPyprojectConform:
                     str(root / "pyproject.toml"),
                 ],
                 cwd=parent,
-            )
+            ),
         )
         tm.that((root / "uv.lock").exists(), eq=False)
         tm.that((parent / "uv.lock").exists(), eq=False)
 
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
     def test_global_constraints_apply_without_direct_runtime_requirements(
-        self, profile: c.Infra.MakeProfile
+        self,
+        profile: c.Infra.MakeProfile,
     ) -> None:
         """Every profile receives SSOT constraints even for indirect dependencies."""
         content = (
@@ -120,11 +159,10 @@ class TestsFlextInfraCodegenPyprojectConform:
         first = tm.ok(
             u.Infra.pyproject_conform(
                 content,
-                workspace=self._workspace(),
-                workspace_mode=profile,
-                toolchain=config.Infra.codegen.toolchain,
+                workspace=self._workspace(role=profile),
                 required_dev_dependencies=self._detached_dev_floors(),
-            )
+                uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
+            ),
         )
         uv_config = test_u.Tests.toml_table_at(first, "tool", "uv")
         expected = [
@@ -137,15 +175,15 @@ class TestsFlextInfraCodegenPyprojectConform:
         second = tm.ok(
             u.Infra.pyproject_conform(
                 first,
-                workspace=self._workspace(),
-                workspace_mode=profile,
-                toolchain=config.Infra.codegen.toolchain,
+                workspace=self._workspace(role=profile),
                 required_dev_dependencies=self._detached_dev_floors(),
-            )
+                uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
+            ),
         )
         tm.that(second, eq=first)
 
-    def test_custom_entry_point_groups_survive_conformance(self) -> None:
+    @staticmethod
+    def test_custom_entry_point_groups_survive_conformance() -> None:
         """Plugin registrations remain owned by their declaring distribution."""
         rendered = '[project]\nname = "sample"\n'
         live = (
@@ -158,17 +196,21 @@ class TestsFlextInfraCodegenPyprojectConform:
 
         tm.that(
             test_u.Tests.toml_table_at(
-                overlaid, "project", "entry-points", "example.plugins"
+                overlaid,
+                "project",
+                "entry-points",
+                "example.plugins",
             )["sample"],
             eq="sample.plugin:main",
         )
 
-    def test_overlay_defaults_only_the_omitted_policy(self) -> None:
+    @staticmethod
+    def test_overlay_defaults_only_the_omitted_policy() -> None:
         """Explicit empty policies survive default resolution of the other policy."""
         spec = next(
             item
             for item in config.Infra.codegen.managed_files
-            if item.path.as_posix() == c.Infra.PYPROJECT_FILENAME
+            if item.path.as_posix() == c.PYPROJECT_FILENAME
         )
         project_key = spec.preserve_project_keys[0]
         tool_table = spec.managed_tool_tables[0]
@@ -180,7 +222,7 @@ class TestsFlextInfraCodegenPyprojectConform:
             f'[project]\n{project_key} = "live"\n[tool.{tool_table}]\nvalue = "live"\n'
         )
         project_override = tm.ok(
-            u.Infra.overlay_preserved(rendered, live, preserve_project_keys=())
+            u.Infra.overlay_preserved(rendered, live, preserve_project_keys=()),
         )
         tm.that(
             test_u.Tests.toml_table_at(project_override, "project")[project_key],
@@ -191,10 +233,11 @@ class TestsFlextInfraCodegenPyprojectConform:
             eq="rendered",
         )
         tool_override = tm.ok(
-            u.Infra.overlay_preserved(rendered, live, managed_tool_tables=())
+            u.Infra.overlay_preserved(rendered, live, managed_tool_tables=()),
         )
         tm.that(
-            test_u.Tests.toml_table_at(tool_override, "project")[project_key], eq="live"
+            test_u.Tests.toml_table_at(tool_override, "project")[project_key],
+            eq="live",
         )
         tm.that(
             test_u.Tests.toml_table_at(tool_override, "tool", tool_table)["value"],
@@ -215,14 +258,13 @@ class TestsFlextInfraCodegenPyprojectConform:
             u.Infra.pyproject_conform(
                 overlaid,
                 workspace=self._workspace(),
-                workspace_mode=c.Infra.MakeProfile.WORKSPACE,
-                toolchain=config.Infra.codegen.toolchain,
                 required_dev_dependencies=self._detached_dev_floors(),
-            )
+                uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
+            ),
         )
         original = test_u.Tests.toml_mapping(test_u.Tests.toml_payload(live)["project"])
         project = test_u.Tests.toml_mapping(
-            test_u.Tests.toml_payload(conformed)["project"]
+            test_u.Tests.toml_payload(conformed)["project"],
         )
         tm.that(project["optional-dependencies"], eq=original["optional-dependencies"])
         tm.that(project["version"], eq=original["version"])
@@ -235,44 +277,20 @@ class TestsFlextInfraCodegenPyprojectConform:
             eq=original["optional-dependencies"],
         )
 
-    def test_repository_root_uses_workspace_provenance(self) -> None:
-        workspace = self._workspace()
-        result = u.Infra.pyproject_dependencies_conform(
-            """[project]
-name = "workspace"
-dependencies = ["flext-core"]
-
-[tool.uv.workspace]
-members = ["flext-core"]
-
-[tool.uv.sources.flext-core]
-workspace = true
-""",
-            workspace=workspace,
-            workspace_mode=c.Infra.MakeProfile.WORKSPACE,
-        )
-        rendered = tm.ok(result)
-        tm.that(
-            test_u.Tests.toml_strings_at(rendered, "project", "dependencies"),
-            eq=("flext-core",),
-        )
-        tm.that(
-            test_u.Tests.toml_strings_at(rendered, "dependency-groups", "workspace"),
-            eq=("flext-core",),
-        )
-
     def test_standalone_requires_declared_git_source(self) -> None:
-        """A source-less internal dependency outside the workspace overlay fails."""
-        workspace = self._workspace()
-        result = u.Infra.pyproject_dependencies_conform(
-            '[project]\nname = "external-consumer"\ndependencies = ["flext-core"]\n',
-            workspace=workspace,
-            workspace_mode=c.Infra.MakeProfile.STANDALONE,
+        """A source-less internal dependency outside the workspace overlay fails.
+
+        The workspace attaches only flext-core, whose declaration supplies the
+        source; the infrastructure distribution is internal and unattached.
+        """
+        unattached = config.Infra.codegen.infra_repository.distribution
+        result = u.Infra.pyproject_conform(
+            f'[project]\nname = "external-consumer"\ndependencies = ["{unattached}"]\n',
+            workspace=self._workspace(),
+            required_dev_dependencies=(),
+            uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
         )
-        tm.fail(
-            result,
-            has="declares no direct git source and is not a workspace dependency",
-        )
+        tm.fail(result, has="internal dependency declares no direct git source")
 
     def test_standalone_canonicalizes_the_declared_git_source(self) -> None:
         """The declared requirement line is the only URL and branch authority."""
@@ -281,10 +299,11 @@ workspace = true
         declared = (
             f"{member.distribution} @ git+{member.url}@{test_u.Tests.provider_branch()}"
         )
-        result = u.Infra.pyproject_dependencies_conform(
+        result = u.Infra.pyproject_conform(
             f'[project]\nname = "external-consumer"\ndependencies = ["{declared}"]\n',
             workspace=workspace,
-            workspace_mode=c.Infra.MakeProfile.STANDALONE,
+            required_dev_dependencies=(),
+            uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
         )
         rendered = tm.ok(result)
         tm.that(
@@ -292,95 +311,60 @@ workspace = true
             eq=(declared,),
         )
 
-    def test_dependency_conformance_removes_only_legacy_uv_constraint(self) -> None:
-        workspace = self._workspace()
+    def test_conformance_deletes_empty_uv_constraint_key(self) -> None:
+        """A constraint set holding only the uv pin removes the key entirely."""
+        toolchain = config.Infra.codegen.toolchain.model_copy(
+            update={"uv_link_mode": "copy", "uv_constraint_dependencies": ("uv>=0",)},
+        )
         source = """[project]
 name = "external-consumer"
 dependencies = ["requests>=2"]
 
 [tool.uv]
-constraint-dependencies = ["uv>=0", "requests<3"]
-"""
-        first = tm.ok(
-            u.Infra.pyproject_dependencies_conform(
-                source,
-                workspace=workspace,
-                workspace_mode=c.Infra.MakeProfile.STANDALONE,
-            )
-        )
-        second = tm.ok(
-            u.Infra.pyproject_dependencies_conform(
-                first,
-                workspace=workspace,
-                workspace_mode=c.Infra.MakeProfile.STANDALONE,
-            )
-        )
-
-        tm.that(second, eq=first)
-        tm.that(
-            test_u.Tests.toml_strings_at(
-                first, "tool", "uv", "constraint-dependencies"
-            ),
-            eq=("requests<3",),
-        )
-
-    def test_dependency_conformance_deletes_empty_uv_constraint_key(self) -> None:
-        workspace = self._workspace()
-        source = """[project]
-name = "external-consumer"
-dependencies = ["requests>=2"]
-
-[tool.uv]
-link-mode = "copy"
 constraint-dependencies = ["uv>=0"]
 """
         conformed = tm.ok(
-            u.Infra.pyproject_dependencies_conform(
+            u.Infra.pyproject_conform(
                 source,
-                workspace=workspace,
-                workspace_mode=c.Infra.MakeProfile.STANDALONE,
-            )
+                workspace=self._workspace(),
+                required_dev_dependencies=(),
+                uv_resolution=self._uv_resolution(toolchain),
+            ),
         )
 
         uv_config = test_u.Tests.toml_table_at(conformed, "tool", "uv")
-        tm.that(uv_config["link-mode"], eq="copy")
+        tm.that(uv_config["link-mode"], eq=toolchain.uv_link_mode)
         tm.that("constraint-dependencies" not in uv_config, eq=True)
 
     def test_standalone_rejects_non_https_manifest_provenance(self) -> None:
-        workspace = self._workspace()
-        member = workspace.subprojects[0].model_copy(
-            update={"url": "git@github.com:flext-sh/flext-core.git"}
-        )
-        invalid_workspace = workspace.model_copy(update={"subprojects": (member,)})
-        result = u.Infra.pyproject_dependencies_conform(
-            '[project]\nname = "external-consumer"\ndependencies = ["flext-core"]\n',
-            workspace=invalid_workspace,
-            workspace_mode=c.Infra.MakeProfile.STANDALONE,
-        )
-        tm.that(result.failure, eq=True)
-
-    def test_workspace_rejects_conflicting_direct_source(self) -> None:
+        """Test standalone rejects non https manifest provenance."""
         workspace = self._workspace()
         member = workspace.subprojects[0]
-        result = u.Infra.pyproject_dependencies_conform(
-            (
-                '[project]\nname = "workspace"\n'
-                f'dependencies = ["{member.distribution} @ git+{member.url}@'
-                f'{test_u.Tests.provider_branch()}"]\n'
-                "\n[tool.uv.workspace]\n"
-                'members = ["flext-core"]\n'
-                "\n[tool.uv.sources.flext-core]\n"
-                "workspace = true\n"
-            ),
-            workspace=workspace,
-            workspace_mode=c.Infra.MakeProfile.WORKSPACE,
+        declared = (
+            f"{member.distribution} @ git+{member.url}@{test_u.Tests.provider_branch()}"
         )
-        tm.fail(result, has="workspace dependency declares a conflicting direct source")
+        invalid_workspace = workspace.model_copy(
+            update={
+                "subprojects": (
+                    member.model_copy(
+                        update={"url": "git@github.com:flext-sh/flext-core.git"},
+                    ),
+                ),
+            },
+        )
+        result = u.Infra.pyproject_conform(
+            f'[project]\nname = "external-consumer"\ndependencies = ["{declared}"]\n',
+            workspace=invalid_workspace,
+            required_dev_dependencies=(),
+            uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
+        )
+        tm.fail(result, has="internal dependency manifest provenance must be HTTPS")
 
     def test_full_conformance_is_idempotent_without_uv_version_pin(self) -> None:
+        """Test full conformance is idempotent without uv version pin."""
         workspace = self._workspace()
         toolchain = config.Infra.codegen.toolchain.model_copy(
-            update={"uv_link_mode": "copy"}
+            update={"uv_link_mode": "copy"},
         )
         required_dev = self._detached_dev_floors()
         declared_member_source = (
@@ -405,19 +389,17 @@ python-interpreter-path = "../.venv/bin/python"
             u.Infra.pyproject_conform(
                 source,
                 workspace=workspace,
-                workspace_mode=c.Infra.MakeProfile.STANDALONE,
-                toolchain=toolchain,
                 required_dev_dependencies=required_dev,
-            )
+                uv_resolution=self._uv_resolution(toolchain),
+            ),
         )
         second = tm.ok(
             u.Infra.pyproject_conform(
                 first,
                 workspace=workspace,
-                workspace_mode=c.Infra.MakeProfile.STANDALONE,
-                toolchain=toolchain,
                 required_dev_dependencies=required_dev,
-            )
+                uv_resolution=self._uv_resolution(toolchain),
+            ),
         )
         uv = test_u.Tests.toml_table_at(first, "tool", "uv")
         tm.that(second, eq=first)
@@ -463,17 +445,16 @@ python-interpreter-path = "../.venv/bin/python"
     def test_conformance_never_writes_the_project_version(self) -> None:
         """The release protocol is the only version writer; conform reads only."""
         workspace = self._workspace().model_copy(
-            update={"project": test_u.Tests.project_spec("external-consumer")}
+            update={"project": test_u.Tests.project_spec("external-consumer")},
         )
         conformed = tm.ok(
             u.Infra.pyproject_conform(
                 '[project]\nname = "external-consumer"\n'
                 'version = "0.0.1"\ndependencies = []\n',
                 workspace=workspace,
-                workspace_mode=c.Infra.MakeProfile.STANDALONE,
-                toolchain=config.Infra.codegen.toolchain,
                 required_dev_dependencies=self._detached_dev_floors(),
-            )
+                uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
+            ),
         )
         tm.that(test_u.Tests.toml_table_at(conformed, "project")["version"], eq="0.0.1")
 
@@ -492,10 +473,9 @@ dev = ["rumdl>=0.2.46", "custom-tool>=1"]
             u.Infra.pyproject_conform(
                 source,
                 workspace=workspace,
-                workspace_mode=c.Infra.MakeProfile.STANDALONE,
-                toolchain=toolchain,
                 required_dev_dependencies=("rumdl>=0.2.45",),
-            )
+                uv_resolution=self._uv_resolution(toolchain),
+            ),
         )
         dev_group = test_u.Tests.toml_strings_at(conformed, "dependency-groups", "dev")
         tm.that("rumdl>=0.2.45" in dev_group, eq=True)
@@ -518,11 +498,12 @@ dependencies = []
             u.Infra.pyproject_conform(
                 source,
                 workspace=workspace,
-                workspace_mode=c.Infra.MakeProfile.STANDALONE,
-                toolchain=config.Infra.codegen.toolchain,
                 required_dev_dependencies=self._detached_dev_floors(),
-                uv_exclude_dependencies=(exclusion,),
-            )
+                uv_resolution=self._uv_resolution(
+                    config.Infra.codegen.toolchain,
+                    (exclusion,),
+                ),
+            ),
         )
         uv = test_u.Tests.toml_table_at(conformed, "tool", "uv")
         excludes = test_u.Tests.toml_list(uv["exclude-dependencies"])
@@ -531,6 +512,36 @@ dependencies = []
             eq=[{"package": {"name": "flext-tests"}, "dependencies": ["flext-infra"]}],
         )
         tm.that("project" not in test_u.Tests.toml_mapping(excludes[0]), eq=True)
+
+    @staticmethod
+    def test_workspace_root_routes_only_exclusions_of_local_projects(
+        tmp_path: Path,
+    ) -> None:
+        """An exclusion for an absent project would drop its only install edge."""
+        configured = config.Infra.codegen.uv_exclude_dependencies
+        member = configured[0].project
+        rendered = test_u.Tests.scaffold_text(
+            tmp_path / "fixture-project",
+            c.PYPROJECT_FILENAME,
+            members=(member,),
+        )
+        uv = test_u.Tests.toml_table_at(rendered, "tool", "uv")
+        local = {"fixture-project", member}
+        tm.that(
+            test_u.Tests.toml_list(uv["exclude-dependencies"]),
+            eq=[
+                {
+                    key: value
+                    for key, value in item.model_dump(
+                        mode="json",
+                        exclude_none=True,
+                    ).items()
+                    if key != "project"
+                }
+                for item in configured
+                if item.project in local
+            ],
+        )
 
     def test_overlay_preserves_custom_scripts_and_unmanaged_tools(self) -> None:
         """Package requirements survive without restoring stale profile pins."""
@@ -592,28 +603,29 @@ skips = ["B101"]
             u.Infra.pyproject_conform(
                 first,
                 workspace=self._workspace(),
-                workspace_mode=c.Infra.MakeProfile.STANDALONE,
-                toolchain=config.Infra.codegen.toolchain,
                 required_dev_dependencies=("rumdl>=0.2.45",),
-            )
+                uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
+            ),
         )
         tm.that(
             frozenset(
-                test_u.Tests.toml_strings_at(conformed, "project", "dependencies")
+                test_u.Tests.toml_strings_at(conformed, "project", "dependencies"),
             ),
             eq=expected_requirements,
         )
         repeated = tm.ok(u.Infra.overlay_preserved(rendered, conformed))
         tm.that(
             frozenset(
-                test_u.Tests.toml_strings_at(repeated, "project", "dependencies")
+                test_u.Tests.toml_strings_at(repeated, "project", "dependencies"),
             ),
             eq=expected_requirements,
         )
         # Membership alone hides a required-first / alphabetical oscillation.
         # Exercise both public owners; neither may reorder the other's output.
         canonical_dependencies = test_u.Tests.toml_strings_at(
-            conformed, "project", "dependencies"
+            conformed,
+            "project",
+            "dependencies",
         )
         tm.that(
             test_u.Tests.toml_strings_at(first, "project", "dependencies"),

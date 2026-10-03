@@ -12,20 +12,28 @@
 # Setup installs frozen from that lock and never re-resolves.
 
 # === SECTION: settings (managed) ===
-# Source: config:codegen.toolchain.mise_lockfile / mise_locked / mise_lockfile_platforms
+# Source: config:codegen.toolchain.mise_lockfile / mise_locked / mise_lockfile_platforms /
+#         dependency_cooldown_days (one fleet supply-chain cooldown, operator 2026-10-01)
 [settings]
+minimum_release_age = "{{ dependency_cooldown_days }}d"
 lockfile = {{ "true" if mise_lockfile else "false" }}
 locked = {{ "true" if mise_locked else "false" }}
 lockfile_platforms = [{% for platform in mise_lockfile_platforms %}"{{ platform }}"{{ ", " if not loop.last }}{% endfor %}]
+[settings.python]
+compile = {{ "true" if python_compile else "false" }}
+[settings.npm]
+# Aube replays the locked dependency graph. Only the configured ast-grep
+# package is approved below to run its native binary-selection lifecycle.
+package_manager = "{{ npm_package_manager }}"
 [tool_config]
 locked = {{ "true" if mise_locked else "false" }}
 # End SECTION: settings
 
 # === SECTION: tools (managed) ===
 # Source: config:python_version, config:codegen.scaffold.project.dev native toolchain floors
-#         (kubectl_version, helm_version, kind_version, taplo_version, ast_grep_version,
+#         (kubectl_version, helm_version, kind_version, taplo_version, ast_grep_selector/ast_grep_version,
 #          gitleaks_version, scc_selector/scc_version, kubeconform_version, qlty_selector/qlty_version,
-#          node_version, jscpd_selector/jscpd_version/jscpd_asset_patterns,
+#          node_version, jscpd_selector/jscpd_version,
 #          prettier_selector/prettier_version, waza_selector/waza_version/waza_version_prefix,
 #          go_version, make_version)
 [tools]
@@ -37,7 +45,7 @@ helm = "{{ helm_version }}"
 kind = "{{ kind_version }}"
 direnv = "{{ direnv_version }}"
 taplo = "{{ taplo_version }}"
-ast-grep = "{{ ast_grep_version }}"
+"{{ ast_grep_selector }}" = { version = "{{ ast_grep_version }}", allow_builds = ["{{ ast_grep_selector.removeprefix('npm:') }}"] }
 gitleaks = "{{ gitleaks_version }}"
 "{{ scc_selector }}" = "{{ scc_version }}"
 kubeconform = "{{ kubeconform_version }}"
@@ -47,13 +55,8 @@ go = "{{ go_version }}"
 make = "{{ make_version }}"
 [tools."{{ qlty_selector }}"]
 version = "{{ qlty_version }}"
-github_attestations = false
 [tools."{{ jscpd_selector }}"]
 version = "{{ jscpd_version }}"
-[tools."{{ jscpd_selector }}".platforms]
-{% for platform, pattern in jscpd_asset_patterns.items() -%}
-{{ platform }} = { asset_pattern = "{{ pattern }}" }
-{% endfor -%}
 [tools."{{ waza_selector }}"]
 version = "{{ waza_version }}"
 version_prefix = "{{ waza_version_prefix }}"

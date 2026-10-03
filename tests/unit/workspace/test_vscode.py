@@ -1,4 +1,8 @@
-"""Canonical VS Code settings codegen merge contract tests."""
+"""Canonical VS Code settings codegen merge contract tests.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -22,7 +26,8 @@ class TestsFlextInfraCodegenVscode:
         return settings_path
 
     def test_applies_canonical_settings_and_removes_retired_artifacts(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Enforce canonical keys while deleting stale generated map entries."""
         project_root = tmp_path / "project"
@@ -35,9 +40,9 @@ class TestsFlextInfraCodegenVscode:
                     "python.analysis.typeCheckingMode": "off",
                     "files.exclude": {"**/.retired-cache": True},
                     "python.analysis.diagnosticSeverityOverrides": {
-                        "reportUnknownMemberType": "none"
+                        "reportUnknownMemberType": "none",
                     },
-                })
+                }),
             )
             + "\n",
         )
@@ -47,15 +52,14 @@ class TestsFlextInfraCodegenVscode:
         doc = u.Tests.json_payload(result.value)
         tm.that("python.analysis.typeCheckingMode" in doc, eq=False)
         tm.that("python.analysis.diagnosticSeverityOverrides" in doc, eq=False)
+        interpreter = "python.defaultInterpreterPath"
         tm.that(
-            doc["python.defaultInterpreterPath"],
-            eq="${workspaceFolder}/.venv/bin/python",
+            doc[interpreter],
+            eq=config.Infra.codegen.vscode.scalar_settings[interpreter],
         )
-        search_paths = u.Tests.toml_strings(
-            doc[c.Infra.VSCODE_PYTHON_ENVS_SEARCH_PATHS_KEY]
-        )
-        tm.that(search_paths, eq=tuple(u.Tests.vscode_declared_search_paths()))
-        tm.that("./apps/*/.venv" in search_paths, eq=False)
+        search_paths_key = c.Infra.VSCODE_PYTHON_ENVS_SEARCH_PATHS_KEY
+        tm.that(search_paths_key in config.Infra.codegen.vscode.list_settings, eq=False)
+        tm.that(search_paths_key in doc, eq=False)
         excludes = u.Tests.toml_mapping(doc["files.exclude"])
         tm.that("**/.retired-cache" in excludes, eq=False)
         tm.that(excludes["**/.mypy_cache"], eq=True)
@@ -74,10 +78,10 @@ class TestsFlextInfraCodegenVscode:
                 u.Cli.json_dumps({
                     "python.analysis.typeCheckingMode": "standard",
                     "python.analysis.diagnosticSeverityOverrides": {
-                        "reportMissingTypeStubs": "error"
+                        "reportMissingTypeStubs": "error",
                     },
                     "python.languageServer": "Pylance",
-                })
+                }),
             )
             + "\n",
         )
@@ -102,8 +106,9 @@ class TestsFlextInfraCodegenVscode:
         tm.ok(second)
         tm.that(second.value, eq=first.value)
 
-    def test_search_paths_are_independent_from_repository_topology(
-        self, tmp_path: Path
+    @staticmethod
+    def test_python_environment_settings_are_independent_from_repository_topology(
+        tmp_path: Path,
     ) -> None:
         """Keep opened-folder settings canonical for roots and subprojects."""
         project_root = tmp_path / "workspace"
@@ -130,15 +135,13 @@ class TestsFlextInfraCodegenVscode:
         tm.ok(standalone)
         tm.that(result.value.encode(), eq=standalone.value.encode())
         doc = u.Tests.json_payload(result.value)
-        search_paths = u.Tests.toml_strings(
-            doc[c.Infra.VSCODE_PYTHON_ENVS_SEARCH_PATHS_KEY]
-        )
-        tm.that(search_paths, eq=tuple(u.Tests.vscode_declared_search_paths()))
-        tm.that("./apps/a/.venv" in search_paths, eq=False)
-        tm.that("./libs/b/.venv" in search_paths, eq=False)
+        search_paths_key = c.Infra.VSCODE_PYTHON_ENVS_SEARCH_PATHS_KEY
+        tm.that(search_paths_key in config.Infra.codegen.vscode.list_settings, eq=False)
+        tm.that(search_paths_key in doc, eq=False)
 
     def test_invalid_json_fails_without_producing_a_document(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Return a typed failure when the existing settings are unparseable."""
         project_root = tmp_path / "project"

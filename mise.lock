@@ -6,61 +6,49 @@ lockfile_version = 2
 url = "https://conda.anaconda.org/conda-forge/linux-aarch64/_openmp_mutex-4.5-20_gnu.conda"
 checksum = "sha256:a2527b1d81792a0ccd2c05850960df119c2b6d8f5fdec97f2db7d25dc23b1068"
 
-[conda-packages.linux-arm64."libgcc-16.2.0-h205dda4_6"]
-url = "https://conda.anaconda.org/conda-forge/linux-aarch64/libgcc-16.2.0-h205dda4_6.conda"
-checksum = "sha256:235bf2b97bbe627f2cd5b2da34e51e77c5ab0c726a7ec8e6d5ea89db555b5260"
+[conda-packages.linux-arm64."libgcc-16.2.0-h205dda4_7"]
+url = "https://conda.anaconda.org/conda-forge/linux-aarch64/libgcc-16.2.0-h205dda4_7.conda"
+checksum = "sha256:eae7a3449d5a3b5351c5427137c076cc3fc826645c7bfc42dc10772b783826f1"
 
-[conda-packages.linux-arm64."libgomp-16.2.0-h8acb6b2_6"]
-url = "https://conda.anaconda.org/conda-forge/linux-aarch64/libgomp-16.2.0-h8acb6b2_6.conda"
-checksum = "sha256:417013b01e6c640bea30eb86326628c7dbbdeca4aa287c69aaf4262ea5a7b2c1"
-
-[conda-packages.linux-arm64-musl."_openmp_mutex-4.5-20_gnu"]
-url = "https://conda.anaconda.org/conda-forge/linux-aarch64/_openmp_mutex-4.5-20_gnu.conda"
-checksum = "sha256:a2527b1d81792a0ccd2c05850960df119c2b6d8f5fdec97f2db7d25dc23b1068"
-
-[conda-packages.linux-arm64-musl."libgcc-16.2.0-h205dda4_6"]
-url = "https://conda.anaconda.org/conda-forge/linux-aarch64/libgcc-16.2.0-h205dda4_6.conda"
-checksum = "sha256:235bf2b97bbe627f2cd5b2da34e51e77c5ab0c726a7ec8e6d5ea89db555b5260"
-
-[conda-packages.linux-arm64-musl."libgomp-16.2.0-h8acb6b2_6"]
-url = "https://conda.anaconda.org/conda-forge/linux-aarch64/libgomp-16.2.0-h8acb6b2_6.conda"
-checksum = "sha256:417013b01e6c640bea30eb86326628c7dbbdeca4aa287c69aaf4262ea5a7b2c1"
+[conda-packages.linux-arm64."libgomp-16.2.0-h8acb6b2_7"]
+url = "https://conda.anaconda.org/conda-forge/linux-aarch64/libgomp-16.2.0-h8acb6b2_7.conda"
+checksum = "sha256:4406fd67c5beeb99b9372f9bf07aa3e40ca141e337eceebac3ff64aa72799494"
 
 [conda-packages.linux-x64."_openmp_mutex-4.5-20_gnu"]
 url = "https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda"
 checksum = "sha256:1dd3fffd892081df9726d7eb7e0dea6198962ba775bd88842135a4ddb4deb3c9"
 
-[conda-packages.linux-x64."libgcc-16.2.0-ha9f2e26_6"]
-url = "https://conda.anaconda.org/conda-forge/linux-64/libgcc-16.2.0-ha9f2e26_6.conda"
-checksum = "sha256:76ab0367ab900e169cd5a981c51ad35c97800795fb9fb89d370d05159c21bd49"
+[conda-packages.linux-x64."libgcc-16.2.0-ha9f2e26_7"]
+url = "https://conda.anaconda.org/conda-forge/linux-64/libgcc-16.2.0-ha9f2e26_7.conda"
+checksum = "sha256:e031634c3a928f9594eba868bc46ef5230d6571a364a0c63215b06c4563bfcea"
 
-[conda-packages.linux-x64."libgomp-16.2.0-he0feb66_6"]
-url = "https://conda.anaconda.org/conda-forge/linux-64/libgomp-16.2.0-he0feb66_6.conda"
-checksum = "sha256:16bad99a5bbd87176ca243938bbf0078bab52a583e18a070d244484422137d01"
+[conda-packages.linux-x64."libgomp-16.2.0-he0feb66_7"]
+url = "https://conda.anaconda.org/conda-forge/linux-64/libgomp-16.2.0-he0feb66_7.conda"
+checksum = "sha256:92a0bb350c7be6a4eedcb4e111c60aefd176018e6b1c009a6e025dbe9bbcd758"
 
 [conda-packages.linux-x64-musl."_openmp_mutex-4.5-20_gnu"]
 url = "https://conda.anaconda.org/conda-forge/linux-64/_openmp_mutex-4.5-20_gnu.conda"
 checksum = "sha256:1dd3fffd892081df9726d7eb7e0dea6198962ba775bd88842135a4ddb4deb3c9"
 
-[conda-packages.linux-x64-musl."libgcc-16.2.0-ha9f2e26_6"]
-url = "https://conda.anaconda.org/conda-forge/linux-64/libgcc-16.2.0-ha9f2e26_6.conda"
-checksum = "sha256:76ab0367ab900e169cd5a981c51ad35c97800795fb9fb89d370d05159c21bd49"
+[conda-packages.linux-x64-musl."libgcc-16.2.0-ha9f2e26_7"]
+url = "https://conda.anaconda.org/conda-forge/linux-64/libgcc-16.2.0-ha9f2e26_7.conda"
+checksum = "sha256:e031634c3a928f9594eba868bc46ef5230d6571a364a0c63215b06c4563bfcea"
 
-[conda-packages.linux-x64-musl."libgomp-16.2.0-he0feb66_6"]
-url = "https://conda.anaconda.org/conda-forge/linux-64/libgomp-16.2.0-he0feb66_6.conda"
-checksum = "sha256:16bad99a5bbd87176ca243938bbf0078bab52a583e18a070d244484422137d01"
+[conda-packages.linux-x64-musl."libgomp-16.2.0-he0feb66_7"]
+url = "https://conda.anaconda.org/conda-forge/linux-64/libgomp-16.2.0-he0feb66_7.conda"
+checksum = "sha256:92a0bb350c7be6a4eedcb4e111c60aefd176018e6b1c009a6e025dbe9bbcd758"
 
 [conda-packages.windows-x64."_openmp_mutex-4.5-20_gnu"]
 url = "https://conda.anaconda.org/conda-forge/win-64/_openmp_mutex-4.5-20_gnu.conda"
 checksum = "sha256:8a1cee28bd0ee7451ada1cd50b64720e57e17ff994fc62dd8329bef570d382e4"
 
-[conda-packages.windows-x64."libgcc-16.2.0-h110b43a_6"]
-url = "https://conda.anaconda.org/conda-forge/win-64/libgcc-16.2.0-h110b43a_6.conda"
-checksum = "sha256:8d9cc59d02371ba40b9e3de4e97662a56162cfb472d496f28aeadf5a00044e6d"
+[conda-packages.windows-x64."libgcc-16.2.0-h110b43a_7"]
+url = "https://conda.anaconda.org/conda-forge/win-64/libgcc-16.2.0-h110b43a_7.conda"
+checksum = "sha256:59feb6d16cba13a70f22dae70a44670eb2cc45e652e9a34a014814c2ca871132"
 
-[conda-packages.windows-x64."libgomp-16.2.0-h8ee18e1_6"]
-url = "https://conda.anaconda.org/conda-forge/win-64/libgomp-16.2.0-h8ee18e1_6.conda"
-checksum = "sha256:27f0f253085b778cfe47c9e3e8d1a5d766f8a323075b199089b36713f0fe903b"
+[conda-packages.windows-x64."libgomp-16.2.0-h8ee18e1_7"]
+url = "https://conda.anaconda.org/conda-forge/win-64/libgomp-16.2.0-h8ee18e1_7.conda"
+checksum = "sha256:4b8a747f047d069ccd2a6cf2f4fdbc6b0c0e4dcd840998d1fe607b8c234e707b"
 
 [conda-packages.windows-x64."libwinpthread-12.0.0.r4.gg4f2fc60ca-h57928b3_10"]
 url = "https://conda.anaconda.org/conda-forge/win-64/libwinpthread-12.0.0.r4.gg4f2fc60ca-h57928b3_10.conda"
@@ -76,11 +64,6 @@ backend = "aqua:boyter/scc"
 specifiers = ["latest"]
 
 [tools."aqua:boyter/scc"."platforms.linux-arm64"]
-checksum = "sha256:6e0d2a1f8d3540ba7df185477dec40bb7340f1b214bfd303147de5cad2bd7b8b"
-url = "https://github.com/boyter/scc/releases/download/v4.1.0/scc_Linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/boyter/scc/releases/assets/549478881"
-
-[tools."aqua:boyter/scc"."platforms.linux-arm64-musl"]
 checksum = "sha256:6e0d2a1f8d3540ba7df185477dec40bb7340f1b214bfd303147de5cad2bd7b8b"
 url = "https://github.com/boyter/scc/releases/download/v4.1.0/scc_Linux_arm64.tar.gz"
 url_api = "https://api.github.com/repos/boyter/scc/releases/assets/549478881"
@@ -110,47 +93,12 @@ checksum = "sha256:4a433984f45ff29c94eeb3af6db5b511c58f5bf74063dccedafcbf473cb8f
 url = "https://github.com/boyter/scc/releases/download/v4.1.0/scc_Windows_x86_64.zip"
 url_api = "https://api.github.com/repos/boyter/scc/releases/assets/549478880"
 
-[[tools.ast-grep]]
-version = "0.45.3"
-backend = "aqua:ast-grep/ast-grep"
-specifiers = ["latest"]
-
-[tools.ast-grep."platforms.linux-arm64"]
-checksum = "sha256:b39cfbc58da4b869a88b8a4bc57bd5deb0d24541e704cf7c257da7b53ec81c8f"
-url = "https://github.com/ast-grep/ast-grep/releases/download/0.45.3/app-aarch64-unknown-linux-gnu.zip"
-url_api = "https://api.github.com/repos/ast-grep/ast-grep/releases/assets/537333400"
-
-[tools.ast-grep."platforms.linux-x64"]
-checksum = "sha256:f8ac830881339d1edee6b2652f54798c0f4da5a827f2db38a08ee31117783ce8"
-url = "https://github.com/ast-grep/ast-grep/releases/download/0.45.3/app-x86_64-unknown-linux-gnu.zip"
-url_api = "https://api.github.com/repos/ast-grep/ast-grep/releases/assets/537332692"
-
-[tools.ast-grep."platforms.macos-arm64"]
-checksum = "sha256:6d2279dea5bea2ad79c66ea93f5fe54ba926e398a8a26de76c56db68fe59eac6"
-url = "https://github.com/ast-grep/ast-grep/releases/download/0.45.3/app-aarch64-apple-darwin.zip"
-url_api = "https://api.github.com/repos/ast-grep/ast-grep/releases/assets/537332514"
-
-[tools.ast-grep."platforms.macos-x64"]
-checksum = "sha256:b2ffd26f42810340326a9e8a084bdc3647a8795c1a3f21fc06bd7bef3c7c5b2c"
-url = "https://github.com/ast-grep/ast-grep/releases/download/0.45.3/app-x86_64-apple-darwin.zip"
-url_api = "https://api.github.com/repos/ast-grep/ast-grep/releases/assets/537333391"
-
-[tools.ast-grep."platforms.windows-x64"]
-checksum = "sha256:3751b7d6be7fd39a80df1180ffe7e053903dcf92d3190e5a8336ff1746af9059"
-url = "https://github.com/ast-grep/ast-grep/releases/download/0.45.3/app-x86_64-pc-windows-msvc.zip"
-url_api = "https://api.github.com/repos/ast-grep/ast-grep/releases/assets/537334241"
-
 [[tools.direnv]]
 version = "2.37.1"
 backend = "aqua:direnv/direnv"
 specifiers = ["latest"]
 
 [tools.direnv."platforms.linux-arm64"]
-checksum = "sha256:2a9cef8d73521d6a3ec3f2871c4b747b8c4cc038628c1b57a7efa42b393a2d82"
-url = "https://github.com/direnv/direnv/releases/download/v2.37.1/direnv.linux-arm64"
-url_api = "https://api.github.com/repos/direnv/direnv/releases/assets/274610549"
-
-[tools.direnv."platforms.linux-arm64-musl"]
 checksum = "sha256:2a9cef8d73521d6a3ec3f2871c4b747b8c4cc038628c1b57a7efa42b393a2d82"
 url = "https://github.com/direnv/direnv/releases/download/v2.37.1/direnv.linux-arm64"
 url_api = "https://api.github.com/repos/direnv/direnv/releases/assets/274610549"
@@ -181,75 +129,44 @@ url = "https://github.com/direnv/direnv/releases/download/v2.37.1/direnv.windows
 url_api = "https://api.github.com/repos/direnv/direnv/releases/assets/274610569"
 
 [[tools."github:kucherenko/jscpd"]]
-version = "5.3.2"
+version = "5.3.3"
 backend = "github:kucherenko/jscpd"
-specifiers = ["latest"]
+specifiers = ["5.3.3"]
 
-[tools."github:kucherenko/jscpd".options]
-asset_pattern = "jscpd-linux-x64-gnu.tar.gz"
+[tools."github:kucherenko/jscpd"."platforms.linux-arm64"]
+checksum = "sha256:e195c02b27ff01ad6debe0a0e4cdbec0cb0f250022c77b7c88119d020ab7c1f4"
+url = "https://github.com/kucherenko/jscpd/releases/download/v5.3.3/jscpd-linux-arm64-gnu.tar.gz"
+url_api = "https://api.github.com/repos/kucherenko/jscpd/releases/assets/595512986"
+provenance = "github-attestations"
 
 [tools."github:kucherenko/jscpd"."platforms.linux-x64"]
-checksum = "sha256:97259f222ea7f6d51a0f2faa98ed5889430233e0fb8d2c129f23d84aff4b93b2"
-url = "https://github.com/kucherenko/jscpd/releases/download/v5.3.2/jscpd-linux-x64-gnu.tar.gz"
-url_api = "https://api.github.com/repos/kucherenko/jscpd/releases/assets/583634214"
+checksum = "sha256:0a1f298a7e010d439be0b21fb8271cf92fca10f9b10fa8eb111320f3d129b62c"
+url = "https://github.com/kucherenko/jscpd/releases/download/v5.3.3/jscpd-linux-x64-gnu.tar.gz"
+url_api = "https://api.github.com/repos/kucherenko/jscpd/releases/assets/595512981"
 provenance = "github-attestations"
 
 [tools."github:kucherenko/jscpd"."platforms.linux-x64-musl"]
-checksum = "sha256:97259f222ea7f6d51a0f2faa98ed5889430233e0fb8d2c129f23d84aff4b93b2"
-url = "https://github.com/kucherenko/jscpd/releases/download/v5.3.2/jscpd-linux-x64-gnu.tar.gz"
-url_api = "https://api.github.com/repos/kucherenko/jscpd/releases/assets/583634214"
+checksum = "sha256:60e4d5517392541551d826ed1b98e96f10d056f1258907d07b8172fac53f1d1c"
+url = "https://github.com/kucherenko/jscpd/releases/download/v5.3.3/jscpd-linux-x64-musl.tar.gz"
+url_api = "https://api.github.com/repos/kucherenko/jscpd/releases/assets/595513018"
 provenance = "github-attestations"
-
-[[tools."github:kucherenko/jscpd"]]
-version = "5.3.2"
-backend = "github:kucherenko/jscpd"
-
-[tools."github:kucherenko/jscpd".options]
-asset_pattern = "jscpd-darwin-arm64.tar.gz"
 
 [tools."github:kucherenko/jscpd"."platforms.macos-arm64"]
-checksum = "sha256:c629e1d2c7a6c41230a0f3bdd72d5ee69996013527a19eabbb5f0e845249dfbc"
-url = "https://github.com/kucherenko/jscpd/releases/download/v5.3.2/jscpd-darwin-arm64.tar.gz"
-url_api = "https://api.github.com/repos/kucherenko/jscpd/releases/assets/583634218"
+checksum = "sha256:a90634a456876a8985abd4c4e6674355f4d76f2166fec10d0f295ee5e17c5d6c"
+url = "https://github.com/kucherenko/jscpd/releases/download/v5.3.3/jscpd-darwin-arm64.tar.gz"
+url_api = "https://api.github.com/repos/kucherenko/jscpd/releases/assets/595512987"
 provenance = "github-attestations"
-
-[[tools."github:kucherenko/jscpd"]]
-version = "5.3.2"
-backend = "github:kucherenko/jscpd"
-
-[tools."github:kucherenko/jscpd".options]
-asset_pattern = "jscpd-windows-x64-msvc.tar.gz"
-
-[tools."github:kucherenko/jscpd"."platforms.windows-x64"]
-checksum = "sha256:165778418ef43d754d42ec014bb56f609b167655449ad17ed00f9ed05cee2441"
-url = "https://github.com/kucherenko/jscpd/releases/download/v5.3.2/jscpd-windows-x64-msvc.tar.gz"
-url_api = "https://api.github.com/repos/kucherenko/jscpd/releases/assets/583634243"
-provenance = "github-attestations"
-
-[[tools."github:kucherenko/jscpd"]]
-version = "5.3.2"
-backend = "github:kucherenko/jscpd"
-
-[tools."github:kucherenko/jscpd".options]
-asset_pattern = "jscpd-linux-arm64-gnu.tar.gz"
-
-[tools."github:kucherenko/jscpd"."platforms.linux-arm64"]
-checksum = "sha256:ddf336de86eb7e26632062a01e751417f6579b4422e9156aa3836fdab1d0265d"
-url = "https://github.com/kucherenko/jscpd/releases/download/v5.3.2/jscpd-linux-arm64-gnu.tar.gz"
-url_api = "https://api.github.com/repos/kucherenko/jscpd/releases/assets/583634217"
-provenance = "github-attestations"
-
-[[tools."github:kucherenko/jscpd"]]
-version = "5.3.2"
-backend = "github:kucherenko/jscpd"
-
-[tools."github:kucherenko/jscpd".options]
-asset_pattern = "jscpd-darwin-x64.tar.gz"
 
 [tools."github:kucherenko/jscpd"."platforms.macos-x64"]
-checksum = "sha256:435ae3f0c4d6256ac84199494c45c31fc04ba1165358151c2c1a1b036f1c523d"
-url = "https://github.com/kucherenko/jscpd/releases/download/v5.3.2/jscpd-darwin-x64.tar.gz"
-url_api = "https://api.github.com/repos/kucherenko/jscpd/releases/assets/583634215"
+checksum = "sha256:d107a9c8fddfd718bfc4d98252d1123ea70ee942b7d0ae3324968de7df53e5b9"
+url = "https://github.com/kucherenko/jscpd/releases/download/v5.3.3/jscpd-darwin-x64.tar.gz"
+url_api = "https://api.github.com/repos/kucherenko/jscpd/releases/assets/595512991"
+provenance = "github-attestations"
+
+[tools."github:kucherenko/jscpd"."platforms.windows-x64"]
+checksum = "sha256:75152cab799db1b894b4c8ba57934291d90174459f2db394bd1243a389c78071"
+url = "https://github.com/kucherenko/jscpd/releases/download/v5.3.3/jscpd-windows-x64-msvc.tar.gz"
+url_api = "https://api.github.com/repos/kucherenko/jscpd/releases/assets/595513031"
 provenance = "github-attestations"
 
 [[tools."github:microsoft/waza"]]
@@ -261,11 +178,6 @@ specifiers = ["latest"]
 version_prefix = "v"
 
 [tools."github:microsoft/waza"."platforms.linux-arm64"]
-checksum = "sha256:142ea836bbc8324154f52d3278cb7c9a9fa4e1be7480b44d3841309b56f7b039"
-url = "https://github.com/microsoft/waza/releases/download/v0.38.7/waza-linux-arm64"
-url_api = "https://api.github.com/repos/microsoft/waza/releases/assets/520984886"
-
-[tools."github:microsoft/waza"."platforms.linux-arm64-musl"]
 checksum = "sha256:142ea836bbc8324154f52d3278cb7c9a9fa4e1be7480b44d3841309b56f7b039"
 url = "https://github.com/microsoft/waza/releases/download/v0.38.7/waza-linux-arm64"
 url_api = "https://api.github.com/repos/microsoft/waza/releases/assets/520984886"
@@ -296,44 +208,45 @@ url = "https://github.com/microsoft/waza/releases/download/v0.38.7/waza-windows-
 url_api = "https://api.github.com/repos/microsoft/waza/releases/assets/520984898"
 
 [[tools."github:qltysh/qlty"]]
-version = "0.642.0"
+version = "0.648.0"
 backend = "github:qltysh/qlty"
-specifiers = ["0.642.0"]
+specifiers = ["latest"]
 
 [tools."github:qltysh/qlty"."platforms.linux-arm64"]
-checksum = "sha256:700a86c930d64860baba2cb168a2a9778e4dc8e38dc941faf9d4d8b88d57da1d"
-url = "https://github.com/qltysh/qlty/releases/download/v0.642.0/qlty-aarch64-unknown-linux-gnu.tar.xz"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/514936221"
-
-[tools."github:qltysh/qlty"."platforms.linux-arm64-musl"]
-checksum = "sha256:752c6f1faf22da236666e7e2fd661aaaf276ae3431c118382fb9a7f838a686c4"
-url = "https://github.com/qltysh/qlty/releases/download/v0.642.0/qlty-aarch64-unknown-linux-musl.tar.xz"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/514936250"
+checksum = "sha256:b71d10222979a502e083ca9ea1d3b9c86bcfbd65b8f619199fa1596ff95c629b"
+url = "https://github.com/qltysh/qlty/releases/download/v0.648.0/qlty-aarch64-unknown-linux-gnu.tar.xz"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/589237548"
+provenance = "github-attestations"
 
 [tools."github:qltysh/qlty"."platforms.linux-x64"]
-checksum = "sha256:05e665112fdf8a3d7cdcf4879f6c7d989a6cacd5c527b1890ba68e9c2c5c1d2e"
-url = "https://github.com/qltysh/qlty/releases/download/v0.642.0/qlty-x86_64-unknown-linux-gnu.tar.xz"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/514936271"
+checksum = "sha256:a297380d79bec2225f315fa45a05721faf9566a198306fa98ffd828a2afa2491"
+url = "https://github.com/qltysh/qlty/releases/download/v0.648.0/qlty-x86_64-unknown-linux-gnu.tar.xz"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/589237606"
+provenance = "github-attestations"
 
 [tools."github:qltysh/qlty"."platforms.linux-x64-musl"]
-checksum = "sha256:55bca32d6ee8ae5e31d8e12696203fa24b106704a176e0e80655ec93abb25477"
-url = "https://github.com/qltysh/qlty/releases/download/v0.642.0/qlty-x86_64-unknown-linux-musl.tar.xz"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/514936274"
+checksum = "sha256:e5002df34f68495051970ad209b6ec34ceb68874e0a8c77ad0ac5752682cf284"
+url = "https://github.com/qltysh/qlty/releases/download/v0.648.0/qlty-x86_64-unknown-linux-musl.tar.xz"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/589237613"
+provenance = "github-attestations"
 
 [tools."github:qltysh/qlty"."platforms.macos-arm64"]
-checksum = "sha256:b884e1dd05fac9a225130f9df5339ed4c0209d20f4947e58efa1f0e60a8094eb"
-url = "https://github.com/qltysh/qlty/releases/download/v0.642.0/qlty-aarch64-apple-darwin.tar.xz"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/514936220"
+checksum = "sha256:7e595fe3a9cf1c68df992a3a9c9bc9ab2406cbe5b25b30ce936e0d189660e823"
+url = "https://github.com/qltysh/qlty/releases/download/v0.648.0/qlty-aarch64-apple-darwin.tar.xz"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/589237552"
+provenance = "github-attestations"
 
 [tools."github:qltysh/qlty"."platforms.macos-x64"]
-checksum = "sha256:206a916d11b5437a778a3da83686487a75f15c89bf8db371605c407ecf975838"
-url = "https://github.com/qltysh/qlty/releases/download/v0.642.0/qlty-x86_64-apple-darwin.tar.xz"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/514936261"
+checksum = "sha256:3b39eba6f90173f1e5d9fc04d05a01436481d3c49a0a7a327e308f0bc5cd142a"
+url = "https://github.com/qltysh/qlty/releases/download/v0.648.0/qlty-x86_64-apple-darwin.tar.xz"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/589237569"
+provenance = "github-attestations"
 
 [tools."github:qltysh/qlty"."platforms.windows-x64"]
-checksum = "sha256:ab80a508bd19447887931865ef78bbe58f044a78e8920a2d26b85d0c4ce185b1"
-url = "https://github.com/qltysh/qlty/releases/download/v0.642.0/qlty-x86_64-pc-windows-msvc.zip"
-url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/514936269"
+checksum = "sha256:82cf57688294976af2a92bb0d3ebbaed2aa7441a942efa67a78395feddde73d9"
+url = "https://github.com/qltysh/qlty/releases/download/v0.648.0/qlty-x86_64-pc-windows-msvc.zip"
+url_api = "https://api.github.com/repos/qltysh/qlty/releases/assets/589237584"
+provenance = "github-attestations"
 
 [[tools.gitleaks]]
 version = "8.30.1"
@@ -341,11 +254,6 @@ backend = "aqua:gitleaks/gitleaks"
 specifiers = ["latest"]
 
 [tools.gitleaks."platforms.linux-arm64"]
-checksum = "sha256:e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62570fb4b080"
-url = "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/gitleaks/gitleaks/releases/assets/378332057"
-
-[tools.gitleaks."platforms.linux-arm64-musl"]
 checksum = "sha256:e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62570fb4b080"
 url = "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_arm64.tar.gz"
 url_api = "https://api.github.com/repos/gitleaks/gitleaks/releases/assets/378332057"
@@ -384,10 +292,6 @@ specifiers = ["latest"]
 checksum = "sha256:3450b45a3f9ee8568792736a5c5e70a1f2e9b36c35a8f74958c03e51d7d92bec"
 url = "https://dl.google.com/go/go1.27.1.linux-arm64.tar.gz"
 
-[tools.go."platforms.linux-arm64-musl"]
-checksum = "sha256:3450b45a3f9ee8568792736a5c5e70a1f2e9b36c35a8f74958c03e51d7d92bec"
-url = "https://dl.google.com/go/go1.27.1.linux-arm64.tar.gz"
-
 [tools.go."platforms.linux-x64"]
 checksum = "sha256:63d339f0da5ab53635a56f2490a7984dfe12dfcff22ad749f63edaf590168445"
 url = "https://dl.google.com/go/go1.27.1.linux-amd64.tar.gz"
@@ -417,10 +321,6 @@ specifiers = ["latest"]
 checksum = "sha256:31c5794dd55c66a51e6b7d2e2ac7a114ae8b1de41ff1d9ba51748ac973b06a08"
 url = "https://get.helm.sh/helm-v4.3.0-linux-arm64.tar.gz"
 
-[tools.helm."platforms.linux-arm64-musl"]
-checksum = "sha256:31c5794dd55c66a51e6b7d2e2ac7a114ae8b1de41ff1d9ba51748ac973b06a08"
-url = "https://get.helm.sh/helm-v4.3.0-linux-arm64.tar.gz"
-
 [tools.helm."platforms.linux-x64"]
 checksum = "sha256:86584a54def73570558f66f5111cc53dfed56689637ae32c1201205d494f54fb"
 url = "https://get.helm.sh/helm-v4.3.0-linux-amd64.tar.gz"
@@ -447,11 +347,6 @@ backend = "aqua:kubernetes-sigs/kind"
 specifiers = ["latest"]
 
 [tools.kind."platforms.linux-arm64"]
-checksum = "sha256:20022bee6cfcd5086cb7234d218e3454e6090022f2a8f55d1fa7fcf42c3867a2"
-url = "https://github.com/kubernetes-sigs/kind/releases/download/v0.33.0/kind-linux-arm64"
-url_api = "https://api.github.com/repos/kubernetes-sigs/kind/releases/assets/531396478"
-
-[tools.kind."platforms.linux-arm64-musl"]
 checksum = "sha256:20022bee6cfcd5086cb7234d218e3454e6090022f2a8f55d1fa7fcf42c3867a2"
 url = "https://github.com/kubernetes-sigs/kind/releases/download/v0.33.0/kind-linux-arm64"
 url_api = "https://api.github.com/repos/kubernetes-sigs/kind/releases/assets/531396478"
@@ -491,11 +386,6 @@ checksum = "sha256:1f53fc8e81258197a35e8603054162a5af1de8c5af13746c71ab680d9534e
 url = "https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-arm64.tar.gz"
 url_api = "https://api.github.com/repos/yannh/kubeconform/releases/assets/438612685"
 
-[tools.kubeconform."platforms.linux-arm64-musl"]
-checksum = "sha256:1f53fc8e81258197a35e8603054162a5af1de8c5af13746c71ab680d9534ed87"
-url = "https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-arm64.tar.gz"
-url_api = "https://api.github.com/repos/yannh/kubeconform/releases/assets/438612685"
-
 [tools.kubeconform."platforms.linux-x64"]
 checksum = "sha256:9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883"
 url = "https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz"
@@ -527,10 +417,6 @@ backend = "aqua:kubernetes/kubernetes/kubectl"
 specifiers = ["latest"]
 
 [tools.kubectl."platforms.linux-arm64"]
-checksum = "sha256:ff749f4b78d9c4f1ec87307df9b50119ed819e2094aa9810cb9acffc3286c8c7"
-url = "https://dl.k8s.io/v1.37.1/bin/linux/arm64/kubectl"
-
-[tools.kubectl."platforms.linux-arm64-musl"]
 checksum = "sha256:ff749f4b78d9c4f1ec87307df9b50119ed819e2094aa9810cb9acffc3286c8c7"
 url = "https://dl.k8s.io/v1.37.1/bin/linux/arm64/kubectl"
 
@@ -566,36 +452,27 @@ channel = "conda-forge"
 checksum = "sha256:b008fb8ba5c93478dacf36d60eed1b2de341d69773c3f73621d2a9e56f834d9d"
 url = "https://conda.anaconda.org/conda-forge/linux-aarch64/make-4.4.1-he30d5cf_3.conda"
 conda_deps = [
-    "libgcc-16.2.0-h205dda4_6",
+    "libgcc-16.2.0-h205dda4_7",
     "_openmp_mutex-4.5-20_gnu",
-    "libgomp-16.2.0-h8acb6b2_6",
-]
-
-[tools.make."platforms.linux-arm64-musl"]
-checksum = "sha256:b008fb8ba5c93478dacf36d60eed1b2de341d69773c3f73621d2a9e56f834d9d"
-url = "https://conda.anaconda.org/conda-forge/linux-aarch64/make-4.4.1-he30d5cf_3.conda"
-conda_deps = [
-    "libgcc-16.2.0-h205dda4_6",
-    "_openmp_mutex-4.5-20_gnu",
-    "libgomp-16.2.0-h8acb6b2_6",
+    "libgomp-16.2.0-h8acb6b2_7",
 ]
 
 [tools.make."platforms.linux-x64"]
 checksum = "sha256:4c65d2769847778a6d84db6984ac81bcec6f8958d349f1fe57ae040ccc56a801"
 url = "https://conda.anaconda.org/conda-forge/linux-64/make-4.4.1-hb03c661_3.conda"
 conda_deps = [
-    "libgcc-16.2.0-ha9f2e26_6",
+    "libgcc-16.2.0-ha9f2e26_7",
     "_openmp_mutex-4.5-20_gnu",
-    "libgomp-16.2.0-he0feb66_6",
+    "libgomp-16.2.0-he0feb66_7",
 ]
 
 [tools.make."platforms.linux-x64-musl"]
 checksum = "sha256:4c65d2769847778a6d84db6984ac81bcec6f8958d349f1fe57ae040ccc56a801"
 url = "https://conda.anaconda.org/conda-forge/linux-64/make-4.4.1-hb03c661_3.conda"
 conda_deps = [
-    "libgcc-16.2.0-ha9f2e26_6",
+    "libgcc-16.2.0-ha9f2e26_7",
     "_openmp_mutex-4.5-20_gnu",
-    "libgomp-16.2.0-he0feb66_6",
+    "libgomp-16.2.0-he0feb66_7",
 ]
 
 [tools.make."platforms.macos-arm64"]
@@ -612,11 +489,11 @@ conda_deps = []
 checksum = "sha256:8b1a30f3e6442ed4c161e7aabab396ce35c61a3c235ece53edf2a78c95d18fed"
 url = "https://conda.anaconda.org/conda-forge/win-64/make-4.4.1-hba3369d_3.conda"
 conda_deps = [
-    "libgcc-16.2.0-h110b43a_6",
+    "libgcc-16.2.0-h110b43a_7",
     "libwinpthread-12.0.0.r4.gg4f2fc60ca-h57928b3_10",
     "ucrt-10.0.26100.0-h57928b3_0",
     "_openmp_mutex-4.5-20_gnu",
-    "libgomp-16.2.0-h8ee18e1_6",
+    "libgomp-16.2.0-h8ee18e1_7",
 ]
 
 [[tools.node]]
@@ -627,10 +504,6 @@ specifiers = ["latest"]
 [tools.node."platforms.linux-arm64"]
 checksum = "sha256:423a41bff8e2a2fa15e702fefe2919ef95823b2378744daccb8439302534b44f"
 url = "https://nodejs.org/dist/v26.10.0/node-v26.10.0-linux-arm64.tar.gz"
-
-[tools.node."platforms.linux-arm64-musl"]
-checksum = "sha256:d26027bff3197050d2a2b0bfa151b18e8378ed81affa2bf5093804db158979b6"
-url = "https://unofficial-builds.nodejs.org/download/release/v26.10.0/node-v26.10.0-linux-arm64-musl.tar.gz"
 
 [tools.node."platforms.linux-x64"]
 checksum = "sha256:cb5c9ce9c80d7b8821e3a258543c71b939138cf17c74d5cc44bbe85d6dbc5ad8"
@@ -652,6 +525,15 @@ url = "https://nodejs.org/dist/v26.10.0/node-v26.10.0-darwin-x64.tar.gz"
 checksum = "sha256:9fef7eca6743a6b910989cd8e78712376b394fcb9b6e1e9c44a0799a287f90c5"
 url = "https://nodejs.org/dist/v26.10.0/node-v26.10.0-win-x64.zip"
 
+[[tools."npm:@ast-grep/cli"]]
+version = "0.45.3"
+aube = { path = ".mise/locks/npm-ast-grep-cli/0.45.3~7a027ead", digest = "sha256:e59172c3ac91ac960cc8cae85e3f4106f868ad3010777268d01e944064bad306" }
+backend = "npm:@ast-grep/cli"
+specifiers = ["latest"]
+
+[tools."npm:@ast-grep/cli".options]
+allow_builds = '["@ast-grep/cli"]'
+
 [[tools."npm:prettier"]]
 version = "3.5.3"
 aube = { path = ".mise/locks/npm-prettier/3.5.3", digest = "sha256:6d0a982291c7b0df742d82eeb58af64bc255d35cfc9238567e0438e647363113" }
@@ -664,38 +546,33 @@ backend = "core:python"
 specifiers = ["3.13"]
 
 [tools.python."platforms.linux-arm64"]
-checksum = "sha256:5ad58156cbec94e5643c13caa792e92df72a23f33d3a6425d4cbff5c4b7a040c"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260924/cpython-3.13.15+20260924-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz"
-provenance = "github-attestations"
-
-[tools.python."platforms.linux-arm64-musl"]
-checksum = "sha256:e919f032be1fbcd7cac8c591f89df461f21749ca6c9c7cee78fbd0909af4cc64"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260924/cpython-3.13.15+20260924-aarch64-unknown-linux-musl-install_only_stripped.tar.gz"
+checksum = "sha256:3807936bef22d3e347454df4f8774c786f98c7caa5e7328425e7b40766a9cff8"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260929/cpython-3.13.15+20260929-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.linux-x64"]
-checksum = "sha256:d0b640eed27fbdd6f5f2bd33444aee53df2c8863f8b2a96f4094717411e3de9c"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260924/cpython-3.13.15+20260924-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
+checksum = "sha256:c552deaf9ed0e678dee4ccc760d6dcd7cab33f1bd43e8037123b4a4db8508e14"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260929/cpython-3.13.15+20260929-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.linux-x64-musl"]
-checksum = "sha256:94c39f6249241858871b9fe9cae8b506076ed8291860b1334210a76c13ac2b65"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260924/cpython-3.13.15+20260924-x86_64-unknown-linux-musl-install_only_stripped.tar.gz"
+checksum = "sha256:aa99d72003c65d2e9d4281152fac51afb78c8aba063004713c5d5ecc19f55d9c"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260929/cpython-3.13.15+20260929-x86_64-unknown-linux-musl-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.macos-arm64"]
-checksum = "sha256:064afb7c2fc0bbf511d886288adf98696af5105e36c138cdf2c199c0146fcf68"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260924/cpython-3.13.15+20260924-aarch64-apple-darwin-install_only_stripped.tar.gz"
+checksum = "sha256:d66c67f16148c7454b1509c32747175f7669c8b8e105b97b92a0000d66af6e6e"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260929/cpython-3.13.15+20260929-aarch64-apple-darwin-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.macos-x64"]
-checksum = "sha256:327814efd865a0b6a99c149b12a261e9d0ad409183515c745d41bda2d07282e9"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260924/cpython-3.13.15+20260924-x86_64-apple-darwin-install_only_stripped.tar.gz"
+checksum = "sha256:73b503a2d3f47f0601265d7936744b77dc4ee75d2a3e88a470594a014dcf6822"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260929/cpython-3.13.15+20260929-x86_64-apple-darwin-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.windows-x64"]
-checksum = "sha256:e42fa944748a50e9ff481cbb817ef8a6e3da6fbcf0cf6f29b554e1acb8c7384d"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260924/cpython-3.13.15+20260924-x86_64-pc-windows-msvc-install_only_stripped.tar.gz"
+checksum = "sha256:d11d0d4b4fefa5df09e925dbd37600457f5488a9712a82f3f0dd1ff9431c2ccf"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260929/cpython-3.13.15+20260929-x86_64-pc-windows-msvc-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [[tools.taplo]]
@@ -704,10 +581,6 @@ backend = "aqua:tamasfe/taplo"
 specifiers = ["latest"]
 
 [tools.taplo."platforms.linux-arm64"]
-url = "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-linux-aarch64.gz"
-url_api = "https://api.github.com/repos/tamasfe/taplo/releases/assets/257322597"
-
-[tools.taplo."platforms.linux-arm64-musl"]
 url = "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-linux-aarch64.gz"
 url_api = "https://api.github.com/repos/tamasfe/taplo/releases/assets/257322597"
 
@@ -732,48 +605,42 @@ url = "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-windows-x
 url_api = "https://api.github.com/repos/tamasfe/taplo/releases/assets/257323062"
 
 [[tools.uv]]
-version = "0.12.18"
+version = "0.12.19"
 backend = "aqua:astral-sh/uv"
 specifiers = ["latest"]
 
 [tools.uv."platforms.linux-arm64"]
-checksum = "sha256:afb6291f3f0a6b4521fc67b947822506c41dde5b60d2189dd8f3695b2ac8c9e7"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.18/uv-aarch64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/582430569"
-provenance = "github-attestations"
-
-[tools.uv."platforms.linux-arm64-musl"]
-checksum = "sha256:0796973fb3eea8095078c3d0659bd17a5f6789a71b8dd85caff2483178f78ac3"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.18/uv-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/582430577"
+checksum = "sha256:0804e9b164c64b6914182d5920c08551958a095986f10a3731056df701126436"
+url = "https://github.com/astral-sh/uv/releases/download/0.12.19/uv-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/587158851"
 provenance = "github-attestations"
 
 [tools.uv."platforms.linux-x64"]
-checksum = "sha256:89eadd7c76fc063887959510d5ba0ab1264dfd5f1143b925ddb73021a40acf16"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.18/uv-x86_64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/582430671"
+checksum = "sha256:23bf5552d220e0842b65c862097b2ebaeba0064b74eda5e565e77fd25969d8c8"
+url = "https://github.com/astral-sh/uv/releases/download/0.12.19/uv-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/587159011"
 provenance = "github-attestations"
 
 [tools.uv."platforms.linux-x64-musl"]
-checksum = "sha256:e38d97460b98ebfd31b197de0fe9fa578add4bc8ba0179b203dd3f87b99f98e6"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.18/uv-x86_64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/582430675"
+checksum = "sha256:db7278c9f57981338fddff1fb250e11964bc0a4fafcb9eed8303fdb117dc067b"
+url = "https://github.com/astral-sh/uv/releases/download/0.12.19/uv-x86_64-unknown-linux-musl.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/587159021"
 provenance = "github-attestations"
 
 [tools.uv."platforms.macos-arm64"]
-checksum = "sha256:cf40e0c6a202190ccd9e0406dcfdd5b2d6668a9a5c779b17948963df32aafe5b"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.18/uv-aarch64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/582430554"
+checksum = "sha256:a9a8df1eedeb192f2e47e40e2faabfb387db4b850209118786d42f89dde3e0ba"
+url = "https://github.com/astral-sh/uv/releases/download/0.12.19/uv-aarch64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/587158826"
 provenance = "github-attestations"
 
 [tools.uv."platforms.macos-x64"]
-checksum = "sha256:2e4108f5395397c8bc5d43bf83d3bdbb2d0e92b90d0efa607756be704905fa33"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.18/uv-x86_64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/582430660"
+checksum = "sha256:cb5fa57bafe68fc0fb94b17f06bee0b0b9a7feb94ccbd110445afa0696e39273"
+url = "https://github.com/astral-sh/uv/releases/download/0.12.19/uv-x86_64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/587158992"
 provenance = "github-attestations"
 
 [tools.uv."platforms.windows-x64"]
-checksum = "sha256:cae6a3bc25239f83dffb467a4b180508d9da23986c04639ebfa44e43e6a84bff"
-url = "https://github.com/astral-sh/uv/releases/download/0.12.18/uv-x86_64-pc-windows-msvc.zip"
-url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/582430665"
+checksum = "sha256:6dbb02d79e419522f1c500f0adb1cddcff0cda7d59b0d66ea7f5e3b4a1b2f5f0"
+url = "https://github.com/astral-sh/uv/releases/download/0.12.19/uv-x86_64-pc-windows-msvc.zip"
+url_api = "https://api.github.com/repos/astral-sh/uv/releases/assets/587159002"
 provenance = "github-attestations"

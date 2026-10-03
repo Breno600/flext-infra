@@ -1,4 +1,8 @@
-"""Project-owned managed-artifact configuration models."""
+"""Project-owned managed-artifact configuration models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,42 +12,30 @@ from typing import Annotated
 from flext_cli import m
 
 from flext_infra import t
-
-from .deps_tool_config_project_gitignore import (
+from flext_infra._models.deps_tool_config_project_gitignore import (
     FlextInfraModelsDepsToolConfigProjectGitignore,
 )
-from .deps_tool_config_project_mise import FlextInfraModelsDepsToolConfigProjectMise
-from .deps_tool_config_project_ruff import FlextInfraModelsDepsToolConfigProjectRuff
+from flext_infra._models.deps_tool_config_project_mise import (
+    FlextInfraModelsDepsToolConfigProjectMise,
+)
 
 
 class FlextInfraModelsDepsToolConfigProjectArtifacts(
-    FlextInfraModelsDepsToolConfigProjectGitignore
+    FlextInfraModelsDepsToolConfigProjectGitignore,
 ):
     """Managed-artifact models composed from project-owned slices."""
 
     class ProjectManagedArtifactsConfig(m.ArbitraryTypesModel):
         """Project-owned configuration for generated artifacts."""
 
-        Ruff: Annotated[
-            FlextInfraModelsDepsToolConfigProjectRuff.ProjectRuffConfig,
-            m.Field(description="Ruff additions owned by the current project."),
-        ] = m.Field(
-            default_factory=FlextInfraModelsDepsToolConfigProjectRuff.ProjectRuffConfig
-        )
         Mise: Annotated[
             FlextInfraModelsDepsToolConfigProjectMise.ProjectMiseConfig,
             m.Field(description="Mise additions owned by the current project."),
-        ] = m.Field(
-            default_factory=FlextInfraModelsDepsToolConfigProjectMise.ProjectMiseConfig
-        )
+        ]
         Gitignore: Annotated[
             FlextInfraModelsDepsToolConfigProjectGitignore.ProjectGitignoreConfig,
             m.Field(description="Ignore patterns owned by the current project."),
-        ] = m.Field(
-            default_factory=(
-                FlextInfraModelsDepsToolConfigProjectGitignore.ProjectGitignoreConfig
-            )
-        )
+        ]
 
     class ProjectManagedArtifactsResolution(m.ArbitraryTypesModel):
         """Composed project configuration plus selector provenance."""

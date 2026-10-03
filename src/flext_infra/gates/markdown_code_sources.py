@@ -1,9 +1,13 @@
-"""Embedded-Python source extraction for the ``markdown-code`` gate.
+"""Embedded-Python source collection for the ``markdown-code`` gate.
 
 Fenced ``python``` blocks on the governed markdown surface and doctest
-examples inside tracked docstrings are extracted once into a temporary source
-tree, so ruff validates and formats them in single invocations. Every
-temporary file maps back through the returned origin dictionary.
+examples inside tracked docstrings are collected once as named sources, each
+mapped back to its documentation origin. The gate writes them into one
+temporary tree so ruff validates and formats them in single invocations, and
+selects itself only for a project whose content yields at least one source.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -11,106 +15,126 @@ from __future__ import annotations
 import ast
 from doctest import DocTestParser
 from pathlib import Path
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING
 
 from flext_infra import c, u
 
 if TYPE_CHECKING:
     from flext_infra import t
 
-TEST_SKIP_MARKER: Final[str] = "notest"
-"Existing fence marker (pytest-markdown-docs) opting a block out of code validation."
 
+class FlextInfraMarkdownCodeSources:
+    """Collect embedded Python from documentation as named, located sources."""
 
-def source_name(relative_posix: str, index: int) -> str:
-    """Encode one block's documentation location into a temp source filename."""
-    return c.Infra.MARKDOWN_CODE_SOURCE_FORMAT.format(
-        relative_posix.replace("/", "__").replace(".", "_"), index
-    )
+    @staticmethod
+    def syntax_broken(code: str, origin: Path) -> bool:
+        """Identify documentation fragments owned by the Markdown syntax validator.
 
+        Returns:
+            The resulting ``bool``.
 
-def write_fenced_block_sources(
-    project_dir: Path, markdown_files: t.SequenceOf[Path], target_dir: Path
-) -> dict[str, t.Pair[str, int]]:
-    """Write one temp source per parseable fenced ``python`` block.
-
-    Blocks carrying the ``notest`` fence marker are skipped (opted out of
-    code validation by declaration), and so are blocks that do not compile:
-    documentation fragments are legitimate prose, and their syntax findings
-    belong to the flext-tests markdown validator (MD-001 with approved
-    exceptions), never to this formatting gate.
-    """
-    origin_by_source: dict[str, t.Pair[str, int]] = {}
-    for md_path in markdown_files:
-        relative_posix = md_path.relative_to(project_dir).as_posix()
-        content = md_path.read_text(c.Cli.ENCODING_DEFAULT)
-        for index, match in enumerate(
-            match
-            for match in c.Infra.MARKDOWN_PY_FENCE_RE.finditer(content)
-            if TEST_SKIP_MARKER not in match.group("info")
-        ):
-            source_text = match.group("code")
-            try:
-                compile(source_text, str(md_path), "exec")
-            except SyntaxError:
-                continue
-            name = source_name(relative_posix, index)
-            (target_dir / name).write_text(source_text, c.Cli.ENCODING_DEFAULT)
-            origin_by_source[name] = (
-                relative_posix,
-                content[: match.start()].count("\n") + 1,
-            )
-    return origin_by_source
-
-
-def write_docstring_sources(
-    project_dir: Path, target_dir: Path
-) -> dict[str, t.Pair[str, int]]:
-    """Write one temp source per doctest example found in tracked docstrings.
-
-    Docstring write-back stays outside the fix contract on purpose: a
-    formatter rewrite inside prose is a semantics risk, so docstring findings
-    remain manual repairs. Example line numbers are approximate within the
-    docstring (stdlib ``doctest`` reports positions relative to its input).
-    """
-    origin_by_source: dict[str, t.Pair[str, int]] = {}
-    parser = DocTestParser()
-    for py_path in u.Infra.iter_matching_files(project_dir, includes=["*.py"]):
-        relative_parts = py_path.relative_to(project_dir).parts
-        if any(part in c.Infra.CHECK_EXCLUDED_DIRS for part in relative_parts):
-            continue
+        """
         try:
-            tree = ast.parse(py_path.read_text(c.Cli.ENCODING_DEFAULT))
+            compile(code, str(origin), "exec")
         except SyntaxError:
-            # Source syntax is the ruff lint gate's finding, not this gate's.
-            continue
-        for node in ast.walk(tree):
-            # Only these carry docstrings; ast.walk also yields expression
-            # nodes and ast.get_docstring raises TypeError on those.
-            if not isinstance(
-                node, ast.Module | ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
+            return True
+        return False
+
+    @staticmethod
+    def source_name(relative_posix: str, index: int) -> str:
+        """Encode one block's documentation location into a temp source filename.
+
+        Returns:
+            The resulting ``str``.
+
+        """
+        return c.Infra.MARKDOWN_CODE_SOURCE_FORMAT.format(
+            relative_posix.replace("/", "__").replace(".", "_"),
+            index,
+        )
+
+    @staticmethod
+    def fenced_block_sources(
+        project_dir: Path,
+        markdown_files: t.SequenceOf[Path],
+    ) -> t.VariadicTuple[t.Triple[str, str, t.Pair[str, int]]]:
+        """Collect one named source per parseable fenced ``python`` block.
+
+        Blocks carrying the ``notest`` fence marker and unparseable fragments
+        are excluded. The Markdown validator owns syntax errors; this gate owns
+        only formatting of Python blocks that compile.
+
+        Returns:
+            The resulting ``t.VariadicTuple[t.Triple[str, str, t.Pair[str, int]]]``.
+
+        """
+        collected: list[t.Triple[str, str, t.Pair[str, int]]] = []
+        for md_path in markdown_files:
+            relative_posix = md_path.relative_to(project_dir).as_posix()
+            content = md_path.read_text(c.Cli.ENCODING_DEFAULT)
+            for index, match in enumerate(
+                match
+                for match in c.Infra.MARKDOWN_PY_FENCE_RE.finditer(content)
+                if c.Infra.MARKDOWN_CODE_SKIP_MARKER not in match.group("info")
             ):
-                continue
-            docstring = ast.get_docstring(node, clean=False)
-            if docstring is None or not node.body:
-                continue
-            body_start = node.body[0].lineno
-            relative_posix = py_path.relative_to(project_dir).as_posix()
-            for index, example in enumerate(parser.get_examples(docstring)):
-                source_text = example.source
-                try:
-                    compile(source_text, str(py_path), "exec")
-                except SyntaxError:
+                source_text = match.group("code")
+                if FlextInfraMarkdownCodeSources.syntax_broken(source_text, md_path):
                     continue
-                name = source_name(relative_posix, index)
-                (target_dir / name).write_text(source_text, c.Cli.ENCODING_DEFAULT)
-                origin_by_source[name] = (relative_posix, body_start + example.lineno)
-    return origin_by_source
+                collected.append((
+                    FlextInfraMarkdownCodeSources.source_name(relative_posix, index),
+                    source_text,
+                    (relative_posix, content[: match.start()].count("\n") + 1),
+                ))
+        return tuple(collected)
+
+    @staticmethod
+    def docstring_sources(
+        project_dir: Path,
+    ) -> t.VariadicTuple[t.Triple[str, str, t.Pair[str, int]]]:
+        """Collect one named source per doctest example in tracked docstrings.
+
+        Docstring write-back stays outside the fix contract on purpose: a
+        formatter rewrite inside prose is a semantics risk, so docstring
+        findings remain manual repairs. Example line numbers are approximate
+        within the docstring (stdlib ``doctest`` reports positions relative to
+        its input).
+
+        Returns:
+            The resulting ``t.VariadicTuple[t.Triple[str, str, t.Pair[str, int]]]``.
+
+        """
+        collected: list[t.Triple[str, str, t.Pair[str, int]]] = []
+        parser = DocTestParser()
+        for py_path in u.Infra.iter_matching_files(project_dir, includes=["*.py"]):
+            relative_parts = py_path.relative_to(project_dir).parts
+            if any(part in c.Infra.CHECK_EXCLUDED_DIRS for part in relative_parts):
+                continue
+            tree = ast.parse(py_path.read_text(c.Cli.ENCODING_DEFAULT))
+            for node in ast.walk(tree):
+                # Only these carry docstrings; ast.walk also yields expression
+                # nodes and ast.get_docstring raises TypeError on those.
+                if not isinstance(
+                    node,
+                    ast.Module | ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
+                ):
+                    continue
+                docstring = ast.get_docstring(node, clean=False)
+                if docstring is None or not node.body:
+                    continue
+                body_start = node.body[0].lineno
+                relative_posix = py_path.relative_to(project_dir).as_posix()
+                for index, example in enumerate(parser.get_examples(docstring)):
+                    source_text = example.source
+                    compile(source_text, str(py_path), "exec")
+                    collected.append((
+                        FlextInfraMarkdownCodeSources.source_name(
+                            relative_posix,
+                            index,
+                        ),
+                        source_text,
+                        (relative_posix, body_start + example.lineno),
+                    ))
+        return tuple(collected)
 
 
-__all__: list[str] = [
-    "TEST_SKIP_MARKER",
-    "source_name",
-    "write_docstring_sources",
-    "write_fenced_block_sources",
-]
+__all__: list[str] = ["FlextInfraMarkdownCodeSources"]

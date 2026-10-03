@@ -1,4 +1,8 @@
-"""Fix helpers for docs services."""
+"""Fix helpers for docs services.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,11 +11,10 @@ from typing import TYPE_CHECKING
 
 from flext_cli import u
 
-from flext_infra import c, m, t
-
-from ._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
-from .docs import FlextInfraUtilitiesDocs
-from .docs_contract import FlextInfraUtilitiesDocsContract
+from flext_infra import c, config, m, t
+from flext_infra._utilities._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
+from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
+from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
 
 if TYPE_CHECKING:
     import re
@@ -23,7 +26,12 @@ class FlextInfraUtilitiesDocsFix:
 
     @staticmethod
     def docs_maybe_fix_link(md_file: Path, raw_link: str) -> str | None:
-        """Return a corrected link target when a simple fix is possible."""
+        """Return a corrected link target when a simple fix is possible.
+
+        Returns:
+            A corrected link target when a simple fix is possible.
+
+        """
         if FlextInfraUtilitiesDocs.docs_is_secure_web_url(raw_link):
             return FlextInfraUtilitiesDocsGithubLinks.docs_rewrite_github_url(raw_link)
         result: str | None = None
@@ -44,45 +52,76 @@ class FlextInfraUtilitiesDocsFix:
 
     @staticmethod
     def docs_fix_python_codeblocks(
-        scope: m.Infra.DocScope, *, apply: bool
+        scope: m.Infra.DocScope,
+        *,
+        apply: bool,
     ) -> t.SequenceOf[m.Infra.GeneratedFile]:
         """Auto-fix ``python`` fenced code blocks using ``ruff check --fix``.
 
-        Only fixes issues that ``ruff`` can resolve automatically; blocks that
-        still contain unfixable diagnostics are left untouched so the audit
-        gate reports them.
+        Apply only fixes that ``ruff`` resolves completely. An unfixable
+        diagnostic fails this phase with the original process detail so the
+        authored Markdown can be corrected before publication.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.GeneratedFile]``.
+
         """
         changed: t.MutableSequenceOf[m.Infra.GeneratedFile] = []
         for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
             original = md_file.read_text(
-                encoding=c.Cli.ENCODING_DEFAULT, errors=c.Infra.IGNORE
+                encoding=c.Cli.ENCODING_DEFAULT,
+                errors=c.Infra.IGNORE,
             )
 
             def _replace_fence(
-                match: re.Match[str], source_file: Path = md_file
+                match: re.Match[str],
+                source_file: Path = md_file,
             ) -> str:
                 body = match.group("body")
                 rel = source_file.relative_to(scope.path).as_posix()
-                # flext-o6h5 (agent: kimi) — ruff via running interpreter (venv SSOT);
+                # Ruff via running interpreter (venv SSOT);
                 # bare "ruff" breaks when .venv/bin is not on PATH (CI docs fix).
-                outcome = u.Cli.run_raw(
-                    [
-                        sys.executable,
-                        "-m",
-                        c.Infra.RUFF,
-                        c.Infra.VERB_CHECK,
-                        "--fix",
-                        "--extend-ignore",
-                        ",".join(c.Infra.PYTHON_FENCE_RUFF_EXTEND_IGNORE),
-                        "--stdin-filename",
-                        f"{rel}#block.py",
-                        "-",
-                    ],
+                common = [
+                    sys.executable,
+                    "-m",
+                    c.Infra.RUFF,
+                    c.Infra.VERB_CHECK,
+                    "--extend-ignore",
+                    ",".join(c.Infra.PYTHON_FENCE_RUFF_EXTEND_IGNORE),
+                    "--stdin-filename",
+                    f"{rel}#block.py",
+                    "-",
+                ]
+                fix_outcome = u.Cli.run_raw(
+                    (*common, *config.Infra.codegen.make.ruff.lint_fix),
                     input_data=body.encode(),
                 )
-                if outcome.failure:
-                    return match.group(0)
-                fixed_body = outcome.value.stdout
+                if fix_outcome.failure:
+                    raise RuntimeError(
+                        fix_outcome.error or f"Ruff could not inspect {rel}",
+                    )
+                # ``ruff check --fix`` exits non-zero when it DETECTED
+                # violations even after fixing every one of them; the fence
+                # is accepted only when a second, fix-free check comes back
+                # clean, never on the fix pass's own exit code.
+                fixed_body = fix_outcome.value.stdout
+                verify_outcome = u.Cli.run_raw(common, input_data=fixed_body.encode())
+                if verify_outcome.failure:
+                    raise RuntimeError(
+                        verify_outcome.error or f"Ruff could not verify {rel}",
+                    )
+                if not u.Cli.process_succeeded(verify_outcome.value.outcome):
+                    msg = (
+                        f"Ruff could not fix {rel}: "
+                        f"{verify_outcome.value.stdout}\n{verify_outcome.value.stderr}"
+                    )
+                    raise RuntimeError(msg)
+                if verify_outcome.value.stderr:
+                    msg = (
+                        f"Ruff emitted diagnostics while fixing {rel}: "
+                        f"{verify_outcome.value.stderr}"
+                    )
+                    raise RuntimeError(msg)
                 if fixed_body == body:
                     return match.group(0)
                 # A closing fence only closes the block when it starts its own
@@ -107,23 +146,38 @@ class FlextInfraUtilitiesDocsFix:
                 continue
             changed.append(
                 FlextInfraUtilitiesDocsContract.docs_write_if_needed(
-                    md_file, sanitized, apply=apply
-                )
+                    md_file,
+                    sanitized,
+                    apply=apply,
+                ),
             )
         return changed
 
     @staticmethod
     def docs_process_markdown_file(
-        md_file: Path, *, apply: bool
+        md_file: Path,
+        *,
+        apply: bool,
     ) -> m.Infra.DocsPhaseItemModel:
-        """Fix one markdown file and return the phase item summary."""
+        """Fix one markdown file and return the phase item summary.
+
+        Returns:
+            The resulting ``m.Infra.DocsPhaseItemModel``.
+
+        """
         original = md_file.read_text(
-            encoding=c.Cli.ENCODING_DEFAULT, errors=c.Infra.IGNORE
+            encoding=c.Cli.ENCODING_DEFAULT,
+            errors=c.Infra.IGNORE,
         )
         link_count = 0
 
-        def replace_link(match: t.Infra.RegexMatch) -> str:
-            """Replace link."""
+        def replace_link(match: t.RegexMatch) -> str:
+            """Replace link.
+
+            Returns:
+                The resulting ``str``.
+
+            """
             nonlocal link_count
             text, link = match.groups()
             fixed = FlextInfraUtilitiesDocsFix.docs_maybe_fix_link(md_file, link)
@@ -157,10 +211,13 @@ class FlextInfraUtilitiesDocsFix:
         FlextInfraUtilitiesDocs.docs_write_phase_reports(
             scope,
             phase="fix",
-            heading="Docs Fix Report",
-            columns=("file", "link_fixes", "toc_updates"),
-            rows=tuple((item.file, str(item.links), str(item.toc)) for item in items),
-            items=items,
+            table=m.Cli.TableRenderRequest(
+                title="Docs Fix Report",
+                columns=("file", "link_fixes", "toc_updates"),
+                rows=tuple(
+                    (item.file, str(item.links), str(item.toc)) for item in items
+                ),
+            ),
             apply=apply,
         )
 

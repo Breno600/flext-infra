@@ -1,4 +1,8 @@
-"""Public API extraction helpers for code-driven documentation."""
+"""Public API extraction helpers for code-driven documentation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,10 +10,9 @@ from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m, t
-
-from .pyproject import FlextInfraUtilitiesPyproject
-from .rope_analysis import FlextInfraUtilitiesRopeAnalysis
-from .rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
+from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -33,16 +36,26 @@ class FlextInfraUtilitiesDocsApi:
     )
 
     @staticmethod
-    def _string_values(value: t.Infra.InfraValue | None) -> t.StrSequence:
-        """Normalize one infra sequence payload into strings."""
+    def _string_values(value: t.JsonValue | None) -> t.StrSequence:
+        """Normalize one infra sequence payload into strings.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         if value is None:
             return []
         items = t.Infra.INFRA_SEQ_ADAPTER.validate_python(value)
         return [str(item) for item in items]
 
     @staticmethod
-    def _string_mapping(value: t.Infra.InfraValue | None) -> t.StrMapping:
-        """Normalize one infra mapping payload into string keys and values."""
+    def _string_mapping(value: t.JsonValue | None) -> t.StrMapping:
+        """Normalize one infra mapping payload into string keys and values.
+
+        Returns:
+            The resulting ``t.StrMapping``.
+
+        """
         if value is None:
             return {}
         items = t.Infra.INFRA_MAPPING_ADAPTER.validate_python(value)
@@ -50,7 +63,12 @@ class FlextInfraUtilitiesDocsApi:
 
     @staticmethod
     def _module_file(project_root: Path, module_name: str) -> Path:
-        """Resolve a Python module path to its file path."""
+        """Resolve a Python module path to its file path.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         parts = module_name.split(".")
         src_dir: str = c.Infra.DEFAULT_SRC_DIR
         init_py: str = c.Infra.INIT_PY
@@ -66,16 +84,32 @@ class FlextInfraUtilitiesDocsApi:
 
     @classmethod
     def _assignment_strings(cls, source: str, name: str) -> t.StrSequence:
-        """Collect literal string values from one module-level assignment."""
+        """Collect literal string values from one module-level assignment.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         return FlextInfraUtilitiesRopeAnalysis.module_assignment_strings_source(
-            source, name
+            source,
+            name,
         )
 
     @classmethod
     def _imported_symbol_binding(
-        cls, source: str, *, current_module: str, symbol_name: str, package_module: bool
+        cls,
+        source: str,
+        *,
+        current_module: str,
+        symbol_name: str,
+        package_module: bool,
     ) -> t.Pair[str, str]:
-        """Return the source module and original name for one imported symbol."""
+        """Return the source module and original name for one imported symbol.
+
+        Returns:
+            The source module and original name for one imported symbol.
+
+        """
         return FlextInfraUtilitiesRopeAnalysis.imported_symbol_binding_source(
             source,
             current_module=current_module,
@@ -92,7 +126,12 @@ class FlextInfraUtilitiesDocsApi:
         symbol_name: str,
         visited: frozenset[str] = frozenset(),
     ) -> t.StrSequence:
-        """Resolve a literal string assignment through imported symbols."""
+        """Resolve a literal string assignment through imported symbols.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         key = f"{module_name}:{symbol_name}"
         if key in visited:
             return []
@@ -103,7 +142,7 @@ class FlextInfraUtilitiesDocsApi:
         values = cls._assignment_strings(source, symbol_name)
         if values:
             return values
-        # flext-o6h5 (agent: kimi): resolve through import aliases to the
+        # Resolve through import aliases to the
         # ORIGINAL symbol — lazy __unit__ contracts bind PUBLIC_EXPORTS as
         # _PUBLIC_EXPORTS; resolving the alias in the target module yielded
         # an empty contract (root cause of the flext-infra validate FAIL).
@@ -124,7 +163,12 @@ class FlextInfraUtilitiesDocsApi:
 
     @staticmethod
     def _resolve_lazy_module_name(package_name: str, module_name: str) -> str:
-        """Resolve a lazy import module string against the root package."""
+        """Resolve a lazy import module string against the root package.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         if module_name.startswith("."):
             return f"{package_name}{module_name}"
         return module_name
@@ -139,7 +183,12 @@ class FlextInfraUtilitiesDocsApi:
         symbol_name: str,
         visited: frozenset[str] = frozenset(),
     ) -> t.StrMapping:
-        """Resolve one lazy-import map symbol into export target modules."""
+        """Resolve one lazy-import map symbol into export target modules.
+
+        Returns:
+            The resulting ``t.StrMapping``.
+
+        """
         key = f"{module_name}:{symbol_name}"
         if key in visited:
             return {}
@@ -149,7 +198,8 @@ class FlextInfraUtilitiesDocsApi:
         source = module_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         entries, refs = (
             FlextInfraUtilitiesRopeAnalysis.module_mapping_assignment_source(
-                source, symbol_name
+                source,
+                symbol_name,
             )
         )
         next_visited = visited | frozenset({key})
@@ -199,7 +249,7 @@ class FlextInfraUtilitiesDocsApi:
                         module_name=imported_module,
                         symbol_name=imported_symbol or ref_name,
                         visited=next_visited,
-                    )
+                    ),
                 )
         return targets
 
@@ -212,9 +262,14 @@ class FlextInfraUtilitiesDocsApi:
         source: str,
         exports: t.StrSequence,
     ) -> t.StrMapping:
-        """Return target modules declared by the package lazy import map."""
+        """Return target modules declared by the package lazy import map.
+
+        Returns:
+            Target modules declared by the package lazy import map.
+
+        """
         lazy_imports_name = FlextInfraUtilitiesRopeAnalysis.lazy_imports_name_source(
-            source
+            source,
         )
         if not lazy_imports_name:
             return {}
@@ -233,9 +288,17 @@ class FlextInfraUtilitiesDocsApi:
 
     @classmethod
     def _public_export_strings(
-        cls, project_root: Path, package_name: str, source: str
+        cls,
+        project_root: Path,
+        package_name: str,
+        source: str,
     ) -> t.StrSequence:
-        """Return runtime public exports from lazy-loader or ``__all__`` contracts."""
+        """Return runtime public exports from lazy-loader or ``__all__`` contracts.
+
+        Returns:
+            Runtime public exports from lazy-loader or ``__all__`` contracts.
+
+        """
         literal_values, export_name = (
             FlextInfraUtilitiesRopeAnalysis.lazy_public_exports_source(source)
         )
@@ -245,7 +308,7 @@ class FlextInfraUtilitiesDocsApi:
             local_values = cls._assignment_strings(source, export_name)
             if local_values:
                 return local_values
-            # flext-o6h5 (agent: kimi): alias-aware binding — see
+            # Alias-aware binding — see
             # _resolve_assignment_strings for the root-cause note.
             imported_module, original_name = cls._imported_symbol_binding(
                 source,
@@ -255,34 +318,61 @@ class FlextInfraUtilitiesDocsApi:
             )
             if imported_module:
                 return cls._resolve_assignment_strings(
-                    project_root, module_name=imported_module, symbol_name=original_name
+                    project_root,
+                    module_name=imported_module,
+                    symbol_name=original_name,
                 )
         return cls._assignment_strings(source, "__all__")
 
     @staticmethod
     def _export_target_map(
-        source: str, package_name: str, exports: t.StrSequence
+        source: str,
+        package_name: str,
+        exports: t.StrSequence,
     ) -> t.StrMapping:
-        """Resolve exported symbols to their defining import modules when possible."""
+        """Resolve exported symbols to their defining import modules when possible.
+
+        Returns:
+            The resulting ``t.StrMapping``.
+
+        """
         return FlextInfraUtilitiesRopeAnalysis.export_target_modules_source(
-            source, package_name, exports
+            source,
+            package_name,
+            exports,
         )
 
     @staticmethod
     def _has_module_docstring(source: str) -> bool:
-        """Return whether source starts with a module docstring."""
+        """Return whether source starts with a module docstring.
+
+        Returns:
+            Whether source starts with a module docstring.
+
+        """
         return FlextInfraUtilitiesRopeAnalysis.module_has_docstring_source(source)
 
     @staticmethod
     def _assignment_docstrings(source: str) -> set[str]:
-        """Return assignment names followed by a literal docstring expression."""
+        """Return assignment names followed by a literal docstring expression.
+
+        Returns:
+            Assignment names followed by a literal docstring expression.
+
+        """
         return set(FlextInfraUtilitiesRopeAnalysis.assignment_docstrings_source(source))
 
     @staticmethod
     def _has_symbol_docstring(source: str, symbol_name: str) -> bool:
-        """Return whether one exported class/function starts with a docstring."""
+        """Return whether one exported class/function starts with a docstring.
+
+        Returns:
+            Whether one exported class/function starts with a docstring.
+
+        """
         if FlextInfraUtilitiesRopeAnalysis.symbol_has_docstring_source(
-            source, symbol_name
+            source,
+            symbol_name,
         ):
             return True
         return symbol_name in FlextInfraUtilitiesDocsApi._assignment_docstrings(source)
@@ -297,13 +387,20 @@ class FlextInfraUtilitiesDocsApi:
         symbol_name: str,
         visited: frozenset[str],
     ) -> bool:
-        """Return whether one class inherits documentation through its FLEXT chain."""
+        """Return whether one class inherits documentation through its FLEXT chain.
+
+        Returns:
+            Whether one class inherits documentation through its FLEXT chain.
+
+        """
         if not FlextInfraUtilitiesRopeAnalysis.class_declared_source(
-            source, symbol_name
+            source,
+            symbol_name,
         ):
             return False
         for base_name in FlextInfraUtilitiesRopeAnalysis.class_bases_source(
-            source, symbol_name
+            source,
+            symbol_name,
         ):
             base_symbol = base_name.split(".")[-1]
             if not base_symbol or base_symbol in {"ABC", "Generic", "Protocol", "Self"}:
@@ -342,7 +439,12 @@ class FlextInfraUtilitiesDocsApi:
         symbol_name: str,
         visited: frozenset[str] = frozenset(),
     ) -> bool:
-        """Return whether an exported symbol or its import target is documented."""
+        """Return whether an exported symbol or its import target is documented.
+
+        Returns:
+            Whether an exported symbol or its import target is documented.
+
+        """
         key = f"{module_name}:{symbol_name}"
         if key in visited:
             return False
@@ -377,24 +479,33 @@ class FlextInfraUtilitiesDocsApi:
 
     @staticmethod
     def _rope_public_symbols(
-        project_root: Path, target_map: t.StrMapping
+        project_root: Path,
+        target_map: t.StrMapping,
     ) -> t.StrSequence:
-        """Use Rope to verify which exported symbols resolve in real modules."""
+        """Use Rope to verify which exported symbols resolve in real modules.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         with FlextInfraUtilitiesRopeCore.open_project(project_root) as rope_project:
             symbols: t.MutableSequenceOf[str] = []
             for export_name, module_name in target_map.items():
                 module_file = FlextInfraUtilitiesDocsApi._module_file(
-                    project_root, module_name
+                    project_root,
+                    module_name,
                 )
                 if not module_file.exists():
                     continue
-                resource = FlextInfraUtilitiesRopeCore.get_resource_from_path(
-                    rope_project, module_file
+                resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
+                    rope_project,
+                    module_file,
                 )
                 if resource is None:
                     continue
-                pymodule = FlextInfraUtilitiesRopeCore.get_pymodule(
-                    rope_project, resource
+                pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
+                    rope_project,
+                    resource,
                 )
                 if export_name in pymodule.get_attributes():
                     symbols.append(export_name)
@@ -402,10 +513,18 @@ class FlextInfraUtilitiesDocsApi:
 
     @staticmethod
     def public_contract(project_root: Path, package_name: str) -> t.JsonMapping:
-        """Build the public API contract from pyproject, exports, and Rope validation."""
-        # flext-j47u: retain flext-core's validated metadata object; no shadow DTO.
+        """Build the public API contract from pyproject, exports, and Rope validation.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
+        Raises:
+            ValueError: If ``metadata_result.failure``.
+
+        """
+        # Retain flext-core's validated metadata object; no shadow DTO.
         metadata_result = FlextInfraUtilitiesPyproject.read_project_metadata_result(
-            project_root
+            project_root,
         )
         if metadata_result.failure:
             msg = (
@@ -445,13 +564,17 @@ class FlextInfraUtilitiesDocsApi:
         source = init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         all_exports = list(
             FlextInfraUtilitiesDocsApi._public_export_strings(
-                project_root, package_name, source
-            )
+                project_root,
+                package_name,
+                source,
+            ),
         )
         target_map = dict(
             FlextInfraUtilitiesDocsApi._export_target_map(
-                source, package_name, all_exports
-            )
+                source,
+                package_name,
+                all_exports,
+            ),
         )
         target_map.update(
             FlextInfraUtilitiesDocsApi._lazy_export_target_map(
@@ -459,16 +582,17 @@ class FlextInfraUtilitiesDocsApi:
                 package_name=package_name,
                 source=source,
                 exports=all_exports,
-            )
+            ),
         )
         aliases, module_exports, symbol_exports = (
             FlextInfraUtilitiesDocsApi._classify_exports(all_exports, target_map)
         )
         modules = FlextInfraUtilitiesDocsApi._resolve_modules(
-            package_name=package_name, target_map=target_map
+            package_name=package_name,
+            target_map=target_map,
         )
         rope_symbols = frozenset(
-            FlextInfraUtilitiesDocsApi._rope_public_symbols(project_root, target_map)
+            FlextInfraUtilitiesDocsApi._rope_public_symbols(project_root, target_map),
         )
         public_symbols = [
             name for name in symbol_exports if name in rope_symbols
@@ -479,8 +603,10 @@ class FlextInfraUtilitiesDocsApi:
         contract: t.JsonMapping = t.Infra.INFRA_MAPPING_ADAPTER.validate_python({
             "package_name": package_name,
             "description": project.description,
-            "doc_summary": FlextInfraUtilitiesRopeAnalysis.module_docstring_summary_source(
-                source
+            "doc_summary": (
+                FlextInfraUtilitiesRopeAnalysis.module_docstring_summary_source(
+                    source,
+                )
             ),
             "classifiers": list(project.classifiers),
             "keywords": list(project.keywords),
@@ -501,9 +627,15 @@ class FlextInfraUtilitiesDocsApi:
 
     @staticmethod
     def _classify_exports(
-        all_exports: t.StrSequence, target_map: t.StrMapping
+        all_exports: t.StrSequence,
+        target_map: t.StrMapping,
     ) -> t.Triple[list[str], list[str], list[str]]:
-        """Split ``__all__`` entries into ``(aliases, module_exports, symbol_exports)``."""
+        """Split ``__all__`` entries into ``(aliases, module_exports, symbol_exports)``.
+
+        Returns:
+            The resulting ``t.Triple[list[str], list[str], list[str]]``.
+
+        """
         aliases = [
             name
             for name in all_exports
@@ -528,7 +660,12 @@ class FlextInfraUtilitiesDocsApi:
 
     @staticmethod
     def _resolve_modules(*, package_name: str, target_map: t.StrMapping) -> list[str]:
-        """Compute doc-eligible modules from the resolved public export graph."""
+        """Compute doc-eligible modules from the resolved public export graph.
+
+        Returns:
+            The resulting ``list[str]``.
+
+        """
         return sorted({
             module
             for module in target_map.values()
@@ -539,7 +676,8 @@ class FlextInfraUtilitiesDocsApi:
 
     @staticmethod
     def _iter_docstring_checks(
-        project_root: Path, contract: t.JsonMapping
+        project_root: Path,
+        contract: t.JsonMapping,
     ) -> t.SequenceOf[t.Triple[str, str, bool]]:
         """Evaluate every public docstring target once (SSOT).
 
@@ -548,18 +686,22 @@ class FlextInfraUtilitiesDocsApi:
         ``docstring_issues`` (undocumented targets) and
         ``docstring_coverage`` (aggregate metric) so the target set and the
         docstring predicates can never drift apart.
+
+        Returns:
+            The resulting ``t.SequenceOf[t.Triple[str, str, bool]]``.
+
         """
         package_name = str(contract.get("package_name", ""))
         module_list = FlextInfraUtilitiesDocsApi._string_values(
-            contract.get("modules", [])
+            contract.get("modules", []),
         )
         target_map = FlextInfraUtilitiesDocsApi._string_mapping(
-            contract.get("target_map", {})
+            contract.get("target_map", {}),
         )
         module_exports = set(
             FlextInfraUtilitiesDocsApi._string_values(
-                contract.get("module_exports", [])
-            )
+                contract.get("module_exports", []),
+            ),
         )
         results: t.MutableSequenceOf[t.Triple[str, str, bool]] = []
         module_docstring_checks = [
@@ -568,11 +710,13 @@ class FlextInfraUtilitiesDocsApi:
         ]
         if package_name:
             module_docstring_checks.insert(
-                0, (package_name, "package module is missing a docstring")
+                0,
+                (package_name, "package module is missing a docstring"),
             )
         for module_name, message in module_docstring_checks:
             module_file = FlextInfraUtilitiesDocsApi._module_file(
-                project_root, module_name
+                project_root,
+                module_name,
             )
             if not module_file.exists():
                 continue
@@ -591,7 +735,8 @@ class FlextInfraUtilitiesDocsApi:
         ]
         for export_name, module_name in export_docstring_checks:
             module_file = FlextInfraUtilitiesDocsApi._module_file(
-                project_root, module_name
+                project_root,
+                module_name,
             )
             if not module_file.exists():
                 continue
@@ -599,16 +744,24 @@ class FlextInfraUtilitiesDocsApi:
                 module_file.relative_to(project_root).as_posix(),
                 f"exported symbol `{export_name}` is missing a docstring",
                 FlextInfraUtilitiesDocsApi._has_exported_symbol_docstring(
-                    project_root, module_name=module_name, symbol_name=export_name
+                    project_root,
+                    module_name=module_name,
+                    symbol_name=export_name,
                 ),
             ))
         return tuple(results)
 
     @staticmethod
     def docstring_issues(
-        project_root: Path, contract: t.JsonMapping
+        project_root: Path,
+        contract: t.JsonMapping,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Return audit issues for public modules and exports missing docstrings."""
+        """Return audit issues for public modules and exports missing docstrings.
+
+        Returns:
+            Audit issues for public modules and exports missing docstrings.
+
+        """
         return [
             m.Infra.AuditIssue(
                 file=rel_file,
@@ -618,7 +771,8 @@ class FlextInfraUtilitiesDocsApi:
             )
             for rel_file, message, documented in (
                 FlextInfraUtilitiesDocsApi._iter_docstring_checks(
-                    project_root, contract
+                    project_root,
+                    contract,
                 )
             )
             if not documented
@@ -626,21 +780,29 @@ class FlextInfraUtilitiesDocsApi:
 
     @staticmethod
     def docstring_coverage(
-        project_root: Path, contract: t.JsonMapping
+        project_root: Path,
+        contract: t.JsonMapping,
     ) -> m.Infra.DocstringCoverage:
         """Aggregate docstring coverage over every public target.
 
         ``percent`` is computed here (behavior lives in ``u``); the model is a
         declaration-only payload.
+
+        Returns:
+            The resulting ``m.Infra.DocstringCoverage``.
+
         """
         checks = FlextInfraUtilitiesDocsApi._iter_docstring_checks(
-            project_root, contract
+            project_root,
+            contract,
         )
         checked = len(checks)
         documented = sum(1 for *_head, documented in checks if documented)
         percent = 100.0 if checked == 0 else round(100.0 * documented / checked, 1)
         return m.Infra.DocstringCoverage(
-            checked=checked, documented=documented, percent=percent
+            checked=checked,
+            documented=documented,
+            percent=percent,
         )
 
 

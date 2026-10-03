@@ -18,13 +18,11 @@ from typing import Annotated, Literal
 # purpose: flext-cli's lazy __init__ keeps it cheap, flext-cli never imports
 # flext-infra (no cycle), and the runtime census gate evaluates every alias's
 # __value__, so a TYPE_CHECKING-only import would explode as NameError.
-from flext_cli import m as _cli_m, p as _cli_p
+from flext_cli import m, m as _cli_m, p as _cli_p, t
 from jinja2.environment import (
     Environment as _JinjaEnvironment,
     Template as _JinjaTemplate,
 )
-
-from flext_core import m, t
 
 
 class FlextInfraTypesBase:
@@ -32,11 +30,20 @@ class FlextInfraTypesBase:
 
     @staticmethod
     def _reject_blanket_mask(rule: str) -> str:
-        """Return the bare rule name, rejecting ``ALL`` and blank padding.
+        """Return the bare Ruff rule name, rejecting ``ALL``, padding and codes.
 
         Normalizing here keeps the rendered TOML free of accidental padding: a
         padded name would otherwise reach a generated pyproject verbatim and no
-        longer match the rule Ruff knows.
+        longer match the rule Ruff knows. Ruff identifies a rule by its
+        kebab-case name (``line-too-long``), so a code (``E501``) is refused.
+
+        Returns:
+            The bare rule name.
+
+        Raises:
+            ValueError: If the value is blank padding, ``ALL``, or not a
+                kebab-case Ruff rule name.
+
         """
         normalized = rule.strip()
         if not normalized:
@@ -48,10 +55,18 @@ class FlextInfraTypesBase:
                 "future. Name each suppressed rule instead."
             )
             raise ValueError(message)
+        if not (normalized.islower() and normalized.replace("-", "").isalnum()):
+            message = (
+                f"{normalized!r} is not a Ruff rule name: name the rule in "
+                "kebab-case (line-too-long), never by its code (E501)."
+            )
+            raise ValueError(message)
         return normalized
 
     type PlanSourceTimestamp = str | date | datetime | None
     "Native YAML timestamp ingress; dates retain their original precision."
+    type DocsRenderedArtifactTuple = t.Triple[_Path, _Path, str | None]
+    "Rendered document destination, source, and optional project owner."
 
     type RegexPattern = t.RegexPattern
     "Compiled regex pattern for string matching."
@@ -81,7 +96,8 @@ class FlextInfraTypesBase:
     type Container[ItemT] = _Container[ItemT]
     "Generic membership-testable collection (supports ``in``)."
     type PipelineHandler = Callable[
-        [_cli_p.Cli.PipelineStageContext], _cli_p.Result[_cli_m.Cli.PipelineStageResult]
+        [_cli_p.Cli.PipelineStageContext],
+        _cli_p.Result[_cli_m.Cli.PipelineStageResult],
     ]
     "Stage handler contract for the flext-infra check/codegen DAG pipelines."
     type PipelineHandlerMap = t.MappingKV[str, PipelineHandler]
@@ -135,7 +151,9 @@ class FlextInfraTypesBase:
     # ── Lint policy types ────────────────────────────────────────────
 
     type RuffRule = Annotated[
-        str, t.StringConstraints(min_length=1), m.AfterValidator(_reject_blanket_mask)
+        str,
+        t.StringConstraints(min_length=1),
+        m.AfterValidator(_reject_blanket_mask),
     ]
     """One named Ruff rule exempted for a path.
 
@@ -159,15 +177,18 @@ class FlextInfraTypesBase:
     type ReleaseArtifactKind = Literal["sdist", "wheel"]
     "Closed artifact kind emitted by a release build."
     type ReleaseAbsolutePath = Annotated[
-        str, t.StringConstraints(min_length=1, pattern=r"^(?:/|[A-Za-z]:[\\/])")
+        str,
+        t.StringConstraints(min_length=1, pattern=r"^(?:/|[A-Za-z]:[\\/])"),
     ]
     "Absolute POSIX or Windows path serialized in a release report."
     type ReleaseArtifactSha256 = Annotated[
-        str, t.StringConstraints(pattern=r"^[0-9a-f]{64}$")
+        str,
+        t.StringConstraints(pattern=r"^[0-9a-f]{64}$"),
     ]
     "Lowercase SHA-256 digest serialized in a release report."
     type ReleaseCommitOid = Annotated[
-        str, t.StringConstraints(pattern=r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
+        str,
+        t.StringConstraints(pattern=r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$"),
     ]
     "Lowercase Git SHA-1 or SHA-256 commit object identifier."
     # ── Git type aliases ────────────────────────────────────────────

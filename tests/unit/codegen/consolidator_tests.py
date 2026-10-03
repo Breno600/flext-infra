@@ -1,4 +1,8 @@
-"""Tests for the public constants consolidator command service."""
+"""Tests for the public constants consolidator command service.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -35,21 +39,35 @@ class TestsFlextInfraCodegenConsolidator:
             TestsFlextInfraCodegenConsolidator._ConsolidatorFilePayload
         ] = cli_m.Field(description="Per-file consolidator results")
 
+    @staticmethod
     def _consolidator_payload(
-        self, value: str
+        value: str,
     ) -> TestsFlextInfraCodegenConsolidator._ConsolidatorJsonPayload:
-        """Load and validate consolidator JSON output."""
+        """Load and validate consolidator JSON output.
+
+        Returns:
+            The resulting
+                ``TestsFlextInfraCodegenConsolidator._ConsolidatorJsonPayload``.
+
+        """
         payload: TestsFlextInfraCodegenConsolidator._ConsolidatorJsonPayload = TestsFlextInfraCodegenConsolidator._ConsolidatorJsonPayload.model_validate_json(
-            value
+            value,
         )
         return payload
 
-    def _consolidator_layout(self, tmp_path: Path) -> t.Triple[Path, Path, Path]:
-        """Create the consolidator workspace, project root, and package directory."""
+    @staticmethod
+    def _consolidator_layout(tmp_path: Path) -> t.Triple[Path, Path, Path]:
+        """Create the consolidator workspace, project root, and package directory.
+
+        Returns:
+            The resulting ``t.Triple[Path, Path, Path]``.
+
+        """
         repository_root = tmp_path / "workspace"
         repository_root.mkdir(parents=True)
         (repository_root / "pyproject.toml").write_text(
-            '[tool.uv.workspace]\nmembers = ["flext-demo"]\n', encoding="utf-8"
+            '[tool.uv.workspace]\nmembers = ["flext-demo"]\n',
+            encoding="utf-8",
         )
         project_root = repository_root / "flext-demo"
         package_dir = project_root / "src" / "flext_demo"
@@ -64,11 +82,22 @@ class TestsFlextInfraCodegenConsolidator:
         return repository_root, project_root, package_dir
 
     def _execute_consolidator(
-        self, repository_root: Path, *, dry_run: bool
+        self,
+        repository_root: Path,
+        *,
+        dry_run: bool,
     ) -> TestsFlextInfraCodegenConsolidator._ConsolidatorJsonPayload:
-        """Run the consolidator once in JSON mode and validate its payload."""
+        """Run the consolidator once in JSON mode and validate its payload.
+
+        Returns:
+            The resulting
+                ``TestsFlextInfraCodegenConsolidator._ConsolidatorJsonPayload``.
+
+        """
         service = FlextInfraCodegenConsolidator(
-            repository_root=repository_root, dry_run=dry_run, output_format="json"
+            repository_root=repository_root,
+            dry_run=dry_run,
+            output_format="json",
         )
 
         result = service.execute()
@@ -77,6 +106,7 @@ class TestsFlextInfraCodegenConsolidator:
         return self._consolidator_payload(result.value)
 
     def test_execute_scans_real_package_layout(self, tmp_path: Path) -> None:
+        """Test execute scans real package layout."""
         repository_root, _, package_dir = self._consolidator_layout(tmp_path)
         (package_dir / "__init__.py").write_text("", encoding="utf-8")
         (package_dir / "constants.py").write_text(
@@ -87,18 +117,25 @@ class TestsFlextInfraCodegenConsolidator:
         u.Tests.declare_workspace_projects(repository_root, ("flext-demo",))
 
         result = u.Tests.consolidate_codegen(
-            repository_root=repository_root, dry_run=True
+            repository_root=repository_root,
+            dry_run=True,
         )
 
         tm.ok(result)
         tm.that(result.value, has="Found")
 
     def _build_consolidator_workspace(self, tmp_path: Path) -> Path:
-        """Create a workspace with one project whose constants define a demo value."""
+        """Create a workspace with one project whose constants define a demo value.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         repository_root, _, package_dir = self._consolidator_layout(tmp_path)
         (package_dir / "__init__.py").write_text("", encoding="utf-8")
         (package_dir / "__init__.py").write_text(
-            "from flext_demo.constants import c\n", encoding="utf-8"
+            "from flext_demo.constants import c\n",
+            encoding="utf-8",
         )
         (package_dir / "constants.py").write_text(
             "from __future__ import annotations\n"
@@ -111,31 +148,43 @@ class TestsFlextInfraCodegenConsolidator:
             encoding="utf-8",
         )
         (package_dir / "consumer.py").write_text(
-            'from __future__ import annotations\n\nVALUE = "demo"\n', encoding="utf-8"
+            'from __future__ import annotations\n\nVALUE = "demo"\n',
+            encoding="utf-8",
         )
         u.Tests.declare_workspace_projects(repository_root, ("flext-demo",))
+        u.Tests.provision_checkout(repository_root)
         return repository_root
 
-    def _write_wrapper_consumer(self, repository_root: Path, segment: str) -> Path:
-        """Create one wrapper-surface consumer for constants consolidation."""
+    @staticmethod
+    def _write_wrapper_consumer(repository_root: Path, segment: str) -> Path:
+        """Create one wrapper-surface consumer for constants consolidation.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         project_root = repository_root / "flext-demo"
         consumer_path = project_root / segment / "consumer.py"
         consumer_path.parent.mkdir(parents=True, exist_ok=True)
         consumer_path.write_text(
-            'from __future__ import annotations\n\nVALUE = "demo"\n', encoding="utf-8"
+            'from __future__ import annotations\n\nVALUE = "demo"\n',
+            encoding="utf-8",
         )
         return consumer_path
 
     def test_execute_apply_mode_replaces_literal_with_canonical_reference(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test execute apply mode replaces literal with canonical reference."""
         repository_root = self._build_consolidator_workspace(tmp_path)
         consumer_path = (
             repository_root / "flext-demo" / "src" / "flext_demo" / "consumer.py"
         )
 
         result = u.Tests.consolidate_codegen(
-            repository_root=repository_root, dry_run=False
+            repository_root=repository_root,
+            dry_run=False,
         )
 
         tm.ok(result)
@@ -145,11 +194,15 @@ class TestsFlextInfraCodegenConsolidator:
         tm.that(updated_source, has="from flext_demo import c")
 
     @pytest.mark.parametrize(
-        "wrapper_segment", sorted(c.Infra.ROOT_WRAPPER_SEGMENTS - {"src"})
+        "wrapper_segment",
+        sorted(c.Infra.ROOT_WRAPPER_SEGMENTS - {"src"}),
     )
     def test_execute_apply_mode_scans_wrapper_surfaces(
-        self, tmp_path: Path, wrapper_segment: str
+        self,
+        tmp_path: Path,
+        wrapper_segment: str,
     ) -> None:
+        """Test execute apply mode scans wrapper surfaces."""
         repository_root = self._build_consolidator_workspace(tmp_path)
         package_consumer_path = (
             repository_root / "flext-demo" / "src" / "flext_demo" / "consumer.py"
@@ -159,19 +212,21 @@ class TestsFlextInfraCodegenConsolidator:
             encoding="utf-8",
         )
         wrapper_consumer_path = self._write_wrapper_consumer(
-            repository_root, wrapper_segment
+            repository_root,
+            wrapper_segment,
         )
         constants_family_path = (
             repository_root
             / "flext-demo"
             / "src"
             / "flext_demo"
-            / c.Infra.FAMILY_DIRECTORIES["c"]
+            / u.Infra.facade_family_declared_by(c.Infra.CONSTANTS_PY).directory
             / "internal.py"
         )
         constants_family_path.parent.mkdir(parents=True, exist_ok=True)
         constants_family_path.write_text(
-            'from __future__ import annotations\n\nVALUE = "demo"\n', encoding="utf-8"
+            'from __future__ import annotations\n\nVALUE = "demo"\n',
+            encoding="utf-8",
         )
         payload = self._execute_consolidator(repository_root, dry_run=False)
         tm.that(payload.total_found, eq=1)
@@ -191,6 +246,7 @@ class TestsFlextInfraCodegenConsolidator:
 
     @pytest.mark.slow
     def test_execute_apply_mode_json_output(self, tmp_path: Path) -> None:
+        """Test execute apply mode json output."""
         repository_root = self._build_consolidator_workspace(tmp_path)
         payload = self._execute_consolidator(repository_root, dry_run=False)
         tm.that(payload.total_found, eq=1)
@@ -200,6 +256,7 @@ class TestsFlextInfraCodegenConsolidator:
         tm.that(payload.files[0].status, eq="applied")
 
     def test_execute_dry_run_json_output(self, tmp_path: Path) -> None:
+        """Test execute dry run json output."""
         repository_root = self._build_consolidator_workspace(tmp_path)
         payload = self._execute_consolidator(repository_root, dry_run=True)
         tm.that(payload.total_found, eq=1)

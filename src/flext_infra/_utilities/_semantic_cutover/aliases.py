@@ -1,4 +1,8 @@
-"""Semantic compatibility-alias cutover planning."""
+"""Semantic compatibility-alias cutover planning.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,29 +13,41 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, t
-
-from ..compatibility_alias_validation import (
+from flext_infra._utilities._semantic_cutover.alias_cst import (
+    FlextInfraUtilitiesSemanticCutoverAliasCst,
+)
+from flext_infra._utilities._semantic_cutover.edits import (
+    FlextInfraUtilitiesSemanticCutoverEdits,
+)
+from flext_infra._utilities.compatibility_alias_validation import (
     FlextInfraUtilitiesCompatibilityAliasValidation,
 )
-from .alias_cst import FlextInfraUtilitiesSemanticCutoverAliasCst
-from .edits import FlextInfraUtilitiesSemanticCutoverEdits
 
 if TYPE_CHECKING:
     from flext_infra import p
 
 
 class FlextInfraUtilitiesSemanticCutoverAliases(
-    FlextInfraUtilitiesSemanticCutoverAliasCst, FlextInfraUtilitiesSemanticCutoverEdits
+    FlextInfraUtilitiesSemanticCutoverAliasCst,
+    FlextInfraUtilitiesSemanticCutoverEdits,
 ):
     """Plan atomic removal of API aliases and their proven consumers."""
 
     @classmethod
     def _api_alias_specs(
-        cls, root: Path, findings: t.SequenceOf[m.Infra.ModScanFinding]
+        cls,
+        root: Path,
+        findings: t.SequenceOf[m.Infra.ModScanFinding],
     ) -> p.Result[
         t.Pair[t.MappingKV[Path, t.StrMapping], t.MappingKV[str, t.StrMapping]]
     ]:
-        """Index every API alias finding by owner file and importable module."""
+        """Index every API alias finding by owner file and importable module.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.MappingKV[Path, t.StrMapping],
+                t.MappingKV[str, t.StrMapping]]]``.
+
+        """
         planned = r[
             t.Pair[t.MappingKV[Path, t.StrMapping], t.MappingKV[str, t.StrMapping]]
         ]
@@ -47,7 +63,7 @@ class FlextInfraUtilitiesSemanticCutoverAliases(
                 and isinstance(statement.value, ast.Name)
             ):
                 return planned.fail(
-                    f"invalid compatibility-alias finding: {finding.text}"
+                    f"invalid compatibility-alias finding: {finding.text}",
                 )
             if c.Infra.DEFAULT_SRC_DIR not in relative.parts:
                 return planned.fail(f"API alias owner is outside src: {relative}")
@@ -68,7 +84,12 @@ class FlextInfraUtilitiesSemanticCutoverAliases(
         sources: t.MappingKV[Path, str],
         findings: t.SequenceOf[m.Infra.ModScanFinding],
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Plan API alias removals and AST-proven consumer rewrites."""
+        """Plan API alias removals and AST-proven consumer rewrites.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        """
         specs = cls._api_alias_specs(
             root,
             tuple(
@@ -93,7 +114,7 @@ class FlextInfraUtilitiesSemanticCutoverAliases(
                 ):
                     for imported in node.names:
                         imported_target = specs_by_module[node.module].get(
-                            imported.name
+                            imported.name,
                         )
                         if imported_target is None:
                             continue
@@ -114,21 +135,26 @@ class FlextInfraUtilitiesSemanticCutoverAliases(
                         ((imported.asname or imported.name, alias), target)
                         for imported in node.names
                         for alias, target in specs_by_module.get(
-                            imported.name, {}
+                            imported.name,
+                            {},
                         ).items()
                     )
             if not (local_aliases or import_aliases or attribute_aliases):
                 return source, ()
             FlextInfraUtilitiesCompatibilityAliasValidation.require_static_compatibility_alias_exports(
-                tree, path, frozenset(local_aliases)
+                tree,
+                path,
+                frozenset(local_aliases),
             )
             rewritten = cls._rewrite_compatibility_alias_source(
                 source,
-                local_aliases=local_aliases,
-                import_aliases=import_aliases,
-                attribute_aliases=attribute_aliases,
-                qualified_aliases=qualified_aliases,
-                target_bindings=cls._bound_names(tree),
+                m.Infra.CompatibilityAliasRewritePlan(
+                    local_aliases=local_aliases,
+                    import_aliases=import_aliases,
+                    attribute_aliases=attribute_aliases,
+                    qualified_aliases=qualified_aliases,
+                    target_bindings=cls._bound_names(tree),
+                ),
             )
             FlextInfraUtilitiesCompatibilityAliasValidation.require_zero_compatibility_alias_residue(
                 rewritten,
@@ -145,7 +171,12 @@ class FlextInfraUtilitiesSemanticCutoverAliases(
 
     @staticmethod
     def _bound_names(tree: ast.Module) -> frozenset[str]:
-        """Return statically bound module names for redundant-import removal."""
+        """Return statically bound module names for redundant-import removal.
+
+        Returns:
+            Statically bound module names for redundant-import removal.
+
+        """
         names: set[str] = set()
         for node in tree.body:
             if isinstance(node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef):

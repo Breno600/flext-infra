@@ -12,7 +12,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, Self, runtime_checkable
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
     from pathlib import Path
     from types import TracebackType
 
@@ -77,7 +76,10 @@ class FlextInfraProtocolsRope(Protocol):
         def workspace_index(self) -> m.Infra.RopeWorkspaceIndex: ...
 
         def refresh(
-            self, *, preserve_indexes: bool = False, validate_project: bool = True
+            self,
+            *,
+            preserve_indexes: bool = False,
+            validate_project: bool = True,
         ) -> m.Infra.RopeWorkspaceSession: ...
 
         def reload(self) -> m.Infra.RopeWorkspaceSession: ...
@@ -98,11 +100,14 @@ class FlextInfraProtocolsRope(Protocol):
         def module(self, file_path: Path) -> m.Infra.RopeModuleIndexEntry | None: ...
 
         def package(
-            self, package_dir: Path
+            self,
+            package_dir: Path,
         ) -> m.Infra.RopePackageIndexEntry | None: ...
 
         def modules(
-            self, *, project_names: t.StrSequence | None = None
+            self,
+            *,
+            project_names: t.StrSequence | None = None,
         ) -> t.SequenceOf[m.Infra.RopeModuleIndexEntry]: ...
 
         def source(self, file_path: Path) -> str: ...
@@ -126,7 +131,8 @@ class FlextInfraProtocolsRope(Protocol):
         def layout(self, project_root: Path) -> m.Infra.RopeProjectLayout | None: ...
 
         def package_context(
-            self, package_dir: Path
+            self,
+            package_dir: Path,
         ) -> m.Infra.LazyInitPackageContext: ...
 
         def policy(
@@ -138,7 +144,10 @@ class FlextInfraProtocolsRope(Protocol):
         ) -> m.Infra.NamespaceModulePolicy: ...
 
         def convention(
-            self, file_path: Path, *, rel_path: Path | None = None
+            self,
+            file_path: Path,
+            *,
+            rel_path: Path | None = None,
         ) -> m.Infra.RopeModuleConvention: ...
 
         def semantic(self, file_path: Path) -> m.Infra.ModuleSemanticState: ...
@@ -151,176 +160,17 @@ class FlextInfraProtocolsRope(Protocol):
         ) -> t.StrSequence: ...
 
     @runtime_checkable
-    class PatchingASTWalker(Protocol):
-        """Structural contract for rope's internal ``_PatchingASTWalker``.
-
-        Used by ``FlextInfraUtilitiesRopePep695Patch`` to install PEP 695
-        type-parameter handlers without depending on rope's private class.
-        """
-
-        # The handler slots the rope patches replace. Rope exposes them under
-        # private names because it has no public registration API; the
-        # protocol states that shape so the patches stay statically typed
-        # instead of reaching into an untyped probe.
-        _handle_function_def_node: Callable[..., None]
-        _ClassDef: Callable[..., None]
-        _JoinedStr: Callable[..., None]
-        _arguments: Callable[..., None]
-        _arg: Callable[..., None]
-
-        @runtime_checkable
-        class ArgumentsNode(Protocol):
-            """Signature capabilities consumed by the rope signature patch."""
-
-            posonlyargs: t.SequenceOf[p.AttributeProbe]
-            args: t.SequenceOf[p.AttributeProbe]
-            vararg: p.AttributeProbe | None
-            kwonlyargs: t.SequenceOf[p.AttributeProbe]
-            kw_defaults: t.SequenceOf[p.AttributeProbe | None]
-            kwarg: p.AttributeProbe | None
-            defaults: t.SequenceOf[p.AttributeProbe]
-
-        @runtime_checkable
-        class ArgumentNode(Protocol):
-            """Single-parameter capabilities consumed by the rope patch."""
-
-            arg: str
-            annotation: p.AttributeProbe | None
-
-        # flext-j47u (codex): model Rope node capabilities structurally; the
-        # FLEXT static path never imports or traverses Python's AST directly.
-        @runtime_checkable
-        class PositionedNode(Protocol):
-            """Source position exposed by a Rope parser node."""
-
-            lineno: int
-            col_offset: int
-
-        @runtime_checkable
-        class SourceSpanningNode(PositionedNode, Protocol):
-            """Complete parser span required to map a node back to source."""
-
-            end_lineno: int
-            end_col_offset: int
-
-        class PatchableNode(SourceSpanningNode, Protocol):
-            """Dynamic source metadata attached by Rope's patched AST walker."""
-
-            region: t.Pair[int, int]
-            sorted_children: list[str]
-
-        @runtime_checkable
-        class TypeParameterOwner(Protocol):
-            """Rope node carrying PEP 695 type parameters."""
-
-            type_params: t.SequenceOf[p.AttributeProbe]
-
-        @runtime_checkable
-        class FunctionDefinitionNode(TypeParameterOwner, Protocol):
-            """Function-definition capabilities consumed by the Rope patch."""
-
-            decorator_list: t.SequenceOf[p.AttributeProbe]
-            name: str
-            args: p.AttributeProbe
-            body: t.SequenceOf[p.AttributeProbe]
-
-        @runtime_checkable
-        class ClassDefinitionNode(TypeParameterOwner, Protocol):
-            """Class-definition capabilities consumed by the Rope patch."""
-
-            decorator_list: t.SequenceOf[p.AttributeProbe]
-            name: str
-            bases: t.SequenceOf[p.AttributeProbe]
-            body: t.SequenceOf[p.AttributeProbe]
-
-        @runtime_checkable
-        class TypeAliasNode(TypeParameterOwner, Protocol):
-            """Type-alias capabilities consumed by the Rope patch."""
-
-            name: p.AttributeProbe
-            value: p.AttributeProbe
-
-        @runtime_checkable
-        class TypeVariableNode(Protocol):
-            """Bound type-variable capabilities consumed by the Rope patch."""
-
-            name: str
-            bound: p.AttributeProbe | None
-
-        @runtime_checkable
-        class NamedNode(Protocol):
-            """Rope node exposing a name."""
-
-            name: str
-
-        @runtime_checkable
-        class MatchSequenceNode(PositionedNode, Protocol):
-            """Sequence-pattern capabilities consumed by the Rope patch."""
-
-            patterns: t.SequenceOf[p.AttributeProbe]
-
-        @runtime_checkable
-        class MatchSingletonNode(Protocol):
-            """Singleton-pattern capabilities consumed by the Rope patch."""
-
-            value: p.AttributeProbe
-
-        @runtime_checkable
-        class MatchStarNode(Protocol):
-            """Star-pattern capabilities consumed by the Rope patch."""
-
-            name: str | None
-
-        @runtime_checkable
-        class MatchOrNode(Protocol):
-            """Alternative-pattern capabilities consumed by the Rope patch."""
-
-            patterns: t.SequenceOf[p.AttributeProbe]
-
-        @runtime_checkable
-        class SourceLines(Protocol):
-            """Minimal line adapter contract exposed by rope patched AST walkers."""
-
-            def get_line_start(self, lineno: int) -> int: ...
-
-        @runtime_checkable
-        class SourceBuffer(Protocol):
-            """Minimal source buffer contract exposed by rope patched AST walkers."""
-
-            source: str
-            offset: int
-
-            def consume_string(self, end: int | None = None) -> t.Pair[int, int]: ...
-
-        lines: FlextInfraProtocolsRope.PatchingASTWalker.SourceLines
-        source: FlextInfraProtocolsRope.PatchingASTWalker.SourceBuffer
-        children: bool
-        empty_tuple: p.AttributeProbe
-
-        def _handle(
-            self,
-            node: p.AttributeProbe,
-            children: list[p.AttributeProbe],
-            *,
-            eat_parens: bool = False,
-            eat_spaces: bool = False,
-        ) -> None: ...
-
-        def _child_nodes(
-            self, nodes: t.SequenceOf[p.AttributeProbe], separator: str
-        ) -> list[p.AttributeProbe]: ...
-
-    @runtime_checkable
     class RopeAnalysisMethods(Protocol):
         """Class contract shared by the Rope analysis mixins."""
 
         @staticmethod
-        def get_module_classes(
-            rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
+        def resolve_module_classes(
+            rope_project: t.Infra.RopeProject,
+            resource: t.Infra.RopeResource,
         ) -> t.StrSequence: ...
 
         @staticmethod
-        def get_class_methods(
+        def resolve_class_methods(
             rope_project: t.Infra.RopeProject,
             resource: t.Infra.RopeResource,
             class_name: str,
@@ -338,31 +188,10 @@ class FlextInfraProtocolsRope(Protocol):
         def init_rope_workspace(repository_root: Path) -> t.Infra.RopeProject: ...
 
         @staticmethod
-        def get_resource_from_path(
-            rope_project: t.Infra.RopeProject, file_path: Path
-        ) -> t.Infra.RopeResource | None: ...
-
-    @runtime_checkable
-    class CensusModuleRule(Protocol):
-        """Call contract shared by the symbol-indexed census rule scanners.
-
-        Every structural census rule that consults the module symbol index is
-        invoked through this one contract, so the census dispatcher owns a
-        single call site instead of one hand-written block per rule.
-        """
-
-        def __call__(
-            self,
-            rope: p.Infra.RopeWorkspaceDsl,
+        def resolve_resource_from_path(
+            rope_project: t.Infra.RopeProject,
             file_path: Path,
-            *,
-            project_name: str,
-            objects: t.VariadicTuple[m.Infra.Object] | None,
-            applied: frozenset[str],
-            selected_kinds: frozenset[str],
-            symbol_index: t.MappingKV[str, t.Pair[str, int]],
-            convention: m.Infra.RopeModuleConvention,
-        ) -> tuple[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
+        ) -> t.Infra.RopeResource | None: ...
 
 
 __all__: list[str] = ["FlextInfraProtocolsRope"]

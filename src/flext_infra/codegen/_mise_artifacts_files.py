@@ -1,4 +1,8 @@
-"""Exact filesystem-state primitives for Mise artifact transactions."""
+"""Exact filesystem-state primitives for Mise artifact transactions.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -18,20 +22,34 @@ class FlextInfraMiseArtifactsFiles:
 
     @classmethod
     def transaction_participants(
-        cls, layout: m.Infra.MiseToolchainWorkspaceLayout
+        cls,
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
     ) -> t.VariadicTuple[
         m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant
     ]:
-        """Return only explicitly registered publication owners."""
+        """Return only explicitly registered publication owners.
+
+        Returns:
+            Only explicitly registered publication owners.
+
+        """
         return (*layout.projects, *layout.file_participants)
 
     @classmethod
     def transaction_relative(
-        cls, layout: m.Infra.MiseToolchainWorkspaceLayout, path: Path
+        cls,
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
+        path: Path,
     ) -> p.Result[str]:
-        """Encode a file capability path without weakening workspace containment."""
+        """Encode a file capability path without weakening workspace containment.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         participants = sorted(
-            layout.file_participants, key=lambda item: -len(item.root.parts)
+            layout.file_participants,
+            key=lambda item: -len(item.root.parts),
         )
         for participant in participants:
             if path.is_relative_to(participant.root):
@@ -52,7 +70,12 @@ class FlextInfraMiseArtifactsFiles:
         *,
         purpose: str,
     ) -> p.Result[Path]:
-        """Resolve one journal path against its exact registered physical root."""
+        """Resolve one journal path against its exact registered physical root.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
+        """
         if not selector.startswith("@"):
             return cls.resolve_relative(layout.scope_root, selector, purpose=purpose)
         identity, separator, relative = selector.partition("/")
@@ -67,71 +90,96 @@ class FlextInfraMiseArtifactsFiles:
             return r[Path].from_failure(physical)
         if physical.value != (participant.device, participant.inode):
             return r[Path].fail(
-                f"file publication root identity changed: {participant.root}"
+                f"file publication root identity changed: {participant.root}",
             )
         return cls.resolve_relative(participant.root, relative, purpose=purpose)
 
     @classmethod
     def digest(cls, content: bytes) -> str:
-        """Return the exact lowercase SHA-256 identity for raw bytes."""
+        """Return the exact lowercase SHA-256 identity for raw bytes.
+
+        Returns:
+            The exact lowercase SHA-256 identity for raw bytes.
+
+        """
         return u.Cli.sha256_bytes(content)
 
     @classmethod
-    def packaged_launchers(cls) -> p.Result[t.VariadicTuple[bytes]]:
-        """Load the packaged unlocked bootstrap launcher pair for fresh seeding.
+    def package_directory(cls) -> Path:
+        """Return the physical directory of the running ``flext_infra`` package.
 
-        Package resources are immutable data: the installer may hard-link them
-        to its cache (uv does), so they are read as resources, never as
-        uniquely owned atomic state. Staging owns the destination's atomic
-        publication and executable-output permissions.
+        Returns:
+            The physical directory of the running ``flext_infra`` package.
+
         """
-        seed_directory = (
-            Path(__file__).resolve().parents[1] / c.Infra.MISE_BOOTSTRAP_SEED_DIRECTORY
-        )
-        contents: list[bytes] = []
-        for name in c.Infra.ARTIFACT_NAMES:
-            path = seed_directory / Path(name).name
-            loaded = u.Cli.files_read_binary(path)
-            if loaded.failure:
-                return r[t.VariadicTuple[bytes]].from_failure(loaded)
-            if not loaded.value:
-                return r[t.VariadicTuple[bytes]].fail(
-                    f"packaged Mise launcher seed is empty: {path}"
-                )
-            contents.append(loaded.value)
-        return r[t.VariadicTuple[bytes]].ok(tuple(contents))
+        return Path(__file__).resolve().parents[1]
+
+    @classmethod
+    def cold_start_directory(cls) -> Path:
+        """Return the packaged copy of flext-infra's own upg-written triple.
+
+        Its only writer is flext-infra's own generation, which projects its
+        runtime-root ``bin/mise``, ``bin/mise.cmd`` and ``mise.version`` here;
+        a repository that has never carried a triple, or carries the pre-bake
+        projection whose launchers resolve the latest release, starts from it.
+
+        Returns:
+            The packaged copy of flext-infra's own upg-written triple.
+
+        """
+        return cls.package_directory() / c.Infra.MISE_COLD_START_DIRECTORY
 
     @classmethod
     def read_state(
-        cls, path: Path, *, required: bool
+        cls,
+        path: Path,
+        *,
+        required: bool,
     ) -> p.Result[m.Cli.AtomicFileState]:
-        """Read exact state through the canonical descriptor-authenticated owner."""
+        """Read exact state through the canonical descriptor-authenticated owner.
+
+        Returns:
+            The resulting ``p.Result[m.Cli.AtomicFileState]``.
+
+        """
         return u.Cli.atomic_read_binary_file_state(path, required=required)
 
     @classmethod
     def physical_directory_identity(cls, path: Path) -> p.Result[t.Pair[int, int]]:
-        """Return the device/inode identity of one physical directory."""
+        """Return the device/inode identity of one physical directory.
+
+        Returns:
+            The device/inode identity of one physical directory.
+
+        """
         try:
             observed = path.lstat()
         except OSError as exc:
             return r[tuple[int, int]].fail_op("inspect generation directory", exc)
         reparse = getattr(observed, "st_file_attributes", 0) & getattr(
-            stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0
+            stat,
+            "FILE_ATTRIBUTE_REPARSE_POINT",
+            0,
         )
         if not stat.S_ISDIR(observed.st_mode) or reparse:
             return r[tuple[int, int]].fail(
-                f"generation directory is not physical: {path}"
+                f"generation directory is not physical: {path}",
             )
         return r[tuple[int, int]].ok((observed.st_dev, observed.st_ino))
 
     @classmethod
     def write_publication(
-        cls, publication: m.Infra.CodegenStagedFile
+        cls,
+        publication: m.Infra.CodegenStagedFile,
     ) -> p.Result[bool]:
         """Consume one staged create/replace/mode/delete through the CLI owner.
 
         Publication is a guarded atomic replace; the zero-residue law
         prohibits leaving backup copies beside managed destinations.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         before = publication.before
         replacement = publication.replacement
@@ -139,7 +187,7 @@ class FlextInfraMiseArtifactsFiles:
             return cls.delete_state(before)
         if replacement.content is None or replacement.mode is None:
             return r[bool].fail(
-                f"codegen staged replacement is absent: {replacement.path}"
+                f"codegen staged replacement is absent: {replacement.path}",
             )
         published = u.Cli.atomic_publish_staged_binary_file_guarded(before, replacement)
         if published.failure:
@@ -171,13 +219,18 @@ class FlextInfraMiseArtifactsFiles:
         )
         if observed_identity != replacement_identity:
             return r[bool].fail(
-                f"published codegen file differs from staged identity: {before.path}"
+                f"published codegen file differs from staged identity: {before.path}",
             )
         return r[bool].ok(True)
 
     @classmethod
     def delete_state(cls, state: m.Cli.AtomicFileState) -> p.Result[bool]:
-        """Delete one exact existing state through the CLI owner."""
+        """Delete one exact existing state through the CLI owner.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         if (
             state.content is None
             or state.mode is None
@@ -185,13 +238,18 @@ class FlextInfraMiseArtifactsFiles:
             or state.inode is None
         ):
             return r[bool].fail(
-                f"cannot delete absent codegen file state: {state.path}"
+                f"cannot delete absent codegen file state: {state.path}",
             )
         return u.Cli.atomic_delete_binary_file_guarded(state)
 
     @classmethod
     def workspace_relative(cls, root: Path, path: Path) -> p.Result[str]:
-        """Return a canonical lexical workspace-relative path selector."""
+        """Return a canonical lexical workspace-relative path selector.
+
+        Returns:
+            A canonical lexical workspace-relative path selector.
+
+        """
         absolute_root = root.absolute()
         try:
             relative = path.absolute().relative_to(absolute_root)
@@ -204,9 +262,18 @@ class FlextInfraMiseArtifactsFiles:
 
     @classmethod
     def resolve_relative(
-        cls, root: Path, selector: str, *, purpose: str
+        cls,
+        root: Path,
+        selector: str,
+        *,
+        purpose: str,
     ) -> p.Result[Path]:
-        """Resolve a lexical relative selector without dereferencing its leaf."""
+        """Resolve a lexical relative selector without dereferencing its leaf.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
+        """
         relative = Path(selector)
         if (
             relative.is_absolute()

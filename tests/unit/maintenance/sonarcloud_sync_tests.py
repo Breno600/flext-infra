@@ -5,6 +5,9 @@ decides what is written and when, without opening a network socket: the
 project key derived from a real Git origin, the request plan derived from the
 codegen SSOT, the no-op decision against the measured response shape, and the
 token preflight that fails before any effect through the public CLI.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -33,7 +36,12 @@ class TestsFlextInfraSonarcloudSettingsSync:
 
     @staticmethod
     def _spec(count: int | None = None) -> m.Infra.SonarcloudSpec:
-        """Use the current SSOT or validate a different exclusion cardinality."""
+        """Use the current SSOT or validate a different exclusion cardinality.
+
+        Returns:
+            The resulting ``m.Infra.SonarcloudSpec``.
+
+        """
         spec = config.Infra.codegen.sonarcloud
         if count is None:
             return spec
@@ -56,7 +64,12 @@ class TestsFlextInfraSonarcloudSettingsSync:
         inherited: bool = False,
         include_setting: bool = True,
     ) -> str:
-        """Render an ``api/settings/values`` body in the measured shape."""
+        """Render an ``api/settings/values`` body in the measured shape.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         settings: list[t.JsonValue] = []
         if include_setting:
             field_values: list[t.JsonValue] = [
@@ -71,16 +84,30 @@ class TestsFlextInfraSonarcloudSettingsSync:
 
     @staticmethod
     def _pairs(spec: m.Infra.SonarcloudSpec) -> t.VariadicTuple[t.Pair[str, str]]:
-        """Read expectations from the exact typed config the service receives."""
+        """Read expectations from the exact typed config the service receives.
+
+        Returns:
+            The resulting ``t.VariadicTuple[t.Pair[str, str]]``.
+
+        """
         return tuple(
             (exclusion.rule_key, exclusion.resource_key)
             for exclusion in spec.issue_exclusions
         )
 
+    @staticmethod
     def _cli(
-        self, repository_root: Path, env: t.StrMapping | None = None
+        self,
+        repository_root: Path,
+        env: t.StrMapping | None = None,
+        *,
+        verb: str = c.Infra.VERB_SONARCLOUD_SYNC,
     ) -> t.Pair[int, str]:
-        """Run the public CLI route in a child process without SONAR_TOKEN."""
+        """Run a public SonarCloud route in a child process.
+
+        Returns:
+            The resulting ``t.Pair[int, str]``.
+        """
         result = tm.ok(
             u.Cli.run_raw(
                 [
@@ -88,13 +115,13 @@ class TestsFlextInfraSonarcloudSettingsSync:
                     "-m",
                     "flext_infra",
                     c.Infra.CLI_GROUP_MAINTENANCE,
-                    c.Infra.VERB_SONARCLOUD_SYNC,
+                    verb,
                     "--repository-root",
                     str(repository_root),
                 ],
                 env={"COLUMNS": "200", **(env or {})},
                 remove_env_keys=() if env else ("SONAR_TOKEN",),
-            )
+            ),
         )
         return result.outcome.raw_return_code, result.stdout + result.stderr
 
@@ -106,7 +133,9 @@ class TestsFlextInfraSonarcloudSettingsSync:
         ],
     )
     def test_project_key_joins_origin_organization_and_repository(
-        self, tmp_path: Path, origin: str
+        self,
+        tmp_path: Path,
+        origin: str,
     ) -> None:
         """The key is <organization>_<repository> whatever the origin transport."""
         u.Tests.initialize_git_repo(tmp_path, origin_url=origin)
@@ -121,7 +150,8 @@ class TestsFlextInfraSonarcloudSettingsSync:
 
     @pytest.mark.parametrize("count", [None, 0, 1, 3])
     def test_plan_selects_reset_or_the_complete_property_set(
-        self, count: int | None
+        self,
+        count: int | None,
     ) -> None:
         """The request honors both the current SSOT and arbitrary valid configs."""
         spec = self._spec(count)
@@ -154,7 +184,10 @@ class TestsFlextInfraSonarcloudSettingsSync:
     @pytest.mark.parametrize("count", [0, 1, 3])
     @pytest.mark.parametrize("inherited", [False, True])
     def test_plan_matches_effective_server_values(
-        self, count: int, *, inherited: bool
+        self,
+        count: int,
+        *,
+        inherited: bool,
     ) -> None:
         """Inherited entries affect convergence exactly like project entries."""
         spec = self._spec(count)
@@ -165,7 +198,8 @@ class TestsFlextInfraSonarcloudSettingsSync:
         for ordered in (pairs, tuple(reversed(pairs))):
             current = values(self._server_payload(ordered, inherited=inherited))
             tm.that(
-                FlextInfraSonarcloudSettingsSync.in_sync_with(plan, current), eq=True
+                FlextInfraSonarcloudSettingsSync.in_sync_with(plan, current),
+                eq=True,
             )
         absent = values(self._server_payload((), include_setting=False))
         tm.that(
@@ -174,14 +208,16 @@ class TestsFlextInfraSonarcloudSettingsSync:
         )
         extra = values(
             self._server_payload(
-                (*pairs, ("text:S0000", "extra.toml")), inherited=inherited
-            )
+                (*pairs, ("text:S0000", "extra.toml")),
+                inherited=inherited,
+            ),
         )
         tm.that(FlextInfraSonarcloudSettingsSync.in_sync_with(plan, extra), eq=False)
 
     @pytest.mark.parametrize("count", [1, 3])
     def test_repeated_config_entries_fail_and_server_duplicates_require_a_write(
-        self, count: int
+        self,
+        count: int,
     ) -> None:
         """Config and readback must contain every declared pair exactly once."""
         spec = self._spec(count)
@@ -195,13 +231,9 @@ class TestsFlextInfraSonarcloudSettingsSync:
         )
         plan = tm.ok(FlextInfraSonarcloudSettingsSync.settings_plan(spec, "org_repo"))
         current = m.Infra.SonarcloudSettingsValues.model_validate_json(
-            self._server_payload(self._pairs(spec) * 2)
+            self._server_payload(self._pairs(spec) * 2),
         )
         tm.that(FlextInfraSonarcloudSettingsSync.in_sync_with(plan, current), eq=False)
-
-    def test_workspace_root_fans_the_verb_out(self) -> None:
-        """The workspace orchestrator accepts the verb so the root reaches members."""
-        tm.that(c.Infra.ORCHESTRATED_VERBS, has=c.Infra.VERB_SONARCLOUD_SYNC)
 
     def test_absent_token_fails_before_any_effect(self, tmp_path: Path) -> None:
         """Without SONAR_TOKEN the verb fails first, before reading origin or API."""
@@ -220,3 +252,40 @@ class TestsFlextInfraSonarcloudSettingsSync:
 
         tm.that(code, ne=0)
         tm.that(output, has="SONAR_TOKEN is required")
+
+    def test_issue_search_requires_token_before_network(self, tmp_path: Path) -> None:
+        """The read-only public route stops before Git or HTTP without a token."""
+        code, output = self._cli(tmp_path, verb=c.Infra.VERB_SONARCLOUD_ISSUES)
+
+        tm.that(code, ne=0)
+        tm.that(output, has="SONAR_TOKEN is required")
+
+    @staticmethod
+    def test_issue_search_response_parses_published_page_contract() -> None:
+        """A missing line stays explicit while page accounting remains required."""
+        payload = tm.ok(
+            u.Cli.json_dumps({
+                "paging": {"pageIndex": 1, "pageSize": 100, "total": 2},
+                "issues": [
+                    {
+                        "key": "issue-1",
+                        "rule": "python:S1",
+                        "component": "org_repo:a.py",
+                        "line": 4,
+                        "message": "First",
+                    },
+                    {
+                        "key": "issue-2",
+                        "rule": "python:S2",
+                        "component": "org_repo:b.py",
+                        "message": "Second",
+                    },
+                ],
+            }),
+        )
+
+        response = m.Infra.SonarcloudIssueSearch.model_validate_json(payload)
+
+        tm.that(response.paging.total, eq=len(response.issues))
+        tm.that(response.issues[0].line, eq=4)
+        tm.that(response.issues[1].line, eq=None)

@@ -1,4 +1,8 @@
-"""Reusable docs contract helpers exposed through ``u.Infra``."""
+"""Reusable docs contract helpers exposed through ``u.Infra``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,14 +10,13 @@ from collections.abc import Mapping
 from html import unescape
 from typing import TYPE_CHECKING
 
+from flext_cli import u
 from markdown import Markdown
 from markdown.extensions.toc import slugify
 
 from flext_core import r
 from flext_infra import c, m, t
-
-from .._utilities.codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
-from .._utilities.docs_scope import FlextInfraUtilitiesDocsScope
+from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -26,7 +29,12 @@ class FlextInfraUtilitiesDocsContract:
 
     @staticmethod
     def _docs_contract_body_start(lines: list[str]) -> int:
-        """Return the first body line index, skipping YAML frontmatter when present."""
+        """Return the first body line index, skipping YAML frontmatter when present.
+
+        Returns:
+            The first body line index, skipping YAML frontmatter when present.
+
+        """
         if not lines or lines[0].strip() != "---":
             return 0
         for index in range(1, len(lines)):
@@ -36,7 +44,12 @@ class FlextInfraUtilitiesDocsContract:
 
     @staticmethod
     def _docs_contract_strip_invented_toc_before_frontmatter(content: str) -> str:
-        """Undo H1+TOC wrongly prepended ahead of YAML frontmatter."""
+        """Undo H1+TOC wrongly prepended ahead of YAML frontmatter.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         if not content.startswith("# Documentation"):
             return content
         if c.Infra.TOC_START not in content or c.Infra.TOC_END not in content:
@@ -51,10 +64,19 @@ class FlextInfraUtilitiesDocsContract:
 
     @staticmethod
     def docs_contract_update_toc(content: str) -> t.StrIntPair:
-        """Normalize the managed table of contents in Markdown content."""
+        """Normalize the managed table of contents in Markdown content.
+
+        Returns:
+            The resulting ``t.StrIntPair``.
+
+        """
         original = content
-        content = FlextInfraUtilitiesDocsContract._docs_contract_strip_invented_toc_before_frontmatter(
-            content
+        strip_toc = (
+            FlextInfraUtilitiesDocsContract
+            ._docs_contract_strip_invented_toc_before_frontmatter
+        )
+        content = strip_toc(
+            content,
         )
         toc = FlextInfraUtilitiesDocsContract.docs_contract_build_toc(content)
         if c.Infra.TOC_START in content and c.Infra.TOC_END in content:
@@ -95,7 +117,12 @@ class FlextInfraUtilitiesDocsContract:
 
     @staticmethod
     def docs_contract_anchorize(text: str) -> str:
-        """Use the Python-Markdown anchor algorithm consumed by MkDocs."""
+        """Use the Python-Markdown anchor algorithm consumed by MkDocs.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return slugify(text, "-")
 
     @staticmethod
@@ -105,6 +132,10 @@ class FlextInfraUtilitiesDocsContract:
         Headings inside fenced code blocks are documentation samples, not
         sections: markdown renders them verbatim and emits no anchor, so a TOC
         entry pointing at them is a dead link that fails the strict docs build.
+
+        Returns:
+            The resulting ``str``.
+
         """
         renderer = Markdown(
             extensions=["attr_list", "md_in_html", "toc", "pymdownx.superfences"],
@@ -116,15 +147,17 @@ class FlextInfraUtilitiesDocsContract:
             "\n".join(
                 lines[
                     FlextInfraUtilitiesDocsContract._docs_contract_body_start(lines) :
-                ]
-            )
+                ],
+            ),
         )
         items: t.MutableSequenceOf[str] = []
         rendered = m.Infra.DocsRenderedToc.model_validate(
-            renderer, from_attributes=True
+            renderer,
+            from_attributes=True,
         )
         FlextInfraUtilitiesDocsContract._docs_contract_toc_items(
-            rendered.toc_tokens, items
+            rendered.toc_tokens,
+            items,
         )
         if not items:
             items = ["- No sections found"]
@@ -136,27 +169,50 @@ class FlextInfraUtilitiesDocsContract:
         items: t.MutableSequenceOf[str],
         depth: int = 0,
     ) -> None:
-        """Serialize the renderer's own TOC without reparsing heading Markdown."""
+        """Serialize rendered TOC labels with the formatter's Markdown escapes."""
         for token in tokens:
-            title = unescape(token.name).replace("[", r"\[").replace("]", r"\]")
+            title = (
+                unescape(token.name)
+                .replace("[", r"\[")
+                .replace("]", r"\]")
+                .replace("*", r"\*")
+                .replace("_", r"\_")
+            )
             indent = "  " * depth
             items.append(f"{indent}- [{title}](#{token.id})")
             FlextInfraUtilitiesDocsContract._docs_contract_toc_items(
-                token.children, items, depth + 1
+                token.children,
+                items,
+                depth + 1,
             )
 
     @staticmethod
     def docs_workspace_contract(repository_root: Path) -> t.JsonMapping:
-        """Return the root docs contract using root ``pyproject.toml`` metadata."""
+        """Return the root docs contract using root ``pyproject.toml`` metadata.
+
+        Returns:
+            The root docs contract using root ``pyproject.toml`` metadata.
+
+        """
         return FlextInfraUtilitiesDocsContract.docs_current_project_contract(
-            repository_root, t.Infra.INFRA_MAPPING_ADAPTER.validate_python({})
+            repository_root,
+            t.Infra.INFRA_MAPPING_ADAPTER.validate_python({}),
         )
 
     @staticmethod
     def docs_current_project_contract(
-        project_root: Path, rendered_contract: t.JsonMapping
+        project_root: Path,
+        rendered_contract: t.JsonMapping,
     ) -> t.JsonMapping:
-        """Bind rendered API analysis to the current authenticated pyproject bytes."""
+        """Bind rendered API analysis to the current authenticated pyproject bytes.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
+        Raises:
+            TypeError: If docs project metadata is missing.
+
+        """
         payload = FlextInfraUtilitiesDocsScope.project_payload(project_root)
         project_value = payload.get(c.Infra.PROJECT)
         if not isinstance(project_value, Mapping):
@@ -183,10 +239,10 @@ class FlextInfraUtilitiesDocsContract:
             else [],
             "site_title": str(docs_meta.get("site_title", "")).strip() or project_name,
             "site_url": str(
-                urls.get("Documentation") or urls.get("Homepage") or ""
+                urls.get("Documentation") or urls.get("Homepage") or "",
             ).strip(),
             "repo_url": str(
-                urls.get("Repository") or urls.get("Homepage") or ""
+                urls.get("Repository") or urls.get("Homepage") or "",
             ).strip(),
             "exclude_docs": list(exclude_docs_value)
             if isinstance(exclude_docs_value, list)
@@ -204,7 +260,12 @@ class FlextInfraUtilitiesDocsContract:
         desired_mode: int | None,
         source_states: t.SequenceOf[m.Cli.AtomicFileState],
     ) -> p.Result[m.Infra.CodegenFilePlan]:
-        """Plan one exact docs artifact without publishing it."""
+        """Plan one exact docs artifact without publishing it.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenFilePlan]``.
+
+        """
         if (
             not project.is_absolute()
             or not path.is_absolute()
@@ -213,38 +274,46 @@ class FlextInfraUtilitiesDocsContract:
             or not path.is_relative_to(project)
         ):
             return r[m.Infra.CodegenFilePlan].fail(
-                f"unsafe docs publication target: {path}"
+                f"unsafe docs publication target: {path}",
             )
         if (content is None) != (desired_mode is None):
             return r[m.Infra.CodegenFilePlan].fail(
-                f"docs desired bytes and mode differ: {path}"
+                f"docs desired bytes and mode differ: {path}",
             )
-        return FlextInfraUtilitiesCodegenFilePlan.planned_file(
-            project,
-            path,
-            required=False,
-            desired_content=content,
-            desired_mode=desired_mode,
-            source_states=source_states,
-            owner="docs",
-            policy="full",
+        before = u.Cli.atomic_read_binary_file_state(path, required=False)
+        if before.failure:
+            return r[m.Infra.CodegenFilePlan].from_failure(before)
+        return r[m.Infra.CodegenFilePlan].ok(
+            m.Infra.CodegenFilePlan(
+                project=project,
+                path=path,
+                before=before.value,
+                desired_content=content,
+                desired_mode=desired_mode,
+                source_states=tuple(source_states),
+                owner="docs",
+                policy="full",
+            ),
         )
 
     @staticmethod
     def docs_write_if_needed(
-        path: Path, content: str, *, apply: bool, overwrite: bool = True
+        path: Path,
+        content: str,
+        *,
+        apply: bool,
     ) -> m.Infra.GeneratedFile:
         """Write generated content only when needed and allowed.
 
         This imperative helper belongs to non-generation docs fixers. Generated
         documentation uses :meth:`docs_file_plan` and is published only by the
         enclosing codegen transaction.
+
+        Returns:
+            The resulting ``m.Infra.GeneratedFile``.
+
         """
         exists = path.exists()
-        if exists and not overwrite:
-            return m.Infra.GeneratedFile(
-                path=path.as_posix(), changed=False, written=False
-            )
         current = path.read_text(encoding=c.Cli.ENCODING_DEFAULT) if exists else ""
         normalized = (
             FlextInfraUtilitiesDocsContract.docs_contract_update_toc(content)[0]

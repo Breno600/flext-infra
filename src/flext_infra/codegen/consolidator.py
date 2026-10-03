@@ -1,4 +1,8 @@
-"""Direct constants consolidation command service."""
+"""Direct constants consolidation command service.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,10 +11,11 @@ from typing import Annotated, override
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
+from flext_infra.base import s
+from flext_infra.codegen._consolidator_steps import (
+    FlextInfraCodegenConsolidatorStepsMixin,
+)
 from flext_infra.workspace.rope import FlextInfraRopeWorkspace
-
-from ..base import s
-from ._consolidator_steps import FlextInfraCodegenConsolidatorStepsMixin
 
 
 class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMixin):
@@ -23,7 +28,12 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
 
     @override
     def execute(self) -> p.Result[str]:
-        """Execute constants consolidation with normalized command context."""
+        """Execute constants consolidation with normalized command context.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         output_lines: t.MutableSequenceOf[str] = (
             ["[DRY-RUN] Scanning...\n"] if self.dry_run else []
         )
@@ -43,7 +53,7 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
 
                 constants_file = project_layout.package_dir / c.Infra.CONSTANTS_PY
                 value_map_result = self._build_value_map_from_constants_file(
-                    constants_file
+                    constants_file,
                 )
                 if value_map_result.failure:
                     return r[str].from_failure(value_map_result)
@@ -58,8 +68,7 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
                     scanned = self._scan_file(rope.rope_project, python_file, value_map)
                     if scanned is None:
                         continue
-                    resource, source, matches = scanned
-                    found += len(matches)
+                    found += len(scanned.matches)
                     rel_path = python_file.relative_to(self.repository_root)
                     if self.dry_run:
                         output_lines.extend(
@@ -67,17 +76,15 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
                                 f"  {rel_path}:{symbol.line}  {symbol.name} = "
                                 f"{value} -> {ref}"
                             )
-                            for symbol, ref, value in matches
+                            for symbol, ref, value in scanned.matches
                         )
                         continue
                     ok, changes, lines = self._apply_and_validate(
                         rope.rope_project,
-                        resource,
+                        scanned,
                         python_file,
                         self.repository_root,
                         project_layout.package_name,
-                        source,
-                        matches,
                     )
                     output_lines.extend(lines)
                     file_results.append(
@@ -85,7 +92,7 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
                             file=str(rel_path),
                             status="applied" if ok else "reverted",
                             changes=tuple(changes),
-                        )
+                        ),
                     )
                     if ok:
                         applied += len(changes)
@@ -108,12 +115,21 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
             return r[str].ok(report.model_dump_json())
         return r[str].ok("\n".join(output_lines))
 
+    @staticmethod
     def _project_python_files(
-        self, rope_workspace: p.Infra.RopeWorkspaceDsl, project_root: Path
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        project_root: Path,
     ) -> p.Result[t.SequenceOf[Path]]:
-        """Return indexed Python wrapper files for one consolidation pass."""
+        """Return indexed Python wrapper files for one consolidation pass.
+
+        Returns:
+            Indexed Python wrapper files for one consolidation pass.
+
+        """
         resolved_root = project_root.resolve()
-        constants_directory = c.Infra.FAMILY_DIRECTORIES["c"]
+        constants_directory = u.Infra.facade_family_declared_by(
+            c.Infra.CONSTANTS_PY,
+        ).directory
         indexed_files: t.MutableSequenceOf[Path] = []
         for module in rope_workspace.modules():
             if (
@@ -136,9 +152,15 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
         return r[t.SequenceOf[Path]].ok(tuple(sorted(indexed_files)))
 
     def _selected_projects(
-        self, rope_workspace: p.Infra.RopeWorkspaceDsl
+        self,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> p.Result[t.SequenceOf[p.Infra.ProjectInfo]]:
-        """Return the selected projects."""
+        """Return the selected projects.
+
+        Returns:
+            The selected projects.
+
+        """
         _ = rope_workspace
         discovered = u.Infra.projects(self.repository_root)
         if discovered.failure:
