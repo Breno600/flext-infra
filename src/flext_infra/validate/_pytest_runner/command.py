@@ -427,7 +427,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         """
         pytest = config.Infra.tooling.tools.pytest
         suite_stop = self.suite_stop_monotonic(
-            serial=serial, execution_mode=execution_mode
+            serial=serial, execution_mode=execution_mode,
         )
         return (
             sys.executable,

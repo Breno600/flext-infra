@@ -15,6 +15,7 @@ from flext_core import build_lazy_import_map, install_lazy_exports
 if TYPE_CHECKING:
     from flext_infra.services._codegen.vscode import FlextInfraCodegenVscodeMixin
 
+
 __all__: tuple[str, ...] = ("FlextInfraCodegenVscodeMixin",)
 
 _LAZY_IMPORTS = MappingProxyType(

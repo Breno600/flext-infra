@@ -63,7 +63,8 @@ class FlextInfraConfigModelsArtifact:
 
     class CodegenVscodeSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Fully modeled content of the ``vscode`` section
-        of ``config/codegen.yaml``."""
+        of ``config/codegen.yaml``.
+        """
 
         scalar_settings: Annotated[
             Mapping[str, str | bool | int],

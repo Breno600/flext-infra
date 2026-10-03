@@ -116,7 +116,7 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(content, contains='".api": ("Demo",)')
         tm.that(content, contains="from demo_pkg.__version__ import __version__\n")
         tm.that(
-            content, contains='__all__: tuple[str, ...] = ("Demo", "__version__", "r")'
+            content, contains='__all__: tuple[str, ...] = ("Demo", "__version__", "r")',
         )
         tm.that(content, contains="if TYPE_CHECKING:")
         tm.that(content, contains="    from demo_pkg.api import Demo")

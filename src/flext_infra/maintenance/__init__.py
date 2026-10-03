@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from flext_infra.maintenance.sonarcloud_client import FlextInfraSonarcloudClient
     from flext_infra.maintenance.sonarcloud_issues import FlextInfraSonarcloudIssues
 
+
 __all__: tuple[str, ...] = (
     "FlextInfraCleanService",
     "FlextInfraPythonVersionEnforcer",

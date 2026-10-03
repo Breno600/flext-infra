@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from flext_infra._models._git.worktree_facts import FlextInfraModelsGitWorktreeFacts
     from flext_infra._models._git.worktree_state import FlextInfraModelsGitWorktreeState
 
+
 __all__: tuple[str, ...] = (
     "FlextInfraModelsGitIdentity",
     "FlextInfraModelsGitWorktreeFacts",

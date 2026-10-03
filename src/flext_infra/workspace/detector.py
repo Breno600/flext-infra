@@ -280,7 +280,7 @@ class FlextInfraWorkspaceDetector(
             # state IS the identity, gascity participates, and no manifest
             # project spec exists. Absence never constructs a None payload.
             outcome = tuple[
-                m.Infra.RepositoryRef, bool, m.Infra.ProjectSpec | None
+                m.Infra.RepositoryRef, bool, m.Infra.ProjectSpec | None,
             ]
             return r[outcome].ok((
                 observed,

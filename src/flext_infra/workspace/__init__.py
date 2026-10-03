@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
     from flext_infra.workspace.rope import FlextInfraRopeWorkspace
 
+
 __all__: tuple[str, ...] = (
     "FlextInfraFlextBindingService",
     "FlextInfraRopeWorkspace",

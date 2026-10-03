@@ -19,7 +19,7 @@ from packaging.utils import canonicalize_name
 from packaging.version import InvalidVersion, Version
 
 from flext_core import r
-from flext_infra import c, t
+from flext_infra import c, m, t
 from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
 
 # Why: dependency_waves subscripts r[t.SequenceOf[t.StrSequence]] at runtime, so
@@ -824,9 +824,13 @@ class FlextInfraUtilitiesDependencies:
         upstream: str,
         distribution: str,
     ) -> m.Infra.ScaffoldDependencyProfileSpec | None:
-        """Compose the shared upstream and project-specific dependency rows once."""
+        """Compose the shared upstream and project-specific dependency rows once.
+
+        Returns:
+            The resulting ``m.Infra.ScaffoldDependencyProfileSpec | None``.
+        """
         rows = cls.dependency_profile_rows(
-            profiles, upstream=upstream, distribution=distribution
+            profiles, upstream=upstream, distribution=distribution,
         )
         if not rows:
             return None
@@ -844,7 +848,7 @@ class FlextInfraUtilitiesDependencies:
                             for item in additions
                             for requirement in item.runtime
                         ),
-                    ))
+                    )),
                 ),
                 "codegen": tuple(
                     dict.fromkeys((
@@ -854,9 +858,9 @@ class FlextInfraUtilitiesDependencies:
                             for item in additions
                             for requirement in item.codegen
                         ),
-                    ))
+                    )),
                 ),
-            }
+            },
         )
 
 
