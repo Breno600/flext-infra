@@ -1,4 +1,8 @@
-"""Hostile coverage for governed gitlink materialization during lane setup."""
+"""Hostile coverage for governed gitlink materialization during lane setup.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -26,12 +30,16 @@ class TestsFlextInfraWorktreeProvisioningGitlinks:
         return source
 
     def _lane(
-        self, tmp_path: Path, *, managed: bool = True
+        self,
+        tmp_path: Path,
+        *,
+        managed: bool = True,
     ) -> t.Triple[Path, Path, str]:
         lane = tmp_path / "lane"
         lane.mkdir()
         (lane / "pyproject.toml").write_text(
-            '[project]\nname = "fixture"\nversion = "0.1.0"\n', encoding="utf-8"
+            '[project]\nname = "fixture"\nversion = "0.1.0"\n',
+            encoding="utf-8",
         )
         (lane / "Makefile").write_text(
             f"RUNTIME_VENV := $(CURDIR)/{c.Infra.ENVIRONMENT_DIRECTORY}\n"
@@ -43,7 +51,8 @@ class TestsFlextInfraWorktreeProvisioningGitlinks:
             encoding="utf-8",
         )
         (lane / ".gitignore").write_text(
-            f"{c.Infra.ENVIRONMENT_DIRECTORY}/\n", encoding="utf-8"
+            f"{c.Infra.ENVIRONMENT_DIRECTORY}/\n",
+            encoding="utf-8",
         )
         u.Tests.initialize_git_repo(lane)
         source = self._source(tmp_path, "member")
@@ -73,8 +82,10 @@ class TestsFlextInfraWorktreeProvisioningGitlinks:
         return lane, source, recorded
 
     def test_absent_governed_gitlink_is_materialized_at_recorded_oid(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test absent governed gitlink is materialized at recorded oid."""
         lane, _source_root, recorded = self._lane(tmp_path)
         self._git(lane, "submodule", "deinit", "-q", "-f", "member")
 
@@ -83,8 +94,10 @@ class TestsFlextInfraWorktreeProvisioningGitlinks:
         tm.that(self._git(lane / "member", "rev-parse", "HEAD"), eq=recorded)
 
     def test_governed_gitlink_head_mismatch_fails_untouched(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test governed gitlink head mismatch fails untouched."""
         lane, source, _recorded = self._lane(tmp_path)
         (source / "advanced.txt").write_text("advanced\n", encoding="utf-8")
         self._git(source, "add", "advanced.txt")
@@ -99,8 +112,10 @@ class TestsFlextInfraWorktreeProvisioningGitlinks:
         tm.that(self._git(lane / "member", "rev-parse", "HEAD"), eq=advanced)
 
     def test_governed_gitlink_origin_identity_mismatch_fails(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test governed gitlink origin identity mismatch fails."""
         lane, _source_root, _recorded = self._lane(tmp_path)
         self._git(
             lane,
@@ -114,6 +129,7 @@ class TestsFlextInfraWorktreeProvisioningGitlinks:
         tm.fail(FlextInfraWorktreeService.setup_lane(lane), has=["member", "identity"])
 
     def test_dirty_governed_gitlink_fails_untouched(self, tmp_path: Path) -> None:
+        """Test dirty governed gitlink fails untouched."""
         lane, _source_root, _recorded = self._lane(tmp_path)
         marker = lane / "member" / "content.txt"
         marker.write_text("dirty\n", encoding="utf-8")
@@ -123,6 +139,7 @@ class TestsFlextInfraWorktreeProvisioningGitlinks:
         tm.that(marker.read_text(encoding="utf-8"), eq="dirty\n")
 
     def test_content_only_gitlink_is_never_materialized(self, tmp_path: Path) -> None:
+        """Test content only gitlink is never materialized."""
         lane, _source_root, _recorded = self._lane(tmp_path, managed=False)
         self._git(lane, "submodule", "deinit", "-q", "-f", "member")
 
@@ -131,6 +148,7 @@ class TestsFlextInfraWorktreeProvisioningGitlinks:
         tm.that((lane / "member" / ".git").exists(), eq=False)
 
     def test_symlinked_git_marker_is_rejected(self, tmp_path: Path) -> None:
+        """Test symlinked git marker is rejected."""
         lane, _source_root, _recorded = self._lane(tmp_path)
         marker = lane / "member" / ".git"
         marker.unlink()

@@ -1,4 +1,8 @@
-"""Public release utilities and artifact-boundary behavior tests."""
+"""Public release utilities and artifact-boundary behavior tests.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -170,17 +174,28 @@ class TestsFlextInfraReleaseHelpers:
 
         @staticmethod
         def write_notes(workspace: Path) -> Path:
-            """Write the release-notes fixture the changelog updates consume."""
+            """Write the release-notes fixture the changelog updates consume.
+
+            Returns:
+                The resulting ``Path``.
+
+            """
             notes_path = workspace / "notes.md"
             notes_path.parent.mkdir(parents=True, exist_ok=True)
             notes_path.write_text(
-                c.Tests.RELEASE_NOTES_HEADING + "\n", encoding="utf-8"
+                c.Tests.RELEASE_NOTES_HEADING + "\n",
+                encoding="utf-8",
             )
             return notes_path
 
         @staticmethod
         def update_changelog_at(workspace: Path, notes_path: Path) -> p.Result[bool]:
-            """Run the public changelog update at the canonical release targets."""
+            """Run the public changelog update at the canonical release targets.
+
+            Returns:
+                The resulting ``p.Result[bool]``.
+
+            """
             return u.Infra.update_changelog(
                 workspace,
                 c.Tests.RELEASE_VERSION_TARGET,
@@ -190,15 +205,21 @@ class TestsFlextInfraReleaseHelpers:
 
         @staticmethod
         def update_changelog_from_seed(workspace: Path, changelog_text: str) -> str:
-            """Seed one existing changelog, update it, and return the rewritten text."""
+            """Seed one existing changelog, update it, and return the rewritten text.
+
+            Returns:
+                The resulting ``str``.
+
+            """
             docs_dir = workspace / "docs"
             docs_dir.mkdir(parents=True, exist_ok=True)
             (docs_dir / "CHANGELOG.md").write_text(changelog_text, encoding="utf-8")
             notes_path = TestsFlextInfraReleaseHelpers.TestsChangelog.write_notes(
-                workspace
+                workspace,
             )
             result = TestsFlextInfraReleaseHelpers.TestsChangelog.update_changelog_at(
-                workspace, notes_path
+                workspace,
+                notes_path,
             )
             tm.ok(result)
             return (docs_dir / "CHANGELOG.md").read_text(encoding="utf-8")
@@ -208,11 +229,12 @@ class TestsFlextInfraReleaseHelpers:
             """Create changelog, latest and versioned release documents."""
             workspace = tmp_path / "workspace"
             notes_path = TestsFlextInfraReleaseHelpers.TestsChangelog.write_notes(
-                workspace
+                workspace,
             )
 
             result = TestsFlextInfraReleaseHelpers.TestsChangelog.update_changelog_at(
-                workspace, notes_path
+                workspace,
+                notes_path,
             )
 
             tm.ok(result)
@@ -220,7 +242,7 @@ class TestsFlextInfraReleaseHelpers:
             # The markdown gate (MD012) rejects a trailing blank line, so a
             # first changelog ends with exactly one newline.
             changelog = (workspace / "docs" / "CHANGELOG.md").read_text(
-                encoding="utf-8"
+                encoding="utf-8",
             )
             tm.that(changelog.endswith("\n"), eq=True)
             tm.that(changelog.endswith("\n\n"), eq=False)
@@ -237,7 +259,7 @@ class TestsFlextInfraReleaseHelpers:
             """Keep one release heading across repeated public updates."""
             workspace = tmp_path / "workspace"
             notes_path = TestsFlextInfraReleaseHelpers.TestsChangelog.write_notes(
-                workspace
+                workspace,
             )
 
             update = TestsFlextInfraReleaseHelpers.TestsChangelog.update_changelog_at
@@ -245,7 +267,7 @@ class TestsFlextInfraReleaseHelpers:
             second_result = update(workspace, notes_path)
 
             changelog = (workspace / "docs" / "CHANGELOG.md").read_text(
-                encoding="utf-8"
+                encoding="utf-8",
             )
             tm.ok(first_result)
             tm.ok(second_result)
@@ -282,7 +304,8 @@ class TestsFlextInfraReleaseHelpers:
             workspace = tmp_path / "workspace"
             changelog = (
                 TestsFlextInfraReleaseHelpers.TestsChangelog.update_changelog_from_seed(
-                    workspace, "Existing notes only\n"
+                    workspace,
+                    "Existing notes only\n",
                 )
             )
             tm.that(changelog, starts=c.Tests.RELEASE_CHANGELOG_HEADER)
@@ -400,7 +423,9 @@ class TestsFlextInfraReleaseHelpers:
             project_name = "flext-a"
             workspace = u.Tests.release_internal_workspace(tmp_path, project_name)
             artifact_dir = u.Tests.release_artifact_dir(
-                workspace, c.Tests.RELEASE_VERSION_BASE, project_name
+                workspace,
+                c.Tests.RELEASE_VERSION_BASE,
+                project_name,
             )
             first_result = u.Tests.run_release_build(workspace, project_name)
             original_artifacts = {
@@ -410,7 +435,7 @@ class TestsFlextInfraReleaseHelpers:
             collision_bytes = b"immutable collision\n"
             collided_artifact.write_bytes(collision_bytes)
             expected_artifacts = original_artifacts | {
-                collided_artifact.name: collision_bytes
+                collided_artifact.name: collision_bytes,
             }
 
             second_result = u.Tests.run_release_build(workspace, project_name)
@@ -464,7 +489,9 @@ class TestsFlextInfraReleaseHelpers:
             tm.that(build_log, has="unexpected.txt")
             tm.that(
                 u.Tests.release_artifact_dir(
-                    workspace, c.Tests.RELEASE_VERSION_BASE, project_name
+                    workspace,
+                    c.Tests.RELEASE_VERSION_BASE,
+                    project_name,
                 ).exists(),
                 eq=False,
             )
@@ -474,7 +501,12 @@ class TestsFlextInfraReleaseHelpers:
 
         @staticmethod
         def write_lock(workspace: Path, body: str) -> Path:
-            """Write one uv.lock body into the workspace root."""
+            """Write one uv.lock body into the workspace root.
+
+            Returns:
+                The resulting ``Path``.
+
+            """
             lock = workspace / c.Infra.UV_LOCK_FILENAME
             lock.write_text(body, encoding="utf-8")
             return lock
@@ -499,7 +531,8 @@ version = "6.0.0"
 source = { registry = "https://pypi.org/simple" }
 """
             TestsFlextInfraReleaseHelpers.TestsInternalLockedVersions.write_lock(
-                tmp_path, lock_body
+                tmp_path,
+                lock_body,
             )
 
             result = FlextInfraReleaseBuildMixin.internal_locked_versions(tmp_path)
@@ -519,7 +552,8 @@ source = { registry = "https://pypi.org/simple" }
         def test_invalid_lock_fails_loud(tmp_path: Path) -> None:
             """A corrupt lock is a typed failure, never a silently empty map."""
             TestsFlextInfraReleaseHelpers.TestsInternalLockedVersions.write_lock(
-                tmp_path, "not [ valid toml"
+                tmp_path,
+                "not [ valid toml",
             )
 
             result = FlextInfraReleaseBuildMixin.internal_locked_versions(tmp_path)

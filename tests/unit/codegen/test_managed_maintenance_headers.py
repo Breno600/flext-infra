@@ -1,4 +1,8 @@
-"""Contracts for continuously managed artifact maintenance headers."""
+"""Contracts for continuously managed artifact maintenance headers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -29,13 +33,15 @@ class TestsFlextInfraManagedMaintenanceHeaders:
         return fields
 
     def test_live_managed_owners_publish_regeneration_contract(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Publish the real owner and canonical regeneration command."""
         makefile_fields = self._fields(
             u.Tests.scaffold_text(
-                tmp_path / "fixture-project", c.Infra.MAKEFILE_FILENAME
-            )
+                tmp_path / "fixture-project",
+                c.Infra.MAKEFILE_FILENAME,
+            ),
         )
         tm.that(makefile_fields.get("@flext-generated"), eq="continuous")
         tm.that(makefile_fields.get("@flext-regenerate"), eq="make gen")
@@ -43,7 +49,8 @@ class TestsFlextInfraManagedMaintenanceHeaders:
         tm.that(makefile_fields.get("@flext-adjust", ""), has="never this projection")
 
         pyproject = u.Tests.scaffold_text(
-            tmp_path / "fixture-project", c.PYPROJECT_FILENAME
+            tmp_path / "fixture-project",
+            c.PYPROJECT_FILENAME,
         )
         tm.that(pyproject, starts=c.Infra.BANNER)
         pyproject_fields = self._fields(pyproject)
@@ -53,7 +60,8 @@ class TestsFlextInfraManagedMaintenanceHeaders:
         tm.that(pyproject_fields.get("@flext-adjust", ""), has="overwrite_project_keys")
         tm.that(pyproject_fields.get("@flext-adjust", ""), has="conflict_sections")
 
-    def test_pyproject_header_is_a_fixed_point(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_pyproject_header_is_a_fixed_point(tmp_path: Path) -> None:
         """Recomposing a published pyproject keeps exactly one header."""
         root = tmp_path / "fixture-project"
         first = u.Tests.scaffold_text(root, c.PYPROJECT_FILENAME)
@@ -61,18 +69,22 @@ class TestsFlextInfraManagedMaintenanceHeaders:
         (root / c.PYPROJECT_FILENAME).write_text(first, encoding="utf-8")
         second = tm.ok(
             FlextInfraCodegenConform.compose_project_artifact(
-                root, c.PYPROJECT_FILENAME, first
-            )
+                root,
+                c.PYPROJECT_FILENAME,
+                first,
+            ),
         ).rendered
         tm.that(second, eq=first)
         tm.that(second.count(c.Infra.BANNER), eq=1)
 
     def test_scaffold_once_owner_has_no_continuous_contract(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Keep user-owned scaffold output outside continuous maintenance."""
         custom = u.Tests.scaffold_text(
-            tmp_path / "fixture-project", c.Infra.CUSTOM_MAKE_FILENAME
+            tmp_path / "fixture-project",
+            c.Infra.CUSTOM_MAKE_FILENAME,
         )
         tm.that(custom, lacks="[MANAGED]")
         tm.that(self._fields(custom), eq={})

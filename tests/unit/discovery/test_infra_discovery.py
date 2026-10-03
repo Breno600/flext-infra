@@ -1,6 +1,9 @@
 """Tests for FlextInfraDiscoveryService.
 
 Tests cover project discovery, pyproject file discovery, and error handling.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -18,14 +21,31 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraDiscoveryInfraDiscovery:
+    """Tests for ``FlextInfraDiscoveryInfraDiscovery``."""
+
+    @staticmethod
     @pytest.fixture
-    def service(self) -> u.Infra:
+    def service() -> u.Infra:
+        """Provide ``service``.
+
+        Returns:
+            The resulting ``u.Infra``.
+
+        """
         return u.Infra()
 
+    @staticmethod
     @pytest.fixture
-    def workspace_with_projects(self, tmp_path: Path) -> Path:
+    def workspace_with_projects(tmp_path: Path) -> Path:
+        """Provide ``workspace_with_projects``.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         (tmp_path / "pyproject.toml").write_text(
-            "[project]\nname='workspace'\n", encoding="utf-8"
+            "[project]\nname='workspace'\n",
+            encoding="utf-8",
         )
         proj1 = tmp_path / "project1"
         proj1.mkdir()
@@ -39,12 +59,14 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         proj2 = tmp_path / "project2"
         proj2.mkdir()
         (proj2 / "pyproject.toml").write_text(
-            "[project]\nname='project2'\n", encoding="utf-8"
+            "[project]\nname='project2'\n",
+            encoding="utf-8",
         )
         invalid = tmp_path / "invalid"
         invalid.mkdir()
         (invalid / "pyproject.toml").write_text(
-            "[project]\nname='invalid'\n", encoding="utf-8"
+            "[project]\nname='invalid'\n",
+            encoding="utf-8",
         )
         hidden = tmp_path / ".hidden"
         hidden.mkdir()
@@ -59,9 +81,12 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         )
         return tmp_path
 
+    @staticmethod
     def test_discover_projects_happy_path(
-        self, service: u.Infra, workspace_with_projects: Path
+        service: u.Infra,
+        workspace_with_projects: Path,
     ) -> None:
+        """Test discover projects happy path."""
         result = service.discover_projects(workspace_with_projects)
         tm.ok(result)
         projects = result.value
@@ -76,24 +101,33 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         tm.that(projects[0].declared_subproject, eq=True)
         tm.that(projects[1].declared_subproject, eq=True)
 
+    @staticmethod
     def test_discover_projects_empty_workspace(
-        self, service: u.Infra, tmp_path: Path
+        service: u.Infra,
+        tmp_path: Path,
     ) -> None:
+        """Test discover projects empty workspace."""
         result = service.discover_projects(tmp_path)
         tm.ok(result)
         tm.that(result.value, eq=[])
 
+    @staticmethod
     def test_discover_projects_nonexistent_path(
-        self, service: u.Infra, tmp_path: Path
+        service: u.Infra,
+        tmp_path: Path,
     ) -> None:
+        """Test discover projects nonexistent path."""
         nonexistent = tmp_path / "missing"
         result = service.discover_projects(nonexistent)
         tm.fail(result)
         tm.that(result.error or "", has=str(nonexistent))
 
+    @staticmethod
     def test_find_all_pyproject_files_happy_path(
-        self, service: u.Infra, tmp_path: Path
+        service: u.Infra,
+        tmp_path: Path,
     ) -> None:
+        """Test find all pyproject files happy path."""
         (tmp_path / "project1").mkdir()
         (tmp_path / "project1" / "pyproject.toml").touch()
         (tmp_path / "project2").mkdir()
@@ -106,24 +140,31 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         tm.that(len(files), eq=3)
         tm.that(all(f.name == "pyproject.toml" for f in files), eq=True)
 
+    @staticmethod
     def test_find_all_pyproject_files_with_skip_dirs(
-        self, service: u.Infra, tmp_path: Path
+        service: u.Infra,
+        tmp_path: Path,
     ) -> None:
+        """Test find all pyproject files with skip dirs."""
         (tmp_path / "project1").mkdir()
         (tmp_path / "project1" / "pyproject.toml").touch()
         (tmp_path / "skip_me").mkdir()
         (tmp_path / "skip_me" / "pyproject.toml").touch()
         result = service.find_all_pyproject_files(
-            tmp_path, skip_dirs=frozenset({"skip_me"})
+            tmp_path,
+            skip_dirs=frozenset({"skip_me"}),
         )
         tm.ok(result)
         files = result.value
         tm.that(len(files), eq=1)
         tm.that(str(files[0]), lacks="skip_me")
 
+    @staticmethod
     def test_find_all_pyproject_files_with_project_paths(
-        self, service: u.Infra, tmp_path: Path
+        service: u.Infra,
+        tmp_path: Path,
     ) -> None:
+        """Test find all pyproject files with project paths."""
         proj1 = tmp_path / "project1"
         proj2 = tmp_path / "project2"
         proj1.mkdir()
@@ -136,25 +177,34 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         tm.that(len(files), eq=1)
         tm.that(files[0].parent, eq=proj1)
 
+    @staticmethod
     def test_discover_projects_result_type(
-        self, service: u.Infra, workspace_with_projects: Path
+        service: u.Infra,
+        workspace_with_projects: Path,
     ) -> None:
+        """Test discover projects result type."""
         result = service.discover_projects(workspace_with_projects)
         tm.ok(result)
         projects: t.SequenceOf[m.Infra.ProjectInfo] = result.value
         for item in projects:
             tm.that(item, is_=m.Infra.ProjectInfo)
 
+    @staticmethod
     def test_discover_projects_empty_workspace_v2(
-        self, service: u.Infra, tmp_path: Path
+        service: u.Infra,
+        tmp_path: Path,
     ) -> None:
+        """Test discover projects empty workspace v2."""
         result = service.discover_projects(tmp_path)
         tm.ok(result)
         tm.that(result.value, eq=[])
 
+    @staticmethod
     def test_discover_projects_prefers_workspace_children_over_root_project(
-        self, service: u.Infra, tmp_path: Path
+        service: u.Infra,
+        tmp_path: Path,
     ) -> None:
+        """Test discover projects prefers workspace children over root project."""
         (tmp_path / "pyproject.toml").write_text(
             "[project]\nname='workspace'\ndependencies=['flext-core>=0.1.0']\n",
             encoding="utf-8",
@@ -169,7 +219,8 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         project2 = tmp_path / "project2"
         project2.mkdir()
         (project2 / "pyproject.toml").write_text(
-            "[project]\nname='project2'\n", encoding="utf-8"
+            "[project]\nname='project2'\n",
+            encoding="utf-8",
         )
         (tmp_path / ".gitmodules").write_text(
             '[submodule "project1"]\n\tpath = project1\n\turl = https://github.com/flext-sh/project1.git\n'
@@ -182,9 +233,12 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         tm.ok(result)
         tm.that([project.name for project in result.value], eq=["project1", "project2"])
 
+    @staticmethod
     def test_discover_projects_derives_package_name_from_hatch_packages(
-        self, service: u.Infra, tmp_path: Path
+        service: u.Infra,
+        tmp_path: Path,
     ) -> None:
+        """Test discover projects derives package name from hatch packages."""
         project = tmp_path
         package_dir = project / "src" / "custom_pkg"
         package_dir.mkdir(parents=True)
@@ -204,15 +258,19 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         tm.that(len(result.value), eq=1)
         tm.that(result.value[0].package_name, eq="custom_pkg")
 
+    @staticmethod
     def test_discover_projects_accepts_standalone_governed_root_without_core_dep(
-        self, service: u.Infra, tmp_path: Path
+        service: u.Infra,
+        tmp_path: Path,
     ) -> None:
+        """Test discover projects accepts standalone governed root without core dep."""
         package_dir = tmp_path / "src" / "demo_pkg"
         package_dir.mkdir(parents=True)
         (package_dir / "__init__.py").write_text("", encoding="utf-8")
         (tmp_path / "Makefile").write_text("check:\n\t@true\n", encoding="utf-8")
         (tmp_path / "pyproject.toml").write_text(
-            "[project]\nname='demo-project'\nversion='0.1.0'\n", encoding="utf-8"
+            "[project]\nname='demo-project'\nversion='0.1.0'\n",
+            encoding="utf-8",
         )
 
         result = service.discover_projects(tmp_path)

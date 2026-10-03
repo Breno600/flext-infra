@@ -1,10 +1,16 @@
-"""Public service execution tests for docs commands."""
+"""Public service execution tests for docs commands.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
 from flext_tests import tm
+from mkdocs.exceptions import ConfigurationError
 
 from flext_infra.docs.auditor import FlextInfraDocAuditor
 from flext_infra.docs.builder import FlextInfraDocBuilder
@@ -20,21 +26,27 @@ if TYPE_CHECKING:
 class TestsFlextInfraDocsMainCommands:
     """Public service execution tests for docs commands."""
 
-    def test_auditor_execute_fails_on_finding(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_auditor_execute_fails_on_finding(tmp_path: Path) -> None:
+        """Test auditor execute fails on finding."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
         (workspace / "docs/README.md").write_text(
-            "# Docs\n\n[Broken](missing.md)\n", encoding="utf-8"
+            "# Docs\n\n[Broken](missing.md)\n",
+            encoding="utf-8",
         )
 
         result = FlextInfraDocAuditor(repository_root=workspace).execute()
 
         tm.fail(result)
 
-    def test_fixer_execute_applies_link_and_toc_updates(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_fixer_execute_applies_link_and_toc_updates(tmp_path: Path) -> None:
+        """Test fixer execute applies link and toc updates."""
         workspace = u.Tests.create_docs_workspace(tmp_path, include_fixable_link=True)
 
         result = FlextInfraDocFixer(
-            repository_root=workspace, apply_changes=True
+            repository_root=workspace,
+            apply_changes=True,
         ).execute()
 
         tm.ok(result)
@@ -42,7 +54,8 @@ class TestsFlextInfraDocsMainCommands:
         tm.that(content, has="guides/setup.md")
         tm.that(content, has="<!-- TOC START -->")
 
-    def test_fixer_execute_fails_on_unapplied_drift(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_fixer_execute_fails_on_unapplied_drift(tmp_path: Path) -> None:
         """The command boundary rejects fixable docs left unapplied."""
         workspace = u.Tests.create_docs_workspace(tmp_path, include_fixable_link=True)
 
@@ -50,7 +63,9 @@ class TestsFlextInfraDocsMainCommands:
 
         tm.fail(result)
 
-    def test_generator_plans_root_and_selected_project(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_generator_plans_root_and_selected_project(tmp_path: Path) -> None:
+        """Test generator plans root and selected project."""
         workspace, generator = u.Tests.docs_workspace_generator(
             tmp_path,
             project_names=("flext-a", "flext-b"),
@@ -60,34 +75,44 @@ class TestsFlextInfraDocsMainCommands:
 
         planned_paths = {plan.path for plan in plans}
         tm.that(
-            workspace / "docs/projects/generated/catalog.md" in planned_paths, eq=True
+            workspace / "docs/projects/generated/catalog.md" in planned_paths,
+            eq=True,
         )
         tm.that(workspace / "flext-a/README.md" in planned_paths, eq=True)
         tm.that(workspace / "flext-b/README.md" not in planned_paths, eq=True)
 
+    @staticmethod
     def test_validator_execute_fails_before_generation_and_succeeds_after(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
+        """Test validator execute fails before generation and succeeds after."""
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
 
         before = FlextInfraDocValidator(
-            repository_root=workspace, selected_projects=["flext-a"]
+            repository_root=workspace,
+            selected_projects=["flext-a"],
         ).execute()
         tm.fail(before)
         generator = FlextInfraDocGenerator(
-            repository_root=workspace, selected_projects=["flext-a"]
+            repository_root=workspace,
+            selected_projects=["flext-a"],
         )
         _ = u.Tests.publish_docs_bundle(generator)
         after = FlextInfraDocValidator(
-            repository_root=workspace, selected_projects=["flext-a"], apply_changes=True
+            repository_root=workspace,
+            selected_projects=["flext-a"],
+            apply_changes=True,
         ).execute()
         tm.ok(after)
         tm.that(
-            (workspace / "flext-a/.reports/docs/validate-report.md").exists(), eq=True
+            (workspace / "flext-a/.reports/docs/validate-report.md").exists(),
+            eq=True,
         )
         tm.that((workspace / "flext-a/TODOS.md").exists(), eq=False)
 
-    def test_builder_execute_fails_when_mkdocs_is_missing(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_builder_execute_fails_when_mkdocs_is_missing(tmp_path: Path) -> None:
+        """Test builder execute fails when mkdocs is missing."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
 
         result = FlextInfraDocBuilder(repository_root=workspace).execute()
@@ -95,19 +120,26 @@ class TestsFlextInfraDocsMainCommands:
         tm.fail(result)
         tm.that((workspace / ".reports/docs/build-report.md").exists(), eq=True)
 
+    @staticmethod
     def test_builder_execute_fails_with_invalid_mkdocs_config(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
+        """An invalid scope config escapes with the MkDocs failure itself.
+
+        The builder loads the scope's own ``mkdocs.yml`` and never translates
+        a MkDocs failure into a result: the exception and traceback escape.
+        """
         workspace = u.Tests.create_docs_workspace(tmp_path)
         (workspace / "mkdocs.yml").write_text("site_name: [", encoding="utf-8")
 
-        result = FlextInfraDocBuilder(repository_root=workspace).execute()
+        with pytest.raises(ConfigurationError, match="parsing the configuration"):
+            FlextInfraDocBuilder(repository_root=workspace).execute()
 
-        tm.fail(result)
-
+    @staticmethod
     def test_generate_fix_cycle_is_byte_identical_on_second_run(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
+        """Test generate fix cycle is byte identical on second run."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
         generator = FlextInfraDocGenerator(repository_root=workspace)
         fixer = FlextInfraDocFixer(repository_root=workspace, apply_changes=True)
@@ -119,7 +151,7 @@ class TestsFlextInfraDocsMainCommands:
         for directory in required.value:
             directory.mkdir(parents=True, exist_ok=True)
         tm.ok(
-            u.Tests.materialize_codegen_plans(generator.plan_files(first_bundle.value))
+            u.Tests.materialize_codegen_plans(generator.plan_files(first_bundle.value)),
         )
         tm.ok(fixer.execute())
         first_cycle = {
@@ -129,7 +161,9 @@ class TestsFlextInfraDocsMainCommands:
         second_bundle = generator.prepare_bundle()
         tm.ok(second_bundle)
         tm.ok(
-            u.Tests.materialize_codegen_plans(generator.plan_files(second_bundle.value))
+            u.Tests.materialize_codegen_plans(
+                generator.plan_files(second_bundle.value),
+            ),
         )
         tm.ok(fixer.execute())
         second_cycle = {

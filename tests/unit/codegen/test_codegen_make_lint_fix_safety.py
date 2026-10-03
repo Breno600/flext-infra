@@ -5,6 +5,9 @@ Ruff's unsafe fixes delete code: the T201 fix removed
 silent. The typed Make contract refuses the unsafe-fix flag, and every
 generated pyproject carries the fix-safety policy of the tooling SSOT, so a
 direct or IDE Ruff run follows the same policy as ``make fix``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -24,7 +27,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraCodegenMakeLintFixSafety:
     """The lint repair contract and its projection preserve information."""
 
-    def test_lint_fix_rejects_the_unsafe_fix_flag(self) -> None:
+    @staticmethod
+    def test_lint_fix_rejects_the_unsafe_fix_flag() -> None:
         """An information-destroying lint repair is unrepresentable."""
         ruff = config.Infra.codegen.make.ruff
         payload = ruff.model_dump()
@@ -35,27 +39,37 @@ class TestsFlextInfraCodegenMakeLintFixSafety:
 
         tm.that(str(failure.value), has=c.Infra.RUFF_UNSAFE_FIXES_FLAG)
 
+    @staticmethod
     @pytest.mark.slow
     def test_scaffold_pyproject_renders_the_fix_safety_policy(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """The rendered Ruff lint table carries the SSOT fix-safety lists."""
         policy = config.Infra.tooling.tools.ruff.lint
         pyproject = u.Tests.scaffold_text(
-            tmp_path / "fixture-project", c.PYPROJECT_FILENAME
+            tmp_path / "fixture-project",
+            c.PYPROJECT_FILENAME,
         )
 
         tm.that(
             list(
-                u.Tests.toml_strings_at(pyproject, "tool", "ruff", "lint", "unfixable")
+                u.Tests.toml_strings_at(pyproject, "tool", "ruff", "lint", "unfixable"),
             ),
             eq=sorted(policy.unfixable),
         )
         tm.that(
             list(
                 u.Tests.toml_strings_at(
-                    pyproject, "tool", "ruff", "lint", "extend-safe-fixes"
-                )
+                    pyproject,
+                    "tool",
+                    "ruff",
+                    "lint",
+                    "extend-safe-fixes",
+                ),
             ),
             eq=sorted(policy.extend_safe_fixes),
+        )
+        tm.that(
+            list(u.Tests.toml_strings_at(pyproject, "tool", "ruff", "lint", "ignore")),
+            eq=list(policy.ignore),
         )

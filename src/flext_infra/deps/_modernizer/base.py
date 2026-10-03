@@ -1,4 +1,8 @@
-"""Pyproject modernizer base joining its responsibility classes via MRO."""
+"""Pyproject modernizer base joining its responsibility classes via MRO.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,10 +11,9 @@ from typing import Annotated, override
 from flext_core import r
 from flext_infra import config, m, p, t
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
-
-from .document import FlextInfraPyprojectModernizerDocument
-from .run import FlextInfraPyprojectModernizerRun
-from .tooling import FlextInfraPyprojectModernizerTooling
+from flext_infra.deps._modernizer.document import FlextInfraPyprojectModernizerDocument
+from flext_infra.deps._modernizer.run import FlextInfraPyprojectModernizerRun
+from flext_infra.deps._modernizer.tooling import FlextInfraPyprojectModernizerTooling
 
 
 class FlextInfraPyprojectModernizerBase(
@@ -23,17 +26,25 @@ class FlextInfraPyprojectModernizerBase(
 
     @staticmethod
     def _config_sort_first() -> t.StrSequence:
-        """Read the config-owned top-level TOML section order once."""
+        """Read the config-owned top-level TOML section order once.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         return config.Infra.tooling.tools.tomlsort.sort_first
 
     audit: Annotated[
-        bool, m.Field(False, description="Audit pyproject changes without writing")
+        bool,
+        m.Field(False, description="Audit pyproject changes without writing"),
     ] = False
     skip_check: Annotated[
-        bool, m.Field(alias="skip-check", description="Skip post-write validation")
+        bool,
+        m.Field(alias="skip-check", description="Skip post-write validation"),
     ] = False
     skip_comments: Annotated[
-        bool, m.Field(alias="skip-comments", description="Skip managed comment updates")
+        bool,
+        m.Field(alias="skip-comments", description="Skip managed comment updates"),
     ] = False
     rewrite_constraints: Annotated[
         bool,
@@ -58,7 +69,12 @@ class FlextInfraPyprojectModernizerBase(
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute pyproject modernization for the configured workspace."""
+        """Execute pyproject modernization for the configured workspace.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         if self.run() != 0:
             return r[bool].fail("pyproject modernization failed")
         return r[bool].ok(True)

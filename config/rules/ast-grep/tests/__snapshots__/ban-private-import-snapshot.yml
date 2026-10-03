@@ -1,0 +1,62 @@
+id: ban-private-import
+snapshots:
+  from flext_core._decorators.runtime import FlextDecoratorsRuntime:
+    labels:
+    - source: from flext_core._decorators.runtime import FlextDecoratorsRuntime
+      style: primary
+      start: 0
+      end: 65
+    - source: flext_core._decorators.runtime
+      style: secondary
+      start: 5
+      end: 35
+  from flext_core._models import FlextModels:
+    labels:
+    - source: from flext_core._models import FlextModels
+      style: primary
+      start: 0
+      end: 42
+    - source: flext_core._models
+      style: secondary
+      start: 5
+      end: 23
+  from flext_core._protocols import FlextProtocols:
+    labels:
+    - source: from flext_core._protocols import FlextProtocols
+      style: primary
+      start: 0
+      end: 48
+    - source: flext_core._protocols
+      style: secondary
+      start: 5
+      end: 26
+  import flext_core._models:
+    labels:
+    - source: import flext_core._models
+      style: primary
+      start: 0
+      end: 25
+    - source: flext_core._models
+      style: secondary
+      start: 7
+      end: 25
+  import flext_core._utilities.guards as guards:
+    labels:
+    - source: import flext_core._utilities.guards as guards
+      style: primary
+      start: 0
+      end: 45
+    - source: flext_core._utilities.guards
+      style: secondary
+      start: 7
+      end: 35
+  import os, flext_core._typings:
+    labels:
+    - source: import os, flext_core._typings
+      style: primary
+      start: 0
+      end: 30
+    - source: flext_core._typings
+      style: secondary
+      start: 11
+      end: 30

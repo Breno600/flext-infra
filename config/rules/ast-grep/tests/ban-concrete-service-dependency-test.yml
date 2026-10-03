@@ -1,0 +1,19 @@
+id: ban-concrete-service-dependency
+valid:
+  - |
+    class FlextFooService:
+        def __init__(self, runner: p.Foo.Runner) -> None:
+            self.runner = runner
+  - |
+    class FlextFooService:
+        def run(self, runner: FlextFooRunner) -> None:
+            return None
+invalid:
+  - |
+    class FlextFooService:
+        def __init__(self, runner: FlextFooRunner) -> None:
+            self.runner = runner
+  - |
+    class FlextFooService:
+        def __init__(self, runner: FlextFooRunner | None = None) -> None:
+            self.runner = runner

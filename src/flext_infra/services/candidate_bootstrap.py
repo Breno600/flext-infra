@@ -1,11 +1,14 @@
-"""One atomic campaign for declared candidate Makefile projections."""
+"""One atomic campaign for declared candidate recovery projections.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 
 from flext_core import r
-
 from flext_infra import c, m, p, t, u
 
 
@@ -17,6 +20,7 @@ class FlextInfraCandidateBootstrapService:
         planner: p.Infra.CandidateBootstrapPlanner,
         transaction: p.Infra.CandidateBootstrapTransaction,
     ) -> None:
+        """Wire the declared-target planner to its atomic publisher."""
         self._planner = planner
         self._transaction = transaction
 
@@ -27,21 +31,26 @@ class FlextInfraCandidateBootstrapService:
         command: m.Infra.CandidateBootstrapCommand,
         manifest_state: m.Cli.AtomicFileState,
     ) -> p.Result[bool]:
-        """Publish a fixed point for the entire typed target declaration."""
+        """Publish a fixed point for the entire typed target declaration.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         targets = workspace.candidate_bootstrap_targets
         if not targets:
             return r[bool].fail("candidate bootstrap targets are not declared")
-        roots: dict[str, Path] = {}
+        roots: t.MutableMappingKV[str, Path] = {}
         for index, target in enumerate(targets):
             identity = u.Infra.exact_worktree_root(
-                (source_root / target.path).resolve(strict=True)
+                (source_root / target.path).resolve(strict=True),
             )
             if identity.failure:
                 return r[bool].from_failure(identity)
             roots[f"@candidate-{index}"] = identity.value.repo_root
         if len(set(roots.values())) != len(roots):
             return r[bool].fail(
-                "candidate bootstrap targets resolve to duplicate worktrees"
+                "candidate bootstrap targets resolve to duplicate worktrees",
             )
         if command.dry_run or command.check_only or not command.apply_changes:
             return self._verify(roots, targets, manifest_state)
@@ -77,9 +86,16 @@ class FlextInfraCandidateBootstrapService:
         targets: m.Infra.CandidateBootstrapTargets,
         manifest_state: m.Cli.AtomicFileState,
     ) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
-        """Compose one immutable receipt from all conform planners."""
+        """Compose one immutable receipt from all conform planners.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenPhaseAnalysis]``.
+
+        """
         files: list[m.Infra.CodegenFilePlan] = []
-        inputs: dict[Path, m.Cli.AtomicFileState] = {manifest_state.path: manifest_state}
+        inputs: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {
+            manifest_state.path: manifest_state,
+        }
         for root, target in zip(roots.values(), targets, strict=True):
             request = m.Infra.CodegenConformRequest(
                 root=root,
@@ -90,10 +106,10 @@ class FlextInfraCandidateBootstrapService:
             planned = self._planner.plan(request)
             if planned.failure:
                 return r[m.Infra.CodegenPhaseAnalysis].from_failure(planned)
-            expected = root / c.Infra.MAKEFILE_FILENAME
-            if len(planned.value.files) != 1 or planned.value.files[0].path != expected:
+            destinations = self._planner.surface_contract(target.what).destinations
+            if not destinations:
                 return r[m.Infra.CodegenPhaseAnalysis].fail(
-                    f"candidate bootstrap must plan exactly one Makefile: {root}"
+                    f"candidate bootstrap has no declared destinations: {root}",
                 )
             for file in planned.value.files:
                 files.append(file)
@@ -101,7 +117,7 @@ class FlextInfraCandidateBootstrapService:
                     previous = inputs.get(state.path)
                     if previous is not None and previous != state:
                         return r[m.Infra.CodegenPhaseAnalysis].fail(
-                            f"candidate bootstrap observed two states for {state.path}"
+                            f"candidate bootstrap observed two states for {state.path}",
                         )
                     inputs[state.path] = state
         return r[m.Infra.CodegenPhaseAnalysis].ok(
@@ -109,7 +125,7 @@ class FlextInfraCandidateBootstrapService:
                 phase="candidate-bootstrap",
                 files=tuple(files),
                 inputs=tuple(inputs.values()),
-            )
+            ),
         )
 
     def _verify(
@@ -118,15 +134,21 @@ class FlextInfraCandidateBootstrapService:
         targets: m.Infra.CandidateBootstrapTargets,
         manifest_state: m.Cli.AtomicFileState,
     ) -> p.Result[bool]:
-        """Require unchanged declarations and a complete post-publication fixed point."""
+        """Require unchanged declarations and a complete post-publication fixed point.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         observed = u.Cli.atomic_read_binary_file_state(
-            manifest_state.path, required=True
+            manifest_state.path,
+            required=True,
         )
         if observed.failure:
             return r[bool].from_failure(observed)
         if observed.value != manifest_state:
             return r[bool].fail(
-                "candidate bootstrap declaration changed during publication"
+                "candidate bootstrap declaration changed during publication",
             )
         planned = self._plan(roots, targets, manifest_state)
         if planned.failure:
@@ -139,7 +161,7 @@ class FlextInfraCandidateBootstrapService:
         if residual:
             return r[bool].fail(
                 "candidate bootstrap did not reach a fixed point: "
-                + ", ".join(str(file.path) for file in residual)
+                + ", ".join(str(file.path) for file in residual),
             )
         return r[bool].ok(True)
 

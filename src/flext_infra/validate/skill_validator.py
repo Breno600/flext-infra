@@ -14,9 +14,8 @@ from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
 from flext_infra import c, m, t, u
-
-from ..base import s
-from ._skill_rule_runner import FlextInfraSkillRuleRunnerMixin
+from flext_infra.base import s
+from flext_infra.validate._skill_rule_runner import FlextInfraSkillRuleRunnerMixin
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -37,7 +36,12 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
 
     @staticmethod
     def _render_template(repository_root: Path, template: str, skill: str) -> Path:
-        """Render a skill path template."""
+        """Render a skill path template.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         rendered = template.replace("{skill}", skill)
         candidate = Path(rendered)
         if candidate.is_absolute():
@@ -52,9 +56,18 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
         counts: t.IntMapping,
         total: int,
     ) -> bool:
-        """Compare counts against the baseline file and return pass/fail."""
+        """Compare counts against the baseline file and return pass/fail.
+
+        Returns:
+            The resulting ``bool``.
+
+        Raises:
+            ValueError: If ``bl_data_result.failure``.
+
+        """
         baseline_obj = u.Cli.json_deep_mapping(
-            rules, c.Infra.OperationMode.BASELINE.value
+            rules,
+            c.Infra.OperationMode.BASELINE.value,
         )
         if not baseline_obj:
             return True
@@ -71,7 +84,7 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
             # A present-but-unreadable risk baseline must fail loud, never
             # read as "allowed" (missing baselines legitimately allow above).
             raise ValueError(
-                bl_data_result.error or f"cannot read baseline: {baseline_path}"
+                bl_data_result.error or f"cannot read baseline: {baseline_path}",
             )
         bl_data = u.Cli.json_as_mapping(bl_data_result.value)
         bl_counts_raw_map = u.Cli.json_deep_mapping(bl_data, "counts")
@@ -114,7 +127,12 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
 
     @staticmethod
     def _missing_rules_report(skill_name: str) -> m.Infra.ValidationReport:
-        """Build the report returned when a skill lacks rules.yml."""
+        """Build the report returned when a skill lacks rules.yml.
+
+        Returns:
+            The resulting ``m.Infra.ValidationReport``.
+
+        """
         return m.Infra.ValidationReport(
             passed=False,
             violations=[f"rules.yml not found for skill '{skill_name}'"],
@@ -125,25 +143,41 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
     def _scan_globs(
         scan_targets: t.MappingKV[str, t.JsonValue],
     ) -> t.Pair[t.StrSequence, t.StrSequence]:
-        """Return include and exclude glob lists from rules.yml scan targets."""
+        """Return include and exclude glob lists from rules.yml scan targets.
+
+        Returns:
+            Include and exclude glob lists from rules.yml scan targets.
+
+        """
         include_globs = u.Infra.string_list(
-            scan_targets.get("include", ["**/*.py"])
+            scan_targets.get("include", ["**/*.py"]),
         ) or ["**/*"]
         exclude_globs = u.Infra.string_list(scan_targets.get(c.Infra.EXCLUDE, []))
         return include_globs, exclude_globs
 
     @staticmethod
     def _rules_list(rules: t.MappingKV[str, t.JsonValue]) -> p.Result[t.JsonList]:
-        """Validate the rules.yml rules payload."""
+        """Validate the rules.yml rules payload.
+
+        Returns:
+            The resulting ``p.Result[t.JsonList]``.
+
+        """
         rules_list_obj = rules.get(c.Infra.RK_RULES, [])
         if not isinstance(rules_list_obj, list):
             return r[t.JsonList].fail("rules must be a list")
         return r[t.JsonList].ok(t.Cli.JSON_LIST_ADAPTER.validate_python(rules_list_obj))
 
     def _evaluate_rules(
-        self, context: m.Infra.SkillRuleEvaluationContext
+        self,
+        context: m.Infra.SkillRuleEvaluationContext,
     ) -> t.Pair[t.IntMapping, t.StrSequence]:
-        """Evaluate skill validation rules and return counts plus violations."""
+        """Evaluate skill validation rules and return counts plus violations.
+
+        Returns:
+            The resulting ``t.Pair[t.IntMapping, t.StrSequence]``.
+
+        """
         counts: t.MutableIntMapping = {}
         violations: t.MutableSequenceOf[str] = []
         for rule_obj_raw in context.rules_list:
@@ -154,15 +188,25 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
         return counts, tuple(violations)
 
     def _skill_report_model(
-        self, context: m.Infra.SkillReportContext
+        self,
+        context: m.Infra.SkillReportContext,
     ) -> m.Infra.ValidationReport:
-        """Build the canonical skill validation report model."""
+        """Build the canonical skill validation report model.
+
+        Returns:
+            The resulting ``m.Infra.ValidationReport``.
+
+        """
         total = sum(context.counts.values())
         passed = (
             total == 0
             if context.mode == c.Infra.OperationMode.STRICT
             else self._apply_baseline_comparison(
-                context.rules, context.root, context.skill_name, context.counts, total
+                context.rules,
+                context.root,
+                context.skill_name,
+                context.counts,
+                total,
             )
         )
         summary = (
@@ -170,26 +214,36 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
             f"{('PASS' if passed else 'FAIL')}"
         )
         return m.Infra.ValidationReport(
-            passed=passed, violations=context.violations, summary=summary
+            passed=passed,
+            violations=context.violations,
+            summary=summary,
         )
 
     def _build_skill_report(
-        self, repository_root: Path, skill_name: str, mode: c.Infra.OperationMode
+        self,
+        repository_root: Path,
+        skill_name: str,
+        mode: c.Infra.OperationMode,
     ) -> p.Result[m.Infra.ValidationReport]:
-        """Build a skill validation report after path resolution."""
+        """Build a skill validation report after path resolution.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ValidationReport]``.
+
+        """
         root = repository_root.resolve()
         skills_dir = root / c.Infra.SKILLS_DIR
         rules_path = skills_dir / skill_name / "rules.yml"
         if not rules_path.exists():
             return r[m.Infra.ValidationReport].ok(
-                self._missing_rules_report(skill_name)
+                self._missing_rules_report(skill_name),
             )
         rules = u.Cli.yaml_load_mapping(rules_path)
         scan_targets_raw = rules.get("scan_targets", {})
         scan_targets = u.Cli.json_as_mapping(scan_targets_raw)
         if not scan_targets and scan_targets_raw not in ({}, None):
             return r[m.Infra.ValidationReport].fail(
-                f"scan_targets must be a mapping: {rules_path}"
+                f"scan_targets must be a mapping: {rules_path}",
             )
         include_globs, exclude_globs = self._scan_globs(scan_targets)
         rules_list_result = self._rules_list(rules)
@@ -203,7 +257,7 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
                 mode=mode,
                 include_globs=include_globs,
                 exclude_globs=exclude_globs,
-            )
+            ),
         )
         return r[m.Infra.ValidationReport].ok(
             self._skill_report_model(
@@ -214,15 +268,22 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
                     mode=mode,
                     counts=counts,
                     violations=violations,
-                )
-            )
+                ),
+            ),
         )
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute the skill-validation CLI flow."""
+        """Execute the skill-validation CLI flow.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         report_result = self.build_report(
-            self.repository_root, self.skill, mode=self.mode
+            self.repository_root,
+            self.skill,
+            mode=self.mode,
         )
         if report_result.failure:
             return r[bool].from_failure(report_result)

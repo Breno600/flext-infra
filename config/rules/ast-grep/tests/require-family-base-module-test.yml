@@ -1,0 +1,7 @@
+id: require-family-base-module
+valid:
+  - |
+    names = ["x"]
+invalid:
+  - |
+    __all__ = ["FlextFooModelsItem"]

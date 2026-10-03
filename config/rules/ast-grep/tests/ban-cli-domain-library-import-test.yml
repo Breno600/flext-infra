@@ -1,0 +1,24 @@
+id: ban-cli-domain-library-import
+valid:
+  - from flext_cli import cli
+  - import rich
+  - import typerx
+  - |
+    if TYPE_CHECKING:
+        from flext_cli import t
+invalid:
+  - import typer
+  - import argparse
+  - from tabulate import tabulate
+  - import colorama
+  - from prompt_toolkit import prompt
+  - from tqdm import tqdm
+  - import getpass
+  - import ujson
+  - import simplejson as json
+  - |
+    if TYPE_CHECKING:
+        from rich.console import Console
+  - |
+    if TYPE_CHECKING:
+        import argparse
