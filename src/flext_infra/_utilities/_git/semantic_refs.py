@@ -264,5 +264,159 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             )
         return r[m.Infra.GitOidReport].ok(m.Infra.GitOidReport(oid=oid))
 
+    @classmethod
+    def git_ref_heads(
+        cls,
+        request: m.Infra.GitRefHeadsRequest,
+    ) -> p.Result[m.Infra.GitRefHeadsReport]:
+        """Map every ref below ``namespace`` to its tip oid.
+
+        Names are relative to the namespace; the symbolic remote ``HEAD`` is
+        an alias of another listed ref and is left out.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitRefHeadsReport]``.
+
+        """
+        prefix = f"{request.namespace.rstrip('/')}/"
+        try:
+            repo = cls._repo(request.repo_root)
+            text = repo.git.for_each_ref("--format=%(refname)%00%(objectname)", prefix)
+        except GitCommandError as exc:
+            return r[m.Infra.GitRefHeadsReport].fail(str(exc), exception=exc)
+        except (OSError, ValueError) as exc:
+            return r[m.Infra.GitRefHeadsReport].fail(
+                f"failed to list refs below {request.namespace}: {exc}",
+                exception=exc,
+            )
+        heads = {
+            name.removeprefix(prefix): oid
+            for name, _, oid in (line.partition("\0") for line in text.splitlines())
+            if name.removeprefix(prefix) != c.Infra.GIT_HEAD
+        }
+        return r[m.Infra.GitRefHeadsReport].ok(m.Infra.GitRefHeadsReport(heads=heads))
+
+    @classmethod
+    def git_stash_oids(
+        cls,
+        request: m.Infra.GitRepoRequest,
+    ) -> p.Result[m.Infra.GitOidListReport]:
+        """List the stash commits, newest (``stash@{0}``) first.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitOidListReport]``.
+
+        """
+        try:
+            repo = cls._repo(request.repo_root)
+            text = repo.git.stash("list", "--format=%H")
+        except GitCommandError as exc:
+            return r[m.Infra.GitOidListReport].fail(str(exc), exception=exc)
+        except (OSError, ValueError) as exc:
+            return r[m.Infra.GitOidListReport].fail(
+                f"failed to list stash entries: {exc}",
+                exception=exc,
+            )
+        return r[m.Infra.GitOidListReport].ok(
+            m.Infra.GitOidListReport(oids=tuple(text.split()))
+        )
+
+    @classmethod
+    def git_remote_branch_oid(
+        cls,
+        request: m.Infra.GitRemoteBranchRequest,
+    ) -> p.Result[m.Infra.GitTextReport]:
+        """Ask the remote itself for one branch tip; empty text means absent.
+
+        Unlike a remote-tracking ref this is the live remote state, so it
+        proves a publication rather than remembering one.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitTextReport]``.
+
+        """
+        try:
+            repo = cls._repo(request.repo_root)
+            text = repo.git.ls_remote(
+                "--heads", request.remote, f"refs/heads/{request.branch}"
+            )
+        except GitCommandError as exc:
+            return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
+        except (OSError, ValueError) as exc:
+            return r[m.Infra.GitTextReport].fail(
+                f"failed to query {request.remote} for {request.branch}: {exc}",
+                exception=exc,
+            )
+        return r[m.Infra.GitTextReport].ok(
+            m.Infra.GitTextReport(text=text.partition("\t")[0].strip())
+        )
+
+    @classmethod
+    def git_merge_is_noop(
+        cls,
+        request: m.Infra.GitMergeProbeRequest,
+    ) -> p.Result[m.Infra.GitBoolReport]:
+        """Whether merging ``commitish`` into ``base`` leaves its tree unchanged.
+
+        This proves a squash- or rebase-merged branch is already contained in
+        ``base`` without touching the index or worktree; a conflicting merge
+        is not a no-op.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitBoolReport]``.
+
+        """
+        try:
+            repo = cls._repo(request.repo_root)
+            merged = repo.git.merge_tree(
+                "--write-tree", request.base, request.commitish
+            ).splitlines()[0]
+            base_tree = repo.git.rev_parse(f"{request.base}^{{tree}}").strip()
+        except GitCommandError as exc:
+            if exc.status == c.Infra.GIT_EXIT_NEGATIVE:
+                return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))
+            return r[m.Infra.GitBoolReport].fail(str(exc), exception=exc)
+        except (OSError, ValueError, IndexError) as exc:
+            return r[m.Infra.GitBoolReport].fail(
+                f"merge probe failed for {request.commitish}: {exc}",
+                exception=exc,
+            )
+        return r[m.Infra.GitBoolReport].ok(
+            m.Infra.GitBoolReport(value=merged.strip() == base_tree)
+        )
+
+    @classmethod
+    def git_last_activity(
+        cls,
+        request: m.Infra.GitRepoRequest,
+    ) -> p.Result[m.Infra.GitTimestampReport]:
+        """Newest of the HEAD commit time and this worktree's last HEAD move.
+
+        The HEAD reflog is per worktree, so checkouts, commits, resets and
+        rebases in one linked worktree never age or refresh another.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitTimestampReport]``.
+
+        """
+        try:
+            repo = cls._repo(request.repo_root)
+            committed = int(repo.git.log("-1", "--format=%ct", "HEAD").strip())
+            moved = repo.git.log(
+                "--walk-reflogs", "-1", "--date=unix", "--format=%gd", "HEAD"
+            ).strip()
+        except GitCommandError as exc:
+            return r[m.Infra.GitTimestampReport].fail(str(exc), exception=exc)
+        except (OSError, ValueError) as exc:
+            return r[m.Infra.GitTimestampReport].fail(
+                f"failed to read last activity: {exc}",
+                exception=exc,
+            )
+        stamp = moved.partition("@{")[2].rstrip("}")
+        latest = max(committed, int(stamp)) if stamp.isdigit() else committed
+        return r[m.Infra.GitTimestampReport].ok(
+            m.Infra.GitTimestampReport(epoch_seconds=latest)
+        )
+
 
 __all__: list[str] = ["FlextInfraUtilitiesGitSemanticRefsMixin"]
