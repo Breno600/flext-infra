@@ -301,7 +301,10 @@ class FlextInfraConfigModelsContexts:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 default=(),
-                description="Repository-relative files omitted from declared data directories",
+                description=(
+                    "Repository-relative files omitted"
+                    " from declared data directories"
+                ),
             ),
         ] = ()
         docs_audit: Annotated[
@@ -486,7 +489,9 @@ class FlextInfraConfigModelsContexts:
         repository_namespace_packages: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                description="Implicit namespace directories shipped from the repository root",
+                description=(
+                    "Implicit namespace directories shipped from the repository root"
+                ),
             ),
         ] = ()
         root_modules: Annotated[
@@ -658,7 +663,9 @@ class FlextInfraConfigModelsContexts:
         flext_source: Annotated[
             t.NonEmptyStr | None,
             m.Field(
-                description="Direct Git infrastructure requirement declared for scaffolding",
+                description=(
+                    "Direct Git infrastructure requirement declared for scaffolding"
+                ),
             ),
         ] = None
 
@@ -749,7 +756,9 @@ class FlextInfraConfigModelsContexts:
         repository_namespace_packages: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                description="Implicit namespace directories shipped from the repository root",
+                description=(
+                    "Implicit namespace directories shipped from the repository root"
+                ),
             ),
         ] = ()
         root_modules: Annotated[
@@ -767,14 +776,20 @@ class FlextInfraConfigModelsContexts:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 default=(),
-                description="Repository-relative data files and directories shipped with the package",
+                description=(
+                    "Repository-relative data files and directories"
+                    " shipped with the package"
+                ),
             ),
         ] = ()
         packaged_data_excludes: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 default=(),
-                description="Repository-relative files omitted from declared data directories",
+                description=(
+                    "Repository-relative files omitted"
+                    " from declared data directories"
+                ),
             ),
         ] = ()
         cli_module: Annotated[
