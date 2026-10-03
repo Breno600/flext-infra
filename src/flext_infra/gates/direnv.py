@@ -3,6 +3,9 @@
 Two fail-closed stages per checked workspace: the static environment-file
 contracts (see ``flext_infra.workspace.environment_contracts``) followed by a
 real ``direnv exec`` activation smoke. A workspace without ``.envrc`` skips.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -31,14 +34,25 @@ class FlextInfraDirenvGate(FlextInfraGate):
 
     @staticmethod
     def _contract_boundary() -> type[p.Infra.WorkspaceEnvironmentContracts]:
-        """Return the contract owner typed at its published ``p.Infra`` boundary."""
+        """Return the contract owner typed at its published ``p.Infra`` boundary.
+
+        Returns:
+            The contract owner typed at its published ``p.Infra`` boundary.
+
+        """
         return FlextInfraWorkspaceEnvironmentContracts
 
     @staticmethod
     def _contract_issue(
-        file: str, violation: m.Infra.EnvironmentContractViolation
+        file: str,
+        violation: m.Infra.EnvironmentContractViolation,
     ) -> m.Infra.Issue:
-        """Render one typed contract violation as a gate issue."""
+        """Render one typed contract violation as a gate issue.
+
+        Returns:
+            The resulting ``m.Infra.Issue``.
+
+        """
         return m.Infra.Issue(
             file=file,
             line=violation.line,
@@ -50,9 +64,16 @@ class FlextInfraDirenvGate(FlextInfraGate):
 
     @override
     def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
-        """Run the static contracts, then the activation smoke."""
+        """Run the static contracts, then the activation smoke.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         started = time.monotonic()
         envrc = project_dir / c.Infra.ENVRC_FILENAME
         if not envrc.is_file():
@@ -75,7 +96,8 @@ class FlextInfraDirenvGate(FlextInfraGate):
                 started=started,
             )
         violations = self._contract_boundary().envrc_contract_violations(
-            content.value, root=project_dir
+            content.value,
+            root=project_dir,
         )
         issues = tuple(
             FlextInfraDirenvGate._contract_issue(c.Infra.ENVRC_FILENAME, violation)
@@ -101,11 +123,12 @@ class FlextInfraDirenvGate(FlextInfraGate):
                     *issues,
                     *(
                         FlextInfraDirenvGate._contract_issue(
-                            c.Infra.ENVRC_LOCAL_RELPATH, violation
+                            c.Infra.ENVRC_LOCAL_RELPATH,
+                            violation,
                         )
                         for violation in (
                             self._contract_boundary().envrc_local_contract_violations(
-                                local_read.value
+                                local_read.value,
                             )
                         )
                     ),
@@ -122,9 +145,16 @@ class FlextInfraDirenvGate(FlextInfraGate):
 
     @override
     def _get_check_dirs(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
-        """One marker dir drives the base flow; the smoke targets the root."""
+        """One marker dir drives the base flow; the smoke targets the root.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         _ = ctx
         return (
             (str(project_dir),)
@@ -134,17 +164,33 @@ class FlextInfraDirenvGate(FlextInfraGate):
 
     @override
     def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Activate the workspace environment for one no-op command."""
+        """Activate the workspace environment for one no-op command.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         _ = ctx, check_dirs
         return (c.Infra.CLI_DIRENV, "exec", str(project_dir), "true")
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Pass only on a zero-exit activation."""
+        """Pass only on a zero-exit activation.
+
+        Returns:
+            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+
+        """
         _ = project_dir, ctx
         if u.Cli.process_succeeded(result.outcome):
             return True, ()

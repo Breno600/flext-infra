@@ -1,4 +1,8 @@
-"""Public utility evidence for semantic private-import cutovers."""
+"""Public utility evidence for semantic private-import cutovers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -13,6 +17,21 @@ from flext_infra import c, infra, m, p, t, u
 class TestsFlextInfraPrivateImportCutover:
     """Exercise private-import automation only through ``u.Infra``."""
 
+    def test_earlier_semantic_move_retires_stale_preflight_import(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Test earlier semantic move retires stale preflight import."""
+        consumer, statement, _ = self._facade_case(
+            tmp_path,
+            "constants",
+            "profile",
+            "Profile",
+            "c",
+        )
+        sources = {consumer: "from flext_sample import c\nvalue = c.Profile.Value\n"}
+        tm.that(self._edits(tmp_path, sources, consumer, statement), empty=True)
+
     @pytest.mark.parametrize("bad_source_reachable", [False, True])
     def test_installed_import_validation_follows_public_reachability(
         self,
@@ -23,7 +42,11 @@ class TestsFlextInfraPrivateImportCutover:
     ) -> None:
         """An invalid import blocks only a cutover that reaches its module."""
         consumer, statement, facade_sources = self._facade_case(
-            tmp_path, "constants", "profile", "Profile", "c"
+            tmp_path,
+            "constants",
+            "profile",
+            "Profile",
+            "c",
         )
         package = installed_dependency_path / "flext_sample"
         package.mkdir()
@@ -37,18 +60,21 @@ class TestsFlextInfraPrivateImportCutover:
         private = package / "_constants/profile.py"
         private.parent.mkdir()
         private.write_text(
-            "class FlextSampleConstantsProfile:\n    Value = str\n", encoding="utf-8"
+            "class FlextSampleConstantsProfile:\n    Value = str\n",
+            encoding="utf-8",
         )
         unrelated = package / "unrelated.py"
         unrelated.write_text(invalid_import, encoding="utf-8")
         sources = {
-            consumer: f"{statement}\nprofile = FlextSampleConstantsProfile.Value\n"
+            consumer: f"{statement}\nprofile = FlextSampleConstantsProfile.Value\n",
         }
 
         if bad_source_reachable:
-            # The planner fails loud: the import error escapes unwrapped.
+            # flext-core's result factory catches broad runtime errors only
+            # ("no IO, no import"): an invalid reachable import escapes raw.
             with pytest.raises(
-                ImportError, match="attempted relative import beyond top-level package"
+                ImportError,
+                match="attempted relative import beyond top-level",
             ):
                 self._plan(tmp_path, sources, consumer, statement)
             return
@@ -62,10 +88,19 @@ class TestsFlextInfraPrivateImportCutover:
     @pytest.mark.parametrize("case", ["unique", "ambiguous", "shadowed"])
     @pytest.mark.parametrize("depth", [0, 2])
     def test_installed_facades_are_read_only_discovery_inputs(
-        self, tmp_path: Path, installed_dependency_path: Path, case: str, depth: int
+        self,
+        tmp_path: Path,
+        installed_dependency_path: Path,
+        case: str,
+        depth: int,
     ) -> None:
+        """Test installed facades are read only discovery inputs."""
         consumer, statement, facade_sources = self._facade_case(
-            tmp_path, "constants", "profile", "Profile", "c"
+            tmp_path,
+            "constants",
+            "profile",
+            "Profile",
+            "c",
         )
         package = installed_dependency_path / "flext_sample"
         package.mkdir()
@@ -109,7 +144,7 @@ class TestsFlextInfraPrivateImportCutover:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(source, encoding="utf-8")
         sources = {
-            consumer: f"{statement}\nprofile = FlextSampleConstantsProfile.Value\n"
+            consumer: f"{statement}\nprofile = FlextSampleConstantsProfile.Value\n",
         }
         if case == "shadowed":
             sources[consumer] += "c = 1\n"
@@ -118,18 +153,29 @@ class TestsFlextInfraPrivateImportCutover:
             tm.that(tuple(edit.file_path for edit in edits), eq=(consumer,))
             tm.that(edits[0].updated_source, has="from flext_sample import c")
             tm.that(edits[0].updated_source, has="profile = c.Profile.Value")
-        else:
+        elif case == "shadowed":
             tm.fail(self._plan(tmp_path, sources, consumer, statement), has=case)
+        else:
+            with pytest.raises(ValueError, match=case):
+                self._plan(tmp_path, sources, consumer, statement)
         for path, source in dependency_sources.items():
             tm.that(path.read_text(encoding="utf-8"), eq=source)
         tm.that(tuple(sources), eq=(consumer,))
 
     @pytest.mark.parametrize("root_export", [False, True])
     def test_installed_declared_reexports_preserve_binding(
-        self, tmp_path: Path, installed_dependency_path: Path, *, root_export: bool
+        self,
+        tmp_path: Path,
+        installed_dependency_path: Path,
+        *,
+        root_export: bool,
     ) -> None:
+        """Test installed declared reexports preserve binding."""
         consumer, statement, sources = self._declared_export_case(
-            tmp_path, package_import=True, root_export=root_export, renamed=True
+            tmp_path,
+            package_import=True,
+            root_export=root_export,
+            renamed=True,
         )
         consumer_sources = {consumer: sources.pop(consumer)}
         dependency_sources = {
@@ -224,6 +270,7 @@ class TestsFlextInfraPrivateImportCutover:
         declaration: str,
         expected: str,
     ) -> None:
+        """Test installed facade bases follow declaration scope."""
         package = installed_dependency_path / "lexical_sample"
         dependency_sources = {
             package / "__init__.py": (
@@ -250,10 +297,11 @@ class TestsFlextInfraPrivateImportCutover:
             tm.that(edits[0].updated_source, has=f"value = {expected}.Value")
             tm.that(edits[0].updated_source, lacks=statement)
         else:
-            tm.fail(
-                self._plan(tmp_path, sources, consumer, statement),
-                has=expected or "no public facade exposes",
-            )
+            with pytest.raises(
+                ValueError,
+                match=expected or "no public facade exposes",
+            ):
+                self._plan(tmp_path, sources, consumer, statement)
         for path, source in dependency_sources.items():
             tm.that(path.read_text(encoding="utf-8"), eq=source)
 
@@ -299,8 +347,14 @@ class TestsFlextInfraPrivateImportCutover:
     @pytest.mark.parametrize("root_export", [False, True])
     @pytest.mark.parametrize("renamed", [False, True])
     def test_declared_reexports_preserve_identity_binding_and_shadowing(
-        self, tmp_path: Path, *, package_import: bool, root_export: bool, renamed: bool
+        self,
+        tmp_path: Path,
+        *,
+        package_import: bool,
+        root_export: bool,
+        renamed: bool,
     ) -> None:
+        """Test declared reexports preserve identity binding and shadowing."""
         consumer, statement, sources = self._declared_export_case(
             tmp_path,
             package_import=package_import,
@@ -315,15 +369,19 @@ class TestsFlextInfraPrivateImportCutover:
         tm.that(updated, has=f"from {module} import {public_name} as BoundClient")
         tm.that(updated, has="instance = BoundClient()")
         tm.that(
-            updated, has="def local(BoundClient: str) -> str:\n    return BoundClient"
+            updated,
+            has="def local(BoundClient: str) -> str:\n    return BoundClient",
         )
         tm.that(updated, lacks=statement)
 
     def test_declared_reexport_rename_keeps_an_unaliased_consumer_binding(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test declared reexport rename keeps an unaliased consumer binding."""
         consumer, statement, sources = self._declared_export_case(
-            tmp_path, renamed=True
+            tmp_path,
+            renamed=True,
         )
         unaliased = statement.replace(" as BoundClient", "")
         sources[consumer] = f"{unaliased}\ninstance = Client()\n"
@@ -334,8 +392,10 @@ class TestsFlextInfraPrivateImportCutover:
         tm.that(updated, has="instance = Client()")
 
     def test_declared_reexport_retains_type_checking_boundary(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test declared reexport retains type checking boundary."""
         consumer, statement, sources = self._declared_export_case(tmp_path)
         sources[consumer] = (
             "from __future__ import annotations\nfrom typing import TYPE_CHECKING\n"
@@ -351,8 +411,10 @@ class TestsFlextInfraPrivateImportCutover:
         tm.that(updated, has="value: BoundClient")
 
     def test_unrelated_export_cycle_does_not_block_a_proven_public_import(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test unrelated export cycle does not block a proven public import."""
         consumer, statement, sources = self._declared_export_case(tmp_path)
         package = tmp_path / "sample/src/sample"
         sources[package / "left.py"] = "from .right import Loop\n__all__ = ('Loop',)\n"
@@ -364,8 +426,11 @@ class TestsFlextInfraPrivateImportCutover:
 
     @pytest.mark.parametrize("case", ["unexposed", "homonym", "ambiguous", "shadowed"])
     def test_declared_export_resolution_rejects_unproven_or_ambiguous_targets(
-        self, tmp_path: Path, case: str
+        self,
+        tmp_path: Path,
+        case: str,
     ) -> None:
+        """Test declared export resolution rejects unproven or ambiguous targets."""
         consumer, statement, sources = self._declared_export_case(tmp_path)
         package = tmp_path / "sample/src/sample"
         if case == "unexposed":
@@ -386,11 +451,17 @@ class TestsFlextInfraPrivateImportCutover:
             else "ambiguous"
         )
 
-        tm.fail(self._plan(tmp_path, sources, consumer, statement), has=expected)
+        with pytest.raises(ValueError, match=expected):
+            self._plan(tmp_path, sources, consumer, statement)
 
     @staticmethod
     def _finding(file_path: Path, text: str) -> m.Infra.ModScanFinding:
-        """Build one authenticated-shape semantic finding."""
+        """Build one authenticated-shape semantic finding.
+
+        Returns:
+            The resulting ``m.Infra.ModScanFinding``.
+
+        """
         return m.Infra.ModScanFinding(
             rule_file="ban-private-import.yml",
             rule_id="ban-private-import",
@@ -413,7 +484,12 @@ class TestsFlextInfraPrivateImportCutover:
         alias: str,
         root_bases: str = "",
     ) -> str:
-        """Build one public facade module that nests ``private_class``."""
+        """Build one public facade module that nests ``private_class``.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return (
             f"from {private_module} import {private_class}\n\n"
             f"class {root_class}{root_bases}:\n"
@@ -438,6 +514,10 @@ class TestsFlextInfraPrivateImportCutover:
 
         Every name follows the FLEXT naming contract, so the case is declared
         by ``family``/``leaf`` rather than by frozen literals repeated per test.
+
+        Returns:
+            The resulting ``t.Triple[Path, str, t.MutableMappingKV[Path, str]]``.
+
         """
         private_module = f"flext_sample._{family}.{leaf}"
         private_class = f"FlextSample{family.title()}{leaf.title()}"
@@ -452,7 +532,7 @@ class TestsFlextInfraPrivateImportCutover:
                 nested_class=nested_class,
                 alias=alias,
                 root_bases=root_bases,
-            )
+            ),
         }
         consumer_path = tmp_path / "flext-consumer/src/flext_consumer/service.py"
         return consumer_path, f"from {private_module} import {binding}", sources
@@ -465,7 +545,12 @@ class TestsFlextInfraPrivateImportCutover:
         consumer_path: Path,
         *private_imports: str,
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Plan the cutover for every private import reported in the consumer."""
+        """Plan the cutover for every private import reported in the consumer.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        """
         with infra.rope_workspace(tmp_path) as rope:
             return u.Infra.plan_semantic_cutover(
                 c.Infra.SemanticCutoverPhase.PRIVATE_IMPORT,
@@ -485,7 +570,12 @@ class TestsFlextInfraPrivateImportCutover:
         consumer_path: Path,
         *private_imports: str,
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
-        """Return the successful plan's edits."""
+        """Return the successful plan's edits.
+
+        Returns:
+            The successful plan's edits.
+
+        """
         planned = cls._plan(tmp_path, sources, consumer_path, *private_imports)
         tm.ok(planned)
         return planned.value
@@ -498,7 +588,12 @@ class TestsFlextInfraPrivateImportCutover:
         consumer_path: Path,
         *private_imports: str,
     ) -> str:
-        """Return the single planned edit's rewritten consumer source."""
+        """Return the single planned edit's rewritten consumer source.
+
+        Returns:
+            The single planned edit's rewritten consumer source.
+
+        """
         return cls._edits(tmp_path, sources, consumer_path, *private_imports)[
             0
         ].updated_source
@@ -506,7 +601,11 @@ class TestsFlextInfraPrivateImportCutover:
     def test_rewires_unique_public_facade_binding(self, tmp_path: Path) -> None:
         """Derive the nested facade path and remove the private import atomically."""
         consumer_path, private_import, sources = self._facade_case(
-            tmp_path, "utilities", "managers", "Sample", "u"
+            tmp_path,
+            "utilities",
+            "managers",
+            "Sample",
+            "u",
         )
         sources[consumer_path] = (
             "from flext_sample import p\n"
@@ -549,7 +648,12 @@ class TestsFlextInfraPrivateImportCutover:
     def test_rewrites_only_the_imported_alias_binding(self, tmp_path: Path) -> None:
         """Keep a homonymous local binding outside the authenticated cutover."""
         consumer_path, private_import, sources = self._facade_case(
-            tmp_path, "utilities", "managers", "Sample", "u", import_alias="managers"
+            tmp_path,
+            "utilities",
+            "managers",
+            "Sample",
+            "u",
+            import_alias="managers",
         )
         sources[consumer_path] = (
             f"{private_import}\n\n"
@@ -568,7 +672,11 @@ class TestsFlextInfraPrivateImportCutover:
     def test_rejects_shadowed_public_facade_alias(self, tmp_path: Path) -> None:
         """Fail before effects when a local binding would capture the facade alias."""
         consumer_path, private_import, sources = self._facade_case(
-            tmp_path, "utilities", "managers", "Sample", "u"
+            tmp_path,
+            "utilities",
+            "managers",
+            "Sample",
+            "u",
         )
         sources[consumer_path] = (
             f"{private_import}\n\n"
@@ -582,11 +690,17 @@ class TestsFlextInfraPrivateImportCutover:
         )
 
     def test_accepts_alias_owned_by_removed_private_import(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Replace the old import binding with its public facade atomically."""
         consumer_path, private_import, sources = self._facade_case(
-            tmp_path, "models", "base", "Metadata", "m", import_alias="m"
+            tmp_path,
+            "models",
+            "base",
+            "Metadata",
+            "m",
+            import_alias="m",
         )
         sources[consumer_path] = f"{private_import}\n\nmetadata = m.Metadata()\n"
 
@@ -597,11 +711,17 @@ class TestsFlextInfraPrivateImportCutover:
         tm.that(updated, lacks=private_import)
 
     def test_preserves_type_checking_boundary_for_public_facade(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Keep a type-only facade import in the original type-only boundary."""
         consumer_path, private_import, sources = self._facade_case(
-            tmp_path, "models", "base", "Metadata", "m", import_alias="m"
+            tmp_path,
+            "models",
+            "base",
+            "Metadata",
+            "m",
+            import_alias="m",
         )
         sources[consumer_path] = (
             "from __future__ import annotations\n\n"
@@ -618,7 +738,8 @@ class TestsFlextInfraPrivateImportCutover:
         tm.that(updated, lacks=private_import)
 
     def test_preserves_multiple_type_only_facades_from_one_package(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Rewire every type facade without promoting imports to runtime."""
         package_path = tmp_path / "flext-sample/src/flext_sample"
@@ -634,7 +755,7 @@ class TestsFlextInfraPrivateImportCutover:
         for layer, alias, private_class, nested_class in layers:
             private_module = f"flext_sample._{layer}.base"
             private_imports.append(
-                f"from {private_module} import {private_class} as {alias}b"
+                f"from {private_module} import {private_class} as {alias}b",
             )
             sources[package_path / f"{layer}.py"] = self._facade_source(
                 private_module=private_module,
@@ -655,7 +776,10 @@ class TestsFlextInfraPrivateImportCutover:
         )
 
         updated = self._updated_source(
-            tmp_path, sources, consumer_path, *private_imports
+            tmp_path,
+            sources,
+            consumer_path,
+            *private_imports,
         )
 
         tm.that(updated, has="    from flext_sample import m, p, t")
@@ -667,11 +791,17 @@ class TestsFlextInfraPrivateImportCutover:
             tm.that(updated, lacks=private_import)
 
     def test_discovers_operational_facade_from_live_source(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Rewire an operational family without a registered family-to-alias map."""
         consumer_path, private_import, sources = self._facade_case(
-            tmp_path, "exceptions", "base", "Invalid", "e", import_alias="eb"
+            tmp_path,
+            "exceptions",
+            "base",
+            "Invalid",
+            "e",
+            import_alias="eb",
         )
         sources[consumer_path] = f"{private_import}\n\nerror: eb.Code\n"
 
@@ -682,11 +812,17 @@ class TestsFlextInfraPrivateImportCutover:
         tm.that(updated, lacks=private_import)
 
     def test_replaces_public_long_alias_during_private_cutover(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Delete the long public alias while wiring the canonical facade."""
         consumer_path, private_import, sources = self._facade_case(
-            tmp_path, "models", "pydantic", "Pydantic", "m", import_alias="mp"
+            tmp_path,
+            "models",
+            "pydantic",
+            "Pydantic",
+            "m",
+            import_alias="mp",
         )
         sources[consumer_path] = (
             "from __future__ import annotations\n\n"
@@ -719,99 +855,3 @@ class TestsFlextInfraPrivateImportCutover:
         )
 
         tm.that(edits, eq=())
-
-    def test_relativizes_same_owner_import_without_rebinding_alias(
-        self, tmp_path: Path
-    ) -> None:
-        """Avoid package-root re-entry while preserving the imported binding."""
-        consumer_path = tmp_path / "flext-sample/src/flext_sample/_utilities/mapper.py"
-        private_import = (
-            "from flext_sample._models.pydantic import FlextSampleModelsPydantic as mp"
-        )
-
-        updated = self._updated_source(
-            tmp_path,
-            {consumer_path: f"{private_import}\n\nmodel = mp.BaseModel\n"},
-            consumer_path,
-            private_import,
-        )
-
-        tm.that(
-            updated,
-            has=("from .._models.pydantic import FlextSampleModelsPydantic as mp"),
-        )
-        tm.that(updated, has="model = mp.BaseModel")
-        tm.that(updated, lacks=private_import)
-        tm.that(updated, lacks="from flext_sample import m")
-
-    def test_same_owner_import_ignores_unrelated_installed_package(
-        self, tmp_path: Path, installed_dependency_path: Path
-    ) -> None:
-        """A local sibling import must not inspect an ambient namesake package."""
-        package_name = "local_imports"
-        installed = installed_dependency_path / package_name
-        installed.mkdir()
-        (installed / "__init__.py").write_text(
-            "from ..outside import Invalid\n", encoding="utf-8"
-        )
-        consumer_path = tmp_path / package_name / "utilities.py"
-        private_import = (
-            f"from {package_name}._utilities.base import LocalUtilitiesBase"
-        )
-        updated = self._updated_source(
-            tmp_path,
-            {consumer_path: f"{private_import}\n\nvalue = LocalUtilitiesBase\n"},
-            consumer_path,
-            private_import,
-        )
-
-        tm.that(updated, has="from ._utilities.base import LocalUtilitiesBase")
-        tm.that(updated, lacks=private_import)
-
-    def test_relativizes_handwritten_package_initializer(self, tmp_path: Path) -> None:
-        """Apply the same owner rule to handwritten ``__init__.py`` modules."""
-        consumer_path = tmp_path / "flext-sample/src/flext_sample/_models/__init__.py"
-        private_import = (
-            "from flext_sample._models.config import FlextSampleModelsConfig"
-        )
-
-        updated = self._updated_source(
-            tmp_path,
-            {
-                consumer_path: (
-                    f"{private_import}\n\n__all__ = ['FlextSampleModelsConfig']\n"
-                )
-            },
-            consumer_path,
-            private_import,
-        )
-
-        tm.that(updated, has="from .config import FlextSampleModelsConfig")
-        tm.that(updated, lacks=private_import)
-
-    def test_relativizes_same_owner_root_facade_without_package_reentry(
-        self, tmp_path: Path
-    ) -> None:
-        """Use one leading dot when a package-root module consumes its family."""
-        consumer_path = tmp_path / "flext-sample/src/flext_sample/loggings.py"
-        private_import = (
-            "from flext_sample._utilities.logging_context import "
-            "FlextSampleUtilitiesLoggingContext as ulc"
-        )
-
-        updated = self._updated_source(
-            tmp_path,
-            {consumer_path: f"{private_import}\n\ncontext = ulc.Context\n"},
-            consumer_path,
-            private_import,
-        )
-
-        tm.that(
-            updated,
-            has=(
-                "from ._utilities.logging_context import "
-                "FlextSampleUtilitiesLoggingContext as ulc"
-            ),
-        )
-        tm.that(updated, has="context = ulc.Context")
-        tm.that(updated, lacks=private_import)

@@ -1,4 +1,8 @@
-"""Destination-local staging for generic generated-file plans."""
+"""Destination-local staging for generic generated-file plans.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,9 +13,12 @@ from typing import TYPE_CHECKING, ClassVar, get_args
 
 from flext_core import r
 from flext_infra import m, u
-
-from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
-from ._mise_artifacts_process import FlextInfraMiseArtifactsProcess as process
+from flext_infra.codegen._mise_artifacts_files import (
+    FlextInfraMiseArtifactsFiles as files,
+)
+from flext_infra.codegen._mise_artifacts_process import (
+    FlextInfraMiseArtifactsProcess as process,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -31,7 +38,12 @@ class FlextInfraCodegenStaging:
         phase: str,
         plans: t.VariadicTuple[m.Infra.CodegenFilePlan],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile]]:
-        """Stage one exact phase without changing any live destination."""
+        """Stage one exact phase without changing any live destination.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile]]``.
+
+        """
         result_type = r[tuple[m.Infra.CodegenStagedFile, ...]]
         if phase not in FlextInfraCodegenStaging._phases:
             return result_type.fail(f"unsupported generation phase: {phase}")
@@ -60,7 +72,7 @@ class FlextInfraCodegenStaging:
             )
             if project is None or project.transaction_root is None:
                 return result_type.fail(
-                    f"{phase} file has no transaction participant: {file_plan.path}"
+                    f"{phase} file has no transaction participant: {file_plan.path}",
                 )
             current = files.read_state(file_plan.path, required=False)
             if current.failure:
@@ -78,16 +90,17 @@ class FlextInfraCodegenStaging:
             ):
                 if before.content is not None:
                     return result_type.fail(
-                        f"{phase} destination appeared after planning: {file_plan.path}"
+                        f"{phase} destination appeared after planning: "
+                        f"{file_plan.path}",
                     )
             elif before != planned_before:
                 return result_type.fail(
-                    f"{phase} destination changed after planning: {file_plan.path}"
+                    f"{phase} destination changed after planning: {file_plan.path}",
                 )
             if not file_plan.path.parent.is_dir() or file_plan.path.parent.is_symlink():
                 return result_type.fail(
                     f"{phase} destination parent is not physical: "
-                    f"{file_plan.path.parent}"
+                    f"{file_plan.path.parent}",
                 )
             try:
                 parent_state = file_plan.path.parent.lstat()
@@ -95,7 +108,9 @@ class FlextInfraCodegenStaging:
             except OSError as exc:
                 return result_type.fail_op(f"inspect {phase} staging filesystem", exc)
             reparse = getattr(parent_state, "st_file_attributes", 0) & getattr(
-                stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0
+                stat,
+                "FILE_ATTRIBUTE_REPARSE_POINT",
+                0,
             )
             if (
                 not stat.S_ISDIR(parent_state.st_mode)
@@ -104,14 +119,14 @@ class FlextInfraCodegenStaging:
             ):
                 return result_type.fail(
                     f"{phase} staging is not on destination filesystem: "
-                    f"{file_plan.path}"
+                    f"{file_plan.path}",
                 )
             replacement_input: tuple[Path, bytes, int] | None = None
             if file_plan.desired_content is not None:
                 desired_mode = file_plan.desired_mode
                 if desired_mode is None:
                     return result_type.fail(
-                        f"{phase} desired mode is absent: {file_plan.path}"
+                        f"{phase} desired mode is absent: {file_plan.path}",
                     )
                 phase_root = project.transaction_root / f"phase-{phase}"
                 if phase_root not in phase_roots:
@@ -119,13 +134,14 @@ class FlextInfraCodegenStaging:
                     # AtomicFileState and is published below; reusing it here
                     # bound a Result and the staged-file model rejected it.
                     phase_root_before = u.Cli.atomic_read_empty_directory_state(
-                        phase_root, required=False
+                        phase_root,
+                        required=False,
                     )
                     if phase_root_before.failure:
                         return result_type.from_failure(phase_root_before)
                     if phase_root_before.value.exists:
                         return result_type.fail(
-                            f"{phase} staging root already exists: {phase_root}"
+                            f"{phase} staging root already exists: {phase_root}",
                         )
                     phase_roots[phase_root] = phase_root_before.value
                 replacement_input = (
@@ -138,9 +154,10 @@ class FlextInfraCodegenStaging:
         # Reject every invalid destination before creating any phase artifact.
         # Recovery cannot authorize partial staging absent from the durable
         # journal.
-        for phase_root_before in phase_roots.values():
+        for phase_root_state in phase_roots.values():
             created = u.Cli.atomic_create_empty_directory_guarded(
-                phase_root_before, permission_mode=0o700
+                phase_root_state,
+                permission_mode=0o700,
             )
             if created.failure:
                 return result_type.from_failure(created)
@@ -163,7 +180,7 @@ class FlextInfraCodegenStaging:
                     project=file_plan.project,
                     before=before,
                     replacement=replacement,
-                )
+                ),
             )
         return result_type.ok(tuple(publications))
 

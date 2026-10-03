@@ -1,4 +1,8 @@
-"""Coverage verb contract of the public cached-pytest runner."""
+"""Coverage verb contract of the public cached-pytest runner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -14,9 +18,10 @@ from tests.unit.validate.pytest_runner_support import runner_for, summary
 class TestsFlextInfraPytestRunnerCoverage:
     """Exercise the real coverage pass and its published accounting."""
 
+    @staticmethod
     @pytest.mark.slow
     def test_coverage_verb_publishes_artifact_without_testmon(
-        self, cached_runner_project: Path
+        cached_runner_project: Path,
     ) -> None:
         """The coverage pass runs its own process: real artifact, zero testmon."""
         codegen = config.Infra.codegen
@@ -34,7 +39,7 @@ class TestsFlextInfraPytestRunnerCoverage:
         summary_text = summary(reports_root)
         tm.that(summary_text, has=["executed=1", "failed=0", "exit=0"])
         command = tm.ok(
-            u.Cli.files_read_text(reports_root / latest_name / "command.txt")
+            u.Cli.files_read_text(reports_root / latest_name / "command.txt"),
         )
         tm.that(command, has="--cov")
         tm.that("--testmon" in command, eq=False)
@@ -45,16 +50,19 @@ class TestsFlextInfraPytestRunnerCoverage:
             execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
         )
         tm.that(
-            [arg for arg in inventory_command if arg.startswith("--testmon")], eq=[]
+            [arg for arg in inventory_command if arg.startswith("--testmon")],
+            eq=[],
         )
         tm.that(
-            (reports_root / latest_name / "testmon-inventory.json").is_file(), eq=True
+            (reports_root / latest_name / "testmon-inventory.json").is_file(),
+            eq=True,
         )
         tm.that(runner.testmon_db.exists(), eq=False)
 
+    @staticmethod
     @pytest.mark.slow
     def test_failed_coverage_suite_preserves_original_failure_and_accounting(
-        self, cached_runner_project: Path
+        cached_runner_project: Path,
     ) -> None:
         """No-cov-on-fail omits coverage without hiding the failed test evidence."""
         runner = runner_for(cached_runner_project)
@@ -71,13 +79,13 @@ class TestsFlextInfraPytestRunnerCoverage:
         latest_name = tm.ok(u.Cli.files_read_text(reports_root / "latest.txt")).strip()
         report_dir = reports_root / latest_name
         outcome = m.Cli.ProcessOutcome.model_validate_json(
-            tm.ok(u.Cli.files_read_text(report_dir / "suite-outcome.json"))
+            tm.ok(u.Cli.files_read_text(report_dir / "suite-outcome.json")),
         )
         tm.that(outcome.raw_return_code, eq=exit_code)
         tm.that(outcome.timed_out, eq=False)
         tm.that(outcome.forwarded_signal, none=True)
         accounting = m.Infra.TestmonRunAccounting.model_validate_json(
-            tm.ok(u.Cli.files_read_text(report_dir / "run-accounting.json"))
+            tm.ok(u.Cli.files_read_text(report_dir / "run-accounting.json")),
         )
         tm.that(accounting.executed_count, eq=accounting.reported_count)
         tm.that(accounting.executed_count > 0, eq=True)

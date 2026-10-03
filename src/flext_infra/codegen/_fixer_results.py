@@ -1,4 +1,8 @@
-"""Result helpers for the codegen fixer service."""
+"""Result helpers for the codegen fixer service.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -18,12 +22,14 @@ class FlextInfraCodegenFixerResultsMixin:
 
     _fixer_log: ClassVar[p.Logger] = u.fetch_logger(__name__)
 
-    if TYPE_CHECKING:
-        rope: p.Infra.RopeWorkspaceDsl
-
     @staticmethod
     def _empty_result(project_name: str) -> m.Infra.AutoFixResult:
-        """Empty result."""
+        """Empty result.
+
+        Returns:
+            The resulting ``m.Infra.AutoFixResult``.
+
+        """
         return m.Infra.AutoFixResult(
             project=project_name,
             violations_fixed=[],
@@ -33,9 +39,15 @@ class FlextInfraCodegenFixerResultsMixin:
 
     @staticmethod
     def _build_result(
-        project_name: str, ctx: m.Infra.FixContext
+        project_name: str,
+        ctx: m.Infra.FixContext,
     ) -> m.Infra.AutoFixResult:
-        """Build result."""
+        """Build result.
+
+        Returns:
+            The resulting ``m.Infra.AutoFixResult``.
+
+        """
         return m.Infra.AutoFixResult(
             project=project_name,
             violations_fixed=list(ctx.violations_fixed),
@@ -44,13 +56,19 @@ class FlextInfraCodegenFixerResultsMixin:
         )
 
     def _load_initial_violations(
-        self, ctx: m.Infra.FixContext, project_path: Path
+        self,
+        ctx: m.Infra.FixContext,
+        project_path: Path,
     ) -> t.SequenceOf[m.Infra.CensusViolation]:
-        """Read the initial namespace violations and record skip reason on failure."""
+        """Read the initial namespace violations and record skip reason on failure.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.CensusViolation]``.
+
+        """
         initial_violations_result = u.Infra.parse_namespace_validation(
-            FlextInfraNamespaceValidator(
-                repository_root=project_path, rope=self.rope
-            ).build_report()
+            FlextInfraNamespaceValidator(repository_root=project_path).build_report(),
+            project_path,
         )
         if initial_violations_result.failure:
             self._fixer_log.warning(
@@ -68,17 +86,16 @@ class FlextInfraCodegenFixerResultsMixin:
             return ()
         return initial_violations_result.unwrap()
 
+    @staticmethod
     def _classify_remaining_violations(
-        self,
         ctx: m.Infra.FixContext,
         project_path: Path,
         initial_violations: t.SequenceOf[m.Infra.CensusViolation],
     ) -> None:
         """Re-run validation and split outstanding violations into fixed vs skipped."""
         remaining_result = u.Infra.parse_namespace_validation(
-            FlextInfraNamespaceValidator(
-                repository_root=project_path, rope=self.rope
-            ).build_report()
+            FlextInfraNamespaceValidator(repository_root=project_path).build_report(),
+            project_path,
         )
         if remaining_result.failure:
             ctx.skip(

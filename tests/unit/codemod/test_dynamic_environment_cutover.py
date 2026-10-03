@@ -1,4 +1,8 @@
-"""Execute migrated dynamic environment boundaries with real typed policy."""
+"""Execute migrated dynamic environment boundaries with real typed policy.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,8 +23,13 @@ class TestsDynamicEnvironmentCutover:
     @pytest.mark.parametrize("value", [None, "", "literal value"])
     @pytest.mark.parametrize("required", [False, True])
     def test_real_settings_consumer_preserves_lookup_contract(
-        self, tmp_path: Path, value: str | None, *, required: bool
+        self,
+        tmp_path: Path,
+        value: str | None,
+        *,
+        required: bool,
     ) -> None:
+        """Test real settings consumer preserves lookup contract."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "consumer.py"
         access = (
@@ -56,7 +65,7 @@ class TestsDynamicEnvironmentCutover:
                     rope_workspace=rope,
                     sources=sources,
                     findings=(finding,),
-                )
+                ),
             )
             tm.that(len(edits), eq=1)
             sources[path] = edits[0].updated_source
@@ -66,7 +75,7 @@ class TestsDynamicEnvironmentCutover:
                     rope_workspace=rope,
                     sources=sources,
                     findings=(finding,),
-                )
+                ),
             )
         tm.that(remaining, empty=True)
         path.write_text(sources[path], encoding="utf-8")
@@ -78,17 +87,21 @@ class TestsDynamicEnvironmentCutover:
                 (sys.executable, "-I", str(path), mode),
                 env=environment,
                 remove_env_keys=(key,) if value is None else (),
-            )
+            ),
         )
         tm.that(u.Cli.process_succeeded(output.outcome), eq=True, msg=output.stderr)
         tm.that(output.stdout, eq="" if mode == "missing-required" else f"{value!r}\n")
 
     @pytest.mark.parametrize(
-        "access", ["os.environ.get('STATIC_KEY')", "os.environ.get(unknown_key)"]
+        "access",
+        ["os.environ.get('STATIC_KEY')", "os.environ.get(unknown_key)"],
     )
     def test_unproven_environment_key_stays_red(
-        self, tmp_path: Path, access: str
+        self,
+        tmp_path: Path,
+        access: str,
     ) -> None:
+        """Test unproven environment key stays red."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "consumer.py"
         source = f"import os\ndef value(unknown_key: str):\n    return {access}\n"

@@ -1,0 +1,7 @@
+id: ban-flext-infra-library-import
+valid:
+  - from flext_infra import u
+  - import ropey
+invalid:
+  - import rope
+  - from rope.base.project import Project

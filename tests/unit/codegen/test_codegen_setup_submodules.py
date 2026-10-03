@@ -1,4 +1,8 @@
-"""Behavioral proof for generated setup submodule bootstrapping."""
+"""Behavioral proof for generated setup submodule bootstrapping.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,11 +23,19 @@ pytestmark = [pytest.mark.slow, pytest.mark.remote]
 
 
 class TestsFlextInfraCodegenSetupSubmodules:
+    """Tests for ``FlextInfraCodegenSetupSubmodules``."""
+
+    @staticmethod
     @pytest.fixture
     def generated_project_template(
-        self, resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path]
+        resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
     ) -> Path:
-        """Return the run's standalone consumer, resolved once by ``make upg``."""
+        """Return the run's standalone consumer, resolved once by ``make upg``.
+
+        Returns:
+            The run's standalone consumer, resolved once by ``make upg``.
+
+        """
         return resolved_make_templates[c.Infra.MakeProfile.STANDALONE]
 
     @staticmethod
@@ -73,18 +85,28 @@ class TestsFlextInfraCodegenSetupSubmodules:
 
     @staticmethod
     def _setup(root: Path) -> p.Cli.CommandOutput:
-        """Invoke the generated public verb with real managed executables."""
+        """Invoke the generated public verb with real managed executables.
+
+        Returns:
+            The resulting ``p.Cli.CommandOutput``.
+
+        """
         return tm.ok(
             test_u.Tests.run_isolated_make(
                 ["--no-print-directory", "setup"],
                 cwd=root,
                 env={"GIT_ALLOW_PROTOCOL": "file:https:ssh"},
-            )
+            ),
         )
 
     @classmethod
     def _assert_setup(cls, root: Path) -> p.Cli.CommandOutput:
-        """Require installed metadata and activation from the real post-setup hook."""
+        """Require installed metadata and activation from the real post-setup hook.
+
+        Returns:
+            The resulting ``p.Cli.CommandOutput``.
+
+        """
         process = cls._setup(root)
         tm.that(
             u.Cli.process_succeeded(process.outcome),
@@ -142,7 +164,12 @@ class TestsFlextInfraCodegenSetupSubmodules:
         superproject_branch: str,
         member_branch: str,
     ) -> Path:
-        """Provision a project whose member sits on the requested branch."""
+        """Provision a project whose member sits on the requested branch.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         source = tmp_path / "source"
         cls._commit_repository(source, "declared-dev", "source")
         project = tmp_path / "project"
@@ -155,8 +182,11 @@ class TestsFlextInfraCodegenSetupSubmodules:
         return project
 
     def test_virgin_submodule_initializes_only_direct_owner_before_environment(
-        self, tmp_path: Path, generated_project_template: Path
+        self,
+        tmp_path: Path,
+        generated_project_template: Path,
     ) -> None:
+        """Test virgin submodule initializes only direct owner before environment."""
         nested = tmp_path / "nested"
         child = tmp_path / "child"
         self._commit_repository(nested, "nested-dev", "nested")
@@ -196,7 +226,9 @@ class TestsFlextInfraCodegenSetupSubmodules:
         tm.that(nested_marker.exists(), eq=False)
 
     def test_setup_is_repeatable_with_managed_submodule(
-        self, tmp_path: Path, generated_project_template: Path
+        self,
+        tmp_path: Path,
+        generated_project_template: Path,
     ) -> None:
         """Idempotent setup succeeds twice when the submodule is already valid."""
         source = tmp_path / "source"
@@ -208,7 +240,9 @@ class TestsFlextInfraCodegenSetupSubmodules:
         self._assert_setup(project)
 
     def test_submodule_setup_never_fetches_or_recurses(
-        self, tmp_path: Path, generated_project_template: Path
+        self,
+        tmp_path: Path,
+        generated_project_template: Path,
     ) -> None:
         """Local gitlinks remain usable with unreachable direct and nested origins."""
         nested = tmp_path / "nested"
@@ -239,7 +273,11 @@ class TestsFlextInfraCodegenSetupSubmodules:
             str(tmp_path / "absent-origin"),
         )
         self._git(
-            checkout, "remote", "set-url", "origin", str(tmp_path / "absent-origin")
+            checkout,
+            "remote",
+            "set-url",
+            "origin",
+            str(tmp_path / "absent-origin"),
         )
         recorded = self._git(checkout, "rev-parse", "HEAD")
 
@@ -249,15 +287,20 @@ class TestsFlextInfraCodegenSetupSubmodules:
         tm.that((checkout / "nested/marker.txt").exists(), eq=False)
 
     def test_setup_is_repeatable_without_gitmodules(
-        self, tmp_path: Path, generated_project_template: Path
+        self,
+        tmp_path: Path,
+        generated_project_template: Path,
     ) -> None:
+        """Test setup is repeatable without gitmodules."""
         project = tmp_path / "project"
         self._generated_project(project, generated_project_template)
         self._assert_setup(project)
         self._assert_setup(project)
 
     def test_content_only_submodule_is_never_initialized(
-        self, tmp_path: Path, generated_project_template: Path
+        self,
+        tmp_path: Path,
+        generated_project_template: Path,
     ) -> None:
         """A checkout without the config-owned marker remains untouched."""
         source = tmp_path / "source"
@@ -265,7 +308,11 @@ class TestsFlextInfraCodegenSetupSubmodules:
         project = tmp_path / "project"
         self._generated_project(project, generated_project_template)
         self._add_submodule(
-            project, source, "vendor/upstream", "upstream", managed=False
+            project,
+            source,
+            "vendor/upstream",
+            "upstream",
+            managed=False,
         )
         self._git(project, "submodule", "deinit", "-q", "-f", "--all")
 
@@ -274,7 +321,9 @@ class TestsFlextInfraCodegenSetupSubmodules:
         tm.that((project / "vendor/upstream/marker.txt").exists(), eq=False)
 
     def test_content_only_submodule_config_and_wip_are_never_mutated(
-        self, tmp_path: Path, generated_project_template: Path
+        self,
+        tmp_path: Path,
+        generated_project_template: Path,
     ) -> None:
         """Setup neither synchronizes nor validates an immutable checkout."""
         source = tmp_path / "source"
@@ -282,13 +331,20 @@ class TestsFlextInfraCodegenSetupSubmodules:
         project = tmp_path / "project"
         self._generated_project(project, generated_project_template)
         self._add_submodule(
-            project, source, "vendor/upstream", "upstream", managed=False
+            project,
+            source,
+            "vendor/upstream",
+            "upstream",
+            managed=False,
         )
         checkout = project / "vendor/upstream"
         marker = checkout / "marker.txt"
         marker.write_text("foreign wip", encoding="utf-8")
         configured_url = self._git(
-            project, "config", "--get", "submodule.vendor/upstream.url"
+            project,
+            "config",
+            "--get",
+            "submodule.vendor/upstream.url",
         )
         self._git(
             project,
@@ -308,10 +364,14 @@ class TestsFlextInfraCodegenSetupSubmodules:
         )
 
     @pytest.mark.parametrize(
-        "member_branch", ["declared-dev", "feature/lane", "local-work"]
+        "member_branch",
+        ["declared-dev", "feature/lane", "local-work"],
     )
     def test_accepted_branch_provisions_the_environment(
-        self, tmp_path: Path, generated_project_template: Path, member_branch: str
+        self,
+        tmp_path: Path,
+        generated_project_template: Path,
+        member_branch: str,
     ) -> None:
         """Any named lane containing the recorded gitlink is accepted."""
         project = self._branch_scenario(
@@ -331,7 +391,9 @@ class TestsFlextInfraCodegenSetupSubmodules:
         )
 
     def test_branch_without_recorded_gitlink_fails_before_environment(
-        self, tmp_path: Path, generated_project_template: Path
+        self,
+        tmp_path: Path,
+        generated_project_template: Path,
     ) -> None:
         """Commit ancestry, rather than a branch-name allowlist, is the boundary."""
         project = self._branch_scenario(
@@ -357,7 +419,9 @@ class TestsFlextInfraCodegenSetupSubmodules:
         tm.that((project / ".venv").exists(), eq=False)
 
     def test_lane_branch_keeps_head_and_dirty_work(
-        self, tmp_path: Path, generated_project_template: Path
+        self,
+        tmp_path: Path,
+        generated_project_template: Path,
     ) -> None:
         """A member on the superproject lane branch provisions without any fetch."""
         project = self._branch_scenario(
@@ -380,7 +444,9 @@ class TestsFlextInfraCodegenSetupSubmodules:
         tm.that(dirty.read_text(encoding="utf-8"), eq="lane wip")
 
     def test_lane_branch_without_recorded_gitlink_fails(
-        self, tmp_path: Path, generated_project_template: Path
+        self,
+        tmp_path: Path,
+        generated_project_template: Path,
     ) -> None:
         """The gitlink ancestry guarantee survives the lane branch acceptance."""
         source = tmp_path / "source"
@@ -410,8 +476,11 @@ class TestsFlextInfraCodegenSetupSubmodules:
         tm.that((project / ".venv").exists(), eq=False)
 
     def test_local_changes_are_preserved_on_declared_branch(
-        self, tmp_path: Path, generated_project_template: Path
+        self,
+        tmp_path: Path,
+        generated_project_template: Path,
     ) -> None:
+        """Test local changes are preserved on declared branch."""
         source = tmp_path / "source"
         self._commit_repository(source, "declared-dev", "source")
         project = tmp_path / "project"
@@ -425,8 +494,11 @@ class TestsFlextInfraCodegenSetupSubmodules:
         tm.that(marker.read_text(encoding="utf-8"), eq="local change")
 
     def test_declared_branch_ahead_of_gitlink_is_preserved(
-        self, tmp_path: Path, generated_project_template: Path
+        self,
+        tmp_path: Path,
+        generated_project_template: Path,
     ) -> None:
+        """Test declared branch ahead of gitlink is preserved."""
         source = tmp_path / "source"
         self._commit_repository(source, "declared-dev", "source")
         project = tmp_path / "project"
@@ -446,14 +518,21 @@ class TestsFlextInfraCodegenSetupSubmodules:
         tm.that(advanced_marker.read_text(encoding="utf-8"), eq="fix forward")
 
     def test_unmanaged_third_party_submodule_is_never_mutated(
-        self, tmp_path: Path, generated_project_template: Path
+        self,
+        tmp_path: Path,
+        generated_project_template: Path,
     ) -> None:
+        """Test unmanaged third party submodule is never mutated."""
         source = tmp_path / "third-party-source"
         self._commit_repository(source, "vendor-main", "vendor")
         project = tmp_path / "project"
         self._generated_project(project, generated_project_template)
         self._add_submodule(
-            project, source, "vendor/third-party", "vendor-main", managed=False
+            project,
+            source,
+            "vendor/third-party",
+            "vendor-main",
+            managed=False,
         )
         checkout = project / "vendor/third-party"
         self._git(checkout, "switch", "-q", "-c", "fork-local")
@@ -468,8 +547,11 @@ class TestsFlextInfraCodegenSetupSubmodules:
         tm.that(marker.read_text(encoding="utf-8"), eq="third-party wip")
 
     def test_same_branch_declaration_initializes_recorded_gitlink(
-        self, tmp_path: Path, generated_project_template: Path
+        self,
+        tmp_path: Path,
+        generated_project_template: Path,
     ) -> None:
+        """Test same branch declaration initializes recorded gitlink."""
         source = tmp_path / "source"
         self._commit_repository(source, "main", "source")
         project = tmp_path / "project"
@@ -497,7 +579,9 @@ class TestsFlextInfraCodegenSetupSubmodules:
         )
 
     def test_setup_succeeds_when_gitlink_is_ahead_of_origin(
-        self, tmp_path: Path, generated_project_template: Path
+        self,
+        tmp_path: Path,
+        generated_project_template: Path,
     ) -> None:
         """Present pin matching HEAD must verify even when origin lags the pin."""
         source = tmp_path / "source"

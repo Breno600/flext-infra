@@ -1,15 +1,17 @@
-"""Quality-gate and enforcement fixture test utilities for flext-infra."""
+"""Quality-gate and enforcement fixture test utilities for flext-infra.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
 from flext_infra.deps.fix_pyrefly_config import FlextInfraConfigFixer
-from flext_infra.fixers.rope_fixer import FlextInfraRopeFixerAdapter
 from flext_infra.refactor.census import FlextInfraRefactorCensus
 from tests import m, t
 from tests.utilities_fixture_tooling import TestsFlextInfraUtilitiesToolingFixtureMixin
@@ -20,24 +22,6 @@ if TYPE_CHECKING:
 
 class TestsFlextInfraUtilitiesGatesMixin:
     """Typed quality-gate execution and enforcement fixture helpers."""
-
-    @staticmethod
-    def run_rope_fixer(
-        tmp_path: Path,
-        project_dir: Path,
-        rule: m.EnforcementRuleSpec,
-        file_path: Path,
-        *,
-        apply: bool,
-    ) -> m.Infra.ProjectFixResult:
-        """Run one rope fixer adapter pass over a single reported file."""
-        adapter = FlextInfraRopeFixerAdapter(tmp_path)
-        ctx = m.Infra.FixEnforcementCommand(
-            repository_root=tmp_path, projects=("demo",), apply=apply
-        )
-        return adapter.fix_project(
-            project_dir, ((rule, SimpleNamespace(file_path=str(file_path))),), ctx
-        )
 
     @staticmethod
     def detector_context(
@@ -52,11 +36,17 @@ class TestsFlextInfraUtilitiesGatesMixin:
         Every detector declares its own violation type, so the shared owner
         stops at the context: the caller keeps its own ``detect_file`` call
         and therefore its precise return type.
+
+        Returns:
+            The resulting ``m.Infra.DetectorContext``.
+
         """
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(source, encoding="utf-8")
         return m.Infra.DetectorContext(
-            file_path=target, rope_project=rope_project, project_name=project_name
+            file_path=target,
+            rope_project=rope_project,
+            project_name=project_name,
         )
 
     @staticmethod
@@ -70,7 +60,12 @@ class TestsFlextInfraUtilitiesGatesMixin:
 
     @staticmethod
     def gate_context(root: Path) -> m.Infra.GateContext:
-        """Build the standard check-mode gate context for one root."""
+        """Build the standard check-mode gate context for one root.
+
+        Returns:
+            The resulting ``m.Infra.GateContext``.
+
+        """
         return m.Infra.GateContext(repository_root=root, reports_dir=root)
 
     @staticmethod
@@ -82,10 +77,16 @@ class TestsFlextInfraUtilitiesGatesMixin:
         passed: bool,
         issues_len: int,
     ) -> m.Infra.GateExecution:
-        """Check one gate once, asserting its pass state and issue count."""
+        """Check one gate once, asserting its pass state and issue count.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         gate = gate_class(tmp_path)
         result = gate.check(
-            project_dir, TestsFlextInfraUtilitiesGatesMixin.gate_context(tmp_path)
+            project_dir,
+            TestsFlextInfraUtilitiesGatesMixin.gate_context(tmp_path),
         )
         tm.that(result.result.passed, eq=passed)
         tm.that(len(result.issues), eq=issues_len)
@@ -99,10 +100,19 @@ class TestsFlextInfraUtilitiesGatesMixin:
         passed: bool = True,
         issues: t.SequenceOf[m.Infra.Issue] | None = None,
     ) -> m.Infra.GateExecution:
-        """Create a typed quality-gate execution fixture."""
+        """Create a typed quality-gate execution fixture.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         return m.Infra.GateExecution(
             result=m.Infra.GateResult(
-                gate=gate, project=project, passed=passed, errors=(), duration=0.0
+                gate=gate,
+                project=project,
+                passed=passed,
+                errors=(),
+                duration=0.0,
             ),
             issues=tuple(issues or ()),
             raw_output="",
@@ -117,7 +127,12 @@ class TestsFlextInfraUtilitiesGatesMixin:
         code: str = "E1",
         message: str = "Error",
     ) -> m.Infra.Issue:
-        """Create a typed quality issue fixture."""
+        """Create a typed quality issue fixture.
+
+        Returns:
+            The resulting ``m.Infra.Issue``.
+
+        """
         return m.Infra.Issue(
             file=file,
             line=line,
@@ -129,9 +144,15 @@ class TestsFlextInfraUtilitiesGatesMixin:
 
     @staticmethod
     def make_project(
-        name: str = "p", gates: t.MappingKV[str, m.Infra.GateExecution] | None = None
+        name: str = "p",
+        gates: t.MappingKV[str, m.Infra.GateExecution] | None = None,
     ) -> m.Infra.ProjectResult:
-        """Create a typed project-result fixture."""
+        """Create a typed project-result fixture.
+
+        Returns:
+            The resulting ``m.Infra.ProjectResult``.
+
+        """
         resolved_gates: t.MappingKV[str, m.Infra.GateExecution] = (
             gates
             if gates is not None
@@ -145,11 +166,19 @@ class TestsFlextInfraUtilitiesGatesMixin:
 
     @staticmethod
     def create_gate_context(
-        repository_root: Path, *, reports_dir: Path | None = None
+        repository_root: Path,
+        *,
+        reports_dir: Path | None = None,
     ) -> m.Infra.GateContext:
-        """Provide the typed test helper `create_gate_context`."""
+        """Provide the typed test helper `create_gate_context`.
+
+        Returns:
+            The resulting ``m.Infra.GateContext``.
+
+        """
         return m.Infra.GateContext(
-            repository_root=repository_root, reports_dir=reports_dir or repository_root
+            repository_root=repository_root,
+            reports_dir=reports_dir or repository_root,
         )
 
     @staticmethod
@@ -161,13 +190,19 @@ class TestsFlextInfraUtilitiesGatesMixin:
         ctx: m.Infra.GateContext | None = None,
         reports_dir: Path | None = None,
     ) -> m.Infra.GateExecution:
-        """Provide the typed test helper `run_gate_check`."""
+        """Provide the typed test helper `run_gate_check`.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         gate = gate_class(repository_root)
         return gate.check(
             project_dir,
             ctx
             or TestsFlextInfraUtilitiesGatesMixin.create_gate_context(
-                repository_root, reports_dir=reports_dir
+                repository_root,
+                reports_dir=reports_dir,
             ),
         )
 
@@ -182,7 +217,12 @@ class TestsFlextInfraUtilitiesGatesMixin:
         apply_changes: bool = False,
         dry_run: bool = False,
     ) -> m.Infra.WorkspaceReport:
-        """Execute one refactor census and unwrap its successful report."""
+        """Execute one refactor census and unwrap its successful report.
+
+        Returns:
+            The resulting ``m.Infra.WorkspaceReport``.
+
+        """
         TestsFlextInfraUtilitiesToolingFixtureMixin.provision_checkout(workspace)
         result = FlextInfraRefactorCensus(
             repository_root=workspace,
@@ -199,7 +239,12 @@ class TestsFlextInfraUtilitiesGatesMixin:
 
     @staticmethod
     def census_violations(report: m.Infra.WorkspaceReport) -> list[m.Infra.Violation]:
-        """Flatten every per-project violation of one census report."""
+        """Flatten every per-project violation of one census report.
+
+        Returns:
+            The resulting ``list[m.Infra.Violation]``.
+
+        """
         return [
             violation for project in report.projects for violation in project.violations
         ]

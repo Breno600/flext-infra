@@ -5,6 +5,9 @@ examples inside tracked docstrings are collected once as named sources, each
 mapped back to its documentation origin. The gate writes them into one
 temporary tree so ruff validates and formats them in single invocations, and
 selects itself only for a project whose content yields at least one source.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -25,7 +28,12 @@ class FlextInfraMarkdownCodeSources:
 
     @staticmethod
     def syntax_broken(code: str, origin: Path) -> bool:
-        """Identify documentation fragments owned by the Markdown syntax validator."""
+        """Identify documentation fragments owned by the Markdown syntax validator.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         try:
             compile(code, str(origin), "exec")
         except SyntaxError:
@@ -34,20 +42,31 @@ class FlextInfraMarkdownCodeSources:
 
     @staticmethod
     def source_name(relative_posix: str, index: int) -> str:
-        """Encode one block's documentation location into a temp source filename."""
+        """Encode one block's documentation location into a temp source filename.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return c.Infra.MARKDOWN_CODE_SOURCE_FORMAT.format(
-            relative_posix.replace("/", "__").replace(".", "_"), index
+            relative_posix.replace("/", "__").replace(".", "_"),
+            index,
         )
 
     @staticmethod
     def fenced_block_sources(
-        project_dir: Path, markdown_files: t.SequenceOf[Path]
+        project_dir: Path,
+        markdown_files: t.SequenceOf[Path],
     ) -> t.VariadicTuple[t.Triple[str, str, t.Pair[str, int]]]:
         """Collect one named source per parseable fenced ``python`` block.
 
         Blocks carrying the ``notest`` fence marker and unparseable fragments
         are excluded. The Markdown validator owns syntax errors; this gate owns
         only formatting of Python blocks that compile.
+
+        Returns:
+            The resulting ``t.VariadicTuple[t.Triple[str, str, t.Pair[str, int]]]``.
+
         """
         collected: list[t.Triple[str, str, t.Pair[str, int]]] = []
         for md_path in markdown_files:
@@ -79,6 +98,10 @@ class FlextInfraMarkdownCodeSources:
         findings remain manual repairs. Example line numbers are approximate
         within the docstring (stdlib ``doctest`` reports positions relative to
         its input).
+
+        Returns:
+            The resulting ``t.VariadicTuple[t.Triple[str, str, t.Pair[str, int]]]``.
+
         """
         collected: list[t.Triple[str, str, t.Pair[str, int]]] = []
         parser = DocTestParser()
@@ -105,7 +128,8 @@ class FlextInfraMarkdownCodeSources:
                     compile(source_text, str(py_path), "exec")
                     collected.append((
                         FlextInfraMarkdownCodeSources.source_name(
-                            relative_posix, index
+                            relative_posix,
+                            index,
                         ),
                         source_text,
                         (relative_posix, body_start + example.lineno),

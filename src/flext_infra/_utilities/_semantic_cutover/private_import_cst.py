@@ -1,11 +1,15 @@
-"""Binding-aware concrete-syntax rewrites for private imports."""
+"""Binding-aware concrete-syntax rewrites for private imports.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, override
 
-from ..qualified_names import FlextInfraUtilitiesQualifiedNames
+from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
 
 if TYPE_CHECKING:
     import libcst as cst
@@ -14,13 +18,24 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
-    """Preserve source layout while moving consumers to public facades."""
+    """Preserve source layout while moving consumers to public facades.
+
+    Same-package absolute private imports are legal (imports are always
+    absolute); only cross-owner private imports reach this rewrite.
+    """
 
     @classmethod
     def _relocate_declared_exports(
-        cls, source: str, exports: t.MappingKV[str, t.Pair[str, str]]
+        cls,
+        source: str,
+        exports: t.MappingKV[str, t.Pair[str, str]],
     ) -> str:
-        """Keep lexical scopes and ``as`` aliases while selecting public owners."""
+        """Keep lexical scopes and ``as`` aliases while selecting public owners.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         import libcst as cst
 
         class _DeclaredExports(cst.CSTTransformer):
@@ -31,10 +46,13 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
 
             @override
             def leave_ImportFrom(
-                self, original_node: cst.ImportFrom, updated_node: cst.ImportFrom
+                self,
+                original_node: cst.ImportFrom,
+                updated_node: cst.ImportFrom,
             ) -> cst.BaseSmallStatement | cst.FlattenSentinel[cst.BaseSmallStatement]:
                 if original_node.relative or isinstance(
-                    updated_node.names, cst.ImportStar
+                    updated_node.names,
+                    cst.ImportStar,
                 ):
                     return updated_node
                 dotted_name = FlextInfraUtilitiesQualifiedNames.dotted_name
@@ -59,7 +77,8 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
                         if asname is None and public_name != name:
                             asname = cst.AsName(cst.Name(name))
                         replacement = replacement.with_changes(
-                            name=cst.Name(public_name), asname=asname
+                            name=cst.Name(public_name),
+                            asname=asname,
                         )
                         destination_module = cst.parse_expression(public_module)
                     statements.append(
@@ -68,7 +87,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
                             names=(replacement,),
                             lpar=None,
                             rpar=None,
-                        )
+                        ),
                     )
                 return cst.FlattenSentinel(statements)
 
@@ -82,7 +101,16 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
         *,
         runtime_public_imports: frozenset[str],
     ) -> str:
-        """Return a binding-proven rewrite with required public imports."""
+        """Return a binding-proven rewrite with required public imports.
+
+        Returns:
+            A binding-proven rewrite with required public imports.
+
+        Raises:
+            ValueError: If type-only facade migration has no TYPE_CHECKING boundary; or
+                if ambiguous private import binding.
+
+        """
         import libcst as cst
         from libcst.codemod import CodemodContext
         from libcst.codemod.visitors import AddImportsVisitor
@@ -100,13 +128,25 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
 
             @override
             def leave_Name(
-                self, original_node: cst.Name, updated_node: cst.Name
+                self,
+                original_node: cst.Name,
+                updated_node: cst.Name,
             ) -> cst.BaseExpression:
-                """Replace only names bound to one authenticated private identity."""
+                """Replace only names bound to one authenticated private identity.
+
+                Returns:
+                    The resulting ``cst.BaseExpression``.
+
+                Raises:
+                    ValueError: If ambiguous private import binding.
+
+                """
                 targets = {
                     replacement
                     for qualified_name in self.get_metadata(
-                        QualifiedNameProvider, original_node, ()
+                        QualifiedNameProvider,
+                        original_node,
+                        (),
                     )
                     if (replacement := self.plan.replacements.get(qualified_name.name))
                     is not None
@@ -121,7 +161,8 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
                     raise ValueError(msg)
                 parent = self.get_metadata(ParentNodeProvider, original_node)
                 if FlextInfraUtilitiesQualifiedNames.rebinds_name_in_place(
-                    parent, original_node
+                    parent,
+                    original_node,
                 ):
                     return updated_node
                 target = targets.pop()
@@ -141,29 +182,23 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
 
             @override
             def leave_ImportFrom(
-                self, original_node: cst.ImportFrom, updated_node: cst.ImportFrom
+                self,
+                original_node: cst.ImportFrom,
+                updated_node: cst.ImportFrom,
             ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
-                """Relativize same-owner imports or remove cross-owner bindings."""
+                """Remove cross-owner private bindings replaced by public facades.
+
+                Returns:
+                    The resulting ``cst.BaseSmallStatement | cst.RemovalSentinel``.
+
+                """
                 module = FlextInfraUtilitiesQualifiedNames.dotted_name(
-                    original_node.module
+                    original_node.module,
                 )
                 module_name = module or ""
-                relative_module = self.plan.relative_imports.get(module_name)
-                if relative_module is not None:
-                    relative_level = len(relative_module) - len(
-                        relative_module.lstrip(".")
-                    )
-                    relative_name = relative_module[relative_level:]
-                    return updated_node.with_changes(
-                        relative=tuple(cst.Dot() for _ in range(relative_level)),
-                        module=(
-                            cst.parse_expression(relative_name)
-                            if relative_name
-                            else None
-                        ),
-                    )
                 removed = self.plan.removals.get(
-                    module_name, frozenset()
+                    module_name,
+                    frozenset(),
                 ) | self.plan.obsolete_imports.get(module_name, frozenset())
                 canonical = {
                     alias
@@ -179,7 +214,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
                     for imported in updated_node.names
                     if (
                         name := FlextInfraUtilitiesQualifiedNames.dotted_name(
-                            imported.name
+                            imported.name,
                         )
                     )
                     not in removed
@@ -189,8 +224,9 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
                     return cst.RemoveFromParent()
                 return updated_node.with_changes(
                     names=FlextInfraUtilitiesQualifiedNames.normalized_import_aliases(
-                        retained, parenthesized=bool(updated_node.lpar)
-                    )
+                        retained,
+                        parenthesized=bool(updated_node.lpar),
+                    ),
                 )
 
         class _TypeCheckingImports(cst.CSTTransformer):
@@ -202,7 +238,15 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
 
             @override
             def leave_If(self, original_node: cst.If, updated_node: cst.If) -> cst.If:
-                """Populate the first explicit ``TYPE_CHECKING`` block."""
+                """Populate the first explicit ``TYPE_CHECKING`` block.
+
+                Returns:
+                    The resulting ``cst.If``.
+
+                Raises:
+                    TypeError: If TYPE_CHECKING boundary must use an indented block.
+
+                """
                 if (
                     self.inserted
                     or not isinstance(original_node.test, cst.Name)
@@ -222,8 +266,8 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
                 self.inserted = True
                 return updated_node.with_changes(
                     body=updated_node.body.with_changes(
-                        body=imports + tuple(updated_node.body.body)
-                    )
+                        body=imports + tuple(updated_node.body.body),
+                    ),
                 )
 
         public_imports = plan.public_imports
