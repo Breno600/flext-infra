@@ -1,4 +1,8 @@
-"""Release automation and override specification models."""
+"""Release automation and override specification models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,10 +12,10 @@ from typing import Annotated, ClassVar, Self
 
 from flext_cli import m, u
 
-from ... import t
-from ..._constants import FlextInfraConstantsRelease
-from .contexts import FlextInfraConfigModelsContexts
-from .contract import FlextInfraConfigModelsContract
+from flext_infra import t
+from flext_infra._constants import FlextInfraConstantsRelease
+from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
 
 
 class FlextInfraConfigModelsRelease:
@@ -49,16 +53,20 @@ class FlextInfraConfigModelsRelease:
         """
 
         tool: Annotated[
-            t.NonEmptyStr, m.Field(description="Release automation distribution")
+            t.NonEmptyStr,
+            m.Field(description="Release automation distribution"),
         ]
         runner: Annotated[
-            t.NonEmptyStr, m.Field(description="Command runner that invokes the tool")
+            t.NonEmptyStr,
+            m.Field(description="Command runner that invokes the tool"),
         ]
         commit_parser: Annotated[
-            t.NonEmptyStr, m.Field(description="Commit convention driving the bump")
+            t.NonEmptyStr,
+            m.Field(description="Commit convention driving the bump"),
         ]
         release_branch: Annotated[
-            t.NonEmptyStr, m.Field(description="Branch that produces releases")
+            t.NonEmptyStr,
+            m.Field(description="Branch that produces releases"),
         ]
         version_variables: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
@@ -69,13 +77,16 @@ class FlextInfraConfigModelsRelease:
             m.Field(description="file:tomlpath anchors the tool rewrites"),
         ]
         build_command: Annotated[
-            t.NonEmptyStr, m.Field(description="Command that produces the artifacts")
+            t.NonEmptyStr,
+            m.Field(description="Command that produces the artifacts"),
         ]
         tag_format: Annotated[
-            t.NonEmptyStr, m.Field(description="Tag shape, shared with the workflow")
+            t.NonEmptyStr,
+            m.Field(description="Tag shape, shared with the workflow"),
         ]
         changelog_file: Annotated[
-            t.NonEmptyStr, m.Field(description="Generated changelog destination")
+            t.NonEmptyStr,
+            m.Field(description="Generated changelog destination"),
         ]
         overrides: Annotated[
             Mapping[
@@ -87,7 +98,15 @@ class FlextInfraConfigModelsRelease:
 
         @u.model_validator(mode="after")
         def _validate_anchors(self) -> Self:
-            """Every anchor must name a target, or the tool rewrites nothing."""
+            """Every anchor must name a target, or the tool rewrites nothing.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If release version anchor must be '<file>.
+
+            """
             for anchor in (*self.version_variables, *self.version_toml):
                 if ":" not in anchor:
                     msg = f"release version anchor must be '<file>:<target>': {anchor}"
@@ -97,7 +116,7 @@ class FlextInfraConfigModelsRelease:
     class ReleasePolicySpec(FlextInfraConfigModelsContract.ConfigContract):
         """The release protocol's declared data: who publishes, what bumps, where.
 
-        Why (aihub-ioijy.9): `ReleaseOrchestrator._build_targets` hardcoded
+        Why: `ReleaseOrchestrator._build_targets` hardcoded
         `project.name.startswith("flext-")`, so any consumer of this release
         engine whose distribution is not named `flext-*` resolved zero targets
         and died with "release build selected no publishable projects".
@@ -113,7 +132,10 @@ class FlextInfraConfigModelsRelease:
         # The bump map is consumed as enum members by the strict release plan,
         # so the contract base's value coercion is switched off here.
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            strict=False, frozen=True, extra="forbid", use_enum_values=False
+            strict=False,
+            frozen=True,
+            extra="forbid",
+            use_enum_values=False,
         )
 
         publishable_prefixes: Annotated[
@@ -170,10 +192,12 @@ class FlextInfraConfigModelsRelease:
 
         project_root: Annotated[Path, m.Field(description="Selected project root")]
         environment_root: Annotated[
-            Path, m.Field(description="Project supplying the active .venv")
+            Path,
+            m.Field(description="Project supplying the active .venv"),
         ]
         python_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Mise/Python version selector")
+            t.NonEmptyStr,
+            m.Field(description="Mise/Python version selector"),
         ]
         groups: Annotated[
             t.VariadicTuple[str],

@@ -23,22 +23,32 @@ if TYPE_CHECKING:
 class TestsFlextInfraBuilder:
     """Core build invocation tests."""
 
+    @staticmethod
     @pytest.fixture
-    def builder(self) -> FlextInfraDocBuilder:
-        """Provide the public documentation builder service."""
+    def builder() -> FlextInfraDocBuilder:
+        """Provide the public documentation builder service.
+
+        Returns:
+            The resulting ``FlextInfraDocBuilder``.
+
+        """
         return FlextInfraDocBuilder()
 
+    @staticmethod
     def test_build_with_valid_scope_returns_success(
-        self, builder: FlextInfraDocBuilder, tmp_path: Path
+        builder: FlextInfraDocBuilder,
+        tmp_path: Path,
     ) -> None:
         """Test build with valid scope returns success."""
         reports: t.SequenceOf[m.Infra.DocsPhaseReport] = tm.ok(builder.build(tmp_path))
         tm.that(len(reports), gte=0)
 
-    def test_build_report_frozen(self) -> None:
+    @staticmethod
+    def test_build_report_frozen() -> None:
         """Test BuildReport is frozen (immutable)."""
         tm.that(m.Infra.DocsPhaseReport.model_config.get("frozen"), eq=True)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "kwargs",
         [
@@ -48,7 +58,6 @@ class TestsFlextInfraBuilder:
         ],
     )
     def test_build_with_option_variants(
-        self,
         builder: FlextInfraDocBuilder,
         tmp_path: Path,
         kwargs: t.MappingKV[str, str | t.SequenceOf[str]],
@@ -58,7 +67,7 @@ class TestsFlextInfraBuilder:
             match kwargs["output_dir"]:
                 case str() as output_dir:
                     tm.ok(
-                        builder.build(tmp_path, output_dir=str(tmp_path / output_dir))
+                        builder.build(tmp_path, output_dir=str(tmp_path / output_dir)),
                     )
                 case invalid:
                     pytest.fail(f"invalid output_dir test case: {invalid!r}")
@@ -69,9 +78,11 @@ class TestsFlextInfraBuilder:
                 case invalid:
                     pytest.fail(f"invalid projects test case: {invalid!r}")
 
+    @staticmethod
     @pytest.mark.parametrize("status", ["OK", "FAIL", "SKIP"])
     def test_build_report_result_field_values(
-        self, status: str, tmp_path: Path
+        status: str,
+        tmp_path: Path,
     ) -> None:
         """Test BuildReport result field accepts valid values."""
         report = m.Infra.DocsPhaseReport(
@@ -83,7 +94,8 @@ class TestsFlextInfraBuilder:
         )
         tm.that(report.result, eq=status)
 
-    def test_build_report_site_dir_field(self) -> None:
+    @staticmethod
+    def test_build_report_site_dir_field() -> None:
         """Test BuildReport site_dir field."""
         report = m.Infra.DocsPhaseReport(
             phase="build",
@@ -94,8 +106,10 @@ class TestsFlextInfraBuilder:
         )
         tm.that(report.site_dir, eq="/path/to/site")
 
+    @staticmethod
     def test_build_with_multiple_projects_returns_list(
-        self, builder: FlextInfraDocBuilder, tmp_path: Path
+        builder: FlextInfraDocBuilder,
+        tmp_path: Path,
     ) -> None:
         """Test build with multiple projects returns list of reports."""
         result = builder.build(tmp_path, projects=["proj1", "proj2"])

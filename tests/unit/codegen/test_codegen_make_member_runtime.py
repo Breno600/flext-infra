@@ -1,4 +1,8 @@
-"""A member checked out inside a workspace uses the workspace runtime (flext-x8gn6)."""
+"""A member checked out inside a workspace uses the workspace runtime (flext-x8gn6).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -26,7 +30,12 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
 
     @classmethod
     def _runtime_values(cls, project_root: Path) -> dict[str, str]:
-        """Print the resolved runtime through the public help verb's post hook."""
+        """Print the resolved runtime through the public help verb's post hook.
+
+        Returns:
+            The resulting ``dict[str, str]``.
+
+        """
         (project_root / "custom.mk").write_text(
             "post-help:\n\t@printf '%s\\n' "
             + " ".join(f"'{name}=$({name})'" for name in cls.RUNTIME_NAMES)
@@ -35,8 +44,9 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
         )
         process = tm.ok(
             u.Tests.run_isolated_make(
-                ["--no-print-directory", "help"], cwd=project_root
-            )
+                ["--no-print-directory", "help"],
+                cwd=project_root,
+            ),
         )
         tm.that(u.Cli.process_succeeded(process.outcome), eq=True, msg=process.stderr)
         return dict(
@@ -47,12 +57,18 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
 
     @staticmethod
     def _workspace_with_member(tmp_path: Path, member_source: Path) -> Path:
-        """Check the rendered member out as a submodule of a real superproject."""
+        """Check the rendered member out as a submodule of a real superproject.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         tm.ok(u.Cli.run_checked(["git", "add", "-A"], cwd=member_source))
         tm.ok(
             u.Cli.run_checked(
-                ["git", "commit", "--quiet", "-m", "render member"], cwd=member_source
-            )
+                ["git", "commit", "--quiet", "-m", "render member"],
+                cwd=member_source,
+            ),
         )
         workspace = tmp_path / "workspace"
         workspace.mkdir()
@@ -70,15 +86,21 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
                     member_source.name,
                 ],
                 cwd=workspace,
-            )
+            ),
         )
         return workspace.resolve()
 
     @staticmethod
     def _direnv_venv(entry: Path) -> str:
-        """Read the ``VENV_DIR`` the real generated ``.envrc`` activation resolves."""
+        """Read the ``VENV_DIR`` the real generated ``.envrc`` activation resolves.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         (entry / ".envrc.local").write_text(
-            'export OBSERVED_VENV_DIR="${VENV_DIR}"\n', encoding="utf-8"
+            'export OBSERVED_VENV_DIR="${VENV_DIR}"\n',
+            encoding="utf-8",
         )
         tm.ok(u.Cli.run_checked((c.Infra.CLI_DIRENV, "allow", str(entry)), cwd=entry))
         try:
@@ -96,11 +118,11 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
                     ),
                     cwd=entry,
                     remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
-                )
+                ),
             )
         finally:
             tm.ok(
-                u.Cli.run_checked((c.Infra.CLI_DIRENV, "deny", str(entry)), cwd=entry)
+                u.Cli.run_checked((c.Infra.CLI_DIRENV, "deny", str(entry)), cwd=entry),
             )
         tm.that(
             u.Cli.process_succeeded(process.outcome),
@@ -110,11 +132,13 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
         return process.stdout.strip()
 
     def test_checkout_without_superproject_owns_its_runtime(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A standalone clone resolves its own physical environment."""
         project_root, _ = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
 
         values = self._runtime_values(project_root)
@@ -127,11 +151,13 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
         )
 
     def test_submodule_member_resolves_the_workspace_runtime(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A member checked out as a submodule shares the superproject runtime."""
         member_source, _ = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
         workspace = self._workspace_with_member(tmp_path, member_source)
         member = workspace / member_source.name
@@ -150,7 +176,11 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
     @pytest.mark.parametrize("linked", [False, True])
     @pytest.mark.parametrize("attached", [False, True])
     def test_direnv_resolves_the_make_runtime_environment(
-        self, tmp_path: Path, *, attached: bool, linked: bool
+        self,
+        tmp_path: Path,
+        *,
+        attached: bool,
+        linked: bool,
     ) -> None:
         """Direnv names the same physical environment as the generated Makefile.
 
@@ -159,7 +189,8 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
         path never changes the resolved environment.
         """
         project_root, _ = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
         owner = project_root.resolve()
         member = owner

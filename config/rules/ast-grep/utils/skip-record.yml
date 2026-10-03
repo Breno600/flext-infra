@@ -1,0 +1,12 @@
+# A call that records a failure through the loud skip channel of gate and
+# fixer flows (`.skip(...)`, recorded with its error and reported).
+id: skip-record
+language: python
+rule:
+  kind: call
+  has:
+    field: function
+    kind: attribute
+    has:
+      field: attribute
+      regex: "^skip$"

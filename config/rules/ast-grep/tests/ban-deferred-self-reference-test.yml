@@ -1,0 +1,24 @@
+id: ban-deferred-self-reference
+valid:
+  - |
+    class Outer:
+        class Item(m.ContractModel):
+            values: list[str] = m.Field(default_factory=list)
+  - |
+    class Outer:
+        class Item(m.ContractModel):
+            values: list[str] = m.Field(default_factory=lambda: [Other()])
+  - |
+    def build():
+        class Outer:
+            item: object = m.Field(default_factory=lambda: Outer.Sibling())
+invalid:
+  - |
+    class Outer:
+        class Sibling(m.ContractModel):
+            pass
+        class Item(m.ContractModel):
+            sibling: object = m.Field(default_factory=lambda: Outer.Sibling())
+  - |
+    class Node(m.ContractModel):
+        child: object = m.Field(default_factory=lambda: Node())

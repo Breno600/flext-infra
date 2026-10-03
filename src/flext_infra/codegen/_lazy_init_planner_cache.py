@@ -1,4 +1,8 @@
-"""Package/module entry and name-resolution caches for the lazy-init planner."""
+"""Package/module entry and name-resolution caches for the lazy-init planner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -22,15 +26,24 @@ class FlextInfraCodegenLazyInitPlannerCacheMixin:
         _module_file_by_name: MutableMapping[str, Path]
 
         def build_plan(
-            self, pkg_dir: Path, *, dir_exports: t.MappingKV[str, t.LazyAliasMap]
+            self,
+            pkg_dir: Path,
+            *,
+            dir_exports: t.MappingKV[str, t.LazyAliasMap],
         ) -> m.Infra.LazyInitPlan: ...
 
         def _declared_alias_names_for_package(
-            self, package_name: str
+            self,
+            package_name: str,
         ) -> frozenset[str]: ...
 
     def _export_names_for_package(self, package_name: str) -> frozenset[str]:
-        """Return all export names for a package (init + source plans)."""
+        """Return all export names for a package (init + source plans).
+
+        Returns:
+            All export names for a package (init + source plans).
+
+        """
         cached = self._package_exports_cache.get(package_name)
         if cached is not None:
             return cached
@@ -42,7 +55,16 @@ class FlextInfraCodegenLazyInitPlannerCacheMixin:
         return exports
 
     def _package_init_exports(self, package_name: str) -> frozenset[str]:
-        """Return names exported from the package __init__.py."""
+        """Return names exported from the package __init__.py.
+
+        Returns:
+            Names exported from the package __init__.py.
+
+        Raises:
+            ValueError: If a facade parent outside the scan scope resolves to a
+                module, not a package, in the active environment.
+
+        """
         index = self.rope_workspace.workspace_index
         package_dir = index.package_dir_by_name.get(package_name)
         if package_dir is not None:
@@ -52,16 +74,20 @@ class FlextInfraCodegenLazyInitPlannerCacheMixin:
             source = init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             # A generated __init__ is the parent's published ABI — what an
             # importer sees — in the workspace exactly as when installed, so
-            # both scopes elect the same nearest re-exporting parent.
+            # both scopes elect the same nearest re-exporting parent. A
+            # generated __init__ with an unresolved merge is an output this run
+            # rebuilds, not an ABI: the package's sources publish for it.
             if source.startswith(c.Infra.AUTOGEN_HEADERS):
+                if u.Infra.first_merge_conflict_marker(source) is not None:
+                    return frozenset()
                 return frozenset(u.Infra.public_export_names_source(source))
             return frozenset(
                 self.rope_workspace.exports(
                     init_path,
                     export_options=m.Infra.ExportOptions(allow_assignments=True),
-                )
+                ),
             )
-        # Why (flext-b3xmn/R32): a parent outside the scan scope is read by
+        # Why: a parent outside the scan scope is read by
         # path from the one package the active environment declares; a name
         # that resolves nowhere raises in the resolver. A module (not a
         # package) can never have been accepted as a facade parent.
@@ -86,13 +112,22 @@ class FlextInfraCodegenLazyInitPlannerCacheMixin:
         Generated initializers are outputs of this plan, not declaration owners.
         Reuse the same source inventory that elects inherited aliases; do not
         recursively build a parent plan or retain its stale generated manifest.
+
+        Returns:
+            The resulting ``frozenset[str]``.
+
         """
         if package_name not in self.rope_workspace.workspace_index.package_dir_by_name:
             return frozenset()
         return self._declared_alias_names_for_package(package_name)
 
     def _source_package_name(self, pkg_dir: Path, inherited_key: str) -> str:
-        """Return the project-root package name for the given directory."""
+        """Return the project-root package name for the given directory.
+
+        Returns:
+            The project-root package name for the given directory.
+
+        """
         if inherited_key == "src":
             return ""
         package_entry = self._package_entry(pkg_dir)
@@ -100,17 +135,28 @@ class FlextInfraCodegenLazyInitPlannerCacheMixin:
             return ""
         project_pkg: str = (
             self.rope_workspace.workspace_index.project_package_by_root.get(
-                str(package_entry.project_root), ""
+                str(package_entry.project_root),
+                "",
             )
         )
         return project_pkg
 
     def _package_entry(self, pkg_dir: Path) -> m.Infra.RopePackageIndexEntry | None:
-        """Return the workspace index entry for a package directory."""
+        """Return the workspace index entry for a package directory.
+
+        Returns:
+            The workspace index entry for a package directory.
+
+        """
         return self.rope_workspace.package(pkg_dir)
 
     def _module_file(self, module_path: str) -> Path | None:
-        """Resolve a dotted module path to its source file (lazy index build)."""
+        """Resolve a dotted module path to its source file (lazy index build).
+
+        Returns:
+            The resulting ``Path | None``.
+
+        """
         resolved = self._module_file_by_name.get(module_path)
         if resolved is not None:
             return resolved
