@@ -1158,8 +1158,7 @@ class FlextInfraBootstrap:
                         Path(locks).replace(parked / "locks")
                     cls.publish(project, held_stage)
                 print(
-                    f"reconcile: published the held mise.lock "
-                    f"Mise {release} satisfies",
+                    f"reconcile: published the held mise.lock Mise {release} satisfies",
                 )
                 return
             finally:

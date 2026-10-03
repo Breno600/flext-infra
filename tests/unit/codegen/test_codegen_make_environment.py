@@ -25,11 +25,13 @@ class TestsFlextInfraCodegenMakeEnvironment:
     """Prove generated operations ignore the caller shell environment."""
 
     def test_make_authenticates_real_mise_without_external_token_setup(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A generated public verb supplies gh's credential to the real Mise child."""
         project_root, _ = self._render_makefile(
-            tmp_path, c.Infra.MakeProfile.STANDALONE,
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
         tm.ok(
             u.Cli.run_checked(
@@ -70,11 +72,15 @@ class TestsFlextInfraCodegenMakeEnvironment:
     @pytest.mark.parametrize("verb", ["setup", "status", "help"])
     @pytest.mark.parametrize("credential", ["", "invalid-test-credential"])
     def test_make_handles_missing_gh_auth_at_the_declared_boundary(
-        self, tmp_path: Path, verb: str, credential: str,
+        self,
+        tmp_path: Path,
+        verb: str,
+        credential: str,
     ) -> None:
         """Setup proceeds to its launcher preflight; other verbs require gh auth."""
         project_root, _ = self._render_makefile(
-            tmp_path, c.Infra.MakeProfile.STANDALONE,
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
         empty_config = tmp_path / "empty-gh-config"
         empty_config.mkdir()

@@ -78,8 +78,7 @@ class FlextInfraUtilitiesIterationWorkspace(FlextInfraUtilitiesIterationDirector
                 file_path
                 for source_root in source_roots
                 for file_path in (
-                    FlextInfraUtilitiesIterationDirectory
-                    .iter_directory_python_files
+                    FlextInfraUtilitiesIterationDirectory.iter_directory_python_files
                 )(
                     source_root,
                 )

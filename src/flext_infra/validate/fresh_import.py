@@ -127,8 +127,7 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                         m.Infra.FreshImportProbe(
                             subject=f"{layout.package_name}: {group}/{name}={value}",
                             code=(
-                                self._PRELUDE
-                                + f"EntryPoint(name={name!r}, "
+                                self._PRELUDE + f"EntryPoint(name={name!r}, "
                                 f"value={value!r}, group={group!r}).load()\n"
                                 + origin_code
                             ),

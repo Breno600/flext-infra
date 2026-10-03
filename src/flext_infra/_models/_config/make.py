@@ -354,32 +354,40 @@ class FlextInfraConfigModelsMake:
             m.Field(description="Cache phase: bootstrap seeds, stable saves"),
         ] = "stable"
         save_enabled: Annotated[
-            bool, m.Field(description="Master switch for cache publishes"),
+            bool,
+            m.Field(description="Master switch for cache publishes"),
         ] = False
         max_bootstrap_generations: Annotated[
-            int, m.Field(gt=0, description="Retention cap for bootstrap generations"),
+            int,
+            m.Field(gt=0, description="Retention cap for bootstrap generations"),
         ] = 3
         max_stable_generations: Annotated[
-            int, m.Field(gt=0, description="Retention cap for stable generations"),
+            int,
+            m.Field(gt=0, description="Retention cap for stable generations"),
         ] = 3
         per_repo_budget_bytes: Annotated[
-            int, m.Field(gt=0, description="Per-repository byte budget"),
+            int,
+            m.Field(gt=0, description="Per-repository byte budget"),
         ] = 52_428_800
         warning_threshold_percent: Annotated[
-            int, m.Field(ge=0, le=100, description="Quota-ladder warning stage"),
+            int,
+            m.Field(ge=0, le=100, description="Quota-ladder warning stage"),
         ] = 80
         maintenance_threshold_percent: Annotated[
-            int, m.Field(ge=0, le=100, description="Quota-ladder maintenance stage"),
+            int,
+            m.Field(ge=0, le=100, description="Quota-ladder maintenance stage"),
         ] = 90
         block_threshold_percent: Annotated[
-            int, m.Field(ge=0, le=100, description="Quota-ladder block stage"),
+            int,
+            m.Field(ge=0, le=100, description="Quota-ladder block stage"),
         ] = 95
         allowed_save_refs: Annotated[
             tuple[t.NonEmptyStr, ...],
             m.Field(description="Refs whose pushes may publish cache generations"),
         ] = ("main", "0.12.0-dev")
         key_prefix: Annotated[
-            t.NonEmptyStr, m.Field(description="Actions cache key namespace"),
+            t.NonEmptyStr,
+            m.Field(description="Actions cache key namespace"),
         ] = "flext-testmon"
 
         @u.model_validator(mode="after")
@@ -405,7 +413,8 @@ class FlextInfraConfigModelsMake:
             return self
 
     class MypyCacheSpec(
-        ExternalCacheDirectorySpec, FlextInfraConfigModelsContract.ConfigContract,
+        ExternalCacheDirectorySpec,
+        FlextInfraConfigModelsContract.ConfigContract,
     ):
         """Project-keyed shared Mypy cache: one analysis per project, reused across relocks."""
 
@@ -528,8 +537,7 @@ class FlextInfraConfigModelsMake:
             m.Field(
                 min_length=1,
                 description=(
-                    "Declaring authority for the suspension (operator ruling "
-                    "reference)"
+                    "Declaring authority for the suspension (operator ruling reference)"
                 ),
             ),
         ]
