@@ -55,3 +55,28 @@ class TestsFlextInfraPytestTargetFile:
             tm.that("existing file" in str(exc), eq=True)
             outcome = "value-error"
         tm.that(outcome, eq="value-error")
+
+    @staticmethod
+    def test_declared_file_execution_never_lets_the_cache_deselect_it(
+        cached_runner_project: Path,
+    ) -> None:
+        """An empty cache selection cannot deselect the declared file.
+
+        A file never run before has no testmon traces, so its selection
+        resolves empty; the execution must still run the file (noselect),
+        because the declared file is the operator's chosen scope.
+        """
+        cache = config.Infra.codegen.make.testmon_cache
+        relative = Path(cache.target_directory) / "fresh_case.py"
+        declared = cached_runner_project / relative
+        declared.write_text(
+            "def test_fresh() -> None:\n    return None\n",
+            encoding="utf-8",
+        )
+        runner = runner_for(cached_runner_project, target_file=relative)
+        report = cached_runner_project / cache.reports_directory
+        suite = runner.build_command(report, selection_plan=None)
+        argv = " ".join(suite)
+        tm.that("--testmon-noselect" in argv, eq=True)
+        tm.that("--testmon-forceselect" not in argv, eq=True)
+        tm.that(relative.as_posix() in argv, eq=True)

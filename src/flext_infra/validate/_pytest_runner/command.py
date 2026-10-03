@@ -384,7 +384,16 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                     else ()
                 ),
                 "--testmon",
-                *(("--testmon-noselect",) if selection else ("--testmon-forceselect",)),
+                # Why: a declared single-file target is the operator's chosen
+                # scope; the cache must never deselect it (a file never run
+                # before has no traces, so testmon selection resolves empty
+                # and the phase would pass with zero tests). The execution
+                # still feeds the persistent database for future runs.
+                *(
+                    ("--testmon-noselect",)
+                    if (selection or self.target_file is not None)
+                    else ("--testmon-forceselect",)
+                ),
                 "--testmon-env",
                 f"'{self.testmon_environment(execution_mode)}'",
                 *self._NO_COVERAGE,
