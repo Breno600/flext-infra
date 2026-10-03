@@ -86,6 +86,10 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
             project_name=repository.distribution,
             package_name=project.package_name,
             path=pyproject,
+            scaffold_project=codegen.scaffold.project,
+            upstream=project.upstream,
+            runtime_dependency_overlay=project.runtime_dependency_overlay,
+            declared_project_dependencies=(),
             topology=m.Infra.PyprojectDeclaredTopology(
                 root_modules=project.root_modules,
                 root_packages=project.root_packages,

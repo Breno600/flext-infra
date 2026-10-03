@@ -91,6 +91,10 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             project_name=repository.distribution,
             package_name=metadata.value.package_name,
             path=pyproject,
+            scaffold_project=codegen.scaffold.project,
+            upstream=project.value.upstream,
+            runtime_dependency_overlay=project.value.runtime_dependency_overlay,
+            declared_project_dependencies=metadata.value.project.dependencies,
             topology=m.Infra.PyprojectDeclaredTopology(
                 root_modules=(
                     target.project.root_modules if target.project is not None else ()
