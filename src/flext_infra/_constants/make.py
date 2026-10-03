@@ -1,4 +1,8 @@
-"""Selector-free Make and project-tool constants."""
+"""Selector-free Make and project-tool constants.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,7 +10,7 @@ import re
 from enum import StrEnum
 from typing import TYPE_CHECKING, ClassVar
 
-from .._constants.check import FlextInfraConstantsCheck
+from flext_infra._constants.check import FlextInfraConstantsCheck
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -58,6 +62,7 @@ class FlextInfraConstantsMake:
     VERB_RUN: ClassVar[str] = "run"
     VERB_CHECKS: ClassVar[str] = "checks"
     VERB_SONARCLOUD_SYNC: ClassVar[str] = "sonarcloud-sync"
+    VERB_SONARCLOUD_ISSUES: ClassVar[str] = "sonarcloud-issues"
 
     CLI_GROUP_CHECK: ClassVar[str] = "check"
     CLI_GROUP_CODEGEN: ClassVar[str] = "codegen"
@@ -97,8 +102,9 @@ class FlextInfraConstantsMake:
     # markdown-code and markdown-format stay allowed and explicitly invocable
     # (`--gates markdown-code`), but are not default check gates: they stay
     # out of the unset-CI default set pending review. markdown-format is
-    # structurally contradictory on the current generated docs: the gen render is not prettier-stable, so no commit can
-    # satisfy both `gen fixed point` and `prettier --check`.
+    # structurally contradictory on the current generated docs: the gen render
+    # is not prettier-stable, so no commit can satisfy both `gen fixed point`
+    # and `prettier --check`.
     CANONICAL_DEFAULT_GATE_IDS: ClassVar[t.VariadicTuple[str]] = tuple(
         gate
         for gate in CANONICAL_GATE_IDS

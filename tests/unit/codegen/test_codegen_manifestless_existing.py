@@ -1,4 +1,8 @@
-"""Public regression coverage for manifestless existing repositories."""
+"""Public regression coverage for manifestless existing repositories.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,10 +23,13 @@ from tests import c, u
 # ceiling, so a real hang still aborts at the declared wall.
 @pytest.mark.slow
 class TestsFlextInfraCodegenManifestlessExisting:
+    """Tests for ``FlextInfraCodegenManifestlessExisting``."""
+
+    @staticmethod
     def test_existing_root_uses_pep621_metadata_for_managed_artifacts(
-        self,
         infra_git_repo: Path,
     ) -> None:
+        """Test existing root uses pep621 metadata for managed artifacts."""
         root = infra_git_repo
         repository = u.Tests.repository_ref(config.Infra.name)
         # Why: LICENSE has no generator and is genuinely exists_or_absent.
@@ -166,8 +173,8 @@ class TestsFlextInfraCodegenManifestlessExisting:
             eq=(),
         )
 
+    @staticmethod
     def test_root_distribution_owns_its_dependency_profile(
-        self,
         tmp_path: Path,
     ) -> None:
         """The tree's root declares no flext runtime dependency and still conforms.

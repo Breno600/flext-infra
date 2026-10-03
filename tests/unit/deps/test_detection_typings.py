@@ -1,4 +1,8 @@
-"""Dependency limits load from a real TOML file through the public service."""
+"""Dependency limits load from a real TOML file through the public service.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -13,7 +17,9 @@ from flext_infra.deps.detection import FlextInfraDependencyDetectionService
 class TestsFlextInfraDepsDetectionTypings:
     """Behaviour of ``load_dependency_limits`` on real files."""
 
-    def test_limits_file_values_are_returned(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_limits_file_values_are_returned(tmp_path: Path) -> None:
+        """Test limits file values are returned."""
         limits = tmp_path / "limits.toml"
         limits.write_text(
             'key = "value"\nnum = 42\nlisted = ["x"]\n'
@@ -28,13 +34,17 @@ class TestsFlextInfraDepsDetectionTypings:
         tm.that(result, has="listed")
         tm.that(result, has="typing_libraries")
 
-    def test_missing_limits_file_fails_loud(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_missing_limits_file_fails_loud(tmp_path: Path) -> None:
+        """Test missing limits file fails loud."""
         with pytest.raises(RuntimeError, match="failed to load dependency limits"):
             FlextInfraDependencyDetectionService().load_dependency_limits(
                 tmp_path / "absent.toml",
             )
 
-    def test_invalid_limits_file_fails_loud(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_invalid_limits_file_fails_loud(tmp_path: Path) -> None:
+        """Test invalid limits file fails loud."""
         limits = tmp_path / "limits.toml"
         limits.write_text("key = [unterminated\n", encoding="utf-8")
 

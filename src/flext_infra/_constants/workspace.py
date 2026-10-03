@@ -1,11 +1,15 @@
-"""Centralized constants for the workspace subpackage."""
+"""Centralized constants for the workspace subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from enum import StrEnum, unique
 from typing import TYPE_CHECKING, ClassVar
 
-from .codegen_project import FlextInfraConstantsCodegenProject
+from flext_infra._constants.codegen_project import FlextInfraConstantsCodegenProject
 
 if TYPE_CHECKING:
     from flext_infra import t

@@ -1,4 +1,8 @@
-"""Runtime behavior of the generated structural protocol assembly."""
+"""Runtime behavior of the generated structural protocol assembly.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -143,7 +147,15 @@ def _write_member(root: Path) -> None:
 
 
 def _load_module(path: Path) -> ModuleType:
-    """Import one real module from its file path."""
+    """Import one real module from its file path.
+
+    Returns:
+        The resulting ``ModuleType``.
+
+    Raises:
+        RuntimeError: If cannot import.
+
+    """
     spec = importlib.util.spec_from_file_location(path.stem, path)
     if spec is None or spec.loader is None:
         msg = f"cannot import {path}"
@@ -155,7 +167,12 @@ def _load_module(path: Path) -> ModuleType:
 
 @pytest.fixture
 def member_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
-    """Provide a real importable demo member for the generator."""
+    """Provide a real importable demo member for the generator.
+
+    Yields:
+        Each ``Path``.
+
+    """
     _purge_member_modules()
     _write_member(tmp_path)
     monkeypatch.syspath_prepend(str(tmp_path / "src"))
@@ -171,7 +188,12 @@ def _purge_member_modules() -> None:
 
 
 def _service(root: Path, *, apply: bool) -> FlextInfraCodegenProtocolModels:
-    """Build the generator service against the member root."""
+    """Build the generator service against the member root.
+
+    Returns:
+        The resulting ``FlextInfraCodegenProtocolModels``.
+
+    """
     return FlextInfraCodegenProtocolModels(repository_root=root, apply_changes=apply)
 
 

@@ -1,4 +1,8 @@
-"""Cohesive environment-setup + per-project execution mixin for the dependency detector runtime."""
+"""Environment-setup + per-project execution mixin for the dependency detector.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -21,10 +25,16 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         root: Path,
         venv_bin: Path,
     ) -> p.Result[t.Pair[t.SequenceOf[Path], Path]]:
-        """Discover projects and verify deptry binary; return ``(projects, limits_path)``."""
+        """Discover projects and verify deptry; return ``(projects, limits_path)``.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.SequenceOf[Path], Path]]``.
+
+        """
         detector = self._detector
         projects_result = self._deps.discover_project_paths(
-            root, projects_filter=params.project_names
+            root,
+            projects_filter=params.project_names,
         )
         if projects_result.failure:
             return r[tuple[t.SequenceOf[Path], Path]].from_failure(projects_result)
@@ -45,9 +55,16 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         return r[tuple[t.SequenceOf[Path], Path]].ok((projects, limits_path))
 
     def _configure_typings_limits(
-        self, limits_path: Path, report_model: p.Infra.WorkspaceReport
+        self,
+        limits_path: Path,
+        report_model: p.Infra.WorkspaceReport,
     ) -> p.Result[bool]:
-        """Load dependency-limits TOML and seed the workspace report's limits info."""
+        """Load dependency-limits TOML and seed the workspace report's limits info.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         limits_data = self._deps.load_dependency_limits(limits_path)
         if not limits_data:
             return r[bool].ok(False)
@@ -60,7 +77,8 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         version_value = python_cfg.get(c.Infra.VERSION)
         python_version = str(version_value) if version_value is not None else None
         report_model.dependency_limits = m.Infra.DependencyLimitsInfo(
-            python_version=python_version, limits_path=str(limits_path)
+            python_version=python_version,
+            limits_path=str(limits_path),
         )
         return r[bool].ok(True)
 
@@ -73,7 +91,12 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         params: m.Infra.DetectCommand,
         projects_report: MutableMapping[str, MutableMapping[str, t.JsonValue]],
     ) -> p.Result[bool]:
-        """Run deptry + optional typings detection/apply for one project."""
+        """Run deptry + optional typings detection/apply for one project.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         detector = self._detector
         deps_service = self._deps
         do_typings = params.typings or params.apply_typings
@@ -112,13 +135,19 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         params: m.Infra.DetectCommand,
         projects_report: MutableMapping[str, MutableMapping[str, t.JsonValue]],
     ) -> p.Result[bool]:
-        """Declare CUSTOM typing extras and install them through UV's source editor."""
+        """Declare CUSTOM typing extras and install them through UV's source editor.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         detector = self._detector
         project_name = project_path.name
         if not params.quiet:
             detector.log.info("deps_typings_detect_running", project=project_name)
         typings_result = self._deps.analyze_required_typings(
-            project_path, limits_path=limits_path
+            project_path,
+            limits_path=limits_path,
         )
         if typings_result.failure:
             return r[bool].from_failure(typings_result)
@@ -160,7 +189,12 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         params: m.Infra.DetectCommand,
         report_model: p.Infra.WorkspaceReport,
     ) -> p.Result[bool]:
-        """Execute the workspace ``pip check`` and stamp the report; ``r.ok(pip_ok)``."""
+        """Execute the workspace ``pip check`` and stamp the report; ``r.ok(pip_ok)``.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         if params.no_pip_check:
             return r[bool].ok(True)
         detector = self._detector

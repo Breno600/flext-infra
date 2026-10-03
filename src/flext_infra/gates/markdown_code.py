@@ -7,6 +7,9 @@ invocation per verb (single-pass law): ``check`` renders the format verdict
 read-only, ``fix`` — reached from ``make fix`` — writes formatting back into
 fenced blocks when every block of a file round-trips cleanly. Invalid Python
 fences fail loudly; docstring write-back stays a human decision.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -20,10 +23,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, m, u
-
-from .base_gate import FlextInfraGate
-from .markdown_code_sources import FlextInfraMarkdownCodeSources as sources
-from .markdown_support import FlextInfraMarkdownGateBase as markdown
+from flext_infra.gates.base_gate import FlextInfraGate
+from flext_infra.gates.markdown_code_sources import (
+    FlextInfraMarkdownCodeSources as sources,
+)
+from flext_infra.gates.markdown_support import FlextInfraMarkdownGateBase as markdown
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -49,6 +53,10 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         because explicit files bypass directory-scan ignores; this gate feeds
         extracted sources instead, so the same projection is applied to the
         collected list here — all markdown gates share one ignore SSOT.
+
+        Returns:
+            The resulting ``t.SequenceOf[Path]``.
+
         """
         patterns = markdown.read_ignore_patterns(
             project_dir,
@@ -81,6 +89,10 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         ``make fmt`` and ``refactor mod`` apply to authored source. ``--isolated``
         ignored that contract and produced a second, divergent formatting, so a
         documented block could never satisfy both surfaces at once.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
         """
         args = ["format", "--no-cache", "--output-format", "concise"]
         config_path = project_dir / c.PYPROJECT_FILENAME
@@ -94,8 +106,8 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             str(sources_dir),
         )
 
+    @staticmethod
     def _origin_issue(
-        self,
         origin: Mapping[str, t.Pair[str, int]],
         source: str,
         *,
@@ -103,7 +115,12 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         message: str,
         line: int = 1,
     ) -> m.Infra.Issue | None:
-        """Map one extracted-source finding back to its documentation location."""
+        """Map one extracted-source finding back to its documentation location.
+
+        Returns:
+            The resulting ``m.Infra.Issue | None``.
+
+        """
         if (location := origin.get(Path(source).name)) is None:
             return None
         return m.Infra.Issue(
@@ -127,6 +144,10 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
 
         A failed run without mapped findings never reads as a clean pass: the
         tool-level error becomes the finding.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.Issue]``.
+
         """
         issues: t.MutableSequenceOf[m.Infra.Issue] = []
         for line in (result.stdout + "\n" + result.stderr).splitlines():
@@ -160,7 +181,12 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         self,
         project_dir: Path,
     ) -> t.MappingKV[str, t.Pair[str, t.Pair[str, int]]]:
-        """Name every embedded source with its text and documentation origin."""
+        """Name every embedded source with its text and documentation origin.
+
+        Returns:
+            The resulting ``t.MappingKV[str, t.Pair[str, t.Pair[str, int]]]``.
+
+        """
         markdown_files = self._ignore_filtered(
             project_dir,
             markdown.collect_markdown_files(project_dir),
@@ -175,7 +201,12 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
 
     @override
     def selected_for(self, project_dir: Path) -> bool:
-        """Only a project carrying embedded documentation code selects the gate."""
+        """Only a project carrying embedded documentation code selects the gate.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         return bool(self._embedded_sources(project_dir))
 
     def _run_extracted(
@@ -191,6 +222,10 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         never selects. Only the format contract lives here — syntax ownership
         belongs to the flext-tests markdown validator, so unparseable fragments
         never enter the extracted tree and cannot turn into gate findings.
+
+        Returns:
+            The resulting ``t.Triple[bool, bool, t.SequenceOf[m.Infra.Issue]]``.
+
         """
         findings: t.MutableSequenceOf[m.Infra.Issue] = []
         embedded = self._embedded_sources(project_dir)
@@ -229,7 +264,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                         formatted,
                         origin,
                         default_message=(
-                            "embedded code is not ruff-formatted (repair belongs to `make fix`)"
+                            "embedded code is not ruff-formatted (fix via `make fix`)"
                         ),
                         file_pattern=c.Infra.MARKDOWN_CODE_FORMAT_FILE_RE,
                     ),
@@ -247,6 +282,10 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         Enumeration matches the extractor exactly: only parseable non-``notest``
         blocks own a staged source, share its index, and take part in the
         all-or-nothing splice; fragments stay byte-identical.
+
+        Returns:
+            The resulting ``t.SequenceOf[Path]``.
+
         """
         rewritten: t.MutableSequenceOf[Path] = []
         for md_path in self._ignore_filtered(
@@ -290,7 +329,12 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                 origin_path: Path = md_path,
                 replacements: Iterator[str] = blocks_iter,
             ) -> str:
-                """Splice formatted code; prose fragments stay byte-identical."""
+                """Splice formatted code; prose fragments stay byte-identical.
+
+                Returns:
+                    The resulting ``str``.
+
+                """
                 keep = c.Infra.MARKDOWN_CODE_SKIP_MARKER in match.group(
                     "info",
                 ) or sources.syntax_broken(match.group("code"), origin_path)
@@ -310,7 +354,12 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
-        """Validate embedded sources read-only when documentation code exists."""
+        """Validate embedded sources read-only when documentation code exists.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         _ = ctx
         started = time.monotonic()
         ran, passed, issues = self._run_extracted(project_dir, fix=False)
@@ -326,7 +375,12 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
 
     @override
     def fix(self, project_dir: Path, ctx: m.Infra.GateContext) -> m.Infra.GateExecution:
-        """Run the single mutating pass: format extracted blocks and splice clean docs back."""
+        """Run the single mutating pass: format blocks and splice clean docs back.
+
+        Returns:
+            The resulting ``m.Infra.GateExecution``.
+
+        """
         if ctx.check_only or not ctx.apply_fixes:
             return self._check_only_fix_result(project_dir)
         started = time.monotonic()

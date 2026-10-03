@@ -1,4 +1,8 @@
-"""Fail-closed pytest configuration contract."""
+"""Fail-closed pytest configuration contract.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -18,14 +22,15 @@ if TYPE_CHECKING:
 class TestsFlextInfraPytestFailClosedConfig:
     """Prove canonical pytest settings replace local bypasses deterministically."""
 
+    @staticmethod
     @pytest.mark.asyncio
-    async def test_declared_async_provider_executes_coroutines(self) -> None:
+    async def test_declared_async_provider_executes_coroutines() -> None:
         """Exercise the installed provider rather than merely registering a marker."""
         await asyncio.sleep(0)
         tm.that(asyncio.current_task() is not None, eq=True)
 
+    @staticmethod
     def test_phase_replaces_stale_collection_and_warning_policy(
-        self,
         tmp_path: Path,
     ) -> None:
         """Replace ignored roots and warning filters without second-apply drift."""

@@ -1,4 +1,8 @@
-"""Behavior tests for the Rope snapshot inventory boundary."""
+"""Behavior tests for the Rope snapshot inventory boundary.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -17,7 +21,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraRopeSnapshot:
     """Validate the closed snapshot inventory against governed entry files."""
 
-    def test_snapshot_serves_project_root_entry_module(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_snapshot_serves_project_root_entry_module(tmp_path: Path) -> None:
         """A governed root conftest.py joins the closed inventory from disk."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
@@ -42,7 +47,8 @@ class TestsFlextInfraRopeSnapshot:
             finally:
                 snapshot.close()
 
-    def test_snapshot_rejects_sources_outside_the_project(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_snapshot_rejects_sources_outside_the_project(tmp_path: Path) -> None:
         """A path outside the workspace root never enters the closed inventory."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,

@@ -1,4 +1,8 @@
-"""Behavior tests for the strict test import DAG guard."""
+"""Behavior tests for the strict test import DAG guard.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -52,6 +56,7 @@ class TestsFlextInfraImportDag:
         source: str,
         imported: str,
     ) -> None:
+        """Test forbidden edges fail."""
         project = self._project(tmp_path, {source: imported})
         report: m.Infra.ValidationReport = tm.ok(
             FlextInfraValidateTestImportDag().build_report(project),
@@ -62,6 +67,7 @@ class TestsFlextInfraImportDag:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test forward facets and type checking reverse edges pass."""
         project = self._project(
             tmp_path,
             {

@@ -1,4 +1,8 @@
-"""FLEXT pyright quality gate."""
+"""FLEXT pyright quality gate.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,8 +10,7 @@ import sys
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, m, u
-
-from .base_gate import FlextInfraGate
+from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -29,7 +32,12 @@ class FlextInfraPyrightGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
-        """Use the project pyright config as SSOT when it exists."""
+        """Use the project pyright config as SSOT when it exists.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         _ = ctx
         if self._has_project_pyright_config(project_dir):
             return [c.Infra.PYRIGHT_PROJECT_ARG, c.Infra.PYRIGHT_PROJECT_CONFIG_TARGET]
@@ -42,7 +50,12 @@ class FlextInfraPyrightGate(FlextInfraGate):
         ctx: m.Infra.GateContext,
         check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Build check command."""
+        """Build check command.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         _ = project_dir
         return self._python_module_command(
             c.Infra.PYRIGHT,
@@ -55,7 +68,12 @@ class FlextInfraPyrightGate(FlextInfraGate):
 
     @staticmethod
     def _has_project_pyright_config(project_dir: Path) -> bool:
-        """Return whether pyproject.toml declares [tool.pyright]."""
+        """Return whether pyproject.toml declares [tool.pyright].
+
+        Returns:
+            Whether pyproject.toml declares [tool.pyright].
+
+        """
         doc = u.Cli.toml_read(project_dir / c.PYPROJECT_FILENAME)
         if doc is None:
             return False
@@ -67,7 +85,12 @@ class FlextInfraPyrightGate(FlextInfraGate):
 
     @override
     def _check_timeout(self, project_dir: Path, ctx: m.Infra.GateContext) -> int:
-        """Check timeout."""
+        """Check timeout.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         _ = project_dir, ctx
         timeout: int = c.Infra.TIMEOUT_LONG
         return timeout
@@ -79,7 +102,12 @@ class FlextInfraPyrightGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Parse check output."""
+        """Parse check output.
+
+        Returns:
+            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+
+        """
         _ = ctx
         if not u.Cli.process_succeeded(result.outcome) and not result.stdout.strip():
             return False, (
@@ -106,16 +134,6 @@ class FlextInfraPyrightGate(FlextInfraGate):
                 ),
             )
         report = validated.value
-        if report.summary.files_analyzed == 0:
-            # The gate is selected only for projects with Python targets, so an
-            # empty analysis is a lost scan, never a pass.
-            return False, (
-                self._malformed_report_issue(
-                    "pyright analyzed no files for a project with Python targets",
-                    tool=c.Infra.PYRIGHT,
-                    file=str(project_dir),
-                ),
-            )
         issues: t.MutableSequenceOf[m.Infra.Issue] = [
             m.Infra.Issue(
                 file=diag.file,
@@ -127,6 +145,18 @@ class FlextInfraPyrightGate(FlextInfraGate):
             )
             for diag in report.general_diagnostics
         ]
+        if report.summary.files_analyzed == 0:
+            # The gate is selected only for projects with Python targets, so an
+            # empty analysis is a lost scan, never a pass; the report's own
+            # diagnostics travel with it because they carry the cause.
+            return False, (
+                *issues,
+                self._malformed_report_issue(
+                    "pyright analyzed no files for a project with Python targets",
+                    tool=c.Infra.PYRIGHT,
+                    file=str(project_dir),
+                ),
+            )
         issues.extend(self._checker_stderr_issues(result, project_dir))
         if (not issues) and not u.Cli.process_succeeded(result.outcome):
             message = (result.stderr or result.stdout).strip()

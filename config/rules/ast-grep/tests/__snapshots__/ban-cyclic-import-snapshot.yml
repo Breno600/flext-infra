@@ -1,0 +1,52 @@
+id: ban-cyclic-import
+snapshots:
+  from . import sibling:
+    labels:
+    - source: sibling
+      style: primary
+      start: 14
+      end: 21
+    - source: from . import sibling
+      style: secondary
+      start: 0
+      end: 21
+    - source: .
+      style: secondary
+      start: 5
+      end: 6
+    - source: from . import sibling
+      style: secondary
+      start: 0
+      end: 21
+  from pkg.b import value:
+    labels:
+    - source: value
+      style: primary
+      start: 18
+      end: 23
+    - source: from pkg.b import value
+      style: secondary
+      start: 0
+      end: 23
+    - source: pkg.b
+      style: secondary
+      start: 5
+      end: 10
+    - source: from pkg.b import value
+      style: secondary
+      start: 0
+      end: 23
+  import pkg.b:
+    labels:
+    - source: pkg.b
+      style: primary
+      start: 7
+      end: 12
+    - source: import pkg.b
+      style: secondary
+      start: 0
+      end: 12
+    - source: import pkg.b
+      style: secondary
+      start: 0
+      end: 12

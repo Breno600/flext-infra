@@ -1,4 +1,8 @@
-"""Durable journal for one extensible workspace generation transaction."""
+"""Durable journal for one extensible workspace generation transaction.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,10 +10,15 @@ from pathlib import Path
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
-
-from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
-from ._mise_artifacts_process import FlextInfraMiseArtifactsProcess as process
-from ._mise_artifacts_state import FlextInfraMiseArtifactsState as journal_state
+from flext_infra.codegen._mise_artifacts_files import (
+    FlextInfraMiseArtifactsFiles as files,
+)
+from flext_infra.codegen._mise_artifacts_process import (
+    FlextInfraMiseArtifactsProcess as process,
+)
+from flext_infra.codegen._mise_artifacts_state import (
+    FlextInfraMiseArtifactsState as journal_state,
+)
 
 
 class FlextInfraMiseArtifactsJournal:
@@ -24,7 +33,12 @@ class FlextInfraMiseArtifactsJournal:
         sources: t.VariadicTuple[t.Pair[str, m.Cli.AtomicFileState]] = (),
         directories: t.VariadicTuple[m.Infra.CodegenJournalDirectory] = (),
     ) -> p.Result[m.Infra.CodegenTransactionJournal]:
-        """Build staging authority before any disposable transaction root exists."""
+        """Build staging authority before any disposable transaction root exists.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenTransactionJournal]``.
+
+        """
         physical_scope = files.physical_directory_identity(plan.layout.scope_root)
         if physical_scope.failure:
             return r[m.Infra.CodegenTransactionJournal].from_failure(physical_scope)
@@ -76,7 +90,12 @@ class FlextInfraMiseArtifactsJournal:
         *,
         sources: t.VariadicTuple[t.Pair[str, m.Cli.AtomicFileState]] = (),
     ) -> p.Result[m.Infra.CodegenTransactionJournal]:
-        """Back up one complete phase and return its extended prepared authority."""
+        """Back up one complete phase and return its extended prepared authority.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenTransactionJournal]``.
+
+        """
         if journal.state not in {"staging", "prepared"}:
             return r[m.Infra.CodegenTransactionJournal].fail(
                 "only staging or prepared codegen journal accepts a phase",
@@ -136,7 +155,12 @@ class FlextInfraMiseArtifactsJournal:
         journal: m.Infra.CodegenTransactionJournal,
         directories: t.VariadicTuple[m.Infra.CodegenJournalDirectory],
     ) -> p.Result[m.Infra.CodegenTransactionJournal]:
-        """Extend durable directory authority before materializing any new path."""
+        """Extend durable directory authority before materializing any new path.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenTransactionJournal]``.
+
+        """
         if journal.state not in {"staging", "prepared"}:
             return r[m.Infra.CodegenTransactionJournal].fail(
                 "only staging or prepared codegen journal accepts directories",
@@ -178,8 +202,15 @@ class FlextInfraMiseArtifactsJournal:
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         journal: m.Infra.CodegenTransactionJournal,
     ) -> p.Result[m.Infra.CodegenTransactionJournal]:
-        """Validate physical manifests and retain them in the transaction journal."""
-        from ._mise_artifacts_verification import FlextInfraMiseArtifactsVerification
+        """Validate physical manifests and retain them in the transaction journal.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenTransactionJournal]``.
+
+        """
+        from flext_infra.codegen._mise_artifacts_verification import (
+            FlextInfraMiseArtifactsVerification,
+        )
 
         registered = FlextInfraMiseArtifactsVerification.register_transaction_manifests(
             layout,
@@ -195,7 +226,12 @@ class FlextInfraMiseArtifactsJournal:
         journal: m.Infra.CodegenTransactionJournal,
         directories: t.VariadicTuple[m.Infra.CodegenJournalDirectory],
     ) -> p.Result[m.Infra.CodegenTransactionJournal]:
-        """Advance physical directory evidence without changing its durable intent."""
+        """Advance physical directory evidence without changing its durable intent.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenTransactionJournal]``.
+
+        """
         result_type = r[m.Infra.CodegenTransactionJournal]
         if tuple(directory.path for directory in directories) != tuple(
             directory.path for directory in journal.directories
@@ -255,7 +291,12 @@ class FlextInfraMiseArtifactsJournal:
         cls,
         journal: m.Infra.CodegenTransactionJournal,
     ) -> p.Result[m.Infra.CodegenTransactionJournal]:
-        """Validate the sole prepared-to-committed transition."""
+        """Validate the sole prepared-to-committed transition.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenTransactionJournal]``.
+
+        """
         if journal.state != "prepared":
             return r[m.Infra.CodegenTransactionJournal].fail(
                 "only a prepared codegen journal can be committed",
@@ -288,7 +329,12 @@ class FlextInfraMiseArtifactsJournal:
         journal: m.Infra.CodegenTransactionJournal,
         candidates: t.VariadicTuple[m.Infra.CodegenStagedFile | None],
     ) -> p.Result[m.Infra.CodegenTransactionJournal]:
-        """Persist every rollback replacement identity before the first restore."""
+        """Persist every rollback replacement identity before the first restore.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenTransactionJournal]``.
+
+        """
         if journal.state != "prepared" or len(candidates) != len(journal.entries):
             return r[m.Infra.CodegenTransactionJournal].fail(
                 "codegen recovery candidates differ from prepared journal",
@@ -374,7 +420,12 @@ class FlextInfraMiseArtifactsJournal:
         *,
         expected: m.Cli.AtomicFileState,
     ) -> p.Result[m.Cli.AtomicFileState]:
-        """Create or transition the common journal with full-state CAS."""
+        """Create or transition the common journal with full-state CAS.
+
+        Returns:
+            The resulting ``p.Result[m.Cli.AtomicFileState]``.
+
+        """
         content = journal.model_dump_json(indent=2).encode(c.Cli.ENCODING_DEFAULT)
         if expected.path != layout.journal_path:
             return r[m.Cli.AtomicFileState].fail(
@@ -409,7 +460,13 @@ class FlextInfraMiseArtifactsJournal:
         cls,
         layout: m.Infra.MiseToolchainWorkspaceLayout,
     ) -> p.Result[t.Pair[m.Infra.CodegenTransactionJournal, m.Cli.AtomicFileState]]:
-        """Parse the typed v8 journal without deriving a second filesystem path."""
+        """Parse the typed v8 journal without deriving a second filesystem path.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[m.Infra.CodegenTransactionJournal,
+                m.Cli.AtomicFileState]]``.
+
+        """
         snapshot = journal_state.journal_state(layout)
         result_type = r[tuple[m.Infra.CodegenTransactionJournal, m.Cli.AtomicFileState]]
         if snapshot.failure:
@@ -441,7 +498,12 @@ class FlextInfraMiseArtifactsJournal:
         journal: m.Infra.CodegenTransactionJournal,
         journal_snapshot: m.Cli.AtomicFileState,
     ) -> p.Result[bool]:
-        """Retain journal authority until all journal-authorized cleanup completes."""
+        """Retain journal authority until all journal-authorized cleanup completes.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         directories = journal_state.cleanup_journaled_directories(
             layout,
             journal,
@@ -460,7 +522,12 @@ class FlextInfraMiseArtifactsJournal:
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         journal: m.Infra.CodegenTransactionJournal,
     ) -> p.Result[m.Infra.CodegenTransactionJournal]:
-        """Rebind authenticated paths when the same physical worktree was moved."""
+        """Rebind authenticated paths when the same physical worktree was moved.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenTransactionJournal]``.
+
+        """
         result_type = r[m.Infra.CodegenTransactionJournal]
         identity = files.physical_directory_identity(layout.scope_root)
         if identity.failure:
@@ -604,6 +671,10 @@ class FlextInfraMiseArtifactsJournal:
 
         A directory owned by a recorded participant contributes no candidate, so
         the empty tuple is the typed absence here, never None.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[Path]]``.
+
         """
         relative = Path(directory.path)
         selector = relative.parts[0]
@@ -647,7 +718,12 @@ class FlextInfraMiseArtifactsJournal:
         recorded_participants: t.MappingKV[str, m.Infra.CodegenFileParticipant],
         current_participants: t.MappingKV[str, m.Infra.CodegenFileParticipant],
     ) -> t.Pair[Path, Path]:
-        """Resolve the physical owner roots for one journaled absolute path."""
+        """Resolve the physical owner roots for one journaled absolute path.
+
+        Returns:
+            The resulting ``t.Pair[Path, Path]``.
+
+        """
         for selector, participant in recorded_participants.items():
             if path.is_relative_to(participant.root):
                 return participant.root, current_participants[selector].root
@@ -910,8 +986,15 @@ class FlextInfraMiseArtifactsJournal:
         plan: m.Infra.MiseToolchainWorkspacePlan | m.Infra.CodegenFileSessionPlan,
         journal: m.Infra.CodegenTransactionJournal,
     ) -> p.Result[bool]:
-        """Use the same capability and physical topology proof as recovery."""
-        from ._mise_artifacts_verification import FlextInfraMiseArtifactsVerification
+        """Use the same capability and physical topology proof as recovery.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        from flext_infra.codegen._mise_artifacts_verification import (
+            FlextInfraMiseArtifactsVerification,
+        )
 
         return FlextInfraMiseArtifactsVerification.journal_topology(
             plan.layout,
