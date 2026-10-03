@@ -142,7 +142,7 @@ class FlextInfraWorkspaceChecker(
                 f"quality checks failed for: {failed_names} "
                 f"({total_findings} findings; see the check summary and reports)",
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def _resolve_project_targets(

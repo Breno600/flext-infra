@@ -120,7 +120,7 @@ class FlextInfraWorkspaceEnvironmentMixin:
         """
         envrc = request.repository_root / c.Infra.ENVRC_FILENAME
         if not request.apply or not request.allow_direnv or not envrc.is_file():
-            return r[bool].ok(False)
+            return r[bool].ok(value=False)
         runner_service = runner or u.Cli
         result = runner_service.run_raw(
             (c.Infra.CLI_DIRENV, "allow", str(request.repository_root)),
@@ -135,7 +135,7 @@ class FlextInfraWorkspaceEnvironmentMixin:
                 f"direnv allow failed for {request.repository_root}: "
                 f"{output.stderr.strip() or output.stdout.strip()}",
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def execute_request(
@@ -194,18 +194,18 @@ class FlextInfraWorkspaceEnvironmentMixin:
 
         """
         if not target_path.exists():
-            return r[bool].ok(False)
+            return r[bool].ok(value=False)
         read = u.Cli.files_read_text(target_path)
         if read.failure:
             return r[bool].from_failure(read)
         if not cls._is_generated_environment_text(read.value):
-            return r[bool].ok(False)
+            return r[bool].ok(value=False)
         if not apply:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         delete_result = u.Cli.files_delete(target_path)
         if delete_result.failure:
             return r[bool].from_failure(delete_result)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _write_generated_text(
@@ -228,9 +228,9 @@ class FlextInfraWorkspaceEnvironmentMixin:
                 return r[bool].from_failure(read)
             existing = read.value
             if u.Cli.sha256_content(existing) == u.Cli.sha256_content(content):
-                return r[bool].ok(False)
+                return r[bool].ok(value=False)
             if not force and not cls._is_generated_environment_text(existing):
-                return r[bool].ok(False)
+                return r[bool].ok(value=False)
         return cls._write_text_if_different(target_path, content, apply=apply)
 
     @staticmethod
@@ -251,9 +251,9 @@ class FlextInfraWorkspaceEnvironmentMixin:
             if read.failure:
                 return r[bool].from_failure(read)
             if read.value == content:
-                return r[bool].ok(False)
+                return r[bool].ok(value=False)
         if not apply:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         return u.Cli.atomic_write_text_file(target_path, content)
 
     @staticmethod

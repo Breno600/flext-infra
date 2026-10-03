@@ -46,7 +46,7 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
             cli.display_text(
                 "protocol-models: no referenced model protocols to assemble",
             )
-            return r[t.Cli.ResultValue].ok(True)
+            return r[t.Cli.ResultValue].ok(value=True)
         modules = FlextInfraCodegenProtocolModelRender.render_member_modules(
             resolved.value,
             target,
@@ -244,7 +244,7 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
         cli.display_text(
             f"protocol-models: {verb} {len(modules)} module(s), {len(changed)} updated",
         )
-        return r[t.Cli.ResultValue].ok(True)
+        return r[t.Cli.ResultValue].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraCodegenProtocolModels"]

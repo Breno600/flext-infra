@@ -81,7 +81,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                     f"across {len(rules)} rule file(s)",
                 )
             self.progress.emit("mod: no pending ast-grep or sed-by-list fixes")
-            return r[t.Cli.ResultValue].ok(True)
+            return r[t.Cli.ResultValue].ok(value=True)
         return self._execute_apply(rules)
 
     def _execute_apply(self, rules: t.SequenceOf[Path]) -> p.Result[t.Cli.ResultValue]:
@@ -229,7 +229,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                 "mod: joint AST, semantic, and text fixed point verified "
                 "with zero actionable findings",
             )
-            return r[t.Cli.ResultValue].ok(True)
+            return r[t.Cli.ResultValue].ok(value=True)
 
     def _pending_renames(self) -> p.Result[int]:
         """Count pending rename occurrences across the configured campaigns.

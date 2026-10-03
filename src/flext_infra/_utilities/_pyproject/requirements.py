@@ -84,7 +84,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             )
             if group_result.failure:
                 return group_result
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _normalize_requirement_field(
@@ -104,7 +104,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
         """
         raw_value = u.Cli.toml_value(container, key)
         if raw_value is None:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         raw_items = u.Cli.json_as_sequence(raw_value)
         validated_items: p.Result[t.StrSequence] = u.validate_value(
             t.Infra.STR_SEQ_ADAPTER,
@@ -132,7 +132,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             sorted(dict.fromkeys(normalized_items), key=cls.dependency_order_key),
         )
         u.Cli.toml_sync_string_list(container, key, canonical)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def dependency_order_key(requirement: str) -> t.Pair[str, str]:
@@ -439,7 +439,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
                         "internal dependency Git URL differs from manifest: "
                         f"{dependency_name}",
                     )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraUtilitiesPyprojectRequirements"]

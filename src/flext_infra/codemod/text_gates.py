@@ -482,7 +482,7 @@ class FlextInfraModTextGateEngine:
                 return r[bool].from_failure(observed)
             if set(observed.value) != expected:
                 return r[bool].fail("text source inventory changed before publication")
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
 
         def validate_published() -> p.Result[bool]:
             inventory = validate_inventory()

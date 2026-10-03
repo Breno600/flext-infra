@@ -44,7 +44,7 @@ class FlextInfraReleasePublishMixin(FlextInfraReleaseBuildMixin):
             dry_run=ctx.dry_run,
             index=ctx.index,
         )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def _verified_receipt(
         self,
@@ -177,7 +177,7 @@ class FlextInfraReleasePublishMixin(FlextInfraReleaseBuildMixin):
             if uploaded.failure:
                 return uploaded
             self.logger.info("release_index_wave_published", projects=", ".join(wave))
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraReleasePublishMixin"]

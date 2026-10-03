@@ -300,7 +300,7 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
             return r[bool].from_failure(result)
         report = result.value
         return (
-            r[bool].ok(True)
+            r[bool].ok(value=True)
             if report.passed
             else r[bool].fail("\n".join((report.summary, *report.violations)))
         )

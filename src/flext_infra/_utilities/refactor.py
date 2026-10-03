@@ -97,7 +97,7 @@ class FlextInfraUtilitiesRefactor:
         write_result = u.Cli.json_write(output_path, normalized_payload)
         if write_result.failure:
             return r[bool].from_failure(write_result)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def publish_mod_scan_evidence(

@@ -617,7 +617,7 @@ class FlextInfraMiseArtifactsState:
                         return r[bool].from_failure(selector)
                     relative = selector.value
                     if relative in journaled or relative in preserved:
-                        return r[bool].ok(True)
+                        return r[bool].ok(value=True)
                     # An ancestor is preservable when everything between it
                     # and a preserved descendant is itself journaled: the
                     # descendant's own guard already authenticated its subtree.
@@ -626,7 +626,7 @@ class FlextInfraMiseArtifactsState:
                         any(candidate.startswith(prefix) for candidate in preserved),
                     )
 
-                authenticated = r[bool].ok(True)
+                authenticated = r[bool].ok(value=True)
                 for resident in residents:
                     authenticated = _journaled_resident(resident, journaled, preserved)
                     if authenticated.failure:
@@ -636,7 +636,7 @@ class FlextInfraMiseArtifactsState:
                 if residents and authenticated.value:
                     continue
                 return r[bool].from_failure(removed)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def _hosts_lease_lock(
@@ -744,7 +744,7 @@ class FlextInfraMiseArtifactsState:
         # them. Pre-restore authentication of every recorded tree and resident
         # aborted the rollback before it started, which replaced the tested
         # mixed outcome with a lost publication.
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _validate_transaction_root(
@@ -752,7 +752,7 @@ class FlextInfraMiseArtifactsState:
         target: Path,
     ) -> p.Result[t.Pair[int, int] | bool]:
         if not target.exists() and not target.is_symlink():
-            return r[tuple[int, int] | bool].ok(False)
+            return r[tuple[int, int] | bool].ok(value=False)
         identifier = target.name.removeprefix(c.Infra.TRANSACTION_DIR_PREFIX)
         if (
             not target.name.startswith(c.Infra.TRANSACTION_DIR_PREFIX)

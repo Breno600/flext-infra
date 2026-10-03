@@ -211,13 +211,13 @@ class FlextInfraUtilitiesPyprojectUvSources(
         u.Cli.toml_remove_key_if_present(uv, "workspace")
         sources = u.Cli.toml_table_child(uv, "sources")
         if sources is None:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         for source_name in tuple(sources):
             if source_name.startswith("flext-"):
                 u.Cli.toml_remove_key_if_present(sources, source_name)
         if not tuple(sources):
             u.Cli.toml_remove_key_if_present(uv, "sources")
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def raw_requirement_values(raw: p.AttributeProbe) -> list[str]:

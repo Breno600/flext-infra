@@ -100,7 +100,7 @@ class FlextInfraUtilitiesRelease:
                 f"materialize release archive into {destination}",
                 exc,
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def _write_validated_tar_tree(
@@ -146,7 +146,7 @@ class FlextInfraUtilitiesRelease:
                 )
             finally:
                 extracted.close()
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def plan_bump(
@@ -246,7 +246,7 @@ class FlextInfraUtilitiesRelease:
                 "release_notes_written",
                 path=str(output_path),
             )
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         except OSError as exc:
             return r[bool].fail(f"failed to write release notes: {exc}", exception=exc)
 
@@ -310,7 +310,7 @@ class FlextInfraUtilitiesRelease:
             )
         except OSError as exc:
             return r[bool].fail_op("changelog update", exc)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def _write_changelog_files(

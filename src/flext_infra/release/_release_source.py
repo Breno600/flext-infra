@@ -220,7 +220,7 @@ class FlextInfraReleaseSourceMixin(FlextInfraReleaseArtifactMixin):
             return r[bool].fail("gitleaks detected a secret in staged release source")
         if not u.Cli.process_succeeded(scan.value.outcome):
             return r[bool].fail(f"gitleaks failed with exit code {code}")
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraReleaseSourceMixin"]

@@ -70,7 +70,7 @@ class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
             f"version-file: {verb} {outcomes['generated']}, "
             f"skipped {outcomes['skipped']}",
         )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def _sync_project(self, project: Path, template_path: Path) -> p.Result[str]:
         """Render one project's ``__version__.py`` and name the outcome.

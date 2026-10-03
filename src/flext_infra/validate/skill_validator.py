@@ -288,7 +288,7 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
         if report_result.failure:
             return r[bool].from_failure(report_result)
         report = report_result.unwrap()
-        return r[bool].ok(True) if report.passed else r[bool].fail(report.summary)
+        return r[bool].ok(value=True) if report.passed else r[bool].fail(report.summary)
 
 
 __all__: list[str] = ["FlextInfraSkillValidator"]

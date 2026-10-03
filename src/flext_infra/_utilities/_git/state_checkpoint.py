@@ -182,7 +182,7 @@ class FlextInfraUtilitiesGitStateCheckpointMixin(FlextInfraUtilitiesGitStateTree
             cls._state_verify_saved(checkpoint, destination_root, saved_commit)
         except (GitCommandError, OSError, ValueError) as exc:
             return r[bool].fail(str(exc), exception=exc)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraUtilitiesGitStateCheckpointMixin"]

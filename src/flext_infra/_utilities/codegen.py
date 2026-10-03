@@ -250,7 +250,7 @@ class FlextInfraUtilitiesCodegen(
         if path.exists():
             if not path.is_dir():
                 return r[bool].fail(f"persistent Mise path is not a directory: {path}")
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         planned = u.Cli.atomic_plan_directory_chain(path)
         if planned.failure:
             return r[bool].from_failure(planned)
@@ -260,7 +260,7 @@ class FlextInfraUtilitiesCodegen(
         )
         if created.failure:
             return r[bool].from_failure(created)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def generate_module_skeleton(

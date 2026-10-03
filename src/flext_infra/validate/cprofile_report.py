@@ -158,7 +158,7 @@ class FlextInfraCProfileReport(s[bool]):
         written = u.Cli.atomic_write_text_file(self.output, stream.getvalue())
         if written.failure:
             return r[bool].from_failure(written)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraCProfileReport"]

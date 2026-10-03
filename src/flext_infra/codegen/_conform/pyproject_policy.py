@@ -234,7 +234,7 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
             return r[bool].fail(
                 f"{policy.filename} line {line_number} is not a private custom handler",
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraCodegenConformPyprojectPolicy"]

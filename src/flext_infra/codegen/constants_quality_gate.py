@@ -41,7 +41,7 @@ class FlextInfraCodegenQualityGate(s[bool]):
             return r[bool].from_failure(report_result)
         verdict = u.Cli.json_pick_str(report_result.value, "verdict", "FAIL")
         if self.successful_verdict(verdict):
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         return r[bool].fail(f"quality gate verdict: {verdict}")
 
     def build_report(self) -> p.Result[t.JsonMapping]:

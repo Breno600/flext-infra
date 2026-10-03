@@ -65,7 +65,7 @@ class FlextInfraDocGeneratorBundleMixin:
                     "docs report directory is aliased or escaped: "
                     f"expected {expected}, observed {scope.report_dir}",
                 )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _prepare_request(

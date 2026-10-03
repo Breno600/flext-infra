@@ -221,7 +221,7 @@ class FlextInfraMiseArtifactsFiles:
             return r[bool].fail(
                 f"published codegen file differs from staged identity: {before.path}",
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def delete_state(cls, state: m.Cli.AtomicFileState) -> p.Result[bool]:

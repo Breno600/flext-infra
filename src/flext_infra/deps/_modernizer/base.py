@@ -36,7 +36,7 @@ class FlextInfraPyprojectModernizerBase(
 
     audit: Annotated[
         bool,
-        m.Field(False, description="Audit pyproject changes without writing"),
+        m.Field(default=False, description="Audit pyproject changes without writing"),
     ] = False
     skip_check: Annotated[
         bool,
@@ -77,7 +77,7 @@ class FlextInfraPyprojectModernizerBase(
         """
         if self.run() != 0:
             return r[bool].fail("pyproject modernization failed")
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraPyprojectModernizerBase"]
