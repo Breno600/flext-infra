@@ -1,4 +1,8 @@
-"""Public durable checkpoint application and guarded source cleanup."""
+"""Public durable checkpoint application and guarded source cleanup.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -12,9 +16,10 @@ from git import GitCommandError
 
 from flext_core import r
 from flext_infra import c, m, t
-
-from ..codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
-from .state_transition import FlextInfraUtilitiesGitStateTransitionMixin
+from flext_infra._utilities._git.state_transition import (
+    FlextInfraUtilitiesGitStateTransitionMixin,
+)
+from flext_infra._utilities.codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -81,7 +86,12 @@ class FlextInfraUtilitiesGitStateCaptureMixin(
         checkpoint: m.Infra.GitWorktreeStateCheckpoint,
         destination_root: Path,
     ) -> p.Result[bool]:
-        """Apply only retained bytes, resuming proven partial prior effects."""
+        """Apply only retained bytes, resuming proven partial prior effects.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         try:
             cls._state_apply(checkpoint, destination_root)
         except (GitCommandError, OSError, ValueError) as exc:
@@ -136,7 +146,12 @@ class FlextInfraUtilitiesGitStateCaptureMixin(
         *,
         publication: m.Infra.GitWorktreeCheckpointPublication,
     ) -> p.Result[bool]:
-        """Restore owned source entries only after live remote retention proof."""
+        """Restore owned source entries only after live remote retention proof.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         try:
             cls._state_cleanup(checkpoint, destination_root, saved_commit, publication)
         except (GitCommandError, OSError, ValueError) as exc:

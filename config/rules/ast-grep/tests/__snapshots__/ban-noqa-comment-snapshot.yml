@@ -1,0 +1,14 @@
+id: ban-noqa-comment
+snapshots:
+  'import os  # noqa':
+    labels:
+    - source: '# noqa'
+      style: primary
+      start: 11
+      end: 17
+  'import os  # noqa: F401':
+    labels:
+    - source: '# noqa: F401'
+      style: primary
+      start: 11
+      end: 23

@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core.lazy import build_lazy_import_map, install_lazy_exports
+from flext_core import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra._utilities._semantic_cutover.alias_cst import (
@@ -58,11 +58,20 @@ if TYPE_CHECKING:
     from flext_infra._utilities._semantic_cutover.model_fields_bindings import (
         FlextInfraUtilitiesSemanticCutoverModelFieldsBindings,
     )
+    from flext_infra._utilities._semantic_cutover.module_layout import (
+        FlextInfraUtilitiesSemanticCutoverModuleLayout,
+    )
     from flext_infra._utilities._semantic_cutover.nesting import (
         FlextInfraUtilitiesSemanticCutoverNesting,
     )
     from flext_infra._utilities._semantic_cutover.nesting_cst import (
         FlextInfraUtilitiesSemanticCutoverNestingCst,
+    )
+    from flext_infra._utilities._semantic_cutover.nesting_module_aliases import (
+        FlextInfraUtilitiesSemanticCutoverNestingModuleAliases,
+    )
+    from flext_infra._utilities._semantic_cutover.nesting_owner import (
+        FlextInfraUtilitiesSemanticCutoverNestingOwner,
     )
     from flext_infra._utilities._semantic_cutover.nesting_references import (
         FlextInfraUtilitiesSemanticCutoverNestingReferences,
@@ -80,7 +89,6 @@ if TYPE_CHECKING:
         FlextInfraUtilitiesSemanticCutoverSelfFacade,
     )
 
-
 __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesSemanticCutoverAliasCst",
     "FlextInfraUtilitiesSemanticCutoverAliases",
@@ -93,8 +101,11 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesSemanticCutoverFacadeOwners",
     "FlextInfraUtilitiesSemanticCutoverModelFields",
     "FlextInfraUtilitiesSemanticCutoverModelFieldsBindings",
+    "FlextInfraUtilitiesSemanticCutoverModuleLayout",
     "FlextInfraUtilitiesSemanticCutoverNesting",
     "FlextInfraUtilitiesSemanticCutoverNestingCst",
+    "FlextInfraUtilitiesSemanticCutoverNestingModuleAliases",
+    "FlextInfraUtilitiesSemanticCutoverNestingOwner",
     "FlextInfraUtilitiesSemanticCutoverNestingReferences",
     "FlextInfraUtilitiesSemanticCutoverPrivateImportCst",
     "FlextInfraUtilitiesSemanticCutoverPrivateImports",
@@ -130,8 +141,13 @@ _LAZY_IMPORTS = MappingProxyType(
             ".model_fields_bindings": (
                 "FlextInfraUtilitiesSemanticCutoverModelFieldsBindings",
             ),
+            ".module_layout": ("FlextInfraUtilitiesSemanticCutoverModuleLayout",),
             ".nesting": ("FlextInfraUtilitiesSemanticCutoverNesting",),
             ".nesting_cst": ("FlextInfraUtilitiesSemanticCutoverNestingCst",),
+            ".nesting_module_aliases": (
+                "FlextInfraUtilitiesSemanticCutoverNestingModuleAliases",
+            ),
+            ".nesting_owner": ("FlextInfraUtilitiesSemanticCutoverNestingOwner",),
             ".nesting_references": (
                 "FlextInfraUtilitiesSemanticCutoverNestingReferences",
             ),

@@ -1,4 +1,8 @@
-"""Render specification models for generated workflow and env surfaces."""
+"""Render specification models for generated workflow and env surfaces.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,17 +11,17 @@ from typing import Annotated
 
 from flext_cli import m
 
-from ... import t
-from ..._constants import (
+from flext_infra import t
+from flext_infra._constants import (
     FlextInfraConstantsCodegenProject,
     FlextInfraConstantsDocs,
     FlextInfraConstantsWorkspace,
 )
-from ..deps_tool_config import FlextInfraModelsDepsToolConfig
-from .contexts import FlextInfraConfigModelsContexts
-from .contract import FlextInfraConfigModelsContract
-from .make import FlextInfraConfigModelsMake
-from .provider import FlextInfraConfigModelsProvider
+from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
+from flext_infra._models._config.make import FlextInfraConfigModelsMake
+from flext_infra._models._config.provider import FlextInfraConfigModelsProvider
+from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
 
 
 class FlextInfraConfigModelsRender:
@@ -116,7 +120,7 @@ class FlextInfraConfigModelsRender:
                     "Requirement names the project takes by direct git "
                     "reference (forks and local projects): derived from its "
                     "pyproject, they never enter the cooldown."
-                )
+                ),
             ),
         ] = ()
         checkout_submodules: Annotated[
@@ -313,6 +317,17 @@ class FlextInfraConfigModelsRender:
                 ),
             ),
         ]
+        workspace_subprojects: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                description=(
+                    "Workspace-relative member checkout paths of a workspace "
+                    "root; each member is its own repository with its own "
+                    "SonarCloud project, so the root scope excludes them. "
+                    "Empty for a standalone repository"
+                ),
+            ),
+        ] = ()
 
     class UvPackageSelectorSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Package selector for one official uv scoped dependency exclusion."""

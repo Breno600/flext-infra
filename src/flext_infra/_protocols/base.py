@@ -26,7 +26,8 @@ class FlextInfraProtocolsBase(Protocol):
         """Apply or inspect one validated CSV rename campaign."""
 
         def run(
-            self, params: m.Infra.ApplyRenamesInput
+            self,
+            params: m.Infra.ApplyRenamesInput,
         ) -> p.Result[m.Infra.ApplyRenamesReport]: ...
 
     @runtime_checkable
@@ -113,7 +114,8 @@ class FlextInfraProtocolsBase(Protocol):
         """Conform plan boundary consumed by the candidate campaign."""
 
         def surface_contract(
-            self, surface: c.Infra.CodegenConformSurface
+            self,
+            surface: c.Infra.CodegenConformSurface,
         ) -> m.Infra.CodegenConformSurfaceContract:
             """Resolve the declared output set for a recovery surface."""
             ...
@@ -159,32 +161,6 @@ class FlextInfraProtocolsBase(Protocol):
             include_root: bool,
         ) -> FlextInfraProtocolsBase.DocsArtifactPlanner:
             """Bind the planner to the repositories conform publishes."""
-            ...
-
-    @runtime_checkable
-    class FreshImportProbe(Protocol):
-        """Fresh-process import validation run at the conform fixed point."""
-
-        def build_report(
-            self,
-            packages: t.StrSequence = (),
-            *,
-            publications: t.SequenceOf[m.Infra.LazyInitPlan] = (),
-            repository_roots: t.SequenceOf[Path] = (),
-        ) -> p.Result[m.Infra.ValidationReport]:
-            """Validate published packages in fresh interpreters."""
-            ...
-
-    @runtime_checkable
-    class FreshImportProbeFactory(Protocol):
-        """Build the fresh-import probe for one repository root."""
-
-        def __call__(
-            self,
-            *,
-            repository_root: Path,
-        ) -> FlextInfraProtocolsBase.FreshImportProbe:
-            """Bind the probe to the conformed repository."""
             ...
 
     @runtime_checkable

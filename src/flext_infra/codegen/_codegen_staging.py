@@ -1,4 +1,8 @@
-"""Destination-local staging for generic generated-file plans."""
+"""Destination-local staging for generic generated-file plans.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,9 +13,12 @@ from typing import TYPE_CHECKING, ClassVar, get_args
 
 from flext_core import r
 from flext_infra import m, u
-
-from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
-from ._mise_artifacts_process import FlextInfraMiseArtifactsProcess as process
+from flext_infra.codegen._mise_artifacts_files import (
+    FlextInfraMiseArtifactsFiles as files,
+)
+from flext_infra.codegen._mise_artifacts_process import (
+    FlextInfraMiseArtifactsProcess as process,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -31,7 +38,12 @@ class FlextInfraCodegenStaging:
         phase: str,
         plans: t.VariadicTuple[m.Infra.CodegenFilePlan],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile]]:
-        """Stage one exact phase without changing any live destination."""
+        """Stage one exact phase without changing any live destination.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile]]``.
+
+        """
         result_type = r[tuple[m.Infra.CodegenStagedFile, ...]]
         if phase not in FlextInfraCodegenStaging._phases:
             return result_type.fail(f"unsupported generation phase: {phase}")
@@ -78,7 +90,8 @@ class FlextInfraCodegenStaging:
             ):
                 if before.content is not None:
                     return result_type.fail(
-                        f"{phase} destination appeared after planning: {file_plan.path}",
+                        f"{phase} destination appeared after planning: "
+                        f"{file_plan.path}",
                     )
             elif before != planned_before:
                 return result_type.fail(

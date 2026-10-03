@@ -1,4 +1,8 @@
-"""Public replacement transport preserves generator authority and exact CAS."""
+"""Public replacement transport preserves generator authority and exact CAS.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,6 +12,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import c, m, u
+from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
 from tests import u as test_u
 
@@ -50,6 +55,7 @@ class TestsBatchReplacements:
         )
 
     def test_utf8_replacements_use_engine_byte_offsets(self, tmp_path: Path) -> None:
+        """Test utf8 replacements use engine byte offsets."""
         root = test_u.Tests.git_repository(tmp_path)
         path = root / "subject.py"
         original = '# ação\nvalue = "before"\n'.encode()
@@ -61,6 +67,7 @@ class TestsBatchReplacements:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test generator findings remain visible and unmodified."""
         root = test_u.Tests.git_repository(tmp_path)
         path = root / "generated.py"
         original = b'value = "before"\n'
@@ -71,6 +78,32 @@ class TestsBatchReplacements:
         tm.that(report.findings, eq=1)
         tm.that(path.read_bytes(), eq=original)
 
+    def test_generator_evidence_never_blocks_authored_rewrites(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Test generator evidence never blocks authored rewrites."""
+        root = test_u.Tests.git_repository(tmp_path)
+        original = b'value = "before"\n'
+        authored = self._report(root / "authored.py", original).entries[0]
+        generated = self._report(
+            root / "generated.py",
+            original,
+            generated=True,
+        ).entries[0]
+        evidence = generated.model_copy(
+            update={
+                "replacement": None,
+                "actionable": False,
+                "classification": c.Infra.ModScanFindingClass.DETECTION_ONLY,
+            },
+        )
+        report = FlextInfraModGateEngine.recounted((authored, evidence))
+        tm.ok(FlextInfraModReplacements.publish(root, report))
+        tm.that((root / "authored.py").read_bytes(), eq=b'value = "after"\n')
+        tm.that((root / "generated.py").read_bytes(), eq=original)
+        tm.that(FlextInfraModGateEngine.authored(report).entries, eq=(authored,))
+
     @pytest.mark.parametrize(
         "changed",
         [b'value = "before"\n\n', b'value = "third-party"\n'],
@@ -80,6 +113,7 @@ class TestsBatchReplacements:
         tmp_path: Path,
         changed: bytes,
     ) -> None:
+        """Test changed source is not overwritten."""
         root = test_u.Tests.git_repository(tmp_path)
         path = root / "subject.py"
         report = self._report(path, b'value = "before"\n')
@@ -88,6 +122,7 @@ class TestsBatchReplacements:
         tm.that(path.read_bytes(), eq=changed)
 
     def test_missing_actionable_snapshot_is_rejected(self, tmp_path: Path) -> None:
+        """Test missing actionable snapshot is rejected."""
         root = test_u.Tests.git_repository(tmp_path)
         path = root / "subject.py"
         report = self._report(path, b'value = "before"\n')
@@ -95,8 +130,8 @@ class TestsBatchReplacements:
         invalid = report.model_copy(update={"entries": (finding,)})
         tm.fail(FlextInfraModReplacements.publish(root, invalid))
 
+    @staticmethod
     def test_emptied_statement_publishes_formatter_clean_file(
-        self,
         tmp_path: Path,
     ) -> None:
         """An emptied statement fix publishes skeleton-free, format-clean bytes.

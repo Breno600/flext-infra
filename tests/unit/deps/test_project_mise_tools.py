@@ -1,4 +1,8 @@
-"""Project-owned Mise tools: declaration, composition, and lock platform scope."""
+"""Project-owned Mise tools: declaration, composition, and lock platform scope.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -25,6 +29,7 @@ class TestsFlextInfraProjectMiseTools:
         return root
 
     def test_declared_tool_reaches_generated_mise_toml(self, tmp_path: Path) -> None:
+        """Test declared tool reaches generated mise toml."""
         root = self._project(
             tmp_path / "project",
             "ManagedArtifacts:\n"
@@ -49,6 +54,7 @@ class TestsFlextInfraProjectMiseTools:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test version string shorthand is not a declaration."""
         root = self._project(
             tmp_path / "project",
             "ManagedArtifacts:\n"

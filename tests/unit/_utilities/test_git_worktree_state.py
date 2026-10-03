@@ -1,4 +1,8 @@
-"""Real Git round trips through the public worktree state-copy boundary."""
+"""Real Git round trips through the public worktree state-copy boundary.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -13,12 +17,14 @@ from tests import u as test_u
 class TestsFlextInfraGitWorktreeState:
     """Preserve both Git layers and reject destructive destination states."""
 
-    def _lane(self, parent: Path, source: Path) -> Path:
+    @staticmethod
+    def _lane(parent: Path, source: Path) -> Path:
         lane = parent / "lane"
         test_u.Tests.git_run(source, "worktree", "add", "--detach", str(lane))
         return lane
 
-    def _assert_layers_match(self, source: Path, lane: Path) -> None:
+    @staticmethod
+    def _assert_layers_match(source: Path, lane: Path) -> None:
         for args in (
             ("status", "--porcelain=v1", "--untracked-files=all"),
             ("diff", "--binary", "HEAD"),
@@ -127,7 +133,8 @@ class TestsFlextInfraGitWorktreeState:
         tm.that((lane / "owned.txt").read_text(), eq="destination\n")
         tm.that((lane / "new.txt").exists(), eq=False)
 
-    def test_other_repository_is_rejected(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_other_repository_is_rejected(tmp_path: Path) -> None:
         source = test_u.Tests.git_repository(tmp_path)
         destination = test_u.Tests.git_repository(tmp_path, "other")
         (source / "new.txt").write_text("source\n", encoding="utf-8")

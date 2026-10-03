@@ -1,0 +1,22 @@
+id: ban-flext-core-settings-library-import
+snapshots:
+  from pydantic_settings import BaseSettings:
+    labels:
+    - source: from pydantic_settings import BaseSettings
+      style: primary
+      start: 0
+      end: 42
+    - source: pydantic_settings
+      style: secondary
+      start: 5
+      end: 22
+  import pydantic_settings:
+    labels:
+    - source: import pydantic_settings
+      style: primary
+      start: 0
+      end: 24
+    - source: pydantic_settings
+      style: secondary
+      start: 7
+      end: 24

@@ -1,4 +1,8 @@
-"""Dependency detection and analysis service for deptry, pip-check, and typing stubs."""
+"""Dependency detection and analysis service for deptry, pip-check, and typing stubs.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,12 +11,11 @@ from pathlib import Path
 
 from flext_core import c as core_c, r
 from flext_infra import c, m, p, t, u
-
-from .detection_analysis import FlextInfraDependencyDetectionAnalysis
+from flext_infra.deps.detection_analysis import FlextInfraDependencyDetectionAnalysis
 
 
 class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis):
-    """Runtime vs dev dependency detector using deptry, pip-check, and mypy stub analysis."""
+    """Runtime vs dev dependency detector using deptry, pip-check, mypy stubs."""
 
     _log = u.fetch_logger(__name__)
 
@@ -20,7 +23,12 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
     def classify_issues(
         issues: t.SequenceOf[t.JsonMapping],
     ) -> m.Infra.DeptryIssueGroups:
-        """Classify deptry issues by error code (DEP001-DEP004)."""
+        """Classify deptry issues by error code (DEP001-DEP004).
+
+        Returns:
+            The resulting ``m.Infra.DeptryIssueGroups``.
+
+        """
         groups = m.Infra.DeptryIssueGroups(dep001=[], dep002=[], dep003=[], dep004=[])
         for item in issues:
             normalized_item: MutableMapping[str, t.Primitives | None] = {}
@@ -52,13 +60,23 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
         project_name: str,
         deptry_issues: t.SequenceOf[t.JsonMapping],
     ) -> m.Infra.ProjectDependencyReport:
-        """Build a project dependency report from classified deptry issues."""
+        """Build a project dependency report from classified deptry issues.
+
+        Returns:
+            The resulting ``m.Infra.ProjectDependencyReport``.
+
+        """
         classified = self.classify_issues(deptry_issues)
 
         def _module_names(
             items: t.SequenceOf[t.MappingKV[str, t.JsonValue | None]],
         ) -> t.MutableSequenceOf[str]:
-            """Extract module names from classified issue items."""
+            """Extract module names from classified issue items.
+
+            Returns:
+                The resulting ``t.MutableSequenceOf[str]``.
+
+            """
             return [
                 str(val)
                 for item in items
@@ -76,8 +94,8 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
             ),
         )
 
+    @staticmethod
     def discover_project_paths(
-        self,
         repository_root: Path,
         projects_filter: t.StrSequence | None = None,
     ) -> p.Result[t.SequenceOf[Path]]:
@@ -85,6 +103,10 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
 
         Returns only the Path objects, filtered to those with pyproject.toml.
         For full ProjectInfo metadata, use u.Infra.discover_projects().
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[Path]]``.
+
         """
         names = projects_filter or []
         result = u.Infra.resolve_projects(repository_root, names)

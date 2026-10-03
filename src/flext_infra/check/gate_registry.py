@@ -1,4 +1,8 @@
-"""Explicit registry of the workspace check gates."""
+"""Explicit registry of the workspace check gates.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -11,6 +15,7 @@ from flext_infra.gates.base_gate import FlextInfraGate
 from flext_infra.gates.codemod import FlextInfraCodemodGate
 from flext_infra.gates.direnv import FlextInfraDirenvGate
 from flext_infra.gates.duplication import FlextInfraDuplicationGate
+from flext_infra.gates.fresh_import import FlextInfraFreshImportGate
 from flext_infra.gates.index_declarations import FlextInfraIndexDeclarationsGate
 from flext_infra.gates.layout import FlextInfraLayoutGate
 from flext_infra.gates.loc_cap import FlextInfraLocCapGate
@@ -42,6 +47,11 @@ class FlextInfraGateRegistry:
         not know, a vocabulary id with no class, or two classes claiming one
         id) is a defect that fails the registry before a single gate can run,
         never a gate that silently cannot be reached through ``make check``.
+
+        Raises:
+            ValueError: If gate registry declares duplicate gate ids; or if gate
+                registry diverges from c.Infra.SARIF_TOOL_INFO.
+
         """
         classes = self._gate_classes()
         self._gates: MutableMapping[str, type[FlextInfraGate]] = {
@@ -62,7 +72,12 @@ class FlextInfraGateRegistry:
 
     @staticmethod
     def _gate_classes() -> t.VariadicTuple[type[FlextInfraGate]]:
-        """Return the runtime gate classes registered for workspace checks."""
+        """Return the runtime gate classes registered for workspace checks.
+
+        Returns:
+            The runtime gate classes registered for workspace checks.
+
+        """
         return (
             FlextInfraRuffLintGate,
             FlextInfraRuffFormatGate,
@@ -75,6 +90,7 @@ class FlextInfraGateRegistry:
             FlextInfraMarkdownCodeGate,
             FlextInfraLocCapGate,
             FlextInfraRuntimeCensusGate,
+            FlextInfraFreshImportGate,
             FlextInfraLayoutGate,
             FlextInfraIndexDeclarationsGate,
             FlextInfraSmellsGate,
@@ -84,11 +100,21 @@ class FlextInfraGateRegistry:
         )
 
     def get(self, gate_id: str) -> type[FlextInfraGate] | None:
-        """Return the registered gate class for one gate id, when present."""
+        """Return the registered gate class for one gate id, when present.
+
+        Returns:
+            The registered gate class for one gate id, when present.
+
+        """
         return self._gates.get(gate_id)
 
     def create(self, gate_id: str, repository_root: Path) -> FlextInfraGate | None:
-        """Instantiate one registered gate for ``repository_root`` when available."""
+        """Instantiate one registered gate for ``repository_root`` when available.
+
+        Returns:
+            The resulting ``FlextInfraGate | None``.
+
+        """
         gate_cls = self._gates.get(gate_id)
         return (
             gate_cls(repository_root, runner=self._runners.get(gate_id))
@@ -98,7 +124,12 @@ class FlextInfraGateRegistry:
 
     @classmethod
     def default(cls) -> FlextInfraGateRegistry:
-        """Return the default registry instance for workspace checks."""
+        """Return the default registry instance for workspace checks.
+
+        Returns:
+            The default registry instance for workspace checks.
+
+        """
         return cls()
 
 

@@ -1,4 +1,8 @@
-"""Typed requests for Rope-backed class moves."""
+"""Typed requests for Rope-backed class moves.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,8 @@ from typing import Annotated, ClassVar
 
 from flext_cli import m
 
-from .. import t
-from . import FlextInfraModelsMixins as mm
+from flext_infra import t
+from flext_infra._models import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsRopeMove:

@@ -1,0 +1,10 @@
+
+      # Why: save on every outcome, a failing or budget-stopped make test
+      # included, under a key unique to this run, so every run hands the
+      # results it recorded to the next selection.
+      - name: Save testmon database
+        if: {% raw %}${{ always() }}{% endraw %}
+        uses: {{ github_actions["cache"].repository }}/save@{{ github_actions["cache"].version }}
+        with:
+          path: ~/{{ make.testmon_cache.home_cache_directory }}/{{ make.testmon_cache.external_storage_directory }}
+          key: {% raw %}${{ runner.os }}-{% endraw %}{{ python_version }}-{{ make.testmon_cache_policy.key_prefix }}{% raw %}-${{ github.run_id }}-${{ github.run_attempt }}{% endraw %}

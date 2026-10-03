@@ -1,4 +1,8 @@
-"""Canonical Git responsibility mixin for ``u.Infra``."""
+"""Canonical Git responsibility mixin for ``u.Infra``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,8 +12,9 @@ from typing import TYPE_CHECKING
 from git import GitCommandError, Repo
 
 from flext_core import r
-
-from .worktree_patch import FlextInfraUtilitiesGitWorktreePatchMixin
+from flext_infra._utilities._git.worktree_patch import (
+    FlextInfraUtilitiesGitWorktreePatchMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -78,7 +83,12 @@ class FlextInfraUtilitiesGitWorktreeRemovalMixin(
         source_root: Path,
         worktree_root: Path,
     ) -> p.Result[bool]:
-        """Remove an explicitly selected clean worktree and prune metadata."""
+        """Remove an explicitly selected clean worktree and prune metadata.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         preflight = cls._preflight_clean_worktree(source_root, worktree_root)
         if preflight.failure:
             return r[bool].from_failure(preflight)

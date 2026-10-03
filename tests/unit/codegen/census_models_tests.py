@@ -18,7 +18,9 @@ from tests import c, m
 class TestsFlextInfraCodegenCensusModels:
     """Violation pattern and census report model contracts."""
 
-    def test_named_groups_present(self) -> None:
+    @staticmethod
+    def test_named_groups_present() -> None:
+        """Test named groups present."""
         match = c.Infra.VIOLATION_PATTERN.match(
             "[ban-cyclic-import] src/file.py:10 — msg",
         )
@@ -26,7 +28,9 @@ class TestsFlextInfraCodegenCensusModels:
         if match is not None:
             tm.that(set(match.groupdict()), eq={"rule", "module", "line", "message"})
 
-    def test_model_fields(self) -> None:
+    @staticmethod
+    def test_model_fields() -> None:
+        """Test model fields."""
         v = m.Infra.CensusViolation(
             module="src/file.py",
             rule="NS-001",
@@ -40,7 +44,9 @@ class TestsFlextInfraCodegenCensusModels:
         tm.that(v.message, eq="Test message")
         tm.that(v.fixable, eq=True)
 
-    def test_empty_report(self) -> None:
+    @staticmethod
+    def test_empty_report() -> None:
+        """Test empty report."""
         report = m.Infra.CensusReport(
             project="test-project",
             violations=[],
@@ -52,7 +58,9 @@ class TestsFlextInfraCodegenCensusModels:
         tm.that(report.fixable, eq=0)
         tm.that(report.violations, empty=True)
 
-    def test_report_with_mixed_violations(self) -> None:
+    @staticmethod
+    def test_report_with_mixed_violations() -> None:
+        """Test report with mixed violations."""
         violations = [
             m.Infra.CensusViolation(
                 module="src/a.py",

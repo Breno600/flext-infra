@@ -1,0 +1,104 @@
+id: fix-result-guard-sentinel-return
+snapshots:
+  ? |
+    def run(res) -> r[str]:
+        if not res.success:
+            return None
+        return res
+  : fixed: |
+      def run(res) -> r[str]:
+          if not res.success:
+              return r[str].from_failure(res)
+          return res
+    labels:
+    - source: return None
+      style: primary
+      start: 56
+      end: 67
+    - source: not res.success
+      style: secondary
+      start: 31
+      end: 46
+    - source: |-
+        if not res.success:
+                return None
+      style: secondary
+      start: 28
+      end: 67
+    - source: return None
+      style: secondary
+      start: 56
+      end: 67
+    - source: r
+      style: secondary
+      start: 16
+      end: 17
+    - source: str
+      style: secondary
+      start: 18
+      end: 21
+    - source: '[str]'
+      style: secondary
+      start: 17
+      end: 22
+    - source: r[str]
+      style: secondary
+      start: 16
+      end: 22
+    - source: r[str]
+      style: secondary
+      start: 16
+      end: 22
+    - source: |-
+        def run(res) -> r[str]:
+            if not res.success:
+                return None
+            return res
+      style: secondary
+      start: 0
+      end: 82
+  ? |
+    def run_guard(validation_result: p.Result[bool]) -> p.Result[bool]:
+        if validation_result.failure:
+            return False
+        return r[bool].ok(True)
+  : fixed: |
+      def run_guard(validation_result: p.Result[bool]) -> p.Result[bool]:
+          if validation_result.failure:
+              return r[bool].from_failure(validation_result)
+          return r[bool].ok(True)
+    labels:
+    - source: return False
+      style: primary
+      start: 110
+      end: 122
+    - source: validation_result.failure
+      style: secondary
+      start: 75
+      end: 100
+    - source: |-
+        if validation_result.failure:
+                return False
+      style: secondary
+      start: 72
+      end: 122
+    - source: return False
+      style: secondary
+      start: 110
+      end: 122
+    - source: p.Result[bool]
+      style: secondary
+      start: 52
+      end: 66
+    - source: p.Result[bool]
+      style: secondary
+      start: 52
+      end: 66
+    - source: |-
+        def run_guard(validation_result: p.Result[bool]) -> p.Result[bool]:
+            if validation_result.failure:
+                return False
+            return r[bool].ok(True)
+      style: secondary
+      start: 0
+      end: 150

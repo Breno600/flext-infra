@@ -1,4 +1,8 @@
-"""Transport ast-grep JSON replacements to the existing guarded publisher."""
+"""Transport ast-grep JSON replacements to the existing guarded publisher.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,24 +23,56 @@ class FlextInfraModReplacements:
     """Preserve exact engine rewrites without granting it filesystem effects."""
 
     @staticmethod
-    def require_authored(report: m.Infra.ModScanReport) -> p.Result[bool]:
-        """Retain generator findings as blocking evidence, never writable targets."""
-        generated = tuple(
-            item for item in report.entries if item.source_owner == "generator"
+    def generator_owned(
+        entries: t.SequenceOf[m.Infra.ModScanFinding],
+    ) -> t.StrTuple:
+        """Name the findings whose file the canonical generator owns.
+
+        One entry per file and rule; the per-finding detail stays in the mod
+        findings report.
+
+        Returns:
+            Sorted ``generator:<file>:<rule>`` identities.
+
+        """
+        return tuple(
+            sorted({
+                f"generator:{item.file}:{item.rule_id}"
+                for item in entries
+                if item.source_owner == "generator"
+            }),
         )
+
+    @classmethod
+    def require_authored(
+        cls,
+        entries: t.SequenceOf[m.Infra.ModScanFinding],
+    ) -> p.Result[bool]:
+        """Refuse to write generated files: their findings are generator repairs.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        generated = cls.generator_owned(entries)
         if generated:
-            details = ", ".join(
-                f"generator:{item.file}:{item.rule_id}" for item in generated
-            )
             return r[bool].fail(
-                f"generated findings require canonical generator repair: {details}",
+                "generated findings require canonical generator repair: "
+                + ", ".join(generated),
             )
         return r[bool].ok(True)
 
     @classmethod
     def publish(cls, root: Path, report: m.Infra.ModScanReport) -> p.Result[bool]:
-        """Validate byte coordinates and publish complete CAS-owned file plans."""
-        allowed = cls.require_authored(report)
+        """Validate byte coordinates and publish complete CAS-owned file plans.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        allowed = cls.require_authored(
+            tuple(finding for finding in report.entries if finding.actionable),
+        )
         if allowed.failure:
             return allowed
         grouped: MutableMapping[Path, list[m.Infra.ModScanFinding]] = {}
@@ -63,7 +99,8 @@ class FlextInfraModReplacements:
                     Mapping,
                 ):
                     return r[bool].fail(
-                        f"ast-grep finding lacks byte coordinates: {path}:{finding.rule_id}",
+                        f"ast-grep finding lacks byte coordinates: "
+                        f"{path}:{finding.rule_id}",
                     )
                 offsets = m.Infra.ModReplacementOffsets.model_validate(raw_offsets)
                 matched = m.Infra.ModReplacementOffsets.model_validate(raw_match)

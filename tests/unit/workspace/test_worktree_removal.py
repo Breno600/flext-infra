@@ -1,4 +1,8 @@
-"""Worktree child containment and removal behavior."""
+"""Worktree child containment and removal behavior.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,8 @@
-"""One atomic campaign for declared candidate recovery projections."""
+"""One atomic campaign for declared candidate recovery projections.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -27,7 +31,12 @@ class FlextInfraCandidateBootstrapService:
         command: m.Infra.CandidateBootstrapCommand,
         manifest_state: m.Cli.AtomicFileState,
     ) -> p.Result[bool]:
-        """Publish a fixed point for the entire typed target declaration."""
+        """Publish a fixed point for the entire typed target declaration.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         targets = workspace.candidate_bootstrap_targets
         if not targets:
             return r[bool].fail("candidate bootstrap targets are not declared")
@@ -77,7 +86,12 @@ class FlextInfraCandidateBootstrapService:
         targets: m.Infra.CandidateBootstrapTargets,
         manifest_state: m.Cli.AtomicFileState,
     ) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
-        """Compose one immutable receipt from all conform planners."""
+        """Compose one immutable receipt from all conform planners.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenPhaseAnalysis]``.
+
+        """
         files: list[m.Infra.CodegenFilePlan] = []
         inputs: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {
             manifest_state.path: manifest_state,
@@ -95,7 +109,7 @@ class FlextInfraCandidateBootstrapService:
             destinations = self._planner.surface_contract(target.what).destinations
             if not destinations:
                 return r[m.Infra.CodegenPhaseAnalysis].fail(
-                    f"candidate bootstrap must plan exactly one Makefile: {root}",
+                    f"candidate bootstrap has no declared destinations: {root}",
                 )
             for file in planned.value.files:
                 files.append(file)
@@ -120,7 +134,12 @@ class FlextInfraCandidateBootstrapService:
         targets: m.Infra.CandidateBootstrapTargets,
         manifest_state: m.Cli.AtomicFileState,
     ) -> p.Result[bool]:
-        """Require unchanged declarations and a complete post-publication fixed point."""
+        """Require unchanged declarations and a complete post-publication fixed point.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         observed = u.Cli.atomic_read_binary_file_state(
             manifest_state.path,
             required=True,

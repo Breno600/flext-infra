@@ -33,6 +33,10 @@ class FlextInfraUtilitiesLogParser:
         ``reports_dir`` mirrors ``check run --reports-dir``: a relative value is
         anchored at ``repository_root``; omitted, it is the canonical project
         check report directory the checker writes by default.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SarifResult]]``.
+
         """
         report_dir = (
             u.Cli.resolve_report_dir(

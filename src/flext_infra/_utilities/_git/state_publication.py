@@ -1,4 +1,8 @@
-"""Credential-safe remote retention receipts for worktree checkpoints."""
+"""Credential-safe remote retention receipts for worktree checkpoints.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,9 +13,10 @@ from git import GitCommandError
 
 from flext_core import r
 from flext_infra import c, m
-
-from .remote import FlextInfraUtilitiesGitRemote
-from .state_checkpoint import FlextInfraUtilitiesGitStateCheckpointMixin
+from flext_infra._utilities._git.remote import FlextInfraUtilitiesGitRemote
+from flext_infra._utilities._git.state_checkpoint import (
+    FlextInfraUtilitiesGitStateCheckpointMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -34,7 +39,10 @@ class FlextInfraUtilitiesGitStatePublicationMixin(
                     raise ValueError(msg)
                 return url
             case _:
-                msg = "checkpoint publication requires one identical fetch and push endpoint"
+                msg = (
+                    "checkpoint publication requires one identical "
+                    "fetch and push endpoint"
+                )
                 raise ValueError(msg)
 
     @classmethod
@@ -115,7 +123,12 @@ class FlextInfraUtilitiesGitStatePublicationMixin(
         checkpoint: m.Infra.GitWorktreeStateCheckpoint,
         remote: str,
     ) -> p.Result[m.Infra.GitWorktreeCheckpointPublication]:
-        """Publish once by ordinary atomic push and return its exact remote proof."""
+        """Publish once by ordinary atomic push and return its exact remote proof.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitWorktreeCheckpointPublication]``.
+
+        """
         try:
             publication = cls._state_publish(checkpoint, remote)
         except (GitCommandError, OSError, ValueError) as exc:
@@ -131,7 +144,12 @@ class FlextInfraUtilitiesGitStatePublicationMixin(
         checkpoint: m.Infra.GitWorktreeStateCheckpoint,
         publication: m.Infra.GitWorktreeCheckpointPublication,
     ) -> p.Result[bool]:
-        """Revalidate endpoint identity and retained remote reference without writes."""
+        """Revalidate endpoint identity and retained remote reference without writes.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         try:
             cls._state_verify_publication(checkpoint, publication)
         except (GitCommandError, OSError, ValueError) as exc:
