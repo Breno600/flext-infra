@@ -8,7 +8,8 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from flext_core import m
+from flext_cli import m
+
 from flext_infra import c, t
 
 
@@ -69,10 +70,12 @@ class FlextInfraModelsDepsToml:
 
             name: str = m.Field(description="Phase name")
             root_path: Annotated[
-                t.StrSequence, m.Field(description="Root path before table_path")
+                t.StrSequence,
+                m.Field(description="Root path before table_path"),
             ] = (c.Infra.TOOL,)
             table_path: Annotated[
-                t.StrSequence, m.Field(description="Primary table path")
+                t.StrSequence,
+                m.Field(description="Primary table path"),
             ] = ()
             operations: Annotated[
                 t.SequenceOf[

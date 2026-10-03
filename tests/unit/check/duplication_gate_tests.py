@@ -1,4 +1,8 @@
-"""Fail-closed public behavior for the jscpd duplication gate."""
+"""Fail-closed public behavior for the jscpd duplication gate.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,8 +10,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import c, settings
-from flext_infra.check.workspace_check_gates import FlextInfraGateRegistry
+from flext_infra import c
+from flext_infra.check.gate_registry import FlextInfraGateRegistry
 from flext_infra.gates.duplication import FlextInfraDuplicationGate
 from tests import m, u
 
@@ -28,19 +32,24 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
     return tuple(sorted(normalized))
 """
 
-    def _ctx(self, root: Path) -> m.Infra.GateContext:
+    @staticmethod
+    def _ctx(root: Path) -> m.Infra.GateContext:
         return m.Infra.GateContext(repository_root=root, reports_dir=root / "reports")
 
-    def test_registry_exposes_the_canonical_gate(self) -> None:
+    @staticmethod
+    def test_registry_exposes_the_canonical_gate() -> None:
+        """Test registry exposes the canonical gate."""
         gate = FlextInfraGateRegistry.default().create("duplication", Path.cwd())
         tm.that(isinstance(gate, FlextInfraDuplicationGate), eq=True)
 
     def test_empty_workspace_scope_is_a_blocking_failure(self, tmp_path: Path) -> None:
+        """Test empty workspace scope is a blocking failure."""
         project = tmp_path / "missing-project"
         project.mkdir()
 
         execution = FlextInfraDuplicationGate(tmp_path).check(
-            project, self._ctx(tmp_path)
+            project,
+            self._ctx(tmp_path),
         )
 
         tm.that(execution.result.passed, eq=False)
@@ -50,7 +59,12 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
 
     @staticmethod
     def _governed_with_declared_trees(tmp_path: Path, *, declare_trees: bool) -> Path:
-        """One governed checkout whose clones live only inside charts/."""
+        """One governed checkout whose clones live only inside charts/.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         root = tmp_path / "governed-duplication"
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
@@ -62,7 +76,8 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
         package = root / "src" / "fixture_duplication"
         package.mkdir(parents=True, exist_ok=True)
         (root / "src" / "fixture_duplication" / "unique.py").write_text(
-            "UNIQUE_MODULE_MARKER = 'canonical-scope-only'\n", encoding="utf-8"
+            "UNIQUE_MODULE_MARKER = 'canonical-scope-only'\n",
+            encoding="utf-8",
         )
         (root / "charts").mkdir()
         # The clone must clear BOTH typed gate floors (lines and tokens); a
@@ -102,7 +117,8 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
         return root
 
     def test_declared_trees_enter_the_scan_and_fail_on_clones(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A declared project tree joins the scan and its clones are findings."""
         root = self._governed_with_declared_trees(tmp_path, declare_trees=True)
@@ -111,7 +127,8 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
 
         tm.that(execution.result.passed, eq=False)
         tm.that(
-            tuple(issue.file for issue in execution.issues), has="charts/values.yaml"
+            tuple(issue.file for issue in execution.issues),
+            has="charts/values.yaml",
         )
 
     def test_undeclared_trees_stay_outside_the_scan(self, tmp_path: Path) -> None:
@@ -130,6 +147,10 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
         ``fixture-dup`` and ``fixture-dup-extra`` share a string prefix but are
         distinct projects; a clone between them must never be attributed to the
         shorter one.
+
+        Returns:
+            The resulting ``Path``.
+
         """
         root = tmp_path / "sibling-workspace"
         root.mkdir()
@@ -151,27 +172,27 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
             package.mkdir(parents=True, exist_ok=True)
             (package / "duplicated.py").write_text(module, encoding="utf-8")
         u.Tests.write_workspace_manifest(
-            root, "sibling-workspace", role=c.Infra.MakeProfile.WORKSPACE
+            root,
+            "sibling-workspace",
+            role=c.Infra.MakeProfile.WORKSPACE,
         )
         u.Tests.declare_workspace_projects(root, ("fixture-dup", "fixture-dup-extra"))
         return root
 
-    def test_sibling_prefix_project_never_claims_foreign_clones(
-        self, tmp_path: Path
+    def test_project_scan_never_reaches_a_prefix_named_sibling(
+        self,
+        tmp_path: Path,
     ) -> None:
-        """A prefix-named sibling is a separate owner, never a crash.
+        """A project evaluates only itself, locally exactly as in CI.
 
-        Regression: ownership used a string prefix, so ``fixture-dup`` claimed
-        ``fixture-dup-extra``'s clone and ``Path.relative_to`` raised
-        ``ValueError`` instead of reporting a finding.
+        Both members carry the same module, yet the gate for ``fixture-dup``
+        scans only its own tree: the sibling whose name it prefixes is a
+        library, never scanned, so no cross-project clone is reported.
         """
         root = self._sibling_prefix_workspace(tmp_path)
         own = root / "fixture-dup"
 
         execution = FlextInfraDuplicationGate(root).check(own, self._ctx(root))
 
-        files = tuple(issue.file for issue in execution.issues)
-        tm.that(execution.result.passed, eq=settings.Infra.github_actions)
-        if not settings.Infra.github_actions:
-            tm.that(files, has="src/fixture_dup/duplicated.py")
-        tm.that(tuple(name for name in files if ".." in name), eq=())
+        tm.that(execution.result.passed, eq=True)
+        tm.that(execution.issues, eq=())

@@ -1,4 +1,8 @@
-"""Public replacement transport preserves generator authority and exact CAS."""
+"""Public replacement transport preserves generator authority and exact CAS.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,6 +12,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import c, m, u
+from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
 from tests import u as test_u
 
@@ -17,7 +22,10 @@ class TestsBatchReplacements:
 
     @staticmethod
     def _report(
-        path: Path, content: bytes, *, generated: bool = False
+        path: Path,
+        content: bytes,
+        *,
+        generated: bool = False,
     ) -> m.Infra.ModScanReport:
         path.write_bytes(content)
         state = tm.ok(u.Cli.atomic_read_binary_file_state(path, required=True))
@@ -47,6 +55,7 @@ class TestsBatchReplacements:
         )
 
     def test_utf8_replacements_use_engine_byte_offsets(self, tmp_path: Path) -> None:
+        """Test utf8 replacements use engine byte offsets."""
         root = test_u.Tests.git_repository(tmp_path)
         path = root / "subject.py"
         original = '# ação\nvalue = "before"\n'.encode()
@@ -55,8 +64,10 @@ class TestsBatchReplacements:
         tm.that(path.read_bytes(), eq=original.replace(b"before", b"after"))
 
     def test_generator_findings_remain_visible_and_unmodified(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test generator findings remain visible and unmodified."""
         root = test_u.Tests.git_repository(tmp_path)
         path = root / "generated.py"
         original = b'value = "before"\n'
@@ -67,12 +78,42 @@ class TestsBatchReplacements:
         tm.that(report.findings, eq=1)
         tm.that(path.read_bytes(), eq=original)
 
+    def test_generator_evidence_never_blocks_authored_rewrites(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Test generator evidence never blocks authored rewrites."""
+        root = test_u.Tests.git_repository(tmp_path)
+        original = b'value = "before"\n'
+        authored = self._report(root / "authored.py", original).entries[0]
+        generated = self._report(
+            root / "generated.py",
+            original,
+            generated=True,
+        ).entries[0]
+        evidence = generated.model_copy(
+            update={
+                "replacement": None,
+                "actionable": False,
+                "classification": c.Infra.ModScanFindingClass.DETECTION_ONLY,
+            },
+        )
+        report = FlextInfraModGateEngine.recounted((authored, evidence))
+        tm.ok(FlextInfraModReplacements.publish(root, report))
+        tm.that((root / "authored.py").read_bytes(), eq=b'value = "after"\n')
+        tm.that((root / "generated.py").read_bytes(), eq=original)
+        tm.that(FlextInfraModGateEngine.authored(report).entries, eq=(authored,))
+
     @pytest.mark.parametrize(
-        "changed", [b'value = "before"\n\n', b'value = "third-party"\n']
+        "changed",
+        [b'value = "before"\n\n', b'value = "third-party"\n'],
     )
     def test_changed_source_is_not_overwritten(
-        self, tmp_path: Path, changed: bytes
+        self,
+        tmp_path: Path,
+        changed: bytes,
     ) -> None:
+        """Test changed source is not overwritten."""
         root = test_u.Tests.git_repository(tmp_path)
         path = root / "subject.py"
         report = self._report(path, b'value = "before"\n')
@@ -81,9 +122,59 @@ class TestsBatchReplacements:
         tm.that(path.read_bytes(), eq=changed)
 
     def test_missing_actionable_snapshot_is_rejected(self, tmp_path: Path) -> None:
+        """Test missing actionable snapshot is rejected."""
         root = test_u.Tests.git_repository(tmp_path)
         path = root / "subject.py"
         report = self._report(path, b'value = "before"\n')
         finding = report.entries[0].model_copy(update={"source_state": None})
         invalid = report.model_copy(update={"entries": (finding,)})
         tm.fail(FlextInfraModReplacements.publish(root, invalid))
+
+    @staticmethod
+    def test_emptied_statement_publishes_formatter_clean_file(
+        tmp_path: Path,
+    ) -> None:
+        """An emptied statement fix publishes skeleton-free, format-clean bytes.
+
+        The ban-test-suite-module-all rule rewrites its match to ``""``; the
+        byte-splice leaves the source line blank and the mod circuit enforces
+        canonical formatting on the first pass after applying.
+        """
+        root = test_u.Tests.git_repository(tmp_path)
+        path = root / "tests" / "unit" / "test_demo.py"
+        path.parent.mkdir(parents=True)
+        original = (
+            b'"""Demo."""\n\n__all__ = ["X"]\n\n\ndef t() -> None:\n    assert True\n'
+        )
+        path.write_bytes(original)
+        state = tm.ok(u.Cli.atomic_read_binary_file_state(path, required=True))
+        statement = b'__all__ = ["X"]'
+        start = original.index(statement)
+        offsets = {"start": start, "end": start + len(statement)}
+        finding = m.Infra.ModScanFinding(
+            rule_file=str(root / "rule.yaml"),
+            rule_id="ban-test-suite-module-all",
+            repository=root.name,
+            file=path,
+            source_owner="authored",
+            source_state=state,
+            range={"byteOffset": offsets},
+            text=statement.decode(),
+            replacement="",
+            actionable=True,
+            classification=c.Infra.ModScanFindingClass.ACTIONABLE,
+            payload={"replacementOffsets": offsets, "severity": "error"},
+        )
+        report = m.Infra.ModScanReport(
+            findings=1,
+            actionable=1,
+            detection_only=0,
+            non_actionable_with_fix=0,
+            files=frozenset({path}),
+            entries=(finding,),
+        )
+        tm.ok(FlextInfraModReplacements.publish(root, report))
+        tm.that(
+            path.read_bytes(),
+            eq=b'"""Demo."""\n\n\ndef t() -> None:\n    assert True\n',
+        )

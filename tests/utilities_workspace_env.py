@@ -1,4 +1,8 @@
-"""Workspace profile and environment test utilities for flext-infra."""
+"""Workspace profile and environment test utilities for flext-infra.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -24,17 +28,13 @@ class TestsFlextInfraUtilitiesWorkspaceEnvMixin:
             os.environ.pop(name, None)
 
     @staticmethod
-    def vscode_declared_search_paths() -> t.JsonList:
-        """Return the config-declared VS Code search paths as rendered JSON."""
-        return list(
-            config.Infra.codegen.vscode.list_settings[
-                c.Infra.VSCODE_PYTHON_ENVS_SEARCH_PATHS_KEY
-            ]
-        )
-
-    @staticmethod
     def repository_profile(root: Path) -> c.Infra.MakeProfile:
-        """Return the Make profile derived from the repository itself."""
+        """Return the Make profile derived from the repository itself.
+
+        Returns:
+            The Make profile derived from the repository itself.
+
+        """
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
         mode = tm.ok(FlextInfraWorkspaceDetector().detect(root))
@@ -52,6 +52,10 @@ class TestsFlextInfraUtilitiesWorkspaceEnvMixin:
         profile-split rule from the SSOT alone. Deriving it from a path makes
         the same assertion depend on where the checkout happens to sit, which
         differs between the workspace and a standalone CI clone.
+
+        Returns:
+            Every SSOT ignore pattern whose section targets *profile*.
+
         """
         gitignore_sections: t.VariadicTuple[m.Infra.ScaffoldGitignoreSectionSpec] = (
             config.Infra.codegen.gitignore_sections
@@ -72,7 +76,7 @@ class TestsFlextInfraUtilitiesWorkspaceEnvMixin:
 
         """
         return TestsFlextInfraUtilitiesWorkspaceEnvMixin.ignore_patterns_for_profile(
-            TestsFlextInfraUtilitiesWorkspaceEnvMixin.repository_profile(root)
+            TestsFlextInfraUtilitiesWorkspaceEnvMixin.repository_profile(root),
         )
 
     @staticmethod
@@ -98,8 +102,9 @@ class TestsFlextInfraUtilitiesWorkspaceEnvMixin:
             # failed run is the success case for a tracked artifact.
             probe: p.Cli.CommandOutput = tm.ok(
                 u.Cli.run_raw(
-                    ["git", "check-ignore", "-q", relative_path], cwd=probe_root
-                )
+                    ["git", "check-ignore", "-q", relative_path],
+                    cwd=probe_root,
+                ),
             )
         code = probe.outcome.raw_return_code
         tm.that(code in {0, 1}, eq=True)

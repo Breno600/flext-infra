@@ -1,4 +1,8 @@
-"""Tri-environment golden contract for pure generation inputs."""
+"""Tri-environment golden contract for pure generation inputs.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -15,8 +19,14 @@ from tests import c, u
 class TestsFlextInfraCodegenRenderPurityGolden:
     """Render remains f(SSOT, templates, PINS) across three host shapes."""
 
-    def _project(self, root: Path) -> Path:
-        """Materialize one governed fixture repository."""
+    @staticmethod
+    def _project(root: Path) -> Path:
+        """Materialize one governed fixture repository.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         project = u.Tests.mk_project(
             root,
             "render-purity",
@@ -25,25 +35,31 @@ class TestsFlextInfraCodegenRenderPurityGolden:
         )
         u.Tests.write_project_beads_config(project, "render-purity")
         u.Tests.initialize_git_repo(
-            project, origin_url=u.Tests.repository_ref("render-purity").url
+            project,
+            origin_url=u.Tests.repository_ref("render-purity").url,
         )
         return project
 
-    def _committed_overlay(self, project: Path, body: str) -> None:
+    @staticmethod
+    def _committed_overlay(project: Path, body: str) -> None:
         """Commit one project-owned ManagedArtifacts catalog."""
         config_dir = project / c.CONFIG_DIR_NAME
         config_dir.mkdir(exist_ok=True)
         (config_dir / "tooling.yaml").write_text(body, encoding="utf-8")
         u.Tests.git_bootstrap(project, ("add", "config/tooling.yaml"))
         u.Tests.git_bootstrap(
-            project, ("commit", "--no-verify", "-m", "commit managed artifacts")
+            project,
+            ("commit", "--no-verify", "-m", "commit managed artifacts"),
         )
 
     @pytest.mark.parametrize(
-        "environment", ["runner-clean", "host-runtime", "host-concurrent-wip"]
+        "environment",
+        ["runner-clean", "host-runtime", "host-concurrent-wip"],
     )
     def test_vscode_settings_are_identical_in_every_environment(
-        self, tmp_path: Path, environment: str
+        self,
+        tmp_path: Path,
+        environment: str,
     ) -> None:
         """Runtime state and worktree WIP never change VS Code projections."""
         project = self._project(tmp_path / environment)
@@ -54,11 +70,15 @@ class TestsFlextInfraCodegenRenderPurityGolden:
             "search.exclude": dict(codegen.vscode_search_exclude_map),
         }
         if environment == "host-runtime":
-            runtime = tmp_path / config.Infra.codegen.toolchain.state_directory_name
-            runtime.mkdir()
-            (runtime / project.name).mkdir()
-            (runtime / project.name / "testmondata").touch()
-            (project / config.Infra.codegen.toolchain.state_directory_name).mkdir()
+            (project / c.Infra.ENVIRONMENT_DIRECTORY).mkdir()
+            external_cache = (
+                project.parent
+                / "testmon-cache"
+                / project.name
+                / codegen.make.testmon_cache.database_filename
+            )
+            external_cache.parent.mkdir(parents=True)
+            external_cache.touch()
         if environment == "host-concurrent-wip":
             (project / "wip_module.py").write_text(
                 "def leaked_private_call():\n    return object().__class__\n",
@@ -76,38 +96,32 @@ class TestsFlextInfraCodegenRenderPurityGolden:
         for key, value in expected.items():
             tm.that(settings[key], eq=value, msg=f"{environment}: {key}")
 
-    def test_ruff_catalog_reads_committed_head_not_worktree_wip(
-        self, tmp_path: Path
+    def test_catalog_reads_committed_head_not_worktree_wip(
+        self,
+        tmp_path: Path,
     ) -> None:
-        """The committed catalog is the sole project Ruff render authority."""
+        """The committed catalog is the sole project managed-artifact authority."""
         project = self._project(tmp_path / "catalog")
         self._committed_overlay(
             project,
-            "ManagedArtifacts:\n"
-            "  Ruff:\n"
-            "    per_file_ignores:\n"
-            "      tests/**: [S101]\n",
+            "ManagedArtifacts:\n  Gitignore:\n    patterns: [committed-cache/]\n",
         )
         (project / c.CONFIG_DIR_NAME / "wip-tooling.yaml").write_text(
-            "ManagedArtifacts:\n"
-            "  Ruff:\n"
-            "    per_file_ignores:\n"
-            "      src/**: [SLF001]\n",
+            "ManagedArtifacts:\n  Gitignore:\n    patterns: [wip-cache/]\n",
             encoding="utf-8",
         )
 
         committed = tm.ok(u.Infra.load_committed_project_managed_artifacts(project))
         working = tm.ok(u.Infra.load_project_managed_artifacts(project))
 
+        tm.that(committed.artifacts.Gitignore.patterns, eq=("committed-cache/",))
         tm.that(
-            dict(committed.artifacts.Ruff.per_file_ignores), eq={"tests/**": ("S101",)}
-        )
-        tm.that(
-            dict(working.artifacts.Ruff.per_file_ignores),
-            eq={"src/**": ("SLF001",), "tests/**": ("S101",)},
+            working.artifacts.Gitignore.patterns,
+            eq=("committed-cache/", "wip-cache/"),
         )
 
-    def test_fixture_scaffold_year_is_the_production_ssot(self) -> None:
+    @staticmethod
+    def test_fixture_scaffold_year_is_the_production_ssot() -> None:
         """Fixture identity uses the same year declaration production renders."""
         year = config.Infra.codegen.scaffold.project.copyright_year
         spec: m.Infra.ProjectSpec = u.Tests.project_spec("year-owner")

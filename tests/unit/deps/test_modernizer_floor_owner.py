@@ -1,4 +1,8 @@
-"""Observe dependency floor ownership through the public modernizer service."""
+"""Observe dependency floor ownership through the public modernizer service.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -44,7 +48,9 @@ class TestsFlextInfraModernizerFloorOwner:
 
     @pytest.mark.parametrize("member_path", [None, Path("tooling/provider")])
     def test_rewrite_uses_declared_local_owner(
-        self, modernizer_workspace: Path, member_path: Path | None
+        self,
+        modernizer_workspace: Path,
+        member_path: Path | None,
     ) -> None:
         """Update the declared SSOT from real installed versions exactly once."""
         source = self._source(modernizer_workspace)
@@ -58,7 +64,9 @@ class TestsFlextInfraModernizerFloorOwner:
         tm.that(name, eq=u.Infra.dep_name(requirement))
         name = tm.not_none(name)
         original = source.read_text(encoding="utf-8")
-        stale = f"{name}>=0"
+        # ``>=0`` is a textual prefix of every 0.x floor the rewrite produces
+        # (``>=0.8.0``), so the stale sentinel must not prefix a real release.
+        stale = f"{name}>=0.0.0"
         source.write_text(
             original.replace(requirement, stale, 1) + "\n# Keep owner annotation.\n",
             encoding="utf-8",
@@ -94,21 +102,25 @@ class TestsFlextInfraModernizerFloorOwner:
         ],
     )
     def test_malformed_owned_config_raises_without_writing(
-        self, modernizer_workspace: Path, content: str
+        self,
+        modernizer_workspace: Path,
+        content: str,
     ) -> None:
         """An owned invalid document cannot become a successful empty update."""
         source = self._source(modernizer_workspace)
         source.write_text(content, encoding="utf-8")
 
         with pytest.raises(
-            ValueError, match=r"codegen|scaffold|dependency_profiles|flow sequence"
+            ValueError,
+            match=r"codegen|scaffold|dependency_profiles|flow sequence",
         ):
             self._run(modernizer_workspace)
 
         tm.that(source.read_text(encoding="utf-8"), eq=content)
 
     def test_consumer_without_owner_leaves_external_config_untouched(
-        self, modernizer_workspace: Path
+        self,
+        modernizer_workspace: Path,
     ) -> None:
         """An unrelated consumer never selects a sibling or installed SSOT."""
         source = self._source(modernizer_workspace)
@@ -131,7 +143,8 @@ class TestsFlextInfraModernizerFloorOwner:
             self._run(modernizer_workspace)
 
     def test_external_configuration_symlink_raises(
-        self, modernizer_workspace: Path
+        self,
+        modernizer_workspace: Path,
     ) -> None:
         """A local-looking config cannot rewrite a different checkout."""
         source = self._source(modernizer_workspace)

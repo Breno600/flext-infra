@@ -1,23 +1,26 @@
 """Darwin Mypy supervisor: sampled process-group RSS and wall-clock deadline.
 
-This executable module uses only the standard library, so supervising starts
-before importing the checker or its dependencies. Darwin's initial VM mappings
+This supervisor validates the owned checker request before launching Mypy.
+Darwin's initial VM mappings
 can already exceed the configured memory budget; RLIMIT_AS cannot represent a
-usable allocation ceiling there. RSS is sampled every 100 ms instead. It is a
+usable allocation ceiling there. RSS is sampled every
+``c.Infra.MYPY_SUPERVISOR_POLL_SECONDS`` instead. It is a
 termination threshold, not a kernel allocation barrier: transient overshoot is
 possible. Linux retains its kernel-enforced address-space limit.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
 
 import os
 import signal
-import subprocess  # nosec B404 - std-lib-only bootstrap supervisor; must run before fleet imports
 import sys
 import time
 from types import FrameType
 
-from flext_infra import t
+from flext_infra import c, m, t
 
 
 class FlextInfraMypyDarwinSupervisor:
@@ -33,6 +36,12 @@ class FlextInfraMypyDarwinSupervisor:
         Raises ProcessGroupAbsent when a native accounting proof shows no live
         member (Darwin may retain an unsignalable zombie-only group): the
         absence is raised, never returned as a silent sentinel.
+
+        Raises:
+            PermissionError: If ``cls._usage(pid)[1]``.
+            ProcessGroupAbsentError: If a ``ProcessLookupError`` is caught; or if a
+                ``PermissionError`` is caught.
+
         """
         try:
             os.killpg(pid, signum)
@@ -47,13 +56,12 @@ class FlextInfraMypyDarwinSupervisor:
 
     @staticmethod
     def _usage(pid: int) -> t.Pair[int, bool]:
-        snapshot = subprocess.run(  # nosec B603 - constant argv (/bin/ps), no shell, no untrusted input
+        from flext_infra import u
+
+        snapshot = u.Cli.run(
             ("/bin/ps", "-axo", "pgid=,rss=,stat="),
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=1,
-        )
+            timeout=c.Infra.MYPY_SUPERVISOR_PS_TIMEOUT,
+        ).unwrap()
         total_kib = 0
         alive = False
         for row in snapshot.stdout.splitlines():
@@ -61,26 +69,38 @@ class FlextInfraMypyDarwinSupervisor:
             if int(group) == pid and not state.startswith("Z"):
                 total_kib += int(rss)
                 alive = True
-        return total_kib * 1024, alive
+        return total_kib * c.Infra.BYTES_PER_KIB, alive
 
     @classmethod
     def run(
         cls,
-        command: t.SequenceOf[str],
+        invocation: m.Infra.MypyInvocation,
         memory_bytes: int,
         timeout: int,
         kill_after: int,
     ) -> int:
-        """Run one command with inherited streams and bounded group lifetime."""
-        if not command or min(memory_bytes, timeout, kill_after) <= 0:
-            msg = "command and positive memory, timeout and kill-after are required"
+        """Run the owned checker with inherited streams and bounded group lifetime.
+
+        Returns:
+            The resulting ``int``.
+
+        Raises:
+            ValueError: If positive memory, timeout and kill-after are required.
+
+        """
+        from flext_infra import u
+
+        if min(memory_bytes, timeout, kill_after) <= 0:
+            msg = "positive memory, timeout and kill-after are required"
             raise ValueError(msg)
         # Probe the native accounting boundary before launching any workload.
         cls._usage(os.getpgrp())
         deadline = time.monotonic() + timeout
-        child = subprocess.Popen(  # nosec B603 - fleet-constructed command; group ownership is the module's purpose
-            command, start_new_session=True
-        )
+        child = u.Cli.process_start(
+            u.Infra.mypy_command(invocation),
+            capture=False,
+            start_new_session=True,
+        ).unwrap()
         received_signal: int = 0
 
         def receive_signal(signum: int, _frame: FrameType | None) -> None:
@@ -101,7 +121,7 @@ class FlextInfraMypyDarwinSupervisor:
                 if cls._usage(child.pid)[0] > memory_bytes:
                     sys.stderr.write("Mypy out of memory: RSS limit reached\n")
                     return 137
-                time.sleep(0.1)
+                time.sleep(c.Infra.MYPY_SUPERVISOR_POLL_SECONDS)
             return exit_code if exit_code >= 0 else 128 - exit_code
         finally:
             # Always clean descendants, even when their leader already exited.
@@ -116,20 +136,24 @@ class FlextInfraMypyDarwinSupervisor:
                     child.poll()
                     if not cls._usage(child.pid)[1]:
                         break
-                    time.sleep(0.05)
+                    time.sleep(c.Infra.MYPY_SUPERVISOR_SHUTDOWN_POLL_SECONDS)
             finally:
                 try:
                     if cls._usage(child.pid)[1]:
                         cls._signal_group(child.pid, signal.SIGKILL)
-                    child.wait()
+                    child.wait().unwrap()
                 finally:
                     for signum, handler in previous.items():
                         signal.signal(signum, handler)
 
 
 if __name__ == "__main__":
+    memory, timeout, kill_after, request = sys.argv[1:]
     raise SystemExit(
         FlextInfraMypyDarwinSupervisor.run(
-            sys.argv[4:], int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3])
-        )
+            m.Infra.MypyInvocation.model_validate_json(request),
+            int(memory),
+            int(timeout),
+            int(kill_after),
+        ),
     )

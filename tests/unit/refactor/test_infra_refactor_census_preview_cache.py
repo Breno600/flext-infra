@@ -1,4 +1,8 @@
-"""Public behavior tests for census removal previews."""
+"""Public behavior tests for census removal previews.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -18,12 +22,15 @@ if TYPE_CHECKING:
 class TestsFlextInfraRefactorCensusPreview:
     """Validate removal planning only through public FLEXT facades."""
 
+    @staticmethod
     def test_build_simple_removal_sources_collapse_excess_blank_lines(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Plan one class removal without leaving excess blank lines."""
         repository_root, package_root = test_u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo"
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         module_path = package_root / "service.py"
         module_path.write_text(
@@ -60,12 +67,15 @@ class TestsFlextInfraRefactorCensusPreview:
         tm.that(updated_source, has="def after")
         tm.that(updated_source, lacks="\n\n\n\n")
 
+    @staticmethod
     def test_build_simple_removal_sources_updates_multiline_consumers(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Plan removal of a base used by a multiline test facade."""
         repository_root, package_root = test_u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo"
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         base_path = package_root / "base.py"
         base_path.write_text(
@@ -124,12 +134,15 @@ class TestsFlextInfraRefactorCensusPreview:
         tm.that(updated_consumer, lacks="Shared,")
         tm.that(updated_consumer, has="Other,")
 
+    @staticmethod
     def test_preview_simple_removal_candidate_does_not_write_source(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Validate a public preview while preserving the source artifact."""
         repository_root, package_root = test_u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo"
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         module_path = package_root / "dispatcher.py"
         original_source = (
@@ -142,6 +155,7 @@ class TestsFlextInfraRefactorCensusPreview:
             "        return run()\n"
         )
         module_path.write_text(original_source, encoding="utf-8")
+        test_u.Tests.provision_checkout(repository_root)
         candidate = m.Infra.RemovalCandidate(
             project="flext-demo",
             file_path=str(module_path.resolve()),
@@ -155,7 +169,10 @@ class TestsFlextInfraRefactorCensusPreview:
 
         with flext_infra.infra.rope_workspace(repository_root) as rope:
             preview = infra_u.Infra.preview_simple_removal_candidate(
-                rope, repository_root, candidate, gates=("lint",)
+                rope,
+                repository_root,
+                candidate,
+                gates=("lint",),
             )
 
         tm.ok(preview)

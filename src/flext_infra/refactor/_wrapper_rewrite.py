@@ -1,4 +1,8 @@
-"""Wrapper-root per-file AST rewrite helpers."""
+"""Wrapper-root per-file AST rewrite helpers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -21,7 +25,7 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
     borrows repository_root + the include-init / dry-run flags + the wrapper
     package set from the facade via FLEXT. ``module_ast`` is narrowed to the
     rope-AST protocol at the parsing boundary via ``ensure_ast_node``, which
-    deliberately avoids ``import ast`` at the consumer layer (tracked: flext-6flt).
+    deliberately avoids ``import ast`` at the consumer layer.
     """
 
     if TYPE_CHECKING:
@@ -48,12 +52,10 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
             rel = file_path
         project_name = rel.parts[0] if rel.parts else "."
         runtime_aliases = project_runtime_aliases.get(
-            project_name, metadata_runtime_aliases
+            project_name,
+            metadata_runtime_aliases,
         )
-        if not any(
-            part in c.Infra.ROOT_WRAPPER_SEGMENTS and part != c.Infra.DEFAULT_SRC_DIR
-            for part in rel.parts
-        ):
+        if not any(part in self._WRAPPER_PACKAGES for part in rel.parts):
             return
         if file_path.name == c.Infra.INIT_PY and (not self.include_init):
             return
@@ -62,7 +64,9 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
         module_ast = u.Infra.ensure_ast_node(pymodule.get_ast())
         line_offsets = self._build_line_offsets(source)
         core_rewrites = self._collect_core_test_rewrites(
-            module_ast, line_offsets=line_offsets, runtime_aliases=runtime_aliases
+            module_ast,
+            line_offsets=line_offsets,
+            runtime_aliases=runtime_aliases,
         )
         has_import_candidate = self._has_wrapper_import_candidate(
             module_ast,
@@ -78,7 +82,6 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
         accumulator.total_core_replacements += len(core_rewrites)
         if has_import_candidate:
             accumulator.import_rewrite_candidates += 1
-            accumulator.wrapper_candidates.append(file_path)
         accumulator.per_project_changes[project_name] += 1
         accumulator.per_project_replacements[project_name] += replacements
         if not self.effective_dry_run and core_updated != source:
@@ -87,20 +90,30 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
 
     @staticmethod
     def _build_line_offsets(source: str) -> list[int]:
-        """Return cumulative line-start byte offsets for ``source``."""
+        """Return cumulative line-start byte offsets for ``source``.
+
+        Returns:
+            Cumulative line-start byte offsets for ``source``.
+
+        """
         line_offsets = [0]
         for line_text in source.splitlines(keepends=True):
             line_offsets.append(line_offsets[-1] + len(line_text))
         return line_offsets
 
+    @staticmethod
     def _collect_core_test_rewrites(
-        self,
         module_ast: t.Infra.RopeAstNode,
         *,
         line_offsets: list[int],
         runtime_aliases: frozenset[str],
     ) -> list[t.Triple[int, int, str]]:
-        """Find every ``<alias>.Core.Tests`` chain and emit ``(start, end, repl)``."""
+        """Find every ``<alias>.Core.Tests`` chain and emit ``(start, end, repl)``.
+
+        Returns:
+            The resulting ``list[t.Triple[int, int, str]]``.
+
+        """
         rewrites: list[t.Triple[int, int, str]] = []
         for node in u.Infra.walk_ast_nodes(u.Infra.ensure_ast_node(module_ast)):
             if (
@@ -109,7 +122,7 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
             ):
                 continue
             parent_attr = getattr(node, "value", None)
-            if not u.Infra.is_ast_node(parent_attr):
+            if not u.Infra.ast_node(parent_attr):
                 continue
             if (
                 u.Infra.node_kind(parent_attr) != "Attribute"
@@ -117,7 +130,7 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
             ):
                 continue
             base_name = getattr(parent_attr, "value", None)
-            if not u.Infra.is_ast_node(base_name):
+            if not u.Infra.ast_node(base_name):
                 continue
             if u.Infra.node_kind(base_name) != "Name":
                 continue
@@ -140,7 +153,12 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
         wrapper_submodules: frozenset[str],
         runtime_aliases: frozenset[str],
     ) -> bool:
-        """Return whether any ``from wrapper.<sub> import <alias>`` exists."""
+        """Return whether any ``from wrapper.<sub> import <alias>`` exists.
+
+        Returns:
+            Whether any ``from wrapper.<sub> import <alias>`` exists.
+
+        """
         for node in u.Infra.walk_ast_nodes(u.Infra.ensure_ast_node(module_ast)):
             if u.Infra.node_kind(node) != "ImportFrom":
                 continue
@@ -161,12 +179,20 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
 
     @staticmethod
     def _apply_byte_rewrites(
-        source: str, rewrites: t.SequenceOf[t.Triple[int, int, str]]
+        source: str,
+        rewrites: t.SequenceOf[t.Triple[int, int, str]],
     ) -> str:
-        """Apply ``(start, end, replacement)`` triples to ``source`` (right-to-left)."""
+        """Apply ``(start, end, replacement)`` triples to ``source`` (right-to-left).
+
+        Returns:
+            The resulting ``str``.
+
+        """
         updated = source
         for start, end, replacement in sorted(
-            rewrites, key=itemgetter(0), reverse=True
+            rewrites,
+            key=itemgetter(0),
+            reverse=True,
         ):
             updated = updated[:start] + replacement + updated[end:]
         return updated

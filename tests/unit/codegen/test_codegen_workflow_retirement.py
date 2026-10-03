@@ -1,4 +1,8 @@
-"""Public conformance preserves authored workflows and release capability."""
+"""Public conformance preserves authored workflows and release capability.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,12 +11,11 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m, u
+from flext_infra import c, config, infra, m, u
 from flext_infra.codegen import FlextInfraCodegenConform
 from flext_infra.workspace import FlextInfraWorkspaceDetector
 from tests import u as test_u
-
-from .conform_support import TestsFlextInfraConformSupport
+from tests.unit.codegen.conform_support import TestsFlextInfraConformSupport
 
 pytestmark = pytest.mark.slow
 
@@ -22,19 +25,27 @@ class TestsFlextInfraCodegenWorkflowRetirement:
 
     @staticmethod
     def _declared_workspace(
-        root: Path, *, publishes_release: bool
+        root: Path,
+        *,
+        publishes_release: bool,
     ) -> m.Infra.WorkspaceSpec:
-        """Declare release capability through the real repository manifest."""
+        """Declare release capability through the real repository manifest.
+
+        Returns:
+            The resulting ``m.Infra.WorkspaceSpec``.
+
+        """
         TestsFlextInfraConformSupport.seed_infra_package_tree(root)
         manifest_path = test_u.Tests.write_standalone_workspace_manifest(
-            root, config.Infra.name
+            root,
+            config.Infra.name,
         )
         workspace = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
         manifest = m.Infra.WorkspaceManifestSpec(
             version=c.Infra.WORKSPACE_MANIFEST_VERSION,
             name=workspace.name,
             repository=workspace.repository.model_copy(
-                update={"publishes_release": publishes_release}
+                update={"publishes_release": publishes_release},
             ),
             project=workspace.project,
         )
@@ -44,7 +55,11 @@ class TestsFlextInfraCodegenWorkflowRetirement:
     @pytest.mark.parametrize("declared_release", [False, True])
     @pytest.mark.parametrize("marker", [None, *c.Infra.TEMPLATE_GENERATED_MARKERS])
     def test_retirement_requires_both_exclusion_and_codegen_authorship(
-        self, infra_git_repo: Path, *, declared_release: bool, marker: str | None
+        self,
+        infra_git_repo: Path,
+        *,
+        declared_release: bool,
+        marker: str | None,
     ) -> None:
         """Effective target policy and current markers determine desired presence."""
         root = infra_git_repo
@@ -96,7 +111,10 @@ class TestsFlextInfraCodegenWorkflowRetirement:
 
     @pytest.mark.parametrize("declared_release", [False, True])
     def test_release_workflows_converge_from_scaffold_to_existing_repository(
-        self, infra_git_repo: Path, *, declared_release: bool
+        self,
+        infra_git_repo: Path,
+        *,
+        declared_release: bool,
     ) -> None:
         """Both public apply routes preserve the declared release capability."""
         root = infra_git_repo
@@ -106,7 +124,7 @@ class TestsFlextInfraCodegenWorkflowRetirement:
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.APPLY,
         )
-        tm.ok(FlextInfraCodegenConform.execute_request(request, workspace))
+        tm.ok(infra.codegen_conform(request, workspace))
         target = tm.ok(FlextInfraWorkspaceDetector.conform_target(root))
         tm.that(target.publishes_release, eq=declared_release)
         releases = tuple(
@@ -127,7 +145,7 @@ class TestsFlextInfraCodegenWorkflowRetirement:
             if (root / entry.destination).is_file()
         }
 
-        conformed = tm.ok(FlextInfraCodegenConform.execute_request(request))
+        conformed = tm.ok(infra.codegen_conform(request))
 
         release_paths = {root / entry.destination for entry in releases}
         tm.that(release_paths.intersection(conformed.written_files), empty=True)

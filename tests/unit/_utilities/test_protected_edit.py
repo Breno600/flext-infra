@@ -1,3 +1,9 @@
+"""Test protected edit module.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -12,9 +18,18 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraUtilitiesProtectedEdit:
+    @staticmethod
+    @pytest.fixture(autouse=True)
+    def provisioned_workspace(tmp_path: Path) -> None:
+        """The edited workspace is a checkout whose environment owns the tools."""
+        u.Tests.provision_checkout(tmp_path)
+
+    @staticmethod
     @pytest.mark.parametrize("batch", [False, True])
     def test_invalid_ruff_configuration_propagates_and_restores_source(
-        self, tmp_path: Path, *, batch: bool
+        tmp_path: Path,
+        *,
+        batch: bool,
     ) -> None:
         """A configuration failure is not a remaining-findings receipt."""
         project_config = (
@@ -64,12 +79,18 @@ class TestsFlextInfraUtilitiesProtectedEdit:
             protected_write()
         tm.that(py_file.read_text(encoding=c.Cli.ENCODING_DEFAULT), eq=original)
 
+    @staticmethod
     @pytest.mark.parametrize("batch", [False, True])
     @pytest.mark.parametrize(
-        ("introduced", "nonfixable"), [(False, False), (True, False), (True, True)]
+        ("introduced", "nonfixable"),
+        [(False, False), (True, False), (True, True)],
     )
     def test_normalization_repairs_only_files_with_new_findings(
-        self, tmp_path: Path, *, batch: bool, introduced: bool, nonfixable: bool
+        tmp_path: Path,
+        *,
+        batch: bool,
+        introduced: bool,
+        nonfixable: bool,
     ) -> None:
         """A real lint delta selects repair; pre-existing findings alone do not."""
         package = u.Tests.src_package(
@@ -112,7 +133,9 @@ class TestsFlextInfraUtilitiesProtectedEdit:
             result = u.Infra.protected_source_write(
                 py_file,
                 request=m.Infra.ProtectedSourceWriteRequest(
-                    workspace=tmp_path, updated_source=requested, gates=("lint",)
+                    workspace=tmp_path,
+                    updated_source=requested,
+                    gates=("lint",),
                 ),
             )
         tm.that(result[0], eq=not nonfixable)
@@ -128,7 +151,9 @@ class TestsFlextInfraUtilitiesProtectedEdit:
         result = u.Infra.protected_source_write(
             py_file,
             request=m.Infra.ProtectedSourceWriteRequest(
-                workspace=workspace, updated_source=updated_source, gates=("lint",)
+                workspace=workspace,
+                updated_source=updated_source,
+                gates=("lint",),
             ),
         )
 
@@ -138,8 +163,9 @@ class TestsFlextInfraUtilitiesProtectedEdit:
             eq=updated_source.rstrip("\n"),
         )
 
+    @staticmethod
     def test_pyrefly_snapshot_uses_the_edited_projects_config(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Protected validation never inherits the orchestrator's Pyrefly config."""
         project = tmp_path / "project"
@@ -154,8 +180,9 @@ class TestsFlextInfraUtilitiesProtectedEdit:
         tm.that(commands["pyrefly"], has="--config")
         tm.that(commands["pyrefly"], has=str(config_path))
 
+    @staticmethod
     def test_preview_source_writes_restores_original_sources_after_preview(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         py_file = tmp_path / "sample.py"
         original_source = "def value() -> int:\n    return 1\n"
@@ -163,26 +190,31 @@ class TestsFlextInfraUtilitiesProtectedEdit:
         py_file.write_text(original_source, encoding=c.Cli.ENCODING_DEFAULT)
 
         result = u.Infra.preview_source_writes(
-            {py_file: updated_source}, workspace=tmp_path, gates=("lint",)
+            {py_file: updated_source},
+            workspace=tmp_path,
+            gates=("lint",),
         )
 
         tm.that(result, eq=(True, []))
         tm.that(py_file.read_text(encoding=c.Cli.ENCODING_DEFAULT), eq=original_source)
 
     def test_protected_source_write_skips_pytest_for_non_test_file(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         self._assert_protected_source_write(tmp_path / "sample.py", tmp_path)
 
     def test_protected_source_write_treats_no_tests_collected_as_success(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         tests_dir = tmp_path / "tests"
         tests_dir.mkdir()
         self._assert_protected_source_write(tests_dir / "test_placeholder.py", tmp_path)
 
+    @staticmethod
     def test_protected_source_writes_applies_request_options(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         left_file = tmp_path / "left.py"
         right_file = tmp_path / "right.py"

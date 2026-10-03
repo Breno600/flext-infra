@@ -1,4 +1,8 @@
-"""Skill validation per-rule execution + violation counting — extracted concern."""
+"""Skill validation per-rule execution + violation counting — extracted concern.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -10,7 +14,7 @@ from typing import TYPE_CHECKING
 from flext_infra import c, u
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from flext_infra import m, p, t
 
 
 class FlextInfraSkillRuleRunnerMixin:
@@ -23,15 +27,11 @@ class FlextInfraSkillRuleRunnerMixin:
     def _evaluate_single_rule(
         self,
         rule_obj: t.MappingKV[str, t.JsonValue],
-        skill_dir: Path,
-        root: Path,
-        mode: c.Infra.OperationMode,
-        include_globs: t.StrSequence,
-        exclude_globs: t.StrSequence,
+        context: m.Infra.SkillRuleEvaluationContext,
         counts: t.MutableIntMapping,
         violations: t.MutableSequenceOf[str],
     ) -> None:
-        """Evaluate one rule entry and accumulate counts/violations."""
+        """Evaluate one rule entry of the skill pass and accumulate its outcome."""
         rule_id = u.Cli.json_get_str_key(rule_obj, c.Infra.RK_ID)
         rule_type = u.Cli.json_get_str_key(rule_obj, "type")
         group = (
@@ -40,10 +40,19 @@ class FlextInfraSkillRuleRunnerMixin:
         match rule_type:
             case "ast-grep":
                 count = self._run_ast_grep_count(
-                    rule_obj, skill_dir, root, include_globs, exclude_globs
+                    rule_obj,
+                    context.skill_dir,
+                    context.root,
+                    context.include_globs,
+                    context.exclude_globs,
                 )
             case "custom":
-                count = self._run_custom_count(rule_obj, skill_dir, root, mode)
+                count = self._run_custom_count(
+                    rule_obj,
+                    context.skill_dir,
+                    context.root,
+                    context.mode,
+                )
             case _:
                 return
         counts[group] = counts.get(group, 0) + count
@@ -53,15 +62,25 @@ class FlextInfraSkillRuleRunnerMixin:
             )
             violations.append(f"[{rule_id}] {count} {label}")
 
+    @staticmethod
     def _run_ast_grep_count(
-        self,
         rule: t.MappingKV[str, t.JsonValue],
         skill_dir: Path,
         project_path: Path,
         include_globs: t.StrSequence,
         exclude_globs: t.StrSequence,
     ) -> int:
-        """Run an ast-grep rule and return match count."""
+        """Run an ast-grep rule and return match count.
+
+        Returns:
+            The resulting ``int``.
+
+        Raises:
+            RuntimeError: If ast-grep rule must declare a non-empty file; or if ast-grep
+                rule file does not exist; or if ``result_wrapper.failure``; or if
+                ast-grep exited with code.
+
+        """
         rule_file_raw = u.Cli.json_get_str_key(rule, c.Infra.RK_FILE)
         if not rule_file_raw:
             msg = "ast-grep rule must declare a non-empty file"
@@ -79,7 +98,9 @@ class FlextInfraSkillRuleRunnerMixin:
             cmd.extend(["--globs", f"!{pat}"])
         cmd.append(str(project_path))
         result_wrapper = u.Cli.run_raw(
-            cmd, cwd=project_path, timeout=c.Infra.TIMEOUT_DEFAULT
+            cmd,
+            cwd=project_path,
+            timeout=c.Infra.TIMEOUT_DEFAULT,
         )
         if result_wrapper.failure:
             msg = result_wrapper.error or "ast-grep execution failed"
@@ -103,7 +124,12 @@ class FlextInfraSkillRuleRunnerMixin:
 
     @staticmethod
     def _parse_violation_count(stdout: str) -> int:
-        """Parse violation count from JSON-line stdout of a custom script."""
+        """Parse violation count from JSON-line stdout of a custom script.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         count = 0
         for raw_line in stdout.splitlines():
             line = raw_line.strip()
@@ -124,7 +150,17 @@ class FlextInfraSkillRuleRunnerMixin:
         project_path: Path,
         mode: c.Infra.OperationMode,
     ) -> int:
-        """Run a custom rule script and return violation count."""
+        """Run a custom rule script and return violation count.
+
+        Returns:
+            The resulting ``int``.
+
+        Raises:
+            RuntimeError: If custom rule must declare a non-empty script; or if custom
+                rule script does not exist; or if ``result_wrapper.failure``; or if
+                custom rule exited with code.
+
+        """
         script_raw = u.Cli.json_get_str_key(rule, "script")
         if not script_raw:
             msg = "custom rule must declare a non-empty script"
@@ -144,7 +180,9 @@ class FlextInfraSkillRuleRunnerMixin:
         if bool(rule.get("pass_mode")):
             cmd.extend(["--mode", mode.value])
         result_wrapper = u.Cli.run_raw(
-            cmd, cwd=project_path, timeout=c.Infra.TIMEOUT_DEFAULT
+            cmd,
+            cwd=project_path,
+            timeout=c.Infra.TIMEOUT_DEFAULT,
         )
         if result_wrapper.failure:
             msg = result_wrapper.error or "custom rule execution failed"
@@ -152,7 +190,10 @@ class FlextInfraSkillRuleRunnerMixin:
         result: p.Cli.CommandOutput = result_wrapper.value
         if result.outcome.raw_return_code not in {0, 1}:
             detail = (result.stderr or result.stdout).strip() or "no diagnostics"
-            msg = f"custom rule exited with code {result.outcome.raw_return_code}: {detail}"
+            msg = (
+                f"custom rule exited with code "
+                f"{result.outcome.raw_return_code}: {detail}"
+            )
             raise RuntimeError(msg)
         count = self._parse_violation_count(result.stdout or "")
         if result.outcome.raw_return_code == 1:

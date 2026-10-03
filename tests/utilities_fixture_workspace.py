@@ -1,4 +1,8 @@
-"""Workspace and project-layout fixture test utilities for flext-infra."""
+"""Workspace and project-layout fixture test utilities for flext-infra.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,9 +12,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import config, u
-from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
-from flext_infra.codegen import FlextInfraCodegenConform
+from flext_infra import config, infra, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from flext_infra.worktree import FlextInfraWorktreeService
 from tests import c, m, t
@@ -32,7 +34,12 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         with_src: bool = False,
         with_git: bool = False,
     ) -> Path:
-        """Provide the typed test helper `mk_project`."""
+        """Provide the typed test helper `mk_project`.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         project_dir = root / name
         project_dir.mkdir(parents=True, exist_ok=True)
         (project_dir / "pyproject.toml").write_text(pyproject, encoding="utf-8")
@@ -44,18 +51,25 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         if with_git:
             (project_dir / ".git").mkdir(exist_ok=True)
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
-            project_dir, name
+            project_dir,
+            name,
         )
         return project_dir
 
     @staticmethod
     def demo_project(root: Path, *, name: str = "demo-project") -> t.Pair[Path, Path]:
-        """Create one minimal buildable project; return its root and package dir."""
+        """Create one minimal buildable project; return its root and package dir.
+
+        Returns:
+            The resulting ``t.Pair[Path, Path]``.
+
+        """
         project = root / name
         package_dir = project / "src" / name.replace("-", "_")
         package_dir.mkdir(parents=True)
         (project / "pyproject.toml").write_text(
-            f"[project]\nname='{name}'\n", encoding="utf-8"
+            f"[project]\nname='{name}'\n",
+            encoding="utf-8",
         )
         (project / "Makefile").write_text("all:\n\t@true\n", encoding="utf-8")
         (package_dir / "__init__.py").write_text("", encoding="utf-8")
@@ -68,6 +82,10 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         The distribution name a scan resolves is part of the fixture's
         contract, so ``pyproject`` is declared by the caller and never
         derived from the directory name.
+
+        Returns:
+            The resulting ``Path``.
+
         """
         package_dir = project_dir / "src" / package_name
         package_dir.mkdir(parents=True, exist_ok=True)
@@ -89,16 +107,23 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         Returns ``(workspace, project, package)``. ``declare`` writes the
         governed ``.gitmodules`` row; a scan that must observe an undeclared
         project sets it to ``False``.
+
+        Returns:
+            The resulting ``t.Triple[Path, Path, Path]``.
+
         """
         workspace = tmp_path / "workspace"
         project = workspace / project_name
         package = TestsFlextInfraUtilitiesWorkspaceFixtureMixin.src_package(
-            project, package_name, pyproject=pyproject
+            project,
+            package_name,
+            pyproject=pyproject,
         )
         (project / "Makefile").write_text("all:\n\t@true\n", encoding="utf-8")
         if declare:
             TestsFlextInfraUtilitiesProjectFixtureMixin.declare_workspace_projects(
-                workspace, (project_name,)
+                workspace,
+                (project_name,),
             )
         return workspace, project, package
 
@@ -111,9 +136,13 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         inherited_facets: t.StrSequence = (),
         root_modules: t.StrSequence = (),
         root_packages: t.StrSequence = (),
+        repository_namespace_packages: t.StrSequence = (),
+        packaged_data_paths: t.StrSequence = (),
+        packaged_data_excludes: t.StrSequence = (),
         extra_verbs: t.VariadicTuple[m.Infra.MakeVerbSpec] = (),
         gascity_enabled: bool | None = None,
         role: c.Infra.MakeProfile = c.Infra.MakeProfile.STANDALONE,
+        cli_module: bool | None = None,
     ) -> Path:
         """Write the declared ``config/workspace.yaml`` of one standalone repository.
 
@@ -126,11 +155,21 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         managed Makefile renders into its help block, so a caller controls
         real rendered content through the declaration the loader validates.
 
-        ``gascity_enabled`` declares the repository policy overlay's Gas City
-        participation; ``None`` writes no overlay at all (the fleet default).
+        ``cli_module`` declares whether an existing package ships its cli entry
+        module; ``None`` keeps the project model's own default.
+
+        ``gascity_enabled`` declares the Gas City participation of a repository
+        that participates in Beads; ``None`` writes no overlay at all (the fleet
+        default). An overlay states every participation explicitly: its Beads
+        default is off, and Gas City requires Beads.
+
+        Returns:
+            The resulting ``Path``.
+
         """
         repository = TestsFlextInfraUtilitiesProjectFixtureMixin.repository_ref(
-            name, role=role
+            name,
+            role=role,
         )
         if extra_verbs:
             repository = repository.model_copy(update={"extra_verbs": extra_verbs})
@@ -139,14 +178,32 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             project = project.model_copy(update={"upstream": upstream})
         if inherited_facets:
             project = project.model_copy(
-                update={"inherited_facets": tuple(inherited_facets)}
+                update={"inherited_facets": tuple(inherited_facets)},
             )
+        if cli_module is not None:
+            project = project.model_copy(update={"cli_module": cli_module})
         if root_modules or root_packages:
             project = project.model_copy(
                 update={
                     "root_modules": tuple(root_modules),
                     "root_packages": tuple(root_packages),
-                }
+                },
+            )
+        if repository_namespace_packages:
+            project = project.model_copy(
+                update={
+                    "repository_namespace_packages": tuple(
+                        repository_namespace_packages,
+                    ),
+                },
+            )
+        if packaged_data_paths:
+            project = project.model_copy(
+                update={"packaged_data_paths": tuple(packaged_data_paths)},
+            )
+        if packaged_data_excludes:
+            project = project.model_copy(
+                update={"packaged_data_excludes": tuple(packaged_data_excludes)},
             )
         manifest = m.Infra.WorkspaceManifestSpec(
             version=c.Infra.WORKSPACE_MANIFEST_VERSION,
@@ -159,10 +216,12 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 update={
                     "repository_policy_overlays": (
                         m.Infra.RepositoryPolicyOverlaySpec(
-                            project=name, gascity_enabled=gascity_enabled
+                            project=name,
+                            beads_enabled=True,
+                            gascity_enabled=gascity_enabled,
                         ),
-                    )
-                }
+                    ),
+                },
             )
         config_dir = project_dir / c.CONFIG_DIR_NAME
         config_dir.mkdir(parents=True, exist_ok=True)
@@ -171,18 +230,52 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         return manifest_path
 
     @staticmethod
-    def standalone_workspace(
-        project_dir: Path, name: str = "flext-demo"
-    ) -> m.Infra.WorkspaceSpec:
-        """Materialize and load the canonical minimal standalone fixture."""
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+    def declared_requirements(distribution: str) -> t.StrSequence:
+        """Declare the governed tooling suppliers a fixture project depends on.
 
-        infra = TestsFlextInfraUtilitiesProjectFixtureMixin.repository_ref(
-            config.Infra.name
+        The set derives from the scaffold dev group and the declared infra
+        repository, each pinned to its fixture provider URL and line; the
+        project itself is never its own supplier.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
+        fixture = TestsFlextInfraUtilitiesProjectFixtureMixin
+        names = {
+            config.Infra.codegen.infra_repository.distribution,
+            *(
+                name
+                for requirement in config.Infra.codegen.scaffold.project.dev
+                if (name := u.Infra.dep_name(requirement)) is not None
+                and name.startswith("flext-")
+            ),
+        } - {distribution}
+        return tuple(
+            f"{name} @ git+{fixture.repository_ref(name).url}@"
+            f"{fixture.provider_branch()}"
+            for name in sorted(names)
         )
-        branch = TestsFlextInfraUtilitiesProjectFixtureMixin.provider_branch()
-        tests_ref = TestsFlextInfraUtilitiesProjectFixtureMixin.repository_ref(
-            "flext-tests"
+
+    @staticmethod
+    def standalone_workspace(
+        project_dir: Path,
+        name: str = "flext-demo",
+    ) -> m.Infra.WorkspaceSpec:
+        """Materialize and load the canonical minimal standalone fixture.
+
+        Returns:
+            The resulting ``m.Infra.WorkspaceSpec``.
+
+        """
+        fixture = TestsFlextInfraUtilitiesWorkspaceFixtureMixin
+        dev = ", ".join(f'"{item}"' for item in fixture.declared_requirements(name))
+        # The governed notice names the manifest's first author, so the
+        # minimal project declares the fixture's own scaffold identity.
+        spec = TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name)
+        python_required = config.Infra.codegen.toolchain.python_required_version
+        upstream_source = TestsFlextInfraUtilitiesProjectFixtureMixin.flext_source(
+            spec.upstream,
         )
         package_root = project_dir / "src" / name.replace("-", "_")
         package_root.mkdir(parents=True, exist_ok=True)
@@ -191,53 +284,87 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             "[project]\n"
             f'name = "{name}"\n'
             'version = "0.1.0"\n'
-            f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
-            "dependencies = []\n"
+            f'authors = [{{name = "{spec.author_name}", '
+            f'email = "{spec.author_email}"}}]\n'
+            f'requires-python = "{python_required}"\n'
+            f'dependencies = ["{upstream_source}"]\n'
             "[dependency-groups]\n"
-            f'dev = ["{infra.distribution} @ git+{infra.url}@{branch}", '
-            f'"{tests_ref.distribution} @ git+{tests_ref.url}@{branch}"]\n',
+            f"dev = [{dev}]\n",
             encoding="utf-8",
         )
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
-            project_dir, name
+            project_dir,
+            name,
+        )
+        # Provider identity is declared, never a checkout path: the governed
+        # HTTPS URL is the origin the manifest carries, so the workspace the
+        # detector loads satisfies the canonical-HTTPS provider gate (a bare
+        # ``str(root)`` origin reads as a path, not an identity).
+        TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(
+            project_dir,
+            origin_url=(
+                f"{TestsFlextInfraUtilitiesProjectFixtureMixin.provider().base_url.rstrip('/')}/"
+                f"{name}.git"
+            ),
         )
         origin = tm.ok(
             u.Infra.git_remote_url(
                 m.Infra.GitRemoteUrlRequest(
-                    repo_root=project_dir, remote=c.Infra.GIT_ORIGIN
-                )
-            )
+                    repo_root=project_dir,
+                    remote=c.Infra.GIT_ORIGIN,
+                ),
+            ),
         )
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_workspace_manifest(
-            project_dir, name, url=origin.text.strip()
+            project_dir,
+            name,
+            url=origin.text.strip(),
         )
         workspace = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(project_dir))
         return workspace.model_copy(
             update={
                 "project": TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(
-                    name
-                )
-            }
+                    name,
+                ),
+            },
         )
 
     @staticmethod
     def required_beads(workspace: m.Infra.WorkspaceSpec) -> m.Infra.BeadsProjectSpec:
         """Return the ledger identity the observed loader must always resolve.
 
-        Every observed load owns a Beads identity — the loader rejects a
-        spec without one — so a test asserting that identity states the
-        contract here instead of reaching into the spec at each call site.
+        Callers use this only for fixtures that explicitly enable Beads.
+
+        Returns:
+            The ledger identity the observed loader must always resolve.
+
+        Raises:
+            ValueError: If test fixture requires Beads participation.
+
         """
+        if workspace.beads is None:
+            msg = "test fixture requires Beads participation"
+            raise ValueError(msg)
         return workspace.beads
 
     @staticmethod
     def to_pascal(snake: str) -> str:
-        """Convert a snake-case fixture name to PascalCase."""
+        """Convert a snake-case fixture name to PascalCase.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return "".join(part.title() for part in snake.split("_"))
 
     @staticmethod
     def src_module_files() -> t.StrSequence:
-        """Return canonical FLEXT source-facade filenames."""
+        """Return canonical FLEXT source-facade filenames.
+
+        Returns:
+            Canonical FLEXT source-facade filenames.
+
+        """
         return (
             "constants.py",
             "typings.py",
@@ -248,18 +375,32 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
 
     @staticmethod
     def create_codegen_project(
-        *, tmp_path: Path, name: str, pkg_name: str, files: t.StrMapping
+        *,
+        tmp_path: Path,
+        name: str,
+        pkg_name: str,
+        files: t.StrMapping,
     ) -> Path:
-        """Provide the typed test helper `create_codegen_project`."""
+        """Provide the typed test helper `create_codegen_project`.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         project = tmp_path / name
         project.mkdir()
         (project / "Makefile").touch()
         (project / "pyproject.toml").write_text(
-            (f"[project]\nname='{name}'\ndependencies=['flext-core>=0.1.0']\n"),
+            (
+                f"[project]\nname='{name}'\nversion='0.1.0'\n"
+                'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
+                "dependencies=['flext-core>=0.1.0']\n"
+            ),
             encoding="utf-8",
         )
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
-            project, name
+            project,
+            name,
         )
         pkg = project / "src" / pkg_name
         pkg.mkdir(parents=True)
@@ -288,9 +429,16 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
 
     @staticmethod
     def create_scaffolder_test_project(
-        *, tmp_path: Path, with_all_modules: bool
+        *,
+        tmp_path: Path,
+        with_all_modules: bool,
     ) -> Path:
-        """Create a project fixture for scaffolder tests."""
+        """Create a project fixture for scaffolder tests.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         project = tmp_path / "test-project"
         project.mkdir()
         (project / "Makefile").touch()
@@ -300,7 +448,8 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         )
         (project / ".git").mkdir()
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
-            project, "test-project"
+            project,
+            "test-project",
         )
         pkg = project / "src" / "test_project"
         pkg.mkdir(parents=True)
@@ -313,25 +462,17 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 )
         return project
 
-    @staticmethod
-    def create_checker_project(
-        tmp_path: Path, *, project_name: str = "p1", with_src: bool = False
-    ) -> t.Pair[FlextInfraWorkspaceChecker, Path]:
-        """Provide the typed test helper `create_checker_project`."""
-        checker = FlextInfraWorkspaceChecker(repository_root=tmp_path)
-        project_dir = TestsFlextInfraUtilitiesWorkspaceFixtureMixin.mk_project(
-            tmp_path, project_name
-        )
-        if with_src:
-            (project_dir / "src").mkdir(parents=True, exist_ok=True)
-        return checker, project_dir
-
     class WorktreeFixture:
         """Provide one repository and lane-path contract without collecting tests."""
 
         @staticmethod
         def add_worktree(repository: Path, branch: str, *, base: str = "HEAD") -> str:
-            """Create one applied worktree and return Git's canonical lane path."""
+            """Create one applied worktree and return Git's canonical lane path.
+
+            Returns:
+                The resulting ``str``.
+
+            """
             return tm.ok(
                 FlextInfraWorktreeService(
                     repository_root=repository,
@@ -339,16 +480,22 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                     branch=branch,
                     base=base,
                     apply_changes=True,
-                ).execute()
+                ).execute(),
             )
 
         @staticmethod
         def override_repository_manifest(
-            repository: Path, updates: Mapping[str, t.JsonValue]
+            repository: Path,
+            updates: Mapping[str, t.JsonValue],
         ) -> m.Infra.RepositoryRef:
-            """Re-select the observed repository, apply overrides, rewrite its manifest."""
+            """Re-select the observed repository, apply overrides, rewrite its manifest.
+
+            Returns:
+                The resulting ``m.Infra.RepositoryRef``.
+
+            """
             observed = tm.ok(
-                FlextInfraWorkspaceDetector.load_workspace_spec(repository)
+                FlextInfraWorkspaceDetector.load_workspace_spec(repository),
             )
             declared = observed.repository.model_copy(update=dict(updates))
             tm.ok(
@@ -359,13 +506,18 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                         "name": declared.name,
                         "repository": declared.model_dump(mode="json"),
                     },
-                )
+                ),
             )
             return declared
 
         @classmethod
         def attach_member_child(cls, root: Path) -> Path:
-            """Initialize the standard child member and link it to the root ledger."""
+            """Initialize the standard child member and link it to the root ledger.
+
+            Returns:
+                The resulting ``Path``.
+
+            """
             child = root / "fixture-child"
             cls.initialize_governed_project(
                 child,
@@ -386,10 +538,15 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
 
         @staticmethod
         def _lane(primary_root: Path, outermost_project: Path, branch: str) -> Path:
-            """Resolve the lane through the production topology owner."""
+            """Resolve the lane through the production topology owner.
+
+            Returns:
+                The resulting ``Path``.
+
+            """
             _ = outermost_project
             return tm.ok(
-                FlextInfraWorktreeService.canonical_lane_path(primary_root, branch)
+                FlextInfraWorktreeService.canonical_lane_path(primary_root, branch),
             )
 
         @staticmethod
@@ -418,18 +575,25 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             """Commit one deliberate fixture mutation."""
             tm.ok(
                 u.Cli.run_checked(
-                    [c.Infra.GIT, "add", "Makefile", "pyproject.toml"], cwd=repository
-                )
+                    [c.Infra.GIT, "add", "Makefile", "pyproject.toml"],
+                    cwd=repository,
+                ),
             )
             tm.ok(
                 u.Cli.run_checked(
-                    [c.Infra.GIT, "commit", "-m", message], cwd=repository
-                )
+                    [c.Infra.GIT, "commit", "-m", message],
+                    cwd=repository,
+                ),
             )
 
         @classmethod
         def conformed_root(cls, tmp_path: Path) -> Path:
-            """Materialize one governed project and conform it to a fixed point."""
+            """Materialize one governed project and conform it to a fixed point.
+
+            Returns:
+                The resulting ``Path``.
+
+            """
             root = tmp_path / "repo"
             cls.initialize_governed_project(
                 root,
@@ -439,16 +603,17 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 issue_prefix="fixture-prefix",
             )
             TestsFlextInfraUtilitiesGitMixin.commit_git_changes(
-                root, "Declare project identity"
+                root,
+                "Declare project identity",
             )
             tm.ok(
-                FlextInfraCodegenConform.execute_request(
+                infra.codegen_conform(
                     TestsFlextInfraUtilitiesCodegenMixin.conform_request(
                         root,
                         scope=c.Infra.CodegenConformScope.SELF,
                         mode=c.Infra.CodegenConformMode.APPLY,
-                    )
-                )
+                    ),
+                ),
             )
             return root
 
@@ -459,6 +624,10 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             The internal dependency declares its own direct Git source: the
             requirement line is the authority conform canonicalizes, and a
             source-less internal dependency fails loudly.
+
+            Returns:
+                The resulting ``Path``.
+
             """
             root.mkdir(parents=True, exist_ok=True)
             pyproject = root / "pyproject.toml"
@@ -468,20 +637,10 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 f"git+{provider.base_url.rstrip('/')}/flext-core.git@"
                 f"{TestsFlextInfraUtilitiesProjectFixtureMixin.provider_branch()}"
             )
-            infra = config.Infra.codegen.infra_repository.distribution
-            tooling_names = {
-                infra,
-                *(
-                    name
-                    for requirement in config.Infra.codegen.scaffold.project.dev
-                    if (name := u.Infra.dep_name(requirement)) is not None
-                    and name.startswith("flext-")
-                ),
-            } - {distribution}
+            workspace_fixture = TestsFlextInfraUtilitiesWorkspaceFixtureMixin
             tooling_requirements = ", ".join(
-                f'"{name} @ git+{cls.governed_repository_url(name)}@'
-                f'{TestsFlextInfraUtilitiesProjectFixtureMixin.provider_branch()}"'
-                for name in sorted(tooling_names)
+                f'"{item}"'
+                for item in workspace_fixture.declared_requirements(distribution)
             )
             tooling = f"\n[dependency-groups]\ndev = [{tooling_requirements}]\n"
             # A governed project always declares its description: the derived
@@ -490,10 +649,11 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             # Why: conform's existing-checkout ProjectSpec now derives authors and
             # upstream from live PEP 621 metadata (no fabricated spec) — every
             # governed fixture must declare both.
+            python_required = config.Infra.codegen.toolchain.python_required_version
             pyproject.write_text(
                 f'[project]\nname = "{distribution}"\nversion = "0.12.0.dev0"\n'
                 f'description = "{distribution} governed fixture"\n'
-                f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
+                f'requires-python = "{python_required}"\n'
                 'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
                 f'dependencies = ["flext-core @ {internal_source}"]\n'
                 f'[project.urls]\nRepository = "{repository_url}"\n{tooling}',
@@ -506,7 +666,12 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
 
         @staticmethod
         def governed_repository_url(distribution: str) -> str:
-            """Build a fixture repository URL from the declared fixture provider."""
+            """Build a fixture repository URL from the declared fixture provider.
+
+            Returns:
+                The resulting ``str``.
+
+            """
             provider = TestsFlextInfraUtilitiesProjectFixtureMixin.provider()
             return f"{provider.base_url.rstrip('/')}/{distribution}.git"
 
@@ -520,7 +685,12 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             database: str,
             issue_prefix: str,
         ) -> Path:
-            """Create the checked-in member route to the workspace-owned ledger."""
+            """Create the checked-in member route to the workspace-owned ledger.
+
+            Returns:
+                The resulting ``Path``.
+
+            """
             member.mkdir(parents=True, exist_ok=True)
             route = member / ".beads"
             route.symlink_to(os.path.relpath(workspace / ".beads", member))
@@ -541,7 +711,12 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             issue_prefix: str,
             custom_issue_types: t.VariadicTuple[str] = (),
         ) -> Path:
-            """Write one repository-local Beads identity input."""
+            """Write one repository-local Beads identity input.
+
+            Returns:
+                The resulting ``Path``.
+
+            """
             path = root / "config" / "beads.yaml"
             payload: t.MutableMappingKV[str, t.JsonValue] = {
                 "version": 1,
@@ -557,9 +732,14 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
 
         @classmethod
         def attach_submodule(
-            cls, parent: Path, member: Path, *, distribution: str, relative_path: str
+            cls,
+            parent: Path,
+            member: Path,
+            *,
+            distribution: str,
+            relative_path: str,
         ) -> None:
-            """Declare and commit ``member`` as a real gitlink submodule of ``parent``."""
+            """Declare and commit ``member`` as a real gitlink of ``parent``."""
             _ = TestsFlextInfraUtilitiesProjectFixtureMixin.provider()
             (parent / c.Infra.GITMODULES).write_text(
                 f'[submodule "{distribution}"]\n'
@@ -577,10 +757,14 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 role=c.Infra.MakeProfile.WORKSPACE,
             )
             member_head = TestsFlextInfraUtilitiesGitMixin.git_capture(
-                member, "rev-parse", c.Infra.GIT_HEAD
+                member,
+                "rev-parse",
+                c.Infra.GIT_HEAD,
             )
             _ = TestsFlextInfraUtilitiesGitMixin.git_run(
-                parent, "add", c.Infra.GITMODULES
+                parent,
+                "add",
+                c.Infra.GITMODULES,
             )
             _ = TestsFlextInfraUtilitiesGitMixin.git_run(
                 parent,
@@ -590,7 +774,11 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 f"160000,{member_head.strip()},{relative_path}",
             )
             _ = TestsFlextInfraUtilitiesGitMixin.git_run(
-                parent, "commit", "--quiet", "-m", "attach member"
+                parent,
+                "commit",
+                "--quiet",
+                "-m",
+                "attach member",
             )
 
         @classmethod
@@ -604,7 +792,12 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             database: str = "fixture_workspace",
             issue_prefix: str = "fixture-workspace",
         ) -> Path:
-            """Initialize one governed checkout at ``parent/directory`` and return it."""
+            """Initialize one governed checkout at ``parent/directory`` and return it.
+
+            Returns:
+                The resulting ``Path``.
+
+            """
             root = parent / directory
             _ = cls.initialize_governed_project(
                 root,
@@ -614,6 +807,48 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 issue_prefix=issue_prefix,
             )
             return root
+
+        @classmethod
+        def governed_workspace_with_member(
+            cls,
+            root: Path,
+            *,
+            workspace: str = "sample-workspace",
+            member: str = "sample-member",
+            database: str = "sample_workspace",
+            issue_prefix: str = "sample",
+        ) -> Path:
+            """Compose one governed workspace root with one attached member.
+
+            The root declares its own project with the workspace role, exactly
+            as the real composed root does, and the member is a real gitlink
+            declared in the root's ``.gitmodules``.
+
+            Returns:
+                The attached member checkout path.
+
+            """
+            for checkout, distribution in ((root, workspace), (root / member, member)):
+                _ = cls.initialize_governed_project(
+                    checkout,
+                    distribution,
+                    workspace=workspace,
+                    database=database,
+                    issue_prefix=issue_prefix,
+                )
+            cls.attach_submodule(
+                root,
+                root / member,
+                distribution=member,
+                relative_path=member,
+            )
+            fixture = TestsFlextInfraUtilitiesWorkspaceFixtureMixin
+            _ = fixture.write_standalone_workspace_manifest(
+                root,
+                workspace,
+                role=c.Infra.MakeProfile.WORKSPACE,
+            )
+            return root / member
 
         @classmethod
         def initialize_governed_project(
@@ -632,6 +867,10 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             Every governed repository commits its own checksum-verified Mise seeds;
             ``codegen conform`` validates them and never mints them, so the fixture
             carries them exactly as a real checkout does.
+
+            Returns:
+                The resulting ``Path``.
+
             """
             pyproject = cls.write_python_project(root, distribution)
             TestsFlextInfraUtilitiesToolingFixtureMixin.copy_tracked_mise_seeds(root)
@@ -644,19 +883,21 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                     custom_issue_types=custom_issue_types,
                 )
             TestsFlextInfraUtilitiesProjectFixtureMixin.write_workspace_manifest(
-                root, distribution
+                root,
+                distribution,
             )
             TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(
-                root, origin_url=cls.governed_repository_url(distribution)
+                root,
+                origin_url=cls.governed_repository_url(distribution),
             )
             baseline = tm.ok(
-                u.Cli.capture([c.Infra.GIT, "rev-parse", "HEAD"], cwd=root)
+                u.Cli.capture([c.Infra.GIT, "rev-parse", "HEAD"], cwd=root),
             )
             tm.ok(
                 u.Cli.run_checked(
                     [c.Infra.GIT, "config", "remote.origin.skipDefaultUpdate", "true"],
                     cwd=root,
-                )
+                ),
             )
             tm.ok(
                 u.Cli.run_checked(
@@ -670,7 +911,7 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                         baseline,
                     ],
                     cwd=root,
-                )
+                ),
             )
             return pyproject
 
@@ -680,6 +921,10 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
 
             The Git origin was minted from that distribution; the checkout
             directory name is arbitrary in tmp fixtures and never the identity.
+
+            Returns:
+                The name the root's manifest already declares.
+
             """
             existing = root / "config" / "workspace.yaml"
             if not existing.is_file():
@@ -692,7 +937,12 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
 
         @classmethod
         def write_gitmodules(cls, root: Path, projects: t.VariadicTuple[str]) -> Path:
-            """Declare governed subprojects with the declared fixture contract."""
+            """Declare governed subprojects with the declared fixture contract.
+
+            Returns:
+                The resulting ``Path``.
+
+            """
             _ = TestsFlextInfraUtilitiesProjectFixtureMixin.provider()
             path = root / c.Infra.GITMODULES
             path.write_text(
@@ -722,7 +972,9 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 else c.Infra.MakeProfile.STANDALONE
             )
             TestsFlextInfraUtilitiesProjectFixtureMixin.write_workspace_manifest(
-                root, declared, role=role
+                root,
+                declared,
+                role=role,
             )
             return path
 
@@ -734,6 +986,10 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
 
             Git metadata is excluded; every runtime-state owner lives outside the
             repository checkout by construction.
+
+            Returns:
+                The resulting ``t.Pair[t.VariadicTuple[t.Pair[str, bytes]], str]``.
+
             """
             excluded_roots = frozenset({c.Infra.GIT_DIR})
             tree = tuple(
@@ -742,13 +998,13 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                     for path in root.rglob("*")
                     if path.is_file()
                     and not excluded_roots.intersection(path.relative_to(root).parts)
-                )
+                ),
             )
             status = tm.ok(
                 u.Cli.capture(
                     [c.Infra.GIT, "status", "--porcelain=v1", "--untracked-files=all"],
                     cwd=root,
-                )
+                ),
             )
             return tree, status
 

@@ -1,4 +1,8 @@
-"""Runtime behavior tests for generated lazy package artifacts."""
+"""Runtime behavior tests for generated lazy package artifacts.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -17,11 +21,15 @@ from tests import c, t, u
 class TestsFlextInfraLazyInitRuntime:
     """Exercise generated roots through Python's real import machinery."""
 
+    @staticmethod
     def test_pytest_private_source_is_not_reintroduced_by_typing_projection(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
+        """Test pytest private source is not reintroduced by typing projection."""
         repository, _ = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-fixtures", package_name="flext_fixtures"
+            tmp_path,
+            project_name="flext-fixtures",
+            package_name="flext_fixtures",
         )
         package = repository / "tests" / "unit"
         package.mkdir(parents=True, exist_ok=True)
@@ -37,7 +45,7 @@ class TestsFlextInfraLazyInitRuntime:
         tm.that(u.Tests.run_lazy_init(repository), eq=0)
 
         generated = (package / c.Infra.INIT_PY).read_text(
-            encoding=c.Cli.ENCODING_DEFAULT
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         tm.that(generated, has="PublishedSupport")
         tm.that(generated, lacks="pytest_plugins")
@@ -46,7 +54,9 @@ class TestsFlextInfraLazyInitRuntime:
     @staticmethod
     def _generate_package(tmp_path: Path) -> t.Pair[Path, Path]:
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-runtime", package_name="flext_runtime"
+            tmp_path,
+            project_name="flext-lazy-demo",
+            package_name="flext_lazy_demo",
         )
         package_root.joinpath("api.py").write_text(
             "from pathlib import Path\n"
@@ -61,13 +71,15 @@ class TestsFlextInfraLazyInitRuntime:
         return repository_root, package_root
 
     def test_generated_root_preserves_lazy_runtime_contract(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test generated root preserves lazy runtime contract."""
         repository_root, package_root = self._generate_package(tmp_path)
         with tm.scope(python_paths=[str(repository_root / c.Infra.DEFAULT_SRC_DIR)]):
-            package = importlib.import_module("flext_runtime")
+            package = importlib.import_module("flext_lazy_demo")
 
-            tm.that("flext_runtime.api" in sys.modules, eq=False)
+            tm.that("flext_lazy_demo.api" in sys.modules, eq=False)
             tm.that(package.__all__, eq=("FlextDemo", "primary"))
             tm.that(dir(package), eq=list(package.__all__))
             first = package.FlextDemo
@@ -76,11 +88,15 @@ class TestsFlextInfraLazyInitRuntime:
             tm.that(package.primary is first, eq=True)
             tm.that(package_root.joinpath("imports.txt").read_text(), eq="x")
 
+    @staticmethod
     def test_generated_root_never_invents_undeclared_api_alias(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
+        """Test generated root never invents undeclared api alias."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-bare", package_name="flext_bare"
+            tmp_path,
+            project_name="flext-bare",
+            package_name="flext_bare",
         )
         package_root.joinpath("api.py").write_text(
             "class FlextBare:\n    pass\n__all__ = ('FlextBare',)\n",
@@ -91,12 +107,17 @@ class TestsFlextInfraLazyInitRuntime:
             package = importlib.import_module("flext_bare")
             tm.that(package.__all__, eq=("FlextBare",))
             tm.that(
-                [name for name in package.__all__ if not hasattr(package, name)], eq=[]
+                [name for name in package.__all__ if not hasattr(package, name)],
+                eq=[],
             )
 
-    def test_generated_root_preserves_import_failures(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_generated_root_preserves_import_failures(tmp_path: Path) -> None:
+        """Test generated root preserves import failures."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-failure", package_name="flext_failure"
+            tmp_path,
+            project_name="flext-failure",
+            package_name="flext_failure",
         )
         package_root.joinpath("api.py").write_text(
             "raise ModuleNotFoundError('missing runtime dependency')\n"
@@ -111,16 +132,22 @@ class TestsFlextInfraLazyInitRuntime:
             with pytest.raises(ModuleNotFoundError, match="missing runtime dependency"):
                 _ = package.FlextDemo
 
+    @staticmethod
     def test_conflicted_generated_initializer_is_rebuilt_from_declarations(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Generated bytes are outputs, including while a merge is unresolved."""
         repository, package = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-rebuilt", package_name="flext_rebuilt"
+            tmp_path,
+            project_name="flext-rebuilt",
+            package_name="flext_rebuilt",
         )
         declaration = package / "models.py"
         u.Tests.write_lazy_init_namespace_module(
-            declaration, class_name="FlextRebuiltModels", alias="m", docstring="Models."
+            declaration,
+            class_name="FlextRebuiltModels",
+            alias="m",
+            docstring="Models.",
         )
         tm.that(u.Tests.run_lazy_init(repository), eq=0)
         initializer = package / c.Infra.INIT_PY
@@ -143,16 +170,19 @@ class TestsFlextInfraLazyInitRuntime:
             declared = importlib.import_module("flext_rebuilt.models")
             tm.that(generated.m is declared.FlextRebuiltModels, eq=True)
             tm.that(
-                all(hasattr(generated, name) for name in generated.__all__), eq=True
+                all(hasattr(generated, name) for name in generated.__all__),
+                eq=True,
             )
         declaration.write_text(
-            "<<<<<<< HEAD\n=======\n>>>>>>> incoming\n", encoding=c.Cli.ENCODING_DEFAULT
+            "<<<<<<< HEAD\n=======\n>>>>>>> incoming\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         with infra.rope_workspace(repository) as rope, pytest.raises(SyntaxError):
             rope.layout(repository)
 
+    @staticmethod
     def test_internal_facade_requires_its_local_declaration(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """An undeclared letter propagates the declaring root's binding.
 
@@ -162,7 +192,9 @@ class TestsFlextInfraLazyInitRuntime:
         substitute a local class for it.
         """
         repository, package = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-local", package_name="flext_local"
+            tmp_path,
+            project_name="flext-local",
+            package_name="flext_local",
         )
         package.joinpath("constants.py").write_text(
             "class Parent:\n    class Domain:\n        pass\n"
@@ -183,7 +215,7 @@ class TestsFlextInfraLazyInitRuntime:
         # no runtime-alias repair may invent a local binding for one.
         tm.that(facet.read_text(encoding=c.Cli.ENCODING_DEFAULT), eq=facet_source)
         exports = u.Infra.public_export_names_source(
-            examples.joinpath("__init__.py").read_text(encoding=c.Cli.ENCODING_DEFAULT)
+            examples.joinpath("__init__.py").read_text(encoding=c.Cli.ENCODING_DEFAULT),
         )
         tm.that("c" in exports, eq=True)
         probe_env = dict(os.environ)
@@ -203,8 +235,9 @@ class TestsFlextInfraLazyInitRuntime:
             "print(all(hasattr(generated, name) for name in generated.__all__))\n"
         )
         result = tm.ok(
-            u.Cli.run([sys.executable, "-c", probe], env=probe_env, cwd=repository)
+            u.Cli.run([sys.executable, "-c", probe], env=probe_env, cwd=repository),
         )
         tm.that(
-            result.stdout.splitlines(), eq=["True", "True", "True", "False", "True"]
+            result.stdout.splitlines(),
+            eq=["True", "True", "True", "False", "True"],
         )

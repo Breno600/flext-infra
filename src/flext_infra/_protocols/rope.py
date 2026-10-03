@@ -76,7 +76,10 @@ class FlextInfraProtocolsRope(Protocol):
         def workspace_index(self) -> m.Infra.RopeWorkspaceIndex: ...
 
         def refresh(
-            self, *, preserve_indexes: bool = False, validate_project: bool = True
+            self,
+            *,
+            preserve_indexes: bool = False,
+            validate_project: bool = True,
         ) -> m.Infra.RopeWorkspaceSession: ...
 
         def reload(self) -> m.Infra.RopeWorkspaceSession: ...
@@ -97,11 +100,14 @@ class FlextInfraProtocolsRope(Protocol):
         def module(self, file_path: Path) -> m.Infra.RopeModuleIndexEntry | None: ...
 
         def package(
-            self, package_dir: Path
+            self,
+            package_dir: Path,
         ) -> m.Infra.RopePackageIndexEntry | None: ...
 
         def modules(
-            self, *, project_names: t.StrSequence | None = None
+            self,
+            *,
+            project_names: t.StrSequence | None = None,
         ) -> t.SequenceOf[m.Infra.RopeModuleIndexEntry]: ...
 
         def source(self, file_path: Path) -> str: ...
@@ -125,7 +131,8 @@ class FlextInfraProtocolsRope(Protocol):
         def layout(self, project_root: Path) -> m.Infra.RopeProjectLayout | None: ...
 
         def package_context(
-            self, package_dir: Path
+            self,
+            package_dir: Path,
         ) -> m.Infra.LazyInitPackageContext: ...
 
         def policy(
@@ -137,7 +144,10 @@ class FlextInfraProtocolsRope(Protocol):
         ) -> m.Infra.NamespaceModulePolicy: ...
 
         def convention(
-            self, file_path: Path, *, rel_path: Path | None = None
+            self,
+            file_path: Path,
+            *,
+            rel_path: Path | None = None,
         ) -> m.Infra.RopeModuleConvention: ...
 
         def semantic(self, file_path: Path) -> m.Infra.ModuleSemanticState: ...
@@ -154,12 +164,13 @@ class FlextInfraProtocolsRope(Protocol):
         """Class contract shared by the Rope analysis mixins."""
 
         @staticmethod
-        def get_module_classes(
-            rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
+        def resolve_module_classes(
+            rope_project: t.Infra.RopeProject,
+            resource: t.Infra.RopeResource,
         ) -> t.StrSequence: ...
 
         @staticmethod
-        def get_class_methods(
+        def resolve_class_methods(
             rope_project: t.Infra.RopeProject,
             resource: t.Infra.RopeResource,
             class_name: str,
@@ -177,31 +188,10 @@ class FlextInfraProtocolsRope(Protocol):
         def init_rope_workspace(repository_root: Path) -> t.Infra.RopeProject: ...
 
         @staticmethod
-        def get_resource_from_path(
-            rope_project: t.Infra.RopeProject, file_path: Path
-        ) -> t.Infra.RopeResource | None: ...
-
-    @runtime_checkable
-    class CensusModuleRule(Protocol):
-        """Call contract shared by the symbol-indexed census rule scanners.
-
-        Every structural census rule that consults the module symbol index is
-        invoked through this one contract, so the census dispatcher owns a
-        single call site instead of one hand-written block per rule.
-        """
-
-        def __call__(
-            self,
-            rope: p.Infra.RopeWorkspaceDsl,
+        def resolve_resource_from_path(
+            rope_project: t.Infra.RopeProject,
             file_path: Path,
-            *,
-            project_name: str,
-            objects: t.VariadicTuple[m.Infra.Object] | None,
-            applied: frozenset[str],
-            selected_kinds: frozenset[str],
-            symbol_index: t.MappingKV[str, t.Pair[str, int]],
-            convention: m.Infra.RopeModuleConvention,
-        ) -> tuple[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
+        ) -> t.Infra.RopeResource | None: ...
 
 
 __all__: list[str] = ["FlextInfraProtocolsRope"]

@@ -1,4 +1,8 @@
-"""Projection-only contract for repository-owned Beads configuration."""
+"""Projection-only contract for repository-owned Beads configuration.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,7 +11,8 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, infra, m
+from flext_infra import c, config
+from flext_infra.codegen import FlextInfraCodegenConformBeadsRoutes
 from tests import u
 
 
@@ -26,8 +31,10 @@ class TestsFlextInfraCodegenBeadsProjection:
         return root
 
     def test_local_identity_renders_declarative_beads_routing(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test local identity renders declarative beads routing."""
         root = self._project(
             tmp_path / "project",
             database="project_database",
@@ -41,10 +48,21 @@ class TestsFlextInfraCodegenBeadsProjection:
         if rendered_config is None:
             pytest.fail("local identity must produce the declarative Beads config")
         # `issue_prefix` is the key bd itself resolves (`bd config get
-        # issue_prefix`); the hyphenated spelling reads as unset, so bd appended
-        # its own key on first write and left every governed checkout dirty.
-        tm.that(rendered_config, has='issue_prefix: "project-prefix"')
-        tm.that(rendered_config, lacks="issue-prefix:")
+        # issue_prefix`); a hyphen-only prefix reads as unset, so bd appended its
+        # own key on first write. A Gas City rig also carries gc's canonical
+        # mirror keys: gc rewrites a managed rig's config into exactly that key
+        # set on every adopt and start, so a projection in any other form left
+        # every governed checkout dirty after each gc pass.
+        beads = config.Infra.codegen.toolchain.beads
+        parsed = u.Tests.toml_mapping(tm.ok(u.Cli.yaml_parse(rendered_config)))
+        tm.that(parsed["issue_prefix"], eq="project-prefix")
+        tm.that(parsed["issue-prefix"], eq="project-prefix")
+        tm.that(parsed["dolt.mode"], eq=beads.dolt_mode)
+        tm.that(
+            parsed["dolt"],
+            eq={"disable-event-flush": beads.dolt_disable_event_flush},
+        )
+        tm.that("dolt.disable-event-flush" in parsed, eq=False)
         # A checkout with no workspace manifest declares city participation by
         # fleet default (True): the endpoint keys mirror the inherited city and
         # `types.custom` stays generator-owned.
@@ -59,15 +77,20 @@ class TestsFlextInfraCodegenBeadsProjection:
         tm.that(metadata["database"], eq="dolt")
         tm.that(metadata["dolt_database"], eq="project_database")
         tm.that(
-            metadata["dolt_mode"], eq=config.Infra.codegen.toolchain.beads.dolt_mode
+            metadata["dolt_mode"],
+            eq=config.Infra.codegen.toolchain.beads.dolt_mode,
         )
         # A fresh checkout has no checkout-owned identity.toml. Conform owns
         # the portable routing marker but never mints the ledger identity.
         tm.that("project_id" in metadata, eq=False)
         tm.that(set(metadata), eq={"backend", "database", "dolt_mode", "dolt_database"})
+        # gc writes this marker as a sorted-key JSON object; the projection uses
+        # the same order so gc's first write after adoption is byte-identical.
+        tm.that(list(metadata), eq=sorted(metadata))
 
     def test_gascity_disabled_renders_standalone_beads_config(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A disabled city never moves runtime ownership into generated config."""
         root = self._project(
@@ -76,7 +99,9 @@ class TestsFlextInfraCodegenBeadsProjection:
             issue_prefix="project-prefix",
         )
         u.Tests.write_standalone_workspace_manifest(
-            root, "fixture-project", gascity_enabled=False
+            root,
+            "fixture-project",
+            gascity_enabled=False,
         )
 
         plan = u.Tests.governed_project_plan(root)
@@ -88,6 +113,11 @@ class TestsFlextInfraCodegenBeadsProjection:
         tm.that(rendered_config, has='issue_prefix: "project-prefix"')
         tm.that(rendered_config, lacks="issue-prefix:")
         tm.that(rendered_config, lacks="dolt.auto-start:")
+        # The mode mirror and the event-flush switch are read only by gc; a
+        # standalone ledger carries neither (bd takes the flush switch from its
+        # environment and the mode from metadata.json).
+        tm.that(rendered_config, lacks="dolt.mode:")
+        tm.that(rendered_config, lacks="disable-event-flush")
         tm.that(rendered_config, lacks="gc.endpoint_origin")
         tm.that(rendered_config, lacks="gc.endpoint_status")
         tm.that(rendered_config, lacks="Gas City contract")
@@ -118,20 +148,23 @@ class TestsFlextInfraCodegenBeadsProjection:
         if rendered_mise is None:
             pytest.fail("conform must produce the managed .mise.toml")
         tm.that(
-            rendered_mise, has=f'make = "{config.Infra.codegen.toolchain.make_version}"'
+            rendered_mise,
+            has=f'make = "{config.Infra.codegen.toolchain.make_version}"',
         )
         tm.that(rendered_mise, lacks="conda")
         tm.that(rendered_mise, lacks="stale")
 
-    def test_gascity_disabled_renders_local_envrc_tier(self, tmp_path: Path) -> None:
-        """A disabled city renders the repository-local bd activation tier."""
+    def test_generated_envrc_excludes_storage_routing(self, tmp_path: Path) -> None:
+        """The project activation leaves Beads routing to native discovery."""
         root = self._project(
             tmp_path / "project",
             database="project_database",
             issue_prefix="project-prefix",
         )
         u.Tests.write_standalone_workspace_manifest(
-            root, "fixture-project", gascity_enabled=False
+            root,
+            "fixture-project",
+            gascity_enabled=False,
         )
 
         plan = u.Tests.governed_project_plan(root)
@@ -142,16 +175,8 @@ class TestsFlextInfraCodegenBeadsProjection:
         tm.that(rendered_envrc, lacks="AGENTS_GAS_CITY_ROOT")
         tm.that(rendered_envrc, lacks="dolt-state.json")
         tm.that(rendered_envrc, lacks="jq -er")
-        tm.that(
-            rendered_envrc, has='watch_file "${checkout_root}/.beads/metadata.json"'
-        )
-        tm.that(
-            rendered_envrc, has="unset BEADS_DOLT_SERVER_HOST BEADS_DOLT_SERVER_PORT"
-        )
-        tm.that(rendered_envrc, has="unset BEADS_DOLT_AUTO_START")
-        # Caller-owned Beads routing survives activation so bd resolves the
-        # selected ledger inside a linked worktree.
-        tm.that(rendered_envrc, lacks="unset BEADS_DIR")
+        tm.that(rendered_envrc, lacks="BEADS_DOLT_")
+        tm.that(rendered_envrc, lacks="BEADS_DIR")
 
     def test_envrc_local_generated_residue_is_normalized(self, tmp_path: Path) -> None:
         """The merge keeps custom overrides and strips stale generated sections.
@@ -170,7 +195,7 @@ class TestsFlextInfraCodegenBeadsProjection:
             "# Generated by `flext-infra codegen conform`.\n"
             "# === SECTION: Gas City Beads activation (managed) ===\n"
             "unset GT_ROOT\n"
-            'source_env_if_exists "$HOME/.config/environment.d/projects/agent-tools.envrc"\n'
+            'source_env_if_exists "${HOME}/.config/environment.d/projects/agent-tools.envrc"\n'
             "# End SECTION: Gas City Beads activation\n"
             "export CUSTOM_OVERRIDE=1\n",
             encoding="utf-8",
@@ -194,7 +219,8 @@ class TestsFlextInfraCodegenBeadsProjection:
         tm.that(desired, lacks="GT_ROOT")
 
     def test_envrc_local_without_custom_content_is_removed(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A .envrc.local carrying only generated residue is deleted."""
         root = self._project(
@@ -223,80 +249,39 @@ class TestsFlextInfraCodegenBeadsProjection:
             pytest.fail("residue-only .envrc.local must be planned for removal")
         tm.that(entry.desired_content, none=True)
 
-    @pytest.mark.parametrize("source_exists", [False, True])
-    def test_gascity_enabled_sources_activate_conditionally(
-        self, tmp_path: Path, *, source_exists: bool
-    ) -> None:
-        """Optional sources precede the fail-loud city authority boundary."""
-        root = self._project(
-            tmp_path / "project",
-            database="project_database",
-            issue_prefix="project-prefix",
-        )
-        source = tmp_path / "optional-host.envrc"
-        marker = "optional-host-source-executed"
-        if source_exists:
-            source.write_text(f"printf '%s\\n' '{marker}' >&2\n", encoding="utf-8")
-        environment = m.Infra.BeadsWorkspaceEnvironmentSpec(
-            environment_sources=(str(source),), identity_var="FLEXT_TEST_CITY_ROOT"
-        )
-        tm.ok(
-            infra.sync_environment_files(
-                m.Infra.WorkspaceEnvironmentSyncRequest(
-                    repository_root=root, beads=environment, allow_direnv=False
-                )
-            )
-        )
-        tm.ok(u.Cli.run_checked((c.Infra.CLI_DIRENV, "allow", str(root)), cwd=root))
-        try:
-            process = tm.ok(
-                u.Cli.run_raw(
-                    (c.Infra.CLI_DIRENV, "exec", str(root), "true"),
-                    cwd=root,
-                    env={environment.identity_var: ""},
-                )
-            )
-        finally:
-            tm.ok(u.Cli.run_checked((c.Infra.CLI_DIRENV, "deny", str(root)), cwd=root))
-        tm.that(process.outcome.raw_return_code, ne=0)
-        tm.that(
-            process.stderr,
-            has=(
-                f"{environment.identity_var} must name the canonical Gas City checkout"
-            ),
-        )
-        tm.that(marker in process.stderr, eq=source_exists)
-
     @pytest.mark.slow
     @pytest.mark.parametrize("gascity_enabled", [True, False])
-    def test_envrc_renders_in_both_city_tiers(
-        self, tmp_path: Path, *, gascity_enabled: bool
+    def test_envrc_is_storage_neutral_in_both_workspace_modes(
+        self,
+        tmp_path: Path,
+        *,
+        gascity_enabled: bool,
     ) -> None:
-        """The managed .envrc renders its city tier in both city modes.
-
-        A duplicated model family let the renderer and its validator bind two
-        different classes of the same name, so the ``gascity.backend`` field of
-        one was absent from the other and standalone renders failed.
-        """
+        """Workspace association never changes the storage-neutral activation."""
         root = self._project(
             tmp_path / "project",
             database="project_database",
             issue_prefix="project-prefix",
         )
         u.Tests.write_standalone_workspace_manifest(
-            root, "fixture-project", gascity_enabled=gascity_enabled
+            root,
+            "fixture-project",
+            gascity_enabled=gascity_enabled,
         )
 
         rendered_envrc = u.Tests.planned_text(
-            u.Tests.governed_project_plan(root), ".envrc"
+            u.Tests.governed_project_plan(root),
+            ".envrc",
         )
 
         if rendered_envrc is None:
             pytest.fail("a governed identity must produce the managed .envrc")
-        tm.that("AGENTS_GAS_CITY_ROOT" in rendered_envrc, eq=gascity_enabled)
+        tm.that(rendered_envrc, lacks="AGENTS_GAS_CITY_ROOT")
+        tm.that(rendered_envrc, lacks="BEADS_DOLT_")
 
     def test_metadata_projection_preserves_a_minted_ledger_identity(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Regenerating must not strip the checkout's own ledger identity.
 
@@ -314,11 +299,13 @@ class TestsFlextInfraCodegenBeadsProjection:
         identity.parent.mkdir(parents=True, exist_ok=True)
         identity.write_text(f'[project]\nid = "{minted}"\n')
         (root / c.Infra.BEADS_METADATA_RELPATH).write_text(
-            '{"backend":"dolt"}\n', encoding="utf-8"
+            '{"backend":"dolt"}\n',
+            encoding="utf-8",
         )
 
         rendered = u.Tests.planned_text(
-            u.Tests.governed_project_plan(root), c.Infra.BEADS_METADATA_RELPATH
+            u.Tests.governed_project_plan(root),
+            c.Infra.BEADS_METADATA_RELPATH,
         )
         if rendered is None:
             pytest.fail("local identity must produce the Beads marker")
@@ -328,10 +315,13 @@ class TestsFlextInfraCodegenBeadsProjection:
             set(metadata),
             eq={"database", "backend", "dolt_mode", "dolt_database", "project_id"},
         )
+        tm.that(list(metadata), eq=sorted(metadata))
 
     def test_projection_preserves_the_manual_identity_input(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test projection preserves the manual identity input."""
         root = self._project(
             tmp_path / "project",
             database="project_database",
@@ -343,3 +333,32 @@ class TestsFlextInfraCodegenBeadsProjection:
         _ = u.Tests.governed_project_plan(root)
 
         tm.that(identity.read_bytes(), eq=before)
+
+    @staticmethod
+    def test_beads_gate_lock_is_tolerated_runtime_state(tmp_path: Path) -> None:
+        """The bd gate serialization marker never fails composed verification.
+
+        The bd client writes ``dolt.gate.lock`` beside the ledger on every gate
+        transaction — the same projection class as ``.exclusive-lock`` and
+        ``.sync.lock``. A composed project whose member holds one (live or left
+        by a dead holder) must still verify; an actual stranger file must not.
+        """
+        route = tmp_path / c.Infra.BEADS_DIRNAME
+        route.mkdir(mode=0o700)
+        (route / Path(c.Infra.BEADS_CONFIG_RELPATH).name).write_text(
+            "{}\n",
+            encoding="utf-8",
+        )
+        (route / "dolt.gate.lock").write_text("", encoding="utf-8")
+
+        state = FlextInfraCodegenConformBeadsRoutes.beads_route_state(tmp_path)
+
+        tm.that(state.failure, eq=False)
+        tm.that(state.value, eq=True)
+
+        (route / "stranger.txt").write_text("unexpected\n", encoding="utf-8")
+
+        broken = FlextInfraCodegenConformBeadsRoutes.beads_route_state(tmp_path)
+
+        tm.that(broken.failure, eq=True)
+        tm.that(broken.error is not None and "stranger.txt" in broken.error, eq=True)

@@ -1,28 +1,32 @@
-"""Rope runtime type predicates and exception factories."""
+"""Rope runtime type predicates and exception factories.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from typing import TypeGuard
 
 from flext_infra import p, t
-
-from .rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
+from flext_infra._utilities.rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
 
 
 class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
     """Expose typed predicates for Rope runtime objects."""
 
     @classmethod
-    def is_resource(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopeResource]:
+    def file_resource(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopeResource]:
         return isinstance(value, cls.runtime_type("rope.base.resources", "File"))
 
     @classmethod
-    def is_pymodule(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopePyModule]:
+    def pymodule(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopePyModule]:
         return isinstance(value, cls.runtime_type("rope.base.pyobjectsdef", "PyModule"))
 
     @classmethod
-    def is_from_import(
-        cls, value: p.AttributeProbe
+    def from_import_info(
+        cls,
+        value: p.AttributeProbe,
     ) -> TypeGuard[t.Infra.RopeFromImport]:
         return isinstance(
             value,
@@ -30,8 +34,9 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
         )
 
     @classmethod
-    def is_normal_import(
-        cls, value: p.AttributeProbe
+    def normal_import_info(
+        cls,
+        value: p.AttributeProbe,
     ) -> TypeGuard[t.Infra.RopeNormalImport]:
         return isinstance(
             value,
@@ -39,55 +44,82 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
         )
 
     @classmethod
-    def is_assigned_name(
-        cls, value: p.AttributeProbe
+    def assigned_name(
+        cls,
+        value: p.AttributeProbe,
     ) -> TypeGuard[t.Infra.RopeAssignedName]:
         return isinstance(
-            value, cls.runtime_type("rope.base.pynamesdef", "AssignedName")
+            value,
+            cls.runtime_type("rope.base.pynamesdef", "AssignedName"),
         )
 
     @classmethod
-    def is_runtime_pyclass(
-        cls, value: p.AttributeProbe
-    ) -> TypeGuard[t.Infra.RopePyObject]:
-        return isinstance(value, cls.runtime_type("rope.base.pyobjects", "PyClass"))
+    def abstract_class(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopePyObject]:
+        """Return whether ``value`` is a Rope abstract class object.
 
-    @classmethod
-    def is_abstract_class(
-        cls, value: p.AttributeProbe
-    ) -> TypeGuard[t.Infra.RopePyObject]:
-        """Return whether ``value`` is a Rope abstract class object."""
+        Returns:
+            Whether ``value`` is a Rope abstract class object.
+
+        """
         return isinstance(
-            value, cls.runtime_type("rope.base.pyobjects", "AbstractClass")
+            value,
+            cls.runtime_type("rope.base.pyobjects", "AbstractClass"),
         )
 
     @classmethod
-    def is_py_function(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopePyObject]:
-        """Return whether ``value`` is a Rope Python function object."""
+    def py_function(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopePyObject]:
+        """Return whether ``value`` is a Rope Python function object.
+
+        Returns:
+            Whether ``value`` is a Rope Python function object.
+
+        """
         return isinstance(
-            value, cls.runtime_type("rope.base.pyobjectsdef", "PyFunction")
+            value,
+            cls.runtime_type("rope.base.pyobjectsdef", "PyFunction"),
         )
 
     @classmethod
-    def is_defined_name(cls, value: p.AttributeProbe) -> bool:
-        """Return whether ``value`` is a Rope defined name."""
+    def defined_name(cls, value: p.AttributeProbe) -> bool:
+        """Return whether ``value`` is a Rope defined name.
+
+        Returns:
+            Whether ``value`` is a Rope defined name.
+
+        """
         return isinstance(value, cls.runtime_type("rope.base.pynames", "DefinedName"))
 
     @classmethod
-    def is_imported_name(cls, value: p.AttributeProbe) -> bool:
-        """Return whether ``value`` is a Rope imported name."""
+    def imported_name(cls, value: p.AttributeProbe) -> bool:
+        """Return whether ``value`` is a Rope imported name.
+
+        Returns:
+            Whether ``value`` is a Rope imported name.
+
+        """
         return isinstance(value, cls.runtime_type("rope.base.pynames", "ImportedName"))
 
     @classmethod
-    def is_parameter_name(cls, value: p.AttributeProbe) -> bool:
-        """Return whether ``value`` is a Rope parameter name."""
+    def parameter_name(cls, value: p.AttributeProbe) -> bool:
+        """Return whether ``value`` is a Rope parameter name.
+
+        Returns:
+            Whether ``value`` is a Rope parameter name.
+
+        """
         return isinstance(
-            value, cls.runtime_type("rope.base.pynamesdef", "ParameterName")
+            value,
+            cls.runtime_type("rope.base.pynamesdef", "ParameterName"),
         )
 
     @classmethod
     def rope_syntax_errors(cls) -> t.VariadicTuple[type[BaseException]]:
-        """Return exceptions that signal unparseable Python source."""
+        """Return exceptions that signal unparseable Python source.
+
+        Returns:
+            Exceptions that signal unparseable Python source.
+
+        """
         return (
             SyntaxError,
             cls._exception_type("rope.base.exceptions", "ModuleSyntaxError"),
@@ -95,21 +127,39 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
 
     @classmethod
     def rope_runtime_errors(cls) -> t.VariadicTuple[type[BaseException]]:
-        """Return recoverable exceptions raised by Rope operations."""
+        """Return recoverable exceptions raised by Rope operations.
+
+        Returns:
+            Recoverable exceptions raised by Rope operations.
+
+        """
         return (
             cls._exception_type("rope.base.exceptions", "RefactoringError"),
             cls._exception_type("rope.base.exceptions", "ResourceNotFoundError"),
+            # Module probing (longest-prefix module/class split) treats a
+            # missing module as "keep splitting", never as a hard failure.
+            cls._exception_type("rope.base.exceptions", "ModuleNotFoundError"),
             AttributeError,
         )
 
     @classmethod
     def rope_error_types(cls) -> t.VariadicTuple[type[BaseException]]:
-        """Return the generic Rope exception boundary."""
+        """Return the generic Rope exception boundary.
+
+        Returns:
+            The generic Rope exception boundary.
+
+        """
         return (cls._exception_type("rope.base.exceptions", "RopeError"),)
 
     @classmethod
     def rope_module_not_found_error_types(cls) -> t.VariadicTuple[type[BaseException]]:
-        """Return Rope exceptions for unresolved importable modules."""
+        """Return Rope exceptions for unresolved importable modules.
+
+        Returns:
+            Rope exceptions for unresolved importable modules.
+
+        """
         return (cls._exception_type("rope.base.exceptions", "ModuleNotFoundError"),)
 
 

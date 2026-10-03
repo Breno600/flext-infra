@@ -1,4 +1,8 @@
-"""Real cold-workspace upgrades materialize gitlinks before Python resolution."""
+"""Real cold-workspace upgrades materialize gitlinks before Python resolution.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -16,11 +20,15 @@ pytestmark = [pytest.mark.slow, pytest.mark.remote]
 class TestsFlextInfraCodegenUpgWorkspace:
     """Upgrade a real workspace with an indexed, uninitialized member."""
 
+    @staticmethod
     def test_upg_materializes_member_before_resolving_workspace_lock(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
+        """Test upg materializes member before resolving workspace lock."""
         root, _ = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.WORKSPACE, bootstrap=True
+            tmp_path,
+            c.Infra.MakeProfile.WORKSPACE,
+            bootstrap=True,
         )
         member = u.Tests.repository_ref("fixture-member", path=Path("fixture-member"))
         source = tmp_path / "member-origin"
@@ -54,11 +62,13 @@ class TestsFlextInfraCodegenUpgWorkspace:
         u.Tests.git_bootstrap(root, ("commit", "-m", "Declare real workspace member"))
         gitlink = tm.ok(
             u.Cli.capture(
-                [c.Infra.GIT, "rev-parse", f"HEAD:{member.path.as_posix()}"], cwd=root
-            )
+                [c.Infra.GIT, "rev-parse", f"HEAD:{member.path.as_posix()}"],
+                cwd=root,
+            ),
         ).strip()
         repository = u.Tests.repository_ref(
-            root.name, role=c.Infra.MakeProfile.WORKSPACE
+            root.name,
+            role=c.Infra.MakeProfile.WORKSPACE,
         )
         workspace = u.Tests.workspace_spec(
             repository,
@@ -75,8 +85,8 @@ class TestsFlextInfraCodegenUpgWorkspace:
         tm.that(len(artifacts), eq=2)
         tm.ok(
             u.Tests.materialize_codegen_plans(
-                r[tuple[m.Infra.CodegenFilePlan, ...]].ok(artifacts)
-            )
+                r[tuple[m.Infra.CodegenFilePlan, ...]].ok(artifacts),
+            ),
         )
         u.Tests.git_bootstrap(root, ("submodule", "deinit", "--force", "--all"))
         checkout = root / member.path
@@ -88,7 +98,7 @@ class TestsFlextInfraCodegenUpgWorkspace:
                 ["--no-print-directory", "upg"],
                 cwd=root,
                 env={"GIT_ALLOW_PROTOCOL": "file:https:ssh"},
-            )
+            ),
         )
 
         tm.that(
@@ -99,7 +109,7 @@ class TestsFlextInfraCodegenUpgWorkspace:
         tm.that((checkout / c.PYPROJECT_FILENAME).is_file(), eq=True)
         tm.that(
             tm.ok(
-                u.Cli.capture([c.Infra.GIT, "rev-parse", "HEAD"], cwd=checkout)
+                u.Cli.capture([c.Infra.GIT, "rev-parse", "HEAD"], cwd=checkout),
             ).strip(),
             eq=gitlink,
         )
@@ -112,7 +122,14 @@ class TestsFlextInfraCodegenUpgWorkspace:
             ),
             has=member.distribution,
         )
-        tm.that((root / ".venv" / "pyvenv.cfg").is_file(), eq=True)
+        tm.that(
+            (u.Infra.runtime_environment_dir(root) / "pyvenv.cfg").is_file(),
+            eq=True,
+        )
         tm.that((checkout / ".venv").exists(), eq=False)
-        pin = (root / c.Infra.MISE_VERSION_PIN_FILENAME).read_text().strip()
+        pin = tm.ok(
+            u.Infra.mise_pinned_release(
+                (root / c.Infra.MISE_VERSION_PIN_FILENAME).read_text(encoding="utf-8"),
+            ),
+        )
         tm.that(process.stdout, has=f"mise setup receipt={pin}")

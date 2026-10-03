@@ -1,23 +1,25 @@
-"""Root configuration namespaces and override payloads."""
+"""Root configuration namespaces.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import Annotated
 
 from flext_cli import m
 
 from flext_infra import t
-
-from ..deps import FlextInfraModelsDepsToolConfig
-from .artifact import FlextInfraConfigModelsArtifact
-from .contract import FlextInfraConfigModelsContract
-from .release import FlextInfraConfigModelsRelease
-from .static import FlextInfraConfigModelsStatic
+from flext_infra._models._config.artifact import FlextInfraConfigModelsArtifact
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
+from flext_infra._models._config.release import FlextInfraConfigModelsRelease
+from flext_infra._models._config.static import FlextInfraConfigModelsStatic
+from flext_infra._models.deps import FlextInfraModelsDepsToolConfig
 
 
 class FlextInfraConfigModelsRoot:
-    """Own root configuration and override namespaces."""
+    """Own the root configuration namespaces."""
 
     class Infra(FlextInfraConfigModelsContract.ConfigContract):
         """Complete flext-infra configuration namespace."""
@@ -43,20 +45,10 @@ class FlextInfraConfigModelsRoot:
             FlextInfraConfigModelsRelease.ReleasePolicySpec,
             m.Field(description="Release protocol policy"),
         ]
-        enforcement: Annotated[
-            FlextInfraConfigModelsStatic.StaticEnforcementSpec,
-            m.Field(description="Rope-only static enforcement policy"),
-        ]
-        sed_patterns: Annotated[
-            FlextInfraConfigModelsArtifact.SedPatternsSpec,
-            m.Field(
-                description="Declared literal replacement patterns for mass refactoring"
-            ),
-        ]
         refactor_csv_campaigns: Annotated[
             FlextInfraConfigModelsArtifact.RefactorCsvCampaignsSpec,
             m.Field(
-                description="Declared CSV-driven rename campaigns for the mod verb"
+                description="Declared CSV-driven rename campaigns for the mod verb",
             ),
         ]
 
@@ -66,58 +58,6 @@ class FlextInfraConfigModelsRoot:
         Infra: Annotated[
             FlextInfraConfigModelsRoot.Infra,
             m.Field(description="Validated flext-infra namespace"),
-        ]
-
-    class CodegenOverridesRoot(FlextInfraConfigModelsContract.ConfigContract):
-        """Override root mirroring the codegen namespace."""
-
-        codegen: Annotated[
-            FlextInfraConfigModelsRoot._CodegenOverridesSection,
-            m.Field(description="Override sections for the codegen namespace"),
-        ]
-
-    class _CodegenOverridesSection(FlextInfraConfigModelsContract.ConfigContract):
-        """Override deltas that deep-merge onto codegen fields."""
-
-        checkout_submodules_overrides: Annotated[
-            Mapping[str, str],
-            m.Field(description="Per-distribution checkout submodule override paths"),
-        ]
-        ci_private_submodules: Annotated[
-            Mapping[str, t.JsonMapping],
-            m.Field(description="Per-distribution private submodule CI contracts"),
-        ]
-        make: Annotated[
-            FlextInfraConfigModelsRoot._MakeOverridesSection | None,
-            m.Field(default=None, description="Make override deltas"),
-        ] = None
-        layout: Annotated[
-            FlextInfraConfigModelsRoot._LayoutOverridesSection | None,
-            m.Field(default=None, description="Layout override deltas"),
-        ] = None
-
-    class _MakeOverridesSection(FlextInfraConfigModelsContract.ConfigContract):
-        """Override deltas for the generated Make contract."""
-
-        custom_handler_profile_overrides: Annotated[
-            Mapping[str, t.JsonMapping],
-            m.Field(description="Per-profile custom handler policy overrides"),
-        ]
-
-    class _LayoutOverridesSection(FlextInfraConfigModelsContract.ConfigContract):
-        """Override deltas for the layout conformance contract."""
-
-        project_overrides: Annotated[
-            Mapping[str, t.JsonMapping],
-            m.Field(description="Per-project layout override deltas"),
-        ]
-
-    class CodegenOverridesSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Typed content of the codegen override layer."""
-
-        Infra: Annotated[
-            FlextInfraConfigModelsRoot.CodegenOverridesRoot,
-            m.Field(description="flext-infra override namespace"),
         ]
 
 

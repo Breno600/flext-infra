@@ -12,12 +12,15 @@ from __future__ import annotations
 import re
 from enum import StrEnum, unique
 from pathlib import Path
+from types import MappingProxyType
 from typing import TYPE_CHECKING, ClassVar
 
-from .._constants.codegen_detection import FlextInfraConstantsCodegenDetection
-from .._constants.codegen_lazy import FlextInfraConstantsCodegenLazy
-from .._constants.codegen_render_names import FlextInfraConstantsCodegenRenderNames
-from .workspace import FlextInfraConstantsWorkspace
+from flext_infra._constants.codegen_detection import FlextInfraConstantsCodegenDetection
+from flext_infra._constants.codegen_lazy import FlextInfraConstantsCodegenLazy
+from flext_infra._constants.codegen_render_names import (
+    FlextInfraConstantsCodegenRenderNames,
+)
+from flext_infra._constants.workspace import FlextInfraConstantsWorkspace
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -32,10 +35,15 @@ class FlextInfraConstantsCodegen(
 
     MISE_ARTIFACTS_STATE_DIRECTORY: ClassVar[Path] = Path(".state") / "mise-artifacts"
 
+    MISE_VERSION_PIN_FILENAME: ClassVar[str] = "mise.version"
+    "Committed Mise release `make upg` resolved; its launchers bake the same one."
+
     ARTIFACT_SPECS: ClassVar[t.VariadicTuple[t.Pair[str, int]]] = (
         ("bin/mise", 0o755),
         ("bin/mise.cmd", 0o644),
+        (MISE_VERSION_PIN_FILENAME, 0o644),
     )
+    "Runtime-root triple `make upg` writes and `make gen` projects, in that order."
 
     CONFIG_SPEC: ClassVar[t.Pair[str, int]] = (
         FlextInfraConstantsWorkspace.MISE_TOML_FILENAME,
@@ -59,8 +67,8 @@ class FlextInfraConstantsCodegen(
     """Bounded polite wait for a held lease before failing loud.
 
     A legitimate fleet ``make gen`` holds the lease for minutes; an immediate
-    non-blocking refusal turned ordinary multi-agent traffic into a spurious
-    ``JournalLeaseTimeoutError`` (flext-c2kp3). The wait is bounded so a truly
+    non-blocking refusal turned ordinary concurrent traffic into a spurious
+    ``JournalLeaseTimeoutError``. The wait is bounded so a truly
     wedged holder still fails loud instead of hanging forever.
     """
 
@@ -86,20 +94,24 @@ class FlextInfraConstantsCodegen(
         ("models.py", "Models", "FlextTestsModels", "Test models"),
         ("utilities.py", "Utilities", "FlextTestsUtilities", "Test utilities"),
     )
-    "Base module definitions for tests/: (filename, class_suffix, base_class, docstring)."
-    # flext-wkii.14 (agent: codegen) — canonical root config/settings pair: a
+    "Base module definitions for tests/: (filename, class_suffix, base_class, doc)."
+    # Canonical root config/settings pair: a
     # private `_config.py`/`_settings.py` module exporting the singleton.
-    # Consumed by the scaffold generator (flext-wkii.10).
+    # Consumed by the scaffold generator.
     RUNTIME_MODULES: ClassVar[t.VariadicTuple[t.Quad[str, str, str, str]]] = (
         ("_config.py", "Config", "FlextConfig", "Runtime config"),
         ("_settings.py", "Settings", "FlextSettings", "Runtime settings"),
     )
-    "Runtime singleton modules for src/: (filename, class_suffix, base_class, docstring)."
+    "Runtime singleton modules for src/: (filename, class_suffix, base_class, doc)."
     VIOLATION_PATTERN: ClassVar[t.RegexPattern] = re.compile(
-        r"\[(?P<rule>NS-(?:[A-Z]+|\d{3}))-\d{3}\]\s+"
-        r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)"
+        r"\[(?P<rule>[a-z0-9][a-z0-9-]*)\]\s+"
+        r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)",
     )
-    "Regex to parse violation strings: [NS-RULE-NNN] path:line — message."
+    "Regex to parse violation strings: [rule-id] path:line — message."
+    PROTOCOL_MODEL_MINIMAL_BODY_LINES: ClassVar[int] = 3
+    "Header lines of a generated protocol class; at or below it the body is empty."
+    LAZY_IMPORTS_BINDING: ClassVar[str] = "_LAZY_IMPORTS"
+    "Module binding the flext-core lazy engine writes and resolves exports from."
     MISE_RELEASE_COMPONENT_COUNT: ClassVar[int] = 3
     "Number of numeric components in a generated Mise release version."
     MISE_RELEASE_PATTERN: ClassVar[str] = (
@@ -112,23 +124,39 @@ class FlextInfraConstantsCodegen(
     "Canonical Unix Mise launcher filename."
     MISE_WINDOWS_LAUNCHER_FILENAME: ClassVar[str] = "mise.cmd"
     "Canonical Windows Mise launcher filename."
-    "UTC basic stamp for `{filename}.{stamp}.bak` written before gen apply."
     CODEGEN_TRANSACTION_LOCK_FILENAME: ClassVar[str] = "flext-infra-codegen.lock"
     "Worktree-specific administrative lock for complete generation."
     CODEGEN_TRANSACTION_LOCK_MODE: ClassVar[int] = 0o600
     "Owner-private mode required for the generation lock."
-    MISE_BOOTSTRAP_SEED_DIRECTORY: ClassVar[str] = "templates/bootstrap"
-    "Package-local bootstrap seed directory for the authenticated launcher."
-    MISE_UNLOCKED_RESOLUTION_URL: ClassVar[str] = (
-        "https://github.com/jdx/mise/releases/latest"
+    MISE_COLD_START_DIRECTORY: ClassVar[str] = "templates/bootstrap"
+    "Package-local byte copy of flext-infra's own upg-written triple (cold start)."
+
+    MISE_LATEST_RESOLUTION_MARKER: ClassVar[str] = "releases/latest"
+    "Live-resolution endpoint a pinned, offline launcher must never contain."
+    MISE_LAUNCHER_BAKED_RELEASE_PATTERNS: ClassVar[t.StrMapping] = MappingProxyType({
+        ARTIFACT_SPECS[0][0]: r"\$\{MISE_VERSION:-v?(?P<release>[^}\"]+)\}",
+        ARTIFACT_SPECS[1][0]: r"set \"pinned_version=v?(?P<release>[^\"]+)\"",
+    })
+    "Release defaults `mise generate install-script` bakes into each launcher."
+    MISE_VERSION_PIN_HEADER: ClassVar[t.VariadicTuple[str]] = (
+        "# @flext-generated: upg",
+        (
+            "# @flext-owner: flext-infra/src/flext_infra/templates/project/base/"
+            "tool_bootstrap_recipe.j2 (toolchain.mise_selector and"
+            " toolchain.mise_version in flext-infra/config/codegen.yaml)"
+        ),
+        (
+            "# @flext-adjust: never hand-edit; bin/mise and bin/mise.cmd are"
+            " generated by mise for exactly this release"
+        ),
+        "# @flext-regenerate: make upg",
     )
-    "Upstream resolution endpoint the unlocked launcher must carry."
-    MISE_UNLOCKED_FAIL_LOUD_CLAUSE: ClassVar[str] = (
-        "could not resolve the latest mise release"
+    "Standardized header `make upg` writes above the release line."
+    MISE_VERSION_PIN_READER: ClassVar[str] = (
+        "!/^[[:space:]]*(#|$)/ { lines++; release = $0 }"
+        " END { if (lines == 1) print release }"
     )
-    "Fail-loud clause emitted when the releases/latest resolution fails."
-    MISE_UNLOCKED_CHECKSUM_URI: ClassVar[str] = "SHASUMS256.txt"
-    "Release checksum payload the unlocked launcher always verifies."
+    "POSIX awk program every shell reader uses: the sole non-comment line."
     MISE_BOOTSTRAP_STORAGE_ROOT_VARIABLE: ClassVar[str] = "MISE_DATA_DIR"
     "Required caller-owned persistent root for generated Mise setup."
     MISE_BOOTSTRAP_FIXED_ENVIRONMENT: ClassVar[t.VariadicTuple[t.Pair[str, str]]] = (
@@ -159,6 +187,13 @@ class FlextInfraConstantsCodegen(
         ("MISE_GITHUB_OAUTH_OPEN_BROWSER", "false"),
     )
     "Fixed fail-closed settings shared by every generated Mise invocation."
+    MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT: ClassVar[t.VariadicTuple[t.Pair[str, str]]] = (
+        ("MISE_OFFLINE", "true"),
+    )
+    (
+        "Network policy of every generated Mise call except a missing-tool "
+        "install and the `make upg` resolution: cached state answers it, or it fails."
+    )
     MISE_BOOTSTRAP_TRANSIENT_ENVIRONMENT: ClassVar[
         t.VariadicTuple[t.Pair[str, str]]
     ] = (
@@ -211,22 +246,16 @@ class FlextInfraConstantsCodegen(
         "PATHEXT",
         "SYSTEMROOT",
         "WINDIR",
-        # Credential and network-policy keys the lock-time provenance fetch
-        # requires: without them the shared-host GitHub rate limit fails the
-        # lock generation closed. Reinjection stays explicit (allowlist).
+        # The one GitHub credential variable (optional) and the network
+        # policy key the lock-time provenance fetch reads.
         "GITHUB_TOKEN",
-        "GH_TOKEN",
-        "MISE_GITHUB_TOKEN",
-        "MISE_GITHUB_CREDENTIAL_COMMAND",
         "MISE_HTTP_TIMEOUT",
-        # Launcher pin knob: hosts whose curl resolves through Mise shims
-        # cannot resolve "latest" inside the sanitized bootstrap env; an
-        # explicit MISE_VERSION skips that resolution entirely.
+        "FLEXT_MYPY_PROFILE_OUTPUT",
+        # The generated launchers bake their release; the bootstrap passes the
+        # committed pin, or the release `make upg` is installing, explicitly.
         "MISE_VERSION",
     )
     "Only host environment keys eligible for explicit reinjection."
-    MISE_VERSION_PIN_FILENAME: ClassVar[str] = "mise.version"
-    "Committed Mise release `make upg` resolved; setup passes it as MISE_VERSION."
     MISE_RUNTIME_INSTALL_RELATIVE_TEMPLATE: ClassVar[str] = "bootstrap/mise-{release}"
     "Persistent runtime address shared by provisioning and direnv activation."
 
@@ -264,9 +293,6 @@ class FlextInfraConstantsCodegen(
     QG_REPORT_DIR: ClassVar[str] = ".reports/codegen/constants-quality-gate"
     "Report directory for constants quality gate."
     QG_CHECK_NAMESPACE_COMPLIANCE: ClassVar[str] = "namespace_compliance"
-    QG_CHECK_FLEXT_VALIDITY: ClassVar[str] = "flext_validity"
-    QG_CHECK_IMPORT_RESOLUTION: ClassVar[str] = "import_resolution"
-    QG_CHECK_LAYER_COMPLIANCE: ClassVar[str] = "layer_compliance"
     QG_CHECK_DUPLICATION_REDUCTION: ClassVar[str] = "duplication_reduction"
     QG_CHECK_TYPE_SAFETY: ClassVar[str] = "type_safety"
     QG_CHECK_LINT_CLEAN: ClassVar[str] = "lint_clean"
