@@ -32,7 +32,8 @@ if TYPE_CHECKING:
 class FlextInfraValidateLazyMapFreshness(FlextInfraProjectSelectionServiceBase[bool]):
     """Flags ``__init__.py`` files whose lazy maps are out of sync with siblings."""
 
-    def build_report(self, repository_root: Path) -> p.Result[m.Infra.ValidationReport]:
+    @staticmethod
+    def build_report(repository_root: Path) -> p.Result[m.Infra.ValidationReport]:
         """Run the lazy-init generator in check-only mode, collect stale inits.
 
         Args:

@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraDocServiceBase(FlextInfraProjectSelectionServiceBase[bool], ABC):
-    """Shared abstract base for ``audit``, ``build``, ``fix``, ``generate``, ``validate``."""
+    """Shared base for audit/build/fix/generate/validate verbs."""
 
     output_dir: Annotated[Path | None, m.Field(description="Docs output dir")] = Path(
         c.Infra.DEFAULT_DOCS_OUTPUT_DIR,

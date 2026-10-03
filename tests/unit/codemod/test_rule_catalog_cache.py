@@ -36,9 +36,12 @@ class TestsFlextInfraRuleCatalogCache:
             encoding="utf-8",
         )
         rule = rules / "only.yml"
+        # The cache is the host's persistent store, keyed by content: the
+        # run's own tmp path makes the content new to it on every run, so a
+        # rerun on the same host still observes its own publication.
         rule.write_text(
             "id: cache-only\nlanguage: Python\nseverity: error\n"
-            f"message: {message}\nrule:\n  pattern: only($VALUE)\n",
+            f"message: '{message} {tmp_path}'\nrule:\n  pattern: only($VALUE)\n",
             encoding="utf-8",
         )
         return project, rule

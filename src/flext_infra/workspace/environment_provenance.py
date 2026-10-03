@@ -7,7 +7,6 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import re
-from importlib.metadata import distributions
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import unquote, urlparse
@@ -63,15 +62,9 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         )
         validated = 0
         for repository in repositories:
-            matches = (
-                tuple(distributions(name=repository.distribution))
-                if metadata_paths is None
-                else tuple(
-                    distributions(
-                        name=repository.distribution,
-                        path=list(metadata_paths),
-                    ),
-                )
+            matches = u.installed_distributions(
+                name=repository.distribution,
+                path=metadata_paths,
             )
             if len(matches) != 1:
                 return r[int].fail(

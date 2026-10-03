@@ -267,11 +267,13 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
             )
         if data.internal_missing:
             violations.append(
-                f"{project_dir.name}: {len(data.internal_missing)} internal missing imports",
+                f"{project_dir.name}: {len(data.internal_missing)} "
+                f"internal missing imports",
             )
         if data.unresolved_missing:
             violations.append(
-                f"{project_dir.name}: {len(data.unresolved_missing)} unresolved imports",
+                f"{project_dir.name}: {len(data.unresolved_missing)} "
+                f"unresolved imports",
             )
         return tuple(violations)
 
@@ -314,7 +316,8 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
                 passed=not violations,
                 violations=violations,
                 summary=(
-                    f"typed dependency chain: {len(projects)} projects, {len(violations)} issues"
+                    f"typed dependency chain: {len(projects)} projects, "
+                    f"{len(violations)} issues"
                 ),
             ),
         )

@@ -307,7 +307,7 @@ class FlextInfraEnsureRuffConfigPhase:
                     path=path,
                     facts=m.Infra.RuffProjectFacts(
                         first_party=FlextInfraToolTablesPhase.first_party_namespaces(
-                            path.parent,
+                            path=path.parent,
                         ),
                         stale_patterns=[
                             pattern

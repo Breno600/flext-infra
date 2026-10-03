@@ -52,7 +52,8 @@ class TestsFlextInfraInfraMaintenanceMain:
         (root / ".python-version").write_text(f"3.{python_minor}\n", encoding="utf-8")
         return root
 
-    def _make_enforcer(self, workspace: Path) -> FlextInfraPythonVersionEnforcer:
+    @staticmethod
+    def _make_enforcer(workspace: Path) -> FlextInfraPythonVersionEnforcer:
         class _TestEnforcer(FlextInfraPythonVersionEnforcer):
             @override
             def _repository_root_from_file(self, file: str | Path) -> Path:

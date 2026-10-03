@@ -454,8 +454,8 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             )
         return result
 
+    @staticmethod
     def _lazy_phase(
-        self,
         request: m.Infra.CodegenConformRequest,
         plan: m.Infra.CodegenPlan,
     ) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
@@ -491,7 +491,8 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 existing = inputs.get(state.path)
                 if existing is not None and existing != state:
                     return r[m.Infra.CodegenPhaseAnalysis].fail(
-                        f"lazy-init input changed across repository plans: {state.path}",
+                        f"lazy-init input changed across repository plans: "
+                        f"{state.path}",
                     )
                 inputs[state.path] = state
         return r[m.Infra.CodegenPhaseAnalysis].ok(
@@ -816,8 +817,8 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 return removed
         return r[bool].ok(True)
 
+    @staticmethod
     def _allow_direnv_after_apply(
-        self,
         request: m.Infra.CodegenConformRequest,
         written_files: t.VariadicTuple[Path],
     ) -> p.Result[bool]:

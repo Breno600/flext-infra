@@ -43,7 +43,11 @@ class FlextInfraCodegenGenerationLazyEntriesMixin(
             if exp not in lazy_filtered:
                 continue
             mod, attr = lazy_filtered[exp]
-            module_or_package_export = FlextInfraCodegenGenerationLazyEntriesMixin._is_module_or_package_export(
+            is_export = (
+                FlextInfraCodegenGenerationLazyEntriesMixin
+                ._is_module_or_package_export
+            )
+            module_or_package_export = is_export(
                 attr,
             )
             if module_or_package_export and not include_module_exports:

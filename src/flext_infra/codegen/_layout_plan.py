@@ -99,8 +99,8 @@ class FlextInfraCodegenLayoutPlanMixin:
             return spec.project_overrides.get(logical)
         return None
 
+    @staticmethod
     def _allowed_root_names(
-        self,
         spec: m.Infra.LayoutSpec,
         project_dir: Path,
         project_name: str,

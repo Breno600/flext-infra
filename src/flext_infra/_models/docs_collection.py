@@ -131,7 +131,9 @@ class FlextInfraModelsDocsCollection:
             description="Source association supplying this revision",
         )
         source_path: Path = m.Field(
-            description="Source-association-relative locator without private root disclosure",
+            description=(
+                "Source-association-relative locator without private root disclosure"
+            ),
         )
         driver: t.NonEmptyStr = m.Field(description="Source driver provenance")
         driver_version: t.NonEmptyStr = m.Field(description="Source driver version")

@@ -114,6 +114,12 @@ language: python
 severity: error
 files:
   - "src/*/__init__.py"
+ignores:
+  # The rule owns the package ROOT facade only. Private-layer namespaces
+  # (src/<pkg>/_*/__init__.py) are internal nesting, not the facade, and the
+  # generated lazy-init __all__ there is the generator's, judged by gen.
+  - "src/*/_*/__init__.py"
+  - "src/*/_*/**/__init__.py"
 metadata:
   context:
     NAME:

@@ -47,9 +47,9 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(protocols_source, has="from __future__ import annotations")
         tm.that(protocols_source, has="from typing import Protocol")
 
+    @staticmethod
     @pytest.mark.slow
     def test_namespace_enforcer_apply_keeps_autofixes_when_other_violations_remain(
-        self,
         tmp_path: Path,
     ) -> None:
         """Relocate what a rule repairs and leave the detection-only finding."""

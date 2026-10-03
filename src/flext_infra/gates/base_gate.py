@@ -161,7 +161,7 @@ class FlextInfraGate:
         targets: t.StrSequence,
         started: float,
     ) -> m.Infra.GateExecution:
-        """Build, run, and parse the check command — shared by ``check`` and ``check_files``.
+        """Build, run, parse the check command (check and check_files).
 
         Returns:
             The resulting ``m.Infra.GateExecution``.
@@ -229,7 +229,10 @@ class FlextInfraGate:
             line=line,
             column=column,
             code=c.Infra.ToolOutcome.ERROR.value,
-            message=f"{tool} exited with code {result.outcome.raw_return_code}: {detail}",
+            message=(
+                f"{tool} exited with code {result.outcome.raw_return_code}: "
+                f"{detail}"
+            ),
             severity="ERROR",
         )
 
@@ -761,10 +764,14 @@ class FlextInfraGate:
     ) -> t.StrSequence:
         """Build the fix CLI command. Must override if can_fix is True."""
         _ = project_dir, ctx, targets
-        msg = f"Gate {self.gate_id} set can_fix=True but did not implement _build_fix_command"
+        msg = (
+            f"Gate {self.gate_id} set can_fix=True but did not "
+            f"implement _build_fix_command"
+        )
         raise NotImplementedError(msg)
 
-    def _fix_raw_output(self, result: p.Cli.CommandOutput) -> str:
+    @staticmethod
+    def _fix_raw_output(result: p.Cli.CommandOutput) -> str:
         """Assemble raw output from fix result. Default: stderr only.
 
         Returns:

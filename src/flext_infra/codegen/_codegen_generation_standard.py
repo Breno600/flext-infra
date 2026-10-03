@@ -108,7 +108,16 @@ class FlextInfraCodegenGenerationStandardMixin(
                     cls._type_checking_sort_key(rendered_module, root_names),
                     cls._format_import("", rendered_module, parts),
                 ))
-        lazy_module = c.Infra.LAZY_BOOTSTRAP_MODULE
+        # The bootstrap owner imports the helpers from the module that defines
+        # them: its root re-exports them, so importing the root from inside it
+        # binds each helper to itself (a cyclic facade binding and a partially
+        # initialized import). Every other distribution imports the root.
+        lazy_module = (
+            c.Infra.LAZY_BOOTSTRAP_MODULE
+            if current_pkg.split(".", maxsplit=1)[0]
+            == c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
+            else c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
+        )
         statements.append((
             cls._type_checking_sort_key(lazy_module, root_names),
             cls._format_import("", lazy_module, c.Infra.LAZY_BOOTSTRAP_HELPERS),
@@ -326,7 +335,7 @@ class FlextInfraCodegenGenerationStandardMixin(
         )
         first_party_names = {
             current_pkg,
-            *FlextInfraToolTablesPhase.first_party_namespaces(project_root),
+            *FlextInfraToolTablesPhase.first_party_namespaces(path=project_root),
         }
         type_checking_root_names = frozenset(first_party_names)
         type_checking_lines = "\n".join(

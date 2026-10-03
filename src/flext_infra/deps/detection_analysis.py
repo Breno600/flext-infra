@@ -382,8 +382,8 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
             raise RuntimeError(msg)
         return result.value
 
+    @staticmethod
     def module_to_types_package(
-        self,
         module_name: str,
         limits: t.MappingKV[str, t.JsonValue],
     ) -> str | None:

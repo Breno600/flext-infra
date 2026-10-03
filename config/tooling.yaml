@@ -196,7 +196,9 @@ Infra:
           # lint gate derives from the source (docstring sections from the
           # signature, summary and raise statement; summaries from the declared
           # name; the notice from the project's declared author and copyright
-          # year).
+          # year; a method that never reads its instance becomes a static
+          # method, its signature and decorators edited and its body kept
+          # byte for byte).
           fix-recipes:
             missing-copyright-notice: copyright-notice
             undocumented-public-class: summary-docstring
@@ -205,6 +207,7 @@ Infra:
             docstring-missing-returns: returns-section
             docstring-missing-yields: yields-section
             docstring-missing-exception: raises-section
+            no-self-use: static-method
           # Banned API messages are policy data, never template literals.
           banned-api:
             argparse: "Use cli.register_result_command + Pydantic model from flext_cli."
@@ -230,6 +233,19 @@ Infra:
           # and the scoped ones as `per-file-ignores`. Repositories declare no
           # exception of their own.
           authorized-exceptions:
+            - files: "scripts/**/*.py"
+              rules:
+                - commented-out-code
+                - line-too-long
+                - typing-only-first-party-import
+              authority: operator-ruling-2026-10-02-promoted-script-surface
+              reason: >-
+                Promoted command scripts declare TOML metadata headers the
+                discovery parser reads literally, so those lines cannot reflow
+                under the line budget, and the orchestration glue keeps
+                documented-disabled blocks and deferred annotation imports
+                inline; the member repository validates this surface
+                end-to-end through its own gates.
             - files: "tests/**/*.py"
               rules: [assert]
               authority: universal-core-2026-07-20-test-idiom-s101

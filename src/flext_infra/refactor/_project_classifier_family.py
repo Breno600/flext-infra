@@ -161,8 +161,8 @@ class FlextInfraProjectClassifierFamilyMixin:
             return ""
         return "".join(part.capitalize() for part in parts)
 
+    @staticmethod
     def _infer_project_kind(
-        self,
         *,
         internal_dependencies: t.StrSequence,
         local_facade_classes: t.Infra.StrSet,
