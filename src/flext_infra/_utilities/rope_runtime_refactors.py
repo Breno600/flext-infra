@@ -51,7 +51,9 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
             m.Infra.SourceRewrite(
                 start=start,
                 end=end,
-                text="".join(prefix + line for line in comments.splitlines(keepends=True)),
+                text="".join(
+                    prefix + line for line in comments.splitlines(keepends=True)
+                ),
             ),
         ]
         for number in range(layout.header_end + 1, layout.body_end + 1):

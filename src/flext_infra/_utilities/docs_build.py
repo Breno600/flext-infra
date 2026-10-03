@@ -123,8 +123,7 @@ class FlextInfraUtilitiesDocsBuild:
             return primary_report.model_copy(
                 update={
                     "reason": (
-                        f"{primary_report.reason}; "
-                        "product mkdocs.yaml also built"
+                        f"{primary_report.reason}; product mkdocs.yaml also built"
                     ),
                 },
             )

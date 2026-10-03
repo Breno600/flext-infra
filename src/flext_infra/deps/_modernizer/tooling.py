@@ -136,16 +136,22 @@ class FlextInfraPyprojectModernizerTooling:
             live_state = self._read_document_state(path)
             if live_state.failure:
                 return result_type.from_failure(live_state)
-            groups = u.Cli.toml_mapping_child(
-                live_state.value.payload, c.Infra.DEPENDENCY_GROUPS,
-            ) or {}
+            groups = (
+                u.Cli.toml_mapping_child(
+                    live_state.value.payload,
+                    c.Infra.DEPENDENCY_GROUPS,
+                )
+                or {}
+            )
             group_dev = u.validate_value(
                 t.Infra.STR_SEQ_ADAPTER,
                 groups.get(str(c.Infra.DEV), []),
                 strict=True,
             )
             if group_dev.failure:
-                return result_type.fail_op("validate live dev dependencies", group_dev.error)
+                return result_type.fail_op(
+                    "validate live dev dependencies", group_dev.error
+                )
             live_dev = (
                 *group_dev.value,
                 *u.Infra.canonical_dev_dependencies_from_payload(
@@ -165,9 +171,7 @@ class FlextInfraPyprojectModernizerTooling:
                 ],
             },
             c.Infra.DEPENDENCY_GROUPS: {
-                "codegen": [
-                    item for item in profile.codegen if item != project_name
-                ],
+                "codegen": [item for item in profile.codegen if item != project_name],
                 c.Infra.DEV: [
                     *(item for item in scaffold_project.dev if item != project_name),
                     *live_dev,
