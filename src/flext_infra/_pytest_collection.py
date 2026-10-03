@@ -151,11 +151,7 @@ class FlextInfraPytestCollection:
             being interrupted after its own final result.
             """
             session = self.session
-            if (
-                session is None
-                or report.when != "teardown"
-                or time.monotonic() < self.stop_at_monotonic
-            ):
+            if session is None or report.when != "teardown":
                 return
             self.completed_items.add(report.nodeid)
             total_items = len(session.items)
@@ -167,7 +163,6 @@ class FlextInfraPytestCollection:
             if not getattr(report, "nodes_files_lines", None):
                 return
             reason = f"suite stop instant {self.stop_at_monotonic:.3f} reached"
-            controller = session.config.pluginmanager.getplugin("dsession")
             if isinstance(controller, DSession):
                 if not controller.shouldstop:
                     controller.shouldstop = reason
