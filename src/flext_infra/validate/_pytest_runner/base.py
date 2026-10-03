@@ -25,6 +25,15 @@ class FlextInfraPytestRunnerBase(s[int]):
         m.Field(gt=0, description="Clock captured before FLEXT imports."),
     ]
     target: Annotated[Path, m.Field(description="Repository-relative test root.")]
+    target_file: Annotated[
+        Path | None,
+        m.Field(
+            description=(
+                "Optional repository-relative single test file; it replaces "
+                "the test root as the only pytest node target when declared."
+            ),
+        ),
+    ] = None
     reports: Annotated[Path, m.Field(description="Repository-relative report root.")]
     testmon_db: Annotated[
         Path,
@@ -76,6 +85,17 @@ class FlextInfraPytestRunnerBase(s[int]):
         return u.Cli.env_read(name, dict(os.environ)).unwrap().strip()
 
     @classmethod
+    def _optional_environment_path(cls, name: str) -> Path | None:
+        """Read one optional Make-owned runner path input.
+
+        Returns:
+            The resulting ``Path | None``.
+
+        """
+        value = cls._environment_value(name)
+        return Path(value) if value else None
+
+    @classmethod
     def from_environment(
         cls,
         *,
@@ -99,6 +119,9 @@ class FlextInfraPytestRunnerBase(s[int]):
             slow_phase=slow_phase,
             ci_context=(u.Infra.env_lookup(ci.variable) or "").strip() == ci.value,
             target=Path(cls._environment_value(c.Infra.PYTEST_ENV_TARGET)),
+            target_file=cls._optional_environment_path(
+                c.Infra.PYTEST_ENV_TARGET_FILE,
+            ),
             reports=Path(cls._environment_value(c.Infra.PYTEST_ENV_REPORTS)),
             testmon_db=Path(
                 cls._environment_value(
@@ -120,7 +143,8 @@ class FlextInfraPytestRunnerBase(s[int]):
                 the checkout; or if ``path.is_absolute() or not path.parts or any((part
                 in {'', '.', '..'} for part in path.parts)) or any((character in raw for
                 character in '\x00\r\n\\'))``; or if ``not
-                resolved.is_relative_to(self.root.resolve())``.
+                resolved.is_relative_to(self.root.resolve())``; or if test
+                target file must be an existing repository file.
 
         """
         for name, path in (("target", self.target), ("reports", self.reports)):
@@ -146,6 +170,39 @@ class FlextInfraPytestRunnerBase(s[int]):
             raise ValueError(msg)
         if self.testmon_db.resolve().is_relative_to(self.root.resolve()):
             msg = f"testmon database must be outside the checkout: {self.testmon_db}"
+            raise ValueError(msg)
+        return self._validate_target_file()
+
+    def _validate_target_file(self) -> Self:
+        """Require the declared single-file target to be repository-contained.
+
+        Returns:
+            The resulting ``Self``.
+
+        Raises:
+            ValueError: If target file must be a normalized repository-relative
+                path; or if target file escapes the repository; or if test
+                target file must be an existing repository file.
+
+        """
+        if self.target_file is None:
+            return self
+        raw_file = str(self.target_file)
+        if (
+            self.target_file.is_absolute()
+            or not self.target_file.parts
+            or any(part in {"", ".", ".."} for part in self.target_file.parts)
+            or any(character in raw_file for character in "\0\r\n\\")
+        ):
+            msg = "target_file must be a normalized repository-relative path"
+            raise ValueError(msg)
+        resolved_file = (self.root / self.target_file).resolve()
+        if not resolved_file.is_relative_to(self.root.resolve()):
+            msg = "target_file escapes the repository"
+            raise ValueError(msg)
+        file_path = self.root / self.target_file
+        if not file_path.is_file() or file_path.is_symlink():
+            msg = f"test target file must be an existing file: {self.target_file}"
             raise ValueError(msg)
         return self
 

@@ -581,6 +581,8 @@ Infra:
           description: Run incremental tests through the persistent testmon cache.
         - name: test-full
           description: Run incremental then all tests, including external and CI-excluded markers, through the same persistent testmon cache.
+        - name: test-file
+          description: Run one declared test file through the budgeted and slow phases with the same persistent testmon cache (FILE=<repository-relative path>).
         - name: fmt
           description: Apply ruff format --preview and every declared formatter gate. Ruff is the rule; change code, never ruff.
         - name: fix
