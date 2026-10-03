@@ -1,4 +1,8 @@
-"""Release boundary: what may ship, how internal pins read, where receipts live."""
+"""Release boundary: what may ship, how internal pins read, where receipts live.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -16,12 +20,22 @@ class FlextInfraReleaseBoundaryMixin(FlextInfraProjectSelectionServiceBase[bool]
 
     @staticmethod
     def _release_dir(root: Path, tag: str = "") -> Path:
-        """Return the release report directory, or one version's receipt directory."""
+        """Return the release report directory, or one version's receipt directory.
+
+        Returns:
+            The release report directory, or one version's receipt directory.
+
+        """
         return u.Cli.resolve_report_dir(root, c.Infra.PROJECT, c.Infra.RK_RELEASE) / tag
 
     @staticmethod
     def _write_release_text(path: Path, content: str) -> p.Result[bool]:
-        """Write release text, creating its directory."""
+        """Write release text, creating its directory.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
@@ -39,6 +53,10 @@ class FlextInfraReleaseBoundaryMixin(FlextInfraProjectSelectionServiceBase[bool]
         root (``root_index``): a package may ship a ``.github`` tree as data.
         A file codegen renders or manages is a projection, never a secret,
         whatever its name; other sensitive material is rejected at every depth.
+
+        Returns:
+            Why ``name`` may not ship, or an empty string.
+
         """
         path = PurePosixPath(name)
         if not name or "\\" in name or path.is_absolute() or ".." in path.parts:
@@ -65,9 +83,15 @@ class FlextInfraReleaseBoundaryMixin(FlextInfraProjectSelectionServiceBase[bool]
 
     @staticmethod
     def _sdist_member_allowed(
-        parts: t.StrSequence, allowed_roots: t.StrSequence,
+        parts: t.StrSequence,
+        allowed_roots: t.StrSequence,
     ) -> bool:
-        """Return whether one regular sdist member is inside the public boundary."""
+        """Return whether one regular sdist member is inside the public boundary.
+
+        Returns:
+            Whether one regular sdist member is inside the public boundary.
+
+        """
         relative = tuple(part.casefold() for part in parts[1:])
         permitted_roots = c.Infra.RELEASE_SDIST_ROOT_DIRS.union(
             root.casefold() for root in allowed_roots
@@ -86,6 +110,10 @@ class FlextInfraReleaseBoundaryMixin(FlextInfraProjectSelectionServiceBase[bool]
 
         The same minor line before 1.0, the same major line after: exactly
         what semantic versioning promises is compatible.
+
+        Returns:
+            The compatible-release range a sibling's declared version earns.
+
         """
         try:
             parsed = Version(version)
@@ -109,6 +137,10 @@ class FlextInfraReleaseBoundaryMixin(FlextInfraProjectSelectionServiceBase[bool]
         ``target`` is the release target (project name, project path);
         ``source`` is the staged source provenance -- its committed snapshot
         and LICENSE digest -- which a record carries completely or not at all.
+
+        Returns:
+            The resulting ``m.Infra.BuildRecord``.
+
         """
         name, path = target
         return m.Infra.BuildRecord(

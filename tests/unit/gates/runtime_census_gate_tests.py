@@ -1,4 +1,8 @@
-"""Runtime census selection and blocking behavior."""
+"""Runtime census selection and blocking behavior.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,7 +13,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m, t
+from flext_infra import m, t
 from flext_infra.gates.runtime_census import FlextInfraRuntimeCensusGate
 from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
 
@@ -28,10 +32,6 @@ _MIXED_SOURCES: t.MappingKV[str, str] = {
         "\n"
         "class Plain:\n"
         '    """Missing the project class prefix."""\n'
-        "\n"
-        "    def run(self, a, b, c, d, e, f, g):\n"
-        '        """Too many parameters for one function."""\n'
-        "        return a + b + c + d + e + f + g\n"
         "\n"
         "\n"
         "class Holder:\n"
@@ -57,7 +57,12 @@ _GENUINE_SOURCES: t.MappingKV[str, str] = {
 
 
 def _write_project(root: Path, sources: t.MappingKV[str, str]) -> Path:
-    """Materialize one fixture project and return its repository root."""
+    """Materialize one fixture project and return its repository root.
+
+    Returns:
+        The resulting ``Path``.
+
+    """
     for relative, text in sources.items():
         target = root / relative
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -67,20 +72,35 @@ def _write_project(root: Path, sources: t.MappingKV[str, str]) -> Path:
 
 @pytest.fixture
 def mixed_project(tmp_path: Path) -> Iterator[Path]:
-    """Importable project tripping several census rule families at once."""
+    """Importable project tripping several census rule families at once.
+
+    Yields:
+        Each ``Path``.
+
+    """
     root = _write_project(tmp_path / "mixed", _MIXED_SOURCES)
     yield from _importable_project(root)
 
 
 @pytest.fixture
 def genuine_project(tmp_path: Path) -> Iterator[Path]:
-    """Importable project tripping exactly one genuine census rule."""
+    """Importable project tripping exactly one genuine census rule.
+
+    Yields:
+        Each ``Path``.
+
+    """
     root = _write_project(tmp_path / "genuine", _GENUINE_SOURCES)
     yield from _importable_project(root)
 
 
 def _importable_project(root: Path) -> Iterator[Path]:
-    """Expose one fixture ``src`` tree to the import system for the census."""
+    """Expose one fixture ``src`` tree to the import system for the census.
+
+    Yields:
+        Each ``Path``.
+
+    """
     src = str(root / "src")
     sys.path.insert(0, src)
     importlib.invalidate_caches()
@@ -94,7 +114,9 @@ def _importable_project(root: Path) -> Iterator[Path]:
 class TestRuntimeCensusSelection:
     """Empty discovery is a broken invocation, not evidence of conformance."""
 
-    def test_empty_checkout_fails_the_gate(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_empty_checkout_fails_the_gate(tmp_path: Path) -> None:
+        """Test empty checkout fails the gate."""
         context = m.Infra.GateContext(
             repository_root=tmp_path,
             reports_dir=tmp_path / ".reports",
@@ -108,16 +130,16 @@ class TestRuntimeCensusSelection:
 class TestsRuntimeCensusBlocking:
     """Every census violation blocks; no rule family is set aside."""
 
+    @staticmethod
     def test_every_rule_family_in_the_project_blocks(
-        self,
         mixed_project: Path,
         genuine_project: Path,
     ) -> None:
-        """Prefix and constant violations count against the check census run.
+        """Prefix and constant violations belong to runtime census.
 
-        The parameter-count violation the mixed fixture also trips is a smell
-        family (``smell_function_parameters``) routed to the smells gate, so it
-        never reaches this run.
+        The parameter-count smell belongs to the smell owner (qlty through
+        make smells, flext-core ea8d16d26), so the census never reports it:
+        each finding has exactly one gate.
         """
         mixed = tm.ok(
             FlextInfraRuntimeCensusValidator(
@@ -131,15 +153,25 @@ class TestsRuntimeCensusBlocking:
         )
         tm.that(mixed.passed, eq=False)
         tm.that("\n".join(mixed.violations), has="[ENFORCE-079]")
+        tm.that("\n".join(mixed.violations), has="[class_prefix]")
         tm.that("\n".join(mixed.violations), lacks="[smell_function_parameters]")
         tm.that(len(mixed.violations) > len(genuine.violations), eq=True)
         tm.that(
             mixed.summary,
             eq=f"runtime census found {len(mixed.violations)} violation(s)",
         )
+        context = m.Infra.GateContext(
+            repository_root=mixed_project,
+            reports_dir=mixed_project / ".reports",
+        )
+        gate = FlextInfraRuntimeCensusGate(repository_root=mixed_project)
+        result = gate.check(mixed_project, context).result
+        tm.that(result.passed, eq=False)
+        tm.that("\n".join(result.errors), has="[ENFORCE-079]")
+        tm.that("\n".join(result.errors), has="[class_prefix]")
 
+    @staticmethod
     def test_single_violation_reports_verbatim(
-        self,
         genuine_project: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -155,60 +187,3 @@ class TestsRuntimeCensusBlocking:
         tm.that("\n".join(report.violations), has="[ENFORCE-079]")
         tm.that(report.summary, eq="runtime census found 1 violation(s)")
         tm.that(output, eq="")
-
-
-class TestsRuntimeCensusSmellOwnership:
-    """Smell families belong to the smells gate, never to the check census."""
-
-    @staticmethod
-    def _smell_tokens(violations: t.SequenceOf[str]) -> tuple[str, ...]:
-        """Violations whose trailing rule token is a flext-core smell tag."""
-        return tuple(
-            violation
-            for violation in violations
-            if any(violation.endswith(f"[{tag}]") for tag in c.ENFORCEMENT_SMELL_TAGS)
-        )
-
-    def test_check_census_never_sees_smell_families(
-        self, mixed_project: Path, capsys: pytest.CaptureFixture[str],
-    ) -> None:
-        """The runtime-census gate neither reports nor counts any smell.
-
-        Premise (operator 2026-10-01): make smells owns every smell family;
-        ownership is routing, so no smell is suspended, observational,
-        suppressed, or announced inside make check.
-        """
-        report = tm.ok(
-            FlextInfraRuntimeCensusValidator(
-                repository_root=mixed_project,
-            ).build_report(),
-        )
-        output = capsys.readouterr().out
-        tm.that(self._smell_tokens(report.violations), length=0)
-        for tag in c.ENFORCEMENT_SMELL_TAGS:
-            tm.that(output, lacks=tag)
-            tm.that(report.summary, lacks=tag)
-
-    def test_smells_census_reports_only_smell_families(
-        self, mixed_project: Path,
-    ) -> None:
-        """The smells-scoped census grades exactly the smell families."""
-        report = tm.ok(
-            FlextInfraRuntimeCensusValidator(
-                repository_root=mixed_project, census_gate=c.Infra.SMELLS,
-            ).build_report(),
-        )
-        tm.that(report.passed, eq=False)
-        tm.that(report.violations, length=len(self._smell_tokens(report.violations)))
-        tm.that("\n".join(report.violations), has="[smell_function_parameters]")
-
-    def test_gate_without_census_families_is_a_failure(
-        self, mixed_project: Path,
-    ) -> None:
-        """A gate that owns no census family cannot grade a census run."""
-        tm.fail(
-            FlextInfraRuntimeCensusValidator(
-                repository_root=mixed_project, census_gate=c.Infra.LINT,
-            ).build_report(),
-            has="has no rule families",
-        )

@@ -1,13 +1,19 @@
-"""Workspace and release CLI route ownership."""
+"""Workspace and release CLI route ownership.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from collections.abc import MutableMapping
 from typing import ClassVar
 
-from flext_infra import c, m, p, t, u
+from flext_infra import c, infra, m, p, t, u
 from flext_infra.git import FlextInfraGitService
 from flext_infra.release.orchestrator import FlextInfraReleaseOrchestrator
+from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
+from flext_infra.services.cli_routes_refactor import FlextInfraRefactorRoutes
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from flext_infra.workspace.environment import FlextInfraWorkspaceEnvironmentMixin
 from flext_infra.workspace.environment_provenance import (
@@ -15,9 +21,6 @@ from flext_infra.workspace.environment_provenance import (
 )
 from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
 from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
-
-from .cli_route_base import FlextInfraCliRouteBase
-from .cli_routes_refactor import FlextInfraRefactorRoutes
 
 
 class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
@@ -27,7 +30,12 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
     def _apply_flext_binding(
         params: m.Infra.FlextBindingRequest,
     ) -> p.Result[t.Cli.ResultValue]:
-        """Apply the typed binding request through its service owner."""
+        """Apply the typed binding request through its service owner.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         return FlextInfraFlextBindingService.apply(
             consumer_root=params.repository_root,
             flext_root=params.flext_root,
@@ -38,7 +46,12 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
     def _sync_environment(
         params: m.Infra.WorkspaceEnvironmentCliRequest,
     ) -> p.Result[t.Cli.ResultValue]:
-        """Keep the internal beads render context off the public CLI surface."""
+        """Keep the internal beads render context off the public CLI surface.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         request = m.Infra.WorkspaceEnvironmentSyncRequest.model_validate(
             params.model_dump(),
         )
@@ -55,9 +68,7 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
                 name=c.Infra.VERB_RUN,
                 help_text="Run release orchestration CLI flow",
                 model_cls=FlextInfraReleaseOrchestrator,
-                handler=FlextInfraCliRouteBase.result_handler(
-                    FlextInfraReleaseOrchestrator.execute_command,
-                ),
+                handler=FlextInfraCliRouteBase.result_handler(infra.release_run),
                 success_message="Release completed successfully",
             ),
         ),
@@ -71,7 +82,10 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
             ),
             m.Cli.ResultCommandRoute(
                 name="verify-clean",
-                help_text="Fail if a Git worktree has staged, unstaged, or untracked changes",
+                help_text=(
+                    "Fail if a Git worktree has staged, unstaged, "
+                    "or untracked changes"
+                ),
                 model_cls=m.Infra.GitStatusRequest,
                 handler=FlextInfraCliRouteBase.result_handler(
                     FlextInfraGitService.verify_clean,
@@ -115,7 +129,7 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
                         "Publish this workspace's flext-infra to every member",
                         FlextInfraWorkspacePropagation,
                         FlextInfraCliRouteBase.result_handler(
-                            FlextInfraWorkspacePropagation.execute_command,
+                            infra.workspace_propagate,
                         ),
                     ),
                     (

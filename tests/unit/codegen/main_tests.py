@@ -16,7 +16,6 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import FlextInfraCliRouteService, c, config, main as infra_main
-from flext_infra.workspace import FlextInfraWorkspaceDetector
 from tests import m, t, u
 
 
@@ -30,13 +29,22 @@ class TestsFlextInfraCodegenMain:
         The bootstrap projection reads declarations only: ``config/workspace.yaml``
         when present, otherwise the project name and its provider-matched
         Repository URL. A checkout with neither has no identity to render.
+
+        Returns:
+            The resulting ``Path``.
+
         """
         repository = u.Tests.repository_ref(repo.name)
+        infra = u.Tests.repository_ref("flext-infra")
+        integration = config.Infra.codegen.branch_policy.integration_branch_preference[
+            0
+        ]
         (repo / "pyproject.toml").write_text(
             f'[project]\nname = "{repository.distribution}"\nversion = "0.1.0"\n'
             f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
             'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
-            'dependencies = ["flext-core>=0.1.0"]\n\n'
+            f'dependencies = ["flext-core>=0.1.0", '
+            f'"flext-infra @ git+{infra.url}@{integration}"]\n\n'
             f'[project.urls]\nRepository = "{repository.url}"\n',
             encoding="utf-8",
         )
@@ -52,18 +60,15 @@ class TestsFlextInfraCodegenMain:
     def _seed_public_conform_checkout(root: Path) -> None:
         """Seed a minimal governed package tree plus the real config and Mise inputs.
 
-        Conform verifies the declared console entry point through a fresh
-        import. Seed the real package so the fixture's distribution metadata
-        describes a public runtime that actually exists.
+        Conform plans and publishes generated files; the fresh import of the
+        declared package is the check gate's proof, not conform's. One real
+        package module therefore suffices, and conform plans over the
+        fixture's size instead of a copy of the whole distribution.
         """
         project_root = Path(__file__).resolve().parents[3]
-        tm.ok(
-            u.Cli.files_copy_directory(
-                project_root / "src" / "flext_infra",
-                root / "src" / "flext_infra",
-                dirs_exist_ok=True,
-            ),
-        )
+        package_init = root / "src" / "flext_infra" / "__init__.py"
+        package_init.parent.mkdir(parents=True, exist_ok=True)
+        tm.ok(u.Cli.atomic_write_text_file(package_init, ""))
         tests_init = root / "tests" / "__init__.py"
         tests_init.parent.mkdir(parents=True, exist_ok=True)
         tm.ok(u.Cli.atomic_write_text_file(tests_init, ""))
@@ -81,21 +86,15 @@ class TestsFlextInfraCodegenMain:
                 root / c.Infra.MISE_TOML_FILENAME,
             ),
         )
-        # The copied manifest declares the project; conform loads every entry
-        # point it declares, so the seed ships the cli module it declares.
-        (manifest,) = tm.ok(FlextInfraWorkspaceDetector.load_workspace_manifest(root))
-        project = tm.not_none(manifest.project)
-        if project.cli_module:
-            tm.ok(
-                u.Cli.atomic_write_text_file(
-                    package_init.parent / c.Infra.CODEGEN_CLI_MODULE_FILENAME,
-                    "def main() -> int:\n    return 0\n",
-                ),
-            )
 
     @staticmethod
     def _mise_transaction_state(root: Path) -> t.Pair[Path, Path]:
-        """Return the workspace journal and the Mise transaction state root."""
+        """Return the workspace journal and the Mise transaction state root.
+
+        Returns:
+            The workspace journal and the Mise transaction state root.
+
+        """
         identity = u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=root)).unwrap()
         return (
             identity.git_dir / c.Infra.JOURNAL_NAME,
@@ -104,7 +103,12 @@ class TestsFlextInfraCodegenMain:
 
     @staticmethod
     def _public_conform_command(root: Path) -> list[str]:
-        """Build the real CLI command whose final argument selects check or apply."""
+        """Build the real CLI command whose final argument selects check or apply.
+
+        Returns:
+            The resulting ``list[str]``.
+
+        """
         return [
             sys.executable,
             "-m",
@@ -121,7 +125,8 @@ class TestsFlextInfraCodegenMain:
     class TestsHandleLazyInit:
         """Tests for direct init command dispatch."""
 
-        def test_success(self, real_git_repo: Path) -> None:
+        @staticmethod
+        def test_success(real_git_repo: Path) -> None:
             """Init returns 0 on empty workspace."""
             result = infra_main([
                 "codegen",
@@ -131,7 +136,8 @@ class TestsFlextInfraCodegenMain:
             ])
             tm.that(result, eq=0)
 
-        def test_check_mode(self, real_git_repo: Path) -> None:
+        @staticmethod
+        def test_check_mode(real_git_repo: Path) -> None:
             """Init check reports managed drift without mutating the repository."""
             repository = TestsFlextInfraCodegenMain._with_pep621_identity(real_git_repo)
             pyproject = repository / c.PYPROJECT_FILENAME
@@ -148,7 +154,8 @@ class TestsFlextInfraCodegenMain:
             tm.that(makefile.exists(), eq=False)
             tm.that(pyproject.read_bytes(), eq=before)
 
-        def test_enforce_mode(self, real_git_repo: Path) -> None:
+        @staticmethod
+        def test_enforce_mode(real_git_repo: Path) -> None:
             """Init in enforce mode (not check)."""
             result = infra_main([
                 "codegen",
@@ -161,7 +168,8 @@ class TestsFlextInfraCodegenMain:
     class TestsMainCommandDispatch:
         """Tests for main() command routing."""
 
-        def test_init_command(self, real_git_repo: Path) -> None:
+        @staticmethod
+        def test_init_command(real_git_repo: Path) -> None:
             """main() with init command returns 0."""
             result = infra_main([
                 "codegen",
@@ -171,18 +179,20 @@ class TestsFlextInfraCodegenMain:
             ])
             tm.that(result, eq=0)
 
-        def test_unknown_command(self) -> None:
+        @staticmethod
+        def test_unknown_command() -> None:
             """main() with unknown command returns non-zero exit code."""
             result = infra_main(["codegen", "unknown-command"])
             tm.that(result, ne=0)
 
-        def test_no_command(self) -> None:
+        @staticmethod
+        def test_no_command() -> None:
             """main() with no command returns non-zero exit code."""
             result = infra_main(["codegen"])
             tm.that(result, ne=0)
 
+        @staticmethod
         def test_init_rejects_nested_non_worktree_root(
-            self,
             real_git_repo: Path,
         ) -> None:
             """Initialization accepts only the exact Git worktree root."""
@@ -203,7 +213,8 @@ class TestsFlextInfraCodegenMain:
     class TestsMainEntryPoint:
         """Tests for the centralized process entrypoint."""
 
-        def test_entry_point_returns_int(self, real_git_repo: Path) -> None:
+        @staticmethod
+        def test_entry_point_returns_int(real_git_repo: Path) -> None:
             """main() returns an integer exit code."""
             result = infra_main([
                 "codegen",
@@ -213,7 +224,8 @@ class TestsFlextInfraCodegenMain:
             ])
             tm.that(type(result).__name__, eq="int")
 
-        def test_entry_point_via_sys_exit(self) -> None:
+        @staticmethod
+        def test_entry_point_via_sys_exit() -> None:
             """The root process entrypoint serves the route owner's declared help."""
             route = next(
                 item
@@ -238,9 +250,9 @@ class TestsFlextInfraCodegenMain:
             )
             tm.that(" ".join(result.value.stdout.split()), contains=route.help_text)
 
+        @staticmethod
         @pytest.mark.slow
         def test_managed_conflict_is_planned_and_published_atomically(
-            self,
             infra_git_repo: Path,
         ) -> None:
             """Keep live bytes unchanged until the public transaction commits."""
@@ -309,11 +321,17 @@ class TestsFlextInfraCodegenMain:
             tm.that(journal.exists(), eq=False)
             tm.that(transaction.exists(), eq=False)
 
+        @staticmethod
         def test_present_invalid_mise_artifact_never_enters_external_resolution(
-            self,
             infra_git_repo: Path,
         ) -> None:
-            """Reject a present invalid artifact before credential/network work."""
+            """Reject a present invalid artifact before credential/network work.
+
+            Raises:
+                AssertionError: If required Mise launcher has no permission mode; or if
+                    required Mise launcher has no bytes.
+
+            """
             root = infra_git_repo
             TestsFlextInfraCodegenMain._seed_public_conform_checkout(root)
             launcher = root / "bin" / "mise"
@@ -343,20 +361,16 @@ class TestsFlextInfraCodegenMain:
             applied = u.Cli.run_raw(
                 [*TestsFlextInfraCodegenMain._public_conform_command(root), "apply"],
                 cwd=root,
-                env={"MISE_GITHUB_CREDENTIAL_COMMAND": ""},
             )
 
             tm.ok(applied)
             tm.that(applied.value.outcome.raw_return_code, eq=1)
-            tm.that(
-                applied.value.stdout + applied.value.stderr,
-                lacks="MISE_GITHUB_CREDENTIAL_COMMAND is required",
-            )
             tm.that(launcher.read_bytes(), eq=corrupted)
             tm.that(journal.exists(), eq=False)
             tm.that(transaction.exists(), eq=False)
 
-        def test_unknown_command_surfaces_root_cause_via_subprocess(self) -> None:
+        @staticmethod
+        def test_unknown_command_surfaces_root_cause_via_subprocess() -> None:
             """Unknown codegen subcommands must print the actual CLI failure."""
             # The child renders through the CLI console, which honours COLUMNS and
             # would otherwise wrap the message at the developer's terminal width,

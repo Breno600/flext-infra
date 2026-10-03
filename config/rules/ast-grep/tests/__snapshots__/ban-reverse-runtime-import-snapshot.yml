@@ -1,0 +1,42 @@
+id: ban-reverse-runtime-import
+snapshots:
+  from .._models import base:
+    labels:
+    - source: .._models
+      style: primary
+      start: 5
+      end: 14
+    - source: from .._models import base
+      style: secondary
+      start: 0
+      end: 26
+  from pkg import m:
+    labels:
+    - source: pkg
+      style: primary
+      start: 5
+      end: 8
+    - source: from pkg import m
+      style: secondary
+      start: 0
+      end: 17
+  from pkg.models import FlextFooModels:
+    labels:
+    - source: pkg.models
+      style: primary
+      start: 5
+      end: 15
+    - source: from pkg.models import FlextFooModels
+      style: secondary
+      start: 0
+      end: 37
+  import pkg.models:
+    labels:
+    - source: pkg.models
+      style: primary
+      start: 7
+      end: 17
+    - source: import pkg.models
+      style: secondary
+      start: 0
+      end: 17

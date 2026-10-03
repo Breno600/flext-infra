@@ -22,7 +22,8 @@ class TestsFlextInfraAuditorLinks:
     class TestAuditorToMarkdown:
         """Tests for docs_audit_markdown helper."""
 
-        def test_to_markdown_empty_issues(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_to_markdown_empty_issues(tmp_path: Path) -> None:
             """Test docs_audit_markdown with no issues."""
             (tmp_path / "docs").mkdir()
             scope = m.Infra.DocScope(
@@ -34,7 +35,8 @@ class TestsFlextInfraAuditorLinks:
             tm.that(len(result), gte=0)
             tm.that(result, has="# Docs Audit Report")
 
-        def test_to_markdown_with_issues(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_to_markdown_with_issues(tmp_path: Path) -> None:
             """Test docs_audit_markdown with issues."""
             (tmp_path / "docs").mkdir()
             scope = m.Infra.DocScope(
@@ -55,7 +57,8 @@ class TestsFlextInfraAuditorLinks:
     class TestAuditorBrokenLinks:
         """Tests for docs_broken_link_issues."""
 
-        def test_broken_link_issues_empty_scope(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_broken_link_issues_empty_scope(tmp_path: Path) -> None:
             """Test docs_broken_link_issues with no markdown files."""
             scope = m.Infra.DocScope(
                 name="test",
@@ -65,7 +68,8 @@ class TestsFlextInfraAuditorLinks:
             issues = u.Infra.docs_broken_link_issues(scope)
             tm.that(len(issues), gte=0)
 
-        def test_broken_link_issues_with_valid_links(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_broken_link_issues_with_valid_links(tmp_path: Path) -> None:
             """Test docs_broken_link_issues ignores valid links."""
             docs_dir = tmp_path / "docs"
             docs_dir.mkdir(parents=True, exist_ok=True)
@@ -78,7 +82,8 @@ class TestsFlextInfraAuditorLinks:
             issues = u.Infra.docs_broken_link_issues(scope)
             tm.that(len(issues), gte=0)
 
-        def test_broken_link_issues_with_external_links(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_broken_link_issues_with_external_links(tmp_path: Path) -> None:
             """Test docs_broken_link_issues ignores external links."""
             docs_dir = tmp_path / "docs"
             docs_dir.mkdir(parents=True, exist_ok=True)
@@ -91,7 +96,8 @@ class TestsFlextInfraAuditorLinks:
             issues = u.Infra.docs_broken_link_issues(scope)
             tm.that(len(issues), gte=0)
 
-        def test_broken_link_issues_with_fragments(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_broken_link_issues_with_fragments(tmp_path: Path) -> None:
             """Test docs_broken_link_issues ignores fragment-only links."""
             docs_dir = tmp_path / "docs"
             docs_dir.mkdir(parents=True, exist_ok=True)
@@ -104,7 +110,8 @@ class TestsFlextInfraAuditorLinks:
             issues = u.Infra.docs_broken_link_issues(scope)
             tm.that(len(issues), gte=0)
 
-        def test_broken_link_issues_in_code_blocks(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_broken_link_issues_in_code_blocks(tmp_path: Path) -> None:
             """Test docs_broken_link_issues ignores links in code blocks."""
             docs_dir = tmp_path / "docs"
             docs_dir.mkdir(parents=True, exist_ok=True)
@@ -117,8 +124,8 @@ class TestsFlextInfraAuditorLinks:
             issues = u.Infra.docs_broken_link_issues(scope)
             tm.that(len(issues), gte=0)
 
+        @staticmethod
         def test_broken_link_issues_with_should_skip_target_true(
-            self,
             tmp_path: Path,
         ) -> None:
             """Test docs_broken_link_issues skips targets when should_skip_target returns True."""
@@ -133,7 +140,8 @@ class TestsFlextInfraAuditorLinks:
             issues = u.Infra.docs_broken_link_issues(scope)
             tm.that(len(issues), gte=0)
 
-        def test_broken_link_issues_with_missing_target(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_broken_link_issues_with_missing_target(tmp_path: Path) -> None:
             """Test docs_broken_link_issues reports missing targets."""
             docs_dir = tmp_path / "docs"
             docs_dir.mkdir(parents=True, exist_ok=True)
@@ -147,10 +155,11 @@ class TestsFlextInfraAuditorLinks:
             tm.that(len(issues) > 0, eq=True)
             tm.that(any("missing.md" in issue.message for issue in issues), eq=True)
 
+        @staticmethod
         def test_broken_link_issues_rejects_cross_project_relative_link(
-            self,
             tmp_path: Path,
         ) -> None:
+            """Test broken link issues rejects cross project relative link."""
             docs_dir = tmp_path / "docs"
             docs_dir.mkdir(parents=True, exist_ok=True)
             (docs_dir / "test.md").write_text(
@@ -173,7 +182,8 @@ class TestsFlextInfraAuditorLinks:
                 eq=True,
             )
 
-        def test_broken_link_issues_skips_some_text(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_broken_link_issues_skips_some_text(tmp_path: Path) -> None:
             """Test docs_broken_link_issues skips plain text brackets."""
             docs_dir = tmp_path / "docs"
             docs_dir.mkdir(parents=True, exist_ok=True)
@@ -186,8 +196,8 @@ class TestsFlextInfraAuditorLinks:
             issues = u.Infra.docs_broken_link_issues(scope)
             tm.that(len(issues), gte=0)
 
+        @staticmethod
         def test_broken_link_issues_with_space_in_url_skips(
-            self,
             tmp_path: Path,
         ) -> None:
             """Test docs_broken_link_issues skips URLs with spaces."""
@@ -206,7 +216,8 @@ class TestsFlextInfraAuditorLinks:
     class TestAuditorGithubLinks:
         """Governed GitHub URL audit and rewrite."""
 
-        def test_github_stale_organization(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_github_stale_organization(tmp_path: Path) -> None:
             """Placeholder organization URLs are high-severity defects."""
             docs_dir = tmp_path / "docs"
             docs_dir.mkdir(parents=True, exist_ok=True)
@@ -222,7 +233,8 @@ class TestsFlextInfraAuditorLinks:
             types = {issue.issue_type for issue in issues}
             tm.that("stale_github_organization" in types, eq=True)
 
-        def test_github_wrong_branch(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_github_wrong_branch(tmp_path: Path) -> None:
             """Wrong working-line branch is reported for governed repos."""
             docs_dir = tmp_path / "docs"
             docs_dir.mkdir(parents=True, exist_ok=True)
@@ -238,7 +250,8 @@ class TestsFlextInfraAuditorLinks:
             types = {issue.issue_type for issue in issues}
             tm.that("wrong_github_branch" in types, eq=True)
 
-        def test_github_rewrite_fix(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_github_rewrite_fix(tmp_path: Path) -> None:
             """Fix rewrites a stale organization on the governed branch only.
 
             A foreign ref may contain ``/``, so its ref/path boundary is not

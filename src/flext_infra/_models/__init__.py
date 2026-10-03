@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core.lazy import build_lazy_import_map, install_lazy_exports
+from flext_core import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra._models import _codegen, _config, _git
@@ -104,7 +104,6 @@ if TYPE_CHECKING:
     from flext_infra._models.validate import FlextInfraModelsCore
     from flext_infra._models.workspace import FlextInfraModelsWorkspace
     from flext_infra._models.worktree import FlextInfraModelsWorktree
-
 
 __all__: tuple[str, ...] = (
     "FlextInfraCodegen",

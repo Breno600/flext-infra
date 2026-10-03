@@ -1,4 +1,8 @@
-"""Public validation-workflow tests for docs services."""
+"""Public validation-workflow tests for docs services.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -17,7 +21,9 @@ if TYPE_CHECKING:
 class TestsFlextInfraDocsValidator:
     """Public validation-workflow tests for docs services."""
 
-    def test_validate_report_model_fields(self) -> None:
+    @staticmethod
+    def test_validate_report_model_fields() -> None:
+        """Test validate report model fields."""
         report = m.Infra.DocsPhaseReport(
             phase="validate",
             scope="root",
@@ -31,10 +37,11 @@ class TestsFlextInfraDocsValidator:
         tm.that(report.missing_adr_skills, eq=["rules-docs"])
         tm.that(report.todo_written, eq=False)
 
+    @staticmethod
     def test_validate_workspace_fails_before_generated_files_exist(
-        self,
         tmp_path: Path,
     ) -> None:
+        """Test validate workspace fails before generated files exist."""
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
 
         result = FlextInfraDocValidator().validate_workspace(
@@ -47,7 +54,8 @@ class TestsFlextInfraDocsValidator:
         tm.ok(result)
         tm.that(any(report.result == "FAIL" for report in result.value), eq=True)
 
-    def test_validate_workspace_passes_after_generation(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_validate_workspace_passes_after_generation(tmp_path: Path) -> None:
         """Validation passes once the generated bundle is published."""
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
 
@@ -68,8 +76,8 @@ class TestsFlextInfraDocsValidator:
         tm.ok(result)
         tm.that(all(report.result == "OK" for report in result.value), eq=True)
 
+    @staticmethod
     def test_standalone_manifest_keeps_project_docs_and_validates(
-        self,
         tmp_path: Path,
     ) -> None:
         """A standalone repository carrying its manifest is not a workspace root.
@@ -93,8 +101,8 @@ class TestsFlextInfraDocsValidator:
         tm.that(all(report.result == "OK" for report in result.value), eq=True)
         tm.that((repository / "docs/projects/generated/catalog.md").exists(), eq=False)
 
+    @staticmethod
     def test_validate_workspace_does_not_write_project_todo(
-        self,
         tmp_path: Path,
     ) -> None:
         """Read-only validation does not publish a project TODO ledger."""

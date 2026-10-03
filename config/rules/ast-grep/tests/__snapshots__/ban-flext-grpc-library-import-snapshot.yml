@@ -1,0 +1,22 @@
+id: ban-flext-grpc-library-import
+snapshots:
+  from grpc import aio:
+    labels:
+    - source: from grpc import aio
+      style: primary
+      start: 0
+      end: 20
+    - source: grpc
+      style: secondary
+      start: 5
+      end: 9
+  import grpc:
+    labels:
+    - source: import grpc
+      style: primary
+      start: 0
+      end: 11
+    - source: grpc
+      style: secondary
+      start: 7
+      end: 11

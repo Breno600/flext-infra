@@ -1,4 +1,8 @@
-"""Documentation formatter service."""
+"""Documentation formatter service.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,7 @@ from typing import override
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
-
-from .base import FlextInfraDocServiceBase
+from flext_infra.docs.base import FlextInfraDocServiceBase
 
 
 class FlextInfraDocFormatter(FlextInfraDocServiceBase):
@@ -40,7 +43,12 @@ class FlextInfraDocFormatter(FlextInfraDocServiceBase):
         output_dir: Path | str | None = None,
         apply: bool = False,
     ) -> p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]:
-        """Run markdown formatting across project scopes."""
+        """Run markdown formatting across project scopes.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]``.
+
+        """
         gate_factory = self.format_gate
         if gate_factory is None:
             return r[t.SequenceOf[m.Infra.DocsPhaseReport]].fail(
@@ -60,7 +68,12 @@ class FlextInfraDocFormatter(FlextInfraDocServiceBase):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute the configured docs format flow."""
+        """Execute the configured docs format flow.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return self._propagate_phase_outcome(
             "fmt",
             self.format(
@@ -79,7 +92,12 @@ class FlextInfraDocFormatter(FlextInfraDocServiceBase):
         apply: bool,
         gate_factory: p.Infra.MarkdownFormatGateFactory,
     ) -> m.Infra.DocsPhaseReport:
-        """Format one scope through the canonical markdown-format gate."""
+        """Format one scope through the canonical markdown-format gate.
+
+        Returns:
+            The resulting ``m.Infra.DocsPhaseReport``.
+
+        """
         gate = gate_factory(scope.path)
         ctx = m.Infra.GateContext(
             repository_root=scope.repository_root,

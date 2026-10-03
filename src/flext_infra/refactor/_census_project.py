@@ -1,11 +1,15 @@
-"""Census per-project report assembly."""
+"""Census per-project report assembly.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from collections import Counter
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
-from flext_infra import m, u
+from flext_infra import m
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -17,8 +21,6 @@ class FlextInfraRefactorCensusProjectMixin:
     Composed into FlextInfraRefactorCensus via inheritance; borrows the
     rule-inclusion + object-classification helpers from sibling mixins via FLEXT.
     """
-
-    _census_project_log: ClassVar[p.Logger] = u.fetch_logger(__name__)
 
     if TYPE_CHECKING:
 
@@ -35,7 +37,10 @@ class FlextInfraRefactorCensusProjectMixin:
         def _object_key(item: m.Infra.Object) -> str: ...
         @staticmethod
         def _violation(
-            item: m.Infra.Object, *, kind: str, description: str,
+            item: m.Infra.Object,
+            *,
+            kind: str,
+            description: str,
         ) -> m.Infra.Violation: ...
         @classmethod
         def _removal_candidate(
@@ -53,7 +58,12 @@ class FlextInfraRefactorCensusProjectMixin:
         duplicate_keys: frozenset[str],
         scan_config: m.Infra.ScanConfig,
     ) -> m.Infra.ProjectReport:
-        """Project report."""
+        """Project report.
+
+        Returns:
+            The resulting ``m.Infra.ProjectReport``.
+
+        """
         objects = tuple(findings.project_objects.get(project, ()))
         violations: list[m.Infra.Violation] = []
         rule_names = scan_config.rule_names
@@ -104,7 +114,10 @@ class FlextInfraRefactorCensusProjectMixin:
                     self._violation(
                         item,
                         kind="wrong_tier",
-                        description=f"Expected tier '{item.expected_tier}' but found '{item.actual_tier}'",
+                        description=(
+                            f"Expected tier '{item.expected_tier}' "
+                            f"but found '{item.actual_tier}'"
+                        ),
                     ),
                 )
             candidate = self._removal_candidate(item, include_unused=include_unused)

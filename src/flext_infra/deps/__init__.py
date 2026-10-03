@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core.lazy import build_lazy_import_map, install_lazy_exports
+from flext_core import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra.deps import _modernizer, phases
@@ -54,7 +54,6 @@ if TYPE_CHECKING:
     from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
     from flext_infra.deps.phases.inject_comments import FlextInfraInjectCommentsPhase
     from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
-
 
 __all__: tuple[str, ...] = (
     "FlextInfraConfigFixer",

@@ -1,4 +1,8 @@
-"""Route config-owned dynamic environment keys through their settings owner."""
+"""Route config-owned dynamic environment keys through their settings owner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -17,9 +21,12 @@ from libcst.metadata import (
 )
 
 from flext_infra import m, t
-
-from .bindings import FlextInfraUtilitiesSemanticCutoverBindings
-from .edits import FlextInfraUtilitiesSemanticCutoverEdits
+from flext_infra._utilities._semantic_cutover.bindings import (
+    FlextInfraUtilitiesSemanticCutoverBindings,
+)
+from flext_infra._utilities._semantic_cutover.edits import (
+    FlextInfraUtilitiesSemanticCutoverEdits,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -183,7 +190,10 @@ class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
                         for alias in node.names
                     )
                 ):
-                    msg = "dynamic environment migration conflicts with a settings binding"
+                    msg = (
+                        "dynamic environment migration conflicts "
+                        "with a settings binding"
+                    )
                     raise ValueError(msg)
                 if isinstance(node, ast.ImportFrom) and any(
                     alias.name == "*" for alias in node.names
@@ -208,7 +218,14 @@ class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
 
     @staticmethod
     def _require_settings_owner(package: str, sources: t.MappingKV[Path, str]) -> None:
-        """Require the destination settings API to exist in the source inventory."""
+        """Require the destination settings API to exist in the source inventory.
+
+        Raises:
+            ValueError: If dynamic environment migration requires one declared settings
+                owner; or if settings owner lacks optional/required dynamic environment
+                reads.
+
+        """
         owners = [
             source
             for path, source in sources.items()
@@ -216,7 +233,10 @@ class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
             and path.parent.name == package.rsplit(".", maxsplit=1)[-1]
         ]
         if len(owners) != 1:
-            msg = f"dynamic environment migration requires one declared settings owner: {package}"
+            msg = (
+                f"dynamic environment migration requires one "
+                f"declared settings owner: {package}"
+            )
             raise ValueError(msg)
         methods = {
             node.name
@@ -224,7 +244,10 @@ class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
             if isinstance(node, ast.FunctionDef)
         }
         if not {"env_lookup", "env_required"} <= methods:
-            msg = f"settings owner lacks optional/required dynamic environment reads: {package}"
+            msg = (
+                f"settings owner lacks optional/required "
+                f"dynamic environment reads: {package}"
+            )
             raise ValueError(msg)
 
 

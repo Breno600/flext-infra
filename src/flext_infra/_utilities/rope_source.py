@@ -1,4 +1,8 @@
-"""Source-level Rope rewrite helpers."""
+"""Source-level Rope rewrite helpers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,8 +12,7 @@ from operator import itemgetter
 from pathlib import Path
 
 from flext_infra import c, t
-
-from .discovery import FlextInfraUtilitiesDiscovery
+from flext_infra._utilities.discovery import FlextInfraUtilitiesDiscovery
 
 
 class FlextInfraUtilitiesRopeSource:
@@ -17,7 +20,12 @@ class FlextInfraUtilitiesRopeSource:
 
     @staticmethod
     def discover_first_party_namespaces(project_dir: Path) -> t.StrSequence:
-        """Discover live regular, namespace, and stub packages under ``src/``."""
+        """Discover live regular, namespace, and stub packages under ``src/``.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         src_dir = project_dir / c.Infra.DEFAULT_SRC_DIR
         return [
             name
@@ -54,6 +62,10 @@ class FlextInfraUtilitiesRopeSource:
         ``splitlines()`` and ``splitlines(keepends=True)``), so separators are
         normalized here: a ``"".join`` collapse would hand ``ast.parse`` one
         broken line.
+
+        Returns:
+            The module-level line index where an import may be inserted.
+
         """
         source = "\n".join(line.removesuffix("\n") for line in lines)
         module = ast.parse(source)
@@ -83,7 +95,12 @@ class FlextInfraUtilitiesRopeSource:
 
     @staticmethod
     def index_after_docstring_and_future_imports(lines: t.StrSequence) -> int:
-        """Return insertion index after module docstring and future imports."""
+        """Return insertion index after module docstring and future imports.
+
+        Returns:
+            Insertion index after module docstring and future imports.
+
+        """
         return FlextInfraUtilitiesRopeSource.find_import_insert_position(
             lines,
             past_existing=False,
@@ -91,7 +108,12 @@ class FlextInfraUtilitiesRopeSource:
 
     @staticmethod
     def parse_import_names(names_str: str) -> t.StrPairSequence:
-        """Parse ``A, B as C`` into ``[(name, bound), ...]``."""
+        """Parse ``A, B as C`` into ``[(name, bound), ...]``.
+
+        Returns:
+            The resulting ``t.StrPairSequence``.
+
+        """
         result: t.MutableSequenceOf[t.StrPair] = []
         for part in names_str.split(","):
             candidate = part.strip().rstrip("\\").strip()
@@ -106,7 +128,9 @@ class FlextInfraUtilitiesRopeSource:
 
     @classmethod
     def hoist_inline_imports(
-        cls, file_path: Path, statement_lines: t.SequenceOf[t.IntPair],
+        cls,
+        file_path: Path,
+        statement_lines: t.SequenceOf[t.IntPair],
     ) -> bool:
         """Move function-local import statements to the module import block.
 
@@ -115,6 +139,10 @@ class FlextInfraUtilitiesRopeSource:
         function bodies and their dedented text is added once after the
         module's last top-level import. A body left empty, or a result that no
         longer parses, raises: the move is never half-applied.
+
+        Returns:
+            The resulting ``bool``.
+
         """
         if not statement_lines:
             return False
@@ -137,6 +165,48 @@ class FlextInfraUtilitiesRopeSource:
         return True
 
     @staticmethod
+    def statements_at_module_end(
+        source: str,
+        statement_lines: t.SequenceOf[t.IntPair],
+        *,
+        filename: str,
+    ) -> str:
+        """Return ``source`` with top-level statements moved after its last one.
+
+        ``statement_lines`` holds the 1-based inclusive line span of each
+        top-level statement to move. The statements keep their text and
+        relative order and close the module, separated from what precedes them
+        by the blank lines PEP 8 asks for: two after a class or function, one
+        otherwise. A result that no longer parses raises.
+
+        Returns:
+            The rewritten source; ``source`` itself when nothing moves.
+
+        """
+        if not statement_lines:
+            return source
+        lines = source.splitlines(keepends=True)
+        drop = {
+            index for start, end in statement_lines for index in range(start, end + 1)
+        }
+        moved = "".join(
+            "".join(lines[start - 1 : end]).rstrip() + "\n"
+            for start, end in sorted(statement_lines)
+        )
+        kept = "".join(
+            line for index, line in enumerate(lines, start=1) if index not in drop
+        ).rstrip()
+        body = ast.parse(kept, filename=filename).body
+        closes_definition = bool(body) and isinstance(
+            body[-1],
+            ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+        )
+        separator = "\n\n\n" if closes_definition else "\n\n"
+        updated = f"{kept}{separator}{moved}" if kept else moved
+        ast.parse(updated, filename=filename)
+        return updated
+
+    @staticmethod
     def rewrite_source_at_offsets(
         rope_project: t.Infra.RopeProject,
         resource: t.Infra.RopeResource,
@@ -144,7 +214,12 @@ class FlextInfraUtilitiesRopeSource:
         *,
         apply: bool = True,
     ) -> str:
-        """Apply offset-based edits (start, end, replacement) to source."""
+        """Apply offset-based edits (start, end, replacement) to source.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         _ = rope_project
         source: str = resource.read()
         for start, end, replacement in sorted(changes, key=itemgetter(0), reverse=True):

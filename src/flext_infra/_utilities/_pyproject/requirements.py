@@ -1,4 +1,8 @@
-"""Internal requirement rendering and workspace dependency-group policy."""
+"""Internal requirement rendering and workspace dependency-group policy.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,9 +12,8 @@ from typing import TYPE_CHECKING
 from flext_cli import r, u
 
 from flext_infra import c, t
-
-from ..dependencies import FlextInfraUtilitiesDependencies
-from ..repository import FlextInfraUtilitiesRepository
+from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
+from flext_infra._utilities.repository import FlextInfraUtilitiesRepository
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -31,6 +34,10 @@ class FlextInfraUtilitiesPyprojectRequirements:
         Optional dependencies hang off ``[project]`` while dependency groups hang
         off the document root; this is the single owner of that traversal for
         every requirement rewriter.
+
+        Yields:
+            Each ``t.Pair[t.Cli.TomlTable, str]``.
+
         """
         for section_name in (c.Infra.OPTIONAL_DEPENDENCIES, c.Infra.DEPENDENCY_GROUPS):
             parent = (
@@ -51,7 +58,12 @@ class FlextInfraUtilitiesPyprojectRequirements:
         candidate_sources: t.StrMapping,
         family_line: str | None,
     ) -> p.Result[bool]:
-        """Render internal requirements from their declared Git provenance."""
+        """Render internal requirements from their declared Git provenance.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         project = u.Cli.toml_ensure_table(document, c.Infra.PROJECT)
         normalized = cls._normalize_requirement_field(
             project,
@@ -84,7 +96,12 @@ class FlextInfraUtilitiesPyprojectRequirements:
         candidate_sources: t.StrMapping,
         family_line: str | None,
     ) -> p.Result[bool]:
-        """Normalize one dependency array and fail on model-less entries."""
+        """Normalize one dependency array and fail on model-less entries.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         raw_value = u.Cli.toml_value(container, key)
         if raw_value is None:
             return r[bool].ok(True)
@@ -119,7 +136,15 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
     @staticmethod
     def dependency_order_key(requirement: str) -> t.Pair[str, str]:
-        """Order preserved and conformed requirements by name and complete spec."""
+        """Order preserved and conformed requirements by name and complete spec.
+
+        Returns:
+            The resulting ``t.Pair[str, str]``.
+
+        Raises:
+            ValueError: If dependency ordering requires a named requirement.
+
+        """
         name = FlextInfraUtilitiesDependencies.dep_name(requirement)
         if name is None:
             message = "dependency ordering requires a named requirement"
@@ -147,6 +172,10 @@ class FlextInfraUtilitiesPyprojectRequirements:
         line it fails loudly. Internal means the FLEXT family or an attached
         workspace member of any family. A source-less internal dependency that
         the active workspace overlay does not own is a loud failure.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
         """
         dependency_name = FlextInfraUtilitiesDependencies.dep_name(requirement)
         if dependency_name is None or not (
@@ -192,7 +221,8 @@ class FlextInfraUtilitiesPyprojectRequirements:
             candidate_url, candidate_commit = selected.value
             if not FlextInfraUtilitiesRepository.ref_is_commit(candidate_commit):
                 return r[str].fail(
-                    f"candidate dependency must pin a full Git commit: {dependency_name}",
+                    f"candidate dependency must pin a full Git commit: "
+                    f"{dependency_name}",
                 )
             if url and url != candidate_url:
                 return r[str].fail(
@@ -291,7 +321,12 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
     @staticmethod
     def _declares_direct_source(requirement: str) -> bool:
-        """Whether one requirement line declares a direct ``@ source``."""
+        """Whether one requirement line declares a direct ``@ source``.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         return "@" in requirement.partition(";")[0]
 
     @staticmethod
@@ -299,7 +334,12 @@ class FlextInfraUtilitiesPyprojectRequirements:
         requirement: str,
         sourced_live_names: frozenset[str] | set[str],
     ) -> bool:
-        """Whether a bare internal floor name must yield to a declared source."""
+        """Whether a bare internal floor name must yield to a declared source.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         name = FlextInfraUtilitiesDependencies.dep_name(requirement)
         return (
             name is not None
@@ -342,7 +382,12 @@ class FlextInfraUtilitiesPyprojectRequirements:
         *,
         workspace: p.Infra.WorkspaceSpec,
     ) -> p.Result[bool]:
-        """Require one internal dependency provenance for the active topology."""
+        """Require one internal dependency provenance for the active topology.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         payload = u.Cli.toml_as_mapping(document)
         if payload is None:
             return r[bool].fail("pyproject document is not a TOML mapping")

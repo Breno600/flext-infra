@@ -1,4 +1,8 @@
-"""Issue collection helpers for FlextInfraDocAuditor."""
+"""Issue collection helpers for FlextInfraDocAuditor.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,7 +23,12 @@ class FlextInfraDocAuditorChecksMixin:
     def forbidden_term_issues(
         scope: m.Infra.DocScope,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Return forbidden-term issues configured for one scope."""
+        """Return forbidden-term issues configured for one scope.
+
+        Returns:
+            Forbidden-term issues configured for one scope.
+
+        """
         return u.Infra.docs_text_token_issues(
             scope,
             tokens=u.Infra.docs_audit_policy(scope).forbidden_terms,
@@ -28,16 +37,27 @@ class FlextInfraDocAuditorChecksMixin:
 
     @staticmethod
     def placeholder_issues(scope: m.Infra.DocScope) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Return placeholder-text issues for one scope."""
+        """Return placeholder-text issues for one scope.
+
+        Returns:
+            Placeholder-text issues for one scope.
+
+        """
         return u.Infra.docs_placeholder_issues(
-            scope, patterns=u.Infra.docs_audit_policy(scope).placeholder_patterns,
+            scope,
+            patterns=u.Infra.docs_audit_policy(scope).placeholder_patterns,
         )
 
     @staticmethod
     def machine_path_issues(
         scope: m.Infra.DocScope,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Return machine-local paths outside exact historical evidence files."""
+        """Return machine-local paths outside exact historical evidence files.
+
+        Returns:
+            Machine-local paths outside exact historical evidence files.
+
+        """
         return u.Infra.docs_machine_path_issues(
             scope,
             historical_evidence_files=(
@@ -46,9 +66,16 @@ class FlextInfraDocAuditorChecksMixin:
         )
 
     def _collect_issues(
-        self, scope: m.Infra.DocScope, checks: t.StrSequence,
+        self,
+        scope: m.Infra.DocScope,
+        checks: t.StrSequence,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Collect issues for the requested check set in canonical order."""
+        """Collect issues for the requested check set in canonical order.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
+
+        """
         handlers: t.VariadicTuple[
             t.Pair[str, Callable[[m.Infra.DocScope], t.SequenceOf[m.Infra.AuditIssue]]]
         ] = (

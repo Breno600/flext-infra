@@ -1,4 +1,8 @@
-"""Real Make generation repairs activation before consuming its own output."""
+"""Real Make generation repairs activation before consuming its own output.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -18,7 +22,8 @@ pytestmark = [pytest.mark.slow, pytest.mark.remote]
 class TestsFlextInfraCodegenGenActivation:
     """Exercise the generated dispatcher with its real producer and activation."""
 
-    def test_gen_without_environment_fails_before_effects(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_gen_without_environment_fails_before_effects(tmp_path: Path) -> None:
         """A checkout that setup never provisioned stops before any hook."""
         root = u.Tests.infra_source_checkout(tmp_path)
         envrc = root / c.Infra.ENVRC_FILENAME
@@ -35,8 +40,8 @@ class TestsFlextInfraCodegenGenActivation:
         tm.that((root / ".venv").exists(), eq=False)
         tm.that(envrc.read_text(encoding="utf-8"), eq=broken_activation)
 
+    @staticmethod
     def test_gen_recovers_activation_and_orders_hooks(
-        self,
         provisioned_infra_checkout: t.Pair[str, Path],
     ) -> None:
         """Native failures stop post hooks; a valid producer activates only once."""

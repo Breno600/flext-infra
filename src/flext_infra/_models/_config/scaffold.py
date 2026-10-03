@@ -1,4 +1,8 @@
-"""Project scaffold specification models."""
+"""Project scaffold specification models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,9 +10,9 @@ from typing import Annotated
 
 from flext_cli import m
 
-from ... import t
-from ..._constants import FlextInfraConstantsCodegenProject
-from .contract import FlextInfraConfigModelsContract
+from flext_infra import t
+from flext_infra._constants import FlextInfraConstantsCodegenProject
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
 
 
 class FlextInfraConfigModelsScaffold:
@@ -33,7 +37,10 @@ class FlextInfraConfigModelsScaffold:
         project: Annotated[
             t.NonEmptyStr | None,
             m.Field(
-                description="Distribution receiving additional requirements; unset selects the shared upstream profile",
+                description=(
+                    "Distribution receiving additional requirements; "
+                    "unset selects the shared upstream profile"
+                ),
             ),
         ] = None
         runtime: Annotated[
@@ -49,13 +56,16 @@ class FlextInfraConfigModelsScaffold:
         """One upstream config base a generated ``_config.py`` may compose."""
 
         distribution: Annotated[
-            t.NonEmptyStr, m.Field(description="Distribution owning the base"),
+            t.NonEmptyStr,
+            m.Field(description="Distribution owning the base"),
         ]
         module: Annotated[
-            t.NonEmptyStr, m.Field(description="Import module exposing the base"),
+            t.NonEmptyStr,
+            m.Field(description="Import module exposing the base"),
         ]
         class_name: Annotated[
-            t.NonEmptyStr, m.Field(description="Config base class name"),
+            t.NonEmptyStr,
+            m.Field(description="Config base class name"),
         ]
 
     class ScaffoldProjectSpec(FlextInfraConfigModelsContract.ConfigContract):

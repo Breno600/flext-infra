@@ -10,16 +10,16 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core.lazy import build_lazy_import_map, install_lazy_exports
+from flext_core import build_lazy_import_map, install_lazy_exports
 from flext_infra.__version__ import (
-    __author__ as __author__,
-    __author_email__ as __author_email__,
-    __description__ as __description__,
-    __license__ as __license__,
-    __title__ as __title__,
-    __url__ as __url__,
-    __version__ as __version__,
-    __version_info__ as __version_info__,
+    __author__,
+    __author_email__,
+    __description__,
+    __license__,
+    __title__,
+    __url__,
+    __version__,
+    __version_info__,
 )
 
 if TYPE_CHECKING:
@@ -30,7 +30,6 @@ if TYPE_CHECKING:
         codegen,
         codemod,
         deps,
-        detectors,
         docs,
         gates,
         maintenance,
@@ -44,7 +43,7 @@ if TYPE_CHECKING:
     from flext_infra._config import FlextInfraConfig, config
     from flext_infra._settings import FlextInfraSettings, settings
     from flext_infra.api import FlextInfra, infra
-    from flext_infra.base import FlextInfraServiceBase, FlextInfraServiceBase as s
+    from flext_infra.base import FlextInfraServiceBase, s
     from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
     from flext_infra.check.gate_registry import FlextInfraGateRegistry
     from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
@@ -91,7 +90,7 @@ if TYPE_CHECKING:
     )
     from flext_infra.codemod.snapshot_refresh import FlextInfraCodemodSnapshotRefresh
     from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
-    from flext_infra.constants import FlextInfraConstants, FlextInfraConstants as c
+    from flext_infra.constants import FlextInfraConstants, c
     from flext_infra.deps.detection import FlextInfraDependencyDetectionService
     from flext_infra.deps.detection_analysis import (
         FlextInfraDependencyDetectionAnalysis,
@@ -115,7 +114,6 @@ if TYPE_CHECKING:
     from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
     from flext_infra.deps.phases.inject_comments import FlextInfraInjectCommentsPhase
     from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
-    from flext_infra.detectors.lsp_diagnostics import FlextInfraLspDiagnosticsDetector
     from flext_infra.docs.auditor import FlextInfraDocAuditor
     from flext_infra.docs.auditor_mixin import FlextInfraDocAuditorMixin
     from flext_infra.docs.base import FlextInfraDocServiceBase
@@ -130,6 +128,7 @@ if TYPE_CHECKING:
     from flext_infra.gates.base_gate import FlextInfraGate
     from flext_infra.gates.direnv import FlextInfraDirenvGate
     from flext_infra.gates.duplication import FlextInfraDuplicationGate
+    from flext_infra.gates.fresh_import import FlextInfraFreshImportGate
     from flext_infra.gates.index_declarations import FlextInfraIndexDeclarationsGate
     from flext_infra.gates.layout import FlextInfraLayoutGate
     from flext_infra.gates.loc_cap import FlextInfraLocCapGate
@@ -150,13 +149,11 @@ if TYPE_CHECKING:
     from flext_infra.maintenance.clean import FlextInfraCleanService
     from flext_infra.maintenance.python_version import FlextInfraPythonVersionEnforcer
     from flext_infra.maintenance.sonarcloud import FlextInfraSonarcloudSettingsSync
-    from flext_infra.models import FlextInfraModels, FlextInfraModels as m
+    from flext_infra.maintenance.sonarcloud_client import FlextInfraSonarcloudClient
+    from flext_infra.maintenance.sonarcloud_issues import FlextInfraSonarcloudIssues
+    from flext_infra.models import FlextInfraModels, m
     from flext_infra.promoted import FlextInfraPromoted
-    from flext_infra.protocols import (
-        FlextInfraProtocols,
-        FlextInfraProtocols as p,
-        FlextInfraProtocolsBase,
-    )
+    from flext_infra.protocols import FlextInfraProtocols, FlextInfraProtocolsBase, p
     from flext_infra.refactor.accessor_migration import (
         FlextInfraAccessorMigrationOrchestrator,
     )
@@ -182,8 +179,8 @@ if TYPE_CHECKING:
     from flext_infra.services.cli_routes_workspace import FlextInfraWorkspaceRoutes
     from flext_infra.services.codegen import FlextInfraCodegen
     from flext_infra.transformers.rope_transformer import FlextInfraRopeTransformer
-    from flext_infra.typings import FlextInfraTypes, FlextInfraTypes as t
-    from flext_infra.utilities import FlextInfraUtilities, FlextInfraUtilities as u
+    from flext_infra.typings import FlextInfraTypes, t
+    from flext_infra.utilities import FlextInfraUtilities, u
     from flext_infra.validate.cprofile_report import FlextInfraCProfileReport
     from flext_infra.validate.fresh_import import FlextInfraValidateFreshImport
     from flext_infra.validate.inventory import FlextInfraInventoryService
@@ -212,7 +209,6 @@ if TYPE_CHECKING:
     from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
     from flext_infra.workspace.rope import FlextInfraRopeWorkspace
     from flext_infra.worktree import FlextInfraWorktreeService
-
 
 __all__: tuple[str, ...] = (
     "FlextInfra",
@@ -279,6 +275,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraEnsureRuffConfigPhase",
     "FlextInfraExtraPathsManager",
     "FlextInfraFlextBindingService",
+    "FlextInfraFreshImportGate",
     "FlextInfraGate",
     "FlextInfraGateRegistry",
     "FlextInfraGitService",
@@ -289,7 +286,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraLocCapGate",
     "FlextInfraLocDeltaValidator",
     "FlextInfraLockIntegrityVerifier",
-    "FlextInfraLspDiagnosticsDetector",
     "FlextInfraManualCommandValidator",
     "FlextInfraMarkdownCodeGate",
     "FlextInfraMarkdownCodeSources",
@@ -332,6 +328,8 @@ __all__: tuple[str, ...] = (
     "FlextInfraSettings",
     "FlextInfraSkillValidator",
     "FlextInfraSmellsGate",
+    "FlextInfraSonarcloudClient",
+    "FlextInfraSonarcloudIssues",
     "FlextInfraSonarcloudSettingsSync",
     "FlextInfraStubSupplyChain",
     "FlextInfraTestmonDbInspector",
@@ -368,7 +366,6 @@ __all__: tuple[str, ...] = (
     "config",
     "d",
     "deps",
-    "detectors",
     "docs",
     "e",
     "gates",
@@ -459,8 +456,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".deps.phases.ensure_ruff": ("FlextInfraEnsureRuffConfigPhase",),
             ".deps.phases.inject_comments": ("FlextInfraInjectCommentsPhase",),
             ".deps.phases.tool_tables": ("FlextInfraToolTablesPhase",),
-            ".detectors": ("detectors",),
-            ".detectors.lsp_diagnostics": ("FlextInfraLspDiagnosticsDetector",),
             ".docs": ("docs",),
             ".docs.auditor": ("FlextInfraDocAuditor",),
             ".docs.auditor_mixin": ("FlextInfraDocAuditorMixin",),
@@ -477,6 +472,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".gates.base_gate": ("FlextInfraGate",),
             ".gates.direnv": ("FlextInfraDirenvGate",),
             ".gates.duplication": ("FlextInfraDuplicationGate",),
+            ".gates.fresh_import": ("FlextInfraFreshImportGate",),
             ".gates.index_declarations": ("FlextInfraIndexDeclarationsGate",),
             ".gates.layout": ("FlextInfraLayoutGate",),
             ".gates.loc_cap": ("FlextInfraLocCapGate",),
@@ -498,6 +494,8 @@ _LAZY_IMPORTS = MappingProxyType(
             ".maintenance.clean": ("FlextInfraCleanService",),
             ".maintenance.python_version": ("FlextInfraPythonVersionEnforcer",),
             ".maintenance.sonarcloud": ("FlextInfraSonarcloudSettingsSync",),
+            ".maintenance.sonarcloud_client": ("FlextInfraSonarcloudClient",),
+            ".maintenance.sonarcloud_issues": ("FlextInfraSonarcloudIssues",),
             ".models": ("FlextInfraModels", "m"),
             ".promoted": ("FlextInfraPromoted",),
             ".protocols": ("FlextInfraProtocols", "FlextInfraProtocolsBase", "p"),

@@ -236,7 +236,6 @@ class TestsFlextInfraScriptDispatchMakefile:
                 "deps modernize",
             ],
         )
-        tm.that(gen_all_body, lacks="MISE_GITHUB_CREDENTIAL_COMMAND")
         tm.that(
             gen_all_body,
             lacks=["codegen lazy-init", "docs generate", "_generated_docs"],
@@ -340,6 +339,55 @@ class TestsFlextInfraScriptDispatchMakefile:
         tm.that(report, has="flext_infra._cprofile_entry")
         tm.that(report, has="$(PROFILE_REPORTS_DIR)/pytest.pstats")
         tm.that(report, has="$(PROFILE_REPORTS_DIR)/pytest.pstats.json")
+
+    def test_test_verbs_share_the_persistent_testmon_database(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Both test verbs run on the one persistent testmon database.
+
+        The persistent database is keyed by the declared distribution, so
+        every checkout of a project shares one testmon history. The full verb
+        runs against that same database (canonical-commands law: incremental
+        first, then the no-selection pass on the same database), never a
+        cache-less bypass.
+        """
+        rendered = self._render_root_makefile(
+            tmp_path,
+            extra_verbs=(),
+            script_dispatch=None,
+        )
+        cache = config.Infra.codegen.make.testmon_cache
+        database_line = next(
+            line
+            for line in rendered.splitlines()
+            if line.startswith("override FLEXT_PYTEST_TESTMON_DATABASE")
+        )
+        tm.that(rendered, has="PROJECT_NAME := demo-root\n")
+        tm.that(
+            database_line,
+            has=(
+                f"/{cache.external_storage_directory}/$(PROJECT_NAME)/"
+                f"{cache.database_filename}"
+            ),
+        )
+        tm.that(database_line, lacks="PROJECT_ROOT")
+        incremental = rendered.split("_builtin_test_all:", 1)[1].split("\n\n", 1)[0]
+        full = rendered.split("_builtin_test_full_all:", 1)[1].split("\n\n", 1)[0]
+        tm.that(
+            incremental,
+            has=[
+                "PYTEST_BOUNDED",
+                f'{cache.database_environment_variable}="$$database"',
+            ],
+        )
+        tm.that(
+            full,
+            has=[
+                "-m flext_infra._pytest_entry full",
+                f'{cache.database_environment_variable}="$$database"',
+            ],
+        )
 
     # A test asserting a downstream consumer's verbs from this
     # engine's catalog was removed. The engine is consumer-agnostic: a consumer

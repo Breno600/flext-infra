@@ -1,4 +1,8 @@
-"""Validation helpers for docs services."""
+"""Validation helpers for docs services.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,10 +13,9 @@ from flext_cli import u
 
 from flext_core import r
 from flext_infra import c, t
-
-from .docs import FlextInfraUtilitiesDocs
-from .docs_api import FlextInfraUtilitiesDocsApi
-from .docs_scope import FlextInfraUtilitiesDocsScope
+from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
+from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
+from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -25,7 +28,12 @@ class FlextInfraUtilitiesDocsValidate:
 
     @staticmethod
     def docs_has_adr_reference(skill_path: Path) -> bool:
-        """Return whether a skill file contains an ADR reference."""
+        """Return whether a skill file contains an ADR reference.
+
+        Returns:
+            Whether a skill file contains an ADR reference.
+
+        """
         text = skill_path.read_text(
             encoding=c.Cli.ENCODING_DEFAULT,
             errors=c.Infra.IGNORE,
@@ -41,6 +49,10 @@ class FlextInfraUtilitiesDocsValidate:
         ``r.ok(list)`` when the configuration block is present and well
         shaped, ``r.fail(reason)`` otherwise. Callers that want to treat
         absence as "no override" can collapse with ``unwrap_or(())``.
+
+        Returns:
+            The resulting ``p.Result[t.JsonList]``.
+
         """
         match payload:
             case Mapping() as outer:
@@ -69,6 +81,10 @@ class FlextInfraUtilitiesDocsValidate:
         ``docs_validation`` block, invalid ``required_skills`` payload)
         propagates as ``r.fail(...)`` so callers see the config defect
         instead of a silent empty list — fail-fast over fail-quiet.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
         """
         settings = repository_root / "docs/architecture/architecture_config.json"
         if not settings.exists():
@@ -84,7 +100,12 @@ class FlextInfraUtilitiesDocsValidate:
 
     @staticmethod
     def _validate_required_skills(raw: t.JsonList) -> p.Result[t.StrSequence]:
-        """Validate ``required_skills`` payload against the canonical adapter."""
+        """Validate ``required_skills`` payload against the canonical adapter.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
+        """
         try:
             validated: t.StrSequence = t.Infra.STR_SEQ_ADAPTER.validate_python(
                 raw,
@@ -104,6 +125,10 @@ class FlextInfraUtilitiesDocsValidate:
 
         The scope label is the only topology input: the scope builder assigns
         ``root`` from the manifest's typed role (``is_fleet_umbrella``).
+
+        Returns:
+            Required docs paths that are still missing from one scope.
+
         """
         if scope.name == c.Infra.RK_ROOT:
             required = [
@@ -132,7 +157,12 @@ class FlextInfraUtilitiesDocsValidate:
 
     @staticmethod
     def docs_contract_messages(scope: m.Infra.DocScope) -> t.StrSequence:
-        """Return public API contract problems for one governed project scope."""
+        """Return public API contract problems for one governed project scope.
+
+        Returns:
+            Public API contract problems for one governed project scope.
+
+        """
         if scope.name == c.Infra.RK_ROOT or not scope.package_name:
             return []
         messages: t.MutableSequenceOf[str] = []
@@ -160,6 +190,10 @@ class FlextInfraUtilitiesDocsValidate:
         ``r.ok(True)`` when a TODO file was written, ``r.ok(False)`` when
         the call is a no-op (root scope or non-apply mode), ``r.fail(...)``
         when the underlying ``write_text`` raises.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         if scope.name == c.Infra.RK_ROOT or not apply_mode:
             return r[bool].ok(False)

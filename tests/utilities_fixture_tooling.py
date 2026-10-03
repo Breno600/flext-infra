@@ -1,7 +1,12 @@
-"""Tooling and executable-environment fixture test utilities for flext-infra."""
+"""Tooling and executable-environment fixture test utilities for flext-infra.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -17,7 +22,12 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
 
     @staticmethod
     def mypy_deadline_limit() -> m.Infra.MypyResourceLimit:
-        """Reserve harness startup and cleanup inside the configured slow budget."""
+        """Reserve harness startup and cleanup inside the configured slow budget.
+
+        Returns:
+            The resulting ``m.Infra.MypyResourceLimit``.
+
+        """
         policy = config.Infra.tooling.tools.pytest
         available = (
             policy.slow_timeout_seconds
@@ -27,13 +37,20 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         return m.Infra.MypyResourceLimit(
             memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
             timeout_seconds=min(
-                config.Infra.tooling.tools.mypy.timeout_seconds, available // 2,
+                config.Infra.tooling.tools.mypy.timeout_seconds,
+                available // 2,
             ),
         )
 
     @staticmethod
     def reap_mypy_descendant(pid_file: Path, timeout: int) -> None:
-        """Reap a registered workload in pytest teardown, preserving call failures."""
+        """Reap a registered workload in pytest teardown, preserving call failures.
+
+        Raises:
+            RuntimeError: If ``snapshot.outcome.raw_return_code not in {0, 1} or
+                snapshot.stderr``.
+
+        """
         pid = pid_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         snapshot = u.Cli.run_raw(
             ("/bin/ps", "-p", str(int(pid)), "-o", "stat="),
@@ -47,7 +64,12 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
 
     @staticmethod
     def mypy_workload(root: Path, plugin_body: str = "") -> m.Infra.MypyInvocation:
-        """Create a real checker project with an optional workload plugin."""
+        """Create a real checker project with an optional workload plugin.
+
+        Returns:
+            The resulting ``m.Infra.MypyInvocation``.
+
+        """
         source = root / "checked.py"
         source.write_text("value: int = 1\n", encoding=c.Cli.ENCODING_DEFAULT)
         config_file = root / "mypy.ini"
@@ -72,7 +94,12 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
 
     @staticmethod
     def create_python_environment(root: Path) -> p.Result[bool]:
-        """Provision a physical fixture environment with the current interpreter."""
+        """Provision a physical fixture environment with the current interpreter.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         environment = u.Infra.runtime_environment_dir(root)
         environment.parent.mkdir(parents=True, exist_ok=True)
         return u.Cli.run_checked(
@@ -90,8 +117,17 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         The fixture becomes one through the single fixture Git owner and
         receives the real binaries this suite was provisioned with, linked
         inside the pytest-managed tree; a missing tool fails the fixture.
+
+        Raises:
+            FileExistsError: If fixture tool conflicts with provisioned executable; or
+                if fixture tool path is already occupied.
+            FileNotFoundError: If setup did not provision.
+
         """
-        TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(root)
+        # Provisioning a runtime never rewrites a checkout's declared identity:
+        # an existing checkout keeps its origin, only a bare root becomes one.
+        if not (root / c.Infra.GIT_DIR).exists():
+            TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(root)
         provisioned = Path(sys.executable).parent
         bin_dir = u.Infra.runtime_environment_dir(root) / provisioned.name
         bin_dir.mkdir(parents=True, exist_ok=True)
@@ -130,6 +166,10 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         boundaries a warm install silently skips. The directory sits beside
         — never inside — the fixture checkout the generated Make rejects as
         storage, and inside the pytest-managed tree so teardown reclaims it.
+
+        Returns:
+            The resulting ``Path``.
+
         """
         storage = project_root.parent / "mise-data"
         storage.mkdir(parents=True, exist_ok=True)
@@ -180,11 +220,25 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         env: t.StrMapping | None = None,
         capture: bool = True,
     ) -> p.Result[p.Cli.CommandOutput]:
-        """Run Make without undeclared state inherited from outer pytest."""
+        """Run Make without undeclared state inherited from outer pytest.
+
+        The network bootstrap asks gh for a token when no GITHUB_TOKEN is set.
+        gh here reads no configuration (``os.devnull`` is not a directory) and
+        reaches no keyring (the session bus is disabled), so the host
+        operator's stored credential never enters a test.
+
+        Returns:
+            The resulting ``p.Result[p.Cli.CommandOutput]``.
+
+        """
         return u.Cli.run_raw(
             [c.Infra.MAKE, *args],
             cwd=cwd,
-            env=env,
+            env={
+                "GH_CONFIG_DIR": os.devnull,
+                "DBUS_SESSION_BUS_ADDRESS": "disabled:",
+                **(env or {}),
+            },
             capture=capture,
             remove_env_keys=tuple(
                 key
@@ -195,7 +249,12 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
 
     @staticmethod
     def is_docker_available() -> bool:
-        """Return whether Docker is available to integration tests."""
+        """Return whether Docker is available to integration tests.
+
+        Returns:
+            Whether Docker is available to integration tests.
+
+        """
         return shutil.which("docker") is not None
 
     @staticmethod
@@ -205,6 +264,10 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         ``gh`` and ``uv publish`` talk to GitHub and to a package index; a
         unit test proves the protocol's command contract against a recorded
         invocation, never against the real remote.
+
+        Returns:
+            The resulting ``Path``.
+
         """
         bin_dir.mkdir(parents=True, exist_ok=True)
         log = bin_dir / f"{name}.log"

@@ -1,4 +1,8 @@
-"""Constants for the unified census pipeline — accessed via c.Infra.*."""
+"""Constants for the unified census pipeline — accessed via c.Infra.*.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -11,7 +15,7 @@ class FlextInfraConstantsCensus:
     CENSUS_UNSUPPORTED_SIMPLE_REMOVAL_CODE: ClassVar[str] = (
         "CENSUS_UNSUPPORTED_SIMPLE_REMOVAL"
     )
-    "Error code marking a candidate outside the simple-removal contract (not a failure)."
+    "Error code marking a candidate outside the simple-removal contract."
 
 
 __all__: list[str] = ["FlextInfraConstantsCensus"]

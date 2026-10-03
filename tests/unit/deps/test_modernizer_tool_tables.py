@@ -1,4 +1,8 @@
-"""Config-owned tool table phase tests for the deps modernizer."""
+"""Config-owned tool table phase tests for the deps modernizer.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -21,9 +25,17 @@ class TestsFlextInfraDepsModernizerToolTables:
         *,
         tool_config: m.Infra.ToolConfigDocument | None = None,
     ) -> t.Pair[t.MutableJsonMapping, t.StrSequence]:
-        """Apply the phase to one named project payload; return payload and changes."""
+        """Apply the phase to one named project payload; return payload and changes.
+
+        Returns:
+            The resulting ``t.Pair[t.MutableJsonMapping, t.StrSequence]``.
+
+        """
         project_dir = tmp_path / "flext-sample"
-        (project_dir / "src" / "flext_sample").mkdir(parents=True, exist_ok=True)
+        package_dir = project_dir / "src" / "flext_sample"
+        package_dir.mkdir(parents=True, exist_ok=True)
+        # A live package: the first-party owner derives importable packages.
+        (package_dir / c.Infra.INIT_PY).write_text('"""Package."""\n', encoding="utf-8")
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
             u.Tests.toml_payload(f'[project]\nname = "flext-sample"\n{source}'),
         )
@@ -34,7 +46,12 @@ class TestsFlextInfraDepsModernizerToolTables:
 
     @staticmethod
     def _table(payload: t.JsonMapping, *path: str) -> t.JsonMapping:
-        """Unwrap one nested table below ``[tool]``."""
+        """Unwrap one nested table below ``[tool]``.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
+        """
         table = u.Tests.toml_mapping(payload["tool"])
         for segment in path:
             table = u.Tests.toml_mapping(table[segment])
@@ -214,11 +231,11 @@ class TestsFlextInfraDepsModernizerToolTables:
             eq=list(arbitrary_source),
         )
 
-    def test_deptry_first_party_includes_project_and_declared_flext_deps(
+    def test_deptry_first_party_is_the_base_namespaces_and_the_live_package(
         self,
         tmp_path: Path,
     ) -> None:
-        """Detect the project package and declared FLEXT dependencies as first party."""
+        """Deptry's first party is the config base plus the live project package."""
         payload, _ = self._applied(tmp_path, 'dependencies = ["flext-core>=0.1.0"]\n')
         tm.that(
             set(
@@ -233,8 +250,8 @@ class TestsFlextInfraDepsModernizerToolTables:
             },
         )
 
+    @staticmethod
     def test_first_party_uses_live_package_when_distribution_name_differs(
-        self,
         tmp_path: Path,
     ) -> None:
         """A distribution name must not invent an importable package."""
@@ -242,13 +259,11 @@ class TestsFlextInfraDepsModernizerToolTables:
         package_dir = project_dir / "src" / "dc_backup"
         package_dir.mkdir(parents=True)
         (package_dir / "__init__.py").write_text('"""Package."""\n', encoding="utf-8")
-        payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
-            u.Tests.toml_payload('[project]\nname = "datacosmos-backup"\n'),
+        (project_dir / "pyproject.toml").write_text(
+            '[project]\nname = "datacosmos-backup"\n',
+            encoding="utf-8",
         )
-        namespaces = FlextInfraToolTablesPhase.first_party_namespaces(
-            payload,
-            path=project_dir / "pyproject.toml",
-        )
+        namespaces = FlextInfraToolTablesPhase.first_party_namespaces(path=project_dir)
         tm.that(namespaces, has="dc_backup", lacks="datacosmos_backup")
 
     def test_tables_are_idempotent(self, tmp_path: Path) -> None:
@@ -261,8 +276,8 @@ class TestsFlextInfraDepsModernizerToolTables:
         tm.that(first, empty=False)
         tm.that(second, empty=True)
 
+    @staticmethod
     def test_modernizer_roots_and_members_converge_without_coverage_floor(
-        self,
         tmp_path: Path,
     ) -> None:
         """Roots and members converge once and never project a coverage floor."""
@@ -325,6 +340,10 @@ class TestsFlextInfraDepsModernizerToolTables:
         its manifest declares the retired tree under the analyzer-exclusion
         contract the detector owns (external dependency paths are the
         read-only trees the src and namespace-packages projections drop).
+
+        Returns:
+            The resulting ``Path``.
+
         """
         project_dir = tmp_path / "flext-sample"
         workspace = u.Tests.standalone_workspace(project_dir, project_dir.name)

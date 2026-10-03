@@ -1,4 +1,8 @@
-"""Tests for refactor namespace-move rewriting."""
+"""Tests for refactor namespace-move rewriting.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -26,7 +30,12 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
 
     @staticmethod
     def _non_module_files(package_root: Path) -> t.VariadicTuple[str]:
-        """Return files the rewrite left beside the package modules."""
+        """Return files the rewrite left beside the package modules.
+
+        Returns:
+            Files the rewrite left beside the package modules.
+
+        """
         return tuple(
             sorted(
                 path.name
@@ -55,6 +64,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test rewrite manual protocol violations uses public runtime api."""
         project_root, package_root = self._build_project(tmp_path)
         protocols_file = package_root / "protocols.py"
         source_file = package_root / "service.py"
@@ -107,6 +117,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test rewrite manual typing alias violations uses public runtime api."""
         project_root, package_root = self._build_project(tmp_path)
         typings_file = package_root / "typings.py"
         source_file = package_root / "service.py"
@@ -126,7 +137,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         )
 
         u.Infra.rewrite_manual_typing_alias_violations(
-            project_root=project_root, names_by_file={source_file: {"PayloadMap"}},
+            project_root=project_root,
+            names_by_file={source_file: {"PayloadMap"}},
         )
 
         source_text = source_file.read_text(encoding="utf-8")

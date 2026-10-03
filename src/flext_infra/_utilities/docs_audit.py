@@ -1,4 +1,8 @@
-"""Audit helpers for docs services."""
+"""Audit helpers for docs services.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,13 +10,16 @@ import re
 from typing import TYPE_CHECKING
 
 from flext_infra import c, config, m
-
-from ._docs_audit_detectors import FlextInfraUtilitiesDocsAuditDetectorsMixin
-from ._docs_command_contract import FlextInfraUtilitiesDocsCommandContractMixin
-from ._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
-from .docs import FlextInfraUtilitiesDocs
-from .docs_api import FlextInfraUtilitiesDocsApi
-from .docs_scope import FlextInfraUtilitiesDocsScope
+from flext_infra._utilities._docs_audit_detectors import (
+    FlextInfraUtilitiesDocsAuditDetectorsMixin,
+)
+from flext_infra._utilities._docs_command_contract import (
+    FlextInfraUtilitiesDocsCommandContractMixin,
+)
+from flext_infra._utilities._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
+from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
+from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
+from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -26,7 +33,12 @@ class FlextInfraUtilitiesDocsAudit(
 
     @staticmethod
     def docs_normalize_link(target: str) -> str:
-        """Strip fragments and query strings from a markdown link target."""
+        """Strip fragments and query strings from a markdown link target.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         value = target.strip()
         if value.startswith("<") and value.endswith(">"):
             value = value[1:-1].strip()
@@ -34,7 +46,12 @@ class FlextInfraUtilitiesDocsAudit(
 
     @staticmethod
     def docs_should_skip_target(raw: str, target: str) -> bool:
-        """Return whether the target should be ignored as prose, not a path."""
+        """Return whether the target should be ignored as prose, not a path.
+
+        Returns:
+            Whether the target should be ignored as prose, not a path.
+
+        """
         if FlextInfraUtilitiesDocs.docs_is_secure_web_url(target):
             return False
         looks_like_prose = ".md" not in raw and "/" not in raw
@@ -42,7 +59,12 @@ class FlextInfraUtilitiesDocsAudit(
 
     @staticmethod
     def docs_strip_inline_code(line: str) -> str:
-        """Remove inline-code spans from one markdown line."""
+        """Remove inline-code spans from one markdown line.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         pieces: list[str] = []
         in_code = False
         for char in line:
@@ -55,7 +77,12 @@ class FlextInfraUtilitiesDocsAudit(
 
     @staticmethod
     def docs_markdown_link_targets(line: str) -> t.StrSequence:
-        """Return markdown link targets from one line."""
+        """Return markdown link targets from one line.
+
+        Returns:
+            Markdown link targets from one line.
+
+        """
         targets: list[str] = []
         index = 0
         while index < len(line):
@@ -71,7 +98,12 @@ class FlextInfraUtilitiesDocsAudit(
 
     @staticmethod
     def docs_audit_policy(scope: m.Infra.DocScope) -> m.Infra.DocsAuditPolicySpec:
-        """Parse the scope's authenticated audit declaration once into its contract."""
+        """Parse the scope's authenticated audit declaration once into its contract.
+
+        Returns:
+            The resulting ``m.Infra.DocsAuditPolicySpec``.
+
+        """
         # Why: the scope's own declared `repository_root` (not a `.parent`
         # heuristic) owns docs policy resolution — a workspace-root project
         # scope IS its own repository root, and only a genuine member-project
@@ -81,18 +113,29 @@ class FlextInfraUtilitiesDocsAudit(
 
     @staticmethod
     def docs_generated_api_reference_path(relative_docs_path: str) -> bool:
-        """Return whether a docs path is owned by generated API reference."""
+        """Return whether a docs path is owned by generated API reference.
+
+        Returns:
+            Whether a docs path is owned by generated API reference.
+
+        """
         return relative_docs_path.startswith(
             "api-reference/generated/",
         ) and relative_docs_path.endswith(".md")
 
     @staticmethod
     def docs_live_public_symbol_names(scope: m.Infra.DocScope) -> set[str]:
-        """Return public symbol names that are still exported by one docs scope."""
+        """Return public symbol names that are still exported by one docs scope.
+
+        Returns:
+            Public symbol names that are still exported by one docs scope.
+
+        """
         if not scope.package_name:
             return set()
         contract = FlextInfraUtilitiesDocsApi.public_contract(
-            scope.path, scope.package_name,
+            scope.path,
+            scope.package_name,
         )
         names: set[str] = set()
         for key in ("exports", "public_symbols"):
@@ -106,12 +149,18 @@ class FlextInfraUtilitiesDocsAudit(
     def docs_broken_link_issues(
         scope: m.Infra.DocScope,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Collect broken internal link issues in one docs scope."""
+        """Collect broken internal link issues in one docs scope.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
+
+        """
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
             rel = md_file.relative_to(scope.path).as_posix()
             content = md_file.read_text(
-                encoding=c.Cli.ENCODING_DEFAULT, errors=c.Infra.IGNORE,
+                encoding=c.Cli.ENCODING_DEFAULT,
+                errors=c.Infra.IGNORE,
             )
             in_fenced_code = False
             for number, line in enumerate(content.splitlines(), start=1):
@@ -147,12 +196,16 @@ class FlextInfraUtilitiesDocsAudit(
                     if FlextInfraUtilitiesDocs.docs_is_external(target):
                         issues.extend(
                             FlextInfraUtilitiesDocsGithubLinks.docs_github_link_issues(
-                                file=rel, line_number=number, raw=raw, target=target,
+                                file=rel,
+                                line_number=number,
+                                raw=raw,
+                                target=target,
                             ),
                         )
                         continue
                     if FlextInfraUtilitiesDocsAudit.docs_should_skip_target(
-                        raw, target,
+                        raw,
+                        target,
                     ):
                         continue
                     if not (md_file.parent / target).resolve().exists():
@@ -170,7 +223,12 @@ class FlextInfraUtilitiesDocsAudit(
     def docs_stale_symbol_issues(
         scope: m.Infra.DocScope,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Collect stale-symbol issues outside the explicit migration docs."""
+        """Collect stale-symbol issues outside the explicit migration docs.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
+
+        """
         policy = FlextInfraUtilitiesDocsAudit.docs_audit_policy(scope)
         tokens = policy.stale_symbols
         exempt_paths = set(policy.stale_symbol_exempt_paths)
@@ -188,7 +246,8 @@ class FlextInfraUtilitiesDocsAudit(
                 FlextInfraUtilitiesDocsAudit.docs_generated_api_reference_path(rel)
             )
             text = md_file.read_text(
-                encoding=c.Cli.ENCODING_DEFAULT, errors=c.Infra.IGNORE,
+                encoding=c.Cli.ENCODING_DEFAULT,
+                errors=c.Infra.IGNORE,
             )
             for token in tokens:
                 if token not in text:
@@ -211,7 +270,12 @@ class FlextInfraUtilitiesDocsAudit(
         issues: t.SequenceOf[m.Infra.AuditIssue],
         docstring_coverage: m.Infra.DocstringCoverage | None = None,
     ) -> t.StrSequence:
-        """Render the standard markdown audit report."""
+        """Render the standard markdown audit report.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         metric_lines: t.MutableSequenceOf[str] = []
         if docstring_coverage is not None:
             metric_lines.append(
@@ -223,14 +287,16 @@ class FlextInfraUtilitiesDocsAudit(
             "# Docs Audit Report",
             "",
             f"Scope: {scope.name}",
-            f"Files scanned: {len(FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope))}",
+            f"Files scanned: "
+            f"{len(FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope))}",
             f"Issues: {len(issues)}",
             *metric_lines,
             "",
             "| file | type | severity | message |",
             "|---|---|---|---|",
             *[
-                f"| {issue.file} | {issue.issue_type} | {issue.severity} | {issue.message} |"
+                f"| {issue.file} | {issue.issue_type} | {issue.severity} "
+                f"| {issue.message} |"
                 for issue in issues
             ],
         ]

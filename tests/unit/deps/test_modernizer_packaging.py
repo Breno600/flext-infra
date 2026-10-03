@@ -1,4 +1,8 @@
-"""Public conformance contract for declared Python distribution roots."""
+"""Public conformance contract for declared Python distribution roots.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,7 +23,12 @@ class TestsFlextInfraDepsModernizerPackaging:
 
     @staticmethod
     def _declared_roots() -> t.Pair[t.NonEmptyStr, t.NonEmptyStr]:
-        """Derive arbitrary valid roots from the typed project fixture owner."""
+        """Derive arbitrary valid roots from the typed project fixture owner.
+
+        Returns:
+            The resulting ``t.Pair[t.NonEmptyStr, t.NonEmptyStr]``.
+
+        """
         package_name = u.Tests.project_spec("flext-packaging-fixture").package_name
         return f"{package_name}_entry", f"{package_name}_client"
 
@@ -30,7 +39,12 @@ class TestsFlextInfraDepsModernizerPackaging:
         materialize_module: bool,
         materialize_package: bool,
     ) -> t.Pair[t.NonEmptyStr, t.NonEmptyStr]:
-        """Materialize one provider-governed project through shared typed fixtures."""
+        """Materialize one provider-governed project through shared typed fixtures.
+
+        Returns:
+            The resulting ``t.Pair[t.NonEmptyStr, t.NonEmptyStr]``.
+
+        """
         _ = u.Tests.standalone_workspace(root, "flext-packaging-fixture")
         root_module, root_package = self._declared_roots()
         source_root = root / c.Infra.DEFAULT_SRC_DIR
@@ -86,9 +100,15 @@ class TestsFlextInfraDepsModernizerPackaging:
         u.Tests.copy_tracked_mise_seeds(root)
         return root_module, root_package
 
+    @staticmethod
     @pytest.mark.slow
-    def _conform_self(self, infra_git_repo: Path) -> int:
-        """Run codegen conform self-apply through the public CLI entrypoint."""
+    def _conform_self(infra_git_repo: Path) -> int:
+        """Run codegen conform self-apply through the public CLI entrypoint.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         return infra_main([
             c.Infra.CLI_GROUP_CODEGEN,
             "conform",
@@ -155,7 +175,8 @@ class TestsFlextInfraDepsModernizerPackaging:
         tm.that({f"/{path}/**" for path in package_paths} <= included, eq=True)
         tm.that(u.Tests.toml_mapping(sdist["force-include"]), has=module_path)
         tm.that(
-            u.Tests.toml_mapping(sdist["force-include"])[module_path], eq=module_path,
+            u.Tests.toml_mapping(sdist["force-include"])[module_path],
+            eq=module_path,
         )
 
         manifest_path = infra_git_repo / c.PYPROJECT_FILENAME

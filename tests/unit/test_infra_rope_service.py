@@ -1,4 +1,8 @@
-"""Public behavior tests for the Rope workspace DSL service."""
+"""Public behavior tests for the Rope workspace DSL service.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -18,13 +22,18 @@ if TYPE_CHECKING:
 class TestsFlextInfraInfraRopeService:
     """Validate the public Rope workspace DSL through public methods only."""
 
+    @staticmethod
     def _demo_module(
-        self,
         tmp_path: Path,
         module_name: str,
         source: str,
     ) -> t.Pair[Path, Path]:
-        """Create one flext-demo workspace and write ``source`` into its module."""
+        """Create one flext-demo workspace and write ``source`` into its module.
+
+        Returns:
+            The resulting ``t.Pair[Path, Path]``.
+
+        """
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-demo",
@@ -34,11 +43,16 @@ class TestsFlextInfraInfraRopeService:
         module_path.write_text(source, encoding="utf-8")
         return repository_root, module_path
 
+    @staticmethod
     def _paired_namespace_projects(
-        self,
         root: Path,
     ) -> tuple[Path, Path, Path, Path, Path]:
-        """Declare two sibling namespace projects and return their roots and modules."""
+        """Declare two sibling namespace projects and return their roots and modules.
+
+        Returns:
+            The resulting ``tuple[Path, Path, Path, Path, Path]``.
+
+        """
         project_root, package_root = u.Tests.create_lazy_init_workspace(
             root,
             project_name="flext-infra",
@@ -71,13 +85,18 @@ class TestsFlextInfraInfraRopeService:
             sibling_module_path,
         )
 
+    @staticmethod
     def _module_exports(
-        self,
         repository_root: Path,
         module_path: Path,
         options: t.JsonMapping,
     ) -> t.VariadicTuple[str]:
-        """Read one module's public export contract through the Rope workspace."""
+        """Read one module's public export contract through the Rope workspace.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
+        """
         with flext_infra.infra.rope_workspace(repository_root) as rope:
             return tuple(
                 rope.exports(
@@ -86,18 +105,24 @@ class TestsFlextInfraInfraRopeService:
                 ),
             )
 
+    @staticmethod
     def _module_objects_by_name(
-        self,
         repository_root: Path,
         module_path: Path,
     ) -> t.MutableMappingKV[str, m.Infra.Object]:
-        """Index one module's non-local objects by their declared name."""
+        """Index one module's non-local objects by their declared name.
+
+        Returns:
+            The resulting ``t.MutableMappingKV[str, m.Infra.Object]``.
+
+        """
         with flext_infra.infra.rope_workspace(repository_root) as rope:
             return {
                 item.name: item
                 for item in rope.objects(module_path, include_local_scopes=False)
             }
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("source", "symbol", "documented"),
         [
@@ -107,7 +132,6 @@ class TestsFlextInfraInfraRopeService:
         ],
     )
     def test_source_docstrings_only_resolve_local_definitions(
-        self,
         source: str,
         symbol: str,
         *,
@@ -116,7 +140,8 @@ class TestsFlextInfraInfraRopeService:
         """Relative reexports require repository context, not source-only lookup."""
         tm.that(u.Infra.symbol_has_docstring_source(source, symbol), eq=documented)
 
-    def test_open_workspace_materializes_snapshot(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_open_workspace_materializes_snapshot(tmp_path: Path) -> None:
         """Public service class exposes one typed workspace snapshot."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         module_path = package_root / "models.py"
@@ -147,7 +172,8 @@ class TestsFlextInfraInfraRopeService:
         finally:
             rope.close()
 
-    def test_script_guard_bindings_are_not_exports(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_script_guard_bindings_are_not_exports(tmp_path: Path) -> None:
         """A name bound under ``if __name__ == "__main__":`` is not a module export.
 
         flext-core's examples bound ``result`` and ``msg`` in their script
@@ -232,8 +258,8 @@ class TestsFlextInfraInfraRopeService:
 
         tm.that(exports, eq=("MODE",))
 
+    @staticmethod
     def test_open_workspace_indexes_declared_wrapper_packages(
-        self,
         tmp_path: Path,
     ) -> None:
         """Expose examples modules for explicitly targeted semantic codegen."""
@@ -260,7 +286,8 @@ class TestsFlextInfraInfraRopeService:
                 eq="examples.demo",
             )
 
-    def test_public_facade_opens_rope_workspace(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_public_facade_opens_rope_workspace(tmp_path: Path) -> None:
         """Public facade returns the same ergonomic Rope workspace DSL."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         module_path = package_root / "models.py"
@@ -281,9 +308,11 @@ class TestsFlextInfraInfraRopeService:
                 eq=True,
             )
 
+    @staticmethod
     @pytest.mark.parametrize("family_alias", sorted(u.Infra.facade_families()))
     def test_class_nesting_cutover_uses_declared_family_owner(
-        self, tmp_path: Path, family_alias: str,
+        tmp_path: Path,
+        family_alias: str,
     ) -> None:
         """Plan every facade family from semantic objects and its declared owner."""
         module_name = u.Tests.family_public_module(family_alias)
@@ -366,8 +395,8 @@ class TestsFlextInfraInfraRopeService:
             tm.that(rope.module(sibling_module_path), none=True)
             tm.that(sibling_root in rope.rope_repository_root.parents, eq=False)
 
+    @staticmethod
     def test_unrelated_ancestor_workspace_does_not_capture_project(
-        self,
         tmp_path: Path,
     ) -> None:
         """An ancestor workspace owns only the projects it declares."""
@@ -388,8 +417,8 @@ class TestsFlextInfraInfraRopeService:
         with flext_infra.infra.rope_workspace(package_root) as rope:
             tm.that(rope.rope_repository_root, eq=project_root.resolve())
 
+    @staticmethod
     def test_unowned_ancestor_src_does_not_expand_rope_scope(
-        self,
         tmp_path: Path,
     ) -> None:
         """Ignore an ancestor source directory that owns no repository."""
@@ -402,8 +431,8 @@ class TestsFlextInfraInfraRopeService:
             tm.that(rope.rope_repository_root, eq=scratch.resolve())
             tm.that(rope.modules(), eq=())
 
+    @staticmethod
     def test_workspace_exports_fixture_functions_when_requested(
-        self,
         tmp_path: Path,
     ) -> None:
         """Fixture modules can publish pytest fixtures through the Rope DSL."""
@@ -435,8 +464,8 @@ class TestsFlextInfraInfraRopeService:
         tm.that(exports, has="reset_settings")
         tm.that(exports, has="settings_factory")
 
+    @staticmethod
     def test_workspace_dsl_centralizes_project_and_module_conventions(
-        self,
         tmp_path: Path,
     ) -> None:
         """Public Rope DSL centralizes project discovery and module naming rules."""
@@ -492,8 +521,8 @@ class TestsFlextInfraInfraRopeService:
         tm.that(policy.expected_alias, none=True)
         tm.that(layout.package_alias, ne=policy.expected_alias)
 
+    @staticmethod
     def test_workspace_dsl_exposes_direct_modules_source_and_objects(
-        self,
         tmp_path: Path,
     ) -> None:
         """Public Rope DSL returns direct module inventory through census objects."""
@@ -540,8 +569,8 @@ class TestsFlextInfraInfraRopeService:
                 none=False,
             )
 
+    @staticmethod
     def test_workspace_dsl_reload_refreshes_cached_objects(
-        self,
         tmp_path: Path,
     ) -> None:
         """Reload drops Rope caches and reflects updated module objects."""
@@ -577,8 +606,8 @@ class TestsFlextInfraInfraRopeService:
                 eq={"first", "second"},
             )
 
+    @staticmethod
     def test_workspace_refresh_invalidates_source_and_semantic_snapshots(
-        self,
         tmp_path: Path,
     ) -> None:
         """Refresh exposes file changes after preserving stable session snapshots."""
@@ -617,8 +646,8 @@ class TestsFlextInfraInfraRopeService:
                 eq=("Changed",),
             )
 
+    @staticmethod
     def test_workspace_refresh_can_preserve_reverted_name_indexes(
-        self,
         tmp_path: Path,
     ) -> None:
         """Refresh can retain the text index after preview-style reverted writes."""
@@ -660,8 +689,8 @@ class TestsFlextInfraInfraRopeService:
             tm.that(rebuilt_index is not original_index, eq=True)
             tm.that(rebuilt_index, has="second")
 
+    @staticmethod
     def test_workspace_objects_raise_on_unparseable_module(
-        self,
         tmp_path: Path,
     ) -> None:
         """Unparseable module sources surface instead of an empty module."""
@@ -681,8 +710,8 @@ class TestsFlextInfraInfraRopeService:
 
         tm.that(parse_error.value.filename, eq=str(module_path.resolve()))
 
+    @staticmethod
     def test_workspace_name_index_raises_on_module_read_error(
-        self,
         tmp_path: Path,
     ) -> None:
         """Name index failures surface instead of dropping unreadable modules."""
@@ -707,8 +736,8 @@ class TestsFlextInfraInfraRopeService:
             with pytest.raises(FileNotFoundError, match=r"service\.py"):
                 rope.name_index()
 
+    @staticmethod
     def test_workspace_objects_raise_on_indexed_resource_lookup_error(
-        self,
         tmp_path: Path,
     ) -> None:
         """Indexed reference lookup fails when a module resource vanishes."""
@@ -743,7 +772,8 @@ class TestsFlextInfraInfraRopeService:
             with pytest.raises(FileNotFoundError, match=r"consumer\.py"):
                 rope.objects(service_path, include_local_scopes=False)
 
-    def test_workspace_dsl_ignores_test_references(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_workspace_dsl_ignores_test_references(tmp_path: Path) -> None:
         """Tests remain outside production reachability."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
@@ -821,8 +851,8 @@ class TestsFlextInfraInfraRopeService:
         tm.that(objects["__all__"].references_count, eq=0)
         tm.that(objects, has="public")
 
+    @staticmethod
     def test_workspace_dsl_ignores_example_importers_for_generic_names(
-        self,
         tmp_path: Path,
     ) -> None:
         """Examples remain outside production reachability."""
@@ -863,8 +893,8 @@ class TestsFlextInfraInfraRopeService:
         tm.that(candidate.runtime_references_count, eq=0)
         tm.that(candidate.script_references_count, eq=0)
 
+    @staticmethod
     def test_workspace_dsl_ignores_example_base_class_references(
-        self,
         tmp_path: Path,
     ) -> None:
         """Example inheritance remains outside production reachability."""
@@ -916,7 +946,8 @@ class TestsFlextInfraInfraRopeService:
         tm.that(candidate.runtime_references_count, eq=0)
         tm.that(candidate.script_references_count, eq=0)
 
-    def test_workspace_dsl_tracks_same_file_references(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_workspace_dsl_tracks_same_file_references(tmp_path: Path) -> None:
         """Same-file uses must block the unused fast-path shortcut."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,

@@ -1,4 +1,8 @@
-"""Pyright phase tests for deps modernizer."""
+"""Pyright phase tests for deps modernizer.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -27,7 +31,12 @@ class TestsFlextInfraDepsModernizerPyright:
         tool_config_document: m.Infra.ToolConfigDocument,
         context: m.Infra.PyprojectAnalyzerContext,
     ) -> t.JsonMapping:
-        """Apply the phase twice to an empty payload; return the converged table."""
+        """Apply the phase twice to an empty payload; return the converged table.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
+        """
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python({})
         phase = FlextInfraEnsurePyrightConfigPhase(tool_config_document)
         changes = [phase.apply_payload(payload, context=context) for _ in range(2)]
@@ -41,7 +50,12 @@ class TestsFlextInfraDepsModernizerPyright:
 
     @staticmethod
     def _sample_project(tmp_path: Path, source_dir_name: str) -> Path:
-        """Create one governed flext-sample project with a src package and manifest."""
+        """Create one governed flext-sample project with a src package and manifest.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         u.Tests.seed_locked_taplo(tmp_path)
         project_dir = tmp_path / "flext-sample"
         source_dir = project_dir / source_dir_name / "flext_sample"
@@ -73,8 +87,8 @@ class TestsFlextInfraDepsModernizerPyright:
         u.Tests.declare_workspace_projects(tmp_path, members)
         u.Tests.write_project_beads_config(tmp_path, "workspace")
 
+    @staticmethod
     def test_python_discovery_ignores_member_only_container(
-        self,
         tmp_path: Path,
     ) -> None:
         """A directory containing only nested projects is not a root source tree."""
@@ -107,8 +121,8 @@ class TestsFlextInfraDepsModernizerPyright:
             eq=["src"],
         )
 
+    @staticmethod
     def test_python_discovery_uses_caller_resolved_exclusions(
-        self,
         tmp_path: Path,
     ) -> None:
         """Honor the command-scoped topology projection without rediscovery."""
@@ -421,7 +435,8 @@ class TestsFlextInfraDepsModernizerPyright:
         ).unwrap()
         discovered = frozenset(
             infra_u.Infra.discover_python_dirs(
-                tmp_path, workspace_excluded_top_dirs=excluded_top_dirs,
+                tmp_path,
+                workspace_excluded_top_dirs=excluded_top_dirs,
             ),
         )
         declared = tuple(d for d in rules.env_dirs if d in discovered)
@@ -438,7 +453,9 @@ class TestsFlextInfraDepsModernizerPyright:
             ),
             eq=sorted(
                 infra_u.Infra.analyzer_python_roots(
-                    tmp_path, declared, workspace_excluded_top_dirs=excluded_top_dirs,
+                    tmp_path,
+                    declared,
+                    workspace_excluded_top_dirs=excluded_top_dirs,
                 ),
             ),
         )

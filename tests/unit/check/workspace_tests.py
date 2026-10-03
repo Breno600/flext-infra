@@ -26,13 +26,14 @@ class TestsFlextInfraWorkspaceChecker:
 
     pytestmark = pytest.mark.usefixtures("_clear_make_ci_token")
 
+    @staticmethod
     @pytest.fixture
-    def _clear_make_ci_token(self) -> Iterator[None]:
+    def _clear_make_ci_token() -> Iterator[None]:
         with test_u.Tests.env_vars_context(vars_to_clear=(c.Infra.PYTEST_ENV_CI,)):
             yield
 
+    @staticmethod
     def test_init_creates_instance(
-        self,
         tmp_path: Path,
     ) -> None:
         """Test that checker initializes with default workspace root."""
@@ -41,8 +42,8 @@ class TestsFlextInfraWorkspaceChecker:
         )
         tm.that(checker, none=False)
 
+    @staticmethod
     def test_init_with_custom_repository_root(
-        self,
         tmp_path: Path,
     ) -> None:
         """Test that checker accepts custom workspace root."""
@@ -51,8 +52,8 @@ class TestsFlextInfraWorkspaceChecker:
         )
         tm.that(checker, none=False)
 
+    @staticmethod
     def test_execute_returns_failure(
-        self,
         tmp_path: Path,
     ) -> None:
         """Test that execute() returns failure with helpful message."""
@@ -65,15 +66,16 @@ class TestsFlextInfraWorkspaceChecker:
         tm.that(result.error, is_=str)
         tm.that(result.error, has="Use execute_command() directly")
 
+    @staticmethod
     def test_cli_returns_error_without_discovered_projects(
-        self,
         tmp_path: Path,
     ) -> None:
         """Test that check run fails when a workspace has no projects."""
         exit_code = main(["check", "run", "--repository-root", str(tmp_path)])
         tm.that(exit_code, eq=1)
 
-    def test_cli_requires_explicit_member_selection(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_cli_requires_explicit_member_selection(tmp_path: Path) -> None:
         """An omitted selection checks only the repository root."""
         project_dir = test_u.Tests.mk_project(
             tmp_path,
@@ -122,7 +124,8 @@ class TestsFlextInfraWorkspaceChecker:
         ])
         tm.that(selected_exit_code, eq=0)
 
-    def test_resolve_gates_with_valid_gates(self) -> None:
+    @staticmethod
+    def test_resolve_gates_with_valid_gates() -> None:
         """Test that resolve_gates normalizes valid gate names."""
         result = FlextInfraWorkspaceChecker.resolve_gates([
             "lint",
@@ -133,7 +136,8 @@ class TestsFlextInfraWorkspaceChecker:
         tm.ok(result)
         tm.that(result.value, eq=["lint", "pyrefly", "mypy", "pyright"])
 
-    def test_resolve_gates_rejects_a_repeated_gate(self) -> None:
+    @staticmethod
+    def test_resolve_gates_rejects_a_repeated_gate() -> None:
         """A gate named twice is an operator mistake, not something to absorb.
 
         Silently collapsing the repeat would run exactly the gates the
@@ -144,13 +148,14 @@ class TestsFlextInfraWorkspaceChecker:
         tm.fail(result)
         tm.that(result.error, has="duplicate gate 'lint'")
 
-    def test_resolve_gates_with_invalid_gate(self) -> None:
+    @staticmethod
+    def test_resolve_gates_with_invalid_gate() -> None:
         """Test that resolve_gates fails on invalid gate name."""
         result = FlextInfraWorkspaceChecker.resolve_gates(["invalid_gate"])
         tm.fail(result)
 
+    @staticmethod
     def test_run_projects_creates_reports_dir(
-        self,
         tmp_path: Path,
     ) -> None:
         """Test that run_projects creates reports directory if missing."""
@@ -164,8 +169,8 @@ class TestsFlextInfraWorkspaceChecker:
         tm.ok(result)
         tm.that(reports_dir.exists(), eq=True)
 
+    @staticmethod
     def test_lint_returns_gate_result(
-        self,
         tmp_path: Path,
     ) -> None:
         """Test that lint() returns a GateResult."""
@@ -176,8 +181,8 @@ class TestsFlextInfraWorkspaceChecker:
         tm.that(result, is_=r)
         tm.ok(result)
 
+    @staticmethod
     def test_format_returns_gate_result(
-        self,
         tmp_path: Path,
     ) -> None:
         """Test that format() returns a GateResult."""
