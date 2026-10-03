@@ -15,7 +15,6 @@ from flext_core import build_lazy_import_map, install_lazy_exports
 if TYPE_CHECKING:
     from flext_infra._utilities._rope.project import FlextInfraRopeProject
 
-
 __all__: tuple[str, ...] = ("FlextInfraRopeProject",)
 
 _LAZY_IMPORTS = MappingProxyType(

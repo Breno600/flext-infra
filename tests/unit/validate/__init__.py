@@ -15,7 +15,6 @@ from flext_core import build_lazy_import_map, install_lazy_exports
 if TYPE_CHECKING:
     from tests.unit.validate import _fixtures
 
-
 __all__: tuple[str, ...] = ("_fixtures",)
 
 _LAZY_IMPORTS = MappingProxyType(

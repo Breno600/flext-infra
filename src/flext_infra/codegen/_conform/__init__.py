@@ -42,7 +42,6 @@ if TYPE_CHECKING:
         FlextInfraCodegenConformScaffoldPlan,
     )
 
-
 __all__: tuple[str, ...] = (
     "FlextInfraCodegenConformArtifactRender",
     "FlextInfraCodegenConformBeadsRoutes",

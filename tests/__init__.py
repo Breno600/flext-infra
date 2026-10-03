@@ -42,7 +42,6 @@ if TYPE_CHECKING:
     from tests.utilities_toml import TestsFlextInfraUtilitiesTomlMixin
     from tests.utilities_workspace_env import TestsFlextInfraUtilitiesWorkspaceEnvMixin
 
-
 __all__: tuple[str, ...] = (
     "TestsFlextInfraConstants",
     "TestsFlextInfraConstantsScanMixin",
