@@ -26,8 +26,9 @@ config/codegen-overrides.local.yaml
   **last** — the local file wins every scalar collision.
 - **Merge semantics**: identical to the tracked pipeline — recursive dict merge, lists
   concatenate, scalars replace. Dict-typed registries (`ci_private_submodules`,
-  `layout.project_overrides`, `dependabot_cooldown_days`) gain local entries beside the
-  public ones.
+  `layout.project_overrides`) gain local entries beside the public ones. The fleet
+  supply-chain cooldown is one scalar (`toolchain.dependency_cooldown_days`) honoured by
+  every resolver, never a per-repository map.
 - **Validation**: the merged document passes the same typed models (`extra="forbid"`),
   so a typo in the local file fails loudly at load time instead of silently diverging.
 - **Read timing**: the file is read once, when the config singleton is first fetched
@@ -52,8 +53,6 @@ Infra:
         organization: my-org
         base_url: https://github.com/my-org
         branch: main
-    dependabot_cooldown_days:
-      my-repo: 7
   release:
     publishable_prefixes:
       - my-repo-
@@ -86,7 +85,7 @@ that explicit contract, avoiding host-interpreter marker evaluation.
 An Infra integration lane can bootstrap declared candidate worktrees with
 `make bootstrap-candidate`. Its handwritten `config/workspace.yaml` lists
 `candidate_bootstrap_targets`, each with a relative `path` and a `what` value of
-`makefile` or `docs-config`.
+`makefile`, `docs-config`, `pyproject`, or `mise-triple`.
 The verb uses the current branch-matched Infra generator and validates every target
 as an exact Git worktree root. It plans all declared recovery projections before
 starting one recoverable, multi-root publication, then verifies every target before
@@ -99,7 +98,11 @@ Makefile bootstrap, run `make setup` and `make gen` in that consumer's worktree.
 `docs-config` renders only the declared docs policy template when a conflicted
 generated JSON file prevents ordinary generation from parsing it; afterward run
 `make gen` to verify the full projection. Generated targets are never edited
-directly. The
+directly. `mise-triple` restores the complete launcher and version-pin set from
+the provider's validated packaged `make upg` artifacts in one publication when
+a merge conflict prevents the candidate's Makefile from starting. Run `make upg`
+in the candidate afterward to resolve its current release, then `make gen` to
+project its managed files, including CI. The
 `makefile` surface reads declared member identity from the workspace manifest even when
 a member checkout has been initialized only partially and still lacks its
 `pyproject.toml`; that is the state the new Make setup must repair. All other conform

@@ -41,7 +41,11 @@ class FlextInfraUtilitiesCodegenFilePlan:
 
     @staticmethod
     @contextmanager
-    def codegen_transaction_lease(journal_path: Path) -> Generator[None]:
+    def codegen_transaction_lease(
+        journal_path: Path,
+        *,
+        wait_seconds: float = c.Infra.JOURNAL_LEASE_WAIT_SECONDS,
+    ) -> Generator[None]:
         """Hold native ownership without unlinking the journal's lock identity.
 
         The lease holds an OS-native exclusive lock on a persistent lock file.
@@ -49,20 +53,28 @@ class FlextInfraUtilitiesCodegenFilePlan:
         Neither path removes the lock identity when ownership ends.
 
         Acquisition waits politely for a held lease up to
-        ``c.Infra.JOURNAL_LEASE_WAIT_SECONDS`` (flext-c2kp3): a legitimate fleet
+        ``c.Infra.JOURNAL_LEASE_WAIT_SECONDS``: a legitimate fleet
         ``make gen`` holds the lease for minutes, so an immediate non-blocking
         refusal manufactured spurious ``JournalLeaseTimeoutError`` failures
-        under ordinary multi-agent traffic. The wait stays bounded, so a truly
-        wedged holder still fails loud rather than hanging forever.
+        under ordinary concurrent traffic. The wait stays bounded, so a truly
+        wedged holder still fails loud rather than hanging forever. A caller
+        whose own deadline already runs (the testmon database owner) passes
+        ``wait_seconds=0``: one attempt, then the loud refusal.
         Only native contention (EACCES, EAGAIN or EWOULDBLOCK) enters this wait;
         every other acquisition error escapes unchanged.
+
+        Raises:
+            OSError: If ``error.errno not in {errno.EACCES, errno.EAGAIN,
+                errno.EWOULDBLOCK}``.
+            JournalLeaseTimeoutError: If ``time.monotonic() >= deadline``.
+
         """
         lock_path = journal_path.with_name(f"{journal_path.name}.lock")
         lock_path.parent.mkdir(parents=True, exist_ok=True)
         descriptor = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o600)
         acquired = False
         try:
-            deadline = time.monotonic() + c.Infra.JOURNAL_LEASE_WAIT_SECONDS
+            deadline = time.monotonic() + wait_seconds
             while True:
                 try:
                     if os.name == "nt":
@@ -78,8 +90,12 @@ class FlextInfraUtilitiesCodegenFilePlan:
                     }:
                         raise
                     if time.monotonic() >= deadline:
-                        raise FlextInfraUtilitiesCodegenFilePlan.JournalLeaseTimeoutError(
-                            lock_path
+                        timeout_error = (
+                            FlextInfraUtilitiesCodegenFilePlan
+                            .JournalLeaseTimeoutError
+                        )
+                        raise timeout_error(
+                            lock_path,
                         ) from error
                     time.sleep(c.Infra.JOURNAL_LEASE_POLL_SECONDS)
                     continue
@@ -102,6 +118,10 @@ class FlextInfraUtilitiesCodegenFilePlan:
 
         Every path must exist: an absent input is a planning defect, not an empty
         snapshot.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[cli_m.Cli.AtomicFileState]]``.
+
         """
         states: list[cli_m.Cli.AtomicFileState] = []
         for path in sorted(set(paths)):
@@ -115,10 +135,15 @@ class FlextInfraUtilitiesCodegenFilePlan:
     def codegen_file_before_state(
         plan: m.Infra.CodegenFilePlan,
     ) -> p.Result[cli_m.Cli.AtomicFileState]:
-        """Return a publishable state only after its parent physically exists."""
+        """Return a publishable state only after its parent physically exists.
+
+        Returns:
+            A publishable state only after its parent physically exists.
+
+        """
         if isinstance(plan.before, cli_m.Cli.AtomicDirectoryChainPlan):
             return r[cli_m.Cli.AtomicFileState].fail(
-                f"codegen destination parent is absent: {plan.path.parent}"
+                f"codegen destination parent is absent: {plan.path.parent}",
             )
         return r[cli_m.Cli.AtomicFileState].ok(plan.before)
 
@@ -134,12 +159,21 @@ class FlextInfraUtilitiesCodegenFilePlan:
         Both content fields are binary contracts. Decoding with replacement
         would hide distinct invalid UTF-8 bytes; treating None as empty bytes
         would erase the distinction between an absent and an empty file.
+
+        Returns:
+            The resulting ``bool``.
+
         """
         return before.content != desired_content or before.mode != desired_mode
 
     @staticmethod
     def codegen_file_requires_effect(plan: m.Infra.CodegenFilePlan) -> bool:
-        """Whether publication must change a generated-file destination."""
+        """Whether publication must change a generated-file destination.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         if isinstance(plan.before, cli_m.Cli.AtomicDirectoryChainPlan):
             return plan.desired_content is not None
         return FlextInfraUtilitiesCodegenFilePlan.atomic_file_state_differs(
@@ -150,12 +184,21 @@ class FlextInfraUtilitiesCodegenFilePlan:
 
     @staticmethod
     def codegen_file_drift_report(
-        plans: t.SequenceOf[m.Infra.CodegenFilePlan], *, limit: int = 40
+        plans: t.SequenceOf[m.Infra.CodegenFilePlan],
+        *,
+        limit: int = 40,
     ) -> str:
         """Report a bounded byte-exact diff, including line endings and presence.
 
         Escaped byte lines preserve CRLF, missing final newlines, and non-UTF-8
         content. Only equal bytes with different modes are mode-only drift.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            ValueError: If codegen drift report limit must be positive.
+
         """
         if limit <= 0:
             msg = "codegen drift report limit must be positive"
@@ -184,7 +227,7 @@ class FlextInfraUtilitiesCodegenFilePlan:
                 f"\n+++ {plan.path} (rendered mode={rendered_mode})"
             )
             diff = tuple(
-                islice(difflib.unified_diff(old_lines, new_lines, lineterm=""), limit)
+                islice(difflib.unified_diff(old_lines, new_lines, lineterm=""), limit),
             )
             if diff:
                 parts.append("\n".join((header, *diff)))
@@ -198,7 +241,7 @@ class FlextInfraUtilitiesCodegenFilePlan:
             if old_bytes == new_bytes:
                 parts.append(
                     f"{header}\n(content equal: mode-only drift "
-                    f"observed={committed_mode} desired={rendered_mode})"
+                    f"observed={committed_mode} desired={rendered_mode})",
                 )
                 continue
             # Lines are equal but bytes are not: name the exact tail difference
@@ -206,7 +249,7 @@ class FlextInfraUtilitiesCodegenFilePlan:
             parts.append(
                 f"{header}\n(lines equal, bytes differ: committed {len(old_bytes)}B "
                 f"tail={old_bytes[-24:]!r}; rendered {len(new_bytes)}B "
-                f"tail={new_bytes[-24:]!r})"
+                f"tail={new_bytes[-24:]!r})",
             )
         return "\n----\n".join(parts)
 

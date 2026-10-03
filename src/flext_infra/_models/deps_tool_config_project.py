@@ -1,4 +1,8 @@
-"""Composed project-owned managed-artifact configuration document."""
+"""Composed project-owned managed-artifact configuration document.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,23 +10,19 @@ from typing import Annotated
 
 from flext_cli import m
 
-from .deps_tool_config_project_artifacts import (
+from flext_infra._models.deps_tool_config_project_artifacts import (
     FlextInfraModelsDepsToolConfigProjectArtifacts,
 )
 
 
 class FlextInfraModelsDepsToolConfigProject(
-    FlextInfraModelsDepsToolConfigProjectArtifacts
+    FlextInfraModelsDepsToolConfigProjectArtifacts,
 ):
     """Document layer composing every project-owned managed-artifact model."""
 
     class ProjectManagedArtifactsFragment(m.ArbitraryTypesModel):
         """Optional project-owned sections present in one configuration source."""
 
-        Ruff: Annotated[
-            FlextInfraModelsDepsToolConfigProjectArtifacts.ProjectRuffConfig | None,
-            m.Field(description="Ruff section declared by this source"),
-        ] = None
         Mise: Annotated[
             FlextInfraModelsDepsToolConfigProjectArtifacts.ProjectMiseConfig | None,
             m.Field(description="Mise section declared by this source"),

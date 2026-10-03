@@ -1,4 +1,8 @@
-"""Public command dispatch for the composed flext-infra CLI."""
+"""Public command dispatch for the composed flext-infra CLI.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,8 +12,7 @@ from typing import TYPE_CHECKING, ClassVar
 from flext_cli import cli as cli_facade
 
 from flext_infra import c, t, u
-
-from .cli_routes import FlextInfraCliRouteService
+from flext_infra.services.cli_routes import FlextInfraCliRouteService
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -24,7 +27,12 @@ class FlextInfraCliDispatchService(FlextInfraCliRouteService, type(cli_facade)):
     shared_value_flags: ClassVar[frozenset[str]] = c.Infra.SHARED_VALUE_FLAGS
 
     def main(self, args: t.StrSequence | None = None) -> int:
-        """Run the centralized dispatcher."""
+        """Run the centralized dispatcher.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         u.ensure_structlog_configured()
         cli_args = list(args) if args is not None else sys.argv[1:]
         if not cli_args:
@@ -43,7 +51,8 @@ class FlextInfraCliDispatchService(FlextInfraCliRouteService, type(cli_facade)):
     def print_help(self) -> None:
         """Display the canonical command groups."""
         self.display_message(
-            "Usage: flext-infra <group> [subcommand] [args...]", c.Cli.MessageTypes.INFO
+            "Usage: flext-infra <group> [subcommand] [args...]",
+            c.Cli.MessageTypes.INFO,
         )
         self.display_message("Groups", c.Cli.MessageTypes.INFO)
         for group in sorted(c.Infra.CLI_GROUP_DESCRIPTIONS):
@@ -53,13 +62,18 @@ class FlextInfraCliDispatchService(FlextInfraCliRouteService, type(cli_facade)):
             )
 
     def normalize_group_args(self, args: t.StrSequence) -> list[str]:
-        """Normalize group arguments."""
+        """Normalize group arguments.
+
+        Returns:
+            The resulting ``list[str]``.
+
+        """
         normalized = t.Cli.STR_SEQUENCE_ADAPTER.validate_python(
             u.Cli.reorder_prefixed_options(
                 args,
                 bool_options=tuple(self.shared_bool_flags),
                 value_options=tuple(self.shared_value_flags),
-            )
+            ),
         )
         return list(normalized)
 
@@ -68,7 +82,12 @@ class FlextInfraCliDispatchService(FlextInfraCliRouteService, type(cli_facade)):
         self.register_result_routes(app, self.route_table_for(group))
 
     def run_group(self, group: str, args: t.StrSequence) -> int:
-        """Execute one registered flext-cli command group."""
+        """Execute one registered flext-cli command group.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         app = self.create_app_with_common_params(
             name=f"{self.app_name} {group}",
             help_text=c.Infra.CLI_GROUP_DESCRIPTIONS[group],
@@ -77,11 +96,15 @@ class FlextInfraCliDispatchService(FlextInfraCliRouteService, type(cli_facade)):
         normalized_args = self.normalize_group_args(args)
         if not normalized_args:
             _ = self.execute_app(
-                app, prog_name=f"{self.app_name} {group}", args=["--help"]
+                app,
+                prog_name=f"{self.app_name} {group}",
+                args=["--help"],
             )
             return 1
         result = self.execute_app(
-            app, prog_name=f"{self.app_name} {group}", args=normalized_args
+            app,
+            prog_name=f"{self.app_name} {group}",
+            args=normalized_args,
         )
         if result.success:
             return c.Infra.PROCESS_SUCCESS_EXIT_CODE

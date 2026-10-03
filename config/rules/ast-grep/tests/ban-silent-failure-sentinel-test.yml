@@ -1,0 +1,98 @@
+id: ban-silent-failure-sentinel
+valid:
+  - value = result.unwrap_or(default_value)
+  - value = result.unwrap_or(0)
+  - |
+    try:
+        run()
+    except Exception as exc:
+        raise RuntimeError() from exc
+  - |
+    try:
+        run()
+    except Exception as exc:
+        return r[int].fail(str(exc))
+  - |
+    try:
+        run()
+    except Exception:
+        pass
+  - |
+    def has_header(path):
+        try:
+            return parse(path)
+        except RegistryError:
+            return False
+  - |
+    def run():
+        try:
+            return parse()
+        except KeyError:
+            return True
+  - |
+    def run_except() -> p.Result[bool]:
+        try:
+            raise ValueError('boom')
+        except ValueError as exc:
+            return None
+  - |
+    def collect_probe_findings(path):
+        result = parse(path)
+        if result.failure:
+            return []
+        return []
+  - |
+    def run_guard(validation_result: p.Result[bool]) -> p.Result[bool]:
+        if validation_result.failure:
+            return False
+        return r[bool].ok(True)
+  - |
+    def run(res):
+        if res.failure:
+            raise RuntimeError(res.error)
+        return res
+invalid:
+  - value = result.unwrap_or(False)
+  - items = result.unwrap_or([])
+  - names = result.unwrap_or(frozenset())
+  - |
+    try:
+        run()
+    except (ValueError, Exception):
+        return None
+  - |
+    try:
+        run()
+    except Exception as exc:
+        log(exc)
+  - |
+    try:
+        run()
+    except:
+        cleanup()
+  - |
+    def run():
+        try:
+            return parse()
+        except KeyError:
+            return None
+  - |
+    def run() -> bool:
+        try:
+            return parse()
+        except KeyError as exc:
+            return False
+  - |
+    def run_guard(validation_result):
+        if validation_result.failure:
+            return False
+        return True
+  - |
+    def run(res) -> r[bool]:
+        if res.success:
+            return None
+        return res
+  - |
+    def run(res):
+        if not res.success:
+            return True

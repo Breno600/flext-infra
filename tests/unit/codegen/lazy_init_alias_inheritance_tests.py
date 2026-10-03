@@ -1,4 +1,8 @@
-"""Facade-parent alias inheritance elects the nearest re-exporting parent."""
+"""Facade-parent alias inheritance elects the nearest re-exporting parent.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -21,8 +25,9 @@ class TestsFlextInfraLazyInitAliasInheritance:
     render the same bytes. An unresolvable declared parent fails loud.
     """
 
+    @staticmethod
     def test_generated_parent_retains_operational_result_alias_in_child(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """A generated parent cannot erase a declared result needed at bootstrap."""
         repository, child = u.Tests.create_lazy_init_workspace(
@@ -37,7 +42,9 @@ class TestsFlextInfraLazyInitAliasInheritance:
             encoding=c.Cli.ENCODING_DEFAULT,
         )
         u.Tests.write_lazy_init_namespace_module(
-            parent / "constants.py", class_name="BootstrapParentConstants", alias="c"
+            parent / "constants.py",
+            class_name="BootstrapParentConstants",
+            alias="c",
         )
         parent_constants = parent / c.Infra.CONSTANTS_PY
         parent_constants.write_text(
@@ -81,14 +88,16 @@ class TestsFlextInfraLazyInitAliasInheritance:
             "print(execute().value)\n"
         )
         result = tm.ok(
-            u.Cli.run([sys.executable, "-c", probe], env=probe_env, cwd=repository)
+            u.Cli.run([sys.executable, "-c", probe], env=probe_env, cwd=repository),
         )
         tm.that(
-            result.stdout.splitlines(), eq=["True", "True", "False", "bootstrap-ready"]
+            result.stdout.splitlines(),
+            eq=["True", "True", "False", "bootstrap-ready"],
         )
 
+    @staticmethod
     def test_child_inherits_exactly_the_indexed_parent_letters(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """An indexed parent's exact alias set is what the child inherits."""
         repository_root, child_root = u.Tests.create_lazy_init_workspace(
@@ -101,7 +110,8 @@ class TestsFlextInfraLazyInitAliasInheritance:
         )
         parent_root.mkdir(parents=True)
         parent_root.joinpath(c.Infra.INIT_PY).write_text(
-            "", encoding=c.Infra.ENCODING_DEFAULT
+            "",
+            encoding=c.Infra.ENCODING_DEFAULT,
         )
         u.Tests.write_lazy_init_namespace_module(
             parent_root / "constants_ns.py",
@@ -129,7 +139,7 @@ class TestsFlextInfraLazyInitAliasInheritance:
 
         tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
         generated = child_root.joinpath(c.Infra.INIT_PY).read_text(
-            encoding=c.Cli.ENCODING_DEFAULT
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
 
         tm.that(
@@ -138,8 +148,9 @@ class TestsFlextInfraLazyInitAliasInheritance:
         )
         tm.that(generated, lacks="from flext_test_inherit_parent import c, m, p, ")
 
+    @staticmethod
     def test_external_parent_letters_come_from_the_nearest_exporter(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """The nearest parent re-exporting a letter is its source.
 
@@ -165,10 +176,11 @@ class TestsFlextInfraLazyInitAliasInheritance:
 
         tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
         generated = child_root.joinpath(c.Infra.INIT_PY).read_text(
-            encoding=c.Cli.ENCODING_DEFAULT
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         entries, _refs = u.Infra.module_mapping_assignment_source(
-            generated, u.Infra.lazy_imports_name_source(generated)
+            generated,
+            u.Infra.lazy_imports_name_source(generated),
         )
         sources = dict(entries)
 
@@ -177,8 +189,9 @@ class TestsFlextInfraLazyInitAliasInheritance:
         tm.that(sources.get("flext_core", ()), lacks="r")
         tm.that(u.Tests.run_lazy_init(repository_root, check_only=True), eq=0)
 
+    @staticmethod
     def test_dependency_groups_and_entry_points_are_never_inherited(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Dev/codegen dependencies and non-letter names stay out of the root.
 
@@ -210,10 +223,11 @@ class TestsFlextInfraLazyInitAliasInheritance:
 
         tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
         generated = child_root.joinpath(c.Infra.INIT_PY).read_text(
-            encoding=c.Cli.ENCODING_DEFAULT
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         entries, _refs = u.Infra.module_mapping_assignment_source(
-            generated, u.Infra.lazy_imports_name_source(generated)
+            generated,
+            u.Infra.lazy_imports_name_source(generated),
         )
         sources = dict(entries)
         inherited = {name for names in sources.values() for name in names}
@@ -225,7 +239,8 @@ class TestsFlextInfraLazyInitAliasInheritance:
             tm.that(inherited, lacks=entry_point)
         tm.that(u.Tests.run_lazy_init(repository_root, check_only=True), eq=0)
 
-    def test_declared_parent_resolving_nowhere_fails_loud(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_declared_parent_resolving_nowhere_fails_loud(tmp_path: Path) -> None:
         """A declared parent that resolves nowhere escapes as the first failure."""
         repository_root, child_root = u.Tests.create_lazy_init_workspace(
             tmp_path,

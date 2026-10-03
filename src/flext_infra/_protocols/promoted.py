@@ -2,6 +2,9 @@
 
 Structural contracts for the frozen models in ``m.Infra.Promoted*`` — leaf
 code annotates with these protocols, never with the concrete models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -17,152 +20,124 @@ if TYPE_CHECKING:
 class FlextInfraProtocolsPromoted(Protocol):
     """Promoted-command protocol definitions."""
 
-    """cosmos-command registry protocol namespace."""
+    """flext-command registry protocol namespace."""
 
     @runtime_checkable
     class PromotedParam(Protocol):
         """Promoted command parameter contract."""
 
         @property
-        def name(self) -> str:
-            """Name."""
+        def name(self) -> str: ...
 
         @property
-        def help(self) -> str:
-            """Help."""
+        def help(self) -> str: ...
 
         @property
-        def required(self) -> bool:
-            """Required."""
+        def required(self) -> bool: ...
 
         @property
-        def default(self) -> str:
-            """Default."""
+        def default(self) -> str: ...
 
         @property
-        def choices(self) -> t.VariadicTuple[str]:
-            """Choices."""
+        def choices(self) -> t.VariadicTuple[str]: ...
 
     @runtime_checkable
     class PromotedCommand(Protocol):
         """Promoted command contract discovered from a script header."""
 
         @property
-        def verb(self) -> str:
-            """Verb."""
+        def verb(self) -> str: ...
 
         @property
-        def what(self) -> str:
-            """What."""
+        def what(self) -> str: ...
 
         @property
-        def domain(self) -> str:
-            """Domain."""
+        def domain(self) -> str: ...
 
         @property
-        def summary(self) -> str:
-            """Summary."""
+        def summary(self) -> str: ...
 
         @property
-        def description(self) -> str:
-            """Description."""
+        def description(self) -> str: ...
 
         @property
-        def example(self) -> str:
-            """Example."""
+        def example(self) -> str: ...
 
         @property
-        def path(self) -> Path:
-            """Path."""
+        def path(self) -> Path: ...
 
         @property
-        def mutates(self) -> bool:
-            """Mutates."""
+        def mutates(self) -> bool: ...
 
         @property
-        def aliases(self) -> t.VariadicTuple[str]:
-            """Aliases."""
+        def aliases(self) -> t.VariadicTuple[str]: ...
 
         @property
-        def params(self) -> tuple[FlextInfraProtocolsPromoted.PromotedParam, ...]:
-            """Params."""
+        def params(self) -> tuple[FlextInfraProtocolsPromoted.PromotedParam, ...]: ...
 
         @property
-        def rules(self) -> t.VariadicTuple[str]:
-            """Rules."""
+        def rules(self) -> t.VariadicTuple[str]: ...
 
     @runtime_checkable
     class PromotedAliasTarget(Protocol):
         """Resolved command alias target contract."""
 
         @property
-        def verb(self) -> str:
-            """Verb."""
+        def verb(self) -> str: ...
 
         @property
-        def what(self) -> str:
-            """What."""
+        def what(self) -> str: ...
 
     @runtime_checkable
     class PromotedWorkspaceSpec(Protocol):
         """Repository facts contract the promoted framework consumes."""
 
         @property
-        def root(self) -> Path:
-            """Repository root."""
+        def root(self) -> Path: ...
 
         @property
-        def scripts(self) -> Path:
-            """Scripts directory."""
+        def scripts(self) -> Path: ...
 
         @property
-        def local_python(self) -> Path:
-            """Declared local ``.venv`` interpreter."""
+        def local_python(self) -> Path: ...
 
         @property
-        def submodule_script_roots(self) -> t.VariadicTuple[Path]:
-            """Submodule script roots in first-wins order."""
+        def submodule_script_roots(self) -> t.VariadicTuple[Path]: ...
 
         @property
-        def consumer_scripts_root(self) -> Path | None:
-            """Consuming workspace scripts root when vendored as a submodule."""
+        def consumer_scripts_root(self) -> Path | None: ...
 
     @runtime_checkable
     class PromotedRegistry(Protocol):
         """In-memory promoted command registry discovered from script headers."""
 
-        def add(self, command: FlextInfraProtocolsPromoted.PromotedCommand) -> None:
-            """Add one command and its aliases."""
+        def add(self, command: FlextInfraProtocolsPromoted.PromotedCommand) -> None: ...
 
-        def validate(self) -> None:
-            """Validate registry invariants after discovery."""
+        def validate(self) -> None: ...
 
-        def resolve_verb(self, verb: str) -> str:
-            """Resolve a public verb or alias to the canonical verb."""
+        def resolve_verb(self, verb: str) -> str: ...
 
         def alias_target(
-            self, verb: str
-        ) -> FlextInfraProtocolsPromoted.PromotedAliasTarget | None:
-            """Return the alias target for a requested verb, if any."""
+            self,
+            verb: str,
+        ) -> FlextInfraProtocolsPromoted.PromotedAliasTarget | None: ...
 
         def commands(
-            self, verb: str
-        ) -> t.MappingKV[str, FlextInfraProtocolsPromoted.PromotedCommand]:
-            """Return commands registered for a verb or alias."""
+            self,
+            verb: str,
+        ) -> t.MappingKV[str, FlextInfraProtocolsPromoted.PromotedCommand]: ...
 
         def command(
-            self, verb: str, what: str
-        ) -> FlextInfraProtocolsPromoted.PromotedCommand:
-            """Return one command by verb and WHAT."""
+            self,
+            verb: str,
+            what: str,
+        ) -> FlextInfraProtocolsPromoted.PromotedCommand: ...
 
-        def verbs(self) -> t.StrSequence:
-            """Return registered verbs in display order."""
+        def verbs(self) -> t.StrSequence: ...
 
-        def aliases_for(self, verb: str) -> t.StrSequence:
-            """Return aliases that point to one canonical verb."""
+        def aliases_for(self, verb: str) -> t.StrSequence: ...
 
-        def has(self, verb: str, what: str) -> bool:
-            """Return whether a (verb, WHAT) command is registered."""
+        def has(self, verb: str, what: str) -> bool: ...
 
 
 __all__: list[str] = ["FlextInfraProtocolsPromoted"]

@@ -1,0 +1,13 @@
+id: require-facade-base
+valid:
+  - |
+    class FlextFooModels(FlextCliModels):
+        pass
+  - |
+    class FlextFooModels(FlextCliModels):
+        class Foo:
+            pass
+invalid:
+  - |
+    class FlextFooModels:
+        pass

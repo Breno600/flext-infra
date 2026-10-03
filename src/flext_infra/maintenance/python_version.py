@@ -21,8 +21,7 @@ from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
 from flext_infra import c, m, u
-
-from ..base import s
+from flext_infra.base import s
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -41,17 +40,27 @@ class FlextInfraPythonVersionEnforcer(s[int]):
     """
 
     check_only: Annotated[
-        bool, m.Field(description="Only validate Python version constraints")
+        bool,
+        m.Field(description="Only validate Python version constraints"),
     ] = False
     verbose: Annotated[
-        bool, m.Field(description="Emit detailed per-project validation logs")
+        bool,
+        m.Field(description="Emit detailed per-project validation logs"),
     ] = False
 
     @override
     def execute(
-        self, *, check_only: bool | None = None, verbose: bool | None = None
+        self,
+        *,
+        check_only: bool | None = None,
+        verbose: bool | None = None,
     ) -> p.Result[int]:
-        """Execute Python version enforcement; returns r[int] exit code."""
+        """Execute Python version enforcement; returns r[int] exit code.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
+        """
         if check_only is not None:
             self.check_only = check_only
         if verbose is not None:
@@ -98,14 +107,24 @@ class FlextInfraPythonVersionEnforcer(s[int]):
         return r[int].ok(0)
 
     def _resolve_repository_root(self) -> Path:
-        """Prefer the validated CLI workspace when provided, otherwise auto-detect."""
+        """Prefer the validated CLI workspace when provided, otherwise auto-detect.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         if "repository_root" in self.model_fields_set:
             repository_root: Path = self.repository_root
             return repository_root.resolve()
         return self._repository_root_from_file(__file__)
 
     def _ensure_python_version_file(self, project: Path, required_minor: int) -> bool:
-        """Return True when project pyproject + runtime match required_minor."""
+        """Return True when project pyproject + runtime match required_minor.
+
+        Returns:
+            True when project pyproject + runtime match required_minor.
+
+        """
         local_minor = self._read_required_minor(project)
         if local_minor != required_minor:
             if self.check_only:
@@ -152,6 +171,13 @@ class FlextInfraPythonVersionEnforcer(s[int]):
         In check-only mode a missing/stale file is a validation failure; in
         apply mode the file is created/rewritten so pyenv/asdf/mise select the
         interpreter that matches the workspace SSOT.
+
+        Returns:
+            The resulting ``bool``.
+
+        Raises:
+            RuntimeError: If failed to write.
+
         """
         version_file = project / c.Infra.PYTHON_VERSION_FILENAME
         desired = f"3.{required_minor}\n"
@@ -180,8 +206,14 @@ class FlextInfraPythonVersionEnforcer(s[int]):
         )
         return True
 
-    def _read_required_minor(self, repository_root: Path) -> int:
-        """Read requires-python minor from pyproject; default 13 when absent."""
+    @staticmethod
+    def _read_required_minor(repository_root: Path) -> int:
+        """Read requires-python minor from pyproject; default 13 when absent.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         pyproject = repository_root / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
             return 13
@@ -195,6 +227,13 @@ class FlextInfraPythonVersionEnforcer(s[int]):
         """Walk up from ``file`` to the first dir with .git+Makefile+pyproject.
 
         Raises RuntimeError when no such repository root exists (fail-loud).
+
+        Returns:
+            The resulting ``Path``.
+
+        Raises:
+            RuntimeError: If repository root not found from.
+
         """
         current = Path(file).resolve()
         if current.is_file():

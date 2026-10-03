@@ -1,4 +1,8 @@
-"""Explicit regeneration of the owned ast-grep rule-test snapshots."""
+"""Explicit regeneration of the owned ast-grep rule-test snapshots.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,9 +11,8 @@ from typing import override
 from flext_cli import cli
 
 from flext_core import r
-
-from .. import FlextInfraServiceBase, p, t, u
-from . import FlextInfraModGateEngine
+from flext_infra import FlextInfraServiceBase, p, t, u
+from flext_infra.codemod import FlextInfraModGateEngine
 
 
 class FlextInfraCodemodSnapshotRefresh(FlextInfraServiceBase[t.Cli.ResultValue]):
@@ -24,13 +27,20 @@ class FlextInfraCodemodSnapshotRefresh(FlextInfraServiceBase[t.Cli.ResultValue])
 
     @override
     def execute(self) -> p.Result[t.Cli.ResultValue]:
-        """Rebuild or preview the owned snapshot projections."""
+        """Rebuild or preview the owned snapshot projections.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         planned = u.Infra.codemod_rule_plan(self.repository_root)
         if planned.failure:
             return r[t.Cli.ResultValue].from_failure(planned)
         rules = tuple(dict.fromkeys(rule.resource for rule in planned.value.rules))
         refreshed = FlextInfraModGateEngine.refresh_rule_snapshots(
-            self.repository_root, rules, apply=not self.effective_dry_run
+            self.repository_root,
+            rules,
+            apply=not self.effective_dry_run,
         )
         if refreshed.failure:
             return r[t.Cli.ResultValue].from_failure(refreshed)
@@ -39,11 +49,11 @@ class FlextInfraCodemodSnapshotRefresh(FlextInfraServiceBase[t.Cli.ResultValue])
         if self.effective_dry_run and refreshed.value:
             return r[t.Cli.ResultValue].fail(
                 f"{len(refreshed.value)} ast-grep snapshot projection(s) differ "
-                "from their rule tests"
+                "from their rule tests",
             )
         cli.display_text(
             f"mod-snapshots: {len(refreshed.value)} snapshot projection(s) "
-            "changed; review the diff and commit it"
+            "changed; review the diff and commit it",
         )
         return r[t.Cli.ResultValue].ok(True)
 

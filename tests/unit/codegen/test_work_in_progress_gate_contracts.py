@@ -8,6 +8,9 @@ pattern fails the guard when it targets a protected integration branch.
 These tests execute the committed CI projection's guard script against real Git
 heads and read every expectation from the typed config values
 (generator/consumer round-trip), never from hardcoded config copies.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -52,21 +55,34 @@ class TestsWorkInProgressGates:
 
     @staticmethod
     def _merge_guard_script() -> str:
-        """Extract the rendered merge-guard run script from the repo projection."""
+        """Extract the rendered merge-guard run script from the repo projection.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         section = _RENDERED_CI.read_text(encoding="utf-8").split("merge-guard:", 1)[1]
         body = section.split("run: |", 1)[1].split("# End SECTION: merge-guard job")[0]
         return "".join(line[10:] + "\n" for line in body.splitlines() if line.strip())
 
     @classmethod
     def _guard(cls, root: Path, subject: str, base: str) -> p.Result[str]:
-        """Run the committed guard against one real head commit subject."""
+        """Run the committed guard against one real head commit subject.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         test_u.Tests.git_bootstrap(root, ("commit", "--allow-empty", "-m", subject))
         with cls._base_ref(base):
             return u.Cli.capture(
-                ["bash", "-c", cls._merge_guard_script()], cwd=root, timeout=120
+                ["bash", "-c", cls._merge_guard_script()],
+                cwd=root,
+                timeout=120,
             )
 
-    def test_template_binds_the_config_owned_predicate(self) -> None:
+    @staticmethod
+    def test_template_binds_the_config_owned_predicate() -> None:
         """The CI template reads make.work_in_progress, never a literal copy."""
         ci = _CI_TEMPLATE.read_text(encoding="utf-8")
         tm.that(

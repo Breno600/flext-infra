@@ -1,0 +1,82 @@
+id: ban-class-wrong-facade-layer
+snapshots:
+  ? |
+    class FlextFooUtilities:
+        pass
+  : labels:
+    - source: |-
+        class FlextFooUtilities:
+            pass
+      style: primary
+      start: 0
+      end: 33
+    - source: |
+        class FlextFooUtilities:
+            pass
+      style: secondary
+      start: 0
+      end: 34
+    - source: FlextFooUtilities
+      style: secondary
+      start: 6
+      end: 23
+    - source: FlextFooUtilities
+      style: secondary
+      start: 6
+      end: 23
+  ? |
+    class Item(m.ContractModel):
+        pass
+  : labels:
+    - source: |-
+        class Item(m.ContractModel):
+            pass
+      style: primary
+      start: 0
+      end: 37
+    - source: |
+        class Item(m.ContractModel):
+            pass
+      style: secondary
+      start: 0
+      end: 38
+    - source: m.ContractModel
+      style: secondary
+      start: 11
+      end: 26
+    - source: m.ContractModel
+      style: secondary
+      start: 11
+      end: 26
+    - source: Item
+      style: secondary
+      start: 6
+      end: 10
+  ? |
+    class Status(StrEnum):
+        A = "a"
+  : labels:
+    - source: |-
+        class Status(StrEnum):
+            A = "a"
+      style: primary
+      start: 0
+      end: 34
+    - source: |
+        class Status(StrEnum):
+            A = "a"
+      style: secondary
+      start: 0
+      end: 35
+    - source: StrEnum
+      style: secondary
+      start: 13
+      end: 20
+    - source: StrEnum
+      style: secondary
+      start: 13
+      end: 20
+    - source: Status
+      style: secondary
+      start: 6
+      end: 12
