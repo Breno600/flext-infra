@@ -5,6 +5,9 @@ re-resolves that line (``uv lock --upgrade --refresh``) to the branch tip and
 records the commit in uv.lock; generation re-renders any commit left in the
 pyproject projection on the detected line instead of writing it back, and no
 manifest or override pins one beside the lock (flext-oe420).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -37,7 +40,12 @@ class TestsFlextInfraUpgOwnedDependencyPin:
         infra_ref: str = LINE,
         flext_source: str = "",
     ) -> str:
-        """Write one standalone consumer declaring the family on the given refs."""
+        """Write one standalone consumer declaring the family on the given refs.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         (root / "config").mkdir(parents=True)
         repository: t.JsonDict = {
             "name": "consumer",

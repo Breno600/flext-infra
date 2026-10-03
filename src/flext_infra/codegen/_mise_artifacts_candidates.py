@@ -1,4 +1,8 @@
-"""Validated receipt and publication candidates for Mise transactions."""
+"""Validated receipt and publication candidates for Mise transactions.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,9 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m
-
-from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
+from flext_infra.codegen._mise_artifacts_files import (
+    FlextInfraMiseArtifactsFiles as files,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -22,7 +27,12 @@ class FlextInfraMiseArtifactsCandidates:
         projects: t.VariadicTuple[m.Infra.MiseToolchainProjectState],
         stages: t.VariadicTuple[Path],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile]]:
-        """Retain every staged artifact receipt, including unchanged destinations."""
+        """Retain every staged artifact receipt, including unchanged destinations.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile]]``.
+
+        """
         publications: list[m.Infra.CodegenStagedFile] = []
         for project, stage in zip(projects, stages, strict=True):
             before_states = (

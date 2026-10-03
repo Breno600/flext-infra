@@ -1,4 +1,8 @@
-"""Render one canonical pyproject and resolve its typed template context."""
+"""Render one canonical pyproject and resolve its typed template context.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,9 +10,8 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, config, m, t, u
-
-from ..extra_paths import FlextInfraExtraPathsManager
-from ..phases.ensure_pyright import FlextInfraEnsurePyrightConfigPhase
+from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
+from flext_infra.deps.phases.ensure_pyright import FlextInfraEnsurePyrightConfigPhase
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -73,6 +76,10 @@ class FlextInfraPyprojectModernizerTooling:
         scaffold knows its future roots before they exist on disk; filesystem
         discovery would find none and silently produce a different fixed point
         than the post-write conformance pass. An empty topology keeps discovery.
+
+        Returns:
+            One canonical pyproject using the same phases as workspace apply.
+
         """
         state = self._read_document_state(path, source=source)
         if state.failure:
@@ -105,11 +112,67 @@ class FlextInfraPyprojectModernizerTooling:
         package_name: t.NonEmptyStr,
         path: Path,
         topology: m.Infra.PyprojectDeclaredTopology,
+        scaffold_project: m.Infra.ScaffoldProjectSpec,
+        upstream: t.NonEmptyStr,
+        runtime_dependency_overlay: t.StrSequence,
+        declared_project_dependencies: t.StrSequence,
     ) -> p.Result[m.Infra.ToolingRuntimeContext]:
-        """Resolve typed Jinja values from the seed conformed to one topology."""
+        """Resolve typed Jinja values from the seed conformed to one topology.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ToolingRuntimeContext]``.
+
+        """
         result_type = r[m.Infra.ToolingRuntimeContext]
+        profile = u.Infra.composed_dependency_profile(
+            scaffold_project.dependency_profiles,
+            upstream=upstream,
+            distribution=project_name,
+        )
+        if profile is None:
+            return result_type.fail(f"unsupported scaffold upstream: {upstream}")
+        live_dev: t.StrSequence = ()
+        if path.is_file():
+            live_state = self._read_document_state(path)
+            if live_state.failure:
+                return result_type.from_failure(live_state)
+            groups = u.Cli.toml_mapping_child(
+                live_state.value.payload, c.Infra.DEPENDENCY_GROUPS
+            ) or {}
+            group_dev = u.validate_value(
+                t.Infra.STR_SEQ_ADAPTER,
+                groups.get(str(c.Infra.DEV), []),
+                strict=True,
+            )
+            if group_dev.failure:
+                return result_type.fail_op("validate live dev dependencies", group_dev.error)
+            live_dev = (
+                *group_dev.value,
+                *u.Infra.canonical_dev_dependencies_from_payload(
+                    live_state.value.payload
+                ),
+            )
+        # Seed the declared dependency families before Ruff derives its
+        # first-party sections. The template emits the profile/config rows and
+        # preserves live project dependencies, so docs and tool tables agree.
         seed: t.JsonMapping = {
-            c.Infra.PROJECT: {c.Infra.NAME: project_name},
+            c.Infra.PROJECT: {
+                c.Infra.NAME: project_name,
+                c.Infra.DEPENDENCIES: [
+                    *declared_project_dependencies,
+                    *runtime_dependency_overlay,
+                    *(item for item in profile.runtime if item != project_name),
+                ],
+            },
+            c.Infra.DEPENDENCY_GROUPS: {
+                "codegen": [
+                    item for item in profile.codegen if item != project_name
+                ],
+                c.Infra.DEV: [
+                    *(item for item in scaffold_project.dev if item != project_name),
+                    *live_dev,
+                ],
+            },
             c.Infra.TOOL: {"flext": {"docs": {"package_name": package_name}}},
         }
         # Atomic scaffolds provide validated future roots;
@@ -255,6 +318,12 @@ class FlextInfraPyprojectModernizerTooling:
                     derived_mypy_path
                     if declared_roots
                     else tools.mypy_path or derived_mypy_path
+                ),
+                # The tree as it stands; a scaffold re-derives this field from
+                # its planned sources before its final pyproject render.
+                "mypy_facade_rebind_modules": u.Infra.facade_rebind_modules(
+                    project_dir,
+                    {},
                 ),
                 "pyrefly_search_path": (
                     derived_search_path

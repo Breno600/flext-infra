@@ -25,7 +25,12 @@ class FlextInfraUtilitiesVersioning:
 
     @staticmethod
     def _extract_project_version_from_text(content: str) -> str | None:
-        """Extract project version from text."""
+        """Extract project version from text.
+
+        Returns:
+            The resulting ``str | None``.
+
+        """
         in_project_section = False
         for raw_line in content.splitlines():
             line = raw_line.strip()
@@ -42,7 +47,12 @@ class FlextInfraUtilitiesVersioning:
 
     @staticmethod
     def _has_project_table(content: str) -> bool:
-        """Has project table."""
+        """Has project table.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         return any(
             raw_line.strip() == c.Infra.SEMVER_PROJECT_SECTION
             for raw_line in content.splitlines()
@@ -50,7 +60,12 @@ class FlextInfraUtilitiesVersioning:
 
     @staticmethod
     def _replace_project_version_in_text(content: str, version: str) -> str | None:
-        """Replace project version in text."""
+        """Replace project version in text.
+
+        Returns:
+            The resulting ``str | None``.
+
+        """
         lines = content.splitlines(keepends=True)
         in_project_section = False
         updated_lines: t.MutableSequenceOf[str] = []
@@ -86,6 +101,10 @@ class FlextInfraUtilitiesVersioning:
         real bump: the base was already reserved when the pre-release was cut,
         so the first releasable change ships it. ``none`` returns the version
         unchanged for both shapes.
+
+        Returns:
+            The next release version for one bump kind.
+
         """
         try:
             normalized_bump = c.Infra.VersionBump(bump_type)
@@ -112,7 +131,12 @@ class FlextInfraUtilitiesVersioning:
 
     @staticmethod
     def finalize_version(version: str) -> p.Result[str]:
-        """Return the base release of ``version`` (a final version is itself)."""
+        """Return the base release of ``version`` (a final version is itself).
+
+        Returns:
+            The base release of ``version`` (a final version is itself).
+
+        """
         result = FlextInfraUtilitiesVersioning.parse_semver(version)
         if result.failure:
             return r[str].from_failure(result)
@@ -178,6 +202,10 @@ class FlextInfraUtilitiesVersioning:
 
         Pre-release segments take part in the ordering: ``0.12.0`` is newer
         than ``0.12.0rc2`` although both share the release triple.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         try:
             return r[bool].ok(Version(candidate) > Version(reference))
@@ -196,6 +224,10 @@ class FlextInfraUtilitiesVersioning:
         ever cut an rc. Order by the same PEP 440 owner
         ``version_is_newer`` already uses, and fail loud on a ``v*`` tag that
         is not a version rather than silently ranking it.
+
+        Returns:
+            The highest release tag under PEP 440, or ``""`` when none exist.
+
         """
         prefix = c.Infra.TAG_FORMAT.format(version="")
         highest_version: Version | None = None
@@ -215,7 +247,12 @@ class FlextInfraUtilitiesVersioning:
 
     @staticmethod
     def render_project_version(content: str, version: str) -> p.Result[str]:
-        """Render one canonical project-version update without writing it."""
+        """Render one canonical project-version update without writing it.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         version_result = FlextInfraUtilitiesVersioning.parse_semver(version)
         if version_result.failure:
             return r[str].from_failure(version_result)

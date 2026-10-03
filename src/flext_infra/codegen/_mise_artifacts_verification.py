@@ -1,4 +1,8 @@
-"""Physical topology, source, destination, and real-consumer verification."""
+"""Physical topology, source, destination, and real-consumer verification.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,8 +12,9 @@ from typing import TYPE_CHECKING, Literal
 
 from flext_core import r
 from flext_infra import c, m, u
-
-from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
+from flext_infra.codegen._mise_artifacts_files import (
+    FlextInfraMiseArtifactsFiles as files,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -30,7 +35,13 @@ class FlextInfraMiseArtifactsVerification:
             m.Cli.AtomicFileState | m.Cli.AtomicDirectoryState
         ] = (),
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenJournalDirectory]]:
-        """Register exact transaction trees after validating any prior authority."""
+        """Register exact transaction trees after validating any prior authority.
+
+        Returns:
+            The resulting
+                ``p.Result[t.VariadicTuple[m.Infra.CodegenJournalDirectory]]``.
+
+        """
         result_type = r[tuple[m.Infra.CodegenJournalDirectory, ...]]
         for receipt in created:
             if not any(
@@ -40,7 +51,10 @@ class FlextInfraMiseArtifactsVerification:
                 for project in files.transaction_participants(layout)
             ):
                 return result_type.fail(
-                    f"created staging receipt escapes transaction topology: {receipt.path}",
+                    (
+                        f"created staging receipt escapes "
+                        f"transaction topology: {receipt.path}"
+                    ),
                 )
         registered: list[m.Infra.CodegenJournalDirectory] = []
         for directory in journal.directories:
@@ -114,7 +128,12 @@ class FlextInfraMiseArtifactsVerification:
         journal: m.Infra.CodegenTransactionJournal,
         directory: m.Infra.CodegenJournalDirectory,
     ) -> p.Result[m.Cli.AtomicPhysicalTreeManifest]:
-        """Observe a tree, prove it is a journal-authorized projection, then return it."""
+        """Observe a tree, prove it is a journal-authorized projection, then return it.
+
+        Returns:
+            The resulting ``p.Result[m.Cli.AtomicPhysicalTreeManifest]``.
+
+        """
         result_type = r[m.Cli.AtomicPhysicalTreeManifest]
         if directory.manifest is None:
             return result_type.fail(
@@ -146,7 +165,12 @@ class FlextInfraMiseArtifactsVerification:
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         journal: m.Infra.CodegenTransactionJournal,
     ) -> p.Result[bool]:
-        """Bind every journal selector and physical identity to the locked layout."""
+        """Bind every journal selector and physical identity to the locked layout.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         if layout.transaction_id != journal.transaction_id:
             return r[bool].fail("generation journal transaction id differs from layout")
         scope = files.physical_directory_identity(layout.scope_root)
@@ -226,7 +250,10 @@ class FlextInfraMiseArtifactsVerification:
                     != expected_parent
                 ):
                     return r[bool].fail(
-                        f"generation directory parent binding differs: {directory.path}",
+                        (
+                            f"generation directory parent "
+                            f"binding differs: {directory.path}"
+                        ),
                     )
             if directory.disposition == "temporary":
                 transaction_root = project.transaction_root
@@ -236,7 +263,10 @@ class FlextInfraMiseArtifactsVerification:
                     or not transaction_root.is_relative_to(resolved_target)
                 ):
                     return r[bool].fail(
-                        f"temporary directory escapes transaction root: {directory.path}",
+                        (
+                            f"temporary directory escapes "
+                            f"transaction root: {directory.path}"
+                        ),
                     )
         for entry in journal.entries:
             project = by_selector[entry.project]
@@ -275,7 +305,10 @@ class FlextInfraMiseArtifactsVerification:
                     transaction_root,
                 ):
                     return r[bool].fail(
-                        f"generation {role} staging escapes transaction root: {entry.path}",
+                        (
+                            f"generation {role} staging escapes "
+                            f"transaction root: {entry.path}"
+                        ),
                     )
             if entry.original_backup is not None:
                 backup = files.resolve_transaction(
@@ -299,7 +332,12 @@ class FlextInfraMiseArtifactsVerification:
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         journal: m.Infra.CodegenTransactionJournal,
     ) -> p.Result[bool]:
-        """Require every exact desired identity before irrevocable commit."""
+        """Require every exact desired identity before irrevocable commit.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         topology = cls.journal_topology(layout, journal)
         if topology.failure:
             return topology
@@ -367,6 +405,10 @@ class FlextInfraMiseArtifactsVerification:
         churn of that same afternoon. A verifier that cannot fail is not a
         verifier, and a hardcoded path exemption in a fleet-wide generator hides
         the next real corruption just as effectively as it hid that one.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         for original_expected in states:
             expected = original_expected
@@ -395,7 +437,12 @@ class FlextInfraMiseArtifactsVerification:
         expected: m.Cli.AtomicFileState,
         journal: m.Infra.CodegenTransactionJournal,
     ) -> p.Result[m.Cli.AtomicFileState]:
-        """Recognize only parent identities created under the durable absence witness."""
+        """Recognize only parent identities created under the durable absence witness.
+
+        Returns:
+            The resulting ``p.Result[m.Cli.AtomicFileState]``.
+
+        """
         result = r[m.Cli.AtomicFileState]
         source = next(
             (item for item in journal.sources if item.path == expected.path),
@@ -429,7 +476,10 @@ class FlextInfraMiseArtifactsVerification:
                 )
             if (identity.parent_device, identity.parent_inode) != ancestry[-1]:
                 return result.fail(
-                    f"generation source parent ancestry differs from its journal: {path}",
+                    (
+                        f"generation source parent ancestry "
+                        f"differs from its journal: {path}"
+                    ),
                 )
             ancestry.append((identity.device, identity.inode))
         observed = current.value
@@ -451,7 +501,12 @@ class FlextInfraMiseArtifactsVerification:
         cls,
         analysis: m.Infra.CodegenPhaseAnalysis,
     ) -> p.Result[bool]:
-        """Prove one published phase from its authenticated analysis receipt."""
+        """Prove one published phase from its authenticated analysis receipt.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         destination_paths = frozenset(file.path for file in analysis.files)
         u.Cli.info(
             f"phase={analysis.phase} verify inputs={len(analysis.inputs)} "
@@ -496,7 +551,12 @@ class FlextInfraMiseArtifactsVerification:
 
     @classmethod
     def sources(cls, plan: m.Infra.MiseToolchainWorkspacePlan) -> p.Result[bool]:
-        """Prove every Mise config source still equals its full snapshot."""
+        """Prove every Mise config source still equals its full snapshot.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         for project in plan.projects:
             if project.config.before.content is None:
                 # First publication: the config sources are themselves created
@@ -513,7 +573,12 @@ class FlextInfraMiseArtifactsVerification:
 
     @classmethod
     def destinations(cls, plan: m.Infra.MiseToolchainWorkspacePlan) -> p.Result[bool]:
-        """Prove all Mise destinations still equal the captured preflight snapshot."""
+        """Prove all Mise destinations still equal the captured preflight snapshot.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         for project in plan.projects:
             expected_states = (
                 project.config.before,
@@ -531,7 +596,12 @@ class FlextInfraMiseArtifactsVerification:
         cls,
         publications: t.VariadicTuple[m.Infra.CodegenStagedFile],
     ) -> p.Result[bool]:
-        """Prove live destinations have the exact staged inode or planned absence."""
+        """Prove live destinations have the exact staged inode or planned absence.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         for publication in publications:
             observed = files.read_state(publication.before.path, required=False)
             if observed.failure:
@@ -545,7 +615,10 @@ class FlextInfraMiseArtifactsVerification:
                 or before.parent_inode is None
             ):
                 return r[bool].fail(
-                    f"generation destination parent identity is incomplete: {before.path}",
+                    (
+                        f"generation destination parent "
+                        f"identity is incomplete: {before.path}"
+                    ),
                 )
             replacement = publication.replacement
             if replacement is None:
@@ -569,7 +642,10 @@ class FlextInfraMiseArtifactsVerification:
                 parent_inode=before.parent_inode,
             ):
                 return r[bool].fail(
-                    f"live generation destination differs from staged identity: {current.path}",
+                    (
+                        f"live generation destination differs "
+                        f"from staged identity: {current.path}"
+                    ),
                 )
         return r[bool].ok(True)
 
@@ -580,7 +656,12 @@ class FlextInfraMiseArtifactsVerification:
         plan: m.Infra.MiseToolchainWorkspacePlan,
         publications: t.VariadicTuple[m.Infra.CodegenStagedFile] | None = None,
     ) -> p.Result[bool]:
-        """Exercise every real Mise consumer while guarding sources and live bytes."""
+        """Exercise every real Mise consumer while guarding sources and live bytes.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         source_before = cls.sources(plan)
         if source_before.failure:
             return source_before
@@ -631,6 +712,10 @@ class FlextInfraMiseArtifactsVerification:
 
         An addition is admitted only as a registered transition: a created
         receipt, a directory above a journaled file, or a journaled file.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         if not cls._same_directory_identity(authorized.root, observed.root):
             return r[bool].fail(
@@ -671,7 +756,10 @@ class FlextInfraMiseArtifactsVerification:
                 path in expected or path not in current
             ):
                 return r[bool].fail(
-                    f"created temporary-tree entry is not a new present artifact: {path}",
+                    (
+                        f"created temporary-tree entry is "
+                        f"not a new present artifact: {path}"
+                    ),
                 )
         for entry in additions:
             receipt = created_by_path.get(entry.path)
@@ -700,7 +788,12 @@ class FlextInfraMiseArtifactsVerification:
         entry: m.Cli.AtomicPhysicalTreeEntry,
         receipt: m.Cli.AtomicFileState | m.Cli.AtomicDirectoryState,
     ) -> bool:
-        """Authenticate additions from invocation receipts, never their inventory."""
+        """Authenticate additions from invocation receipts, never their inventory.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         if (
             entry.path,
             entry.parent_device,
@@ -959,7 +1052,12 @@ class FlextInfraMiseArtifactsVerification:
         int | None,
         int | None,
     ]:
-        """Return every physical and byte field except the intentionally moved path."""
+        """Return every physical and byte field except the intentionally moved path.
+
+        Returns:
+            Every physical and byte field except the intentionally moved path.
+
+        """
         return (
             parent_device,
             parent_inode,

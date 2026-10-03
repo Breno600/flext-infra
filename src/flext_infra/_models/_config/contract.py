@@ -1,4 +1,8 @@
-"""Shared contract base and root aliases for config models."""
+"""Shared contract base and root aliases for config models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,9 +12,9 @@ from typing import Annotated, Self
 
 from flext_cli import m, u
 
-from ... import t
-from ..._constants.validate import FlextInfraConstantsSharedInfra
-from ..mise_toolchain import FlextInfraModelsMiseToolchain
+from flext_infra import t
+from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
+from flext_infra._models.mise_toolchain import FlextInfraModelsMiseToolchain
 
 
 class FlextInfraConfigModelsContract:
@@ -42,7 +46,7 @@ class FlextInfraConfigModelsContract:
         historical_evidence_files: Annotated[
             t.VariadicTuple[Path],
             m.Field(
-                description="Exact dated Markdown records preserving observed paths"
+                description="Exact dated Markdown records preserving observed paths",
             ),
         ] = ()
 
@@ -60,7 +64,10 @@ class FlextInfraConfigModelsContract:
                     or path.parts[0] != FlextInfraConstantsSharedInfra.DIR_DOCS
                     or path.suffix != ".md"
                 ):
-                    msg = f"historical evidence must be an exact docs Markdown file: {path}"
+                    msg = (
+                        "historical evidence must be "
+                        f"an exact docs Markdown file: {path}"
+                    )
                     raise ValueError(msg)
             return self
 

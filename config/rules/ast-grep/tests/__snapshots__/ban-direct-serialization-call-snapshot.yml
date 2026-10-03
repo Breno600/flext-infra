@@ -1,0 +1,86 @@
+id: ban-direct-serialization-call
+snapshots:
+  csv.DictReader(handle):
+    labels:
+    - source: csv.DictReader
+      style: primary
+      start: 0
+      end: 14
+    - source: csv
+      style: secondary
+      start: 0
+      end: 3
+    - source: DictReader
+      style: secondary
+      start: 4
+      end: 14
+  json.dumps(payload):
+    labels:
+    - source: json.dumps
+      style: primary
+      start: 0
+      end: 10
+    - source: json
+      style: secondary
+      start: 0
+      end: 4
+    - source: dumps
+      style: secondary
+      start: 5
+      end: 10
+  json.load(handle):
+    labels:
+    - source: json.load
+      style: primary
+      start: 0
+      end: 9
+    - source: json
+      style: secondary
+      start: 0
+      end: 4
+    - source: load
+      style: secondary
+      start: 5
+      end: 9
+  writer = csv.writer:
+    labels:
+    - source: csv.writer
+      style: primary
+      start: 9
+      end: 19
+    - source: csv
+      style: secondary
+      start: 9
+      end: 12
+    - source: writer
+      style: secondary
+      start: 13
+      end: 19
+  yaml.dump(data):
+    labels:
+    - source: yaml.dump
+      style: primary
+      start: 0
+      end: 9
+    - source: yaml
+      style: secondary
+      start: 0
+      end: 4
+    - source: dump
+      style: secondary
+      start: 5
+      end: 9
+  yaml.safe_load(text):
+    labels:
+    - source: yaml.safe_load
+      style: primary
+      start: 0
+      end: 14
+    - source: yaml
+      style: secondary
+      start: 0
+      end: 4
+    - source: safe_load
+      style: secondary
+      start: 5
+      end: 14

@@ -3,6 +3,9 @@
 The guides index is generated, so every relative link it renders must resolve.
 Naming a curated guide the generator never writes produced a broken link
 (MD057) in every project that had no such file.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -20,8 +23,14 @@ if TYPE_CHECKING:
 class TestsFlextInfraDocsRenderGuidesIndex:
     """Regression tests for the generated guides index."""
 
-    def _scope(self, tmp_path: Path) -> m.Infra.DocScope:
-        """Return one isolated doc scope rooted at the fixture directory."""
+    @staticmethod
+    def _scope(tmp_path: Path) -> m.Infra.DocScope:
+        """Return one isolated doc scope rooted at the fixture directory.
+
+        Returns:
+            One isolated doc scope rooted at the fixture directory.
+
+        """
         return m.Infra.DocScope(
             name="fixture-project",
             path=tmp_path,

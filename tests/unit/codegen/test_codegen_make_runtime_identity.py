@@ -1,4 +1,8 @@
-"""Public Make runtime uses the same locked tool identity as frozen setup."""
+"""Public Make runtime uses the same locked tool identity as frozen setup.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -15,10 +19,11 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraCodegenMakeRuntimeIdentity:
     """Host Mise configuration cannot replace a project's resolved executable."""
 
+    @staticmethod
     def test_status_uses_locked_uv_without_loading_host_configuration(
-        self,
         tmp_path: Path,
     ) -> None:
+        """Test status uses locked uv without loading host configuration."""
         root, _ = u.Tests.render_make_environment(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,

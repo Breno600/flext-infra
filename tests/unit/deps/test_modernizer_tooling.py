@@ -1,4 +1,8 @@
-"""Tooling phase tests for deps modernizer."""
+"""Tooling phase tests for deps modernizer.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -23,7 +27,12 @@ class TestsFlextInfraDepsModernizerTooling:
         project_dir: Path,
         source: str = "",
     ) -> t.Pair[t.MutableJsonMapping, t.JsonMapping]:
-        """Apply the Ruff phase twice to one named payload; return payload and ruff."""
+        """Apply the Ruff phase twice to one named payload; return payload and ruff.
+
+        Returns:
+            The resulting ``t.Pair[t.MutableJsonMapping, t.JsonMapping]``.
+
+        """
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
             u.Tests.toml_payload(f'[project]\nname = "{project_dir.name}"\n{source}'),
         )
@@ -35,8 +44,8 @@ class TestsFlextInfraDepsModernizerTooling:
             u.Tests.toml_mapping(payload["tool"])["ruff"],
         )
 
+    @staticmethod
     def test_typecheck_policy_keeps_tracked_surfaces_visible(
-        self,
         tool_config_document: m.Infra.ToolConfigDocument,
     ) -> None:
         """Keep every tracked Python surface visible to all four analyzers."""
@@ -85,9 +94,10 @@ class TestsFlextInfraDepsModernizerTooling:
         )
 
         tm.that(payload, lacks="lint")
-        # A project without workspace declarations adds no exclusions, and
-        # Ruff keeps its own default excludes (never a replacement list).
-        tm.that(list(u.Tests.toml_strings(ruff["extend-exclude"])), eq=[])
+        # A project without workspace declarations adds no exclusions (the
+        # empty list leaves the key absent), and Ruff keeps its own default
+        # excludes (never a replacement list).
+        tm.that(ruff, lacks="extend-exclude")
         tm.that(ruff, lacks="exclude")
         tm.that(ruff["line-length"], eq=ruff_policy.line_length)
         tm.that(ruff["target-version"], eq=ruff_policy.target_version)
@@ -114,6 +124,10 @@ class TestsFlextInfraDepsModernizerTooling:
             eq=sorted(ruff_policy.lint.extend_safe_fixes),
         )
         tm.that(
+            list(u.Tests.toml_strings(lint["ignore"])),
+            eq=list(ruff_policy.lint.ignore),
+        )
+        tm.that(
             list(
                 u.Tests.toml_strings(
                     u.Tests.toml_mapping(lint["isort"])["known-first-party"],
@@ -132,8 +146,8 @@ class TestsFlextInfraDepsModernizerTooling:
             },
         )
 
+    @staticmethod
     def test_project_cannot_declare_its_own_ruff_exemption(
-        self,
         tmp_path: Path,
     ) -> None:
         """Per-file exemptions live only at the tooling owner, never per project."""

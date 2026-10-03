@@ -1,4 +1,8 @@
-"""Exercise elected import deferral through the real public utility facade."""
+"""Exercise elected import deferral through the real public utility facade.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,6 +23,7 @@ class TestsSelfFacadeCutover:
     """Keep method behavior, docstrings, and local shadowing after migration."""
 
     def test_resolved_body_import_preserves_real_consumer(self, tmp_path: Path) -> None:
+        """Test resolved body import preserves real consumer."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "consumer.py"
         source = (
@@ -73,6 +78,7 @@ class TestsSelfFacadeCutover:
         tmp_path: Path,
         consumer: str,
     ) -> None:
+        """Test eager reference is rejected before publication."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "consumer.py"
         source = "from flext_infra import u\n" + consumer
@@ -99,6 +105,7 @@ class TestsSelfFacadeCutover:
         tmp_path: Path,
         declaration: str,
     ) -> None:
+        """Test multiple aliases and duplicate imports preserve each use."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "consumer.py"
         source = declaration + (

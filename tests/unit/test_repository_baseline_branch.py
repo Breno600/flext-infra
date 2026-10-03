@@ -6,6 +6,9 @@ legitimately integrate on different branches (for example ``dev`` and
 closed on every repository whose integration branch differs from the provider
 default. The canonical baseline is the integration branch the repository really
 publishes, discovered from Git itself.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -57,8 +60,8 @@ class TestsFlextInfraRepositoryBaselineBranch:
         tm.ok(resolved)
         tm.that(resolved.value, eq="dev")
 
+    @staticmethod
     def test_baseline_fails_closed_without_any_integration_branch(
-        self,
         tmp_path: Path,
     ) -> None:
         """A checkout without a published integration branch never guesses."""

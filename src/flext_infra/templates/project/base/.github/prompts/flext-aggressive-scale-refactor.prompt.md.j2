@@ -20,7 +20,8 @@ fallbacks before mutation. Rewire every consumer to one typed SSOT, regenerate,
 and remove the superseded path in the same change.
 
 Use only selector-free root Make verbs. Mutation uses ``; structural
-rewires use `make mod `, which owns ast-grep and standalone LSP validation.
+rewires use `make mod `, which owns the ast-grep, semantic and text rewrites;
+`make check` owns the lint and type verdicts.
 Host-runtime CRG, LSP, Rope automation, and GitHub operations belong to the
 host runtime and may augment the workflow only through public commands, hooks,
 MCP routes, or daemons. Their absence is a no-op; once an available capability

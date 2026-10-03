@@ -1,3 +1,9 @@
+"""Test scanning module.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -11,7 +17,8 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraUtilitiesscanning:
-    def test_scan_violation_model_fields(self) -> None:
+    @staticmethod
+    def test_scan_violation_model_fields() -> None:
         violation = m.Infra.ScanViolation(
             line=42,
             message="forbidden import",
@@ -24,7 +31,8 @@ class TestsFlextInfraUtilitiesscanning:
         tm.that(violation.severity, eq="high")
         tm.that(violation.rule_id, eq="FLEXT001")
 
-    def test_scan_result_model_fields_and_defaults(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_scan_result_model_fields_and_defaults(tmp_path: Path) -> None:
         result = m.Infra.ScanResult(
             file_path=tmp_path / "sample.py",
             detector_name="scanner-x",
@@ -36,7 +44,8 @@ class TestsFlextInfraUtilitiesscanning:
         tm.that(result.detector_name, eq="scanner-x")
         tm.that(payload["violations"], eq=[])
 
-    def test_scan_result_with_violations(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_scan_result_with_violations(tmp_path: Path) -> None:
         violation = m.Infra.ScanViolation(
             line=7,
             message="rule hit",

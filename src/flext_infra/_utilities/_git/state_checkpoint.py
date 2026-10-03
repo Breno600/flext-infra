@@ -1,4 +1,8 @@
-"""Reachable two-layer checkpoints for operator-authorized WIP capture."""
+"""Reachable two-layer checkpoints for operator-authorized WIP capture.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,9 +13,10 @@ from git import GitCommandError
 
 from flext_core import r
 from flext_infra import c, m
-
-from .state_trees import FlextInfraUtilitiesGitStateTreesMixin
-from .worktree_io import FlextInfraUtilitiesGitWorktreeIO
+from flext_infra._utilities._git.state_trees import (
+    FlextInfraUtilitiesGitStateTreesMixin,
+)
+from flext_infra._utilities._git.worktree_io import FlextInfraUtilitiesGitWorktreeIO
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -120,7 +125,12 @@ class FlextInfraUtilitiesGitStateCheckpointMixin(FlextInfraUtilitiesGitStateTree
         snapshot: m.Infra.GitWorktreeStateSnapshot,
         checkpoint_ref: str,
     ) -> p.Result[m.Infra.GitWorktreeStateCheckpoint]:
-        """Create a dedicated checkpoint, or verify an identical prior receipt."""
+        """Create a dedicated checkpoint, or verify an identical prior receipt.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitWorktreeStateCheckpoint]``.
+
+        """
         try:
             checkpoint = cls._state_checkpoint(snapshot, checkpoint_ref)
         except (GitCommandError, OSError, ValueError) as exc:
@@ -162,7 +172,12 @@ class FlextInfraUtilitiesGitStateCheckpointMixin(FlextInfraUtilitiesGitStateTree
         destination_root: Path,
         saved_commit: str,
     ) -> p.Result[bool]:
-        """Verify original retention and an independently saved descendant."""
+        """Verify original retention and an independently saved descendant.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         try:
             cls._state_verify_saved(checkpoint, destination_root, saved_commit)
         except (GitCommandError, OSError, ValueError) as exc:
