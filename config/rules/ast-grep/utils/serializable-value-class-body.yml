@@ -1,0 +1,33 @@
+# A class body with no custom construction (`__init__` / `__post_init__`)
+# whose every annotated field names only JSON-serializable primitives
+# (str, int, float, bool, None, Path), alone or in unions.
+id: serializable-value-class-body
+language: python
+rule:
+  kind: block
+  all:
+    - not:
+        has:
+          kind: function_definition
+          has:
+            field: name
+            regex: "^(?:__init__|__post_init__)$"
+    - not:
+        has:
+          kind: decorated_definition
+          has:
+            field: definition
+            kind: function_definition
+            has:
+              field: name
+              regex: "^(?:__init__|__post_init__)$"
+    - not:
+        has:
+          kind: expression_statement
+          has:
+            kind: assignment
+            has:
+              field: type
+              pattern: $_
+              not:
+                regex: "^(?:str|int|float|bool|None|Path)(?:\\s*\\|\\s*(?:str|int|float|bool|None|Path))*$"

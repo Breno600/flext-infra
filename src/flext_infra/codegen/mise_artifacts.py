@@ -1,21 +1,25 @@
-"""Offline validation for generated Mise declarations and launchers."""
+"""Offline validation for generated Mise declarations and launchers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from collections.abc import Mapping, MutableMapping
-from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
-
-from .. import c, config, m, t, u
-from ._execution import FlextInfraCodegenExecutionBase
-from ._mise_artifacts_derivation import FlextInfraMiseArtifactsDerivation
-from .mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
+from flext_infra import c, m, t, u
+from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
+from flext_infra.codegen._mise_artifacts_derivation import (
+    FlextInfraMiseArtifactsDerivation,
+)
+from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
 
 if TYPE_CHECKING:
-    from .. import p
+    from flext_infra import p
 
 
 class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
@@ -44,7 +48,12 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
 
     @staticmethod
     def _tool_version(raw_tool: t.JsonValue) -> str | None:
-        """Return one version selector from either supported Mise tool shape."""
+        """Return one version selector from either supported Mise tool shape.
+
+        Returns:
+            One version selector from either supported Mise tool shape.
+
+        """
         candidate = (
             raw_tool.get("version") if isinstance(raw_tool, Mapping) else raw_tool
         )
@@ -63,7 +72,7 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
             version = cls._tool_version(raw_tool)
             if not version:
                 return r[t.StrMapping].fail(
-                    f".mise.toml tool lacks a version selector: {selector}"
+                    f".mise.toml tool lacks a version selector: {selector}",
                 )
             specifiers[selector] = version
         if not specifiers:
@@ -71,40 +80,60 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
         return r[t.StrMapping].ok(specifiers)
 
     @staticmethod
-    def _validate_suspended_selectors(configured_tools: t.StrMapping) -> p.Result[bool]:
-        """Reject dormant capabilities before download or publication."""
-        patterns = config.Infra.codegen.toolchain.suspended_mise_selector_patterns
-        suspended = tuple(
-            selector
-            for selector in configured_tools
-            if any(fnmatchcase(selector, pattern) for pattern in patterns)
+    def _validate_selector_integrity(configured_tools: t.StrMapping) -> p.Result[bool]:
+        """Reject a lockfile annotation leaking into a ``.mise.toml`` selector.
+
+        A generated selector is the declared release; the ``~<hash>`` fragment
+        belongs to the lockfile's cache key (``aube.path``). Copied into the
+        selector it makes ``mise install`` fail with "not in the lockfile" and
+        aborts the fleet's ``make setup`` before any verb can run.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        annotated = tuple(
+            f"{selector}={version}"
+            for selector, version in sorted(configured_tools.items())
+            if c.Infra.MISE_LOCK_ANNOTATION in version
         )
-        if suspended:
+        if annotated:
             return r[bool].fail(
-                "Mise payload selects a suspended toolchain: "
-                f"{', '.join(sorted(suspended))}"
+                "Mise payload carries a lockfile annotation in the selector: "
+                f"{', '.join(annotated)}",
             )
         return r[bool].ok(True)
 
     @classmethod
     def _validate_config(cls, project_root: Path) -> p.Result[bool]:
-        """Validate the generated ``.mise.toml`` declaration offline."""
+        """Validate the generated ``.mise.toml`` declaration offline.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         config_result = cls._read_toml(project_root / c.Infra.CONFIG_SPEC[0])
         if config_result.failure:
             return r[bool].from_failure(config_result)
         tools_result = cls._tool_specifiers(config_result.value)
         if tools_result.failure:
             return r[bool].from_failure(tools_result)
-        return cls._validate_suspended_selectors(tools_result.value)
+        return cls._validate_selector_integrity(tools_result.value)
 
     def validate_artifacts(
-        self, project_root: Path, runtime_root: Path
+        self,
+        project_root: Path,
+        runtime_root: Path,
     ) -> p.Result[bool]:
         """Validate one project's declaration, pin, and launchers offline.
 
         The pin and launchers derive from the runtime root's `make upg`
         output: every launcher bakes the pinned release, and a member's triple
         is byte-identical to its runtime root's.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         declared = self._validate_config(project_root)
         if declared.failure:
@@ -113,7 +142,12 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Validate generated Mise declarations and launchers entirely offline."""
+        """Validate generated Mise declarations and launchers entirely offline.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         declared = self._validate_config(self.repository_root)
         if declared.failure or self.config_only:
             return declared
@@ -121,7 +155,8 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
         if runtime_root.failure:
             return r[bool].from_failure(runtime_root)
         return FlextInfraMiseArtifactsDerivation.validate(
-            self.repository_root, runtime_root.value
+            self.repository_root,
+            runtime_root.value,
         )
 
 

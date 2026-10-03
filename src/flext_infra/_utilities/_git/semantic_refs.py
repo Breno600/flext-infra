@@ -1,4 +1,8 @@
-"""Canonical Git responsibility mixin for ``u.Infra``."""
+"""Canonical Git responsibility mixin for ``u.Infra``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,8 +13,7 @@ from git import BadName, GitCommandError
 
 from flext_core import r
 from flext_infra import c, m
-
-from .worktree import FlextInfraUtilitiesGitWorktreeMixin
+from flext_infra._utilities._git.worktree import FlextInfraUtilitiesGitWorktreeMixin
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -21,58 +24,105 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
 
     @classmethod
     def git_list_worktrees(
-        cls, request: m.Infra.GitRepoRequest
-    ) -> p.Result[m.Infra.GitTextReport]:
-        """List registered worktrees in porcelain form."""
+        cls,
+        request: m.Infra.GitRepoRequest,
+    ) -> p.Result[m.Infra.GitWorktreeListReport]:
+        """Read Git's canonical worktree registry, parsed once for every consumer.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitWorktreeListReport]``.
+
+        """
+        repo_root = request.repo_root.expanduser().resolve()
         try:
-            repo = cls._repo(request.repo_root)
-            text = repo.git.worktree("list", "--porcelain")
+            repo = cls._repo(repo_root)
+            porcelain = repo.git.worktree("list", "--porcelain")
         except GitCommandError as exc:
-            return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
+            return r[m.Infra.GitWorktreeListReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
-            return r[m.Infra.GitTextReport].fail(
-                f"failed to list Git worktrees: {exc}", exception=exc
+            return r[m.Infra.GitWorktreeListReport].fail(
+                f"failed to list Git worktrees: {exc}",
+                exception=exc,
             )
-        return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=text))
+        return r[m.Infra.GitWorktreeListReport].ok(
+            m.Infra.GitWorktreeListReport(
+                root=repo_root,
+                entries=cls._registered_worktree_entries(porcelain),
+                porcelain=porcelain,
+            ),
+        )
 
     @classmethod
     def git_check_branch_format(
-        cls, request: m.Infra.GitBranchRequest
+        cls,
+        request: m.Infra.GitBranchRequest,
     ) -> p.Result[m.Infra.GitBoolReport]:
-        """Validate a branch name with ``git check-ref-format --branch``."""
+        """Validate a branch name with ``git check-ref-format --branch``.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitBoolReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             repo.git.check_ref_format("--branch", request.branch)
-        except GitCommandError:
-            return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))
+        except GitCommandError as exc:
+            # check-ref-format documents exit 1 for an invalid name; any other
+            # status is a real failure.
+            if exc.status == c.Infra.GIT_EXIT_NEGATIVE:
+                return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))
+            return r[m.Infra.GitBoolReport].fail(
+                f"failed to validate branch name: {exc}",
+                exception=exc,
+            )
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(
-                f"failed to validate branch name: {exc}", exception=exc
+                f"failed to validate branch name: {exc}",
+                exception=exc,
             )
         return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=True))
 
     @classmethod
     def git_ref_exists(
-        cls, request: m.Infra.GitRefRequest
+        cls,
+        request: m.Infra.GitRefRequest,
     ) -> p.Result[m.Infra.GitBoolReport]:
-        """Return whether an exact Git ref exists (exit 0/1 only)."""
+        """Return whether an exact Git ref exists (exit 0/1 only).
+
+        Returns:
+            Whether an exact Git ref exists (exit 0/1 only).
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             repo.git.show_ref("--verify", "--quiet", request.reference)
-        except GitCommandError:
-            # show-ref exits 1 when the ref does not exist — not an error.
-            return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))
+        except GitCommandError as exc:
+            # show-ref documents exit 1 for a missing ref; any other status is
+            # a real failure.
+            if exc.status == c.Infra.GIT_EXIT_NEGATIVE:
+                return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))
+            return r[m.Infra.GitBoolReport].fail(
+                f"failed to inspect Git ref: {exc}",
+                exception=exc,
+            )
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(
-                f"failed to inspect Git ref: {exc}", exception=exc
+                f"failed to inspect Git ref: {exc}",
+                exception=exc,
             )
         return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=True))
 
     @classmethod
     def git_superproject_working_tree(
-        cls, request: m.Infra.GitRepoRequest
+        cls,
+        request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitTextReport]:
-        """Capture ``rev-parse --show-superproject-working-tree`` stdout."""
+        """Capture ``rev-parse --show-superproject-working-tree`` stdout.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitTextReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             text = repo.git.rev_parse("--show-superproject-working-tree")
@@ -80,15 +130,22 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitTextReport].fail(
-                f"failed to resolve superproject working tree: {exc}", exception=exc
+                f"failed to resolve superproject working tree: {exc}",
+                exception=exc,
             )
         return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=text))
 
     @classmethod
     def git_show_toplevel(
-        cls, request: m.Infra.GitRepoRequest
+        cls,
+        request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitRootReport]:
-        """Resolve ``rev-parse --show-toplevel`` as a repository root report."""
+        """Report the resolved top-level directory of the request's worktree.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitRootReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             root = (
@@ -96,21 +153,28 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             )
             if root is None:
                 return r[m.Infra.GitRootReport].fail(
-                    "failed to resolve Git top level: working tree is None"
+                    "failed to resolve Git top level: working tree is None",
                 )
         except GitCommandError as exc:
             return r[m.Infra.GitRootReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitRootReport].fail(
-                f"failed to resolve Git top level: {exc}", exception=exc
+                f"failed to resolve Git top level: {exc}",
+                exception=exc,
             )
         return r[m.Infra.GitRootReport].ok(m.Infra.GitRootReport(repository_root=root))
 
     @classmethod
     def git_current_branch(
-        cls, request: m.Infra.GitRepoRequest
+        cls,
+        request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitTextReport]:
-        """Resolve the current non-detached branch name."""
+        """Resolve the current non-detached branch name.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitTextReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             branch = repo.active_branch.name
@@ -119,31 +183,22 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
         except (TypeError, OSError, ValueError) as exc:
             # active_branch raises TypeError on detached HEAD.
             return r[m.Infra.GitTextReport].fail(
-                f"head branch is required from a detached HEAD: {exc}", exception=exc
+                f"head branch is required from a detached HEAD: {exc}",
+                exception=exc,
             )
         return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=branch))
 
     @classmethod
-    def git_symbolic_ref_short(
-        cls, request: m.Infra.GitRepoRequest
-    ) -> p.Result[m.Infra.GitTextReport]:
-        """Resolve ``symbolic-ref --quiet --short HEAD``."""
-        try:
-            repo = cls._repo(request.repo_root)
-            text = repo.git.symbolic_ref("--quiet", "--short", c.Infra.GIT_HEAD)
-        except GitCommandError as exc:
-            return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
-        except (OSError, ValueError) as exc:
-            return r[m.Infra.GitTextReport].fail(
-                f"failed to resolve symbolic-ref HEAD: {exc}", exception=exc
-            )
-        return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=text.strip()))
-
-    @classmethod
     def git_resolve_commit(
-        cls, request: m.Infra.GitCommitishRequest
+        cls,
+        request: m.Infra.GitCommitishRequest,
     ) -> p.Result[m.Infra.GitOidReport]:
-        """Resolve a commit-ish to an oid via ``rev-parse --verify``."""
+        """Resolve a commit-ish to its commit oid, failing on a non-commit name.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitOidReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             oid = repo.commit(request.commitish).hexsha
@@ -151,53 +206,52 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             return r[m.Infra.GitOidReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitOidReport].fail(
-                f"cannot resolve commitish: {exc}", exception=exc
+                f"cannot resolve commitish: {exc}",
+                exception=exc,
             )
         return r[m.Infra.GitOidReport].ok(m.Infra.GitOidReport(oid=oid))
 
     @classmethod
-    def git_abbrev_ref_head(
-        cls, request: m.Infra.GitRepoRequest
-    ) -> p.Result[m.Infra.GitTextReport]:
-        """Resolve ``rev-parse --abbrev-ref HEAD``."""
-        try:
-            repo = cls._repo(request.repo_root)
-            branch = repo.active_branch.name
-        except GitCommandError as exc:
-            return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
-        except (TypeError, OSError, ValueError):
-            # Detached HEAD — fall back to the proxy for the ``HEAD`` text.
-            try:
-                detached_repo = cls._repo(request.repo_root)
-                text = detached_repo.git.rev_parse("--abbrev-ref", c.Infra.GIT_HEAD)
-            except GitCommandError as exc:
-                return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
-            return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=text.strip()))
-        return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=branch))
-
-    @classmethod
     def git_is_ancestor(
-        cls, request: m.Infra.GitCommitishRequest
+        cls,
+        request: m.Infra.GitAncestryRequest,
     ) -> p.Result[m.Infra.GitBoolReport]:
-        """Return whether ``commitish`` is an ancestor of HEAD."""
+        """Return whether ``ancestor`` is an ancestor of ``descendant``.
+
+        One owner proves ancestry for any pair. ``descendant`` defaults to
+        ``HEAD``, so the HEAD-bound proof existing consumers relied on is a
+        use of this verb, not a separate one.
+
+        Returns:
+            Whether ``ancestor`` is an ancestor of ``descendant``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
-            ancestor = repo.commit(request.commitish)
-            head = repo.commit(c.Infra.GIT_HEAD)
-            result = repo.is_ancestor(ancestor, head)
-        except GitCommandError as exc:
+            result = repo.is_ancestor(
+                repo.commit(request.ancestor),
+                repo.commit(request.descendant),
+            )
+        except (BadName, GitCommandError) as exc:
             return r[m.Infra.GitBoolReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(
-                f"failed to inspect ancestry: {exc}", exception=exc
+                f"failed to inspect ancestry: {exc}",
+                exception=exc,
             )
         return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=result))
 
     @classmethod
     def git_rev_parse(
-        cls, request: m.Infra.GitCommitishRequest
+        cls,
+        request: m.Infra.GitCommitishRequest,
     ) -> p.Result[m.Infra.GitOidReport]:
-        """Resolve an arbitrary rev-parse argument to stripped text oid."""
+        """Resolve an arbitrary rev-parse argument to stripped text oid.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitOidReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             oid = repo.git.rev_parse(request.commitish).strip()
@@ -205,23 +259,8 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             return r[m.Infra.GitOidReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitOidReport].fail(
-                f"rev-parse failed for {request.commitish}: {exc}", exception=exc
-            )
-        return r[m.Infra.GitOidReport].ok(m.Infra.GitOidReport(oid=oid))
-
-    @classmethod
-    def git_rev_parse_parent(
-        cls, request: m.Infra.GitCommitishRequest
-    ) -> p.Result[m.Infra.GitOidReport]:
-        """Resolve ``commitish^`` via rev-parse."""
-        try:
-            repo = cls._repo(request.repo_root)
-            oid = repo.commit(f"{request.commitish}^").hexsha
-        except GitCommandError as exc:
-            return r[m.Infra.GitOidReport].fail(str(exc), exception=exc)
-        except (OSError, ValueError) as exc:
-            return r[m.Infra.GitOidReport].fail(
-                f"failed to resolve parent of {request.commitish}: {exc}", exception=exc
+                f"rev-parse failed for {request.commitish}: {exc}",
+                exception=exc,
             )
         return r[m.Infra.GitOidReport].ok(m.Infra.GitOidReport(oid=oid))
 

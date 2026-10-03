@@ -1,4 +1,0 @@
-from tests import u
-
-class TestsFlextTestTypesDomain:
-    pass

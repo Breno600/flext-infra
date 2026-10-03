@@ -1,10 +1,9 @@
 # AUTO-GENERATED — DO NOT EDIT MANUALLY
-site_name: flext-infra Documentation
-site_description: Generated documentation for flext-infra
+site_name: flext-infra
+site_description: Workspace documentation generated from code and curated root docs
 site_url: https://github.com/flext-sh/flext-infra/blob/main/README.md
 repo_name: flext-sh/flext-infra
 repo_url: https://github.com/flext-sh/flext-infra
-edit_uri: edit/main/flext-infra/
 docs_dir: docs
 site_dir: .reports/docs/site
 
@@ -88,7 +87,9 @@ markdown_extensions:
       custom_checkbox: true
 
 # MkDocs discovers the complete documentation tree, including maintained pages.
-# A fixed three-page nav silently omitted every domain guide and decision record.
+# A fixed three-page nav silently omitted guides, standards, and decisions.
+not_in_nav: |
+  api-reference/generated/**
 validation:
   omitted_files: warn
   absolute_links: warn

@@ -1,4 +1,8 @@
-"""Public release build-policy tests using real workspaces."""
+"""Public release build-policy tests using real workspaces.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,6 +10,7 @@ import hashlib
 import zipfile
 from pathlib import Path
 
+import pytest
 from flext_tests import tm
 
 from flext_infra import config
@@ -37,7 +42,12 @@ class TestsFlextInfraReleaseDag:
 
         @staticmethod
         def policy_snapshot(workspace: Path, name: str) -> bytes:
-            """Read one immutable policy file a build phase snapshotted."""
+            """Read one immutable policy file a build phase snapshotted.
+
+            Returns:
+                The resulting ``bytes``.
+
+            """
             return (
                 u.Tests.release_report_dir(workspace, c.Tests.RELEASE_VERSION_BASE)
                 / "policy"
@@ -61,7 +71,7 @@ class TestsFlextInfraReleaseDag:
             tm.that(
                 report.build_constraints_sha256,
                 eq=hashlib.sha256(
-                    snapshot(workspace, "build-constraints.txt")
+                    snapshot(workspace, "build-constraints.txt"),
                 ).hexdigest(),
             )
             tm.that(
@@ -116,7 +126,11 @@ class TestsFlextInfraReleaseDag:
             gitleaks = entries[c.Infra.RELEASE_GITLEAKS_CONFIG_PATH]
             tm.that("config/build-constraints.txt" in entries, eq=False)
             tm.that(set(gitleaks.profiles), eq=set(c.Infra.MakeProfile))
-            tm.that(gitleaks.overwrite, eq=True)
+            managed = {
+                item.path.as_posix(): item.policy
+                for item in config.Infra.codegen.managed_files
+            }
+            tm.that(managed[c.Infra.RELEASE_GITLEAKS_CONFIG_PATH], eq="full")
 
     class TestsArchiveBoundary:
         """Publishable archive content policy."""
@@ -144,8 +158,10 @@ class TestsFlextInfraReleaseDag:
             tm.that(result, eq=0, msg=build_log)
             wheel = next(
                 u.Tests.release_artifact_dir(
-                    workspace, c.Tests.RELEASE_VERSION_BASE, project_name
-                ).glob("*.whl")
+                    workspace,
+                    c.Tests.RELEASE_VERSION_BASE,
+                    project_name,
+                ).glob("*.whl"),
             )
             with zipfile.ZipFile(wheel) as archive:
                 tm.that(archive.namelist(), has="flext_a/templates/.github/ci.yml.j2")
@@ -158,7 +174,9 @@ class TestsFlextInfraReleaseDag:
             """Never substitute installed versions for an unavailable release source."""
             project_name = "flext-a"
             workspace = u.Tests.create_release_workspace(
-                tmp_path, project_names=(project_name,), initialize_project_git=True
+                tmp_path,
+                project_names=(project_name,),
+                initialize_project_git=True,
             )
             result = u.Tests.run_release_build(workspace, project_name)
             tm.that(result, ne=0)
@@ -190,9 +208,76 @@ class TestsFlextInfraReleaseDag:
             tm.that(build_log, has="release pyproject must define [tool.hatch]")
             tm.that(
                 u.Tests.release_artifact_dir(
-                    workspace, c.Tests.RELEASE_VERSION_BASE, project_name
+                    workspace,
+                    c.Tests.RELEASE_VERSION_BASE,
+                    project_name,
                 ).exists(),
                 eq=False,
+            )
+
+        @staticmethod
+        @pytest.mark.parametrize("target", ["build", "wheel", "sdist"])
+        def test_hatch_exclusion_cannot_cancel_declared_source(
+            tmp_path: Path,
+            target: str,
+        ) -> None:
+            """Reject an archive target that excludes its declared package."""
+            project_name = "flext-a"
+            workspace = u.Tests.release_internal_workspace(tmp_path, project_name)
+            project = workspace / project_name
+            pyproject = project / "pyproject.toml"
+            content = pyproject.read_text(encoding="utf-8")
+            header = f"[tool.hatch.build.targets.{target}]\n"
+            replacement = header + 'exclude = ["/src/flext_a/**"]\n'
+            expected = "Hatch wheel and sdist exclusions must match"
+            if target == "build":
+                header = "[tool.hatch.build.targets.sdist]\n"
+                replacement = (
+                    '[tool.hatch.build]\nexclude = ["/src/flext_a/**"]\n\n' + header
+                )
+                expected = (
+                    "Hatch build must use target source patterns without exclusions"
+                )
+            pyproject.write_text(content.replace(header, replacement), encoding="utf-8")
+            u.Tests.commit_git_changes(project, "add conflicting Hatch exclusion")
+
+            result = u.Tests.run_release_build(workspace, project_name, dry_run=True)
+
+            tm.that(result, eq=1)
+            tm.that(
+                u.Tests.release_build_log_text(workspace, project_name),
+                has=expected,
+            )
+
+        @staticmethod
+        def test_hatch_force_include_rejects_absolute_host_source(
+            tmp_path: Path,
+        ) -> None:
+            """Keep a host path outside the release staging boundary."""
+            project_name = "flext-a"
+            workspace = u.Tests.release_internal_workspace(tmp_path, project_name)
+            project = workspace / project_name
+            pyproject = project / "pyproject.toml"
+            content = pyproject.read_text(encoding="utf-8")
+            header = "[tool.hatch.metadata]\n"
+            forced = (
+                "[tool.hatch.build.targets.wheel.force-include]\n"
+                '"/src/host.py" = "host.py"\n\n'
+                "[tool.hatch.build.targets.sdist.force-include]\n"
+                '"/src/host.py" = "/src/host.py"\n\n'
+            )
+            pyproject.write_text(
+                content.replace(header, forced + header),
+                encoding="utf-8",
+            )
+            u.Tests.commit_git_changes(project, "add absolute Hatch source")
+
+            result = u.Tests.run_release_build(workspace, project_name, dry_run=True)
+
+            tm.that(result, eq=1)
+            tm.that(
+                u.Tests.release_build_log_text(workspace, project_name),
+                has="Hatch source path is outside the release boundary",
             )
 
     class TestsGitleaksPolicy:
@@ -216,7 +301,8 @@ class TestsFlextInfraReleaseDag:
             u.Tests.commit_git_changes(project, "add synthetic secret fixture")
             ambient_policy = tmp_path / "ambient-gitleaks.toml"
             ambient_policy.write_text(
-                'title = "permissive ambient policy"\n', encoding="utf-8"
+                'title = "permissive ambient policy"\n',
+                encoding="utf-8",
             )
 
             with tm.scope(env={"GITLEAKS_CONFIG": str(ambient_policy)}):
@@ -233,7 +319,8 @@ class TestsFlextInfraReleaseDag:
             workspace = u.Tests.release_internal_workspace(tmp_path, project_name)
             project = workspace / project_name
             (project / ".gitleaks.toml").write_text(
-                'title = "project override"\n', encoding="utf-8"
+                'title = "project override"\n',
+                encoding="utf-8",
             )
             u.Tests.commit_git_changes(project, "add forbidden scanner policy")
 
@@ -254,7 +341,8 @@ class TestsFlextInfraReleaseDag:
             workspace = u.Tests.release_internal_workspace(tmp_path, project_name)
             project = workspace / project_name
             (project / ".env.example").write_text(
-                "FLEXT_A_LOG_LEVEL=INFO\n", encoding="utf-8"
+                "FLEXT_A_LOG_LEVEL=INFO\n",
+                encoding="utf-8",
             )
             u.Tests.commit_git_changes(project, "add the generated environment example")
 
@@ -281,7 +369,9 @@ class TestsFlextInfraReleaseDag:
             tm.that(build_log, has="release project is dirty")
             tm.that(
                 u.Tests.release_artifact_dir(
-                    workspace, c.Tests.RELEASE_VERSION_BASE, project_name
+                    workspace,
+                    c.Tests.RELEASE_VERSION_BASE,
+                    project_name,
                 ).exists(),
                 eq=False,
             )

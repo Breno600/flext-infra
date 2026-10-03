@@ -38,29 +38,79 @@ Run tests only through the dispatcher at the workspace root:
 make test
 ```
 
-The test verb owns test selection and the retained Testmon cache. Never clear or bypass
-that cache, and never invoke the underlying test runner directly.
+`make test` owns incremental impact selection and the project's persistent Testmon
+database, whose location the flext-infra generated configuration owns. Its collection
+inventory uses the same marker scope as execution. The runner accounts for every
+selected and deselected test; it never infers selection from console output. Never clear
+or bypass the database, or invoke the underlying runner directly.
+Concurrent worktrees serialize on the database lease within the same declared suite
+deadline. If the lease cannot be acquired before that deadline's cleanup reserve,
+the invocation fails without reading or writing another run's database state.
 
-The generated root Makefile gives pytest-testmon the official `TESTMON_DATAFILE`
-pointing outside the checkout: `${XDG_CACHE_HOME:-$HOME/.cache}/flext/infra/testmon/`
-plus a key derived from the physical checkout and the configured database filename.
-Incremental selection, execution, and the full-suite phase share that database;
-`make clean` does not delete it. The directory, environment-variable names, and filename
-are owned by `Infra.codegen.make.testmon_cache` in `config/codegen.yaml`.
+The supported Testmon environment combines installed toolchain provenance, the current
+`config/*.yaml` content, and the marker scope of the phase. A config edit selects a fresh
+environment while preserving the same external database, so tests that depend on the
+changed configuration execute again instead of reporting a cache hit.
 
-CI and generated pre-commit hooks use the configured `make.ci.value` token. In that
-context, flext-infra deselects `tooling.tools.pytest.ci-excluded-markers`, currently
-`slow`, consistently in collection, execution and coverage. Local runs and pre-push
-retain slow tests. The runner records these exclusions as `not_executed_ci_markers`;
-they are neither passed tests nor proof that a timeout was repaired. Mark expensive
-integration cases with `pytest.mark.slow` rather than changing global addopts or
-duplicating a marker expression in each project.
+Run the complete suite through its declared verb:
+
+```bash
+make test-full
+```
+
+Use `make profile-test` before optimizing a slow suite, then `make profile-test-report`
+to render the parent and aggregated child profiles. Profiling uses the same Make runner,
+persistent Testmon database, selection, and deadline as `make test`. Each collection
+process, controller, and worker writes its own cProfile artifact under that run's report
+directory; the aggregate includes fixture setup, test calls, and teardown. A failing or
+interrupted profiled run remains RED with its original process outcome. The profile is
+diagnostic evidence, not a substitute for a complete test result.
+
+The suite deadline is declared once as `Infra.tooling.tools.pytest.run-timeout-seconds`
+in `config/tooling.yaml`. The typed runner and generated Make process bound
+derive from that policy. Use the profile and complete run receipts to repair
+a slow owner; an interrupted selection or suite remains a failed invocation.
+
+The runner first completes the incremental operation, then executes the full suite using
+the same database and one monotonic deadline. The first failure stops the sequence. The
+full phase includes both configured `external-gate-markers` and `ci-excluded-markers` in
+every context. External tests retain their declared services, network access, and
+authentication requirements.
+
+Incremental execution excludes `tooling.tools.pytest.external-gate-markers`. CI and
+generated pre-commit hooks use the configured `make.ci.value` token and also exclude
+`ci-excluded-markers`, consistently in collection, execution, and coverage. The runner
+records these as `not_executed_external_gates` and `not_executed_ci_markers`; exclusions
+are not passed tests. Both fields are empty for the full phase. Marker policy belongs to
+the typed tooling configuration, not a separate command-line expression.
+
+Each phase retains its mode, database, raw process outcome, collection manifest, and
+diagnostics. The latest receipt names the current attempt even when collection fails.
+Warning totals include selection, inventory, and suite occurrences, with blocking and
+explicitly suspended warnings reported separately. The existing non-strict MRO
+enforcement suspension remains visible in those receipts; skips still block acceptance.
+
+Zero execution is accepted only as a typed incremental `cache_hit`: the database must
+pass integrity checks, a complete nonempty inventory must be entirely deselected, and
+there must be no failures, blocking warnings, or skips. A cache hit is never reported as
+tests passed. Empty collection or zero execution in the full phase fails.
 
 Run the complete verification gate through the same dispatcher:
 
 ```bash
 make check
 ```
+
+The checker evaluates the current declared repository. An omitted project selection
+never expands to nested members; a root without project metadata fails even if it
+contains declared members. Fleet orchestration invokes each repository's own lifecycle.
+
+Conformance can explicitly select multiple repository owners for one generation
+transaction. Lazy-init opens a separate Rope index for each selected owner and combines
+the authenticated inputs and publication plans; it never widens the parent's implicit
+scan to include submodules. A module target must resolve in exactly one selected owner.
+Missing or ambiguous targets fail before publication, and repeated generation verifies
+the complete selected set.
 
 Selectors such as project names, file names, patterns, or changed-only flags are not
 part of this command surface. If a required workflow is missing, repair the root Make
@@ -82,3 +132,8 @@ Do not edit a member projection by hand.
 - Development
 - Troubleshooting
 - Testing standards
+
+Private attribute usage is enforced by Pyright's resolved owner and export semantics in
+source, tests, examples, and scripts according to the typed path policy. The
+`ban-test-private-access` ast-grep rule retains only dynamic private-module imports; it
+does not duplicate semantic attribute detection or require deleting test scenarios.

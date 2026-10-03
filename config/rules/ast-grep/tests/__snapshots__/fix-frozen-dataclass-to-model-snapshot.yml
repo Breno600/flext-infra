@@ -1,0 +1,116 @@
+id: fix-frozen-dataclass-to-model
+snapshots:
+  ? |
+    from flext_core import m
+
+    @dataclass(frozen=True)
+    class Point:
+        x: int
+        label: str | None = None
+  : fixed: |
+      from flext_core import m
+
+      class Point(m.FrozenModel):
+          x: int
+          label: str | None = None
+    labels:
+    - source: |-
+        @dataclass(frozen=True)
+        class Point:
+            x: int
+            label: str | None = None
+      style: primary
+      start: 26
+      end: 102
+    - source: '@dataclass(frozen=True)'
+      style: secondary
+      start: 26
+      end: 49
+    - source: Point
+      style: secondary
+      start: 56
+      end: 61
+    - source: |-
+        x: int
+            label: str | None = None
+      style: secondary
+      start: 67
+      end: 102
+    - source: |-
+        class Point:
+            x: int
+            label: str | None = None
+      style: secondary
+      start: 50
+      end: 102
+    - source: from flext_core import m
+      style: secondary
+      start: 0
+      end: 24
+    - source: |
+        from flext_core import m
+
+        @dataclass(frozen=True)
+        class Point:
+            x: int
+            label: str | None = None
+      style: secondary
+      start: 0
+      end: 103
+  ? |
+    from flext_infra import m, t
+
+    @dataclass(frozen=True, slots=True)
+    class Span:
+        start: int
+        path: Path
+  : fixed: |
+      from flext_infra import m, t
+
+      class Span(m.FrozenModel):
+          start: int
+          path: Path
+    labels:
+    - source: |-
+        @dataclass(frozen=True, slots=True)
+        class Span:
+            start: int
+            path: Path
+      style: primary
+      start: 30
+      end: 107
+    - source: '@dataclass(frozen=True, slots=True)'
+      style: secondary
+      start: 30
+      end: 65
+    - source: Span
+      style: secondary
+      start: 72
+      end: 76
+    - source: |-
+        start: int
+            path: Path
+      style: secondary
+      start: 82
+      end: 107
+    - source: |-
+        class Span:
+            start: int
+            path: Path
+      style: secondary
+      start: 66
+      end: 107
+    - source: from flext_infra import m, t
+      style: secondary
+      start: 0
+      end: 28
+    - source: |
+        from flext_infra import m, t
+
+        @dataclass(frozen=True, slots=True)
+        class Span:
+            start: int
+            path: Path
+      style: secondary
+      start: 0
+      end: 108

@@ -5,6 +5,9 @@ promoted-command contract; ``PromotedWorkspaceSpec`` is the typed
 projection of repository facts the framework consumes. Construction is
 keyword-only; leaf code annotates with the ``p.Infra.Promoted*`` protocols
 (a model is never a type).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -14,14 +17,13 @@ from pathlib import Path
 from flext_cli import m
 
 from flext_infra import t
-
-from .base import FlextInfraModelsBase
+from flext_infra._models.base import FlextInfraModelsBase
 
 
 class FlextInfraModelsPromoted(FlextInfraModelsBase):
     """Promoted-command models mixed into ``m.Infra``."""
 
-    """cosmos-command registry models (promoted script headers)."""
+    """flext-command registry models (promoted script headers)."""
 
     class PromotedParam(m.BaseModel):
         """One promoted command parameter declared in the script header."""
@@ -35,7 +37,7 @@ class FlextInfraModelsPromoted(FlextInfraModelsBase):
         choices: t.VariadicTuple[str] = ()
 
     class PromotedCommand(m.BaseModel):
-        """One promoted command discovered from a cosmos-command header."""
+        """One promoted command discovered from a flext-command header."""
 
         model_config = m.ConfigDict(extra="forbid", frozen=True)
 

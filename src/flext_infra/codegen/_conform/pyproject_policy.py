@@ -1,4 +1,8 @@
-"""Pyproject, tooling-root, and custom Make policy projections."""
+"""Pyproject, tooling-root, and custom Make policy projections.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,9 +10,8 @@ import re
 from pathlib import Path
 
 from flext_core import r
-
-from ... import c, config, m, p, t, u
-from .file_plans import FlextInfraCodegenConformFilePlans
+from flext_infra import c, config, m, p, t, u
+from flext_infra.codegen._conform.file_plans import FlextInfraCodegenConformFilePlans
 
 
 class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans):
@@ -21,7 +24,12 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         *,
         package: bool = True,
     ) -> t.StrSequence:
-        """Return Python roots the selected scaffold manifest actually creates."""
+        """Return Python roots the selected scaffold manifest actually creates.
+
+        Returns:
+            Python roots the selected scaffold manifest actually creates.
+
+        """
         # Derive future roots from both
         # declarative owners so scaffold and existing-tree discovery converge.
         generated_roots = {
@@ -48,21 +56,45 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
 
     @classmethod
     def conformed_pyproject_source(
-        cls, source: str, *, render_inputs: m.Infra.CodegenRenderInputs
+        cls,
+        source: str,
+        *,
+        render_inputs: m.Infra.CodegenRenderInputs,
     ) -> p.Result[str]:
-        """Conform one pyproject source."""
+        """Conform one pyproject source.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         target = render_inputs.target
         workspace = render_inputs.workspace
         codegen = render_inputs.codegen
         flext_line = u.Infra.flext_integration_line_for_checkout(
-            codegen=codegen, repository_root=target.root, workspace=workspace
+            codegen=codegen,
+            repository_root=target.root,
+            workspace=workspace,
         )
         if flext_line.failure:
             return r[str].from_failure(flext_line)
-        declared_sources = {
-            member.distribution: f"git+{member.url}@{flext_line.value.branch}"
-            for member in workspace.subprojects
-        }
+        if workspace.integration is None:
+            # Attached members render on the workspace's own integration line
+            # (a governed .gitmodules branch must equal it), derived from the
+            # checkout when the manifest does not declare it.
+            branch = u.Infra.resolve_integration_branch(
+                target.root,
+                preference=codegen.branch_policy.integration_branch_preference,
+            )
+            if branch.failure:
+                return r[str].from_failure(branch)
+            workspace = workspace.model_copy(
+                update={
+                    "integration": m.Infra.WorkspaceIntegrationSpec(
+                        provider=workspace.repository.provider,
+                        branch=branch.value,
+                    ),
+                },
+            )
         return u.Infra.pyproject_conform(
             source,
             workspace=workspace,
@@ -70,12 +102,12 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
             uv_resolution=m.Infra.UvResolutionSpec(
                 link_mode=cls.link_mode(target.repository, codegen.toolchain),
                 constraint_dependencies=tuple(
-                    codegen.toolchain.uv_constraint_dependencies
+                    codegen.toolchain.uv_constraint_dependencies,
                 ),
                 exclude_dependencies=cls.routed_uv_exclude_dependencies(render_inputs),
                 environments=tuple(codegen.toolchain.uv_environments),
             ),
-            declared_sources=declared_sources,
+            family_line=flext_line.value.branch,
         )
 
     @staticmethod
@@ -90,6 +122,10 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         exclude-dependencies only from the root), one of its declared
         members. Routing an exclusion for an absent project would drop the
         only edge that installs it.
+
+        Returns:
+            The uv dependency exclusions routed to one repository.
+
         """
         target = render_inputs.target
         local = {target.repository.distribution}
@@ -105,9 +141,15 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
 
     @staticmethod
     def validate_custom_make(
-        content: str, policy: m.Infra.CustomHandlerPolicy
+        content: str,
+        policy: m.Infra.CustomHandlerPolicy,
     ) -> p.Result[bool]:
-        """Reject public targets, aliases, includes, and toolchain declarations."""
+        """Reject public targets, aliases, includes, and toolchain declarations.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         target_re = re.compile(policy.target_pattern)
         in_define = False
         # Collapse backslash continuation lines before validating so that
@@ -149,7 +191,7 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         if pending_line is not None:
             if pending_line.startswith(".PHONY:"):
                 return r[bool].fail(
-                    f"{policy.filename} has an unterminated .PHONY continuation"
+                    f"{policy.filename} has an unterminated .PHONY continuation",
                 )
             logical_lines.append((pending_number, pending_line))
         for line_number, raw_line in logical_lines:
@@ -160,7 +202,7 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
                 if not policy.allow_toolchain_declarations:
                     return r[bool].fail(
                         f"{policy.filename} line {line_number} "
-                        "declares a macro, which this profile forbids"
+                        "declares a macro, which this profile forbids",
                     )
                 in_define = True
                 continue
@@ -179,18 +221,18 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
             if target and target_re.fullmatch(target):
                 continue
             if c.Infra.MAKE_ASSIGNMENT_RE.match(
-                raw_line
+                raw_line,
             ) or c.Infra.MAKE_DIRECTIVE_RE.match(raw_line):
                 if policy.allow_toolchain_declarations:
                     continue
                 return r[bool].fail(
                     f"{policy.filename} line {line_number} "
-                    "declares a variable, which this profile forbids"
+                    "declares a variable, which this profile forbids",
                 )
             if target and policy.allow_public_targets:
                 continue
             return r[bool].fail(
-                f"{policy.filename} line {line_number} is not a private custom handler"
+                f"{policy.filename} line {line_number} is not a private custom handler",
             )
         return r[bool].ok(True)
 

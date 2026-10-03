@@ -1,10 +1,15 @@
-"""Project identity and spec fixture test utilities for flext-infra."""
+"""Project identity and spec fixture test utilities for flext-infra.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 
 from flext_tests import tm
+from packaging.utils import canonicalize_name
 
 from flext_infra import config, u
 from tests import c, m, t
@@ -35,7 +40,12 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
         make_profile: c.Infra.MakeProfile = c.Infra.MakeProfile.STANDALONE,
         declared_subproject: bool = False,
     ) -> m.Infra.ProjectInfo:
-        """Provide the typed test helper `create_project_info`."""
+        """Provide the typed test helper `create_project_info`.
+
+        Returns:
+            The resulting ``m.Infra.ProjectInfo``.
+
+        """
         return m.Infra.ProjectInfo(
             name=name,
             path=project_root,
@@ -50,7 +60,12 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
 
     @staticmethod
     def provider(name: str = FIXTURE_PROVIDER_NAME) -> m.Infra.ProviderIdentitySpec:
-        """Return the declared fixture provider identity for one provider key."""
+        """Return the declared fixture provider identity for one provider key.
+
+        Returns:
+            The declared fixture provider identity for one provider key.
+
+        """
         return m.Infra.ProviderIdentitySpec(
             name=name,
             organization=FIXTURE_PROVIDER_ORGANIZATION,
@@ -59,7 +74,12 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
 
     @staticmethod
     def provider_branch() -> str:
-        """Return the declared fixture integration branch."""
+        """Return the declared fixture integration branch.
+
+        Returns:
+            The declared fixture integration branch.
+
+        """
         return FIXTURE_PROVIDER_BRANCH
 
     @staticmethod
@@ -67,11 +87,19 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
         """Declare one internal distribution's direct Git source for a fixture.
 
         Defaults to the infrastructure distribution; every internal flext
-        requirement a governed checkout declares carries its own source.
+        requirement a governed checkout declares carries its own source. The
+        name is PEP 503-canonicalized, so a project spec's upstream import name
+        (``flext_core``) and its distribution (``flext-core``) declare the same
+        repository.
+
+        Returns:
+            The resulting ``str``.
+
         """
         fixture = TestsFlextInfraUtilitiesProjectFixtureMixin
         if distribution is None:
             distribution = config.Infra.codegen.infra_repository.distribution
+        distribution = canonicalize_name(distribution)
         return (
             f"{distribution} @ git+{fixture.provider().base_url.rstrip('/')}/"
             f"{distribution}.git@{fixture.provider_branch()}"
@@ -79,10 +107,16 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
 
     @staticmethod
     def integration() -> m.Infra.WorkspaceIntegrationSpec:
-        """Return the fixture's declared integration line (provider + branch)."""
+        """Return the fixture's declared integration line (provider + branch).
+
+        Returns:
+            The fixture's declared integration line (provider + branch).
+
+        """
         provider = TestsFlextInfraUtilitiesProjectFixtureMixin.provider()
         return m.Infra.WorkspaceIntegrationSpec(
-            provider=provider.name, branch=FIXTURE_PROVIDER_BRANCH
+            provider=provider.name,
+            branch=FIXTURE_PROVIDER_BRANCH,
         )
 
     @staticmethod
@@ -98,6 +132,10 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
         repository reference and the declared fixture provider; a test never
         restates them. ``project`` is the scaffold metadata only a
         materializing test needs.
+
+        Returns:
+            The resulting ``m.Infra.WorkspaceSpec``.
+
         """
         fixture = TestsFlextInfraUtilitiesProjectFixtureMixin
         return m.Infra.WorkspaceSpec(
@@ -115,7 +153,10 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
 
     @staticmethod
     def repository_ref(
-        name: str, *, role: c.Infra.MakeProfile | None = None, path: Path | None = None
+        name: str,
+        *,
+        role: c.Infra.MakeProfile | None = None,
+        path: Path | None = None,
     ) -> m.Infra.RepositoryRef:
         """Build a repository reference from the declared fixture provider.
 
@@ -127,6 +168,10 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
         A non-empty path denotes the workspace's view of one composed
         project. That project is standalone in its own right; being composed
         is carried by ``editable``, a fact of the parent's Git tree.
+
+        Returns:
+            The resulting ``m.Infra.RepositoryRef``.
+
         """
         provider = TestsFlextInfraUtilitiesProjectFixtureMixin.provider()
         resolved_path = Path() if path is None else path
@@ -152,7 +197,12 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
 
     @staticmethod
     def beads_project(name: str) -> m.Infra.BeadsProjectSpec:
-        """Build portable Beads identity for one repository fixture."""
+        """Build portable Beads identity for one repository fixture.
+
+        Returns:
+            The resulting ``m.Infra.BeadsProjectSpec``.
+
+        """
         return m.Infra.BeadsProjectSpec(
             version=c.Infra.BEADS_CONFIG_VERSION,
             workspace=name,
@@ -161,8 +211,13 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
         )
 
     @staticmethod
-    def project_spec(name: str) -> m.Infra.ProjectSpec:
-        """Build deterministic scaffold metadata for one project fixture."""
+    def project_spec(name: str, *, cli_module: bool = True) -> m.Infra.ProjectSpec:
+        """Build deterministic scaffold metadata for one project fixture.
+
+        Returns:
+            The resulting ``m.Infra.ProjectSpec``.
+
+        """
         package_name = name.replace("-", "_")
         class_stem = u.derive_class_stem(name)
         homepage = (
@@ -170,7 +225,6 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
             f"{name}"
         )
         return m.Infra.ProjectSpec(
-            dependency_revisions={},
             flext_source=TestsFlextInfraUtilitiesProjectFixtureMixin.flext_source(),
             package_name=package_name,
             class_stem=class_stem,
@@ -190,17 +244,26 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
             documentation=homepage,
             repository_root_rel=".",
             year=config.Infra.codegen.scaffold.project.copyright_year,
+            cli_module=cli_module,
         )
 
     @staticmethod
     def write_beads_project(
-        repository: Path, *, workspace: str, database: str, issue_prefix: str
+        repository: Path,
+        *,
+        workspace: str,
+        database: str,
+        issue_prefix: str,
     ) -> Path:
         """Write the typed repository-local Beads identity fixture.
 
         The bytes mirror the managed ``config/beads.yaml.j2`` render for
         the same spec, so a planned regeneration of an existing fixture
         file is never reported as drift.
+
+        Returns:
+            The resulting ``Path``.
+
         """
         path = repository / "config" / "beads.yaml"
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -239,6 +302,10 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
         declare its provider key and canonical URL; the detector fails loudly
         without it, so every governed fixture carries one exactly as a real
         checkout does.
+
+        Returns:
+            The resulting ``Path``.
+
         """
         provider = TestsFlextInfraUtilitiesProjectFixtureMixin.provider()
         manifest = repository / "config" / "workspace.yaml"
@@ -266,7 +333,12 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
 
     @staticmethod
     def declare_workspace_projects(repository: Path, projects: t.StrSequence) -> Path:
-        """Declare the exact governed projects in this root's ``.gitmodules``."""
+        """Declare the exact governed projects in this root's ``.gitmodules``.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         provider = TestsFlextInfraUtilitiesProjectFixtureMixin.provider()
         path = repository / c.Infra.GITMODULES
         path.write_text(
@@ -283,14 +355,27 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
 
     @staticmethod
     def write_project_beads_config(project_dir: Path, name: str) -> Path:
-        """Write a standalone project's required local topology input."""
+        """Write a standalone project's required local topology input.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         return TestsFlextInfraUtilitiesProjectFixtureMixin.write_beads_project(
-            project_dir, workspace=name, database=name, issue_prefix=name
+            project_dir,
+            workspace=name,
+            database=name,
+            issue_prefix=name,
         )
 
     @staticmethod
     def is_project_valid(project_name: str) -> bool:
-        """Validate the lightweight project-name fixture contract."""
+        """Validate the lightweight project-name fixture contract.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         return (
             bool(project_name)
             and project_name.replace("-", "").replace("_", "").isalnum()

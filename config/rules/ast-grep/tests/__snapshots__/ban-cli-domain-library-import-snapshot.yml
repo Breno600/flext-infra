@@ -1,0 +1,116 @@
+id: ban-cli-domain-library-import
+snapshots:
+  from prompt_toolkit import prompt:
+    labels:
+    - source: from prompt_toolkit import prompt
+      style: primary
+      start: 0
+      end: 33
+    - source: prompt_toolkit
+      style: secondary
+      start: 5
+      end: 19
+  from tabulate import tabulate:
+    labels:
+    - source: from tabulate import tabulate
+      style: primary
+      start: 0
+      end: 29
+    - source: tabulate
+      style: secondary
+      start: 5
+      end: 13
+  from tqdm import tqdm:
+    labels:
+    - source: from tqdm import tqdm
+      style: primary
+      start: 0
+      end: 21
+    - source: tqdm
+      style: secondary
+      start: 5
+      end: 9
+  ? |
+    if TYPE_CHECKING:
+        from rich.console import Console
+  : labels:
+    - source: from rich.console import Console
+      style: primary
+      start: 22
+      end: 54
+    - source: rich.console
+      style: secondary
+      start: 27
+      end: 39
+  ? |
+    if TYPE_CHECKING:
+        import argparse
+  : labels:
+    - source: import argparse
+      style: primary
+      start: 22
+      end: 37
+    - source: argparse
+      style: secondary
+      start: 29
+      end: 37
+  import argparse:
+    labels:
+    - source: import argparse
+      style: primary
+      start: 0
+      end: 15
+    - source: argparse
+      style: secondary
+      start: 7
+      end: 15
+  import colorama:
+    labels:
+    - source: import colorama
+      style: primary
+      start: 0
+      end: 15
+    - source: colorama
+      style: secondary
+      start: 7
+      end: 15
+  import getpass:
+    labels:
+    - source: import getpass
+      style: primary
+      start: 0
+      end: 14
+    - source: getpass
+      style: secondary
+      start: 7
+      end: 14
+  import simplejson as json:
+    labels:
+    - source: import simplejson as json
+      style: primary
+      start: 0
+      end: 25
+    - source: simplejson
+      style: secondary
+      start: 7
+      end: 17
+  import typer:
+    labels:
+    - source: import typer
+      style: primary
+      start: 0
+      end: 12
+    - source: typer
+      style: secondary
+      start: 7
+      end: 12
+  import ujson:
+    labels:
+    - source: import ujson
+      style: primary
+      start: 0
+      end: 12
+    - source: ujson
+      style: secondary
+      start: 7
+      end: 12

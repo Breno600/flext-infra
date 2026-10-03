@@ -1,4 +1,8 @@
-"""FLEXT pyrefly quality gate."""
+"""FLEXT pyrefly quality gate.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,8 +10,7 @@ import sys
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, m, u
-
-from .base_gate import FlextInfraGate
+from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -22,20 +25,36 @@ class FlextInfraPyreflyGate(FlextInfraGate):
     gate_name: ClassVar[str] = "Pyrefly"
     can_fix: ClassVar[bool] = False
     checker_info_prefixes: ClassVar[t.StrSequence] = ("INFO",)
+    requires_python_targets: ClassVar[bool] = True
 
     @override
     def _get_check_dirs(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
-        """Check only local Python roots to avoid scanning dependency trees."""
+        """Check only local Python roots to avoid scanning dependency trees.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         _ = ctx
-        return u.Infra.discover_python_targets(project_dir)
+        return self._python_targets(project_dir)
 
     @override
     def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Build check command."""
+        """Build check command.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         json_file = self._check_report_path(project_dir, ctx)
         target_args = u.Infra.pyrefly_target_args(project_dir, tuple(check_dirs))
         return self._python_module_command(
@@ -57,14 +76,26 @@ class FlextInfraPyreflyGate(FlextInfraGate):
 
     @override
     def _check_report_path(self, project_dir: Path, ctx: m.Infra.GateContext) -> Path:
-        """Use the existing native report owner, freshly replaced for every run."""
+        """Use the existing native report owner, freshly replaced for every run.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         return ctx.reports_dir / f"{project_dir.name}-pyrefly.json"
 
     @override
     def _check_remove_env_keys(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
-        """Use configured search paths without Pyrefly's inherited-path warning."""
+        """Use configured search paths without Pyrefly's inherited-path warning.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         return (
             *super()._check_remove_env_keys(project_dir, ctx),
             c.Infra.ORCHESTRATOR_ENV_PYTHONPATH,
@@ -72,14 +103,26 @@ class FlextInfraPyreflyGate(FlextInfraGate):
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Parse check output."""
+        """Parse check output.
+
+        Returns:
+            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+
+        """
         json_file = self._check_report_path(project_dir, ctx)
         if not u.Cli.process_succeeded(result.outcome) and not json_file.exists():
             return False, (
                 self._command_error_issue(
-                    result, tool=c.Infra.PYREFLY, file=str(json_file), line=0, column=0
+                    result,
+                    tool=c.Infra.PYREFLY,
+                    file=str(json_file),
+                    line=0,
+                    column=0,
                 ),
             )
         validated: p.Result[m.Infra.PyreflyReport] = u.validate_value(
@@ -91,7 +134,9 @@ class FlextInfraPyreflyGate(FlextInfraGate):
         if validated.failure:
             return False, (
                 self._malformed_report_issue(
-                    str(validated.error), tool=c.Infra.PYREFLY, file=str(json_file)
+                    str(validated.error),
+                    tool=c.Infra.PYREFLY,
+                    file=str(json_file),
                 ),
             )
         report = validated.value
@@ -122,7 +167,7 @@ class FlextInfraPyreflyGate(FlextInfraGate):
                     code="pyrefly-exec",
                     message=message,
                     severity=c.Infra.ERROR,
-                )
+                ),
             )
         return (
             u.Cli.process_succeeded(result.outcome)

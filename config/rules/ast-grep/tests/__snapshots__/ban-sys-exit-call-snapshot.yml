@@ -1,0 +1,14 @@
+id: ban-sys-exit-call
+snapshots:
+  sys.exit():
+    labels:
+    - source: sys.exit()
+      style: primary
+      start: 0
+      end: 10
+  sys.exit(1):
+    labels:
+    - source: sys.exit(1)
+      style: primary
+      start: 0
+      end: 11
