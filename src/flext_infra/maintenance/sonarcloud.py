@@ -195,7 +195,7 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
             return r[bool].from_failure(current)
         if self.in_sync_with(plan, current.value):
             u.Cli.info(f"sonarcloud-sync: {plan.project_key} already matches the SSOT")
-            return r[bool].ok(False)
+            return r[bool].ok(value=False)
         request = self.settings_write_request(plan)
         written = self.call(
             plan.api_url,
@@ -228,7 +228,7 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
             project_key=plan.project_key,
             exclusions=len(plan.field_values),
         )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraSonarcloudSettingsSync"]

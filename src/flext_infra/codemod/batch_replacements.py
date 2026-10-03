@@ -60,7 +60,7 @@ class FlextInfraModReplacements:
                 "generated findings require canonical generator repair: "
                 + ", ".join(generated),
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def publish(cls, root: Path, report: m.Infra.ModScanReport) -> p.Result[bool]:
@@ -151,7 +151,7 @@ class FlextInfraModReplacements:
         formatted = FlextInfraRuffFormatGate.format_files(root, tuple(sorted(grouped)))
         if formatted.failure:
             return r[bool].from_failure(formatted)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraModReplacements"]

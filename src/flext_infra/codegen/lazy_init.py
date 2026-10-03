@@ -83,7 +83,7 @@ class FlextInfraCodegenLazyInit(
                 f"init drift detected in {len(changed)} "
                 f"generated artifacts: {drifted_files}",
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def plan_files(self) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
         """Return one complete immutable lazy-init analysis receipt.

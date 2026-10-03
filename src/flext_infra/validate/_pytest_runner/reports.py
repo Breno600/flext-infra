@@ -259,7 +259,7 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
                 report_dir / "pytest.log",
             )
             raise ValueError(msg)
-        return r.ok(True)
+        return r.ok(value=True)
 
     @staticmethod
     def _write_diagnostics(

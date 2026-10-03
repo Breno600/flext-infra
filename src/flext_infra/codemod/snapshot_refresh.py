@@ -55,7 +55,7 @@ class FlextInfraCodemodSnapshotRefresh(FlextInfraServiceBase[t.Cli.ResultValue])
             f"mod-snapshots: {len(refreshed.value)} snapshot projection(s) "
             "changed; review the diff and commit it",
         )
-        return r[t.Cli.ResultValue].ok(True)
+        return r[t.Cli.ResultValue].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraCodemodSnapshotRefresh"]

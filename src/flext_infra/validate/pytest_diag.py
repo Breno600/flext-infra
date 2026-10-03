@@ -263,7 +263,7 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
             f"warning_count={diagnostics.warning_count}\n"
             f"skipped_count={diagnostics.skipped_count}\n",
         )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraPytestDiagExtractor"]

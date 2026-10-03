@@ -76,7 +76,7 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
             return r[t.Cli.ResultValue].fail(
                 f"{report.occurrences} pending source edits",
             )
-        return r[t.Cli.ResultValue].ok(True)
+        return r[t.Cli.ResultValue].ok(value=True)
 
     @staticmethod
     def execute_mod(request: m.Infra.ModCommand) -> p.Result[t.Cli.ResultValue]:

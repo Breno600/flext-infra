@@ -131,7 +131,7 @@ class FlextInfraApplyRenames:
                     return r[bool].fail(
                         f"CSV campaign post-scan found {remaining} pending edits",
                     )
-                return r[bool].ok(True)
+                return r[bool].ok(value=True)
 
             driver_plan = m.Infra.SemanticFilePlan(
                 project=Path(commonpath(roots)),

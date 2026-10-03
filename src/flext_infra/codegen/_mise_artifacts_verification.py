@@ -324,7 +324,7 @@ class FlextInfraMiseArtifactsVerification:
                     return r[bool].fail(
                         f"generation backup escapes its recovery root: {entry.path}",
                     )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def journal_destinations_live(
@@ -379,7 +379,7 @@ class FlextInfraMiseArtifactsVerification:
                 return r[bool].fail(
                     f"published generation identity changed: {entry.path}",
                 )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def states_current(
@@ -429,7 +429,7 @@ class FlextInfraMiseArtifactsVerification:
                 return r[bool].fail(
                     f"generation authenticated state changed: {rebound_expected.path}",
                 )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _bind_source_parent(
@@ -547,7 +547,7 @@ class FlextInfraMiseArtifactsVerification:
                     f"published {analysis.phase} destination differs from receipt: "
                     f"{plan.path}",
                 )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def sources(cls, plan: m.Infra.MiseToolchainWorkspacePlan) -> p.Result[bool]:
@@ -569,7 +569,7 @@ class FlextInfraMiseArtifactsVerification:
                 return r[bool].from_failure(current)
             if current.value != project.config.sources:
                 return r[bool].fail(f"Mise sources changed: {project.layout.selector}")
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def destinations(cls, plan: m.Infra.MiseToolchainWorkspacePlan) -> p.Result[bool]:
@@ -589,7 +589,7 @@ class FlextInfraMiseArtifactsVerification:
             current = cls.states_current(expected_states)
             if current.failure:
                 return current
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def publications_live(
@@ -647,7 +647,7 @@ class FlextInfraMiseArtifactsVerification:
                         f"from staged identity: {current.path}"
                     ),
                 )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def live(
@@ -694,7 +694,7 @@ class FlextInfraMiseArtifactsVerification:
         source_after = cls.sources(plan)
         if source_after.failure:
             return source_after
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _validate_manifest_transition(
@@ -780,7 +780,7 @@ class FlextInfraMiseArtifactsVerification:
                 return r[bool].fail(
                     f"unregistered temporary-tree file exists: {entry.path}",
                 )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _matches_created_entry(
@@ -982,7 +982,7 @@ class FlextInfraMiseArtifactsVerification:
             return r[bool].fail(
                 f"temporary tree differs from created identity: {directory.path}",
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _artifact_snapshot(

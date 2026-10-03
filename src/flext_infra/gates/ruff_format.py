@@ -141,7 +141,7 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
 
         """
         if not paths:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         command = cls._python_module_command(
             c.Infra.RUFF,
             c.Infra.FORMAT,
@@ -153,7 +153,7 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
             return r[bool].from_failure(run)
         if not u.Cli.process_succeeded(run.value.outcome):
             return r[bool].fail(run.value.stdout)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraRuffFormatGate"]

@@ -76,7 +76,7 @@ class FlextInfraCandidateBootstrapService:
             )
             if committed.failure:
                 return r[bool].from_failure(committed)
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
 
         return self._transaction.run_files_locked(roots, publish)
 
@@ -163,7 +163,7 @@ class FlextInfraCandidateBootstrapService:
                 "candidate bootstrap did not reach a fixed point: "
                 + ", ".join(str(file.path) for file in residual),
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraCandidateBootstrapService"]

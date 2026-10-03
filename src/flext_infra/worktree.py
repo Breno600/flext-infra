@@ -316,7 +316,7 @@ class FlextInfraWorktreeService(s[str]):
         """
         epic_lane = self.epic_lane
         if epic_lane is None:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         if epic_lane.is_symlink() or not epic_lane.is_dir():
             reason = "is a symlink" if epic_lane.is_symlink() else "does not exist"
             return r[bool].fail(f"epic lane worktree {reason}: {epic_lane}")
@@ -328,7 +328,7 @@ class FlextInfraWorktreeService(s[str]):
         container = epic_lane / c.Infra.WORKTREES_DIRNAME
         if container.is_symlink():
             return r[bool].fail(f"epic worktree container is a symlink: {container}")
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def _new_lane_path(self, primary_root: Path, branch: str) -> p.Result[Path]:
         """Reserve the canonical path of a branch that has no lane yet.

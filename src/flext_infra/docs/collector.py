@@ -115,7 +115,7 @@ class FlextInfraDocCollector:
                     configuration,
                     bundle,
                 )
-                return r[bool].ok(True)
+                return r[bool].ok(value=True)
 
             published = transaction.publish_file_phase_locked(
                 scope_root,
@@ -142,7 +142,7 @@ class FlextInfraDocCollector:
                 removed = u.Cli.atomic_delete_empty_directory_guarded(observed.value)
                 if removed.failure:
                     return r[bool].from_failure(removed)
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
 
         return transaction.run_files_locked(roots, publish)
 

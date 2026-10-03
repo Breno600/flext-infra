@@ -72,7 +72,7 @@ class FlextInfraWorkspacePropagation(s[bool]):
             )
             if propagated.failure:
                 return propagated
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def _propagate_member(
         self,

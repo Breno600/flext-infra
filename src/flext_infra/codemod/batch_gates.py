@@ -82,7 +82,7 @@ class FlextInfraModGateEngine:
                         )
                     )
                     return r[bool].fail(f"{tested.error}\n{remedy}")
-        return r.ok(True)
+        return r.ok(value=True)
 
     @classmethod
     def refresh_rule_snapshots(
@@ -450,7 +450,7 @@ class FlextInfraModGateEngine:
                 f"ast-grep finding receipt mismatch: parsed_errors={errors} "
                 f"expected={expected!r} actual={stderr.strip()!r}",
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def _admitted(
@@ -574,7 +574,7 @@ class FlextInfraModGateEngine:
                     f"ast-grep rule {rule.id} declares {rule.expected} "
                     f"finding(s), scan produced {observed}",
                 )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def _parse_findings(

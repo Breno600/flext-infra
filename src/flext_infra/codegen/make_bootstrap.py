@@ -74,7 +74,7 @@ class FlextInfraCodegenMakeBootstrap(FlextInfraCodegenExecutionBase[bool]):
         )
         if conformed.failure:
             return r[bool].from_failure(conformed)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraCodegenMakeBootstrap"]

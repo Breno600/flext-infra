@@ -623,7 +623,7 @@ class FlextInfraMiseWorkspacePlanner:
         )
         if not stat.S_ISDIR(state.st_mode) or reparse:
             return r[bool].fail(f"Mise directory is not physical: {path}")
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraMiseWorkspacePlanner"]

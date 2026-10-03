@@ -1085,7 +1085,7 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
                 return r[bool].from_failure(observed)
             snapshot = state.journal_snapshot(observed.value)
             if snapshot is not None and snapshot.content is None:
-                return r[bool].ok(False)
+                return r[bool].ok(value=False)
             return r[bool].fail("generation recovery has no invocation journal receipt")
         return self._recover(layout, expected=expected)
 
@@ -1104,7 +1104,7 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
             return r[bool].fail(
                 f"generation staging has no journal authority: {residue[0]}",
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def _handle_journal_write_failure(
         self,
@@ -1146,7 +1146,7 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
                     barriers.error or "generation barrier failed",
                 ),
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def _recover_failure(
         self,

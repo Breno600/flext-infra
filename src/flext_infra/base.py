@@ -174,7 +174,7 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
         if report_result.failure:
             return r[bool].from_failure(report_result)
         report = report_result.unwrap()
-        return r[bool].ok(True) if report.passed else r[bool].fail(report.summary)
+        return r[bool].ok(value=True) if report.passed else r[bool].fail(report.summary)
 
     @override
     def execute(self) -> p.Result[TDomainResult]:

@@ -159,7 +159,7 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
 
         """
         if "tests" not in py_file.parts and not py_file.name.startswith("test_"):
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         if not cls._file_contains_tests(py_file):
             compile_result = u.Cli.run_raw(
                 [
@@ -174,7 +174,7 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
             )
             if compile_result.failure:
                 return r[bool].from_failure(compile_result)
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         run_result = u.Cli.run_raw(
             [
                 *cls._workspace_tool_command(workspace, "pytest"),
@@ -194,7 +194,7 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
             run_result.value.outcome.raw_return_code == cls._NO_TESTS_EXIT_CODE
             and cls._has_no_tests_marker(output)
         )
-        return r[bool].ok(True) if passed_or_no_tests else r[bool].fail(output)
+        return r[bool].ok(value=True) if passed_or_no_tests else r[bool].fail(output)
 
     @staticmethod
     def protected_file_edit(

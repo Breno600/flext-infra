@@ -337,7 +337,7 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
         if report_result.failure:
             return r[bool].from_failure(report_result)
         report = report_result.unwrap()
-        return r[bool].ok(True) if report.passed else r[bool].fail(report.summary)
+        return r[bool].ok(value=True) if report.passed else r[bool].fail(report.summary)
 
     def _run_mypy_hints(self, project_dir: Path) -> p.Result[t.StrSequence]:
         """Run mypy and extract install-package hints.

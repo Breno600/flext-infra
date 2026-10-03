@@ -118,7 +118,7 @@ class FlextInfraSonarcloudIssues(FlextInfraSonarcloudClient[bool]):
         )
         for issue in findings:
             u.Cli.info(issue.model_dump_json())
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraSonarcloudIssues"]

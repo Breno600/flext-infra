@@ -162,7 +162,7 @@ class FlextInfraCodegenLayoutApplyMixin(
             if moved.failure:
                 return r[bool].from_failure(moved)
         self._prune_empty_dirs(source)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraCodegenLayoutApplyMixin"]

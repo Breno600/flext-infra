@@ -108,7 +108,7 @@ class FlextInfraCodemodSemanticApply:
             "import_alignment_files": len(alignment.value),
             "future_annotations": len(future_annotations),
         }
-        residue = r[bool].ok(True)
+        residue = r[bool].ok(value=True)
         if future_annotations:
             residue = cls._check_residue(
                 "future-annotations",
@@ -165,7 +165,7 @@ class FlextInfraCodemodSemanticApply:
         if not changed:
             # Every phase just planned against this identical source snapshot.
             # With no publication there is no second state to validate.
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
 
         def validate_published() -> p.Result[bool]:
             published = dict(cls._source_inventory(root, preflight))
@@ -295,7 +295,7 @@ class FlextInfraCodemodSemanticApply:
             return r[bool].fail(
                 f"{phase} phase left residue after application: {files}",
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _verify_fixed_point(
@@ -503,7 +503,7 @@ class FlextInfraCodemodSemanticApply:
                 ),
             )
         if not semantic_plans:
-            return validator() if validator is not None else r[bool].ok(True)
+            return validator() if validator is not None else r[bool].ok(value=True)
         return FlextInfraSemanticPublication.publish_semantic_file_plans(
             semantic_plans,
             repository_root=root,

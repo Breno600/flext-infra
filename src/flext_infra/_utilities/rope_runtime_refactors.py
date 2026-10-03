@@ -51,7 +51,7 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
             m.Infra.SourceRewrite(
                 start=start,
                 end=end,
-                text="".join(prefix + line for line in comments.splitlines(True)),
+                text="".join(prefix + line for line in comments.splitlines(keepends=True)),
             ),
         ]
         for number in range(layout.header_end + 1, layout.body_end + 1):
@@ -278,7 +278,7 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
         if not callable(worder_factory):
             msg = "rope Worder factory is not callable"
             raise TypeError(msg)
-        finder: p.AttributeProbe = worder_factory(source, True)
+        finder: p.AttributeProbe = worder_factory(source, handle_ignores=True)
         return finder
 
 

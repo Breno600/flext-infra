@@ -102,7 +102,7 @@ class FlextInfraUtilitiesGitWorktreeRemovalMixin(
                 f"failed to remove clean worktree: {exc}",
                 exception=exc,
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraUtilitiesGitWorktreeRemovalMixin"]

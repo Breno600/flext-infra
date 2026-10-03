@@ -96,9 +96,9 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
             return r[bool].from_failure(plan)
         if not plan.value.releasable:
             self.logger.info("release_version_none", current=ctx.version)
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         if ctx.dry_run:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         exists = u.Cli.capture([c.Infra.GIT, "tag", "-l", plan.value.tag], cwd=root)
         if exists.failure:
             return r[bool].from_failure(exists)
@@ -188,7 +188,7 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
                 f"found {subject!r}",
             )
         if ctx.dry_run:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         existing = u.Cli.capture(
             [c.Infra.GIT, "rev-list", "-n", "1", ctx.tag],
             cwd=root,
