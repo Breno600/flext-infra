@@ -188,6 +188,10 @@ exclude = [
 {% endif %}
 include = [
   "/src/{{ package_name }}/**",
+{% if hatch_build_hook_path %}
+  {# uv 0.12 builds the wheel FROM the sdist: the declared custom hook must ride in it. #}
+  {{ hatch_build_hook_path | tojson }},
+{% endif %}
 {% for package in root_packages %}
   {{ ("/src/" ~ package ~ "/**") | tojson }},
 {% endfor %}
