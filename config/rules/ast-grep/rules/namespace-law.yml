@@ -9,7 +9,10 @@
 # aliases the own package binds (its modules' __all__), a module's own
 # __all__, and the facade family a module belongs to (__all__ of the module
 # or of its family package's facade, over the tooling import-layer order).
-# No package, alias or file name is listed here.
+# No package, alias or file name is listed here, with one sanctioned
+# exception: the lazy defining module literal in ENFORCE-099, which mirrors
+# the SSOT constant `c.Infra.LAZY_BOOTSTRAP_MODULE` because a static YAML
+# rule cannot read the Python constants catalog.
 
 # ENFORCE-001: every symbol lives inside the module's facade class. A module
 # body holds that one class, its alias binding, __all__ and imports; a
@@ -273,7 +276,14 @@ message: >-
 # root only: a module path below the root is the owner's layout. Runtime
 # aliases are ENFORCE-002's and private paths ban-private-import's; a root
 # import of a name the root does not declare in __all__ is the type
-# checkers' private-import-usage finding.
+# checkers' private-import-usage finding. The one sanctioned literal is the
+# lazy defining module below: every generated consumer initializer imports
+# the lazy helpers from it (contract #1362 — the root bootstrap no longer
+# publishes those names), and a static YAML rule cannot read the Python
+# constants catalog, so the name mirrors the SSOT constant
+# `c.Infra.LAZY_BOOTSTRAP_MODULE` (flext-infra
+# src/flext_infra/_constants/codegen_lazy.py, value "flext_core.lazy");
+# change the two together.
 id: ban-consumer-submodule-import
 language: python
 severity: error
@@ -304,7 +314,9 @@ rule:
               pattern: $MODULE
               regex: "\\."
               not:
-                regex: "\\._"
+                any:
+                  - regex: "\\._"
+                  - regex: "^flext_core\\.lazy$"
         - inside:
             kind: aliased_import
             field: name
@@ -316,12 +328,16 @@ rule:
                 pattern: $MODULE
                 regex: "\\."
                 not:
-                  regex: "\\._"
+                  any:
+                    - regex: "\\._"
+                    - regex: "^flext_core\\.lazy$"
     - kind: dotted_name
       pattern: $MODULE
       regex: "\\."
       not:
-        regex: "\\._"
+        any:
+          - regex: "\\._"
+          - regex: "^flext_core\\.lazy$"
       any:
         - inside:
             kind: import_statement
