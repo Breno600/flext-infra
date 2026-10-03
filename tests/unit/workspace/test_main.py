@@ -1,4 +1,8 @@
-"""Public workspace CLI and facade tests."""
+"""Public workspace CLI and facade tests.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -30,7 +34,8 @@ class TestsFlextInfraWorkspaceMain:
         u.Tests.write_project_beads_config(project_root, name)
         u.Tests.write_workspace_manifest(project_root, name)
         u.Tests.initialize_git_repo(
-            project_root, origin_url=u.Tests.repository_ref(name).url
+            project_root,
+            origin_url=u.Tests.repository_ref(name).url,
         )
 
     def _write_workspace(self, repository_root: Path) -> None:
@@ -46,22 +51,27 @@ class TestsFlextInfraWorkspaceMain:
         return infra_main(args)
 
     def test_unattached_child_does_not_infer_workspace_from_ancestor(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test unattached child does not infer workspace from ancestor."""
         repository_root = tmp_path / "workspace"
         self._write_workspace(repository_root)
         member_root = repository_root / "demo-a"
 
         result = FlextInfraWorkspaceDetector(
-            repository_root=member_root, apply_changes=False
+            repository_root=member_root,
+            apply_changes=False,
         ).execute()
 
         tm.ok(result)
         tm.that(result.value, eq=c.Infra.MakeProfile.STANDALONE)
 
     def test_workspace_main_detect_accepts_explicit_repository_root(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test workspace main detect accepts explicit repository root."""
         repository_root = tmp_path / "workspace"
         self._write_workspace(repository_root)
         member_root = repository_root / "demo-a"
@@ -85,4 +95,5 @@ class TestsFlextInfraWorkspaceMain:
         tm.that(exit_code, eq=0)
 
     def test_workspace_main_without_command_returns_failure(self) -> None:
+        """Test workspace main without command returns failure."""
         tm.that(self._workspace_main([]), eq=1)

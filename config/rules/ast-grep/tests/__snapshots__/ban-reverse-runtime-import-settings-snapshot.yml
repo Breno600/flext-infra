@@ -1,0 +1,22 @@
+id: ban-reverse-runtime-import-settings
+snapshots:
+  from pkg import s:
+    labels:
+    - source: pkg
+      style: primary
+      start: 5
+      end: 8
+    - source: from pkg import s
+      style: secondary
+      start: 0
+      end: 17
+  from pkg.api import FlextFoo:
+    labels:
+    - source: pkg.api
+      style: primary
+      start: 5
+      end: 12
+    - source: from pkg.api import FlextFoo
+      style: secondary
+      start: 0
+      end: 28

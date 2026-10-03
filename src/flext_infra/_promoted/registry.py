@@ -1,4 +1,8 @@
-"""Promoted-command registry state and invariants."""
+"""Promoted-command registry state and invariants.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -16,7 +20,8 @@ class FlextInfraPromotedRegistry:
     def __init__(self) -> None:
         """Initialize an empty command registry."""
         self._commands: t.MutableMappingKV[
-            str, t.MutableMappingKV[str, p.Infra.PromotedCommand]
+            str,
+            t.MutableMappingKV[str, p.Infra.PromotedCommand],
         ] = {}
         self._aliases: t.MutableMappingKV[str, p.Infra.PromotedAliasTarget] = {}
 
@@ -26,17 +31,22 @@ class FlextInfraPromotedRegistry:
         by_what = self._commands.setdefault(command.verb, {})
         if command.what in by_what:
             u.Infra.promoted_fail(
-                message.DUPLICATE_COMMAND, verb=command.verb, what=command.what
+                message.DUPLICATE_COMMAND,
+                verb=command.verb,
+                what=command.what,
             )
         by_what[command.what] = command
         for alias in command.aliases:
             name, separator, what = alias.partition(c.Infra.PromotedSelector.ALIAS)
             target = m.Infra.PromotedAliasTarget(
-                verb=command.verb, what=what.strip() if separator else command.what
+                verb=command.verb,
+                what=what.strip() if separator else command.what,
             )
             if not name.strip() or not target.what:
                 u.Infra.promoted_fail(
-                    message.INVALID_ALIAS, path=command.path, alias=alias
+                    message.INVALID_ALIAS,
+                    path=command.path,
+                    alias=alias,
                 )
             previous = self._aliases.setdefault(name.strip(), target)
             if previous != target:
@@ -81,11 +91,19 @@ class FlextInfraPromotedRegistry:
             else:
                 continue
             u.Infra.promoted_fail(
-                failure, alias=alias, verb=target.verb, what=target.what
+                failure,
+                alias=alias,
+                verb=target.verb,
+                what=target.what,
             )
 
     def resolve_verb(self, verb: str) -> str:
-        """Resolve a public verb or alias to the canonical verb."""
+        """Resolve a public verb or alias to the canonical verb.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         target = self._aliases.get(verb)
         resolved = verb if target is None else target.verb
         if resolved not in self._commands:
@@ -93,15 +111,30 @@ class FlextInfraPromotedRegistry:
         return resolved
 
     def alias_target(self, verb: str) -> p.Infra.PromotedAliasTarget | None:
-        """Return the alias target for a requested verb, if any."""
+        """Return the alias target for a requested verb, if any.
+
+        Returns:
+            The alias target for a requested verb, if any.
+
+        """
         return self._aliases.get(verb)
 
     def commands(self, verb: str) -> t.MappingKV[str, p.Infra.PromotedCommand]:
-        """Return commands registered for a verb or alias."""
+        """Return commands registered for a verb or alias.
+
+        Returns:
+            Commands registered for a verb or alias.
+
+        """
         return self._commands[self.resolve_verb(verb)]
 
     def command(self, verb: str, what: str) -> p.Infra.PromotedCommand:
-        """Return one command by verb and WHAT."""
+        """Return one command by verb and WHAT.
+
+        Returns:
+            One command by verb and WHAT.
+
+        """
         commands = self.commands(verb)
         if what not in commands:
             u.Infra.promoted_fail(
@@ -113,17 +146,32 @@ class FlextInfraPromotedRegistry:
         return commands[what]
 
     def verbs(self) -> t.StrSequence:
-        """Return registered verbs in display order."""
+        """Return registered verbs in display order.
+
+        Returns:
+            Registered verbs in display order.
+
+        """
         return sorted(self._commands)
 
     def aliases_for(self, verb: str) -> t.StrSequence:
-        """Return aliases that point to one canonical verb."""
+        """Return aliases that point to one canonical verb.
+
+        Returns:
+            Aliases that point to one canonical verb.
+
+        """
         return sorted(
             name for name, target in self._aliases.items() if target.verb == verb
         )
 
     def has(self, verb: str, what: str) -> bool:
-        """Return whether a ``(verb, WHAT)`` command is registered."""
+        """Return whether a ``(verb, WHAT)`` command is registered.
+
+        Returns:
+            Whether a ``(verb, WHAT)`` command is registered.
+
+        """
         return what in self._commands.get(verb, {})
 
 

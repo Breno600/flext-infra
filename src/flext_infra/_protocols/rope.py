@@ -42,19 +42,6 @@ class FlextInfraProtocolsRope(Protocol):
         def apply_to_source(self, source: str) -> t.Infra.TransformResult: ...
 
     @runtime_checkable
-    class RopeModuleCallback(Protocol):
-        """Validate or alter one module inside the owner Rope cycle."""
-
-        def __call__(
-            self,
-            workspace: FlextInfraProtocolsRope.RopeWorkspaceDsl,
-            visit: m.Infra.RopeModuleVisit,
-            /,
-        ) -> p.Result[m.Infra.RopeCallbackOutcome]:
-            """Return one typed validation or mutation outcome."""
-            ...
-
-    @runtime_checkable
     class RopeScopeDsl(Protocol):
         """Public scope contract for Rope semantic traversal."""
 
@@ -89,7 +76,10 @@ class FlextInfraProtocolsRope(Protocol):
         def workspace_index(self) -> m.Infra.RopeWorkspaceIndex: ...
 
         def refresh(
-            self, *, preserve_indexes: bool = False, validate_project: bool = True
+            self,
+            *,
+            preserve_indexes: bool = False,
+            validate_project: bool = True,
         ) -> m.Infra.RopeWorkspaceSession: ...
 
         def reload(self) -> m.Infra.RopeWorkspaceSession: ...
@@ -110,19 +100,15 @@ class FlextInfraProtocolsRope(Protocol):
         def module(self, file_path: Path) -> m.Infra.RopeModuleIndexEntry | None: ...
 
         def package(
-            self, package_dir: Path
+            self,
+            package_dir: Path,
         ) -> m.Infra.RopePackageIndexEntry | None: ...
 
         def modules(
-            self, *, project_names: t.StrSequence | None = None
-        ) -> t.SequenceOf[m.Infra.RopeModuleIndexEntry]: ...
-
-        def cycle(
             self,
-            callbacks: t.SequenceOf[m.Infra.RopeCallbackBinding],
             *,
             project_names: t.StrSequence | None = None,
-        ) -> p.Result[m.Infra.RopeCycleReport]: ...
+        ) -> t.SequenceOf[m.Infra.RopeModuleIndexEntry]: ...
 
         def source(self, file_path: Path) -> str: ...
 
@@ -145,7 +131,8 @@ class FlextInfraProtocolsRope(Protocol):
         def layout(self, project_root: Path) -> m.Infra.RopeProjectLayout | None: ...
 
         def package_context(
-            self, package_dir: Path
+            self,
+            package_dir: Path,
         ) -> m.Infra.LazyInitPackageContext: ...
 
         def policy(
@@ -157,7 +144,10 @@ class FlextInfraProtocolsRope(Protocol):
         ) -> m.Infra.NamespaceModulePolicy: ...
 
         def convention(
-            self, file_path: Path, *, rel_path: Path | None = None
+            self,
+            file_path: Path,
+            *,
+            rel_path: Path | None = None,
         ) -> m.Infra.RopeModuleConvention: ...
 
         def semantic(self, file_path: Path) -> m.Infra.ModuleSemanticState: ...
@@ -175,7 +165,8 @@ class FlextInfraProtocolsRope(Protocol):
 
         @staticmethod
         def resolve_module_classes(
-            rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
+            rope_project: t.Infra.RopeProject,
+            resource: t.Infra.RopeResource,
         ) -> t.StrSequence: ...
 
         @staticmethod
@@ -198,21 +189,9 @@ class FlextInfraProtocolsRope(Protocol):
 
         @staticmethod
         def resolve_resource_from_path(
-            rope_project: t.Infra.RopeProject, file_path: Path
+            rope_project: t.Infra.RopeProject,
+            file_path: Path,
         ) -> t.Infra.RopeResource | None: ...
-
-    @runtime_checkable
-    class CensusModuleRule(Protocol):
-        """Call contract shared by the structural census rule scanners.
-
-        Every structural census rule reads one module under census through
-        this one contract, so the census dispatcher owns a single call site
-        instead of one hand-written block per rule.
-        """
-
-        def __call__(
-            self, scan: m.Infra.ModuleScan
-        ) -> tuple[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
 
 
 __all__: list[str] = ["FlextInfraProtocolsRope"]

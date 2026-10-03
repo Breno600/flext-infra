@@ -43,12 +43,33 @@ database, whose location the flext-infra generated configuration owns. Its colle
 inventory uses the same marker scope as execution. The runner accounts for every
 selected and deselected test; it never infers selection from console output. Never clear
 or bypass the database, or invoke the underlying runner directly.
+Concurrent worktrees serialize on the database lease within the same declared suite
+deadline. If the lease cannot be acquired before that deadline's cleanup reserve,
+the invocation fails without reading or writing another run's database state.
+
+The supported Testmon environment combines installed toolchain provenance, the current
+`config/*.yaml` content, and the marker scope of the phase. A config edit selects a fresh
+environment while preserving the same external database, so tests that depend on the
+changed configuration execute again instead of reporting a cache hit.
 
 Run the complete suite through its declared verb:
 
 ```bash
 make test-full
 ```
+
+Use `make profile-test` before optimizing a slow suite, then `make profile-test-report`
+to render the parent and aggregated child profiles. Profiling uses the same Make runner,
+persistent Testmon database, selection, and deadline as `make test`. Each collection
+process, controller, and worker writes its own cProfile artifact under that run's report
+directory; the aggregate includes fixture setup, test calls, and teardown. A failing or
+interrupted profiled run remains RED with its original process outcome. The profile is
+diagnostic evidence, not a substitute for a complete test result.
+
+The suite deadline is declared once as `Infra.tooling.tools.pytest.run-timeout-seconds`
+in `config/tooling.yaml`. The typed runner and generated Make process bound
+derive from that policy. Use the profile and complete run receipts to repair
+a slow owner; an interrupted selection or suite remains a failed invocation.
 
 The runner first completes the incremental operation, then executes the full suite using
 the same database and one monotonic deadline. The first failure stops the sequence. The
@@ -80,6 +101,17 @@ Run the complete verification gate through the same dispatcher:
 make check
 ```
 
+The checker evaluates the current declared repository. An omitted project selection
+never expands to nested members; a root without project metadata fails even if it
+contains declared members. Fleet orchestration invokes each repository's own lifecycle.
+
+Conformance can explicitly select multiple repository owners for one generation
+transaction. Lazy-init opens a separate Rope index for each selected owner and combines
+the authenticated inputs and publication plans; it never widens the parent's implicit
+scan to include submodules. A module target must resolve in exactly one selected owner.
+Missing or ambiguous targets fail before publication, and repeated generation verifies
+the complete selected set.
+
 Selectors such as project names, file names, patterns, or changed-only flags are not
 part of this command surface. If a required workflow is missing, repair the root Make
 owner and rerun its declared verb.
@@ -100,3 +132,8 @@ Do not edit a member projection by hand.
 - Development
 - Troubleshooting
 - Testing standards
+
+Private attribute usage is enforced by Pyright's resolved owner and export semantics in
+source, tests, examples, and scripts according to the typed path policy. The
+`ban-test-private-access` ast-grep rule retains only dynamic private-module imports; it
+does not duplicate semantic attribute detection or require deleting test scenarios.

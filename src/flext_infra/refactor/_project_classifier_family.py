@@ -1,4 +1,8 @@
-"""FLEXT family-chain discovery + project-kind inference — extracted concern."""
+"""FLEXT family-chain discovery + project-kind inference — extracted concern.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -31,27 +35,43 @@ class FlextInfraProjectClassifierFamilyMixin:
     def _discover_facade_inheritance(
         self,
     ) -> t.Pair[t.MappingKV[str, t.Infra.StrSet], t.Infra.StrSet]:
-        """Discover facade inheritance."""
+        """Discover facade inheritance.
+
+        Returns:
+            The resulting ``t.Pair[t.MappingKV[str, t.Infra.StrSet], t.Infra.StrSet]``.
+
+        """
+        families = u.Infra.facade_families()
         family_bases: t.MappingKV[str, t.Infra.StrSet] = {
-            family: set() for family in c.Infra.FAMILY_SUFFIXES
+            family: set() for family in families
         }
         local_facade_classes: t.Infra.StrSet = set()
         if not self._src_path.is_dir():
             return (family_bases, local_facade_classes)
-        for family, suffix in c.Infra.FAMILY_SUFFIXES.items():
-            file_pattern = c.Infra.FAMILY_FILES[family]
+        for family, declared in families.items():
             for file_path in u.Infra.iter_matching_files(
-                self._src_path, includes=[file_pattern]
+                self._src_path,
+                includes=[f"*{declared.module}{c.Infra.EXT_PYTHON}"],
             ):
-                class_bases, class_names = self._parse_family_file(file_path, suffix)
+                class_bases, class_names = self._parse_family_file(
+                    file_path,
+                    declared.suffix,
+                )
                 family_bases[family].update(class_bases)
                 local_facade_classes.update(class_names)
         return (family_bases, local_facade_classes)
 
     def _parse_family_file(
-        self, file_path: Path, suffix: str
+        self,
+        file_path: Path,
+        suffix: str,
     ) -> t.Pair[t.Infra.StrSet, t.Infra.StrSet]:
-        """Parse family file."""
+        """Parse family file.
+
+        Returns:
+            The resulting ``t.Pair[t.Infra.StrSet, t.Infra.StrSet]``.
+
+        """
         source = u.Cli.files_read_text(file_path).unwrap()
         base_names: t.Infra.StrSet = set()
         class_names: t.Infra.StrSet = set()
@@ -76,11 +96,17 @@ class FlextInfraProjectClassifierFamilyMixin:
         internal_dependencies: t.StrSequence,
         family_bases: t.MappingKV[str, t.Infra.StrSet],
     ) -> t.MappingKV[str, t.StrSequence]:
-        """Build confirmed family chains."""
+        """Build confirmed family chains.
+
+        Returns:
+            The resulting ``t.MappingKV[str, t.StrSequence]``.
+
+        """
         family_chains: MutableMapping[str, t.StrSequence] = {}
-        for family, suffix in c.Infra.FAMILY_SUFFIXES.items():
+        for family, declared in u.Infra.facade_families().items():
             expected_parents = self._expected_parents_for_family(
-                family_suffix=suffix, internal_dependencies=internal_dependencies
+                family_suffix=declared.suffix,
+                internal_dependencies=internal_dependencies,
             )
             confirmed_bases = family_bases.get(family, set())
             confirmed_expected = [
@@ -93,9 +119,17 @@ class FlextInfraProjectClassifierFamilyMixin:
         return family_chains
 
     def _expected_parents_for_family(
-        self, *, family_suffix: str, internal_dependencies: t.StrSequence
+        self,
+        *,
+        family_suffix: str,
+        internal_dependencies: t.StrSequence,
     ) -> t.StrSequence:
-        """Return the expected parents for a family."""
+        """Return the expected parents for a family.
+
+        Returns:
+            The expected parents for a family.
+
+        """
         expected: t.MutableSequenceOf[str] = []
         for dependency in internal_dependencies:
             stem = self._dependency_to_class_stem(dependency)
@@ -107,7 +141,12 @@ class FlextInfraProjectClassifierFamilyMixin:
         return expected
 
     def _dependency_to_class_stem(self, dependency: str) -> str:
-        """Dependency to class stem."""
+        """Dependency to class stem.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         normalized = self._normalize_dependency_name(dependency)
         if normalized == c.Infra.PKG_CORE:
             return "Flext"
@@ -122,13 +161,18 @@ class FlextInfraProjectClassifierFamilyMixin:
             return ""
         return "".join(part.capitalize() for part in parts)
 
+    @staticmethod
     def _infer_project_kind(
-        self,
         *,
         internal_dependencies: t.StrSequence,
         local_facade_classes: t.Infra.StrSet,
     ) -> str:
-        """Infer project kind."""
+        """Infer project kind.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         if not internal_dependencies:
             return "core"
         has_domain_dependency = any(
