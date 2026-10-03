@@ -221,7 +221,8 @@ class FlextInfraUtilitiesPyprojectRequirements:
             candidate_url, candidate_commit = selected.value
             if not FlextInfraUtilitiesRepository.ref_is_commit(candidate_commit):
                 return r[str].fail(
-                    f"candidate dependency must pin a full Git commit: {dependency_name}",
+                    f"candidate dependency must pin a full Git commit: "
+                    f"{dependency_name}",
                 )
             if url and url != candidate_url:
                 return r[str].fail(

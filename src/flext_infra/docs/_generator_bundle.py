@@ -195,7 +195,11 @@ class FlextInfraDocGeneratorBundleMixin:
                             if normalized_content is None
                             else normalized_content.encode(c.Cli.ENCODING_DEFAULT)
                         ),
-                        desired_mode=0o644 if normalized_content is not None else None,
+                        desired_mode=(
+                            c.Infra.DOCS_ARTIFACT_MODE
+                            if normalized_content is not None
+                            else None
+                        ),
                     ),
                 )
             normalized_scopes.append(

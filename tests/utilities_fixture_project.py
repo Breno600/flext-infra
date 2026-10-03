@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_tests import tm
+from packaging.utils import canonicalize_name
 
 from flext_infra import config, u
 from tests import c, m, t
@@ -86,7 +87,10 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
         """Declare one internal distribution's direct Git source for a fixture.
 
         Defaults to the infrastructure distribution; every internal flext
-        requirement a governed checkout declares carries its own source.
+        requirement a governed checkout declares carries its own source. The
+        name is PEP 503-canonicalized, so a project spec's upstream import name
+        (``flext_core``) and its distribution (``flext-core``) declare the same
+        repository.
 
         Returns:
             The resulting ``str``.
@@ -95,6 +99,7 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
         fixture = TestsFlextInfraUtilitiesProjectFixtureMixin
         if distribution is None:
             distribution = config.Infra.codegen.infra_repository.distribution
+        distribution = canonicalize_name(distribution)
         return (
             f"{distribution} @ git+{fixture.provider().base_url.rstrip('/')}/"
             f"{distribution}.git@{fixture.provider_branch()}"

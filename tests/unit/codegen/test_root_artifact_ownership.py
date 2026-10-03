@@ -159,11 +159,11 @@ class TestsFlextInfraRootArtifactOwnership:
         tm.ok(infra.codegen_conform(request))
         manual = {"custom.mk": b"# manual project extension\n"}
         (root / "custom.mk").write_bytes(manual["custom.mk"])
-        configured_policy = next(
-            item.policy
+        configured_policies = {
+            root / item.path: item.policy
             for item in config.Infra.codegen.managed_files
-            if item.path == Path(c.Infra.MAKEFILE_FILENAME)
-        )
+            if item.path.as_posix() in c.Infra.MAKEFILE_BOOTSTRAP_DESTINATIONS
+        }
         before = tuple(
             sorted(
                 (path.relative_to(root).as_posix(), path.read_bytes())
@@ -175,8 +175,10 @@ class TestsFlextInfraRootArtifactOwnership:
         first = infra.codegen_conform(request)
         result = tm.ok(first)
         governed = tuple(file for file in result.plan.files if file.policy is not None)
-        tm.that(tuple(file.path for file in governed), eq=(root / "Makefile",))
-        tm.that(governed[0].policy, eq=configured_policy)
+        tm.that(
+            {file.path: file.policy for file in governed},
+            eq=configured_policies,
+        )
         tm.that(result.written_files, eq=())
         after = tuple(
             sorted(
@@ -192,8 +194,9 @@ class TestsFlextInfraRootArtifactOwnership:
     class TestsConformPlanNetworkBoundary:
         """The conform plan is a repository-local, offline inventory."""
 
+        @staticmethod
         @pytest.mark.slow
-        def test_plan_never_fetches_origin(self, infra_git_repo: Path) -> None:
+        def test_plan_never_fetches_origin(infra_git_repo: Path) -> None:
             """Planning consumes the existing origin ref without network access."""
             root = infra_git_repo
             dist = u.Tests.repository_ref(config.Infra.name).distribution

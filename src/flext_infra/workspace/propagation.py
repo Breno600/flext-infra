@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
 from flext_infra import c, config, m, p, s, u
@@ -26,6 +26,18 @@ class FlextInfraWorkspacePropagation(s[bool]):
     every member checkout is left on its integration branch, so a rerun
     continues the same lanes and commits nothing new.
     """
+
+    conform_collaborators: Annotated[
+        m.Infra.CodegenConformPorts | None,
+        m.Field(
+            default=None,
+            exclude=True,
+            description=(
+                "Docs port bound by the FlextInfra facade; the settling "
+                "conform fails before any effect without it"
+            ),
+        ),
+    ]
 
     @override
     def execute(self) -> p.Result[bool]:
@@ -97,7 +109,10 @@ class FlextInfraWorkspacePropagation(s[bool]):
                 subject=c.Infra.PROPAGATION_COMMIT_SUBJECT,
                 body_file=body.value,
             ),
-            lambda: FlextInfraCodegenConform.settle_repository(member_root),
+            lambda: FlextInfraCodegenConform.settle_repository(
+                member_root,
+                ports=self.conform_collaborators,
+            ),
         )
         if published.failure:
             return published

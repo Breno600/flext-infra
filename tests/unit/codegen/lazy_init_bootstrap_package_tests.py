@@ -108,11 +108,21 @@ class TestsFlextInfraLazyInitBootstrapPackage:
         tm.that(rendered, lacks=f"from {c.Infra.LAZY_BOOTSTRAP_MODULE} import")
         tm.that(rendered, lacks="install_lazy_exports")
 
+    @staticmethod
+    def _helpers_import(module: str) -> str:
+        """Return the helpers import line a generated initializer opens with.
+
+        Returns:
+            The resulting ``str``.
+
+        """
+        return f"from {module} import {', '.join(c.Infra.LAZY_BOOTSTRAP_HELPERS)}"
+
     def test_other_distributions_import_the_helpers_from_the_bootstrap_root(
         self,
         tmp_path: Path,
     ) -> None:
-        """Packages outside the bootstrap owner import the published helpers."""
+        """Packages outside the bootstrap owner import the publishing root."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         consumer_facet = self._write_bootstrap_owner(package_root, "_models")
 
@@ -124,13 +134,52 @@ class TestsFlextInfraLazyInitBootstrapPackage:
         tm.that(result, eq=0)
         tm.that(
             init_content,
-            contains=(
-                f"from {c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE} import "
-                f"{', '.join(c.Infra.LAZY_BOOTSTRAP_HELPERS)}"
-            ),
+            contains=self._helpers_import(c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE),
         )
         tm.that(init_content, lacks=f"from {c.Infra.LAZY_BOOTSTRAP_MODULE} import")
         tm.that(init_content, contains="FlextModelsPart")
+
+    def test_bootstrap_owner_never_imports_the_helpers_from_its_own_root(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """The bootstrap owner's initializers never bind a helper to itself.
+
+        Its root re-exports the helpers, so an initializer of the bootstrap
+        owner that imported them from that root would bind each helper to
+        itself: the facade-owner derivation of every consumer's ``make gen``
+        raised ``cyclic facade binding: flext_core.build_lazy_import_map``
+        and the import itself re-entered a partially initialized module.
+        """
+        repository_root, package_root = u.Tests.create_lazy_init_workspace(
+            tmp_path,
+            project_name=c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE.replace("_", "-"),
+            package_name=c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE,
+        )
+        public_facet = self._write_bootstrap_owner(package_root, "_models")
+        (package_root / "models.py").write_text(
+            '"""Bootstrap root model facade."""\n\n'
+            "class FlextModels:\n"
+            '    """Root model facade."""\n\n'
+            '__all__ = ["FlextModels"]\n',
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+
+        result = u.Tests.run_lazy_init(repository_root)
+
+        tm.that(result, eq=0)
+        for package_dir in (package_root, public_facet):
+            init_content = (package_dir / c.Infra.INIT_PY).read_text(
+                encoding=c.Cli.ENCODING_DEFAULT,
+            )
+            tm.that(
+                init_content,
+                contains=self._helpers_import(c.Infra.LAZY_BOOTSTRAP_MODULE),
+            )
+            tm.that(
+                init_content,
+                lacks=self._helpers_import(c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE),
+            )
 
     @staticmethod
     def test_bootstrap_root_publishes_the_helpers_it_owns(

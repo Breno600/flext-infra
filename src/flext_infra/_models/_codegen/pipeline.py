@@ -113,9 +113,8 @@ class FlextInfraModelsCodegenPipelineModels:
     class CodegenConformPorts(m.ArbitraryTypesModel):
         """Collaborators the complete conform crosses into, wired by the facade.
 
-        Docs rendering and fresh-import validation are other service families;
-        the composition root binds their implementations once and conform only
-        consumes these ports.
+        Docs rendering is another service family; the composition root binds
+        its implementation once and conform only consumes this port.
         """
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
@@ -127,10 +126,6 @@ class FlextInfraModelsCodegenPipelineModels:
         docs_planner: Annotated[
             p.Infra.DocsArtifactPlannerFactory,
             m.Field(description="Builds the docs planner for one conform scope"),
-        ]
-        fresh_import: Annotated[
-            p.Infra.FreshImportProbeFactory,
-            m.Field(description="Builds the fresh-import probe for one repository"),
         ]
 
     class CodegenPipelineState(m.ArbitraryTypesModel):

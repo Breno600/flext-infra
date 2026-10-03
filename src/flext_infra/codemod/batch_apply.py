@@ -196,11 +196,18 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                     f"{current.actionable} AST and {current_text.actionable} text "
                     "actionable findings; changes retained for mandatory owner repair",
                 )
-            owned = FlextInfraModReplacements.require_authored(current.entries)
-            if owned.failure:
-                return r[t.Cli.ResultValue].from_failure(owned)
-            # Repair reports non-rewritable defects; check owns their verdict,
-            # and the Ruff, Pyrefly and Pyright findings are check's alone.
+            # Repair reports what it cannot own; check owns every verdict. A
+            # generated file is never written here: its findings are repaired
+            # by the canonical generator (make gen), never a reason for this
+            # repair verb to fail (operator ruling 2026-10-02: repair verbs
+            # never deadlock).
+            generated = FlextInfraModReplacements.generator_owned(current.entries)
+            if generated:
+                self.progress.emit(
+                    f"mod: {len(generated)} generated finding(s) remain for "
+                    f"canonical generator repair: {', '.join(generated)}",
+                )
+            # Ruff, Pyrefly and Pyright findings are check's alone.
             if current.detection_only or current.non_actionable_with_fix:
                 detection_rules = sorted({
                     finding.rule_id
@@ -267,8 +274,9 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             rule_ids = {r for r, _, _, _ in unresolved}
             files = {p for _, p, _, _ in unresolved}
             msg = (
-                f"fix!=match: ast-grep apply did not resolve {len(unresolved)} expected actionable "
-                f"findings in rules {sorted(rule_ids)} across files {sorted(files)}"
+                f"fix!=match: ast-grep apply did not resolve {len(unresolved)} "
+                f"actionable findings in rules {sorted(rule_ids)} "
+                f"across files {sorted(files)}"
             )
             raise RuntimeError(msg)
         # A completed rule may enable a later rule in the declared cascade.
@@ -282,8 +290,9 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             rule_ids = {r for r, _, _, _ in unexpected}
             files = {p for _, p, _, _ in unexpected}
             msg = (
-                f"fix!=match: ast-grep apply introduced {len(unexpected)} new actionable "
-                f"findings in rules {sorted(rule_ids)} across files {sorted(files)}"
+                f"fix!=match: ast-grep apply introduced {len(unexpected)} new "
+                f"actionable findings in rules {sorted(rule_ids)} "
+                f"across files {sorted(files)}"
             )
             raise RuntimeError(msg)
 

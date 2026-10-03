@@ -8,10 +8,12 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 {%- endif %}
 
-{% if runtime_import_lines %}{{ runtime_import_lines }}
-{% endif %}{% if type_checking_lines %}
+{{ runtime_import_lines }}
+{% if type_checking_lines %}
 {{ type_checking_lines }}
-{% endif %}{{ blank_lines_before_exports }}__all__: tuple[str, ...] = {{ exports_tuple }}
+
+{% endif %}
+__all__: tuple[str, ...] = {{ exports_tuple }}
 
 _LAZY_IMPORTS = MappingProxyType(
     build_lazy_import_map(

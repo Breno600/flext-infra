@@ -32,7 +32,8 @@ class FlextInfraMarkdownFormatGate(FlextInfraMarkdownGateBase):
     scanner_binary: ClassVar[str] = c.Infra.PRETTIER_BINARY
     can_fix: ClassVar[bool] = True
 
-    def _resolve_config_args(self, project_dir: Path) -> t.StrSequence:
+    @staticmethod
+    def _resolve_config_args(project_dir: Path) -> t.StrSequence:
         """Resolve only the repository-local prettier settings owner.
 
         Returns:
@@ -44,7 +45,8 @@ class FlextInfraMarkdownFormatGate(FlextInfraMarkdownGateBase):
             return ()
         return ["--config", str(config_path.resolve())]
 
-    def _resolve_ignore_args(self, project_dir: Path) -> t.StrSequence:
+    @staticmethod
+    def _resolve_ignore_args(project_dir: Path) -> t.StrSequence:
         """Point ``--ignore-path`` at the generated ignore projection, when present.
 
         Returns:

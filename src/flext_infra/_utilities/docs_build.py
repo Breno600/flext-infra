@@ -48,13 +48,20 @@ class FlextInfraUtilitiesDocsBuild:
         settings: Path,
         site_dir: Path,
     ) -> MutableMapping[str, p.AttributeProbe]:
-        """Load and validate a MkDocs config mapping.
+        """Load and validate one declared MkDocs config mapping.
+
+        The settings path goes through ``config_file`` (MkDocs 1.6) and the
+        output directory is pinned on the loaded mapping afterwards: a stale
+        keyword made MkDocs absorb both into ``**kwargs`` and fall back to
+        whatever ``mkdocs.yml`` the working directory held.
 
         Returns:
             The resulting ``MutableMapping[str, p.AttributeProbe]``.
 
         """
-        return load(config_file_path=str(settings), site_dir=str(site_dir))
+        config_obj = load(str(settings))
+        config_obj["site_dir"] = str(site_dir)
+        return config_obj
 
     @staticmethod
     def docs_mkdocs_config_files(scope: m.Infra.DocScope) -> t.VariadicTuple[Path]:
@@ -115,7 +122,10 @@ class FlextInfraUtilitiesDocsBuild:
         if len(configs) > 1:
             return primary_report.model_copy(
                 update={
-                    "reason": f"{primary_report.reason}; product mkdocs.yaml also built",
+                    "reason": (
+                        f"{primary_report.reason}; "
+                        "product mkdocs.yaml also built"
+                    ),
                 },
             )
         return primary_report
@@ -129,7 +139,9 @@ class FlextInfraUtilitiesDocsBuild:
     ) -> m.Infra.DocsPhaseReport:
         """Build one MkDocs config file into a site directory.
 
-        A MkDocs failure escapes with its own exception and traceback.
+        A MkDocs failure becomes the phase's ``FAIL`` report — the phase
+        result, not a raised exception, is the reporting contract every
+        caller (``execute`` above all) consumes.
 
         Returns:
             The resulting ``m.Infra.DocsPhaseReport``.
@@ -140,7 +152,17 @@ class FlextInfraUtilitiesDocsBuild:
             / c.Infra.DEFAULT_DOCS_OUTPUT_DIR
             / f"{c.Infra.DIR_SITE}{site_suffix}"
         ).resolve()
-        FlextInfraUtilitiesDocsBuild._run_mkdocs_api(settings, site_dir)
+        try:
+            FlextInfraUtilitiesDocsBuild._run_mkdocs_api(settings, site_dir)
+        except Exception as exc:  # ruff: ignore[blind-except] - reported, not swallowed
+            return m.Infra.DocsPhaseReport(
+                phase="build",
+                scope=scope.name,
+                result=c.Infra.ResultStatus.FAIL,
+                reason=f"build failed ({settings.name}): {exc}",
+                site_dir="",
+                passed=False,
+            )
         return m.Infra.DocsPhaseReport(
             phase="build",
             scope=scope.name,

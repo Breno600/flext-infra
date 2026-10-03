@@ -124,7 +124,10 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
             FileNotFoundError: If setup did not provision.
 
         """
-        TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(root)
+        # Provisioning a runtime never rewrites a checkout's declared identity:
+        # an existing checkout keeps its origin, only a bare root becomes one.
+        if not (root / c.Infra.GIT_DIR).exists():
+            TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(root)
         provisioned = Path(sys.executable).parent
         bin_dir = u.Infra.runtime_environment_dir(root) / provisioned.name
         bin_dir.mkdir(parents=True, exist_ok=True)

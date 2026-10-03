@@ -11,8 +11,6 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from flext_core import build_lazy_import_map, install_lazy_exports
-
-
 from flext_infra.__version__ import (
     __author__,
     __author_email__,
@@ -130,6 +128,7 @@ if TYPE_CHECKING:
     from flext_infra.gates.base_gate import FlextInfraGate
     from flext_infra.gates.direnv import FlextInfraDirenvGate
     from flext_infra.gates.duplication import FlextInfraDuplicationGate
+    from flext_infra.gates.fresh_import import FlextInfraFreshImportGate
     from flext_infra.gates.index_declarations import FlextInfraIndexDeclarationsGate
     from flext_infra.gates.layout import FlextInfraLayoutGate
     from flext_infra.gates.loc_cap import FlextInfraLocCapGate
@@ -150,6 +149,8 @@ if TYPE_CHECKING:
     from flext_infra.maintenance.clean import FlextInfraCleanService
     from flext_infra.maintenance.python_version import FlextInfraPythonVersionEnforcer
     from flext_infra.maintenance.sonarcloud import FlextInfraSonarcloudSettingsSync
+    from flext_infra.maintenance.sonarcloud_client import FlextInfraSonarcloudClient
+    from flext_infra.maintenance.sonarcloud_issues import FlextInfraSonarcloudIssues
     from flext_infra.models import FlextInfraModels, m
     from flext_infra.promoted import FlextInfraPromoted
     from flext_infra.protocols import FlextInfraProtocols, FlextInfraProtocolsBase, p
@@ -274,6 +275,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraEnsureRuffConfigPhase",
     "FlextInfraExtraPathsManager",
     "FlextInfraFlextBindingService",
+    "FlextInfraFreshImportGate",
     "FlextInfraGate",
     "FlextInfraGateRegistry",
     "FlextInfraGitService",
@@ -326,6 +328,8 @@ __all__: tuple[str, ...] = (
     "FlextInfraSettings",
     "FlextInfraSkillValidator",
     "FlextInfraSmellsGate",
+    "FlextInfraSonarcloudClient",
+    "FlextInfraSonarcloudIssues",
     "FlextInfraSonarcloudSettingsSync",
     "FlextInfraStubSupplyChain",
     "FlextInfraTestmonDbInspector",
@@ -468,6 +472,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".gates.base_gate": ("FlextInfraGate",),
             ".gates.direnv": ("FlextInfraDirenvGate",),
             ".gates.duplication": ("FlextInfraDuplicationGate",),
+            ".gates.fresh_import": ("FlextInfraFreshImportGate",),
             ".gates.index_declarations": ("FlextInfraIndexDeclarationsGate",),
             ".gates.layout": ("FlextInfraLayoutGate",),
             ".gates.loc_cap": ("FlextInfraLocCapGate",),
@@ -489,6 +494,8 @@ _LAZY_IMPORTS = MappingProxyType(
             ".maintenance.clean": ("FlextInfraCleanService",),
             ".maintenance.python_version": ("FlextInfraPythonVersionEnforcer",),
             ".maintenance.sonarcloud": ("FlextInfraSonarcloudSettingsSync",),
+            ".maintenance.sonarcloud_client": ("FlextInfraSonarcloudClient",),
+            ".maintenance.sonarcloud_issues": ("FlextInfraSonarcloudIssues",),
             ".models": ("FlextInfraModels", "m"),
             ".promoted": ("FlextInfraPromoted",),
             ".protocols": ("FlextInfraProtocols", "FlextInfraProtocolsBase", "p"),

@@ -56,7 +56,10 @@ class FlextInfraCodegenFileLeases:
                 ).unwrap()
                 != scope
             ):
-                msg = f"mutation Git ownership changed before lease acquisition: {scope.root}"
+                msg = (
+                    f"mutation Git ownership changed before lease "
+                    f"acquisition: {scope.root}"
+                )
                 raise ValueError(msg)
             yield
 
@@ -114,7 +117,10 @@ class FlextInfraCodegenFileLeases:
                         participant.root,
                     ).unwrap()
                     if physical != (participant.device, participant.inode):
-                        msg = f"file publication root changed during lease: {participant.root}"
+                        msg = (
+                            f"file publication root changed during lease: "
+                            f"{participant.root}"
+                        )
                         raise ValueError(msg)
                 yield
         finally:

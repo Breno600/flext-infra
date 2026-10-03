@@ -25,7 +25,9 @@ class FlextInfraModelsGitWorktreeState:
         git_dir: Annotated[
             Path | None,
             m.Field(
-                description="Validated worktree Git directory, absent only for file scopes",
+                description=(
+                    "Validated worktree Git directory, absent only for file scopes"
+                ),
             ),
         ]
 
@@ -93,7 +95,9 @@ class FlextInfraModelsGitWorktreeState:
         content: Annotated[
             bytes | None,
             m.Field(
-                description="Raw working bytes; link text for symlinks, None when absent",
+                description=(
+                    "Raw working bytes; link text for symlinks, None when absent"
+                ),
             ),
         ]
         mode: Annotated[str, m.Field(description="Git mode for raw bytes or symlink")]
@@ -147,7 +151,9 @@ class FlextInfraModelsGitWorktreeState:
         retained_commits: Annotated[
             t.VariadicTuple[str],
             m.Field(
-                description="Additional resolved commits retained by checkpoint ancestry",
+                description=(
+                    "Additional resolved commits retained by checkpoint ancestry"
+                ),
             ),
         ] = ()
         head_entries: Annotated[
@@ -197,7 +203,9 @@ class FlextInfraModelsGitWorktreeState:
         worktree_commit: Annotated[
             str,
             m.Field(
-                description="Reachable commit retaining raw working bytes and snapshot metadata",
+                description=(
+                    "Reachable commit retaining raw working bytes and snapshot metadata"
+                ),
             ),
         ]
 

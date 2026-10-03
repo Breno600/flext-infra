@@ -20,10 +20,10 @@ from tests import t, u
 class TestsFlextInfraWorkspaceMemberLedgerIdentity:
     """Prove parent and member identities remain in their own coordinates."""
 
+    @staticmethod
     @pytest.mark.parametrize("root_produces_activation", [False, True])
     @pytest.mark.parametrize("member_produces_activation", [False, True])
     def test_manifest_load_preserves_each_activation_producer(
-        self,
         tmp_path: Path,
         *,
         root_produces_activation: bool,

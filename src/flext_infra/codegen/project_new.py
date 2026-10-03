@@ -31,7 +31,7 @@ class FlextInfraCodegenProjectNew(
         str,
         m.Field(
             min_length=1,
-            description="Distribution name in kebab-case (e.g. flext-demo / acme-demo).",
+            description="Distribution name in kebab-case (e.g. flext-demo).",
         ),
     ]
     kind: Annotated[
@@ -132,8 +132,8 @@ class FlextInfraCodegenProjectNew(
             default=None,
             exclude=True,
             description=(
-                "Docs and fresh-import ports bound by FlextInfra.codegen_new; the "
-                "scaffold conform fails before any effect without them"
+                "Docs port bound by FlextInfra.codegen_new; the scaffold "
+                "conform fails before any effect without it"
             ),
         ),
     ]

@@ -14,10 +14,7 @@ from flext_infra import c, config, m, p, t, u
 from flext_infra.codegen._conform.pyproject_policy import (
     FlextInfraCodegenConformPyprojectPolicy,
 )
-from flext_infra.deps import (
-    FlextInfraEnsurePackagingPhase,
-    FlextInfraEnsureRuffConfigPhase,
-)
+from flext_infra.deps import FlextInfraEnsurePackagingPhase
 
 
 class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPolicy):
@@ -396,14 +393,9 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 dependency_profile=dependency_profile,
                 tooling=config.Infra.tooling,
                 # The in-place pyproject edit and this render read the same
-                # fleet exemption map, scoped to the project.
+                # fleet exemption map, unchanged for every project.
                 ruff_per_file_ignores=(
-                    FlextInfraEnsureRuffConfigPhase.compose_per_file_ignores(
-                        repository_root,
-                        global_ignores=(
-                            config.Infra.tooling.tools.ruff.lint.per_file_ignores
-                        ),
-                    )
+                    config.Infra.tooling.tools.ruff.lint.per_file_ignores
                 ),
                 environment_path_prepends=(codegen.toolchain.environment_path_prepends),
                 beads=workspace.beads,
@@ -542,9 +534,9 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         with. Rendering ``project_id: null`` over it dirties the tree (the
         generated-drift check goes red) and, worse, a pushed rewrite would
         strand every clone's identity — the same class of loss already
-        observed in a consumer rig. When identity.toml is absent, read the id back from the
-        existing marker so an unminted checkout preserves the identity it
-        cloned instead of clobbering it.
+        observed in a consumer rig. When identity.toml is absent, read the id
+        back from the existing marker so an unminted checkout preserves the
+        identity it cloned instead of clobbering it.
 
         Returns:
             The checkout's own ledger identity, or None if unminted.

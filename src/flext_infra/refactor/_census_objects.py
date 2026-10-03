@@ -185,13 +185,15 @@ class FlextInfraRefactorCensusObjectsMixin:
             cls._append_impact_change(
                 changes_by_file,
                 source_path,
-                f"{candidate.suggested_action}: {candidate.object_name} ({candidate.reason})",
+                f"{candidate.suggested_action}: {candidate.object_name} "
+                f"({candidate.reason})",
             )
             for site in cls._reference_sites(candidate):
                 cls._append_impact_change(
                     changes_by_file,
                     Path(site.file_path),
-                    f"remove reference to {candidate.object_name} at line {site.line} ({site.surface})",
+                    f"remove reference to {candidate.object_name} "
+                    f"at line {site.line} ({site.surface})",
                 )
         return tuple(
             m.Infra.Result(
