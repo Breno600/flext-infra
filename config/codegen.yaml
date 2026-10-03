@@ -111,14 +111,15 @@ Infra:
       # The Mise release `make upg` writes to every project's mise.version and
       # bakes into bin/mise and bin/mise.cmd. make upg resolves the hold under
       # the dependency cooldown, so a hold younger than the cooldown resolves
-      # nothing and stops upg. Held at 2026.9.13, the newest release the 7-day
-      # cooldown admits (measured 2026-10-01: mise latest github:jdx/mise
-      # returns 2026.9.13 with MISE_MINIMUM_RELEASE_AGE=7d, and nothing for
-      # @2026.9.16). The hold also keeps out 2026.9.17, whose artifact fails
-      # the receipt check ("Mise receipt returned invalid version"). Move it
-      # only to a release outside the cooldown that passes that check.
+      # nothing and stops upg. 2026.9.16 is the fleet floor the consumers
+      # already carry (ai-hub measured green 2026-10-03) and the oldest pin
+      # that reads the v3 mise.lock the upg lock pass writes; 2026.9.13
+      # refuses that lock ("mise.lock does not satisfy .mise.toml"), which
+      # broke setup, gen and CI on every fresh checkout of this tip. The
+      # 2026.9.17 artifact fails the receipt check ("Mise receipt returned
+      # invalid version") — keep it out.
       mise_selector: github:jdx/mise
-      mise_version: "2026.9.13"
+      mise_version: "2026.9.16"
       # The caller supplies GITHUB_TOKEN through the declared environment.
       # Bootstrap never reads a keyring or runs a credential command.
       # Projection: .mise.toml [tools] keys. Override the selector here.

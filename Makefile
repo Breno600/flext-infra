@@ -699,14 +699,14 @@ mise_checked() { \
 	mise_receipt runtime-version "$$pinned_mise"; \
 	runtime_release="$$receipt_release"; \
 	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
-		mise_checked_stdout "$$scratch/resolve.stdout" "$$scratch/resolve.stderr" mise_exec no-config env MISE_CACHE_DIR="$$scratch/resolve-cache" MISE_FETCH_REMOTE_VERSIONS_CACHE=0s "$$pinned_mise" latest github:jdx/mise@2026.9.13; \
+		mise_checked_stdout "$$scratch/resolve.stdout" "$$scratch/resolve.stderr" mise_exec no-config env MISE_CACHE_DIR="$$scratch/resolve-cache" MISE_FETCH_REMOTE_VERSIONS_CACHE=0s "$$pinned_mise" latest github:jdx/mise@2026.9.16; \
 		resolved_release=$$(cat "$$scratch/resolve.stdout"); \
 		if ! printf '%s\n' "$$resolved_release" | grep -Eq '^[0-9]+(\.[0-9]+){2}$$'; then \
-			mise ls-remote github:jdx/mise@2026.9.13 >"$$scratch/lsremote.stdout" 2>"$$scratch/lsremote.stderr" || true; \
+			mise ls-remote github:jdx/mise@2026.9.16 >"$$scratch/lsremote.stdout" 2>"$$scratch/lsremote.stderr" || true; \
 			resolved_release=$$(grep -E '^[0-9]+(\.[0-9]+){2}$$' "$$scratch/lsremote.stdout" | tail -1); \
 		fi; \
 		if ! printf '%s\n' "$$resolved_release" | grep -Eq '^[0-9]+(\.[0-9]+){2}$$'; then \
-			printf 'ERROR: mise latest github:jdx/mise@2026.9.13 returned an invalid release: %s\n' "$$resolved_release" >&2; exit 2; \
+			printf 'ERROR: mise latest github:jdx/mise@2026.9.16 returned an invalid release: %s\n' "$$resolved_release" >&2; exit 2; \
 		fi; \
 		caller_mise_version="$$resolved_release"; \
 		mise_receipt resolved-version "$$pinned_mise"; \
@@ -759,7 +759,21 @@ mise_checked() { \
 			cat "$$scratch/lock.log" >&2; \
 			exit 2; \
 		fi; \
-		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" install --yes; \
+		# A broken upstream release fails the staged install. The bootstrap \
+		# library holds every failing tool at its newest installable release \
+		# inside the stage (loud INFO per hold; the committed manifest never \
+		# changes, so the next upg retries the newest release), then the \
+		# install is retried against the held stage before publication. \
+		if mise_exec project "$$pinned_mise" -C "$$lock_stage" install --yes >"$$scratch/install.log" 2>&1; then :; \
+		else install_status=$$?; cat "$$scratch/install.log" >&2; \
+			printf 'upg relock: staged install failed (exit %s); holding failing tools at their newest installable releases\n' "$$install_status" >&2; \
+			converge_python=$$(command -v python3 || true); \
+			if [ -z "$$converge_python" ]; then \
+				printf 'ERROR: converge needs a host python3 (stdlib only); provision one and retry\n' >&2; exit 2; \
+			fi; \
+			mise_checked "$$scratch/converge.log" "$$converge_python" "$$project_root/bin/mise-lock-transaction.py" converge "$$project_root" "$$lock_stage" "$$runtime_release"; \
+			mise_checked "$$scratch/install-retry.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" install --yes; \
+		fi; \
 		mise_checked "$$scratch/staged-python.log" mise_offline project "$$pinned_mise" -C "$$lock_stage" which python; \
 		staged_python=$$(cat "$$scratch/staged-python.log"); \
 		if [ ! -x "$$staged_python" ]; then printf 'ERROR: staged Mise Python is not executable: %s\n' "$$staged_python" >&2; exit 2; fi; \
@@ -792,9 +806,14 @@ mise_receipt launcher-version "$$lock_stage/artifacts/bin/mise"; \
 		if mise_offline project "$$pinned_mise" -C "$$project_root" install --dry-run >"$$scratch/install-probe.log" 2>&1; then \
 			:; \
 		else \
+			probe_status=$$?; \
 			cat "$$scratch/install-probe.log" >&2; \
-			printf 'ERROR: mise.lock does not satisfy .mise.toml under Mise %s; run make upg\n' "$$runtime_release" >&2; \
-			exit 2; \
+			printf 'setup reconcile: committed mise.lock does not satisfy .mise.toml under pinned Mise %s (probe exit %s); running the generated bin reconcile\n' "$$runtime_release" "$$probe_status" >&2; \
+			reconcile_python=$$(command -v python3 || true); \
+			if [ -z "$$reconcile_python" ]; then \
+				printf 'ERROR: reconcile needs a host python3 (stdlib only); provision one and retry\n' >&2; exit 2; \
+			fi; \
+			mise_checked "$$scratch/reconcile.log" "$$reconcile_python" "$$project_root/bin/mise-lock-transaction.py" reconcile "$$project_root" "$$runtime_release"; \
 		fi; \
 		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$project_root" install --yes; \
 	fi; \
