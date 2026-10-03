@@ -79,6 +79,7 @@ ifeq ($(strip $(SELF_MAKE_EXECUTABLE)),)
 $(error Current Make executable has no physical path: $(MAKE_COMMAND))
 endif
 .DEFAULT_GOAL := help
+
 ifeq ($(filter command line override,$(origin SETUP_BOOTSTRAP_ONLY)),)
 ifneq ($(filter setup,$(MAKECMDGOALS)),)
 SETUP_BOOTSTRAP_ONLY := Y
@@ -691,6 +692,13 @@ _builtin_test_all: _builtin_require_environment
 _builtin_test_full_all: _builtin_require_environment
 {{ test_report_recipe(
     runner=pytest_test_runner(("full", "full-slow")),
+) }}
+
+_builtin_tests_all: _builtin_require_environment
+	+@$(SELF_MAKE) test
+{{ test_report_recipe(
+    runner="$(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full",
+    invocation_namespace=make.testmon_cache.invocation_namespace,
 ) }}
 
 # fmt is format-only (single-pass verb law): ruff formats Python, the
