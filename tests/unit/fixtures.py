@@ -352,6 +352,7 @@ def hermetic_git_environment(tmp_path_factory: pytest.TempPathFactory) -> t.StrM
         "@".join(source) for source in u.Tests.locked_git_sources(_PROJECT_ROOT)
     )
     parent = _run_scoped(
+        _run_root(tmp_path_factory),
         "git-mirrors",
         hashlib.sha256(sources.encode()).hexdigest()[:16],
     )
@@ -695,14 +696,6 @@ def mod_workspace(tmp_path: Path) -> Path:
                 "\n"
                 "u.Infra.serialization_lock_execute(paths, timeout)\n"
             ),
-        ),
-    )
-    package_dir = workspace / "src" / project.project.name.replace("-", "_")
-    tm.ok(u.Cli.ensure_dir(package_dir))
-    tm.ok(
-        u.Cli.atomic_write_text_file(
-            package_dir / c.Infra.INIT_PY,
-            '"""Public refactor-mod fixture package."""\n\nfrom __future__ import annotations\n',
         ),
     )
     u.Tests.initialize_git_repo(workspace)

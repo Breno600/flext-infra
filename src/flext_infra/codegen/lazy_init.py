@@ -26,7 +26,7 @@ from flext_infra.codegen.lazy_init_planner import FlextInfraCodegenLazyInitPlann
 from flext_infra.workspace.rope import FlextInfraRopeWorkspace
 
 if TYPE_CHECKING:
-    from .. import p
+    from flext_infra import p
 
 
 class FlextInfraCodegenLazyInit(
@@ -163,7 +163,8 @@ class FlextInfraCodegenLazyInit(
                     target_roots += 1
                     if target_roots > 1:
                         return r[m.Infra.CodegenPhaseAnalysis].fail(
-                            f"lazy-init target module is ambiguous: {self.target_module}",
+                            f"lazy-init target module is ambiguous: "
+                            f"{self.target_module}",
                         )
                 planned = self._plan_open_workspace(rope)
                 if planned.failure:
@@ -173,7 +174,8 @@ class FlextInfraCodegenLazyInit(
                     previous = inputs.get(state.path)
                     if previous is not None and previous != state:
                         return r[m.Infra.CodegenPhaseAnalysis].fail(
-                            f"lazy-init shared input changed between repositories: {state.path}",
+                            f"lazy-init shared input changed between "
+                            f"repositories: {state.path}",
                         )
                     inputs[state.path] = state
         if self.target_module and not target_roots:
@@ -287,7 +289,8 @@ class FlextInfraCodegenLazyInit(
             target_package_dir = sorted_target_dirs[0]
             if target_package_dir not in indexed_package_dirs:
                 return r[m.Infra.CodegenPhaseAnalysis].fail(
-                    f"lazy-init target belongs to retired support: {self.target_module}",
+                    f"lazy-init target belongs to retired support: "
+                    f"{self.target_module}",
                 )
         package_dirs = self._package_dirs_for_target(
             indexed_package_dirs,

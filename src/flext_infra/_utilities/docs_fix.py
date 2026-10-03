@@ -81,32 +81,47 @@ class FlextInfraUtilitiesDocsFix:
                 rel = source_file.relative_to(scope.path).as_posix()
                 # Ruff via running interpreter (venv SSOT);
                 # bare "ruff" breaks when .venv/bin is not on PATH (CI docs fix).
-                outcome = u.Cli.run_raw(
-                    [
-                        sys.executable,
-                        "-m",
-                        c.Infra.RUFF,
-                        c.Infra.VERB_CHECK,
-                        *config.Infra.codegen.make.ruff.lint_fix,
-                        "--extend-ignore",
-                        ",".join(c.Infra.PYTHON_FENCE_RUFF_EXTEND_IGNORE),
-                        "--stdin-filename",
-                        f"{rel}#block.py",
-                        "-",
-                    ],
+                common = [
+                    sys.executable,
+                    "-m",
+                    c.Infra.RUFF,
+                    c.Infra.VERB_CHECK,
+                    "--extend-ignore",
+                    ",".join(c.Infra.PYTHON_FENCE_RUFF_EXTEND_IGNORE),
+                    "--stdin-filename",
+                    f"{rel}#block.py",
+                    "-",
+                ]
+                fix_outcome = u.Cli.run_raw(
+                    (*common, *config.Infra.codegen.make.ruff.lint_fix),
                     input_data=body.encode(),
                 )
-                if outcome.failure:
-                    raise RuntimeError(outcome.error or f"Ruff could not inspect {rel}")
-                if outcome.value.stderr or not u.Cli.process_succeeded(
-                    outcome.value.outcome,
-                ):
+                if fix_outcome.failure:
+                    raise RuntimeError(
+                        fix_outcome.error or f"Ruff could not inspect {rel}",
+                    )
+                # ``ruff check --fix`` exits non-zero when it DETECTED
+                # violations even after fixing every one of them; the fence
+                # is accepted only when a second, fix-free check comes back
+                # clean, never on the fix pass's own exit code.
+                fixed_body = fix_outcome.value.stdout
+                verify_outcome = u.Cli.run_raw(common, input_data=fixed_body.encode())
+                if verify_outcome.failure:
+                    raise RuntimeError(
+                        verify_outcome.error or f"Ruff could not verify {rel}",
+                    )
+                if not u.Cli.process_succeeded(verify_outcome.value.outcome):
                     msg = (
                         f"Ruff could not fix {rel}: "
-                        f"{outcome.value.stdout}\n{outcome.value.stderr}"
+                        f"{verify_outcome.value.stdout}\n{verify_outcome.value.stderr}"
                     )
                     raise RuntimeError(msg)
-                fixed_body = outcome.value.stdout
+                if verify_outcome.value.stderr:
+                    msg = (
+                        f"Ruff emitted diagnostics while fixing {rel}: "
+                        f"{verify_outcome.value.stderr}"
+                    )
+                    raise RuntimeError(msg)
                 if fixed_body == body:
                     return match.group(0)
                 # A closing fence only closes the block when it starts its own

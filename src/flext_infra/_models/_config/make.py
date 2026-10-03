@@ -174,16 +174,6 @@ class FlextInfraConfigModelsMake:
                 ),
             ),
         ]
-        api_modules: Annotated[
-            Mapping[t.NonEmptyStr, t.VariadicTuple[t.NonEmptyStr]],
-            m.Field(
-                min_length=1,
-                description=(
-                    "Public API modules generated per distribution; absent "
-                    "distributions own no module pages"
-                ),
-            ),
-        ]
         mutable_actions: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(min_length=1, description="Docs actions that mutate"),
@@ -216,38 +206,6 @@ class FlextInfraConfigModelsMake:
                 description="Governed org/repo/branch map for cross-repo doc URLs",
             ),
         ] = ()
-
-        @u.model_validator(mode="after")
-        def _validate_api_modules(self) -> Self:
-            """Reject duplicate or non-importable API module declarations.
-
-            Returns:
-                The resulting ``Self``.
-
-            Raises:
-                ValueError: If docs api_modules must not be empty; or if docs
-                    api_modules must be unique; or if docs api module is not importable.
-
-            """
-            for distribution, modules in self.api_modules.items():
-                if not modules:
-                    msg = f"docs api_modules must not be empty: {distribution}"
-                    raise ValueError(msg)
-                if len(set(modules)) != len(modules):
-                    msg = f"docs api_modules must be unique: {distribution}"
-                    raise ValueError(msg)
-                invalid = next(
-                    (
-                        module
-                        for module in modules
-                        if not all(part.isidentifier() for part in module.split("."))
-                    ),
-                    None,
-                )
-                if invalid is not None:
-                    msg = f"docs api module is not importable: {invalid}"
-                    raise ValueError(msg)
-            return self
 
         @u.model_validator(mode="after")
         def _validate_actions(self) -> Self:
@@ -285,7 +243,10 @@ class FlextInfraConfigModelsMake:
                 None,
             )
             if outside is not None:
-                msg = f"mutable_actions entry is not part of the docs lifecycle: {outside}"
+                msg = (
+                    "mutable_actions entry is not part of the docs lifecycle:"
+                    f" {outside}"
+                )
                 raise ValueError(msg)
             return self
 
@@ -446,7 +407,10 @@ class FlextInfraConfigModelsMake:
                     < self.block_threshold_percent
                     <= full_scale
                 ):
-                    msg = "testmon cache quota ladder must ascend warning < maintenance < block <= 100"
+                    msg = (
+                        "testmon cache quota ladder must ascend"
+                        " warning < maintenance < block <= 100"
+                    )
                     raise ValueError(msg)
                 return self
 
@@ -554,11 +518,28 @@ class FlextInfraConfigModelsMake:
                     raise ValueError(msg)
                 return self
 
+        class CodemodRulesCacheSpec(
+            ExternalCacheDirectorySpec,
+            FlextInfraConfigModelsContract.ConfigContract,
+        ):
+            """Content-keyed parsed codemod rule catalogs shared by every process."""
+
+            data_home_environment_variable: Annotated[
+                t.NonEmptyStr,
+                m.Field(description="XDG persistent cache-home variable"),
+            ]
+            user_home_environment_variable: Annotated[
+                t.NonEmptyStr,
+                m.Field(description="User home variable for the XDG default"),
+            ]
+
         class MypyCacheSpec(
             ExternalCacheDirectorySpec,
             FlextInfraConfigModelsContract.ConfigContract,
         ):
-            """Project-keyed shared Mypy cache: one analysis per project, reused across relocks."""
+            """Project-keyed shared Mypy cache: one analysis per project,
+            reused across relocks.
+            """
 
             cache_environment_variable: Annotated[
                 FlextInfraConstantsMake.MypyCacheEnvironment,
@@ -690,8 +671,15 @@ class FlextInfraConfigModelsMake:
             FlextInfraConfigModelsMake.MakeSpec.TestmonCachePolicySpec,
             m.Field(
                 default_factory=TestmonCachePolicySpec,
-                description="Declarative save/budget/quota policy for the shared testmon cache (#1001 delta)",
+                description=(
+                    "Declarative save/budget/quota policy for the shared"
+                    " testmon cache (#1001 delta)"
+                ),
             ),
+        ]
+        codemod_rules_cache: Annotated[
+            FlextInfraConfigModelsMake.MakeSpec.CodemodRulesCacheSpec,
+            m.Field(description="Content-keyed parsed codemod rule catalog cache"),
         ]
         mypy_cache: Annotated[
             FlextInfraConfigModelsMake.MakeSpec.MypyCacheSpec,
@@ -744,7 +732,9 @@ class FlextInfraConfigModelsMake:
         standalone_check_gates: Annotated[
             Mapping[t.NonEmptyStr, t.NonEmptyStr],
             m.Field(
-                description="Public Make verb to checker gate mapping outside make check",
+                description=(
+                    "Public Make verb to checker gate mapping outside make check"
+                ),
             ),
         ] = m.Field(default_factory=lambda: MappingProxyType({}))
 
@@ -787,7 +777,9 @@ class FlextInfraConfigModelsMake:
             on that contradiction. The real invariant is enforced structurally
             in the template, which excludes `setup` from
             `_builtin_require_environment` (`$(filter-out setup,$(PUBLIC_VERBS))`
-            and `{% raw %}{% for verb in make.verbs if verb.name != "setup" %}{% endraw %}`),
+            and
+            `{% raw %}{% for verb in make.verbs
+            if verb.name != "setup" %}{% endraw %}`),
             so `setup` never depends on the environment it exists to create.
 
             Returns:

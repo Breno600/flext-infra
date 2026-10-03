@@ -139,6 +139,21 @@ graphs, publishes them before replacing `mise.lock`, and records a durable journ
 If publication stops after a graph moves, the next upgrade restores the committed
 graph before starting its own publication. The lock rename is the commit point; a
 failed upgrade leaves the previous lock usable without a live `.bak` copy.
+When Git leaves the generated `mise.lock` unmerged, the publisher reads the exact
+stage-2 lock from that repository's index solely to authenticate the existing
+sidecars. It still derives the replacement lock from `.mise.toml` through `make upg`
+and publishes that replacement transactionally. A malformed lock without a Git
+conflict, or sidecars that no longer match stage 2, fails without changing the lock.
+
+Mise reaches GitHub only to install a tool missing from the persistent cache and inside
+`make upg`. `make setup` never locks: every Mise call except `install --yes` runs with
+the offline settings declared once in `MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT`, an offline
+`install --dry-run` proves the committed lock satisfies `.mise.toml`, and a lock that
+does not stops setup with `run make upg` and stays untouched. `make upg` resolves once
+per manifest: when the `.mise.toml` that its `gen` renders is byte-identical to the
+manifest its first half locked, the relock half installs from the published lock instead
+of resolving again. Wherever a lock runs, the bootstrap forwards the GitHub credential
+it selected (`GITHUB_TOKEN`, else the declared `github_credential_commands`) to Mise.
 
 The platforms declared by `toolchain.mise_lockfile_platforms` compose the lock together
 with the platform of the machine running the upgrade, which Mise always includes.

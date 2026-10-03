@@ -196,7 +196,10 @@ class FlextInfraModelsDocsGeneration:
         @classmethod
         def _validate_absolute_repository_root(cls, value: Path) -> Path:
             if not value.is_absolute() or ".." in value.parts:
-                msg = f"docs generation repository root must be absolute and lexical: {value}"
+                msg = (
+                    "docs generation repository root must "
+                    f"be absolute and lexical: {value}"
+                )
                 raise ValueError(msg)
             return value
 

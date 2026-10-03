@@ -1,6 +1,7 @@
 """Verify published exports and real entrypoints in fresh child processes.
 
-The conformance transaction runs this guard before committing its journal.
+The ``fresh-import`` check gate runs this guard in the checkout's provisioned
+runtime; generation never depends on it.
 Each entrypoint loads before any package smoke so cached imports cannot hide
 consumer-order defects. Imported workspace modules must belong to this checkout.
 
@@ -63,8 +64,14 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
         "    for package, directory in {origins!r}:\n"
         "        if loaded_name == package or loaded_name.startswith(package + '.'):\n"
         "            origin = getattr(loaded_module, '__file__', None)\n"
-        "            if origin is None or not Path(origin).resolve().is_relative_to(Path(directory)):\n"
-        "                raise ImportError(f'{loaded_name}: origin {origin!r} is outside {directory}')\n"
+        "            if (\n"
+        "                origin is None\n"
+        "                or not Path(origin).resolve()\n"
+        "                .is_relative_to(Path(directory))\n"
+        "            ):\n"
+        "                raise ImportError(\n"
+        "                    f'{loaded_name}: origin {origin!r} not in {directory}'\n"
+        "                )\n"
     )
 
     def build_report(
@@ -121,7 +128,8 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                             subject=f"{layout.package_name}: {group}/{name}={value}",
                             code=(
                                 self._PRELUDE
-                                + f"EntryPoint(name={name!r}, value={value!r}, group={group!r}).load()\n"
+                                + f"EntryPoint(name={name!r}, "
+                                f"value={value!r}, group={group!r}).load()\n"
                                 + origin_code
                             ),
                         ),

@@ -35,11 +35,16 @@ class TestsFlextInfraCodegenMain:
 
         """
         repository = u.Tests.repository_ref(repo.name)
+        infra = u.Tests.repository_ref("flext-infra")
+        integration = config.Infra.codegen.branch_policy.integration_branch_preference[
+            0
+        ]
         (repo / "pyproject.toml").write_text(
             f'[project]\nname = "{repository.distribution}"\nversion = "0.1.0"\n'
             f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
             'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
-            'dependencies = ["flext-core>=0.1.0"]\n\n'
+            f'dependencies = ["flext-core>=0.1.0", '
+            f'"flext-infra @ git+{infra.url}@{integration}"]\n\n'
             f'[project.urls]\nRepository = "{repository.url}"\n',
             encoding="utf-8",
         )
@@ -55,18 +60,15 @@ class TestsFlextInfraCodegenMain:
     def _seed_public_conform_checkout(root: Path) -> None:
         """Seed a minimal governed package tree plus the real config and Mise inputs.
 
-        Conform verifies the declared console entry point through a fresh
-        import. Seed the real package so the fixture's distribution metadata
-        describes a public runtime that actually exists.
+        Conform plans and publishes generated files; the fresh import of the
+        declared package is the check gate's proof, not conform's. One real
+        package module therefore suffices, and conform plans over the
+        fixture's size instead of a copy of the whole distribution.
         """
         project_root = Path(__file__).resolve().parents[3]
-        tm.ok(
-            u.Cli.files_copy_directory(
-                project_root / "src" / "flext_infra",
-                root / "src" / "flext_infra",
-                dirs_exist_ok=True,
-            ),
-        )
+        package_init = root / "src" / "flext_infra" / "__init__.py"
+        package_init.parent.mkdir(parents=True, exist_ok=True)
+        tm.ok(u.Cli.atomic_write_text_file(package_init, ""))
         tests_init = root / "tests" / "__init__.py"
         tests_init.parent.mkdir(parents=True, exist_ok=True)
         tm.ok(u.Cli.atomic_write_text_file(tests_init, ""))
@@ -248,9 +250,9 @@ class TestsFlextInfraCodegenMain:
             )
             tm.that(" ".join(result.value.stdout.split()), contains=route.help_text)
 
+        @staticmethod
         @pytest.mark.slow
         def test_managed_conflict_is_planned_and_published_atomically(
-            self,
             infra_git_repo: Path,
         ) -> None:
             """Keep live bytes unchanged until the public transaction commits."""

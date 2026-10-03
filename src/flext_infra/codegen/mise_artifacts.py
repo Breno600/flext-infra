@@ -19,7 +19,7 @@ from flext_infra.codegen._mise_artifacts_derivation import (
 from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
 
 if TYPE_CHECKING:
-    from .. import p
+    from flext_infra import p
 
 
 class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):

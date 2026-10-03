@@ -179,8 +179,8 @@ class FlextInfraEnsurePackagingPhase:
             excluded.append(declaration)
         return tuple(excluded)
 
+    @staticmethod
     def _phase(
-        self,
         *,
         package_name: str,
         data: m.Infra.PackagedDataSelection,

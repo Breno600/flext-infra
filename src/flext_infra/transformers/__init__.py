@@ -18,7 +18,6 @@ if TYPE_CHECKING:
     )
     from flext_infra.transformers.rope_transformer import FlextInfraRopeTransformer
 
-
 __all__: tuple[str, ...] = (
     "FlextInfraRopeTransformer",
     "FlextInfraSemanticPublication",

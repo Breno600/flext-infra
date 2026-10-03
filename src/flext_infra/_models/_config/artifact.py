@@ -62,7 +62,8 @@ class FlextInfraConfigModelsArtifact:
         ] = False
 
     class CodegenVscodeSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Fully modeled content of the ``vscode`` section of ``config/codegen.yaml``."""
+        """Fully modeled content of the ``vscode`` section
+        of ``config/codegen.yaml``."""
 
         scalar_settings: Annotated[
             Mapping[str, str | bool | int],
@@ -436,7 +437,8 @@ class FlextInfraConfigModelsArtifact:
     class CodegenConformSurfaceContract(m.Value):
         """Typed ownership contract for one requested conformance surface."""
 
-        # Why: leaf conform planning contract lives on m.Infra only (not nested in services).
+        # Why: leaf conform planning contract lives on
+        # m.Infra only (not nested in services).
         destinations: Annotated[
             frozenset[str] | None,
             m.Field(description="Output paths selected for conformance planning"),
@@ -707,21 +709,30 @@ class FlextInfraConfigModelsArtifact:
             t.MappingKV[str, t.StrSequence],
             m.Field(
                 default_factory=lambda: MappingProxyType[str, t.StrSequence]({}),
-                description="CSV expression prefixes mapped to current public Rope owner identities",
+                description=(
+                    "CSV expression prefixes mapped "
+                    "to current public Rope owner identities"
+                ),
             ),
         ]
         text_globs: Annotated[
             t.StrSequence,
             m.Field(
                 default=(),
-                description="Explicit root-relative non-Python documentation and configuration text surfaces",
+                description=(
+                    "Explicit root-relative non-Python "
+                    "documentation and configuration text surfaces"
+                ),
             ),
         ]
         python_documentation: Annotated[
             bool,
             m.Field(
                 default=False,
-                description="Rename comments and actual Python docstrings without changing executable strings",
+                description=(
+                    "Rename comments and actual Python docstrings "
+                    "without changing executable strings"
+                ),
             ),
         ]
         exclude_globs: Annotated[
@@ -758,44 +769,6 @@ class FlextInfraConfigModelsArtifact:
                     )
                     raise ValueError(msg)
             return self
-
-    class SedPatternSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """One declared literal regex substitution for the mod verb's sed phase."""
-
-        pattern: Annotated[
-            str,
-            m.Field(description="Regular expression matched against file sources"),
-        ]
-        replacement: Annotated[
-            str,
-            m.Field(description="Literal replacement applied to every match"),
-        ]
-        file_glob: Annotated[
-            str | None,
-            m.Field(
-                default=None,
-                description="Optional glob restricting the targeted source files",
-            ),
-        ] = None
-        flags: Annotated[
-            t.StrSequence,
-            m.Field(
-                default=(),
-                description="Names of the compiled regex flags applied to pattern",
-            ),
-        ] = ()
-        description: Annotated[
-            str | None,
-            m.Field(default=None, description="Human-readable pattern intent"),
-        ] = None
-
-    class SedPatternsSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Declared sed-by-list patterns applied by the mod verb's sed phase."""
-
-        patterns: Annotated[
-            t.VariadicTuple[FlextInfraConfigModelsArtifact.SedPatternSpec],
-            m.Field(default=(), description="Ordered substitution patterns"),
-        ] = ()
 
     class RefactorCsvCampaignsSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Declared CSV-driven rename campaigns for the mod verb's rename phase."""

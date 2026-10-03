@@ -187,8 +187,8 @@ class FlextInfraDuplicationGate(FlextInfraGate):
             ),
         )
 
+    @staticmethod
     def _read_project_config(
-        self,
         project_dir: Path,
     ) -> p.Result[m.Infra.ProjectDuplicationOverrides]:
         """Read ``[tool.flext.project.duplication]`` from pyproject.toml.

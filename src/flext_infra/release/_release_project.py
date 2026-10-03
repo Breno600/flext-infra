@@ -163,7 +163,9 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
             timeout=c.Infra.TIMEOUT_LONG,
             env={
                 c.Infra.SOURCE_DATE_EPOCH: str(snapshot.source_date_epoch),
-                c.Infra.UV_HTTP_CONNECT_TIMEOUT: c.Infra.UV_RELEASE_HTTP_CONNECT_TIMEOUT,
+                c.Infra.UV_HTTP_CONNECT_TIMEOUT: (
+                    c.Infra.UV_RELEASE_HTTP_CONNECT_TIMEOUT
+                ),
                 c.Infra.UV_HTTP_TIMEOUT: c.Infra.UV_RELEASE_HTTP_TIMEOUT,
                 c.Infra.UV_HTTP_RETRIES: c.Infra.UV_RELEASE_HTTP_RETRIES,
             },

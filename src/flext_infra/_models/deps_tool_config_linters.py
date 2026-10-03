@@ -101,6 +101,20 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             ),
         ]
 
+    class RuffPydocstyleConfig(m.ArbitraryTypesModel):
+        """Ruff pydocstyle settings loaded from YAML."""
+
+        convention: Annotated[
+            Literal["google", "numpy", "pep257"],
+            m.Field(
+                description=(
+                    "Docstring convention; Ruff disables the docstring rules "
+                    "it does not use, one of each mutually exclusive pair "
+                    "included."
+                ),
+            ),
+        ]
+
     class RuffAuthorizedException(m.ArbitraryTypesModel):
         """One operator-authorized Ruff exception, recorded with its authority.
 
@@ -187,6 +201,9 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         ]
         isort: FlextInfraModelsDepsToolConfigLinters.RuffIsortConfig = m.Field(
             description="Ruff isort configuration",
+        )
+        pydocstyle: FlextInfraModelsDepsToolConfigLinters.RuffPydocstyleConfig = (
+            m.Field(description="Ruff pydocstyle configuration")
         )
         authorized_exceptions: Annotated[
             tuple[FlextInfraModelsDepsToolConfigLinters.RuffAuthorizedException, ...],
@@ -387,11 +404,17 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         overrides: Annotated[
             t.VariadicTuple[FlextInfraModelsDepsToolConfigLinters.MypyOverrideConfig],
             m.Field(
-                description="Per-module mypy overrides for auto-generated files and PEP 695 generics.",
+                description=(
+                    "Per-module mypy overrides for "
+                    "auto-generated files and PEP 695 generics."
+                ),
             ),
         ] = m.Field(
             default_factory=tuple,
-            description="Per-module mypy overrides for auto-generated files and PEP 695 generics.",
+            description=(
+                "Per-module mypy overrides for "
+                "auto-generated files and PEP 695 generics."
+            ),
         )
 
     class PydanticMypyConfig(m.ArbitraryTypesModel):
@@ -400,7 +423,9 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         init_forbid_extra: Annotated[
             bool,
             m.Field(
-                description="Enable forbid-extra init behavior in pydantic mypy plugin.",
+                description=(
+                    "Enable forbid-extra init behavior in pydantic mypy plugin."
+                ),
             ),
         ]
         init_typed: Annotated[

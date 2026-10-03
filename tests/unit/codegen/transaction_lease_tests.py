@@ -28,9 +28,9 @@ if TYPE_CHECKING:
 class TestsFlextInfraTransactionLease:
     """Keep live journal recovery behind the shared physical scope lease."""
 
+    @staticmethod
     @pytest.mark.parametrize("boundary", ["service", "cli"])
     def test_native_acquisition_denial_escapes_without_waiting(
-        self,
         tmp_path: Path,
         boundary: str,
     ) -> None:

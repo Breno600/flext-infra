@@ -90,7 +90,8 @@ class FlextInfraCodegenStaging:
             ):
                 if before.content is not None:
                     return result_type.fail(
-                        f"{phase} destination appeared after planning: {file_plan.path}",
+                        f"{phase} destination appeared after planning: "
+                        f"{file_plan.path}",
                     )
             elif before != planned_before:
                 return result_type.fail(

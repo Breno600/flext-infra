@@ -72,14 +72,16 @@ class FlextInfraFlextBindingService:
                 )
         if python.absolute() != expected.absolute():
             return r[Path].fail(
-                f"binding interpreter must belong to the consumer: expected={expected}, actual={python}",
+                f"binding interpreter must belong to the consumer: "
+                f"expected={expected}, actual={python}",
             )
         if not (environment / c.Infra.ENVIRONMENT_METADATA).is_file() or not os.access(
             expected,
             os.X_OK,
         ):
             return r[Path].fail(
-                f"binding requires the consumer's provisioned environment: {environment}; run make setup",
+                f"binding requires the consumer's provisioned environment: "
+                f"{environment}; run make setup",
             )
         return r[Path].ok(environment)
 
@@ -163,7 +165,8 @@ class FlextInfraFlextBindingService:
             name = u.Infra.dep_name(repository.distribution)
             if name is None or name in available:
                 return r[t.MappingKV[str, Path]].fail(
-                    f"binding supplier has an invalid or duplicate distribution: {repository.distribution}",
+                    f"binding supplier has an invalid or duplicate "
+                    f"distribution: {repository.distribution}",
                 )
             available[name] = (flext_root / repository.path).resolve()
         names = {u.Infra.dep_name(item) for item in requirements}

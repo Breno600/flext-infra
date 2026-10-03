@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 class TestsFlextInfraExtendedConfigFixerErrors:
     """Exercise ``FlextInfraConfigFixer`` only through its public surface."""
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("pyproject", "name"),
         [
@@ -29,7 +30,6 @@ class TestsFlextInfraExtendedConfigFixerErrors:
         ],
     )
     def test_process_file_returns_empty_for_non_fixable_documents(
-        self,
         tmp_path: Path,
         pyproject: str,
         name: str,

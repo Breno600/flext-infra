@@ -20,9 +20,9 @@ pytestmark = [pytest.mark.slow, pytest.mark.remote]
 class TestsFlextInfraDepsDetectorReport:
     """Tests for ``FlextInfraDepsDetectorReport``."""
 
+    @staticmethod
     @pytest.mark.parametrize("custom", [False, True])
     def test_report_path_and_real_project_identity(
-        self,
         real_detector_project: Path,
         *,
         custom: bool,

@@ -54,19 +54,9 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
             )
         # ``build_report`` (not ``execute``) keeps violations structured so the
         # gate can grade a broken invocation separately from found violations.
-        report_result = validator.value.build_report()
-        if report_result.failure:
-            return self._build_project_error_gate_result(
-                project_dir,
-                passed=False,
-                errors=[report_result.error or "runtime census failed"],
-                started=started,
-            )
-        report = report_result.value
-        return self._build_project_error_gate_result(
+        return self._build_validation_report_result(
             project_dir,
-            passed=report.passed,
-            errors=list(report.violations),
+            validator.value.build_report(),
             started=started,
         )
 

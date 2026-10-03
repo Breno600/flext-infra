@@ -155,9 +155,17 @@ class FlextInfraConstantsRefactor:
         PACKAGE_ROOT_INIT = "package-root-init"
         FAMILY_BASE = "family-base"
 
+    CODEMOD_RUNTIME_CLOSURE_PREDICATES: ClassVar[frozenset[CodemodContextPredicate]] = (
+        frozenset({
+            CodemodContextPredicate.RUNTIME_PACKAGE,
+            CodemodContextPredicate.FACADE_PACKAGE,
+        })
+    )
+    "Predicates evaluated against the project's runtime dependency closure."
+
     @unique
     class SemanticCutoverPhase(StrEnum):
-        """Semantic ``make mod`` cutovers planned by ``u.Infra.plan_semantic_cutover``."""
+        """Semantic ``make mod`` cutovers planned by ``u.Infra``."""
 
         CLASS_NESTING = "class-nesting"
         COMPAT_ALIAS = "compat-alias"
@@ -173,8 +181,12 @@ class FlextInfraConstantsRefactor:
         SemanticCutoverPhase.COMPAT_ALIAS: "ban-compat-alias",
         SemanticCutoverPhase.PRIVATE_IMPORT: "ban-private-import",
         SemanticCutoverPhase.FACADE_BASE: "facade-base-by-class-name",
-        SemanticCutoverPhase.MODEL_FIELDS: "rewire-getattr-model-fields-to-direct-access",
-        SemanticCutoverPhase.SELF_FACADE_IMPORT: "ban-infra-utility-module-self-facade-import",
+        SemanticCutoverPhase.MODEL_FIELDS: (
+            "rewire-getattr-model-fields-to-direct-access"
+        ),
+        SemanticCutoverPhase.SELF_FACADE_IMPORT: (
+            "ban-infra-utility-module-self-facade-import"
+        ),
         SemanticCutoverPhase.DYNAMIC_ENVIRONMENT: "ban-ambient-environ-read",
         SemanticCutoverPhase.MODULE_END: "require-all-last",
         SemanticCutoverPhase.NOTICE_LAST: "require-notice-last",
@@ -407,7 +419,7 @@ class FlextInfraConstantsRefactor:
         "set_",
         "is_",
     })
-    "Public accessor name prefixes that should be renamed (drop the prefix or use a canonical verb)."
+    "Public accessor prefixes to rename (drop the prefix or use a canonical name)."
 
     # --- Symbol/identifier patterns ---
     IDENTIFIER_PATTERN: ClassVar[t.RegexPattern] = re.compile(r"\b[A-Za-z_]\w*\b")

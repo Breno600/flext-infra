@@ -89,7 +89,10 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     return r[m.Infra.CodegenArtifactComposition].from_failure(resolved)
                 blocks = resolved.value.artifacts.Gitignore.preserved_blocks
             else:
-                blocks = render_inputs.managed_artifacts.resolution.artifacts.Gitignore.preserved_blocks
+                blocks = (
+                    render_inputs.managed_artifacts.resolution.artifacts
+                    .Gitignore.preserved_blocks
+                )
             composed = u.Infra.preserve_project_gitignore_blocks(
                 rendered,
                 repository_root,
@@ -267,6 +270,15 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 m.Infra.SonarcloudRenderSpec(
                     sonarcloud=codegen.sonarcloud,
                     tests_dir=c.Infra.DIR_TESTS,
+                    # Why: a workspace root checks its members out in place, and
+                    # each member is a separate repository analysed by its own
+                    # SonarCloud project; scanning them again from the root
+                    # double-counts their code as root duplication.
+                    workspace_subprojects=(
+                        tuple(item.path.as_posix() for item in workspace.subprojects)
+                        if target.make_profile is c.Infra.MakeProfile.WORKSPACE
+                        else ()
+                    ),
                 ),
             )
         if destination == c.Infra.ENVRC_FILENAME:

@@ -52,7 +52,8 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
             repo = cls._repo(request.repo_root)
             if cls._git_head_is_unborn(repo):
                 return r[m.Infra.GitIdentityReport].fail(
-                    f"Git repository has no committed HEAD: {request.repo_root.resolve()}",
+                    f"Git repository has no committed HEAD: "
+                    f"{request.repo_root.resolve()}",
                     error_code=c.Infra.GIT_UNBORN_HEAD_ERROR_CODE,
                 )
             primary = cls._git_primary_worktree_root_path(request.repo_root)

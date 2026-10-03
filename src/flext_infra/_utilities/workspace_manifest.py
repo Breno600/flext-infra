@@ -21,7 +21,7 @@ from flext_infra import c, m, t
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from .. import p
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesWorkspaceManifest:

@@ -17,7 +17,7 @@ from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
 from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
 
 if TYPE_CHECKING:
-    from .. import p, t
+    from flext_infra import p, t
 
 
 class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
@@ -186,8 +186,8 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
             files_skipped=files_skipped,
         )
 
+    @staticmethod
     def _scaffold_dir(
-        self,
         request: m.Infra.ScaffoldDirRequest,
     ) -> t.Pair[t.MutableSequenceOf[str], t.MutableSequenceOf[str]]:
         """Generate missing modules in a directory and return file lists.
