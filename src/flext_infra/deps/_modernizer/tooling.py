@@ -254,6 +254,7 @@ class FlextInfraPyprojectModernizerTooling:
         # written by the analyzer-path sync, so a project that has not run it
         # yet has them missing, and an empty default would make the NEXT plan
         # re-derive them, so apply would never reach its fixed point.
+        type_checking = config.Infra.tooling.tools.ruff.lint.flake8_type_checking
         validated: p.Result[m.Infra.ToolingRuntimeContext] = u.validate_value(
             m.Infra.ToolingRuntimeContext,
             {
@@ -273,6 +274,13 @@ class FlextInfraPyprojectModernizerTooling:
                 "mypy_facade_rebind_modules": u.Infra.facade_rebind_modules(
                     project_dir,
                     {},
+                ),
+                "ruff_runtime_evaluated_base_classes": (
+                    u.Infra.runtime_evaluated_base_classes(
+                        project_dir,
+                        {},
+                        type_checking.runtime_evaluated_roots,
+                    )
                 ),
                 "pyrefly_search_path": (
                     derived_search_path

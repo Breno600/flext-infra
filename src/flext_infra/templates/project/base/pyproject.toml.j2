@@ -425,6 +425,16 @@ unfixable = [
 [tool.ruff.lint.flake8-copyright]
 notice-rgx = {{ tooling.tools.ruff.lint.copyright_notice_rgx | tojson }}
 
+{# Bases derived from the project's own classes: each imported base that
+   subclasses a declared runtime-evaluated root keeps its annotation imports
+   at runtime (Pydantic evaluates field annotations). #}
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = [
+{% for item in tooling_runtime.ruff_runtime_evaluated_base_classes %}
+  {{ item | tojson }},
+{% endfor %}
+]
+
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = {{ tooling.tools.ruff.lint.ban_relative_imports | tojson }}
 {% for name, message in tooling.tools.ruff.lint.banned_api | dictsort %}

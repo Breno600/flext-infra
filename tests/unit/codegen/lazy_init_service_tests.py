@@ -13,10 +13,10 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import config
-from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
 from tests import c, u
 
 if TYPE_CHECKING:
+    from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
     from tests import p, t
 
 

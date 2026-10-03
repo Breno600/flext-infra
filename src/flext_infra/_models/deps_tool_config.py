@@ -905,6 +905,15 @@ class FlextInfraModelsDepsToolConfig(
             t.StrTuple,
             m.Field(description="Modules written in the canonical facade-rebind form"),
         ]
+        ruff_runtime_evaluated_base_classes: Annotated[
+            t.StrTuple,
+            m.Field(
+                description=(
+                    "Imported base classes whose subclasses evaluate their "
+                    "annotations at runtime"
+                ),
+            ),
+        ]
         pyrefly_search_path: Annotated[
             t.StrTuple,
             m.Field(description="Resolved Pyrefly search paths"),
