@@ -69,7 +69,11 @@ class FlextInfraReleasePlanMixin(FlextInfraReleasePublishMixin):
                 "--merged",
                 c.Infra.GIT_HEAD,
                 "--list",
-                c.Infra.TAG_FORMAT.format(version="*"),
+                # The listing glob demands a digit after the prefix: foreign
+                # tag namespaces that only collide with it (cycle-control
+                # markers like val<date>t<hhmm>) are excluded at the source,
+                # so ``latest`` can never name one.
+                c.Infra.TAG_FORMAT.format(version="[0-9]*"),
                 "--sort=-version:refname",
             ],
             cwd=root,
