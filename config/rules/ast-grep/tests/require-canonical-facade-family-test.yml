@@ -1,0 +1,10 @@
+# Shape only: the engine admits the finding when the package does not provide
+# every layer the rule names.
+id: require-canonical-facade-family
+valid:
+  - |
+    def build():
+        __all__ = ["x"]
+invalid:
+  - |
+    __all__ = ["c", "m"]

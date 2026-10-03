@@ -1,13 +1,19 @@
-"""Generation helpers for docs services."""
+"""Generation helpers for docs services.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
-from .._utilities._docs_generate_root import FlextInfraUtilitiesDocsGenerateRootMixin
+from flext_infra._utilities._docs_generate_root import (
+    FlextInfraUtilitiesDocsGenerateRootMixin,
+)
+from flext_infra._utilities._docs_guides import FlextInfraUtilitiesDocsGuidesMixin
+from flext_infra._utilities.docs_collection import FlextInfraUtilitiesDocsCollection
 
 # Why: restored lost composition — FlextInfraUtilitiesDocsGuidesMixin was
 # never wired into any composed Docs* facade, leaving consumers unresolved.
-from ._docs_guides import FlextInfraUtilitiesDocsGuidesMixin
-from .docs_collection import FlextInfraUtilitiesDocsCollection
 
 
 class FlextInfraUtilitiesDocsGenerate(

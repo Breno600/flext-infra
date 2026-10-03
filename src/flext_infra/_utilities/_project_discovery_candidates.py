@@ -10,28 +10,40 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c
-
-from ._project_discovery_shape import FlextInfraUtilitiesProjectDiscoveryShapeMixin
-from .git import FlextInfraUtilitiesGit
+from flext_infra._utilities._project_discovery_shape import (
+    FlextInfraUtilitiesProjectDiscoveryShapeMixin,
+)
+from flext_infra._utilities.git import FlextInfraUtilitiesGit
 
 if TYPE_CHECKING:
     from flext_infra import t
 
 
 class FlextInfraUtilitiesProjectDiscoveryCandidatesMixin(
-    FlextInfraUtilitiesProjectDiscoveryShapeMixin
+    FlextInfraUtilitiesProjectDiscoveryShapeMixin,
 ):
     """Private candidate enumeration for workspace project discovery."""
 
     @classmethod
     def discover_project_candidates(
-        cls, repository_root: Path, *, scan_dirs: frozenset[str] | None = None
+        cls,
+        repository_root: Path,
+        *,
+        scan_dirs: frozenset[str] | None = None,
     ) -> t.SequenceOf[Path]:
-        """Return the root and projects declared by its own ``.gitmodules``."""
+        """Return the root and projects declared by its own ``.gitmodules``.
+
+        Returns:
+            The root and projects declared by its own ``.gitmodules``.
+
+        Raises:
+            ValueError: If ``declared_paths.failure``.
+
+        """
         roots: t.MutableSequenceOf[Path] = []
         effective_scan_dirs = scan_dirs or frozenset()
         declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(
-            repository_root
+            repository_root,
         )
         if declared_paths.failure:
             raise ValueError(declared_paths.error or "invalid .gitmodules")
@@ -51,7 +63,8 @@ class FlextInfraUtilitiesProjectDiscoveryCandidatesMixin(
             roots.append(resolved_repository_root)
         if configured_projects:
             candidate_entries: t.SequenceOf[Path] = sorted(
-                configured_entries, key=Path.as_posix
+                configured_entries,
+                key=Path.as_posix,
             )
             roots.extend([
                 entry.resolve()

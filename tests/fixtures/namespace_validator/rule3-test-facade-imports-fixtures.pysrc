@@ -1,4 +1,0 @@
-from tests.fixtures import helper
-
-class TestsFlextTestModels:
-    pass

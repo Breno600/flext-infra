@@ -1,0 +1,12 @@
+id: ban-direct-pydantic-import
+valid:
+  - from flext_core import m, u
+  - import pydantic_settings
+  - |
+    if TYPE_CHECKING:
+        from pydantic import BaseModel
+invalid:
+  - import pydantic
+  - from pydantic import BaseModel
+  - import pydantic_core
+  - from pydantic.fields import FieldInfo

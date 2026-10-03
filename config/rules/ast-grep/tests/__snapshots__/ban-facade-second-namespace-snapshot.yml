@@ -1,0 +1,51 @@
+id: ban-facade-second-namespace
+snapshots:
+  ? |
+    class FlextFooModels(FlextCliModels):
+        class Foo(FlextFooModelsBase):
+            pass
+        class Bar(FlextFooModelsBase):
+            pass
+  : labels:
+    - source: |-
+        class Bar(FlextFooModelsBase):
+                pass
+      style: primary
+      start: 90
+      end: 133
+    - source: |
+        class FlextFooModels(FlextCliModels):
+            class Foo(FlextFooModelsBase):
+                pass
+            class Bar(FlextFooModelsBase):
+                pass
+      style: secondary
+      start: 0
+      end: 134
+    - source: |-
+        class FlextFooModels(FlextCliModels):
+            class Foo(FlextFooModelsBase):
+                pass
+            class Bar(FlextFooModelsBase):
+                pass
+      style: secondary
+      start: 0
+      end: 133
+    - source: |-
+        class Foo(FlextFooModelsBase):
+                pass
+            class Bar(FlextFooModelsBase):
+                pass
+      style: secondary
+      start: 42
+      end: 133
+    - source: Bar
+      style: secondary
+      start: 96
+      end: 99
+    - source: |-
+        class Foo(FlextFooModelsBase):
+                pass
+      style: secondary
+      start: 42
+      end: 85

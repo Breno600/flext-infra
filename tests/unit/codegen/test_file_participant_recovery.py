@@ -1,4 +1,8 @@
-"""Public recovery behavior for file-only transaction participants."""
+"""Public recovery behavior for file-only transaction participants.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -21,9 +25,11 @@ if TYPE_CHECKING:
 class TestsFlextInfraFileParticipantRecovery:
     """Recover prepared file-only journals through their physical owners."""
 
+    @staticmethod
     @pytest.mark.parametrize("invalid_later_plan", ["participant", "destination"])
     def test_later_invalid_plan_leaves_no_partial_staging(
-        self, tmp_path: Path, invalid_later_plan: str
+        tmp_path: Path,
+        invalid_later_plan: str,
     ) -> None:
         """A rejected phase cannot strand earlier replacements outside its journal."""
         root = test_u.Tests.git_repository(tmp_path)
@@ -33,7 +39,7 @@ class TestsFlextInfraFileParticipantRecovery:
         second = nested / "second.md"
         roots = {"@docs-0": root}
         owner = FlextInfraCodegenTransaction(
-            FlextInfraCodegenMiseArtifacts(repository_root=root)
+            FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
 
         def publish(scope: Path) -> p.Result[m.Infra.CodegenTransactionSession]:
@@ -43,7 +49,10 @@ class TestsFlextInfraFileParticipantRecovery:
                     project=project,
                     path=destination,
                     before=tm.ok(
-                        u.Cli.atomic_read_binary_file_state(destination, required=False)
+                        u.Cli.atomic_read_binary_file_state(
+                            destination,
+                            required=False,
+                        ),
                     ),
                     desired_content=b"generated replacement\n",
                     desired_mode=session.journal_state.mode,
@@ -75,9 +84,11 @@ class TestsFlextInfraFileParticipantRecovery:
         # the previous implementation refuses its unregistered phase directory.
         tm.ok(owner.run_files_locked(roots, lambda _scope: r[bool].ok(True)))
 
+    @staticmethod
     def test_fresh_import_failure_restores_published_initializer(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
+        """Test fresh import failure restores published initializer."""
         root = test_u.Tests.git_repository(tmp_path)
         package = root / c.Infra.DEFAULT_SRC_DIR / "flext_import_probe"
         package.mkdir(parents=True)
@@ -85,7 +96,7 @@ class TestsFlextInfraFileParticipantRecovery:
         initializer.write_text("__all__ = ()\n", encoding=c.Cli.ENCODING_DEFAULT)
         before = tm.ok(u.Cli.atomic_read_binary_file_state(initializer, required=True))
         owner = FlextInfraCodegenTransaction(
-            FlextInfraCodegenMiseArtifacts(repository_root=root)
+            FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
         roots = {"@lazy-init": root}
         publication = m.Infra.CodegenFilePlan(
@@ -97,13 +108,14 @@ class TestsFlextInfraFileParticipantRecovery:
             owner="lazy-init",
         )
         validator = FlextInfraValidateFreshImport(
-            repository_root=root, packages=(package.name,)
+            repository_root=root,
+            packages=(package.name,),
         )
 
         def publish(scope: Path) -> p.Result[t.VariadicTuple[Path]]:
             session = tm.ok(owner.begin_files_locked(scope, roots, (before,)))
             published = tm.ok(
-                owner.append_phase_locked(session, "lazy-init", (publication,))
+                owner.append_phase_locked(session, "lazy-init", (publication,)),
             )
             return owner.commit_locked(published, validator.execute)
 
@@ -112,47 +124,54 @@ class TestsFlextInfraFileParticipantRecovery:
         tm.fail(failed, has="missing_export")
         tm.that(failed.error, has="Traceback")
         restored = tm.ok(
-            u.Cli.atomic_read_binary_file_state(initializer, required=True)
+            u.Cli.atomic_read_binary_file_state(initializer, required=True),
         )
         tm.that(restored.content, eq=before.content)
         tm.that(restored.mode, eq=before.mode)
         tm.ok(owner.run_files_locked(roots, lambda _scope: r[bool].ok(True)))
 
-    def test_recovers_external_only_prepared_journal(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_recovers_external_only_prepared_journal(tmp_path: Path) -> None:
+        """Test recovers external only prepared journal."""
         workspace = test_u.Tests.create_docs_workspace(tmp_path, project_names=())
         docs_root = tmp_path / "published-docs"
         docs_root.mkdir()
         roots = {"@docs-0": docs_root}
         source = tm.ok(
-            u.Cli.atomic_read_binary_file_state(workspace / "README.md", required=True)
+            u.Cli.atomic_read_binary_file_state(workspace / "README.md", required=True),
         )
         transaction = FlextInfraCodegenTransaction(
-            FlextInfraCodegenMiseArtifacts(repository_root=workspace)
+            FlextInfraCodegenMiseArtifacts(repository_root=workspace),
         )
 
         prepared = transaction.run_files_locked(
             roots,
             lambda scope_root: transaction.begin_files_locked(
-                scope_root, roots, (source,)
+                scope_root,
+                roots,
+                (source,),
             ),
         )
         tm.ok(prepared)
 
         recovered = transaction.run_files_locked(
-            roots, lambda _scope_root: r[bool].ok(True)
+            roots,
+            lambda _scope_root: r[bool].ok(True),
         )
 
         tm.ok(recovered)
         tm.that(recovered.value, eq=True)
 
+    @staticmethod
     @pytest.mark.parametrize("foreign_change", ["none", "extra", "replaced"])
     def test_prepared_publication_recovery_requires_original_tree(
-        self, tmp_path: Path, foreign_change: str
+        tmp_path: Path,
+        foreign_change: str,
     ) -> None:
         """Recover owned publications, but retain foreign trees and their evidence."""
         root = test_u.Tests.git_repository(tmp_path)
         owner = FlextInfraCodegenTransaction(
-            FlextInfraCodegenMiseArtifacts(repository_root=root)
+            FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
         roots = {"@docs-0": root}
         target = root / "generated.md"
@@ -163,7 +182,7 @@ class TestsFlextInfraFileParticipantRecovery:
                 project=root,
                 path=target,
                 before=tm.ok(
-                    u.Cli.atomic_read_binary_file_state(target, required=False)
+                    u.Cli.atomic_read_binary_file_state(target, required=False),
                 ),
                 desired_content=b"owned publication\n",
                 desired_mode=session.journal_state.mode,
@@ -193,21 +212,26 @@ class TestsFlextInfraFileParticipantRecovery:
             tm.that(target.read_bytes(), eq=b"owned publication\n")
             tm.that(session.journal_state.path.exists(), eq=True)
 
+    @staticmethod
     @pytest.mark.parametrize("with_foreign_file", [False, True])
     @pytest.mark.parametrize("journal_state", ["staging", "prepared"])
     def test_unmanifested_created_directory_owns_no_descendants(
-        self, tmp_path: Path, journal_state: str, *, with_foreign_file: bool
+        tmp_path: Path,
+        journal_state: str,
+        *,
+        with_foreign_file: bool,
     ) -> None:
         """A pre-manifest crash receipt permits only exact empty-directory cleanup."""
         root = test_u.Tests.git_repository(tmp_path)
         owner = FlextInfraCodegenTransaction(
-            FlextInfraCodegenMiseArtifacts(repository_root=root)
+            FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
         roots = {"@docs-0": root}
         session = tm.ok(
             owner.run_files_locked(
-                roots, lambda scope: owner.begin_files_locked(scope, roots, ())
-            )
+                roots,
+                lambda scope: owner.begin_files_locked(scope, roots, ()),
+            ),
         )
         staging = session.plan.layout.file_participants[0].transaction_root
         crash_journal = m.Infra.CodegenTransactionJournal.model_validate({
@@ -223,7 +247,7 @@ class TestsFlextInfraFileParticipantRecovery:
                 session.journal_state,
                 crash_journal.model_dump_json(indent=2).encode(c.Cli.ENCODING_DEFAULT),
                 permission_mode=tm.not_none(session.journal_state.mode),
-            )
+            ),
         )
         if with_foreign_file:
             (staging / "foreign.bin").write_bytes(b"not journaled")
@@ -239,15 +263,18 @@ class TestsFlextInfraFileParticipantRecovery:
             tm.that(staging.exists(), eq=False)
             tm.that(session.journal_state.path.exists(), eq=False)
 
+    @staticmethod
     @pytest.mark.parametrize("journal_change", ["unchanged", "replaced", "missing"])
     @pytest.mark.parametrize("failure_kind", ["validator", "exception", "abort"])
     def test_session_failure_never_recovers_changed_journal(
-        self, tmp_path: Path, failure_kind: str, journal_change: str
+        tmp_path: Path,
+        failure_kind: str,
+        journal_change: str,
     ) -> None:
         """Retain the causal failure and publications when journal authority changes."""
         root = test_u.Tests.git_repository(tmp_path)
         owner = FlextInfraCodegenTransaction(
-            FlextInfraCodegenMiseArtifacts(repository_root=root)
+            FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
         roots = {"@docs-0": root}
         target = root / "generated.md"
@@ -264,7 +291,7 @@ class TestsFlextInfraFileParticipantRecovery:
                 project=root,
                 path=target,
                 before=tm.ok(
-                    u.Cli.atomic_read_binary_file_state(target, required=False)
+                    u.Cli.atomic_read_binary_file_state(target, required=False),
                 ),
                 desired_content=b"prepared publication\n",
                 desired_mode=session.journal_state.mode,
@@ -281,7 +308,7 @@ class TestsFlextInfraFileParticipantRecovery:
                 journal.write_bytes(saved.read_bytes())
                 journal.chmod(saved.stat().st_mode)
             foreign = tm.ok(
-                u.Cli.atomic_read_binary_file_state(journal, required=False)
+                u.Cli.atomic_read_binary_file_state(journal, required=False),
             )
             if failure_kind == "exception":
                 with pytest.raises(OSError, match=str(cause)) as raised:
