@@ -203,7 +203,6 @@ class FlextInfraRuffLintGate(FlextInfraGate):
                         issues,
                         path=path,
                         recipes=recipes,
-                        notice=u.Infra.copyright_notice(path.parent),
                     ),
                 ))
             for before, repaired in planned:

@@ -263,7 +263,7 @@ class TestsFlextInfraDepsModernizerToolTables:
             '[project]\nname = "datacosmos-backup"\n',
             encoding="utf-8",
         )
-        namespaces = FlextInfraToolTablesPhase.first_party_namespaces(project_dir)
+        namespaces = FlextInfraToolTablesPhase.first_party_namespaces(path=project_dir)
         tm.that(namespaces, has="dc_backup", lacks="datacosmos_backup")
 
     def test_tables_are_idempotent(self, tmp_path: Path) -> None:

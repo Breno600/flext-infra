@@ -25,7 +25,6 @@ class FlextInfraToolTablesPhase:
 
     @staticmethod
     def first_party_namespaces(
-        payload: t.MutableJsonMapping | None = None,
         *,
         path: Path,
         planned_sources: t.SequenceOf[Path] = (),
@@ -44,8 +43,7 @@ class FlextInfraToolTablesPhase:
             The sorted first-party namespaces.
 
         """
-        project_dir = path
-        src_dir = project_dir / c.Infra.DEFAULT_SRC_DIR
+        src_dir = path / c.Infra.DEFAULT_SRC_DIR
         planned_parts = (
             source.relative_to(src_dir).parts
             for source in planned_sources
@@ -58,9 +56,9 @@ class FlextInfraToolTablesPhase:
         }
         return sorted({
             *config.Infra.tooling.tools.deptry.known_first_party,
-            *u.Infra.discover_first_party_namespaces(project_dir),
+            *u.Infra.discover_first_party_namespaces(path),
             *planned_packages,
-            *FlextInfraToolTablesPhase._workspace_project_namespaces(project_dir),
+            *FlextInfraToolTablesPhase._workspace_project_namespaces(path),
         })
 
     @staticmethod
@@ -373,7 +371,7 @@ class FlextInfraToolTablesPhase:
         return u.Infra.apply_toml_phases(
             payload,
             *self._phases(
-                first_party=self.first_party_namespaces(payload, path=path.parent),
+                first_party=self.first_party_namespaces(path=path.parent),
                 path=path.parent,
             ),
         )

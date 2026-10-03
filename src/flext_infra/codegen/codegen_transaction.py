@@ -979,7 +979,8 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
                 and recorded.manifest.entries
             ):
                 return result_type.fail(
-                    f"new transaction tree contains unregistered entries: {recorded.path}",
+                    f"new transaction tree contains unregistered entries: "
+                    f"{recorded.path}",
                 )
         persisted = self._write_journal(
             layout,
@@ -1007,7 +1008,8 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         compensated = state.compensate_created_directory(created)
         if compensated.failure:
             return r[bool].fail(
-                f"{failure}; created-directory compensation failed: {compensated.error}",
+                f"{failure}; created-directory compensation failed: "
+                f"{compensated.error}",
             )
         if journal_write:
             return self._handle_journal_write_failure(layout, failure)

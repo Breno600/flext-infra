@@ -279,7 +279,10 @@ class FlextInfraWorkspaceDetector(
             # observed repository (pre-G1 contract, restored): the observed
             # state IS the identity, gascity participates, and no manifest
             # project spec exists. Absence never constructs a None payload.
-            return r[tuple[m.Infra.RepositoryRef, bool, m.Infra.ProjectSpec | None]].ok((
+            outcome = tuple[
+                m.Infra.RepositoryRef, bool, m.Infra.ProjectSpec | None
+            ]
+            return r[outcome].ok((
                 observed,
                 True,
                 None,
@@ -379,7 +382,8 @@ class FlextInfraWorkspaceDetector(
             origin.value,
         ) != u.Infra.git_remote_identity(declared_url):
             return r[m.Infra.RepositoryRef].fail(
-                f"subproject origin differs from its .gitmodules URL: {path.as_posix()}",
+                f"subproject origin differs from its .gitmodules URL: "
+                f"{path.as_posix()}",
             )
         effective_url = declared_url or origin.value
         provider_result = cls._declared_provider_name(

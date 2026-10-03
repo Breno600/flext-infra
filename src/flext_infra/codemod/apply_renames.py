@@ -123,13 +123,13 @@ class FlextInfraApplyRenames:
                 ).unwrap()
                 if current_driver != driver:
                     return r[bool].fail(
-                        f"rename campaign driver changed during publication: {csv_path}",
+                        f"rename campaign driver changed during publish: {csv_path}",
                     )
                 _fresh, remaining = cls._plan(params, roots, pairs)
                 pending = remaining
                 if remaining:
                     return r[bool].fail(
-                        f"CSV campaign post-scan found {remaining} pending source edits",
+                        f"CSV campaign post-scan found {remaining} pending edits",
                     )
                 return r[bool].ok(True)
 

@@ -249,7 +249,9 @@ class FlextInfraModelsDocs(
         docstring_min: Annotated[
             float | None,
             m.Field(
-                description="Minimum docstring coverage percent; breach fails the scope",
+                description=(
+                    "Minimum docstring coverage percent; breach fails the scope"
+                ),
             ),
         ] = None
 
