@@ -1,4 +1,8 @@
-"""Real formatter effects share Git capture and physical file-scope leases."""
+"""Real formatter effects share Git capture and physical file-scope leases.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -17,13 +21,14 @@ from tests import u as test_u
 class TestsFlextInfraMutationLeases:
     """Public formatter behavior respects exact shared writer ownership."""
 
+    @staticmethod
     @pytest.mark.parametrize("git_owned", [False, True])
     def test_format_waits_for_scope_writer_and_does_not_apply_lint(
-        self,
         tmp_path: Path,
         *,
         git_owned: bool,
     ) -> None:
+        """Test format waits for scope writer and does not apply lint."""
         root = (
             test_u.Tests.git_repository(tmp_path) if git_owned else tmp_path / "files"
         )
@@ -51,7 +56,9 @@ class TestsFlextInfraMutationLeases:
         tm.that(target.read_text(encoding="utf-8"), has="import os")
         tm.that(gate.check(root, context).result.passed, eq=True)
 
-    def test_malformed_git_marker_is_not_a_file_scope(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_malformed_git_marker_is_not_a_file_scope(tmp_path: Path) -> None:
+        """Test malformed git marker is not a file scope."""
         marker = tmp_path / c.Infra.GIT_DIR
         marker.mkdir()
         request = m.Infra.GitRepoRequest(repo_root=tmp_path)
@@ -59,10 +66,11 @@ class TestsFlextInfraMutationLeases:
         tm.that(u.Infra.git_mutation_scope(request).failure, eq=True)
         tm.that((tmp_path / c.Infra.TRANSACTION_STATE_DIRNAME).exists(), eq=False)
 
+    @staticmethod
     def test_nested_git_scope_uses_original_worktree_journal(
-        self,
         tmp_path: Path,
     ) -> None:
+        """Test nested git scope uses original worktree journal."""
         root = test_u.Tests.git_repository(tmp_path)
         nested = root / "nested"
         nested.mkdir()

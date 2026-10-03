@@ -1,0 +1,62 @@
+id: require-notice-last
+valid:
+  - |
+    """Summary line.
+
+    Copyright (c) 2026 FLEXT Team. All rights reserved.
+    SPDX-License-Identifier: MIT
+    """
+  - |
+    """Summary line.
+
+    Body paragraph.
+
+    Copyright (c) 2026 FLEXT Team. All rights reserved.
+    SPDX-License-Identifier: MIT
+    """
+  - |
+    #!/usr/bin/env python3
+    """Summary line.
+
+    Copyright (c) 2026 FLEXT Team. All rights reserved.
+    SPDX-License-Identifier: MIT
+    """
+  - |
+    """Summary line.
+
+    Copyright (c) 2026 FLEXT Team. All rights reserved.
+    SPDX-License-Identifier: MIT
+    """
+
+    TEXT = """Not a docstring.
+
+    SPDX-License-Identifier: MIT
+
+    Trailing text.
+    """
+  - |
+    def run():
+        """Summary line.
+
+        SPDX-License-Identifier: MIT
+
+        Body paragraph.
+        """
+invalid:
+  - |
+    """Summary line.
+
+    Copyright (c) 2026 FLEXT Team. All rights reserved.
+    SPDX-License-Identifier: MIT
+
+    Body paragraph.
+    """
+  - |
+    #!/usr/bin/env python3
+    """Summary line.
+
+    Copyright (c) 2026 FLEXT Team. All rights reserved.
+    SPDX-License-Identifier: MIT
+
+    Body paragraph.
+    """

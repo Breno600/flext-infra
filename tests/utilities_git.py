@@ -1,4 +1,8 @@
-"""Repository-construction Git fixture test utilities for flext-infra."""
+"""Repository-construction Git fixture test utilities for flext-infra.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -18,7 +22,12 @@ class TestsFlextInfraUtilitiesGitMixin:
 
     @staticmethod
     def integration_branch(repo_root: Path) -> str:
-        """Resolve the integration branch the fixture publishes, as production does."""
+        """Resolve the integration branch the fixture publishes, as production does.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return tm.ok(
             u.Infra.repository_baseline_branch(
                 repo_root,
@@ -30,7 +39,12 @@ class TestsFlextInfraUtilitiesGitMixin:
 
     @staticmethod
     def checkout_integration(repo_root: Path) -> str:
-        """Move the fixture onto its integration branch and return its name."""
+        """Move the fixture onto its integration branch and return its name.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         branch = TestsFlextInfraUtilitiesGitMixin.integration_branch(repo_root)
         already_on_branch = (
             TestsFlextInfraUtilitiesGitMixin.git_capture(
@@ -89,7 +103,12 @@ class TestsFlextInfraUtilitiesGitMixin:
 
     @staticmethod
     def git_ref_exists(repo_root: Path, ref_name: str) -> bool:
-        """Return whether a real Git fixture contains the exact ref."""
+        """Return whether a real Git fixture contains the exact ref.
+
+        Returns:
+            Whether a real Git fixture contains the exact ref.
+
+        """
         report = tm.ok(
             u.Infra.git_ref_exists(
                 m.Infra.GitRefRequest(repo_root=repo_root, reference=ref_name),
@@ -105,6 +124,10 @@ class TestsFlextInfraUtilitiesGitMixin:
         ``initialize_git_repo`` already seeds a placeholder origin, so the
         remote is re-pointed rather than added: a second ``remote add``
         fails with "remote origin already exists".
+
+        Returns:
+            The resulting ``Path``.
+
         """
         bootstrap = TestsFlextInfraUtilitiesGitMixin.git_bootstrap
         bare_remote = remote_root / "origin.git"
@@ -151,6 +174,10 @@ class TestsFlextInfraUtilitiesGitMixin:
         repository instead of its own tmp_path, so repository construction
         must never inherit them. The set is whatever the installed Git
         declares, never a hardcoded list.
+
+        Returns:
+            The repository-local Git variables a fixture must not inherit.
+
         """
         declared = cli_facade.capture([c.Infra.GIT, "rev-parse", "--local-env-vars"])
         tm.ok(declared)
@@ -234,7 +261,12 @@ class TestsFlextInfraUtilitiesGitMixin:
 
     @staticmethod
     def git_repository(parent: Path, name: str = "repository") -> Path:
-        """Create and initialize one Git fixture repository under ``parent``."""
+        """Create and initialize one Git fixture repository under ``parent``.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         root = parent / name
         root.mkdir(parents=True)
         TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(root)
@@ -247,6 +279,10 @@ class TestsFlextInfraUtilitiesGitMixin:
         A stdlib venv built from the base interpreter with nothing installed,
         at the path the production owner resolves for that declared root: an
         environment independent of the runner's. Returns its interpreter.
+
+        Returns:
+            The resulting ``Path``.
+
         """
         venv.EnvBuilder(with_pip=False, symlinks=True).create(
             u.Infra.runtime_environment_dir(runtime_root, runtime_root=runtime_root),
@@ -262,6 +298,10 @@ class TestsFlextInfraUtilitiesGitMixin:
         origin URL is a probe, not an assertion: a freshly initialized fixture
         has no remote yet, so the probe must tolerate the negative case and
         let the caller choose ``remote add`` instead of ``remote set-url``.
+
+        Returns:
+            The configured URL for ``remote`` or "" when it is absent.
+
         """
         result = tm.ok(
             u.Cli.run_raw([c.Infra.GIT, "remote", "get-url", remote], cwd=repo_root),
@@ -272,12 +312,22 @@ class TestsFlextInfraUtilitiesGitMixin:
 
     @staticmethod
     def git_run(repo_root: Path, *args: str) -> bool:
-        """Run one Git command inside the fixture repository, failing closed."""
+        """Run one Git command inside the fixture repository, failing closed.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         return tm.ok(u.Cli.run_checked(["git", *args], cwd=repo_root))
 
     @staticmethod
     def git_capture(repo_root: Path, *args: str) -> str:
-        """Capture one Git command's stdout inside the fixture repository."""
+        """Capture one Git command's stdout inside the fixture repository.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return tm.ok(u.Cli.capture(["git", *args], cwd=repo_root))
 
 

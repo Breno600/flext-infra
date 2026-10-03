@@ -1,4 +1,8 @@
-"""Public build-workflow tests for docs services."""
+"""Public build-workflow tests for docs services.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -16,10 +20,11 @@ if TYPE_CHECKING:
 class TestsFlextInfraBuilderScope:
     """Public build-workflow tests for docs services."""
 
+    @staticmethod
     def test_build_returns_root_and_selected_project_reports(
-        self,
         tmp_path: Path,
     ) -> None:
+        """Test build returns root and selected project reports."""
         workspace = u.Tests.create_docs_workspace(
             tmp_path,
             project_names=("flext-a", "flext-b"),
@@ -39,7 +44,9 @@ class TestsFlextInfraBuilderScope:
         )
         tm.that(all(not report.passed for report in result.value), eq=True)
 
-    def test_build_uses_custom_output_dir(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_build_uses_custom_output_dir(tmp_path: Path) -> None:
+        """Test build uses custom output dir."""
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
 
         result = FlextInfraDocBuilder().build(
@@ -52,10 +59,11 @@ class TestsFlextInfraBuilderScope:
         tm.that((workspace / ".custom-docs/build-report.md").exists(), eq=True)
         tm.that((workspace / "flext-a/.custom-docs/build-report.md").exists(), eq=True)
 
+    @staticmethod
     def test_build_missing_settings_failure_has_empty_site_dir(
-        self,
         tmp_path: Path,
     ) -> None:
+        """Test build missing settings failure has empty site dir."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
 
         result = FlextInfraDocBuilder().build(workspace)

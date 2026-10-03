@@ -1,12 +1,15 @@
-"""Codegen, check, and dependency CLI route ownership."""
+"""Codegen, check, and dependency CLI route ownership.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra import c, m
-from flext_infra.codegen.conform import FlextInfraCodegenConform
+from flext_infra import c, infra, m
 from flext_infra.codegen.consolidator import FlextInfraCodegenConsolidator
 from flext_infra.codegen.constants_quality_gate import FlextInfraCodegenQualityGate
 from flext_infra.codegen.layout import FlextInfraCodegenLayout
@@ -22,9 +25,7 @@ from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
 from flext_infra.deps.fix_pyrefly_config import FlextInfraConfigFixer
 from flext_infra.deps.lock_integrity import FlextInfraLockIntegrityVerifier
 from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
-
-from ..api import infra
-from .cli_route_base import FlextInfraCliRouteBase
+from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -66,7 +67,7 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                 name="conform",
                 help_text="Conform generated project and workspace files",
                 model_cls=m.Infra.CodegenConformRequest,
-                handler=FlextInfraCodegenConform.execute_request,
+                handler=infra.codegen_conform,
                 success_message="project conformance complete",
             ),
             *(
@@ -82,9 +83,7 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                         "new",
                         "Create a new FLEXT project from the canonical templates",
                         FlextInfraCodegenProjectNew,
-                        FlextInfraCliRouteBase.result_handler(
-                            FlextInfraCodegenProjectNew.execute,
-                        ),
+                        FlextInfraCliRouteBase.result_handler(infra.codegen_new),
                         "project created",
                     ),
                     (

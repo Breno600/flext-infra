@@ -1,4 +1,8 @@
-"""Centralized constants for the core subpackage."""
+"""Centralized constants for the core subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -98,7 +102,7 @@ class FlextInfraConstantsSharedInfra:
     MAKEFILE_FILENAME: ClassVar[str] = "Makefile"
     GITMODULES: ClassVar[str] = ".gitmodules"
     GITMODULE_MANAGED_KEY: ClassVar[str] = "flext-managed"
-    "``.gitmodules`` key whose explicit non-``true`` value opts a member out of governance."
+    "``.gitmodules`` key whose non-``true`` value opts a member out of governance."
     FOLLOW_SUPERPROJECT_BRANCH: ClassVar[str] = "."
     GITIGNORE: ClassVar[str] = ".gitignore"
     PRE_COMMIT_CONFIG_FILENAME: ClassVar[str] = ".pre-commit-config.yaml"
@@ -113,6 +117,9 @@ class FlextInfraConstantsSharedInfra:
     SONARCLOUD_ISSUE_IGNORE_KEY: ClassVar[str] = "sonar.issue.ignore.multicriteria"
     "Server-side PROPERTY_SET that automatic analysis honors for issue exclusions."
     SONARCLOUD_API_AUTH_VALIDATE_PATH: ClassVar[str] = "/api/authentication/validate"
+    SONARCLOUD_API_ISSUES_SEARCH_PATH: ClassVar[str] = "/api/issues/search"
+    SONARCLOUD_ISSUES_SEARCH_LIMIT: ClassVar[int] = 10000
+    "Maximum result window documented by SonarSource for issue search."
     SONARCLOUD_API_SETTINGS_VALUES_PATH: ClassVar[str] = "/api/settings/values"
     SONARCLOUD_API_SETTINGS_SET_PATH: ClassVar[str] = "/api/settings/set"
     SONARCLOUD_API_SETTINGS_RESET_PATH: ClassVar[str] = "/api/settings/reset"
@@ -177,23 +184,6 @@ class FlextInfraConstantsSharedInfra:
     DIR_TESTS: ClassVar[str] = "tests"
     DIR_EXAMPLES: ClassVar[str] = "examples"
     DIR_SCRIPTS: ClassVar[str] = "scripts"
-    # Runtime-exempt surfaces, matched on path parts RELATIVE to the scanned
-    # repository root (X-75): an ancestor directory name never grants an
-    # exemption. Scope exclusions (state/cache dirs) belong to the source-scan
-    # ignore list, not here.
-    TIER_WHITELIST_NON_RUNTIME_DIR_PARTS: ClassVar[frozenset[str]] = frozenset({
-        DIR_TESTS,
-        DIR_EXAMPLES,
-        DIR_SCRIPTS,
-        "evaluate",
-    })
-    TIER_WHITELIST_SETTINGS_MODULE_LIBRARIES: ClassVar[frozenset[str]] = frozenset({
-        "pydantic_settings"
-    })
-    TIER_WHITELIST_LEAF_CONFIG_FILES: ClassVar[frozenset[str]] = frozenset({
-        "_config.py"
-    })
-    "Leaf config modules (e.g. a consumer's _config.py) that own their external-library"
     "imports directly as the bottom of the c/t/p/m/u chain."
     DIR_TYPINGS: ClassVar[str] = "typings"
     DIR_DOCS: ClassVar[str] = "docs"
@@ -211,118 +201,6 @@ class FlextInfraConstantsSharedInfra:
 
     # --- Path constants (was: class Paths) ---
     DEFAULT_SRC_DIR: ClassVar[str] = "src"
-    DUNDER_ALLOWED: ClassVar[frozenset[str]] = frozenset({"__all__", "__version__"})
-
-    TYPEVAR_CALLABLES: ClassVar[frozenset[str]] = frozenset({
-        "TypeVar",
-        "ParamSpec",
-        "TypeVarTuple",
-    })
-
-    ENUM_BASES: ClassVar[frozenset[str]] = frozenset({"StrEnum", "Enum", "IntEnum"})
-
-    COLLECTION_CALLS: ClassVar[frozenset[str]] = frozenset({
-        "frozenset",
-        "tuple",
-        "dict",
-        "list",
-    })
-
-    SCRIPT_EXIT_CODE_VALUES: ClassVar[frozenset[int]] = frozenset(
-        int(item) for item in ScriptExitCode
-    )
-
-    SCRIPT_HEADER_MAX_LINES: ClassVar[int] = 10
-
-    SCRIPT_MIN_CODE_LINES: ClassVar[int] = 20
-
-    SKILL_REPORT_VALIDATED_TOP_DIRS: ClassVar[frozenset[str]] = frozenset({"."})
-
-    SKILL_REPORT_SKIPPED_TOP_DIRS: ClassVar[frozenset[str]] = frozenset({
-        "evidence",
-        "plans",
-        "drafts",
-        "validation",
-        "dependencies",
-    })
-
-    SKILL_REPORT_SKIPPED_FILES: ClassVar[frozenset[str]] = frozenset({".gitkeep"})
-
-    SKILL_OWNER_MARKER_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^# Owner-Skill:\s+(.agents/skills/([a-z0-9][-a-z0-9]*)/SKILL\.md)\s*$"
-    )
-
-    SKILL_REPORT_ARTIFACT_NAME_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^[a-z][-a-z0-9]*--[a-z]+--[a-z][-a-z0-9]*\.[a-z]+$"
-    )
-
-    SKILL_REPORT_ARTIFACT_SKILL_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^[a-z][-a-z0-9]*$"
-    )
-
-    SKILL_REPORT_ARTIFACT_SLUG_INVALID_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"[^a-z0-9-]+"
-    )
-
-    SKILL_REPORT_ARTIFACT_MULTI_DASH_RE: ClassVar[t.RegexPattern] = re.compile(r"-+")
-
-    SKILL_REPORTS_PATH_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"\.reports/([^\s\"']+)"
-    )
-
-    SKILL_BASH_EXIT_RE: ClassVar[t.RegexPattern] = re.compile(r"^\s*exit\s+(\d+)")
-
-    SKILL_INTERACTIVE_PY_RE: ClassVar[t.RegexPattern] = re.compile(r"\binput\s*\(")
-
-    SKILL_INTERACTIVE_SH_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"\bread\s+-p\b|\bselect\s+\w+\s+in\b|\bdialog\b|\bwhiptail\b"
-    )
-
-    SKILL_INTERACTIVE_GATE_RE: ClassVar[t.RegexPattern] = re.compile(r"--interactive")
-
-    SKILL_VALIDATOR_NAME_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(enforce|check|validate|test|verify|audit|lint|scan)[-_]"
-    )
-
-    SKILL_FIXER_NAME_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(fix|autofix|repair|correct|reorder|refactor|standardize)[-_]"
-    )
-
-    METADATA_TOMLLIB_MODULES: ClassVar[frozenset[str]] = frozenset({"tomllib"})
-    # Package-tree markers matched against "/<path relative to the scanned
-    # root>" (X-77): the directory name of the working copy (a lane may be
-    # named anything) never takes part in the match.
-
-    METADATA_ALLOWLIST_PATH_MARKERS: ClassVar[t.StrSequence] = (
-        "/src/flext_core/_utilities/project_metadata.py",
-        "/src/flext_infra/iteration.py",
-        "/src/flext_infra/__version__.py",
-    )
-
-    METADATA_TARGET_SCOPE_MARKERS: ClassVar[t.StrSequence] = ("/src/flext_infra/",)
-
-    # --- Integration baseline discovery ---
-    # Ordered preference used to derive one repository's integration baseline
-    # from live Git. A provider default is a fallback ordering, never the
-    # answer: repositories under the same provider legitimately integrate on
-    # different branches, so the published remote-tracking branch decides.
-    #
-    # This is the built-in ordering of conventional names only. The governing
-    # value is `codegen.branch_policy.integration_branch_preference`, which a
-    # workspace declares for itself — a fleet that integrates on a versioned
-    # line names it there rather than asking for a constant here. Product- and
-    # release-specific names do not belong in this tuple.
-
-    GITMODULE_SECTION_RE: ClassVar[t.RegexPattern] = re.compile(
-        r'(?m)^\[submodule "[^"]+"\]\s*$'
-    )
-    "``.gitmodules`` submodule section header at line start."
-
-    GITMODULE_PATH_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"(?m)^[ \t]*path[ \t]*=[ \t]*(.+?)[ \t]*$"
-    )
-    "``.gitmodules`` path assignment value inside a submodule section."
-
 
 
 __all__: list[str] = ["FlextInfraConstantsSharedInfra"]

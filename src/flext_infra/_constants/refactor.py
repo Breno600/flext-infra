@@ -1,4 +1,8 @@
-"""Constants namespace for flext_infra.refactor."""
+"""Constants namespace for flext_infra.refactor.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,8 +13,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, ClassVar, Literal
 
 from flext_core import c
-
-from .base import FlextInfraConstantsBase as cb
+from flext_infra._constants.base import FlextInfraConstantsBase as cb
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -110,7 +113,28 @@ class FlextInfraConstantsRefactor:
         - ``file-family``: it is a facade letter (tooling import-layer order)
           of the family the finding's module belongs to: the letters its own
           ``__all__`` declares and those its private family package's facade
-          module declares.
+          module declares;
+        - ``facade-module``: the finding's module declares a facade letter in
+          its ``__all__`` (the captured value is not read);
+        - ``later-layer``: the captured import (a module of the own package or
+          a facade letter) belongs to a later layer of the import-layer order
+          than the finding's module;
+        - ``import-cycle``: the captured import (module as written, with the
+          imported name as ``of``) is an edge of a runtime import cycle of the
+          project's import graph;
+        - ``composes-family``: the captured class of a facade module reaches,
+          through its bases, every class the facade's family package
+          declares in ``__all__``;
+        - ``class-stem``: the captured class name starts with the project's
+          class stem (``Tests`` + stem under the tests tree);
+        - ``package-layers``: the finding's package provides every layer the
+          rule names in ``arg`` (a declared facade letter, a module, a
+          private module or a subpackage of that name);
+        - ``family-base``: the private family package holding the finding's
+          module begins with ``base.py``.
+
+        ``later-layer`` compares with the layer the rule names in ``arg`` when
+        it names one.
         """
 
         STDLIB_MODULE = "stdlib-module"
@@ -122,10 +146,26 @@ class FlextInfraConstantsRefactor:
         MODULE_EXPORT = "module-export"
         PACKAGE_EXPORT = "package-export"
         FILE_FAMILY = "file-family"
+        FACADE_MODULE = "facade-module"
+        LATER_LAYER = "later-layer"
+        IMPORT_CYCLE = "import-cycle"
+        COMPOSES_FAMILY = "composes-family"
+        CLASS_STEM = "class-stem"
+        PACKAGE_LAYERS = "package-layers"
+        PACKAGE_ROOT_INIT = "package-root-init"
+        FAMILY_BASE = "family-base"
+
+    CODEMOD_RUNTIME_CLOSURE_PREDICATES: ClassVar[frozenset[CodemodContextPredicate]] = (
+        frozenset({
+            CodemodContextPredicate.RUNTIME_PACKAGE,
+            CodemodContextPredicate.FACADE_PACKAGE,
+        })
+    )
+    "Predicates evaluated against the project's runtime dependency closure."
 
     @unique
     class SemanticCutoverPhase(StrEnum):
-        """Semantic ``make mod`` cutovers planned by ``u.Infra.plan_semantic_cutover``."""
+        """Semantic ``make mod`` cutovers planned by ``u.Infra``."""
 
         CLASS_NESTING = "class-nesting"
         COMPAT_ALIAS = "compat-alias"
@@ -134,14 +174,22 @@ class FlextInfraConstantsRefactor:
         MODEL_FIELDS = "model-fields"
         SELF_FACADE_IMPORT = "self-facade-import"
         DYNAMIC_ENVIRONMENT = "dynamic-environment"
+        MODULE_END = "module-end"
+        NOTICE_LAST = "notice-last"
 
     SEMANTIC_CUTOVER_RULE_IDS: ClassVar[t.MappingKV[str, str]] = MappingProxyType({
         SemanticCutoverPhase.COMPAT_ALIAS: "ban-compat-alias",
         SemanticCutoverPhase.PRIVATE_IMPORT: "ban-private-import",
         SemanticCutoverPhase.FACADE_BASE: "facade-base-by-class-name",
-        SemanticCutoverPhase.MODEL_FIELDS: "rewire-getattr-model-fields-to-direct-access",
-        SemanticCutoverPhase.SELF_FACADE_IMPORT: "ban-infra-utility-module-self-facade-import",
+        SemanticCutoverPhase.MODEL_FIELDS: (
+            "rewire-getattr-model-fields-to-direct-access"
+        ),
+        SemanticCutoverPhase.SELF_FACADE_IMPORT: (
+            "ban-infra-utility-module-self-facade-import"
+        ),
         SemanticCutoverPhase.DYNAMIC_ENVIRONMENT: "ban-ambient-environ-read",
+        SemanticCutoverPhase.MODULE_END: "require-all-last",
+        SemanticCutoverPhase.NOTICE_LAST: "require-notice-last",
     })
     "ast-grep rule whose findings select each finding-driven semantic cutover."
 
@@ -194,6 +242,7 @@ class FlextInfraConstantsRefactor:
     CODEMOD_TEXT_KEY_DESCRIPTION: ClassVar[str] = "description"
     CODEMOD_TEXT_KEY_INCLUDE: ClassVar[str] = "include"
     CODEMOD_TEXT_KEY_EXCLUDE: ClassVar[str] = "exclude"
+    CODEMOD_TEXT_KEY_DISTRIBUTIONS: ClassVar[str] = "distributions"
     CODEMOD_TEXT_KEY_FIND: ClassVar[str] = "find"
     CODEMOD_TEXT_KEY_REPLACE: ClassVar[str] = "replace"
     CODEMOD_TEXT_KEY_FLAGS: ClassVar[str] = "flags"
@@ -219,6 +268,8 @@ class FlextInfraConstantsRefactor:
     CODEMOD_CONTEXT_HOLDS_KEY: ClassVar[str] = "is"
     CODEMOD_CONTEXT_FAILS_KEY: ClassVar[str] = "not"
     CODEMOD_CONTEXT_OF_KEY: ClassVar[str] = "of"
+    CODEMOD_CONTEXT_ARG_KEY: ClassVar[str] = "arg"
+    CODEMOD_CONTEXT_AS_KEY: ClassVar[str] = "as"
     CODEMOD_RULE_NAME_METAVARIABLE: ClassVar[str] = "NAME"
     CODEMOD_RULE_MODULE_METAVARIABLE: ClassVar[str] = "MODULE"
     CODEMOD_RULE_FAMILY_METAVARIABLE: ClassVar[str] = "FAMILY"
@@ -265,90 +316,6 @@ class FlextInfraConstantsRefactor:
         cb.RK_ENABLED,
         cb.RK_SEVERITY,
     )
-    FLEXT_CONSTANTS_FILE_NAMES: ClassVar[frozenset[str]] = frozenset({
-        "constants.py",
-        "_constants.py",
-    })
-    "Canonical constants module file names."
-    FLEXT_CONSTANTS_DIRECTORY: ClassVar[str] = "constants"
-    "Canonical constants package directory name."
-    FLEXT_TYPINGS_FILE_NAMES: ClassVar[frozenset[str]] = frozenset({
-        "typings.py",
-        "_typings.py",
-    })
-    "Canonical typings module file names."
-    FLEXT_TYPINGS_DIRECTORY: ClassVar[str] = "typings"
-    "Canonical typings package directory name."
-    FLEXT_PROTOCOLS_FILE_NAMES: ClassVar[frozenset[str]] = frozenset({
-        "protocols.py",
-        "_protocols.py",
-    })
-    "Canonical protocols module file names."
-    FLEXT_PROTOCOLS_DIRECTORY: ClassVar[str] = "protocols"
-    "Canonical protocols package directory name."
-    FLEXT_PROTOCOLS_DIRECTORIES: ClassVar[frozenset[str]] = frozenset({
-        FLEXT_PROTOCOLS_DIRECTORY,
-        f"_{FLEXT_PROTOCOLS_DIRECTORY}",
-    })
-    "Sanctioned protocol package directory names (public and private)."
-    FLEXT_MODELS_FILE_NAMES: ClassVar[frozenset[str]] = frozenset({"models.py"})
-    "Canonical models module file names."
-    FLEXT_MODELS_DIRECTORY: ClassVar[str] = "models"
-    "Canonical models package directory name."
-    FLEXT_MODELS_DIRECTORIES: ClassVar[frozenset[str]] = frozenset({
-        FLEXT_MODELS_DIRECTORY,
-        f"_{FLEXT_MODELS_DIRECTORY}",
-    })
-    "Sanctioned model package directory names (public and private)."
-    FLEXT_UTILITIES_FILE_NAMES: ClassVar[frozenset[str]] = frozenset({
-        "utilities.py",
-        "_utilities.py",
-    })
-    "Canonical utilities module file names."
-    FLEXT_UTILITIES_DIRECTORY: ClassVar[str] = "utilities"
-    "Canonical utilities package directory name."
-    FAMILY_SUFFIXES: ClassVar[t.StrMapping] = MappingProxyType({
-        "c": "Constants",
-        "t": "Types",
-        "p": "Protocols",
-        "m": "Models",
-        "u": "Utilities",
-    })
-    "Facade family letter → class suffix mapping."
-    FAMILY_DIRECTORIES: ClassVar[t.StrMapping] = MappingProxyType({
-        "c": "_constants",
-        "t": "_typings",
-        "p": "_protocols",
-        "m": "_models",
-        "u": "_utilities",
-    })
-    "Facade family letter → subdirectory name mapping."
-    FAMILY_PUBLIC_MODULES: ClassVar[t.StrMapping] = MappingProxyType({
-        "c": "constants",
-        "m": "models",
-        "p": "protocols",
-        "t": "typings",
-        "u": "utilities",
-    })
-    "Facade family letter → public facade module suffix mapping."
-    FAMILY_FILES: ClassVar[t.StrMapping] = MappingProxyType({
-        "c": "*constants.py",
-        "t": "*typings.py",
-        "p": "*protocols.py",
-        "m": "*models.py",
-        "u": "*utilities.py",
-    })
-    "Facade family letter → file glob mapping."
-    NAMESPACE_FILE_TO_FAMILY: ClassVar[t.StrMapping] = MappingProxyType(
-        dict.fromkeys(FLEXT_CONSTANTS_FILE_NAMES, "c")
-        | dict.fromkeys(FLEXT_TYPINGS_FILE_NAMES, "t")
-        | dict.fromkeys(FLEXT_PROTOCOLS_FILE_NAMES, "p")
-        | dict.fromkeys(FLEXT_MODELS_FILE_NAMES, "m")
-        | dict.fromkeys(FLEXT_UTILITIES_FILE_NAMES, "u"),
-    )
-    "Canonical facade file name → family alias mapping."
-    FLEXT_FAMILIES: ClassVar[frozenset[str]] = frozenset({"c", "t", "p", "m", "u"})
-    "All FLEXT families."
     DOMAIN_PACKAGES: ClassVar[frozenset[str]] = frozenset({
         "flext-ldap",
         "flext-ldif",
@@ -452,166 +419,11 @@ class FlextInfraConstantsRefactor:
         "set_",
         "is_",
     })
-    "Public accessor name prefixes that should be renamed (drop the prefix or use a canonical verb)."
+    "Public accessor prefixes to rename (drop the prefix or use a canonical name)."
 
     # --- Symbol/identifier patterns ---
     IDENTIFIER_PATTERN: ClassVar[t.RegexPattern] = re.compile(r"\b[A-Za-z_]\w*\b")
     "Regex: Python identifier word boundary match."
-    RK_REFACTOR: ClassVar[str] = "refactor"
-
-    RK_PROJECT_SCAN_DIRS: ClassVar[str] = "project_scan_dirs"
-
-    RK_FILE_EXTENSIONS: ClassVar[str] = "file_extensions"
-
-    CODEMOD_RESOURCE_DIRNAME: ClassVar[str] = "codemod"
-
-    REFACTOR_SIGNATURE_RULES_RELPATH: ClassVar[Path] = (
-        Path("config") / "rules" / "refactor" / "signature-propagation.yml"
-    )
-
-    REFACTOR_SIGNATURE_RULES_KEY: ClassVar[str] = "migrations"
-
-    REFACTOR_CONFIG_KEYS: ClassVar[t.StrSequence] = (
-        RK_PROJECT_SCAN_DIRS,
-        RK_FILE_EXTENSIONS,
-    )
-    """Allowed keys under the ``refactor`` config scope."""
-
-    CONSTANTS_CLASS_SUFFIX: ClassVar[str] = "Constants"
-    "Class-name suffix used to identify constants facades."
-
-    CONSTANT_PATTERN: ClassVar[t.RegexPattern] = re.compile(r"^_*[A-Z][A-Z0-9_]*$")
-    "Compiled naming pattern for module-level constant candidates."
-
-    CLASSVAR_DECLARATION_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^([A-Z][A-Z0-9_]*:\s*)ClassVar\[(.*)\](\s*=)", re.DOTALL
-    )
-    "One ``NAME: ClassVar[T] =`` declaration head, capturing name, type and ``=``."
-
-    DOCSTRING_DELIMITER_COUNT: ClassVar[int] = 2
-    "Opening plus closing quote delimiters of a one-line docstring."
-
-    NAMESPACE_CONSTANT_PATTERN: ClassVar[t.RegexPattern] = re.compile(
-        r"^_?[A-Z][A-Z0-9_]+$"
-    )
-    "Regex: namespace constant candidate names."
-
-    CLASSVAR_EXEMPT_NAMES: ClassVar[frozenset[str]] = (
-        c.ENFORCEMENT_CLASSVAR_EXEMPT_NAMES
-    )
-    "ClassVar attribute names that are framework idioms and stay in place (SSOT: flext-core)."
-
-    CLASSVAR_ALLOWED_CALLS: ClassVar[frozenset[str]] = frozenset({
-        "Path",
-        "PurePath",
-        "PosixPath",
-        "WindowsPath",
-        "frozenset",
-        "tuple",
-        "dict",
-        "list",
-        "set",
-        "MappingProxyType",
-    })
-    "Canonical factory calls allowed as ClassVar default values."
-
-    NAMESPACE_MIN_ALIAS_LENGTH: ClassVar[int] = 2
-
-    FACADE_ALIAS_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(\w)\b[^=]*=\s*(\w+)", re.MULTILINE
-    )
-    "Matches ``m = FlextFooModels`` alias assignments in facade files."
-
-    # --- Detector regex constants ---
-
-    ASSIGN_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^([A-Z_]\w*)\s*[:=]", re.MULTILINE
-    )
-    "Matches top-level UPPER_CASE assignments for loose constant detection."
-
-    LOGGER_ASSIGN_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^([A-Za-z_]\w*)\s*[:=]\s*(?:(?:\w+\.)*)?"
-        r"(?:fetch_logger|create_module_logger|get_logger|logging\.getLogger)\s*\(",
-        re.IGNORECASE | re.MULTILINE,
-    )
-    "Matches top-level logger assignments created outside namespace classes."
-
-    PEP695_RE: ClassVar[t.RegexPattern] = re.compile(r"^type\s+(\w+)\s*=", re.MULTILINE)
-    "Matches PEP 695 type alias definitions."
-
-    TYPEALIAS_ANNOT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(\w+)\s*:\s*(?:\w+\.)*TypeAlias\s*=", re.MULTILINE
-    )
-    "Matches TypeAlias annotation syntax for typing alias detection."
-
-    COMPAT_ALIAS_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^([A-Z]\w+)\s*=\s*([A-Z]\w+)\s*$", re.MULTILINE
-    )
-    "Matches compatibility alias assignments (CapitalName = CapitalName)."
-
-    COMPAT_SKIP_NAMES: ClassVar[frozenset[str]] = frozenset({
-        "__all__",
-        "__version__",
-        "__version_info__",
-    })
-    "Names to skip during compatibility alias detection."
-
-    ENFORCEMENT_PROJECT_ALIAS_OWNERS: ClassVar[t.StrSequenceMapping] = (
-        c.ENFORCEMENT_PROJECT_ALIAS_OWNERS
-    )
-    "Project package → canonical aliases it re-exports locally (SSOT: flext-core)."
-    # flext-j47u: consume core enforcement data through its exact canonical alias.
-
-    FUTURE_ANNOTATIONS_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^from\s+__future__\s+import\s+annotations\b", re.MULTILINE
-    )
-    "Matches 'from __future__ import annotations' import statement."
-
-    ONLY_DOCSTRING_RE: ClassVar[t.RegexPattern] = re.compile(
-        r'^("""[\s\S]*?"""|\'\'\'[\s\S]*?\'\'\')\s*$'
-    )
-    "Matches files that contain only a module docstring."
-
-    SCAN_ALLOWED_TOP_LEVEL: ClassVar[frozenset[str]] = frozenset({
-        "__all__",
-        "__version__",
-        "__version_info__",
-    })
-    "Top-level names allowed without namespace classification."
-
-    NAMESPACE_PRIVATE_BASE_CLASS_SUFFIXES: ClassVar[frozenset[str]] = frozenset({
-        "Base",
-        "Mixin",
-        "Typing",
-    })
-    "Allowed suffixes for multiple private classes in a private base module."
-
-    IMPORT_BYPASS_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^try:\n"
-        r"(    from .+\n)"
-        r"except ImportError:\n"
-        r"    from .+\n",
-        re.MULTILINE,
-    )
-    "Regex: try/except ImportError import bypass block (strict form)."
-
-    # --- Deprecated class pattern ---
-
-    CLASS_BLOCK_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(class\s+(\w+)\b[^\n]*:\n(?:(?:[ \t]+[^\n]*|[ \t]*)\n)*)", re.MULTILINE
-    )
-    "Regex: full class block including body lines."
-
-    DEPRECATION_WARN_RE: ClassVar[t.RegexPattern] = re.compile(r"\.warn\s*\(")
-    "Regex: deprecation warning call site (.warn())."
-
-    # --- Lazy import fixer ---
-
-    DEF_ASYNC_CLASS_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?:def |async def |class )", re.MULTILINE
-    )
-    "Regex: top-level def/async def/class keyword (for lazy import detection)."
-
 
 
 __all__: list[str] = ["FlextInfraConstantsRefactor"]

@@ -1,4 +1,8 @@
-"""Fixture staging follows sgconfig declarations, never the owning checkout."""
+"""Fixture staging follows sgconfig declarations, never the owning checkout.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -13,15 +17,16 @@ from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 class TestsFlextInfraModRuleFixtureStaging:
     """Fixture staging follows sgconfig declarations, never the owning checkout."""
 
+    @staticmethod
     @pytest.mark.parametrize("with_utils", [False, True])
     @pytest.mark.parametrize("regenerate_snapshots", [False, True])
     def test_staging_copies_declared_trees_without_traversing_checkout(
-        self,
         tmp_path: Path,
         *,
         with_utils: bool,
         regenerate_snapshots: bool,
     ) -> None:
+        """Test staging copies declared trees without traversing checkout."""
         owner = tmp_path / "owner"
         owner.mkdir()
         config = "ruleDirs: [rules]\ntestConfigs:\n  - testDir: fixtures\n"
@@ -69,12 +74,13 @@ class TestsFlextInfraModRuleFixtureStaging:
         assert not (staged / ".agents").is_symlink()
         assert not (staged / ".git").exists()
 
+    @staticmethod
     @pytest.mark.parametrize("declaration", [".", "../outside", "/outside"])
     def test_staging_rejects_owner_wide_or_escaping_declarations(
-        self,
         tmp_path: Path,
         declaration: str,
     ) -> None:
+        """Test staging rejects owner wide or escaping declarations."""
         owner = tmp_path / "owner"
         owner.mkdir()
         (owner / "fixtures").mkdir()
@@ -92,13 +98,14 @@ class TestsFlextInfraModRuleFixtureStaging:
 
         assert not staged.exists()
 
+    @staticmethod
     @pytest.mark.parametrize("linked_directory", [False, True])
     def test_staging_rejects_declared_symlinks_before_copying(
-        self,
         tmp_path: Path,
         *,
         linked_directory: bool,
     ) -> None:
+        """Test staging rejects declared symlinks before copying."""
         owner = tmp_path / "owner"
         owner.mkdir()
         outside = tmp_path / "outside"

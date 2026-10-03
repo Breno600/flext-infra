@@ -1,9 +1,0 @@
-from __future__ import annotations
-
-from typing import Final
-
-VALUE: Final[int] = 1
-
-
-class FlextTestModels:
-    pass

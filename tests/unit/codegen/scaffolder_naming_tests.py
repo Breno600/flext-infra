@@ -25,14 +25,20 @@ if TYPE_CHECKING:
 class TestsFlextInfraCodegenScaffolderNaming:
     """Test suite for scaffolder generated code validity and naming conventions."""
 
-    def _parse_class_names(self, source: str) -> t.StrSequence:
+    @staticmethod
+    def _parse_class_names(source: str) -> t.StrSequence:
         """Extract all class names from Python source via the codegen regex authority.
 
         Single Responsibility: detect class definitions only.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
         """
         return c.Infra.DETECTION_CLASS_DECL_RE.findall(source)
 
-    def _validate_modules_parse(self, base_dir: Path, modules: t.StrSequence) -> None:
+    @staticmethod
+    def _validate_modules_parse(base_dir: Path, modules: t.StrSequence) -> None:
         """Validate that all modules in base_dir compile as valid Python.
 
         Utility: eliminates duplicate syntax validation logic.
@@ -59,8 +65,8 @@ class TestsFlextInfraCodegenScaffolderNaming:
                 msg=f"{filename} should contain {expected_class}",
             )
 
+    @staticmethod
     def _project_info(
-        self,
         project: Path,
         *,
         package_name: str = "test_project",
@@ -74,8 +80,8 @@ class TestsFlextInfraCodegenScaffolderNaming:
     class TestsGeneratedFilesAreValidPython:
         """Generated source and test modules compile as Python."""
 
+        @staticmethod
         def _validate_modules_parse(
-            self,
             base_dir: Path,
             modules: t.StrSequence,
         ) -> None:
@@ -83,8 +89,8 @@ class TestsFlextInfraCodegenScaffolderNaming:
                 source = (base_dir / mod).read_text(encoding="utf-8")
                 _ = compile(source, str(base_dir / mod), "exec")
 
+        @staticmethod
         def _project_info(
-            self,
             project: Path,
             *,
             package_name: str = "test_project",
@@ -124,7 +130,8 @@ class TestsFlextInfraCodegenScaffolderNaming:
     class TestsGeneratedClassNamingConvention:
         """Generated class names follow the canonical prefix and suffix contract."""
 
-        def _parse_class_names(self, source: str) -> t.StrSequence:
+        @staticmethod
+        def _parse_class_names(source: str) -> t.StrSequence:
             return c.Infra.DETECTION_CLASS_DECL_RE.findall(source)
 
         def _validate_class_names(
@@ -141,8 +148,8 @@ class TestsFlextInfraCodegenScaffolderNaming:
                     msg=f"{filename} should contain {expected_class}",
                 )
 
+        @staticmethod
         def _project_info(
-            self,
             project: Path,
             *,
             package_name: str = "test_project",
@@ -197,7 +204,8 @@ class TestsFlextInfraCodegenScaffolderNaming:
                 },
             )
 
-        def test_no_prefix_returns_empty_result(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_no_prefix_returns_empty_result(tmp_path: Path) -> None:
             """Skip generation when no package prefix is available."""
             project = tmp_path / "empty-project"
             project.mkdir()

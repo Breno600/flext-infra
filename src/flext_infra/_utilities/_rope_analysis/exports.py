@@ -1,4 +1,8 @@
-"""Rope export-name resolution, scopes, and docstring summaries."""
+"""Rope export-name resolution, scopes, and docstring summaries.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,11 +11,14 @@ from collections.abc import MutableMapping
 from typing import ClassVar
 
 from flext_infra import c, m, t
-
-from ..rope_core import FlextInfraUtilitiesRopeCore
-from ..rope_runtime import FlextInfraUtilitiesRopeRuntime
-from .asthelpers import FlextInfraUtilitiesRopeAnalysisAstHelpers
-from .sourcescan import FlextInfraUtilitiesRopeAnalysisSourceScan
+from flext_infra._utilities._rope_analysis.asthelpers import (
+    FlextInfraUtilitiesRopeAnalysisAstHelpers,
+)
+from flext_infra._utilities._rope_analysis.sourcescan import (
+    FlextInfraUtilitiesRopeAnalysisSourceScan,
+)
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeAnalysisExports:
@@ -34,6 +41,10 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         never ``get_ast``/``ast.walk``. Each entry carries the scope kind
         (Function/Class/Comprehension), its 1-based start line, and whether it
         is a direct child of the module (global) scope.
+
+        Returns:
+            Every def/class scope in a module via rope's semantic tree.
+
         """
         root_scope = pymodule.get_scope()
         if root_scope is None:
@@ -74,16 +85,28 @@ class FlextInfraUtilitiesRopeAnalysisExports:
 
     @staticmethod
     def _scope_kind(scope: t.Infra.RopeScope) -> c.Infra.RopeScopeKind:
-        """Map rope's ``get_kind()`` to the typed enum (None -> UNKNOWN)."""
+        """Map rope's ``get_kind()`` to the typed enum.
+
+        Rope documents ``None`` for comprehension scopes, which maps to
+        ``UNKNOWN``; any other undeclared kind raises its ``ValueError``.
+
+        Returns:
+            The resulting ``c.Infra.RopeScopeKind``.
+
+        """
         raw_kind = scope.get_kind()
-        try:
-            return c.Infra.RopeScopeKind(raw_kind)
-        except ValueError:
+        if raw_kind is None:
             return c.Infra.RopeScopeKind.UNKNOWN
+        return c.Infra.RopeScopeKind(raw_kind)
 
     @staticmethod
     def _scope_name(scope: t.Infra.RopeScope) -> str:
-        """Return the def/class name backing one rope scope."""
+        """Return the def/class name backing one rope scope.
+
+        Returns:
+            The def/class name backing one rope scope.
+
+        """
         name: str = scope.pyobject.get_name()
         return name
 
@@ -94,7 +117,12 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         *,
         export_options: m.Infra.ExportOptions | None = None,
     ) -> t.StrSequence:
-        """Return module-local export names from Rope metadata."""
+        """Return module-local export names from Rope metadata.
+
+        Returns:
+            Module-local export names from Rope metadata.
+
+        """
         resolved_export_options = export_options or m.Infra.ExportOptions()
         cache_key = (
             *FlextInfraUtilitiesRopeAnalysisAstHelpers.resource_cache_key(
@@ -134,7 +162,12 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         *,
         export_options: m.Infra.ExportOptions | None = None,
     ) -> t.StrSequence:
-        """Return module-local exports from one parsed source snapshot."""
+        """Return module-local exports from one parsed source snapshot.
+
+        Returns:
+            Module-local exports from one parsed source snapshot.
+
+        """
         resolved_options = export_options or m.Infra.ExportOptions()
         module = ast.parse(source)
         assignments: t.MutableSequenceOf[str] = []
@@ -257,7 +290,12 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         pymodule: t.Infra.RopePyModule,
         resource: t.Infra.RopeResource,
     ) -> t.StrSequence:
-        """Return export names for one resolved Rope module."""
+        """Return export names for one resolved Rope module.
+
+        Returns:
+            Export names for one resolved Rope module.
+
+        """
         attributes = pymodule.get_attributes()
         if export_options.include_dunder:
             return FlextInfraUtilitiesRopeAnalysisExports._dunder_export_names(
@@ -286,7 +324,12 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         attributes: t.MappingKV[str, t.Infra.RopePyName],
         resource: t.Infra.RopeResource,
     ) -> t.StrSequence:
-        """Return locally assigned dunder export names."""
+        """Return locally assigned dunder export names.
+
+        Returns:
+            Locally assigned dunder export names.
+
+        """
         return tuple(
             dict.fromkeys(
                 name
@@ -309,7 +352,12 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         pymodule: t.Infra.RopePyModule,
         resource: t.Infra.RopeResource,
     ) -> t.StrSequence | None:
-        """Return explicit ``__all__`` export names when declared locally."""
+        """Return explicit ``__all__`` export names when declared locally.
+
+        Returns:
+            Explicit ``__all__`` export names when declared locally.
+
+        """
         explicit_all_name = attributes.get(c.Infra.DUNDER_ALL)
         if (
             explicit_all_name is None
@@ -335,7 +383,12 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         resource: t.Infra.RopeResource,
         pymodule: t.Infra.RopePyModule,
     ) -> t.StrSequence:
-        """Return implicit export names accepted by the export options."""
+        """Return implicit export names accepted by the export options.
+
+        Returns:
+            Implicit export names accepted by the export options.
+
+        """
         guard_spans = FlextInfraUtilitiesRopeAnalysisExports._script_guard_spans(
             pymodule,
         )
@@ -366,6 +419,10 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         Names bound there exist only when the module runs as a script; a
         package facade that re-exported them (flext-core's examples exported
         ``result`` and ``msg``) failed every importer.
+
+        Returns:
+            The line spans of top-level ``if __name__ == "__main__":`` blocks.
+
         """
         module_ast = pymodule.get_ast()
         body = getattr(module_ast, "body", ())
@@ -396,7 +453,12 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         pyname: t.Infra.RopePyName,
         guard_spans: t.SequenceOf[t.Pair[int, int]] = (),
     ) -> bool:
-        """Return whether one Rope name is exportable under the options."""
+        """Return whether one Rope name is exportable under the options.
+
+        Returns:
+            Whether one Rope name is exportable under the options.
+
+        """
         if FlextInfraUtilitiesRopeRuntime.imported_name(pyname):
             return False
         if FlextInfraUtilitiesRopeRuntime.assigned_name(pyname):
@@ -433,6 +495,10 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         Reads the assignment's source range via the module's ``source_code``
         and extracts string literals with ``c.Infra.STRING_LITERAL_RE`` —
         avoiding ``ast`` walking entirely.
+
+        Returns:
+            Literal ``__all__`` names from a Rope-cached source slice.
+
         """
         for assignment in pyname.assignments:
             node = assignment.ast_node
@@ -447,7 +513,12 @@ class FlextInfraUtilitiesRopeAnalysisExports:
 
     @staticmethod
     def public_export_names_source(source: str) -> t.StrSequence:
-        """Return the explicit public ABI declared by one module source."""
+        """Return the explicit public ABI declared by one module source.
+
+        Returns:
+            The explicit public ABI declared by one module source.
+
+        """
         return (
             FlextInfraUtilitiesRopeAnalysisSourceScan.module_assignment_strings_source(
                 source,
@@ -457,13 +528,23 @@ class FlextInfraUtilitiesRopeAnalysisExports:
 
     @staticmethod
     def module_has_docstring_source(source: str) -> bool:
-        """Return whether ``source`` starts with a module docstring (rope-parsed)."""
+        """Return whether ``source`` starts with a module docstring (rope-parsed).
+
+        Returns:
+            Whether ``source`` starts with a module docstring (rope-parsed).
+
+        """
         pymodule = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(source)
         return bool(pymodule.get_doc())
 
     @staticmethod
     def module_docstring_summary_source(source: str) -> str:
-        """Return the PEP 257 summary line of the module docstring (rope-parsed)."""
+        """Return the PEP 257 summary line of the module docstring (rope-parsed).
+
+        Returns:
+            The PEP 257 summary line of the module docstring (rope-parsed).
+
+        """
         pymodule = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(source)
         doc = pymodule.get_doc() or ""
         summary = next((line for line in doc.splitlines() if line.strip()), "")
@@ -474,7 +555,12 @@ class FlextInfraUtilitiesRopeAnalysisExports:
 
     @staticmethod
     def symbol_has_docstring_source(source: str, symbol_name: str) -> bool:
-        """Check a locally defined symbol; imported docs need module context."""
+        """Check a locally defined symbol; imported docs need module context.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         pymodule = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(source)
         pyname = pymodule.get_attributes().get(symbol_name)
         if pyname is None or not FlextInfraUtilitiesRopeRuntime.defined_name(pyname):
@@ -488,11 +574,15 @@ class FlextInfraUtilitiesRopeAnalysisExports:
 
     @staticmethod
     def assignment_docstrings_source(source: str) -> t.StrSequence:
-        """Return assignment names followed by a string-literal expression (rope-parsed).
+        """Return assignment names followed by a string literal (rope-parsed).
 
         Iterates the parsed module's body via ``_fields`` access and pairs each
         ``Assign``/``AnnAssign``/PEP-695 ``TypeAlias`` target with the next
         sibling ``Expr(Constant(str))``.
+
+        Returns:
+            Assignment names followed by a string-literal expression (rope-parsed).
+
         """
         pymodule = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(source)
         module_ast = pymodule.get_ast()
@@ -522,12 +612,22 @@ class FlextInfraUtilitiesRopeAnalysisExports:
 
     @staticmethod
     def module_body_nodes_source(source: str) -> t.SequenceOf[t.Infra.RopeAstNode]:
-        """Return top-level parsed statements for one source module."""
+        """Return top-level parsed statements for one source module.
+
+        Returns:
+            Top-level parsed statements for one source module.
+
+        """
         _ = source
         return ()
 
     @staticmethod
     def module_reachable_nodes_source(source: str) -> t.SequenceOf[t.Infra.RopeAstNode]:
-        """Return parsed nodes reachable from one source module."""
+        """Return parsed nodes reachable from one source module.
+
+        Returns:
+            Parsed nodes reachable from one source module.
+
+        """
         _ = source
         return ()

@@ -1,4 +1,8 @@
-"""Release workflow fixture test utilities for flext-infra."""
+"""Release workflow fixture test utilities for flext-infra.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -17,7 +21,12 @@ class TestsFlextInfraUtilitiesReleaseMixin:
 
     @staticmethod
     def release_policy_root() -> Path:
-        """Return the packaged template root that owns the Gitleaks policy."""
+        """Return the packaged template root that owns the Gitleaks policy.
+
+        Returns:
+            The packaged template root that owns the Gitleaks policy.
+
+        """
         return (
             Path(__file__).resolve().parents[1]
             / "src"
@@ -40,6 +49,13 @@ class TestsFlextInfraUtilitiesReleaseMixin:
 
         ``version`` seeds the root ``pyproject.toml``, the version SSOT the
         release protocol reads and is the only writer of.
+
+        Returns:
+            The resulting ``Path``.
+
+        Raises:
+            RuntimeError: If ``rendered_gitleaks.failure``.
+
         """
         workspace = root / "workspace"
         workspace.mkdir(parents=True, exist_ok=True)
@@ -164,7 +180,12 @@ class TestsFlextInfraUtilitiesReleaseMixin:
 
     @staticmethod
     def run_release_main(repository_root: Path, *arguments: str) -> int:
-        """Run the public release CLI against one real test workspace."""
+        """Run the public release CLI against one real test workspace.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         return main([
             "release",
             "run",
@@ -180,7 +201,12 @@ class TestsFlextInfraUtilitiesReleaseMixin:
         *,
         dry_run: bool = False,
     ) -> int:
-        """Run the release build phase for one project through the public CLI."""
+        """Run the release build phase for one project through the public CLI.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         return TestsFlextInfraUtilitiesReleaseMixin.run_release_main(
             repository_root,
             "--phase",
@@ -197,7 +223,12 @@ class TestsFlextInfraUtilitiesReleaseMixin:
         *,
         initialize_project_git: bool = True,
     ) -> Path:
-        """Create a release workspace carrying one project and its internal deps."""
+        """Create a release workspace carrying one project and its internal deps.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         return TestsFlextInfraUtilitiesReleaseMixin.create_release_workspace(
             root,
             project_names=(project_name, *c.Tests.RELEASE_INTERNAL_DEPENDENCIES),
@@ -206,7 +237,12 @@ class TestsFlextInfraUtilitiesReleaseMixin:
 
     @staticmethod
     def release_build_report(repository_root: Path) -> m.Infra.BuildReport:
-        """Read the strict build report the last build phase wrote."""
+        """Read the strict build report the last build phase wrote.
+
+        Returns:
+            The resulting ``m.Infra.BuildReport``.
+
+        """
         report_path = (
             TestsFlextInfraUtilitiesReleaseMixin.release_report_dir(
                 repository_root,
@@ -220,7 +256,12 @@ class TestsFlextInfraUtilitiesReleaseMixin:
 
     @staticmethod
     def release_build_log_text(repository_root: Path, project_name: str) -> str:
-        """Read one release project's build log at the base release version."""
+        """Read one release project's build log at the base release version.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return TestsFlextInfraUtilitiesReleaseMixin.release_build_log(
             repository_root,
             c.Tests.RELEASE_VERSION_BASE,
@@ -229,7 +270,12 @@ class TestsFlextInfraUtilitiesReleaseMixin:
 
     @staticmethod
     def release_report_dir(repository_root: Path, version: str) -> Path:
-        """Return the public release report directory for one version."""
+        """Return the public release report directory for one version.
+
+        Returns:
+            The public release report directory for one version.
+
+        """
         return repository_root / ".reports" / "release" / f"v{version}"
 
     @staticmethod
@@ -238,7 +284,12 @@ class TestsFlextInfraUtilitiesReleaseMixin:
         version: str,
         project_name: str,
     ) -> Path:
-        """Return one release project's observable build log path."""
+        """Return one release project's observable build log path.
+
+        Returns:
+            One release project's observable build log path.
+
+        """
         return (
             TestsFlextInfraUtilitiesReleaseMixin.release_report_dir(
                 repository_root,
@@ -253,7 +304,12 @@ class TestsFlextInfraUtilitiesReleaseMixin:
         version: str,
         project_name: str,
     ) -> Path:
-        """Return one release project's immutable artifact-set directory."""
+        """Return one release project's immutable artifact-set directory.
+
+        Returns:
+            One release project's immutable artifact-set directory.
+
+        """
         return (
             TestsFlextInfraUtilitiesReleaseMixin.release_report_dir(
                 repository_root,

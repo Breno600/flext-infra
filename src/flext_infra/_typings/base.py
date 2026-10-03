@@ -30,11 +30,20 @@ class FlextInfraTypesBase:
 
     @staticmethod
     def _reject_blanket_mask(rule: str) -> str:
-        """Return the bare rule name, rejecting ``ALL`` and blank padding.
+        """Return the bare Ruff rule name, rejecting ``ALL``, padding and codes.
 
         Normalizing here keeps the rendered TOML free of accidental padding: a
         padded name would otherwise reach a generated pyproject verbatim and no
-        longer match the rule Ruff knows.
+        longer match the rule Ruff knows. Ruff identifies a rule by its
+        kebab-case name (``line-too-long``), so a code (``E501``) is refused.
+
+        Returns:
+            The bare rule name.
+
+        Raises:
+            ValueError: If the value is blank padding, ``ALL``, or not a
+                kebab-case Ruff rule name.
+
         """
         normalized = rule.strip()
         if not normalized:
@@ -44,6 +53,12 @@ class FlextInfraTypesBase:
             message = (
                 "ALL is not a Ruff exemption: it masks every rule, present and "
                 "future. Name each suppressed rule instead."
+            )
+            raise ValueError(message)
+        if not (normalized.islower() and normalized.replace("-", "").isalnum()):
+            message = (
+                f"{normalized!r} is not a Ruff rule name: name the rule in "
+                "kebab-case (line-too-long), never by its code (E501)."
             )
             raise ValueError(message)
         return normalized

@@ -1,7 +1,12 @@
-"""Census and introspection utilities for the refactor subpackage."""
+"""Census and introspection utilities for the refactor subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
+import ast
 import shutil
 from collections import defaultdict
 from collections.abc import Callable as _CensusCallable, MutableMapping
@@ -12,13 +17,12 @@ from flext_cli import u
 
 from flext_core import r
 from flext_infra import c, m, t
-
-from .protected_edit import FlextInfraUtilitiesProtectedEdit
-from .rope_analysis import FlextInfraUtilitiesRopeAnalysis
-from .rope_core import FlextInfraUtilitiesRopeCore
-from .rope_helpers import FlextInfraUtilitiesRopeHelpers
-from .rope_imports import FlextInfraUtilitiesRopeImports
-from .rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities.protected_edit import FlextInfraUtilitiesProtectedEdit
+from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.rope_helpers import FlextInfraUtilitiesRopeHelpers
+from flext_infra._utilities.rope_imports import FlextInfraUtilitiesRopeImports
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -44,7 +48,12 @@ class FlextInfraUtilitiesRefactorCensus:
         *,
         source_cache: MutableMapping[Path, str] | None = None,
     ) -> str:
-        """Return one original source snapshot, optionally cached by path."""
+        """Return one original source snapshot, optionally cached by path.
+
+        Returns:
+            One original source snapshot, optionally cached by path.
+
+        """
         resolved_path = file_path.resolve()
         if source_cache is None:
             source_text: str = rope.source(resolved_path)
@@ -63,7 +72,12 @@ class FlextInfraUtilitiesRefactorCensus:
         *,
         source_cache: MutableMapping[Path, str] | None = None,
     ) -> t.MappingKV[Path, t.VariadicTuple[t.IntPair]] | None:
-        """Plan safe line-range removals for simple top-level removal candidates."""
+        """Plan safe line-range removals for simple top-level removal candidates.
+
+        Returns:
+            The resulting ``t.MappingKV[Path, t.VariadicTuple[t.IntPair]] | None``.
+
+        """
         if candidate.scope_path != candidate.object_name:
             return None
         if candidate.object_kind not in {"class", "function"}:
@@ -120,7 +134,12 @@ class FlextInfraUtilitiesRefactorCensus:
         *,
         sites: t.VariadicTuple[m.Infra.ReferenceSite],
     ) -> t.VariadicTuple[t.IntPair] | None:
-        """Plan removable top-level ranges for one support file."""
+        """Plan removable top-level ranges for one support file.
+
+        Returns:
+            The resulting ``t.VariadicTuple[t.IntPair] | None``.
+
+        """
         planned_ranges: list[t.IntPair] = []
         for site in sites:
             site_range = FlextInfraUtilitiesRefactorCensus._reference_line_range(
@@ -165,7 +184,12 @@ class FlextInfraUtilitiesRefactorCensus:
         *,
         imported_name: str,
     ) -> t.VariadicTuple[int]:
-        """Return same-file occurrence lines for local aliases of ``imported_name``."""
+        """Return same-file occurrence lines for local aliases of ``imported_name``.
+
+        Returns:
+            Same-file occurrence lines for local aliases of ``imported_name``.
+
+        """
         resource = rope.resource(file_path)
         if resource is None:
             return ()
@@ -213,7 +237,12 @@ class FlextInfraUtilitiesRefactorCensus:
 
     @staticmethod
     def _supports_simple_removal_candidate(candidate: m.Infra.RemovalCandidate) -> bool:
-        """Whether ``candidate`` is eligible for the simple-removal pipeline."""
+        """Whether ``candidate`` is eligible for the simple-removal pipeline.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         return (
             candidate.scope_path == candidate.object_name
             and candidate.object_kind in {"class", "function"}
@@ -232,6 +261,10 @@ class FlextInfraUtilitiesRefactorCensus:
         Supported top-level class/function candidates must either produce
         concrete source updates or fail loudly; they must not silently collapse
         into an empty projection.
+
+        Returns:
+            Projected sources or a loud failure for broken planning.
+
         """
         updates = cls.build_simple_removal_sources(
             rope,
@@ -252,7 +285,12 @@ class FlextInfraUtilitiesRefactorCensus:
         *,
         source_cache: MutableMapping[Path, str] | None = None,
     ) -> t.MappingKV[Path, str] | None:
-        """Build updated sources for a simple removal candidate without writing."""
+        """Build updated sources for a simple removal candidate without writing.
+
+        Returns:
+            The resulting ``t.MappingKV[Path, str] | None``.
+
+        """
         edit_plan = FlextInfraUtilitiesRefactorCensus.plan_simple_removal_edits(
             rope,
             candidate,
@@ -331,7 +369,12 @@ class FlextInfraUtilitiesRefactorCensus:
         target_name: str,
         removed_ranges: t.SequenceOf[t.IntPair],
     ) -> t.StrSequence:
-        """Return simple alias names removed together with ``target_name``."""
+        """Return simple alias names removed together with ``target_name``.
+
+        Returns:
+            Simple alias names removed together with ``target_name``.
+
+        """
         if not removed_ranges:
             return ()
         resource = rope.resource(file_path)
@@ -376,6 +419,10 @@ class FlextInfraUtilitiesRefactorCensus:
 
         ``None`` when the symbol is defined in another module, so a caller never
         attributes an imported name to the file under inspection.
+
+        Returns:
+            The local definition line for one Rope symbol.
+
         """
         location = pyname.get_definition_location()
         module, line = location
@@ -386,7 +433,12 @@ class FlextInfraUtilitiesRefactorCensus:
 
     @staticmethod
     def _line_in_ranges(line: int, *, removed_ranges: t.SequenceOf[t.IntPair]) -> bool:
-        """Return whether ``line`` falls inside any removed range."""
+        """Return whether ``line`` falls inside any removed range.
+
+        Returns:
+            Whether ``line`` falls inside any removed range.
+
+        """
         return any(start <= line <= end for start, end in removed_ranges)
 
     @staticmethod
@@ -402,6 +454,10 @@ class FlextInfraUtilitiesRefactorCensus:
         populated mapping with rewritten sources otherwise, or ``None`` when
         removing the base would leave a facade class with no bases at all
         (unsafe — candidate must be handled manually).
+
+        Returns:
+            The resulting ``t.MappingKV[Path, str] | None``.
+
         """
         target_name = candidate.object_name
         definition_path = Path(candidate.file_path).resolve()
@@ -467,32 +523,37 @@ class FlextInfraUtilitiesRefactorCensus:
     def _strip_class_base(source: str, base_name: str) -> t.Pair[str, bool]:
         """Return (new_source, disqualified) after removing ``base_name`` from bases.
 
-        Handles both single-line and multi-line class declarations. When the
-        removed base was the sole entry, the candidate is flagged as
+        Handles both single-line and multi-line class declarations. The header
+        of each class spans from its ``class`` line to the line before its
+        first body statement (or that line itself for a one-line class). When
+        the removed base was the sole entry, the candidate is flagged as
         disqualified so the caller can abort the cascade safely.
+
+        Returns:
+            (new_source, disqualified) after removing ``base_name`` from bases.
+
         """
-        source_lines = source.splitlines(keepends=True)
-        rewritten_lines = list(source_lines)
-        index = 0
-        changed = False
-        while index < len(rewritten_lines):
-            line = rewritten_lines[index]
-            if not line.lstrip().startswith("class "):
-                index += 1
-                continue
-            header_start = index
-            header_lines = [rewritten_lines[index]]
-            header_balance = FlextInfraUtilitiesRopeHelpers.bracket_balance_line(line)
-            while header_start + len(header_lines) < len(rewritten_lines) and (
-                header_balance > 0 or not header_lines[-1].rstrip().endswith(":")
-            ):
-                next_index = header_start + len(header_lines)
-                next_line = rewritten_lines[next_index]
-                header_lines.append(next_line)
-                header_balance += FlextInfraUtilitiesRopeHelpers.bracket_balance_line(
-                    next_line,
+        rewritten_lines = source.splitlines(keepends=True)
+        headers = sorted(
+            (
+                (
+                    node.lineno,
+                    max(
+                        node.lineno,
+                        FlextInfraUtilitiesRopeHelpers.statement_line_span(
+                            node.body[0],
+                        )[0]
+                        - 1,
+                    ),
                 )
-            header = "".join(header_lines)
+                for node in ast.walk(ast.parse(source))
+                if isinstance(node, ast.ClassDef)
+            ),
+            reverse=True,
+        )
+        changed = False
+        for header_start, header_end in headers:
+            header = "".join(rewritten_lines[header_start - 1 : header_end])
             rewritten_header, header_changed, disqualified = (
                 FlextInfraUtilitiesRefactorCensus._rewrite_class_header_bases(
                     header,
@@ -503,13 +564,9 @@ class FlextInfraUtilitiesRefactorCensus:
                 return source, True
             if header_changed:
                 changed = True
-                replacement_lines = rewritten_header.splitlines(keepends=True)
-                rewritten_lines[header_start : header_start + len(header_lines)] = (
-                    replacement_lines
+                rewritten_lines[header_start - 1 : header_end] = (
+                    rewritten_header.splitlines(keepends=True)
                 )
-                index = header_start + len(replacement_lines)
-                continue
-            index = header_start + len(header_lines)
         return ("".join(rewritten_lines) if changed else source, False)
 
     @staticmethod
@@ -517,7 +574,12 @@ class FlextInfraUtilitiesRefactorCensus:
         header: str,
         base_name: str,
     ) -> t.Triple[str, bool, bool]:
-        """Rewrite one class header block after removing ``base_name`` from bases."""
+        """Rewrite one class header block after removing ``base_name`` from bases.
+
+        Returns:
+            The resulting ``t.Triple[str, bool, bool]``.
+
+        """
         stripped_header = header.rstrip("\n")
         if "(" not in stripped_header or ")" not in stripped_header:
             return header, False, False
@@ -565,13 +627,22 @@ class FlextInfraUtilitiesRefactorCensus:
         one line; otherwise each remaining entry stays on its own line. When
         the removed entry was the only element, the list is collapsed to
         ``[]``.
+
+        Returns:
+            The resulting ``str``.
+
         """
         single_line = c.Infra.DUNDER_ALL_SINGLE_LINE_RE
         multi_line = c.Infra.DUNDER_ALL_MULTI_LINE_RE
         quoted_target = {f'"{name}"', f"'{name}'"}
 
         def _rewrite_single(match: t.RegexMatch) -> str:
-            """Rewrite single."""
+            """Rewrite single.
+
+            Returns:
+                The resulting ``str``.
+
+            """
             body: str = t.Infra.STR_ADAPTER.validate_python(match.group("body"))
             entries = [entry.strip() for entry in body.split(",") if entry.strip()]
             remaining = [entry for entry in entries if entry not in quoted_target]
@@ -585,7 +656,12 @@ class FlextInfraUtilitiesRefactorCensus:
             return result
 
         def _rewrite_multi(match: t.RegexMatch) -> str:
-            """Rewrite multi."""
+            """Rewrite multi.
+
+            Returns:
+                The resulting ``str``.
+
+            """
             body: str = t.Infra.STR_ADAPTER.validate_python(match.group("body"))
             if "\n" not in body:
                 original_text: str = t.Infra.STR_ADAPTER.validate_python(match.group(0))
@@ -620,7 +696,12 @@ class FlextInfraUtilitiesRefactorCensus:
         candidate: m.Infra.RemovalCandidate,
         file_paths: t.SequenceOf[Path],
     ) -> None:
-        """Run one centralized post-write Rope cleanup for touched files."""
+        """Run one centralized post-write Rope cleanup for touched files.
+
+        Raises:
+            RuntimeError: If ``cleanup_result.failure``.
+
+        """
         try:
             rope.rope_project.validate()
         except RecursionError as exc:
@@ -651,6 +732,11 @@ class FlextInfraUtilitiesRefactorCensus:
         ``None`` payload, which success results forbid. The preview and
         apply paths translate that code into their own "unsupported"
         outcome so both report the same result from one owner.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.MappingKV[Path, str], _CensusCallable[[],
+                None]]]``.
+
         """
         planned = r[t.Pair[t.MappingKV[Path, str], _CensusCallable[[], None]]]
         if not FlextInfraUtilitiesRefactorCensus._supports_simple_removal_candidate(
@@ -698,6 +784,10 @@ class FlextInfraUtilitiesRefactorCensus:
         snapshot. ``r.ok(False)`` when the candidate is outside the
         simple-removal contract. ``r.fail(...)`` when planning or
         ``preview_source_writes`` failed — the message lists the reason.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         planned = FlextInfraUtilitiesRefactorCensus._planned_simple_removal(
             rope,
@@ -750,6 +840,10 @@ class FlextInfraUtilitiesRefactorCensus:
         routine here. This keeps ``flext_infra._utilities.census`` outside
         the ``flext_infra.codegen.lazy_init`` import cycle while still
         giving gates a chance to verify post-cascade correctness.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         source_cache: MutableMapping[Path, str] = {}
         planned = FlextInfraUtilitiesRefactorCensus._planned_simple_removal(
@@ -788,7 +882,12 @@ class FlextInfraUtilitiesRefactorCensus:
 
     @staticmethod
     def apply_line_ranges(source: str, ranges: t.SequenceOf[t.IntPair]) -> str:
-        """Remove one or more 1-based inclusive line ranges from Python source."""
+        """Remove one or more 1-based inclusive line ranges from Python source.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         merged_ranges = FlextInfraUtilitiesRefactorCensus.merge_line_ranges(ranges)
         if not merged_ranges:
             return source
@@ -806,7 +905,12 @@ class FlextInfraUtilitiesRefactorCensus:
 
     @staticmethod
     def normalize_top_level_spacing(source: str) -> str:
-        """Collapse blank-line runs left behind by top-level removals."""
+        """Collapse blank-line runs left behind by top-level removals.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         normalized: str = c.Infra.BLANK_LINE_RUN_RE.sub("\n\n\n", source)
         return normalized
 
@@ -817,6 +921,13 @@ class FlextInfraUtilitiesRefactorCensus:
         Skips cache and virtual-env directories so the clone is minimal and the
         downstream rope workspace opens on source-only state. Returns the
         resolved destination path.
+
+        Returns:
+            The resulting ``Path``.
+
+        Raises:
+            NotADirectoryError: If clone source is not a directory.
+
         """
         resolved_source = source.resolve()
         resolved_destination = destination.resolve()
@@ -837,7 +948,12 @@ class FlextInfraUtilitiesRefactorCensus:
     def merge_line_ranges(
         ranges: t.SequenceOf[t.IntPair],
     ) -> t.VariadicTuple[t.IntPair]:
-        """Merge overlapping or adjacent 1-based inclusive line ranges."""
+        """Merge overlapping or adjacent 1-based inclusive line ranges.
+
+        Returns:
+            The resulting ``t.VariadicTuple[t.IntPair]``.
+
+        """
         if not ranges:
             return ()
         ordered_ranges = sorted(ranges)
@@ -854,7 +970,12 @@ class FlextInfraUtilitiesRefactorCensus:
     def _supporting_reference_sites(
         candidate: m.Infra.RemovalCandidate,
     ) -> t.VariadicTuple[m.Infra.ReferenceSite]:
-        """Supporting reference sites."""
+        """Supporting reference sites.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.ReferenceSite]``.
+
+        """
         sites: t.VariadicTuple[m.Infra.ReferenceSite] = tuple(
             candidate.script_reference_sites,
         )
@@ -865,22 +986,29 @@ class FlextInfraUtilitiesRefactorCensus:
         source: str,
         candidate: m.Infra.RemovalCandidate,
     ) -> t.IntPair | None:
-        """Definition line range."""
-        block = FlextInfraUtilitiesRopeHelpers.extract_definition(
+        """Definition line range.
+
+        Returns:
+            The resulting ``t.IntPair | None``.
+
+        """
+        return FlextInfraUtilitiesRopeHelpers.top_level_definition_span(
             source,
             candidate.object_name,
             kind=candidate.object_kind,
         )
-        if block is None:
-            return None
-        return FlextInfraUtilitiesRefactorCensus._line_range_for_snippet(source, block)
 
     @staticmethod
     def _reference_line_range(
         source: str,
         site: m.Infra.ReferenceSite,
     ) -> t.IntPair | None:
-        """Compute the line range for a reference site."""
+        """Compute the line range for a reference site.
+
+        Returns:
+            The resulting ``t.IntPair | None``.
+
+        """
         return FlextInfraUtilitiesRefactorCensus._reference_line_range_for_line(
             source,
             site.line,
@@ -888,99 +1016,20 @@ class FlextInfraUtilitiesRefactorCensus:
 
     @staticmethod
     def _reference_line_range_for_line(source: str, line: int) -> t.IntPair | None:
-        """Top-level removable statement range containing ``line``."""
-        lines = source.splitlines()
-        if line < 1 or line > len(lines):
-            return None
-        start = FlextInfraUtilitiesRefactorCensus._top_level_statement_start(
-            lines,
-            line_index=line - 1,
-        )
-        if start is None:
-            return None
-        if lines[start].lstrip().startswith("class "):
-            return None
-        end = FlextInfraUtilitiesRefactorCensus._top_level_statement_end(
-            lines,
-            start_index=start,
-        )
-        if end is None:
-            return None
-        return start + 1, end + 1
+        """Top-level removable statement range containing ``line``.
 
-    @staticmethod
-    def _line_range_for_snippet(source: str, snippet: str) -> t.IntPair | None:
-        """Line range for snippet."""
-        start_offset = source.find(snippet)
-        if start_offset < 0:
-            return None
-        start_line = source[:start_offset].count("\n") + 1
-        end_line = start_line + snippet.count("\n")
-        return start_line, end_line
+        A class statement is never removed as a reference site; ``None`` also
+        answers a line outside every top-level statement.
 
-    @staticmethod
-    def _top_level_statement_start(
-        lines: t.SequenceOf[str],
-        *,
-        line_index: int,
-    ) -> int | None:
-        """Top level statement start."""
-        start = line_index
-        while start >= 0:
-            line = lines[start]
-            stripped = line.strip()
-            if not stripped:
-                start -= 1
-                continue
-            if line.startswith((" ", "\t")):
-                start -= 1
-                continue
-            prior_balance = sum(
-                FlextInfraUtilitiesRopeHelpers.bracket_balance_line(lines[i])
-                for i in range(start)
-            )
-            if prior_balance > 0:
-                start -= 1
-                continue
-            while start > 0:
-                previous = lines[start - 1]
-                if previous.startswith("@"):
-                    start -= 1
-                    continue
-                break
-            return start
+        Returns:
+            The resulting ``t.IntPair | None``.
+
+        """
+        for statement in ast.parse(source).body:
+            start, end = FlextInfraUtilitiesRopeHelpers.statement_line_span(statement)
+            if start <= line <= end:
+                return None if isinstance(statement, ast.ClassDef) else (start, end)
         return None
-
-    @staticmethod
-    def _top_level_statement_end(
-        lines: t.SequenceOf[str],
-        *,
-        start_index: int,
-    ) -> int | None:
-        """Top level statement end."""
-        if start_index < 0 or start_index >= len(lines):
-            return None
-        bracket_balance = FlextInfraUtilitiesRopeHelpers.bracket_balance_line(
-            lines[start_index],
-        )
-        end = start_index
-        for index in range(start_index + 1, len(lines)):
-            line = lines[index]
-            stripped = line.strip()
-            if bracket_balance > 0:
-                end = index
-                bracket_balance += FlextInfraUtilitiesRopeHelpers.bracket_balance_line(
-                    line,
-                )
-                continue
-            if not stripped:
-                end = index
-                continue
-            if not line.startswith((" ", "\t")):
-                return end
-            end = index
-            bracket_balance += FlextInfraUtilitiesRopeHelpers.bracket_balance_line(line)
-        return end
 
 
 __all__: list[str] = ["FlextInfraUtilitiesRefactorCensus"]

@@ -1,4 +1,8 @@
-"""Real local installation preserves consumer resolution and isolation."""
+"""Real local installation preserves consumer resolution and isolation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -16,6 +20,8 @@ from tests import u
 class TestsFlextInfraBindingInstall:
     """Exercise the public binding CLI with real consumer and supplier packages."""
 
+    @staticmethod
+    @pytest.mark.slow
     @pytest.mark.parametrize(
         "scenario",
         [
@@ -30,7 +36,6 @@ class TestsFlextInfraBindingInstall:
         ],
     )
     def test_binding_uses_consumer_contract(
-        self,
         tmp_path: Path,
         scenario: str,
     ) -> None:

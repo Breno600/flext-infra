@@ -1,4 +1,8 @@
-"""Crash recovery for staging, prepared, recovering, or committed journals."""
+"""Crash recovery for staging, prepared, recovering, or committed journals.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,12 +12,21 @@ from typing import TYPE_CHECKING, Literal
 
 from flext_core import r
 from flext_infra import c, m
-
-from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
-from ._mise_artifacts_journal import FlextInfraMiseArtifactsJournal as journal_io
-from ._mise_artifacts_process import FlextInfraMiseArtifactsProcess as process
-from ._mise_artifacts_state import FlextInfraMiseArtifactsState as state
-from ._mise_artifacts_verification import FlextInfraMiseArtifactsVerification as verify
+from flext_infra.codegen._mise_artifacts_files import (
+    FlextInfraMiseArtifactsFiles as files,
+)
+from flext_infra.codegen._mise_artifacts_journal import (
+    FlextInfraMiseArtifactsJournal as journal_io,
+)
+from flext_infra.codegen._mise_artifacts_process import (
+    FlextInfraMiseArtifactsProcess as process,
+)
+from flext_infra.codegen._mise_artifacts_state import (
+    FlextInfraMiseArtifactsState as state,
+)
+from flext_infra.codegen._mise_artifacts_verification import (
+    FlextInfraMiseArtifactsVerification as verify,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -50,7 +63,12 @@ class FlextInfraMiseRecovery:
         journal: m.Infra.CodegenTransactionJournal,
         journal_state: m.Cli.AtomicFileState,
     ) -> p.Result[bool]:
-        """Recover an authenticated journal without consulting source topology."""
+        """Recover an authenticated journal without consulting source topology.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         topology = verify.journal_topology(layout, journal)
         if topology.failure:
             return topology
@@ -104,6 +122,10 @@ class FlextInfraMiseRecovery:
         count exceeds one by construction; the atomic-state reader rejects
         such leaves. Package resources are immutable data read as bytes, and
         their physical identities still come from lstat for the action log.
+
+        Returns:
+            The resulting ``m.Cli.AtomicFileState``.
+
         """
         content = path.read_bytes()
         leaf = path.lstat()
@@ -126,7 +148,12 @@ class FlextInfraMiseRecovery:
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         journal: m.Infra.CodegenTransactionJournal,
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenRecoveryAction]]:
-        """Classify every live target before preparing any recovery effect."""
+        """Classify every live target before preparing any recovery effect.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenRecoveryAction]]``.
+
+        """
         result_type = r[tuple[m.Infra.CodegenRecoveryAction, ...]]
         actions: list[m.Infra.CodegenRecoveryAction] = []
         for entry in journal.entries:
@@ -193,7 +220,12 @@ class FlextInfraMiseRecovery:
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         entry: m.Infra.CodegenJournalEntry,
     ) -> bool:
-        """Whether the entry's staged rollback tree is gone entirely."""
+        """Whether the entry's staged rollback tree is gone entirely.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         if entry.original_backup is None:
             return False
         backup = files.resolve_transaction(
@@ -408,7 +440,12 @@ class FlextInfraMiseRecovery:
 
     @staticmethod
     def _classify_identity(state: m.Cli.AtomicFileState) -> _FileOwnershipIdentity:
-        """Classify by durable content and parent identity, never per-copy inode."""
+        """Classify by durable content and parent identity, never per-copy inode.
+
+        Returns:
+            The resulting ``_FileOwnershipIdentity``.
+
+        """
         return (
             state.content is not None,
             state.parent_device,
@@ -474,7 +511,12 @@ class FlextInfraMiseRecovery:
         entry: m.Infra.CodegenJournalEntry,
         prefix: Literal["original", "desired", "rollback"],
     ) -> _FileIdentity:
-        """Build one journal identity without dynamically addressing model fields."""
+        """Build one journal identity without dynamically addressing model fields.
+
+        Returns:
+            The resulting ``_FileIdentity``.
+
+        """
         stored: t.MappingKV[str, t.Pair[bool | None, _FileIdentity]] = {
             "original": (
                 entry.original_exists,

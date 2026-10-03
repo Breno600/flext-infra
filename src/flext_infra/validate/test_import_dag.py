@@ -1,4 +1,8 @@
-"""Rope-semantic guard for the strict package-test import DAG."""
+"""Rope-semantic guard for the strict package-test import DAG.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -17,7 +21,12 @@ class FlextInfraValidateTestImportDag(FlextInfraProjectSelectionServiceBase[bool
     """Enforce directed imports between production, tests, and test facets."""
 
     def build_report(self, repository_root: Path) -> p.Result[m.Infra.ValidationReport]:
-        """Scan every governed project as an independent import unit."""
+        """Scan every governed project as an independent import unit.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ValidationReport]``.
+
+        """
         try:
             roots = u.Infra.discover_project_roots(repository_root) or (
                 repository_root,
@@ -71,7 +80,7 @@ class FlextInfraValidateTestImportDag(FlextInfraProjectSelectionServiceBase[bool
     def _facet(file_path: Path) -> str | None:
         if c.Infra.DIR_TESTS not in file_path.parts:
             return None
-        return c.Infra.NAMESPACE_FILE_TO_FAMILY.get(file_path.name)
+        return u.Infra.facade_family_of_file(file_path.name)
 
     @staticmethod
     def _imported_facet(imported: str) -> str | None:
@@ -80,10 +89,14 @@ class FlextInfraValidateTestImportDag(FlextInfraProjectSelectionServiceBase[bool
             return None
         return next(
             (
-                c.Infra.NAMESPACE_FILE_TO_FAMILY[module_file]
+                family
                 for part in parts[1:]
-                if (module_file := f"{part}{c.Infra.EXT_PYTHON}")
-                in c.Infra.NAMESPACE_FILE_TO_FAMILY
+                if (
+                    family := u.Infra.facade_family_of_file(
+                        f"{part}{c.Infra.EXT_PYTHON}",
+                    )
+                )
+                is not None
             ),
             None,
         )
@@ -131,11 +144,7 @@ class FlextInfraValidateTestImportDag(FlextInfraProjectSelectionServiceBase[bool
                 return "test facets cannot import the tests package root"
             if imports_test_support:
                 return "test facets cannot import fixtures, conftest, or test modules"
-            facade_order = tuple(
-                alias
-                for alias in c.Infra.PUBLIC_ROOT_ALIAS_ORDER
-                if alias in c.Infra.FLEXT_FAMILIES
-            )
+            facade_order = tuple(u.Infra.facade_families())
             if imported_facet is not None and facade_order.index(
                 imported_facet,
             ) < facade_order.index(source_facet):
