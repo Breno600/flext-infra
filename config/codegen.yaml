@@ -51,7 +51,12 @@ Infra:
       # Keep reasons here; an empty list removes constraints from all projections.
       # Dependency compatibility is resolved from the declared project graph;
       # upstream packages own any bounds their public contracts require.
-      uv_constraint_dependencies: []
+      # mypy 2.4.0 crashes internally (AssertionError "Must not defer during
+      # final iteration", mypy semanal.py) on the fleet's nested ldif model
+      # inference — held below 2.4.0 until upstream fixes the deferral bug.
+      # Bead trail: flext-0ftd.3 family + flext-mlr2m root parser finding.
+      uv_constraint_dependencies:
+        - mypy<2.4.0
       # Moving selectors consumed by generated .mise.toml and CI. Only
       # `make upg` resolves them to the newest release and writes mise.lock;
       # setup installs exactly what the committed lock pins.
