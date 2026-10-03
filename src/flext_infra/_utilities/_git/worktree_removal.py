@@ -1,4 +1,8 @@
-"""Canonical Git responsibility mixin for ``u.Infra``."""
+"""Canonical Git responsibility mixin for ``u.Infra``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,15 +12,16 @@ from typing import TYPE_CHECKING
 from git import GitCommandError, Repo
 
 from flext_core import r
-
-from .worktree_patch import FlextInfraUtilitiesGitWorktreePatchMixin
+from flext_infra._utilities._git.worktree_patch import (
+    FlextInfraUtilitiesGitWorktreePatchMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p, t
 
 
 class FlextInfraUtilitiesGitWorktreeRemovalMixin(
-    FlextInfraUtilitiesGitWorktreePatchMixin
+    FlextInfraUtilitiesGitWorktreePatchMixin,
 ):
     """Own worktree removal operations."""
 
@@ -36,7 +41,9 @@ class FlextInfraUtilitiesGitWorktreeRemovalMixin(
 
     @classmethod
     def _preflight_clean_worktree(
-        cls, source_root: Path, worktree_root: Path
+        cls,
+        source_root: Path,
+        worktree_root: Path,
     ) -> p.Result[Repo]:
         try:
             repo = cls._repo(source_root)
@@ -44,7 +51,7 @@ class FlextInfraUtilitiesGitWorktreeRemovalMixin(
                 (
                     item
                     for item in cls._registered_worktree_entries(
-                        repo.git.worktree("list", "--porcelain")
+                        repo.git.worktree("list", "--porcelain"),
                     )
                     if item.path == worktree_root.resolve()
                 ),
@@ -57,13 +64,14 @@ class FlextInfraUtilitiesGitWorktreeRemovalMixin(
             return r[Repo].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[Repo].fail(
-                f"failed to inspect clean worktree: {exc}", exception=exc
+                f"failed to inspect clean worktree: {exc}",
+                exception=exc,
             )
         if entry is not None and entry.locked:
             return r[Repo].fail(f"locked worktree: {worktree_root}")
         if dirty:
             return r[Repo].fail(
-                f"dirty nested submodule in {worktree_root}: {'; '.join(dirty)}"
+                f"dirty nested submodule in {worktree_root}: {'; '.join(dirty)}",
             )
         if porcelain.strip():
             return r[Repo].fail(f"dirty worktree: {worktree_root}")
@@ -71,9 +79,16 @@ class FlextInfraUtilitiesGitWorktreeRemovalMixin(
 
     @classmethod
     def git_remove_clean_worktree(
-        cls, source_root: Path, worktree_root: Path
+        cls,
+        source_root: Path,
+        worktree_root: Path,
     ) -> p.Result[bool]:
-        """Remove an explicitly selected clean worktree and prune metadata."""
+        """Remove an explicitly selected clean worktree and prune metadata.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         preflight = cls._preflight_clean_worktree(source_root, worktree_root)
         if preflight.failure:
             return r[bool].from_failure(preflight)
@@ -84,7 +99,8 @@ class FlextInfraUtilitiesGitWorktreeRemovalMixin(
             return r[bool].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[bool].fail(
-                f"failed to remove clean worktree: {exc}", exception=exc
+                f"failed to remove clean worktree: {exc}",
+                exception=exc,
             )
         return r[bool].ok(True)
 

@@ -1,4 +1,8 @@
-"""Scoped transition preflight and recoverable file/directory ordering."""
+"""Scoped transition preflight and recoverable file/directory ordering.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,8 +12,9 @@ from pathlib import Path
 from flext_cli import u
 
 from flext_infra import c, m, t
-
-from .state_files import FlextInfraUtilitiesGitStateFilesMixin
+from flext_infra._utilities._git.state_files import (
+    FlextInfraUtilitiesGitStateFilesMixin,
+)
 
 
 class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFilesMixin):
@@ -22,7 +27,7 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
     ) -> m.Infra.GitWorktreeFileState:
         permissions = (
             0
-            if entry.mode == "160000"
+            if entry.mode == c.Infra.GIT_GITLINK_MODE_TEXT
             else 0o777
             if entry.mode == "120000"
             else int(entry.mode, 8) & 0o777
@@ -34,7 +39,10 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
         ):
             permissions = original.permissions & ~0o111 | (int(entry.mode, 8) & 0o111)
         return m.Infra.GitWorktreeFileState(
-            path=entry.path, mode=entry.mode, permissions=permissions, oid=entry.oid
+            path=entry.path,
+            mode=entry.mode,
+            permissions=permissions,
+            oid=entry.oid,
         )
 
     @classmethod
@@ -88,10 +96,14 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
 
     @classmethod
     def _state_preflight_transition(
-        cls, snapshot: m.Infra.GitWorktreeStateSnapshot, root: Path, *, cleanup: bool
+        cls,
+        snapshot: m.Infra.GitWorktreeStateSnapshot,
+        root: Path,
+        *,
+        cleanup: bool,
     ) -> t.VariadicTuple[m.Infra.GitWorktreeIndexEntry]:
         actual = cls._state_snapshot(
-            m.Infra.GitWorktreeStateRequest(repo_root=root, paths=snapshot.paths)
+            m.Infra.GitWorktreeStateRequest(repo_root=root, paths=snapshot.paths),
         )
         if actual.common_dir != snapshot.common_dir or actual.head != snapshot.head:
             msg = "state transition requires the captured repository and HEAD"
@@ -138,7 +150,7 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
                     cls._state_require_directory_scope(root, path, tuple(paths))
                 elif target.exists() or target.is_symlink():
                     current = cls._state_file(root, path)
-            if current is not None and current.mode == "160000":
+            if current is not None and current.mode == c.Infra.GIT_GITLINK_MODE_TEXT:
                 required = previous if cleanup else original
                 if current != required:
                     msg = f"nested worktree requires independent reconciliation: {path}"
@@ -160,7 +172,10 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
         expected = {file.path: file for file in snapshot.files}
         base = {
             entry.path: cls._state_baseline_at(
-                root, entry, expected.get(entry.path), cleanup=cleanup
+                root,
+                entry,
+                expected.get(entry.path),
+                cleanup=cleanup,
             )
             for entry in baseline
         }
@@ -171,7 +186,9 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
         # Remove leaves first. Physical directories are retained until every
         # owned descendant is removed and an exact empty-tree proof succeeds.
         for path in sorted(
-            paths - set(desired), key=lambda item: len(item.parts), reverse=True
+            paths - set(desired),
+            key=lambda item: len(item.parts),
+            reverse=True,
         ):
             destination = root / path
             if cls._state_obstruction(root, path) is None and (
@@ -180,7 +197,7 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
                 allowed = cls._state_allowed_files(expected.get(path), base.get(path))
                 cls._state_effect_file(root, path, None, allowed)
         for path, entry in sorted(desired.items(), key=lambda pair: len(pair[0].parts)):
-            if entry.mode == "160000":
+            if entry.mode == c.Infra.GIT_GITLINK_MODE_TEXT:
                 continue
             destination = root / path
             allowed = cls._state_allowed_files(expected.get(path), base.get(path))
@@ -188,14 +205,17 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
                 cls._state_remove_empty_tree(destination)
             plan = u.Cli.atomic_plan_directory_chain(destination.parent).unwrap()
             u.Cli.atomic_create_directory_chain_guarded(
-                plan, permission_mode=0o755
+                plan,
+                permission_mode=0o755,
             ).unwrap()
             cls._state_effect_file(root, path, entry, allowed)
         # An index change made by another writer remains visible before the
         # one atomic index-info publication; no intermediate empty index.
         cls._state_preflight_transition(snapshot, root, cleanup=cleanup)
         cls._state_index_update(
-            root, tuple(paths), baseline if cleanup else snapshot.index_entries
+            root,
+            tuple(paths),
+            baseline if cleanup else snapshot.index_entries,
         )
 
 

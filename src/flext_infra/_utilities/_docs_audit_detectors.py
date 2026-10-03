@@ -1,21 +1,24 @@
-"""Docs-audit per-issue-type detectors (token/scope/ownership/docstring/codeblock)."""
+"""Docs-audit per-issue-type detectors (token/scope/ownership/docstring/codeblock).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
+import re
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_cli import u
 
-from flext_infra import c, m
-
-from .docs import FlextInfraUtilitiesDocs
-from .docs_api import FlextInfraUtilitiesDocsApi
-from .docs_scope import FlextInfraUtilitiesDocsScope
+from flext_infra import c, config, m
+from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
+from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
+from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from flext_infra import t
 
 
@@ -28,9 +31,17 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
 
     @staticmethod
     def docs_text_token_issues(
-        scope: m.Infra.DocScope, *, tokens: t.StrSequence, issue_type: str
+        scope: m.Infra.DocScope,
+        *,
+        tokens: t.StrSequence,
+        issue_type: str,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Collect simple token-presence issues from markdown files."""
+        """Collect token-presence issues in the complete Markdown scope.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
+
+        """
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         if not tokens:
             return issues
@@ -45,27 +56,61 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                             issue_type=issue_type,
                             severity="medium",
                             message=f"contains `{token}`",
-                        )
+                        ),
+                    )
+        return issues
+
+    @staticmethod
+    def docs_placeholder_issues(
+        scope: m.Infra.DocScope,
+        *,
+        patterns: t.StrSequence,
+    ) -> t.SequenceOf[m.Infra.AuditIssue]:
+        """Find unfinished markers using declared lexical patterns.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
+
+        """
+        issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
+        compiled = tuple(re.compile(pattern) for pattern in patterns)
+        for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
+            rel = md_file.relative_to(scope.path).as_posix()
+            content = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+            for pattern in compiled:
+                if pattern.search(content):
+                    issues.append(
+                        m.Infra.AuditIssue(
+                            file=rel,
+                            issue_type="placeholder",
+                            severity="medium",
+                            message=f"matches placeholder pattern `{pattern.pattern}`",
+                        ),
                     )
         return issues
 
     @staticmethod
     def docs_machine_path_issues(
-        scope: m.Infra.DocScope, *, exempt_paths: t.StrSequence
+        scope: m.Infra.DocScope,
+        *,
+        historical_evidence_files: t.VariadicTuple[Path],
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Collect per-user absolute paths (``/home/<user>``) frozen into markdown.
 
         A path rooted at one operator's home binds the document to one machine;
         container and CI identities declared in ``c.Infra.MACHINE_PATH_CONTAINER_USERS``
-        are image contracts and pass. ``exempt_paths`` are scope-relative prefixes
-        (frozen evidence such as dated plans) declared by the repository's docs
-        policy; they are skipped whole.
+        are image contracts and pass. Only exact declared dated evidence files
+        retain the observed machine path.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
+
         """
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
-        exempt = tuple(exempt_paths)
+        evidence = set(historical_evidence_files)
         for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
             rel = md_file.relative_to(scope.path).as_posix()
-            if rel.startswith(exempt):
+            if Path(rel) in evidence:
                 continue
             text = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             for line_number, line in enumerate(text.splitlines(), start=1):
@@ -81,7 +126,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                                 f"line {line_number} embeds machine-local path "
                                 f"`{match.group(0)}`"
                             ),
-                        )
+                        ),
                     )
         return issues
 
@@ -89,7 +134,12 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
     def docs_scope_boundary_issues(
         scope: m.Infra.DocScope,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Collect mentions of excluded non-FLEXT roots in root docs."""
+        """Collect mentions of excluded non-FLEXT roots in root docs.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
+
+        """
         if scope.name != c.Infra.RK_ROOT:
             return []
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
@@ -109,7 +159,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                             issue_type="scope_boundary",
                             severity="high",
                             message=f"root docs mention out-of-scope project `{token}`",
-                        )
+                        ),
                     )
         return issues
 
@@ -117,7 +167,12 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
     def docs_generated_ownership_issues(
         scope: m.Infra.DocScope,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Collect manual API pages that duplicate generated ownership."""
+        """Collect manual API pages that duplicate generated ownership.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
+
+        """
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         candidates: t.MutableSequenceOf[Path] = [scope.path / "docs/api-reference.md"]
         for parent in (scope.path / "docs/api-reference", scope.path / "docs/api"):
@@ -129,12 +184,13 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
             rel = path.relative_to(scope.path).as_posix()
             if path.is_relative_to(scope.path / c.Infra.DIR_DOCS) and (
                 FlextInfraUtilitiesDocsScope.excluded_doc_path(
-                    scope.path, path.relative_to(scope.path / c.Infra.DIR_DOCS)
+                    scope.path,
+                    path.relative_to(scope.path / c.Infra.DIR_DOCS),
                 )
             ):
                 continue
             if rel == "docs/api-reference/README.md" or rel.startswith(
-                "docs/api-reference/generated/"
+                "docs/api-reference/generated/",
             ):
                 continue
             issues.append(
@@ -143,7 +199,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                     issue_type="generated_ownership",
                     severity="medium",
                     message="manual API page duplicates generated API ownership",
-                )
+                ),
             )
         return issues
 
@@ -151,11 +207,17 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
     def docs_public_docstring_issues(
         scope: m.Infra.DocScope,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Collect missing docstring issues for public exports and modules."""
+        """Collect missing docstring issues for public exports and modules.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
+
+        """
         if scope.name == c.Infra.RK_ROOT or not scope.package_name:
             return []
         contract = FlextInfraUtilitiesDocsApi.public_contract(
-            scope.path, scope.package_name
+            scope.path,
+            scope.package_name,
         )
         return FlextInfraUtilitiesDocsApi.docstring_issues(scope.path, contract)
 
@@ -163,11 +225,17 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
     def docs_public_docstring_coverage(
         scope: m.Infra.DocScope,
     ) -> m.Infra.DocstringCoverage | None:
-        """Aggregate docstring coverage for a project scope (None at root)."""
+        """Aggregate docstring coverage for a project scope (None at root).
+
+        Returns:
+            The resulting ``m.Infra.DocstringCoverage | None``.
+
+        """
         if scope.name == c.Infra.RK_ROOT or not scope.package_name:
             return None
         contract = FlextInfraUtilitiesDocsApi.public_contract(
-            scope.path, scope.package_name
+            scope.path,
+            scope.package_name,
         )
         return FlextInfraUtilitiesDocsApi.docstring_coverage(scope.path, contract)
 
@@ -181,13 +249,17 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
         and gates each block through ``ruff check --stdin-filename`` (piped
         body bytes — no temp files). Failures land as ``m.Infra.AuditIssue``
         records flowing through the standard audit report pipeline.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
+
         """
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
             rel = md_file.relative_to(scope.path).as_posix()
             content = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             for index, match in enumerate(c.Infra.PYTHON_FENCE_RE.finditer(content)):
-                # flext-o6h5 (agent: kimi) — ruff via running interpreter (venv SSOT);
+                # Ruff via running interpreter (venv SSOT);
                 # bare "ruff" breaks when .venv/bin is not on PATH (CI docs audit).
                 outcome = u.Cli.run_raw(
                     [
@@ -195,7 +267,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                         "-m",
                         c.Infra.RUFF,
                         c.Infra.VERB_CHECK,
-                        "--no-fix",
+                        *config.Infra.codegen.make.ruff.lint_check,
                         "--extend-ignore",
                         ",".join(c.Infra.PYTHON_FENCE_RUFF_EXTEND_IGNORE),
                         "--stdin-filename",
@@ -206,10 +278,13 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                 )
                 if outcome.failure:
                     detail = outcome.error
-                elif u.Cli.process_succeeded(outcome.value.outcome):
+                elif (
+                    u.Cli.process_succeeded(outcome.value.outcome)
+                    and not outcome.value.stderr
+                ):
                     continue
                 else:
-                    # flext-o6h5 (agent: kimi) — ruff reports parse errors on stderr
+                    # Ruff reports parse errors on stderr
                     # only; indexing an empty stdout crashes with IndexError.
                     detail = (
                         f"{outcome.value.stdout}\n{outcome.value.stderr}".strip()
@@ -221,7 +296,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                         issue_type="python_codeblock",
                         severity="medium",
                         message=f"block #{index}: {detail}",
-                    )
+                    ),
                 )
         return issues
 

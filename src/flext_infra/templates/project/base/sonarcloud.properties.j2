@@ -9,9 +9,15 @@ sonar.sources=.
 sonar.tests={{ tests_dir }}
 sonar.test.inclusions={{ tests_dir }}/**/*.py
 sonar.sourceEncoding=UTF-8
-sonar.exclusions={{ sonarcloud.exclusions | join(",") }},{{ tests_dir }}/**
-{% if sonarcloud.cpd_exclusions -%}
-sonar.cpd.exclusions={{ sonarcloud.cpd_exclusions | join(",") }}
+{# Workspace members are separate repositories with their own SonarCloud projects. -#}
+{% set scope = namespace(members=[]) -%}
+{% for member in workspace_subprojects -%}
+{% set scope.members = scope.members + [member ~ "/**"] -%}
+{% endfor -%}
+sonar.exclusions={{ (sonarcloud.exclusions | list + [tests_dir ~ "/**"] + scope.members) | join(",") }}
+{% set cpd_exclusions = sonarcloud.cpd_exclusions | list + scope.members -%}
+{% if cpd_exclusions -%}
+sonar.cpd.exclusions={{ cpd_exclusions | join(",") }}
 {% endif -%}
 {% if sonarcloud.issue_exclusions %}
 # Server-side issue exclusions: applied through SonarCloud project settings,

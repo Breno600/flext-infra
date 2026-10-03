@@ -1,4 +1,8 @@
-"""Runtime behavior of the generated structural protocol assembly."""
+"""Runtime behavior of the generated structural protocol assembly.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -137,12 +141,21 @@ def _write_member(root: Path) -> None:
     (package / "typings.py").write_text(TYPINGS, encoding="utf-8")
     (package / "consumer.py").write_text(CONSUMER, encoding="utf-8")
     (package / "_protocols" / "manual_ports.py").write_text(
-        MANUAL_PORTS, encoding="utf-8"
+        MANUAL_PORTS,
+        encoding="utf-8",
     )
 
 
 def _load_module(path: Path) -> ModuleType:
-    """Import one real module from its file path."""
+    """Import one real module from its file path.
+
+    Returns:
+        The resulting ``ModuleType``.
+
+    Raises:
+        RuntimeError: If cannot import.
+
+    """
     spec = importlib.util.spec_from_file_location(path.stem, path)
     if spec is None or spec.loader is None:
         msg = f"cannot import {path}"
@@ -154,7 +167,12 @@ def _load_module(path: Path) -> ModuleType:
 
 @pytest.fixture
 def member_root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[Path]:
-    """Provide a real importable demo member for the generator."""
+    """Provide a real importable demo member for the generator.
+
+    Yields:
+        Each ``Path``.
+
+    """
     _purge_member_modules()
     _write_member(tmp_path)
     monkeypatch.syspath_prepend(str(tmp_path / "src"))
@@ -170,7 +188,12 @@ def _purge_member_modules() -> None:
 
 
 def _service(root: Path, *, apply: bool) -> FlextInfraCodegenProtocolModels:
-    """Build the generator service against the member root."""
+    """Build the generator service against the member root.
+
+    Returns:
+        The resulting ``FlextInfraCodegenProtocolModels``.
+
+    """
     return FlextInfraCodegenProtocolModels(repository_root=root, apply_changes=apply)
 
 
@@ -191,7 +214,7 @@ def test_apply_generates_runtime_checkable_contracts(member_root: Path) -> None:
     assert "ManualPort" not in content
     aggregate = generated_dir / "generated_models.py"
     assert "class DemoMemberProtocolsGeneratedModels:" in aggregate.read_text(
-        encoding="utf-8"
+        encoding="utf-8",
     )
     module = _load_module(part)
     models = importlib.import_module("demo_member.models")
@@ -213,7 +236,9 @@ def test_apply_generates_runtime_checkable_contracts(member_root: Path) -> None:
     ],
 )
 def test_generated_annotations_resolve_specialized_aliases(
-    member_root: Path, field_name: str, expected: t.TypeHintSpecifier
+    member_root: Path,
+    field_name: str,
+    expected: t.TypeHintSpecifier,
 ) -> None:
     """Real consumers resolve specialized aliases without free parameters."""
     result = _service(member_root, apply=True).execute()

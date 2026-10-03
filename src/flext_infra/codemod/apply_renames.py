@@ -1,4 +1,8 @@
-"""Transactional CSV campaigns using existing Rope and publication primitives."""
+"""Transactional CSV campaigns using existing Rope and publication primitives.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,10 +12,9 @@ from pathlib import Path
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
-from flext_infra.transformers import publish_semantic_file_plans
-
-from ._rename_sources import FlextInfraRenameSources
-from ._rename_symbols import FlextInfraRenameSymbols
+from flext_infra.codemod._rename_sources import FlextInfraRenameSources
+from flext_infra.codemod._rename_symbols import FlextInfraRenameSymbols
+from flext_infra.transformers import FlextInfraSemanticPublication
 
 
 class FlextInfraApplyRenames:
@@ -40,14 +43,17 @@ class FlextInfraApplyRenames:
         occurrences = 0
         with u.Infra.open_project(root, project_roots=roots) as project:
             symbols = FlextInfraRenameSymbols.plan(
-                project, python, pairs, params.bindings
+                project,
+                python,
+                pairs,
+                params.bindings,
             )
             for path, source in sources.items():
                 edits = list(symbols.get(path, ()))
                 if path in python:
                     if params.python_documentation:
                         edits.extend(
-                            FlextInfraRenameSources.documentation_edits(source, pairs)
+                            FlextInfraRenameSources.documentation_edits(source, pairs),
                         )
                 else:
                     edits.extend(FlextInfraRenameSources.text_edits(source, pairs))
@@ -67,20 +73,26 @@ class FlextInfraApplyRenames:
                         desired_content=desired if edits else None,
                         desired_mode=inventory[path].mode,
                         changes=("CSV campaign",) if edits else (),
-                    )
+                    ),
                 )
         return tuple(plans), occurrences
 
     @classmethod
     def run(
-        cls, params: m.Infra.ApplyRenamesInput
+        cls,
+        params: m.Infra.ApplyRenamesInput,
     ) -> p.Result[m.Infra.ApplyRenamesReport]:
-        """Apply one declared campaign; check and verification share the planner."""
+        """Apply one declared campaign; check and verification share the planner.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ApplyRenamesReport]``.
+
+        """
         roots = tuple(sorted({Path(value).resolve() for value in params.roots}))
         for root in roots:
             if not root.is_dir():
                 return r[m.Infra.ApplyRenamesReport].fail(
-                    f"rename root is not a directory: {root}"
+                    f"rename root is not a directory: {root}",
                 )
         if (
             not params.bindings
@@ -88,16 +100,16 @@ class FlextInfraApplyRenames:
             and not params.python_documentation
         ):
             return r[m.Infra.ApplyRenamesReport].fail(
-                "rename campaign has no declared symbol or text surfaces"
+                "rename campaign has no declared symbol or text surfaces",
             )
         csv_path = Path(params.csv).resolve()
         driver = u.Cli.atomic_read_binary_file_state(csv_path, required=True).unwrap()
         if driver.content is None:
             return r[m.Infra.ApplyRenamesReport].fail(
-                f"rename CSV disappeared: {csv_path}"
+                f"rename CSV disappeared: {csv_path}",
             )
         pairs = FlextInfraRenameSources.pairs(
-            driver.content.decode(c.Cli.ENCODING_DEFAULT)
+            driver.content.decode(c.Cli.ENCODING_DEFAULT),
         )
         plans, pending = cls._plan(params, roots, pairs)
         changed: t.SequenceOf[Path] = ()
@@ -106,17 +118,18 @@ class FlextInfraApplyRenames:
             def verify() -> p.Result[bool]:
                 nonlocal pending
                 current_driver = u.Cli.atomic_read_binary_file_state(
-                    csv_path, required=True
+                    csv_path,
+                    required=True,
                 ).unwrap()
                 if current_driver != driver:
                     return r[bool].fail(
-                        f"rename campaign driver changed during publication: {csv_path}"
+                        f"rename campaign driver changed during publish: {csv_path}",
                     )
                 _fresh, remaining = cls._plan(params, roots, pairs)
                 pending = remaining
                 if remaining:
                     return r[bool].fail(
-                        f"CSV campaign post-scan found {remaining} pending source edits"
+                        f"CSV campaign post-scan found {remaining} pending edits",
                     )
                 return r[bool].ok(True)
 
@@ -128,7 +141,7 @@ class FlextInfraApplyRenames:
                 desired_mode=driver.mode,
                 changes=(),
             )
-            publication = publish_semantic_file_plans(
+            publication = FlextInfraSemanticPublication.publish_semantic_file_plans(
                 (*plans, driver_plan),
                 repository_root=Path(commonpath(roots)),
                 validator=verify,

@@ -28,7 +28,15 @@ class FlextInfraPytestDiagXmlMixin:
     def _as_xml_element(
         value: p.Infra.XmlElementLike | t.JsonValue,
     ) -> p.Infra.XmlElementLike:
-        """Require the typed stdlib element API from defusedxml."""
+        """Require the typed stdlib element API from defusedxml.
+
+        Returns:
+            The resulting ``p.Infra.XmlElementLike``.
+
+        Raises:
+            TypeError: If invalid XML element.
+
+        """
         if not isinstance(value, p.Infra.XmlElementLike):
             msg = f"invalid XML element: {type(value).__name__}"
             raise TypeError(msg)
@@ -36,9 +44,16 @@ class FlextInfraPytestDiagXmlMixin:
 
     @staticmethod
     def _build_trace_chunk(
-        heading: str, label: str, element: p.Infra.XmlElementLike
+        heading: str,
+        label: str,
+        element: p.Infra.XmlElementLike,
     ) -> str:
-        """Build an error/failure trace chunk from a JUnit XML element."""
+        """Build an error/failure trace chunk from a JUnit XML element.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         msg = (element.attrib.get(c.Infra.RK_MESSAGE) or "").strip()
         trace = (element.text or "").strip()
         chunk: t.MutableSequenceOf[str] = [f"=== {heading}: {label} ==="]
@@ -50,9 +65,15 @@ class FlextInfraPytestDiagXmlMixin:
 
     @staticmethod
     def _process_testcase(
-        case: p.Infra.XmlElementLike, diag: m.Infra.DiagResult
+        case: p.Infra.XmlElementLike,
+        diag: m.Infra.DiagResult,
     ) -> t.Pair[float, str]:
-        """Process a single testcase element; returns (seconds, label)."""
+        """Process a single testcase element; returns (seconds, label).
+
+        Returns:
+            The resulting ``t.Pair[float, str]``.
+
+        """
         classname = case.attrib.get("classname", "")
         name = case.attrib.get(c.Infra.NAME, "")
         label = f"{classname}::{name}" if classname else name
@@ -61,13 +82,15 @@ class FlextInfraPytestDiagXmlMixin:
             diag.failed_cases.append(label)
             diag.error_traces.append(
                 FlextInfraPytestDiagXmlMixin._build_trace_chunk(
-                    "FAILURE", label, failure
-                )
+                    "FAILURE",
+                    label,
+                    failure,
+                ),
             )
         if (error := case.find(c.Infra.ERROR)) is not None:
             diag.error_cases.append(label)
             diag.error_traces.append(
-                FlextInfraPytestDiagXmlMixin._build_trace_chunk("ERROR", label, error)
+                FlextInfraPytestDiagXmlMixin._build_trace_chunk("ERROR", label, error),
             )
         if (skipped := case.find("skipped")) is not None:
             reason = (
@@ -78,7 +101,12 @@ class FlextInfraPytestDiagXmlMixin:
 
     @staticmethod
     def _parse_xml(junit_path: Path, diag: m.Infra.DiagResult) -> None:
-        """Parse the required JUnit XML and populate diagnostics."""
+        """Parse the required JUnit XML and populate diagnostics.
+
+        Raises:
+            ValueError: If JUnit XML has no root element.
+
+        """
         root_raw = DefusedET.parse(junit_path).getroot()
         if root_raw is None:
             msg = f"JUnit XML has no root element: {junit_path}"
