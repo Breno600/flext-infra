@@ -1,8 +1,12 @@
-"""Promoted-command framework base: joins every responsibility via MRO."""
+"""Promoted-command framework base: joins every responsibility via MRO.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
-from .dispatch import FlextInfraPromotedDispatch
+from flext_infra._promoted.dispatch import FlextInfraPromotedDispatch
 
 
 class FlextInfraPromotedBase(FlextInfraPromotedDispatch):

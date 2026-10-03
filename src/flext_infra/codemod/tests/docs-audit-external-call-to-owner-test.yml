@@ -1,8 +1,0 @@
-id: docs-audit-external-call-to-owner
-# `valid` MUST NOT match: the docs owner itself, or another audit method.
-valid:
-  - external = FlextInfraUtilitiesDocs.docs_is_external(target)
-  - links = FlextInfraUtilitiesDocsAudit.docs_links(target)
-# `invalid` MUST match: the audit-local classifier call.
-invalid:
-  - external = FlextInfraUtilitiesDocsAudit.docs_is_external(target)

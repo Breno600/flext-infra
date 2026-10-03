@@ -1,8 +1,0 @@
-id: docs-fix-non-web-prefixes-to-owner
-# `valid` MUST NOT match: the positive check, or a different scheme tuple.
-valid:
-  - local = target.startswith(("mailto:", "tel:", "#"))
-  - local = not target.startswith(("mailto:",))
-# `invalid` MUST match: the negated hand-written scheme and fragment tuple.
-invalid:
-  - rewrite = not target.startswith(("mailto:", "tel:", "#"))

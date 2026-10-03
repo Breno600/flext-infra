@@ -1,0 +1,13 @@
+id: ban-facade-second-namespace
+valid:
+  - |
+    class FlextFooModels(FlextCliModels):
+        class Foo(FlextFooModelsBase):
+            pass
+invalid:
+  - |
+    class FlextFooModels(FlextCliModels):
+        class Foo(FlextFooModelsBase):
+            pass
+        class Bar(FlextFooModelsBase):
+            pass

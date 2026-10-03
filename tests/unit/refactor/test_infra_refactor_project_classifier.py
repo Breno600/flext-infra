@@ -1,4 +1,8 @@
-"""Tests for the refactor project classifier."""
+"""Tests for the refactor project classifier.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -21,8 +25,10 @@ class TestsFlextInfraRefactorInfraRefactorProjectClassifier:
         pyproject_path.write_text(content.strip() + "\n", encoding="utf-8")
 
     def test_classify_reads_internal_dependencies_from_pep621(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test classify reads internal dependencies from pep621."""
         self._write_pyproject(
             tmp_path,
             """
@@ -41,8 +47,10 @@ class TestsFlextInfraRefactorInfraRefactorProjectClassifier:
         tm.that(classification.project_kind, eq="platform")
 
     def test_classify_reads_internal_dependencies_from_poetry(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test classify reads internal dependencies from poetry."""
         self._write_pyproject(
             tmp_path,
             """

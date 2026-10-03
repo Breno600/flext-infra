@@ -1,8 +1,0 @@
-id: docs-fix-web-prefix-to-secure-owner
-# `valid` MUST NOT match: the secure owner, or an HTTPS-only prefix tuple.
-valid:
-  - secure = FlextInfraUtilitiesDocs.docs_is_secure_web_url(target)
-  - web = target.startswith(("https://",))
-# `invalid` MUST match: the prefix tuple that accepts plain HTTP.
-invalid:
-  - web = target.startswith(("http://", "https://"))

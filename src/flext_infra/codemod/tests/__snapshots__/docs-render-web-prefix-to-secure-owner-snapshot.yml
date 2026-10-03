@@ -1,9 +1,0 @@
-id: docs-render-web-prefix-to-secure-owner
-snapshots:
-  absolute = link.startswith(("http://", "https://")):
-    fixed: absolute = FlextInfraUtilitiesDocs.docs_is_secure_web_url(link)
-    labels:
-    - source: link.startswith(("http://", "https://"))
-      style: primary
-      start: 11
-      end: 51

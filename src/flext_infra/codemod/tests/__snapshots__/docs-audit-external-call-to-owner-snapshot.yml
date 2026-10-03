@@ -1,9 +1,0 @@
-id: docs-audit-external-call-to-owner
-snapshots:
-  external = FlextInfraUtilitiesDocsAudit.docs_is_external(target):
-    fixed: external = FlextInfraUtilitiesDocs.docs_is_external(target)
-    labels:
-    - source: FlextInfraUtilitiesDocsAudit.docs_is_external(target)
-      style: primary
-      start: 11
-      end: 64

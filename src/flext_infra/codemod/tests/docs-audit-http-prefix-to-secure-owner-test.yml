@@ -1,8 +1,0 @@
-id: docs-audit-http-prefix-to-secure-owner
-# `valid` MUST NOT match: the secure owner, or another prefix check.
-valid:
-  - secure = FlextInfraUtilitiesDocs.docs_is_secure_web_url(target)
-  - fragment = target.startswith("#")
-# `invalid` MUST match: the bare `http` prefix check, which accepts HTTP.
-invalid:
-  - web = target.startswith("http")

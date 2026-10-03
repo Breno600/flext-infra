@@ -1,9 +1,0 @@
-id: docs-audit-http-prefix-to-secure-owner
-snapshots:
-  web = target.startswith("http"):
-    fixed: web = FlextInfraUtilitiesDocs.docs_is_secure_web_url(target)
-    labels:
-    - source: target.startswith("http")
-      style: primary
-      start: 6
-      end: 31

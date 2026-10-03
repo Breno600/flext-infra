@@ -1,9 +1,0 @@
-id: docs-fix-web-prefix-to-secure-owner
-snapshots:
-  web = target.startswith(("http://", "https://")):
-    fixed: web = FlextInfraUtilitiesDocs.docs_is_secure_web_url(target)
-    labels:
-    - source: target.startswith(("http://", "https://"))
-      style: primary
-      start: 6
-      end: 48

@@ -1,4 +1,8 @@
-"""Process entrypoint for the canonical centralized flext-infra CLI."""
+"""Process entrypoint for the canonical centralized flext-infra CLI.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

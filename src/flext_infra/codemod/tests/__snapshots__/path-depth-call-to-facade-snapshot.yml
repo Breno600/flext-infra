@@ -1,9 +1,0 @@
-id: path-depth-call-to-facade
-snapshots:
-  depth = path_depth(path):
-    fixed: depth = u.Infra.path_depth(path)
-    labels:
-    - source: path_depth(path)
-      style: primary
-      start: 8
-      end: 24

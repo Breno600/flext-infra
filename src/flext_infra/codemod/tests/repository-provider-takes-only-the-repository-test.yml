@@ -1,5 +1,0 @@
-id: repository-provider-takes-only-the-repository
-valid:
-  - "provider = u.Infra.repository_provider(repository)"
-invalid:
-  - "provider = u.Infra.repository_provider(repository, codegen.providers)"

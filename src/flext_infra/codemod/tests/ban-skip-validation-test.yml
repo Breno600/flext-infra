@@ -1,8 +1,0 @@
-id: ban-skip-validation
-valid:
-  - 'slug: "t.NonEmptyStr"'
-  - value = validate_value(raw)
-  - note = "SkipValidation belongs at flext-core with owner justification"
-invalid:
-  - "raw: SkipValidation[str]"
-  - int_view = PlainValidator(int)

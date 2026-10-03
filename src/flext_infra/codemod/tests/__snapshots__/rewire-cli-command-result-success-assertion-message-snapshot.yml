@@ -1,9 +1,0 @@
-id: rewire-cli-command-result-success-assertion-message
-snapshots:
-  tm.that(result.value.exit_code, eq=0, msg=result.value.stderr):
-    fixed: tm.that(u.Cli.process_succeeded(result.value.outcome), eq=True, msg=result.value.stderr)
-    labels:
-    - source: tm.that(result.value.exit_code, eq=0, msg=result.value.stderr)
-      style: primary
-      start: 0
-      end: 62

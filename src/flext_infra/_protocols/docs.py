@@ -1,4 +1,8 @@
-"""Structural documentation contracts for exact model transport."""
+"""Structural documentation contracts for exact model transport.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -99,15 +103,25 @@ class FlextInfraProtocolsDocs(Protocol):
         """Generic lazily-loaded MkDocs callable without loose top types."""
 
         def __call__(
-            self, *args: cli_p.AttributeProbe, **kwargs: cli_p.AttributeProbe
+            self,
+            *args: cli_p.AttributeProbe,
+            **kwargs: cli_p.AttributeProbe,
         ) -> cli_p.AttributeProbe: ...
 
     @runtime_checkable
     class MkDocsLoadConfig(Protocol):
-        """Contract for ``mkdocs.config.load_config``."""
+        """Contract for ``mkdocs.config.load_config``.
+
+        MkDocs 1.6 takes the settings path as ``config_file``; the retired
+        ``config_file_path`` keyword is silently absorbed by ``**kwargs``,
+        which made every build load whatever ``mkdocs.yml`` the working
+        directory happened to hold.
+
+        """
 
         def __call__(
-            self, *, config_file_path: str, site_dir: str
+            self,
+            config_file: str,
         ) -> MutableMapping[str, cli_p.AttributeProbe]: ...
 
     @runtime_checkable

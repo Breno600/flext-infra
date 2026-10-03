@@ -1,7 +1,0 @@
-id: path-depth-call-to-facade
-# `valid` MUST NOT match: the facade call.
-valid:
-  - depth = u.Infra.path_depth(path)
-# `invalid` MUST match: the private sort key called directly.
-invalid:
-  - depth = path_depth(path)

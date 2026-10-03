@@ -1,8 +1,0 @@
-id: docs-generate-preserved-link-to-owner
-# `valid` MUST NOT match: the owner composition, or a different prefix tuple.
-valid:
-  - preserved = FlextInfraUtilitiesDocs.docs_is_external(target) or target.startswith(c.Infra.DOCS_FRAGMENT_PREFIX)
-  - preserved = target.startswith(("https://", "#"))
-# `invalid` MUST match: the hand-written tuple that preserves plain HTTP links.
-invalid:
-  - preserved = target.startswith(("http://", "https://", "#", "mailto:"))

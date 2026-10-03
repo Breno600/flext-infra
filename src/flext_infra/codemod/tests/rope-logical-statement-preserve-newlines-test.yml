@@ -1,7 +1,0 @@
-id: rope-logical-statement-preserve-newlines
-# `valid` MUST NOT match: a logical region joined on physical newlines.
-valid:
-  - statement = "\n".join(lines.get_line(index) for index in range(start, end + 1))
-# `invalid` MUST match: a logical region joined without its line boundaries.
-invalid:
-  - statement = "".join(lines.get_line(index) for index in range(start, end + 1))

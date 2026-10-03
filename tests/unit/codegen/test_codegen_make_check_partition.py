@@ -1,4 +1,8 @@
-"""The Make check partition derives from the gate kind in the registry."""
+"""The Make check partition derives from the gate kind in the registry.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,9 +13,7 @@ from flext_tests import tm
 
 from flext_infra import config
 from tests import c, m, t, u
-
-from ._support import CodegenTestSupport
-from .test_ci_integration_branch_triggers import (
+from tests.unit.codegen.test_ci_integration_branch_triggers import (
     TestsFlextInfraCiIntegrationBranchTriggers,
 )
 
@@ -19,7 +21,8 @@ from .test_ci_integration_branch_triggers import (
 class TestsFlextInfraCodegenMakeCheckPartition:
     """CI and pre-commit run only external gates; the rest block locally."""
 
-    def test_registry_declares_one_kind_per_gate(self) -> None:
+    @staticmethod
+    def test_registry_declares_one_kind_per_gate() -> None:
         """Every gate vocabulary is derived from the single kind declaration."""
         declared = [
             gate for tools in c.Infra.GATE_TOOLS_BY_KIND.values() for gate in tools
@@ -36,7 +39,8 @@ class TestsFlextInfraCodegenMakeCheckPartition:
             ),
         )
 
-    def test_fast_partition_holds_only_active_external_gates(self) -> None:
+    @staticmethod
+    def test_fast_partition_holds_only_active_external_gates() -> None:
         """CI=Y is exactly the active external gates; CI=N is the complement."""
         make = config.Infra.codegen.make
         external = c.Infra.GateKind.EXTERNAL
@@ -56,7 +60,8 @@ class TestsFlextInfraCodegenMakeCheckPartition:
         for gate in make.check_gates_local:
             tm.that(c.Infra.GATE_KINDS.get(gate) is external, eq=False)
 
-    def test_project_declared_gates_never_join_the_fast_partition(self) -> None:
+    @staticmethod
+    def test_project_declared_gates_never_join_the_fast_partition() -> None:
         """A gate the registry does not classify as external stays local."""
         payload = config.Infra.codegen.make.model_dump(exclude_computed_fields=True)
         payload["project_check_gates"] = ("fixture-project-gate",)
@@ -67,13 +72,14 @@ class TestsFlextInfraCodegenMakeCheckPartition:
         tm.that(active.check_gates_local, has="fixture-project-gate")
         tm.that("fixture-project-gate" in active.check_gates_ci, eq=False)
 
-    def test_ci_workflow_runs_only_the_fast_partition(self) -> None:
+    @staticmethod
+    def test_ci_workflow_runs_only_the_fast_partition() -> None:
         """The rendered CI job never runs the local check partition."""
         make = config.Infra.codegen.make
-        steps = CodegenTestSupport.Ci.ci_job_steps(
+        steps = u.CodegenTestSupport.Ci.ci_job_steps(
             TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
-                repository_branch="0.12.0-dev"
-            )
+                repository_branch="0.12.0-dev",
+            ),
         )
         commands = [str(step.get("run", "")) for step in steps]
         fast = f"{make.ci.variable}={make.ci.value} make {c.Infra.VERB_CHECK}"
@@ -81,14 +87,17 @@ class TestsFlextInfraCodegenMakeCheckPartition:
         tm.that(sum(fast in command for command in commands), eq=1)
         tm.that(any(local in command for command in commands), eq=False)
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("context", ["ci", "local", "all"])
     def test_make_check_keeps_a_missing_runtime_fatal(
-        self, tmp_path: Path, context: str
+        tmp_path: Path,
+        context: str,
     ) -> None:
         """A real missing runtime stays fatal in every check context."""
         root, _ = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
         tm.ok(u.Tests.create_python_environment(root))
         policy = config.Infra.codegen.make
@@ -114,12 +123,13 @@ class TestsFlextInfraCodegenMakeCheckPartition:
                     *c.Tests.MAKE_ISOLATION_ENV_KEYS,
                     *((policy.ci.variable,) if context == "all" else ()),
                 ),
-            )
+            ),
         )
 
         tm.that(process.outcome.raw_return_code, ne=0)
         tm.that(
-            process.stdout, has=f"INFO: {label} runs check gates: {' '.join(gates)}\n"
+            process.stdout,
+            has=f"INFO: {label} runs check gates: {' '.join(gates)}\n",
         )
         tm.that(
             process.stderr,

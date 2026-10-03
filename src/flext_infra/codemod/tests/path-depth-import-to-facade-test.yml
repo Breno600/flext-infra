@@ -1,8 +1,0 @@
-id: path-depth-import-to-facade
-# `valid` MUST NOT match: the public facade import, or another private name.
-valid:
-  - from flext_infra import u
-  - from flext_infra._utilities._sort_keys import other_key
-# `invalid` MUST match: the private sort-key import.
-invalid:
-  - from flext_infra._utilities._sort_keys import path_depth

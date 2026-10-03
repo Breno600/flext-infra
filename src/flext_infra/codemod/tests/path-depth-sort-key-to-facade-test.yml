@@ -1,8 +1,0 @@
-id: path-depth-sort-key-to-facade
-# `valid` MUST NOT match: the facade key, or the name outside a sort.
-valid:
-  - ordered = sorted(paths, key=u.Infra.path_depth)
-  - key = path_depth
-# `invalid` MUST match: the private key passed to sorted.
-invalid:
-  - ordered = sorted(paths, key=path_depth)

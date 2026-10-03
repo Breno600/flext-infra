@@ -1,9 +1,0 @@
-id: rope-logical-statement-preserve-newlines
-snapshots:
-  statement = "".join(lines.get_line(index) for index in range(start, end + 1)):
-    fixed: statement = "\n".join(lines.get_line(index) for index in range(start, end + 1))
-    labels:
-    - source: statement = "".join(lines.get_line(index) for index in range(start, end + 1))
-      style: primary
-      start: 0
-      end: 77

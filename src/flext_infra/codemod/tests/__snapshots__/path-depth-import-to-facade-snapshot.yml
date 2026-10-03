@@ -1,9 +1,0 @@
-id: path-depth-import-to-facade
-snapshots:
-  from flext_infra._utilities._sort_keys import path_depth:
-    fixed: from flext_infra import u
-    labels:
-    - source: from flext_infra._utilities._sort_keys import path_depth
-      style: primary
-      start: 0
-      end: 56

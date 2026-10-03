@@ -1,8 +1,0 @@
-id: private-infra-utility-alias-call-to-facade
-# `valid` MUST NOT match: the facade call, or a different receiver.
-valid:
-  - projects = u.Infra.discover_projects(root)
-  - projects = ub_helper.discover_projects(root)
-# `invalid` MUST match: a call through the private `ub` alias.
-invalid:
-  - projects = ub.discover_projects(root)

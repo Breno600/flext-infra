@@ -44,7 +44,8 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
         """Rope semantic object shape."""
 
         def get_attribute(
-            self, name: str
+            self,
+            name: str,
         ) -> FlextInfraProtocolsRopeRuntime.RopePyName: ...
 
         def get_attributes(
@@ -148,7 +149,8 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
         def get_module(self) -> FlextInfraProtocolsRopeRuntime.RopePyModule | None: ...
 
         def get_attribute(
-            self, name: str
+            self,
+            name: str,
         ) -> FlextInfraProtocolsRopeRuntime.RopePyName: ...
 
         def get_name(self) -> str: ...
@@ -177,11 +179,13 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
         root: FlextInfraProtocolsRopeRuntime.RopeRoot
 
         def get_resource(
-            self, path: str
+            self,
+            path: str,
         ) -> FlextInfraProtocolsRopeRuntime.RopeResource: ...
 
         def get_pymodule(
-            self, resource: FlextInfraProtocolsRopeRuntime.RopeResource
+            self,
+            resource: FlextInfraProtocolsRopeRuntime.RopeResource,
         ) -> FlextInfraProtocolsRopeRuntime.RopePyModule: ...
 
         def get_source_folders(
@@ -214,7 +218,8 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
         def do(self, changes: FlextInfraProtocolsRopeRuntime.RopeChangeSet) -> None: ...
 
         def validate(
-            self, root: FlextInfraProtocolsRopeRuntime.RopeRoot | None = None
+            self,
+            root: FlextInfraProtocolsRopeRuntime.RopeRoot | None = None,
         ) -> None: ...
 
         def close(self) -> None: ...
@@ -284,7 +289,9 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
         """Public semantic restructuring planner at the Rope runtime boundary."""
 
         def get_changes(
-            self, *, resources: list[FlextInfraProtocolsRopeRuntime.RopeResource]
+            self,
+            *,
+            resources: list[FlextInfraProtocolsRopeRuntime.RopeResource],
         ) -> FlextInfraProtocolsRopeRuntime.RopeChangeSet: ...
 
     @runtime_checkable
@@ -294,7 +301,8 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
         imports: list[FlextInfraProtocolsRopeRuntime.RopeImportStatement]
 
         def add_import(
-            self, import_info: FlextInfraProtocolsRopeRuntime.RopeImportInfo
+            self,
+            import_info: FlextInfraProtocolsRopeRuntime.RopeImportInfo,
         ) -> None: ...
 
         def remove_duplicates(self) -> None: ...
@@ -308,7 +316,8 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
         """Rope import organizer shape."""
 
         def organize_imports(
-            self, resource: FlextInfraProtocolsRopeRuntime.RopeResource
+            self,
+            resource: FlextInfraProtocolsRopeRuntime.RopeResource,
         ) -> FlextInfraProtocolsRopeRuntime.RopeChangeSet | None: ...
 
     @runtime_checkable
@@ -338,7 +347,9 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
         """Rope occurrence finder shape."""
 
         def find_occurrences(
-            self, *, resource: FlextInfraProtocolsRopeRuntime.RopeResource
+            self,
+            *,
+            resource: FlextInfraProtocolsRopeRuntime.RopeResource,
         ) -> t.SequenceOf[FlextInfraProtocolsRopeRuntime.RopeOccurrence]: ...
 
 

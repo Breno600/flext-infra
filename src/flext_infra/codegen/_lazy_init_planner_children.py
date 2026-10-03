@@ -1,4 +1,8 @@
-"""Child-package merging for the lazy-init planner."""
+"""Child-package merging for the lazy-init planner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,7 +23,8 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
         rope_workspace: p.Infra.RopeWorkspaceDsl
 
         def _package_entry(
-            self, pkg_dir: Path
+            self,
+            pkg_dir: Path,
         ) -> m.Infra.RopePackageIndexEntry | None: ...
 
         def context(self, pkg_dir: Path) -> m.Infra.LazyInitPackageContext: ...
@@ -27,7 +32,10 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
         _source_plan_cache: MutableMapping[str, m.Infra.LazyInitPlan]
 
         def _add(
-            self, index: t.MutableLazyAliasMap, name: str, target: t.StrPair
+            self,
+            index: t.MutableLazyAliasMap,
+            name: str,
+            target: t.StrPair,
         ) -> None: ...
 
         @staticmethod
@@ -40,9 +48,15 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
         def _is_private_owner(module_path: str, *, root_pkg: str) -> bool: ...
 
     def _has_live_package_content(
-        self, package_entry: m.Infra.RopePackageIndexEntry
+        self,
+        package_entry: m.Infra.RopePackageIndexEntry,
     ) -> bool:
-        """Return whether a package owns a module or a manual initializer."""
+        """Return whether a package owns a module or a manual initializer.
+
+        Returns:
+            Whether a package owns a module or a manual initializer.
+
+        """
         candidates = (package_entry.package_dir, *package_entry.descendant_child_dirs)
         for candidate in candidates:
             entry = self._package_entry(candidate)
@@ -62,7 +76,12 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
         lazy_map: t.MutableLazyAliasMap,
         dir_exports: t.MappingKV[str, t.LazyAliasMap],
     ) -> t.StrSequence:
-        """Merge direct child packages into the parent lazy map."""
+        """Merge direct child packages into the parent lazy map.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         package_entry = self._package_entry(pkg_dir)
         if package_entry is None:
             return ()
@@ -79,14 +98,14 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
         is_facade_root = self._is_facade_root(parent_context)
         direct: list[str] = []
         for child_dir in package_entry.descendant_child_dirs:
-            # flext-pulj (codex): do not merge retired root registries into the
+            # Do not merge retired root registries into the
             # inline map that replaces them.
             if child_dir.name in c.Infra.OBSOLETE_ROOT_SUPPORT_NAMES:
                 continue
             if not self.context(child_dir).importable:
                 continue
             resolved_child_dir = child_dir.resolve()
-            # flext-mh7g4: children are planned before their parent (depth
+            # Children are planned before their parent (depth
             # descending), so the parent inventory follows the child's plan in
             # the same pass — a planned WRITE counts as a package even before
             # its initializer exists on disk, and a planned REMOVE/SKIP (for
@@ -134,7 +153,7 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
                 source_module_name = module_name.rsplit(".", maxsplit=1)[-1]
                 test_only_source_module = (
                     c.Infra.TEST_ONLY_SOURCE_MODULE_RE.fullmatch(
-                        f"{source_module_name}.py"
+                        f"{source_module_name}.py",
                     )
                     is not None
                 )
@@ -156,6 +175,10 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
         root) while ``tests/unit/io/`` and ``pkg/services/http/`` do not.
         The generator's own Ruff gate rejects the shadowing render, and no
         generated content can repair the package name.
+
+        Returns:
+            True when the package's importable name shadows a stdlib module.
+
         """
         current_pkg = self.context(pkg_dir).current_pkg
         parts = (

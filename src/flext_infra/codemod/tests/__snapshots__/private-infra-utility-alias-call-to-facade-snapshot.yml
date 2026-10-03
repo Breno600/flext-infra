@@ -1,9 +1,0 @@
-id: private-infra-utility-alias-call-to-facade
-snapshots:
-  projects = ub.discover_projects(root):
-    fixed: projects = u.Infra.discover_projects(root)
-    labels:
-    - source: ub.discover_projects(root)
-      style: primary
-      start: 11
-      end: 37

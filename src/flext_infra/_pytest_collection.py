@@ -5,6 +5,9 @@ pytest arguments. Testmon still records dependencies in every worker, but its
 worker-local stable/unstable classification must not define xdist's index order.
 Missing, additional or duplicate tests fail loudly. The same installed plugin
 records warning identities before report-log reduces their categories to names.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -17,7 +20,7 @@ from warnings import WarningMessage
 import pytest
 from xdist.dsession import DSession
 
-from ._constants.check import FlextInfraConstantsCheck
+from flext_infra._constants.check import FlextInfraConstantsCheck
 
 
 class FlextInfraPytestCollection:
@@ -49,12 +52,12 @@ class FlextInfraPytestCollection:
         report_log = config.getoption("report_log")
         if report_log and not hasattr(config, "workerinput"):
             config.pluginmanager.register(
-                FlextInfraPytestCollection.WarningAccounting(Path(report_log))
+                FlextInfraPytestCollection.WarningAccounting(Path(report_log)),
             )
         stop_at = config.getoption(FlextInfraConstantsCheck.PYTEST_SUITE_STOP_OPTION)
         if stop_at is not None and not hasattr(config, "workerinput"):
             config.pluginmanager.register(
-                FlextInfraPytestCollection.SuiteStop(stop_at_monotonic=stop_at)
+                FlextInfraPytestCollection.SuiteStop(stop_at_monotonic=stop_at),
             )
 
     @staticmethod
@@ -66,34 +69,42 @@ class FlextInfraPytestCollection:
         neither imports no model. A requested manifest loads only its owning
         model module, never the whole model facade, because every runner
         collection process pays that import.
+
+        Raises:
+            ValueError: If Runner collection manifest contains duplicate node IDs; or if
+                Runner collection differs from selection.
+
         """
         selected: str | None = session.config.getoption(
-            FlextInfraConstantsCheck.PYTEST_SELECTED_COLLECTION_OPTION
+            FlextInfraConstantsCheck.PYTEST_SELECTED_COLLECTION_OPTION,
         )
         if selected is not None:
-            from ._models.validate import FlextInfraModelsCore
+            from flext_infra._models.validate import FlextInfraModelsCore
 
             manifest = (
                 FlextInfraModelsCore.PytestCollectionManifest.model_validate_json(
-                    Path(selected).read_text(encoding="utf-8")
+                    Path(selected).read_text(encoding="utf-8"),
                 )
             )
             order = {node_id: index for index, node_id in enumerate(manifest.node_ids)}
             collected = [item.nodeid for item in session.items]
             if len(order) != len(manifest.node_ids) or len(set(collected)) != len(
-                collected
+                collected,
             ):
                 msg = "Runner collection manifest contains duplicate node IDs"
                 raise ValueError(msg)
             if set(collected) != set(order):
                 missing = sorted(set(order) - set(collected))
                 unexpected = sorted(set(collected) - set(order))
-                msg = f"Runner collection differs from selection: {missing=}, {unexpected=}"
+                msg = (
+                    f"Runner collection differs from selection: "
+                    f"{missing=}, {unexpected=}"
+                )
                 raise ValueError(msg)
             session.items.sort(key=lambda item: order[item.nodeid])
         yield
         target: str | None = session.config.getoption(
-            FlextInfraConstantsCheck.PYTEST_COLLECTION_MANIFEST_OPTION
+            FlextInfraConstantsCheck.PYTEST_COLLECTION_MANIFEST_OPTION,
         )
         if target is not None and session.config.getoption("collectonly"):
             FlextInfraPytestCollection._write_collection_manifest(session, Path(target))
@@ -103,10 +114,10 @@ class FlextInfraPytestCollection:
         """Publish final selected items after testmon and every collection hook."""
         from flext_cli import u
 
-        from ._models.validate import FlextInfraModelsCore
+        from flext_infra._models.validate import FlextInfraModelsCore
 
         manifest = FlextInfraModelsCore.PytestCollectionManifest(
-            node_ids=tuple(item.nodeid for item in session.items)
+            node_ids=tuple(item.nodeid for item in session.items),
         )
         u.Cli.atomic_write_text_file(target, manifest.model_dump_json() + "\n").unwrap()
 
@@ -120,7 +131,7 @@ class FlextInfraPytestCollection:
 
         When every collected item has already completed, nothing is left to
         stop and the stop request would only recolor a finished green suite
-        red (flext-xqw3w), so the request is suppressed at that boundary.
+        red, so the request is suppressed at that boundary.
         """
 
         def __init__(self, *, stop_at_monotonic: float) -> None:
@@ -137,21 +148,21 @@ class FlextInfraPytestCollection:
 
             The request is suppressed when this item was the last one still
             pending: a suite that already finished must end green instead of
-            being interrupted after its own final result (flext-xqw3w).
+            being interrupted after its own final result.
             """
             session = self.session
-            if (
-                session is None
-                or report.when != "teardown"
-                or time.monotonic() < self.stop_at_monotonic
-            ):
+            if session is None or report.when != "teardown":
                 return
             self.completed_items.add(report.nodeid)
-            total_items = len(getattr(session, "items", ()) or ())
+            total_items = len(session.items)
             if total_items and len(self.completed_items) >= total_items:
                 return
+            # Testmon writes an in-flight coverage batch only when it attaches
+            # nodes_files_lines to a teardown report. Stopping earlier leaves
+            # selected rows without durable execution data on the next run.
+            if not getattr(report, "nodes_files_lines", None):
+                return
             reason = f"suite stop instant {self.stop_at_monotonic:.3f} reached"
-            controller = session.config.pluginmanager.getplugin("dsession")
             if isinstance(controller, DSession):
                 if not controller.shouldstop:
                     controller.shouldstop = reason
@@ -162,19 +173,24 @@ class FlextInfraPytestCollection:
         """Preserve the real class identity of every recorded warning."""
 
         def __init__(self, report_log: Path) -> None:
-            from flext_infra import c
+            # Owner modules, never the root facades: this plugin loads in every
+            # consumer test process, and ``m.Infra`` builds the whole model
+            # family (seconds of class construction) to write one JSON line.
+            from flext_infra._constants.make import FlextInfraConstantsMake
 
-            self.report = report_log.with_suffix(c.Infra.PYTEST_WARNING_EVENTS_SUFFIX)
+            self.report = report_log.with_suffix(
+                FlextInfraConstantsMake.PYTEST_WARNING_EVENTS_SUFFIX,
+            )
             self.report.parent.mkdir(parents=True, exist_ok=True)
             self.report.write_text("", encoding="utf-8")
 
         @pytest.hookimpl(tryfirst=True)
         def pytest_warning_recorded(self, warning_message: WarningMessage) -> None:
             """Record the real warning once before report-log serializes it."""
-            from flext_infra import m
+            from flext_infra._models.validate import FlextInfraModelsCore
 
             category = warning_message.category
-            event = m.Infra.PytestWarningEvent(
+            event = FlextInfraModelsCore.PytestWarningEvent(
                 category=category.__name__,
                 category_module=category.__module__,
                 category_qualname=category.__qualname__,

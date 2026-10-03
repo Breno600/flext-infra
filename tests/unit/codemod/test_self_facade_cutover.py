@@ -1,4 +1,8 @@
-"""Exercise elected import deferral through the real public utility facade."""
+"""Exercise elected import deferral through the real public utility facade.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,6 +23,7 @@ class TestsSelfFacadeCutover:
     """Keep method behavior, docstrings, and local shadowing after migration."""
 
     def test_resolved_body_import_preserves_real_consumer(self, tmp_path: Path) -> None:
+        """Test resolved body import preserves real consumer."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "consumer.py"
         source = (
@@ -42,7 +47,7 @@ class TestsSelfFacadeCutover:
                     rope_workspace=rope,
                     sources={path: source},
                     findings=(finding,),
-                )
+                ),
             )
             tm.that(len(edits), eq=1)
             remaining = tm.ok(
@@ -51,7 +56,7 @@ class TestsSelfFacadeCutover:
                     rope_workspace=rope,
                     sources={path: edits[0].updated_source},
                     findings=(finding,),
-                )
+                ),
             )
         tm.that(remaining, empty=True)
         path.write_text(edits[0].updated_source, encoding="utf-8")
@@ -69,8 +74,11 @@ class TestsSelfFacadeCutover:
         ],
     )
     def test_eager_reference_is_rejected_before_publication(
-        self, tmp_path: Path, consumer: str
+        self,
+        tmp_path: Path,
+        consumer: str,
     ) -> None:
+        """Test eager reference is rejected before publication."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "consumer.py"
         source = "from flext_infra import u\n" + consumer
@@ -93,8 +101,11 @@ class TestsSelfFacadeCutover:
         ],
     )
     def test_multiple_aliases_and_duplicate_imports_preserve_each_use(
-        self, tmp_path: Path, declaration: str
+        self,
+        tmp_path: Path,
+        declaration: str,
     ) -> None:
+        """Test multiple aliases and duplicate imports preserve each use."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "consumer.py"
         source = declaration + (
@@ -110,7 +121,7 @@ class TestsSelfFacadeCutover:
                     rope_workspace=rope,
                     sources={path: source},
                     findings=(finding,),
-                )
+                ),
             )
             tm.that(len(edits), eq=1)
             remaining = tm.ok(
@@ -119,7 +130,7 @@ class TestsSelfFacadeCutover:
                     rope_workspace=rope,
                     sources={path: edits[0].updated_source},
                     findings=(finding,),
-                )
+                ),
             )
         tm.that(remaining, empty=True)
         path.write_text(edits[0].updated_source, encoding="utf-8")

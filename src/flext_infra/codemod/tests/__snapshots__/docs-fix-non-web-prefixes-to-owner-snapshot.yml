@@ -1,9 +1,0 @@
-id: docs-fix-non-web-prefixes-to-owner
-snapshots:
-  rewrite = not target.startswith(("mailto:", "tel:", "#")):
-    fixed: rewrite = not (FlextInfraUtilitiesDocs.docs_is_external(target) or target.startswith(c.Infra.DOCS_FRAGMENT_PREFIX))
-    labels:
-    - source: not target.startswith(("mailto:", "tel:", "#"))
-      style: primary
-      start: 10
-      end: 57

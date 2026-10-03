@@ -1,5 +1,0 @@
-id: rewire-duplicate-test-release-main
-valid:
-  - u.Tests.run_release_main(workspace, "--phase", "plan")
-invalid:
-  - _run_release_main(workspace, "--phase", "plan")

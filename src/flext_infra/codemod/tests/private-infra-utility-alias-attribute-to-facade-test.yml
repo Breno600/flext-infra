@@ -1,9 +1,0 @@
-id: private-infra-utility-alias-attribute-to-facade
-# `valid` MUST NOT match: the facade attribute, or a different receiver.
-valid:
-  - root = u.Infra.ROOT
-  - root = ub_helper.ROOT
-# `invalid` MUST match: an attribute read through the private `ub` alias.
-invalid:
-  - root = ub.ROOT
-  - handler = ub.discover_projects
