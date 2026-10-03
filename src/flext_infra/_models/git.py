@@ -231,13 +231,100 @@ class FlextInfraModelsGit(
         ]
 
     class GitPushRequest(m.ContractModel):
-        """Push HEAD to a remote branch ref."""
+        """Push a local commit-ish (HEAD by default) to a remote branch ref."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
         repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
         remote: Annotated[t.NonEmptyStr, m.Field(description="Remote name")] = "origin"
         branch: Annotated[t.NonEmptyStr, m.Field(description="Branch to publish")]
+        source: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Local commit-ish pushed to the remote branch"),
+        ] = "HEAD"
+
+    class GitRemoteRequest(m.ContractModel):
+        """One repository plus one remote name."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
+        remote: Annotated[t.NonEmptyStr, m.Field(description="Remote name")] = "origin"
+
+    class GitRemoteBranchRequest(GitRemoteRequest):
+        """One remote branch, optionally bound to its expected tip oid."""
+
+        branch: Annotated[t.NonEmptyStr, m.Field(description="Remote branch name")]
+        expected_oid: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(description="Remote tip the mutation is leased on"),
+        ] = None
+
+    class GitRefHeadsRequest(m.ContractModel):
+        """List every ref below one namespace (``refs/heads``, ``refs/remotes/origin``)."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
+        namespace: Annotated[t.NonEmptyStr, m.Field(description="Ref namespace")]
+
+    class GitRefHeadsReport(m.ContractModel):
+        """Short ref names below one namespace mapped to their tip oids."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        heads: Annotated[
+            t.StrMapping,
+            m.Field(description="Name relative to the namespace -> tip oid"),
+        ]
+
+    class GitOidListReport(m.ContractModel):
+        """Ordered Git object ids."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        oids: Annotated[t.StrSequence, m.Field(description="Object ids in order")]
+
+    class GitBranchCreateRequest(m.ContractModel):
+        """Create one branch at a start point, optionally switching to it."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
+        branch: Annotated[t.NonEmptyStr, m.Field(description="New branch name")]
+        start: Annotated[
+            t.NonEmptyStr, m.Field(description="Commit-ish the branch starts at")
+        ] = "HEAD"
+        switch: Annotated[
+            bool,
+            m.Field(description="Switch the worktree to it, carrying local changes"),
+        ] = False
+
+    class GitStashDropRequest(m.ContractModel):
+        """Drop the stash entry whose commit is exactly ``oid``."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
+        oid: Annotated[t.NonEmptyStr, m.Field(description="Stash commit oid")]
+
+    class GitMergeProbeRequest(m.ContractModel):
+        """Ask whether merging ``commitish`` into ``base`` would change nothing."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
+        base: Annotated[t.NonEmptyStr, m.Field(description="Merge target commit-ish")]
+        commitish: Annotated[t.NonEmptyStr, m.Field(description="Merged commit-ish")]
+
+    class GitTimestampReport(m.ContractModel):
+        """One Unix timestamp in seconds."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        epoch_seconds: Annotated[
+            t.NonNegativeInt, m.Field(description="Seconds since the Unix epoch")
+        ]
 
     class GitWorktreeAddRequest(m.ContractModel):
         """Add a development worktree lane."""
