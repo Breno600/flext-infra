@@ -1,0 +1,80 @@
+id: ban-runtime-alias-rebind
+snapshots:
+  ? |
+    class FlextFooConstants:
+        pass
+    c = FlextFooConstants
+    __all__ = ["FlextFooConstants"]
+  : labels:
+    - source: c = FlextFooConstants
+      style: primary
+      start: 34
+      end: 55
+    - source: |
+        class FlextFooConstants:
+            pass
+        c = FlextFooConstants
+        __all__ = ["FlextFooConstants"]
+      style: secondary
+      start: 0
+      end: 88
+    - source: c
+      style: secondary
+      start: 34
+      end: 35
+    - source: c = FlextFooConstants
+      style: secondary
+      start: 34
+      end: 55
+  ? |
+    class FlextFooConstants:
+        pass
+    c = FlextFooConstants
+    c = FlextFooConstants
+    __all__ = ["FlextFooConstants", "c"]
+  : labels:
+    - source: c = FlextFooConstants
+      style: primary
+      start: 34
+      end: 55
+    - source: |
+        class FlextFooConstants:
+            pass
+        c = FlextFooConstants
+        c = FlextFooConstants
+        __all__ = ["FlextFooConstants", "c"]
+      style: secondary
+      start: 0
+      end: 115
+    - source: c
+      style: secondary
+      start: 34
+      end: 35
+    - source: c = FlextFooConstants
+      style: secondary
+      start: 34
+      end: 55
+  ? |
+    from flext_core import FlextConstants
+    c = FlextConstants
+    __all__ = ["c"]
+  : labels:
+    - source: c = FlextConstants
+      style: primary
+      start: 38
+      end: 56
+    - source: |
+        from flext_core import FlextConstants
+        c = FlextConstants
+        __all__ = ["c"]
+      style: secondary
+      start: 0
+      end: 73
+    - source: c
+      style: secondary
+      start: 38
+      end: 39
+    - source: c = FlextConstants
+      style: secondary
+      start: 38
+      end: 56

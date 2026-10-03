@@ -31,7 +31,7 @@
 {{ "\t" }}@{{ check_run(gates_csv(make.fmt_gates), " --apply") }}
 {%- endmacro -%}
 {%- macro fix_body() -%}
-{{ "\t" }}@{{ check_run(gates_csv(make.check_gates_fixable), " --apply --report-findings") }}
+{{ "\t" }}@{{ check_run(gates_csv(make.check_gates_fixable), " --apply") }}
 {%- endmacro -%}
 {%- macro pytest_testmon_guard() -%}
 set -eu; \
@@ -44,10 +44,12 @@ mkdir -p "$$(dirname "$$database")"; \
 {#- Each phase is its own bounded runner process with its own entrypoint clock:
     the budgeted phase never carries slow-marked items, which run afterwards in
     their own phase, each within the per-item slow bound (gate-budget rule). -#}
+{#- Tests run on the pinned toolchain (PROJECT_TOOL_EXEC), the same one every
+    verb's tools resolve from, so a test observes the runtime's tool versions. -#}
 {%- macro pytest_test_runner(operations=("",)) -%}
 {{ pytest_testmon_guard() }}
 {%- for operation in operations %}
-{{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry{% if operation %} {{ operation }}{% endif %}{% if not loop.last %}; \{% endif %}
+{{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry{% if operation %} {{ operation }}{% endif %}{% if not loop.last %}; \{% endif %}
 {%- endfor %}
 {%- endmacro -%}
 # @flext-generated: continuous
@@ -90,18 +92,15 @@ export GEN_INIT_ONLY
 endif
 endif
 
-# An explicit process credential is required for network bootstrap. GH_TOKEN
-# takes precedence over GITHUB_TOKEN, and no host credential store is read.
-# Local provisioned operations need no authentication preflight or network call.
-# Keep the selected value in the environment, never in a rendered recipe.
-ifneq ($(strip $(GH_TOKEN)),)
-override GITHUB_TOKEN := $(GH_TOKEN)
-endif
+# GITHUB_TOKEN is the one GitHub credential variable every tool reads (mise,
+# gh, uv). The caller's environment supplies it (ai-hub propagates it through
+# .envrc.ai-hub); when it carries none, the network bootstrap selects the first
+# declared toolchain.github_credential_commands entry whose executable is on
+# PATH, and that source must deliver. With no source present, GitHub access is
+# anonymous. A tool-scoped alias of the same credential never reaches a recipe,
+# where it would shadow or outrank it. The value is never printed.
 export GITHUB_TOKEN
-override export GH_TOKEN := $(GITHUB_TOKEN)
-# One credential, one variable: mise reads GITHUB_TOKEN, and a tool-scoped
-# alias inherited from a caller would silently outrank it.
-unexport MISE_GITHUB_TOKEN
+unexport GH_TOKEN MISE_GITHUB_TOKEN GITHUB_API_TOKEN
 
 # === SECTION: project identity (managed) ===
 # Source: config:dist / config:make_profile / config:repository_root_rel / config:uv_link_mode
@@ -129,11 +128,15 @@ PYTEST_PROCESS_TIMEOUT_SECONDS := {{ pytest_process_timeout_seconds }}
 PYTEST_BOUNDED = {{ timeout_command }} --signal=TERM --kill-after={{ timeout_kill_after_seconds }}s "$(PYTEST_PROCESS_TIMEOUT_SECONDS)s"
 PYTEST_REPORTS_DIR := {{ make.testmon_cache.reports_directory }}
 PYTEST_CACHE_HOME = $(if $(strip $({{ make.testmon_cache.data_home_environment_variable }})),$({{ make.testmon_cache.data_home_environment_variable }}),$(if $(strip $({{ make.testmon_cache.user_home_environment_variable }})),$({{ make.testmon_cache.user_home_environment_variable }})/{{ make.testmon_cache.home_cache_directory }},))
-override FLEXT_PYTEST_TESTMON_DATABASE = $(if $(strip $(PYTEST_CACHE_HOME)),$(PYTEST_CACHE_HOME)/{{ make.testmon_cache.external_storage_directory }}/$(subst /,_,$(PROJECT_ROOT))/{{ make.testmon_cache.database_filename }})
+# One persistent testmon database per project, shared by every checkout and
+# worktree of it (like the Mypy cache): testmon tracks each checkout's source by
+# file checksum, so a new lane starts from the project's measured selection
+# instead of a cold full inventory.
+override FLEXT_PYTEST_TESTMON_DATABASE = $(if $(strip $(PYTEST_CACHE_HOME)),$(PYTEST_CACHE_HOME)/{{ make.testmon_cache.external_storage_directory }}/$(PROJECT_NAME)/{{ make.testmon_cache.database_filename }})
 # Profiles sit beside the other reports of this checkout (.reports is ignored).
 PROFILE_REPORTS_DIR = $(PROJECT_ROOT)/$(dir $(PYTEST_REPORTS_DIR))profiles
 override PYTEST_CASE_TIMEOUT_SECONDS := {{ pytest.case_timeout_seconds }}
-override PYTEST_RUN_TIMEOUT_SECONDS := {{ pytest.run_timeout_seconds }}
+override PYTEST_RUN_TIMEOUT_SECONDS := {{ pytest.run_timeout_overrides.get(dist, pytest.run_timeout_seconds) }}
 override PYTEST_TERMINATION_GRACE_SECONDS := {{ pytest.termination_grace_seconds }}
 override PYTEST_TIMEOUT_EXIT_CODE := {{ mypy_timeout_exit_code }}
 override PYTEST_ENFORCEMENT_PLUGIN := {{ pytest.enforcement_plugin }}
@@ -229,12 +232,8 @@ override export MISE_CEILING_PATHS := $(abspath $(RUNTIME_ROOT)/..)
 # Attached members retain their own lock inputs for standalone consumption.
 # The pin is `make upg` output: a generated header, then its release line.
 override MISE_VERSION_PIN := $(RUNTIME_ROOT)/{{ mise_bootstrap.version_pin_file }}
-ifneq ($(wildcard $(MISE_VERSION_PIN)),)
-override export MISE_VERSION := $(strip $(shell awk '{{ mise_bootstrap.version_pin_reader | replace('$', '$$') }}' "$(MISE_VERSION_PIN)"))
-ifneq ($(.SHELLSTATUS),0)
-$(error Cannot read the pinned Mise release from $(MISE_VERSION_PIN))
-endif
-endif
+# The pin is read by the bootstrap recipe after any interrupted lock journal
+# has been recovered. Parsing it here would freeze a torn pre-recovery value.
 # End SECTION: profile routing
 
 override RUNTIME_VENV := $(RUNTIME_ROOT)/{{ environment_directory }}
@@ -324,7 +323,7 @@ REQUIRE_WORKSPACE_ENVIRONMENT = case "$(PROJECT_ROOT)/" in \
 	"$(RUNTIME_ROOT)/"*) ;; \
 	*) printf 'ERROR: runtime workspace does not contain this project: %s\n' "$(RUNTIME_ROOT)" >&2; exit 2 ;; \
 	esac; \
-	for environment_path in "$(RUNTIME_VENV)" "$(RUNTIME_BIN)" "$(PROJECT_ROOT)/.venv" "$(PROJECT_ROOT)/.venv/bin"; do \
+	for environment_path in "$(RUNTIME_VENV)" "$(RUNTIME_BIN)" "$(PROJECT_ROOT)/{{ environment_directory }}" "$(PROJECT_ROOT)/{{ environment_directory }}/bin"; do \
 		if [ -L "$$environment_path" ]; then \
 			printf 'ERROR: workspace environment must be physical, not a symlink: %s\n' "$$environment_path" >&2; exit 2; \
 		fi; \
@@ -339,7 +338,12 @@ _bootstrap_setup_tools: _builtin_require_workspace
 # Execute the interpreter provisioned by setup without discovering a project
 # workspace or creating a dependency-resolution file during a runtime command.
 UV_RUN := env -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u PROJECT_ROOT PYTHONPATH="$(PROJECT_ROOT)/src" $(UV) run --no-project --python "$(RUNTIME_PYTHON)"
-override PROJECT_INFRA_PYTHONPATH := $(MAKEFILE_ROOT)/src
+# The checked-out flext-infra lane owns every lifecycle verb: a workspace
+# runs the generator it carries (the submodule src), so a broken published
+# dependency tip can never block the local recovery cycle. A checkout without
+# the submodule (standalone member) keeps its own installed copy.
+FLEXT_INFRA_SUBMODULE_SRC := $(RUNTIME_ROOT)/flext-infra/src
+override PROJECT_INFRA_PYTHONPATH := $(if $(wildcard $(FLEXT_INFRA_SUBMODULE_SRC)/flext_infra/.),$(FLEXT_INFRA_SUBMODULE_SRC),$(MAKEFILE_ROOT)/src)
 PROJECT_INFRA_RUN = if [ ! -x "$(FLEXT_INFRA_PYTHON)" ]; then printf 'ERROR: FLEXT_INFRA_PYTHON must name an executable managed Python\n' >&2; exit 2; fi; $(PROJECT_TOOL_EXEC) env -u PYTHONPATH -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u UV_PROJECT_ENVIRONMENT PYTHONPATH="$(PROJECT_INFRA_PYTHONPATH)" $(FLEXT_INFRA_PYTHON)
 PROJECT_FLEXT_INFRA := $(PROJECT_INFRA_RUN) -m flext_infra
 # Scaffold dev tools live in the validated optional dev
@@ -417,7 +421,7 @@ define _lock_project
 		mkdir -p "$${stage}/mirror$$relative"; \
 		cp "$$member/pyproject.toml" "$${stage}/mirror$$relative/pyproject.toml"; \
 	done < "$${stage}/.members"; \
-	if [ "$(1)" != "--upgrade --refresh" ] && [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$${stage}/mirror/uv.lock"; fi; \
+	$(if $(2),if [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$${stage}/mirror/uv.lock"; fi;) \
 	$(UV) lock --project "$${stage}/mirror" $(1); \
 	$(UV) lock --check --project "$${stage}/mirror"; \
 	if [ -e "$$candidate" ]; then printf 'ERROR: lock staging path already exists: %s\n' "$$candidate" >&2; exit 2; fi; \
@@ -462,14 +466,19 @@ _activated-{{ verb.name }}: _builtin_require_environment
 setup: _bootstrap_setup_tools
 
 # `upg` builds the environment from the locks it writes, so like `setup` it
-# must not require an existing environment. Its first half resolves the Mise
-# release and installs from the committed mise.lock only: locking here would
-# resolve against the manifest the old generator rendered, before the uv lock
-# brings the new generator, so a toolchain policy change (for example the
-# fleet cooldown) could never reach a consumer. mise.lock is written once, in
-# `_upg_relock`, from the .mise.toml `gen` just rendered.
+# must not require an existing environment, and as the only resolver it must
+# not require a readable committed mise.lock either. A lock written by a newer
+# Mise than the pinned release ("unsupported lockfile version 3") or one that
+# no longer covers the manifest would otherwise stop the very verb that
+# rewrites it. Its first half therefore resolves the toolchain afresh, in a
+# private stage that never reads the committed lock. `_upg_relock` then bumps
+# that lock against the .mise.toml `gen` just rendered, so toolchain policy
+# changes (for example the fleet cooldown) still reach every consumer; when
+# that manifest is byte-identical to the one the first half locked, the lock
+# already satisfies it and the relock installs from it without resolving again.
 upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle
 upg: TOOL_BOOTSTRAP_RESOLVE := 1
+upg: TOOL_BOOTSTRAP_LOCK := 1
 upg: _builtin_require_runtime_root _bootstrap_setup_tools
 
 # Only the runtime root resolves the Mise release. An attached member's pin and
@@ -513,20 +522,40 @@ _builtin-help:
 # A provisioned local setup needs no GitHub credential. Mise and Git receive
 # only the explicit process credential above; an operation that actually needs
 # network access reports its own failure without a preflight or fallback.
-_bootstrap_setup_tools: $(if $(filter upg,$(MAKECMDGOALS)),,_builtin_require_mise_pin)
+_bootstrap_setup_tools: _builtin_recover_mise $(if $(filter upg,$(MAKECMDGOALS)),,_builtin_require_mise_pin)
+
+.PHONY: _builtin_recover_mise
+_builtin_recover_mise:
+	@set -eu; \
+	project_root=$$(cd "$(RUNTIME_ROOT)" && pwd -P); \
+	project_parent=$${project_root%/*}; \
+	if [ -z "$$project_parent" ]; then project_parent=/; fi; \
+	for prior in "$$project_parent/.$${project_root##*/}.mise-lock-stage."*; do \
+		if [ ! -d "$$prior" ]; then continue; fi; \
+		if [ ! -f "$$prior/transaction.json" ]; then \
+			printf 'INFO: removing the dead Mise stage (crashed before its lock commit point; nothing was published): %s\n' "$$prior" >&2; \
+			find "$$prior" -depth -delete; \
+			continue; \
+		fi; \
+		if [ ! -f "$$prior/python-path" ]; then printf 'ERROR: Mise transaction lacks its Python receipt: %s\n' "$$prior" >&2; exit 2; fi; \
+		IFS= read -r recovery_python < "$$prior/python-path"; \
+		if [ ! -x "$$recovery_python" ]; then printf 'ERROR: Mise transaction Python is unavailable: %s\n' "$$recovery_python" >&2; exit 2; fi; \
+		"$$recovery_python" "$$project_root/{{ mise_bootstrap.lock_transaction_script }}" recover "$$project_root" "$$prior"; \
+	done
 
 .PHONY: _builtin_require_mise_pin
-_builtin_require_mise_pin:
+_builtin_require_mise_pin: _builtin_recover_mise
 	@set -eu; \
 	if [ ! -s "$(MISE_VERSION_PIN)" ]; then \
 		printf 'ERROR: missing or empty %s; make upg records the Mise release\n' "$(MISE_VERSION_PIN)" >&2; \
 		exit 2; \
 	fi; \
-	if ! printf '%s\n' "$(MISE_VERSION)" | grep -Eq '^{{ mise_bootstrap.resolved_release_pattern }}$$'; then \
+	mise_pin=$$(awk '{{ mise_bootstrap.version_pin_reader | replace('$', '$$') }}' "$(MISE_VERSION_PIN)"); \
+	if ! printf '%s\n' "$$mise_pin" | grep -Eq '^{{ mise_bootstrap.resolved_release_pattern }}$$'; then \
 		printf 'ERROR: %s must contain a resolved Mise release; make upg writes it\n' "$(MISE_VERSION_PIN)" >&2; \
 		exit 2; \
 	fi; \
-	if [ "$(MISE_VERSION)" != "$$(awk '{{ mise_bootstrap.version_pin_reader | replace('$', '$$') }}' "$(MISE_VERSION_PIN)")" ]; then \
+	if [ -n "$${MISE_VERSION:-}" ] && [ "$${MISE_VERSION#v}" != "$$mise_pin" ]; then \
 		printf 'ERROR: MISE_VERSION conflicts with %s\n' "$(MISE_VERSION_PIN)" >&2; \
 		exit 2; \
 	fi
@@ -590,17 +619,15 @@ _upg_lifecycle: _builtin_setup_submodules
 	@$(SELF_MAKE) _upg_relock
 	@set -eu; \
 	if [ -d .mise/locks ]; then \
-		if git add -- .mise/locks; then \
-			printf 'INFO: staged the .mise/locks sidecars written by mise lock (declared tracked by the generated .gitignore; commit them with the relock)\n'; \
-		else \
-			printf 'WARN: .mise/locks exist but could not be staged (not a git worktree?); commit them manually\n'; \
-		fi; \
+		git add -- .mise/locks; \
+		printf 'INFO: staged the .mise/locks sidecars written by mise lock (declared tracked by the generated .gitignore; commit them with the relock)\n'; \
 	fi
 
 # The second half belongs to the Makefile `gen` just rendered, so it runs as a
 # fresh make invocation rather than as lines of the recipe already expanded
 # above. It locks mise.lock from the rendered .mise.toml (never from the
-# manifest the generator was provisioned with), installs exactly that lock,
+# manifest the generator was provisioned with) unless that manifest is the one
+# the first half already locked, installs exactly that lock,
 # re-resolves uv.lock against the raised floors and reprovisions frozen from
 # both: the committed locks must match the committed manifests, or `setup`
 # (the CI path, `--locked`) rejects them. The Mise release is not resolved
@@ -622,7 +649,7 @@ _upg_converge:
 	@$(UV) lock --check --project "$(PROJECT_ROOT)"
 	@set -eu; \
 	before="$$(git -C "$(PROJECT_ROOT)" status --porcelain --untracked-files=all --ignore-submodules=none | sort)"; \
-	$(SELF_MAKE) gen > /dev/null; \
+	$(SELF_MAKE) gen; \
 	after="$$(git -C "$(PROJECT_ROOT)" status --porcelain --untracked-files=all --ignore-submodules=none | sort)"; \
 	if [ "$$before" != "$$after" ]; then \
 		printf 'ERROR: make upg did not converge; `make gen` still rewrites:\n%s\n' "$$after" >&2; \
@@ -665,7 +692,7 @@ _builtin_test_all: _builtin_require_environment
 
 _builtin_test_full_all: _builtin_require_environment
 {{ test_report_recipe(
-    runner=pytest_test_runner(("full", "full slow")),
+    runner=pytest_test_runner(("full", "full-slow")),
 ) }}
 
 # fmt is format-only (single-pass verb law): ruff formats Python, the
@@ -684,6 +711,18 @@ _builtin_fix_all: _builtin_require_environment
 # to no setup/gen/check/test workflow row and never runs implicitly.
 _builtin_sonarcloud_sync_all: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) maintenance sonarcloud-sync --repository-root "$(PROJECT_ROOT)"
+
+# Read the complete unresolved new-code issue set on the published integration
+# branch. This diagnostic never writes SonarCloud settings or issue state.
+_builtin_sonarcloud_issues_all: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) maintenance sonarcloud-issues --repository-root "$(PROJECT_ROOT)"
+
+{% if make_profile == "workspace" %}
+# Member propagation exists only where members exist: this workspace's
+# flext-infra conforms and relocks each declared member and publishes one
+# pull-request lane per member that changed. It never merges.
+_builtin-propagate: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) {{ workspace_cli_group }} propagate --repository-root "$(PROJECT_ROOT)"
 {% endif %}
 _builtin_run_default: _builtin_require_environment
 	@$(UV_RUN) $(PROJECT_NAME) $(ARGS)
@@ -711,7 +750,7 @@ profile-mypy: _builtin_require_environment
 	@mkdir -p "$(PROFILE_REPORTS_DIR)"
 	@export FLEXT_MYPY_PROFILE_OUTPUT="$(PROFILE_REPORTS_DIR)/mypy.pstats"; \
 		$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" \
-		--gates mypy --report-findings
+		--gates mypy
 
 .PHONY: profile-mypy-report
 profile-mypy-report: _builtin_require_environment
@@ -746,12 +785,12 @@ profile-test: _builtin_require_environment
 	@mkdir -p "$(PROFILE_REPORTS_DIR)"
 	@{{ pytest_testmon_guard() }}
 	{{ make.testmon_cache.database_environment_variable }}="$$database" $(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -m flext_infra._pytest_entry profile \
-		"$(PROFILE_REPORTS_DIR)/pytest.pstats"
+		"$(PROFILE_REPORTS_DIR)/{{ pytest.profile_suite_filename }}"
 
 .PHONY: profile-test-report
 profile-test-report: _builtin_require_environment
 	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -m flext_infra._cprofile_entry \
-		"$(PROFILE_REPORTS_DIR)/pytest.pstats" "$(PROFILE_REPORTS_DIR)/pytest.pstats.json"
+		"$(PROFILE_REPORTS_DIR)/{{ pytest.profile_suite_filename }}" "$(PROFILE_REPORTS_DIR)/{{ pytest.profile_suite_filename }}.json"
 
 _builtin_status_diagnostics: _builtin_require_environment
 	@printf 'profile=%s\nproject=%s\nruntime=%s\n' \
@@ -878,6 +917,10 @@ _builtin-audit:
 	@$(UV) pip check --python "$(RUNTIME_VENV)"
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode check
 _builtin-status: _builtin_status_diagnostics
+_builtin-verify-clean: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode check
+	@$(PROJECT_FLEXT_INFRA) docs audit --repository-root "$(PROJECT_ROOT)" --output-dir "{{ make.docs.reports_dir }}" --projects .
+	@git -C "$(PROJECT_ROOT)" diff --exit-code
 _builtin-docs: _builtin_docs_all
 _builtin-clean: _builtin_clean_generated
 _builtin-release-plan: _builtin_release_plan

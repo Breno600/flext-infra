@@ -1,4 +1,8 @@
-"""Atomic, fail-fast Rope class relocation for ``u.Infra``."""
+"""Atomic, fail-fast Rope class relocation for ``u.Infra``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,10 +11,11 @@ from pathlib import Path
 from flext_cli import u
 
 from flext_infra import c, m, p, t
-
-from ._rope_core_pymodule import FlextInfraUtilitiesRopeCorePyModuleMixin
-from .namespace import FlextInfraUtilitiesCodegenNamespace
-from .rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities._rope_core_pymodule import (
+    FlextInfraUtilitiesRopeCorePyModuleMixin,
+)
+from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeClassMove:
@@ -18,7 +23,12 @@ class FlextInfraUtilitiesRopeClassMove:
 
     @classmethod
     def move_class(cls, request: m.Infra.ClassMoveRequest) -> Path:
-        """Move one top-level class or return its validated preview target."""
+        """Move one top-level class or return its validated preview target.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         target_file, mover = cls._class_mover(request)
         root = Path(request.rope_project.root.real_path).resolve()
         if not request.apply:
@@ -49,7 +59,19 @@ class FlextInfraUtilitiesRopeClassMove:
         *,
         sources: t.MappingKV[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
-        """Preview one identity-preserving move inside a closed source inventory."""
+        """Preview one identity-preserving move inside a closed source inventory.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.SemanticMigrationEdit]``.
+
+        Raises:
+            TypeError: If class move planning produced a non-content effect.
+            ValueError: If immutable class move planning requires apply=False; or if
+                class move owners are absent from the governed source inventory; or if
+                class move source differs from its planning snapshot; or if class move
+                escaped its governed source inventory.
+
+        """
         if request.apply:
             msg = "immutable class move planning requires apply=False"
             raise ValueError(msg)
@@ -95,7 +117,17 @@ class FlextInfraUtilitiesRopeClassMove:
         cls,
         request: m.Infra.ClassMoveRequest,
     ) -> t.Pair[Path, p.Infra.RopeMoveGlobal]:
-        """Resolve both execution and planning from the exact original declaration."""
+        """Resolve both execution and planning from the exact original declaration.
+
+        Returns:
+            The resulting ``t.Pair[Path, p.Infra.RopeMoveGlobal]``.
+
+        Raises:
+            FileNotFoundError: If ``not source_file.is_file()``; or if ``not
+                target_file.parent.is_dir()``.
+            ValueError: If class move source and target are identical; or if class.
+
+        """
         root = Path(request.rope_project.root.real_path).resolve()
         source_file = cls._owned_path(root, request.source_file)
         target_file = cls._owned_path(root, request.target_file)
@@ -128,7 +160,12 @@ class FlextInfraUtilitiesRopeClassMove:
 
     @staticmethod
     def class_module_stem(class_name: str) -> str:
-        """Derive one module stem from the core CamelCase boundary authority."""
+        """Derive one module stem from the core CamelCase boundary authority.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return c.CAMEL_TO_SNAKE_RE.sub(r"\1_\2", class_name).lower()
 
     @classmethod
@@ -140,7 +177,12 @@ class FlextInfraUtilitiesRopeClassMove:
         class_name: str,
         family: str,
     ) -> Path:
-        """Derive a canonical destination without a project-owned registry."""
+        """Derive a canonical destination without a project-owned registry.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         module_stem = cls.class_module_stem(class_name)
         if family:
             family_dir = FlextInfraUtilitiesCodegenNamespace.facade_families()[

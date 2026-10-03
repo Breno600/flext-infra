@@ -1,4 +1,8 @@
-"""Compose inherited ast-grep rules from FLEXT distribution metadata."""
+"""Compose inherited ast-grep rules from FLEXT distribution metadata.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,7 +10,7 @@ import re
 import sys
 from collections.abc import Mapping, MutableMapping, Sequence
 from functools import lru_cache
-from importlib.metadata import Distribution, distributions
+from importlib.metadata import Distribution
 from importlib.util import find_spec
 from pathlib import Path
 
@@ -14,8 +18,8 @@ from flext_cli import u
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
-from .. import c, m, p, r, t
-from .dependencies import FlextInfraUtilitiesDependencies
+from flext_infra import c, m, p, r, t
+from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
 
 
 class FlextInfraUtilitiesCodemodRules:
@@ -30,6 +34,10 @@ class FlextInfraUtilitiesCodemodRules:
         provider/rule catalog is invariant across the many ``scan()`` calls a
         single ``mod`` invocation issues while converging to a fixed point, and
         a fresh process (a new ``make mod`` run) always recomputes it from disk.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodemodRulePlan]``.
+
         """
         project = cls.codemod_project_requirements(root)
         if project.failure:
@@ -68,14 +76,24 @@ class FlextInfraUtilitiesCodemodRules:
 
     @staticmethod
     def codemod_rule_filter(rule_ids: t.StrSequence) -> str:
-        """Return one exact ast-grep rule-ID filter for an elected ruleset."""
+        """Return one exact ast-grep rule-ID filter for an elected ruleset.
+
+        Returns:
+            One exact ast-grep rule-ID filter for an elected ruleset.
+
+        Raises:
+            ValueError: If codemod rule filter requires at least one rule ID.
+
+        """
         if not rule_ids:
             msg = "codemod rule filter requires at least one rule ID"
             raise ValueError(msg)
         return "^(?:" + "|".join(re.escape(rule_id) for rule_id in rule_ids) + ")$"
 
     @staticmethod
-    def codemod_project_requirements(root: Path) -> p.Result[t.Pair[str, t.StrSequence]]:
+    def codemod_project_requirements(
+        root: Path,
+    ) -> p.Result[t.Pair[str, t.StrSequence]]:
         pyproject = root / c.PYPROJECT_FILENAME
         document = u.Cli.toml_read_document(pyproject)
         if document.failure:
@@ -92,6 +110,11 @@ class FlextInfraUtilitiesCodemodRules:
                 f"missing project.name: {pyproject}",
             )
         raw_dependencies = project.get(c.Infra.DEPENDENCIES)
+        if raw_dependencies is None:
+            # ``project.dependencies`` is spec-optional: a project with no
+            # declared runtime dependency has an empty runtime closure, not a
+            # malformed manifest.
+            raw_dependencies = ()
         if not isinstance(raw_dependencies, Sequence) or isinstance(
             raw_dependencies,
             str,
@@ -119,13 +142,18 @@ class FlextInfraUtilitiesCodemodRules:
         # Import search paths may repeat the same physical directory. Query each
         # directory once; distinct installations with the same name still fail.
         paths = list(dict.fromkeys(str(Path(path).resolve()) for path in sys.path))
-        for installed in distributions(path=paths):
+        for installed in u.installed_distributions(path=paths):
             raw_name = installed.metadata.get("Name")
             if not isinstance(raw_name, str) or not raw_name.strip():
                 continue
             name = canonicalize_name(raw_name)
-            if name in indexed:
-                msg = f"duplicate installed distribution metadata: {name}"
+            previous = indexed.get(name)
+            if previous is not None:
+                msg = (
+                    f"duplicate installed distribution metadata: {name} "
+                    f"({previous.version} at {previous.locate_file('')}; "
+                    f"{installed.version} at {installed.locate_file('')})"
+                )
                 raise ValueError(msg)
             indexed[name] = installed
         return indexed
@@ -274,6 +302,10 @@ class FlextInfraUtilitiesCodemodRules:
         ``metadata.consumers_of``: a plan elects it only when the facade is in
         the project's runtime closure, so the facade itself and the projects
         below it never do.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodemodRulePlan]``.
+
         """
         selected: MutableMapping[str, m.Infra.CodemodRule] = {}
         rulesets: list[m.Infra.CodemodRuleset] = []
@@ -410,11 +442,11 @@ class FlextInfraUtilitiesCodemodRules:
                         metadata if isinstance(metadata, Mapping) else {}
                     )
                     context = cls._declared_context(
-                        declared_metadata.get(c.Infra.CODEMOD_RULE_CONTEXT_KEY)
+                        declared_metadata.get(c.Infra.CODEMOD_RULE_CONTEXT_KEY),
                     )
                     if context.failure:
                         return r[t.SequenceOf[m.Infra.CodemodRule]].fail(
-                            f"{context.error}: {resource}"
+                            f"{context.error}: {resource}",
                         )
                     body = u.Cli.json_dumps({
                         key: value
@@ -432,7 +464,7 @@ class FlextInfraUtilitiesCodemodRules:
                     if unbound:
                         return r[t.SequenceOf[m.Infra.CodemodRule]].fail(
                             f"ast-grep rule {rule_id} context names variables "
-                            f"its rule never captures {unbound}: {resource}"
+                            f"its rule never captures {unbound}: {resource}",
                         )
                     rules.append(
                         m.Infra.CodemodRule.model_validate({
@@ -443,22 +475,23 @@ class FlextInfraUtilitiesCodemodRules:
                             "fixable": "fix" in parsed_rule.value,
                             "expected": declared.value[0] if declared.value else None,
                             "owner": declared_metadata.get(
-                                c.Infra.CODEMOD_RULE_OWNER_KEY
+                                c.Infra.CODEMOD_RULE_OWNER_KEY,
                             ),
                             "consumers_of": declared_metadata.get(
-                                c.Infra.CODEMOD_RULE_CONSUMERS_OF_KEY
+                                c.Infra.CODEMOD_RULE_CONSUMERS_OF_KEY,
                             ),
                             "relocation": declared_metadata.get(
-                                c.Infra.CODEMOD_RULE_RELOCATION_KEY
+                                c.Infra.CODEMOD_RULE_RELOCATION_KEY,
                             ),
                             "context": context.value,
-                        })
+                        }),
                     )
         return r[t.SequenceOf[m.Infra.CodemodRule]].ok(tuple(rules))
 
     @classmethod
     def _declared_context(
-        cls, raw: t.JsonValue | None
+        cls,
+        raw: t.JsonValue | None,
     ) -> p.Result[t.VariadicTuple[m.Infra.CodemodContextCondition]]:
         """Read ``metadata.context``: ``{VAR: {is|not: predicate[, of: VAR]}}``.
 
@@ -467,13 +500,18 @@ class FlextInfraUtilitiesCodemodRules:
         (``is``) or fail (``not``), optionally evaluated against the module
         another capture names (``of``). Absence is the empty tuple; any other
         shape is a malformed rule document.
+
+        Returns:
+            The resulting
+                ``p.Result[t.VariadicTuple[m.Infra.CodemodContextCondition]]``.
+
         """
         conditions = r[t.VariadicTuple[m.Infra.CodemodContextCondition]]
         if raw is None:
             return conditions.ok(())
         if not isinstance(raw, Mapping) or not raw:
             return conditions.fail(
-                "ast-grep rule metadata.context must be a non-empty mapping"
+                "ast-grep rule metadata.context must be a non-empty mapping",
             )
         verdicts = {
             c.Infra.CODEMOD_CONTEXT_HOLDS_KEY,
@@ -490,7 +528,7 @@ class FlextInfraUtilitiesCodemodRules:
                 if not isinstance(condition, Mapping):
                     return conditions.fail(
                         f"ast-grep rule context ${variable} must be a mapping "
-                        "or a sequence of mappings"
+                        "or a sequence of mappings",
                     )
                 verdict = cls._context_verdict(variable, condition, verdicts)
                 if verdict.failure:
@@ -502,20 +540,27 @@ class FlextInfraUtilitiesCodemodRules:
                         "holds": verdict.value == c.Infra.CODEMOD_CONTEXT_HOLDS_KEY,
                         "of": condition.get(c.Infra.CODEMOD_CONTEXT_OF_KEY),
                         "arg": str(
-                            condition.get(c.Infra.CODEMOD_CONTEXT_ARG_KEY, "")
+                            condition.get(c.Infra.CODEMOD_CONTEXT_ARG_KEY, ""),
                         ).split(),
                         "as_": str(
-                            condition.get(c.Infra.CODEMOD_CONTEXT_AS_KEY, "")
+                            condition.get(c.Infra.CODEMOD_CONTEXT_AS_KEY, ""),
                         ).split(),
-                    })
+                    }),
                 )
         return conditions.ok(tuple(parsed))
 
     @staticmethod
     def _context_verdict(
-        variable: str, condition: t.JsonMapping, verdicts: t.StrSequence | set[str]
+        variable: str,
+        condition: t.JsonMapping,
+        verdicts: t.StrSequence | set[str],
     ) -> p.Result[str]:
-        """Return the one verdict key (``is``/``not``) of a context condition."""
+        """Return the one verdict key (``is``/``not``) of a context condition.
+
+        Returns:
+            The one verdict key (``is``/``not``) of a context condition.
+
+        """
         keys = set(condition)
         verdict = keys.intersection(verdicts)
         operands = {
@@ -526,7 +571,7 @@ class FlextInfraUtilitiesCodemodRules:
         if len(verdict) != 1 or keys - set(verdicts) - operands:
             return r[str].fail(
                 f"ast-grep rule context ${variable} must hold exactly one of "
-                f"{sorted(verdicts)} and at most {sorted(operands)}"
+                f"{sorted(verdicts)} and at most {sorted(operands)}",
             )
         return r[str].ok(verdict.pop())
 
@@ -544,6 +589,10 @@ class FlextInfraUtilitiesCodemodRules:
         ``metadata`` mapping it does accept. Absence is the empty tuple: a
         declared `expected: 0` is a real receipt ("this rule must never match
         again") and must not collapse into "no receipt declared".
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[int]]``.
+
         """
         metadata = document.get(c.Infra.CODEMOD_RULE_METADATA_KEY)
         if metadata is None:

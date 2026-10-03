@@ -26,12 +26,17 @@ if TYPE_CHECKING:
 class TestsFlextInfraIndexDeclarationsGate:
     """Every indexed gitlink must be declared in `.gitmodules`."""
 
+    @staticmethod
     @pytest.fixture
-    def gate_result(self, tmp_path: Path) -> Callable[..., m.Infra.GateResult]:
+    def gate_result(tmp_path: Path) -> Callable[..., m.Infra.GateResult]:
         """Build a repository with the requested defects and run the gate over it.
 
         One owner for the whole arrange-act pair: the tests differ only in which
         defect they seed.
+
+        Returns:
+            The resulting ``Callable[..., m.Infra.GateResult]``.
+
         """
 
         def run(
@@ -88,30 +93,33 @@ class TestsFlextInfraIndexDeclarationsGate:
 
         return run
 
+    @staticmethod
     def test_consistent_repository_passes(
-        self,
         gate_result: Callable[..., m.Infra.GateResult],
     ) -> None:
+        """Test consistent repository passes."""
         result = gate_result()
         tm.that(result.passed, eq=True)
         tm.that(len(result.errors), eq=0)
 
+    @staticmethod
     def test_undeclared_gitlink_fails_naming_the_path(
-        self,
         gate_result: Callable[..., m.Infra.GateResult],
     ) -> None:
+        """Test undeclared gitlink fails naming the path."""
         result = gate_result(orphan_gitlink=True)
         tm.that(result.passed, eq=False)
         tm.that(len(result.errors), eq=1)
         tm.that(result.errors[0], has="nested")
         tm.that(result.errors[0], has=".gitmodules")
 
+    @staticmethod
     def test_declared_gitlink_passes(
-        self,
         gate_result: Callable[..., m.Infra.GateResult],
     ) -> None:
         # The same gitlink, now declared, is legitimate topology and must not
         # be reported: the gate judges the declaration, never the mode.
+        """Test declared gitlink passes."""
         result = gate_result(orphan_gitlink=True, declare_gitlink=True)
         tm.that(result.passed, eq=True)
         tm.that(len(result.errors), eq=0)

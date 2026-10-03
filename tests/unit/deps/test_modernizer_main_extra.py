@@ -1,4 +1,8 @@
-"""Edge-case tests for public modernizer flows."""
+"""Edge-case tests for public modernizer flows.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,7 +23,12 @@ class TestsFlextInfraDepsModernizerMainExtra:
 
     @staticmethod
     def _ran_modernizer(modernizer_workspace: Path) -> str:
-        """Run the constraint-rewriting modernizer and return the rendered root."""
+        """Run the constraint-rewriting modernizer and return the rendered root.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         modernizer = FlextInfraPyprojectModernizer(
             repository_root=modernizer_workspace,
             apply_changes=True,
@@ -31,6 +40,7 @@ class TestsFlextInfraDepsModernizerMainExtra:
         tm.that(modernizer.run(), eq=0)
         return (modernizer_workspace / c.PYPROJECT_FILENAME).read_text(encoding="utf-8")
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("content", "expected"),
         [
@@ -40,7 +50,6 @@ class TestsFlextInfraDepsModernizerMainExtra:
         ],
     )
     def test_run_handles_root_edge_cases(
-        self,
         tmp_path: Path,
         content: str | None,
         expected: int,
@@ -53,8 +62,8 @@ class TestsFlextInfraDepsModernizerMainExtra:
         modernizer = FlextInfraPyprojectModernizer(repository_root=workspace)
         tm.that(modernizer.run(), eq=expected)
 
+    @staticmethod
     def test_audit_returns_zero_after_workspace_is_canonical(
-        self,
         modernizer_workspace: Path,
     ) -> None:
         """Reach a fixed point after one canonical apply."""
@@ -72,8 +81,8 @@ class TestsFlextInfraDepsModernizerMainExtra:
         tm.that(apply_exit, eq=0)
         tm.that(audit_exit, eq=0)
 
+    @staticmethod
     def test_run_fails_when_selected_project_has_invalid_toml(
-        self,
         modernizer_workspace_with_projects: Path,
     ) -> None:
         """Invalid TOML in a declared member escapes before any write."""
@@ -101,8 +110,8 @@ class TestsFlextInfraDepsModernizerMainExtra:
         tm.that(root_pyproject.read_bytes(), eq=root_before)
         tm.that(selected_pyproject.read_text(encoding="utf-8"), eq="[invalid")
 
+    @staticmethod
     def test_run_rewrite_constraints_uses_provisioned_runtime(
-        self,
         modernizer_workspace: Path,
     ) -> None:
         """Rewriting does not require a persisted dependency resolution."""
@@ -116,8 +125,8 @@ class TestsFlextInfraDepsModernizerMainExtra:
         tm.that(modernizer.run(), eq=0)
         tm.that((modernizer_workspace / "uv.lock").exists(), eq=False)
 
+    @staticmethod
     def test_run_rewrite_constraints_keeps_attached_submodule_manifest(
-        self,
         modernizer_workspace: Path,
     ) -> None:
         """Read runtime versions without creating a dependency lock in a member."""
@@ -169,8 +178,8 @@ class TestsFlextInfraDepsModernizerMainExtra:
             has='"requests>=2.0"',
         )
 
+    @staticmethod
     def test_run_apply_rewrites_dependency_constraints_from_runtime(
-        self,
         modernizer_workspace: Path,
     ) -> None:
         """Rewrite registry constraints while preserving internal dependencies."""
@@ -205,8 +214,8 @@ class TestsFlextInfraDepsModernizerMainExtra:
         tm.that(rendered, has='"requests>=2.0"')
         tm.that(rendered, lacks='"requests>=2.32.4"')
 
+    @staticmethod
     def test_run_apply_rewrites_constraints_as_open_floor(
-        self,
         modernizer_workspace: Path,
     ) -> None:
         """Use installed versions as floors without imposing an artificial upper bound."""
@@ -226,8 +235,8 @@ class TestsFlextInfraDepsModernizerMainExtra:
         tm.that(rendered, has='"requests>=2.0"')
         tm.that(rendered, lacks='"requests>=2.32.4"')
 
+    @staticmethod
     def test_run_scopes_default_audit_to_root_without_external_siblings(
-        self,
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -266,7 +275,8 @@ class TestsFlextInfraDepsModernizerMainExtra:
         tm.that(output, lacks=str(external_pyproject.resolve()))
         tm.that(output, lacks="not in the subpath")
 
-    def test_conform_source_preserves_taplo_process_error(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_conform_source_preserves_taplo_process_error(tmp_path: Path) -> None:
         """Return the exact formatter process failure from the public conform path."""
         u.Tests.write_mise_lock(
             tmp_path,

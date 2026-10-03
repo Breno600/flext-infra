@@ -1,4 +1,8 @@
-"""Public CLI entry tests for workspace check commands."""
+"""Public CLI entry tests for workspace check commands.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -30,10 +34,13 @@ class TestsFlextInfraExtendedCliEntry:
         u.Tests.declare_workspace_projects(workspace, ("p1",))
         return workspace
 
-    def test_empty_workspace_errors(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_empty_workspace_errors(tmp_path: Path) -> None:
+        """Test empty workspace errors."""
         tm.that(main(["check", "run", "--repository-root", str(tmp_path)]), eq=1)
 
     def test_run_accepts_explicit_scope(self, tmp_path: Path) -> None:
+        """Test run accepts explicit scope."""
         workspace = self._workspace(tmp_path)
         tm.that(
             main([
@@ -83,6 +90,7 @@ class TestsFlextInfraExtendedCliEntry:
         )
 
     def test_with_projects_success(self, tmp_path: Path) -> None:
+        """Test with projects success."""
         workspace = self._workspace(tmp_path)
         tm.that(
             main([
@@ -99,6 +107,7 @@ class TestsFlextInfraExtendedCliEntry:
         )
 
     def test_with_projects_failure(self, tmp_path: Path) -> None:
+        """Test with projects failure."""
         workspace = self._workspace(tmp_path)
         broken_file = workspace / "p1" / "src" / "broken.py"
         broken_file.write_text("def broken(:\n", encoding="utf-8")
@@ -116,10 +125,14 @@ class TestsFlextInfraExtendedCliEntry:
             eq=1,
         )
 
-    def test_check_main_routes_real_help(self) -> None:
+    @staticmethod
+    def test_check_main_routes_real_help() -> None:
+        """Test check main routes real help."""
         tm.that(main(["check", "run", "--help"]), eq=0)
 
-    def test_fix_pyrefly_config_routes_real_help(self) -> None:
+    @staticmethod
+    def test_fix_pyrefly_config_routes_real_help() -> None:
+        """Test fix pyrefly config routes real help."""
         tm.that(main(["check", "fix-pyrefly-settings", "--help"]), eq=0)
 
     def test_run_cli_anchors_relative_reports_dir_at_repository_root(

@@ -1,4 +1,8 @@
-"""Tests for lazy-init transformation behavior."""
+"""Tests for lazy-init transformation behavior.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -17,7 +21,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraLazyInitTransforms:
     """Behavior tests for generated lazy-init transform output."""
 
-    def test_private_subpackage_initializer_is_lazy(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_private_subpackage_initializer_is_lazy(tmp_path: Path) -> None:
         """Private implementation packages retain a lazy FLEXT facade."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
@@ -43,13 +48,17 @@ class TestsFlextInfraLazyInitTransforms:
             encoding=c.Cli.ENCODING_DEFAULT,
         )
         tm.that(result, eq=0)
-        tm.that(init_content, has="from .mapper import FlextDemoUtilitiesMapper")
+        tm.that(
+            init_content,
+            has=f"from {package_root.name}._utilities.mapper import FlextDemoUtilitiesMapper",
+        )
         tm.that(init_content, has="FlextDemoUtilitiesMapper")
         tm.that(init_content, has="__all__: tuple[str, ...]")
         tm.that(init_content, has="install_lazy_exports(")
         tm.that(init_content, lacks="__unit__")
 
-    def test_source_packages_exclude_test_named_modules(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_source_packages_exclude_test_named_modules(tmp_path: Path) -> None:
         """Never publish test artifacts from an installable source package."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
@@ -90,8 +99,8 @@ class TestsFlextInfraLazyInitTransforms:
         tm.that(init_content, lacks="test_fixture")
         tm.that(init_content, lacks="model_tests")
 
+    @staticmethod
     def test_version_exports_are_explicit_runtime_reexports(
-        self,
         tmp_path: Path,
     ) -> None:
         """Publish version declarations explicitly from the package root."""

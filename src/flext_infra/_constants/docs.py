@@ -1,9 +1,13 @@
-"""Centralized constants for the docs subpackage."""
+"""Centralized constants for the docs subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -55,10 +59,17 @@ class FlextInfraConstantsDocs:
         "tel",
     })
     DOCS_FRAGMENT_PREFIX: ClassVar[str] = "#"
-    PYTHON_FENCE_RUFF_EXTEND_IGNORE: ClassVar[t.StrSequence] = ("D100", "INP001")
-    """Only module-docstring and package rules are inapplicable to a
-    standalone Markdown fence. All names, behavior, types, and security
-    rules remain active and require correction in the authored source."""
+    PYTHON_FENCE_RUFF_EXTEND_IGNORE: ClassVar[t.StrSequence] = (
+        "undocumented-public-module",
+        "missing-copyright-notice",
+        "implicit-namespace-package",
+        "print",
+    )
+    """Only module-header (docstring, copyright notice) and package rules are
+    inapplicable to a standalone Markdown fence, which is not a module file;
+    ``print`` is the fence demonstrating its output. All names, behavior,
+    types, docstring, and security rules remain active and require correction
+    in the authored source."""
     MACHINE_PATH_RE: ClassVar[t.RegexPattern] = re.compile(
         r"(?<![\w./-])/(?:home|Users)/(?P<user>[A-Za-z0-9_.-]+)(?=/|\b)",
     )
@@ -129,7 +140,7 @@ class FlextInfraConstantsDocs:
         r"(?P<org>[^/]+)/(?P<repo>[^/]+)/"
         r"(?P<kind>blob|tree)/"
         r"(?P<refpath>[^/?#]+/[^?#]*)"
-        r"(?P<suffix>[?#].*)?$"
+        r"(?P<suffix>[?#].*)?$",
     )
     """Match a github.com blob/tree documentation URL by its named parts.
 
@@ -138,6 +149,8 @@ class FlextInfraConstantsDocs:
     branch a consumer knows. ``suffix`` keeps a ``?query`` or ``#fragment``
     (for example ``#L10``) out of the filesystem path.
     """
+    DOCS_ARTIFACT_MODE: ClassVar[Literal[0o644]] = 0o644
+    """File mode every rendered documentation artifact is published with."""
     DOCS_OWNED_HEADER_LINES: ClassVar[int] = 2
     """Lines an owned member guide carries before its body: marker + source."""
     HEADING_RE: ClassVar[t.RegexPattern] = re.compile(

@@ -1,4 +1,8 @@
-"""Public recovery behavior for file-only transaction participants."""
+"""Public recovery behavior for file-only transaction participants.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -21,9 +25,9 @@ if TYPE_CHECKING:
 class TestsFlextInfraFileParticipantRecovery:
     """Recover prepared file-only journals through their physical owners."""
 
+    @staticmethod
     @pytest.mark.parametrize("invalid_later_plan", ["participant", "destination"])
     def test_later_invalid_plan_leaves_no_partial_staging(
-        self,
         tmp_path: Path,
         invalid_later_plan: str,
     ) -> None:
@@ -80,10 +84,11 @@ class TestsFlextInfraFileParticipantRecovery:
         # the previous implementation refuses its unregistered phase directory.
         tm.ok(owner.run_files_locked(roots, lambda _scope: r[bool].ok(True)))
 
+    @staticmethod
     def test_fresh_import_failure_restores_published_initializer(
-        self,
         tmp_path: Path,
     ) -> None:
+        """Test fresh import failure restores published initializer."""
         root = test_u.Tests.git_repository(tmp_path)
         package = root / c.Infra.DEFAULT_SRC_DIR / "flext_import_probe"
         package.mkdir(parents=True)
@@ -125,7 +130,9 @@ class TestsFlextInfraFileParticipantRecovery:
         tm.that(restored.mode, eq=before.mode)
         tm.ok(owner.run_files_locked(roots, lambda _scope: r[bool].ok(True)))
 
-    def test_recovers_external_only_prepared_journal(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_recovers_external_only_prepared_journal(tmp_path: Path) -> None:
+        """Test recovers external only prepared journal."""
         workspace = test_u.Tests.create_docs_workspace(tmp_path, project_names=())
         docs_root = tmp_path / "published-docs"
         docs_root.mkdir()
@@ -155,9 +162,9 @@ class TestsFlextInfraFileParticipantRecovery:
         tm.ok(recovered)
         tm.that(recovered.value, eq=True)
 
+    @staticmethod
     @pytest.mark.parametrize("foreign_change", ["none", "extra", "replaced"])
     def test_prepared_publication_recovery_requires_original_tree(
-        self,
         tmp_path: Path,
         foreign_change: str,
     ) -> None:
@@ -205,10 +212,10 @@ class TestsFlextInfraFileParticipantRecovery:
             tm.that(target.read_bytes(), eq=b"owned publication\n")
             tm.that(session.journal_state.path.exists(), eq=True)
 
+    @staticmethod
     @pytest.mark.parametrize("with_foreign_file", [False, True])
     @pytest.mark.parametrize("journal_state", ["staging", "prepared"])
     def test_unmanifested_created_directory_owns_no_descendants(
-        self,
         tmp_path: Path,
         journal_state: str,
         *,
@@ -256,10 +263,10 @@ class TestsFlextInfraFileParticipantRecovery:
             tm.that(staging.exists(), eq=False)
             tm.that(session.journal_state.path.exists(), eq=False)
 
+    @staticmethod
     @pytest.mark.parametrize("journal_change", ["unchanged", "replaced", "missing"])
     @pytest.mark.parametrize("failure_kind", ["validator", "exception", "abort"])
     def test_session_failure_never_recovers_changed_journal(
-        self,
         tmp_path: Path,
         failure_kind: str,
         journal_change: str,

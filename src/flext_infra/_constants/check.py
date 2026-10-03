@@ -1,4 +1,8 @@
-"""Centralized constants for the check subpackage."""
+"""Centralized constants for the check subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -44,6 +48,20 @@ class FlextInfraConstantsCheck:
         NOTE = "note"
 
     @unique
+    class ToolOutcome(StrEnum):
+        """How a completed tool run ended, read from its exit and its report.
+
+        ``CLEAN`` and ``FINDINGS`` are runs the tool completed; only ``ERROR``
+        (a status the tool does not declare, a timeout, a signal, or a findings
+        status with nothing reported) breaks a repair verb. Findings stay
+        reported and are enforced by ``make check``.
+        """
+
+        CLEAN = "clean"
+        FINDINGS = "findings"
+        ERROR = "error"
+
+    @unique
     class GateKind(StrEnum):
         """Who owns a gate's rule catalog, which decides where the gate blocks.
 
@@ -57,6 +75,22 @@ class FlextInfraConstantsCheck:
         TYPE_CHECKER = "type-checker"
         INFRA = "infra"
 
+    @unique
+    class LintFixRecipe(StrEnum):
+        """Repair the lint gate applies to a finding Ruff reports without a fix.
+
+        The tooling owner maps each Ruff rule name to one recipe; ``make fix``
+        applies Ruff's own fixes first and then the recipe of every finding
+        left, so no rule code or repair text lives in the gate.
+        """
+
+        RETURNS_SECTION = "returns-section"
+        YIELDS_SECTION = "yields-section"
+        RAISES_SECTION = "raises-section"
+        SUMMARY_DOCSTRING = "summary-docstring"
+        COPYRIGHT_NOTICE = "copyright-notice"
+        STATIC_METHOD = "static-method"
+
     AST_GREP_DOCS_URL: ClassVar[str] = "https://ast-grep.github.io/"
     "Canonical ast-grep documentation URL for gate metadata."
     # Quality gate identifiers shared with the tool-name vocabulary.
@@ -68,42 +102,51 @@ class FlextInfraConstantsCheck:
     SMELLS: ClassVar[str] = "smells"
     RUNTIME_CENSUS: ClassVar[str] = "runtime-census"
     "Gate id whose census rule families no other gate owns."
-    GATE_TOOLS_BY_KIND: ClassVar[
-        t.MappingKV[GateKind, t.MappingKV[str, t.StrPair]]
-    ] = MappingProxyType({
-        GateKind.EXTERNAL: MappingProxyType({
-            "lint": ("Ruff Linter", "https://docs.astral.sh/ruff/"),
-            "format": ("Ruff Formatter", "https://docs.astral.sh/ruff/formatter/"),
-            "security": ("Bandit", "https://bandit.readthedocs.io/"),
-            "markdown": ("rumdl", "https://rumdl.dev/"),
-            "markdown-format": ("Prettier", "https://prettier.io/"),
-            "markdown-code": ("Ruff", "https://docs.astral.sh/ruff/"),
-            "duplication": ("jscpd", "https://github.com/kucherenko/jscpd"),
-        }),
-        GateKind.TYPE_CHECKER: MappingProxyType({
-            "pyrefly": ("Pyrefly", "https://github.com/facebook/pyrefly"),
-            "mypy": ("Mypy", "https://mypy.readthedocs.io/"),
-            "pyright": ("Pyright", "https://github.com/microsoft/pyright"),
-        }),
-        GateKind.INFRA: MappingProxyType({
-            "loc-cap": ("scc", "https://github.com/boyter/scc"),
-            "runtime-census": (
-                "Flext Runtime Enforcement Census",
-                "internal://flext-infra/runtime-census",
-            ),
-            "index-declarations": (
-                "Flext Index Declarations Gate",
-                "internal://flext-infra/index-declarations",
-            ),
-            SMELLS: ("Flext Code Smell Detector", "internal://flext-infra/smells"),
-            "codemod": ("ast-grep", AST_GREP_DOCS_URL),
-            "layout": ("Flext Project Layout Gate", "internal://flext-infra/layout"),
-            "direnv": (
-                "Flext Direnv Environment Contract Gate",
-                "internal://flext-infra/direnv",
-            ),
-        }),
-    })
+    FRESH_IMPORT: ClassVar[str] = "fresh-import"
+    "Gate id of the fresh-process import proof over the provisioned runtime."
+    GATE_TOOLS_BY_KIND: ClassVar[t.MappingKV[GateKind, t.MappingKV[str, t.StrPair]]] = (
+        MappingProxyType({
+            GateKind.EXTERNAL: MappingProxyType({
+                "lint": ("Ruff Linter", "https://docs.astral.sh/ruff/"),
+                "format": ("Ruff Formatter", "https://docs.astral.sh/ruff/formatter/"),
+                "security": ("Bandit", "https://bandit.readthedocs.io/"),
+                "markdown": ("rumdl", "https://rumdl.dev/"),
+                "markdown-format": ("Prettier", "https://prettier.io/"),
+                "markdown-code": ("Ruff", "https://docs.astral.sh/ruff/"),
+                "duplication": ("jscpd", "https://github.com/kucherenko/jscpd"),
+            }),
+            GateKind.TYPE_CHECKER: MappingProxyType({
+                "pyrefly": ("Pyrefly", "https://github.com/facebook/pyrefly"),
+                "mypy": ("Mypy", "https://mypy.readthedocs.io/"),
+                "pyright": ("Pyright", "https://github.com/microsoft/pyright"),
+            }),
+            GateKind.INFRA: MappingProxyType({
+                "loc-cap": ("scc", "https://github.com/boyter/scc"),
+                "runtime-census": (
+                    "Flext Runtime Enforcement Census",
+                    "internal://flext-infra/runtime-census",
+                ),
+                FRESH_IMPORT: (
+                    "Flext Fresh-Process Import Gate",
+                    "internal://flext-infra/fresh-import",
+                ),
+                "index-declarations": (
+                    "Flext Index Declarations Gate",
+                    "internal://flext-infra/index-declarations",
+                ),
+                SMELLS: ("Flext Code Smell Detector", "internal://flext-infra/smells"),
+                "codemod": ("ast-grep", AST_GREP_DOCS_URL),
+                "layout": (
+                    "Flext Project Layout Gate",
+                    "internal://flext-infra/layout",
+                ),
+                "direnv": (
+                    "Flext Direnv Environment Contract Gate",
+                    "internal://flext-infra/direnv",
+                ),
+            }),
+        })
+    )
     """The gate registry: each gate is declared once, under its kind.
 
     ``loc-cap`` and ``codemod`` drive an external engine (scc, ast-grep) over a
@@ -115,17 +158,15 @@ class FlextInfraConstantsCheck:
     })
     "Gate id -> kind, derived from the registry declaration."
     TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset(
-        GATE_TOOLS_BY_KIND[GateKind.TYPE_CHECKER]
+        GATE_TOOLS_BY_KIND[GateKind.TYPE_CHECKER],
     )
     "Native type-checker gates, derived from the registry declaration."
     SARIF_TOOL_INFO: ClassVar[t.MappingKV[str, t.StrPair]] = MappingProxyType({
-        gate: tool for tools in GATE_TOOLS_BY_KIND.values() for gate, tool in tools.items()
+        gate: tool
+        for tools in GATE_TOOLS_BY_KIND.values()
+        for gate, tool in tools.items()
     })
     "Gate id -> (tool name, tool url), derived from the registry declaration."
-    TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset(
-        GATE_TOOLS_BY_KIND[GateKind.TYPE_CHECKER]
-    )
-    "Native type-checker gates: independent read-only analyzers of one tree."
     ALLOWED_GATES: ClassVar[frozenset[str]] = frozenset(SARIF_TOOL_INFO)
     "Gate identifiers — derived from SARIF_TOOL_INFO keys (single SSOT)."
     CHECK_REPORT_MARKDOWN_FILENAME: ClassVar[str] = "check-report.md"
@@ -133,7 +174,10 @@ class FlextInfraConstantsCheck:
     CHECK_REPORT_SARIF_FILENAME: ClassVar[str] = "check-report.sarif"
     "SARIF 2.1.0 check report: the machine-readable findings owner of ``check run``."
     MUTATING_GATES: ClassVar[frozenset[str]] = frozenset({FORMAT})
-    "Gates that rewrite files: owned by `fmt`/`fix`, never a read-only `check` vocabulary."
+    (
+        "Gates that rewrite files: owned by `fmt`/`fix`, "
+        "never a read-only `check` vocabulary."
+    )
 
     RUFF_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^\s*-->\s*(.+?):\d+:\d+\s*$",
@@ -145,16 +189,25 @@ class FlextInfraConstantsCheck:
         r"^\[warn\]\s+(?P<file>\S+\.md)\s*$",
         re.MULTILINE,
     )
-    "Prettier ``--check`` unformatted-file line (``[warn] <file.md>``); config warns never match."
+    (
+        "Prettier ``--check`` unformatted-file line "
+        "(``[warn] <file.md>``); config warns never match."
+    )
     MARKDOWN_PY_FENCE_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^```(?P<info>python\S*(?:\s+notest)?)\s*$\n(?P<code>.*?)^```\s*$",
         re.MULTILINE | re.DOTALL,
     )
-    "Canonical fenced-Python-block extractor; the flext-tests markdown validator consumes the same pattern."
+    (
+        "Canonical fenced-Python-block extractor; "
+        "the flext-tests markdown validator consumes the same pattern."
+    )
     MARKDOWN_CODE_SOURCE_FORMAT: ClassVar[str] = "{}_b{}.py"
     "Temp-file name for one extracted block: sanitized doc path plus block index."
     MARKDOWN_CODE_SKIP_MARKER: ClassVar[str] = "notest"
-    "Existing fence marker (pytest-markdown-docs) opting a block out of code validation."
+    (
+        "Existing fence marker (pytest-markdown-docs) "
+        "opting a block out of code validation."
+    )
     MARKDOWN_CODE_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^(?P<file>\S+):\d+:\d+:\s+unformatted:\s+",
     )
@@ -192,7 +245,7 @@ class FlextInfraConstantsCheck:
         "--quiet",
         "--no-upgrade-check",
     )
-    "Full-workspace scan: default qlty scope is changed-files-only; --all overrides."
+    "Smells scan arguments; the gate appends explicit targets, scanned in full."
     SMELLS_RULE_PREFIX: ClassVar[str] = "qlty:"
     SMELLS_RULE_TAGS: ClassVar[t.MappingKV[str, str]] = MappingProxyType({
         "boolean-logic": "smell_boolean_logic",
@@ -204,19 +257,28 @@ class FlextInfraConstantsCheck:
         "return-statements": "smell_return_statements",
         "similar-code": "smell_similar_code",
     })
-    "qlty ruleId suffix -> flext-core enforcement tag (texts SSOT: core ENFORCEMENT_RULES_TEXT)."
+    (
+        "qlty ruleId suffix -> flext-core enforcement tag "
+        "(texts SSOT: core ENFORCEMENT_RULES_TEXT)."
+    )
 
     # --- jscpd duplication gate SSOT (flext-infra owns the
     # jscpd plugin behind one centralized `make check` verb; its config is
     # rendered from this typed SSOT at scan time, never a hand-maintained file).
     JSCPD_BINARY: ClassVar[str] = "jscpd"
-    "Provisioned by mise from codegen.toolchain.jscpd_version; never a runner or a version here."
+    (
+        "Provisioned by mise from codegen.toolchain.jscpd_version; "
+        "never a runner or a version here."
+    )
 
     # --- markdown-format gate SSOT (operator 2026-09-18: prettier is the
     # markdown formatter owned by `make fmt`; rumdl stays the linter owned by
     # `make fix`. The binary is mise-provisioned, never a runner or version).
     PRETTIER_BINARY: ClassVar[str] = "prettier"
-    "Provisioned by mise from codegen.toolchain.prettier_version; never a runner or a version here."
+    (
+        "Provisioned by mise from codegen.toolchain.prettier_version; "
+        "never a runner or a version here."
+    )
     JSCPD_MODE: ClassVar[str] = "strict"
     JSCPD_MIN_LINES: ClassVar[int] = 10
     "Minimum lines for a clone (R2: 10 lines = 62 tokens per consumption-law.md)."
@@ -232,7 +294,10 @@ class FlextInfraConstantsCheck:
         "templates",
         "config",
     )
-    "Canonical scope: source, tests, scripts, examples, templates, config (R2 consumer+family)."
+    (
+        "Canonical scope: source, tests, scripts, examples, "
+        "templates, config (R2 consumer+family)."
+    )
     JSCPD_REPORT_DIRNAME: ClassVar[str] = ".reports/jscpd"
     JSCPD_CONFIG_FILENAME: ClassVar[str] = ".jscpd.generated.json"
     JSCPD_REPORT_FILENAME: ClassVar[str] = "jscpd-report.json"
@@ -259,7 +324,10 @@ class FlextInfraConstantsCheck:
     JSCPD_CONSUMER_FAMILY_SCOPE: ClassVar[bool] = True
     "When true, extend scan scope to consumer+family via [tool.flext.project] keys."
     JSCPD_STRUCTURAL_BAN_FORMS: ClassVar[bool] = True
-    "When true, ban structural forms only for mechanisms with published canonical owner."
+    (
+        "When true, ban structural forms only for mechanisms "
+        "with published canonical owner."
+    )
 
     # --- Manual-command blocker (AGENTS.md `Build & Test`) SSOT ---
     MANUAL_CMD_BLOCKED_TOOLS: ClassVar[frozenset[str]] = frozenset({

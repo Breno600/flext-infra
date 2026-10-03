@@ -1,6 +1,6 @@
 id: ban-silent-except-swallow
 snapshots:
-  ? |-
+  ? |
     for item in items:
         try:
             parse(item)
@@ -13,11 +13,21 @@ snapshots:
       style: primary
       start: 52
       end: 87
-    - source: continue
-      style: secondary
-      start: 79
-      end: 87
-  ? |-
+  ? |
+    try:
+        run()
+    except Exception:
+        """Ignored."""
+        pass
+  : labels:
+    - source: |-
+        except Exception:
+            """Ignored."""
+            pass
+      style: primary
+      start: 15
+      end: 60
+  ? |
     try:
         run()
     except ValueError:
@@ -29,7 +39,17 @@ snapshots:
       style: primary
       start: 15
       end: 42
-    - source: pass
-      style: secondary
-      start: 38
-      end: 42
+  ? |
+    try:
+        run()
+    except:
+        # nothing
+        pass
+  : labels:
+    - source: |-
+        except:
+            # nothing
+            pass
+      style: primary
+      start: 15
+      end: 45

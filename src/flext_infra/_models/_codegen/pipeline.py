@@ -1,4 +1,8 @@
-"""Phase analysis and pipeline state models."""
+"""Phase analysis and pipeline state models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,12 +11,12 @@ from typing import Annotated, ClassVar, Literal, Self
 
 from flext_cli import m, u
 
-from ... import p, t
-from .._config.base import FlextInfraConfigModels
-from ..mixins import FlextInfraModelsMixins as mm
-from .fix import FlextInfraModelsCodegenFixModels
-from .lazy_init import FlextInfraModelsCodegenLazyInitModels
-from .scaffold import FlextInfraModelsCodegenScaffoldModels
+from flext_infra import p, t
+from flext_infra._models._codegen.fix import FlextInfraModelsCodegenFixModels
+from flext_infra._models._codegen.lazy_init import FlextInfraModelsCodegenLazyInitModels
+from flext_infra._models._codegen.scaffold import FlextInfraModelsCodegenScaffoldModels
+from flext_infra._models._config.base import FlextInfraConfigModels
+from flext_infra._models.mixins import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsCodegenPipelineModels:
@@ -61,7 +65,14 @@ class FlextInfraModelsCodegenPipelineModels:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True, extra="forbid")
 
         phase: Annotated[
-            Literal["docs", "lazy-init", "mod-text", "semantic", "candidate-bootstrap"],
+            Literal[
+                "docs",
+                "lazy-init",
+                "mod-text",
+                "semantic",
+                "candidate-bootstrap",
+                "conform-bootstrap",
+            ],
             m.Field(description="Generation phase that produced this receipt"),
         ]
         files: Annotated[
@@ -79,7 +90,16 @@ class FlextInfraModelsCodegenPipelineModels:
 
         @u.model_validator(mode="after")
         def _validate_unique_paths(self) -> Self:
-            """Reject ambiguous receipts with competing path authorities."""
+            """Reject ambiguous receipts with competing path authorities.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If codegen phase receipt destination paths must be unique;
+                    or if codegen phase receipt input paths must be unique.
+
+            """
             file_paths = tuple(file.path for file in self.files)
             if len(set(file_paths)) != len(file_paths):
                 msg = "codegen phase receipt destination paths must be unique"
@@ -93,9 +113,8 @@ class FlextInfraModelsCodegenPipelineModels:
     class CodegenConformPorts(m.ArbitraryTypesModel):
         """Collaborators the complete conform crosses into, wired by the facade.
 
-        Docs rendering and fresh-import validation are other service families;
-        the composition root binds their implementations once and conform only
-        consumes these ports.
+        Docs rendering is another service family; the composition root binds
+        its implementation once and conform only consumes this port.
         """
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
@@ -107,10 +126,6 @@ class FlextInfraModelsCodegenPipelineModels:
         docs_planner: Annotated[
             p.Infra.DocsArtifactPlannerFactory,
             m.Field(description="Builds the docs planner for one conform scope"),
-        ]
-        fresh_import: Annotated[
-            p.Infra.FreshImportProbeFactory,
-            m.Field(description="Builds the fresh-import probe for one repository"),
         ]
 
     class CodegenPipelineState(m.ArbitraryTypesModel):

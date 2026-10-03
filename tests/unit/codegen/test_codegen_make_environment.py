@@ -1,4 +1,8 @@
-"""Generated Make environment isolation contract."""
+"""Generated Make environment isolation contract.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -20,9 +24,87 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraCodegenMakeEnvironment:
     """Prove generated operations ignore the caller shell environment."""
 
+    @staticmethod
+    @pytest.mark.remote
+    def test_upg_replaces_newer_lock_revision_before_older_mise_reads_it(
+        tmp_path: Path,
+        resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
+    ) -> None:
+        """The public upgrade recovers a v3 lock with a v2 Mise release."""
+        profile = c.Infra.MakeProfile.STANDALONE
+        project_root = u.Tests.resolved_make_checkout(
+            resolved_make_templates[profile],
+            tmp_path / "lock-revision",
+            profile,
+        )
+        lock = project_root / c.Infra.MISE_LOCK_FILENAME
+        previous = lock.read_text(encoding="utf-8")
+        tm.that(previous, has="lockfile_version = 2")
+        lock.write_text(
+            previous.replace("lockfile_version = 2", "lockfile_version = 3", 1),
+            encoding="utf-8",
+        )
+
+        upgraded = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "upg"],
+                cwd=project_root,
+            ),
+        )
+
+        tm.that(
+            u.Cli.process_succeeded(upgraded.outcome),
+            eq=True,
+            msg=upgraded.stdout + upgraded.stderr,
+        )
+        tm.that(lock.read_text(encoding="utf-8"), has="lockfile_version = 2")
+        tm.that(upgraded.stdout, has="setup probe: end stage=publish-lock.log exit=0")
+
+    @staticmethod
+    @pytest.mark.remote
+    def test_failed_upg_lock_preserves_runtime_and_retires_own_stage(
+        tmp_path: Path,
+        resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
+    ) -> None:
+        """A failed real Mise lock cannot strand a downgraded launcher/pin."""
+        profile = c.Infra.MakeProfile.STANDALONE
+        project_root = u.Tests.resolved_make_checkout(
+            resolved_make_templates[profile],
+            tmp_path / "lock-failure",
+            profile,
+        )
+        bootstrap = u.Infra.mise_bootstrap_environment()
+        artifacts = {
+            relative: (project_root / relative).read_bytes()
+            for relative, _mode in bootstrap.artifact_specs
+        }
+        lock = project_root / c.Infra.MISE_LOCK_FILENAME
+        previous_lock = lock.read_bytes()
+        (project_root / c.Infra.MISE_TOML_FILENAME).write_text(
+            "[tools\n",
+            encoding="utf-8",
+        )
+
+        upgraded = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "upg"],
+                cwd=project_root,
+            ),
+        )
+
+        tm.that(u.Cli.process_succeeded(upgraded.outcome), eq=False)
+        tm.that(upgraded.stderr, has="setup probe: failed stage=lock.log")
+        tm.that(lock.read_bytes(), eq=previous_lock)
+        for relative, _mode in bootstrap.artifact_specs:
+            tm.that((project_root / relative).read_bytes(), eq=artifacts[relative])
+        tm.that(
+            list(project_root.parent.glob(f".{project_root.name}.mise-lock-stage.*")),
+            eq=[],
+        )
+
+    @staticmethod
     @pytest.mark.parametrize("failure_return", [None, 37])
     def test_public_dispatch_activates_once_before_hooks(
-        self,
         tmp_path: Path,
         *,
         failure_return: int | None,
@@ -82,6 +164,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
                 eq=str(runtime_environment),
             )
 
+    @staticmethod
     @pytest.mark.parametrize("verb", ["setup", "check", "gen", "status"])
     @pytest.mark.parametrize("broken", [False, True])
     @pytest.mark.parametrize(
@@ -89,7 +172,6 @@ class TestsFlextInfraCodegenMakeEnvironment:
         ["runtime", "runtime-bin", ".venv", ".venv/bin"],
     )
     def test_foreign_environment_is_rejected_before_effects(
-        self,
         tmp_path: Path,
         verb: str,
         environment_part: str,
@@ -132,9 +214,9 @@ class TestsFlextInfraCodegenMakeEnvironment:
         else:
             tm.that(foreign.exists(), eq=False)
 
+    @staticmethod
     @pytest.mark.parametrize("command_line", [False, True])
     def test_derived_workspace_paths_ignore_foreign_redirection(
-        self,
         tmp_path: Path,
         *,
         command_line: bool,
@@ -191,6 +273,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
                 has=f"{name}={u.Infra.runtime_environment_dir(project_root)}\n",
             )
 
+    @staticmethod
     @pytest.mark.parametrize(
         "profile",
         [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE],
@@ -201,7 +284,6 @@ class TestsFlextInfraCodegenMakeEnvironment:
     # it after the incremental test phase.
     @pytest.mark.remote
     def test_generated_make_uses_profile_runtime_venv_under_hostile_env(
-        self,
         tmp_path: Path,
         resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
         profile: c.Infra.MakeProfile,
@@ -367,6 +449,10 @@ class TestsFlextInfraCodegenMakeEnvironment:
         receipts = template.parent.parent
         upgraded = u.Tests.command_receipt(receipts / c.Tests.MAKE_TEMPLATE_UPG_RECEIPT)
         tm.that(upgraded.stdout, has="upg-hook-ran")
+        # One upg resolves the toolchain once: gen re-renders the manifest the
+        # resolve half locked, so the relock half installs from that lock.
+        tm.that(upgraded.stderr.count("setup probe: begin stage=lock.log"), eq=1)
+        tm.that(upgraded.stdout, has="upg relock: .mise.toml is byte-identical")
         tool_receipts = re.findall(
             r"uv setup selector=\S+ receipt=(\S+) selected=(\S+)",
             upgraded.stdout,
@@ -444,9 +530,43 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(u.Cli.process_succeeded(stale.outcome), eq=False)
         tm.that(self._locks(checkout), eq=resolved_locks)
 
+        # A manifest the committed mise.lock does not satisfy stops setup with
+        # the upg hint; setup never relocks and leaves every lock untouched.
+        drifted = u.Tests.resolved_make_checkout(
+            template,
+            tmp_path / "drifted",
+            profile,
+        )
+        manifest = drifted / c.Infra.MISE_TOML_FILENAME
+        manifest.write_text(
+            manifest.read_text(encoding="utf-8")
+            + '[tools."github:example/absent-from-lock"]\nversion = "1.0.0"\n',
+            encoding="utf-8",
+        )
+        unsatisfied = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "setup"],
+                cwd=drifted,
+                env={
+                    **active_env,
+                    make.ci.variable: make.ci.value,
+                    bootstrap.storage_root_variable: str(cold_storage),
+                },
+            ),
+        )
+        tm.that(u.Cli.process_succeeded(unsatisfied.outcome), eq=False)
+        tm.that(unsatisfied.stderr, has="does not satisfy .mise.toml")
+        tm.that(unsatisfied.stderr, has="run make upg")
+        tm.that(self._locks(drifted), eq=resolved_locks)
+
     @staticmethod
     def _locks(root: Path) -> t.MappingKV[str, bytes]:
-        """Return every lock artifact ``make upg`` owns, keyed by relative path."""
+        """Return every lock artifact ``make upg`` owns, keyed by relative path.
+
+        Returns:
+            Every lock artifact ``make upg`` owns, keyed by relative path.
+
+        """
         sidecars = root / ".mise" / "locks"
         paths = (
             root / c.Infra.UV_LOCK_FILENAME,
@@ -456,8 +576,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         )
         return {path.relative_to(root).as_posix(): path.read_bytes() for path in paths}
 
+    @staticmethod
     def test_setup_fails_when_the_tracked_mise_launcher_is_missing(
-        self,
         tmp_path: Path,
     ) -> None:
         """Never substitute a system Mise for the generated launcher owner."""
@@ -493,8 +613,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(mise_log.exists(), eq=False)
         tm.that(u.Infra.runtime_environment_dir(project_root).exists(), eq=False)
 
+    @staticmethod
     def test_dispatched_runner_preserves_provisioned_external_tools(
-        self,
         tmp_path: Path,
     ) -> None:
         """Keep managed tools reachable while removing the hostile active venv.
@@ -523,7 +643,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, has="SANITIZED_CALLER_PATH")
         tm.that(makefile, lacks="hostile")
 
-    def test_generated_operations_bind_uv_to_runtime_root(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_generated_operations_bind_uv_to_runtime_root(tmp_path: Path) -> None:
         """All generated uv operations use the profile-owned environment."""
         project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
@@ -562,7 +683,10 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(u.Infra.runtime_environment_dir(project_root), eq=checkout_venv)
         tm.that(environment.stdout, has=f"RUNTIME_VENV={checkout_venv}\n")
         envrc = (project_root / ".envrc").read_text(encoding="utf-8")
-        tm.that(envrc, has='VENV_DIR="${RUNTIME_ROOT}/.venv"')
+        tm.that(
+            envrc,
+            has=f'VENV_DIR="${{RUNTIME_ROOT}}/{c.Infra.ENVIRONMENT_DIRECTORY}"',
+        )
         # One testmon database per project (flext-3l1gk): every checkout and
         # worktree of the project resolves the same file, so a new lane starts
         # from the project's measured selection, never a cold inventory.
@@ -607,12 +731,12 @@ class TestsFlextInfraCodegenMakeEnvironment:
         for forced in ("PYTHONPYCACHEPREFIX", "export TMPDIR", "PROJECT_STATE_ROOT"):
             tm.that(envrc, lacks=forced)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "profile",
         [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE],
     )
     def test_build_verb_renders_uv_build_for_packaged_repositories(
-        self,
         tmp_path: Path,
         profile: c.Infra.MakeProfile,
     ) -> None:
@@ -631,12 +755,12 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that('$(UV) build --project "$(PROJECT_ROOT)"' in makefile, eq=True)
         tm.that(makefile, lacks="package=false (content-only root)")
 
+    @staticmethod
     @pytest.mark.parametrize(
         "profile",
         [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE],
     )
     def test_build_verb_renders_typed_noop_for_package_false_roots(
-        self,
         tmp_path: Path,
         profile: c.Infra.MakeProfile,
     ) -> None:
@@ -660,12 +784,12 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, has="_builtin-build: _builtin_build_artifacts")
         tm.that(makefile, has="_builtin_build_artifacts:")
 
+    @staticmethod
     @pytest.mark.parametrize(
         "profile",
         [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE],
     )
     def test_every_declared_check_gate_reaches_the_runtime(
-        self,
         tmp_path: Path,
         profile: c.Infra.MakeProfile,
     ) -> None:
@@ -715,10 +839,11 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(check_invocations, empty=False)
         for invocation in check_invocations:
             tm.that(invocation, lacks="--apply")
-        tm.that(makefile, has="--apply --report-findings")
+        tm.that(makefile, has="--apply")
+        tm.that(makefile, lacks="--report-findings")
 
+    @staticmethod
     def test_standalone_check_executes_its_declared_default_gates(
-        self,
         tmp_path: Path,
     ) -> None:
         """Standalone check runs exactly the owner-declared default gate set."""
@@ -759,7 +884,12 @@ class TestsFlextInfraCodegenMakeEnvironment:
 
     @staticmethod
     def _recipe_targets_containing(makefile: str, needle: str) -> set[str]:
-        """Return every rule target whose recipe (not comments) carries *needle*."""
+        """Return every rule target whose recipe (not comments) carries *needle*.
+
+        Returns:
+            Every rule target whose recipe (not comments) carries *needle*.
+
+        """
         targets: set[str] = set()
         current: str | None = None
         continued = False
@@ -811,6 +941,37 @@ class TestsFlextInfraCodegenMakeEnvironment:
         toolchain = config.Infra.codegen.toolchain
         lock_invocations = re.findall(r"lock --bump([^;]*);", makefile)
         tm.that(tuple(arguments.strip() for arguments in lock_invocations), eq=("",))
+        # Setup never locks (operator 2026-10-02): no reconcile or relock path
+        # survives, and a lock that no longer satisfies the manifest stops.
+        tm.that(
+            makefile,
+            lacks=[
+                "setup reconcile",
+                ' reconcile "$$project_root"',
+                'relock "$(PROJECT_ROOT)"',
+            ],
+        )
+        tm.that(makefile, has="does not satisfy .mise.toml under Mise %s; run make upg")
+        # Only a missing-tool install and the upg resolution reach the network;
+        # every other Mise call runs through the declared offline wrapper.
+        offline = " ".join(
+            f"'{name}={value}'"
+            for name, value in u.Infra.mise_bootstrap_environment().offline_environment
+        )
+        tm.that(makefile, has=f'mise_exec "$$mise_offline_mode" env {offline} "$$@"')
+        networked = set(
+            re.findall(
+                r'mise_exec (?:project|no-config) .*?"\$\$pinned_mise" '
+                r'(?:-C "[^"]+" )?([a-z-]+)',
+                makefile,
+            ),
+        )
+        tm.that(networked, eq={"latest", "lock", "install", "generate"})
+        tm.that(makefile, has="install --yes")
+        tm.that(
+            makefile,
+            lacks='mise_exec project "$$pinned_mise" -C "$$project_root" install --dry-run',
+        )
         platform_matrix = ",".join(toolchain.mise_lockfile_platforms)
         tm.that(makefile, has=f'mise_lockfile_platforms="{platform_matrix}";')
         tm.that(
@@ -856,8 +1017,70 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(waza.get("version"), eq=toolchain.waza_version)
         tm.that(waza.get("version_prefix"), eq=toolchain.waza_version_prefix)
 
+    @staticmethod
+    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
+    def test_upg_hands_the_staged_lock_to_the_transaction_publisher(
+        tmp_path: Path,
+        profile: c.Infra.MakeProfile,
+    ) -> None:
+        """The staged lock and its sidecars reach the tree through one publisher.
+
+        ``mise lock`` writes the lock and each tool's sidecar into a stage
+        beside the project; the generated transaction publisher is the one
+        owner that publishes them, sidecars before the lock. The converge
+        step keeps ``gen`` output so a failure carries its cause.
+        """
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path,
+            profile,
+            bootstrap=True,
+        )
+        makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding="utf-8",
+        )
+        tm.that(makefile, has='publish "$$project_root" "$$lock_stage"')
+        tm.that(makefile, has="$(SELF_MAKE) gen; \\")
+        tm.that(makefile, lacks=["gen > /dev/null", "could not be staged"])
+
+    @staticmethod
+    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
+    def test_bootstrap_selects_the_github_credential_from_declared_sources(
+        tmp_path: Path,
+        profile: c.Infra.MakeProfile,
+    ) -> None:
+        """The credential source is selected once; a selected source must deliver.
+
+        The caller's ``GITHUB_TOKEN`` wins; otherwise each declared command whose
+        executable is on PATH is consulted in order, and its failure or empty
+        output stops the verb instead of degrading to anonymous access.
+        """
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path,
+            profile,
+            bootstrap=True,
+        )
+        makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding="utf-8",
+        )
+        commands = config.Infra.codegen.toolchain.github_credential_commands
+        tm.that(makefile, has="export GITHUB_TOKEN")
+        tm.that(bool(commands), eq=True)
+        for command in commands:
+            rendered = " ".join(command)
+            tm.that(
+                makefile,
+                has=[
+                    f"command -v {command[0]} >/dev/null 2>&1; then",
+                    f'caller_github_token="$$({rendered})"',
+                    "the selected GitHub credential source failed: %s\\n' "
+                    f"'{rendered}' >&2; exit 2;",
+                    "the selected GitHub credential source printed nothing",
+                ],
+            )
+            tm.that(makefile, lacks=f"$$({rendered} 2>/dev/null)")
+
+    @staticmethod
     def test_public_gate_fails_closed_before_managed_environment_exists(
-        self,
         tmp_path: Path,
     ) -> None:
         """A public gate preserves the canonical setup-required diagnostic."""
@@ -924,8 +1147,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
             eq=True,
         )
 
+    @staticmethod
     def test_workspace_without_local_members_retains_external_flext_sources(
-        self,
         tmp_path: Path,
     ) -> None:
         """Workspace role alone cannot turn external dependencies into members."""
@@ -947,9 +1170,9 @@ class TestsFlextInfraCodegenMakeEnvironment:
             assert url.endswith(f"/{u.Infra.dep_name(requirement)}.git")
             assert ref == u.Tests.provider_branch()
 
+    @staticmethod
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
     def test_help_prints_description_as_literal_data(
-        self,
         tmp_path: Path,
         profile: c.Infra.MakeProfile,
     ) -> None:
@@ -981,8 +1204,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that((project_root / "make-effect").exists(), eq=False)
         tm.that((project_root / "shell-effect").exists(), eq=False)
 
+    @staticmethod
     def test_generated_make_ignores_forbidden_makeflags_overrides(
-        self,
         tmp_path: Path,
     ) -> None:
         """An undeclared MAKEFLAGS override is inert, never a validation error.
@@ -1021,8 +1244,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(output, lacks="Unsupported Make input")
         tm.that(output, lacks="declared public inputs are")
 
+    @staticmethod
     def test_generated_make_dispatches_script_verbs_to_builtin_targets(
-        self,
         tmp_path: Path,
     ) -> None:
         """Auto-discovered script verbs get _builtin-<verb> dispatch targets."""
@@ -1052,8 +1275,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that("scripts/dispatch.py" in makefile, eq=True)
         tm.that("sync" in makefile, eq=True)
 
+    @staticmethod
     def test_arbitrary_unknown_command_line_variable_is_ignored(
-        self,
         tmp_path: Path,
     ) -> None:
         """An arbitrary unknown command-line variable never blocks a verb.
@@ -1081,8 +1304,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
             msg=process.stdout + process.stderr,
         )
 
+    @staticmethod
     def test_generated_makefile_routes_every_verb_unconditionally(
-        self,
         tmp_path: Path,
     ) -> None:
         """Every public verb maps unconditionally to its one implementation.
@@ -1106,8 +1329,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, lacks="fix-enforcement")
         tm.that(makefile, has="_builtin-fix-namespace: _builtin_fix_namespace")
         tm.that(makefile, has="_builtin-fix-accessors: _builtin_fix_accessors")
-        tm.that(makefile, has="_builtin-self-fix-namespace: _builtin_fix_namespace")
-        tm.that(makefile, has="_builtin-self-fix-accessors: _builtin_fix_accessors")
+        # Each repository evaluates only itself: no _builtin-self-* fan-out.
+        tm.that(makefile, lacks="_builtin-self-")
         tm.that(makefile, has="_builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all")
         tm.that(
             makefile,
@@ -1147,8 +1370,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         ):
             tm.that(makefile, lacks=forbidden)
 
+    @staticmethod
     def test_every_declared_verb_renders_implementation_target(
-        self,
         tmp_path: Path,
     ) -> None:
         """Every codegen.yaml-declared verb renders a reachable implementation.

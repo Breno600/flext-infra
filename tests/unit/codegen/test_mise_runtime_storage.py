@@ -1,4 +1,8 @@
-"""Public contracts for persistent release-addressed Mise runtime storage."""
+"""Public contracts for persistent release-addressed Mise runtime storage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -13,7 +17,9 @@ from flext_infra import c, config, u
 class TestsFlextInfraMiseRuntimeStorage:
     """Validate storage behavior only through the public utility facade."""
 
-    def test_runtime_storage_is_persistent_and_release_addressed(self) -> None:
+    @staticmethod
+    def test_runtime_storage_is_persistent_and_release_addressed() -> None:
+        """Test runtime storage is persistent and release addressed."""
         contract = u.Infra.mise_bootstrap_environment()
         storage = u.Infra.prepare_mise_runtime_storage(Path.cwd(), os.environ, contract)
         tm.ok(storage)
@@ -40,7 +46,8 @@ class TestsFlextInfraMiseRuntimeStorage:
         tm.that(first.value.is_relative_to(storage.value), eq=True)
         tm.that(storage.value.is_relative_to(Path.cwd()), eq=False)
 
-    def test_safe_bootstrap_carries_the_fleet_cooldown(self) -> None:
+    @staticmethod
+    def test_safe_bootstrap_carries_the_fleet_cooldown() -> None:
         """Safe mode ignores project settings, so the cooldown travels as env."""
         contract = u.Infra.mise_bootstrap_environment()
         days = config.Infra.codegen.toolchain.dependency_cooldown_days
@@ -50,7 +57,9 @@ class TestsFlextInfraMiseRuntimeStorage:
             eq=f"{days}d",
         )
 
-    def test_checkout_storage_is_rejected_before_creation(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_checkout_storage_is_rejected_before_creation(tmp_path: Path) -> None:
+        """Test checkout storage is rejected before creation."""
         contract = u.Infra.mise_bootstrap_environment()
         candidate = tmp_path / contract.storage_root_variable.lower()
 

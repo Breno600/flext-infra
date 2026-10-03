@@ -1,4 +1,8 @@
-"""Census and introspection utilities for the refactor subpackage."""
+"""Census and introspection utilities for the refactor subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -13,13 +17,12 @@ from flext_cli import u
 
 from flext_core import r
 from flext_infra import c, m, t
-
-from .protected_edit import FlextInfraUtilitiesProtectedEdit
-from .rope_analysis import FlextInfraUtilitiesRopeAnalysis
-from .rope_core import FlextInfraUtilitiesRopeCore
-from .rope_helpers import FlextInfraUtilitiesRopeHelpers
-from .rope_imports import FlextInfraUtilitiesRopeImports
-from .rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities.protected_edit import FlextInfraUtilitiesProtectedEdit
+from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.rope_helpers import FlextInfraUtilitiesRopeHelpers
+from flext_infra._utilities.rope_imports import FlextInfraUtilitiesRopeImports
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -45,7 +48,12 @@ class FlextInfraUtilitiesRefactorCensus:
         *,
         source_cache: MutableMapping[Path, str] | None = None,
     ) -> str:
-        """Return one original source snapshot, optionally cached by path."""
+        """Return one original source snapshot, optionally cached by path.
+
+        Returns:
+            One original source snapshot, optionally cached by path.
+
+        """
         resolved_path = file_path.resolve()
         if source_cache is None:
             source_text: str = rope.source(resolved_path)
@@ -64,7 +72,12 @@ class FlextInfraUtilitiesRefactorCensus:
         *,
         source_cache: MutableMapping[Path, str] | None = None,
     ) -> t.MappingKV[Path, t.VariadicTuple[t.IntPair]] | None:
-        """Plan safe line-range removals for simple top-level removal candidates."""
+        """Plan safe line-range removals for simple top-level removal candidates.
+
+        Returns:
+            The resulting ``t.MappingKV[Path, t.VariadicTuple[t.IntPair]] | None``.
+
+        """
         if candidate.scope_path != candidate.object_name:
             return None
         if candidate.object_kind not in {"class", "function"}:
@@ -121,7 +134,12 @@ class FlextInfraUtilitiesRefactorCensus:
         *,
         sites: t.VariadicTuple[m.Infra.ReferenceSite],
     ) -> t.VariadicTuple[t.IntPair] | None:
-        """Plan removable top-level ranges for one support file."""
+        """Plan removable top-level ranges for one support file.
+
+        Returns:
+            The resulting ``t.VariadicTuple[t.IntPair] | None``.
+
+        """
         planned_ranges: list[t.IntPair] = []
         for site in sites:
             site_range = FlextInfraUtilitiesRefactorCensus._reference_line_range(
@@ -166,7 +184,12 @@ class FlextInfraUtilitiesRefactorCensus:
         *,
         imported_name: str,
     ) -> t.VariadicTuple[int]:
-        """Return same-file occurrence lines for local aliases of ``imported_name``."""
+        """Return same-file occurrence lines for local aliases of ``imported_name``.
+
+        Returns:
+            Same-file occurrence lines for local aliases of ``imported_name``.
+
+        """
         resource = rope.resource(file_path)
         if resource is None:
             return ()
@@ -214,7 +237,12 @@ class FlextInfraUtilitiesRefactorCensus:
 
     @staticmethod
     def _supports_simple_removal_candidate(candidate: m.Infra.RemovalCandidate) -> bool:
-        """Whether ``candidate`` is eligible for the simple-removal pipeline."""
+        """Whether ``candidate`` is eligible for the simple-removal pipeline.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
         return (
             candidate.scope_path == candidate.object_name
             and candidate.object_kind in {"class", "function"}
@@ -233,6 +261,10 @@ class FlextInfraUtilitiesRefactorCensus:
         Supported top-level class/function candidates must either produce
         concrete source updates or fail loudly; they must not silently collapse
         into an empty projection.
+
+        Returns:
+            Projected sources or a loud failure for broken planning.
+
         """
         updates = cls.build_simple_removal_sources(
             rope,
@@ -253,7 +285,12 @@ class FlextInfraUtilitiesRefactorCensus:
         *,
         source_cache: MutableMapping[Path, str] | None = None,
     ) -> t.MappingKV[Path, str] | None:
-        """Build updated sources for a simple removal candidate without writing."""
+        """Build updated sources for a simple removal candidate without writing.
+
+        Returns:
+            The resulting ``t.MappingKV[Path, str] | None``.
+
+        """
         edit_plan = FlextInfraUtilitiesRefactorCensus.plan_simple_removal_edits(
             rope,
             candidate,
@@ -332,7 +369,12 @@ class FlextInfraUtilitiesRefactorCensus:
         target_name: str,
         removed_ranges: t.SequenceOf[t.IntPair],
     ) -> t.StrSequence:
-        """Return simple alias names removed together with ``target_name``."""
+        """Return simple alias names removed together with ``target_name``.
+
+        Returns:
+            Simple alias names removed together with ``target_name``.
+
+        """
         if not removed_ranges:
             return ()
         resource = rope.resource(file_path)
@@ -377,6 +419,10 @@ class FlextInfraUtilitiesRefactorCensus:
 
         ``None`` when the symbol is defined in another module, so a caller never
         attributes an imported name to the file under inspection.
+
+        Returns:
+            The local definition line for one Rope symbol.
+
         """
         location = pyname.get_definition_location()
         module, line = location
@@ -387,7 +433,12 @@ class FlextInfraUtilitiesRefactorCensus:
 
     @staticmethod
     def _line_in_ranges(line: int, *, removed_ranges: t.SequenceOf[t.IntPair]) -> bool:
-        """Return whether ``line`` falls inside any removed range."""
+        """Return whether ``line`` falls inside any removed range.
+
+        Returns:
+            Whether ``line`` falls inside any removed range.
+
+        """
         return any(start <= line <= end for start, end in removed_ranges)
 
     @staticmethod
@@ -403,6 +454,10 @@ class FlextInfraUtilitiesRefactorCensus:
         populated mapping with rewritten sources otherwise, or ``None`` when
         removing the base would leave a facade class with no bases at all
         (unsafe — candidate must be handled manually).
+
+        Returns:
+            The resulting ``t.MappingKV[Path, str] | None``.
+
         """
         target_name = candidate.object_name
         definition_path = Path(candidate.file_path).resolve()
@@ -473,6 +528,10 @@ class FlextInfraUtilitiesRefactorCensus:
         first body statement (or that line itself for a one-line class). When
         the removed base was the sole entry, the candidate is flagged as
         disqualified so the caller can abort the cascade safely.
+
+        Returns:
+            (new_source, disqualified) after removing ``base_name`` from bases.
+
         """
         rewritten_lines = source.splitlines(keepends=True)
         headers = sorted(
@@ -515,7 +574,12 @@ class FlextInfraUtilitiesRefactorCensus:
         header: str,
         base_name: str,
     ) -> t.Triple[str, bool, bool]:
-        """Rewrite one class header block after removing ``base_name`` from bases."""
+        """Rewrite one class header block after removing ``base_name`` from bases.
+
+        Returns:
+            The resulting ``t.Triple[str, bool, bool]``.
+
+        """
         stripped_header = header.rstrip("\n")
         if "(" not in stripped_header or ")" not in stripped_header:
             return header, False, False
@@ -563,13 +627,22 @@ class FlextInfraUtilitiesRefactorCensus:
         one line; otherwise each remaining entry stays on its own line. When
         the removed entry was the only element, the list is collapsed to
         ``[]``.
+
+        Returns:
+            The resulting ``str``.
+
         """
         single_line = c.Infra.DUNDER_ALL_SINGLE_LINE_RE
         multi_line = c.Infra.DUNDER_ALL_MULTI_LINE_RE
         quoted_target = {f'"{name}"', f"'{name}'"}
 
         def _rewrite_single(match: t.RegexMatch) -> str:
-            """Rewrite single."""
+            """Rewrite single.
+
+            Returns:
+                The resulting ``str``.
+
+            """
             body: str = t.Infra.STR_ADAPTER.validate_python(match.group("body"))
             entries = [entry.strip() for entry in body.split(",") if entry.strip()]
             remaining = [entry for entry in entries if entry not in quoted_target]
@@ -583,7 +656,12 @@ class FlextInfraUtilitiesRefactorCensus:
             return result
 
         def _rewrite_multi(match: t.RegexMatch) -> str:
-            """Rewrite multi."""
+            """Rewrite multi.
+
+            Returns:
+                The resulting ``str``.
+
+            """
             body: str = t.Infra.STR_ADAPTER.validate_python(match.group("body"))
             if "\n" not in body:
                 original_text: str = t.Infra.STR_ADAPTER.validate_python(match.group(0))
@@ -618,7 +696,12 @@ class FlextInfraUtilitiesRefactorCensus:
         candidate: m.Infra.RemovalCandidate,
         file_paths: t.SequenceOf[Path],
     ) -> None:
-        """Run one centralized post-write Rope cleanup for touched files."""
+        """Run one centralized post-write Rope cleanup for touched files.
+
+        Raises:
+            RuntimeError: If ``cleanup_result.failure``.
+
+        """
         try:
             rope.rope_project.validate()
         except RecursionError as exc:
@@ -649,6 +732,11 @@ class FlextInfraUtilitiesRefactorCensus:
         ``None`` payload, which success results forbid. The preview and
         apply paths translate that code into their own "unsupported"
         outcome so both report the same result from one owner.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.MappingKV[Path, str], _CensusCallable[[],
+                None]]]``.
+
         """
         planned = r[t.Pair[t.MappingKV[Path, str], _CensusCallable[[], None]]]
         if not FlextInfraUtilitiesRefactorCensus._supports_simple_removal_candidate(
@@ -696,6 +784,10 @@ class FlextInfraUtilitiesRefactorCensus:
         snapshot. ``r.ok(False)`` when the candidate is outside the
         simple-removal contract. ``r.fail(...)`` when planning or
         ``preview_source_writes`` failed — the message lists the reason.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         planned = FlextInfraUtilitiesRefactorCensus._planned_simple_removal(
             rope,
@@ -748,6 +840,10 @@ class FlextInfraUtilitiesRefactorCensus:
         routine here. This keeps ``flext_infra._utilities.census`` outside
         the ``flext_infra.codegen.lazy_init`` import cycle while still
         giving gates a chance to verify post-cascade correctness.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         source_cache: MutableMapping[Path, str] = {}
         planned = FlextInfraUtilitiesRefactorCensus._planned_simple_removal(
@@ -786,7 +882,12 @@ class FlextInfraUtilitiesRefactorCensus:
 
     @staticmethod
     def apply_line_ranges(source: str, ranges: t.SequenceOf[t.IntPair]) -> str:
-        """Remove one or more 1-based inclusive line ranges from Python source."""
+        """Remove one or more 1-based inclusive line ranges from Python source.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         merged_ranges = FlextInfraUtilitiesRefactorCensus.merge_line_ranges(ranges)
         if not merged_ranges:
             return source
@@ -804,7 +905,12 @@ class FlextInfraUtilitiesRefactorCensus:
 
     @staticmethod
     def normalize_top_level_spacing(source: str) -> str:
-        """Collapse blank-line runs left behind by top-level removals."""
+        """Collapse blank-line runs left behind by top-level removals.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         normalized: str = c.Infra.BLANK_LINE_RUN_RE.sub("\n\n\n", source)
         return normalized
 
@@ -815,6 +921,13 @@ class FlextInfraUtilitiesRefactorCensus:
         Skips cache and virtual-env directories so the clone is minimal and the
         downstream rope workspace opens on source-only state. Returns the
         resolved destination path.
+
+        Returns:
+            The resulting ``Path``.
+
+        Raises:
+            NotADirectoryError: If clone source is not a directory.
+
         """
         resolved_source = source.resolve()
         resolved_destination = destination.resolve()
@@ -835,7 +948,12 @@ class FlextInfraUtilitiesRefactorCensus:
     def merge_line_ranges(
         ranges: t.SequenceOf[t.IntPair],
     ) -> t.VariadicTuple[t.IntPair]:
-        """Merge overlapping or adjacent 1-based inclusive line ranges."""
+        """Merge overlapping or adjacent 1-based inclusive line ranges.
+
+        Returns:
+            The resulting ``t.VariadicTuple[t.IntPair]``.
+
+        """
         if not ranges:
             return ()
         ordered_ranges = sorted(ranges)
@@ -852,7 +970,12 @@ class FlextInfraUtilitiesRefactorCensus:
     def _supporting_reference_sites(
         candidate: m.Infra.RemovalCandidate,
     ) -> t.VariadicTuple[m.Infra.ReferenceSite]:
-        """Supporting reference sites."""
+        """Supporting reference sites.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.ReferenceSite]``.
+
+        """
         sites: t.VariadicTuple[m.Infra.ReferenceSite] = tuple(
             candidate.script_reference_sites,
         )
@@ -863,7 +986,12 @@ class FlextInfraUtilitiesRefactorCensus:
         source: str,
         candidate: m.Infra.RemovalCandidate,
     ) -> t.IntPair | None:
-        """Definition line range."""
+        """Definition line range.
+
+        Returns:
+            The resulting ``t.IntPair | None``.
+
+        """
         return FlextInfraUtilitiesRopeHelpers.top_level_definition_span(
             source,
             candidate.object_name,
@@ -875,7 +1003,12 @@ class FlextInfraUtilitiesRefactorCensus:
         source: str,
         site: m.Infra.ReferenceSite,
     ) -> t.IntPair | None:
-        """Compute the line range for a reference site."""
+        """Compute the line range for a reference site.
+
+        Returns:
+            The resulting ``t.IntPair | None``.
+
+        """
         return FlextInfraUtilitiesRefactorCensus._reference_line_range_for_line(
             source,
             site.line,
@@ -887,6 +1020,10 @@ class FlextInfraUtilitiesRefactorCensus:
 
         A class statement is never removed as a reference site; ``None`` also
         answers a line outside every top-level statement.
+
+        Returns:
+            The resulting ``t.IntPair | None``.
+
         """
         for statement in ast.parse(source).body:
             start, end = FlextInfraUtilitiesRopeHelpers.statement_line_span(statement)

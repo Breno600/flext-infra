@@ -1,4 +1,8 @@
-"""Rope-semantic guard for the strict package-test import DAG."""
+"""Rope-semantic guard for the strict package-test import DAG.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -17,7 +21,12 @@ class FlextInfraValidateTestImportDag(FlextInfraProjectSelectionServiceBase[bool
     """Enforce directed imports between production, tests, and test facets."""
 
     def build_report(self, repository_root: Path) -> p.Result[m.Infra.ValidationReport]:
-        """Scan every governed project as an independent import unit."""
+        """Scan every governed project as an independent import unit.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ValidationReport]``.
+
+        """
         try:
             roots = u.Infra.discover_project_roots(repository_root) or (
                 repository_root,

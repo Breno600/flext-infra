@@ -1,4 +1,8 @@
-"""FLEXT pyrefly quality gate."""
+"""FLEXT pyrefly quality gate.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,9 +10,7 @@ import sys
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, m, u
-from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
-from .base_gate import FlextInfraGate
+from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -31,16 +33,14 @@ class FlextInfraPyreflyGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
-        """Check only local Python roots to avoid scanning dependency trees."""
+        """Check only local Python roots to avoid scanning dependency trees.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         _ = ctx
-        return u.Infra.discover_python_targets(
-            project_dir,
-            workspace_excluded_top_dirs=(
-                FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
-                    project_dir
-                ).unwrap()
-            ),
-        )
+        return self._python_targets(project_dir)
 
     @override
     def _build_check_command(
@@ -49,7 +49,12 @@ class FlextInfraPyreflyGate(FlextInfraGate):
         ctx: m.Infra.GateContext,
         check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Build check command."""
+        """Build check command.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         json_file = self._check_report_path(project_dir, ctx)
         target_args = u.Infra.pyrefly_target_args(project_dir, tuple(check_dirs))
         return self._python_module_command(
@@ -71,7 +76,12 @@ class FlextInfraPyreflyGate(FlextInfraGate):
 
     @override
     def _check_report_path(self, project_dir: Path, ctx: m.Infra.GateContext) -> Path:
-        """Use the existing native report owner, freshly replaced for every run."""
+        """Use the existing native report owner, freshly replaced for every run.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         return ctx.reports_dir / f"{project_dir.name}-pyrefly.json"
 
     @override
@@ -80,7 +90,12 @@ class FlextInfraPyreflyGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
-        """Use configured search paths without Pyrefly's inherited-path warning."""
+        """Use configured search paths without Pyrefly's inherited-path warning.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         return (
             *super()._check_remove_env_keys(project_dir, ctx),
             c.Infra.ORCHESTRATOR_ENV_PYTHONPATH,
@@ -93,7 +108,12 @@ class FlextInfraPyreflyGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Parse check output."""
+        """Parse check output.
+
+        Returns:
+            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+
+        """
         json_file = self._check_report_path(project_dir, ctx)
         if not u.Cli.process_succeeded(result.outcome) and not json_file.exists():
             return False, (

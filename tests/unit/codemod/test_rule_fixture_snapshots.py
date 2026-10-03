@@ -1,4 +1,8 @@
-"""Rule-test snapshots change only through their explicit refresh, never in mod."""
+"""Rule-test snapshots change only through their explicit refresh, never in mod.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,33 +11,51 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, main as infra_main, u
+from flext_infra import c, main as infra_main
 from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
-from tests import t
+from tests import t, u
 
 
 class TestsFlextInfraModRuleFixtureSnapshots:
     """Verification rejects snapshot drift; the refresh records it for review."""
 
     @staticmethod
+    def _catalog(root: Path) -> Path:
+        """Return the project's own rule catalog directory under ``root``.
+
+        Returns:
+            The directory holding the local ``sgconfig.yml`` the plan reads.
+
+        """
+        return root / c.Infra.CODEMOD_CONFIG_RELPATH.parent
+
+    @classmethod
     def _owner(
+        cls,
         root: Path,
         *,
-        fixtures: str = "codemod",
         fix: str = "bar($A)",
         invalid: t.StrSequence = ("foo(1)",),
     ) -> Path:
-        """Declare one governed rule with its test under ``root``; return the rule."""
-        for directory in ("src", f"{fixtures}/rules", f"{fixtures}/tests"):
-            tm.ok(u.Cli.ensure_dir(root / directory))
+        """Declare one governed rule with its test in the local catalog.
+
+        The catalog sits where the rule plan reads a project's own rules, and
+        Git must track it: Git decides which provider a repository governs.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
+        catalog = cls._catalog(root)
+        for directory in (root / "src", catalog / "rules", catalog / "tests"):
+            tm.ok(u.Cli.ensure_dir(directory))
         tm.ok(
             u.Cli.atomic_write_text_file(
-                root / c.Infra.CODEMOD_CONFIG_FILENAME,
-                f"ruleDirs: [{fixtures}/rules]\n"
-                f"testConfigs:\n  - testDir: {fixtures}/tests\n",
+                root / c.Infra.CODEMOD_CONFIG_RELPATH,
+                "ruleDirs: [rules]\ntestConfigs:\n  - testDir: tests\n",
             ),
         )
-        rule = root / fixtures / "rules" / "demo.yml"
+        rule = catalog / "rules" / "demo.yml"
         tm.ok(
             u.Cli.atomic_write_text_file(
                 rule,
@@ -44,18 +66,28 @@ class TestsFlextInfraModRuleFixtureSnapshots:
         cases = "".join(f"  - {case}\n" for case in invalid)
         tm.ok(
             u.Cli.atomic_write_text_file(
-                root / fixtures / "tests" / "demo-test.yml",
+                catalog / "tests" / "demo-test.yml",
                 f"id: demo\nvalid:\n  - baz(1)\ninvalid:\n{cases}",
             ),
         )
+        # A bare root becomes a checkout through its initial commit; an
+        # existing checkout commits the catalog it now declares.
+        if (root / c.Infra.GIT_DIR).exists():
+            u.Tests.commit_git_changes(root, "Declare the demo rule catalog")
+        else:
+            u.Tests.initialize_git_repo(root)
         return rule
 
-    @staticmethod
-    def _snapshot(root: Path, rule_id: str = "demo") -> Path:
-        """Return the committed snapshot path of one rule under ``root``."""
+    @classmethod
+    def _snapshot(cls, root: Path, rule_id: str = "demo") -> Path:
+        """Return the committed snapshot path of one rule under ``root``.
+
+        Returns:
+            The committed snapshot path of one rule under ``root``.
+
+        """
         return (
-            root
-            / "codemod"
+            cls._catalog(root)
             / "tests"
             / c.Infra.CODEMOD_SNAPSHOT_DIRNAME
             / f"{rule_id}{c.Infra.CODEMOD_SNAPSHOT_SUFFIX}"
