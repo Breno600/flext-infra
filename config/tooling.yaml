@@ -306,7 +306,7 @@ Infra:
                 drive subprocesses and use os.path; the sys.path bootstrap
                 forces module-level imports after executable code. Scoped to
                 scripts/** so shipped source keeps every rule.
-            - files: "tests/python/**"
+            - files: "**/tests/python/**"
               rules: [suspicious-subprocess-import, subprocess-without-shell-equals-true, start-process-with-partial-path, raise-vanilla-args]
               authority: operator-ruling-2026-10-02-mcb-tests-python
               reason: >-
