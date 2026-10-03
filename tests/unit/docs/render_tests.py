@@ -1,4 +1,8 @@
-"""Behavior tests for managed mkdocs.yml rendering (exclude_docs / nav404)."""
+"""Behavior tests for managed mkdocs.yml rendering (exclude_docs / nav404).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -26,12 +30,15 @@ class TestsFlextInfraDocsRender:
     site nav; the rooted ``/README.md`` excludes only the docs-dir root README.
     """
 
+    @staticmethod
     def test_project_navigation_discovers_maintained_pages(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """The real MkDocs navigation includes manual guides beyond generated indexes."""
         scope = m.Infra.DocScope(
-            name="flext-demo", path=tmp_path, report_dir=tmp_path / ".reports/docs"
+            name="flext-demo",
+            path=tmp_path,
+            report_dir=tmp_path / ".reports/docs",
         )
         for relative in ("index.md", "security/triage.md", "decisions/ADR-001.md"):
             page = tmp_path / "docs" / relative
@@ -39,7 +46,8 @@ class TestsFlextInfraDocsRender:
             page.write_text("# Maintained page\n", encoding="utf-8")
         config_file = tmp_path / "mkdocs.yml"
         config_file.write_text(
-            u.Infra.docs_project_mkdocs(scope, {}, []), encoding="utf-8"
+            u.Infra.docs_project_mkdocs(scope, {}, []),
+            encoding="utf-8",
         )
         configuration = load_config(config_file=str(config_file), plugins=[])
         files = get_files(configuration)
@@ -49,10 +57,13 @@ class TestsFlextInfraDocsRender:
             eq={"index.md", "security/triage.md", "decisions/ADR-001.md"},
         )
 
-    def test_project_mkdocs_excludes_root_readme_only(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_project_mkdocs_excludes_root_readme_only(tmp_path: Path) -> None:
         """Keep nested README pages while excluding only the docs root README."""
         scope = m.Infra.DocScope(
-            name="flext-demo", path=tmp_path, report_dir=tmp_path / ".reports/docs"
+            name="flext-demo",
+            path=tmp_path,
+            report_dir=tmp_path / ".reports/docs",
         )
 
         rendered = u.Infra.docs_project_mkdocs(scope, {}, [])
@@ -71,7 +82,8 @@ class TestsFlextInfraDocsRender:
         tm.that(patterns, has="/README.md")
         tm.that(patterns, lacks="README.md")
 
-    def test_root_navigation_discovers_maintained_pages(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_root_navigation_discovers_maintained_pages(tmp_path: Path) -> None:
         """The root portal exposes maintained sections without a fixed nav list."""
         for relative in (
             "index.md",
@@ -84,7 +96,8 @@ class TestsFlextInfraDocsRender:
             page.write_text("# Maintained page\n", encoding="utf-8")
         config_file = tmp_path / "mkdocs.yml"
         config_file.write_text(
-            u.Infra.docs_root_mkdocs({"site_title": "Workspace"}), encoding="utf-8"
+            u.Infra.docs_root_mkdocs({"site_title": "Workspace"}),
+            encoding="utf-8",
         )
         configuration = load_config(config_file=str(config_file), plugins=[])
         files = get_files(configuration)
@@ -100,12 +113,15 @@ class TestsFlextInfraDocsRender:
             },
         )
 
+    @staticmethod
     def test_mkdocs_repository_name_comes_from_project_metadata(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Render the repository label from the same URL owner as the link."""
         scope = m.Infra.DocScope(
-            name="consumer", path=tmp_path, report_dir=tmp_path / ".reports/docs"
+            name="consumer",
+            path=tmp_path,
+            report_dir=tmp_path / ".reports/docs",
         )
         contract = {
             "repo_url": "https://github.com/example/consumer.git",
@@ -118,12 +134,15 @@ class TestsFlextInfraDocsRender:
         tm.that(project, has="repo_name: example/consumer")
         tm.that(root, has="repo_name: example/consumer")
 
+    @staticmethod
     def test_project_mkdocs_excludes_generated_api_from_revision_dates(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Do not derive Git revision dates for generated API pages."""
         scope = m.Infra.DocScope(
-            name="flext-demo", path=tmp_path, report_dir=tmp_path / ".reports/docs"
+            name="flext-demo",
+            path=tmp_path,
+            report_dir=tmp_path / ".reports/docs",
         )
 
         rendered = u.Infra.docs_project_mkdocs(scope, {}, [])
@@ -146,6 +165,3 @@ class TestsFlextInfraDocsRender:
                 "        - api-reference/generated/**\n"
             ),
         )
-
-
-__all__: list[str] = ["TestsFlextInfraDocsRender"]

@@ -1,23 +1,36 @@
-"""Semantic private-import cutover planning."""
+"""Semantic private-import cutover planning.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 import ast
 from collections.abc import MutableMapping
-from functools import partial
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m, t
-
-from ..private_import_ancestry import FlextInfraUtilitiesPrivateImportAncestry
-from ..private_import_facades import FlextInfraUtilitiesPrivateImportFacades
-from ..private_import_validation import FlextInfraUtilitiesPrivateImportValidation
-from .edits import FlextInfraUtilitiesSemanticCutoverEdits
-from .private_import_cst import FlextInfraUtilitiesSemanticCutoverPrivateImportCst
+from flext_infra import m, t
+from flext_infra._utilities._semantic_cutover.edits import (
+    FlextInfraUtilitiesSemanticCutoverEdits,
+)
+from flext_infra._utilities._semantic_cutover.private_import_cst import (
+    FlextInfraUtilitiesSemanticCutoverPrivateImportCst,
+)
+from flext_infra._utilities.private_import_ancestry import (
+    FlextInfraUtilitiesPrivateImportAncestry,
+)
+from flext_infra._utilities.private_import_facades import (
+    FlextInfraUtilitiesPrivateImportFacades,
+)
+from flext_infra._utilities.private_import_validation import (
+    FlextInfraUtilitiesPrivateImportValidation,
+)
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from flext_infra import p
 
 
@@ -25,70 +38,23 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
     FlextInfraUtilitiesSemanticCutoverPrivateImportCst,
     FlextInfraUtilitiesSemanticCutoverEdits,
 ):
-    """Plan cycle-free local imports and uniquely public cross-owner cutovers."""
+    """Plan uniquely public cutovers for cross-owner private imports.
 
-    @staticmethod
-    def _same_owner_relative_module(
-        file_path: Path, *, package: str, private_module: str
-    ) -> str | None:
-        """Derive the minimal relative module for a same-owner source path."""
-        package_parts = tuple(package.split("."))
-        target_parts = tuple(private_module.split("."))
-        candidates: set[str] = set()
-        path_parts = file_path.resolve().parts
-        source_candidates = [
-            path_parts[index + 1 :]
-            for index, part in enumerate(path_parts)
-            if part == c.Infra.DEFAULT_SRC_DIR
-        ]
-        # Repo-rooted trees (tests) import from the checkout root, so the
-        # package path itself anchors the module without a src segment. The
-        # anchor applies at ANY depth inside the owner: a module nested in a
-        # private segment (tests/_utilities/x.py) is a same-owner sibling and
-        # must resolve to a minimal relative import, never to a facade hunt.
-        owner_length = len(package_parts)
-        for index in range(len(path_parts) - owner_length):
-            if tuple(path_parts[index : index + owner_length]) == package_parts:
-                source_candidates.append(path_parts[index:])
-                break
-        for source_parts in source_candidates:
-            if (
-                len(source_parts) <= len(package_parts)
-                or tuple(source_parts[: len(package_parts)]) != package_parts
-            ):
-                continue
-            is_package_module = source_parts[-1] in {c.Infra.INIT_PY, c.Infra.INIT_PYI}
-            module_parts = (
-                source_parts[:-1]
-                if is_package_module
-                else (*source_parts[:-1], Path(source_parts[-1]).stem)
-            )
-            current_package = module_parts if is_package_module else module_parts[:-1]
-            common = 0
-            for current_part, target_part in zip(
-                current_package, target_parts, strict=False
-            ):
-                if current_part != target_part:
-                    break
-                common += 1
-            level = len(current_package) - common + 1
-            suffix = ".".join(target_parts[common:])
-            candidates.add(f"{'.' * level}{suffix}")
-        if len(candidates) > 1:
-            msg = f"ambiguous source owner for private import in {file_path}"
-            raise ValueError(msg)
-        return next(iter(candidates), None)
+    The ``ban-private-import`` rule reports only private imports of another
+    package; imports inside one package are absolute and stay as written.
+    """
 
     @staticmethod
     def _runtime_public_aliases(
         tree: ast.Module,
-        *,
-        removals: t.MappingKV[str, set[str]],
-        obsolete_imports: t.MappingKV[str, set[str]],
-        replacements: t.StrMapping,
-        public_imports: t.StrMapping,
+        plan: m.Infra.PrivateImportRewritePlan,
     ) -> frozenset[str]:
-        """Return facades required outside a ``TYPE_CHECKING`` boundary."""
+        """Return facades required outside a ``TYPE_CHECKING`` boundary.
+
+        Returns:
+            Facades required outside a ``TYPE_CHECKING`` boundary.
+
+        """
         parents = {
             child: parent
             for parent in ast.walk(tree)
@@ -114,14 +80,17 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
             aliases: set[str] = set()
             for imported in node.names:
                 qualified = f"{node.module}.{imported.name}"
-                if imported.name in removals.get(node.module, set()):
-                    reference = replacements.get(qualified)
+                if imported.name in plan.removals.get(node.module, frozenset()):
+                    reference = plan.replacements.get(qualified)
                     if reference is not None:
                         aliases.add(reference.split(".", 1)[0])
-                elif imported.name in obsolete_imports.get(node.module, set()):
+                elif imported.name in plan.obsolete_imports.get(
+                    node.module,
+                    frozenset(),
+                ):
                     aliases.add(imported.asname or imported.name)
                 elif (
-                    public_imports.get(imported.name) == node.module
+                    plan.public_imports.get(imported.name) == node.module
                     and imported.asname is None
                 ):
                     aliases.add(imported.name)
@@ -136,53 +105,94 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         sources: t.MappingKV[Path, str],
         findings: t.SequenceOf[m.Infra.ModScanFinding],
     ) -> t.Infra.PrivateImportReferences:
-        """Resolve every reported private import to its relative or public owner."""
-        discovery_sources = FlextInfraUtilitiesPrivateImportFacades.source_modules(
-            sources, tuple(finding.text for finding in findings)
+        """Resolve every reported cross-owner private import to its public owner.
+
+        Returns:
+            The resulting ``t.Infra.PrivateImportReferences``.
+
+        Raises:
+            ValueError: If ambiguous private star import in; or if no public facade
+                exposes cross-owner private import.
+
+        """
+        live_findings = tuple(
+            finding
+            for finding in findings
+            if cls._finding_is_live(root, sources, finding)
         )
-        facades = FlextInfraUtilitiesPrivateImportFacades.discover(discovery_sources)
-        export_bindings, declared_exports = (
-            FlextInfraUtilitiesPrivateImportFacades.declared_exports(discovery_sources)
-        )
-        class_bases = FlextInfraUtilitiesPrivateImportAncestry.class_bases(
-            discovery_sources
-        )
+        cross_owner_statements: list[str] = []
+        for finding in live_findings:
+            statement = cls._finding_statement(finding)
+            if not isinstance(statement, ast.ImportFrom) or statement.level:
+                continue
+            if (
+                FlextInfraUtilitiesPrivateImportFacades.private_owner(
+                    statement.module or "",
+                )
+                is not None
+            ):
+                cross_owner_statements.append(finding.text)
+        facades: t.MappingKV[
+            str,
+            t.VariadicTuple[t.Quad[ast.Module, str, str, str]],
+        ] = {}
+        export_bindings: t.MappingKV[str, set[str]] = {}
+        declared_exports: t.MappingKV[str, set[str]] = {}
+        class_bases: t.MappingKV[str, t.VariadicTuple[str]] = {}
+        if cross_owner_statements:
+            discovery_sources = (
+                FlextInfraUtilitiesPrivateImportFacades.reachable_sources(
+                    FlextInfraUtilitiesPrivateImportFacades.source_modules(
+                        sources,
+                        tuple(cross_owner_statements),
+                    ),
+                    tuple(cross_owner_statements),
+                )
+            )
+            facades = FlextInfraUtilitiesPrivateImportFacades.discover(
+                discovery_sources,
+            )
+            export_bindings, declared_exports = (
+                FlextInfraUtilitiesPrivateImportFacades.declared_exports(
+                    discovery_sources,
+                )
+            )
+            class_bases = FlextInfraUtilitiesPrivateImportAncestry.class_bases(
+                discovery_sources,
+            )
         direct_specs: MutableMapping[Path, MutableMapping[str, t.Pair[str, str]]] = {}
         specs: MutableMapping[Path, list[t.Infra.PrivateImportSpec]] = {}
-        for finding in findings:
+        for finding in live_findings:
             statement = cls._finding_statement(finding)
             if not isinstance(statement, ast.ImportFrom) or statement.level:
                 continue
             private_module = statement.module or ""
             package = FlextInfraUtilitiesPrivateImportFacades.private_owner(
-                private_module
+                private_module,
             )
             if package is None:
                 continue
             file_path = (root / finding.file).resolve()
-            relative_module = cls._same_owner_relative_module(
-                file_path, package=package, private_module=private_module
-            )
             file_specs = specs.setdefault(file_path, [])
             for imported in statement.names:
-                if imported.name == "*" and relative_module is None:
+                if imported.name == "*":
                     msg = f"ambiguous private star import in {finding.file}"
                     raise ValueError(msg)
                 qualified = f"{private_module}.{imported.name}"
                 declared = (
                     FlextInfraUtilitiesPrivateImportFacades.declared_public_reference(
-                        qualified, export_bindings, declared_exports
+                        qualified,
+                        export_bindings,
+                        declared_exports,
                     )
-                    if relative_module is None
-                    else None
                 )
                 if declared is not None:
                     direct_specs.setdefault(file_path, {})[qualified] = declared
                     continue
                 target_reference = (
-                    relative_module
-                    or FlextInfraUtilitiesPrivateImportFacades.facade_alias_binding(
-                        owners=facades.get(package, ()), alias=imported.asname
+                    FlextInfraUtilitiesPrivateImportFacades.facade_alias_binding(
+                        owners=facades.get(package, ()),
+                        alias=imported.asname,
                     )
                     or FlextInfraUtilitiesPrivateImportFacades.public_reference(
                         owners=facades.get(package, ()),
@@ -208,24 +218,61 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         return specs, direct_specs, facades
 
     @classmethod
+    def _finding_is_live(
+        cls,
+        root: Path,
+        sources: t.MappingKV[Path, str],
+        finding: m.Infra.ModScanFinding,
+    ) -> bool:
+        """Reject a preflight import already moved by an earlier semantic phase.
+
+        Returns:
+            The resulting ``bool``.
+
+        Raises:
+            ValueError: If private import source missing from inventory.
+
+        """
+        statement = cls._finding_statement(finding)
+        if not isinstance(statement, ast.ImportFrom):
+            return False
+        path = (root / finding.file).resolve()
+        source = sources.get(path)
+        if source is None:
+            msg = f"private import source missing from inventory: {path}"
+            raise ValueError(msg)
+        expected = tuple((alias.name, alias.asname) for alias in statement.names)
+        return any(
+            isinstance(node, ast.ImportFrom)
+            and node.module == statement.module
+            and node.level == statement.level
+            and tuple((alias.name, alias.asname) for alias in node.names) == expected
+            for node in ast.walk(ast.parse(source))
+        )
+
+    @classmethod
     def _plan_private_imports(
         cls,
         root: Path,
         sources: t.MappingKV[Path, str],
         findings: t.SequenceOf[m.Infra.ModScanFinding],
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Plan owner-aware relative and binding-aware public import rewrites."""
+        """Plan binding-aware public import rewrites.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        """
         planned_edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
-        references = r[t.Infra.PrivateImportReferences].create_from_callable(
-            partial(cls._private_import_references, root, sources, findings)
+        specs, direct_specs, facades = cls._private_import_references(
+            root,
+            sources,
+            findings,
         )
-        if references.failure:
-            return planned_edits.from_failure(references)
-        specs, direct_specs, facades = references.value
         missing = sorted(str(path) for path in specs if path not in sources)
         if missing:
             return planned_edits.fail(
-                f"private import source missing from inventory: {', '.join(missing)}"
+                f"private import source missing from inventory: {', '.join(missing)}",
             )
 
         def rewrite(path: Path, source: str) -> t.Infra.TransformResult:
@@ -252,21 +299,21 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         direct_specs: t.MappingKV[str, t.Pair[str, str]],
         facades: t.MappingKV[str, t.VariadicTuple[t.Quad[ast.Module, str, str, str]]],
     ) -> t.Infra.TransformResult:
-        """Rewrite one module's private imports and prove zero residue."""
+        """Rewrite one module's private imports and prove zero residue.
+
+        Returns:
+            The resulting ``t.Infra.TransformResult``.
+
+        Raises:
+            ValueError: If ambiguous facade alias; or if ambiguous public reference for.
+
+        """
         tree = ast.parse(source, filename=str(file_path))
-        relative_imports: MutableMapping[str, str] = {}
-        relative_symbols: MutableMapping[str, set[str]] = {}
         removals: MutableMapping[str, set[str]] = {}
         obsolete_imports: MutableMapping[str, set[str]] = {}
         replacements: MutableMapping[str, str] = {}
         public_imports: MutableMapping[str, str] = {}
         for private_module, symbol, qualified, package, reference in file_specs:
-            if reference.startswith("."):
-                if relative_imports.setdefault(private_module, reference) != reference:
-                    msg = f"ambiguous relative import for {private_module}"
-                    raise ValueError(msg)
-                relative_symbols.setdefault(private_module, set()).add(symbol)
-                continue
             facade_alias = reference.split(".", 1)[0]
             if public_imports.setdefault(facade_alias, package) != package:
                 msg = (
@@ -280,7 +327,8 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
             removals.setdefault(private_module, set()).add(symbol)
         for facade_alias, package in public_imports.items():
             public_root_name = FlextInfraUtilitiesPrivateImportFacades.public_root_name(
-                owners=facades.get(package, ()), facade_alias=facade_alias
+                owners=facades.get(package, ()),
+                facade_alias=facade_alias,
             )
             if public_root_name is None:
                 continue
@@ -296,30 +344,30 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
                 ):
                     obsolete_imports.setdefault(package, set()).add(public_root_name)
                     replacements[f"{package}.{public_root_name}"] = facade_alias
-        all_removals = {
-            module: removals.get(module, set()) | obsolete_imports.get(module, set())
-            for module in removals.keys() | obsolete_imports.keys()
-        }
-        for facade_alias, package in public_imports.items():
-            FlextInfraUtilitiesPrivateImportFacades.require_unshadowed_alias(
-                tree, package, facade_alias, file_path, all_removals
-            )
-        rewritten = cls._rewrite_private_import_source(
-            cls._relocate_declared_exports(source, direct_specs),
-            relative_imports=relative_imports,
+        plan = m.Infra.PrivateImportRewritePlan(
             removals={key: frozenset(value) for key, value in removals.items()},
             obsolete_imports={
                 key: frozenset(value) for key, value in obsolete_imports.items()
             },
             replacements=replacements,
             public_imports=public_imports,
-            runtime_public_imports=cls._runtime_public_aliases(
+        )
+        all_removals = {
+            module: removals.get(module, set()) | obsolete_imports.get(module, set())
+            for module in removals.keys() | obsolete_imports.keys()
+        }
+        for facade_alias, package in public_imports.items():
+            FlextInfraUtilitiesPrivateImportFacades.require_unshadowed_alias(
                 tree,
-                removals=removals,
-                obsolete_imports=obsolete_imports,
-                replacements=replacements,
-                public_imports=public_imports,
-            ),
+                package,
+                facade_alias,
+                file_path,
+                all_removals,
+            )
+        rewritten = cls._rewrite_private_import_source(
+            cls._relocate_declared_exports(source, direct_specs),
+            plan,
+            runtime_public_imports=cls._runtime_public_aliases(tree, plan),
         )
         for qualified in direct_specs:
             module, _, name = qualified.rpartition(".")
@@ -327,20 +375,13 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         FlextInfraUtilitiesPrivateImportValidation.require_zero_private_import_residue(
             rewritten,
             file_path=file_path,
-            relative_imports=relative_imports,
-            relative_symbols=relative_symbols,
+            plan=plan,
             removals=all_removals,
-            replacements=replacements,
-            public_imports=public_imports,
         )
         return rewritten, (
             *(
                 f"rewired {private} to {module}.{name}"
                 for private, (module, name) in sorted(direct_specs.items())
-            ),
-            *(
-                f"relativized {absolute} to {relative}"
-                for absolute, relative in sorted(relative_imports.items())
             ),
             *(
                 f"rewired {private} to {public}"

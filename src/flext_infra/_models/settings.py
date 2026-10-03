@@ -1,4 +1,8 @@
-"""Pure Pydantic settings declarations for flext-infra."""
+"""Pure Pydantic settings declarations for flext-infra.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -14,7 +18,7 @@ class FlextInfraSettingsModels:
     class Infra(m.BaseSettings):
         """Validated process-start settings owned by flext-infra."""
 
-        # flext-wkii.4.15: validate every external alias before singleton export.
+        # Validate every external alias before singleton export.
         model_config = m.SettingsConfigDict(
             env_prefix="",
             env_ignore_empty=True,
@@ -48,14 +52,6 @@ class FlextInfraSettingsModels:
                 description="Prefer HTTPS repository URLs during dependency sync.",
             ),
         ]
-        github_actions: Annotated[
-            bool,
-            m.Field(
-                default=False,
-                validation_alias="GITHUB_ACTIONS",
-                description="Whether the process runs in GitHub Actions.",
-            ),
-        ]
         github_head_ref: Annotated[
             str | None,
             m.Field(
@@ -80,6 +76,19 @@ class FlextInfraSettingsModels:
                 description="uv launcher path resolved for dependency orchestration.",
             ),
         ]
+        runtime_root: Annotated[
+            Path | None,
+            m.Field(
+                default=None,
+                validation_alias="RUNTIME_ROOT",
+                description=(
+                    "Declared runtime root whose environment executes the target "
+                    "checkout's code; the generated Makefile exports its "
+                    "RUNTIME_ROOT. Undeclared, the owner derives the checkout's "
+                    "Git root."
+                ),
+            ),
+        ]
         virtual_env: Annotated[
             str | None,
             m.Field(
@@ -96,20 +105,20 @@ class FlextInfraSettingsModels:
                 description="Make-dispatch WHAT verb for promoted commands.",
             ),
         ]
-        cosmos_command_dispatched: Annotated[
+        flext_command_dispatched: Annotated[
             str | None,
             m.Field(
                 default=None,
-                validation_alias="COSMOS_COMMAND_DISPATCHED",
-                description="Gas City command-dispatch marker for promoted verbs.",
+                validation_alias="FLEXT_COMMAND_DISPATCHED",
+                description="Dispatcher marker exported to a promoted command.",
             ),
         ]
-        cosmos_command_path: Annotated[
+        flext_command_path: Annotated[
             str | None,
             m.Field(
                 default=None,
-                validation_alias="COSMOS_COMMAND_PATH",
-                description="Gas City command path for promoted verb dispatch.",
+                validation_alias="FLEXT_COMMAND_PATH",
+                description="Resolved path of the promoted command being dispatched.",
             ),
         ]
         system_path: Annotated[
@@ -129,14 +138,6 @@ class FlextInfraSettingsModels:
                     "SonarCloud web API token; required only by the explicit "
                     "sonarcloud-sync verb, never read from any other source."
                 ),
-            ),
-        ]
-        mise_github_credential_command: Annotated[
-            str | None,
-            m.Field(
-                default=None,
-                validation_alias="MISE_GITHUB_CREDENTIAL_COMMAND",
-                description="Mise credential command forwarded to isolated builds.",
             ),
         ]
 

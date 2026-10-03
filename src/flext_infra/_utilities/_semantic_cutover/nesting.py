@@ -1,4 +1,8 @@
-"""Automatic class-nesting plans derived from the public Rope workspace."""
+"""Automatic class-nesting plans derived from the public Rope workspace.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,11 +11,26 @@ from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m, t
-
-from .edits import FlextInfraUtilitiesSemanticCutoverEdits
-from .family_flatten import FlextInfraUtilitiesSemanticFamilyFlatten
-from .nesting_cst import FlextInfraUtilitiesSemanticCutoverNestingCst
+from flext_infra import m, t
+from flext_infra._utilities._semantic_cutover.edits import (
+    FlextInfraUtilitiesSemanticCutoverEdits,
+)
+from flext_infra._utilities._semantic_cutover.family_flatten import (
+    FlextInfraUtilitiesSemanticFamilyFlatten,
+)
+from flext_infra._utilities._semantic_cutover.nesting_cst import (
+    FlextInfraUtilitiesSemanticCutoverNestingCst,
+)
+from flext_infra._utilities._semantic_cutover.nesting_owner import (
+    FlextInfraUtilitiesSemanticCutoverNestingOwner,
+)
+from flext_infra._utilities._semantic_cutover.test_helpers import (
+    FlextInfraUtilitiesSemanticTestHelpers,
+)
+from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities.rope_runtime_modules import (
+    FlextInfraUtilitiesRopeRuntimeModules,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -20,15 +39,18 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesSemanticCutoverNesting(
+    FlextInfraUtilitiesSemanticTestHelpers,
     FlextInfraUtilitiesSemanticFamilyFlatten,
     FlextInfraUtilitiesSemanticCutoverNestingCst,
+    FlextInfraUtilitiesSemanticCutoverNestingOwner,
     FlextInfraUtilitiesSemanticCutoverEdits,
 ):
     """Plan class nesting from semantic module ownership instead of record lists."""
 
     @staticmethod
     def _inheritance_bound_to_owner(
-        classes: t.MappingKV[str, ast.ClassDef], owner_name: str
+        classes: t.MappingKV[str, ast.ClassDef],
+        owner_name: str,
     ) -> frozenset[str]:
         """Return top-level classes an owner cannot contain.
 
@@ -39,6 +61,10 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         it either, because the owner's base list is evaluated before its body
         exists. Either move produces a NameError at import, so both are excluded
         from the plan and stay at module level.
+
+        Returns:
+            Top-level classes an owner cannot contain.
+
         """
 
         def ancestors(name: str) -> frozenset[str]:
@@ -64,56 +90,104 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
 
     @classmethod
     def _class_nesting_definitions(
-        cls, rope_workspace: p.Infra.RopeWorkspaceDsl, file_path: Path, source: str
+        cls,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        file_path: Path,
+        source: str,
     ) -> p.Result[t.StrMapping]:
-        """Map each loose top-level class to the owner Rope's module policy elects."""
+        """Map each loose top-level class to the owner Rope's module policy elects.
+
+        Returns:
+            The resulting ``p.Result[t.StrMapping]``.
+
+        """
         planned = r[t.StrMapping]
-        family = c.Infra.NAMESPACE_FILE_TO_FAMILY.get(file_path.name) or next(
-            (
-                alias
-                for alias, directory in c.Infra.FAMILY_DIRECTORIES.items()
-                if file_path.parent.name == directory
-            ),
-            None,
+        family = FlextInfraUtilitiesCodegenNamespace.facade_family_of_file(
+            file_path.name,
+        ) or FlextInfraUtilitiesCodegenNamespace.facade_family_of_directory(
+            file_path.parent.name,
         )
-        classes = {
-            node.name: node
-            for node in ast.parse(source, filename=str(file_path)).body
-            if isinstance(node, ast.ClassDef)
-        }
-        if family is None or len(classes) <= 1:
+        # A dunder module (``__main__``, ``__version__``, a package init) is
+        # never a facade module, whatever family directory holds it.
+        if family is None or file_path.stem.startswith("__"):
             return planned.ok({})
+        tree = ast.parse(source, filename=str(file_path))
+        classes = {
+            node.name: node for node in tree.body if isinstance(node, ast.ClassDef)
+        }
         convention = rope_workspace.convention(file_path)
-        owner = convention.module_policy.expected_family
-        if owner is None or owner not in classes:
-            return planned.fail(
-                "class-nesting requires exactly one declared module owner "
-                f"for {convention.module_name}; discovered: {', '.join(classes)}"
-            )
-        bound = cls._inheritance_bound_to_owner(classes, owner)
-        return planned.ok({
+        loose = cls._loose_members(
+            tree,
+            values=not convention.module_policy.allow_type_alias,
+        )
+        if len(classes) <= 1 and not loose:
+            return planned.ok({})
+        owned = cls._module_owner(
+            convention,
+            file_path,
+            classes,
+            cls._declared_names(tree),
+        )
+        if owned.failure:
+            return planned.from_failure(owned)
+        owner = owned.value
+        movable = cls._movable_members(
+            tree,
+            loose,
+            owner=owner,
+            module_name=convention.module_name,
+        )
+        if movable.failure:
+            return planned.from_failure(movable)
+        bound: frozenset[str] = (
+            cls._inheritance_bound_to_owner(classes, owner)
+            if owner in classes
+            else frozenset()
+        )
+        definitions = {
             name: owner for name in classes if name != owner and name not in bound
-        })
+        }
+        definitions.update((name, owner) for name in movable.value)
+        return planned.ok(definitions)
 
     @classmethod
     def _plan_class_nesting(
-        cls, rope_workspace: p.Infra.RopeWorkspaceDsl, sources: t.MappingKV[Path, str]
+        cls,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        sources: t.MappingKV[Path, str],
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Compose family flattening and orphan nesting in one immutable plan."""
+        """Compose helper promotion, family flattening, and orphan nesting.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        """
         planned = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
-        flattened = planned.create_from_callable(
-            lambda: cls._family_flatten_edits(rope_workspace, sources)
+        # The planner contract keeps every failure in the Result (see
+        # plan_semantic_cutover); helper promotion raises per rejected move.
+        # A promotion ValueError IS the rejected move's loud contract (one
+        # utilities facade, unshadowed destination, unchanged bindings), so it
+        # propagates instead of demoting to a Result the caller would retry.
+        promotion = planned.create_from_callable(
+            lambda: cls._test_helper_edits(rope_workspace, sources),
         )
-        if flattened.failure:
-            return planned.from_failure(flattened)
+        if promotion.failure:
+            error = promotion.exception
+            if isinstance(error, ValueError):
+                raise error
+            return promotion
+        promoted = promotion.value
         proposed = dict(sources)
-        merged = {edit.file_path: edit for edit in flattened.value}
-        for edit in flattened.value:
+        merged = {edit.file_path: edit for edit in promoted}
+        for edit in promoted:
+            proposed[edit.file_path] = edit.updated_source
+        flattened = cls._family_flatten_edits(rope_workspace, proposed)
+        for edit in flattened:
             proposed[edit.file_path] = edit.updated_source
         nested = cls._plan_orphan_nesting(rope_workspace, proposed)
         if nested.failure:
             return planned.from_failure(nested)
-        for edit in nested.value:
+        for edit in (*flattened, *nested.value):
             previous = merged.get(edit.file_path)
             merged[edit.file_path] = m.Infra.SemanticMigrationEdit(
                 file_path=edit.file_path,
@@ -129,9 +203,16 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
 
     @classmethod
     def _plan_orphan_nesting(
-        cls, rope_workspace: p.Infra.RopeWorkspaceDsl, sources: t.MappingKV[Path, str]
+        cls,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        sources: t.MappingKV[Path, str],
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Plan all structural nesting and consumer rewrites without effects."""
+        """Plan all structural nesting and consumer rewrites without effects.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        """
         planned_edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
         modules = {
             entry.file_path.resolve(): entry for entry in rope_workspace.modules()
@@ -158,17 +239,31 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
                 if bindings.setdefault(name, owner) != owner:
                     return planned_edits.fail(
                         f"ambiguous class-nesting owner for {module_name}.{name}: "
-                        f"{bindings[name]}, {owner}"
+                        f"{bindings[name]}, {owner}",
                     )
         nested_names = frozenset(
             name for bindings in bindings_by_module.values() for name in bindings
         )
+        if not nested_names:
+            return planned_edits.ok(())
+        project = FlextInfraUtilitiesRopeRuntimeModules.snapshot_project(
+            rope_workspace.rope_project,
+            sources,
+        )
+        try:
+            quoted = cls._nesting_quoted_sources(
+                project,
+                dict(editable),
+                definitions_by_file,
+            )
+        finally:
+            project.close()
 
         def rewrite(path: Path, source: str) -> t.Infra.TransformResult:
             module = modules.get(path)
             definitions = definitions_by_file.get(path, {})
             updated = cls._rewrite_class_nesting_source(
-                source,
+                quoted[path],
                 module_name=module.module_name if module is not None else "",
                 is_package_init=module.is_package_init if module is not None else False,
                 bindings_by_module=bindings_by_module,
@@ -186,6 +281,7 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
                 (path, source)
                 for path, source in editable
                 if path in definitions_by_file
+                or quoted[path] != source
                 or any(name in source for name in nested_names)
             ),
             rewrite,

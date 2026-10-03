@@ -10,6 +10,7 @@ import re
 from collections import abc
 from enum import Enum
 from importlib import import_module
+from importlib.util import find_spec
 from pathlib import Path
 from types import UnionType
 from typing import (
@@ -22,13 +23,13 @@ from typing import (
     get_origin,
 )
 
-from flext_infra import m, t
+from flext_infra import m, p, t
 
 
 class FlextInfraCodegenProtocolModelAnnotations:
     """Map validated runtime model types to public protocol-facade types."""
 
-    _ORIGINS: ClassVar[t.MappingKV[object, str]] = {
+    _ORIGINS: ClassVar[t.MappingKV[p.AttributeProbe, str]] = {
         list: "list",
         tuple: "tuple",
         dict: "dict",
@@ -53,25 +54,25 @@ class FlextInfraCodegenProtocolModelAnnotations:
         """The member namespace the generator renders protocols for."""
 
         package_name: str = m.Field(
-            description="Member package name (pyproject name, underscore form)."
+            description="Member package name (pyproject name, underscore form).",
         )
         facade_container: str = m.Field(
-            description="CamelCase member container prefix (for example AiHub)."
+            description="CamelCase member container prefix (for example AiHub).",
         )
         package_module_prefix: str = m.Field(
-            description="Module prefix naming member-owned models."
+            description="Module prefix naming member-owned models.",
         )
         protocol_ref_prefix: str = m.Field(
-            description="Public protocols facade reference (for example p.AiHub)."
+            description="Public protocols facade reference (for example p.AiHub).",
         )
         models_facade_name: str = m.Field(
-            description="Single-letter models facade alias used in sources."
+            description="Single-letter models facade alias used in sources.",
         )
         facade_probes: t.VariadicTuple[t.Pair[str, str]] = m.Field(
             description=(
                 "Alias to importable facade object paths probed when mapping "
                 "identical runtime types to public names."
-            )
+            ),
         )
 
         @property
@@ -82,9 +83,20 @@ class FlextInfraCodegenProtocolModelAnnotations:
 
     @classmethod
     def render(
-        cls, annotation: t.TypeHintSpecifier | None, target: ProtocolModelTarget
+        cls,
+        annotation: t.TypeHintSpecifier | None,
+        target: ProtocolModelTarget,
     ) -> str:
-        """Render one field/property type without exposing a concrete model."""
+        """Render one field/property type without exposing a concrete model.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            TypeError: If unsupported protocol annotation; or if unsupported protocol
+                annotation origin; or if unsupported Callable parameters.
+
+        """
         if isinstance(annotation, ForwardRef):
             return cls._render_forward(annotation.__forward_arg__, target)
         if isinstance(annotation, str):
@@ -162,16 +174,26 @@ class FlextInfraCodegenProtocolModelAnnotations:
         raise TypeError(msg)
 
     @classmethod
-    def _facade_name(cls, value: object, target: ProtocolModelTarget) -> str | None:
-        """Return the existing public facade path for an identical runtime type."""
+    def _facade_name(
+        cls,
+        value: p.AttributeProbe,
+        target: ProtocolModelTarget,
+    ) -> str | None:
+        """Return the existing public facade path for an identical runtime type.
+
+        Returns:
+            The existing public facade path for an identical runtime type.
+
+        """
         for prefix, probe in target.facade_probes:
             module_path, _, attribute = probe.rpartition(".")
-            try:
-                module = import_module(module_path)
-            except ImportError:
-                # A member without that facade surface cannot hold the value;
-                # probing continues with the next surface.
+            # A member without that facade surface cannot hold the value;
+            # probing continues with the next surface. A surface that exists
+            # but fails to import is a real defect and escapes.
+            package = module_path.partition(".")[0]
+            if find_spec(package) is None or find_spec(module_path) is None:
                 continue
+            module = import_module(module_path)
             facade = getattr(module, attribute, None)
             if facade is None:
                 continue
@@ -182,21 +204,36 @@ class FlextInfraCodegenProtocolModelAnnotations:
 
     @classmethod
     def _render_forward(cls, annotation: str, target: ProtocolModelTarget) -> str:
-        """Normalize a postponed source annotation without evaluating Field data."""
+        """Normalize a postponed source annotation without evaluating Field data.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         rendered = annotation.strip()
         if rendered.startswith(cls._ANNOTATED_PREFIX):
             rendered = cls._first_annotated_argument(rendered)
         rendered = target.model_ref_re.sub(
-            rf"{target.protocol_ref_prefix}.\1", rendered
+            rf"{target.protocol_ref_prefix}.\1",
+            rendered,
         )
         rendered = rendered.replace(
-            target.models_facade_name, target.protocol_ref_prefix
+            target.models_facade_name,
+            target.protocol_ref_prefix,
         )
         return cls._validate(rendered)
 
     @classmethod
     def _first_annotated_argument(cls, annotation: str) -> str:
-        """Extract the first top-level argument from ``Annotated[...]``."""
+        """Extract the first top-level argument from ``Annotated[...]``.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            ValueError: If malformed Annotated protocol field.
+
+        """
         content = annotation[len(cls._ANNOTATED_PREFIX) : -1]
         depth = 0
         for index, character in enumerate(content):
@@ -211,7 +248,15 @@ class FlextInfraCodegenProtocolModelAnnotations:
 
     @classmethod
     def _validate(cls, rendered: str) -> str:
-        """Reject escape-hatch types from generated public contracts."""
+        """Reject escape-hatch types from generated public contracts.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            TypeError: If forbidden generated protocol annotation.
+
+        """
         tokens = frozenset(cls._TOKEN_RE.findall(rendered))
         banned = tokens.intersection(cls._BANNED)
         if banned:

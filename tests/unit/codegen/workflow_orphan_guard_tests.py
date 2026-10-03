@@ -1,4 +1,8 @@
-"""Contract tests for the declared GitHub workflow surface."""
+"""Contract tests for the declared GitHub workflow surface.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -28,7 +32,12 @@ class TestsFlextInfraWorkflowOrphanGuard:
     )
 
     def _declared_workflows(self) -> set[str]:
-        """Return every workflow filename the SSOT owns."""
+        """Return every workflow filename the SSOT owns.
+
+        Returns:
+            Every workflow filename the SSOT owns.
+
+        """
         declared: set[str] = set()
         for entry in config.Infra.codegen.templates.entries:
             destination = entry.destination
@@ -54,7 +63,8 @@ class TestsFlextInfraWorkflowOrphanGuard:
         """
         tm.that("codeql.yml" in self._declared_workflows(), eq=False)
 
-    def test_ci_matrix_uses_only_canonical_profiles(self) -> None:
+    @staticmethod
+    def test_ci_matrix_uses_only_canonical_profiles() -> None:
         """ci-matrix is projected for workspace and standalone repositories."""
         entries = tuple(
             entry
@@ -66,6 +76,3 @@ class TestsFlextInfraWorkflowOrphanGuard:
             p.value if hasattr(p, "value") else str(p) for p in entries[0].profiles
         }
         tm.that(profiles, eq={"workspace", "standalone"})
-
-
-__all__: list[str] = ["TestsFlextInfraWorkflowOrphanGuard"]

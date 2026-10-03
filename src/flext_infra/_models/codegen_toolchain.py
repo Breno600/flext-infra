@@ -1,4 +1,8 @@
-"""Toolchain layout and observed-state contracts for code generation."""
+"""Toolchain layout and observed-state contracts for code generation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,7 +11,7 @@ from typing import Annotated, ClassVar, Self
 
 from flext_cli import m, u
 
-from .. import t
+from flext_infra import t
 
 
 class FlextInfraModelsCodegenToolchain:
@@ -19,11 +23,17 @@ class FlextInfraModelsCodegenToolchain:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True, extra="forbid")
 
         config: Annotated[
-            Path, m.Field(description="Generated Mise configuration destination")
+            Path,
+            m.Field(description="Generated Mise configuration destination"),
         ]
         unix_launcher: Annotated[Path, m.Field(description="Unix launcher destination")]
         windows_launcher: Annotated[
-            Path, m.Field(description="Windows launcher destination")
+            Path,
+            m.Field(description="Windows launcher destination"),
+        ]
+        version_pin: Annotated[
+            Path,
+            m.Field(description="Pinned Mise release destination"),
         ]
 
     class MiseToolchainProjectLayout(m.ArbitraryTypesModel):
@@ -32,13 +42,14 @@ class FlextInfraModelsCodegenToolchain:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True, extra="forbid")
 
         selector: Annotated[
-            t.NonEmptyStr, m.Field(description="Workspace-relative project selector")
+            t.NonEmptyStr,
+            m.Field(description="Workspace-relative project selector"),
         ]
         root: Annotated[Path, m.Field(description="Resolved project root")]
         transaction_root: Annotated[
             Path | None,
             m.Field(
-                description="Persistent transaction root on this project filesystem"
+                description="Persistent transaction root on this project filesystem",
             ),
         ] = None
         artifacts: Annotated[
@@ -54,18 +65,22 @@ class FlextInfraModelsCodegenToolchain:
         selector: Annotated[
             str,
             m.Field(
-                pattern=r"^@[a-z][a-z0-9-]*$", description="File capability identity"
+                pattern=r"^@[a-z][a-z0-9-]*$",
+                description="File capability identity",
             ),
         ]
         root: Annotated[Path, m.Field(description="Exact authorized destination root")]
         device: Annotated[
-            int, m.Field(ge=0, strict=True, description="Authenticated root device")
+            int,
+            m.Field(ge=0, strict=True, description="Authenticated root device"),
         ]
         inode: Annotated[
-            int, m.Field(gt=0, strict=True, description="Authenticated root inode")
+            int,
+            m.Field(gt=0, strict=True, description="Authenticated root inode"),
         ]
         transaction_root: Annotated[
-            Path, m.Field(description="Destination-local staging for this transaction")
+            Path,
+            m.Field(description="Destination-local staging for this transaction"),
         ]
 
         @u.model_validator(mode="after")
@@ -88,12 +103,15 @@ class FlextInfraModelsCodegenToolchain:
 
         scope_root: Annotated[Path, m.Field(description="Resolved transaction scope")]
         state_root: Annotated[
-            Path, m.Field(description="Persistent scope transaction staging directory")
+            Path,
+            m.Field(description="Persistent scope transaction staging directory"),
         ]
         journal_path: Annotated[
             Path,
             m.Field(
-                description="Direct journal under the authenticated scope Git directory"
+                description=(
+                    "Direct journal under the authenticated scope Git directory"
+                ),
             ),
         ]
         transaction_id: Annotated[
@@ -178,16 +196,26 @@ class FlextInfraModelsCodegenToolchain:
 
         @u.model_validator(mode="after")
         def _validate_destination_paths(self) -> Self:
-            """Bind every captured state to its declared live destination."""
+            """Bind every captured state to its declared live destination.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If Mise project states differ from declared destinations.
+
+            """
             expected = (
                 self.layout.artifacts.config,
                 self.layout.artifacts.unix_launcher,
                 self.layout.artifacts.windows_launcher,
+                self.layout.artifacts.version_pin,
             )
             observed = (
                 self.config.before.path,
                 self.artifacts.unix_launcher.path,
                 self.artifacts.windows_launcher.path,
+                self.artifacts.version_pin.path,
             )
             if observed != expected:
                 msg = "Mise project states differ from declared destinations"
@@ -200,12 +228,23 @@ class FlextInfraModelsCodegenToolchain:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True, extra="forbid")
 
         unix_launcher: Annotated[
-            m.Cli.AtomicFileState, m.Field(description="Observed Unix launcher state")
+            m.Cli.AtomicFileState,
+            m.Field(description="Observed Unix launcher state"),
         ]
         windows_launcher: Annotated[
             m.Cli.AtomicFileState,
             m.Field(description="Observed Windows launcher state"),
         ]
+        version_pin: Annotated[
+            m.Cli.AtomicFileState,
+            m.Field(description="Observed Mise pin state"),
+        ]
+
+        @m.computed_field
+        @property
+        def states(self) -> t.VariadicTuple[m.Cli.AtomicFileState]:
+            """The triple in ``c.Infra.ARTIFACT_SPECS`` order."""
+            return (self.unix_launcher, self.windows_launcher, self.version_pin)
 
     class MiseToolchainWorkspacePlan(m.ArbitraryTypesModel):
         """One stable layout plus a coherent mutable-state snapshot."""
@@ -220,10 +259,40 @@ class FlextInfraModelsCodegenToolchain:
             t.VariadicTuple[FlextInfraModelsCodegenToolchain.MiseToolchainProjectState],
             m.Field(min_length=1, description="Ordered complete workspace topology"),
         ]
+        runtime_artifacts: Annotated[
+            FlextInfraModelsCodegenToolchain.MiseToolchainArtifactSet,
+            m.Field(
+                description=(
+                    "Runtime-root `make upg` triple every project projects, or the "
+                    "packaged cold-start copy when the runtime root has none"
+                ),
+            ),
+        ]
+
+        @m.computed_field
+        @property
+        def sources(self) -> t.VariadicTuple[m.Cli.AtomicFileState]:
+            """Every state the publication reads: declarations, then the triple."""
+            return (
+                *(
+                    state
+                    for project in self.projects
+                    for state in project.config.sources
+                ),
+                *self.runtime_artifacts.states,
+            )
 
         @u.model_validator(mode="after")
         def _validate_project_layouts(self) -> Self:
-            """Bind every mutable project snapshot to the exact stable layout."""
+            """Bind every mutable project snapshot to the exact stable layout.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If Mise project snapshots differ from workspace layout.
+
+            """
             if (
                 tuple(project.layout for project in self.projects)
                 != self.layout.projects

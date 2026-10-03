@@ -5,6 +5,9 @@ decides what is written and when, without opening a network socket: the
 project key derived from a real Git origin, the request plan derived from the
 codegen SSOT, the no-op decision against the measured response shape, and the
 token preflight that fails before any effect through the public CLI.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -32,41 +35,79 @@ class TestsFlextInfraSonarcloudSettingsSync:
     _REPOSITORY = "example-repo"
 
     @staticmethod
-    def _plan(project_key: str) -> m.Infra.SonarcloudSettingsPlan:
-        """Build the plan the SSOT declares for one project key."""
-        return tm.ok(
-            FlextInfraSonarcloudSettingsSync.settings_plan(
-                config.Infra.codegen.sonarcloud, project_key
-            )
-        )
+    def _spec(count: int | None = None) -> m.Infra.SonarcloudSpec:
+        """Use the current SSOT or validate a different exclusion cardinality.
+
+        Returns:
+            The resulting ``m.Infra.SonarcloudSpec``.
+
+        """
+        spec = config.Infra.codegen.sonarcloud
+        if count is None:
+            return spec
+        return m.Infra.SonarcloudSpec.model_validate({
+            **spec.model_dump(),
+            "issue_exclusions": tuple(
+                m.Infra.SonarcloudIssueExclusionSpec(
+                    rule_key=f"text:S{1000 + index}",
+                    resource_key=f"inputs/{index}.toml",
+                    reason=f"Contract scenario {index}",
+                )
+                for index in range(count)
+            ),
+        })
 
     @staticmethod
-    def _server_payload(pairs: tuple[tuple[str, str], ...]) -> str:
-        """Render an ``api/settings/values`` body in the measured shape."""
+    def _server_payload(
+        pairs: t.VariadicTuple[t.Pair[str, str]],
+        *,
+        inherited: bool = False,
+        include_setting: bool = True,
+    ) -> str:
+        """Render an ``api/settings/values`` body in the measured shape.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         settings: list[t.JsonValue] = []
-        if pairs:
+        if include_setting:
             field_values: list[t.JsonValue] = [
                 {"resourceKey": resource, "ruleKey": rule} for rule, resource in pairs
             ]
             settings.append({
                 "key": c.Infra.SONARCLOUD_ISSUE_IGNORE_KEY,
                 "fieldValues": field_values,
-                "inherited": False,
+                "inherited": inherited,
             })
         return tm.ok(u.Cli.json_dumps({"settings": settings}))
 
     @staticmethod
-    def _ssot_pairs() -> tuple[tuple[str, str], ...]:
-        """Return the SSOT exclusions as ``(rule_key, resource_key)`` pairs."""
+    def _pairs(spec: m.Infra.SonarcloudSpec) -> t.VariadicTuple[t.Pair[str, str]]:
+        """Read expectations from the exact typed config the service receives.
+
+        Returns:
+            The resulting ``t.VariadicTuple[t.Pair[str, str]]``.
+
+        """
         return tuple(
             (exclusion.rule_key, exclusion.resource_key)
-            for exclusion in config.Infra.codegen.sonarcloud.issue_exclusions
+            for exclusion in spec.issue_exclusions
         )
 
+    @staticmethod
     def _cli(
-        self, repository_root: Path, env: t.StrMapping | None = None
-    ) -> tuple[int, str]:
-        """Run the public CLI route in a child process without SONAR_TOKEN."""
+        self,
+        repository_root: Path,
+        env: t.StrMapping | None = None,
+        *,
+        verb: str = c.Infra.VERB_SONARCLOUD_SYNC,
+    ) -> t.Pair[int, str]:
+        """Run a public SonarCloud route in a child process.
+
+        Returns:
+            The resulting ``t.Pair[int, str]``.
+        """
         result = tm.ok(
             u.Cli.run_raw(
                 [
@@ -74,13 +115,13 @@ class TestsFlextInfraSonarcloudSettingsSync:
                     "-m",
                     "flext_infra",
                     c.Infra.CLI_GROUP_MAINTENANCE,
-                    c.Infra.VERB_SONARCLOUD_SYNC,
+                    verb,
                     "--repository-root",
                     str(repository_root),
                 ],
                 env={"COLUMNS": "200", **(env or {})},
                 remove_env_keys=() if env else ("SONAR_TOKEN",),
-            )
+            ),
         )
         return result.outcome.raw_return_code, result.stdout + result.stderr
 
@@ -92,7 +133,9 @@ class TestsFlextInfraSonarcloudSettingsSync:
         ],
     )
     def test_project_key_joins_origin_organization_and_repository(
-        self, tmp_path: Path, origin: str
+        self,
+        tmp_path: Path,
+        origin: str,
     ) -> None:
         """The key is <organization>_<repository> whatever the origin transport."""
         u.Tests.initialize_git_repo(tmp_path, origin_url=origin)
@@ -105,64 +148,92 @@ class TestsFlextInfraSonarcloudSettingsSync:
             f"{self._REPOSITORY}",
         )
 
-    def test_plan_sends_one_field_value_per_ssot_exclusion(self) -> None:
-        """The set request carries the project, the key, and every SSOT entry."""
-        plan = self._plan("org_repo")
-        form = plan.form_fields()
+    @pytest.mark.parametrize("count", [None, 0, 1, 3])
+    def test_plan_selects_reset_or_the_complete_property_set(
+        self,
+        count: int | None,
+    ) -> None:
+        """The request honors both the current SSOT and arbitrary valid configs."""
+        spec = self._spec(count)
+        plan = tm.ok(FlextInfraSonarcloudSettingsSync.settings_plan(spec, "org_repo"))
+        request = FlextInfraSonarcloudSettingsSync.settings_write_request(plan)
+        form = request.form
 
         tm.that(form[0], eq=("component", "org_repo"))
-        tm.that(form[1], eq=("key", c.Infra.SONARCLOUD_ISSUE_IGNORE_KEY))
+        if spec.issue_exclusions:
+            tm.that(request.api_path, eq=c.Infra.SONARCLOUD_API_SETTINGS_SET_PATH)
+            tm.that(form[1], eq=("key", c.Infra.SONARCLOUD_ISSUE_IGNORE_KEY))
+        else:
+            tm.that(request.api_path, eq=c.Infra.SONARCLOUD_API_SETTINGS_RESET_PATH)
+            tm.that(form[1], eq=("keys", c.Infra.SONARCLOUD_ISSUE_IGNORE_KEY))
         sent = tuple(
             (entry.rule_key, entry.resource_key)
             for name, value in form[2:]
             if name == "fieldValues"
             for entry in (m.Infra.SonarcloudIssueFieldValue.model_validate_json(value),)
         )
-        tm.that(form[2][1], has='"ruleKey"')
-        tm.that(form[2][1], has='"resourceKey"')
+        for name, value in form[2:]:
+            tm.that(name, eq="fieldValues")
+            tm.that(value, has='"ruleKey"')
+            tm.that(value, has='"resourceKey"')
         tm.that(len(form), eq=2 + len(sent))
-        tm.that(sent, eq=self._ssot_pairs())
-        tm.that(plan.api_url, eq=config.Infra.codegen.sonarcloud.api_url)
+        tm.that(sent, eq=self._pairs(spec))
+        tm.that(plan.api_url, eq=spec.api_url)
+        tm.that(plan.timeout_seconds, eq=spec.api_timeout_seconds)
 
-    def test_plan_is_in_sync_only_when_server_holds_the_ssot(self) -> None:
-        """The write is skipped exactly when the server already equals the SSOT."""
-        plan = self._plan("org_repo")
-        pairs = self._ssot_pairs()
+    @pytest.mark.parametrize("count", [0, 1, 3])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_plan_matches_effective_server_values(
+        self,
+        count: int,
+        *,
+        inherited: bool,
+    ) -> None:
+        """Inherited entries affect convergence exactly like project entries."""
+        spec = self._spec(count)
+        plan = tm.ok(FlextInfraSonarcloudSettingsSync.settings_plan(spec, "org_repo"))
+        pairs = self._pairs(spec)
         values = m.Infra.SonarcloudSettingsValues.model_validate_json
 
-        tm.that(plan.in_sync_with(values(self._server_payload(pairs))), eq=True)
-        tm.that(
-            plan.in_sync_with(values(self._server_payload(tuple(reversed(pairs))))),
-            eq=True,
-        )
-        tm.that(plan.in_sync_with(values(self._server_payload(()))), eq=False)
-        tm.that(
-            plan.in_sync_with(
-                values(self._server_payload((*pairs, ("text:S0000", "x.toml"))))
-            ),
-            eq=False,
-        )
-
-    def test_plan_refuses_empty_and_repeated_exclusions(self) -> None:
-        """An SSOT that cannot be written as one property set fails before effects."""
-        spec = config.Infra.codegen.sonarcloud
-        empty = spec.model_copy(update={"issue_exclusions": ()})
-        repeated = spec.model_copy(
-            update={"issue_exclusions": (*spec.issue_exclusions,) * 2}
-        )
-
-        for invalid, reason in (
-            (empty, "declares no exclusion"),
-            (repeated, "repeats"),
-        ):
-            tm.fail(
-                FlextInfraSonarcloudSettingsSync.settings_plan(invalid, "org_repo"),
-                has=reason,
+        for ordered in (pairs, tuple(reversed(pairs))):
+            current = values(self._server_payload(ordered, inherited=inherited))
+            tm.that(
+                FlextInfraSonarcloudSettingsSync.in_sync_with(plan, current),
+                eq=True,
             )
+        absent = values(self._server_payload((), include_setting=False))
+        tm.that(
+            FlextInfraSonarcloudSettingsSync.in_sync_with(plan, absent),
+            eq=not spec.issue_exclusions,
+        )
+        extra = values(
+            self._server_payload(
+                (*pairs, ("text:S0000", "extra.toml")),
+                inherited=inherited,
+            ),
+        )
+        tm.that(FlextInfraSonarcloudSettingsSync.in_sync_with(plan, extra), eq=False)
 
-    def test_workspace_root_fans_the_verb_out(self) -> None:
-        """The workspace orchestrator accepts the verb so the root reaches members."""
-        tm.that(c.Infra.ORCHESTRATED_VERBS, has=c.Infra.VERB_SONARCLOUD_SYNC)
+    @pytest.mark.parametrize("count", [1, 3])
+    def test_repeated_config_entries_fail_and_server_duplicates_require_a_write(
+        self,
+        count: int,
+    ) -> None:
+        """Config and readback must contain every declared pair exactly once."""
+        spec = self._spec(count)
+        repeated = m.Infra.SonarcloudSpec.model_validate({
+            **spec.model_dump(),
+            "issue_exclusions": spec.issue_exclusions * 2,
+        })
+        tm.fail(
+            FlextInfraSonarcloudSettingsSync.settings_plan(repeated, "org_repo"),
+            has="repeats",
+        )
+        plan = tm.ok(FlextInfraSonarcloudSettingsSync.settings_plan(spec, "org_repo"))
+        current = m.Infra.SonarcloudSettingsValues.model_validate_json(
+            self._server_payload(self._pairs(spec) * 2),
+        )
+        tm.that(FlextInfraSonarcloudSettingsSync.in_sync_with(plan, current), eq=False)
 
     def test_absent_token_fails_before_any_effect(self, tmp_path: Path) -> None:
         """Without SONAR_TOKEN the verb fails first, before reading origin or API."""
@@ -182,5 +253,39 @@ class TestsFlextInfraSonarcloudSettingsSync:
         tm.that(code, ne=0)
         tm.that(output, has="SONAR_TOKEN is required")
 
+    def test_issue_search_requires_token_before_network(self, tmp_path: Path) -> None:
+        """The read-only public route stops before Git or HTTP without a token."""
+        code, output = self._cli(tmp_path, verb=c.Infra.VERB_SONARCLOUD_ISSUES)
 
-__all__: list[str] = ["TestsFlextInfraSonarcloudSettingsSync"]
+        tm.that(code, ne=0)
+        tm.that(output, has="SONAR_TOKEN is required")
+
+    @staticmethod
+    def test_issue_search_response_parses_published_page_contract() -> None:
+        """A missing line stays explicit while page accounting remains required."""
+        payload = tm.ok(
+            u.Cli.json_dumps({
+                "paging": {"pageIndex": 1, "pageSize": 100, "total": 2},
+                "issues": [
+                    {
+                        "key": "issue-1",
+                        "rule": "python:S1",
+                        "component": "org_repo:a.py",
+                        "line": 4,
+                        "message": "First",
+                    },
+                    {
+                        "key": "issue-2",
+                        "rule": "python:S2",
+                        "component": "org_repo:b.py",
+                        "message": "Second",
+                    },
+                ],
+            }),
+        )
+
+        response = m.Infra.SonarcloudIssueSearch.model_validate_json(payload)
+
+        tm.that(response.paging.total, eq=len(response.issues))
+        tm.that(response.issues[0].line, eq=4)
+        tm.that(response.issues[1].line, eq=None)

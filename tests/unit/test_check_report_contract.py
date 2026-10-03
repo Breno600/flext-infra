@@ -37,7 +37,8 @@ class TestsFlextInfraCheckReportContract:
         )
         # One fixable lint finding (unused import) that only --apply rewrites.
         (project / "src" / "p1" / "module.py").write_text(
-            '"""Fixture module."""\n\nimport os\n', encoding="utf-8"
+            '"""Fixture module."""\n\nimport os\n',
+            encoding="utf-8",
         )
         return project
 
@@ -50,7 +51,12 @@ class TestsFlextInfraCheckReportContract:
 
     @staticmethod
     def _check_run(project: Path, reports: Path, *mode: str) -> int:
-        """Run the same ``check run`` argument vector the generated verbs render."""
+        """Run the same ``check run`` argument vector the generated verbs render.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         return main([
             "check",
             "run",
@@ -65,7 +71,9 @@ class TestsFlextInfraCheckReportContract:
             *mode,
         ])
 
-    def test_sarif_report_validates_its_own_emitted_json(self) -> None:
+    @staticmethod
+    def test_sarif_report_validates_its_own_emitted_json() -> None:
+        """Test sarif report validates its own emitted json."""
         report = m.Infra.SarifReport(
             runs=(
                 m.Infra.SarifRun(
@@ -73,25 +81,27 @@ class TestsFlextInfraCheckReportContract:
                     information_uri="https://example.invalid/tool",
                     rules=(
                         m.Infra.SarifRule(
-                            id="F401",
+                            id="unused-import",
                             short_description="Ruff Linter (lint) issue",
                             helpUri="https://example.invalid/rule",
                         ),
                     ),
                     results=(
                         m.Infra.SarifResult(
-                            ruleId="F401",
+                            ruleId="unused-import",
                             level="error",
                             message="`os` imported but unused",
                             locations=[
                                 m.Infra.SarifLocation(
-                                    uri="src/p1/module.py", start_line=3, start_column=8
-                                )
+                                    uri="src/p1/module.py",
+                                    start_line=3,
+                                    start_column=8,
+                                ),
                             ],
                         ),
                     ),
                 ),
-            )
+            ),
         )
 
         emitted = report.model_dump_json()
@@ -100,8 +110,10 @@ class TestsFlextInfraCheckReportContract:
         tm.that(m.Infra.SarifReport.model_validate_json(emitted), eq=report)
 
     def test_check_without_apply_leaves_sources_and_reports_findings(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
+        """Test check without apply leaves sources and reports findings."""
         project = self._project(tmp_path)
         reports = tmp_path / "reports"
         before = self._sources(project)
@@ -121,12 +133,10 @@ class TestsFlextInfraCheckReportContract:
         )
 
     def test_check_with_apply_is_the_mutating_fix_path(self, tmp_path: Path) -> None:
+        """Test check with apply is the mutating fix path."""
         project = self._project(tmp_path)
         before = self._sources(project)
 
         tm.that(self._check_run(project, tmp_path / "reports", "--apply"), eq=0)
 
         tm.that(self._sources(project), ne=before)
-
-
-__all__: list[str] = ["TestsFlextInfraCheckReportContract"]

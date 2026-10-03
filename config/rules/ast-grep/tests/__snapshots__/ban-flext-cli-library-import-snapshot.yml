@@ -1,0 +1,42 @@
+id: ban-flext-cli-library-import
+snapshots:
+  from rich.console import Console:
+    labels:
+    - source: from rich.console import Console
+      style: primary
+      start: 0
+      end: 32
+    - source: rich.console
+      style: secondary
+      start: 5
+      end: 17
+  import click:
+    labels:
+    - source: import click
+      style: primary
+      start: 0
+      end: 12
+    - source: click
+      style: secondary
+      start: 7
+      end: 12
+  import orjson:
+    labels:
+    - source: import orjson
+      style: primary
+      start: 0
+      end: 13
+    - source: orjson
+      style: secondary
+      start: 7
+      end: 13
+  import rich:
+    labels:
+    - source: import rich
+      style: primary
+      start: 0
+      end: 11
+    - source: rich
+      style: secondary
+      start: 7
+      end: 11

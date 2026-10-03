@@ -1,4 +1,8 @@
-"""Typed SonarCloud web API contracts for the server-side settings sync."""
+"""Typed SonarCloud web API contracts for the server-side settings sync.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -15,7 +19,9 @@ class FlextInfraModelsSonarcloud:
         """One ``sonar.issue.ignore.multicriteria`` entry as the API spells it."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            extra="forbid", frozen=True, populate_by_name=True
+            extra="forbid",
+            frozen=True,
+            populate_by_name=True,
         )
 
         rule_key: Annotated[
@@ -38,13 +44,15 @@ class FlextInfraModelsSonarcloud:
     class SonarcloudSetting(m.ContractModel):
         """One setting returned by ``api/settings/values``.
 
-        The endpoint also reports bookkeeping (for example ``inherited``) that
-        this contract does not consume; only ``key`` and ``fieldValues`` are
-        read, so the unread keys are ignored rather than forbidden.
+        ``fieldValues`` contains the effective value, including inherited
+        entries. Origin bookkeeping does not change which entries are active.
+        Unread metadata is ignored rather than forbidden.
         """
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            extra="ignore", frozen=True, populate_by_name=True
+            extra="ignore",
+            frozen=True,
+            populate_by_name=True,
         )
 
         key: Annotated[t.NonEmptyStr, m.Field(description="Setting key")]
@@ -64,7 +72,7 @@ class FlextInfraModelsSonarcloud:
 
         settings: Annotated[
             t.VariadicTuple[FlextInfraModelsSonarcloud.SonarcloudSetting],
-            m.Field(description="Settings the project defines for the asked keys"),
+            m.Field(description="Effective settings for the requested keys"),
         ]
 
     class SonarcloudAuthentication(m.ContractModel):
@@ -81,53 +89,79 @@ class FlextInfraModelsSonarcloud:
 
         api_url: Annotated[t.NonEmptyStr, m.Field(description="Web API origin")]
         timeout_seconds: Annotated[
-            t.PositiveInt, m.Field(description="Per-request timeout")
+            t.PositiveInt,
+            m.Field(description="Per-request timeout"),
         ]
         project_key: Annotated[
-            t.NonEmptyStr, m.Field(description="<organization>_<repository>")
+            t.NonEmptyStr,
+            m.Field(description="<organization>_<repository>"),
         ]
         setting_key: Annotated[
-            t.NonEmptyStr, m.Field(description="PROPERTY_SET setting key")
+            t.NonEmptyStr,
+            m.Field(description="PROPERTY_SET setting key"),
         ]
         field_values: Annotated[
             t.VariadicTuple[FlextInfraModelsSonarcloud.SonarcloudIssueFieldValue],
-            m.Field(min_length=1, description="Entries in SSOT order"),
+            m.Field(description="Entries in SSOT order; empty means reset"),
         ]
 
-        def current_field_values(
-            self, current: FlextInfraModelsSonarcloud.SonarcloudSettingsValues
-        ) -> t.VariadicTuple[FlextInfraModelsSonarcloud.SonarcloudIssueFieldValue]:
-            """Return the entries the server holds for this plan's setting key."""
-            return tuple(
-                value
-                for setting in current.settings
-                if setting.key == self.setting_key
-                for value in setting.field_values
-            )
+    class SonarcloudSettingsWriteRequest(m.ContractModel):
+        """One complete POST request selected from a validated settings plan."""
 
-        def in_sync_with(
-            self, current: FlextInfraModelsSonarcloud.SonarcloudSettingsValues
-        ) -> bool:
-            """Whether the server already holds exactly the SSOT entries.
+        api_path: Annotated[t.NonEmptyStr, m.Field(description="Web API endpoint")]
+        form: Annotated[
+            t.VariadicTuple[t.Pair[str, str]],
+            m.Field(min_length=2, description="Ordered form fields for the endpoint"),
+        ]
 
-            The property set is compared as a set: the API replaces the whole
-            value, and the SSOT is validated duplicate-free, so order carries
-            no meaning for which issues are excluded.
-            """
-            return frozenset(self.current_field_values(current)) == frozenset(
-                self.field_values
-            )
+    class SonarcloudIssue(m.ContractModel):
+        """One issue in a SonarCloud issue-search response."""
 
-        def form_fields(self) -> t.VariadicTuple[t.Pair[str, str]]:
-            """Return the ``api/settings/set`` form, one ``fieldValues`` per entry."""
-            return (
-                ("component", self.project_key),
-                ("key", self.setting_key),
-                *(
-                    ("fieldValues", value.model_dump_json(by_alias=True))
-                    for value in self.field_values
-                ),
-            )
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore", frozen=True)
+
+        key: Annotated[t.NonEmptyStr, m.Field(description="Stable issue key")]
+        rule: Annotated[t.NonEmptyStr, m.Field(description="Rule key")]
+        component: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Project and file key"),
+        ]
+        line: Annotated[
+            int | None,
+            m.Field(description="Source line, when assigned"),
+        ] = None
+        message: Annotated[t.NonEmptyStr, m.Field(description="Observed finding")]
+
+    class SonarcloudIssuePaging(m.ContractModel):
+        """Server-side page accounting required before reporting completeness."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore", frozen=True)
+
+        page_index: Annotated[
+            t.PositiveInt,
+            m.Field(validation_alias="pageIndex", description="One-based page index"),
+        ]
+        page_size: Annotated[
+            t.PositiveInt,
+            m.Field(validation_alias="pageSize", description="Issues per page"),
+        ]
+        total: Annotated[
+            int,
+            m.Field(ge=0, description="Total issues matching the server query"),
+        ]
+
+    class SonarcloudIssueSearch(m.ContractModel):
+        """A complete typed page returned by ``api/issues/search``."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore", frozen=True)
+
+        paging: Annotated[
+            FlextInfraModelsSonarcloud.SonarcloudIssuePaging,
+            m.Field(description="Server-side page accounting of this page"),
+        ]
+        issues: Annotated[
+            t.VariadicTuple[FlextInfraModelsSonarcloud.SonarcloudIssue],
+            m.Field(description="Issues returned on this page"),
+        ]
 
 
 __all__: list[str] = ["FlextInfraModelsSonarcloud"]

@@ -1,68 +1,45 @@
-# Mapa de decisões aplicáveis ao flext-infra
+# Decision map for flext-infra
 
 <!-- TOC START -->
 
-- [Divergências identificadas](#divergencias-identificadas)
-- [Contexto de implementação](#contexto-de-implementacao)
-- [Estado corrente (reconciliado com fontes vivas em a2bd0a726)](#estado-corrente-reconciliado-com-fontes-vivas-em-a2bd0a726)
+- [Known divergences](#known-divergences)
+- [Current contract](#current-contract)
 
 <!-- TOC END -->
 
-Este índice aponta os responsáveis arquiteturais da estabilização de namespace e
-runtime. Os ADRs de plataforma abaixo pertencem a `flext`; este repositório mantém o
-código, seus testes e este mapa de navegação. O índice não substitui nem duplica o texto
-das decisões.
+This index points to the architectural owners that govern flext-infra. The platform
+ADRs below belong to the `flext` workspace; this repository keeps the code, its tests,
+and this navigation map. The index does not replace or duplicate the decision text.
 
-| Referência                                                                                                                                 | Responsabilidade                                        | Aplicação nesta execução                                                                              |
-| ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| [ADR-005](https://github.com/flext-sh/flext/blob/0.12.0-dev/docs/architecture/adr/005-config-settings-constants-templates-schemas-ssot.md) | Configuração, settings, constantes, templates e schemas | Usar §§1–2 para configuração e seus responsáveis tipados; corrigir templates/SSOT antes das projeções |
-| [ADR-010](https://github.com/flext-sh/flext/blob/0.12.0-dev/docs/architecture/adr/010-unified-project-standardization-via-codegen.md)      | Padronização e descoberta semântica                     | §3b descreve descoberta nas fontes e rewiring automático; conferir a implementação e a skill canônica |
-| [ADR-014](https://github.com/flext-sh/flext/blob/0.12.0-dev/docs/architecture/adr/014-family-part-shape-rope-codemod-rules.md)             | Forma das famílias e codemods Rope                      | Alinhar órfãos, wrappers, consumidores e detecção de namespace                                        |
+| Reference                                                                                                                                  | Responsibility                                            | Application in flext-infra                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| [ADR-005](https://github.com/flext-sh/flext/blob/0.12.0-dev/docs/architecture/adr/005-config-settings-constants-templates-schemas-ssot.md) | Configuration, settings, constants, templates and schemas | Use §§1–2 for configuration and its typed owners; fix templates/SSOT before projections    |
+| [ADR-010](https://github.com/flext-sh/flext/blob/0.12.0-dev/docs/architecture/adr/010-unified-project-standardization-via-codegen.md)      | Standardization and semantic discovery                    | §3b describes source discovery and automatic rewiring; check it against the implementation |
+| [ADR-014](https://github.com/flext-sh/flext/blob/0.12.0-dev/docs/architecture/adr/014-family-part-shape-rope-codemod-rules.md)             | Family shape and Rope codemods                            | Align orphans, wrappers, consumers and namespace detection                                 |
 
-## Divergências identificadas
+## Known divergences
 
-ADR-012 não é a referência de configuração dessa linha: `flext-z0zkq` já documentou a
-correção para ADR-005 e os docstrings de `_settings.py`/`_config.py`. A propagação
-restante está ligada a `flext-la3z5`.
+These divergences remain open in the platform ADR text. Do not resolve them silently;
+report a conflict to the owning ADR instead.
 
-ADR-005 §6 contém uma proibição histórica de AST, enquanto ADR-010 §3b e a skill
-`flext-law` descrevem o circuito AST/Rope/LSP. ADR-010 §2 contém, enquanto o plano de
-reconciliação de 14/09/2026 determina verbos sem seletores. Essas divergências estão
-documentadas no [handoff](../../roadmap/namespace-automation-handoff-2026-09-14.md), com
-as revisões consultadas e a precedência do pedido mais recente. Este índice não declara
-que os ADRs de plataforma já foram alterados.
+- ADR-012 is absent from this directory. The configuration reference is ADR-005 §§1–2
+  together with the `_settings.py` and `_config.py` docstrings.
+- ADR-005 §6 carries a historical AST prohibition, while ADR-010 §3b describes the
+  AST/Rope/LSP pipeline the code implements.
+- ADR-010 §2 mentions Make verbs with selectors, while the current Make surface uses
+  selector-free verbs and no longer has `APPLY`.
 
-## Contexto de implementação
+## Current contract
 
-O plano reconstruído, as causas ainda não corrigidas e os responsáveis estão no handoff.
-`flext-5fxu6.4` é o Bead principal de geração/enforcement; `flext-pwmej` cobre a
-convergência dos gates; `flext-ro6mj.1` trata da capacidade correlata de
-coleta/reconciliação de planos. Consulte o
-[guia de recuperação](../../guides/execution-context.md) antes de reiniciar uma
-varredura de contexto.
+The current implementation supersedes the divergent ADR text on these points:
 
-## Estado corrente (reconciliado com fontes vivas em `a2bd0a726`)
+- `APPLY` is removed from every producer and consumer.
+- Configuration declares `latest`. Only `make upg` resolves newer releases and writes
+  the committed `uv.lock` and `mise.lock`; `make setup`, `make gen` and `make fmt`
+  install frozen from those locks.
+- `make upg` is the only writer of `mise.version`, `bin/mise` and `bin/mise.cmd`, which
+  Mise itself generates (`mise generate install-script`) for the resolved release.
+  `make gen`, `make check` and CI only verify them offline.
 
-Os ADRs de plataforma acima não foram alterados desde a consulta. As divergências
-listadas permanecem abertas e não devem ser silenciosamente escolhidas:
-
-- ADR-005 §6 proíbe AST; ADR-010 §3b e a skill `flext-law` descrevem o circuito
-  AST/Rope/LSP.
-- ADR-010 §2 menciona verbos com seletor, enquanto o plano vigente determina verbos sem
-  seletor e a remoção de `APPLY`.
-- ADR-012 continua ausente deste diretório; `flext-z0zkq` documentou a referência
-  histórica e determina ADR-005 §§1–2 como padrão. A propagação restante é de
-  `flext-la3z5`.
-
-A correção mais recente do operador sobrepõe esses textos: `APPLY`, `uv.lock` e
-`mise.lock` estão exterminados em todos os produtores e consumidores, e os Beads são
-exclusivamente do Gas City. Qualquer nova leitura desses ADRs deve aplicar essa
-precedência e reportar o conflito no Bead owner, não resolver em silêncio.
-
-O estado dos god modules e do defeito `_lazy_analysis` não é provado resolvido por
-qualquer fonte viva. Consulte o [roadmap](../../roadmap/index.md) para a tabela corrente
-e o Bead ativo. Gas City task `flext-itpd1.2` mantém o cursor da convergência documental
-e `flext-5fxu6.4` mantém o owner técnico de geração/enforcement; o
-[handoff de namespace e runtime](../../roadmap/namespace-automation-handoff-2026-09-14.md)
-é a rota versionada de retomada. Planos locais do superprojeto são contexto de sessão e
-não fazem parte do contrato standalone.
+The [execution context guide](../../guides/execution-context.md) documents the
+operational details.

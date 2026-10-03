@@ -1,4 +1,8 @@
-"""Test extra paths manager behavior."""
+"""Test extra paths manager behavior.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,16 +23,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraExtraPathsManager:
     """Test flext infra extra paths manager behavior."""
 
-    def test_manager_initialization(self) -> None:
-        """Verify manager initialization."""
-        manager = ExtraPathsTestSupport.manager()
-        tm.that(manager.__class__.__name__, eq="FlextInfraExtraPathsManager")
-
-    def test_manager_has_required_services(self) -> None:
-        """Verify manager has required services."""
-        ExtraPathsTestSupport.manager()
-
-    def test_sync_one_missing_file(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_sync_one_missing_file(tmp_path: Path) -> None:
         """Verify sync one missing file."""
         tm.that(
             not ExtraPathsTestSupport
@@ -38,7 +34,8 @@ class TestsFlextInfraExtraPathsManager:
             eq=True,
         )
 
-    def test_sync_one_no_tool_section(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_sync_one_no_tool_section(tmp_path: Path) -> None:
         """Verify sync one no tool section."""
         pyproject = tmp_path / "pyproject.toml"
         doc = u.Cli.toml_document()
@@ -48,7 +45,8 @@ class TestsFlextInfraExtraPathsManager:
         tm.that(result.success, eq=True)
         tm.that(result.value, eq=False)
 
-    def test_sync_one_no_pyright_section(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_sync_one_no_pyright_section(tmp_path: Path) -> None:
         """Verify sync one no pyright section."""
         pyproject = tmp_path / "pyproject.toml"
         doc = u.Cli.toml_document()
@@ -60,6 +58,7 @@ class TestsFlextInfraExtraPathsManager:
         tm.that(result.success, eq=True)
         tm.that(result.value, eq=False)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "tool_doc",
         [
@@ -69,7 +68,8 @@ class TestsFlextInfraExtraPathsManager:
         ],
     )
     def test_sync_one_success_cases(
-        self, tmp_path: Path, tool_doc: t.MappingKV[str, t.Infra.InfraValue]
+        tmp_path: Path,
+        tool_doc: t.MappingKV[str, t.JsonValue],
     ) -> None:
         """Verify sync one success cases."""
         pyproject = tmp_path / "pyproject.toml"
@@ -77,11 +77,13 @@ class TestsFlextInfraExtraPathsManager:
         doc["tool"] = tool_doc
         pyproject.write_text(doc.as_string(), encoding="utf-8")
         result = ExtraPathsTestSupport.manager().sync_one(
-            pyproject, is_root="pyrefly" not in tool_doc
+            pyproject,
+            is_root="pyrefly" not in tool_doc,
         )
         tm.that(result.success, eq=True)
 
-    def test_sync_one_dry_run(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_sync_one_dry_run(tmp_path: Path) -> None:
         """Verify sync one dry run."""
         pyproject = tmp_path / "pyproject.toml"
         doc = u.Cli.toml_document()
@@ -89,12 +91,15 @@ class TestsFlextInfraExtraPathsManager:
         pyproject.write_text(doc.as_string(), encoding="utf-8")
         tm.ok(
             ExtraPathsTestSupport.manager().sync_one(
-                pyproject, dry_run=True, is_root=True
-            )
+                pyproject,
+                dry_run=True,
+                is_root=True,
+            ),
         )
         tm.that(pyproject.read_text(encoding="utf-8"), contains="old")
 
-    def test_sync_one_write_failure(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_sync_one_write_failure(tmp_path: Path) -> None:
         """Verify sync one write failure."""
         pyproject = tmp_path / "pyproject.toml"
         pyproject.write_text('[tool.pyright]\nextraPaths = ["old"]\n', encoding="utf-8")
@@ -105,8 +110,9 @@ class TestsFlextInfraExtraPathsManager:
             has="TOML write",
         )
 
+    @staticmethod
     def test_pyrefly_includes_skip_empty_declared_directory(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """An existing empty env_dir is not reintroduced after conform removes it."""
         project = u.Tests.mk_project(tmp_path, "demo")
@@ -117,12 +123,14 @@ class TestsFlextInfraExtraPathsManager:
         (project / "examples").mkdir()
 
         includes = ExtraPathsTestSupport.manager(project).pyrefly_project_includes(
-            project_dir=project, is_root=False
+            project_dir=project,
+            is_root=False,
         )
 
         tm.that(includes, eq=["src/**/*.py*", "tests/**/*.py*"])
 
-    def test_base_constants(self) -> None:
+    @staticmethod
+    def test_base_constants() -> None:
         """Verify base constants."""
         manager = ExtraPathsTestSupport.manager()
         tm.that(manager.root.is_absolute(), eq=True)

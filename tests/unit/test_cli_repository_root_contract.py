@@ -1,4 +1,8 @@
-"""Generated Make scope options must match the real CLI route contract."""
+"""Generated Make scope options must match the real CLI route contract.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,35 +13,46 @@ from flext_tests import tm
 
 from flext_infra import c, config, main
 from flext_infra.codegen.conform import FlextInfraCodegenConform
-from flext_infra.services.cli_routes import CliRouteService
+from flext_infra.services.cli_routes import FlextInfraCliRouteService
 from tests import u
 
 
 class TestsFlextInfraCliRepositoryRootContract:
+    """Tests for ``FlextInfraCliRepositoryRootContract``."""
+
+    @staticmethod
     @pytest.fixture
-    def rendered_makefile(self, tmp_path: Path) -> str:
-        """Use the conform owner and typed fixtures, not a copied Make recipe."""
+    def rendered_makefile(tmp_path: Path) -> str:
+        """Use the conform owner and typed fixtures, not a copied Make recipe.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         repository = u.Tests.repository_ref("scope-contract-fixture")
         request = u.Tests.conform_request(
-            tmp_path, what=c.Infra.CodegenConformSurface.MAKEFILE
+            tmp_path,
+            what=c.Infra.CodegenConformSurface.MAKEFILE,
         )
         plan = tm.ok(
             FlextInfraCodegenConform(
                 repository_root=tmp_path,
                 request=request,
                 initial_workspace=u.Tests.workspace_spec(
-                    repository, project=u.Tests.project_spec(repository.name)
+                    repository,
+                    project=u.Tests.project_spec(repository.name),
                 ),
-            ).plan(request)
+            ).plan(request),
         )
         return u.Tests.codegen_file_text(
             next(
                 file
                 for file in plan.files
                 if file.path.name == c.Infra.MAKEFILE_FILENAME
-            )
+            ),
         )
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("group", "command", "generated_command"),
         [
@@ -51,12 +66,15 @@ class TestsFlextInfraCliRepositoryRootContract:
         ],
     )
     def test_generated_scope_matches_route_and_help(
-        self, rendered_makefile: str, group: str, command: str, generated_command: str
+        rendered_makefile: str,
+        group: str,
+        command: str,
+        generated_command: str,
     ) -> None:
         """Reject stale recipes and hidden service aliases as well as CLI drift."""
         route = next(
             route
-            for route in CliRouteService.route_table_for(group)
+            for route in FlextInfraCliRouteService.route_table_for(group)
             if route.name == command
         )
         fields = route.model_cls.model_fields
@@ -74,6 +92,3 @@ class TestsFlextInfraCliRepositoryRootContract:
         # The route model field IS the CLI option (typed contract above); help must
         # render, and its styled text is presentation, never the contract.
         tm.that(main([group, route.name, "--help"]), eq=0)
-
-
-__all__: list[str] = ["TestsFlextInfraCliRepositoryRootContract"]

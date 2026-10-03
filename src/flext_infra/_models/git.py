@@ -1,4 +1,8 @@
-"""Typed Git request/report contracts for flext-infra public Git API."""
+"""Typed Git request/report contracts for flext-infra public Git API.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,13 +12,15 @@ from typing import Annotated, ClassVar
 from flext_cli import m
 
 from flext_infra import t
-
-from ._git.identity import FlextInfraModelsGitIdentity
-from ._git.worktree_facts import FlextInfraModelsGitWorktreeFacts
+from flext_infra._models._git.identity import FlextInfraModelsGitIdentity
+from flext_infra._models._git.worktree_facts import FlextInfraModelsGitWorktreeFacts
+from flext_infra._models._git.worktree_state import FlextInfraModelsGitWorktreeState
 
 
 class FlextInfraModelsGit(
-    FlextInfraModelsGitIdentity, FlextInfraModelsGitWorktreeFacts
+    FlextInfraModelsGitIdentity,
+    FlextInfraModelsGitWorktreeFacts,
+    FlextInfraModelsGitWorktreeState,
 ):
     """Declaration-only models for Git facade and FlextInfraGitService.
 
@@ -42,7 +48,8 @@ class FlextInfraModelsGit(
 
         repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
         porcelain: Annotated[
-            str, m.Field(description="Raw git status --porcelain output")
+            str,
+            m.Field(description="Raw git status --porcelain output"),
         ]
         dirty: Annotated[bool, m.Field(description="Whether the worktree is dirty")]
 
@@ -52,7 +59,8 @@ class FlextInfraModelsGit(
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
         primary_root: Annotated[
-            Path, m.Field(description="Canonical primary worktree root")
+            Path,
+            m.Field(description="Canonical primary worktree root"),
         ]
 
     class GitRootReport(m.ContractModel):
@@ -61,7 +69,8 @@ class FlextInfraModelsGit(
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
         repository_root: Annotated[
-            Path, m.Field(description="Workspace or superproject root")
+            Path,
+            m.Field(description="Workspace or superproject root"),
         ]
 
     class GitOidReport(m.ContractModel):
@@ -92,6 +101,50 @@ class FlextInfraModelsGit(
 
         value: Annotated[bool, m.Field(description="Predicate result")]
 
+    class GitWorktreeEntry(m.ContractModel):
+        """One registered worktree checkout from Git's canonical registry."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        path: Annotated[Path, m.Field(description="Registered worktree root")]
+        head: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(description="Checked-out commit oid; absent for a bare worktree"),
+        ] = None
+        branch: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(description="Checked-out branch short name; absent when detached"),
+        ] = None
+        detached: Annotated[bool, m.Field(description="Whether HEAD is detached")] = (
+            False
+        )
+        bare: Annotated[
+            bool,
+            m.Field(description="Whether this is the bare main worktree"),
+        ] = False
+        locked: Annotated[
+            bool,
+            m.Field(description="Whether the worktree is locked"),
+        ] = False
+
+    class GitWorktreeListReport(m.ContractModel):
+        """Git's worktree registry, parsed once, plus its raw porcelain contract."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        root: Annotated[
+            Path,
+            m.Field(description="Repository the registry was read for"),
+        ]
+        entries: Annotated[
+            t.VariadicTuple[FlextInfraModelsGit.GitWorktreeEntry],
+            m.Field(description="Every registered worktree, primary first"),
+        ]
+        porcelain: Annotated[
+            str,
+            m.Field(description="Raw git worktree list --porcelain output"),
+        ]
+
     class GitBranchRequest(m.ContractModel):
         """Repository plus branch name for branch-scoped operations."""
 
@@ -115,7 +168,8 @@ class FlextInfraModelsGit(
 
         repo_root: Annotated[Path, m.Field(description="Superproject worktree root")]
         section: Annotated[
-            t.NonEmptyStr, m.Field(description="Section, e.g. submodule.flext-core")
+            t.NonEmptyStr,
+            m.Field(description="Section, e.g. submodule.flext-core"),
         ]
         key: Annotated[t.NonEmptyStr, m.Field(description="Key inside the section")]
 
@@ -126,6 +180,23 @@ class FlextInfraModelsGit(
 
         repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
         commitish: Annotated[t.NonEmptyStr, m.Field(description="Commit-ish")]
+
+    class GitAncestryRequest(m.ContractModel):
+        """Repository plus the ancestor and descendant an ancestry proof relates.
+
+        ``descendant`` defaults to ``HEAD``, so the HEAD-bound proof every
+        existing consumer relied on is the same single owner generalized to an
+        arbitrary pair; there is no separate pair verb.
+        """
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
+        ancestor: Annotated[t.NonEmptyStr, m.Field(description="Candidate ancestor")]
+        descendant: Annotated[
+            t.NonEmptyStr,
+            m.Field(default="HEAD", description="Candidate descendant"),
+        ] = "HEAD"
 
     class GitPathPairRequest(m.ContractModel):
         """Repository plus source/target relative paths."""
@@ -143,7 +214,8 @@ class FlextInfraModelsGit(
 
         repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
         relative_path: Annotated[
-            t.NonEmptyStr, m.Field(description="Path relative to repo root")
+            t.NonEmptyStr,
+            m.Field(description="Path relative to repo root"),
         ]
 
     class GitDeleteRefRequest(m.ContractModel):
@@ -154,7 +226,8 @@ class FlextInfraModelsGit(
         repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
         reference: Annotated[t.NonEmptyStr, m.Field(description="Exact Git ref")]
         expected_oid: Annotated[
-            t.NonEmptyStr, m.Field(description="Expected tip oid for CAS delete")
+            t.NonEmptyStr,
+            m.Field(description="Expected tip oid for CAS delete"),
         ]
 
     class GitPushRequest(m.ContractModel):
@@ -175,13 +248,16 @@ class FlextInfraModelsGit(
         lane: Annotated[Path, m.Field(description="Absolute lane worktree path")]
         branch: Annotated[t.NonEmptyStr, m.Field(description="Lane branch name")]
         base: Annotated[
-            t.NonEmptyStr, m.Field(description="Base commit-ish when creating branch")
+            t.NonEmptyStr,
+            m.Field(description="Base commit-ish when creating branch"),
         ]
         track_remote: Annotated[
-            bool, m.Field(description="Track origin/<branch> when creating")
+            bool,
+            m.Field(description="Track origin/<branch> when creating"),
         ] = False
         local_branch_exists: Annotated[
-            bool, m.Field(description="Whether refs/heads/<branch> already exists")
+            bool,
+            m.Field(description="Whether refs/heads/<branch> already exists"),
         ] = False
 
     class GitNumstatReport(m.ContractModel):
@@ -198,10 +274,12 @@ class FlextInfraModelsGit(
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
         paths_z: Annotated[
-            bytes, m.Field(description="NUL-delimited ls-files path list")
+            bytes,
+            m.Field(description="NUL-delimited ls-files path list"),
         ]
         index_z: Annotated[
-            bytes, m.Field(description="NUL-delimited ls-files --stage list")
+            bytes,
+            m.Field(description="NUL-delimited ls-files --stage list"),
         ]
         head: Annotated[bytes, m.Field(description="HEAD oid bytes or UNBORN")]
 
@@ -213,7 +291,8 @@ class FlextInfraModelsGit(
         repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
         oid: Annotated[t.NonEmptyStr, m.Field(description="Gitlink commit oid")]
         relative_path: Annotated[
-            t.NonEmptyStr, m.Field(description="Gitlink path relative to repo")
+            t.NonEmptyStr,
+            m.Field(description="Gitlink path relative to repo"),
         ]
 
     class GitPathsRequest(m.ContractModel):
@@ -261,8 +340,26 @@ class FlextInfraModelsGit(
 
         url: Annotated[t.NonEmptyStr, m.Field(description="Declared submodule URL")]
         branch: Annotated[
-            t.NonEmptyStr, m.Field(description="Declared submodule branch")
+            t.NonEmptyStr,
+            m.Field(description="Declared submodule branch"),
         ]
+
+    class GitLaneRequest(m.ContractModel):
+        """One publication lane: ``branch`` carried from ``base`` to a pull request."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
+        branch: Annotated[t.NonEmptyStr, m.Field(description="Lane branch")]
+        base: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Integration branch the lane starts from and targets"),
+        ]
+        subject: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Commit subject and pull-request title"),
+        ]
+        body_file: Annotated[Path, m.Field(description="Pull-request body file")]
 
     class GitCheckoutPathsRequest(m.ContractModel):
         """Repository plus optional paths for checkout/restore operations."""

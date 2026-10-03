@@ -1,4 +1,8 @@
-"""Documentation scope behavior inside linked-worktree directory layouts."""
+"""Documentation scope behavior inside linked-worktree directory layouts.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -15,8 +19,9 @@ if TYPE_CHECKING:
 class TestsFlextInfraDocsScopeWorktree:
     """Contract for docs scope classification inside a linked-worktree lane."""
 
+    @staticmethod
     def test_project_scope_uses_declared_name_inside_worktree_lane(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Classify a project from metadata, not the worktree directory basename."""
         lane = tmp_path / ".worktrees" / "lane-example"
@@ -29,12 +34,11 @@ class TestsFlextInfraDocsScopeWorktree:
         )
 
         result = u.Infra.build_scopes(
-            lane, projects=None, output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR
+            lane,
+            projects=None,
+            output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR,
         )
 
         tm.ok(result)
         tm.that([scope.name for scope in result.value], eq=["flext-demo"])
         tm.that(result.value[0].path, eq=lane.resolve())
-
-
-__all__: list[str] = ["TestsFlextInfraDocsScopeWorktree"]

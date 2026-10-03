@@ -22,7 +22,12 @@ class FlextInfraDocAuditorMixin:
 
     @staticmethod
     def resolve_checks(check: str) -> t.Infra.StrSet:
-        """Parse check string into a resolved set of check names."""
+        """Parse check string into a resolved set of check names.
+
+        Returns:
+            The resulting ``t.Infra.StrSet``.
+
+        """
         checks = {part.strip() for part in check.split(",") if part.strip()}
         if not checks or "all" in checks:
             return {
@@ -79,9 +84,12 @@ class FlextInfraDocAuditorMixin:
             c.Infra.RK_SUMMARY: summary,
             "issues": issues_payload,
         }
-        _ = u.Cli.json_write(scope.report_dir / "audit-summary.json", summary_payload)
+        _ = u.Cli.json_write(
+            scope.report_dir / c.Infra.DOCS_AUDIT_SUMMARY_FILENAME,
+            summary_payload,
+        )
         _ = u.Infra.write_markdown(
-            scope.report_dir / "audit-report.md",
+            scope.report_dir / c.Infra.DOCS_AUDIT_REPORT_FILENAME,
             to_markdown_fn(scope, issues, docstring_coverage),
         )
 

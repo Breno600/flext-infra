@@ -1,12 +1,15 @@
-"""Promoted-command discovery across first-wins script roots."""
+"""Promoted-command discovery across first-wins script roots.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Self
 
 from flext_infra import c, u
-
-from .registry import FlextInfraPromotedRegistry
+from flext_infra._promoted.registry import FlextInfraPromotedRegistry
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -23,7 +26,7 @@ class FlextInfraPromotedDiscovery(FlextInfraPromotedRegistry):
         cls,
         *,
         script_roots: Sequence[Path] | None = None,
-        spec: p.Infra.Promoted.WorkspaceSpec | None = None,
+        spec: p.Infra.PromotedWorkspaceSpec | None = None,
     ) -> Self:
         """Discover promoted commands from every configured script root.
 
@@ -31,6 +34,10 @@ class FlextInfraPromotedDiscovery(FlextInfraPromotedRegistry):
         workspace can inject ``scripts/`` before its subrepos while each isolated
         subrepo stays authoritative over its own commands. Without injection the
         order is ``spec.scripts``, sorted submodule roots, then the consumer root.
+
+        Returns:
+            The resulting ``Self``.
+
         """
         message = c.Infra.PromotedMessage
         workspace = spec or u.Infra.promoted_discovered_workspace_spec()
@@ -52,7 +59,9 @@ class FlextInfraPromotedDiscovery(FlextInfraPromotedRegistry):
                     continue
                 if not verb_dir.is_dir():
                     u.Infra.promoted_fail(
-                        message.INVALID_SCRIPTS_ENTRY, path=verb_dir, root=root
+                        message.INVALID_SCRIPTS_ENTRY,
+                        path=verb_dir,
+                        root=root,
                     )
                 # A directory where no file declares a header is not a command
                 # directory; a present but invalid header stays a defect.

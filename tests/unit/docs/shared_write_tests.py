@@ -1,4 +1,8 @@
-"""Public tests for docs-related write helpers."""
+"""Public tests for docs-related write helpers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -14,7 +18,9 @@ class TestsFlextInfraDocsSharedWrite:
 
     _MIN_MARKDOWN_NEWLINES = 3
 
-    def test_json_write_round_trips_dict_payload(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_json_write_round_trips_dict_payload(tmp_path: Path) -> None:
+        """Test json write round trips dict payload."""
         json_file = tmp_path / "nested/data.json"
 
         result = u.Cli.json_write(json_file, {"key": "value", "number": 42})
@@ -25,10 +31,17 @@ class TestsFlextInfraDocsSharedWrite:
         expected: t.JsonMapping = {"key": "value", "number": 42}
         tm.that(read_result.unwrap(), eq=expected)
 
-    def test_json_write_accepts_pydantic_model(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_json_write_accepts_pydantic_model(tmp_path: Path) -> None:
+        """Test json write accepts pydantic model."""
         json_file = tmp_path / "report.json"
         report = m.Infra.DocsPhaseReport(
-            phase="audit", scope="root", items=[], checks=[], strict=False, passed=True
+            phase="audit",
+            scope="root",
+            items=[],
+            checks=[],
+            strict=False,
+            passed=True,
         )
 
         result = u.Cli.json_write(json_file, report)
@@ -36,7 +49,9 @@ class TestsFlextInfraDocsSharedWrite:
         tm.ok(result)
         tm.that(json_file.exists(), eq=True)
 
-    def test_write_markdown_writes_exact_content(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_write_markdown_writes_exact_content(tmp_path: Path) -> None:
+        """Test write markdown writes exact content."""
         md_file = tmp_path / "exact.md"
         lines = ["Line 1", "Line 2", "Line 3"]
 
@@ -46,6 +61,7 @@ class TestsFlextInfraDocsSharedWrite:
         tm.that(md_file.read_text(), eq="Line 1\nLine 2\nLine 3\n")
 
     def test_write_markdown_preserves_empty_lines(self, tmp_path: Path) -> None:
+        """Test write markdown preserves empty lines."""
         md_file = tmp_path / "empty-lines.md"
 
         result = u.Infra.write_markdown(md_file, ["# Title", "", "", "Content"])
@@ -53,11 +69,10 @@ class TestsFlextInfraDocsSharedWrite:
         tm.ok(result)
         tm.that(md_file.read_text().count("\n") >= self._MIN_MARKDOWN_NEWLINES, eq=True)
 
-    def test_write_markdown_fails_for_non_directory_parent(self) -> None:
+    @staticmethod
+    def test_write_markdown_fails_for_non_directory_parent() -> None:
+        """Test write markdown fails for non directory parent."""
         result = u.Infra.write_markdown(Path("/dev/null/test.md"), ["test"])
 
         tm.fail(result)
         tm.that((result.error or ""), has="markdown write error")
-
-
-__all__: list[str] = ["TestsFlextInfraDocsSharedWrite"]

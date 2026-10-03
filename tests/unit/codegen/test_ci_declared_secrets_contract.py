@@ -1,16 +1,18 @@
-"""Verify every rendered ci.yml secret access is a declared workflow_call input."""
+"""Verify every rendered ci.yml secret access is a declared workflow_call input.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
 
-from flext_cli import u
 from flext_tests import tm
 
 from flext_infra import c, t
-
-from ._support import CodegenTestSupport
+from tests import u
 
 
 class TestsFlextInfraCiDeclaredSecretsContract:
@@ -31,13 +33,18 @@ class TestsFlextInfraCiDeclaredSecretsContract:
 
     @classmethod
     def render_ci(cls, tmp_path: Path) -> Path:
-        """Render the ci.yml template once and materialize it for parsing."""
-        spec = CodegenTestSupport.Ci.workflow_spec(
+        """Render the ci.yml template once and materialize it for parsing.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
+        spec = u.CodegenTestSupport.Ci.workflow_spec(
             dist="mcb",
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="conformance/declared-secrets",
-            ci_trigger_branches=CodegenTestSupport.Ci.ci_trigger_branches(
-                "conformance/declared-secrets"
+            ci_trigger_branches=u.CodegenTestSupport.Ci.ci_trigger_branches(
+                "conformance/declared-secrets",
             ),
         )
         workflow_path = tmp_path / "ci.yml"
@@ -46,17 +53,27 @@ class TestsFlextInfraCiDeclaredSecretsContract:
 
     @classmethod
     def _declared_secret_names(cls, workflow_path: Path) -> t.JsonMapping:
-        """Return the workflow_call secret contract parsed from the render."""
+        """Return the workflow_call secret contract parsed from the render.
+
+        Returns:
+            The workflow_call secret contract parsed from the render.
+
+        """
         document = u.Cli.yaml_load_mapping(workflow_path)
         triggers = t.Cli.JSON_MAPPING_ADAPTER.validate_python(document["on"])
         workflow_call = t.Cli.JSON_MAPPING_ADAPTER.validate_python(
-            triggers["workflow_call"]
+            triggers["workflow_call"],
         )
         return t.Cli.JSON_MAPPING_ADAPTER.validate_python(workflow_call["secrets"])
 
     @classmethod
     def _referenced_secret_names(cls, workflow_path: Path) -> set[str]:
-        """Collect every ``secrets.<NAME>`` access in the rendered workflow."""
+        """Collect every ``secrets.<NAME>`` access in the rendered workflow.
+
+        Returns:
+            The resulting ``set[str]``.
+
+        """
         document = u.Cli.yaml_load_mapping(workflow_path)
         jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(document["jobs"])
         referenced: set[str] = set()
@@ -78,7 +95,8 @@ class TestsFlextInfraCiDeclaredSecretsContract:
         return referenced
 
     def test_secret_accesses_are_declared_optional_workflow_call_inputs(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Every referenced secret resolves to an optional workflow_call input."""
         workflow_path = self.render_ci(tmp_path)
@@ -93,6 +111,3 @@ class TestsFlextInfraCiDeclaredSecretsContract:
         for contract in declared.values():
             specification = t.Cli.JSON_MAPPING_ADAPTER.validate_python(contract)
             tm.that(specification["required"], eq=False)
-
-
-__all__: list[str] = ["TestsFlextInfraCiDeclaredSecretsContract"]

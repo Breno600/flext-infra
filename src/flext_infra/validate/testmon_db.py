@@ -1,4 +1,8 @@
-"""Typed post-run integrity and saveability for pytest-testmon SQLite DBs."""
+"""Typed post-run integrity and saveability for pytest-testmon SQLite DBs.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,8 +13,7 @@ from typing import TYPE_CHECKING, Annotated, Self, override
 
 from flext_core import r
 from flext_infra import m, u
-
-from ..base import s
+from flext_infra.base import s
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -27,15 +30,36 @@ class FlextInfraTestmonDbInspector(s[m.Infra.TestmonCacheState]):
 
     @u.model_validator(mode="after")
     def _validate_absolute_db(self) -> Self:
-        """Reject relative or empty DB paths."""
+        """Reject relative or in-checkout database paths.
+
+        Returns:
+            The resulting ``Self``.
+
+        Raises:
+            ValueError: If testmon db_path must be absolute; or if testmon database must
+                be outside the repository checkout.
+
+        """
         if not self.db_path.is_absolute():
             msg = "testmon db_path must be absolute"
+            raise ValueError(msg)
+        if self.db_path.resolve().is_relative_to(self.root.resolve()):
+            msg = "testmon database must be outside the repository checkout"
             raise ValueError(msg)
         return self
 
     @staticmethod
     def digest_file(path: Path) -> str | None:
-        """Return a stable digest; absence alone denotes an unseeded cache."""
+        """Return a stable digest; absence alone denotes an unseeded cache.
+
+        Returns:
+            A stable digest; absence alone denotes an unseeded cache.
+
+        Raises:
+            ValueError: If testmon db must not be a symlink; or if testmon db must be a
+                regular file; or if testmon db must not be empty.
+
+        """
         if path.is_symlink():
             msg = f"testmon db must not be a symlink: {path}"
             raise ValueError(msg)
@@ -51,7 +75,13 @@ class FlextInfraTestmonDbInspector(s[m.Infra.TestmonCacheState]):
 
     @staticmethod
     def _validate_open_db(connection: sqlite3.Connection) -> None:
-        """Raise on the first invalid SQLite cache property."""
+        """Raise on the first invalid SQLite cache property.
+
+        Raises:
+            RuntimeError: If testmon wal_checkpoint busy=; or if testmon
+                integrity_check=; or if testmon schema empty.
+
+        """
         checkpoint = connection.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
         if checkpoint is None or int(checkpoint[0]) != 0:
             msg = f"testmon wal_checkpoint busy={checkpoint!r}"
@@ -63,7 +93,7 @@ class FlextInfraTestmonDbInspector(s[m.Infra.TestmonCacheState]):
         tables = {
             row[0]
             for row in connection.execute(
-                "SELECT name FROM sqlite_master WHERE type='table'"
+                "SELECT name FROM sqlite_master WHERE type='table'",
             ).fetchall()
         }
         if not tables:
@@ -71,7 +101,17 @@ class FlextInfraTestmonDbInspector(s[m.Infra.TestmonCacheState]):
             raise RuntimeError(msg)
 
     def _inspect_existing(self) -> p.Result[m.Infra.TestmonCacheState]:
-        """Validate one on-disk DB after pytest has closed it."""
+        """Validate one on-disk DB after pytest has closed it.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.TestmonCacheState]``.
+
+        Raises:
+            FileNotFoundError: If ``not path.exists()``.
+            ValueError: If testmon db must not be a symlink; or if testmon db must be a
+                regular file; or if testmon db must not be empty.
+
+        """
         path = self.db_path
         if path.is_symlink():
             msg = f"testmon db must not be a symlink: {path}"
@@ -103,12 +143,17 @@ class FlextInfraTestmonDbInspector(s[m.Infra.TestmonCacheState]):
                 changed=changed,
                 saveable=saveable,
                 reason=reason,
-            )
+            ),
         )
 
     @override
     def execute(self) -> p.Result[m.Infra.TestmonCacheState]:
-        """Return typed cache state after a successful testmon-backed pytest run."""
+        """Return typed cache state after a successful testmon-backed pytest run.
+
+        Returns:
+            Typed cache state after a successful testmon-backed pytest run.
+
+        """
         return self._inspect_existing()
 
 

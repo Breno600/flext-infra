@@ -1,4 +1,8 @@
-"""Declared finding-count receipts for ast-grep rules, through the public CLI."""
+"""Declared finding-count receipts for ast-grep rules, through the public CLI.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -21,13 +25,14 @@ class TestsFlextInfraModRuleExpectedReceipt:
     @staticmethod
     def _declare(workspace: Path, *, expected: str) -> None:
         """Point the workspace at one local rule carrying the receipt clause."""
-        rules_root = workspace / "codemod" / c.Cli.RULES_DIR_NAME
+        config_path = workspace / c.Infra.CODEMOD_CONFIG_RELPATH
+        rules_root = config_path.parent / c.Cli.RULES_DIR_NAME
         tm.ok(u.Cli.ensure_dir(rules_root))
         tm.ok(
             u.Cli.atomic_write_text_file(
-                workspace / c.Infra.CODEMOD_CONFIG_FILENAME,
-                "ruleDirs:\n  - codemod/rules\ntestConfigs: []\n",
-            )
+                config_path,
+                f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n",
+            ),
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
@@ -42,16 +47,18 @@ class TestsFlextInfraModRuleExpectedReceipt:
                     "message: probe the declared receipt\n"
                     f"{expected}"
                 ),
-            )
+            ),
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
-                workspace / "receipt_sample.py", "value = dict()\n"
-            )
+                workspace / "receipt_sample.py",
+                "value = dict()\n",
+            ),
         )
 
     def test_scan_fails_loud_when_the_count_drifts_from_the_receipt(
-        self, mod_workspace: Path
+        self,
+        mod_workspace: Path,
     ) -> None:
         """A rule declaring two findings over one occurrence is a defect.
 
@@ -69,7 +76,9 @@ class TestsFlextInfraModRuleExpectedReceipt:
             infra_main(["refactor", "mod", "--repository-root", str(mod_workspace)])
 
     def test_a_matching_receipt_does_not_block_the_scan(
-        self, mod_workspace: Path, capsys: pytest.CaptureFixture[str]
+        self,
+        mod_workspace: Path,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """A receipt that matches the occurrence count raises no receipt failure."""
         self._declare(mod_workspace, expected="metadata:\n  expected: 1\n")
@@ -78,6 +87,3 @@ class TestsFlextInfraModRuleExpectedReceipt:
         capture = capsys.readouterr()
 
         tm.that(capture.out + capture.err, lacks="receipt-probe declares")
-
-
-__all__: list[str] = ["TestsFlextInfraModRuleExpectedReceipt"]

@@ -1,4 +1,8 @@
-"""Centralized constants for the deps subpackage."""
+"""Centralized constants for the deps subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -36,14 +40,19 @@ class FlextInfraConstantsDeps:
         "pyproject document is not a TOML mapping"
     )
     PEP621_NAME_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\s*(?P<name>[A-Za-z0-9_.-]+)"
+        r"^\s*(?P<name>[A-Za-z0-9_.-]+)",
     )
     PEP621_REQUIREMENT_HEAD_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\s*(?P<head>[A-Za-z0-9_.-]+(?:\[[^\]]+\])?)"
+        r"^\s*(?P<head>[A-Za-z0-9_.-]+(?:\[[^\]]+\])?)",
+    )
+    # An internal requirement declares its integration line; the commit it
+    # resolves to is recorded only in uv.lock, written by `make upg`.
+    GIT_COMMIT_OID_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$",
     )
     BANNER: ClassVar[str] = (
         "# @flext-generated: continuous\n"
-        "# @flext-owner: flext-infra de/config/codegen.yaml"
+        "# @flext-owner: flext-infra/config/codegen.yaml"
         " + flext-infra/src/flext_infra/templates/project/base/pyproject.toml.j2\n"
         "# @flext-adjust: MANAGED=conflict_sections + overwrite_project_keys."
         " CUSTOM=preserve_project_keys and [tool.*] outside conflict_sections."
@@ -61,6 +70,12 @@ class FlextInfraConstantsDeps:
     )
     DEPENDENCY_LIMITS_FILENAME: ClassVar[str] = "limits.toml"
     """Packaged dependency-limit configuration resource."""
+    DEPTRY_UNUSED_DEPENDENCY_CODE: ClassVar[str] = "DEP002"
+    """Deptry rule code for a declared dependency the code never imports."""
+    MYPY_FOLLOW_UNTYPED_IMPORTS: ClassVar[str] = "follow_untyped_imports"
+    """Mypy option that analyzes installed packages lacking stubs or py.typed."""
+    MYPY_FOLLOW_UNTYPED_IMPORTS_DEFAULT: ClassVar[bool] = False
+    """Mypy's own default when neither governed policy nor project declares it."""
 
 
 __all__: list[str] = ["FlextInfraConstantsDeps"]

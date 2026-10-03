@@ -6,6 +6,9 @@ markers.
 
 Copyright (FlextTestsConstants) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -33,6 +36,28 @@ class TestsFlextInfraConstants(FlextTestsConstants, FlextInfraConstants):
     class Tests(TestsFlextInfraConstantsScanMixin, FlextTestsConstants.Tests):
         """Flat constants optimized for data-driven infra tests."""
 
+        DIRENV_SESSION_ENV_KEYS: ClassVar[t.StrSequence] = (
+            "DIRENV_DIFF",
+            "DIRENV_DIR",
+            "DIRENV_FILE",
+            "DIRENV_IN_ENVRC",
+            "DIRENV_WATCHES",
+            "DIRENV_STDERR",
+            "DIRENV_LOG_ERROR",
+            "DIRENV_LOG_FILTER",
+        )
+        """Direnv session state an outer activation exports to its children.
+
+        Test-only vocabulary: direnv is an external binary and the product
+        declares no Python constant for its session protocol, so no src owner
+        exists to import. ``direnv exec`` reverts the inherited ``DIRENV_DIFF``
+        before evaluating the target ``.envrc``, so a test-declared override of
+        any variable the outer activation touched (``MISE_DATA_DIR``, for one)
+        is silently discarded and the fixture contract is evaluated against the
+        host runtime instead. Isolated runs must therefore start from a parent
+        environment with no inherited direnv session at all.
+        """
+
         GIT_LOCAL_ENV_KEYS: ClassVar[t.StrSequence] = (
             "GIT_ALTERNATE_OBJECT_DIRECTORIES",
             "GIT_CONFIG",
@@ -52,8 +77,45 @@ class TestsFlextInfraConstants(FlextTestsConstants, FlextInfraConstants):
         )
         """Repository-local variables Git exports to hooks and aliases."""
 
+        MAKE_TEMPLATE_HOSTILE_VENV: ClassVar[str] = "hostile/.venv"
+        """Foreign environment beside a run-scoped ``make upg`` template."""
+
+        COLD_MISE_STORAGE: ClassVar[str] = "cold-mise-storage"
+        """Mise storage that starts empty, so every tool and lookup is fetched."""
+
+        MAKE_TEMPLATE_CI_CHECKOUT: ClassVar[str] = "ci"
+        """Home of the template checkout set up once in cold CI storage."""
+
+        MAKE_TEMPLATE_UPG_RECEIPT: ClassVar[str] = "upg-receipt.json"
+        """Recorded ``make upg`` outcome of one run-scoped template."""
+
+        MAKE_TEMPLATE_CI_RECEIPT: ClassVar[str] = "ci-setup-receipt.json"
+        """Recorded cold-storage CI ``make setup`` outcome of one template."""
+
+        DIRENV_STATE_ENV_KEYS: ClassVar[t.StrSequence] = (
+            "DIRENV_DIFF",
+            "DIRENV_DIR",
+            "DIRENV_FILE",
+            "DIRENV_WATCHES",
+        )
+        """direnv's loaded-activation protocol; ``direnv exec`` first reverts it.
+
+        Test-only vocabulary: direnv is an external binary and the product
+        declares no Python constant for its session protocol, so no src owner
+        exists to import. An outer activation (the operator's shell) would
+        otherwise undo the variables a test hands to the activation under test.
+        """
+
         MAKE_ISOLATION_ENV_KEYS: ClassVar[t.StrSequence] = (
+            *DIRENV_STATE_ENV_KEYS,
+            # BASH_ENV: Make's own recursive-invocation propagation variable
+            # (GNU Make protocol), declared by no Python constant.
             "BASH_ENV",
+            # Verb-selector and runtime variables below are declared by the
+            # generated Make surface (template-owned shell), not by Python
+            # constants — the template file is their only owner. FLEXT_ROOT
+            # guards a host-side legacy spelling of the repository root that
+            # no repository artifact declares.
             "CHANGED_ONLY",
             "CHECK_GATES",
             "CHECK_ONLY",
@@ -62,8 +124,9 @@ class TestsFlextInfraConstants(FlextTestsConstants, FlextInfraConstants):
             "FIX",
             "FLEXT_INFRA_PYTHON",
             "FLEXT_ROOT",
-            "FLEXT_STANDALONE",
-            "FLEXT_REPOSITORY_ROOT",
+            *FlextInfraConstants.Infra.PYTEST_INHERITED_ENV_REMOVE_KEYS,
+            FlextInfraConstants.Infra.ENV_VAR_STANDALONE,
+            FlextInfraConstants.Infra.ENV_VAR_REPOSITORY_ROOT,
             "MATCH",
             "PROJECT",
             "PROJECTS",
@@ -72,11 +135,25 @@ class TestsFlextInfraConstants(FlextTestsConstants, FlextInfraConstants):
             "RUFF_ARGS",
             "UV",
             "VALIDATE_GATES",
-            "WHAT",
-            "REPOSITORY_ROOT",
+            FlextInfraConstants.Infra.PromotedEnv.WHAT,
+            FlextInfraConstants.Infra.MAKE_REPOSITORY_ROOT,
             *FlextInfraConstants.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
+            *DIRENV_SESSION_ENV_KEYS,
+            # The host's GitHub credential (and the aliases Make unexports)
+            # never enters a test; a test that needs one passes its own.
+            "GITHUB_TOKEN",
+            "GH_TOKEN",
+            "MISE_GITHUB_TOKEN",
+            "GITHUB_API_TOKEN",
         )
-        """Environment inherited from an outer Make invocation to discard in tests."""
+        """Environment inherited from an outer Make invocation to discard in tests.
+
+        Keys with a product owner are imported from that owner
+        (``ORCHESTRATOR_REMOVE_ENV_KEYS``, ``PYTEST_INHERITED_ENV_REMOVE_KEYS``,
+        ``ENV_VAR_*``, ``MAKE_REPOSITORY_ROOT``, ``PromotedEnv.WHAT``); the
+        remainder are direnv/Git external protocols or
+        template-declared Make variables that no Python constant declares.
+        """
 
         # ClassVar, not Final: these rebindings live on a Pydantic model
         # class, and Pydantic 2.11 deprecates final-annotated defaults
@@ -91,57 +168,6 @@ class TestsFlextInfraConstants(FlextTestsConstants, FlextInfraConstants):
         )
         RELEASE_PHASE_PUBLISH: ClassVar[str] = (
             FlextInfraConstants.Infra.ReleasePhase.PUBLISH
-        )
-
-        INFRA_PUBLIC_ROOT_EXPORTS: ClassVar[t.StrSequence] = (
-            "FlextInfra",
-            "c",
-            "infra",
-            "m",
-            "main",
-            "p",
-            "s",
-            "t",
-            "u",
-        )
-        INFRA_PUBLIC_WRAPPER_MODULES: ClassVar[t.StrSequence] = (
-            "flext_infra.__version__",
-            "flext_infra.constants",
-            "flext_infra.models",
-            "flext_infra.protocols",
-            "flext_infra.typings",
-            "flext_infra.utilities",
-        )
-        INFRA_PUBLIC_ROOT_ALIAS_EXPECTATIONS: ClassVar[
-            t.VariadicTuple[t.Pair[str, str]]
-        ] = (
-            ("c", "FlextInfraConstants"),
-            ("m", "FlextInfraModels"),
-            ("p", "FlextInfraProtocols"),
-            ("s", "FlextInfraServiceBase"),
-            ("t", "FlextInfraTypes"),
-            ("u", "FlextInfraUtilities"),
-        )
-        INFRA_PUBLIC_WRAPPER_ALIAS_EXPECTATIONS: ClassVar[
-            t.VariadicTuple[t.Triple[str, str, str]]
-        ] = (
-            ("flext_infra.constants", "c", "FlextInfraConstants"),
-            ("flext_infra.models", "m", "FlextInfraModels"),
-            ("flext_infra.protocols", "p", "FlextInfraProtocols"),
-            ("flext_infra.typings", "t", "FlextInfraTypes"),
-            ("flext_infra.utilities", "u", "FlextInfraUtilities"),
-        )
-        INFRA_PUBLIC_NAMESPACE_ALIAS_NAMES: ClassVar[t.StrSequence] = (
-            "c",
-            "m",
-            "p",
-            "t",
-            "u",
-        )
-        INFRA_PUBLIC_UTILITY_NAMESPACE_METHODS: ClassVar[t.StrSequence] = (
-            "plan_semantic_cutover",
-            "current_workspace_version",
-            "parse_semver",
         )
 
         WORKSPACE_PROJECT_NAME: ClassVar[str] = "workspace"

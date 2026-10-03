@@ -1,4 +1,8 @@
-"""Wave 0 stub tests confirming rope is importable."""
+"""Wave 0 stub tests confirming rope is importable.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -15,7 +19,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraRefactorRopeStubs:
     """Behavior contract for test_rope_stubs."""
 
-    def test_rope_project_wrapper(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_rope_project_wrapper(tmp_path: Path) -> None:
         """Confirm the Rope project wrapper creates a live project."""
         project = u.Infra.init_rope_project(tmp_path)
         project = tm.not_none(project)
@@ -24,7 +29,8 @@ class TestsFlextInfraRefactorRopeStubs:
         finally:
             project.close()
 
-    def test_rope_find_occurrences_wrapper(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_rope_find_occurrences_wrapper(tmp_path: Path) -> None:
         """Confirm occurrence search works through the utility wrapper."""
         package_dir = tmp_path / "demo"
         package_dir.mkdir()
@@ -34,7 +40,7 @@ class TestsFlextInfraRefactorRopeStubs:
         project = u.Infra.init_rope_project(tmp_path)
         project = tm.not_none(project)
         try:
-            resource = u.Infra.get_resource_from_path(project, target)
+            resource = u.Infra.resolve_resource_from_path(project, target)
             resource = tm.not_none(resource)
             offset = u.Infra.find_definition_offset(project, resource, "Demo")
             offset = tm.not_none(offset)

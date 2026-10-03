@@ -1,4 +1,8 @@
-"""Promoted-command execution on the workspace process boundary."""
+"""Promoted-command execution on the workspace process boundary.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,8 +13,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c
-
-from .invocation import FlextInfraUtilitiesPromotedInvocation
+from flext_infra._utilities._promoted.invocation import (
+    FlextInfraUtilitiesPromotedInvocation,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -20,12 +25,19 @@ class FlextInfraUtilitiesPromotedExecution(FlextInfraUtilitiesPromotedInvocation
     """Run one promoted command in its canonical command environment."""
 
     @classmethod
-    def promoted_run(cls, command: p.Infra.Promoted.Command) -> int:
+    def promoted_run(cls, command: p.Infra.PromotedCommand) -> int:
         """Run one promoted command from its owner root and stream it live.
 
         The single workspace venv is authoritative for every inherited command;
         the owner root only fixes the working directory. The child is not
         captured, so output, Ctrl-C/SIGINT, and the exact exit code propagate.
+
+        Returns:
+            The resulting ``int``.
+
+        Raises:
+            PromotedRegistryError: If ``result.failure``.
+
         """
         from flext_infra import settings, u
 
@@ -36,8 +48,7 @@ class FlextInfraUtilitiesPromotedExecution(FlextInfraUtilitiesPromotedInvocation
         python = Path(sys.executable)
         if not python.is_file():
             cls.promoted_fail(message.WORKSPACE_PYTHON_MISSING, python=python)
-        live_settings = type(settings).fetch_global()
-        active_venv = live_settings.Infra.virtual_env
+        active_venv = settings.Infra.virtual_env
         venv = Path(active_venv) if active_venv else Path(sys.prefix)
         env = os.environ.copy()
         env.update({
@@ -79,7 +90,7 @@ class FlextInfraUtilitiesPromotedExecution(FlextInfraUtilitiesPromotedInvocation
         if result.failure:
             # The process error is literal text, never a message template.
             raise c.Infra.PromotedRegistryError(
-                result.error or message.PROCESS_START_FAILED
+                result.error or message.PROCESS_START_FAILED,
             )
         output: p.Cli.CommandOutput = result.value
         # flext-cli carries the causal completion state instead of a bare status:

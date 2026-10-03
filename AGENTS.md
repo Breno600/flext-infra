@@ -1,8 +1,12 @@
 # AGENTS.md — flext-infra
 
-This repository is a standalone authority. Never climb to a parent checkout or fetch
-remote instructions, build files, roots, environments, or runtimes. Provider governance
-may add a minimal prelude, but this repository owns the package-specific body below.
+> **Parent workspace law** lives in [`../AGENTS.md`](../AGENTS.md) — read it first.
+> Composition: global skills + parent/root `AGENTS.md` + this scope delta. Do not
+> re-embed universal law.
+>
+> **Standalone / independent mode:** when `../AGENTS.md` does not resolve, pin the
+> parent raw `AGENTS.md` URL to the same branch/release as this package (never
+> `main`): <https://raw.githubusercontent.com/flext-sh/flext/0.12.0-dev/AGENTS.md>
 
 <!-- AIHUB-AGENTS-SCOPE-LOCAL-BEGIN -->
 
@@ -42,7 +46,7 @@ src/flext_infra/
 
 ## Promoted command framework
 
-Repository-owned `scripts/<verb>/<WHAT>.{py,sh}` commands declare a `/// cosmos-command`
+Repository-owned `scripts/<verb>/<WHAT>.{py,sh}` commands declare a `/// flext-command`
 header and are reached only through `make <verb> WHAT=<action>` when the repository
 declares `script_dispatch`.
 
@@ -57,7 +61,7 @@ declares `script_dispatch`.
   `verb/what`, and `promoted_validate_command_contract`. Dynamic command parameters are
   read through `u.Infra.env_value`.
 - Vocabulary is `c.Infra.Promoted*` (`_constants/promoted*.py`); the registry contract
-  is `p.Infra.Promoted.Registry`.
+  is `p.Infra.PromotedRegistry`.
 - An empty, `help` or undeclared `all` WHAT renders the verb help; a verb that declares
   an `all` command still runs it.
 
@@ -75,6 +79,11 @@ declares `script_dispatch`.
 - Config/settings canonical pattern: ADR-005 §§1–2 and `_settings.py`/`_config.py`
   docstrings (flext-z0zkq; fleet follow-up flext-la3z5).
 - Codemod governance (ast-grep + make mod): ADR-014.
+- Family-wrapper flattening preserves the domain prefix in every promoted name.
+  Rope identity owns rewrites in executable references and quoted type positions,
+  including generic bases and deferred annotations. Ordinary strings, `Literal`
+  values, and `Annotated` metadata retain their payloads. Using the wrapper itself
+  as an entity type preserves that wrapper instead of emitting a partial cutover.
 
 ## Recovering this work
 
@@ -93,10 +102,18 @@ consumer paths first, then make tests verify that contract. Never alter the envi
 to preserve an obsolete fixture or treat a passing test as proof of integrated runtime
 behavior.
 
-Provisioning and dependency updates run exclusively through `make setup`. Fix its
+Generation performs one transaction per invocation. A changed source fails with its
+original diagnostic after authenticated rollback; it is never replanned automatically.
+Journal contention waits only for native EACCES/EAGAIN/EWOULDBLOCK and retains the lock file's
+identity. Other lease errors escape unchanged. Every Mise warning and failed declared
+entrypoint blocks publication; no message classifier converts either to success.
+
+Configuration declares `latest`; only `make upg` resolves newer releases and writes
+the committed `uv.lock` and `mise.lock`. `make setup` installs frozen from those locks
+(the CI path). Generation and runtime verbs use those installed identities without
+installing or upgrading tools, and ignore host Mise tool declarations. Fix the
 configuration/templates when the lifecycle is wrong; do not install, resolve or
-synchronize dependencies manually. The current operator contract removes `APPLY`,
-`uv.lock` and `mise.lock` throughout producers and consumers. Git dependencies follow
+synchronize dependencies manually. `APPLY` stays removed. Git dependencies follow
 each repository's declared integration branch tip unless `project.dependency_revisions`
 in `config/workspace.yaml` declares a full commit SHA for that external provider
 dependency. Codegen renders these pins into every dependency group and the matching uv

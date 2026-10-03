@@ -6,11 +6,51 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from ._conform import FlextInfraCodegenConformBase
+from typing import TYPE_CHECKING
+
+from flext_core import r
+from flext_infra import c, m, p, u
+from flext_infra.codegen._conform import FlextInfraCodegenConformExecute
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
-class FlextInfraCodegenConform(FlextInfraCodegenConformBase):
+class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
     """Plan every selected output, then atomically write only a clean plan."""
+
+    @classmethod
+    def settle_repository(
+        cls,
+        root: Path,
+        *,
+        ports: m.Infra.CodegenConformPorts | None,
+    ) -> p.Result[bool]:
+        """Conform every projection of ``root``, then lock it without upgrading.
+
+        ``ports`` are the facade-bound collaborators the complete conform
+        crosses into; without them the conform fails before any effect.
+
+        Conform settles ``pyproject.toml`` and every rendered projection first,
+        so the lock resolves against them; it upgrades nothing (only ``upg``
+        resolves the newest releases). Identical inputs regenerate identical
+        bytes, so a rerun changes nothing.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        conformed = cls.execute_request(
+            m.Infra.CodegenConformRequest(
+                root=root,
+                scope=c.Infra.CodegenConformScope.ALL,
+                mode=c.Infra.CodegenConformMode.APPLY,
+            ),
+            ports=ports,
+        )
+        if conformed.failure:
+            return r[bool].from_failure(conformed)
+        return u.Cli.run_checked([c.Infra.UV, "lock", "--project", str(root)], cwd=root)
 
 
 __all__: list[str] = ["FlextInfraCodegenConform"]

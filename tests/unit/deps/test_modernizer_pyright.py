@@ -1,4 +1,8 @@
-"""Pyright phase tests for deps modernizer."""
+"""Pyright phase tests for deps modernizer.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -10,14 +14,13 @@ from flext_tests import tm
 from flext_infra import (
     FlextInfraEnsurePyrightConfigPhase,
     FlextInfraPyprojectModernizer,
+    FlextInfraWorkspaceDetector,
     u as infra_u,
 )
-from tests import t, u
+from tests import m, t, u
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from tests import m
 
 
 class TestsFlextInfraDepsModernizerPyright:
@@ -26,27 +29,17 @@ class TestsFlextInfraDepsModernizerPyright:
     @staticmethod
     def _applied(
         tool_config_document: m.Infra.ToolConfigDocument,
-        *,
-        is_root: bool,
-        repository_root: Path | None = None,
-        project_dir: Path | None = None,
-        declared_python_dirs: t.StrSequence = (),
-        declared_python_dirs_are_complete: bool = False,
+        context: m.Infra.PyprojectAnalyzerContext,
     ) -> t.JsonMapping:
-        """Apply the phase twice to an empty payload; return the converged table."""
+        """Apply the phase twice to an empty payload; return the converged table.
+
+        Returns:
+            The resulting ``t.JsonMapping``.
+
+        """
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python({})
         phase = FlextInfraEnsurePyrightConfigPhase(tool_config_document)
-        changes = [
-            phase.apply_payload(
-                payload,
-                is_root=is_root,
-                repository_root=repository_root,
-                project_dir=project_dir,
-                declared_python_dirs=declared_python_dirs,
-                declared_python_dirs_are_complete=declared_python_dirs_are_complete,
-            )
-            for _ in range(2)
-        ]
+        changes = [phase.apply_payload(payload, context=context) for _ in range(2)]
         tm.that(changes[0], empty=False)
         tm.that(changes[1], empty=True)
         pyright = u.Tests.toml_mapping(u.Tests.toml_mapping(payload["tool"])["pyright"])
@@ -57,13 +50,20 @@ class TestsFlextInfraDepsModernizerPyright:
 
     @staticmethod
     def _sample_project(tmp_path: Path, source_dir_name: str) -> Path:
-        """Create one governed flext-sample project with a src package and manifest."""
+        """Create one governed flext-sample project with a src package and manifest.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
+        u.Tests.seed_locked_taplo(tmp_path)
         project_dir = tmp_path / "flext-sample"
         source_dir = project_dir / source_dir_name / "flext_sample"
         source_dir.mkdir(parents=True)
         (source_dir / "__init__.py").write_text("", encoding="utf-8")
         (project_dir / "pyproject.toml").write_text(
-            "[project]\nname='flext-sample'\nversion='0.1.0'\n", encoding="utf-8"
+            "[project]\nname='flext-sample'\nversion='0.1.0'\n",
+            encoding="utf-8",
         )
         u.Tests.write_project_beads_config(project_dir, "flext-sample")
         return project_dir
@@ -72,42 +72,58 @@ class TestsFlextInfraDepsModernizerPyright:
     def _workspace(tmp_path: Path, *members: str) -> None:
         """Declare one governed workspace root with governed member manifests."""
         (tmp_path / "pyproject.toml").write_text(
-            "[project]\nname='workspace'\nversion='0.1.0'\n", encoding="utf-8"
+            "[project]\nname='workspace'\nversion='0.1.0'\n",
+            encoding="utf-8",
         )
         for member in members:
             package = tmp_path / member / "src" / member.replace("-", "_")
             package.mkdir(parents=True, exist_ok=True)
             (package / "__init__.py").write_text("VALUE = 1\n", encoding="utf-8")
             (tmp_path / member / "pyproject.toml").write_text(
-                f"[project]\nname='{member}'\nversion='0.1.0'\n", encoding="utf-8"
+                f"[project]\nname='{member}'\nversion='0.1.0'\n",
+                encoding="utf-8",
             )
             u.Tests.write_project_beads_config(tmp_path / member, member)
         u.Tests.declare_workspace_projects(tmp_path, members)
         u.Tests.write_project_beads_config(tmp_path, "workspace")
 
+    @staticmethod
     def test_python_discovery_ignores_member_only_container(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """A directory containing only nested projects is not a root source tree."""
         root_source = tmp_path / "src"
         root_source.mkdir()
         (root_source / "root.py").write_text("VALUE = 1\n", encoding="utf-8")
         (tmp_path / "pyproject.toml").write_text(
-            "[project]\nname='workspace'\nversion='0.1.0'\n", encoding="utf-8"
+            "[project]\nname='workspace'\nversion='0.1.0'\n",
+            encoding="utf-8",
         )
         u.Tests.write_project_beads_config(tmp_path, "workspace")
         member = tmp_path / "apps" / "member"
         member_source = member / "src" / "member"
         member_source.mkdir(parents=True)
         (member / "pyproject.toml").write_text(
-            "[project]\nname='member'\nversion='0.1.0'\n", encoding="utf-8"
+            "[project]\nname='member'\nversion='0.1.0'\n",
+            encoding="utf-8",
         )
         (member_source / "__init__.py").write_text("VALUE = 1\n", encoding="utf-8")
 
-        tm.that(infra_u.Infra.discover_python_dirs(tmp_path), eq=["src"])
+        tm.that(
+            infra_u.Infra.discover_python_dirs(
+                tmp_path,
+                workspace_excluded_top_dirs=(
+                    FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
+                        tmp_path,
+                    ).unwrap()
+                ),
+            ),
+            eq=["src"],
+        )
 
+    @staticmethod
     def test_python_discovery_uses_caller_resolved_exclusions(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Honor the command-scoped topology projection without rediscovery."""
         included = tmp_path / "included"
@@ -117,13 +133,16 @@ class TestsFlextInfraDepsModernizerPyright:
             (directory / "module.py").write_text("VALUE = 1\n", encoding="utf-8")
 
         discovered = infra_u.Infra.discover_python_dirs(
-            tmp_path, workspace_excluded_top_dirs=frozenset({excluded.name})
+            tmp_path,
+            workspace_excluded_top_dirs=frozenset({excluded.name}),
         )
 
         tm.that(discovered, eq=[included.name])
 
     def test_root_config_sets_expected_execution_environments(
-        self, tmp_path: Path, tool_config_document: m.Infra.ToolConfigDocument
+        self,
+        tmp_path: Path,
+        tool_config_document: m.Infra.ToolConfigDocument,
     ) -> None:
         """Render only roots owned by the workspace repository itself."""
         pyright_rules = tool_config_document.tools.pyright
@@ -134,16 +153,19 @@ class TestsFlextInfraDepsModernizerPyright:
         (root_source / "__init__.py").write_text("VALUE = 1\n", encoding="utf-8")
         (tmp_path / "flext-core" / "tests").mkdir()
         (tmp_path / "flext-core" / "tests" / "test_smoke.py").write_text(
-            "VALUE = 1\n", encoding="utf-8"
+            "VALUE = 1\n",
+            encoding="utf-8",
         )
         detached = tmp_path / "demo-migration-tool"
         (detached / "src").mkdir(parents=True)
         (detached / "pyproject.toml").write_text(
-            "[project]\nname='demo-migration-tool'\n", encoding="utf-8"
+            "[project]\nname='demo-migration-tool'\n",
+            encoding="utf-8",
         )
 
         pyright = self._applied(
-            tool_config_document, is_root=True, repository_root=tmp_path
+            tool_config_document,
+            m.Infra.PyprojectAnalyzerContext(is_root=True, repository_root=tmp_path),
         )
 
         tm.that(
@@ -162,23 +184,24 @@ class TestsFlextInfraDepsModernizerPyright:
             pyright["executionEnvironments"],
             eq=[
                 {
-                    **pyright_rules.lazy_import_suppressions,
-                    **pyright_rules.source_env_suppressions,
                     "root": rules.source_dir,
                     "reportPrivateUsage": rules.source_report_private_usage,
                     "extraPaths": [rules.source_dir, "flext-core/src", "flext-api/src"],
-                }
+                },
             ],
         )
 
     def test_root_config_includes_member_src_paths(
-        self, tmp_path: Path, tool_config_document: m.Infra.ToolConfigDocument
+        self,
+        tmp_path: Path,
+        tool_config_document: m.Infra.ToolConfigDocument,
     ) -> None:
         """Workspace root execution environments include every declared first-party member src path for Pylance resolution."""
         pyright_rules = tool_config_document.tools.pyright
         rules = pyright_rules.path_rules
         _ = (tmp_path / "pyproject.toml").write_text(
-            "[project]\nname='workspace'\nversion='0.1.0'\n", encoding="utf-8"
+            "[project]\nname='workspace'\nversion='0.1.0'\n",
+            encoding="utf-8",
         )
         flext_core = tmp_path / "flext-core"
         flext_api = tmp_path / "flext-api"
@@ -186,21 +209,25 @@ class TestsFlextInfraDepsModernizerPyright:
         (flext_api / "src").mkdir(parents=True, exist_ok=True)
         (flext_core / "src" / "flext_core").mkdir(parents=True, exist_ok=True)
         (flext_core / "src" / "flext_core" / "__init__.py").write_text(
-            "VALUE = 1\n", encoding="utf-8"
+            "VALUE = 1\n",
+            encoding="utf-8",
         )
         (flext_api / "src" / "flext_api").mkdir(parents=True, exist_ok=True)
         (flext_api / "src" / "flext_api" / "__init__.py").write_text(
-            "VALUE = 1\n", encoding="utf-8"
+            "VALUE = 1\n",
+            encoding="utf-8",
         )
         (tmp_path / "src").mkdir(parents=True, exist_ok=True)
         (tmp_path / "src" / "workspace").mkdir(parents=True, exist_ok=True)
         (tmp_path / "src" / "workspace" / "__init__.py").write_text(
-            "VALUE = 1\n", encoding="utf-8"
+            "VALUE = 1\n",
+            encoding="utf-8",
         )
         u.Tests.declare_workspace_projects(tmp_path, ("flext-core", "flext-api"))
         u.Tests.write_project_beads_config(tmp_path, "workspace")
         pyright = self._applied(
-            tool_config_document, is_root=True, repository_root=tmp_path
+            tool_config_document,
+            m.Infra.PyprojectAnalyzerContext(is_root=True, repository_root=tmp_path),
         )
         envs = pyright["executionEnvironments"]
         tm.that(envs, is_=Sequence)
@@ -218,37 +245,32 @@ class TestsFlextInfraDepsModernizerPyright:
         if src_env is None:
             return
         extra_paths = u.Tests.toml_strings(
-            u.Cli.toml_unwrap_item(src_env.get("extraPaths", ()))
+            u.Cli.toml_unwrap_item(src_env.get("extraPaths", ())),
         )
         tm.that("flext-core/src" in extra_paths, eq=True)
         tm.that("flext-api/src" in extra_paths, eq=True)
 
     def test_declared_repository_config_sets_expected_execution_environments(
-        self, tool_config_document: m.Infra.ToolConfigDocument
+        self,
+        tool_config_document: m.Infra.ToolConfigDocument,
     ) -> None:
         """Render every configured standalone analyzer environment."""
         pyright_rules = tool_config_document.tools.pyright
         rules = pyright_rules.path_rules
 
-        pyright = self._applied(tool_config_document, is_root=False)
+        pyright = self._applied(
+            tool_config_document,
+            m.Infra.PyprojectAnalyzerContext(is_root=False),
+        )
 
         tm.that(
-            sorted(u.Tests.toml_strings(pyright["include"])), eq=sorted(rules.env_dirs)
+            sorted(u.Tests.toml_strings(pyright["include"])),
+            eq=sorted(rules.env_dirs),
         )
         tm.that(
             pyright["executionEnvironments"],
             eq=[
                 {
-                    **pyright_rules.lazy_import_suppressions,
-                    **(
-                        pyright_rules.source_env_suppressions
-                        if env_dir == rules.source_dir
-                        else (
-                            pyright_rules.test_like_env_suppressions
-                            if env_dir in rules.test_like_dirs
-                            else {}
-                        )
-                    ),
                     "root": env_dir,
                     "reportPrivateUsage": (
                         rules.source_report_private_usage
@@ -266,7 +288,9 @@ class TestsFlextInfraDepsModernizerPyright:
         )
 
     def test_project_config_uses_canonical_typings_and_fixture_excludes(
-        self, tmp_path: Path, tool_config_document: m.Infra.ToolConfigDocument
+        self,
+        tmp_path: Path,
+        tool_config_document: m.Infra.ToolConfigDocument,
     ) -> None:
         """Render typed paths and config-owned fixture exclusions."""
         rules = tool_config_document.tools.pyright.path_rules
@@ -279,11 +303,13 @@ class TestsFlextInfraDepsModernizerPyright:
         (project_dir / "src" / "sample.py").write_text("VALUE = 1\n", encoding="utf-8")
         (project_dir / "tests" / "fixtures").mkdir(parents=True)
         (project_dir / "tests" / "test_smoke.py").write_text(
-            "VALUE = 1\n", encoding="utf-8"
+            "VALUE = 1\n",
+            encoding="utf-8",
         )
 
         pyright = self._applied(
-            tool_config_document, is_root=False, project_dir=project_dir
+            tool_config_document,
+            m.Infra.PyprojectAnalyzerContext(is_root=False, project_dir=project_dir),
         )
 
         if rules.ignored_diagnostic_globs:
@@ -299,13 +325,15 @@ class TestsFlextInfraDepsModernizerPyright:
         )
         tm.that(
             set(u.Tests.toml_strings(pyright["exclude"])).issuperset(
-                rules.default_excludes
+                rules.default_excludes,
             ),
             eq=True,
         )
 
     def test_existing_standalone_uses_complete_declared_roots(
-        self, tmp_path: Path, tool_config_document: m.Infra.ToolConfigDocument
+        self,
+        tmp_path: Path,
+        tool_config_document: m.Infra.ToolConfigDocument,
     ) -> None:
         """A complete declaration fixes the include set through the modernizer."""
         rules = tool_config_document.tools.pyright.path_rules
@@ -314,13 +342,17 @@ class TestsFlextInfraDepsModernizerPyright:
 
         rendered = tm.ok(
             FlextInfraPyprojectModernizer(
-                repository_root=project_dir, skip_check=True, skip_comments=True
+                repository_root=project_dir,
+                skip_check=True,
+                skip_comments=True,
             ).conform_source(
                 pyproject.read_text(encoding="utf-8"),
                 path=pyproject,
-                declared_python_dirs=(rules.source_dir, rules.test_like_dirs[0]),
-                declared_python_dirs_are_complete=True,
-            )
+                topology=m.Infra.PyprojectDeclaredTopology(
+                    declared_python_dirs=(rules.source_dir, rules.test_like_dirs[0]),
+                    declared_python_dirs_are_complete=True,
+                ),
+            ),
         )
 
         tm.that(
@@ -329,7 +361,9 @@ class TestsFlextInfraDepsModernizerPyright:
         )
 
     def test_existing_standalone_complete_empty_roots_do_not_rediscover_disk(
-        self, tmp_path: Path, tool_config_document: m.Infra.ToolConfigDocument
+        self,
+        tmp_path: Path,
+        tool_config_document: m.Infra.ToolConfigDocument,
     ) -> None:
         """A complete empty declaration renders no include and no environment."""
         rules = tool_config_document.tools.pyright.path_rules
@@ -337,29 +371,36 @@ class TestsFlextInfraDepsModernizerPyright:
 
         pyright = self._applied(
             tool_config_document,
-            is_root=False,
-            project_dir=project_dir,
-            declared_python_dirs_are_complete=True,
+            m.Infra.PyprojectAnalyzerContext(
+                is_root=False,
+                project_dir=project_dir,
+                declared_python_dirs_are_complete=True,
+            ),
         )
 
         tm.that(pyright, lacks="include")
         tm.that(pyright["executionEnvironments"], eq=[])
 
     def test_repository_root_never_adopts_member_analyzer_roots(
-        self, tmp_path: Path, tool_config_document: m.Infra.ToolConfigDocument
+        self,
+        tmp_path: Path,
+        tool_config_document: m.Infra.ToolConfigDocument,
     ) -> None:
         """Keep member projects under their own manifests and native gates."""
         rules = tool_config_document.tools.pyright.path_rules
         self._workspace(tmp_path, "flext-core")
 
         fleet = self._applied(
-            tool_config_document, is_root=True, repository_root=tmp_path
+            tool_config_document,
+            m.Infra.PyprojectAnalyzerContext(is_root=True, repository_root=tmp_path),
         )
         declared = self._applied(
             tool_config_document,
-            is_root=True,
-            repository_root=tmp_path,
-            declared_python_dirs=(rules.source_dir,),
+            m.Infra.PyprojectAnalyzerContext(
+                is_root=True,
+                repository_root=tmp_path,
+                declared_python_dirs=(rules.source_dir,),
+            ),
         )
 
         tm.that(declared, eq=fleet)
@@ -367,7 +408,9 @@ class TestsFlextInfraDepsModernizerPyright:
         tm.that(declared["executionEnvironments"], eq=[])
 
     def test_expected_envs_cover_every_analyzer_python_root(
-        self, tmp_path: Path, tool_config_document: m.Infra.ToolConfigDocument
+        self,
+        tmp_path: Path,
+        tool_config_document: m.Infra.ToolConfigDocument,
     ) -> None:
         """The phase emits an environment for every root the analyzer owner selects.
 
@@ -383,14 +426,24 @@ class TestsFlextInfraDepsModernizerPyright:
         outside.mkdir(parents=True)
         (outside / "validate_docs.py").write_text("y = 2\n", encoding="utf-8")
         (tmp_path / "pyproject.toml").write_text(
-            "[project]\nname='workspace'\nversion='0.1.0'\n", encoding="utf-8"
+            "[project]\nname='workspace'\nversion='0.1.0'\n",
+            encoding="utf-8",
         )
         u.Tests.write_project_beads_config(tmp_path, "workspace")
-        discovered = frozenset(infra_u.Infra.discover_python_dirs(tmp_path))
+        excluded_top_dirs = FlextInfraWorkspaceDetector.analysis_excluded_top_dirs(
+            tmp_path,
+        ).unwrap()
+        discovered = frozenset(
+            infra_u.Infra.discover_python_dirs(
+                tmp_path,
+                workspace_excluded_top_dirs=excluded_top_dirs,
+            ),
+        )
         declared = tuple(d for d in rules.env_dirs if d in discovered)
 
         pyright = self._applied(
-            tool_config_document, is_root=False, project_dir=tmp_path
+            tool_config_document,
+            m.Infra.PyprojectAnalyzerContext(is_root=False, project_dir=tmp_path),
         )
 
         tm.that(
@@ -398,8 +451,11 @@ class TestsFlextInfraDepsModernizerPyright:
                 str(u.Tests.toml_mapping(environment)["root"])
                 for environment in u.Tests.toml_list(pyright["executionEnvironments"])
             ),
-            eq=sorted(infra_u.Infra.analyzer_python_roots(tmp_path, declared)),
+            eq=sorted(
+                infra_u.Infra.analyzer_python_roots(
+                    tmp_path,
+                    declared,
+                    workspace_excluded_top_dirs=excluded_top_dirs,
+                ),
+            ),
         )
-
-
-__all__: list[str] = ["TestsFlextInfraDepsModernizerPyright"]

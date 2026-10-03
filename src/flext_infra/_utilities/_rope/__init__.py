@@ -1,35 +1,28 @@
 # AUTO-GENERATED FILE — Regenerate with: make gen
-"""Flext Infra. Utilities. Rope package."""
+"""Flext Infra. Utilities. Rope package.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core.lazy import build_lazy_import_map, install_lazy_exports
+from flext_core import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from .pep695_patch import FlextInfraUtilitiesRopePep695Patch
-    from .project import FlextInfraRopeProject
-    from .signature_patch import FlextInfraUtilitiesRopeSignaturePatch
+    from flext_infra._utilities._rope.project import FlextInfraRopeProject
 
-
-__all__: tuple[str, ...] = (
-    "FlextInfraRopeProject",
-    "FlextInfraUtilitiesRopePep695Patch",
-    "FlextInfraUtilitiesRopeSignaturePatch",
-)
+__all__: tuple[str, ...] = ("FlextInfraRopeProject",)
 
 _LAZY_IMPORTS = MappingProxyType(
     build_lazy_import_map(
-        MappingProxyType({
-            ".pep695_patch": ("FlextInfraUtilitiesRopePep695Patch",),
-            ".project": ("FlextInfraRopeProject",),
-            ".signature_patch": ("FlextInfraUtilitiesRopeSignaturePatch",),
-        }),
+        MappingProxyType({".project": ("FlextInfraRopeProject",)}),
         alias_groups=MappingProxyType({}),
         sort_keys=False,
-    )
+    ),
 )
 
 install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

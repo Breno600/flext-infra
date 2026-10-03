@@ -28,7 +28,7 @@ Infra:
           allow_toolchain_declarations: true
 
     layout:
-      # Consumer ecosystem root keep-lists (plan B).
+      # Consumer ecosystem root keep-lists.
       project_overrides:
         flext-cli:
           archive_names:

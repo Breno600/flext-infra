@@ -1,4 +1,8 @@
-"""Public checker acceptance against real tools and native report schemas."""
+"""Public checker acceptance against real tools and native report schemas.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,7 +11,8 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m
+from flext_infra import c, config, m
+from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 from flext_infra.gates.mypy import FlextInfraMypyGate
 from flext_infra.gates.pyrefly import FlextInfraPyreflyGate
 from flext_infra.gates.pyright import FlextInfraPyrightGate
@@ -21,9 +26,67 @@ if TYPE_CHECKING:
 class TestsFlextInfraTypeGates:
     """The selected project's actual findings determine acceptance."""
 
+    @staticmethod
+    @pytest.mark.slow
+    def test_mypy_cache_is_project_keyed_across_checkouts_and_relocks(
+        tmp_path: Path,
+    ) -> None:
+        """Real gate runs populate one external cache per declared project name."""
+        spec = config.Infra.codegen.make.mypy_cache
+        cache_home = tmp_path / "cache"
+        shared_root = cache_home / spec.external_storage_directory
+        with tm.scope(env={str(spec.data_home_environment_variable): str(cache_home)}):
+            for checkout, project in (
+                ("lane", "fixture-alpha"),
+                ("primary", "fixture-alpha"),
+                ("other", "fixture-beta"),
+            ):
+                root = tmp_path / checkout
+                root.mkdir()
+                (root / c.PYPROJECT_FILENAME).write_text(
+                    f"[project]\nname = '{project}'\nversion = '0.0.0'\n[tool.mypy]\n",
+                    encoding="utf-8",
+                )
+                (root / "sample.py").write_text("value: int = 1\n", encoding="utf-8")
+                lock = root / c.Infra.UV_LOCK_FILENAME
+                context = m.Infra.GateContext(
+                    repository_root=root,
+                    reports_dir=root / ".reports",
+                )
+                gate = FlextInfraMypyGate(root)
+                cache = shared_root / project
+                for revision in (1, 2):
+                    lock.write_text(
+                        f"version = 1\nrevision = {revision}\n",
+                        encoding="utf-8",
+                    )
+                    execution = gate.check(root, context)
+                    tm.that(execution.result.passed, eq=True)
+                    tm.that(
+                        [
+                            line.partition("Cache Dir:")[2].strip()
+                            for line in execution.raw_output.splitlines()
+                            if line.startswith("LOG:") and "Cache Dir:" in line
+                        ],
+                        eq=[str(cache)],
+                    )
+                    tm.that(cache.is_dir(), eq=True)
+                    tm.that(any(path.is_file() for path in cache.rglob("*")), eq=True)
+                tm.that((root / ".mypy_cache").exists(), eq=False)
+            tm.that(
+                {path.name for path in shared_root.iterdir()},
+                eq={"fixture-alpha", "fixture-beta"},
+            )
+
+    @staticmethod
     @pytest.fixture
-    def checker_context(self, real_python_package: Path) -> m.Infra.GateContext:
-        """Configure the existing real package for native checker execution."""
+    def checker_context(real_python_package: Path) -> m.Infra.GateContext:
+        """Configure the existing real package for native checker execution.
+
+        Returns:
+            The resulting ``m.Infra.GateContext``.
+
+        """
         pyproject = real_python_package / "pyproject.toml"
         pyproject.write_text(
             pyproject.read_text(encoding="utf-8")
@@ -34,12 +97,14 @@ class TestsFlextInfraTypeGates:
         reports = real_python_package / ".reports"
         reports.mkdir()
         return m.Infra.GateContext(
-            repository_root=real_python_package, reports_dir=reports
+            repository_root=real_python_package,
+            reports_dir=reports,
         )
 
+    @staticmethod
     @pytest.mark.slow
     def test_mypy_preserves_protocol_member_diagnostics(
-        self, checker_context: m.Infra.GateContext
+        checker_context: m.Infra.GateContext,
     ) -> None:
         """Native protocol conflict details remain visible in reported issues."""
         project = checker_context.repository_root
@@ -61,9 +126,10 @@ class TestsFlextInfraTypeGates:
         messages = "\n".join(issue.message for issue in result.issues)
         tm.that(messages, has=["Expected", "Actual", "def size", "int", "str"])
 
+    @staticmethod
     @pytest.mark.slow
     def test_mypy_preserves_malformed_native_output(
-        self, checker_context: m.Infra.GateContext
+        checker_context: m.Infra.GateContext,
     ) -> None:
         """Unexpected plugin output remains a causal, visible tool failure."""
         project = checker_context.repository_root
@@ -78,7 +144,8 @@ class TestsFlextInfraTypeGates:
         pyproject = project / "pyproject.toml"
         pyproject.write_text(
             pyproject.read_text(encoding="utf-8").replace(
-                "[tool.mypy]\n", '[tool.mypy]\nplugins = ["plugin.py"]\n'
+                "[tool.mypy]\n",
+                '[tool.mypy]\nplugins = ["plugin.py"]\n',
             ),
             encoding="utf-8",
         )
@@ -86,19 +153,26 @@ class TestsFlextInfraTypeGates:
         result = FlextInfraMypyGate(project).check(project, checker_context)
 
         tm.that(result.result.passed, eq=False)
-        tm.that(tuple(issue.code for issue in result.issues), has="TOOL_ERROR")
+        tm.that(
+            tuple(issue.code for issue in result.issues),
+            has=c.Infra.ToolOutcome.ERROR,
+        )
         tm.that(
             "\n".join(issue.message for issue in result.issues),
             has="native-plugin-output",
         )
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize(
-        "gate_class", [FlextInfraMypyGate, FlextInfraPyrightGate, FlextInfraPyreflyGate]
+        "gate_class",
+        [FlextInfraMypyGate, FlextInfraPyrightGate, FlextInfraPyreflyGate],
     )
     def test_real_check_and_repair(
-        self, checker_context: m.Infra.GateContext, gate_class: type[FlextInfraGate]
+        checker_context: m.Infra.GateContext,
+        gate_class: type[FlextInfraGate],
     ) -> None:
+        """Test real check and repair."""
         project = checker_context.repository_root
         reports = checker_context.reports_dir
         ctx = m.Infra.GateContext(repository_root=project, reports_dir=reports)
@@ -116,16 +190,7 @@ class TestsFlextInfraTypeGates:
         assert repaired.result.passed, repaired
         assert not repaired.issues
 
-        if gate_class is FlextInfraMypyGate:
-            native_reports = tuple(reports.rglob("coverage.json"))
-            assert len(native_reports) == 1
-            inventory = m.Infra.MypyCoverageReport.model_validate_json(
-                native_reports[0].read_text(encoding="utf-8"), strict=True
-            )
-            assert set(inventory.lines) == {
-                str(path.resolve()) for path in (project / "src").rglob("*.py")
-            }
-
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize(
         ("gate_class", "config_text"),
@@ -144,31 +209,36 @@ class TestsFlextInfraTypeGates:
         ],
     )
     def test_real_warning_is_red(
-        self,
         real_python_package: Path,
         gate_class: type[FlextInfraGate],
         config_text: str,
     ) -> None:
+        """Test real warning is red."""
         project = real_python_package
         pyproject = project / "pyproject.toml"
         pyproject.write_text(
-            pyproject.read_text(encoding="utf-8") + "\n" + config_text, encoding="utf-8"
+            pyproject.read_text(encoding="utf-8") + "\n" + config_text,
+            encoding="utf-8",
         )
         (project / "src" / "test_pkg" / "warning.py").write_text(
-            'value: int = "incorrect"\n', encoding="utf-8"
+            'value: int = "incorrect"\n',
+            encoding="utf-8",
         )
         reports = project / ".reports"
         reports.mkdir()
         result = gate_class(project).check(
-            project, m.Infra.GateContext(repository_root=project, reports_dir=reports)
+            project,
+            m.Infra.GateContext(repository_root=project, reports_dir=reports),
         )
         assert result.result.passed is False
         assert any(issue.severity in {"warn", "warning"} for issue in result.issues)
 
+    @staticmethod
     @pytest.mark.slow
     def test_failed_pyrefly_cannot_reuse_previous_report(
-        self, checker_context: m.Infra.GateContext
+        checker_context: m.Infra.GateContext,
     ) -> None:
+        """Test failed pyrefly cannot reuse previous report."""
         project = checker_context.repository_root
         pyproject = project / "pyproject.toml"
         reports = checker_context.reports_dir
@@ -178,20 +248,28 @@ class TestsFlextInfraTypeGates:
         native_reports = tuple(reports.glob("*-pyrefly.json"))
         assert len(native_reports) == 1
         assert not m.Infra.PyreflyReport.model_validate_json(
-            native_reports[0].read_text(encoding="utf-8"), strict=True
+            native_reports[0].read_text(encoding="utf-8"),
+            strict=True,
         ).errors
         pyproject.write_text("[tool.pyrefly\n", encoding="utf-8")
         failed = gate.check(project, checker_context)
         assert failed.result.passed is False
         assert failed.raw_output
+        # The gate's declared report path is replaced per run: the passing
+        # run's report is removed before the failing run, never reused.
+        assert not native_reports[0].exists()
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize(
-        "gate_class", [FlextInfraMypyGate, FlextInfraPyrightGate, FlextInfraPyreflyGate]
+        "gate_class",
+        [FlextInfraMypyGate, FlextInfraPyrightGate, FlextInfraPyreflyGate],
     )
     def test_explicit_files_keep_selected_scope(
-        self, checker_context: m.Infra.GateContext, gate_class: type[FlextInfraGate]
+        checker_context: m.Infra.GateContext,
+        gate_class: type[FlextInfraGate],
     ) -> None:
+        """Test explicit files keep selected scope."""
         project = checker_context.repository_root
         package = project / "src" / "test_pkg"
         unselected = package / "unselected.py"
@@ -213,12 +291,16 @@ class TestsFlextInfraTypeGates:
             issue.file.endswith(unselected.name) for issue in full_project.issues
         )
 
+    @staticmethod
     @pytest.mark.parametrize(
-        "gate_class", [FlextInfraMypyGate, FlextInfraPyrightGate, FlextInfraPyreflyGate]
+        "gate_class",
+        [FlextInfraMypyGate, FlextInfraPyrightGate, FlextInfraPyreflyGate],
     )
     def test_empty_source_is_not_passed(
-        self, tmp_path: Path, gate_class: type[FlextInfraGate]
+        tmp_path: Path,
+        gate_class: type[FlextInfraGate],
     ) -> None:
+        """A checker invoked without inputs never reads as a clean pass."""
         result = gate_class(tmp_path).check(
             tmp_path,
             m.Infra.GateContext(repository_root=tmp_path, reports_dir=tmp_path),
@@ -228,22 +310,42 @@ class TestsFlextInfraTypeGates:
         # stays visible in the execution errors for every gate posture.
         assert result.result.errors
 
+    @staticmethod
+    @pytest.mark.parametrize(
+        "gate_class",
+        [FlextInfraPyrightGate, FlextInfraPyreflyGate],
+    )
+    def test_python_analysis_gates_follow_detected_content(
+        tmp_path: Path,
+        real_python_package: Path,
+        gate_class: type[FlextInfraGate],
+    ) -> None:
+        """Detected Python content, not a pass receipt, selects the type gates."""
+        tm.that(gate_class(tmp_path).selected_for(tmp_path), eq=False)
+        tm.that(
+            gate_class(real_python_package).selected_for(real_python_package),
+            eq=True,
+        )
+
+    @staticmethod
     @pytest.mark.parametrize("payload", ["", " ", "not JSON", "{}", "[]", "null"])
     @pytest.mark.parametrize(
         "report_model",
         [m.Infra.MypyDiagnostic, m.Infra.PyrightReport, m.Infra.PyreflyReport],
     )
     def test_invalid_native_report(
-        self,
         report_model: type[
             m.Infra.MypyDiagnostic | m.Infra.PyrightReport | m.Infra.PyreflyReport
         ],
         payload: str,
     ) -> None:
+        """Test invalid native report."""
         with pytest.raises(c.ValidationError):
             report_model.model_validate_json(payload, strict=True)
 
-    def test_pyright_incomplete_counts(self) -> None:
+    @staticmethod
+    def test_pyright_incomplete_counts() -> None:
+        """Test pyright incomplete counts."""
         payload = (
             '{"version":"1.1.411","time":"1","generalDiagnostics":[], '
             '"summary":{"filesAnalyzed":1,"errorCount":0,"warningCount":1,'
@@ -252,11 +354,15 @@ class TestsFlextInfraTypeGates:
         with pytest.raises(c.ValidationError, match="warning count"):
             m.Infra.PyrightReport.model_validate_json(payload, strict=True)
 
-    def test_pyrefly_empty_native_report(self) -> None:
+    @staticmethod
+    def test_pyrefly_empty_native_report() -> None:
+        """Test pyrefly empty native report."""
         report = m.Infra.PyreflyReport.model_validate_json('{"errors":[]}', strict=True)
         assert not report.errors
 
-    def test_pyright_information_without_location(self) -> None:
+    @staticmethod
+    def test_pyright_information_without_location() -> None:
+        """Test pyright information without location."""
         report = m.Infra.PyrightReport.model_validate_json(
             '{"version":"1.1.411","time":"1","generalDiagnostics":['
             '{"file":"source.py","severity":"information","message":"type info"}],'
@@ -267,21 +373,40 @@ class TestsFlextInfraTypeGates:
         assert report.general_diagnostics[0].range is None
         assert report.summary.information_count == 1
 
-    def test_pyright_zero_collection(self) -> None:
-        with pytest.raises(c.ValidationError):
-            m.Infra.PyrightReport.model_validate_json(
-                '{"version":"1.1.411","time":"1","generalDiagnostics":[], '
-                '"summary":{"filesAnalyzed":0,"errorCount":0,"warningCount":0,'
-                '"informationCount":0,"timeInSec":0.1}}',
-                strict=True,
-            )
+    @staticmethod
+    def test_pyright_zero_collection() -> None:
+        """filesAnalyzed=0 parses; the gate, not the model, judges it."""
+        report = m.Infra.PyrightReport.model_validate_json(
+            '{"version":"1.1.411","time":"1","generalDiagnostics":[], '
+            '"summary":{"filesAnalyzed":0,"errorCount":0,"warningCount":0,'
+            '"informationCount":0,"timeInSec":0.1}}',
+            strict=True,
+        )
+        assert report.summary.files_analyzed == 0
+        assert not report.general_diagnostics
 
-    @pytest.mark.parametrize(
-        "payload", ['{"lines":{}}', '{"lines":{"relative.py":[1]}}', "{}"]
-    )
-    def test_mypy_requires_native_source_evidence(self, payload: str) -> None:
-        with pytest.raises(c.ValidationError):
-            m.Infra.MypyCoverageReport.model_validate_json(payload, strict=True)
+    @staticmethod
+    def test_checker_does_not_run_type_gates_on_content_only_project(
+        real_python_package: Path,
+    ) -> None:
+        """A project without Python targets gets no type-gate row at all."""
+        for module in (real_python_package / "src").rglob("*.py"):
+            module.unlink()
+        reports = real_python_package / ".reports"
 
+        results = tm.ok(
+            FlextInfraWorkspaceChecker(
+                repository_root=real_python_package.parent,
+            ).run_projects(
+                [real_python_package.name],
+                [FlextInfraPyrightGate.gate_id, FlextInfraPyreflyGate.gate_id],
+                reports_dir=reports,
+            ),
+        )
 
-__all__: list[str] = ["TestsFlextInfraTypeGates"]
+        tm.that(results[0].gates, empty=True)
+        markdown = (reports / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME).read_text(
+            encoding="utf-8",
+        )
+        tm.that(markdown, lacks=f"- {FlextInfraPyrightGate.gate_id}:")
+        tm.that(markdown, lacks=f"- {FlextInfraPyreflyGate.gate_id}:")

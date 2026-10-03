@@ -1,4 +1,8 @@
-"""Lazy-init constants for the codegen package."""
+"""Lazy-init constants for the codegen package.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -13,8 +17,12 @@ if TYPE_CHECKING:
 class FlextInfraConstantsCodegenLazy:
     """Lazy-init and export-policy constants for codegen."""
 
-    MAX_LINE_LENGTH: ClassVar[int] = 88
-    "Maximum line length for generated import lines."
+    MANIFEST_API_VERSION: ClassVar[str] = "flext-infra/projections-lock/v1"
+    "Version tag of the projected ``.agents/projections.lock.json`` contract."
+    MANIFEST_FILENAME: ClassVar[str] = "projections.lock.json"
+    "Projection lock filename emitted beside the lazy-init projections."
+    PROJECTED_ROOTS: ClassVar[frozenset[str]] = frozenset({".agents", ".codex"})
+    "Roots whose projected files carry a manifest entry."
     MAX_ALIAS_LENGTH: ClassVar[int] = 2
     "Maximum length of a public facade alias."
     AUTOGEN_HEADER: ClassVar[str] = "# AUTO-GENERATED FILE — Regenerate with: make gen"
@@ -29,7 +37,7 @@ class FlextInfraConstantsCodegenLazy:
     ROOT_EXPORTS_DIR: ClassVar[str] = "_constants"
     "Directory under each package where lazy-init registries must live."
     GENERATED_EXPORT_SIDECAR_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?:_exports(?:_lazy(?:_part_[0-9]+)?)?|_lazy_exports)\.py$"
+        r"^(?:_exports(?:_lazy(?:_part_[0-9]+)?)?|_lazy_exports)\.py$",
     )
     "Regex matching every generated lazy-export sidecar filename "
     "(``_exports.py``, ``_exports_lazy.py``, ``_exports_lazy_part_N.py``, "
@@ -41,20 +49,22 @@ class FlextInfraConstantsCodegenLazy:
         "_root_typing_parts",
     })
     "Closed set of retired root registry module and package names."
+    LAZY_BOOTSTRAP_HELPERS: ClassVar[t.VariadicTuple[str]] = (
+        "build_lazy_import_map",
+        "install_lazy_exports",
+    )
+    "Lazy helpers every initializer imports; the bootstrap root publishes them."
     ROOT_TEMPLATE_BINDINGS: ClassVar[frozenset[str]] = frozenset({
         "MappingProxyType",
         "TYPE_CHECKING",
-        "build_lazy_import_map",
-        "install_lazy_exports",
+        *LAZY_BOOTSTRAP_HELPERS,
     })
-    "Names owned by the canonical root initializer template, never public exports."
+    "Names the root initializer template binds; only the helpers are ever published."
     TEST_ONLY_SOURCE_MODULE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?:_?test(?:_[A-Za-z0-9_]+)?|[A-Za-z0-9_]+_tests?)\.py$"
+        r"^(?:_?test(?:_[A-Za-z0-9_]+)?|[A-Za-z0-9_]+_tests?)\.py$",
     )
     "Test-module filenames forbidden from installable package export maps."
-    INIT_PY: ClassVar[str] = "__init__.py"
-    "Standard Python package initializer filename."
-    # flext-wkii.17.26 (codex): cleanup is the only owner of retired init artifacts.
+    # Cleanup is the only owner of retired init artifacts.
     OBSOLETE_GENERATED_INIT_FILES: ClassVar[t.StrSequence] = ("__unit__.py",)
     "Generated initializer artifacts removed during every codegen pass."
     INIT_PYI: ClassVar[str] = "__init__.pyi"
@@ -80,7 +90,7 @@ class FlextInfraConstantsCodegenLazy:
     "Root import surfaces generated as private lazy plumbing, not public ABI."
     WRAPPER_NAMESPACE_DEPTH: ClassVar[int] = 2
     "Dotted depth of a namespace package under a governed wrapper surface."
-    # flext-pulj (codex): pytest must register fixture plugins before importing
+    # Pytest must register fixture plugins before importing
     # them, so their private package initializer is always side-effect free.
     # Real cycle exceptions are the bootstrap packages imported while
     # ``flext_core.lazy`` initializes; importing them with a lazy facade would
@@ -91,19 +101,23 @@ class FlextInfraConstantsCodegenLazy:
     })
     "Package segments whose initializer must remain empty to avoid bootstrap cycles."
 
-    # The generated bootstrap opens with `from flext_core.lazy import ...`, so a
-    # package that `flext_core.lazy` itself reaches at module scope cannot carry
-    # one: importing it would re-enter the module that is still initializing and
-    # fail with "cannot import name 'build_lazy_import_map' from partially
-    # initialized module 'flext_core.lazy'". `flext_core.lazy` pulls
-    # `._lazy_parts`, which pulls `._typings`, which reaches the other private
-    # facets, so the whole private surface of the bootstrap-owning distribution
-    # keeps side-effect-free initializers. Private packages of every OTHER
-    # distribution import the bootstrap normally and are unaffected.
+    # The bootstrap-owning distribution's generated initializers open with
+    # `from flext_core.lazy import ...`, so a package that `flext_core.lazy`
+    # itself reaches at module scope cannot carry one: importing it would
+    # re-enter the module that is still initializing and fail with "cannot
+    # import name 'build_lazy_import_map' from partially initialized module
+    # 'flext_core.lazy'". `flext_core.lazy` pulls `._lazy_parts`, which pulls
+    # `._typings`, which reaches the other private facets, so the whole private
+    # surface of the bootstrap-owning distribution keeps side-effect-free
+    # initializers. Every OTHER distribution imports the helpers from the
+    # `flext_core` root, which publishes them, never from its submodule.
     LAZY_BOOTSTRAP_ROOT_PACKAGE: ClassVar[str] = "flext_core"
+    LAZY_BOOTSTRAP_MODULE: ClassVar[str] = "flext_core.lazy"
+    "Module defining the lazy helpers; only the bootstrap owner imports it directly."
 
     BARE_IMPORT_FROM_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^from\s+import\s", re.MULTILINE
+        r"^from\s+import\s",
+        re.MULTILINE,
     )
     "Regex: malformed ``from import`` statement (missing module name)."
 
@@ -138,7 +152,6 @@ class FlextInfraConstantsCodegenLazy:
     "Internal child packages exported at the root as module objects only."
     INFRA_ONLY_EXPORTS: ClassVar[frozenset[str]] = frozenset({
         "cleanup_submodule_namespace",
-        "install_lazy_exports",
         "lazy_getattr",
         "logger",
         "merge_lazy_imports",
@@ -157,11 +170,10 @@ class FlextInfraConstantsCodegenLazy:
     })
     "Exports excluded from package __init__.py auto-export."
     PUBLISHED_ALL_EXCLUDE: ClassVar[frozenset[str]] = frozenset({
-        "build_lazy_import_map",
         "lazy",
         "normalize_lazy_imports",
     })
-    # flext-pulj (codex): these remain direct inline lazy imports without
+    # These remain direct inline lazy imports without
     # widening the explicit wildcard contract or requiring root sidecars.
     "Public-module symbols withheld from generated root-facade __all__."
     PUBLIC_ROOT_ALIAS_ORDER: ClassVar[t.StrSequence] = (
@@ -203,7 +215,6 @@ class FlextInfraConstantsCodegenLazy:
             "tf": ("flext_tests", "tf"),
             "tk": ("flext_tests", "tk"),
             "tm": ("flext_tests", "tm"),
-            "tv": ("flext_tests", "tv"),
             "u": ("flext_tests", "u"),
             "x": ("flext_tests", "x"),
         })

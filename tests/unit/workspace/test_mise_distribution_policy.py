@@ -2,8 +2,11 @@
 
 ``codegen conform`` exclusively owns ``.mise.toml`` (workspace environment
 sync stopped writing it when the toolchain transaction landed), so the
-composition rule is proven against ``u.Infra.compose_mise_toml`` — the one
-surface that turns a repository's ``config/*.yaml`` overlay into that file.
+composition rule is proven through the immutable project snapshot and the
+public composer that turns that source view into the managed file.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -12,7 +15,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import config, u
+from flext_infra import config
+from tests import u
 
 
 class TestsFlextInfraMiseDistributionPolicy:
@@ -20,18 +24,12 @@ class TestsFlextInfraMiseDistributionPolicy:
 
     @staticmethod
     def _workspace(root: Path) -> Path:
-        root.mkdir(parents=True)
-        (root / "pyproject.toml").write_text(
-            "[project]\n"
-            'name = "fixture"\n'
-            'version = "0.1.0"\n'
-            'requires-python = ">=3.13,<3.14"\n',
-            encoding="utf-8",
-        )
+        u.Tests.WorktreeFixture.write_python_project(root, "fixture")
         return root
 
     def test_managed_artifacts_fleet_wins_over_divergent_pin(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A project pin diverging from a tool the fleet now owns is residue.
 
@@ -51,13 +49,12 @@ class TestsFlextInfraMiseDistributionPolicy:
             encoding="utf-8",
         )
 
-        result = u.Infra.compose_mise_toml(
-            root, f'[tools]\n"{selector}" = "{version}"\n'
+        snapshot = tm.ok(u.Infra.snapshot_project_managed_artifacts(root))
+        result = u.Infra.compose_mise_toml_from_snapshot(
+            snapshot.sources,
+            f'[tools]\n"{selector}" = "{version}"\n',
         )
 
         tm.ok(result)
         tm.that(result.value, has=f'"{selector}" = "{version}"')
         tm.that(result.value, lacks="divergent")
-
-
-__all__: list[str] = ["TestsFlextInfraMiseDistributionPolicy"]

@@ -1,4 +1,8 @@
-"""Behavior tests for the public documentation command-contract audit."""
+"""Behavior tests for the public documentation command-contract audit.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -18,14 +22,21 @@ if TYPE_CHECKING:
 class TestsFlextInfraAuditorCommandContract:
     """Prove canonical Make, Testmon, and public-test documentation policy."""
 
+    @staticmethod
     @pytest.fixture
-    def command_contract_scope(self, infra_test_workspace: Path) -> m.Infra.DocScope:
-        """Declare the same repository identity in Git and the typed topology."""
+    def command_contract_scope(infra_test_workspace: Path) -> m.Infra.DocScope:
+        """Declare the same repository identity in Git and the typed topology.
+
+        Returns:
+            The resulting ``m.Infra.DocScope``.
+
+        """
         name = "infra-pkg"
         u.Tests.write_project_beads_config(infra_test_workspace, name)
         u.Tests.write_standalone_workspace_manifest(infra_test_workspace, name)
         u.Tests.initialize_git_repo(
-            infra_test_workspace, origin_url=u.Tests.repository_ref(name).url
+            infra_test_workspace,
+            origin_url=u.Tests.repository_ref(name).url,
         )
         return m.Infra.DocScope(
             name=name,
@@ -69,6 +80,7 @@ class TestsFlextInfraAuditorCommandContract:
 
     @staticmethod
     def test_ignores_prose_that_begins_with_make() -> None:
+        """Test ignores prose that begins with make."""
         content = """# Scope
 
 Make surfaces and documentation are changed at their canonical owner.
@@ -84,6 +96,7 @@ Make surfaces and documentation are changed at their canonical owner.
 
     @staticmethod
     def test_rejects_invented_make_selectors() -> None:
+        """Test rejects invented make selectors."""
         content = """```bash
 make test PROJECT=flext-demo MATCH=unit
 ```
@@ -141,6 +154,7 @@ make test PROJECT=flext-demo MATCH=unit
 
     @staticmethod
     def test_rejects_raw_pytest_execution() -> None:
+        """Test rejects raw pytest execution."""
         content = """```bash
 PYTHONPATH=src python -m pytest tests/unit
 ```
@@ -157,6 +171,7 @@ PYTHONPATH=src python -m pytest tests/unit
 
     @staticmethod
     def test_rejects_direct_tool_execution() -> None:
+        """Test rejects direct tool execution."""
         content = """```bash
 ruff check src
 ```
@@ -172,9 +187,27 @@ ruff check src
         tm.that(issues[0].message, has="bypasses the root Make dispatcher")
 
     @staticmethod
+    def test_inline_command_requires_an_execution_directive() -> None:
+        """Describe a tool invocation without treating it as user guidance."""
+        content = (
+            "The fix pass runs `ruff check --fix` internally.\n"
+            "Run `ruff check --fix` to invoke the tool directly.\n"
+        )
+
+        issues = u.Infra.docs_command_contract_content_issues(
+            content,
+            relative_path="docs/guides/commands.md",
+            effective_verbs=config.Infra.codegen.make.verbs,
+        )
+
+        tm.that(len(issues), eq=1)
+        tm.that(issues[0].message, has="line 2: direct tool command")
+
+    @staticmethod
     def test_scans_recursive_live_docs_from_typed_scope(
         command_contract_scope: m.Infra.DocScope,
     ) -> None:
+        """Test scans recursive live docs from typed scope."""
         infra_test_workspace = command_contract_scope.path
         docs_root = infra_test_workspace / "docs"
         governed = {
@@ -227,12 +260,16 @@ ruff check src
         declared: bool,
         expected: str,
     ) -> None:
+        """Test audits repository declared verbs."""
         scope = command_contract_scope
         spec = m.Infra.MakeVerbSpec(
-            name=verb_name, description="Repository-owned operation"
+            name=verb_name,
+            description="Repository-owned operation",
         )
         u.Tests.write_standalone_workspace_manifest(
-            scope.path, scope.name, extra_verbs=(spec,) if declared else ()
+            scope.path,
+            scope.name,
+            extra_verbs=(spec,) if declared else (),
         )
         guide = scope.path / "docs/guides/commands.md"
         guide.parent.mkdir(parents=True)
@@ -251,15 +288,19 @@ ruff check src
     def test_manifest_changes_update_the_live_contract(
         command_contract_scope: m.Infra.DocScope,
     ) -> None:
+        """Test manifest changes update the live contract."""
         scope = command_contract_scope
         spec = m.Infra.MakeVerbSpec(
-            name="publish-preview", description="Repository-owned operation"
+            name="publish-preview",
+            description="Repository-owned operation",
         )
         guide = scope.path / "docs/guides/commands.md"
         guide.parent.mkdir(parents=True)
         u.write_file(guide, f"```bash\nmake {spec.name}\n```\n")
         u.Tests.write_standalone_workspace_manifest(
-            scope.path, scope.name, extra_verbs=(spec,)
+            scope.path,
+            scope.name,
+            extra_verbs=(spec,),
         )
         tm.that(u.Infra.docs_command_contract_issues(scope), eq=[])
 
@@ -269,10 +310,13 @@ ruff check src
         tm.that(legacy[0].message, has="legacy `APPLY` flag is exterminated")
 
         renamed = m.Infra.MakeVerbSpec(
-            name="archive-assets", description="Repository-owned operation"
+            name="archive-assets",
+            description="Repository-owned operation",
         )
         u.Tests.write_standalone_workspace_manifest(
-            scope.path, scope.name, extra_verbs=(renamed,)
+            scope.path,
+            scope.name,
+            extra_verbs=(renamed,),
         )
         u.write_file(guide, f"```bash\nmake {renamed.name}\n```\n")
         tm.that(u.Infra.docs_command_contract_issues(scope), eq=[])
@@ -280,8 +324,11 @@ ruff check src
     @staticmethod
     @pytest.mark.parametrize("with_guide", [False, True])
     def test_malformed_selected_topology_blocks_with_exact_cause(
-        command_contract_scope: m.Infra.DocScope, *, with_guide: bool
+        command_contract_scope: m.Infra.DocScope,
+        *,
+        with_guide: bool,
     ) -> None:
+        """Test malformed selected topology blocks with exact cause."""
         scope = command_contract_scope
         if with_guide:
             guide = scope.path / "docs/guides/commands.md"
@@ -290,7 +337,7 @@ ruff check src
             u.write_file(guide, f"```bash\nmake {spec.name}\n```\n")
         manifest = u.Tests.write_standalone_workspace_manifest(scope.path, scope.name)
         u.write_file(manifest, "version: [\n")
-        loaded = u.Infra.workspace_spec_load(scope.path)
+        loaded = u.Infra.load_workspace_manifest(scope.path)
         tm.fail(loaded)
         tm.that(loaded.error, has=str(manifest))
 
@@ -303,12 +350,16 @@ ruff check src
     def test_guide_projection_resolves_source_repository_contract(
         command_contract_scope: m.Infra.DocScope,
     ) -> None:
+        """Test guide projection resolves source repository contract."""
         source_scope = command_contract_scope
         spec = m.Infra.MakeVerbSpec(
-            name="publish-preview", description="Source repository operation"
+            name="publish-preview",
+            description="Source repository operation",
         )
         manifest = u.Tests.write_standalone_workspace_manifest(
-            source_scope.path, source_scope.name, extra_verbs=(spec,)
+            source_scope.path,
+            source_scope.name,
+            extra_verbs=(spec,),
         )
         guide = source_scope.path / "docs/guides/commands.md"
         guide.parent.mkdir(parents=True)
@@ -318,11 +369,15 @@ ruff check src
         destination = source_scope.path / "member"
         destination.mkdir()
         scope = m.Infra.DocScope(
-            name="member", path=destination, report_dir=destination / ".reports/docs"
+            name="member",
+            path=destination,
+            report_dir=destination / ".reports/docs",
         )
 
         projected = u.Infra.docs_project_guides_artifacts(
-            scope, repository_root=source_scope.path, source_states=(state.value,)
+            scope,
+            repository_root=source_scope.path,
+            source_states=(state.value,),
         )
 
         tm.ok(projected)
@@ -331,16 +386,19 @@ ruff check src
         tm.that(projected.value[0][2], has=f"make {spec.name}")
 
         u.write_file(manifest, "version: [\n")
-        loaded = u.Infra.workspace_spec_load(source_scope.path)
+        loaded = u.Infra.load_workspace_manifest(source_scope.path)
         tm.fail(loaded)
         blocked = u.Infra.docs_project_guides_artifacts(
-            scope, repository_root=source_scope.path, source_states=(state.value,)
+            scope,
+            repository_root=source_scope.path,
+            source_states=(state.value,),
         )
         tm.fail(blocked)
         tm.that(blocked.error, eq=loaded.error)
 
     @staticmethod
     def test_rejects_test_double_examples() -> None:
+        """Test rejects test double examples."""
         content = """```python
 from unittest.mock import patch
 
@@ -356,6 +414,3 @@ result = patch("package.owner")
 
         tm.that(len(issues), eq=2)
         tm.that(issues[0].message, has="test-double code")
-
-
-__all__: list[str] = ["TestsFlextInfraAuditorCommandContract"]

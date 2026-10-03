@@ -1,4 +1,8 @@
-"""Select workspace pyprojects, modernize them, and verify the build backend."""
+"""Select workspace pyprojects, modernize them, and verify the build backend.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,7 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, t, u
-
-from .._floor_profile_writer import FlextInfraDepsFloorProfileWriter
+from flext_infra.deps._floor_profile_writer import FlextInfraDepsFloorProfileWriter
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
@@ -37,7 +40,10 @@ class FlextInfraPyprojectModernizerRun:
         def project_names(self) -> t.StrSequence | None: ...
 
         def _read_document_state(
-            self, path: Path, *, source: str | None = None
+            self,
+            path: Path,
+            *,
+            source: str | None = None,
         ) -> p.Result[m.Infra.PyprojectDocumentState]: ...
 
         def _process_document_state(
@@ -47,10 +53,15 @@ class FlextInfraPyprojectModernizerRun:
             canonical_dev: t.StrSequence,
             dry_run: bool,
             skip_comments: bool,
-        ) -> t.StrSequence: ...
+        ) -> p.Result[t.StrSequence]: ...
 
     def _selected_project_paths(self) -> p.Result[t.SequenceOf[Path]]:
-        """Resolve selected names by path, directory basename, or declared name."""
+        """Resolve selected names by path, directory basename, or declared name.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[Path]]``.
+
+        """
         result_type = r[t.SequenceOf[Path]]
         declared = {
             name: self.root / name
@@ -64,20 +75,30 @@ class FlextInfraPyprojectModernizerRun:
         )
         if outside:
             return result_type.fail(
-                f"workspace subprojects outside root: {', '.join(outside)}"
+                f"workspace subprojects outside root: {', '.join(outside)}",
             )
         aliases: MutableMapping[str, t.MutableSequenceOf[Path]] = {}
         for path in declared.values():
             aliases.setdefault(path.name, []).append(path)
-            state = self._read_document_state(path / c.Infra.PYPROJECT_FILENAME)
+            # A declared subproject whose pyproject cannot be read or named
+            # would otherwise vanish from the alias map and resurface as a
+            # false "missing" or "ambiguous" project further down.
+            state = self._read_document_state(path / c.PYPROJECT_FILENAME)
             if state.failure:
-                continue
-            try:
-                name = u.Infra.project_name_from_payload(
-                    state.value.pyproject_path, state.value.payload
+                # A declared member's unreadable pyproject is a broken
+                # workspace contract, not a selectable absence: the canonical
+                # docs-scope reader owns the typed error for invalid TOML and
+                # names the offending file, and that raise must leave the run
+                # instead of being demoted into an exit-code log line.
+                _ = u.Infra.project_state(path)
+                return result_type.fail(
+                    f"workspace subproject {path} has an unreadable pyproject: "
+                    f"{state.error}",
                 )
-            except c.EXC_TYPE_VALIDATION:
-                continue
+            name = u.Infra.project_name_from_payload(
+                state.value.pyproject_path,
+                state.value.payload,
+            )
             if path not in aliases.setdefault(name, []):
                 aliases[name].append(path)
         selected = [name for name in self.project_names or () if name != "."]
@@ -94,14 +115,19 @@ class FlextInfraPyprojectModernizerRun:
                 paths.append(matches[0])
         if ambiguous:
             return result_type.fail(
-                f"ambiguous projects: {', '.join(sorted(ambiguous))}"
+                f"ambiguous projects: {', '.join(sorted(ambiguous))}",
             )
         if missing:
             return result_type.fail(f"unknown projects: {', '.join(sorted(missing))}")
         return result_type.ok(paths)
 
     def run(self) -> int:
-        """Run pyproject modernization for the workspace."""
+        """Run pyproject modernization for the workspace.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         check_mode = self.audit or self.check_only
         dry_run = check_mode or self.effective_dry_run
         # Modernization writes only the requested repository root and its
@@ -111,7 +137,7 @@ class FlextInfraPyprojectModernizerRun:
         if project_paths.failure:
             u.Cli.error(project_paths.error or "project selection failed")
             return 2
-        root_pyproject = self.root / c.Infra.PYPROJECT_FILENAME
+        root_pyproject = self.root / c.PYPROJECT_FILENAME
         root_state = self._read_document_state(root_pyproject)
         if root_state.failure:
             return 2
@@ -120,7 +146,8 @@ class FlextInfraPyprojectModernizerRun:
         if include_root:
             try:
                 _ = u.Infra.project_name_from_payload(
-                    root_pyproject, root_state.value.payload
+                    root_pyproject,
+                    root_state.value.payload,
                 )
             except c.EXC_TYPE_VALIDATION as exc:
                 u.Cli.error(str(exc))
@@ -134,7 +161,7 @@ class FlextInfraPyprojectModernizerRun:
         if include_root and root_pyproject.is_file():
             files.add(root_pyproject)
         canonical_dev: t.StrSequence = t.Infra.STR_SEQ_ADAPTER.validate_python(
-            u.Infra.canonical_dev_dependencies_from_payload(root_state.value.payload)
+            u.Infra.canonical_dev_dependencies_from_payload(root_state.value.payload),
         )
         violations: MutableMapping[str, t.StrSequence] = {}
         states: t.MutableSequenceOf[m.Infra.PyprojectDocumentState] = []
@@ -142,7 +169,7 @@ class FlextInfraPyprojectModernizerRun:
         drift_reported = False
         ordered = sorted(files)
         for index, file_path in enumerate(ordered, start=1):
-            u.Cli.progress(index, len(ordered), str(file_path), c.Infra.VERB_DEPS)
+            u.Cli.progress(index, len(ordered), str(file_path), c.Infra.CLI_GROUP_DEPS)
             state = (
                 root_state
                 if file_path.resolve() == root_pyproject.resolve()
@@ -152,12 +179,16 @@ class FlextInfraPyprojectModernizerRun:
                 invalid_paths.append(file_path)
                 changes: t.StrSequence = ["invalid TOML"]
             else:
-                changes = self._process_document_state(
+                processed = self._process_document_state(
                     state.value,
                     canonical_dev=canonical_dev,
                     dry_run=dry_run,
                     skip_comments=self.skip_comments,
                 )
+                if processed.failure:
+                    u.Cli.error(f"{file_path}: {processed.error}")
+                    return 2
+                changes = processed.value
                 if changes and not drift_reported:
                     drift_reported = True
                     diff_lines = u.Infra.unified_diff_lines(
@@ -165,10 +196,10 @@ class FlextInfraPyprojectModernizerRun:
                         state.value.rendered,
                         fromfile=f"{file_path}:before",
                         tofile=f"{file_path}:after",
-                        max_lines=30,
+                        max_lines=c.Infra.EDIT_DIFF_PREVIEW_MAX_LINES,
                     )
                     u.Cli.info(
-                        "deps: first rendered drift\n" + "".join(diff_lines).rstrip()
+                        "deps: first rendered drift\n" + "".join(diff_lines).rstrip(),
                     )
                 states.append(state.value)
             if changes:
@@ -194,12 +225,21 @@ class FlextInfraPyprojectModernizerRun:
         return self._run_build_check(states, invalid_paths=invalid_paths)
 
     def _rewrite_constraints(
-        self, root_state: m.Infra.PyprojectDocumentState, *, dry_run: bool
+        self,
+        root_state: m.Infra.PyprojectDocumentState,
+        *,
+        dry_run: bool,
     ) -> int:
-        """Write runtime-resolved floors to the codegen SSOT (flext-gzfd2 cutover)."""
+        """Write runtime-resolved floors to the codegen SSOT.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         try:
             root_project_name = u.Infra.project_name_from_payload(
-                root_state.pyproject_path, root_state.payload
+                root_state.pyproject_path,
+                root_state.payload,
             )
         except c.EXC_TYPE_VALIDATION as exc:
             u.Cli.error(str(exc))
@@ -214,13 +254,13 @@ class FlextInfraPyprojectModernizerRun:
                     sorted({
                         *u.Infra.workspace_project_paths(self.root),
                         root_project_name,
-                    })
+                    }),
                 ),
             )
         )
         if profile_changes:
             u.Cli.info(
-                "deps: dependency_profiles floors updated from the provisioned runtime"
+                "deps: dependency_profiles floors updated from the provisioned runtime",
             )
             for change in profile_changes:
                 u.Cli.info(f"  - {change}")
@@ -232,7 +272,12 @@ class FlextInfraPyprojectModernizerRun:
         *,
         invalid_paths: t.SequenceOf[Path],
     ) -> int:
-        """Validate every pyproject declares the hatchling build backend."""
+        """Validate every pyproject declares the hatchling build backend.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         warnings = [f"{path}: invalid TOML" for path in invalid_paths]
         for state in states:
             build_system = u.Cli.toml_mapping_child(state.payload, "build-system")
@@ -245,7 +290,7 @@ class FlextInfraPyprojectModernizerRun:
                 warnings.append(f"{state.pyproject_path}: missing [build-system]")
             elif backend != "hatchling.build":
                 warnings.append(
-                    f"{state.pyproject_path}: expected hatchling.build, got {backend}"
+                    f"{state.pyproject_path}: expected hatchling.build, got {backend}",
                 )
         for warning in warnings:
             u.Cli.info(warning)

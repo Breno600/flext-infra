@@ -1,4 +1,8 @@
-"""Public build-workflow tests for docs services."""
+"""Public build-workflow tests for docs services.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -16,15 +20,20 @@ if TYPE_CHECKING:
 class TestsFlextInfraBuilderScope:
     """Public build-workflow tests for docs services."""
 
+    @staticmethod
     def test_build_returns_root_and_selected_project_reports(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
+        """Test build returns root and selected project reports."""
         workspace = u.Tests.create_docs_workspace(
-            tmp_path, project_names=("flext-a", "flext-b")
+            tmp_path,
+            project_names=("flext-a", "flext-b"),
         )
 
         result = FlextInfraDocBuilder().build(
-            workspace, projects=["flext-a"], output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR
+            workspace,
+            projects=["flext-a"],
+            output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR,
         )
 
         tm.ok(result)
@@ -35,20 +44,26 @@ class TestsFlextInfraBuilderScope:
         )
         tm.that(all(not report.passed for report in result.value), eq=True)
 
-    def test_build_uses_custom_output_dir(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_build_uses_custom_output_dir(tmp_path: Path) -> None:
+        """Test build uses custom output dir."""
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
 
         result = FlextInfraDocBuilder().build(
-            workspace, projects=["flext-a"], output_dir=".custom-docs"
+            workspace,
+            projects=["flext-a"],
+            output_dir=".custom-docs",
         )
 
         tm.ok(result)
         tm.that((workspace / ".custom-docs/build-report.md").exists(), eq=True)
         tm.that((workspace / "flext-a/.custom-docs/build-report.md").exists(), eq=True)
 
+    @staticmethod
     def test_build_missing_settings_failure_has_empty_site_dir(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
+        """Test build missing settings failure has empty site dir."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
 
         result = FlextInfraDocBuilder().build(workspace)
@@ -57,6 +72,3 @@ class TestsFlextInfraBuilderScope:
         tm.that(result.value[0].result, eq=c.Infra.ResultStatus.FAIL)
         tm.that(result.value[0].passed, eq=False)
         tm.that(result.value[0].site_dir, eq="")
-
-
-__all__: list[str] = ["TestsFlextInfraBuilderScope"]

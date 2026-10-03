@@ -1,4 +1,8 @@
-"""Per-package and per-module export resolution for the lazy-init planner."""
+"""Per-package and per-module export resolution for the lazy-init planner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,25 +23,57 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
         rope_workspace: p.Infra.RopeWorkspaceDsl
         lazy_init: m.Infra.LazyInitConfig
         _module_exports_cache: MutableMapping[
-            tuple[str, bool, bool, bool, bool, bool], t.LazyAliasMap
+            tuple[str, bool, bool, bool, bool, bool],
+            t.LazyAliasMap,
         ]
         _version_module_name: str
+        _project_layout_cache: MutableMapping[Path, m.Infra.RopeProjectLayout]
 
         def _package_entry(
-            self, pkg_dir: Path
+            self,
+            pkg_dir: Path,
         ) -> m.Infra.RopePackageIndexEntry | None: ...
 
         def _add(
-            self, index: t.MutableLazyAliasMap, name: str, target: t.StrPair
+            self,
+            index: t.MutableLazyAliasMap,
+            name: str,
+            target: t.StrPair,
         ) -> None: ...
 
         @staticmethod
         def _publish(name: str, *, allow_main: bool) -> bool: ...
 
+    def _project_layout_for(self, pkg_dir: Path) -> m.Infra.RopeProjectLayout | None:
+        """Reuse the project's canonical layout during one planning snapshot.
+
+        Returns:
+            The resulting ``m.Infra.RopeProjectLayout | None``.
+
+        """
+        project_root = u.Infra.project_root(pkg_dir)
+        if project_root is None:
+            return None
+        layout = self._project_layout_cache.get(project_root)
+        if layout is None:
+            layout = u.Infra.layout(project_root)
+            if layout is not None:
+                self._project_layout_cache[project_root] = layout
+        return layout
+
     def _package_exports(
-        self, context: m.Infra.LazyInitPackageContext
+        self,
+        context: m.Infra.LazyInitPackageContext,
     ) -> t.MutableLazyAliasMap:
-        """Return the lazy export map for a package (excluding child packages)."""
+        """Return the lazy export map for a package (excluding child packages).
+
+        Returns:
+            The lazy export map for a package (excluding child packages).
+
+        Raises:
+            ValueError: If unindexed publication source.
+
+        """
         package_entry = self._package_entry(context.pkg_dir)
         # Operator init law (2026-09-16): every package with public children —
         # underscore internals included — carries a light lazy-init export
@@ -73,7 +109,8 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
                 if child.name != c.Infra.INIT_PY
             ]
         index: t.MutableLazyAliasMap = {}
-        # flext-i6nq.10: Generated support modules are output, never public input.
+        project_layout = self._project_layout_for(context.pkg_dir)
+        # Generated support modules are output, never public input.
         # conftest.py is pytest-private: its hook variables (pytest_plugins) are
         # never public package ABI and must not enter the lazy export map.
         skip_names = {
@@ -84,7 +121,7 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
             *c.Infra.OBSOLETE_GENERATED_INIT_FILES,
         }
         for py_file, module_name in module_entries:
-            # Operator ruling (2026-09-16, universal, no exceptions): a light
+            # Universal, no exceptions: a light
             # package init exports ONLY its direct children. Subdirectory
             # symbols stay in the subpackage's own init — never re-exported
             # upward, in the root or anywhere else.
@@ -92,14 +129,14 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
                 continue
             child_dir = py_file.parent / py_file.stem
             child_entry = self._package_entry(child_dir)
-            # flext-pulj: test artifacts never enter an installable package ABI.
+            # Test artifacts never enter an installable package ABI.
             test_only_source_module = (
                 context.surface != c.Infra.DIR_TESTS
                 or context.current_pkg == c.Infra.DIR_TESTS
             ) and (
                 c.Infra.TEST_ONLY_SOURCE_MODULE_RE.fullmatch(py_file.name) is not None
             )
-            # flext-6int (claude-ulw): extract predicate to satisfy PLR0916
+            # Extract predicate to satisfy PLR0916
             # (>5 boolean expressions); retired/generated/test modules are
             # never semantic input for the lazy export map.
             is_generated_or_test = (
@@ -120,6 +157,7 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
                 rel_path=py_file.relative_to(context.pkg_dir),
                 current_pkg=context.current_pkg,
                 rope_project=self.rope_workspace.rope_project,
+                project_layout=project_layout,
             )
             entry = self.rope_workspace.module(py_file)
             if entry is None:
@@ -139,7 +177,7 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
                             allow_functions=True,
                             require_explicit_all=True,
                         ),
-                    )
+                    ),
                 )
             )
             if (
@@ -178,7 +216,12 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
         *,
         export_options: m.Infra.ExportOptions | None = None,
     ) -> t.MutableLazyAliasMap:
-        """Return the lazy export map for one Python module (cache-backed)."""
+        """Return the lazy export map for one Python module (cache-backed).
+
+        Returns:
+            The lazy export map for one Python module (cache-backed).
+
+        """
         resolved_export_options = export_options or m.Infra.ExportOptions()
         cache_key = (
             str(py_file.resolve()),
@@ -200,8 +243,8 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
                     "require_explicit_all": (
                         resolved_export_options.require_explicit_all
                         and not resolved_export_options.include_dunder
-                    )
-                }
+                    ),
+                },
             ),
         )
         exports = {

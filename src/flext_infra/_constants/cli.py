@@ -82,7 +82,7 @@ class FlextInfraConstantsCli:
         "maintenance": "Python version enforcement",
         "refactor": "Declarative refactoring and modernization",
         "release": "Release orchestration",
-        "workspace": "Workspace detection and orchestration",
+        "workspace": "Workspace detection, environment, and member propagation",
     })
 
 
