@@ -1,4 +1,8 @@
-"""The collection plugin never imports the model facade to honor a runner request."""
+"""The collection plugin never imports the model facade to honor a runner request.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -17,7 +21,12 @@ class TestsFlextInfraPytestCollectionManifest:
 
     @staticmethod
     def _collect(project: Path, *options: str) -> str:
-        """Collect with the real collection plugin as the only external plugin."""
+        """Collect with the real collection plugin as the only external plugin.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         tests = project / "tests"
         tests.mkdir(exist_ok=True)
         (project / "pytest.ini").write_text("[pytest]\n", encoding="utf-8")
@@ -60,6 +69,7 @@ class TestsFlextInfraPytestCollectionManifest:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test unrequested manifest never imports the model facade."""
         tm.that(self._collect(tmp_path), eq="False")
         tm.that(list(tmp_path.glob("*.json")), eq=[])
 
@@ -67,6 +77,7 @@ class TestsFlextInfraPytestCollectionManifest:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test runner requested manifest publishes the collected items."""
         target = tmp_path / "collection.json"
 
         loaded = self._collect(
@@ -80,11 +91,12 @@ class TestsFlextInfraPytestCollectionManifest:
         )
         tm.that(manifest.node_ids, eq=("tests/test_sample.py::test_sample",))
 
+    @staticmethod
     @pytest.mark.slow
     def test_missing_collection_manifest_preserves_file_failure(
-        self,
         cached_runner_project: Path,
     ) -> None:
+        """Test missing collection manifest preserves file failure."""
         (cached_runner_project / "conftest.py").write_text(
             "from pathlib import Path\n\n"
             "def pytest_sessionfinish(session):\n"

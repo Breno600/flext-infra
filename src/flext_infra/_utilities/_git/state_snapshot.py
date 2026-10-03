@@ -1,4 +1,8 @@
-"""Read scoped index and exact working bytes without changing the source."""
+"""Read scoped index and exact working bytes without changing the source.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -11,9 +15,8 @@ from git import GitCommandError
 
 from flext_core import r
 from flext_infra import c, m, t
-
-from .repo import FlextInfraUtilitiesGitRepo
-from .worktree_io import FlextInfraUtilitiesGitWorktreeIO
+from flext_infra._utilities._git.repo import FlextInfraUtilitiesGitRepo
+from flext_infra._utilities._git.worktree_io import FlextInfraUtilitiesGitWorktreeIO
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -71,7 +74,10 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
         pathspecs = cls._state_pathspecs(paths)
         for row in repo.git.ls_files("-v", "-z", "--", *pathspecs).split("\0"):
             if row and (row[0].islower() or row[0] == "S"):
-                msg = "capture requires index entries without assume-unchanged or skip-worktree flags"
+                msg = (
+                    "capture requires index entries without assume-unchanged "
+                    "or skip-worktree flags"
+                )
                 raise ValueError(msg)
         entries: list[m.Infra.GitWorktreeIndexEntry] = []
         for row in repo.git.ls_files("--stage", "-z", "--", *pathspecs).split("\0"):
@@ -154,7 +160,11 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
             for entry in (*cls._state_head_entries(root, paths), *entries)
             if entry.mode == c.Infra.GIT_GITLINK_MODE_TEXT
         }
-        indexed_gitlinks = {entry.path for entry in entries if entry.mode == c.Infra.GIT_GITLINK_MODE_TEXT}
+        indexed_gitlinks = {
+            entry.path
+            for entry in entries
+            if entry.mode == c.Infra.GIT_GITLINK_MODE_TEXT
+        }
         for path in (*paths, *candidates):
             for parent in path.parents:
                 if (root / parent).is_symlink() and parent not in candidates:
@@ -228,7 +238,12 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
         cls,
         request: m.Infra.GitWorktreeStateRequest,
     ) -> p.Result[m.Infra.GitWorktreeStateSnapshot]:
-        """Measure owned index entries and raw files, without writing Git objects."""
+        """Measure owned index entries and raw files, without writing Git objects.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitWorktreeStateSnapshot]``.
+
+        """
         try:
             snapshot = cls._state_snapshot(request)
         except (GitCommandError, OSError, ValueError) as exc:
@@ -241,7 +256,12 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
         snapshot: m.Infra.GitWorktreeStateSnapshot,
         destination_root: Path,
     ) -> p.Result[bool]:
-        """Return false for layer differences, fail on foreign identity or read errors."""
+        """Return false for layer differences, fail on foreign identity or read errors.
+
+        Returns:
+            False for layer differences, fail on foreign identity or read errors.
+
+        """
         observed = cls.git_snapshot_worktree_state(
             m.Infra.GitWorktreeStateRequest(
                 repo_root=destination_root,

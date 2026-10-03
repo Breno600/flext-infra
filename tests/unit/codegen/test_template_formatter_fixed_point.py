@@ -1,4 +1,8 @@
-"""Generated template formatter fixed-point contracts."""
+"""Generated template formatter fixed-point contracts.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,10 +10,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from tests import c, t
-
-from ... import m, u
-from ._support import CodegenTestSupport
+from tests import c, m, t, u
 
 
 class TestsFlextInfraTemplateFormatterFixedPoint:
@@ -37,6 +38,10 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
         return m.Infra.LazyInitRootRender(
             autogen_header=c.Infra.AUTOGEN_HEADER,
             docstring='"""Tests package."""',
+            runtime_import_lines=(
+                f"from {c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE} import "
+                f"{', '.join(c.Infra.LAZY_BOOTSTRAP_HELPERS)}"
+            ),
             exports_tuple="()",
             lazy_module_mapping="        MappingProxyType({}),",
             lazy_alias_mapping="        alias_groups=MappingProxyType({}),",
@@ -48,17 +53,17 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
         workspace_repositories: t.VariadicTuple[m.Infra.RepositoryRef],
         has_devcontainer: bool,
     ) -> m.Infra.GithubWorkflowRenderSpec:
-        return CodegenTestSupport.Ci.workflow_spec(
+        return u.CodegenTestSupport.Ci.workflow_spec(
             dist="demo",
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="develop",
-            ci_trigger_branches=CodegenTestSupport.Ci.CI_TRIGGER_BASELINE_BRANCHES,
+            ci_trigger_branches=u.CodegenTestSupport.Ci.ci_trigger_branches("develop"),
             workspace_repositories=workspace_repositories,
             has_devcontainer=has_devcontainer,
         )
 
+    @staticmethod
     def test_standalone_pyproject_does_not_declare_empty_workspace(
-        self,
         tmp_path: Path,
     ) -> None:
         """Keep standalone projects eligible for a real parent uv workspace."""
@@ -71,6 +76,7 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
         tm.that(rendered, lacks="[tool.uv.workspace]")
 
     def test_dependabot_render_has_one_terminal_newline(self) -> None:
+        """Test dependabot render has one terminal newline."""
         empty = tm.ok(
             u.Cli.template_render(
                 self._TEMPLATES / ".github/dependabot.yml.j2",
@@ -92,6 +98,7 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
             tm.that(rendered.endswith("\n") and not rendered.endswith("\n\n"), eq=True)
 
     def test_dependabot_projects_devcontainers_only_when_one_exists(self) -> None:
+        """Test dependabot projects devcontainers only when one exists."""
         without = tm.ok(
             u.Cli.template_render(
                 self._TEMPLATES / ".github/dependabot.yml.j2",
@@ -110,9 +117,7 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
         for rendered in (without, with_devcontainer):
             tm.that(rendered, has="package-ecosystem: pip")
 
-    def test_lazy_root_renders_one_argument_per_line_with_trailing_commas(
-        self,
-    ) -> None:
+    def test_lazy_root_renders_one_argument_per_line_with_trailing_commas(self) -> None:
         """Render the formatter fixed point under magic trailing commas.
 
         Ruff respects magic trailing commas and COM812 demands one on every

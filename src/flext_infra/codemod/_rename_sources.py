@@ -1,4 +1,8 @@
-"""Authenticated input and explicitly declared text surfaces for CSV campaigns."""
+"""Authenticated input and explicitly declared text surfaces for CSV campaigns.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -39,7 +43,10 @@ class FlextInfraRenameSources:
                 if re.search(pattern, new) or (
                     old != other and re.search(pattern, old)
                 ):
-                    msg = f"rename CSV contains overlapping or cascading mappings: {old}, {other}"
+                    msg = (
+                        f"rename CSV contains overlapping or cascading mappings: "
+                        f"{old}, {other}"
+                    )
                     raise ValueError(msg)
         return tuple(sorted(pairs.items()))
 
@@ -127,7 +134,15 @@ class FlextInfraRenameSources:
         source: str,
         pairs: t.SequenceOf[t.Pair[str, str]],
     ) -> t.VariadicTuple[m.Infra.SourceRewrite]:
-        """Select real docstrings and comments; executable literals retain bytes."""
+        """Select real docstrings and comments; executable literals retain bytes.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.SourceRewrite]``.
+
+        Raises:
+            ValueError: If Python docstring lacks an authenticated source span.
+
+        """
         lines = source.splitlines(keepends=True)
         offsets = [0]
         for line in lines:

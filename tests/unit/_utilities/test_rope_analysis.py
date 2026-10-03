@@ -1,4 +1,8 @@
-"""Tests for Rope semantic analysis helpers."""
+"""Tests for Rope semantic analysis helpers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -18,6 +22,7 @@ if TYPE_CHECKING:
 class TestsFlextInfraRopeAnalysis:
     """Behavior contract for Rope-backed semantic analysis."""
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("statement", "suffix"),
         [
@@ -28,7 +33,6 @@ class TestsFlextInfraRopeAnalysis:
         ],
     )
     def test_declared_imports_preserve_relative_levels(
-        self,
         tmp_path: Path,
         statement: str,
         suffix: str,
@@ -54,8 +58,8 @@ class TestsFlextInfraRopeAnalysis:
         tm.that(imports["path_alias"], eq="os.path")
         tm.that(imports["Path"], eq="pathlib.Path")
 
+    @staticmethod
     def test_declared_imports_reject_relative_level_beyond_package(
-        self,
         tmp_path: Path,
     ) -> None:
         """An invalid relative import is not converted into an absolute import."""
@@ -67,7 +71,8 @@ class TestsFlextInfraRopeAnalysis:
             with pytest.raises(ImportError, match="beyond top-level package"):
                 u.Infra.resolve_declared_module_imports(rope_project, resource)
 
-    def test_ast_boundary_validates_before_traversal(self) -> None:
+    @staticmethod
+    def test_ast_boundary_validates_before_traversal() -> None:
         """Accept actual ASTs and reject unrelated external runtime objects."""
         source_tree = ast.parse("value = 1")
         tree = u.Infra.ensure_ast_node(source_tree)

@@ -1,4 +1,8 @@
-"""Execute migrated public model-validation boundaries with real Pydantic types."""
+"""Execute migrated public model-validation boundaries with real Pydantic types.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -18,6 +22,7 @@ if TYPE_CHECKING:
 class TestsModelFieldsCutover:
     """Migration preserves rejection semantics and reaches a stable source."""
 
+    @staticmethod
     @pytest.mark.parametrize(
         "access",
         [
@@ -28,10 +33,10 @@ class TestsModelFieldsCutover:
         ],
     )
     def test_public_boundary_rejects_non_models_without_attribute_access(
-        self,
         tmp_path: Path,
         access: str,
     ) -> None:
+        """Test public boundary rejects non models without attribute access."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "validation.py"
         source = (
@@ -80,10 +85,11 @@ class TestsModelFieldsCutover:
         tm.that(outcome.exit_code, eq=0)
         tm.that(outcome.stderr, eq="")
 
+    @staticmethod
     def test_ambiguous_rejection_keeps_the_source_untouched(
-        self,
         tmp_path: Path,
     ) -> None:
+        """Test ambiguous rejection keeps the source untouched."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "validation.py"
         source = (
@@ -101,7 +107,9 @@ class TestsModelFieldsCutover:
         tm.fail(result, has="lacks a rejecting guard")
         tm.that(path.read_text(encoding="utf-8"), eq=source)
 
-    def test_conflicting_guard_binding_is_not_overwritten(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_conflicting_guard_binding_is_not_overwritten(tmp_path: Path) -> None:
+        """Test conflicting guard binding is not overwritten."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "validation.py"
         source = (
@@ -119,6 +127,7 @@ class TestsModelFieldsCutover:
             )
         tm.fail(result, has="conflicts with a local binding")
 
+    @staticmethod
     @pytest.mark.parametrize(
         "declaration",
         [
@@ -131,10 +140,10 @@ class TestsModelFieldsCutover:
         ],
     )
     def test_shadowed_contract_is_rejected(
-        self,
         tmp_path: Path,
         declaration: str,
     ) -> None:
+        """Test shadowed contract is rejected."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "validation.py"
         source = declaration + (
@@ -151,6 +160,7 @@ class TestsModelFieldsCutover:
             )
         tm.fail(result)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "body",
         [
@@ -167,10 +177,10 @@ class TestsModelFieldsCutover:
         ],
     )
     def test_unsafe_statement_layout_or_receiver_rebinding_fails(
-        self,
         tmp_path: Path,
         body: str,
     ) -> None:
+        """Test unsafe statement layout or receiver rebinding fails."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "validation.py"
         source = "def validate(candidate: object) -> None:\n" + body

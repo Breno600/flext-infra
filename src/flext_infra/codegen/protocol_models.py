@@ -1,4 +1,8 @@
-"""Assemble member structural protocols from validated models on demand."""
+"""Assemble member structural protocols from validated models on demand.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -11,10 +15,13 @@ from typing import TypeAliasType, get_args, override
 from flext_cli import cli
 
 from flext_core import r
-
-from .. import FlextInfraServiceBase, m, p, t, u
-from ._protocol_model_annotations import FlextInfraCodegenProtocolModelAnnotations
-from ._protocol_model_render import FlextInfraCodegenProtocolModelRender
+from flext_infra import FlextInfraServiceBase, m, p, t, u
+from flext_infra.codegen._protocol_model_annotations import (
+    FlextInfraCodegenProtocolModelAnnotations,
+)
+from flext_infra.codegen._protocol_model_render import (
+    FlextInfraCodegenProtocolModelRender,
+)
 
 
 class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
@@ -22,7 +29,12 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
 
     @override
     def execute(self) -> p.Result[t.Cli.ResultValue]:
-        """Assemble generated protocol modules for the member repository."""
+        """Assemble generated protocol modules for the member repository.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         targeted = self._resolve_target(self.repository_root)
         if targeted.failure:
             return r[t.Cli.ResultValue].from_failure(targeted)
@@ -46,7 +58,13 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
         cls,
         root: Path,
     ) -> p.Result[FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget]:
-        """Derive the member target from its declared pyproject name."""
+        """Derive the member target from its declared pyproject name.
+
+        Returns:
+            The resulting
+                ``p.Result[FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget]``.
+
+        """
         manifest = root / "pyproject.toml"
         if not manifest.is_file():
             return r[
@@ -89,7 +107,12 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
         root: Path,
         target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
     ) -> p.Result[t.SequenceOf[type[m.BaseModel]]]:
-        """Resolve every referenced protocol name against the models facade."""
+        """Resolve every referenced protocol name against the models facade.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[type[m.BaseModel]]]``.
+
+        """
         referenced = cls._referenced_names(root, target)
         manual = cls._manual_protocol_names(root, target)
         wanted = sorted(referenced - manual)
@@ -123,7 +146,12 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
         cls,
         candidate: p.AttributeProbe,
     ) -> t.VariadicTuple[type[m.BaseModel]]:
-        """Expand discriminated-union aliases into their leaf models."""
+        """Expand discriminated-union aliases into their leaf models.
+
+        Returns:
+            The resulting ``t.VariadicTuple[type[m.BaseModel]]``.
+
+        """
         if isinstance(candidate, TypeAliasType):
             value = candidate.__value__
             if isinstance(value, UnionType):
@@ -143,7 +171,12 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
         root: Path,
         target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
     ) -> set[str]:
-        """Scan member sources for ``<protocols_ref>.<Name>`` references."""
+        """Scan member sources for ``<protocols_ref>.<Name>`` references.
+
+        Returns:
+            The resulting ``set[str]``.
+
+        """
         pattern = re.compile(
             rf"\b{re.escape(target.protocol_ref_prefix)}\.([A-Z]\w*)\b",
         )
@@ -161,7 +194,12 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
         root: Path,
         target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
     ) -> set[str]:
-        """Collect protocol class names already hand-declared by the member."""
+        """Collect protocol class names already hand-declared by the member.
+
+        Returns:
+            The resulting ``set[str]``.
+
+        """
         pattern = re.compile(r"^class ([A-Z]\w*)\b", re.MULTILINE)
         found: set[str] = set()
         protocols = root / "src" / target.package_name / "_protocols"
@@ -179,7 +217,12 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
         *,
         dry: bool,
     ) -> p.Result[t.Cli.ResultValue]:
-        """Compare or write generated modules under the member protocols dir."""
+        """Compare or write generated modules under the member protocols dir.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         changed: list[str] = []
         for relative, content in sorted(modules.items()):
             destination = root / relative

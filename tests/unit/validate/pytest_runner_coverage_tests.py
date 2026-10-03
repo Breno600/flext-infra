@@ -1,4 +1,8 @@
-"""Coverage verb contract of the public cached-pytest runner."""
+"""Coverage verb contract of the public cached-pytest runner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -14,9 +18,9 @@ from tests.unit.validate.pytest_runner_support import runner_for, summary
 class TestsFlextInfraPytestRunnerCoverage:
     """Exercise the real coverage pass and its published accounting."""
 
+    @staticmethod
     @pytest.mark.slow
     def test_coverage_verb_publishes_artifact_without_testmon(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """The coverage pass runs its own process: real artifact, zero testmon."""
@@ -55,9 +59,9 @@ class TestsFlextInfraPytestRunnerCoverage:
         )
         tm.that(runner.testmon_db.exists(), eq=False)
 
+    @staticmethod
     @pytest.mark.slow
     def test_failed_coverage_suite_preserves_original_failure_and_accounting(
-        self,
         cached_runner_project: Path,
     ) -> None:
         """No-cov-on-fail omits coverage without hiding the failed test evidence."""

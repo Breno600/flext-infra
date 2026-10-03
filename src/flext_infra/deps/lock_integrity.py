@@ -13,8 +13,7 @@ from typing import ClassVar, override
 
 from flext_core import r
 from flext_infra import c, p, t
-
-from ..base import FlextInfraServiceBase
+from flext_infra.base import FlextInfraServiceBase
 
 
 class FlextInfraLockIntegrityVerifier(FlextInfraServiceBase[bool]):
@@ -33,7 +32,12 @@ class FlextInfraLockIntegrityVerifier(FlextInfraServiceBase[bool]):
 
     @classmethod
     def _duplicated_sections(cls, text: str) -> t.StrSequence:
-        """Enumerate table headers declared more than once in a corrupt lock."""
+        """Enumerate table headers declared more than once in a corrupt lock.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         counts: t.MutableMappingKV[str, int] = {}
         for match in cls._TABLE_HEADER.finditer(text):
             key = (match.group(1) or match.group(2) or "").strip()
@@ -42,7 +46,12 @@ class FlextInfraLockIntegrityVerifier(FlextInfraServiceBase[bool]):
 
     @classmethod
     def _verify_lock(cls, lock_path: Path) -> t.StrSequence:
-        """Verify one committed lock, returning zero or more failure causes."""
+        """Verify one committed lock, returning zero or more failure causes.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         if not lock_path.is_file():
             return (f"{lock_path.name}: missing committed generated lock",)
         text = lock_path.read_text(encoding="utf-8")
@@ -58,7 +67,12 @@ class FlextInfraLockIntegrityVerifier(FlextInfraServiceBase[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Verify every committed generated TOML lock at the repository root."""
+        """Verify every committed generated TOML lock at the repository root.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         failures: t.StrSequence = tuple(
             failure
             for lock_filename in (c.Infra.MISE_LOCK_FILENAME, c.Infra.UV_LOCK_FILENAME)

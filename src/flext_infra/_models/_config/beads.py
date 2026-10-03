@@ -1,4 +1,8 @@
-"""Beads projection and workspace environment models."""
+"""Beads projection and workspace environment models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,8 @@ from typing import Annotated, Literal, Self
 
 from flext_cli import m, u
 
-from ... import t
-from .contract import FlextInfraConfigModelsContract
+from flext_infra import t
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
 
 
 class FlextInfraConfigModelsBeads:
@@ -36,13 +40,23 @@ class FlextInfraConfigModelsBeads:
         custom_issue_types: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                description="Repository-owned custom types beyond the Gas City baseline",
+                description=(
+                    "Repository-owned custom types beyond the Gas City baseline"
+                ),
             ),
         ] = ()
 
         @u.model_validator(mode="after")
         def _validate_custom_issue_types(self) -> Self:
-            """Reject duplicate project extensions before projection."""
+            """Reject duplicate project extensions before projection.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If beads custom_issue_types must be unique.
+
+            """
             if len(set(self.custom_issue_types)) != len(self.custom_issue_types):
                 msg = "beads custom_issue_types must be unique"
                 raise ValueError(msg)

@@ -1,12 +1,12 @@
-"""Bootstrap-safe namespace constants."""
+"""Bootstrap-safe namespace constants.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
-from types import MappingProxyType
-from typing import TYPE_CHECKING, ClassVar
-
-if TYPE_CHECKING:
-    from flext_infra import t
+from typing import ClassVar
 
 
 class FlextInfraConstantsNamespace:

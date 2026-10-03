@@ -1,4 +1,8 @@
-"""Canonical Git responsibility mixin for ``u.Infra``."""
+"""Canonical Git responsibility mixin for ``u.Infra``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,8 +13,9 @@ from git import GitCommandError
 
 from flext_core import r
 from flext_infra import m
-
-from .worktree_facts import FlextInfraUtilitiesGitWorktreeFactsMixin
+from flext_infra._utilities._git.worktree_facts import (
+    FlextInfraUtilitiesGitWorktreeFactsMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -26,7 +31,12 @@ class FlextInfraUtilitiesGitWorktreeRootsMixin(
         cls,
         request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitRootReport]:
-        """Resolve the superproject root or the repository's own top level."""
+        """Resolve the superproject root or the repository's own top level.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitRootReport]``.
+
+        """
         root = cls._git_repository_root_path(request.repo_root)
         if root.failure:
             return r[m.Infra.GitRootReport].from_failure(root)
@@ -39,7 +49,12 @@ class FlextInfraUtilitiesGitWorktreeRootsMixin(
         cls,
         request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitPrimaryRootReport]:
-        """Resolve the primary worktree from Git's canonical storage topology."""
+        """Resolve the primary worktree from Git's canonical storage topology.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitPrimaryRootReport]``.
+
+        """
         primary = cls._git_primary_worktree_root_path(request.repo_root)
         if primary.failure:
             return r[m.Infra.GitPrimaryRootReport].from_failure(primary)
@@ -54,6 +69,10 @@ class FlextInfraUtilitiesGitWorktreeRootsMixin(
         ``rev-parse --show-superproject-working-tree`` exits 0 and prints
         nothing when the checkout is not a submodule; that empty answer selects
         the checkout's own top level. Every Git failure is a failure.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
         """
         try:
             repo = cls._repo(repository_path)

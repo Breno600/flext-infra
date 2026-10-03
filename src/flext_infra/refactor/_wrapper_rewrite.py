@@ -1,4 +1,8 @@
-"""Wrapper-root per-file AST rewrite helpers."""
+"""Wrapper-root per-file AST rewrite helpers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -86,20 +90,30 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
 
     @staticmethod
     def _build_line_offsets(source: str) -> list[int]:
-        """Return cumulative line-start byte offsets for ``source``."""
+        """Return cumulative line-start byte offsets for ``source``.
+
+        Returns:
+            Cumulative line-start byte offsets for ``source``.
+
+        """
         line_offsets = [0]
         for line_text in source.splitlines(keepends=True):
             line_offsets.append(line_offsets[-1] + len(line_text))
         return line_offsets
 
+    @staticmethod
     def _collect_core_test_rewrites(
-        self,
         module_ast: t.Infra.RopeAstNode,
         *,
         line_offsets: list[int],
         runtime_aliases: frozenset[str],
     ) -> list[t.Triple[int, int, str]]:
-        """Find every ``<alias>.Core.Tests`` chain and emit ``(start, end, repl)``."""
+        """Find every ``<alias>.Core.Tests`` chain and emit ``(start, end, repl)``.
+
+        Returns:
+            The resulting ``list[t.Triple[int, int, str]]``.
+
+        """
         rewrites: list[t.Triple[int, int, str]] = []
         for node in u.Infra.walk_ast_nodes(u.Infra.ensure_ast_node(module_ast)):
             if (
@@ -139,7 +153,12 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
         wrapper_submodules: frozenset[str],
         runtime_aliases: frozenset[str],
     ) -> bool:
-        """Return whether any ``from wrapper.<sub> import <alias>`` exists."""
+        """Return whether any ``from wrapper.<sub> import <alias>`` exists.
+
+        Returns:
+            Whether any ``from wrapper.<sub> import <alias>`` exists.
+
+        """
         for node in u.Infra.walk_ast_nodes(u.Infra.ensure_ast_node(module_ast)):
             if u.Infra.node_kind(node) != "ImportFrom":
                 continue
@@ -163,7 +182,12 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
         source: str,
         rewrites: t.SequenceOf[t.Triple[int, int, str]],
     ) -> str:
-        """Apply ``(start, end, replacement)`` triples to ``source`` (right-to-left)."""
+        """Apply ``(start, end, replacement)`` triples to ``source`` (right-to-left).
+
+        Returns:
+            The resulting ``str``.
+
+        """
         updated = source
         for start, end, replacement in sorted(
             rewrites,
