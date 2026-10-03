@@ -46,7 +46,8 @@ class TestsFlextInfraCodegenManifestlessExisting:
             u.Tests.toml_payload(pyproject_source),
         )
         dev_groups = u.Cli.toml_mapping_ensure_table(
-            pyproject_payload, c.Infra.DEPENDENCY_GROUPS,
+            pyproject_payload,
+            c.Infra.DEPENDENCY_GROUPS,
         )
         dev_groups[str(c.Infra.DEV)] = [
             *u.Cli.json_as_sequence(dev_groups.get(str(c.Infra.DEV))),
