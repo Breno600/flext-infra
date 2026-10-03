@@ -571,6 +571,17 @@ class FlextInfraConfigModelsMake:
     class MakeSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Complete generated Makefile public and extension contract."""
 
+        check_gate_suspensions: Annotated[
+            t.VariadicTuple[MakeGateSuspensionSpec],
+            m.Field(
+                description=(
+                    "Gates temporarily suspended for this project (the gate "
+                    "id plus the declaring authority); suspended gates leave "
+                    "the active default set without leaving the vocabulary."
+                ),
+            ),
+        ] = ()
+
         class TestmonCachePolicySpec(FlextInfraConfigModelsContract.ConfigContract):
             """Declarative Actions-cache policy for the shared testmon database.
 
