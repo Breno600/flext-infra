@@ -279,6 +279,11 @@ class FlextInfraMypyGate(FlextInfraGate):
         for raw_line in result.stdout.splitlines():
             if not raw_line.strip():
                 continue
+            if raw_line.startswith("LOG:"):
+                # Mypy verbose progress channel (--verbose runs). LOG lines are
+                # the tool's own human stream, never diagnostics; the machine
+                # contract of this gate is one JSON object per line.
+                continue
             validated: p.Result[m.Infra.MypyDiagnostic] = u.validate_value(
                 m.Infra.MypyDiagnostic,
                 raw_line,
