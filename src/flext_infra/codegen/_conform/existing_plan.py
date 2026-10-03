@@ -56,6 +56,21 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         metadata = u.Infra.read_project_metadata_result(root)
         if metadata.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(metadata)
+        project = workspace.project
+        if project is None:
+            # Existing checkouts declare no scaffold metadata: derive the
+            # tooling identity from live PEP 621 metadata (same rule as the
+            # render pass) instead of referencing an undefined name.
+            derived = self._project_spec_from_existing(
+                repository,
+                root,
+                codegen,
+            )
+            if derived.failure:
+                return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
+                    derived,
+                )
+            project = derived.value
         dist = metadata.value.project.name
         if dist != repository.distribution:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
@@ -92,8 +107,8 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             package_name=metadata.value.package_name,
             path=pyproject,
             scaffold_project=codegen.scaffold.project,
-            upstream=project.value.upstream,
-            runtime_dependency_overlay=project.value.runtime_dependency_overlay,
+            upstream=project.upstream,
+            runtime_dependency_overlay=project.runtime_dependency_overlay,
             declared_project_dependencies=metadata.value.project.dependencies,
             topology=m.Infra.PyprojectDeclaredTopology(
                 root_modules=(
