@@ -94,7 +94,7 @@ class FlextInfraConstantsCodegen(
         ("models.py", "Models", "FlextTestsModels", "Test models"),
         ("utilities.py", "Utilities", "FlextTestsUtilities", "Test utilities"),
     )
-    "Base module definitions for tests/: (filename, class_suffix, base_class, docstring)."
+    "Base module definitions for tests/: (filename, class_suffix, base_class, doc)."
     # Canonical root config/settings pair: a
     # private `_config.py`/`_settings.py` module exporting the singleton.
     # Consumed by the scaffold generator.
@@ -102,7 +102,7 @@ class FlextInfraConstantsCodegen(
         ("_config.py", "Config", "FlextConfig", "Runtime config"),
         ("_settings.py", "Settings", "FlextSettings", "Runtime settings"),
     )
-    "Runtime singleton modules for src/: (filename, class_suffix, base_class, docstring)."
+    "Runtime singleton modules for src/: (filename, class_suffix, base_class, doc)."
     VIOLATION_PATTERN: ClassVar[t.RegexPattern] = re.compile(
         r"\[(?P<rule>[a-z0-9][a-z0-9-]*)\]\s+"
         r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)",
@@ -187,6 +187,13 @@ class FlextInfraConstantsCodegen(
         ("MISE_GITHUB_OAUTH_OPEN_BROWSER", "false"),
     )
     "Fixed fail-closed settings shared by every generated Mise invocation."
+    MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT: ClassVar[t.VariadicTuple[t.Pair[str, str]]] = (
+        ("MISE_OFFLINE", "true"),
+    )
+    (
+        "Network policy of every generated Mise call except a missing-tool "
+        "install and the `make upg` resolution: cached state answers it, or it fails."
+    )
     MISE_BOOTSTRAP_TRANSIENT_ENVIRONMENT: ClassVar[
         t.VariadicTuple[t.Pair[str, str]]
     ] = (

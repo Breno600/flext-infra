@@ -274,8 +274,9 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             rule_ids = {r for r, _, _, _ in unresolved}
             files = {p for _, p, _, _ in unresolved}
             msg = (
-                f"fix!=match: ast-grep apply did not resolve {len(unresolved)} expected actionable "
-                f"findings in rules {sorted(rule_ids)} across files {sorted(files)}"
+                f"fix!=match: ast-grep apply did not resolve {len(unresolved)} "
+                f"actionable findings in rules {sorted(rule_ids)} "
+                f"across files {sorted(files)}"
             )
             raise RuntimeError(msg)
         # A completed rule may enable a later rule in the declared cascade.
@@ -289,8 +290,9 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             rule_ids = {r for r, _, _, _ in unexpected}
             files = {p for _, p, _, _ in unexpected}
             msg = (
-                f"fix!=match: ast-grep apply introduced {len(unexpected)} new actionable "
-                f"findings in rules {sorted(rule_ids)} across files {sorted(files)}"
+                f"fix!=match: ast-grep apply introduced {len(unexpected)} new "
+                f"actionable findings in rules {sorted(rule_ids)} "
+                f"across files {sorted(files)}"
             )
             raise RuntimeError(msg)
 

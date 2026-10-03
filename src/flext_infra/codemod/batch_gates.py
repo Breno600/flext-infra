@@ -391,7 +391,7 @@ class FlextInfraModGateEngine:
 
         """
         sys.stderr.write(
-            f"mod: start {' '.join(command[:2])} arguments={max(0, len(command) - 2)}\n",
+            f"mod: start {' '.join(command[:2])} args={max(0, len(command) - 2)}\n",
         )
         sys.stderr.flush()
         run = u.Cli.run_raw(command, cwd=root, timeout=c.Infra.TIMEOUT_SHORT)

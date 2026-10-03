@@ -168,6 +168,7 @@ class TestsFlextInfraCodegenCatalogExtensions:
         tm.that(result.failure, eq=True)
         tm.that(result.error, has="conflicting flext-* line sources")
 
+    @staticmethod
     @pytest.mark.parametrize(
         "section",
         [
@@ -180,7 +181,6 @@ class TestsFlextInfraCodegenCatalogExtensions:
         ],
     )
     def test_infra_identity_respects_managed_conflict_ownership(
-        self,
         tmp_path: Path,
         section: str | None,
     ) -> None:

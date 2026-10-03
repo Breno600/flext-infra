@@ -57,6 +57,7 @@ class FlextInfraUtilitiesCodegen(
                 ),
                 ("MISE_MINIMUM_RELEASE_AGE", f"{toolchain.dependency_cooldown_days}d"),
             ),
+            offline_environment=tuple(c.Infra.MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT),
             transient_environment=tuple(c.Infra.MISE_BOOTSTRAP_TRANSIENT_ENVIRONMENT),
             persistent_environment=tuple(c.Infra.MISE_BOOTSTRAP_PERSISTENT_ENVIRONMENT),
             empty_files=tuple(c.Infra.MISE_BOOTSTRAP_EMPTY_FILES),
@@ -144,7 +145,8 @@ class FlextInfraUtilitiesCodegen(
             )
         if physical_project.is_relative_to(storage_root):
             return r[Path].fail(
-                f"persistent Mise storage must not contain the checkout: {storage_root}",
+                f"persistent Mise storage must not contain the checkout: "
+                f"{storage_root}",
             )
         if storage_root.is_symlink():
             return r[Path].fail(
@@ -164,11 +166,13 @@ class FlextInfraUtilitiesCodegen(
             physical_project,
         ):
             return r[Path].fail(
-                f"persistent Mise storage must not contain the checkout: {physical_root}",
+                f"persistent Mise storage must not contain the checkout: "
+                f"{physical_root}",
             )
         if physical_project.is_relative_to(physical_root):
             return r[Path].fail(
-                f"persistent Mise storage must not contain the checkout: {physical_root}",
+                f"persistent Mise storage must not contain the checkout: "
+                f"{physical_root}",
             )
         relative_directories = {
             relative

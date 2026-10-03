@@ -58,7 +58,8 @@ class FlextInfraDocValidator(FlextInfraDocServiceBase):
             failure_predicate=lambda report: report.result == c.Infra.ResultStatus.FAIL,
         )
 
-    def _run_adr_skill_check(self, repository_root: Path) -> t.Pair[int, t.StrSequence]:
+    @staticmethod
+    def _run_adr_skill_check(repository_root: Path) -> t.Pair[int, t.StrSequence]:
         """Run the ADR skill validation check for the root docs scope.
 
         Returns:

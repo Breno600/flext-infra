@@ -196,7 +196,9 @@ Infra:
           # lint gate derives from the source (docstring sections from the
           # signature, summary and raise statement; summaries from the declared
           # name; the notice from the project's declared author and copyright
-          # year).
+          # year; a method that never reads its instance becomes a static
+          # method, its signature and decorators edited and its body kept
+          # byte for byte).
           fix-recipes:
             missing-copyright-notice: copyright-notice
             undocumented-public-class: summary-docstring
@@ -205,6 +207,7 @@ Infra:
             docstring-missing-returns: returns-section
             docstring-missing-yields: yields-section
             docstring-missing-exception: raises-section
+            no-self-use: static-method
           # Banned API messages are policy data, never template literals.
           banned-api:
             argparse: "Use cli.register_result_command + Pydantic model from flext_cli."
@@ -230,6 +233,19 @@ Infra:
           # and the scoped ones as `per-file-ignores`. Repositories declare no
           # exception of their own.
           authorized-exceptions:
+            - files: "scripts/**/*.py"
+              rules:
+                - commented-out-code
+                - line-too-long
+                - typing-only-first-party-import
+              authority: operator-ruling-2026-10-02-promoted-script-surface
+              reason: >-
+                Promoted command scripts declare TOML metadata headers the
+                discovery parser reads literally, so those lines cannot reflow
+                under the line budget, and the orchestration glue keeps
+                documented-disabled blocks and deferred annotation imports
+                inline; the member repository validates this surface
+                end-to-end through its own gates.
             - files: "tests/**/*.py"
               rules: [assert]
               authority: universal-core-2026-07-20-test-idiom-s101
@@ -281,11 +297,7 @@ Infra:
 
 
             - files: "scripts/**"
-<<<<<<< HEAD
               rules: [any-type, unused-function-argument, undocumented-public-class, undocumented-public-method, undocumented-public-function, undocumented-public-init, unnecessary-multiline-docstring, blank-line-after-function, missing-blank-line-after-summary, multi-line-summary-first-line, raw-string-in-exception, f-string-in-exception, commented-out-code, shebang-not-executable, boolean-type-hint-positional-argument, boolean-default-value-positional-argument, read-whole-file, write-whole-file, if-exp-instead-of-or-operator, repeated-append, logging-string-concat, non-lowercase-variable-in-function, invalid-module-name, manual-list-comprehension, manual-list-copy, multiple-starts-ends-with, missing-maxsplit-arg, import-private-name, magic-value-comparison, literal-membership, unspecified-encoding, os-path-abspath, os-path-exists, os-path-join, os-path-dirname, builtin-open, path-constructor-current-directory, avoidable-escaped-quote, unsorted-dunder-all, used-dummy-variable, unused-noqa, noqa-comments, suspicious-subprocess-import, subprocess-without-shell-equals-true, start-process-with-partial-path, print, runtime-cast-value, banned-api, relative-imports, raise-vanilla-args, error-instead-of-exception, verbose-raise]
-=======
-              rules: [any-type, unused-function-argument, undocumented-public-class, undocumented-public-method, undocumented-public-function, undocumented-public-init, unnecessary-multiline-docstring, blank-line-after-function, missing-blank-line-after-summary, multi-line-summary-first-line, raw-string-in-exception, f-string-in-exception, commented-out-code, shebang-not-executable, boolean-type-hint-positional-argument, boolean-default-value-positional-argument, read-whole-file, write-whole-file, if-exp-instead-of-or-operator, repeated-append, logging-string-concat, non-lowercase-variable-in-function, invalid-module-name, manual-list-comprehension, manual-list-copy, multiple-starts-ends-with, missing-maxsplit-arg, import-private-name, magic-value-comparison, literal-membership, unspecified-encoding, os-path-abspath, os-path-exists, os-path-join, os-path-dirname, builtin-open, path-constructor-current-directory, avoidable-escaped-quote, unsorted-dunder-all, used-dummy-variable, unused-noqa, noqa-comments, suspicious-subprocess-import, subprocess-without-shell-equals-true, start-process-with-partial-path, print, runtime-cast-value, banned-api, relative-imports, raise-vanilla-args, error-instead-of-exception, verbose-log-message]
->>>>>>> c70297fd1 (fix(config): scripts/** exemptions in kebab rule names (schema rejects codes))
               authority: operator-ruling-2026-10-02-mcb-scripts-automation
               reason: >-
                 Repository automation helpers (mcb scripts/**, migrated from

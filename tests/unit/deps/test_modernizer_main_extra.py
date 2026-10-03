@@ -40,6 +40,7 @@ class TestsFlextInfraDepsModernizerMainExtra:
         tm.that(modernizer.run(), eq=0)
         return (modernizer_workspace / c.PYPROJECT_FILENAME).read_text(encoding="utf-8")
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("content", "expected"),
         [
@@ -49,7 +50,6 @@ class TestsFlextInfraDepsModernizerMainExtra:
         ],
     )
     def test_run_handles_root_edge_cases(
-        self,
         tmp_path: Path,
         content: str | None,
         expected: int,

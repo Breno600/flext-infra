@@ -23,11 +23,12 @@ if TYPE_CHECKING:
 class TestsFlextInfraWorkspaceInit:
     """Declarative public-contract tests for workspace checker setup."""
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("raw", "expected"),
         [("--fix --unsafe-fixes", ["--fix", "--unsafe-fixes"]), (None, []), ("", [])],
     )
-    def test_parse_tool_args(self, raw: str | None, expected: t.StrSequence) -> None:
+    def test_parse_tool_args(raw: str | None, expected: t.StrSequence) -> None:
         """Test parse tool args."""
         tm.that(FlextInfraWorkspaceChecker.parse_tool_args(raw), eq=list(expected))
 
