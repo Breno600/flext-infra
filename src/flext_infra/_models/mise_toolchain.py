@@ -565,6 +565,26 @@ class FlextInfraModelsMiseToolchain:
                 ),
             ),
         ]
+        credential_commands: Annotated[
+            t.VariadicTuple[t.VariadicTuple[t.NonEmptyStr]],
+            m.Field(
+                description=(
+                    "Candidate commands (probe order) printing a GitHub token "
+                    "for private tool downloads; the bootstrap probes each in "
+                    "turn and takes the first non-empty output."
+                ),
+            ),
+        ] = ()
+        credential_commands: Annotated[
+            t.VariadicTuple[t.VariadicTuple[t.NonEmptyStr]],
+            m.Field(
+                description=(
+                    "Candidate commands (in probe order) that print a GitHub "
+                    "token for private tool downloads; the bootstrap probes "
+                    "each in turn and takes the first non-empty output."
+                ),
+            ),
+        ] = ()
         transaction_lock_file: Annotated[
             t.NonEmptyStr,
             m.Field(
