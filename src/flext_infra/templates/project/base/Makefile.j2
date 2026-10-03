@@ -719,7 +719,6 @@ _builtin_tests_all: _builtin_require_environment
 	+@$(SELF_MAKE) test
 {{ test_report_recipe(
     runner="$(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full",
-    invocation_namespace=make.testmon_cache.invocation_namespace,
 ) }}
 
 # fmt is format-only (single-pass verb law): ruff formats Python, the
