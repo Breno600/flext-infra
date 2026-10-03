@@ -233,17 +233,20 @@ Infra:
           # and the scoped ones as `per-file-ignores`. Repositories declare no
           # exception of their own.
           authorized-exceptions:
-            - rules: [missing-required-import]
-              authority: operator-ruling-2026-10-03-i001-on-i002-i003-off-tc001-on
+            - rules: [missing-required-import, implicit-namespace-package, typing-only-first-party-import]
+              authority: operator-ruling-2026-10-03-tc001-off-global
               reason: >-
-                Operator ruling 2026-10-03: I001 (unsorted-imports) stays
-                enforced as the import-order contract, while I002
-                (missing-required-import) and the isort-only I003 slot are
-                disabled — required-import banners duplicate the
-                absolute-import law (ban-relative-imports: all) and F401
-                already governs unused imports; first-party type-only movement
-                stays governed by TC001 with the lazy-root __init__
-                exception.
+                Operator ruling 2026-10-03 (supersedes the earlier TC001-on):
+                I001 (unsorted-imports) stays enforced as the import-order
+                contract; I002 (missing-required-import), the isort-only I003
+                slot and TC001 (typing-only-first-party-import) are DISABLED —
+                required-import banners duplicate the absolute-import law
+                (ban-relative-imports: all); F401 already governs unused
+                imports; and the TC001 autofix moves runtime-required imports
+                into TYPE_CHECKING, leaving pydantic models "not fully
+                defined" (the OptionSpec/RuntimeCommandCase PydanticUserError
+                wave). The lazy-root __init__ exception remains the only lazy
+                form; model_rebuild stays forbidden.
             - files: "scripts/**/*.py"
               rules:
                 - commented-out-code
