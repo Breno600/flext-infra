@@ -64,8 +64,14 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
         "    for package, directory in {origins!r}:\n"
         "        if loaded_name == package or loaded_name.startswith(package + '.'):\n"
         "            origin = getattr(loaded_module, '__file__', None)\n"
-        "            if origin is None or not Path(origin).resolve().is_relative_to(Path(directory)):\n"
-        "                raise ImportError(f'{loaded_name}: origin {origin!r} is outside {directory}')\n"
+        "            if (\n"
+        "                origin is None\n"
+        "                or not Path(origin).resolve()\n"
+        "                .is_relative_to(Path(directory))\n"
+        "            ):\n"
+        "                raise ImportError(\n"
+        "                    f'{loaded_name}: origin {origin!r} not in {directory}'\n"
+        "                )\n"
     )
 
     def build_report(
@@ -122,7 +128,8 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                             subject=f"{layout.package_name}: {group}/{name}={value}",
                             code=(
                                 self._PRELUDE
-                                + f"EntryPoint(name={name!r}, value={value!r}, group={group!r}).load()\n"
+                                + f"EntryPoint(name={name!r}, "
+                                f"value={value!r}, group={group!r}).load()\n"
                                 + origin_code
                             ),
                         ),

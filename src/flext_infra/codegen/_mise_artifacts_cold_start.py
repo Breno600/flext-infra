@@ -29,8 +29,9 @@ class FlextInfraMiseColdStart:
 
     A repository that has never carried a Mise pin and launchers, or still
     carries the pre-bake projection whose launchers resolve the latest release
-    at run time, starts from the copy the installed flext-infra ships. Only the repository whose
-    ``src/`` holds the running ``flext_infra`` package owns that copy, so every
+    at run time, starts from the copy the installed flext-infra ships. Only
+    the repository whose ``src/`` holds the running ``flext_infra`` package
+    owns that copy, so every
     other repository plans nothing and nobody maintains a hand-written seed.
     """
 

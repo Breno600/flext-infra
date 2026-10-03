@@ -122,7 +122,10 @@ class FlextInfraUtilitiesDocsBuild:
         if len(configs) > 1:
             return primary_report.model_copy(
                 update={
-                    "reason": f"{primary_report.reason}; product mkdocs.yaml also built",
+                    "reason": (
+                        f"{primary_report.reason}; "
+                        "product mkdocs.yaml also built"
+                    ),
                 },
             )
         return primary_report

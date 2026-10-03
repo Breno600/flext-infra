@@ -75,15 +75,16 @@ class FlextInfraUtilitiesLintRecipes:
         *,
         path: Path,
         recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
-        notice: str,
     ) -> str:
         """Return ``source`` with the declared recipe of every issue applied.
 
         A static-method finding on a hook a subclass overrides is filtered
         out by the caller (``overridden_findings``) and never reaches here.
 
-        ``path`` names the module in every refusal; a module without a
-        docstring receives one, summarized from its name, to carry the notice.
+        ``path`` names the module in every refusal and locates the project
+        whose declared author signs the notice; the notice is derived only
+        when a copyright finding asks for it. A module without a docstring
+        receives one, summarized from its name, to carry the notice.
 
         Returns:
             The repaired module source.
@@ -155,6 +156,7 @@ class FlextInfraUtilitiesLintRecipes:
             offset = cls._offset(lines, first_line, 0)
             edits.append((offset, offset, f'{" " * first.col_offset}"""{text}"""\n'))
         if wants_notice:
+            notice = cls.copyright_notice(path.parent)
             module_docstring = cls._docstring_expr(tree)
             if module_docstring is None:
                 offset = len(lines[0]) if lines and lines[0].startswith("#!") else 0

@@ -103,7 +103,7 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
 
     @classmethod
     def _git_enter_lane(cls, request: m.Infra.GitLaneRequest) -> p.Result[bool]:
-        """Continue the lane where it exists (local, then remote), else start it at HEAD.
+        """Continue the lane where it exists (local then remote), else start at HEAD.
 
         Returns:
             The resulting ``p.Result[bool]``.

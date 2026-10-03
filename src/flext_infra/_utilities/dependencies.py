@@ -363,7 +363,7 @@ class FlextInfraUtilitiesDependencies:
 
     @classmethod
     def resolved_dependency_versions(cls) -> t.MappingKV[str, str]:
-        """Read registry versions from the provisioned runtime, never release provenance.
+        """Read registry versions from the provisioned runtime, not release provenance.
 
         Returns:
             The resulting ``t.MappingKV[str, str]``.

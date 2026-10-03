@@ -89,7 +89,6 @@ if TYPE_CHECKING:
         FlextInfraUtilitiesSemanticCutoverSelfFacade,
     )
 
-
 __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesSemanticCutoverAliasCst",
     "FlextInfraUtilitiesSemanticCutoverAliases",

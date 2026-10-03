@@ -21,7 +21,9 @@ class FlextInfraSonarcloudIssues(FlextInfraSonarcloudClient[bool]):
 
     @staticmethod
     def search_form(
-        project_key: str, branch: str, page: int,
+        project_key: str,
+        branch: str,
+        page: int,
     ) -> t.VariadicTuple[t.Pair[str, str]]:
         """Constrain the search to one project and its integration branch.
 
@@ -72,14 +74,17 @@ class FlextInfraSonarcloudIssues(FlextInfraSonarcloudClient[bool]):
             if body.failure:
                 return r[bool].from_failure(body)
             parsed = u.validate_value(
-                m.Infra.SonarcloudIssueSearch, body.value, from_json=True,
+                m.Infra.SonarcloudIssueSearch,
+                body.value,
+                from_json=True,
             )
             if parsed.failure:
                 return r[bool].from_failure(parsed)
             response = parsed.value
             if response.paging.page_index != page:
                 return r[bool].fail(
-                    f"SonarCloud returned page {response.paging.page_index}; requested {page}",
+                    f"SonarCloud returned page {response.paging.page_index}; "
+                    f"requested {page}",
                 )
             if total is not None and response.paging.total != total:
                 return r[bool].fail(

@@ -72,7 +72,7 @@ class FlextInfraCodegenCensus(s[str]):
         """Run census on all projects in workspace.
 
         Args:
-            repository_root: Override repository root (defaults to self.repository_root).
+            repository_root: Override root (defaults to self.repository_root).
             output_format: Unused, kept for API compat.
             projects: Pre-discovered projects to skip redundant discovery.
 

@@ -71,8 +71,8 @@ class FlextInfraCodegenLazyInitPlannerPublicRootMixin:
     ) -> frozenset[str] | None:
         if context.generated_init or not context.init_path.is_file():
             return None
-        # If the project declares subpackages (e.g. services/), root aggregates from sources;
-        # only single-directory/flat projects can declare an ABI filter via manual __init__.py.
+        # With declared subpackages (e.g. services/), root aggregates from sources;
+        # only flat projects can declare an ABI filter via a manual __init__.py.
         entry = self.rope_workspace.package(context.pkg_dir)
         if entry is not None and entry.descendant_child_dirs:
             return None

@@ -91,11 +91,16 @@ class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
         if rendered.failure:
             return r[str].from_failure(rendered)
         return self._publish_version(
-            project, src_pkg / "__version__.py", rendered.value,
+            project,
+            src_pkg / "__version__.py",
+            rendered.value,
         )
 
     def _publish_version(
-        self, project: Path, target: Path, content: str,
+        self,
+        project: Path,
+        target: Path,
+        content: str,
     ) -> p.Result[str]:
         """Publish ``content`` to ``target`` unless it is already current.
 

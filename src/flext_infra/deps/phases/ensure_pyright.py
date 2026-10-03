@@ -77,7 +77,7 @@ class FlextInfraEnsurePyrightConfigPhase:
         source_dir: str,
         member_src_paths: t.SequenceOf[str] = (),
     ) -> t.StrSequence:
-        """``src/`` owns only its own path; every other discovered dir also imports from src + root.
+        """``src/`` owns only its path; other dirs also import from src + root.
 
         Returns:
             The resulting ``t.StrSequence``.

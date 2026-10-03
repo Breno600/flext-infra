@@ -270,7 +270,9 @@ class FlextInfraModelsRope:
         modules: Annotated[
             t.VariadicTuple[FlextInfraModelsRope.RopeModuleIndexEntry],
             m.Field(
-                description="Direct Python module resources that belong to this package",
+                description=(
+                    "Direct Python module resources that belong to this package"
+                ),
             ),
         ] = ()
         direct_child_dirs: Annotated[

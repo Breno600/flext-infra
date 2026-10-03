@@ -96,7 +96,10 @@ class FlextInfraPytestCollection:
             if set(collected) != set(order):
                 missing = sorted(set(order) - set(collected))
                 unexpected = sorted(set(collected) - set(order))
-                msg = f"Runner collection differs from selection: {missing=}, {unexpected=}"
+                msg = (
+                    f"Runner collection differs from selection: "
+                    f"{missing=}, {unexpected=}"
+                )
                 raise ValueError(msg)
             session.items.sort(key=lambda item: order[item.nodeid])
         yield
