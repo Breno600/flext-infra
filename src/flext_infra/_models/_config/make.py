@@ -571,9 +571,6 @@ class FlextInfraConfigModelsMake:
     class MakeSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Complete generated Makefile public and extension contract."""
 
-
-        class TestmonCachePolicySpec(FlextInfraConfigModelsContract.ConfigContract):
-            """Declarative Actions-cache policy for the shared testmon database.
         check_gate_suspensions: Annotated[
             t.VariadicTuple[MakeGateSuspensionSpec],
             m.Field(
@@ -584,6 +581,9 @@ class FlextInfraConfigModelsMake:
                 ),
             ),
         ] = ()
+
+        class TestmonCachePolicySpec(FlextInfraConfigModelsContract.ConfigContract):
+            """Declarative Actions-cache policy for the shared testmon database.
 
             Implements the preserved #1001 delta (bead flext-j0u23): two-phase
             generations with per-mode caps, a per-repository byte budget with a
