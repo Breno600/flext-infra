@@ -51,7 +51,10 @@ class FlextInfraMiseArtifactsVerification:
                 for project in files.transaction_participants(layout)
             ):
                 return result_type.fail(
-                    f"created staging receipt escapes transaction topology: {receipt.path}",
+                    (
+                        f"created staging receipt escapes "
+                        f"transaction topology: {receipt.path}"
+                    ),
                 )
         registered: list[m.Infra.CodegenJournalDirectory] = []
         for directory in journal.directories:
@@ -247,7 +250,10 @@ class FlextInfraMiseArtifactsVerification:
                     != expected_parent
                 ):
                     return r[bool].fail(
-                        f"generation directory parent binding differs: {directory.path}",
+                        (
+                            f"generation directory parent "
+                            f"binding differs: {directory.path}"
+                        ),
                     )
             if directory.disposition == "temporary":
                 transaction_root = project.transaction_root
@@ -257,7 +263,10 @@ class FlextInfraMiseArtifactsVerification:
                     or not transaction_root.is_relative_to(resolved_target)
                 ):
                     return r[bool].fail(
-                        f"temporary directory escapes transaction root: {directory.path}",
+                        (
+                            f"temporary directory escapes "
+                            f"transaction root: {directory.path}"
+                        ),
                     )
         for entry in journal.entries:
             project = by_selector[entry.project]
@@ -296,7 +305,10 @@ class FlextInfraMiseArtifactsVerification:
                     transaction_root,
                 ):
                     return r[bool].fail(
-                        f"generation {role} staging escapes transaction root: {entry.path}",
+                        (
+                            f"generation {role} staging escapes "
+                            f"transaction root: {entry.path}"
+                        ),
                     )
             if entry.original_backup is not None:
                 backup = files.resolve_transaction(
@@ -312,7 +324,7 @@ class FlextInfraMiseArtifactsVerification:
                     return r[bool].fail(
                         f"generation backup escapes its recovery root: {entry.path}",
                     )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def journal_destinations_live(
@@ -367,7 +379,7 @@ class FlextInfraMiseArtifactsVerification:
                 return r[bool].fail(
                     f"published generation identity changed: {entry.path}",
                 )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def states_current(
@@ -417,7 +429,7 @@ class FlextInfraMiseArtifactsVerification:
                 return r[bool].fail(
                     f"generation authenticated state changed: {rebound_expected.path}",
                 )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _bind_source_parent(
@@ -464,7 +476,10 @@ class FlextInfraMiseArtifactsVerification:
                 )
             if (identity.parent_device, identity.parent_inode) != ancestry[-1]:
                 return result.fail(
-                    f"generation source parent ancestry differs from its journal: {path}",
+                    (
+                        f"generation source parent ancestry "
+                        f"differs from its journal: {path}"
+                    ),
                 )
             ancestry.append((identity.device, identity.inode))
         observed = current.value
@@ -532,7 +547,7 @@ class FlextInfraMiseArtifactsVerification:
                     f"published {analysis.phase} destination differs from receipt: "
                     f"{plan.path}",
                 )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def sources(cls, plan: m.Infra.MiseToolchainWorkspacePlan) -> p.Result[bool]:
@@ -554,7 +569,7 @@ class FlextInfraMiseArtifactsVerification:
                 return r[bool].from_failure(current)
             if current.value != project.config.sources:
                 return r[bool].fail(f"Mise sources changed: {project.layout.selector}")
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def destinations(cls, plan: m.Infra.MiseToolchainWorkspacePlan) -> p.Result[bool]:
@@ -574,7 +589,7 @@ class FlextInfraMiseArtifactsVerification:
             current = cls.states_current(expected_states)
             if current.failure:
                 return current
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def publications_live(
@@ -600,7 +615,10 @@ class FlextInfraMiseArtifactsVerification:
                 or before.parent_inode is None
             ):
                 return r[bool].fail(
-                    f"generation destination parent identity is incomplete: {before.path}",
+                    (
+                        f"generation destination parent "
+                        f"identity is incomplete: {before.path}"
+                    ),
                 )
             replacement = publication.replacement
             if replacement is None:
@@ -624,9 +642,12 @@ class FlextInfraMiseArtifactsVerification:
                 parent_inode=before.parent_inode,
             ):
                 return r[bool].fail(
-                    f"live generation destination differs from staged identity: {current.path}",
+                    (
+                        f"live generation destination differs "
+                        f"from staged identity: {current.path}"
+                    ),
                 )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def live(
@@ -673,7 +694,7 @@ class FlextInfraMiseArtifactsVerification:
         source_after = cls.sources(plan)
         if source_after.failure:
             return source_after
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _validate_manifest_transition(
@@ -735,7 +756,10 @@ class FlextInfraMiseArtifactsVerification:
                 path in expected or path not in current
             ):
                 return r[bool].fail(
-                    f"created temporary-tree entry is not a new present artifact: {path}",
+                    (
+                        f"created temporary-tree entry is "
+                        f"not a new present artifact: {path}"
+                    ),
                 )
         for entry in additions:
             receipt = created_by_path.get(entry.path)
@@ -756,7 +780,7 @@ class FlextInfraMiseArtifactsVerification:
                 return r[bool].fail(
                     f"unregistered temporary-tree file exists: {entry.path}",
                 )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _matches_created_entry(
@@ -958,7 +982,7 @@ class FlextInfraMiseArtifactsVerification:
             return r[bool].fail(
                 f"temporary tree differs from created identity: {directory.path}",
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _artifact_snapshot(

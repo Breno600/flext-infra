@@ -196,7 +196,7 @@ class FlextInfraUtilitiesDocsValidate:
 
         """
         if scope.name == c.Infra.RK_ROOT or not apply_mode:
-            return r[bool].ok(False)
+            return r[bool].ok(value=False)
         path = scope.path / "TODOS.md"
         content = (
             "# TODOS\n\n"
@@ -207,7 +207,7 @@ class FlextInfraUtilitiesDocsValidate:
             _ = path.write_text(content, encoding=c.Cli.ENCODING_DEFAULT)
         except OSError as exc:
             return r[bool].fail(f"failed to write {path}: {exc}")
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def docs_write_validate_reports(

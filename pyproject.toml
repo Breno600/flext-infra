@@ -420,6 +420,9 @@ skip-magic-trailing-comma = false
 extend-safe-fixes = ["camelcase-imported-as-lowercase", "relative-imports"]
 ignore = [
   "camelcase-imported-as-lowercase",
+  "implicit-namespace-package",
+  "missing-required-import",
+  "typing-only-first-party-import",
   "typing-only-standard-library-import",
   "typing-only-third-party-import",
 ]
@@ -469,6 +472,12 @@ split-on-trailing-comma = false
   "runtime-import-in-type-checking-block",
   "typing-only-first-party-import",
   "unused-import",
+]
+"**/tests/python/**" = [
+  "raise-vanilla-args",
+  "start-process-with-partial-path",
+  "subprocess-without-shell-equals-true",
+  "suspicious-subprocess-import",
 ]
 "scripts/**" = [
   "any-type",
@@ -524,6 +533,11 @@ split-on-trailing-comma = false
   "verbose-raise",
   "write-whole-file",
 ]
+"scripts/**/*.py" = [
+  "commented-out-code",
+  "line-too-long",
+  "typing-only-first-party-import",
+]
 "tests/**/*.py" = ["assert"]
 
 [tool.ruff.lint.pydocstyle]
@@ -549,6 +563,7 @@ whitelines = 1
 
 [tool.uv]
 link-mode = "copy"
+constraint-dependencies = ["mypy<2.4.0"]
 environments = ["sys_platform == 'linux'", "sys_platform == 'darwin'"]
 
 [[tool.uv.exclude-dependencies]]

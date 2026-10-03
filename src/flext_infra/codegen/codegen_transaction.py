@@ -979,7 +979,8 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
                 and recorded.manifest.entries
             ):
                 return result_type.fail(
-                    f"new transaction tree contains unregistered entries: {recorded.path}",
+                    f"new transaction tree contains unregistered entries: "
+                    f"{recorded.path}",
                 )
         persisted = self._write_journal(
             layout,
@@ -1007,7 +1008,8 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         compensated = state.compensate_created_directory(created)
         if compensated.failure:
             return r[bool].fail(
-                f"{failure}; created-directory compensation failed: {compensated.error}",
+                f"{failure}; created-directory compensation failed: "
+                f"{compensated.error}",
             )
         if journal_write:
             return self._handle_journal_write_failure(layout, failure)
@@ -1083,7 +1085,7 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
                 return r[bool].from_failure(observed)
             snapshot = state.journal_snapshot(observed.value)
             if snapshot is not None and snapshot.content is None:
-                return r[bool].ok(False)
+                return r[bool].ok(value=False)
             return r[bool].fail("generation recovery has no invocation journal receipt")
         return self._recover(layout, expected=expected)
 
@@ -1102,7 +1104,7 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
             return r[bool].fail(
                 f"generation staging has no journal authority: {residue[0]}",
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def _handle_journal_write_failure(
         self,
@@ -1144,7 +1146,7 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
                     barriers.error or "generation barrier failed",
                 ),
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def _recover_failure(
         self,

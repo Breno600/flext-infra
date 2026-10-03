@@ -171,7 +171,7 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
         return score_winner
 
     def _is_intentional_reexport(self, a: t.StrPair, b: t.StrPair) -> bool:
-        """Return whether one module is a root-namespace stub re-exporting from the other.
+        """Return whether one module is a root-namespace stub re-exporting the other.
 
         Returns:
             Whether one module is a root-namespace stub re-exporting from the other.

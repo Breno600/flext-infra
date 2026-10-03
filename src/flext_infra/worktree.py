@@ -277,6 +277,22 @@ class FlextInfraWorktreeService(s[str]):
             return r[str].fail("worktree add requires --apply")
         if base.startswith("-"):
             return r[str].fail(f"invalid base commitish: {base}")
+        base_oid = self._resolved_base(primary_root, base)
+        if base_oid.failure:
+            return r[str].from_failure(base_oid)
+        lane = self._new_lane_path(primary_root, branch)
+        if lane.failure:
+            return r[str].from_failure(lane)
+        return self._create_lane(primary_root, lane.value, branch, base_oid.value)
+
+    @staticmethod
+    def _resolved_base(primary_root: Path, base: str) -> p.Result[str]:
+        """Resolve the requested base to the commit the new lane starts from.
+
+        Returns:
+            The base commit oid, or the service's own refusal naming the base.
+
+        """
         resolved = u.Infra.git_resolve_commit(
             m.Infra.GitCommitishRequest(repo_root=primary_root, commitish=base),
         )
@@ -289,58 +305,121 @@ class FlextInfraWorktreeService(s[str]):
                 f"cannot resolve worktree base: {base} ({resolved.error})",
                 exception=resolved.exception,
             )
-        base_oid = resolved.value.oid
-        if self.epic_lane is not None:
-            if self.epic_lane.is_symlink():
-                return r[str].fail(f"epic lane worktree is a symlink: {self.epic_lane}")
-            if not self.epic_lane.is_dir():
-                return r[str].fail(
-                    f"epic lane worktree does not exist: {self.epic_lane}",
-                )
-            registered = self._registered_worktrees(primary_root)
-            if registered.failure:
-                return r[str].from_failure(registered)
-            if self.epic_lane.resolve() not in {root for root, _ in registered.value}:
-                return r[str].fail(
-                    f"registered epic lane is required: {self.epic_lane}",
-                )
-            container = self.epic_lane / c.Infra.WORKTREES_DIRNAME
-            if container.is_symlink():
-                return r[str].fail(f"epic worktree container is a symlink: {container}")
+        return r[str].ok(resolved.value.oid)
+
+    def _checked_epic_lane(self, primary_root: Path) -> p.Result[bool]:
+        """Require a requested epic lane to be a registered, real container.
+
+        Returns:
+            Success when no epic lane is requested or the epic lane is valid.
+
+        """
+        epic_lane = self.epic_lane
+        if epic_lane is None:
+            return r[bool].ok(value=True)
+        if epic_lane.is_symlink() or not epic_lane.is_dir():
+            reason = "is a symlink" if epic_lane.is_symlink() else "does not exist"
+            return r[bool].fail(f"epic lane worktree {reason}: {epic_lane}")
+        registered = self._registered_worktrees(primary_root)
+        if registered.failure:
+            return r[bool].from_failure(registered)
+        if epic_lane.resolve() not in {root for root, _ in registered.value}:
+            return r[bool].fail(f"registered epic lane is required: {epic_lane}")
+        container = epic_lane / c.Infra.WORKTREES_DIRNAME
+        if container.is_symlink():
+            return r[bool].fail(f"epic worktree container is a symlink: {container}")
+        return r[bool].ok(value=True)
+
+    def _new_lane_path(self, primary_root: Path, branch: str) -> p.Result[Path]:
+        """Reserve the canonical path of a branch that has no lane yet.
+
+        Returns:
+            The unused canonical lane path for the branch.
+
+        """
+        epic = self._checked_epic_lane(primary_root)
+        if epic.failure:
+            return r[Path].from_failure(epic)
         existing = self.registered_lanes(primary_root, branch)
         if existing.failure:
-            return r[str].from_failure(existing)
+            return r[Path].from_failure(existing)
         if existing.value:
-            return r[str].fail(f"worktree branch is already registered: {branch}")
-        lane_result = self._lane_path(primary_root, branch, self.epic_lane)
-        if lane_result.failure:
-            return r[str].from_failure(lane_result)
-        lane = lane_result.value
-        if lane.exists():
-            return r[str].fail(f"worktree lane already exists: {lane}")
+            return r[Path].fail(f"worktree branch is already registered: {branch}")
+        lane = self._lane_path(primary_root, branch, self.epic_lane)
+        if lane.success and lane.value.exists():
+            return r[Path].fail(f"worktree lane already exists: {lane.value}")
+        return lane
+
+    def _branch_refs(self, branch: str) -> p.Result[t.Pair[bool, bool]]:
+        """Report whether the branch exists locally and on ``origin``.
+
+        Returns:
+            The local and remote existence of the branch, in that order.
+
+        """
+        local = self._ref_exists(f"refs/heads/{branch}")
+        if local.failure:
+            return r[t.Pair[bool, bool]].from_failure(local)
+        remote = self._ref_exists(f"refs/remotes/origin/{branch}")
+        if remote.failure:
+            return r[t.Pair[bool, bool]].from_failure(remote)
+        return r[t.Pair[bool, bool]].ok((local.value, remote.value))
+
+    def _create_lane(
+        self,
+        primary_root: Path,
+        lane: Path,
+        branch: str,
+        base_oid: str,
+    ) -> p.Result[str]:
+        """Register the lane worktree for a branch at the resolved base.
+
+        Returns:
+            The created lane path.
+
+        """
         ensured = u.Cli.ensure_dir(lane.parent)
         if ensured.failure:
             return r[str].from_failure(ensured)
-        local = self._ref_exists(f"refs/heads/{branch}")
-        if local.failure:
-            return r[str].from_failure(local)
-        remote = self._ref_exists(f"refs/remotes/origin/{branch}")
-        if remote.failure:
-            return r[str].from_failure(remote)
+        refs = self._branch_refs(branch)
+        if refs.failure:
+            return r[str].from_failure(refs)
+        local_exists, remote_exists = refs.value
         added = u.Infra.git_add_lane_worktree(
             m.Infra.GitWorktreeAddRequest(
                 repo_root=self.repository_root,
                 lane=lane,
                 branch=branch,
                 base=base_oid,
-                local_branch_exists=local.value,
-                track_remote=not local.value and remote.value,
+                local_branch_exists=local_exists,
+                track_remote=not local_exists and remote_exists,
             ),
         )
         if added.failure:
             return r[str].from_failure(added)
+        return self._verified_new_lane(
+            primary_root,
+            lane,
+            branch,
+            created_branch=not local_exists,
+        )
+
+    def _verified_new_lane(
+        self,
+        primary_root: Path,
+        lane: Path,
+        branch: str,
+        *,
+        created_branch: bool,
+    ) -> p.Result[str]:
+        """Keep a new lane only when its identity and metadata are valid.
+
+        Returns:
+            The lane path, or the rollback outcome of an invalid new lane.
+
+        """
         created_branch_oid: str | None = None
-        if not local.value:
+        if created_branch:
             created_oid = u.Infra.git_repository_head(
                 m.Infra.GitRepoRequest(repo_root=lane),
             )
@@ -353,8 +432,7 @@ class FlextInfraWorktreeService(s[str]):
                     created_oid.error or "failed to retain created branch identity",
                 )
             created_branch_oid = created_oid.value.oid
-        pyproject = lane / c.PYPROJECT_FILENAME
-        if pyproject.is_file():
+        if (lane / c.PYPROJECT_FILENAME).is_file():
             metadata = u.Infra.read_project_metadata_result(lane)
             if metadata.failure:
                 return self._rollback_new_lane(
@@ -429,21 +507,26 @@ class FlextInfraWorktreeService(s[str]):
             if listed.failure:
                 return r[str].from_failure(listed)
             return r[str].ok(listed.value.porcelain)
+        return self._mutate(primary.value)
+
+    def _mutate(self, primary_root: Path) -> p.Result[str]:
+        """Run the selected branch-scoped operation on one validated branch.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         branch = self._validated_branch()
         if branch.failure:
             return r[str].from_failure(branch)
         base = (self.base or "").strip()
-        if (
-            self.operation
-            in {c.Infra.WorktreeOperation.ADD, c.Infra.WorktreeOperation.UPDATE}
-            and not base
-        ):
+        if self.operation == c.Infra.WorktreeOperation.REMOVE:
+            return self._remove(primary_root, branch.value)
+        if not base:
             return r[str].fail(f"worktree {self.operation} requires --base")
         if self.operation == c.Infra.WorktreeOperation.ADD:
-            return self._add(primary.value, branch.value, base)
-        if self.operation == c.Infra.WorktreeOperation.UPDATE:
-            return self._update(primary.value, branch.value, base)
-        return self._remove(primary.value, branch.value)
+            return self._add(primary_root, branch.value, base)
+        return self._update(primary_root, branch.value, base)
 
 
 __all__: list[str] = ["FlextInfraWorktreeService"]

@@ -15,7 +15,7 @@ class FlextInfraConstantsCensus:
     CENSUS_UNSUPPORTED_SIMPLE_REMOVAL_CODE: ClassVar[str] = (
         "CENSUS_UNSUPPORTED_SIMPLE_REMOVAL"
     )
-    "Error code marking a candidate outside the simple-removal contract (not a failure)."
+    "Error code marking a candidate outside the simple-removal contract."
 
 
 __all__: list[str] = ["FlextInfraConstantsCensus"]

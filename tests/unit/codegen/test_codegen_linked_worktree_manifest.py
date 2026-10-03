@@ -99,6 +99,7 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
             eq=primary_snapshot,
         )
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("beads_content", "expected_error"),
         [
@@ -115,7 +116,6 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
         ],
     )
     def test_invalid_local_beads_identity_fails_before_any_write(
-        self,
         tmp_path: Path,
         beads_content: str | None,
         expected_error: str,

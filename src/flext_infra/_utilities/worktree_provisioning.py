@@ -31,13 +31,13 @@ class FlextInfraWorktreeProvisioning:
                 f"governed gitlink has an invalid .git marker: {reference}",
             )
         if git_marker.exists():
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         initialized = u.Infra.git_submodule_init(
             m.Infra.GitRefRequest(repo_root=lane, reference=reference),
         )
         if initialized.failure:
             return r[bool].from_failure(initialized)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def _verify_gitlink_state(
@@ -65,7 +65,7 @@ class FlextInfraWorktreeProvisioning:
             return r[bool].fail(
                 f"governed gitlink {reference} is not at recorded oid {recorded_oid}",
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _validate_governed_gitlink(
@@ -128,7 +128,7 @@ class FlextInfraWorktreeProvisioning:
             validated = cls._validate_governed_gitlink(lane, member_path)
             if validated.failure:
                 return validated
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def setup_lane(cls, lane: Path) -> p.Result[bool]:
@@ -138,7 +138,7 @@ class FlextInfraWorktreeProvisioning:
         if gitlinks.failure:
             return gitlinks
         if not (lane / c.PYPROJECT_FILENAME).is_file():
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         lane_venv = u.Infra.runtime_environment_dir(lane)
         if lane_venv.is_symlink():
             return r[bool].fail(
@@ -156,7 +156,7 @@ class FlextInfraWorktreeProvisioning:
             return r[bool].fail(
                 f"lane setup did not create an interpreter: {interpreter}",
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraWorktreeProvisioning"]

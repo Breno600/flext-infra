@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from flext_tests import tm
 
 from flext_infra.docs.generator import FlextInfraDocGenerator
-from tests import m, u
+from tests import c, m, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -163,7 +163,10 @@ class TestsFlextInfraDocsGeneratorPlan:
         plans = u.Tests.plan_docs_bundle(generator)
 
         tm.that(plans, empty=False)
-        tm.that(all(plan.desired_mode == 0o644 for plan in plans), eq=True)
+        tm.that(
+            all(plan.desired_mode == c.Infra.DOCS_ARTIFACT_MODE for plan in plans),
+            eq=True,
+        )
         tm.that(all(plan.source_states for plan in plans), eq=True)
         tm.that(
             {

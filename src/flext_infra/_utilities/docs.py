@@ -139,7 +139,7 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
                 "\n".join(lines).rstrip() + "\n",
                 encoding=c.Cli.ENCODING_DEFAULT,
             )
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         except OSError as exc:
             return r[bool].fail(f"markdown write error: {exc}", exception=exc)
 

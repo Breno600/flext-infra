@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 class TestsFlextInfraRopeAnalysis:
     """Behavior contract for Rope-backed semantic analysis."""
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("statement", "suffix"),
         [
@@ -32,7 +33,6 @@ class TestsFlextInfraRopeAnalysis:
         ],
     )
     def test_declared_imports_preserve_relative_levels(
-        self,
         tmp_path: Path,
         statement: str,
         suffix: str,

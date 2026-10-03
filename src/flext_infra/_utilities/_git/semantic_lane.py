@@ -99,11 +99,11 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
             outcome = u.Cli.run_checked(command, cwd=root)
             if outcome.failure:
                 return outcome
-        return r[bool].ok(False)
+        return r[bool].ok(value=False)
 
     @classmethod
     def _git_enter_lane(cls, request: m.Infra.GitLaneRequest) -> p.Result[bool]:
-        """Continue the lane where it exists (local, then remote), else start it at HEAD.
+        """Continue the lane where it exists (local then remote), else start at HEAD.
 
         Returns:
             The resulting ``p.Result[bool]``.
@@ -162,7 +162,7 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
             if line.strip()
         )
         if not produced:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         staged = cls.git_add_paths(
             m.Infra.GitPathsRequest(repo_root=root, paths=produced),
         )

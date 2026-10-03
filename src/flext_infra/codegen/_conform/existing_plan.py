@@ -56,6 +56,21 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         metadata = u.Infra.read_project_metadata_result(root)
         if metadata.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(metadata)
+        project = workspace.project
+        if project is None:
+            # Existing checkouts declare no scaffold metadata: derive the
+            # tooling identity from live PEP 621 metadata (same rule as the
+            # render pass) instead of referencing an undefined name.
+            derived = self._project_spec_from_existing(
+                repository,
+                root,
+                codegen,
+            )
+            if derived.failure:
+                return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
+                    derived,
+                )
+            project = derived.value
         dist = metadata.value.project.name
         if dist != repository.distribution:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
@@ -91,6 +106,10 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             project_name=repository.distribution,
             package_name=metadata.value.package_name,
             path=pyproject,
+            scaffold_project=codegen.scaffold.project,
+            upstream=project.upstream,
+            runtime_dependency_overlay=project.runtime_dependency_overlay,
+            declared_project_dependencies=metadata.value.project.dependencies,
             topology=m.Infra.PyprojectDeclaredTopology(
                 root_modules=(
                     target.project.root_modules if target.project is not None else ()
@@ -249,7 +268,8 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         )
         if len(entries) != 1 or entries[0].source is None or len(managed) != 1:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
-                f"docs config requires one declared render template and owner: {destination}",
+                f"docs config requires one declared render template "
+                f"and owner: {destination}",
             )
         template = u.Infra.codegen_templates_root(codegen) / entries[0].source
         source = u.Cli.atomic_read_binary_file_state(template, required=True)
@@ -328,7 +348,8 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 continue
             if len(entries) != 1:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
-                    f"managed file requires exactly one render template: {managed.path}",
+                    f"managed file requires exactly one render template: "
+                    f"{managed.path}",
                 )
             entry = entries[0]
             if entry.source is None:

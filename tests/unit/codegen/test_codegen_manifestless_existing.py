@@ -41,6 +41,20 @@ class TestsFlextInfraCodegenManifestlessExisting:
         preserved = {"LICENSE": "existing license\n"}
         seeded = {**preserved, "README.md": "# Existing repository\n"}
         pyproject_source = tm.ok(u.Cli.files_read_text(Path.cwd() / "pyproject.toml"))
+        custom_dev_requirement = 'flext-custom-tests>=0.1; python_version < "3.0"'
+        pyproject_payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
+            u.Tests.toml_payload(pyproject_source),
+        )
+        dev_groups = u.Cli.toml_mapping_ensure_table(
+            pyproject_payload, c.Infra.DEPENDENCY_GROUPS,
+        )
+        dev_groups[str(c.Infra.DEV)] = [
+            *u.Cli.json_as_sequence(dev_groups.get(str(c.Infra.DEV))),
+            custom_dev_requirement,
+        ]
+        pyproject_source = u.Cli.toml_dumps(
+            u.Cli.toml_document_from_mapping(pyproject_payload),
+        )
         tm.ok(u.Cli.atomic_write_text_file(root / "pyproject.toml", pyproject_source))
         package_name = u.Infra.project_package_name(Path.cwd())
         package_init = root / c.Infra.DEFAULT_SRC_DIR / package_name / "__init__.py"

@@ -29,11 +29,13 @@ from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
 class FlextInfraCliModProgress:
     """Render mod progress at the CLI transport boundary."""
 
-    def emit(self, message: str) -> None:
+    @staticmethod
+    def emit(message: str) -> None:
         """Show the current canonical mod phase."""
         cli.display_text(message)
 
-    def emit_rename(self, report: m.Infra.ApplyRenamesReport) -> None:
+    @staticmethod
+    def emit_rename(report: m.Infra.ApplyRenamesReport) -> None:
         """Show one completed CSV campaign."""
         cli.display_text(FlextInfraCliModProgress.render_rename(report))
 
@@ -74,7 +76,7 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
             return r[t.Cli.ResultValue].fail(
                 f"{report.occurrences} pending source edits",
             )
-        return r[t.Cli.ResultValue].ok(True)
+        return r[t.Cli.ResultValue].ok(value=True)
 
     @staticmethod
     def execute_mod(request: m.Infra.ModCommand) -> p.Result[t.Cli.ResultValue]:

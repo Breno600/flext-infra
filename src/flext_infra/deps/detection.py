@@ -15,7 +15,7 @@ from flext_infra.deps.detection_analysis import FlextInfraDependencyDetectionAna
 
 
 class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis):
-    """Runtime vs dev dependency detector using deptry, pip-check, and mypy stub analysis."""
+    """Runtime vs dev dependency detector using deptry, pip-check, mypy stubs."""
 
     _log = u.fetch_logger(__name__)
 
@@ -94,8 +94,8 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
             ),
         )
 
+    @staticmethod
     def discover_project_paths(
-        self,
         repository_root: Path,
         projects_filter: t.StrSequence | None = None,
     ) -> p.Result[t.SequenceOf[Path]]:

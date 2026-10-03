@@ -12,68 +12,23 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
-from flext_infra import c, config, m, settings, t, u
-from flext_infra.base import s
+from flext_infra import c, config, m, t, u
+from flext_infra.maintenance.sonarcloud_client import FlextInfraSonarcloudClient
 
 if TYPE_CHECKING:
     from flext_infra import p
 
 
-class FlextInfraSonarcloudSettingsSync(s[bool]):
+class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
     """Converge one project's SonarCloud issue exclusions onto the SSOT.
 
     Every input — token, project key, SSOT exclusions — is validated before
     the first request. The setting is written only when the server value
     differs from the SSOT, then read back and compared; any divergence fails.
     """
-
-    @staticmethod
-    def required_token() -> p.Result[t.SecretStr]:
-        """Return ``SONAR_TOKEN`` exactly as the process environment holds it.
-
-        Returns:
-            ``SONAR_TOKEN`` exactly as the process environment holds it.
-
-        """
-        token = settings.Infra.sonar_token
-        if token is None or not token.get_secret_value().strip():
-            return r[t.SecretStr].fail(
-                "SONAR_TOKEN is required in the process environment and must "
-                "not be empty or whitespace",
-            )
-        raw = token.get_secret_value()
-        if raw != raw.strip():
-            return r[t.SecretStr].fail(
-                "SONAR_TOKEN carries surrounding whitespace; supply the exact token",
-            )
-        return r[t.SecretStr].ok(token)
-
-    @staticmethod
-    def project_key(repository_root: Path) -> p.Result[str]:
-        """Derive ``<organization>_<repository>`` from the checkout's origin.
-
-        Returns:
-            The resulting ``p.Result[str]``.
-
-        """
-        origin = u.Infra.git_remote_url(
-            m.Infra.GitRemoteUrlRequest(repo_root=repository_root),
-        )
-        if origin.failure:
-            return r[str].from_failure(origin)
-        identity = u.Infra.git_remote_identity(origin.value.text)
-        organization, _, repository = identity.partition("/")
-        if not organization or not repository or "/" in repository:
-            return r[str].fail(
-                f"origin does not identify an organization and repository: {identity}",
-            )
-        return r[str].ok(
-            f"{organization}{c.Infra.SONARCLOUD_PROJECT_KEY_SEPARATOR}{repository}",
-        )
 
     @staticmethod
     def settings_plan(
@@ -171,28 +126,6 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
             plan.field_values,
         )
 
-    @staticmethod
-    def _call(
-        plan: m.Infra.SonarcloudSettingsPlan,
-        token: t.SecretStr,
-        method: str,
-        path: str,
-        form: t.SequenceOf[t.Pair[str, str]],
-    ) -> p.Result[str]:
-        """Send one authenticated request to the plan's web API origin.
-
-        Returns:
-            The resulting ``p.Result[str]``.
-
-        """
-        return u.Infra.http_bearer_text(
-            method,
-            f"{plan.api_url}{path}",
-            bearer_token=token,
-            form=form,
-            timeout_seconds=plan.timeout_seconds,
-        )
-
     @classmethod
     def _server_values(
         cls,
@@ -203,10 +136,10 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
 
         Returns:
             The resulting ``p.Result[m.Infra.SonarcloudSettingsValues]``.
-
         """
-        body = cls._call(
-            plan,
+        body = cls.call(
+            plan.api_url,
+            plan.timeout_seconds,
             token,
             "GET",
             c.Infra.SONARCLOUD_API_SETTINGS_VALUES_PATH,
@@ -238,8 +171,9 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
         if planned.failure:
             return r[bool].from_failure(planned)
         plan = planned.value
-        auth_body = self._call(
-            plan,
+        auth_body = self.call(
+            plan.api_url,
+            plan.timeout_seconds,
             token.value,
             "GET",
             c.Infra.SONARCLOUD_API_AUTH_VALIDATE_PATH,
@@ -261,9 +195,16 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
             return r[bool].from_failure(current)
         if self.in_sync_with(plan, current.value):
             u.Cli.info(f"sonarcloud-sync: {plan.project_key} already matches the SSOT")
-            return r[bool].ok(False)
+            return r[bool].ok(value=False)
         request = self.settings_write_request(plan)
-        written = self._call(plan, token.value, "POST", request.api_path, request.form)
+        written = self.call(
+            plan.api_url,
+            plan.timeout_seconds,
+            token.value,
+            "POST",
+            request.api_path,
+            request.form,
+        )
         if written.failure:
             return r[bool].from_failure(written)
         readback = self._server_values(plan, token.value)
@@ -287,7 +228,7 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
             project_key=plan.project_key,
             exclusions=len(plan.field_values),
         )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraSonarcloudSettingsSync"]

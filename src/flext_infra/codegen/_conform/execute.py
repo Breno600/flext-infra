@@ -385,7 +385,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             return r[bool].fail(
                 f"bootstrap did not reach a fixed point: {residual[0].path}",
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def _execute_managed(
         self,
@@ -454,8 +454,8 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             )
         return result
 
+    @staticmethod
     def _lazy_phase(
-        self,
         request: m.Infra.CodegenConformRequest,
         plan: m.Infra.CodegenPlan,
     ) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
@@ -491,7 +491,8 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 existing = inputs.get(state.path)
                 if existing is not None and existing != state:
                     return r[m.Infra.CodegenPhaseAnalysis].fail(
-                        f"lazy-init input changed across repository plans: {state.path}",
+                        f"lazy-init input changed across repository plans: "
+                        f"{state.path}",
                     )
                 inputs[state.path] = state
         return r[m.Infra.CodegenPhaseAnalysis].ok(
@@ -814,10 +815,10 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             removed = u.Cli.atomic_delete_empty_directory_guarded(state)
             if removed.failure:
                 return removed
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
+    @staticmethod
     def _allow_direnv_after_apply(
-        self,
         request: m.Infra.CodegenConformRequest,
         written_files: t.VariadicTuple[Path],
     ) -> p.Result[bool]:
@@ -838,14 +839,14 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             c.Infra.CodegenConformMode(request.mode)
             is not c.Infra.CodegenConformMode.APPLY
         ):
-            return r[bool].ok(False)
+            return r[bool].ok(value=False)
         roots = {
             path.expanduser().resolve().parent
             for path in written_files
             if path.name == c.Infra.ENVRC_FILENAME
         }
         if not roots:
-            return r[bool].ok(False)
+            return r[bool].ok(value=False)
         for root in sorted(roots):
             result = u.Cli.run_raw(
                 (c.Infra.CLI_DIRENV, "allow", str(root)),
@@ -859,7 +860,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                     f"direnv allow failed for {root}: "
                     f"{result.value.stderr.strip() or result.value.stdout.strip()}",
                 )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def _validate_managed_fixed_point(
         self,
@@ -924,7 +925,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         # The fresh-process import proof needs the runtime make setup
         # provisions, so it belongs to make check (the fresh-import gate):
         # generation must publish a project that has no runtime yet.
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraCodegenConformExecute"]

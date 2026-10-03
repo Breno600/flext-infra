@@ -22,7 +22,7 @@ from tests.unit.validate.pytest_runner_support import (
 
 
 class TestsFlextInfraPytestRunnerSuiteStop:
-    """Exercise the real runner when the entrypoint budget is already spent."""
+    """Exercise the real runner around its graceful-stop boundary."""
 
     @staticmethod
     def _read(path: Path) -> str:
@@ -186,7 +186,7 @@ class TestsFlextInfraPytestRunnerSuiteStop:
             ),
             encoding="utf-8",
         )
-        runner = self._spent_runner(cached_runner_project)
+        runner = self._runner_stopping_at(cached_runner_project, time.monotonic())
 
         tm.that(tm.ok(runner.execute()), eq=pytest.ExitCode.INTERRUPTED.value)
 

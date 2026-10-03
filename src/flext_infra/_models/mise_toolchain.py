@@ -130,6 +130,15 @@ class FlextInfraModelsMiseToolchain:
                 ),
             ),
         ]
+        worktree_environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                pattern=r"^\.[A-Za-z][A-Za-z0-9._-]*$",
+                description=(
+                    "Sibling directory for physical linked-worktree environments"
+                ),
+            ),
+        ]
         dependency_cooldown_days: Annotated[
             int,
             m.Field(
@@ -226,7 +235,9 @@ class FlextInfraModelsMiseToolchain:
             t.NonEmptyStr,
             m.Field(
                 pattern=r"^\.[A-Za-z0-9._-]+\.lock$",
-                description="Ignored project-root mutex for Mise lock publication/recovery",
+                description=(
+                    "Ignored project-root mutex for Mise lock publication/recovery"
+                ),
             ),
         ]
         mise_lockfile_platforms: Annotated[
@@ -255,18 +266,6 @@ class FlextInfraModelsMiseToolchain:
         npm_package_manager: Annotated[
             Literal["aube"],
             m.Field(description="Mise npm installer with a locked dependency graph"),
-        ]
-        github_credential_commands: Annotated[
-            t.VariadicTuple[t.VariadicTuple[t.NonEmptyStr]],
-            m.Field(
-                description=(
-                    "Commands that print the GitHub credential when the caller's "
-                    "environment carries none, in precedence order. The first "
-                    "whose executable is on PATH is the selected source and must "
-                    "deliver; none present means anonymous GitHub access. "
-                    "Override toolchain.github_credential_commands."
-                ),
-            ),
         ]
         mise_selector: Annotated[
             t.NonEmptyStr,
@@ -485,6 +484,15 @@ class FlextInfraModelsMiseToolchain:
             t.VariadicTuple[t.Pair[str, str]],
             m.Field(min_length=1, description="Literal fail-closed Mise settings"),
         ]
+        offline_environment: Annotated[
+            t.VariadicTuple[t.Pair[t.NonEmptyStr, t.NonEmptyStr]],
+            m.Field(
+                min_length=1,
+                description=(
+                    "Settings that keep a non-install Mise call off the network"
+                ),
+            ),
+        ]
         transient_environment: Annotated[
             t.VariadicTuple[t.Pair[t.NonEmptyStr, t.NonEmptyStr]],
             m.Field(min_length=1, description="Scratch-relative environment paths"),
@@ -500,15 +508,6 @@ class FlextInfraModelsMiseToolchain:
         passthrough_environment: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(min_length=1, description="Explicitly reinjected host variables"),
-        ]
-        credential_commands: Annotated[
-            t.VariadicTuple[t.VariadicTuple[t.NonEmptyStr]],
-            m.Field(
-                description=(
-                    "Declared GitHub credential commands consulted, in order, "
-                    "only when the caller's environment carries no credential"
-                ),
-            ),
         ]
         version_pin_file: Annotated[
             t.NonEmptyStr,
@@ -561,9 +560,31 @@ class FlextInfraModelsMiseToolchain:
             t.NonEmptyStr,
             m.Field(
                 pattern=r"^[A-Za-z0-9._/-]+\.py$",
-                description="Project-relative generated publisher of a staged mise.lock",
+                description=(
+                    "Project-relative generated publisher of a staged mise.lock"
+                ),
             ),
         ]
+        credential_commands: Annotated[
+            t.VariadicTuple[t.VariadicTuple[t.NonEmptyStr]],
+            m.Field(
+                description=(
+                    "Candidate commands (probe order) printing a GitHub token "
+                    "for private tool downloads; the bootstrap probes each in "
+                    "turn and takes the first non-empty output."
+                ),
+            ),
+        ] = ()
+        credential_commands: Annotated[
+            t.VariadicTuple[t.VariadicTuple[t.NonEmptyStr]],
+            m.Field(
+                description=(
+                    "Candidate commands (in probe order) that print a GitHub "
+                    "token for private tool downloads; the bootstrap probes "
+                    "each in turn and takes the first non-empty output."
+                ),
+            ),
+        ] = ()
         transaction_lock_file: Annotated[
             t.NonEmptyStr,
             m.Field(
@@ -677,8 +698,9 @@ class FlextInfraModelsMiseToolchain:
                     header lines must be comments.
 
             """
+            literal_environment = (*self.fixed_environment, *self.offline_environment)
             self._ensure_unique_environment_names(
-                self.fixed_environment,
+                literal_environment,
                 self.transient_environment,
                 self.persistent_environment,
                 self.passthrough_environment,
@@ -686,7 +708,7 @@ class FlextInfraModelsMiseToolchain:
             names = [
                 name
                 for group in (
-                    self.fixed_environment,
+                    literal_environment,
                     self.transient_environment,
                     self.persistent_environment,
                 )
@@ -704,7 +726,7 @@ class FlextInfraModelsMiseToolchain:
                     raise ValueError(msg)
                 self._ensure_persistent_and_fixed_values(
                     self.storage_root_variable,
-                    self.fixed_environment,
+                    literal_environment,
                     self.persistent_environment,
                 )
                 self._ensure_relative_paths(

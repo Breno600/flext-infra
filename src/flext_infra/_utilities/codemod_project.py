@@ -150,7 +150,10 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         if source is None:
             layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
             if layout is not None and file_path.is_relative_to(layout.src_dir):
-                msg = f"source module is absent from the project import graph: {file_path}"
+                msg = (
+                    f"source module is absent from the project import graph: "
+                    f"{file_path}"
+                )
                 raise ValueError(msg)
             # Project-level files are scanned by ast-grep but have no package
             # import graph node, so none of their imports can close a cycle.
@@ -765,7 +768,10 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         for violation in validation.value.violations:
             match = c.Infra.VIOLATION_PATTERN.match(violation)
             if match is None:
-                msg = f"namespace violation does not follow the report format: {violation}"
+                msg = (
+                    f"namespace violation does not follow the report format: "
+                    f"{violation}"
+                )
                 raise ValueError(msg)
             parsed.append(
                 m.Infra.CensusViolation(

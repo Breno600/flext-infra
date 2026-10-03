@@ -41,7 +41,7 @@ class FlextInfraCodegenQualityGate(s[bool]):
             return r[bool].from_failure(report_result)
         verdict = u.Cli.json_pick_str(report_result.value, "verdict", "FAIL")
         if self.successful_verdict(verdict):
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         return r[bool].fail(f"quality gate verdict: {verdict}")
 
     def build_report(self) -> p.Result[t.JsonMapping]:
@@ -444,7 +444,9 @@ class FlextInfraCodegenQualityGate(s[bool]):
             "Current:",
             f"- violations: {after.get('total_violations', 'n/a')}",
             f"- duplicates: {after.get('duplicate_groups', 'n/a')}",
-            f"- projects: {after.get('projects_total', 0)} total, {after.get('projects_passed', 0)} passed, {after.get('projects_failed', 0)} failed",
+            f"- projects: {after.get('projects_total', 0)} total, "
+            f"{after.get('projects_passed', 0)} passed, "
+            f"{after.get('projects_failed', 0)} failed",
         ])
         if duplicate_groups:
             lines.extend(["", "Duplicate Groups:"])

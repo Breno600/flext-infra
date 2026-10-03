@@ -12,6 +12,9 @@ import json
 import sys
 from typing import TYPE_CHECKING
 
+import pytest
+
+from flext_infra.bootstrap import FlextInfraBootstrap
 from flext_tests import tm
 
 from tests import c, u
@@ -58,6 +61,59 @@ class TestsMiseLockTransaction:
             ),
         )
         return u.Cli.process_succeeded(outcome.outcome), outcome.stderr
+
+    @staticmethod
+    def test_release_change_publishes_pin_when_lock_bytes_are_unchanged(
+        tmp_path: Path,
+    ) -> None:
+        """A new Mise release reaches the pin even when the bumped lock is identical.
+
+        ``make upg`` may resolve a different Mise release (the rolling cooldown
+        can select an older one) while ``mise lock --bump`` reproduces the
+        committed lock byte for byte. The pin and launchers must still move to
+        the resolved release, or every later Mise call rejects the lifecycle's
+        ``MISE_VERSION`` against the stale pin. The publisher runs isolated
+        from every installed package (``-I -S``), exactly as the bootstrap runs
+        it before any project environment exists.
+        """
+        root, _ = u.Tests.render_make_environment(
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
+        )
+        lock_bytes = b"lockfile_version = 3\n[tools]\n"
+        (root / "mise.lock").write_bytes(lock_bytes)
+        stage = root.parent / f".{root.name}.mise-lock-stage.release"
+        stage.mkdir()
+        (stage / "mise.lock").write_bytes(lock_bytes)
+        bootstrap = u.Infra.mise_bootstrap_environment()
+        for relative, _mode in bootstrap.artifact_specs:
+            staged = stage / "artifacts" / relative
+            staged.parent.mkdir(parents=True, exist_ok=True)
+            staged.write_bytes(f"resolved {relative}\n".encode())
+
+        outcome = tm.ok(
+            u.Cli.run_raw(
+                [
+                    sys.executable,
+                    "-I",
+                    "-S",
+                    str(root / "bin/mise-lock-transaction.py"),
+                    "publish",
+                    str(root),
+                    str(stage),
+                ],
+                cwd=root,
+            ),
+        )
+
+        tm.that(u.Cli.process_succeeded(outcome.outcome), eq=True, msg=outcome.stderr)
+        tm.that((root / "mise.lock").read_bytes(), eq=lock_bytes)
+        tm.that(stage.exists(), eq=False)
+        for relative, _mode in bootstrap.artifact_specs:
+            tm.that(
+                (root / relative).read_bytes(),
+                eq=f"resolved {relative}\n".encode(),
+            )
 
     def test_interrupted_sidecar_publication_recovers_then_commits(
         self,
@@ -218,8 +274,8 @@ class TestsMiseLockTransaction:
         for relative, _mode in bootstrap.artifact_specs:
             tm.that((root / relative).read_bytes(), eq=old_artifacts[relative])
 
+    @staticmethod
     def test_setup_recovers_committed_lock_before_selecting_mise_runtime(
-        self,
         tmp_path: Path,
     ) -> None:
         """A killed publication finishes its pin and launchers on next setup."""
@@ -273,3 +329,73 @@ class TestsMiseLockTransaction:
         tm.that(stage.exists(), eq=False)
         for relative, _mode in bootstrap.artifact_specs:
             tm.that((root / relative).read_bytes(), eq=f"new {relative}\n".encode())
+
+
+class TestsMiseHoldConvergence:
+    """Broken releases are held per tool so upgrade never blocks on them."""
+
+    @staticmethod
+    def test_failing_install_tools_parses_mise_diagnostics() -> None:
+        parsed = FlextInfraBootstrap._failing_install_tools(
+            "mise ERROR Failed to install tools:"
+            " github:kucherenko/jscpd@5.3.3, github:qltysh/qlty@0.645.0\n",
+        )
+        tm.that(
+            parsed
+            == [
+                ("github:kucherenko/jscpd", "5.3.3"),
+                ("github:qltysh/qlty", "0.645.0"),
+            ],
+        )
+
+    @staticmethod
+    def test_failing_install_tools_refuses_unparsable_diagnostics() -> None:
+        with pytest.raises(ValueError, match="named no failing tool"):
+            FlextInfraBootstrap._failing_install_tools("boom")
+
+    @staticmethod
+    def test_hold_manifest_version_rewrites_only_the_named_section(
+        tmp_path: Path,
+    ) -> None:
+        manifest = tmp_path / ".mise.toml"
+        manifest.write_text(
+            '[tools]\npython = "3.13"\n'
+            '[tools."github:kucherenko/jscpd"]\nversion = "5.3.3"\n'
+            '[tools."github:microsoft/waza"]\nversion = "latest"\n'
+            'version_prefix = "v"\n',
+            encoding="utf-8",
+        )
+        FlextInfraBootstrap._hold_manifest_version(
+            manifest,
+            "github:kucherenko/jscpd",
+            "5.3.2",
+        )
+        content = manifest.read_text(encoding="utf-8")
+        tm.that('version = "5.3.2"' in content)
+        tm.that('version = "latest"' in content)
+        tm.that('version = "5.3.3"' not in content)
+
+    @staticmethod
+    def test_remote_release_candidates_walk_below_the_failed_release(
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def fake_ls_remote(
+            runtime: Path,
+            arguments: list[str],
+            environment: dict[str, str],
+        ) -> str:
+            tm.that(arguments[:1] == ["ls-remote"])
+            return "v5.4.0\n5.3.3\nv5.3.2\n5.2.0\nnot-a-version\n"
+
+        monkeypatch.setattr(
+            FlextInfraBootstrap,
+            "_run",
+            staticmethod(fake_ls_remote),
+        )
+        candidates = FlextInfraBootstrap._remote_release_candidates(
+            Path("/runtime"),
+            {},
+            "github:kucherenko/jscpd",
+            "5.3.3",
+        )
+        tm.that(candidates == ["5.3.2", "5.2.0"])

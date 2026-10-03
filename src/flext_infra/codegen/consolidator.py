@@ -115,8 +115,8 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
             return r[str].ok(report.model_dump_json())
         return r[str].ok("\n".join(output_lines))
 
+    @staticmethod
     def _project_python_files(
-        self,
         rope_workspace: p.Infra.RopeWorkspaceDsl,
         project_root: Path,
     ) -> p.Result[t.SequenceOf[Path]]:

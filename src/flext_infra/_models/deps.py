@@ -96,9 +96,9 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             str | None,
             m.Field(None, description="Optional output report path"),
         ] = None
-        quiet: Annotated[bool, m.Field(False, description="Reduce command output")] = (
-            False
-        )
+        quiet: Annotated[
+            bool, m.Field(default=False, description="Reduce command output"),
+        ] = False
         no_fail: Annotated[
             bool,
             m.Field(
@@ -108,7 +108,7 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         ] = False
         typings: Annotated[
             bool,
-            m.Field(False, description="Detect required typing packages"),
+            m.Field(default=False, description="Detect required typing packages"),
         ] = False
         apply_typings: Annotated[
             bool,
@@ -149,7 +149,10 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
     class ModernizeCommand(mm.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra deps modernize``."""
 
-        check: Annotated[bool, m.Field(False, description="Run in check mode")] = False
+        check: Annotated[
+            bool,
+            m.Field(default=False, description="Run in check mode"),
+        ] = False
         audit: Annotated[
             bool,
             m.Field(description="Audit pyproject changes without writing"),
@@ -169,7 +172,9 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             bool,
             m.Field(
                 alias="rewrite-constraints",
-                description="Rewrite dependency constraints from the provisioned runtime",
+                description=(
+                    "Rewrite dependency constraints from the provisioned runtime"
+                ),
             ),
         ] = False
 
@@ -231,7 +236,9 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             t.StrSequence | None,
             m.Field(
                 default=None,
-                description="Declared analysis exclusions; None derives workspace globs",
+                description=(
+                    "Declared analysis exclusions; None derives workspace globs"
+                ),
             ),
         ]
         generated_python_roots: Annotated[
@@ -257,7 +264,9 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         repository_namespace_packages: Annotated[
             t.StrTuple,
             m.Field(
-                description="Implicit namespace directories shipped from the repository root",
+                description=(
+                    "Implicit namespace directories shipped from the repository root"
+                ),
             ),
         ] = ()
         packaged_data_paths: Annotated[
@@ -267,13 +276,17 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         packaged_data_excludes: Annotated[
             t.StrTuple,
             m.Field(
-                description="Repository-relative files omitted from declared data directories",
+                description=(
+                    "Repository-relative files omitted from declared data directories"
+                ),
             ),
         ] = ()
         planned_data_files: Annotated[
             t.StrTuple,
             m.Field(
-                description="Exact scaffold file destinations planned before publication",
+                description=(
+                    "Exact scaffold file destinations planned before publication"
+                ),
             ),
         ] = ()
         declared_python_dirs: Annotated[
@@ -346,9 +359,10 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
     class PipCheckReport(m.ArbitraryTypesModel):
         """Pip check execution report with status and output lines."""
 
-        ok: Annotated[bool, m.Field(True, description="Whether pip check passed")] = (
-            True
-        )
+        ok: Annotated[
+            bool,
+            m.Field(default=True, description="Whether pip check passed"),
+        ] = True
         lines: Annotated[
             t.StrSequence,
             m.Field(description="Pip check output lines"),
@@ -428,7 +442,7 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         ] = m.Field(default_factory=tuple)
         limits_applied: Annotated[
             bool,
-            m.Field(False, description="Whether limits were applied"),
+            m.Field(default=False, description="Whether limits were applied"),
         ] = False
         python_version: Annotated[
             str | None,

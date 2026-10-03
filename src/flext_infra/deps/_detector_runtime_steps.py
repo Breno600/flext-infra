@@ -1,4 +1,4 @@
-"""Cohesive environment-setup + per-project execution mixin for the dependency detector runtime.
+"""Environment-setup + per-project execution mixin for the dependency detector.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -25,7 +25,7 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         root: Path,
         venv_bin: Path,
     ) -> p.Result[t.Pair[t.SequenceOf[Path], Path]]:
-        """Discover projects and verify deptry binary; return ``(projects, limits_path)``.
+        """Discover projects and verify deptry; return ``(projects, limits_path)``.
 
         Returns:
             The resulting ``p.Result[t.Pair[t.SequenceOf[Path], Path]]``.
@@ -67,7 +67,7 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         """
         limits_data = self._deps.load_dependency_limits(limits_path)
         if not limits_data:
-            return r[bool].ok(False)
+            return r[bool].ok(value=False)
         python_payload = limits_data.get(c.Infra.PYTHON)
         python_cfg: t.JsonMapping = (
             t.Infra.INFRA_MAPPING_ADAPTER.validate_python(python_payload)
@@ -80,7 +80,7 @@ class FlextInfraDependencyDetectorRuntimeSteps:
             python_version=python_version,
             limits_path=str(limits_path),
         )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def _run_project_detection(
         self,
@@ -119,7 +119,7 @@ class FlextInfraDependencyDetectorRuntimeSteps:
             do_typings and (project_path / c.Infra.DEFAULT_SRC_DIR).is_dir()
         )
         if not run_typings_for_project:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         return self._run_project_typings(
             project_path,
             limits_path=limits_path,
@@ -155,7 +155,7 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         projects_report[project_name][c.Infra.DIR_TYPINGS] = typings_report.model_dump()
         to_add: t.StrSequence = typings_report.to_add
         if not (params.apply_typings and to_add and params.apply):
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         # UV owns the TOML edit, lock, installation and failed-add source recovery.
         # Inherit Make's UV_PROJECT_ENVIRONMENT; never rebind a parent's runtime.
         run_outcome = u.Cli.run_raw(
@@ -180,7 +180,7 @@ class FlextInfraDependencyDetectorRuntimeSteps:
                 f"exit {run_outcome.value.outcome.raw_return_code}\n"
                 f"{run_outcome.value.stdout}\n{run_outcome.value.stderr}",
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def _run_pip_check(
         self,
@@ -196,7 +196,7 @@ class FlextInfraDependencyDetectorRuntimeSteps:
 
         """
         if params.no_pip_check:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         detector = self._detector
         if not params.quiet:
             detector.log.info("deps_pip_check_running")

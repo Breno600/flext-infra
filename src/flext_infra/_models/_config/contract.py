@@ -64,7 +64,10 @@ class FlextInfraConfigModelsContract:
                     or path.parts[0] != FlextInfraConstantsSharedInfra.DIR_DOCS
                     or path.suffix != ".md"
                 ):
-                    msg = f"historical evidence must be an exact docs Markdown file: {path}"
+                    msg = (
+                        "historical evidence must be "
+                        f"an exact docs Markdown file: {path}"
+                    )
                     raise ValueError(msg)
             return self
 

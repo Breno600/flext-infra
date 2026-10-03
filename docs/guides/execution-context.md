@@ -90,19 +90,18 @@ overlay.
 
 Code in a checkout runs in the environment of its `RUNTIME_ROOT`. The generated Makefile
 exports `RUNTIME_ROOT`, and flext-infra reads it as a typed declaration: the
-`fresh-import` validation runs its probes with the platform-specific Python interpreter in `<RUNTIME_ROOT>/.venv`, never
+`fresh-import` validation runs its probes with the platform-specific Python interpreter in the derived `RUNTIME_VENV`, never
 with the interpreter hosting the tool. Without a declaration, the owner derives the
 checkout's Git root; a declaration without an interpreter fails.
 
-The `.venv` belongs to the `RUNTIME_ROOT`. A member attached as a submodule uses the
-`.venv` of its containing Git superproject; a standalone checkout or linked worktree has
-its own. In development there is no other option: the environment is always
-`<RUNTIME_ROOT>/.venv`, rendered from its constant owner, and that location is law,
-never configuration. The generated Makefile, the generated `.envrc`, and
-`runtime_environment_dir` resolve that root through the same physical path, so entering
-the checkout through a symlink does not change the selected environment. No environment
-lives outside the checkout that owns it, and none is borrowed from another checkout
-through a symlink.
+The environment belongs to the `RUNTIME_ROOT`. A member attached as a submodule uses
+its containing Git superproject's environment. A primary standalone checkout keeps
+`<RUNTIME_ROOT>/.venv`. A linked Git worktree owns a physical sibling environment at
+`<RUNTIME_ROOT>/../<toolchain.worktree_environment_directory>/<worktree-name>`.
+The directory component is declared in `config/codegen.yaml`; Git's distinct worktree
+and common directories identify the linked checkout. The generated Makefile, generated
+`.envrc`, and `runtime_environment_dir` derive the same path. Neither a caller
+variable nor a checkout-local symlink may redirect the environment.
 
 ## Mise launchers
 
@@ -146,6 +145,16 @@ sidecars. It still derives the replacement lock from `.mise.toml` through `make 
 and publishes that replacement transactionally. A malformed lock without a Git
 conflict, or sidecars that no longer match stage 2, fails without changing the lock.
 
+Mise reaches GitHub only to install a tool missing from the persistent cache and inside
+`make upg`. `make setup` never locks: every Mise call except `install --yes` runs with
+the offline settings declared once in `MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT`, an offline
+`install --dry-run` proves the committed lock satisfies `.mise.toml`, and a lock that
+does not stops setup with `run make upg` and stays untouched. `make upg` resolves once
+per manifest: when the `.mise.toml` that its `gen` renders is byte-identical to the
+manifest its first half locked, the relock half installs from the published lock instead
+of resolving again. Wherever a lock runs, the bootstrap forwards the GitHub credential
+it selected (`GITHUB_TOKEN`, else the declared `github_credential_commands`) to Mise.
+
 The platforms declared by `toolchain.mise_lockfile_platforms` compose the lock together
 with the platform of the machine running the upgrade, which Mise always includes.
 Because `MISE_SAFE` ignores local settings, bootstrap forwards `MISE_LOCKFILE`,
@@ -177,18 +186,11 @@ never authorizes broad exclusions or changes to the native payload.
 ## Bootstrap credentials
 
 The GitHub credential is optional and has one variable, `GITHUB_TOKEN`, which mise,
-gh, and uv all read. The network bootstrap (`make setup`, `make upg`) selects its
-source once, before any effect, from declared sources only:
-
-1. the caller's `GITHUB_TOKEN`, when it is set; ai-hub propagates it into each project
-   through `.envrc.ai-hub`, which its direnv library sources on every evaluation;
-2. otherwise the first `toolchain.github_credential_commands` entry in
-   `flext-infra/config/codegen.yaml` whose executable is on `PATH` (by default
-   `gh auth token`).
-
-A selected source must deliver: a command that fails or prints nothing stops the verb
-with its cause, and nothing degrades to anonymous access after a failure. Only when no
-source is present does mise reach GitHub anonymously. The value is never printed. Make
+gh, and uv all read. The caller supplies it directly; ai-hub may project it into a
+project through `.envrc.ai-hub`. The network bootstrap (`make setup`, `make upg`)
+never runs a credential command or reads a keyring. With no token, public GitHub
+requests use the upstream tool's native unauthenticated behavior. The value is never
+printed. Make
 unexports the tool-scoped aliases `GH_TOKEN`, `MISE_GITHUB_TOKEN`, and
 `GITHUB_API_TOKEN` from every recipe, because an alias of the same credential would
 shadow or outrank `GITHUB_TOKEN`. An invalid token preserves the backend's native

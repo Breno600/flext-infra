@@ -42,7 +42,10 @@ class FlextInfraDepsFloorProfileWriter:
                     continue
                 owner = (root / member.path).resolve()
                 if not owner.is_relative_to(root) or member.read_only:
-                    message = f"dependency floor owner is not writable in this workspace: {owner}"
+                    message = (
+                        f"dependency floor owner is not writable "
+                        f"in this workspace: {owner}"
+                    )
                     raise ValueError(message)
                 owners.append(owner)
             if manifest.repository.distribution == config.Infra.name and not owners:

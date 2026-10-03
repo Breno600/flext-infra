@@ -1,4 +1,4 @@
-"""Lane provisioning owns a real local environment.
+"""Lane provisioning owns a real sibling environment.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -10,12 +10,12 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import FlextInfraWorktreeService, c, u as infra_u
+from flext_infra import FlextInfraWorktreeService, c, config, u as infra_u
 from tests import u
 
 
 class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
-    """Lane provisioning owns a real local environment, never a borrowed one."""
+    """Lane provisioning owns a real sibling environment, never a borrowed one."""
 
     @staticmethod
     def _repository(tmp_path: Path) -> Path:
@@ -29,7 +29,9 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         (repository / "Makefile").write_text(
             "PROJECT_ROOT := $(CURDIR)\n"
             "RUNTIME_ROOT := $(PROJECT_ROOT)\n"
-            f"RUNTIME_VENV := $(RUNTIME_ROOT)/{c.Infra.ENVIRONMENT_DIRECTORY}\n"
+            "RUNTIME_VENV := $(abspath $(RUNTIME_ROOT)/../"
+            f"{config.Infra.codegen.toolchain.worktree_environment_directory}/"
+            "$(notdir $(RUNTIME_ROOT)))\n"
             ".PHONY: setup\n"
             "setup:\n"
             '\t@test "$(RUNTIME_ROOT)" = "$(PROJECT_ROOT)"\n'
@@ -80,11 +82,11 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
     def _lane(repository: Path, branch: str) -> Path:
         return Path(u.Tests.WorktreeFixture.add_worktree(repository, branch))
 
-    def test_setup_runs_in_lane_and_creates_real_local_environment(
+    def test_setup_runs_in_lane_and_creates_real_sibling_environment(
         self,
         tmp_path: Path,
     ) -> None:
-        """Test setup runs in lane and creates real local environment."""
+        """Test setup runs in lane and creates a real sibling environment."""
         repository = self._repository(tmp_path)
         primary_sentinel = (
             infra_u.Infra.runtime_environment_dir(repository) / "primary-sentinel"
@@ -104,6 +106,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         lane_venv = infra_u.Infra.runtime_environment_dir(lane)
         assert lane_venv.is_dir()
         assert not lane_venv.is_symlink()
+        assert not (lane / c.Infra.ENVIRONMENT_DIRECTORY).exists()
         assert primary_sentinel.read_text(encoding="utf-8") == "untouched\n"
         assert (lane / "setup-runs.log").read_text(encoding="utf-8") == (
             f"{lane.resolve()}|unset|unset|unset\n"

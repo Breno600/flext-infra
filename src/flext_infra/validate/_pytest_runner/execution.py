@@ -328,7 +328,10 @@ class FlextInfraPytestRunnerExecution(
                 f"forwarded_signal={outcome.forwarded_signal}; receipt={receipt}\n",
             )
         if outcome.raw_return_code == 0 and not u.Cli.process_succeeded(outcome):
-            msg = f"pytest {phase} reported zero after an interrupted lifecycle: {receipt}"
+            msg = (
+                f"pytest {phase} reported zero after an interrupted "
+                f"lifecycle: {receipt}"
+            )
             raise RuntimeError(msg)
 
     @staticmethod

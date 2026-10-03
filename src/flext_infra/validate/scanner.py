@@ -172,7 +172,7 @@ class FlextInfraTextPatternScanner(s[bool]):
         count = result.value.get("violation_count", 0)
         if isinstance(count, int) and count > 0:
             return r[bool].fail(f"Scan found {count} violation(s)")
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def _validate_scan_inputs(scan_root: Path, includes: t.StrSequence) -> str | None:

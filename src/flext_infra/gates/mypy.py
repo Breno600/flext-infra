@@ -98,7 +98,8 @@ class FlextInfraMypyGate(FlextInfraGate):
             return [*discovered_dirs, *root_files]
         return []
 
-    def _resolve_config(self, project_dir: Path, ctx: m.Infra.GateContext) -> Path:
+    @staticmethod
+    def _resolve_config(project_dir: Path, ctx: m.Infra.GateContext) -> Path:
         """Resolve Mypy settings from the project, then the workspace.
 
         Returns:
@@ -141,14 +142,16 @@ class FlextInfraMypyGate(FlextInfraGate):
         if profile_output is not None:
             destination = Path(profile_output)
             if not destination.is_absolute() or not destination.parent.is_dir():
-                msg = "Mypy profile output requires an absolute path in an existing directory"
+                msg = (
+                    "Mypy profile output requires an absolute path "
+                    "in an existing directory"
+                )
                 raise ValueError(msg)
         return u.Infra.mypy_limited_command(
             m.Infra.MypyInvocation(
                 targets=tuple(project_dir / target for target in check_dirs),
                 config_file=cfg,
                 report_json=True,
-                verbose=True,
                 profile_output=destination,
             ),
         )
@@ -276,6 +279,11 @@ class FlextInfraMypyGate(FlextInfraGate):
         for raw_line in result.stdout.splitlines():
             if not raw_line.strip():
                 continue
+            if raw_line.startswith("LOG:"):
+                # Mypy verbose progress channel (--verbose runs). LOG lines are
+                # the tool's own human stream, never diagnostics; the machine
+                # contract of this gate is one JSON object per line.
+                continue
             validated: p.Result[m.Infra.MypyDiagnostic] = u.validate_value(
                 m.Infra.MypyDiagnostic,
                 raw_line,
@@ -285,7 +293,8 @@ class FlextInfraMypyGate(FlextInfraGate):
             if validated.failure:
                 return False, (
                     self._malformed_report_issue(
-                        f"{validated.error}\nstdout: {raw_line}\nstderr: {result.stderr}",
+                        f"{validated.error}\nstdout: {raw_line}\n"
+                        f"stderr: {result.stderr}",
                         tool=c.Infra.MYPY,
                         file=str(project_dir),
                     ),
@@ -309,7 +318,10 @@ class FlextInfraMypyGate(FlextInfraGate):
         if (not issues) and not u.Cli.process_succeeded(result.outcome):
             message = (result.stderr or result.stdout).strip()
             if not message:
-                message = f"mypy exited with code {result.outcome.raw_return_code} without JSON diagnostics"
+                message = (
+                    f"mypy exited with code {result.outcome.raw_return_code} "
+                    f"without JSON diagnostics"
+                )
             issues.append(
                 m.Infra.Issue(
                     file=c.PYPROJECT_FILENAME,

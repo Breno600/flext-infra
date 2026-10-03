@@ -34,7 +34,8 @@ class TestsFlextInfraDepsModernizerToolTables:
         project_dir = tmp_path / "flext-sample"
         package_dir = project_dir / "src" / "flext_sample"
         package_dir.mkdir(parents=True, exist_ok=True)
-        (package_dir / "__init__.py").write_text('"""Package."""\n', encoding="utf-8")
+        # A live package: the first-party owner derives importable packages.
+        (package_dir / c.Infra.INIT_PY).write_text('"""Package."""\n', encoding="utf-8")
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
             u.Tests.toml_payload(f'[project]\nname = "flext-sample"\n{source}'),
         )
@@ -262,7 +263,7 @@ class TestsFlextInfraDepsModernizerToolTables:
             '[project]\nname = "datacosmos-backup"\n',
             encoding="utf-8",
         )
-        namespaces = FlextInfraToolTablesPhase.first_party_namespaces(project_dir)
+        namespaces = FlextInfraToolTablesPhase.first_party_namespaces(path=project_dir)
         tm.that(namespaces, has="dc_backup", lacks="datacosmos_backup")
 
     def test_tables_are_idempotent(self, tmp_path: Path) -> None:
