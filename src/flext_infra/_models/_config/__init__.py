@@ -18,7 +18,10 @@ if TYPE_CHECKING:
     from flext_infra._models._config.beads import FlextInfraConfigModelsBeads
     from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
     from flext_infra._models._config.contract import FlextInfraConfigModelsContract
-    from flext_infra._models._config.make import FlextInfraConfigModelsMake
+    from flext_infra._models._config.make import (
+        ExternalCacheDirectorySpec,
+        FlextInfraConfigModelsMake,
+    )
     from flext_infra._models._config.provider import FlextInfraConfigModelsProvider
     from flext_infra._models._config.release import FlextInfraConfigModelsRelease
     from flext_infra._models._config.render import FlextInfraConfigModelsRender
@@ -28,7 +31,9 @@ if TYPE_CHECKING:
     from flext_infra._models._config.templates import FlextInfraConfigModelsTemplates
     from flext_infra._models._config.workspace import FlextInfraConfigModelsWorkspace
 
+
 __all__: tuple[str, ...] = (
+    "ExternalCacheDirectorySpec",
     "FlextInfraConfigModels",
     "FlextInfraConfigModelsArtifact",
     "FlextInfraConfigModelsBeads",
@@ -53,7 +58,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".beads": ("FlextInfraConfigModelsBeads",),
             ".contexts": ("FlextInfraConfigModelsContexts",),
             ".contract": ("FlextInfraConfigModelsContract",),
-            ".make": ("FlextInfraConfigModelsMake",),
+            ".make": ("ExternalCacheDirectorySpec", "FlextInfraConfigModelsMake"),
             ".provider": ("FlextInfraConfigModelsProvider",),
             ".release": ("FlextInfraConfigModelsRelease",),
             ".render": ("FlextInfraConfigModelsRender",),

@@ -12,7 +12,6 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import time
 from collections.abc import Generator
 from pathlib import Path
 from warnings import WarningMessage
@@ -137,11 +136,13 @@ class FlextInfraPytestCollection:
         def __init__(self, *, stop_at_monotonic: float) -> None:
             self.stop_at_monotonic = stop_at_monotonic
             self.session: pytest.Session | None = None
+            self.controller: DSession | None = None
             self.completed_items: set[str] = set()
 
         def pytest_sessionstart(self, session: pytest.Session) -> None:
             """Bind the controller session that owns the stop decision."""
             self.session = session
+            self.controller = session if isinstance(session, DSession) else None
 
         def pytest_runtest_logreport(self, report: pytest.TestReport) -> None:
             """Request the stop once a completed item crosses the instant.
@@ -163,6 +164,7 @@ class FlextInfraPytestCollection:
             if not getattr(report, "nodes_files_lines", None):
                 return
             reason = f"suite stop instant {self.stop_at_monotonic:.3f} reached"
+            controller = self.controller
             if isinstance(controller, DSession):
                 if not controller.shouldstop:
                     controller.shouldstop = reason

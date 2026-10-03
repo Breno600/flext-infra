@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from flext_infra._promoted.dispatch import FlextInfraPromotedDispatch
     from flext_infra._promoted.registry import FlextInfraPromotedRegistry
 
+
 __all__: tuple[str, ...] = (
     "FlextInfraPromotedBase",
     "FlextInfraPromotedDiscovery",

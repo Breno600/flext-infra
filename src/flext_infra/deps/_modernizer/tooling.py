@@ -137,7 +137,7 @@ class FlextInfraPyprojectModernizerTooling:
             if live_state.failure:
                 return result_type.from_failure(live_state)
             groups = u.Cli.toml_mapping_child(
-                live_state.value.payload, c.Infra.DEPENDENCY_GROUPS
+                live_state.value.payload, c.Infra.DEPENDENCY_GROUPS,
             ) or {}
             group_dev = u.validate_value(
                 t.Infra.STR_SEQ_ADAPTER,
@@ -149,7 +149,7 @@ class FlextInfraPyprojectModernizerTooling:
             live_dev = (
                 *group_dev.value,
                 *u.Infra.canonical_dev_dependencies_from_payload(
-                    live_state.value.payload
+                    live_state.value.payload,
                 ),
             )
         # Seed the declared dependency families before Ruff derives its

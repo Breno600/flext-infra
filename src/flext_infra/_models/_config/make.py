@@ -22,6 +22,7 @@ from flext_infra._constants import (
 )
 from flext_infra._models._config.contract import FlextInfraConfigModelsContract
 
+
 class ExternalCacheDirectorySpec(FlextInfraConfigModelsContract.ConfigContract):
     """External-cache path pair every tool cache spec owns identically."""
 
@@ -57,14 +58,15 @@ class ExternalCacheDirectorySpec(FlextInfraConfigModelsContract.ConfigContract):
         return self
 
 
-
-
 def _shared_mypy_cache_spec() -> FlextInfraConfigModelsMake.MypyCacheSpec:
     """Build the declared default shared Mypy analysis cache policy.
 
     Declared here (module scope) so the field default is one shared policy that
     a member may override, instead of forcing every hand-owned ``codegen.yaml``
     to repeat the same block just to satisfy a required field.
+
+    Returns:
+        The resulting ``FlextInfraConfigModelsMake.MypyCacheSpec``.
     """
     return FlextInfraConfigModelsMake.MypyCacheSpec()
 
@@ -72,46 +74,16 @@ def _shared_mypy_cache_spec() -> FlextInfraConfigModelsMake.MypyCacheSpec:
 def _default_testmon_cache_policy() -> (
     FlextInfraConfigModelsMake.TestmonCachePolicySpec
 ):
-    """Build the declared default testmon cache policy (#1001 delta)."""
+    """Build the declared default testmon cache policy (#1001 delta).
+
+    Returns:
+        The resulting ``FlextInfraConfigModelsMake.TestmonCachePolicySpec``.
+    """
     return FlextInfraConfigModelsMake.TestmonCachePolicySpec()
 
 
 class FlextInfraConfigModelsMake:
     """Make workflow, verb, CI, and cache specification models."""
-
-    class MakeGateSuspensionSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """An explicitly authorized policy gate excluded from default execution."""
-
-        gate: Annotated[t.NonEmptyStr, m.Field(description="Suspended gate id")]
-        authority: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Bead and operator decision authorizing suspension"),
-        ]
-        reason: Annotated[
-            t.NonEmptyStr, m.Field(description="Reason recorded in gate receipts")
-        ]
-        census_rule_families: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default=(),
-                description=(
-                    "Runtime-census rule families this suspension also covers. "
-                    "A family starting with 'ENFORCE-' matches a census "
-                    "violation rule id exactly; every other family matches the "
-                    "violation tag by prefix. Matching families are dropped "
-                    "from the census failure count under one loud INFO line "
-                    "per family; unmapped families stay fully blocking"
-                ),
-            ),
-        ] = ()
-
-        @u.model_validator(mode="after")
-        def _validate_evidence(self) -> Self:
-            """Whitespace cannot stand in for an authority or a rationale."""
-            if not self.authority.strip() or not self.reason.strip():
-                msg = "make gate suspension requires authority and reason"
-                raise ValueError(msg)
-            return self
 
     class MakeCiSpec(FlextInfraConfigModelsContract.ConfigContract):
         """The only permitted environment delta between local and CI execution."""
@@ -136,13 +108,20 @@ class FlextInfraConfigModelsMake:
                     "slow whole-program type checkers. This is the ONLY "
                     "declared set; the CI token runs its strict complement and "
                     "an unset token runs every active default gate."
-                )
+                ),
             ),
         ]
 
         @u.model_validator(mode="after")
         def _validate_local_check_gates(self) -> Self:
-            """Every locally owned gate must be in the allowed check vocabulary."""
+            """Every locally owned gate must be in the allowed check vocabulary.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If make.ci.local_check_gates contains unknown gates.
+            """
             allowed = set(FlextInfraConstantsMake.CANONICAL_GATE_IDS)
             unknown = sorted(set(self.local_check_gates) - allowed)
             if unknown:
@@ -375,37 +354,45 @@ class FlextInfraConfigModelsMake:
             m.Field(description="Cache phase: bootstrap seeds, stable saves"),
         ] = "stable"
         save_enabled: Annotated[
-            bool, m.Field(description="Master switch for cache publishes")
+            bool, m.Field(description="Master switch for cache publishes"),
         ] = False
         max_bootstrap_generations: Annotated[
-            int, m.Field(gt=0, description="Retention cap for bootstrap generations")
+            int, m.Field(gt=0, description="Retention cap for bootstrap generations"),
         ] = 3
         max_stable_generations: Annotated[
-            int, m.Field(gt=0, description="Retention cap for stable generations")
+            int, m.Field(gt=0, description="Retention cap for stable generations"),
         ] = 3
         per_repo_budget_bytes: Annotated[
-            int, m.Field(gt=0, description="Per-repository byte budget")
+            int, m.Field(gt=0, description="Per-repository byte budget"),
         ] = 52_428_800
         warning_threshold_percent: Annotated[
-            int, m.Field(ge=0, le=100, description="Quota-ladder warning stage")
+            int, m.Field(ge=0, le=100, description="Quota-ladder warning stage"),
         ] = 80
         maintenance_threshold_percent: Annotated[
-            int, m.Field(ge=0, le=100, description="Quota-ladder maintenance stage")
+            int, m.Field(ge=0, le=100, description="Quota-ladder maintenance stage"),
         ] = 90
         block_threshold_percent: Annotated[
-            int, m.Field(ge=0, le=100, description="Quota-ladder block stage")
+            int, m.Field(ge=0, le=100, description="Quota-ladder block stage"),
         ] = 95
         allowed_save_refs: Annotated[
             tuple[t.NonEmptyStr, ...],
             m.Field(description="Refs whose pushes may publish cache generations"),
         ] = ("main", "0.12.0-dev")
         key_prefix: Annotated[
-            t.NonEmptyStr, m.Field(description="Actions cache key namespace")
+            t.NonEmptyStr, m.Field(description="Actions cache key namespace"),
         ] = "flext-testmon"
 
         @u.model_validator(mode="after")
         def require_ascending_quota_ladder(self) -> Self:
-            """Keep the quota ladder strictly ascending within the percent scale."""
+            """Keep the quota ladder strictly ascending within the percent scale.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If testmon cache quota ladder must ascend warning <
+                    maintenance < block <= 100.
+            """
             full_scale = 100
             if not (
                 self.warning_threshold_percent
@@ -418,7 +405,7 @@ class FlextInfraConfigModelsMake:
             return self
 
     class MypyCacheSpec(
-        ExternalCacheDirectorySpec, FlextInfraConfigModelsContract.ConfigContract
+        ExternalCacheDirectorySpec, FlextInfraConfigModelsContract.ConfigContract,
     ):
         """Project-keyed shared Mypy cache: one analysis per project, reused across relocks."""
 
@@ -460,7 +447,14 @@ class FlextInfraConfigModelsMake:
 
         @u.model_validator(mode="after")
         def require_external_cache_contract(self) -> Self:
-            """Keep the official cache variable and the external path policy exact."""
+            """Keep the official cache variable and the external path policy exact.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If mypy cache.
+            """
             for name, actual, expected in (
                 (
                     "cache_environment_variable",
@@ -1113,17 +1107,12 @@ class FlextInfraConfigModelsMake:
         @property
         def check_gates_default(self) -> t.VariadicTuple[str]:
             """Active default gates, shared by local, CI, hooks, and project gates."""
-            suspended = frozenset(item.gate for item in self.check_gate_suspensions)
             standalone = frozenset(self.standalone_check_gates.values())
             declared = (
                 *FlextInfraConstantsMake.CANONICAL_DEFAULT_GATE_IDS,
                 *self.project_check_gates,
             )
-            return tuple(
-                gate
-                for gate in declared
-                if gate not in suspended and gate not in standalone
-            )
+            return tuple(gate for gate in declared if gate not in standalone)
 
         @m.computed_field
         @property

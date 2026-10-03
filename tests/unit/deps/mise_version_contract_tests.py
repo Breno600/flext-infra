@@ -6,6 +6,9 @@ specifier) and ``jscpd_version: latest`` while ``mise.lock`` recorded the
 resolved identity. ``mise install --locked`` then failed in every repository and
 took the whole fleet CI red. These tests read the committed SSOT, the generated
 ``.mise.toml`` and ``mise.lock`` and refuse the recurrence.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -52,7 +55,8 @@ def _lock_specifiers(tools: t.JsonMapping) -> dict[str, set[str]]:
 class TestsFlextInfraMiseVersionContract:
     """The declared toolchain versions stay exact and lockable."""
 
-    def test_declared_versions_carry_no_resolved_identity(self) -> None:
+    @staticmethod
+    def test_declared_versions_carry_no_resolved_identity() -> None:
         """No declared ``*_version`` value may embed a resolved identity."""
         source = (_REPO_ROOT / "config" / "codegen.yaml").read_text(encoding="utf-8")
         offenders = tuple(
@@ -62,17 +66,18 @@ class TestsFlextInfraMiseVersionContract:
         )
         tm.that(offenders, eq=())
 
-    def test_mise_tools_exist_in_the_committed_lock(self) -> None:
+    @staticmethod
+    def test_mise_tools_exist_in_the_committed_lock() -> None:
         """Every generated ``.mise.toml`` tool spec is recorded in the lock."""
         declared = _declared_versions(
             tomllib.loads((_REPO_ROOT / ".mise.toml").read_text(encoding="utf-8"))[
                 "tools"
-            ]
+            ],
         )
         locked = _lock_specifiers(
             tomllib.loads((_REPO_ROOT / "mise.lock").read_text(encoding="utf-8"))[
                 "tools"
-            ]
+            ],
         )
         missing = {
             name: version

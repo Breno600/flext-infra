@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from flext_infra._typings.base import FlextInfraTypesBase
     from flext_infra._typings.rope import FlextInfraTypesRope
 
+
 __all__: tuple[str, ...] = (
     "FlextInfraTypesAdapters",
     "FlextInfraTypesBase",
