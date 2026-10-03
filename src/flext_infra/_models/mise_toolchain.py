@@ -565,16 +565,16 @@ class FlextInfraModelsMiseToolchain:
                 ),
             ),
         ]
-        credential_commands: Annotated[
-            t.VariadicTuple[t.VariadicTuple[t.NonEmptyStr]],
+        lock_converge_script: Annotated[
+            t.NonEmptyStr,
             m.Field(
+                pattern=r"^[A-Za-z0-9._/-]+\.py$",
                 description=(
-                    "Candidate commands (probe order) printing a GitHub token "
-                    "for private tool downloads; the bootstrap probes each in "
-                    "turn and takes the first non-empty output."
+                    "Project-relative generated script `make upg` runs to hold "
+                    "broken releases inside a lock stage"
                 ),
             ),
-        ] = ()
+        ]
         credential_commands: Annotated[
             t.VariadicTuple[t.VariadicTuple[t.NonEmptyStr]],
             m.Field(

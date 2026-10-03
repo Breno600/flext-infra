@@ -8,19 +8,19 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import sys
 from typing import TYPE_CHECKING
 
 import pytest
-
-from flext_infra.bootstrap import FlextInfraBootstrap
 from flext_tests import tm
 
 from tests import c, u
 
 if TYPE_CHECKING:
     from pathlib import Path
+    from types import ModuleType
 
 
 class TestsMiseLockTransaction:
@@ -335,29 +335,77 @@ class TestsMiseHoldConvergence:
     """Broken releases are held per tool so upgrade never blocks on them."""
 
     @staticmethod
-    def test_failing_install_tools_parses_mise_diagnostics() -> None:
-        parsed = FlextInfraBootstrap._failing_install_tools(
+    def _converge(tmp_path: Path) -> ModuleType:
+        root, _ = u.Tests.render_make_environment(
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
+        )
+        script = root / u.Infra.mise_bootstrap_environment().lock_converge_script
+        spec = importlib.util.spec_from_file_location(script.stem, script)
+        if spec is None or spec.loader is None:
+            msg = f"cannot import {script}"
+            raise RuntimeError(msg)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def test_isolated_environment_is_the_bootstrap_ssot(self, tmp_path: Path) -> None:
+        """Converge runs Mise under exactly the environment the recipe declares."""
+        converge = self._converge(tmp_path).MiseLockConverge
+        bootstrap = u.Infra.mise_bootstrap_environment()
+        tm.that(converge.FIXED_ENVIRONMENT, eq=tuple(bootstrap.fixed_environment))
+        tm.that(
+            converge.TRANSIENT_ENVIRONMENT,
+            eq=tuple(bootstrap.transient_environment),
+        )
+        tm.that(
+            converge.PERSISTENT_ENVIRONMENT,
+            eq=tuple(bootstrap.persistent_environment),
+        )
+        tm.that(converge.EMPTY_FILES, eq=tuple(bootstrap.empty_files))
+        tm.that(
+            converge.PASSTHROUGH_ENVIRONMENT,
+            eq=tuple(bootstrap.passthrough_environment),
+        )
+        tm.that(
+            converge.RUNTIME_INSTALL_RELATIVE_TEMPLATE,
+            eq=bootstrap.runtime_install_relative_template,
+        )
+
+    def test_failing_install_tools_parses_mise_diagnostics(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Every ``selector@version`` a failed install names becomes a hold target."""
+        converge = self._converge(tmp_path).MiseLockConverge
+        parsed = converge.failing_install_tools(
             "mise ERROR Failed to install tools:"
             " github:kucherenko/jscpd@5.3.3, github:qltysh/qlty@0.645.0\n",
         )
         tm.that(
-            parsed
-            == [
+            parsed,
+            eq=[
                 ("github:kucherenko/jscpd", "5.3.3"),
                 ("github:qltysh/qlty", "0.645.0"),
             ],
         )
 
-    @staticmethod
-    def test_failing_install_tools_refuses_unparsable_diagnostics() -> None:
-        with pytest.raises(ValueError, match="named no failing tool"):
-            FlextInfraBootstrap._failing_install_tools("boom")
-
-    @staticmethod
-    def test_hold_manifest_version_rewrites_only_the_named_section(
+    def test_failing_install_tools_refuses_unparsable_diagnostics(
+        self,
         tmp_path: Path,
     ) -> None:
-        manifest = tmp_path / ".mise.toml"
+        """A failed install that names no tool stops loudly instead of guessing."""
+        converge = self._converge(tmp_path).MiseLockConverge
+        with pytest.raises(ValueError, match="named no failing tool"):
+            converge.failing_install_tools("boom")
+
+    def test_hold_manifest_version_rewrites_only_the_named_section(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A hold rewrites only the failing tool's declared version."""
+        converge = self._converge(tmp_path).MiseLockConverge
+        manifest = tmp_path / "held.mise.toml"
         manifest.write_text(
             '[tools]\npython = "3.13"\n'
             '[tools."github:kucherenko/jscpd"]\nversion = "5.3.3"\n'
@@ -365,37 +413,20 @@ class TestsMiseHoldConvergence:
             'version_prefix = "v"\n',
             encoding="utf-8",
         )
-        FlextInfraBootstrap._hold_manifest_version(
-            manifest,
-            "github:kucherenko/jscpd",
-            "5.3.2",
-        )
+        converge.hold_manifest_version(manifest, "github:kucherenko/jscpd", "5.3.2")
         content = manifest.read_text(encoding="utf-8")
-        tm.that('version = "5.3.2"' in content)
-        tm.that('version = "latest"' in content)
-        tm.that('version = "5.3.3"' not in content)
+        tm.that(content, has='version = "5.3.2"')
+        tm.that(content, has='version = "latest"')
+        tm.that(content, lacks='version = "5.3.3"')
 
-    @staticmethod
-    def test_remote_release_candidates_walk_below_the_failed_release(
-        monkeypatch: pytest.MonkeyPatch,
+    def test_release_candidates_walk_below_the_failed_release(
+        self,
+        tmp_path: Path,
     ) -> None:
-        def fake_ls_remote(
-            runtime: Path,
-            arguments: list[str],
-            environment: dict[str, str],
-        ) -> str:
-            tm.that(arguments[:1] == ["ls-remote"])
-            return "v5.4.0\n5.3.3\nv5.3.2\n5.2.0\nnot-a-version\n"
-
-        monkeypatch.setattr(
-            FlextInfraBootstrap,
-            "_run",
-            staticmethod(fake_ls_remote),
-        )
-        candidates = FlextInfraBootstrap._remote_release_candidates(
-            Path("/runtime"),
-            {},
-            "github:kucherenko/jscpd",
+        """Candidates are the parsable releases strictly older than the failed one."""
+        converge = self._converge(tmp_path).MiseLockConverge
+        candidates = converge.release_candidates(
+            "v5.4.0\n5.3.3\nv5.3.2\n5.2.0\nnot-a-version\n",
             "5.3.3",
         )
-        tm.that(candidates == ["5.3.2", "5.2.0"])
+        tm.that(candidates, eq=["5.3.2", "5.2.0"])

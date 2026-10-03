@@ -139,6 +139,10 @@ graphs, publishes them before replacing `mise.lock`, and records a durable journ
 If publication stops after a graph moves, the next upgrade restores the committed
 graph before starting its own publication. The lock rename is the commit point; a
 failed upgrade leaves the previous lock usable without a live `.bak` copy.
+When a broken upstream release fails the staged install, the generated
+`bin/mise-lock-converge.py` holds each failing tool at its newest installable release
+inside the stage only, under the same isolated environment the bootstrap declares; the
+committed `.mise.toml` never changes, so the next upgrade retries the newest release.
 When Git leaves the generated `mise.lock` unmerged, the publisher reads the exact
 stage-2 lock from that repository's index solely to authenticate the existing
 sidecars. It still derives the replacement lock from `.mise.toml` through `make upg`
@@ -146,10 +150,16 @@ and publishes that replacement transactionally. A malformed lock without a Git
 conflict, or sidecars that no longer match stage 2, fails without changing the lock.
 
 Mise reaches GitHub only to install a tool missing from the persistent cache and inside
-`make upg`. `make setup` never locks: every Mise call except `install --yes` runs with
-the offline settings declared once in `MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT`, an offline
-`install --dry-run` proves the committed lock satisfies `.mise.toml`, and a lock that
-does not stops setup with `run make upg` and stays untouched. `make upg` resolves once
+`make upg`. Only `make upg` writes `mise.lock` and `uv.lock`; `make setup` never writes
+either and always runs. Every Mise call except `install --yes` runs with the offline
+settings declared once in `MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT`. An offline
+`install --dry-run` checks that the committed lock satisfies `.mise.toml`. When it does
+not, setup prints a `WARN`, installs from `.mise.toml` with `MISE_LOCKFILE=false` and
+`MISE_LOCKED=false` for the rest of that setup (the lifecycle inherits
+`SETUP_MISE_LOCK_DRIFT`), and leaves `mise.lock` untouched. On the uv side, setup syncs
+`--locked`; when `uv.lock` drifts from `pyproject.toml` it prints a `WARN` and syncs the
+committed lock `--frozen`, which never writes it. The next `make upg` rewrites both
+locks. `make upg` resolves once
 per manifest: when the `.mise.toml` that its `gen` renders is byte-identical to the
 manifest its first half locked, the relock half installs from the published lock instead
 of resolving again. Wherever a lock runs, the bootstrap forwards the GitHub credential

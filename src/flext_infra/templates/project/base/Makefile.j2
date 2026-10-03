@@ -340,7 +340,11 @@ SETUP_ENVIRONMENT_RECIPE = set -eu; \
 			$(UV) venv --clear --python "$$desired_python" "$(RUNTIME_VENV)"; \
 		fi; \
 	fi; \
-	$(UV) sync --project "$(UV_PROJECT)" $(UV_SYNC_FLAGS) --link-mode "$(UV_LINK_MODE)"; \
+	if $(UV) sync --project "$(UV_PROJECT)" $(UV_SYNC_FLAGS) --locked --link-mode "$(UV_LINK_MODE)"; then :; \
+	else \
+		printf 'WARN: uv.lock drifts from pyproject.toml; setup installs the committed uv.lock without touching it; make upg rewrites it\n' >&2; \
+		$(UV) sync --project "$(UV_PROJECT)" $(UV_SYNC_FLAGS) --frozen --link-mode "$(UV_LINK_MODE)"; \
+	fi; \
 	XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
 		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" allow "$(PROJECT_ROOT)"; \
 	for member in $(WORKSPACE_SUBPROJECTS); do \
@@ -379,10 +383,10 @@ override PROJECT_INFRA_PYTHONPATH := $(if $(wildcard $(FLEXT_INFRA_SUBMODULE_SRC
 PROJECT_INFRA_RUN = if [ ! -x "$(FLEXT_INFRA_PYTHON)" ]; then printf 'ERROR: FLEXT_INFRA_PYTHON must name an executable managed Python\n' >&2; exit 2; fi; $(PROJECT_TOOL_EXEC) env -u PYTHONPATH -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u UV_PROJECT_ENVIRONMENT PYTHONPATH="$(PROJECT_INFRA_PYTHONPATH)" $(FLEXT_INFRA_PYTHON)
 PROJECT_FLEXT_INFRA := $(PROJECT_INFRA_RUN) -m flext_infra
 # Scaffold dev tools live in the validated optional dev
-# Setup installs frozen from the committed uv.lock and never re-resolves: it is
-# the CI path and must be stable. A missing or stale lock fails through uv's own
-# error; `make upg` is the only verb that resolves and rewrites it.
-UV_SYNC_FLAGS := --all-extras --all-groups --locked
+# Only `make upg` resolves and rewrites uv.lock. Setup always runs: it syncs
+# `--locked`, and when uv.lock drifts from pyproject.toml it warns and installs
+# the committed lock `--frozen`, which never writes it.
+UV_SYNC_FLAGS := --all-extras --all-groups
 
 ifeq ($(GEN_INIT_ONLY),)
 {{ makefile_custom_include }}
@@ -608,7 +612,9 @@ endif
 # Setup PROVISIONS tooling only — mise, venv, dependencies.
 # It never generates, conforms, or mutates project code; `make gen` is the
 # single public conformance/generation surface.
-# Setup always reconciles directly from the lock. The venv is created when
+# Setup installs from the committed locks and never writes them; when a lock
+# drifts from its manifest it warns and installs without touching it, because
+# only `make upg` rewrites locks. The venv is created when
 # missing and is never cleared while present, because a concurrent lane may be
 # running against it.
 # Governed gitlinks are provisioned in every context, GitHub Actions included:
@@ -662,7 +668,7 @@ _upg_lifecycle: _builtin_setup_submodules
 # the first half already locked, installs exactly that lock,
 # re-resolves uv.lock against the raised floors and reprovisions frozen from
 # both: the committed locks must match the committed manifests, or `setup`
-# (the CI path, `--locked`) rejects them. The Mise release is not resolved
+# (the CI path) warns of drift on every run. The Mise release is not resolved
 # again; the first half already pinned it.
 .PHONY: _upg_relock
 _upg_relock: TOOL_BOOTSTRAP_LIFECYCLE := _upg_converge

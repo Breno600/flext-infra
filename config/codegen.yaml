@@ -1132,6 +1132,9 @@ Infra:
       - path: bin/mise-lock-transaction.py
         owner: codegen
         policy: full
+      - path: bin/mise-lock-converge.py
+        owner: codegen
+        policy: full
     # CUSTOM vs MANAGED (humans read comments; this block is the owner):
     #   conflict_sections = MANAGED tables (template wins on make gen)
     #   preserve_project_keys = CUSTOM [project] keys (live wins on merge)
@@ -1536,6 +1539,7 @@ Infra:
             - "!bin/mise"
             - "!bin/mise.cmd"
             - "!bin/mise-lock-transaction.py"
+            - "!bin/mise-lock-converge.py"
         - name: "Documentation"
           profiles: [workspace]
           patterns:
@@ -1937,6 +1941,7 @@ Infra:
             - "!/bin/mise"
             - "!/bin/mise.cmd"
             - "!/bin/mise-lock-transaction.py"
+            - "!/bin/mise-lock-converge.py"
             - ".tools/"
             - "__pycache__/"
             - "base.mk"
@@ -2106,6 +2111,10 @@ Infra:
           delegate: render
         - source: base/bin/mise-lock-transaction.py.j2
           destination: bin/mise-lock-transaction.py
+          profiles: [workspace, standalone]
+          delegate: render
+        - source: base/bin/mise-lock-converge.py.j2
+          destination: bin/mise-lock-converge.py
           profiles: [workspace, standalone]
           delegate: render
         - source: base/Makefile.j2
