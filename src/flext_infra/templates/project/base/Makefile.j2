@@ -235,7 +235,28 @@ override MISE_VERSION_PIN := $(RUNTIME_ROOT)/{{ mise_bootstrap.version_pin_file 
 # has been recovered. Parsing it here would freeze a torn pre-recovery value.
 # End SECTION: profile routing
 
+# Git identity distinguishes a linked worktree from a primary submodule:
+# both can have a .git file, but only a linked worktree has distinct Git
+# directory and common directory. The environment path cannot be overridden.
+RUNTIME_LINKED_WORKTREE :=
+ifneq ($(wildcard $(RUNTIME_ROOT)/.git),)
+RUNTIME_GIT_DIR := $(shell git -C "$(RUNTIME_ROOT)" rev-parse --path-format=absolute --git-dir)
+ifneq ($(.SHELLSTATUS),0)
+$(error Cannot resolve Git directory for $(RUNTIME_ROOT))
+endif
+RUNTIME_GIT_COMMON_DIR := $(shell git -C "$(RUNTIME_ROOT)" rev-parse --path-format=absolute --git-common-dir)
+ifneq ($(.SHELLSTATUS),0)
+$(error Cannot resolve Git common directory for $(RUNTIME_ROOT))
+endif
+ifneq ($(RUNTIME_GIT_DIR),$(RUNTIME_GIT_COMMON_DIR))
+RUNTIME_LINKED_WORKTREE := Y
+endif
+endif
+ifeq ($(RUNTIME_LINKED_WORKTREE),Y)
+override RUNTIME_VENV := $(abspath $(RUNTIME_ROOT)/../{{ worktree_environment_directory }}/$(notdir $(RUNTIME_ROOT)))
+else
 override RUNTIME_VENV := $(RUNTIME_ROOT)/{{ environment_directory }}
+endif
 ifeq ($(OS),Windows_NT)
 override RUNTIME_BIN := $(RUNTIME_VENV)/Scripts
 override RUNTIME_PYTHON := $(RUNTIME_BIN)/python.exe
@@ -322,7 +343,7 @@ REQUIRE_WORKSPACE_ENVIRONMENT = case "$(PROJECT_ROOT)/" in \
 	"$(RUNTIME_ROOT)/"*) ;; \
 	*) printf 'ERROR: runtime workspace does not contain this project: %s\n' "$(RUNTIME_ROOT)" >&2; exit 2 ;; \
 	esac; \
-	for environment_path in "$(RUNTIME_VENV)" "$(RUNTIME_BIN)" "$(PROJECT_ROOT)/{{ environment_directory }}" "$(PROJECT_ROOT)/{{ environment_directory }}/bin"; do \
+	for environment_path in "$(patsubst %/,%,$(dir $(RUNTIME_VENV)))" "$(RUNTIME_VENV)" "$(RUNTIME_BIN)" "$(PROJECT_ROOT)/{{ environment_directory }}" "$(PROJECT_ROOT)/{{ environment_directory }}/bin"; do \
 		if [ -L "$$environment_path" ]; then \
 			printf 'ERROR: workspace environment must be physical, not a symlink: %s\n' "$$environment_path" >&2; exit 2; \
 		fi; \

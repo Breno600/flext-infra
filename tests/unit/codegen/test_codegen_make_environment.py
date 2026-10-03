@@ -757,10 +757,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
             ),
         )
         tm.that(u.Cli.process_succeeded(environment.outcome), eq=True)
-        # Law (operator 2026-10-01, flext-h2a9h): in development the
-        # environment is the checkout's own .venv, never a configurable
-        # location outside it. Anchor to the checkout, not to the resolver,
-        # so relocating the resolver and the templates together still fails.
+        # Primary standalone checkouts retain their local environment;
+        # linked Git worktrees are exercised separately above.
         checkout_venv = project_root.resolve() / c.Infra.ENVIRONMENT_DIRECTORY
         tm.that(u.Infra.runtime_environment_dir(project_root), eq=checkout_venv)
         tm.that(environment.stdout, has=f"RUNTIME_VENV={checkout_venv}\n")

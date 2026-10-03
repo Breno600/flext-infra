@@ -350,10 +350,9 @@ class FlextInfraUtilitiesProjectDiscovery(
         A declared ``runtime_root`` (the generated Makefile's ``RUNTIME_ROOT``)
         owns the environment. Undeclared, the owner derives it: a subproject
         checked out inside a workspace uses the workspace environment; a
-        standalone checkout or a linked worktree owns its own, exactly as the
-        generated Makefile resolves ``REPOSITORY_ROOT``. The environment is
-        always ``<runtime root>/.venv``; its location is law, never
-        configuration (operator law 2026-10-01, flext-h2a9h).
+        standalone checkout owns its local environment. A linked Git worktree
+        owns a physical sibling environment in the declared external directory,
+        exactly as the generated Makefile resolves ``REPOSITORY_ROOT``.
 
         Returns:
             The resulting ``Path``.
@@ -364,7 +363,18 @@ class FlextInfraUtilitiesProjectDiscovery(
                 m.Infra.GitRepoRequest(repo_root=project_root),
             ).unwrap()
             runtime_root = runtime.repository_root
-        return runtime_root.resolve() / c.Infra.ENVIRONMENT_DIRECTORY
+        owner = runtime_root.resolve()
+        if (owner / c.Infra.GIT_DIR).is_file():
+            identity = FlextInfraUtilitiesGit.git_identity(
+                m.Infra.GitRepoRequest(repo_root=owner),
+            ).unwrap()
+            if identity.is_worktree:
+                return (
+                    owner.parent
+                    / config.Infra.codegen.toolchain.worktree_environment_directory
+                    / owner.name
+                )
+        return owner / c.Infra.ENVIRONMENT_DIRECTORY
 
     @classmethod
     def runtime_python(
