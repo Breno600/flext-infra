@@ -268,8 +268,11 @@ class FlextInfraPyprojectModernizerTooling:
                     if declared_roots
                     else tools.mypy_path or derived_mypy_path
                 ),
+                # The tree as it stands; a scaffold re-derives this field from
+                # its planned sources before its final pyproject render.
                 "mypy_facade_rebind_modules": u.Infra.facade_rebind_modules(
                     project_dir,
+                    {},
                 ),
                 "pyrefly_search_path": (
                     derived_search_path

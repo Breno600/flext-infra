@@ -116,7 +116,7 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
     @m.field_validator("output_dir", mode="before")
     @classmethod
     def _normalize_output_dir(cls, value: str | Path | None) -> Path | None:
-        """Preserve relative output dirs so callers can scope them under workspace roots.
+        """Preserve relative output dirs so callers scope them under workspace roots.
 
         Returns:
             The resulting ``Path | None``.

@@ -445,7 +445,8 @@ class FlextInfraUtilitiesDiscovery(
             if scan_root.is_file():
                 if scan_root.name != c.PYPROJECT_FILENAME:
                     return r[t.SequenceOf[Path]].fail(
-                        f"explicit project file must be {c.PYPROJECT_FILENAME}: {scan_root}",
+                        f"explicit project file must be "
+                        f"{c.PYPROJECT_FILENAME}: {scan_root}",
                     )
                 all_files.append(scan_root)
                 continue

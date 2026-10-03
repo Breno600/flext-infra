@@ -279,7 +279,10 @@ class FlextInfraWorkspaceDetector(
             # observed repository (pre-G1 contract, restored): the observed
             # state IS the identity, gascity participates, and no manifest
             # project spec exists. Absence never constructs a None payload.
-            return r[tuple[m.Infra.RepositoryRef, bool, m.Infra.ProjectSpec | None]].ok((
+            outcome = tuple[
+                m.Infra.RepositoryRef, bool, m.Infra.ProjectSpec | None
+            ]
+            return r[outcome].ok((
                 observed,
                 True,
                 None,
@@ -379,7 +382,8 @@ class FlextInfraWorkspaceDetector(
             origin.value,
         ) != u.Infra.git_remote_identity(declared_url):
             return r[m.Infra.RepositoryRef].fail(
-                f"subproject origin differs from its .gitmodules URL: {path.as_posix()}",
+                f"subproject origin differs from its .gitmodules URL: "
+                f"{path.as_posix()}",
             )
         effective_url = declared_url or origin.value
         provider_result = cls._declared_provider_name(
@@ -941,7 +945,14 @@ class FlextInfraWorkspaceDetector(
         # exclusions are none.
         if not u.Infra.workspace_manifest_path(resolved_root).is_file():
             return r[t.VariadicTuple[Path]].ok(())
-        workspace = cls.load_workspace_spec(resolved_root)
+        # Analysis scope reads declared topology, so it tolerates members a
+        # provisioning surface has not materialized yet (conform renders the
+        # setup Makefile before a member's pyproject exists); a strict load
+        # here re-imposed governance on a declaration-only read.
+        workspace = cls.load_workspace_spec(
+            resolved_root,
+            allow_unprovisioned_members=True,
+        )
         if workspace.failure:
             return r[t.VariadicTuple[Path]].from_failure(workspace)
         return r[t.VariadicTuple[Path]].ok(

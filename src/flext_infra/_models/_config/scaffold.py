@@ -37,7 +37,10 @@ class FlextInfraConfigModelsScaffold:
         project: Annotated[
             t.NonEmptyStr | None,
             m.Field(
-                description="Distribution receiving additional requirements; unset selects the shared upstream profile",
+                description=(
+                    "Distribution receiving additional requirements; "
+                    "unset selects the shared upstream profile"
+                ),
             ),
         ] = None
         runtime: Annotated[

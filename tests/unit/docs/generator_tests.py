@@ -88,11 +88,11 @@ class TestsFlextInfraDocsGenerator:
         tm.that(workspace / "flext-a/README.md" in paths, eq=True)
         tm.that(all(plan.owner == "docs" for plan in plans), eq=True)
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("selected_projects", [None, (".",), ("flext-a",)])
     @pytest.mark.parametrize("project_name", ["workspace", config.Infra.name])
     def test_workspace_package_api_and_member_docs_share_one_transaction(
-        self,
         tmp_path: Path,
         selected_projects: t.StrSequence | None,
         project_name: str,
@@ -444,9 +444,9 @@ class TestsFlextInfraDocsGenerator:
         )
         tm.that(page, lacks="::: flext_a options:")
 
+    @staticmethod
     @pytest.mark.slow
     def test_generated_directive_builds_with_real_mkdocstrings(
-        self,
         tmp_path: Path,
     ) -> None:
         """The actual documentation engine consumes the generated directive options."""

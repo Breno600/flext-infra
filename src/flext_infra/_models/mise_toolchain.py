@@ -226,7 +226,9 @@ class FlextInfraModelsMiseToolchain:
             t.NonEmptyStr,
             m.Field(
                 pattern=r"^\.[A-Za-z0-9._-]+\.lock$",
-                description="Ignored project-root mutex for Mise lock publication/recovery",
+                description=(
+                    "Ignored project-root mutex for Mise lock publication/recovery"
+                ),
             ),
         ]
         mise_lockfile_platforms: Annotated[
@@ -473,6 +475,15 @@ class FlextInfraModelsMiseToolchain:
             t.VariadicTuple[t.Pair[str, str]],
             m.Field(min_length=1, description="Literal fail-closed Mise settings"),
         ]
+        offline_environment: Annotated[
+            t.VariadicTuple[t.Pair[t.NonEmptyStr, t.NonEmptyStr]],
+            m.Field(
+                min_length=1,
+                description=(
+                    "Settings that keep a non-install Mise call off the network"
+                ),
+            ),
+        ]
         transient_environment: Annotated[
             t.VariadicTuple[t.Pair[t.NonEmptyStr, t.NonEmptyStr]],
             m.Field(min_length=1, description="Scratch-relative environment paths"),
@@ -540,7 +551,9 @@ class FlextInfraModelsMiseToolchain:
             t.NonEmptyStr,
             m.Field(
                 pattern=r"^[A-Za-z0-9._/-]+\.py$",
-                description="Project-relative generated publisher of a staged mise.lock",
+                description=(
+                    "Project-relative generated publisher of a staged mise.lock"
+                ),
             ),
         ]
         transaction_lock_file: Annotated[
@@ -656,8 +669,9 @@ class FlextInfraModelsMiseToolchain:
                     header lines must be comments.
 
             """
+            literal_environment = (*self.fixed_environment, *self.offline_environment)
             self._ensure_unique_environment_names(
-                self.fixed_environment,
+                literal_environment,
                 self.transient_environment,
                 self.persistent_environment,
                 self.passthrough_environment,
@@ -665,7 +679,7 @@ class FlextInfraModelsMiseToolchain:
             names = [
                 name
                 for group in (
-                    self.fixed_environment,
+                    literal_environment,
                     self.transient_environment,
                     self.persistent_environment,
                 )
@@ -683,7 +697,7 @@ class FlextInfraModelsMiseToolchain:
                     raise ValueError(msg)
                 self._ensure_persistent_and_fixed_values(
                     self.storage_root_variable,
-                    self.fixed_environment,
+                    literal_environment,
                     self.persistent_environment,
                 )
                 self._ensure_relative_paths(

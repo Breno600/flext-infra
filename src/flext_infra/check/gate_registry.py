@@ -15,6 +15,7 @@ from flext_infra.gates.base_gate import FlextInfraGate
 from flext_infra.gates.codemod import FlextInfraCodemodGate
 from flext_infra.gates.direnv import FlextInfraDirenvGate
 from flext_infra.gates.duplication import FlextInfraDuplicationGate
+from flext_infra.gates.fresh_import import FlextInfraFreshImportGate
 from flext_infra.gates.index_declarations import FlextInfraIndexDeclarationsGate
 from flext_infra.gates.layout import FlextInfraLayoutGate
 from flext_infra.gates.loc_cap import FlextInfraLocCapGate
@@ -89,6 +90,7 @@ class FlextInfraGateRegistry:
             FlextInfraMarkdownCodeGate,
             FlextInfraLocCapGate,
             FlextInfraRuntimeCensusGate,
+            FlextInfraFreshImportGate,
             FlextInfraLayoutGate,
             FlextInfraIndexDeclarationsGate,
             FlextInfraSmellsGate,

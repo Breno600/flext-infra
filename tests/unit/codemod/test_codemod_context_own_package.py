@@ -60,11 +60,13 @@ class TestsFlextInfraCodemodContextOwnPackage:
         consumer.parent.mkdir(parents=True)
         consumer.write_text(f"from {module} import Helper\n", encoding="utf-8")
 
+        rule = self._private_import_rule()
         verdict = u.Infra.codemod_context_admits(
             project,
-            self._private_import_rule(),
+            rule,
             consumer,
             {"MOD": {"text": module}},
+            u.Infra.codemod_project_facts(project, (rule,)),
         )
 
         tm.that(verdict, eq=admitted)

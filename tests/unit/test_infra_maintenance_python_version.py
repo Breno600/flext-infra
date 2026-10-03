@@ -69,7 +69,8 @@ class TestsFlextInfraInfraMaintenancePythonVersion:
         (proj / ".python-version").write_text(f"3.{resolved_minor}\n", encoding="utf-8")
         return proj
 
-    def _svc(self, ws: Path) -> FlextInfraPythonVersionEnforcer:
+    @staticmethod
+    def _svc(ws: Path) -> FlextInfraPythonVersionEnforcer:
         class _TestEnforcer(FlextInfraPythonVersionEnforcer):
             @override
             def _repository_root_from_file(self, file: str | Path) -> Path:

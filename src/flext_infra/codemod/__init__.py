@@ -27,7 +27,6 @@ if TYPE_CHECKING:
     from flext_infra.codemod.snapshot_refresh import FlextInfraCodemodSnapshotRefresh
     from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
 
-
 __all__: tuple[str, ...] = (
     "FlextInfraApplyRenames",
     "FlextInfraCodemodAstScan",

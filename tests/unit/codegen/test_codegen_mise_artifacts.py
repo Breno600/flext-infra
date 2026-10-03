@@ -114,9 +114,9 @@ class TestsFlextInfraCodegenMiseArtifacts:
             expected = packaged.joinpath(Path(relative).name).read_bytes()
             tm.that(state.content, eq=expected)
 
+    @staticmethod
     @pytest.mark.parametrize("shape", ["absolute", "tilde"])
     def test_packaged_launcher_runs_its_baked_release_offline(
-        self,
         tmp_path: Path,
         shape: str,
     ) -> None:

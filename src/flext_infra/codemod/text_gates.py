@@ -116,9 +116,10 @@ class FlextInfraModTextGateEngine:
             The resulting ``p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]``.
 
         """
-        provider = (
-            FlextInfraConfig.ssot_config_dir().parent
-            / c.Infra.CODEMOD_TEXT_RULES_RELPATH
+        # The packaged rules live at the same sub-path of whichever SSOT
+        # config directory is active, including a declared relocation.
+        provider = FlextInfraConfig.ssot_config_dir() / (
+            c.Infra.CODEMOD_TEXT_RULES_RELPATH.relative_to(c.CONFIG_DIR_NAME)
         )
         consumer = root / c.Infra.CODEMOD_TEXT_RULES_RELPATH
         snapshots: list[m.Cli.AtomicFileState] = []
@@ -249,7 +250,7 @@ class FlextInfraModTextGateEngine:
             not isinstance(expected, int) or isinstance(expected, bool) or expected < 0
         ):
             return r[m.Infra.ModTextRule].fail(
-                f"text rule expected receipt must be a non-negative integer in {source}",
+                f"text rule expected receipt must be non-negative in {source}",
             )
         capture_equals = raw.get(c.Infra.CODEMOD_TEXT_KEY_CAPTURE_EQUALS, {})
         distributions = raw.get(c.Infra.CODEMOD_TEXT_KEY_DISTRIBUTIONS, ())
@@ -269,7 +270,7 @@ class FlextInfraModTextGateEngine:
             for name, value in capture_equals.items()
         ):
             return r[m.Infra.ModTextRule].fail(
-                f"text rule capture_equals must map capture names to strings in {source}",
+                f"text rule capture_equals must map captures to strings in {source}",
             )
         try:
             compiled = re.compile(find)
@@ -412,7 +413,7 @@ class FlextInfraModTextGateEngine:
             if fix and updated != source:
                 if source.startswith(c.Infra.AUTOGEN_HEADERS):
                     return r[m.Infra.ModTextReport].fail(
-                        f"generated findings require canonical generator repair: {path}",
+                        f"generated findings require generator repair: {path}",
                     )
                 if path.suffix == c.Infra.EXT_PYTHON:
                     ast.parse(updated, filename=str(path))

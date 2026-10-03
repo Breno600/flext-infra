@@ -107,8 +107,8 @@ class FlextInfraDependencyDetectionRunnersMixin:
             cmd_result.outcome.raw_return_code,
         ))
 
+    @staticmethod
     def run_mypy_stub_hints(
-        self,
         project_path: Path,
     ) -> p.Result[t.Pair[t.StrSequence, t.StrSequence]]:
         """Run mypy via the command runner to detect missing stubs and hint packages.
@@ -159,8 +159,8 @@ class FlextInfraDependencyDetectionRunnersMixin:
             sorted(missing),
         ))
 
+    @staticmethod
     def run_pip_check(
-        self,
         repository_root: Path,
         venv_bin: Path,
     ) -> p.Result[t.Pair[t.StrSequence, int]]:

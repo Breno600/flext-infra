@@ -63,7 +63,6 @@ if TYPE_CHECKING:
         FlextInfraWrapperRootNamespaceRefactor,
     )
 
-
 __all__: tuple[str, ...] = (
     "FlextInfraAccessorMigrationOrchestrator",
     "FlextInfraAccessorMigrationReportMixin",

@@ -495,9 +495,9 @@ class TestsFlextInfraCodegenLazyInitService:
             msg=f"{ruff_check.value.stdout}\n{ruff_check.value.stderr}",
         )
 
+    @staticmethod
     @pytest.mark.parametrize("width_offset", [-1, 0, 1])
     def test_export_tuple_is_formatter_stable_at_line_width(
-        self,
         tmp_path: Path,
         width_offset: int,
     ) -> None:
@@ -694,9 +694,9 @@ class TestsFlextInfraCodegenLazyInitService:
     # it (stdlib-module-shadowing). Apply must remove generator-owned residue,
     # never write a new initializer, drop the child from the parent inventory
     # in the same pass, and a following check must be a byte fixed point.
+    @staticmethod
     @pytest.mark.parametrize("directory_name", ["typing", "done-check", "class", "123"])
     def test_invalid_directory_is_never_a_generated_package(
-        self,
         tmp_path: Path,
         directory_name: str,
     ) -> None:
