@@ -585,6 +585,15 @@ Infra:
           # its runners). This measurement ceiling permits a complete cold
           # local run of the 241-case suite.
           cosmos-charts: 600
+          # algar-oud-mig budgeted suite measured on 2026-10-03 (operator
+          # exception docs/guides/testing.md: the global budget is 180s):
+          # the 124s entry clock SIGTERM'd the suite at 64% (~194s projected
+          # full runtime) once every OUD-bound case started owning a per-test
+          # LDAP namespace (worker+run token, teardown included). This
+          # measurement ceiling covers the documented operator budget plus
+          # the namespace lifecycle overhead before the measured
+          # parallel-worker ceiling lands.
+          algar-oud-mig: 300
         termination-grace-seconds: 2
         # One failure stops the invocation. The next run starts from the
         # corrected owner instead of accumulating a backlog of unrelated
