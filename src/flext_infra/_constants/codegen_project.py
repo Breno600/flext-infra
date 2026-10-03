@@ -221,11 +221,14 @@ class FlextInfraConstantsCodegenProject:
     MISE_LOCK_FILENAME: ClassVar[str] = "mise.lock"
     MISE_LOCK_TRANSACTION_SCRIPT: ClassVar[str] = "bin/mise-lock-transaction.py"
     "Generated publisher the Makefile bootstrap runs to commit a staged mise.lock."
+    MISE_LOCK_CONVERGE_SCRIPT: ClassVar[str] = "bin/mise-lock-converge.py"
+    "Generated script ``make upg`` runs to hold broken releases inside a lock stage."
     MAKEFILE_BOOTSTRAP_DESTINATIONS: ClassVar[frozenset[str]] = frozenset({
         FlextInfraConstantsSharedInfra.MAKEFILE_FILENAME,
         MISE_LOCK_TRANSACTION_SCRIPT,
+        MISE_LOCK_CONVERGE_SCRIPT,
     })
-    "The Makefile surface: the Makefile and the lock publisher its bootstrap runs."
+    "The Makefile surface: the Makefile and the lock scripts its bootstrap runs."
     MISE_LOCK_ANNOTATION: ClassVar[str] = "~"
     "Lockfile cache-key fragment (``<version>~<hash>``); never a selector."
     MISE_MOVING_SELECTOR: ClassVar[str] = "latest"

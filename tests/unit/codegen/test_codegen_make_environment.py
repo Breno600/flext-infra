@@ -499,8 +499,9 @@ class TestsFlextInfraCodegenMakeEnvironment:
         )
         tm.that(self._locks(ci_checkout), eq=resolved_locks)
 
-        # A new dependency declaration makes the committed lock stale: setup
-        # fails instead of re-resolving, and the lock stays untouched.
+        # Only upg writes locks, and setup always runs. A new dependency
+        # declaration drifts uv.lock: setup warns, installs the committed lock
+        # frozen, and leaves every lock untouched.
         checkout = u.Tests.resolved_make_checkout(template, tmp_path / "stale", profile)
         dependency_root = tmp_path / "external-runtime"
         u.Tests.WorktreeFixture.write_python_project(
@@ -527,22 +528,34 @@ class TestsFlextInfraCodegenMakeEnvironment:
                 },
             ),
         )
-        tm.that(u.Cli.process_succeeded(stale.outcome), eq=False)
+        tm.that(
+            u.Cli.process_succeeded(stale.outcome),
+            eq=True,
+            msg=stale.stdout + stale.stderr,
+        )
+        tm.that(stale.stderr, has="uv.lock drifts from pyproject.toml")
         tm.that(self._locks(checkout), eq=resolved_locks)
 
-        # A manifest the committed mise.lock does not satisfy stops setup with
-        # the upg hint; setup never relocks and leaves every lock untouched.
+        # A committed mise.lock missing a declared tool drifts from .mise.toml:
+        # setup warns, installs from the manifest with the lockfile disabled,
+        # and never rewrites mise.lock.
         drifted = u.Tests.resolved_make_checkout(
             template,
             tmp_path / "drifted",
             profile,
         )
-        manifest = drifted / c.Infra.MISE_TOML_FILENAME
-        manifest.write_text(
-            manifest.read_text(encoding="utf-8")
-            + '[tools."github:example/absent-from-lock"]\nversion = "1.0.0"\n',
+        mise_lock = drifted / c.Infra.MISE_LOCK_FILENAME
+        lock_text = mise_lock.read_text(encoding="utf-8")
+        first_tool = lock_text.index("[[tools.")
+        next_tool = lock_text.index("\n[", first_tool + 1)
+        mise_lock.write_text(
+            lock_text[:first_tool] + lock_text[next_tool + 1 :],
             encoding="utf-8",
         )
+        drifted_locks = {
+            **resolved_locks,
+            c.Infra.MISE_LOCK_FILENAME: mise_lock.read_bytes(),
+        }
         unsatisfied = tm.ok(
             u.Tests.run_isolated_make(
                 ["--no-print-directory", "setup"],
@@ -554,10 +567,13 @@ class TestsFlextInfraCodegenMakeEnvironment:
                 },
             ),
         )
-        tm.that(u.Cli.process_succeeded(unsatisfied.outcome), eq=False)
-        tm.that(unsatisfied.stderr, has="does not satisfy .mise.toml")
-        tm.that(unsatisfied.stderr, has="run make upg")
-        tm.that(self._locks(drifted), eq=resolved_locks)
+        tm.that(
+            u.Cli.process_succeeded(unsatisfied.outcome),
+            eq=True,
+            msg=unsatisfied.stdout + unsatisfied.stderr,
+        )
+        tm.that(unsatisfied.stderr, has="mise.lock drifts from .mise.toml")
+        tm.that(self._locks(drifted), eq=drifted_locks)
 
     @staticmethod
     def _locks(root: Path) -> t.MappingKV[str, bytes]:
@@ -916,8 +932,9 @@ class TestsFlextInfraCodegenMakeEnvironment:
 
         The generated Makefile confines every uv upgrade to the `upg`
         lifecycle and every `mise lock --bump` to the shared bootstrap gated by
-        a switch that only `upg` sets; `setup` syncs `--locked`, and the
-        generated `.mise.toml` makes mise install exactly what the lock pins.
+        a switch that only `upg` sets; `setup` never writes a lock and always
+        runs, installing exactly what the lock pins or, on drift, warning and
+        installing without touching it.
         """
         project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
@@ -939,17 +956,21 @@ class TestsFlextInfraCodegenMakeEnvironment:
         toolchain = config.Infra.codegen.toolchain
         lock_invocations = re.findall(r"lock --bump([^;]*);", makefile)
         tm.that(tuple(arguments.strip() for arguments in lock_invocations), eq=("",))
-        # Setup never locks (operator 2026-10-02): no reconcile or relock path
-        # survives, and a lock that no longer satisfies the manifest stops.
+        # Only upg writes locks, and setup always runs: no reconcile or relock
+        # path survives; a drifted mise.lock is installed around with the
+        # lockfile disabled for that setup, never rewritten.
         tm.that(
             makefile,
             lacks=[
                 "setup reconcile",
-                ' reconcile "$$project_root"',
-                'relock "$(PROJECT_ROOT)"',
+                '" reconcile "',
+                '" relock "',
+                "flext_infra/bootstrap.py",
             ],
         )
-        tm.that(makefile, has="does not satisfy .mise.toml under Mise %s; run make upg")
+        tm.that(makefile, has="mise.lock drifts from .mise.toml")
+        tm.that(makefile, has='$${mise_lock_drift:+"MISE_LOCKED=false"}')
+        tm.that(makefile, has='$${mise_lock_drift:+"SETUP_MISE_LOCK_DRIFT=1"}')
         # Only a missing-tool install and the upg resolution reach the network;
         # every other Mise call runs through the declared offline wrapper.
         offline = " ".join(
@@ -986,8 +1007,13 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, has="upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle")
         sync_flags = re.search(r"^UV_SYNC_FLAGS := (.*)$", makefile, re.MULTILINE)
         assert sync_flags is not None
-        tm.that(sync_flags.group(1), has="--locked")
-        tm.that(sync_flags.group(1), lacks="--upgrade")
+        tm.that(sync_flags.group(1), lacks=["--upgrade", "--locked", "--frozen"])
+        # A drifted uv.lock falls back to `--frozen`, which never writes it.
+        tm.that(
+            re.findall(r"\$\(UV\) sync [^;]*?(--locked|--frozen)", makefile),
+            eq=["--locked", "--frozen"],
+        )
+        tm.that(makefile, has="uv.lock drifts from pyproject.toml")
 
         mise_toml = u.Cli.toml_mapping_from_text(
             (project_root / c.Infra.MISE_TOML_FILENAME).read_text(encoding="utf-8"),
