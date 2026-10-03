@@ -1,0 +1,20 @@
+id: ban-manual-typing-alias-outside-typings
+valid:
+  - |
+    class Namespace:
+        type Inner = int
+  - |
+    def build() -> None:
+        T = TypeVar("T")
+  - |
+    VALUE: int = 1
+  - |
+    result = factory("T")
+invalid:
+  - type Payload = dict[str, int]
+  - type Box[T] = list[T]
+  - "Alias: TypeAlias = int"
+  - "Alias: typing.TypeAlias = int"
+  - T = TypeVar("T")
+  - P = typing.ParamSpec("P")
+  - UserId = NewType("UserId", int)

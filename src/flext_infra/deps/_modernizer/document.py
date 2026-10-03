@@ -1,4 +1,8 @@
-"""Read, normalize, and render one pyproject document through every phase."""
+"""Read, normalize, and render one pyproject document through every phase.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,16 +10,15 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, config, m, t, u
+from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
+from flext_infra.deps.phases.consolidate_groups import FlextInfraConsolidateGroupsPhase
+from flext_infra.deps.phases.ensure_packaging import FlextInfraEnsurePackagingPhase
+from flext_infra.deps.phases.ensure_pyrefly import FlextInfraEnsurePyreflyConfigPhase
+from flext_infra.deps.phases.ensure_pyright import FlextInfraEnsurePyrightConfigPhase
+from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
+from flext_infra.deps.phases.inject_comments import FlextInfraInjectCommentsPhase
+from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
 from flext_infra.refactor.project_classifier import FlextInfraProjectClassifier
-
-from ..extra_paths import FlextInfraExtraPathsManager
-from ..phases.consolidate_groups import FlextInfraConsolidateGroupsPhase
-from ..phases.ensure_packaging import FlextInfraEnsurePackagingPhase
-from ..phases.ensure_pyrefly import FlextInfraEnsurePyreflyConfigPhase
-from ..phases.ensure_pyright import FlextInfraEnsurePyrightConfigPhase
-from ..phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
-from ..phases.inject_comments import FlextInfraInjectCommentsPhase
-from ..phases.tool_tables import FlextInfraToolTablesPhase
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -35,9 +38,17 @@ class FlextInfraPyprojectModernizerDocument:
         def root(self) -> Path: ...
 
     def _project_kind(
-        self, path: Path, payload: t.JsonMapping, project_kind: str | None
+        self,
+        path: Path,
+        payload: t.JsonMapping,
+        project_kind: str | None,
     ) -> str:
-        """Return the declared kind, classifying member projects on demand."""
+        """Return the declared kind, classifying member projects on demand.
+
+        Returns:
+            The declared kind, classifying member projects on demand.
+
+        """
         if project_kind is not None:
             return project_kind
         if path.parent.resolve() == self.root.resolve():
@@ -48,10 +59,18 @@ class FlextInfraPyprojectModernizerDocument:
             .project_kind
         )
 
+    @staticmethod
     def _read_document_state(
-        self, path: Path, *, source: str | None = None
+        path: Path,
+        *,
+        source: str | None = None,
     ) -> p.Result[m.Infra.PyprojectDocumentState]:
-        """Parse one pyproject once into one validated plain payload state."""
+        """Parse one pyproject once into one validated plain payload state.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.PyprojectDocumentState]``.
+
+        """
         result_type = r[m.Infra.PyprojectDocumentState]
         if source is None:
             read = u.Cli.files_read_text(path)
@@ -62,39 +81,54 @@ class FlextInfraPyprojectModernizerDocument:
         if payload_source is None:
             return result_type.fail(f"invalid TOML: {path}")
         validated: p.Result[t.MutableJsonMapping] = u.validate_value(
-            t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER, payload_source
+            t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER,
+            payload_source,
         )
         if validated.failure:
             return result_type.fail_op("TOML payload validation", validated.error)
         return result_type.ok(
             m.Infra.PyprojectDocumentState(
-                pyproject_path=path, original_rendered=source, payload=validated.value
-            )
+                pyproject_path=path,
+                original_rendered=source,
+                payload=validated.value,
+            ),
         )
 
     @staticmethod
     def _normalize_build_payload(payload: t.MutableJsonMapping) -> t.StrSequence:
-        """Pin the hatchling backend and drop empty Poetry dependency groups."""
+        """Pin the hatchling backend and drop empty Poetry dependency groups.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         changes: t.MutableSequenceOf[str] = []
         if u.Cli.toml_mapping_child(payload, "build-system") is None:
             changes.append("created [build-system]")
         build_system = u.Cli.toml_mapping_ensure_table(payload, "build-system")
         if u.Cli.toml_mapping_sync_value(
-            build_system, "build-backend", "hatchling.build"
+            build_system,
+            "build-backend",
+            "hatchling.build",
         ):
             changes.append("build-system.build-backend set to hatchling.build")
         if u.Cli.toml_mapping_sync_string_list(
-            build_system, "requires", ["hatchling"], sort_values=True
+            build_system,
+            "requires",
+            ["hatchling"],
+            sort_values=True,
         ):
             changes.append("build-system.requires set to ['hatchling']")
         metadata = u.Cli.toml_mapping_ensure_path(
-            payload, (c.Infra.TOOL, "hatch", "metadata")
+            payload,
+            (c.Infra.TOOL, "hatch", "metadata"),
         )
         if metadata.get("allow-direct-references") is not True:
             metadata["allow-direct-references"] = True
             changes.append("tool.hatch.metadata.allow-direct-references set to true")
         groups = u.Cli.toml_mapping_path(
-            payload, (c.Infra.TOOL, c.Infra.POETRY, c.Infra.GROUP)
+            payload,
+            (c.Infra.TOOL, c.Infra.POETRY, c.Infra.GROUP),
         )
         if groups is None:
             return changes
@@ -113,9 +147,15 @@ class FlextInfraPyprojectModernizerDocument:
 
     @staticmethod
     def _ordered_keys(
-        container: t.Cli.TomlDocument | t.Cli.TomlTable, preferred_first: t.StrSequence
+        container: t.Cli.TomlDocument | t.Cli.TomlTable,
+        preferred_first: t.StrSequence,
     ) -> t.Pair[t.StrSequence, t.StrSequence]:
-        """Return current keys and their preferred-first, then alphabetical order."""
+        """Return current keys and their preferred-first, then alphabetical order.
+
+        Returns:
+            Current keys and their preferred-first, then alphabetical order.
+
+        """
         current = [str(key) for key in container]
         ordered = [key for key in preferred_first if key in current]
         ordered.extend(sorted(set(current) - set(ordered)))
@@ -123,7 +163,9 @@ class FlextInfraPyprojectModernizerDocument:
 
     @classmethod
     def _reorder_child(
-        cls, container: t.Cli.TomlDocument | t.Cli.TomlTable, table_key: str
+        cls,
+        container: t.Cli.TomlDocument | t.Cli.TomlTable,
+        table_key: str,
     ) -> None:
         """Reorder a table child or every table in an array child."""
         if table_key == "per-file-ignores":
@@ -152,7 +194,10 @@ class FlextInfraPyprojectModernizerDocument:
 
     @classmethod
     def _reorder_document(
-        cls, doc: t.Cli.TomlDocument, *, preferred_first: t.StrSequence
+        cls,
+        doc: t.Cli.TomlDocument,
+        *,
+        preferred_first: t.StrSequence,
     ) -> None:
         """Apply deterministic ordering to top-level groups and nested tables."""
         current, ordered = cls._ordered_keys(doc, preferred_first)
@@ -173,7 +218,12 @@ class FlextInfraPyprojectModernizerDocument:
         dry_run: bool,
         skip_comments: bool,
     ) -> p.Result[t.StrSequence]:
-        """Run every phase over one discovered state; write unless ``dry_run``."""
+        """Run every phase over one discovered state; write unless ``dry_run``.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
+        """
         return self._render_document_state(
             state,
             self._apply_document_phases(
@@ -192,7 +242,12 @@ class FlextInfraPyprojectModernizerDocument:
         canonical_dev: t.StrSequence,
         topology: m.Infra.PyprojectDeclaredTopology,
     ) -> t.StrSequence:
-        """Run every managed phase, in order, over one parsed payload."""
+        """Run every managed phase, in order, over one parsed payload.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         path, payload = state.pyproject_path, state.payload
         is_root = path.parent.resolve() == self.root.resolve()
         # Scaffold (pre-write) contexts have no on-disk project root yet: derive
@@ -207,7 +262,6 @@ class FlextInfraPyprojectModernizerDocument:
             if exists
             else None
         )
-        resolved_kind = self._project_kind(path, payload, topology.project_kind)
         analyzer_context = m.Infra.PyprojectAnalyzerContext(
             is_root=is_root,
             repository_root=self.root if exists else None,
@@ -227,7 +281,6 @@ class FlextInfraPyprojectModernizerDocument:
             *FlextInfraEnsurePyrightConfigPhase(tooling).apply_payload(
                 payload,
                 context=analyzer_context,
-                project_kind=resolved_kind,
                 paths_manager=paths_manager,
                 analysis_exclusions=topology.analysis_exclusions,
             ),
@@ -239,26 +292,30 @@ class FlextInfraPyprojectModernizerDocument:
                     analyzer_context
                     if exists
                     else analyzer_context.model_copy(
-                        update={"declared_python_dirs_are_complete": True}
+                        update={"declared_python_dirs_are_complete": True},
                     )
                 ),
                 paths_manager=paths_manager,
             ),
-            *FlextInfraEnsureRuffConfigPhase(
-                tooling, self.managed_artifacts
-            ).apply_payload(payload, path=path),
-            *FlextInfraEnsurePackagingPhase(tooling).apply_payload(
+            *FlextInfraEnsureRuffConfigPhase(tooling).apply_payload(
                 payload,
                 path=path,
-                root_modules=topology.root_modules,
-                root_packages=topology.root_packages,
+                analysis_exclusions=topology.analysis_exclusions,
+                generated_python_roots=topology.declared_python_dirs,
+            ),
+            *FlextInfraEnsurePackagingPhase().apply_payload(
+                payload,
+                path=path,
+                topology=topology,
             ),
         ]
         if paths_manager is not None:
             changes.extend(
                 paths_manager.sync_payload(
-                    payload, project_dir=path.parent, is_root=is_root
-                )
+                    payload,
+                    project_dir=path.parent,
+                    is_root=is_root,
+                ),
             )
         return changes
 
@@ -274,6 +331,10 @@ class FlextInfraPyprojectModernizerDocument:
         """Order, annotate, and format one payload; write unless ``dry_run``.
 
         A formatter failure is the result's failure, never a reported change.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
         """
         path = state.pyproject_path
         doc = u.Cli.toml_document_from_mapping(state.payload)

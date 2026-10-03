@@ -1,0 +1,39 @@
+id: fix-except-sentinel-return
+valid:
+  - |
+    def run() -> p.Result[bool]:
+        try:
+            raise ValueError('boom')
+        except ValueError:
+            return None
+  - |
+    def run() -> bool:
+        try:
+            raise ValueError('boom')
+        except ValueError as exc:
+            return None
+  - |
+    def is_ready() -> r[bool]:
+        try:
+            probe()
+        except ValueError as exc:
+            return False
+  - |
+    def run() -> r[bool]:
+        try:
+            probe()
+        except ValueError as exc:
+            return True
+invalid:
+  - |
+    def run_except() -> p.Result[bool]:
+        try:
+            raise ValueError('boom')
+        except ValueError as exc:
+            return None
+  - |
+    def load() -> r[list[str]]:
+        try:
+            return read()
+        except (OSError, KeyError) as error:
+            return []

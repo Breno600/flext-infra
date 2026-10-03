@@ -1,0 +1,37 @@
+id: require-facade-mro-completeness
+snapshots:
+  ? |
+    class FlextFooModels(FlextCliModels):
+        class Foo(FlextFooModelsBase):
+            pass
+  : labels:
+    - source: |-
+        class Foo(FlextFooModelsBase):
+                pass
+      style: primary
+      start: 42
+      end: 85
+    - source: |
+        class FlextFooModels(FlextCliModels):
+            class Foo(FlextFooModelsBase):
+                pass
+      style: secondary
+      start: 0
+      end: 86
+    - source: |-
+        class FlextFooModels(FlextCliModels):
+            class Foo(FlextFooModelsBase):
+                pass
+      style: secondary
+      start: 0
+      end: 85
+    - source: |-
+        class Foo(FlextFooModelsBase):
+                pass
+      style: secondary
+      start: 42
+      end: 85
+    - source: Foo
+      style: secondary
+      start: 48
+      end: 51

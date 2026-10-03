@@ -25,18 +25,36 @@ from tests import t
 
 
 class TestsFlextInfraCustomMakeSurfaceIsDerived:
-    def _engine_modules(self) -> t.VariadicTuple[Path]:
-        """Return every shipped engine module, excluding the template tree."""
+    """Tests for ``FlextInfraCustomMakeSurfaceIsDerived``."""
+
+    @staticmethod
+    def _engine_modules() -> t.VariadicTuple[Path]:
+        """Return every shipped engine module, excluding the template tree.
+
+        Returns:
+            Every shipped engine module, excluding the template tree.
+
+        """
         root = Path(flext_infra.__file__).resolve().parent
         templates = root / "templates"
         return tuple(
-            sorted(path for path in root.rglob("*.py") if templates not in path.parents)
+            sorted(
+                path for path in root.rglob("*.py") if templates not in path.parents
+            ),
         )
 
+    @staticmethod
     def _string_literals(
-        self, module: Path, *, containing: str
+        module: Path,
+        *,
+        containing: str,
     ) -> t.VariadicTuple[str]:
-        """Return every string literal in *module*, excluding docstrings."""
+        """Return every string literal in *module*, excluding docstrings.
+
+        Returns:
+            Every string literal in *module*, excluding docstrings.
+
+        """
         source = module.read_text(encoding="utf-8")
         if containing not in source:
             return ()
@@ -45,7 +63,8 @@ class TestsFlextInfraCustomMakeSurfaceIsDerived:
             ast.get_docstring(node, clean=False)
             for node in ast.walk(tree)
             if isinstance(
-                node, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
+                node,
+                ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
             )
         }
         return tuple(
@@ -56,7 +75,8 @@ class TestsFlextInfraCustomMakeSurfaceIsDerived:
             and node.value not in docstrings
         )
 
-    def test_include_directive_is_derived_from_the_filename_ssot(self) -> None:
+    @staticmethod
+    def test_include_directive_is_derived_from_the_filename_ssot() -> None:
         """The include directive embeds the SSOT filename, not a copy of it."""
         tm.that(
             c.Infra.MAKEFILE_CUSTOM_INCLUDE.endswith(c.Infra.CUSTOM_MAKE_FILENAME),
@@ -74,7 +94,8 @@ class TestsFlextInfraCustomMakeSurfaceIsDerived:
             and any(
                 c.Infra.CUSTOM_MAKE_FILENAME in literal
                 for literal in self._string_literals(
-                    module, containing=c.Infra.CUSTOM_MAKE_FILENAME
+                    module,
+                    containing=c.Infra.CUSTOM_MAKE_FILENAME,
                 )
             )
         )

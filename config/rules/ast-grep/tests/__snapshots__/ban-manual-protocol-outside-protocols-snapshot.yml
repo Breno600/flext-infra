@@ -1,0 +1,72 @@
+id: ban-manual-protocol-outside-protocols
+snapshots:
+  ? |
+    class Box(Protocol[T]):
+        def get(self) -> T: ...
+  : labels:
+    - source: |-
+        class Box(Protocol[T]):
+            def get(self) -> T: ...
+      style: primary
+      start: 0
+      end: 51
+    - source: Box
+      style: secondary
+      start: 6
+      end: 9
+    - source: Protocol
+      style: secondary
+      start: 10
+      end: 18
+    - source: Protocol[T]
+      style: secondary
+      start: 10
+      end: 21
+    - source: Protocol[T]
+      style: secondary
+      start: 10
+      end: 21
+  ? |
+    class Reader(Protocol):
+        def read(self) -> str: ...
+  : labels:
+    - source: |-
+        class Reader(Protocol):
+            def read(self) -> str: ...
+      style: primary
+      start: 0
+      end: 54
+    - source: Reader
+      style: secondary
+      start: 6
+      end: 12
+    - source: Protocol
+      style: secondary
+      start: 13
+      end: 21
+    - source: Protocol
+      style: secondary
+      start: 13
+      end: 21
+  ? |
+    class Writer(typing.Protocol):
+        def write(self, data: str) -> None: ...
+  : labels:
+    - source: |-
+        class Writer(typing.Protocol):
+            def write(self, data: str) -> None: ...
+      style: primary
+      start: 0
+      end: 74
+    - source: Writer
+      style: secondary
+      start: 6
+      end: 12
+    - source: typing.Protocol
+      style: secondary
+      start: 13
+      end: 28
+    - source: typing.Protocol
+      style: secondary
+      start: 13
+      end: 28

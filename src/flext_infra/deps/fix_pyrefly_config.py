@@ -12,11 +12,8 @@ from typing import override
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
-
-from ..base import FlextInfraServiceBase
-from ._pyrefly_fix_steps import FlextInfraConfigFixerSteps
-
-logger = u.fetch_logger(__name__)
+from flext_infra.base import FlextInfraServiceBase
+from flext_infra.deps._pyrefly_fix_steps import FlextInfraConfigFixerSteps
 
 
 class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bool]):
@@ -32,12 +29,22 @@ class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bo
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute."""
+        """Execute.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return r[bool].fail("Use execute_command() directly")
 
     @classmethod
     def execute_payload(cls, params: m.Infra.FixPyreflyConfigCommand) -> p.Result[bool]:
-        """Execute pyrefly config repair from the canonical check command payload."""
+        """Execute pyrefly config repair from the canonical check command payload.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         fixer = cls(repository_root=params.repository_root)
         fix_result = fixer.run(
             projects=params.project_names or [],
@@ -49,9 +56,17 @@ class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bo
         return r[bool].ok(True)
 
     def process_file(
-        self, path: Path, *, dry_run: bool = False
+        self,
+        path: Path,
+        *,
+        dry_run: bool = False,
     ) -> p.Result[t.StrSequence]:
-        """Process one pyproject.toml file and apply fixes."""
+        """Process one pyproject.toml file and apply fixes.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
+        """
         document_result = u.Cli.toml_read_document(path)
         if document_result.failure:
             return r[t.StrSequence].from_failure(document_result)
@@ -61,21 +76,25 @@ class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bo
         if not isinstance(tool_data, Mapping):
             return r[t.StrSequence].ok(())
         typed_tool_data: p.Result[t.MutableJsonMapping] = u.validate_value(
-            t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER, tool_data
+            t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER,
+            tool_data,
         )
         if typed_tool_data.failure:
             return r[t.StrSequence].fail_op(
-                f"validate {path} [tool]", typed_tool_data.error
+                f"validate {path} [tool]",
+                typed_tool_data.error,
             )
         pyrefly_data = typed_tool_data.value.get(c.Infra.PYREFLY)
         if not isinstance(pyrefly_data, Mapping):
             return r[t.StrSequence].ok(())
         validated_pyrefly: p.Result[t.MutableJsonMapping] = u.validate_value(
-            t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER, pyrefly_data
+            t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER,
+            pyrefly_data,
         )
         if validated_pyrefly.failure:
             return r[t.StrSequence].fail_op(
-                f"validate {path} [tool.pyrefly]", validated_pyrefly.error
+                f"validate {path} [tool.pyrefly]",
+                validated_pyrefly.error,
             )
         pyrefly: MutableMapping[str, t.JsonValue] = validated_pyrefly.value
         original_pyrefly: t.JsonMapping = dict(pyrefly)
@@ -87,7 +106,9 @@ class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bo
             return search_result
         all_fixes.extend(search_result.value)
         includes_result = self._sync_project_includes(
-            pyrefly, project_dir, is_root=is_root
+            pyrefly,
+            project_dir,
+            is_root=is_root,
         )
         if includes_result.failure:
             return includes_result
@@ -109,7 +130,7 @@ class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bo
             pyrefly_table = tool_table[c.Infra.PYREFLY]
             if not isinstance(pyrefly_table, MutableMapping):
                 return r[t.StrSequence].fail(f"invalid {path} [tool.pyrefly] table")
-            # flext-wkii.17 (codex): reassign only changed keys so an untouched
+            # Reassign only changed keys so an untouched
             # nested table retains adjacent managed comments and TOML trivia.
             for key, value in pyrefly.items():
                 if key in original_pyrefly and original_pyrefly[key] == value:
@@ -121,9 +142,18 @@ class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bo
         return r[t.StrSequence].ok(all_fixes)
 
     def run(
-        self, projects: t.StrSequence, *, dry_run: bool = False, verbose: bool = False
+        self,
+        projects: t.StrSequence,
+        *,
+        dry_run: bool = False,
+        verbose: bool = False,
     ) -> p.Result[t.StrSequence]:
-        """Run pyrefly configuration fixes for selected projects."""
+        """Run pyrefly configuration fixes for selected projects.
+
+        Returns:
+            The resulting ``p.Result[t.StrSequence]``.
+
+        """
         project_paths = [
             (
                 project_path
@@ -134,7 +164,8 @@ class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bo
             for project_path in [Path(project)]
         ]
         files_result = u.Infra.find_all_pyproject_files(
-            self._repository_root, project_paths=project_paths or None
+            self._repository_root,
+            project_paths=project_paths or None,
         )
         if files_result.failure:
             return r[t.StrSequence].from_failure(files_result)
@@ -150,16 +181,17 @@ class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bo
                 continue
             total_fixes += len(fixes)
             if verbose:
-                try:
-                    rel = path.relative_to(self._repository_root)
-                except ValueError:
-                    rel = path
+                rel = (
+                    path.relative_to(self._repository_root)
+                    if path.is_relative_to(self._repository_root)
+                    else path
+                )
                 for fix in fixes:
                     line = f"  {('(dry)' if dry_run else '✓')} {rel}: {fix}"
-                    logger.info("pyrefly_config_fix", detail=line)
+                    self.logger.info("pyrefly_config_fix", detail=line)
                     messages.append(line)
         if verbose and total_fixes == 0:
-            logger.info("pyrefly_configs_clean")
+            self.logger.info("pyrefly_configs_clean")
         return r[t.StrSequence].ok(messages)
 
 

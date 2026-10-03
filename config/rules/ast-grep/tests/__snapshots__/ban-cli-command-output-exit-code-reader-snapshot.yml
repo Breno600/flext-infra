@@ -1,0 +1,42 @@
+id: ban-cli-command-output-exit-code-reader
+snapshots:
+  ? |
+    def check(command):
+        output = u.Cli.run_checked(command).value
+        return output.exit_code == 0
+  : labels:
+    - source: output.exit_code
+      style: primary
+      start: 77
+      end: 93
+    - source: output = u.Cli.run_checked(command).value
+      style: secondary
+      start: 24
+      end: 65
+    - source: |-
+        def check(command):
+            output = u.Cli.run_checked(command).value
+            return output.exit_code == 0
+      style: secondary
+      start: 0
+      end: 98
+  ? |
+    def check(command):
+        output = u.Cli.run_raw(command).unwrap()
+        return output.exit_code
+  : labels:
+    - source: output.exit_code
+      style: primary
+      start: 76
+      end: 92
+    - source: output = u.Cli.run_raw(command).unwrap()
+      style: secondary
+      start: 24
+      end: 64
+    - source: |-
+        def check(command):
+            output = u.Cli.run_raw(command).unwrap()
+            return output.exit_code
+      style: secondary
+      start: 0
+      end: 92
