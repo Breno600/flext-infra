@@ -1,0 +1,10 @@
+id: ban-broad-annotation
+valid:
+  - "def run(values: t.StrMapping) -> t.StrSequence: ..."
+  - "values: Annotated[t.StrMapping, m.Field(default_factory=dict)]"
+  - "value = dict(name='x')"
+invalid:
+  - "def run(values: Any) -> None: ..."
+  - "def run(values: str) -> Optional[str]: ..."
+  - "value: object = None"
+  - "values: dict[str, str] = {}"

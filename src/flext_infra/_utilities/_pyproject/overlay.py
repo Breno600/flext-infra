@@ -1,4 +1,8 @@
-"""Preserve live CUSTOM project keys and unmanaged tool tables over renders."""
+"""Preserve live CUSTOM project keys and unmanaged tool tables over renders.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,10 +11,11 @@ from typing import TYPE_CHECKING
 from flext_cli import r, u
 
 from flext_infra import c, t
-
-from ..dependencies import FlextInfraUtilitiesDependencies
-from ..managed_conflicts import FlextInfraUtilitiesManagedConflicts
-from .requirements import FlextInfraUtilitiesPyprojectRequirements
+from flext_infra._utilities._pyproject.requirements import (
+    FlextInfraUtilitiesPyprojectRequirements,
+)
+from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
+from flext_infra._utilities.managed_conflicts import FlextInfraUtilitiesManagedConflicts
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -28,7 +33,12 @@ class FlextInfraUtilitiesPyprojectOverlay:
         preserve_project_keys: t.StrSequence | None = None,
         managed_tool_tables: t.StrSequence | None = None,
     ) -> p.Result[str]:
-        """Keep live CUSTOM project keys and unmanaged tool tables."""
+        """Keep live CUSTOM project keys and unmanaged tool tables.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         spec = FlextInfraUtilitiesManagedConflicts.pyproject_managed_file()
         if spec.failure:
             return r[str].from_failure(spec)
@@ -61,18 +71,24 @@ class FlextInfraUtilitiesPyprojectOverlay:
             if key in live_project:
                 if key == c.Infra.DEPENDENCIES:
                     validated_required: p.Result[t.StrSequence] = u.validate_value(
-                        t.Infra.STR_SEQ_ADAPTER, project.get(key, []), strict=True
+                        t.Infra.STR_SEQ_ADAPTER,
+                        project.get(key, []),
+                        strict=True,
                     )
                     if validated_required.failure:
                         return r[str].fail_op(
-                            "validate runtime dependencies", validated_required.error
+                            "validate runtime dependencies",
+                            validated_required.error,
                         )
                     validated_custom: p.Result[t.StrSequence] = u.validate_value(
-                        t.Infra.STR_SEQ_ADAPTER, live_project[key], strict=True
+                        t.Infra.STR_SEQ_ADAPTER,
+                        live_project[key],
+                        strict=True,
                     )
                     if validated_custom.failure:
                         return r[str].fail_op(
-                            "validate runtime dependencies", validated_custom.error
+                            "validate runtime dependencies",
+                            validated_custom.error,
                         )
                     required = validated_required.value
                     custom = validated_custom.value
@@ -96,7 +112,7 @@ class FlextInfraUtilitiesPyprojectOverlay:
                                 ),
                             )),
                             key=FlextInfraUtilitiesPyprojectRequirements.dependency_order_key,
-                        )
+                        ),
                     )
                 else:
                     project[key] = live_project[key]

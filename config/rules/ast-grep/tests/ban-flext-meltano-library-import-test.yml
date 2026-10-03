@@ -1,0 +1,6 @@
+id: ban-flext-meltano-library-import
+valid:
+  - from flext_meltano import FlextMeltano
+invalid:
+  - import singer_sdk
+  - from singer_sdk.streams import Stream

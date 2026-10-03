@@ -5,6 +5,9 @@ Filesystem-only worktree facts: registered worktrees come straight from
 bounded newest mtime, and the layout/dependency vocabulary arrives as typed
 policy. Retirement is never executed here: a stale worktree only yields
 ``contents-remove`` plans for its rebuildable dependency directories.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -15,18 +18,20 @@ from pathlib import Path
 from typing import Literal
 
 from flext_infra import c, m, t
-
-from .worktree_measure import FlextInfraUtilitiesGitWorktreeMeasureMixin
+from flext_infra._utilities._git.worktree_measure import (
+    FlextInfraUtilitiesGitWorktreeMeasureMixin,
+)
 
 
 class FlextInfraUtilitiesGitWorktreeFactsMixin(
-    FlextInfraUtilitiesGitWorktreeMeasureMixin
+    FlextInfraUtilitiesGitWorktreeMeasureMixin,
 ):
     """Own FS-only worktree facts discovery and stale-deps planning."""
 
     @classmethod
     def git_registered_worktrees_fs(
-        cls, repository_root: Path
+        cls,
+        repository_root: Path,
     ) -> t.VariadicTuple[t.Pair[Path, str]]:
         """Resolve registered worktrees from ``.git/worktrees`` without Git.
 
@@ -35,6 +40,10 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
         detached entries yield an empty branch. Broken or unreadable entries
         are report cells, not failures, skipped silently in stable sorted
         order.
+
+        Returns:
+            The resulting ``t.VariadicTuple[t.Pair[Path, str]]``.
+
         """
         registry = (
             repository_root.expanduser()
@@ -56,9 +65,11 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
 
     @classmethod
     def collect_worktree_facts(
-        cls, query: m.Infra.WorktreeFactsQuery
+        cls,
+        query: m.Infra.WorktreeFactsQuery,
     ) -> t.Pair[
-        t.VariadicTuple[m.Infra.WorktreeFact], t.VariadicTuple[m.Infra.PruneAction]
+        t.VariadicTuple[m.Infra.WorktreeFact],
+        t.VariadicTuple[m.Infra.PruneAction],
     ]:
         """Measure every registered worktree and plan stale-deps pruning.
 
@@ -66,6 +77,11 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
         flagged ``retire_candidate`` and each non-symlinked deps directory
         becomes one ``contents-remove`` action owned by ``worktrees``.
         Nothing is executed here.
+
+        Returns:
+            The resulting ``t.Pair[t.VariadicTuple[m.Infra.WorktreeFact],
+                t.VariadicTuple[m.Infra.PruneAction]]``.
+
         """
         facts: list[m.Infra.WorktreeFact] = []
         actions: list[m.Infra.PruneAction] = []
@@ -78,11 +94,13 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
                 facts.append(
                     cls._worktree_fact(
                         m.Infra.WorktreeCandidate(
-                            path=worktree_root, repo=repo_root, branch=branch
+                            path=worktree_root,
+                            repo=repo_root,
+                            branch=branch,
                         ),
                         query,
                         actions,
-                    )
+                    ),
                 )
         return tuple(facts), tuple(actions)
 
@@ -94,7 +112,12 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
         mode: str = "manual",
         apply: bool = False,
     ) -> m.Infra.WorktreesReport:
-        """Assemble the facts report and its plan-only stale-deps actions."""
+        """Assemble the facts report and its plan-only stale-deps actions.
+
+        Returns:
+            The resulting ``m.Infra.WorktreesReport``.
+
+        """
         facts, actions = cls.collect_worktree_facts(query)
         return m.Infra.WorktreesReport(
             facts=facts,
@@ -114,7 +137,12 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
         query: m.Infra.WorktreeFactsQuery,
         actions: list[m.Infra.PruneAction],
     ) -> m.Infra.WorktreeFact:
-        """Build one fact and append its planned stale-deps actions."""
+        """Build one fact and append its planned stale-deps actions.
+
+        Returns:
+            The resulting ``m.Infra.WorktreeFact``.
+
+        """
         worktree_root = candidate.path
         total_bytes, newest_mtime, exact = cls._worktree_measure(worktree_root)
         deps: list[t.Pair[Path, int]] = []
@@ -148,36 +176,50 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
                         ),
                         owner="worktrees",
                         reclaim_bytes=size,
-                    )
+                    ),
                 )
         return correlated
 
     @staticmethod
     def _worktree_gitdir_pointer(entry: Path) -> Path | None:
-        """Read one registry ``gitdir`` pointer, or ``None`` when unreadable."""
-        text = ""
-        try:
-            text = (entry / "gitdir").read_text(encoding=c.Cli.ENCODING_DEFAULT).strip()
-        except (OSError, ValueError):
-            text = ""
+        """Read one registry ``gitdir`` pointer.
+
+        ``None`` means the registry entry carries no pointer file, which Git
+        itself treats as a prunable entry; any read error escapes.
+
+        Returns:
+            The resulting ``Path | None``.
+
+        """
+        pointer = entry / "gitdir"
+        if not pointer.is_file():
+            return None
+        text = pointer.read_text(encoding=c.Cli.ENCODING_DEFAULT).strip()
         return Path(text) if text else None
 
     @staticmethod
     def _worktree_registry_branch(entry: Path) -> str:
-        """Read the checked-out branch from a registry HEAD, else empty text."""
-        head = ""
-        try:
-            head = (entry / "HEAD").read_text(encoding=c.Cli.ENCODING_DEFAULT).strip()
-        except OSError:
-            head = ""
+        """Read the checked-out branch from a registry HEAD (empty when detached).
+
+        Returns:
+            The resulting ``str``.
+
+        """
+        head = (entry / "HEAD").read_text(encoding=c.Cli.ENCODING_DEFAULT).strip()
         prefix = f"ref: {c.Infra.GIT_REFS_HEADS}"
         return head.removeprefix(prefix) if head.startswith(prefix) else ""
 
     @staticmethod
     def _worktree_kind(
-        worktree_root: Path, policy: m.Infra.WorktreeFactsPolicy
+        worktree_root: Path,
+        policy: m.Infra.WorktreeFactsPolicy,
     ) -> Literal["sibling", "tool_internal"]:
-        """Classify a worktree as tool-internal or sibling from policy patterns."""
+        """Classify a worktree as tool-internal or sibling from policy patterns.
+
+        Returns:
+            The resulting ``Literal['sibling', 'tool_internal']``.
+
+        """
         text = f"{worktree_root}/"
         internal = any(
             str(worktree_root).endswith(pattern) or f"/{pattern}/" in text
@@ -187,9 +229,15 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
 
     @classmethod
     def _worktree_bead_index(
-        cls, rows: t.VariadicTuple[t.JsonMapping]
+        cls,
+        rows: t.VariadicTuple[t.JsonMapping],
     ) -> t.MappingKV[str, t.MappingKV[str, t.JsonMapping]]:
-        """Index optional bead rows by work dir and branch for correlation."""
+        """Index optional bead rows by work dir and branch for correlation.
+
+        Returns:
+            The resulting ``t.MappingKV[str, t.MappingKV[str, t.JsonMapping]]``.
+
+        """
         by_dir: MutableMapping[str, t.JsonMapping] = {}
         by_branch: MutableMapping[str, t.JsonMapping] = {}
         for row in rows:
@@ -197,7 +245,7 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
             if not isinstance(metadata, Mapping):
                 continue
             work_dir = str(
-                metadata.get("gc.work_dir") or metadata.get("work_dir") or ""
+                metadata.get("gc.work_dir") or metadata.get("work_dir") or "",
             )
             if work_dir:
                 by_dir.setdefault(work_dir, row)
@@ -213,7 +261,12 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
         candidate: m.Infra.WorktreeCandidate,
         query: m.Infra.WorktreeFactsQuery,
     ) -> m.Infra.WorktreeFact:
-        """Attach optional bead/PR/actor evidence to one fact."""
+        """Attach optional bead/PR/actor evidence to one fact.
+
+        Returns:
+            The resulting ``m.Infra.WorktreeFact``.
+
+        """
         index = cls._worktree_bead_index(query.bead_rows)
         row = (
             index.get("by_branch", {}).get(candidate.branch)
@@ -233,7 +286,7 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
                 "pr_number": pr if isinstance(pr, int) else None,
                 "actor": evidence[0],
                 "session_id": evidence[1],
-            }
+            },
         )
 
 

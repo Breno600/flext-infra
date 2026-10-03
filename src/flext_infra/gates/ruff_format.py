@@ -1,4 +1,8 @@
-"""Ruff format gate implementation."""
+"""Ruff format gate implementation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,8 +10,7 @@ from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_core import r
 from flext_infra import c, config, m, u
-
-from .base_gate import FlextInfraGate
+from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -24,9 +27,17 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
 
     @override
     def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Build the format verdict command from the config-owned flags."""
+        """Build the format verdict command from the config-owned flags.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         _ = project_dir, ctx
         return self._python_module_command(
             c.Infra.RUFF,
@@ -37,17 +48,32 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
 
     @override
     def _get_check_dirs(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
-        """Get check dirs."""
+        """Get check dirs.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         _ = ctx
         return self._existing_check_dirs(project_dir) or ["."]
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Parse check output."""
+        """Parse check output.
+
+        Returns:
+            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+
+        """
         _ = project_dir, ctx
         issues: t.MutableSequenceOf[m.Infra.Issue] = []
         if not u.Cli.process_succeeded(result.outcome) and result.stdout.strip():
@@ -71,15 +97,23 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
                             column=0,
                             code=c.Infra.FORMAT,
                             message="Would be reformatted",
-                        )
+                        ),
                     )
         return u.Cli.process_succeeded(result.outcome), issues
 
     @override
     def _build_fix_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, targets: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        targets: t.StrSequence,
     ) -> t.StrSequence:
-        """Build fix command."""
+        """Build fix command.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         _ = project_dir, ctx
         return self._python_module_command(
             c.Infra.RUFF,
@@ -90,7 +124,9 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
 
     @classmethod
     def format_files(
-        cls, repository_root: Path, paths: t.SequenceOf[Path]
+        cls,
+        repository_root: Path,
+        paths: t.SequenceOf[Path],
     ) -> p.Result[bool]:
         """Format an explicit path list with the config-owned apply flags.
 
@@ -99,6 +135,10 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
         time, because the mod circuit enforces canonical formatting on the
         first pass after applying instead of deferring to a project-wide
         ``make fmt`` sweep.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         if not paths:
             return r[bool].ok(True)

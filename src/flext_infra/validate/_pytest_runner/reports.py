@@ -1,4 +1,8 @@
-"""Durable diagnostics and execution accounting for pytest."""
+"""Durable diagnostics and execution accounting for pytest.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,9 +13,8 @@ from defusedxml import ElementTree as DefusedET
 
 from flext_core import r
 from flext_infra import c, m, u
+from flext_infra.validate._pytest_runner.base import FlextInfraPytestRunnerBase
 from flext_infra.validate.pytest_diag import FlextInfraPytestDiagExtractor
-
-from .base import FlextInfraPytestRunnerBase
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -24,22 +27,47 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
     def _write_run_context(report_dir: Path, context: m.Infra.PytestRunContext) -> None:
         """Name the mode and database before any subprocess can fail."""
         u.Cli.atomic_write_text_file(
-            report_dir / "run-context.json", context.model_dump_json(indent=2) + "\n"
+            report_dir / "run-context.json",
+            context.model_dump_json(indent=2) + "\n",
         ).unwrap()
         u.Cli.atomic_write_text_file(
-            report_dir.parent / "latest.txt", f"{report_dir.name}\n"
+            report_dir.parent / "latest.txt",
+            f"{report_dir.name}\n",
         ).unwrap()
 
     @staticmethod
     def _failure_detail(message: str, pytest_log: Path) -> str:
-        """Attach the bounded log tail to an artifact failure."""
+        """Attach the bounded log tail to an artifact failure.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         tail = "\n".join(pytest_log.read_text(encoding="utf-8").splitlines()[-40:])
         return f"{message}\n--- pytest.log (tail) ---\n{tail}" if tail else message
 
     def _accounting(
-        self, junit: Path, log: Path, *, cache_restored: bool, reported_count: int
+        self,
+        junit: Path,
+        log: Path,
+        *,
+        cache_restored: bool,
+        reported_count: int,
     ) -> p.Result[m.Infra.TestmonRunAccounting]:
-        """Parse typed executed/deselected accounting from durable artifacts."""
+        """Parse typed executed/deselected accounting from durable artifacts.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.TestmonRunAccounting]``.
+
+        Raises:
+            FileNotFoundError: If ``not junit.exists()``.
+            RuntimeError: Always; or if non-coverage accounting requires the durable
+                selection plan; or if testmon selected node IDs outside the complete
+                collection inventory.
+            ValueError: If JUnit must be a regular file; or if ``junit.stat().st_size ==
+                0``; or if ``root is None``.
+
+        """
         if not junit.exists():
             raise FileNotFoundError(junit)
         if not junit.is_file():
@@ -54,7 +82,7 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
             raise ValueError(msg)
         executed = sum(1 for _ in root.iter("testcase"))
         context = m.Infra.PytestRunContext.model_validate_json(
-            (log.parent / "run-context.json").read_text(encoding="utf-8")
+            (log.parent / "run-context.json").read_text(encoding="utf-8"),
         )
         deselected = 0
         inventory_count = None
@@ -62,7 +90,7 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         selection_plan: m.Infra.PytestSelectionPlan | None = None
         if context.execution_mode != c.Infra.PytestExecutionMode.COVERAGE:
             selection_plan = m.Infra.PytestSelectionPlan.model_validate_json(
-                (log.parent / "selection-plan.json").read_text(encoding="utf-8")
+                (log.parent / "selection-plan.json").read_text(encoding="utf-8"),
             )
             owns_no_tests = selection_plan.owns_no_tests
         if owns_no_tests and selection_plan is not None:
@@ -86,22 +114,25 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
                 raise RuntimeError(msg)
             selected = (
                 m.Infra.PytestCollectionManifest.model_validate_json(
-                    selection_plan.manifest_path.read_text(encoding="utf-8")
+                    selection_plan.manifest_path.read_text(encoding="utf-8"),
                 )
                 if context.execution_mode == c.Infra.PytestExecutionMode.FULL
                 else m.Infra.PytestCollectionManifest.model_validate_json(
-                    (log.parent / "testmon-selection.json").read_text(encoding="utf-8")
+                    (log.parent / "testmon-selection.json").read_text(encoding="utf-8"),
                 )
             )
             inventory = (
                 selected
                 if not selection_plan.inventory_collected
                 else m.Infra.PytestCollectionManifest.model_validate_json(
-                    (log.parent / "testmon-inventory.json").read_text(encoding="utf-8")
+                    (log.parent / "testmon-inventory.json").read_text(encoding="utf-8"),
                 )
             )
             if not set(selected.node_ids).issubset(inventory.node_ids):
-                msg = "testmon selected node IDs outside the complete collection inventory"
+                msg = (
+                    "testmon selected node IDs outside the complete "
+                    "collection inventory"
+                )
                 raise RuntimeError(msg)
             inventory_count = len(inventory.node_ids)
             deselected = inventory_count - len(selected.node_ids)
@@ -121,7 +152,12 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         raise RuntimeError(msg)
 
     def _diagnostics(self, report_dir: Path) -> p.Result[m.Infra.PytestDiagnostics]:
-        """Extract diagnostics through the canonical typed service."""
+        """Extract diagnostics through the canonical typed service.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.PytestDiagnostics]``.
+
+        """
         extractor = FlextInfraPytestDiagExtractor(
             repository_root=self.root,
             junit=report_dir / "junit.xml",
@@ -129,23 +165,31 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
             report_log=report_dir / "events.jsonl",
         )
         return extractor.extract(
-            extractor.junit, extractor.log_path, report_log=extractor.report_log
+            extractor.junit,
+            extractor.log_path,
+            report_log=extractor.report_log,
         )
 
     @staticmethod
     def _collection_diagnostics(report_log: Path) -> None:
-        """Require complete collection evidence before accepting a selection."""
+        """Require complete collection evidence before accepting a selection.
+
+        Raises:
+            RuntimeError: If pytest collection contains blocking findings.
+
+        """
         diagnostics = FlextInfraPytestDiagExtractor.extract_report_log(
-            report_log
+            report_log,
         ).unwrap()
         receipt = report_log.with_suffix(".diagnostics.json")
         u.Cli.atomic_write_text_file(
-            receipt, diagnostics.model_dump_json(indent=2) + "\n"
+            receipt,
+            diagnostics.model_dump_json(indent=2) + "\n",
         ).unwrap()
         if any((
             diagnostics.collection_failed_count,
             diagnostics.collection_skipped_count,
-            diagnostics.blocking_warning_count,
+            diagnostics.warning_count,
         )):
             msg = f"pytest collection contains blocking findings: {receipt}"
             raise RuntimeError(msg)
@@ -157,11 +201,16 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         context: m.Infra.PytestRunContext,
         suite: m.Infra.PytestDiagnostics,
     ) -> t.VariadicTuple[t.Pair[str, m.Infra.PytestDiagnostics]]:
-        """Read each subprocess receipt once in execution order."""
+        """Read each subprocess receipt once in execution order.
+
+        Returns:
+            The resulting ``t.VariadicTuple[t.Pair[str, m.Infra.PytestDiagnostics]]``.
+
+        """
         phases: t.MutableSequenceOf[t.Pair[str, m.Infra.PytestDiagnostics]] = []
         if context.execution_mode != c.Infra.PytestExecutionMode.COVERAGE:
             selection_plan = m.Infra.PytestSelectionPlan.model_validate_json(
-                (report_dir / "selection-plan.json").read_text(encoding="utf-8")
+                (report_dir / "selection-plan.json").read_text(encoding="utf-8"),
             )
             if selection_plan.owns_no_tests:
                 # The declared empty suite ran no collection subprocess, so no
@@ -181,13 +230,23 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
                 phases.append((
                     phase,
                     m.Infra.PytestDiagnostics.model_validate_json(
-                        receipt.read_text(encoding="utf-8")
+                        receipt.read_text(encoding="utf-8"),
                     ),
                 ))
         return (*phases, ("suite", suite))
 
     def _validate_coverage(self, report_dir: Path) -> p.Result[bool]:
-        """Require a non-empty coverage report; the percentage is never a gate."""
+        """Require a non-empty coverage report; the percentage is never a gate.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        Raises:
+            FileNotFoundError: If ``not coverage.exists()``.
+            ValueError: If coverage artifact must be a regular file; or if
+                ``coverage.stat().st_size == 0``.
+
+        """
         coverage = report_dir / "coverage.xml"
         if not coverage.exists():
             raise FileNotFoundError(coverage)
@@ -196,7 +255,8 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
             raise ValueError(msg)
         if coverage.stat().st_size == 0:
             msg = self._failure_detail(
-                f"empty coverage artifact: {coverage}", report_dir / "pytest.log"
+                f"empty coverage artifact: {coverage}",
+                report_dir / "pytest.log",
             )
             raise ValueError(msg)
         return r.ok(True)
@@ -218,15 +278,6 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
                     f"{phase}: {line}"
                     for phase, item in phases
                     for line in item.warning_lines
-                ),
-                "\n",
-            ),
-            (
-                "suspended-warnings.txt",
-                tuple(
-                    f"{phase}: {line}"
-                    for phase, item in phases
-                    for line in item.suspended_warning_lines
                 ),
                 "\n",
             ),

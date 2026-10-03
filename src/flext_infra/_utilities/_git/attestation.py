@@ -1,4 +1,8 @@
-"""SSH-signed Git gate attestation owner."""
+"""SSH-signed Git gate attestation owner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -12,9 +16,8 @@ from git import GitCommandError
 
 from flext_core import r
 from flext_infra import m
-
-from ..._utilities._git.remote import FlextInfraUtilitiesGitRemote
-from ..._utilities._git.semantic_identity import (
+from flext_infra._utilities._git.remote import FlextInfraUtilitiesGitRemote
+from flext_infra._utilities._git.semantic_identity import (
     FlextInfraUtilitiesGitSemanticIdentityMixin,
 )
 
@@ -23,7 +26,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesGitAttestationMixin(
-    FlextInfraUtilitiesGitSemanticIdentityMixin
+    FlextInfraUtilitiesGitSemanticIdentityMixin,
 ):
     """Create and verify immutable SSH-signed gate tags."""
 
@@ -36,7 +39,8 @@ class FlextInfraUtilitiesGitAttestationMixin(
 
     @classmethod
     def _attestation_predicate(
-        cls, request: m.Infra.GateAttestationCreateRequest
+        cls,
+        request: m.Infra.GateAttestationCreateRequest,
     ) -> p.Result[m.Infra.GateAttestationPredicate]:
         repo_root = Path(request.workspace).expanduser().resolve()
         identity = cls.git_identity(m.Infra.GitRepoRequest(repo_root=repo_root))
@@ -45,7 +49,7 @@ class FlextInfraUtilitiesGitAttestationMixin(
         repo = cls._repo(repo_root)
         if repo.is_dirty(untracked_files=False):
             return r[m.Infra.GateAttestationPredicate].fail(
-                "gate attestation requires a clean committed worktree"
+                "gate attestation requires a clean committed worktree",
             )
         evidence_result = cls._run_gate_evidence(repo_root, request.gates)
         if evidence_result.failure:
@@ -53,7 +57,7 @@ class FlextInfraUtilitiesGitAttestationMixin(
         toolchain = cls._toolchain_digest(repo_root)
         predicate = m.Infra.GateAttestationPredicate(
             repository=FlextInfraUtilitiesGitRemote.canonical_origin_remote(
-                identity.value.origin_remote or ""
+                identity.value.origin_remote or "",
             ),
             commit_sha=identity.value.head_oid,
             tree_sha=repo.head.commit.tree.hexsha,
@@ -66,7 +70,9 @@ class FlextInfraUtilitiesGitAttestationMixin(
 
     @classmethod
     def _run_gate_evidence(
-        cls, repo_root: Path, gates: t.StrSequence
+        cls,
+        repo_root: Path,
+        gates: t.StrSequence,
     ) -> p.Result[t.VariadicTuple[m.Infra.GateCommandEvidence]]:
         evidence: list[m.Infra.GateCommandEvidence] = []
         for gate in gates:
@@ -91,7 +97,7 @@ class FlextInfraUtilitiesGitAttestationMixin(
                     result_digest=f"sha256:{digest}",
                     started_at=started.isoformat().replace("+00:00", "Z"),
                     completed_at=completed.isoformat().replace("+00:00", "Z"),
-                )
+                ),
             )
         return r[tuple[m.Infra.GateCommandEvidence, ...]].ok(tuple(evidence))
 
@@ -113,9 +119,15 @@ class FlextInfraUtilitiesGitAttestationMixin(
 
     @classmethod
     def git_create_gate_attestation(
-        cls, request: m.Infra.GateAttestationCreateRequest
+        cls,
+        request: m.Infra.GateAttestationCreateRequest,
     ) -> p.Result[m.Infra.GateAttestationReport]:
-        """Create the exact signed tag for a validated HEAD predicate."""
+        """Create the exact signed tag for a validated HEAD predicate.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GateAttestationReport]``.
+
+        """
         repo_root = Path(request.workspace).expanduser().resolve()
         predicate_result = cls._attestation_predicate(request)
         if predicate_result.failure:
@@ -129,25 +141,31 @@ class FlextInfraUtilitiesGitAttestationMixin(
         try:
             if tag in {item.name for item in repo.tags}:
                 return r[m.Infra.GateAttestationReport].fail(
-                    f"attestation tag already exists: {tag}"
+                    f"attestation tag already exists: {tag}",
                 )
             repo.git.tag("--sign", "--annotate", "--message", serialized.value, tag)
         except (GitCommandError, OSError, ValueError) as exc:
             return r[m.Infra.GateAttestationReport].fail(str(exc), exception=exc)
         return r[m.Infra.GateAttestationReport].ok(
-            cls._attestation_report(tag, predicate)
+            cls._attestation_report(tag, predicate),
         )
 
     @classmethod
     def git_verify_gate_attestation(
-        cls, request: m.Infra.GateAttestationVerifyRequest
+        cls,
+        request: m.Infra.GateAttestationVerifyRequest,
     ) -> p.Result[m.Infra.GateAttestationReport]:
-        """Verify signature, signer, HEAD identity, and exact gate coverage."""
+        """Verify signature, signer, HEAD identity, and exact gate coverage.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GateAttestationReport]``.
+
+        """
         repo_root = Path(request.workspace).expanduser().resolve()
         allowed = Path(request.allowed_signers).expanduser().resolve()
         if not allowed.is_file():
             return r[m.Infra.GateAttestationReport].fail(
-                f"allowed_signers file not found: {allowed}"
+                f"allowed_signers file not found: {allowed}",
             )
         commit_sha = request.commit_sha
         tag = cls._attestation_tag(commit_sha)
@@ -171,7 +189,9 @@ class FlextInfraUtilitiesGitAttestationMixin(
             return r[m.Infra.GateAttestationReport].from_failure(predicate_result)
         predicate = predicate_result.value
         checked = cls._attestation_predicate_from_value(
-            repo_root, predicate, commit_sha
+            repo_root,
+            predicate,
+            commit_sha,
         )
         if checked.failure:
             return r[m.Infra.GateAttestationReport].from_failure(checked)
@@ -183,28 +203,33 @@ class FlextInfraUtilitiesGitAttestationMixin(
         )
         if match is None or match.group(1) != predicate.signer:
             return r[m.Infra.GateAttestationReport].fail(
-                f"verified signature does not identify signer: {predicate.signer}"
+                f"verified signature does not identify signer: {predicate.signer}",
             )
         if tuple(request.expected_gates) != tuple(predicate.covered_gates):
             return r[m.Infra.GateAttestationReport].fail(
-                "attestation gate coverage does not exactly match required gates"
+                "attestation gate coverage does not exactly match required gates",
             )
         if request.output is not None:
             serialized = u.Cli.json_dumps(
-                predicate.model_dump(mode="json"), sort_keys=True
+                predicate.model_dump(mode="json"),
+                sort_keys=True,
             )
             if serialized.failure:
                 return r[m.Infra.GateAttestationReport].from_failure(serialized)
             Path(request.output).expanduser().resolve().write_text(
-                serialized.value, encoding="utf-8"
+                serialized.value,
+                encoding="utf-8",
             )
         return r[m.Infra.GateAttestationReport].ok(
-            cls._attestation_report(tag, predicate)
+            cls._attestation_report(tag, predicate),
         )
 
     @classmethod
     def _predicate_from_tag(
-        cls, repo_root: Path, tag: str, commit_sha: str
+        cls,
+        repo_root: Path,
+        tag: str,
+        commit_sha: str,
     ) -> p.Result[m.Infra.GateAttestationPredicate]:
         try:
             tag_ref = next(
@@ -214,13 +239,13 @@ class FlextInfraUtilitiesGitAttestationMixin(
             return r[m.Infra.GateAttestationPredicate].fail(str(exc), exception=exc)
         if tag_ref.tag is None:
             return r[m.Infra.GateAttestationPredicate].fail(
-                f"attestation is not an annotated tag: {tag}"
+                f"attestation is not an annotated tag: {tag}",
             )
         target = tag_ref.commit.hexsha
         if target != commit_sha:
             return r[m.Infra.GateAttestationPredicate].fail(
                 "attestation tag target does not equal selected commit: "
-                f"{target} != {commit_sha}"
+                f"{target} != {commit_sha}",
             )
         message = tag_ref.tag.message.split(cls._SSH_SIGNATURE_MARKER, maxsplit=1)[0]
         parsed = u.Cli.json_loads(message)
@@ -246,7 +271,7 @@ class FlextInfraUtilitiesGitAttestationMixin(
         commit = repo.commit(commit_sha)
         tree_sha = commit.tree.hexsha
         actual_repository = FlextInfraUtilitiesGitRemote.canonical_origin_remote(
-            identity.value.origin_remote or ""
+            identity.value.origin_remote or "",
         )
         actual_toolchain = cls._toolchain_digest(repo_root, commit_sha)
         mismatches = tuple(
@@ -261,13 +286,14 @@ class FlextInfraUtilitiesGitAttestationMixin(
         )
         if mismatches:
             return r[bool].fail(
-                "attestation does not match HEAD: " + ", ".join(mismatches)
+                "attestation does not match HEAD: " + ", ".join(mismatches),
             )
         return r[bool].ok(True)
 
     @staticmethod
     def _attestation_report(
-        tag: str, predicate: m.Infra.GateAttestationPredicate
+        tag: str,
+        predicate: m.Infra.GateAttestationPredicate,
     ) -> m.Infra.GateAttestationReport:
         return m.Infra.GateAttestationReport(
             tag=tag,

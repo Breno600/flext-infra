@@ -1,4 +1,8 @@
-"""Transaction and session models for the codegen pipeline."""
+"""Transaction and session models for the codegen pipeline.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,9 +11,9 @@ from typing import Annotated, ClassVar, Literal, Self
 
 from flext_cli import m, u
 
-from ... import t
-from ..codegen_toolchain import FlextInfraModelsCodegenToolchain
-from .journal import FlextInfraModelsCodegenJournalModels
+from flext_infra import t
+from flext_infra._models._codegen.journal import FlextInfraModelsCodegenJournalModels
+from flext_infra._models.codegen_toolchain import FlextInfraModelsCodegenToolchain
 
 
 class FlextInfraModelsCodegenTransactionModels:
@@ -21,7 +25,8 @@ class FlextInfraModelsCodegenTransactionModels:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True, extra="forbid")
 
         version: Annotated[
-            Literal[8], m.Field(description="Exact journal schema version")
+            Literal[8],
+            m.Field(description="Exact journal schema version"),
         ]
         transaction_id: Annotated[
             str,
@@ -31,10 +36,12 @@ class FlextInfraModelsCodegenTransactionModels:
             ),
         ]
         scope_device: Annotated[
-            int, m.Field(ge=0, strict=True, description="Scope directory device")
+            int,
+            m.Field(ge=0, strict=True, description="Scope directory device"),
         ]
         scope_inode: Annotated[
-            int, m.Field(gt=0, strict=True, description="Scope directory inode")
+            int,
+            m.Field(gt=0, strict=True, description="Scope directory inode"),
         ]
         state: Annotated[
             Literal["staging", "prepared", "recovering", "committed"],
@@ -65,7 +72,24 @@ class FlextInfraModelsCodegenTransactionModels:
 
         @u.model_validator(mode="after")
         def _validate_lifecycle(self) -> Self:
-            """Bind staging and publication payloads to one safe project set."""
+            """Bind staging and publication payloads to one safe project set.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If generation journal requires an explicit participant; or
+                    if Mise root selector must be first when present; or if Mise journal
+                    project selectors must be unique; or if staging codegen journal must
+                    not authorize live transitions; or if staging codegen journal cannot
+                    generate a transaction root; or if codegen journal destination paths
+                    must be unique; or if codegen journal entry has no project
+                    participant; or if codegen journal directory paths must be unique;
+                    or if codegen journal directory has no project participant; or if
+                    recovering codegen journal lacks rollback identities; or if
+                    non-recovering codegen journal contains rollback identities.
+
+            """
             selectors = tuple(
                 project.selector
                 for project in (*self.projects, *self.file_participants)

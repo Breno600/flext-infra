@@ -28,16 +28,8 @@ Infra:
           allow_toolchain_declarations: true
 
     layout:
-      # Consumer ecosystem root keep-lists (plan B).
+      # Consumer ecosystem root keep-lists.
       project_overrides:
-        cosmos-docgen:
-          # Presentation SSOT surface owned by dcdoc.config.yaml (templates,
-          # generated_assets) plus the project-local strict skills source
-          # declared by AGENTS.md/GOVERNANCE.md; reviewed and kept at root.
-          ignore_globs:
-            - layouts
-            - skills
-            - templates
         flext-cli:
           archive_names:
             - settings.json

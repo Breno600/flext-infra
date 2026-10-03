@@ -14,8 +14,7 @@ from pathlib import Path
 from flext_cli import u as cli_u
 
 from flext_infra import c, t
-
-from .._settings import FlextInfraSettings
+from flext_infra._settings import FlextInfraSettings
 
 if os.name != "nt":
     import pwd
@@ -38,6 +37,10 @@ class FlextInfraUtilitiesBase:
         subprocess environment merges). Static values must be typed
         ``settings.Infra.*`` fields instead; ambient ``os.environ`` reads
         elsewhere are banned by the ``ban-ambient-environ-read`` rule.
+
+        Returns:
+            One raw environment value through the governed boundary.
+
         """
         return FlextInfraSettings.env_lookup(name)
 
@@ -47,6 +50,10 @@ class FlextInfraUtilitiesBase:
 
         Only an unset variable falls back to ``default``; a set but blank value
         stays blank so callers can reject it explicitly.
+
+        Returns:
+            One stripped dynamic environment value, or the stripped default.
+
         """
         value = FlextInfraSettings.env_lookup(name)
         return default.strip() if value is None else value.strip()
@@ -65,6 +72,10 @@ class FlextInfraUtilitiesBase:
         sibling worktrees, so project-local inputs were resolved in the wrong
         checkout and `.reports/tests/latest.txt` was written to the shared root,
         where each project's run overwrote the previous one's evidence.
+
+        Returns:
+            The resulting ``Path``.
+
         """
         target = repository_root or Path.cwd()
         if target.is_file():
@@ -79,6 +90,10 @@ class FlextInfraUtilitiesBase:
         state, so it probes the account's own home directory: check pipelines run
         under redirected homes where the referenced files legitimately live only
         in the real account. On Windows the process home is authoritative.
+
+        Returns:
+            The real account home directory, never the ambient ``HOME``.
+
         """
         return (
             Path.home() if os.name == "nt" else Path(pwd.getpwuid(os.getuid()).pw_dir)
@@ -86,7 +101,12 @@ class FlextInfraUtilitiesBase:
 
     @staticmethod
     def normalize_optional_path(value: str | Path | None) -> Path | None:
-        """Resolve one optional path-like value when present."""
+        """Resolve one optional path-like value when present.
+
+        Returns:
+            The resulting ``Path | None``.
+
+        """
         if value is None:
             return None
         path = value if isinstance(value, Path) else Path(value)
@@ -94,7 +114,12 @@ class FlextInfraUtilitiesBase:
 
     @staticmethod
     def normalize_cli_values(*values: str | None) -> t.StrSequence:
-        """Normalize comma-separated or whitespace-separated CLI selectors."""
+        """Normalize comma-separated or whitespace-separated CLI selectors.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         return tuple(
             item.strip()
             for value in values
@@ -105,23 +130,43 @@ class FlextInfraUtilitiesBase:
 
     @staticmethod
     def normalize_sequence_values(values: t.StrSequence | None) -> t.StrSequence | None:
-        """Normalize repeated CLI sequence fields into a compact selector list."""
+        """Normalize repeated CLI sequence fields into a compact selector list.
+
+        Returns:
+            The resulting ``t.StrSequence | None``.
+
+        """
         names = FlextInfraUtilitiesBase.normalize_cli_values(*(values or ()))
         return names or None
 
     @staticmethod
     def path_depth(path: Path) -> int:
-        """Return the number of components in a path."""
+        """Return the number of components in a path.
+
+        Returns:
+            The number of components in a path.
+
+        """
         return len(path.parts)
 
     @staticmethod
     def path_depth_then_text(path: Path) -> t.Pair[int, str]:
-        """Order paths by depth and then their stable POSIX representation."""
+        """Order paths by depth and then their stable POSIX representation.
+
+        Returns:
+            The resulting ``t.Pair[int, str]``.
+
+        """
         return FlextInfraUtilitiesBase.path_depth(path), path.as_posix()
 
     @staticmethod
     def first_merge_conflict_marker(content: str) -> str | None:
-        """Return the first Git merge-control line in rendered content."""
+        """Return the first Git merge-control line in rendered content.
+
+        Returns:
+            The first Git merge-control line in rendered content.
+
+        """
         return next(
             (
                 line
@@ -133,7 +178,12 @@ class FlextInfraUtilitiesBase:
 
     @staticmethod
     def merge_conflict_control(line: str) -> str | None:
-        """Classify one Git merge-control line from the protocol SSOT."""
+        """Classify one Git merge-control line from the protocol SSOT.
+
+        Returns:
+            The resulting ``str | None``.
+
+        """
         return next(
             (
                 kind
@@ -152,7 +202,17 @@ class FlextInfraUtilitiesBase:
         json_stream: bool = False,
         update_all: bool = False,
     ) -> t.StrSequence:
-        """Build one ast-grep scan command with explicit cwd-relative targets."""
+        """Build one ast-grep scan command with explicit cwd-relative targets.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            ValueError: If ast-grep scan targets must be nonempty and cwd-relative; or
+                if ast-grep rule has no owning config; or if ast-grep rule IDs must be
+                nonempty literal IDs.
+
+        """
         if not targets or any(Path(target).is_absolute() for target in targets):
             msg = "ast-grep scan targets must be nonempty and cwd-relative"
             raise ValueError(msg)
@@ -171,19 +231,22 @@ class FlextInfraUtilitiesBase:
             tuple(rule_ids)
             if rule_ids
             else tuple(
-                sorted(FlextInfraUtilitiesBase.ast_grep_rule_contract(rule_path)[0])
+                sorted(FlextInfraUtilitiesBase.ast_grep_rule_contract(rule_path)[0]),
             )
         )
         if any(not rule_id or "|" in rule_id for rule_id in selected_rule_ids):
             msg = "ast-grep rule IDs must be nonempty literal IDs"
             raise ValueError(msg)
+        rule_pattern = "|".join(
+            re.escape(rule_id) for rule_id in sorted(selected_rule_ids)
+        )
         command = [
             c.Infra.SG,
             c.Infra.SCAN,
             c.Infra.SG_CONFIG_FLAG,
             str(config_path),
             c.Infra.SG_FILTER_FLAG,
-            rf"^(?:{'|'.join(re.escape(rule_id) for rule_id in sorted(selected_rule_ids))})$",
+            f"^(?:{rule_pattern})$",
         ]
         if json_stream:
             command.append("--json=stream")
@@ -196,11 +259,20 @@ class FlextInfraUtilitiesBase:
     def ast_grep_rule_contract(
         rule_path: Path,
     ) -> t.Pair[frozenset[str], frozenset[str]]:
-        """Return every document ID and the subset carrying an automatic fix."""
+        """Return every document ID and the subset carrying an automatic fix.
+
+        Returns:
+            Every document ID and the subset carrying an automatic fix.
+
+        Raises:
+            ValueError: If ast-grep rule file contains no rule documents; or if ast-grep
+                rule document missing required id; or if duplicate ast-grep rule id.
+
+        """
         rule_ids: set[str] = set()
         fixable_ids: set[str] = set()
         for raw_document in rule_path.read_text(encoding=c.Cli.ENCODING_DEFAULT).split(
-            "\n---"
+            "\n---",
         ):
             if not any(
                 line.strip() and not line.lstrip().startswith("#")
@@ -227,7 +299,12 @@ class FlextInfraUtilitiesBase:
     def strongly_connected_components(
         graph: t.MappingKV[str, set[str]],
     ) -> t.SequenceOf[t.StrSequence]:
-        """Return every strongly connected component in one directed graph."""
+        """Return every strongly connected component in one directed graph.
+
+        Returns:
+            Every strongly connected component in one directed graph.
+
+        """
         next_index = 0
         stack: list[str] = []
         indexes: MutableMapping[str, int] = {}
@@ -266,7 +343,12 @@ class FlextInfraUtilitiesBase:
 
     @staticmethod
     def classify_process_exit(exit_code: int) -> str:
-        """Classify a nonzero process status as timeout, signal, or failure."""
+        """Classify a nonzero process status as timeout, signal, or failure.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         if exit_code == c.Infra.PROCESS_TIMEOUT_EXIT_CODE:
             return "timeout"
         if exit_code < 0:

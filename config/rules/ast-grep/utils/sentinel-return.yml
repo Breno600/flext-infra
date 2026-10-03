@@ -1,0 +1,9 @@
+# A return statement that returns nothing or a sentinel value.
+id: sentinel-return
+language: python
+rule:
+  kind: return_statement
+  any:
+    - regex: "^return\\s*$"
+    - has:
+        matches: sentinel-value

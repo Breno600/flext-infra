@@ -1,4 +1,8 @@
-"""Post-apply formatting helpers for refactor census fixes."""
+"""Post-apply formatting helpers for refactor census fixes.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -16,9 +20,16 @@ class FlextInfraRefactorCensusApplyFormattingMixin:
 
     @staticmethod
     def normalize_source(
-        repository_root: Path, path: Path, source: str
+        repository_root: Path,
+        path: Path,
+        source: str,
     ) -> p.Result[str]:
-        """Normalize staged source with the destination's real Ruff configuration."""
+        """Normalize staged source with the destination's real Ruff configuration.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         checked = u.Cli.run(
             [
                 "ruff",
@@ -47,7 +58,7 @@ class FlextInfraRefactorCensusApplyFormattingMixin:
                 cwd=repository_root,
                 input_data=output.stdout,
                 timeout=c.Infra.TIMEOUT_SHORT,
-            ).map(lambda formatted: formatted.stdout)
+            ).map(lambda formatted: formatted.stdout),
         )
 
     @staticmethod
@@ -57,6 +68,11 @@ class FlextInfraRefactorCensusApplyFormattingMixin:
         Two apply paths need this and there is one owner: the census apply
         cascade and the semantic cutover publication. It is public because
         it is consumed across surfaces, not because it is a helper.
+
+        Raises:
+            RuntimeError: If ruff check --fix failed after refactor apply; or if ruff
+                format failed after refactor apply.
+
         """
         existing = sorted({str(path) for path in paths if path.is_file()})
         if not existing:
