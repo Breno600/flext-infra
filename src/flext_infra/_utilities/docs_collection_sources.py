@@ -290,7 +290,10 @@ class FlextInfraUtilitiesDocsCollectionSources:
             projected = cls.collection_capture(projected_manifest, states)
             if projected.content is not None:
                 if projected.content != before.content:
-                    msg = f"projected collection manifest was modified: {projected_manifest}"
+                    msg = (
+                        f"projected collection manifest was modified: "
+                        f"{projected_manifest}"
+                    )
                     raise ValueError(msg)
                 excluded.append(projected_manifest)
         return manifest, tuple(path for path in excluded if path not in affected)

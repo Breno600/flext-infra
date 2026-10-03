@@ -302,8 +302,7 @@ class FlextInfraConfigModelsContexts:
             m.Field(
                 default=(),
                 description=(
-                    "Repository-relative files omitted"
-                    " from declared data directories"
+                    "Repository-relative files omitted from declared data directories"
                 ),
             ),
         ] = ()
@@ -787,8 +786,7 @@ class FlextInfraConfigModelsContexts:
             m.Field(
                 default=(),
                 description=(
-                    "Repository-relative files omitted"
-                    " from declared data directories"
+                    "Repository-relative files omitted from declared data directories"
                 ),
             ),
         ] = ()

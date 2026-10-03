@@ -24,7 +24,7 @@ class FlextInfraReleaseSourceMixin(FlextInfraReleaseArtifactMixin):
         stage_path: Path,
         gitleaks_config: Path,
     ) -> p.Result[t.Pair[m.Infra.SourceSnapshot, str]]:
-        """Extract HEAD of a clean project, scan it, and return identity and license digest.
+        """Extract HEAD of a clean project; scan, return identity + license digest.
 
         Returns:
             The resulting ``p.Result[t.Pair[m.Infra.SourceSnapshot, str]]``.

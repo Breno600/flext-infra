@@ -574,7 +574,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
 
     @staticmethod
     def assignment_docstrings_source(source: str) -> t.StrSequence:
-        """Return assignment names followed by a string-literal expression (rope-parsed).
+        """Return assignment names followed by a string literal (rope-parsed).
 
         Iterates the parsed module's body via ``_fields`` access and pairs each
         ``Assign``/``AnnAssign``/PEP-695 ``TypeAlias`` target with the next

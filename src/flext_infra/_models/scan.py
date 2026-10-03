@@ -196,7 +196,10 @@ class FlextInfraModelsScan:
         distributions: Annotated[
             t.StrSequence,
             m.Field(
-                description="Declared project distributions selected for this rule; empty selects all",
+                description=(
+                    "Declared project distributions selected "
+                    "for this rule; empty selects all"
+                ),
             ),
         ] = ()
         find: Annotated[

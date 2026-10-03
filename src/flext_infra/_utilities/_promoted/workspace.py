@@ -33,7 +33,7 @@ class FlextInfraUtilitiesPromotedWorkspace:
 
     @staticmethod
     def promoted_find_owner_root(start: Path) -> Path | None:
-        """Return ``start`` or its nearest ancestor owning ``scripts/`` + ``pyproject.toml``.
+        """Return ``start`` or nearest ancestor with ``scripts/`` + ``pyproject.toml``.
 
         A project root is its own owner, so discovery from the repository root
         resolves; command ownership follows the same boundary.
