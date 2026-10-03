@@ -1,8 +1,12 @@
 """Verify published exports and real entrypoints in fresh child processes.
 
-The conformance transaction runs this guard before committing its journal.
+The ``fresh-import`` check gate runs this guard in the checkout's provisioned
+runtime; generation never depends on it.
 Each entrypoint loads before any package smoke so cached imports cannot hide
 consumer-order defects. Imported workspace modules must belong to this checkout.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -13,8 +17,7 @@ from typing import Annotated, ClassVar, override
 
 from flext_core import r
 from flext_infra import c, config, m, p, settings, t, u
-
-from ..base import FlextInfraServiceBase
+from flext_infra.base import FlextInfraServiceBase
 
 
 class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
@@ -61,8 +64,14 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
         "    for package, directory in {origins!r}:\n"
         "        if loaded_name == package or loaded_name.startswith(package + '.'):\n"
         "            origin = getattr(loaded_module, '__file__', None)\n"
-        "            if origin is None or not Path(origin).resolve().is_relative_to(Path(directory)):\n"
-        "                raise ImportError(f'{loaded_name}: origin {origin!r} is outside {directory}')\n"
+        "            if (\n"
+        "                origin is None\n"
+        "                or not Path(origin).resolve()\n"
+        "                .is_relative_to(Path(directory))\n"
+        "            ):\n"
+        "                raise ImportError(\n"
+        "                    f'{loaded_name}: origin {origin!r} not in {directory}'\n"
+        "                )\n"
     )
 
     def build_report(
@@ -72,7 +81,12 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
         publications: t.SequenceOf[m.Infra.LazyInitPlan] = (),
         repository_roots: t.SequenceOf[Path] = (),
     ) -> p.Result[m.Infra.ValidationReport]:
-        """Validate complete publications, stopping at the first causal failure."""
+        """Validate complete publications, stopping at the first causal failure.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ValidationReport]``.
+
+        """
         layouts: t.MutableSequenceOf[m.Infra.RopeProjectLayout] = []
         for root in repository_roots:
             layout = u.Infra.layout(root)
@@ -114,7 +128,8 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                             subject=f"{layout.package_name}: {group}/{name}={value}",
                             code=(
                                 self._PRELUDE
-                                + f"EntryPoint(name={name!r}, value={value!r}, group={group!r}).load()\n"
+                                + f"EntryPoint(name={name!r}, "
+                                f"value={value!r}, group={group!r}).load()\n"
                                 + origin_code
                             ),
                         ),
@@ -252,7 +267,12 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
         self,
         source_roots: t.SequenceOf[Path] = (),
     ) -> t.StrMapping:
-        """Prefer the complete candidate fleet over inherited editable installs."""
+        """Prefer the complete candidate fleet over inherited editable installs.
+
+        Returns:
+            The resulting ``t.StrMapping``.
+
+        """
         inherited_env = u.Cli.process_env()
         import_roots = (
             *(str(root) for root in source_roots),
@@ -269,7 +289,12 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute the same guard used by managed publication."""
+        """Execute the same guard used by managed publication.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         result = self.build_report(packages=self.packages)
         if result.failure:
             return r[bool].from_failure(result)

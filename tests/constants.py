@@ -6,6 +6,9 @@ markers.
 
 Copyright (FlextTestsConstants) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -136,6 +139,12 @@ class TestsFlextInfraConstants(FlextTestsConstants, FlextInfraConstants):
             FlextInfraConstants.Infra.MAKE_REPOSITORY_ROOT,
             *FlextInfraConstants.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
             *DIRENV_SESSION_ENV_KEYS,
+            # The host's GitHub credential (and the aliases Make unexports)
+            # never enters a test; a test that needs one passes its own.
+            "GITHUB_TOKEN",
+            "GH_TOKEN",
+            "MISE_GITHUB_TOKEN",
+            "GITHUB_API_TOKEN",
         )
         """Environment inherited from an outer Make invocation to discard in tests.
 

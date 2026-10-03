@@ -1,33 +1,36 @@
 # AUTO-GENERATED FILE — Regenerate with: make gen
-"""Flext Infra.codemod package."""
+"""Flext Infra.codemod package.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core.lazy import build_lazy_import_map, install_lazy_exports
+from flext_core import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from ._rename_sources import FlextInfraRenameSources
-    from ._rename_symbols import FlextInfraRenameSymbols
-    from .apply_renames import FlextInfraApplyRenames
-    from .ast_scan import FlextInfraCodemodAstScan
-    from .batch_apply import FlextInfraCodemodBatchApply
-    from .batch_gates import FlextInfraModGateEngine
-    from .batch_replacements import FlextInfraModReplacements
-    from .sed_apply import FlextInfraCodemodSedApply
-    from .semantic_apply import FlextInfraCodemodSemanticApply
-    from .snapshot_reconciler import FlextInfraCodemodSnapshotReconciler
-    from .snapshot_refresh import FlextInfraCodemodSnapshotRefresh
-    from .text_gates import FlextInfraModTextGateEngine
-
+    from flext_infra.codemod._rename_sources import FlextInfraRenameSources
+    from flext_infra.codemod._rename_symbols import FlextInfraRenameSymbols
+    from flext_infra.codemod.apply_renames import FlextInfraApplyRenames
+    from flext_infra.codemod.ast_scan import FlextInfraCodemodAstScan
+    from flext_infra.codemod.batch_apply import FlextInfraCodemodBatchApply
+    from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
+    from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
+    from flext_infra.codemod.semantic_apply import FlextInfraCodemodSemanticApply
+    from flext_infra.codemod.snapshot_reconciler import (
+        FlextInfraCodemodSnapshotReconciler,
+    )
+    from flext_infra.codemod.snapshot_refresh import FlextInfraCodemodSnapshotRefresh
+    from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
 
 __all__: tuple[str, ...] = (
     "FlextInfraApplyRenames",
     "FlextInfraCodemodAstScan",
     "FlextInfraCodemodBatchApply",
-    "FlextInfraCodemodSedApply",
     "FlextInfraCodemodSemanticApply",
     "FlextInfraCodemodSnapshotReconciler",
     "FlextInfraCodemodSnapshotRefresh",
@@ -48,7 +51,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".batch_apply": ("FlextInfraCodemodBatchApply",),
             ".batch_gates": ("FlextInfraModGateEngine",),
             ".batch_replacements": ("FlextInfraModReplacements",),
-            ".sed_apply": ("FlextInfraCodemodSedApply",),
             ".semantic_apply": ("FlextInfraCodemodSemanticApply",),
             ".snapshot_reconciler": ("FlextInfraCodemodSnapshotReconciler",),
             ".snapshot_refresh": ("FlextInfraCodemodSnapshotRefresh",),

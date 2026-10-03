@@ -17,8 +17,7 @@ from typing import Annotated, override
 from flext_core import r
 from flext_infra import c, m, p, t
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
-
-from ._fixer_workspace import FlextInfraCodegenFixerWorkspaceMixin
+from flext_infra.codegen._fixer_workspace import FlextInfraCodegenFixerWorkspaceMixin
 
 
 class FlextInfraCodegenFixer(
@@ -35,14 +34,15 @@ class FlextInfraCodegenFixer(
         bool,
         m.Field(description="Only apply rule-based fixes, skip heuristic ones"),
     ] = False
-    rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
-        exclude=True,
-        description="Shared Rope cycle injected by the composition root",
-    )
 
     @override
     def execute(self) -> p.Result[str]:
-        """Execute auto-fix directly from the validated CLI service model."""
+        """Execute auto-fix directly from the validated CLI service model.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         dry_run = self.dry_run or not self.apply_changes
         try:
             results = self.fix_workspace()

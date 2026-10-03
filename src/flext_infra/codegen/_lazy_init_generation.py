@@ -1,15 +1,18 @@
-"""Lazy-init per-directory generation service — extracted concern."""
+"""Lazy-init per-directory generation service — extracted concern.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 from flext_infra import c, u
-
-from ._lazy_init_generation_files import (
+from flext_infra.codegen._lazy_init_generation_files import (
     FlextInfraCodegenLazyInitGenerationFilePlanMixin,
 )
-from ._lazy_init_generation_registry import (
+from flext_infra.codegen._lazy_init_generation_registry import (
     FlextInfraCodegenLazyInitGenerationRegistryMixin,
 )
 
@@ -38,7 +41,12 @@ class FlextInfraCodegenLazyInitGenerationMixin(
         planner: FlextInfraCodegenLazyInitPlanner,
         target_package_dir: Path | None = None,
     ) -> t.VariadicTuple[m.Infra.LazyInitPlan]:
-        """Resolve every selected package plan bottom-up without effects."""
+        """Resolve every selected package plan bottom-up without effects.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.LazyInitPlan]``.
+
+        """
         dir_exports: MutableMapping[str, t.LazyAliasMap] = {}
         planned: list[m.Infra.LazyInitPlan] = []
         progress_interval = max(1, len(pkg_dirs) // 20) if pkg_dirs else 1

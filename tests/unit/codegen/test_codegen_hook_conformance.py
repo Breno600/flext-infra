@@ -1,4 +1,8 @@
-"""Behavioral contracts for generated Git-hook conformance."""
+"""Behavioral contracts for generated Git-hook conformance.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,7 +13,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m, t, u
+from flext_infra import c, config, infra, m, t, u
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from tests import c as test_c, u as test_u
 
@@ -34,12 +38,22 @@ class TestsFlextInfraCodegenHookConformance:
 
     @staticmethod
     def _standalone_workspace(root: Path) -> m.Infra.WorkspaceSpec:
-        """Load the smallest repository-local topology needed by conform."""
+        """Load the smallest repository-local topology needed by conform.
+
+        Returns:
+            The resulting ``m.Infra.WorkspaceSpec``.
+
+        """
         return test_u.Tests.standalone_workspace(root)
 
     @staticmethod
     def _render_hooks(root: Path) -> str:
-        """Render the manifest-owned hook artifact through the public owner."""
+        """Render the manifest-owned hook artifact through the public owner.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         rendered = tm.ok(
             u.Cli.template_render(
                 _HOOK_TEMPLATE,
@@ -57,7 +71,7 @@ class TestsFlextInfraCodegenHookConformance:
         root: Path,
         workspace: m.Infra.WorkspaceSpec,
     ) -> p.Result[m.Infra.CodegenResult]:
-        return FlextInfraCodegenConform.execute_request(
+        return infra.codegen_conform(
             test_u.Tests.conform_request(
                 root,
                 what=c.Infra.CodegenConformSurface.MAKEFILE,
@@ -87,7 +101,7 @@ class TestsFlextInfraCodegenHookConformance:
         workspace = self._standalone_workspace(root)
         hooks_dir = root / ".git" / "hooks"
 
-        FlextInfraCodegenConform.execute_request(
+        infra.codegen_conform(
             test_u.Tests.conform_request(
                 root,
                 what=c.Infra.CodegenConformSurface.MAKEFILE,
@@ -102,8 +116,8 @@ class TestsFlextInfraCodegenHookConformance:
             if hook.is_file():
                 tm.that(hook.read_text(encoding="utf-8"), lacks=f"--hook-type={stage}")
 
+    @staticmethod
     def test_generated_hooks_use_one_strict_shell_per_workflow_step(
-        self,
         infra_git_repo: Path,
     ) -> None:
         """Each enabled stage runs every declared verb in its own strict shell.
@@ -131,9 +145,9 @@ class TestsFlextInfraCodegenHookConformance:
         tm.that(rendered.count("bash -eu -o pipefail -c"), eq=expected)
         tm.that(rendered, lacks=".local")
 
+    @staticmethod
     @pytest.mark.parametrize("inherited", ["ci", "local"])
     def test_pre_push_check_unsets_inherited_ci_before_the_real_make_runtime(
-        self,
         tmp_path: Path,
         inherited: str,
     ) -> None:
@@ -217,7 +231,7 @@ class TestsFlextInfraCodegenHookConformance:
             (hooks_dir / stage).write_text(foreign, encoding="utf-8")
 
         self._check(root, workspace)
-        FlextInfraCodegenConform.execute_request(
+        infra.codegen_conform(
             test_u.Tests.conform_request(
                 root,
                 what=c.Infra.CodegenConformSurface.MAKEFILE,
@@ -230,7 +244,8 @@ class TestsFlextInfraCodegenHookConformance:
         for stage in ("pre-commit", "pre-push"):
             tm.that((hooks_dir / stage).read_text(encoding="utf-8"), eq=foreign)
 
-    def test_hook_stages_follow_configuration(self) -> None:
+    @staticmethod
+    def test_hook_stages_follow_configuration() -> None:
         """The projection follows the current typed configuration."""
         make = config.Infra.codegen.make
         rendered = tm.ok(
@@ -242,7 +257,8 @@ class TestsFlextInfraCodegenHookConformance:
         tm.that("flext-pre-commit-" in rendered, eq=make.pre_commit)
         tm.that("flext-pre-push-" in rendered, eq=make.pre_push)
 
-    def test_disabled_gates_render_no_hook_stages(self) -> None:
+    @staticmethod
+    def test_disabled_gates_render_no_hook_stages() -> None:
         """With both gates off the generated config carries zero hook steps."""
         rendered = tm.ok(
             u.Cli.template_render(
@@ -261,7 +277,8 @@ class TestsFlextInfraCodegenHookConformance:
         tm.that(rendered, lacks="flext-pre-commit-")
         tm.that(rendered, lacks="flext-pre-push-")
 
-    def test_enabled_gates_render_exactly_the_declared_stages(self) -> None:
+    @staticmethod
+    def test_enabled_gates_render_exactly_the_declared_stages() -> None:
         """Each gate renders exactly its configured workflow rows, no more."""
         make = config.Infra.codegen.make
 
@@ -296,7 +313,8 @@ class TestsFlextInfraCodegenHookConformance:
         tm.that(commit_only, has="stages: [pre-commit]")
         tm.that(commit_only, lacks="stages: [pre-push]")
 
-    def test_standalone_hook_config_is_not_retired(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_standalone_hook_config_is_not_retired(tmp_path: Path) -> None:
         """Keep a generated projection whose template declares standalone."""
         root = tmp_path / "flext-member"
         root.mkdir()
@@ -315,8 +333,8 @@ class TestsFlextInfraCodegenHookConformance:
         retired = {plan.path for plan in tm.ok(planned) if plan.desired_content is None}
         tm.that(hook_config in retired, eq=False)
 
+    @staticmethod
     def test_standalone_retires_workspace_only_generated_projection(
-        self,
         tmp_path: Path,
     ) -> None:
         """Remove a generated projection excluded from the selected profile."""

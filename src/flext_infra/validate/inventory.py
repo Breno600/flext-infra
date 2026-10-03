@@ -14,8 +14,7 @@ from typing import Annotated, cast, override
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
-
-from ..base import s
+from flext_infra.base import s
 
 
 class FlextInfraInventoryService(s[bool]):
@@ -54,7 +53,12 @@ class FlextInfraInventoryService(s[bool]):
 
     @staticmethod
     def _script_paths(root: Path) -> t.StrSequence:
-        """Return workspace script paths relative to root."""
+        """Return workspace script paths relative to root.
+
+        Returns:
+            Workspace script paths relative to root.
+
+        """
         scripts_dir = root / c.Infra.DIR_SCRIPTS
         if not scripts_dir.exists():
             return ()
@@ -73,7 +77,12 @@ class FlextInfraInventoryService(s[bool]):
         root: Path,
         scripts: t.StrSequence,
     ) -> t.Triple[t.JsonMapping, t.JsonMapping, t.JsonMapping]:
-        """Build inventory, wiring, and external candidate payloads."""
+        """Build inventory, wiring, and external candidate payloads.
+
+        Returns:
+            The resulting ``t.Triple[t.JsonMapping, t.JsonMapping, t.JsonMapping]``.
+
+        """
         now = u.now().isoformat()
         inventory_payload = t.json_value_adapter().validate_python({
             "generated_at": now,
@@ -98,7 +107,12 @@ class FlextInfraInventoryService(s[bool]):
 
     @staticmethod
     def _write_json_report(path: Path, payload: t.JsonMapping) -> p.Result[str]:
-        """Write a single JSON report and return its path."""
+        """Write a single JSON report and return its path.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         write_result = u.Cli.json_write(
             path,
             payload,
@@ -115,7 +129,12 @@ class FlextInfraInventoryService(s[bool]):
         wiring: t.JsonMapping,
         external: t.JsonMapping,
     ) -> p.Result[list[str]]:
-        """Write all inventory report payloads."""
+        """Write all inventory report payloads.
+
+        Returns:
+            The resulting ``p.Result[list[str]]``.
+
+        """
         report_specs: t.VariadicTuple[t.Pair[str, t.JsonMapping]] = (
             ("scripts-infra--json--scripts-inventory.json", inventory),
             ("scripts-infra--json--scripts-wiring.json", wiring),
@@ -134,7 +153,12 @@ class FlextInfraInventoryService(s[bool]):
         repository_root: Path,
         output_dir: Path | None,
     ) -> p.Result[m.Infra.InventoryReport]:
-        """Generate inventory reports after path resolution."""
+        """Generate inventory reports after path resolution.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.InventoryReport]``.
+
+        """
         root = repository_root.resolve()
         scripts = self._script_paths(root)
         inventory, wiring, external = self._report_payloads(root, scripts)
@@ -156,7 +180,12 @@ class FlextInfraInventoryService(s[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute the inventory CLI flow."""
+        """Execute the inventory CLI flow.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         result = self.generate(self.repository_root, output_dir=self.output_dir)
         if result.failure:
             return r[bool].from_failure(result)

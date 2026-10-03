@@ -1,4 +1,8 @@
-"""Conformance plan selection and repository topology resolution."""
+"""Conformance plan selection and repository topology resolution.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,11 +11,12 @@ from pathlib import Path
 from typing import override
 
 from flext_core import r
-
-from ... import c, config, m, p, t, u
-from ...workspace import FlextInfraWorkspaceDetector
-from .._mise_artifacts_cold_start import FlextInfraMiseColdStart
-from .scaffold_plan import FlextInfraCodegenConformScaffoldPlan
+from flext_infra import c, config, m, p, t, u
+from flext_infra.codegen._conform.scaffold_plan import (
+    FlextInfraCodegenConformScaffoldPlan,
+)
+from flext_infra.codegen._mise_artifacts_cold_start import FlextInfraMiseColdStart
+from flext_infra.workspace import FlextInfraWorkspaceDetector
 
 
 class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
@@ -21,7 +26,12 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
         self,
         request: m.Infra.CodegenConformRequest,
     ) -> p.Result[m.Infra.CodegenPlan]:
-        """Build and validate the complete selection without writing."""
+        """Build and validate the complete selection without writing.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenPlan]``.
+
+        """
         config_spec = config.Infra.codegen
         root = request.root.expanduser().resolve()
         repository_root = root
@@ -239,7 +249,12 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
         workspace: m.Infra.WorkspaceSpec,
         current_repository: m.Infra.RepositoryRef,
     ) -> p.Result[t.VariadicTuple[m.Infra.RepositoryRef]]:
-        """Resolve self/subprojects/all from the local read-only topology."""
+        """Resolve self/subprojects/all from the local read-only topology.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.RepositoryRef]]``.
+
+        """
         scope = c.Infra.CodegenConformScope(request.scope)
         selected: t.VariadicTuple[m.Infra.RepositoryRef]
         if scope is c.Infra.CodegenConformScope.SELF:
@@ -270,7 +285,12 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
         workspace: p.Infra.WorkspaceSpec,
         repository: p.Infra.RepositoryRef,
     ) -> p.Result[Path]:
-        """Resolve one declared checkout without escaping its workspace owner."""
+        """Resolve one declared checkout without escaping its workspace owner.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
+        """
         if repository.name == workspace.repository.name:
             return r[Path].ok(root)
         resolved_root = root.resolve()
@@ -285,7 +305,12 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
     @override
     @staticmethod
     def _repository_root_rel(workspace: m.Infra.WorkspaceSpec) -> str:
-        """Return the environment root owned by the inferred target."""
+        """Return the environment root owned by the inferred target.
+
+        Returns:
+            The environment root owned by the inferred target.
+
+        """
         if workspace.project is not None:
             project_root_rel: str = workspace.project.repository_root_rel
             return project_root_rel
@@ -295,5 +320,10 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
     def _repository_provider(
         repository: m.Infra.RepositoryRef,
     ) -> p.Result[m.Infra.ProviderIdentitySpec]:
-        """Resolve one repository to its self-declared provider identity."""
+        """Resolve one repository to its self-declared provider identity.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ProviderIdentitySpec]``.
+
+        """
         return u.Infra.repository_provider(repository)

@@ -1,4 +1,8 @@
-"""Move and compatibility rewrites for namespace refactors."""
+"""Move and compatibility rewrites for namespace refactors.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,15 +10,18 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_infra import c, m, t
-
-from ._rope_analysis.asthelpers import FlextInfraUtilitiesRopeAnalysisAstHelpers
-from .namespace_common import FlextInfraUtilitiesRefactorNamespaceCommon
-from .protected_edit import FlextInfraUtilitiesProtectedEdit
-from .rope_analysis import FlextInfraUtilitiesRopeAnalysis
-from .rope_core import FlextInfraUtilitiesRopeCore
-from .rope_imports import FlextInfraUtilitiesRopeImports
-from .rope_runtime import FlextInfraUtilitiesRopeRuntime
-from .rope_source import FlextInfraUtilitiesRopeSource
+from flext_infra._utilities._rope_analysis.asthelpers import (
+    FlextInfraUtilitiesRopeAnalysisAstHelpers,
+)
+from flext_infra._utilities.namespace_common import (
+    FlextInfraUtilitiesRefactorNamespaceCommon,
+)
+from flext_infra._utilities.protected_edit import FlextInfraUtilitiesProtectedEdit
+from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.rope_imports import FlextInfraUtilitiesRopeImports
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities.rope_source import FlextInfraUtilitiesRopeSource
 
 
 class FlextInfraUtilitiesRefactorNamespaceMoves:
@@ -27,7 +34,12 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         *,
         preserve_canonical_aliases: bool = False,
     ) -> None:
-        """Normalize imports for one rewritten file; a failed cleanup is loud."""
+        """Normalize imports for one rewritten file; a failed cleanup is loud.
+
+        Raises:
+            RuntimeError: If ``cleanup_result.failure``.
+
+        """
         cleanup_result = FlextInfraUtilitiesRopeImports.normalize_imports(
             rope_project,
             file_paths=(file_path,),
@@ -89,7 +101,15 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         names: t.Infra.StrSet,
         gates: t.StrSequence | None,
     ) -> t.Triple[Path, Path, t.VariadicTuple[str]] | None:
-        """Move named top-level protocol classes into the canonical protocols module."""
+        """Move named top-level protocol classes into the canonical protocols module.
+
+        Returns:
+            The resulting ``t.Triple[Path, Path, t.VariadicTuple[str]] | None``.
+
+        Raises:
+            RuntimeError: If ``not ok``.
+
+        """
         source = source_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         lines = source.splitlines()
         blocks: t.MutableSequenceOf[str] = []
@@ -153,7 +173,6 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                     target_file: expected_target_source,
                     source_file: source,
                 },
-                keep_backup=True,
                 gates=gates,
             ),
         )
@@ -164,7 +183,12 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
 
     @staticmethod
     def _import_bindings(source: str) -> MutableMapping[str, str]:
-        """Map each name a module binds by import to the line that binds it."""
+        """Map each name a module binds by import to the line that binds it.
+
+        Returns:
+            The resulting ``MutableMapping[str, str]``.
+
+        """
         pymodule = FlextInfraUtilitiesRopeAnalysis.parse_string_module(source)
         lines = source.splitlines()
         bindings: MutableMapping[str, str] = {}
@@ -193,7 +217,12 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         source: str,
         blocks: t.StrSequence,
     ) -> t.StrSequence:
-        """Collect required import lines using rope-parsed module bodies."""
+        """Collect required import lines using rope-parsed module bodies.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         import_map = FlextInfraUtilitiesRefactorNamespaceMoves._import_bindings(source)
         required_imports: t.MutableSequenceOf[str] = []
         seen_imports: t.Infra.StrSet = set()
@@ -214,7 +243,12 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
 
     @staticmethod
     def _drop_moved_alias_exports(*, source: str, alias_names: t.Infra.StrSet) -> str:
-        """Remove moved aliases from a literal module ``__all__`` assignment."""
+        """Remove moved aliases from a literal module ``__all__`` assignment.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         pymodule = FlextInfraUtilitiesRopeAnalysis.parse_string_module(source)
         lines = source.splitlines()
         module_ast = pymodule.get_ast()
@@ -260,6 +294,10 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         ``reportPrivateUsage`` and ruff reports the alias as unused at its new
         home, so the whole move validates red and is reverted. Filtering here
         rather than at each caller keeps one owner for the rule.
+
+        Raises:
+            RuntimeError: If ``not ok``.
+
         """
         public_alias_names = {name for name in alias_names if not name.startswith("_")}
         if not public_alias_names:
@@ -356,7 +394,11 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                 existing = target_bindings.get(bound)
                 if existing is not None and existing != import_line:
                     return
-        fallback_runtime_imports = FlextInfraUtilitiesRefactorNamespaceMoves._collect_missing_runtime_alias_imports(
+        collect_missing = (
+            FlextInfraUtilitiesRefactorNamespaceMoves
+            ._collect_missing_runtime_alias_imports
+        )
+        fallback_runtime_imports = collect_missing(
             target_source=target_source,
             blocks=moved_lines,
         )
@@ -434,7 +476,6 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                     target_file: expected_target_source,
                     source_file: source,
                 },
-                keep_backup=True,
                 gates=gates,
             ),
         )
@@ -456,6 +497,10 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         the caller must treat as "do not move": returning an empty sequence
         there silently deleted the declaration and left every reference to it
         undefined, which is how a test module lost ``RopeWorkspace``.
+
+        Returns:
+            The import that re-binds moved aliases in the source module.
+
         """
         source_pymodule = FlextInfraUtilitiesRopeAnalysis.parse_string_module(
             kept_source,
@@ -496,6 +541,10 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         ``from <pkg> import t`` there is a self-package import that shadows the
         binding and raises F811. Keep only the names the target does not already
         own; return ``""`` when nothing remains so the whole line is dropped.
+
+        Returns:
+            The resulting ``str``.
+
         """
         from flext_infra import u
 
@@ -519,7 +568,12 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         target_source: str,
         blocks: t.StrSequence,
     ) -> t.StrSequence:
-        """Collect missing runtime alias imports."""
+        """Collect missing runtime alias imports.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         from flext_infra import u
 
         moved_source = "\n".join(blocks)
@@ -571,7 +625,12 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         kept_source: str,
         max_line: int,
     ) -> t.StrSequence:
-        """Collect orphaned import lines via rope-parsed bodies."""
+        """Collect orphaned import lines via rope-parsed bodies.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         source_pymodule = FlextInfraUtilitiesRopeAnalysis.parse_string_module(source)
         source_ast = FlextInfraUtilitiesRopeAnalysis.ensure_ast_node(
             source_pymodule.get_ast(),
@@ -617,7 +676,13 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         py_files: t.SequenceOf[Path],
         moves: t.SequenceOf[t.Triple[Path, Path, t.VariadicTuple[str]]],
     ) -> None:
-        """Rewrite moved imports."""
+        """Rewrite moved imports.
+
+        Raises:
+            RuntimeError: If rope module name resolution failed for moved pair.
+            ValueError: If refusing moved-import rewrite outside project.
+
+        """
         with FlextInfraUtilitiesRopeCore.open_project(project_root) as rope_project:
             mappings: t.MutableSequenceOf[t.Triple[str, str, t.VariadicTuple[str]]] = []
             for source, target, names in moves:
@@ -670,9 +735,6 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                 )
                 if resource is None:
                     continue
-                original_source = resolved_py_file.read_text(
-                    encoding=c.Cli.ENCODING_DEFAULT,
-                )
                 changed = False
                 for source_module, target_module, names in mappings:
                     updated = (
@@ -690,14 +752,6 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                         rope_project,
                         resolved_py_file,
                     )
-                    backup_path = resolved_py_file.with_suffix(
-                        resolved_py_file.suffix + c.Infra.SAFE_EXECUTION_BAK_SUFFIX,
-                    )
-                    if not backup_path.exists():
-                        backup_path.write_text(
-                            original_source,
-                            encoding=c.Cli.ENCODING_DEFAULT,
-                        )
 
 
 __all__: list[str] = ["FlextInfraUtilitiesRefactorNamespaceMoves"]

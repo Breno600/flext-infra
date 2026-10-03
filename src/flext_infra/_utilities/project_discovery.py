@@ -15,12 +15,16 @@ from typing import override
 from flext_cli import u
 
 from flext_infra import config
-
-from ..constants import c
-from ..models import m
-from ..typings import t
-from . import FlextInfraUtilitiesGit, FlextInfraUtilitiesProjectDiscoveryCandidatesMixin
-from .workspace_manifest import FlextInfraUtilitiesWorkspaceManifest
+from flext_infra._utilities import (
+    FlextInfraUtilitiesGit,
+    FlextInfraUtilitiesProjectDiscoveryCandidatesMixin,
+)
+from flext_infra._utilities.workspace_manifest import (
+    FlextInfraUtilitiesWorkspaceManifest,
+)
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.typings import t
 
 
 class FlextInfraUtilitiesProjectDiscovery(
@@ -31,12 +35,17 @@ class FlextInfraUtilitiesProjectDiscovery(
     @classmethod
     @lru_cache(maxsize=1)
     def load_refactor_config(cls, repository_root: Path) -> m.Infra.RefactorConfigSpec:
-        """Load declared refactor configuration, propagating invalid manifests."""
+        """Load declared refactor configuration, propagating invalid manifests.
+
+        Returns:
+            The resulting ``m.Infra.RefactorConfigSpec``.
+
+        """
         manifest_path = FlextInfraUtilitiesWorkspaceManifest.workspace_manifest_path(
             repository_root,
         )
         packaged = m.Infra.RefactorConfigSpec(
-            project_scan_dirs=config.Infra.source_scan.roots
+            project_scan_dirs=config.Infra.source_scan.roots,
         )
         if not manifest_path.is_file():
             return packaged
@@ -69,6 +78,10 @@ class FlextInfraUtilitiesProjectDiscovery(
 
         An absent manifest declares no exclusions. An unreadable or invalid
         manifest fails before discovery can expand the declared scope.
+
+        Returns:
+            Every manifest-relative path that is not a generation participant.
+
         """
         manifest_path = FlextInfraUtilitiesWorkspaceManifest.workspace_manifest_path(
             repository_root,
@@ -95,7 +108,12 @@ class FlextInfraUtilitiesProjectDiscovery(
         repository_root: Path,
         nonparticipants: frozenset[str],
     ) -> bool:
-        """Return whether one candidate lies at or under a declared non-participant."""
+        """Return whether one candidate lies at or under a declared non-participant.
+
+        Returns:
+            Whether one candidate lies at or under a declared non-participant.
+
+        """
         # "Is this candidate inside the root?" is a question, not a failure, so
         # it is asked instead of caught. relative_to raised ValueError for the
         # ordinary outside-the-root case, which made an except branch produce a
@@ -129,6 +147,10 @@ class FlextInfraUtilitiesProjectDiscovery(
         ignored by the next: discovery skipped an excluded submodule while
         lazy-init still planned files inside it and failed with "lazy-init file
         has no transaction participant".
+
+        Returns:
+            The resulting ``t.SequenceOf[Path]``.
+
         """
         candidates = super().discover_project_candidates(
             repository_root,
@@ -159,11 +181,14 @@ class FlextInfraUtilitiesProjectDiscovery(
 
         Args:
             repository_root: Root directory to start search from.
-            scan_dirs: Directory names indicating a project exists (e.g., "src", "tests").
-                Must be frozenset for use as constant. Defaults to standard project dirs.
+            scan_dirs: Directory names indicating a project (e.g., "src", "tests").
+                Must be a frozenset constant. Defaults to standard project dirs.
 
         Returns:
             Project roots sorted by their ``.gitmodules`` declaration order.
+
+        Raises:
+            ValueError: If ``declared_paths.failure``.
 
         """
         declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(
@@ -209,6 +234,13 @@ class FlextInfraUtilitiesProjectDiscovery(
         manifest had just excluded, and lazy-init planned files for a directory
         the transaction has no participant for -- which aborts staging after the
         phase root already exists on disk.
+
+        Returns:
+            Every Python project this repository's Rope workspace owns.
+
+        Raises:
+            ValueError: If ``declared_paths.failure``.
+
         """
         resolved_root = repository_root.resolve()
         declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(
@@ -246,6 +278,10 @@ class FlextInfraUtilitiesProjectDiscovery(
         another generator. The refactor config is the single scope owner for
         source trees; root Python modules cover public entry points such as
         ``conftest.py`` without opening hidden directories.
+
+        Returns:
+            Only governed handwritten Python surfaces as scan targets.
+
         """
         resolved_root = repository_root.resolve()
         refactor_config = cls.load_refactor_config(resolved_root)
@@ -265,7 +301,7 @@ class FlextInfraUtilitiesProjectDiscovery(
                         for target in scan_dir.rglob(f"*{suffix}"):
                             if target.is_file():
                                 targets.add(
-                                    target.relative_to(resolved_root).as_posix()
+                                    target.relative_to(resolved_root).as_posix(),
                                 )
         return tuple(sorted(targets))
 
@@ -273,11 +309,35 @@ class FlextInfraUtilitiesProjectDiscovery(
     def governed_project_roots(cls, repository_root: Path) -> t.SequenceOf[Path]:
         """Return the repositories a verb run at ``repository_root`` governs.
 
-        Every repository evaluates and rewrites only itself: a workspace root consumes its declared members as
-        installed libraries and never scans, checks, or rewrites them; each
-        member runs its own verbs in its own repository.
+        Every repository evaluates and rewrites only itself: a workspace root
+        consumes its declared members as installed libraries and never scans,
+        checks, or rewrites them; each member runs its own verbs in its own
+        repository.
+
+        Returns:
+            The repositories a verb run at ``repository_root`` governs.
+
         """
         return (repository_root.resolve(),)
+
+    @staticmethod
+    def nearest_project_root(repository_root: Path, path: Path) -> Path | None:
+        """Find the nearest manifest owner inside one governed repository.
+
+        Returns:
+            The resulting ``Path | None``.
+
+        """
+        boundary = repository_root.resolve()
+        candidate = path.resolve()
+        if not candidate.is_relative_to(boundary):
+            return None
+        for parent in (candidate, *candidate.parents):
+            if (parent / c.PYPROJECT_FILENAME).is_file():
+                return parent
+            if parent == boundary:
+                return None
+        return None
 
     @staticmethod
     def runtime_environment_dir(
@@ -294,6 +354,10 @@ class FlextInfraUtilitiesProjectDiscovery(
         generated Makefile resolves ``REPOSITORY_ROOT``. The environment is
         always ``<runtime root>/.venv``; its location is law, never
         configuration (operator law 2026-10-01, flext-h2a9h).
+
+        Returns:
+            The resulting ``Path``.
+
         """
         if runtime_root is None:
             runtime = FlextInfraUtilitiesGit.git_repository_root(
@@ -313,6 +377,10 @@ class FlextInfraUtilitiesProjectDiscovery(
 
         ``runtime_root`` mirrors ``runtime_environment_dir``: a declared runtime
         root (the generated Makefile's ``RUNTIME_ROOT``) owns the environment.
+
+        Returns:
+            The resulting ``Path``.
+
         """
         return (
             cls.runtime_environment_dir(project_root, runtime_root=runtime_root)

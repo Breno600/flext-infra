@@ -1,4 +1,8 @@
-"""Behavior tests for the rope signature patched-AST handlers."""
+"""Behavior tests for the rope signature patched-AST handlers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -29,7 +33,8 @@ class _PatchableNode(ast.Name):
 class TestsFlextInfraRopeSignaturePatch:
     """Validate signature token walking against annotated call parameters."""
 
-    def test_objects_walk_annotated_call_parameters(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_objects_walk_annotated_call_parameters(tmp_path: Path) -> None:
         """Two multiline annotated parameters no longer break the AST walk.
 
         rope 1.14 skipped annotation tokens and failed loudly once a second
@@ -65,7 +70,8 @@ class TestsFlextInfraRopeSignaturePatch:
 
         tm.that([item.name for item in objects], has="command")
 
-    def test_objects_walk_full_signature_shapes(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_objects_walk_full_signature_shapes(tmp_path: Path) -> None:
         """Positional-only, vararg, keyword-only and kwargs walk in order."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
@@ -95,7 +101,8 @@ class TestsFlextInfraRopeSignaturePatch:
 
         tm.that([item.name for item in objects], has="shapes")
 
-    def test_scope_at_walks_pep701_nested_quotes(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_scope_at_walks_pep701_nested_quotes(tmp_path: Path) -> None:
         """Rope resolves scope when an f-string expression reuses quote style."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
@@ -122,8 +129,14 @@ class TestsFlextInfraRopeSignaturePatch:
         assert scope is not None
         tm.that(scope.get_kind(), eq=c.Infra.RopeScopeKind.FUNCTION)
 
-    def test_rename_writes_pep701_nested_quote_expression(self, tmp_path: Path) -> None:
-        """Rope preserves f-string fragments while writing a renamed AST child."""
+    @staticmethod
+    def test_rename_writes_pep701_nested_quote_expression(tmp_path: Path) -> None:
+        """Rope preserves f-string fragments while writing a renamed AST child.
+
+        Raises:
+            AssertionError: If Rope did not resolve the PEP 701 regression resource.
+
+        """
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-demo",
@@ -157,8 +170,14 @@ class TestsFlextInfraRopeSignaturePatch:
 
         tm.that(rewritten, eq=expected)
 
-    def test_rename_writes_generator_inside_format_spec(self, tmp_path: Path) -> None:
-        """Rope patches generator scopes nested in an f-string format spec."""
+    @staticmethod
+    def test_rename_writes_generator_inside_format_spec(tmp_path: Path) -> None:
+        """Rope patches generator scopes nested in an f-string format spec.
+
+        Raises:
+            AssertionError: If Rope did not resolve the format-spec regression resource.
+
+        """
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-demo",
@@ -192,7 +211,8 @@ class TestsFlextInfraRopeSignaturePatch:
 
         tm.that(rewritten, eq=expected)
 
-    def test_write_ast_keeps_nested_generator_name_mutation(self) -> None:
+    @staticmethod
+    def test_write_ast_keeps_nested_generator_name_mutation() -> None:
         """Sorted children expose names below positionless comprehension nodes."""
         source = 'rendered = f"{next(width for width in widths)}"\n'
         tree = patchedast.get_patched_ast(source, sorted_children=True)

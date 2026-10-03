@@ -1,13 +1,18 @@
-"""Desired-state file, environment, and retirement plans."""
+"""Desired-state file, environment, and retirement plans.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 
 from flext_core import r
-
-from ... import c, config, m, p, t, u
-from .beads_routes import FlextInfraCodegenConformBeadsRoutes
+from flext_infra import c, config, m, p, t, u
+from flext_infra.codegen._conform.beads_routes import (
+    FlextInfraCodegenConformBeadsRoutes,
+)
 
 
 class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
@@ -22,7 +27,12 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
         mode: int = 0o644,
         source_states: t.VariadicTuple[m.Cli.AtomicFileState] = (),
     ) -> p.Result[m.Infra.CodegenFilePlan]:
-        """Snapshot one target and bind it to exact desired bytes and mode."""
+        """Snapshot one target and bind it to exact desired bytes and mode.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenFilePlan]``.
+
+        """
         project = root.expanduser().absolute()
         path = (project / relative_path).absolute()
         # Planning is read-only: an optional read of a destination whose parent
@@ -48,7 +58,12 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
     def mise_config_plans(
         plan: m.Infra.CodegenPlan,
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
-        """Select one planned Mise configuration for each selected repository."""
+        """Select one planned Mise configuration for each selected repository.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]``.
+
+        """
         expected = tuple(
             environment.project_root / c.Infra.MISE_TOML_FILENAME
             for environment in plan.uv_environments
@@ -74,7 +89,12 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
         workspace: m.Infra.WorkspaceSpec,
         config: m.Infra.CodegenConfigSpec,
     ) -> m.Infra.UvEnvironmentPlan:
-        """Describe the exact setup overlay without executing uv."""
+        """Describe the exact setup overlay without executing uv.
+
+        Returns:
+            The resulting ``m.Infra.UvEnvironmentPlan``.
+
+        """
         workspace_environment = target.make_profile is c.Infra.MakeProfile.WORKSPACE
         groups: t.VariadicTuple[str] = ("dev", "codegen")
         editable_repositories: t.VariadicTuple[m.Infra.RepositoryRef] = ()
@@ -95,7 +115,12 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
 
     @staticmethod
     def _absent_file_plan(root: Path, path: Path) -> p.Result[m.Infra.CodegenFilePlan]:
-        """Plan the removal of one retired projection."""
+        """Plan the removal of one retired projection.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenFilePlan]``.
+
+        """
         target = path.expanduser().absolute()
         before = u.Cli.atomic_read_binary_file_state(target, required=True)
         if before.failure:
@@ -122,6 +147,10 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
         profile or because no template renders it any more (a renamed or
         deleted template, declared in ``retired_projections``). Either way only
         a file carrying the generated marker is removed.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
+
         """
         planned: list[m.Infra.CodegenFilePlan] = []
         destinations: list[str] = [

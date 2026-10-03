@@ -1,0 +1,58 @@
+id: ban-frozen-dataclass-contract
+snapshots:
+  ? |
+    @dataclass(frozen=True)
+    class Point:
+        x: int
+  : labels:
+    - source: |-
+        @dataclass(frozen=True)
+        class Point:
+            x: int
+      style: primary
+      start: 0
+      end: 47
+    - source: '@dataclass(frozen=True)'
+      style: secondary
+      start: 0
+      end: 23
+    - source: 'x: int'
+      style: secondary
+      start: 41
+      end: 47
+    - source: |-
+        class Point:
+            x: int
+      style: secondary
+      start: 24
+      end: 47
+  ? |
+    from flext_core import m
+
+    @final
+    @dataclass(frozen=True)
+    class Point:
+        x: int
+  : labels:
+    - source: |-
+        @final
+        @dataclass(frozen=True)
+        class Point:
+            x: int
+      style: primary
+      start: 26
+      end: 80
+    - source: '@dataclass(frozen=True)'
+      style: secondary
+      start: 33
+      end: 56
+    - source: 'x: int'
+      style: secondary
+      start: 74
+      end: 80
+    - source: |-
+        class Point:
+            x: int
+      style: secondary
+      start: 57
+      end: 80

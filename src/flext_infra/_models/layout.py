@@ -16,8 +16,7 @@ from typing import Annotated
 from flext_cli import m
 
 from flext_infra import t
-
-from .mixins import FlextInfraModelsMixins as mm
+from flext_infra._models.mixins import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsLayout:
@@ -171,7 +170,7 @@ class FlextInfraModelsLayout:
         project_overrides: Annotated[
             Mapping[str, FlextInfraModelsLayout.LayoutProjectOverrideSpec],
             m.Field(description="Per-project layout deltas keyed by project name"),
-        ] = MappingProxyType({})
+        ] = m.Field(default_factory=lambda: MappingProxyType({}))
 
     class LayoutFinding(_LayoutContract):
         """One planned or executed layout decision for a project entry."""

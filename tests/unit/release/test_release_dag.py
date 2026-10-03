@@ -1,4 +1,8 @@
-"""Public release build-policy tests using real workspaces."""
+"""Public release build-policy tests using real workspaces.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -38,7 +42,12 @@ class TestsFlextInfraReleaseDag:
 
         @staticmethod
         def policy_snapshot(workspace: Path, name: str) -> bytes:
-            """Read one immutable policy file a build phase snapshotted."""
+            """Read one immutable policy file a build phase snapshotted.
+
+            Returns:
+                The resulting ``bytes``.
+
+            """
             return (
                 u.Tests.release_report_dir(workspace, c.Tests.RELEASE_VERSION_BASE)
                 / "policy"
@@ -117,7 +126,11 @@ class TestsFlextInfraReleaseDag:
             gitleaks = entries[c.Infra.RELEASE_GITLEAKS_CONFIG_PATH]
             tm.that("config/build-constraints.txt" in entries, eq=False)
             tm.that(set(gitleaks.profiles), eq=set(c.Infra.MakeProfile))
-            tm.that(gitleaks.overwrite, eq=True)
+            managed = {
+                item.path.as_posix(): item.policy
+                for item in config.Infra.codegen.managed_files
+            }
+            tm.that(managed[c.Infra.RELEASE_GITLEAKS_CONFIG_PATH], eq="full")
 
     class TestsArchiveBoundary:
         """Publishable archive content policy."""
@@ -205,7 +218,8 @@ class TestsFlextInfraReleaseDag:
         @staticmethod
         @pytest.mark.parametrize("target", ["build", "wheel", "sdist"])
         def test_hatch_exclusion_cannot_cancel_declared_source(
-            tmp_path: Path, target: str
+            tmp_path: Path,
+            target: str,
         ) -> None:
             """Reject an archive target that excludes its declared package."""
             project_name = "flext-a"
@@ -231,7 +245,8 @@ class TestsFlextInfraReleaseDag:
 
             tm.that(result, eq=1)
             tm.that(
-                u.Tests.release_build_log_text(workspace, project_name), has=expected
+                u.Tests.release_build_log_text(workspace, project_name),
+                has=expected,
             )
 
         @staticmethod
@@ -252,7 +267,8 @@ class TestsFlextInfraReleaseDag:
                 '"/src/host.py" = "/src/host.py"\n\n'
             )
             pyproject.write_text(
-                content.replace(header, forced + header), encoding="utf-8"
+                content.replace(header, forced + header),
+                encoding="utf-8",
             )
             u.Tests.commit_git_changes(project, "add absolute Hatch source")
 

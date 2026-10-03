@@ -1,4 +1,8 @@
-"""Committed generated TOML lock integrity verification tests."""
+"""Committed generated TOML lock integrity verification tests.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -18,7 +22,12 @@ class TestsFlextInfraDepsLockIntegrity:
 
     @staticmethod
     def _verifier(repository_root: Path) -> FlextInfraLockIntegrityVerifier:
-        """Build the public verifier command for one repository root."""
+        """Build the public verifier command for one repository root.
+
+        Returns:
+            The resulting ``FlextInfraLockIntegrityVerifier``.
+
+        """
         return FlextInfraLockIntegrityVerifier(repository_root=repository_root)
 
     def test_healthy_locks_verify_green(self, tmp_path: Path) -> None:

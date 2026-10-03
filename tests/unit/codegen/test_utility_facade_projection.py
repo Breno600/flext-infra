@@ -1,4 +1,8 @@
-"""Public evidence for discovery-driven utility-facade projection."""
+"""Public evidence for discovery-driven utility-facade projection.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -63,7 +67,8 @@ class TestsFlextInfraUtilityFacadeProjection:
             "        Existing,\n"
             "    ):\n"
             "        pass\n\n"
-            "u = FlextSampleUtilities\n",
+            "u = FlextSampleUtilities\n\n"
+            '__all__ = ["FlextSampleUtilities", "u"]\n',
         )
         updated = u.Infra.render_utility_facade(package)
 
@@ -87,7 +92,8 @@ class TestsFlextInfraUtilityFacadeProjection:
         self._write(package / "_utilities" / "owner.py", "class Owner:\n    pass\n")
         self._write(
             package / "utilities.py",
-            "class Facade:\n    class Sample:\n        pass\n",
+            "class Facade:\n    class Sample:\n        pass\n\n"
+            "u = Facade\n__all__ = ['Facade', 'u']\n",
         )
         self._write(
             package / "consumer.py",
@@ -117,7 +123,9 @@ class TestsFlextInfraUtilityFacadeProjection:
             "from upstream import u\n\n"
             "class FlextSampleUtilities(u):\n"
             "    class Sample(u):\n"
-            "        pass\n"
+            "        pass\n\n"
+            "u = FlextSampleUtilities\n\n"
+            '__all__ = ["FlextSampleUtilities", "u"]\n'
         )
         self._write(facade, original)
 
@@ -133,7 +141,8 @@ class TestsFlextInfraUtilityFacadeProjection:
         with pytest.raises(ValueError, match="have no public facade"):
             u.Infra.render_utility_facade(package)
 
-    def test_empty_owner_directory_needs_no_facade(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_empty_owner_directory_needs_no_facade(tmp_path: Path) -> None:
         """A preflight-created empty directory is not a private implementation."""
         package = tmp_path / "src" / "flext_sample"
         (package / "_utilities").mkdir(parents=True)
@@ -197,7 +206,9 @@ class TestsFlextInfraUtilityFacadeProjection:
             "from upstream import u\n\n"
             "class FlextSampleUtilities(u):\n"
             "    class Sample(owner_factory()):\n"
-            "        pass\n",
+            "        pass\n\n"
+            "u = FlextSampleUtilities\n\n"
+            '__all__ = ["FlextSampleUtilities", "u"]\n',
         )
 
         with pytest.raises(ValueError, match="unsupported utility facade base"):
@@ -248,7 +259,8 @@ class TestsFlextInfraUtilityFacadeProjection:
         original = (
             "from upstream import p\n\nclass FlextSampleProtocols(p):\n"
             + header
-            + "        preserved = 'unchanged'\n\np = FlextSampleProtocols\n"
+            + "        preserved = 'unchanged'\n\np = FlextSampleProtocols\n\n"
+            + '__all__ = ["FlextSampleProtocols", "p"]\n'
         )
         self._write(facade, original)
 

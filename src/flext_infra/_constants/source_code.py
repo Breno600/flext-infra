@@ -128,7 +128,7 @@ class FlextInfraConstantsSourceCode:
     ENCODING_DEFAULT: ClassVar[str] = "utf-8"
     "Default text encoding for file operations."
 
-    # --- Source code template constants and parsing patterns (was: class SourceCode) ---
+    # --- Source code template constants/parsing patterns (was: class SourceCode) ---
     TOC_START: ClassVar[str] = "<!-- TOC START -->"
     "Marker for table of contents start."
     TOC_END: ClassVar[str] = "<!-- TOC END -->"
@@ -144,7 +144,7 @@ class FlextInfraConstantsSourceCode:
         "BaseSettings",
         "FlextModelsBase",
     })
-    "Pydantic bases that resolve class-body annotations at runtime, not only for a type checker."
+    "Pydantic bases that resolve class-body annotations at runtime, not statically."
     ENCODING_COOKIE_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^[ \t\f]*#.*?coding[:=][ \t]*[-\w.]+",
     )
@@ -199,86 +199,66 @@ class FlextInfraConstantsSourceCode:
 
     @staticmethod
     def compile_multiline(pattern: str) -> t.RegexPattern:
-        """Compile a user-supplied pattern with ``re.MULTILINE`` (centralized)."""
+        """Compile a user-supplied pattern with ``re.MULTILINE`` (centralized).
+
+        Returns:
+            The resulting ``t.RegexPattern``.
+
+        """
         return re.compile(pattern, re.MULTILINE)
 
     @staticmethod
     def compile(pattern: str, *, multiline: bool = False) -> t.RegexPattern:
-        """Compile an arbitrary pattern (centralized so consumers needn't import re)."""
+        """Compile an arbitrary pattern (centralized so consumers needn't import re).
+
+        Returns:
+            The resulting ``t.RegexPattern``.
+
+        """
         return re.compile(pattern, re.MULTILINE if multiline else 0)
 
     @staticmethod
     def compile_class_base_with_generic(name: str) -> t.RegexPattern:
-        r"""Compile ``<escaped name>(?:\[.*\])?`` for class-base + generic match."""
+        r"""Compile ``<escaped name>(?:\[.*\])?`` for class-base + generic match.
+
+        Returns:
+            The resulting ``t.RegexPattern``.
+
+        """
         return re.compile(rf"{re.escape(name)}(?:\[.*\])?")
 
     @staticmethod
     def escape(literal: str) -> str:
-        """Escape ``literal`` for inclusion in a regex (centralized re.escape)."""
+        """Escape ``literal`` for inclusion in a regex (centralized re.escape).
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return re.escape(literal)
 
     @staticmethod
     def compile_from_module_paren_open(module_name: str) -> t.RegexPattern:
-        """Compile ``^from <module_name> import (`` for parenthesized-import detection."""
+        """Compile ``^from <module_name> import (`` for parenthesized-import detection.
+
+        Returns:
+            The resulting ``t.RegexPattern``.
+
+        """
         return re.compile(rf"^from\s+{re.escape(module_name)}\s+import\s+\(")
 
     @staticmethod
     def compile_from_module_import_line(module_name: str) -> t.RegexPattern:
-        """Compile ``^from <module_name> import .+$`` (MULTILINE) for whole-line replace."""
+        """Compile ``^from <module_name> import .+$`` (MULTILINE) for line replace.
+
+        Returns:
+            The resulting ``t.RegexPattern``.
+
+        """
         return re.compile(
             rf"^from\s+{re.escape(module_name)}\s+import\s+.+$",
             re.MULTILINE,
         )
-
-    @staticmethod
-    def compile_class_header_search(class_name: str) -> t.RegexPattern:
-        r"""Compile ``^class <class_name>\b`` (MULTILINE) for full-source search."""
-        return re.compile(rf"^class\s+{re.escape(class_name)}\b", re.MULTILINE)
-
-    @staticmethod
-    def compile_function_def_block(name: str) -> t.RegexPattern:
-        """Compile a regex matching the full def block of ``name`` (with decorators)."""
-        return re.compile(
-            rf"^((?:@\w[\w.]*(?:\([^)]*\))?\n)*"
-            rf"def\s+{re.escape(name)}\s*\([^)]*\)[^\n]*\n"
-            rf"(?:(?:[ \t]+[^\n]*|[ \t]*)\n)*)",
-            re.MULTILINE,
-        )
-
-    @staticmethod
-    def compile_class_def_block(name: str) -> t.RegexPattern:
-        """Compile a regex matching the full class block of ``name`` (with decorators)."""
-        return re.compile(
-            rf"^((?:@\w[\w.]*(?:\([^)]*\))?\n)*"
-            rf"class\s+{re.escape(name)}\b[^\n]*\n"
-            rf"(?:(?:[ \t]+[^\n]*|[ \t]*)\n)*)",
-            re.MULTILINE,
-        )
-
-    @staticmethod
-    def compile_function_def_remove(name: str) -> t.RegexPattern:
-        """Compile a regex matching the def block of ``name`` for removal (no outer capture)."""
-        return re.compile(
-            rf"^(?:@\w[\w.]*(?:\([^)]*\))?\n)*"
-            rf"def\s+{re.escape(name)}\s*\([^)]*\)[^\n]*\n"
-            rf"(?:(?:[ \t]+[^\n]*|[ \t]*)\n)*",
-            re.MULTILINE,
-        )
-
-    @staticmethod
-    def compile_class_def_remove(name: str) -> t.RegexPattern:
-        """Compile a regex matching the class block of ``name`` for removal (no outer capture)."""
-        return re.compile(
-            rf"^(?:@\w[\w.]*(?:\([^)]*\))?\n)*"
-            rf"class\s+{re.escape(name)}\b[^\n]*\n"
-            rf"(?:(?:[ \t]+[^\n]*|[ \t]*)\n)*",
-            re.MULTILINE,
-        )
-
-    MODULE_ASSIGNMENT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^([A-Za-z_]\w*)\s*(?::\s*[^=]+)?=\s*(.+)$",
-    )
-    "Regex: module-level ``X [: T] = value`` assignment (captures name, value)."
 
     GITHUB_REPO_URL: ClassVar[str] = "https://github.com/flext-sh/flext"
     "Official GitHub repository URL for the FLEXT project."

@@ -1,4 +1,8 @@
-"""Typed source associations and immutable plan-collection receipts."""
+"""Typed source associations and immutable plan-collection receipts.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,8 +13,7 @@ from flext_cli import m as cli_m
 
 from flext_core import m, u
 from flext_infra import t
-
-from ._config.artifact import FlextInfraConfigModelsArtifact
+from flext_infra._models._config.artifact import FlextInfraConfigModelsArtifact
 
 
 class FlextInfraModelsDocsCollection:
@@ -128,7 +131,9 @@ class FlextInfraModelsDocsCollection:
             description="Source association supplying this revision",
         )
         source_path: Path = m.Field(
-            description="Source-association-relative locator without private root disclosure",
+            description=(
+                "Source-association-relative locator without private root disclosure"
+            ),
         )
         driver: t.NonEmptyStr = m.Field(description="Source driver provenance")
         driver_version: t.NonEmptyStr = m.Field(description="Source driver version")

@@ -1,4 +1,8 @@
-"""Guarded semantic phase for detection-only ``make mod`` findings."""
+"""Guarded semantic phase for detection-only ``make mod`` findings.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,9 +12,8 @@ from pathlib import Path
 from flext_cli import cli
 
 from flext_core import r
-
-from .. import c, config, m, p, t, u
-from ..transformers import FlextInfraSemanticPublication
+from flext_infra import c, config, m, p, t, u
+from flext_infra.transformers import FlextInfraSemanticPublication
 
 
 class FlextInfraCodemodSemanticApply:
@@ -22,7 +25,12 @@ class FlextInfraCodemodSemanticApply:
         root: Path,
         preflight: m.Infra.ModScanReport,
     ) -> t.VariadicTuple[t.Pair[str, str]]:
-        """Identify the complete governed source state between mod phases."""
+        """Identify the complete governed source state between mod phases.
+
+        Returns:
+            The resulting ``t.VariadicTuple[t.Pair[str, str]]``.
+
+        """
         return tuple(
             (path.as_posix(), u.Cli.sha256_bytes(source.encode(c.Cli.ENCODING_DEFAULT)))
             for path, source in sorted(cls._source_inventory(root, preflight).items())
@@ -35,9 +43,14 @@ class FlextInfraCodemodSemanticApply:
         preflight: m.Infra.ModScanReport,
         rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
-        """Return one immutable Rope callback for the mod loop's progress identity."""
+        """Return one immutable Rope callback for the mod loop's progress identity.
+
+        Returns:
+            One immutable Rope callback for the mod loop's progress identity.
+
+        """
         original = cls._source_inventory(root, preflight)
-        from .._utilities.codegen_path_cutover import (
+        from flext_infra._utilities.codegen_path_cutover import (
             FlextInfraUtilitiesCodegenPathCutover,
         )
 
@@ -71,6 +84,10 @@ class FlextInfraCodemodSemanticApply:
 
         Every planner failure (per module) is returned as a failed Result so the
         mod circuit reports it without a traceback and publishes nothing.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         original = cls._source_inventory(root, preflight)
         working = dict(original)
@@ -180,21 +197,19 @@ class FlextInfraCodemodSemanticApply:
         working: t.MappingKV[Path, str],
         rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Plan rope-native cross-layer import alignment when tooling enables it."""
+        """Plan rope-native absolute import alignment when tooling enables it.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        """
         planned_edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
         if not config.Infra.tooling.mod.phases.import_alignment:
-            return planned_edits.ok(())
-        project_package = rope_workspace.workspace_index.project_package_by_root.get(
-            str(root.resolve()),
-        )
-        if project_package is None:
             return planned_edits.ok(())
         planned = u.Infra.align_module_imports(
             rope_project=rope_workspace.rope_project,
             repository_root=root.resolve(),
             index=rope_workspace.workspace_index,
-            project_package=project_package,
-            config=config.Infra.tooling.lazy_init,
         )
         if planned.failure:
             return planned_edits.fail(
@@ -220,7 +235,15 @@ class FlextInfraCodemodSemanticApply:
         preflight: m.Infra.ModScanReport,
         working: MutableMapping[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
-        """Plan the future-annotations phase; the pipeline applies the edits."""
+        """Plan the future-annotations phase; the pipeline applies the edits.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.SemanticMigrationEdit]``.
+
+        Raises:
+            ValueError: If authenticated source disappeared during mod preflight.
+
+        """
         future_annotations: list[m.Infra.SemanticMigrationEdit] = []
         for file_path in sorted({
             (root / finding.file).resolve()
@@ -259,7 +282,12 @@ class FlextInfraCodemodSemanticApply:
         phase: str,
         planned: p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]],
     ) -> p.Result[bool]:
-        """Reject a replan failure or edits replanned by a completed phase."""
+        """Reject a replan failure or edits replanned by a completed phase.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         if planned.failure:
             return r[bool].from_failure(planned)
         if planned.value:
@@ -277,7 +305,12 @@ class FlextInfraCodemodSemanticApply:
         preflight: m.Infra.ModScanReport,
         rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> p.Result[bool]:
-        """Replan every phase against the proposed or reread published sources."""
+        """Replan every phase against the proposed or reread published sources.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
         verified = cls._check_residue(
             "future-annotations",
@@ -307,23 +340,41 @@ class FlextInfraCodemodSemanticApply:
         root: Path,
         preflight: m.Infra.ModScanReport,
     ) -> t.MappingKV[Path, str]:
-        """Read governed sources and every Python path reported by preflight."""
+        """Read governed sources and every Python path reported by preflight.
+
+        Returns:
+            The resulting ``t.MappingKV[Path, str]``.
+
+        Raises:
+            ValueError: If authenticated source disappeared during mod preflight.
+
+        """
         project_roots = u.Infra.governed_project_roots(root)
         refactor_config = u.Infra.load_refactor_config(root)
         scan_dirs = refactor_config.project_scan_dirs
+        # The scan-ignore SSOT owns source visibility everywhere: preflight
+        # findings and ast-grep targets may name paths under an ignored
+        # resource (a tool hook scanned outside governed roots), and feeding
+        # those into the semantic planners crashes the phase on files that
+        # are declared non-source.
+        ignored = frozenset(config.Infra.codegen.source_scan_ignored)
         paths = {
             path.resolve()
             for project_root in project_roots
             for directory in scan_dirs
             for path in u.Infra.iter_directory_python_files(project_root / directory)
+            if not ignored.intersection(path.relative_to(root).parts[:-1])
         }
         paths.update(
             path
             for finding in preflight.entries
             if (path := (root / finding.file).resolve()).suffix == c.Infra.EXT_PYTHON
+            and not ignored.intersection(path.relative_to(root).parts[:-1])
         )
         for target in u.Infra.ast_grep_scan_targets(root):
             candidate = root / target
+            if ignored.intersection(candidate.relative_to(root).parts):
+                continue
             paths.update(
                 path.absolute()
                 for path in (
@@ -346,15 +397,20 @@ class FlextInfraCodemodSemanticApply:
     def _deferred_model_edits(
         sources: t.MappingKV[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
-        """Normalize every handwritten canonical model source from its AST."""
+        """Normalize every handwritten canonical model source from its AST.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.SemanticMigrationEdit]``.
+
+        """
         edits: list[m.Infra.SemanticMigrationEdit] = []
-        model_directories = c.Infra.FLEXT_MODELS_DIRECTORIES
+        models = u.Infra.facade_family_declared_by(c.Infra.MODELS_PY)
         for path, source in sorted(sources.items()):
             if source.startswith("# AUTO-GENERATED FILE"):
                 continue
             if (
-                path.name not in c.Infra.FLEXT_MODELS_FILE_NAMES
-                and not model_directories.intersection(path.parts)
+                path.name not in models.file_names
+                and not models.directories.intersection(path.parts)
             ):
                 continue
             updated = u.Infra.normalize_deferred_self_references(source)
@@ -375,7 +431,12 @@ class FlextInfraCodemodSemanticApply:
         edits: t.SequenceOf[m.Infra.SemanticMigrationEdit],
         changed: set[Path],
     ) -> None:
-        """Compose validated edit plans in memory without partial effects."""
+        """Compose validated edit plans in memory without partial effects.
+
+        Raises:
+            ValueError: If semantic plans disagree for.
+
+        """
         for edit in edits:
             current = sources.get(edit.file_path)
             if current != edit.original_source:
@@ -394,8 +455,16 @@ class FlextInfraCodemodSemanticApply:
         *,
         validator: Callable[[], p.Result[bool]] | None = None,
     ) -> p.Result[bool]:
-        """Normalize and preflight every source before journaled publication."""
-        from ..refactor._census_apply_formatting import (
+        """Normalize and preflight every source before journaled publication.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        Raises:
+            ValueError: If source changed after semantic preflight.
+
+        """
+        from flext_infra.refactor._census_apply_formatting import (
             FlextInfraRefactorCensusApplyFormattingMixin,
         )
 
@@ -443,7 +512,12 @@ class FlextInfraCodemodSemanticApply:
 
     @staticmethod
     def _path_key(path: Path) -> t.Pair[bool, str]:
-        """Sort consumers before the public API owner in a typed key."""
+        """Sort consumers before the public API owner in a typed key.
+
+        Returns:
+            The resulting ``t.Pair[bool, str]``.
+
+        """
         return (path.name == c.Infra.API_PY, path.as_posix())
 
 

@@ -1,4 +1,8 @@
-"""Typed Make and project render context projection."""
+"""Typed Make and project render context projection.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,10 +10,11 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from flext_core import r
-
-from ... import c, config, m, p, t, u
-from ...deps import FlextInfraEnsurePackagingPhase, FlextInfraEnsureRuffConfigPhase
-from .pyproject_policy import FlextInfraCodegenConformPyprojectPolicy
+from flext_infra import c, config, m, p, t, u
+from flext_infra.codegen._conform.pyproject_policy import (
+    FlextInfraCodegenConformPyprojectPolicy,
+)
+from flext_infra.deps import FlextInfraEnsurePackagingPhase
 
 
 class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPolicy):
@@ -31,6 +36,10 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         read this one resolution instead of repeating the probe per render.
         An unresolved branch stays absent here: only a render that consumes it
         fails, through ``render_integration_branch``, exactly as before.
+
+        Returns:
+            The resulting ``m.Infra.CodegenRenderInputs``.
+
         """
         branch = FlextInfraCodegenConformContextRender._resolve_integration_branch(
             target=target,
@@ -50,7 +59,12 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
     def render_integration_branch(
         render_inputs: m.Infra.CodegenRenderInputs,
     ) -> p.Result[str]:
-        """Return the plan's integration branch, or the resolver's own failure."""
+        """Return the plan's integration branch, or the resolver's own failure.
+
+        Returns:
+            The plan's integration branch, or the resolver's own failure.
+
+        """
         if render_inputs.integration_branch is not None:
             return r[str].ok(render_inputs.integration_branch)
         return FlextInfraCodegenConformContextRender._resolve_integration_branch(
@@ -70,6 +84,10 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
 
         The repository's declaration wins; otherwise the published baseline.
         A checkout's HEAD is never consulted (ADR-018 p.10).
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
         """
         return u.Infra.resolve_integration_branch(
             target.root,
@@ -85,7 +103,12 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         self,
         render_inputs: m.Infra.CodegenRenderInputs,
     ) -> p.Result[m.Infra.MakeRenderContext]:
-        """Build the typed context consumed by the generated Makefile."""
+        """Build the typed context consumed by the generated Makefile.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.MakeRenderContext]``.
+
+        """
         target = render_inputs.target
         workspace = render_inputs.workspace
         codegen = render_inputs.codegen
@@ -150,7 +173,12 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         repository_root: Path,
         codegen: m.Infra.CodegenConfigSpec,
     ) -> p.Result[m.Infra.ProjectSpec]:
-        """Derive scaffold ProjectSpec from live PEP 621 metadata for existing trees."""
+        """Derive scaffold ProjectSpec from live PEP 621 metadata for existing trees.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ProjectSpec]``.
+
+        """
         metadata = u.Infra.read_project_metadata_result(repository_root)
         if metadata.failure:
             return r[m.Infra.ProjectSpec].from_failure(metadata)
@@ -216,7 +244,12 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         *,
         planned_data_files: t.StrSequence = (),
     ) -> p.Result[m.Infra.ProjectRenderContext]:
-        """Build the complete typed context consumed by project templates."""
+        """Build the complete typed context consumed by project templates.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ProjectRenderContext]``.
+
+        """
         target = render_inputs.target
         workspace = render_inputs.workspace
         codegen = render_inputs.codegen
@@ -246,12 +279,12 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             project = project.model_copy(
                 update={"namespace_scan_dirs": workspace.namespace_scan_dirs},
             )
-        rows = u.Infra.dependency_profile_rows(
+        dependency_profile = u.Infra.composed_dependency_profile(
             codegen.scaffold.project.dependency_profiles,
             upstream=project.upstream,
             distribution=repository.distribution,
         )
-        if not rows:
+        if dependency_profile is None:
             return r[m.Infra.ProjectRenderContext].fail(
                 f"unsupported scaffold upstream: {project.upstream}",
             )
@@ -359,18 +392,10 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 ),
                 dependency_profile=dependency_profile,
                 tooling=config.Infra.tooling,
-                # Why: the fleet policy alone is not the effective Ruff contract.
-                # A repository may carry an operator-authorized exemption in its
-                # committed ``config/*.yaml`` ManagedArtifacts catalog, and
-                # ensure_ruff composes the two when it edits a pyproject in
-                # place. Composed through the static contract directly (no
-                # phase instance, so the historic constructor-binding defect
-                # cannot resurface); both call sites share this single owner.
+                # The in-place pyproject edit and this render read the same
+                # fleet exemption map, unchanged for every project.
                 ruff_per_file_ignores=(
-                    FlextInfraEnsureRuffConfigPhase.compose_per_file_ignores(
-                        repository_root,
-                        managed_artifacts=catalog_artifacts,
-                    )
+                    config.Infra.tooling.tools.ruff.lint.per_file_ignores
                 ),
                 environment_path_prepends=(codegen.toolchain.environment_path_prepends),
                 beads=workspace.beads,
@@ -454,7 +479,12 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         *,
         repository_root: Path,
     ) -> p.Result[t.VariadicTuple[m.Infra.ManagedGitlinkSpec]]:
-        """Resolve detected member baselines only for mutable governed subprojects."""
+        """Resolve detected member baselines only for mutable governed subprojects.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.ManagedGitlinkSpec]]``.
+
+        """
         resolved: list[m.Infra.ManagedGitlinkSpec] = []
         for repository in workspace.subprojects:
             # A governed member follows its workspace's declared line unless
@@ -479,7 +509,12 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
 
     @staticmethod
     def _repository_root_rel(workspace: m.Infra.WorkspaceSpec) -> str:
-        """Return the environment root owned by the inferred target."""
+        """Return the environment root owned by the inferred target.
+
+        Returns:
+            The environment root owned by the inferred target.
+
+        """
         if workspace.project is not None:
             project_root_rel: str = workspace.project.repository_root_rel
             return project_root_rel
@@ -499,9 +534,17 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         with. Rendering ``project_id: null`` over it dirties the tree (the
         generated-drift check goes red) and, worse, a pushed rewrite would
         strand every clone's identity — the same class of loss already
-        observed in a consumer rig. When identity.toml is absent, read the id back from the
-        existing marker so an unminted checkout preserves the identity it
-        cloned instead of clobbering it.
+        observed in a consumer rig. When identity.toml is absent, read the id
+        back from the existing marker so an unminted checkout preserves the
+        identity it cloned instead of clobbering it.
+
+        Returns:
+            The checkout's own ledger identity, or None if unminted.
+
+        Raises:
+            RuntimeError: If failed to read beads identity at.
+            ValueError: If beads identity at.
+
         """
         identity = repository_root / c.Infra.BEADS_DIRNAME / "identity.toml"
         if identity.is_file():
