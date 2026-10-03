@@ -64,7 +64,6 @@ class FlextInfraUtilitiesCodegen(
             passthrough_environment=tuple(
                 c.Infra.MISE_BOOTSTRAP_PASSTHROUGH_ENVIRONMENT,
             ),
-            credential_commands=toolchain.github_credential_commands,
             version_pin_file=c.Infra.MISE_VERSION_PIN_FILENAME,
             version_pin_header=c.Infra.MISE_VERSION_PIN_HEADER,
             version_pin_reader=c.Infra.MISE_VERSION_PIN_READER,

@@ -258,18 +258,6 @@ class FlextInfraModelsMiseToolchain:
             Literal["aube"],
             m.Field(description="Mise npm installer with a locked dependency graph"),
         ]
-        github_credential_commands: Annotated[
-            t.VariadicTuple[t.VariadicTuple[t.NonEmptyStr]],
-            m.Field(
-                description=(
-                    "Commands that print the GitHub credential when the caller's "
-                    "environment carries none, in precedence order. The first "
-                    "whose executable is on PATH is the selected source and must "
-                    "deliver; none present means anonymous GitHub access. "
-                    "Override toolchain.github_credential_commands."
-                ),
-            ),
-        ]
         mise_selector: Annotated[
             t.NonEmptyStr,
             m.Field(
@@ -511,15 +499,6 @@ class FlextInfraModelsMiseToolchain:
         passthrough_environment: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(min_length=1, description="Explicitly reinjected host variables"),
-        ]
-        credential_commands: Annotated[
-            t.VariadicTuple[t.VariadicTuple[t.NonEmptyStr]],
-            m.Field(
-                description=(
-                    "Declared GitHub credential commands consulted, in order, "
-                    "only when the caller's environment carries no credential"
-                ),
-            ),
         ]
         version_pin_file: Annotated[
             t.NonEmptyStr,

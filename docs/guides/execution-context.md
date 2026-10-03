@@ -187,18 +187,11 @@ never authorizes broad exclusions or changes to the native payload.
 ## Bootstrap credentials
 
 The GitHub credential is optional and has one variable, `GITHUB_TOKEN`, which mise,
-gh, and uv all read. The network bootstrap (`make setup`, `make upg`) selects its
-source once, before any effect, from declared sources only:
-
-1. the caller's `GITHUB_TOKEN`, when it is set; ai-hub propagates it into each project
-   through `.envrc.ai-hub`, which its direnv library sources on every evaluation;
-2. otherwise the first `toolchain.github_credential_commands` entry in
-   `flext-infra/config/codegen.yaml` whose executable is on `PATH` (by default
-   `gh auth token`).
-
-A selected source must deliver: a command that fails or prints nothing stops the verb
-with its cause, and nothing degrades to anonymous access after a failure. Only when no
-source is present does mise reach GitHub anonymously. The value is never printed. Make
+gh, and uv all read. The caller supplies it directly; ai-hub may project it into a
+project through `.envrc.ai-hub`. The network bootstrap (`make setup`, `make upg`)
+never runs a credential command or reads a keyring. With no token, public GitHub
+requests use the upstream tool's native unauthenticated behavior. The value is never
+printed. Make
 unexports the tool-scoped aliases `GH_TOKEN`, `MISE_GITHUB_TOKEN`, and
 `GITHUB_API_TOKEN` from every recipe, because an alias of the same credential would
 shadow or outrank `GITHUB_TOKEN`. An invalid token preserves the backend's native
