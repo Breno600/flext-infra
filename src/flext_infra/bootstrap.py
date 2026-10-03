@@ -804,8 +804,31 @@ class FlextInfraBootstrap:
             return None
         return completed.stdout
 
-    @staticmethod
+    @classmethod
+    def _probe_stage(
+        cls,
+        runtime: Path,
+        stage: Path,
+        environment: dict[str, str],
+    ) -> tuple[bool, str]:
+        """Prove the staged lock installs without mutating tools.
+
+        Returns:
+            The resulting ``tuple[bool, str]``: satisfaction and the raw probe
+            diagnostics.
+        """
+        completed = subprocess.run(
+            [str(runtime), "-C", str(stage), "install", "--dry-run"],
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return completed.returncode == 0, completed.stdout + completed.stderr
+
+    @classmethod
     def _staged_lock_satisfies(
+        cls,
         runtime: Path,
         stage: Path,
         environment: dict[str, str],
@@ -815,14 +838,171 @@ class FlextInfraBootstrap:
         Returns:
             The resulting ``bool``.
         """
-        completed = subprocess.run(
-            [str(runtime), "-C", str(stage), "install", "--dry-run"],
-            env=environment,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        return completed.returncode == 0
+        satisfied, _ = cls._probe_stage(runtime, stage, environment)
+        return satisfied
+
+    @staticmethod
+    def _failing_install_tools(probe_output: str) -> list[tuple[str, str]]:
+        """Extract the ``selector@version`` pairs a failed install probe named.
+
+        Returns:
+            The resulting ``list[tuple[str, str]]`` of failing tool selectors
+            and their (``v``-stripped) versions, in the order Mise named them.
+
+        Raises:
+            ValueError: If the probe diagnostics name no failing tool.
+        """
+        tools: list[tuple[str, str]] = []
+        for line in probe_output.splitlines():
+            marker = "Failed to install tools:"
+            if marker not in line:
+                continue
+            for item in line.split(marker, 1)[1].split(","):
+                selector, _, version = item.strip().rpartition("@")
+                version = version.strip().lstrip("v")
+                if selector and version and version[0].isdigit():
+                    tools.append((selector, version))
+        if not tools:
+            raise ValueError(
+                "staged install failed but named no failing tool:"
+                f" {probe_output.strip()[:400]}",
+            )
+        return tools
+
+    @classmethod
+    def _remote_release_candidates(
+        cls,
+        runtime: Path,
+        environment: dict[str, str],
+        selector: str,
+        failed_version: str,
+        limit: int = 8,
+    ) -> list[str]:
+        """List install candidates strictly older than the failed release.
+
+        Returns:
+            The resulting ``list[str]`` of semantic releases, newest first,
+            capped at ``limit``.
+
+        Raises:
+            ValueError: If Mise exited or warned during the listing.
+        """
+
+        def release_key(version: str) -> tuple[int, ...] | None:
+            try:
+                return tuple(int(part) for part in version.split("."))
+            except ValueError:
+                return None
+
+        failed = release_key(failed_version)
+        candidates: list[str] = []
+        listing = cls._run(runtime, ["ls-remote", selector], environment)
+        for line in listing.splitlines():
+            version = line.strip().lstrip("v")
+            parsed = release_key(version)
+            if parsed is None:
+                continue
+            if failed is not None and parsed >= failed:
+                continue
+            candidates.append(version)
+        return candidates[:limit]
+
+    @staticmethod
+    def _hold_manifest_version(manifest: Path, selector: str, version: str) -> None:
+        """Rewrite one tool's declared version inside a staged manifest copy.
+
+        The committed manifest keeps its policy (``latest`` or pin); the hold
+        lives only in the staged manifest that produces the published lock, so
+        the next ``upg`` resolves the newest release afresh.
+
+        Raises:
+            ValueError: If the manifest has no declared version for the tool.
+        """
+        lines = manifest.read_text(encoding="utf-8").splitlines(keepends=True)
+        header_exact = f'[tools."{selector}"]'
+        header_bare = f"[tools.{selector}]"
+        in_section = False
+        for index, line in enumerate(lines):
+            stripped = line.strip()
+            if stripped.startswith("[tools."):
+                in_section = stripped in (header_exact, header_bare)
+                continue
+            if in_section and stripped.startswith("version") and "=" in stripped:
+                lines[index] = f'version = "{version}"\n'
+                manifest.write_text("".join(lines), encoding="utf-8")
+                return
+        raise ValueError(f"Mise manifest has no declared version to hold: {selector}")
+
+    @classmethod
+    def _hold_stage_tools(
+        cls,
+        runtime: Path,
+        storage: Path,
+        stage: Path,
+        cooldown: str,
+        platforms: str,
+        failed_tools: list[tuple[str, str]],
+    ) -> dict[str, str]:
+        """Hold every failing tool at its newest installable release, in stage.
+
+        Candidates walk ``ls-remote`` newest-first below the failed release;
+        each candidate is resolved into the staged lock and proven by the same
+        dry-run gate the publication requires. Every hold is announced loudly;
+        nothing is silently skipped.
+
+        Returns:
+            The resulting ``dict[str, str]`` of held ``selector -> version``.
+
+        Raises:
+            ValueError: If any failing tool has no installable candidate below
+                its failed release, or if Mise exited or warned during.
+        """
+        holds: dict[str, str] = {}
+        scratch = Path(tempfile.mkdtemp(prefix="mise-hold."))
+        try:
+            environment = cls._mise_environment(
+                storage,
+                stage,
+                scratch,
+                cooldown,
+                platforms,
+            )
+            for selector, failed_version in failed_tools:
+                held: str | None = None
+                for candidate in cls._remote_release_candidates(
+                    runtime,
+                    environment,
+                    selector,
+                    failed_version,
+                ):
+                    cls._hold_manifest_version(
+                        stage / ".mise.toml",
+                        selector,
+                        candidate,
+                    )
+                    try:
+                        cls._run(runtime, ["-C", str(stage), "lock"], environment)
+                    except ValueError as error:
+                        if "refusing to replace locked version" in str(error):
+                            continue
+                        raise
+                    satisfied, _ = cls._probe_stage(runtime, stage, environment)
+                    if satisfied:
+                        held = candidate
+                        break
+                if held is None:
+                    raise ValueError(
+                        f"no installable release found below {failed_version}"
+                        f" for {selector}; upgrade needs an operator decision",
+                    )
+                holds[selector] = held
+                print(
+                    f"hold: {selector} held at {held}: release {failed_version}"
+                    " failed install; the next upg retries the newest release",
+                )
+        finally:
+            shutil.rmtree(scratch, ignore_errors=True)
+        return holds
 
     @classmethod
     def reconcile(cls, project: Path, release: str) -> None:
@@ -832,7 +1012,9 @@ class FlextInfraBootstrap:
         lock written by a different Mise release — recovers here. Seeds are
         tried in order, each proven by a staged dry-run install before
         publication: the working lock, the committed Git lock (its retained
-        pins survive the cooldown), and finally a fresh resolution. Publication
+        pins survive the cooldown), a fresh resolution, and finally a fresh
+        resolution with every broken-release tool held at its newest
+        installable release. Publication
         is atomic and parks an unreadable prior state inside the stage. This is
         the reconcile phase ``make setup`` invokes; it never bumps a tool
         beyond the declared cooldown.
@@ -919,11 +1101,147 @@ class FlextInfraBootstrap:
                 shutil.rmtree(scratch, ignore_errors=True)
                 if stage.exists() and not (stage / cls.JOURNAL).exists():
                     shutil.rmtree(stage, ignore_errors=True)
+        held_stage = Path(
+            tempfile.mkdtemp(
+                prefix=f".{project.name}.mise-lock-stage.",
+                dir=project.parent,
+            ),
+        )
+        try:
+            scratch = Path(tempfile.mkdtemp(prefix="mise-reconcile."))
+            try:
+                shutil.copyfile(manifest, held_stage / ".mise.toml")
+                environment = cls._mise_environment(
+                    storage,
+                    held_stage,
+                    scratch,
+                    cooldown,
+                    platforms,
+                )
+                try:
+                    cls._run(runtime, ["-C", str(held_stage), "lock"], environment)
+                except ValueError as error:
+                    if "refusing to replace locked version" not in str(error):
+                        raise
+                satisfied, probe_output = cls._probe_stage(
+                    runtime,
+                    held_stage,
+                    environment,
+                )
+                if not satisfied:
+                    holds = cls._hold_stage_tools(
+                        runtime,
+                        storage,
+                        held_stage,
+                        cooldown,
+                        platforms,
+                        cls._failing_install_tools(probe_output),
+                    )
+                    satisfied, _ = cls._probe_stage(
+                        runtime,
+                        held_stage,
+                        environment,
+                    )
+                    if not satisfied:
+                        raise ValueError(
+                            f"held lock still fails install: {sorted(holds)}",
+                        )
+                try:
+                    cls.publish(project, held_stage)
+                except ValueError:
+                    parked = held_stage / "reconcile-parked"
+                    parked.mkdir()
+                    if (project / "mise.lock").exists():
+                        Path(project / "mise.lock").replace(parked / "mise.lock")
+                    locks = project / ".mise" / "locks"
+                    if locks.exists():
+                        Path(locks).replace(parked / "locks")
+                    cls.publish(project, held_stage)
+                print(
+                    f"reconcile: published the held mise.lock "
+                    f"Mise {release} satisfies",
+                )
+                return
+            finally:
+                shutil.rmtree(scratch, ignore_errors=True)
+        except ValueError as held_error:
+            failures.append(f"held: {held_error}")
+        finally:
+            if held_stage.exists() and not (held_stage / cls.JOURNAL).exists():
+                shutil.rmtree(held_stage, ignore_errors=True)
         raise ValueError(
             "reconcile: no seed produced a lock the pinned Mise satisfies ("
             + "; ".join(failures)
             + "); run make upg at the runtime root",
         )
+
+    @classmethod
+    def converge(cls, project: Path, stage: Path, release: str) -> None:
+        """Hold failing tools in an ``upg`` lock stage at installable releases.
+
+        The ``upg`` lock stage already carries the bumped lock; a broken
+        upstream release fails its staged install. This probes the stage,
+        parses the failing tools, holds each at its newest installable release
+        inside the staged manifest, and re-proves the whole stage. The caller
+        then retries the staged install and publishes. The committed manifest
+        never changes, so the next ``upg`` resolves the newest release afresh.
+
+        Raises:
+            ValueError: If the stage has no manifest, no failing tool is
+                parseable, no installable candidate exists, or the held lock
+                still fails its install probe.
+        """
+        cls._physical_directory(stage)
+        manifest = stage / ".mise.toml"
+        if not manifest.is_file():
+            raise ValueError(f"missing staged Mise manifest: {manifest}")
+        storage = cls._mise_storage_root()
+        runtime = cls._pinned_runtime(storage, release)
+        cooldown, platforms = cls._manifest_settings(manifest)
+        scratch = Path(tempfile.mkdtemp(prefix="mise-converge."))
+        try:
+            environment = cls._mise_environment(
+                storage,
+                stage,
+                scratch,
+                cooldown,
+                platforms,
+            )
+            satisfied, probe_output = cls._probe_stage(
+                runtime,
+                stage,
+                environment,
+            )
+        finally:
+            shutil.rmtree(scratch, ignore_errors=True)
+        if satisfied:
+            print("converge: staged lock installs; nothing to hold")
+            return
+        holds = cls._hold_stage_tools(
+            runtime,
+            storage,
+            stage,
+            cooldown,
+            platforms,
+            cls._failing_install_tools(probe_output),
+        )
+        scratch = Path(tempfile.mkdtemp(prefix="mise-converge."))
+        try:
+            environment = cls._mise_environment(
+                storage,
+                stage,
+                scratch,
+                cooldown,
+                platforms,
+            )
+            satisfied, _ = cls._probe_stage(runtime, stage, environment)
+        finally:
+            shutil.rmtree(scratch, ignore_errors=True)
+        if not satisfied:
+            raise ValueError(
+                f"converge: held lock still fails install: {sorted(holds)}",
+            )
+        print(f"converge: staged lock installs with holds {sorted(holds)}")
 
     @staticmethod
     def _uv_binary() -> str:
@@ -1032,6 +1350,11 @@ class FlextInfraBootstrap:
             with cls._serialized(Path(arguments[1]).absolute()):
                 cls.relock(Path(arguments[1]).absolute())
             return 0
+        if len(arguments) == 4 and arguments[0] == "converge":
+            project = Path(arguments[1]).absolute()
+            with cls._serialized(project):
+                cls.converge(project, Path(arguments[2]).absolute(), arguments[3])
+            return 0
         if len(arguments) != 3 or arguments[0] not in {
             "publish",
             "recover",
@@ -1039,7 +1362,8 @@ class FlextInfraBootstrap:
         }:
             raise ValueError(
                 "usage: bootstrap.py (publish|recover) PROJECT STAGE"
-                " | reconcile PROJECT RELEASE | relock PROJECT",
+                " | reconcile PROJECT RELEASE | relock PROJECT"
+                " | converge PROJECT STAGE RELEASE",
             )
         project = Path(arguments[1]).absolute()
         if arguments[0] == "reconcile":
