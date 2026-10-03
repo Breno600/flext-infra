@@ -264,7 +264,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                         formatted,
                         origin,
                         default_message=(
-                            "embedded code is not ruff-formatted (repair belongs to `make fix`)"
+                            "embedded code is not ruff-formatted (fix via `make fix`)"
                         ),
                         file_pattern=c.Infra.MARKDOWN_CODE_FORMAT_FILE_RE,
                     ),
@@ -375,7 +375,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
 
     @override
     def fix(self, project_dir: Path, ctx: m.Infra.GateContext) -> m.Infra.GateExecution:
-        """Run the single mutating pass: format extracted blocks and splice clean docs back.
+        """Run the single mutating pass: format blocks and splice clean docs back.
 
         Returns:
             The resulting ``m.Infra.GateExecution``.

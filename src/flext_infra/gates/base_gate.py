@@ -161,7 +161,7 @@ class FlextInfraGate:
         targets: t.StrSequence,
         started: float,
     ) -> m.Infra.GateExecution:
-        """Build, run, and parse the check command — shared by ``check`` and ``check_files``.
+        """Build, run, parse the check command (check and check_files).
 
         Returns:
             The resulting ``m.Infra.GateExecution``.
@@ -229,7 +229,10 @@ class FlextInfraGate:
             line=line,
             column=column,
             code=c.Infra.ToolOutcome.ERROR.value,
-            message=f"{tool} exited with code {result.outcome.raw_return_code}: {detail}",
+            message=(
+                f"{tool} exited with code {result.outcome.raw_return_code}: "
+                f"{detail}"
+            ),
             severity="ERROR",
         )
 
@@ -562,8 +565,8 @@ class FlextInfraGate:
             *self.check_module_command_suffix,
         )
 
-    @staticmethod
     def _parse_check_output(
+        self,
         result: p.Cli.CommandOutput,
         project_dir: Path,
         ctx: m.Infra.GateContext,
@@ -577,8 +580,7 @@ class FlextInfraGate:
         _ = result, project_dir, ctx
         return True, ()
 
-    @staticmethod
-    def _check_timeout(project_dir: Path, ctx: m.Infra.GateContext) -> int:
+    def _check_timeout(self, project_dir: Path, ctx: m.Infra.GateContext) -> int:
         """Timeout for the check command. Override for long-running tools.
 
         Returns:
@@ -589,8 +591,8 @@ class FlextInfraGate:
         timeout: int = c.Infra.TIMEOUT_DEFAULT
         return timeout
 
-    @staticmethod
     def _check_report_path(
+        self,
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> Path | None:
@@ -603,8 +605,8 @@ class FlextInfraGate:
         _ = project_dir, ctx
         return None
 
-    @staticmethod
     def _validate_check_report(
+        self,
         result: p.Cli.CommandOutput,
         project_dir: Path,
         ctx: m.Infra.GateContext,
@@ -613,8 +615,8 @@ class FlextInfraGate:
         """Validate native execution evidence against the exact submitted targets."""
         _ = result, project_dir, ctx, targets
 
-    @staticmethod
     def _check_env(
+        self,
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.StrMapping | None:
@@ -627,8 +629,8 @@ class FlextInfraGate:
         _ = project_dir, ctx
         return None
 
-    @staticmethod
     def _check_remove_env_keys(
+        self,
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
@@ -762,7 +764,10 @@ class FlextInfraGate:
     ) -> t.StrSequence:
         """Build the fix CLI command. Must override if can_fix is True."""
         _ = project_dir, ctx, targets
-        msg = f"Gate {self.gate_id} set can_fix=True but did not implement _build_fix_command"
+        msg = (
+            f"Gate {self.gate_id} set can_fix=True but did not "
+            f"implement _build_fix_command"
+        )
         raise NotImplementedError(msg)
 
     @staticmethod

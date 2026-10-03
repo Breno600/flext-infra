@@ -76,8 +76,7 @@ class TestsFlextInfraGovernanceAuthority:
         assert config.get("MD064") is not False
         assert config.get("MD075") is not False
         line_length = u.Tests.toml_mapping(config["MD013"])["line_length"]
-        assert isinstance(line_length, int)
-        assert line_length <= 500
+        tm.that(line_length, eq=u.Infra.docs_markdown_line_length())
 
     def test_flext_law_requires_automated_structural_rewires(self) -> None:
         # Markdown reflows a clause across lines at whatever column the

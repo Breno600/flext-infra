@@ -74,7 +74,10 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
         pathspecs = cls._state_pathspecs(paths)
         for row in repo.git.ls_files("-v", "-z", "--", *pathspecs).split("\0"):
             if row and (row[0].islower() or row[0] == "S"):
-                msg = "capture requires index entries without assume-unchanged or skip-worktree flags"
+                msg = (
+                    "capture requires index entries without assume-unchanged "
+                    "or skip-worktree flags"
+                )
                 raise ValueError(msg)
         entries: list[m.Infra.GitWorktreeIndexEntry] = []
         for row in repo.git.ls_files("--stage", "-z", "--", *pathspecs).split("\0"):

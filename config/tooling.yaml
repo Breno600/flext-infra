@@ -233,6 +233,19 @@ Infra:
           # and the scoped ones as `per-file-ignores`. Repositories declare no
           # exception of their own.
           authorized-exceptions:
+            - files: "scripts/**/*.py"
+              rules:
+                - commented-out-code
+                - line-too-long
+                - typing-only-first-party-import
+              authority: operator-ruling-2026-10-02-promoted-script-surface
+              reason: >-
+                Promoted command scripts declare TOML metadata headers the
+                discovery parser reads literally, so those lines cannot reflow
+                under the line budget, and the orchestration glue keeps
+                documented-disabled blocks and deferred annotation imports
+                inline; the member repository validates this surface
+                end-to-end through its own gates.
             - files: "tests/**/*.py"
               rules: [assert]
               authority: universal-core-2026-07-20-test-idiom-s101

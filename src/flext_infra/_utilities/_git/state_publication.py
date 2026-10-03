@@ -39,7 +39,10 @@ class FlextInfraUtilitiesGitStatePublicationMixin(
                     raise ValueError(msg)
                 return url
             case _:
-                msg = "checkpoint publication requires one identical fetch and push endpoint"
+                msg = (
+                    "checkpoint publication requires one identical "
+                    "fetch and push endpoint"
+                )
                 raise ValueError(msg)
 
     @classmethod

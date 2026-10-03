@@ -255,6 +255,9 @@ class TestsFlextInfraTypeGates:
         failed = gate.check(project, checker_context)
         assert failed.result.passed is False
         assert failed.raw_output
+        # The gate's declared report path is replaced per run: the passing
+        # run's report is removed before the failing run, never reused.
+        assert not native_reports[0].exists()
 
     @staticmethod
     @pytest.mark.slow

@@ -223,8 +223,7 @@ class FlextInfraPythonVersionEnforcer(s[int]):
             return 13
         return int(match.group(2))
 
-    @staticmethod
-    def _repository_root_from_file(file: str | Path) -> Path:
+    def _repository_root_from_file(self, file: str | Path) -> Path:
         """Walk up from ``file`` to the first dir with .git+Makefile+pyproject.
 
         Raises RuntimeError when no such repository root exists (fail-loud).

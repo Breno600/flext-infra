@@ -97,7 +97,8 @@ class FlextInfraBootstrap:
                         if time.monotonic() >= deadline:
                             raise ValueError(
                                 "Mise transaction mutex is held elsewhere for over "
-                                f"{FlextInfraBootstrap.MUTEX_TIMEOUT_SECONDS:.0f}s: {mutex}",
+                                f"{FlextInfraBootstrap.MUTEX_TIMEOUT_SECONDS:.0f}s: "
+                                f"{mutex}",
                             ) from None
                         time.sleep(0.2)
             try:
@@ -430,7 +431,10 @@ class FlextInfraBootstrap:
         cls._require_roots(project, stage)
         journal = cls._read_journal(stage)
         if journal is None:
-            raise ValueError(f"uncommitted Mise stage has no recovery journal: {stage}")
+            # An unjournaled stage never reached its commit point: it is a
+            # killed run's orphan, safe to retire without touching the project.
+            cls._retire_stage(stage)
+            return
         if journal.get("project") != str(project):
             raise ValueError(f"Mise lock journal belongs to another project: {stage}")
         old = cls._bytes(stage / cls.OLD_LOCK)
@@ -769,7 +773,8 @@ class FlextInfraBootstrap:
             sys.stderr.write(completed.stderr)
             diagnostics = (completed.stdout + completed.stderr).strip()
             raise ValueError(
-                f"Mise exited {completed.returncode}: {' '.join(arguments)}\n{diagnostics}",
+                f"Mise exited {completed.returncode}: "
+                f"{' '.join(arguments)}\n{diagnostics}",
             )
         if "mise WARN" in completed.stdout or "mise WARN" in completed.stderr:
             sys.stderr.write(completed.stderr)
@@ -906,7 +911,8 @@ class FlextInfraBootstrap:
                         Path(locks).replace(parked / "locks")
                     cls.publish(project, stage)
                 print(
-                    f"reconcile: published the {name} mise.lock Mise {release} satisfies",
+                    f"reconcile: published the {name} mise.lock "
+                    f"Mise {release} satisfies",
                 )
                 return
             finally:

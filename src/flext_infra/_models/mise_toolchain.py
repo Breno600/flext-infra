@@ -226,7 +226,9 @@ class FlextInfraModelsMiseToolchain:
             t.NonEmptyStr,
             m.Field(
                 pattern=r"^\.[A-Za-z0-9._-]+\.lock$",
-                description="Ignored project-root mutex for Mise lock publication/recovery",
+                description=(
+                    "Ignored project-root mutex for Mise lock publication/recovery"
+                ),
             ),
         ]
         mise_lockfile_platforms: Annotated[
@@ -570,7 +572,9 @@ class FlextInfraModelsMiseToolchain:
             t.NonEmptyStr,
             m.Field(
                 pattern=r"^[A-Za-z0-9._/-]+\.py$",
-                description="Project-relative generated publisher of a staged mise.lock",
+                description=(
+                    "Project-relative generated publisher of a staged mise.lock"
+                ),
             ),
         ]
         transaction_lock_file: Annotated[

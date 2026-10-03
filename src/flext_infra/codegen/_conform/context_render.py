@@ -534,9 +534,9 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         with. Rendering ``project_id: null`` over it dirties the tree (the
         generated-drift check goes red) and, worse, a pushed rewrite would
         strand every clone's identity — the same class of loss already
-        observed in a consumer rig. When identity.toml is absent, read the id back from the
-        existing marker so an unminted checkout preserves the identity it
-        cloned instead of clobbering it.
+        observed in a consumer rig. When identity.toml is absent, read the id
+        back from the existing marker so an unminted checkout preserves the
+        identity it cloned instead of clobbering it.
 
         Returns:
             The checkout's own ledger identity, or None if unminted.

@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core.lazy import build_lazy_import_map, install_lazy_exports
+from flext_core import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_tests import api, d, e, h, r, td, tf, tk, tm, x
@@ -41,7 +41,6 @@ if TYPE_CHECKING:
     from tests.utilities_release import TestsFlextInfraUtilitiesReleaseMixin
     from tests.utilities_toml import TestsFlextInfraUtilitiesTomlMixin
     from tests.utilities_workspace_env import TestsFlextInfraUtilitiesWorkspaceEnvMixin
-
 
 __all__: tuple[str, ...] = (
     "TestsFlextInfraConstants",
