@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 class TestsModelFieldsCutover:
     """Migration preserves rejection semantics and reaches a stable source."""
 
+    @staticmethod
     @pytest.mark.parametrize(
         "access",
         [
@@ -32,7 +33,6 @@ class TestsModelFieldsCutover:
         ],
     )
     def test_public_boundary_rejects_non_models_without_attribute_access(
-        self,
         tmp_path: Path,
         access: str,
     ) -> None:
@@ -127,6 +127,7 @@ class TestsModelFieldsCutover:
             )
         tm.fail(result, has="conflicts with a local binding")
 
+    @staticmethod
     @pytest.mark.parametrize(
         "declaration",
         [
@@ -139,7 +140,6 @@ class TestsModelFieldsCutover:
         ],
     )
     def test_shadowed_contract_is_rejected(
-        self,
         tmp_path: Path,
         declaration: str,
     ) -> None:
@@ -160,6 +160,7 @@ class TestsModelFieldsCutover:
             )
         tm.fail(result)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "body",
         [
@@ -176,7 +177,6 @@ class TestsModelFieldsCutover:
         ],
     )
     def test_unsafe_statement_layout_or_receiver_rebinding_fails(
-        self,
         tmp_path: Path,
         body: str,
     ) -> None:

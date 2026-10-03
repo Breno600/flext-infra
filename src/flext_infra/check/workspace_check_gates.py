@@ -27,8 +27,8 @@ class FlextInfraWorkspaceCheckGatesMixin:
     _default_reports_dir: Path
     _gate_logger: ClassVar[p.Logger] = u.fetch_logger(__name__)
 
+    @staticmethod
     def _isolate_context(
-        self,
         ctx: m.Infra.GateContext,
         target: m.Infra.CheckProjectTarget,
     ) -> m.Infra.GateContext:
@@ -300,8 +300,8 @@ class FlextInfraWorkspaceCheckGatesMixin:
 
         return _handler
 
+    @staticmethod
     def _execute_gate(
-        self,
         gate_instance: FlextInfraGate,
         project_dir: Path,
         ctx: m.Infra.GateContext,

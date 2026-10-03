@@ -190,7 +190,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         summary = (
             f"{project.name}: {len(merged_violations)} runtime violation(s)"
             if not passed
-            else f"{project.name}: runtime census passed ({len(real_modules)} module(s))"
+            else f"{project.name}: runtime census passed ({len(real_modules)} modules)"
         )
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(

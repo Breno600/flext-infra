@@ -114,7 +114,9 @@ class FlextInfraModelsCore:
         unresolved_missing: Annotated[
             t.MutableSequenceOf[str],
             m.Field(
-                description="Missing external imports without an installed typed dependency",
+                description=(
+                    "Missing external imports without an installed typed dependency"
+                ),
             ),
         ] = m.Field(default_factory=list)
         total_missing: Annotated[

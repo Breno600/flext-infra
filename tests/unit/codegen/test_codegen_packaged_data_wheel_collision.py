@@ -49,6 +49,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         *,
         package_config: bool,
         packaged_data_paths: tuple[str, ...] = (),
+        packaged_data_excludes: tuple[str, ...] = (),
         repository_namespace_packages: tuple[str, ...] = (),
     ) -> None:
         """Materialize one governed project, optionally shipping in-package data."""
@@ -85,6 +86,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             FIXTURE_DISTRIBUTION,
             cli_module=False,
             packaged_data_paths=packaged_data_paths,
+            packaged_data_excludes=packaged_data_excludes,
             repository_namespace_packages=repository_namespace_packages,
         )
         u.Tests.git_bootstrap(
@@ -226,7 +228,8 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             eq=False,
         )
         tm.that(
-            FIXTURE_DISTRIBUTION_DATA_DIR in self._sdist_only_include(infra_git_repo),
+            f"/{FIXTURE_DISTRIBUTION_DATA_DIR}/**"
+            in self._sdist_include(infra_git_repo),
             eq=False,
         )
 
@@ -370,8 +373,13 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             self._wheel_force_include(infra_git_repo),
             eq={catalog: f"{package_name}/{catalog}"},
         )
-        tm.that(catalog in self._sdist_only_include(infra_git_repo), eq=True)
-        tm.that("config" in self._sdist_only_include(infra_git_repo), eq=False)
+        # A declared data file ships through the sdist force-include, never
+        # by widening the source include to its whole directory.
+        tm.that(
+            self._sdist_force_include(infra_git_repo).get(catalog),
+            eq=catalog,
+        )
+        tm.that("/config/**" in self._sdist_include(infra_git_repo), eq=False)
 
     @pytest.mark.slow
     @pytest.mark.parametrize(

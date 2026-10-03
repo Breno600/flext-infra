@@ -20,8 +20,16 @@ class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
     """Plan every selected output, then atomically write only a clean plan."""
 
     @classmethod
-    def settle_repository(cls, root: Path) -> p.Result[bool]:
+    def settle_repository(
+        cls,
+        root: Path,
+        *,
+        ports: m.Infra.CodegenConformPorts | None,
+    ) -> p.Result[bool]:
         """Conform every projection of ``root``, then lock it without upgrading.
+
+        ``ports`` are the facade-bound collaborators the complete conform
+        crosses into; without them the conform fails before any effect.
 
         Conform settles ``pyproject.toml`` and every rendered projection first,
         so the lock resolves against them; it upgrades nothing (only ``upg``
@@ -38,6 +46,7 @@ class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
                 scope=c.Infra.CodegenConformScope.ALL,
                 mode=c.Infra.CodegenConformMode.APPLY,
             ),
+            ports=ports,
         )
         if conformed.failure:
             return r[bool].from_failure(conformed)

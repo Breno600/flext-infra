@@ -269,7 +269,9 @@ class FlextInfraModelsCodegenJournalModels:
         absent_parent: Annotated[
             m.Cli.AtomicDirectoryChainPlan | None,
             m.Field(
-                description="Physical ancestor witness when the source parent is absent",
+                description=(
+                    "Physical ancestor witness when the source parent is absent"
+                ),
             ),
         ] = None
         file_attributes: Annotated[
@@ -332,7 +334,10 @@ class FlextInfraModelsCodegenJournalModels:
                 raise ValueError(msg)
             if self.parent_device is None:
                 if any(populated) or self.absent_parent is None:
-                    msg = "absent source parent requires an authenticated ancestor witness"
+                    msg = (
+                        "absent source parent requires "
+                        "an authenticated ancestor witness"
+                    )
                     raise ValueError(msg)
                 if (
                     self.absent_parent.target != self.path.parent

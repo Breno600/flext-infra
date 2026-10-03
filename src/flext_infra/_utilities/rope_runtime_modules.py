@@ -10,7 +10,7 @@ import ast
 from collections.abc import Iterable
 from pathlib import Path
 
-from flext_infra import c, p, t
+from flext_infra import c, config, p, t
 from flext_infra._utilities.rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
 
 
@@ -91,6 +91,7 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
             project.root.real_path,
             inventory,
             [folder.path for folder in project.get_source_folders()],
+            ignored_resources=sorted(config.Infra.codegen.source_scan_ignored),
         )
         if not isinstance(snapshot, p.Infra.RopeProject):
             msg = "Rope snapshot does not satisfy its project contract"

@@ -16,10 +16,44 @@ from flext_tests import tm
 import flext_core
 from flext_infra import c, m, t, u
 from flext_infra.codegen.codegen_generation import FlextInfraCodegenGeneration
+from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
 
 
 class TestsFlextInfraCodegenGeneration:
     """Validate observable generated Python artifacts without legacy internals."""
+
+    @staticmethod
+    def _owner_sections(
+        plan: m.Infra.LazyInitPlan,
+        imports: t.MappingKV[str, t.StrPair],
+    ) -> str:
+        """Render the TYPE_CHECKING block the single first-party owner implies.
+
+        Third-party imports, one blank line, then first-party imports, each
+        alphabetical; the partition comes from the owner, never a literal.
+
+        Returns:
+            The expected ``if TYPE_CHECKING:`` block.
+
+        """
+        pyproject = next(
+            candidate / c.PYPROJECT_FILENAME
+            for candidate in (plan.context.pkg_dir, *plan.context.pkg_dir.parents)
+            if (candidate / c.PYPROJECT_FILENAME).is_file()
+        ).resolve()
+        first_party = frozenset(
+            FlextInfraToolTablesPhase.first_party_namespaces(path=pyproject.parent),
+        )
+
+        def block(*, owned: bool) -> str:
+            return "".join(
+                f"    from {module} import {attr} as {alias}\n"
+                for alias, (module, attr) in sorted(imports.items())
+                if (module in first_party) is owned
+            )
+
+        sections = [text for text in (block(owned=False), block(owned=True)) if text]
+        return "if TYPE_CHECKING:\n" + "\n".join(sections)
 
     @staticmethod
     def _plan(
@@ -122,7 +156,10 @@ class TestsFlextInfraCodegenGeneration:
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
-        tm.that(content, has="from demo_pkg.servers._base.constants import BaseConstants")
+        tm.that(
+            content,
+            has="from demo_pkg.servers._base.constants import BaseConstants",
+        )
         tm.that(content, has='".._base.constants": ("BaseConstants",)')
         tm.that(content, lacks="from .._base.constants import")
 
@@ -217,7 +254,10 @@ class TestsFlextInfraCodegenGeneration:
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
-        tm.that(content, lacks="from demo_pkg._utilities.conversion import DemoConversion")
+        tm.that(
+            content,
+            lacks="from demo_pkg._utilities.conversion import DemoConversion",
+        )
         tm.that(content, lacks="DemoConversion")
         tm.that(content, contains='__all__: tuple[str, ...] = ("Demo",)')
 
@@ -235,7 +275,10 @@ class TestsFlextInfraCodegenGeneration:
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
-        tm.that(content, contains="from flext_cli._settings import FlextCliSettings, settings")
+        tm.that(
+            content,
+            contains="from flext_cli._settings import FlextCliSettings, settings",
+        )
         tm.that(content, lacks="from ._settings import")
         tm.that(content, lacks="    _ = (")
 
@@ -276,7 +319,10 @@ class TestsFlextInfraCodegenGeneration:
         init_content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(init_content, "__init__.py", "exec")
-        tm.that(init_content, contains="from demo_pkg._fixtures.settings import DemoFixture")
+        tm.that(
+            init_content,
+            contains="from demo_pkg._fixtures.settings import DemoFixture",
+        )
         tm.that(init_content, contains='__all__: tuple[str, ...] = ("DemoFixture",)')
         tm.that(init_content, contains="install_lazy_exports")
 
@@ -418,7 +464,10 @@ class TestsFlextInfraCodegenGeneration:
         content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(content, "__init__.py", "exec")
-        tm.that(content, contains="from demo_pkg.protocols import FlextDemoProtocols, p")
+        tm.that(
+            content,
+            contains="from demo_pkg.protocols import FlextDemoProtocols, p",
+        )
         tm.that(content, lacks="FlextDemoProtocols as p")
 
     def test_root_service_letter_is_the_declared_service_letter(self) -> None:
@@ -455,88 +504,61 @@ class TestsFlextInfraCodegenGeneration:
         )
 
     def test_root_type_checking_sections_follow_known_first_party_policy(self) -> None:
-        """Base first-party namespaces render in the ruff first-party section.
+        """The TYPE_CHECKING block mirrors the first-party owner's sections.
 
-        The generated TYPE_CHECKING block must mirror the project's ruff isort
-        sections. The config-owned base namespace (flext_core, the declared
-        upstream) is first-party, so it is separated from a third-party
-        absolute import by the blank line ruff requires (I001).
+        The generated block follows the project's ruff isort sections as the
+        single first-party owner derives them: third-party imports, then the
+        blank line ruff requires (I001), then first-party imports.
         """
-        plan = self._plan(
-            "demo_pkg",
-            ("cli_c", "core_d"),
-            MappingProxyType({
-                "cli_c": ("flext_cli", "c"),
-                "core_d": ("flext_core", "d"),
-            }),
-        )
+        imports = {"cli_c": ("flext_cli", "c"), "core_d": ("flext_core", "d")}
+        plan = self._plan("demo_pkg", tuple(imports), MappingProxyType(imports))
 
         init_content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(init_content, "__init__.py", "exec")
-        tm.that(
-            init_content,
-            contains=(
-                "if TYPE_CHECKING:\n"
-                "    from flext_cli import c as cli_c\n"
-                "\n"
-                "    from flext_core import d as core_d\n"
-            ),
-        )
+        tm.that(init_content, contains=self._owner_sections(plan, imports))
 
     def test_root_type_checking_keeps_the_project_package_first_party(self) -> None:
         """Roots outside the source tree import the project package first-party.
 
         ``examples``/``scripts`` initializers import the distribution package
-        absolutely, and the project's known-first-party lists it, so it must
-        share its section instead of gaining a spurious blank line.
+        absolutely; the single first-party owner decides each import's
+        section, so the rendered block is the owner's partition: third-party
+        imports, one blank line, then first-party imports.
         """
-        plan = self._plan(
-            "demo_root",
-            ("cli_c", "core_d", "project_p"),
-            MappingProxyType({
-                "cli_c": ("flext_cli", "c"),
-                "core_d": ("flext_core", "d"),
-                "project_p": ("flext_infra", "p"),
-            }),
-        )
+        imports = {
+            "cli_c": ("flext_cli", "c"),
+            "core_d": ("flext_core", "d"),
+            "project_p": ("flext_infra", "p"),
+        }
+        plan = self._plan("demo_root", tuple(imports), MappingProxyType(imports))
 
         init_content = FlextInfraCodegenGeneration.render_init(plan)
 
         compile(init_content, "__init__.py", "exec")
-        tm.that(
-            init_content,
-            contains=(
-                "if TYPE_CHECKING:\n"
-                "    from flext_cli import c as cli_c\n"
-                "\n"
-                "    from flext_core import d as core_d\n"
-                "    from flext_infra import p as project_p\n"
-            ),
-        )
+        tm.that(init_content, contains=self._owner_sections(plan, imports))
 
-    @pytest.mark.parametrize(
-        "isort_table",
-        ["", "[tool.ruff.lint.isort]\nknown-first-party = []\n"],
-    )
+    @staticmethod
     def test_project_package_name_reads_manifest_not_directory_name(
-        self,
         tmp_path: Path,
-        isort_table: str,
     ) -> None:
-        """Worktree checkouts keep the manifest's package name.
+        """Worktree checkouts keep the project's own package first-party.
 
         A project root directory named after a git branch (``0.12.0-dev``)
-        must not leak into isort sectioning: the distribution package is
-        declared by the manifest, never proxied from the directory name,
-        so a wrapper root renders the project import in the first-party
-        section below the third-party block.
+        must not leak into isort sectioning: the first-party package is the
+        project's live ``src`` package (the single first-party owner), never
+        proxied from the directory name, so a wrapper root renders the project
+        import in the first-party section below the third-party block.
         """
         project_root = tmp_path / "0.12.0-dev"
         wrapper_root = project_root / "examples"
         wrapper_root.mkdir(parents=True)
+        project_package = project_root / "src" / "demo_worktree_pkg"
+        project_package.mkdir(parents=True)
+        (project_package / c.Infra.INIT_PY).write_text("", encoding="utf-8")
         (project_root / c.PYPROJECT_FILENAME).write_text(
-            f'[project]\nname = "demo-worktree-pkg"\nversion = "1.0.0"\n{isort_table}',
+            '[project]\nname = "demo-worktree-pkg"\nversion = "1.0.0"\n'
+            'authors = [{ name = "Fixture Author" }]\n',
             encoding="utf-8",
         )
         plan = m.Infra.LazyInitPlan(
@@ -573,13 +595,17 @@ class TestsFlextInfraCodegenGeneration:
         )
 
     @pytest.mark.parametrize("declared_empty", [False, True])
-    def test_empty_first_party_policy_does_not_discover_extra_namespaces(
+    def test_first_party_is_the_live_package_set_whatever_the_declared_table(
         self,
         tmp_path: Path,
         *,
         declared_empty: bool,
     ) -> None:
-        """An explicit empty list and an absent table remain distinct inputs."""
+        """A declared first-party table never varies the derived sections.
+
+        The single first-party owner derives the live ``src`` packages; an
+        explicit empty list and an absent table render the same sections.
+        """
         additional = tmp_path / "src" / "fixture_extra_namespace"
         additional.mkdir(parents=True)
         (additional / c.Infra.INIT_PY).write_text("", encoding="utf-8")
@@ -589,7 +615,7 @@ class TestsFlextInfraCodegenGeneration:
             "[tool.ruff.lint.isort]\nknown-first-party = []\n" if declared_empty else ""
         )
         (tmp_path / c.PYPROJECT_FILENAME).write_text(
-            f'[project]\nname = "configured-workspace"\nversion = "1.0.0"\n{table}',
+            f'[project]\nname = "configured-workspace"\nversion = "1.0.0"\nauthors = [{{ name = "Fixture Author" }}]\n{table}',
             encoding="utf-8",
         )
         plan = self._plan(
@@ -609,38 +635,61 @@ class TestsFlextInfraCodegenGeneration:
         )
         rendered = FlextInfraCodegenGeneration.render_init(plan)
         expected = (
+            "    from zz_external_fixture import value as external\n\n"
             "    from fixture_extra_namespace import value as extra\n"
-            "    from zz_external_fixture import value as external\n"
-            if declared_empty
-            else (
-                "    from zz_external_fixture import value as external\n\n"
-                "    from fixture_extra_namespace import value as extra\n"
-            )
         )
         tm.that(rendered, has=expected)
 
-    @pytest.mark.parametrize("projected", ['"namespace"', '["valid", 3]', "false"])
-    def test_malformed_first_party_names_fail_at_the_render_boundary(
+    def test_runtime_imports_are_one_isort_section_with_the_lazy_helpers(
         self,
-        tmp_path: Path,
-        projected: str,
     ) -> None:
-        """Invalid Ruff configuration cannot become a derived namespace list."""
-        package = tmp_path / "src" / "sample"
-        package.mkdir(parents=True)
-        (tmp_path / c.PYPROJECT_FILENAME).write_text(
-            '[project]\nname = "sample"\nversion = "1.0.0"\n'
-            f"[tool.ruff.lint.isort]\nknown-first-party = {projected}\n",
-            encoding="utf-8",
-        )
-        plan = self._plan("sample", (), MappingProxyType({}))
-        plan = plan.model_copy(
-            update={
-                "context": plan.context.model_copy(
-                    update={"pkg_dir": package, "init_path": package / c.Infra.INIT_PY},
-                ),
-            },
+        """The helpers import sorts inside the first-party block it belongs to.
+
+        In the bootstrap root the helpers live in a sibling module of the
+        ``__version__`` import; both are first-party, so Ruff isort keeps them
+        in one block ordered by module. A separate helpers block was rewritten
+        by ``make fix`` after every ``make gen``.
+        """
+        root = c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
+        plan = self._plan(
+            root,
+            ("FlextLazy", "__version__"),
+            MappingProxyType({
+                "FlextLazy": (c.Infra.LAZY_BOOTSTRAP_MODULE, "FlextLazy"),
+            }),
+            eager_dunders=MappingProxyType({
+                "__version__": (f"{root}.__version__", "__version__"),
+            }),
         )
 
-        with pytest.raises(m.ValidationError):
-            FlextInfraCodegenGeneration.render_init(plan)
+        content = FlextInfraCodegenGeneration.render_init(plan)
+
+        helpers = ", ".join(c.Infra.LAZY_BOOTSTRAP_HELPERS)
+        tm.that(
+            content,
+            contains=(
+                f"from {root}.__version__ import __version__\n"
+                f"from {c.Infra.LAZY_BOOTSTRAP_MODULE} import {helpers}\n"
+            ),
+        )
+
+    def test_expanded_single_entry_mapping_keeps_its_trailing_comma(self) -> None:
+        """An exploded one-entry mapping carries the comma COM812 requires.
+
+        The entry fits one line while the inline mapping does not, which is
+        the shape whose comma-less rendering ``make fix`` rewrote.
+        """
+        plan = self._plan(
+            "demo_pkg",
+            ("FlextDemoGeneratedFacade",),
+            MappingProxyType({
+                "FlextDemoGeneratedFacade": (
+                    "demo_pkg._generated_parts.facade_part_04",
+                    "FlextDemoGeneratedFacade",
+                ),
+            }),
+        )
+
+        content = FlextInfraCodegenGeneration.render_init(plan)
+
+        tm.that(content, contains='("FlextDemoGeneratedFacade",),\n        }),')
