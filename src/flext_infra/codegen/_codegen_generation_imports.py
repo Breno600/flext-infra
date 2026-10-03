@@ -65,8 +65,20 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
         """
         if "." in mod and mod != ".":
             parent_mod, _, child_name = mod.rpartition(".")
-            return (
+            compact = (
                 f"{indent}from {parent_mod or '.'} import {child_name} as {export_name}"
+            )
+            line_length = config.Infra.tooling.tools.ruff.line_length
+            if len(compact) <= line_length:
+                return compact
+            nested_indent = f"{indent}    "
+            # One symbol per wrapped line is the only form Ruff's isort accepts
+            # (I001); the width contract matches _format_import so the render
+            # stays inside the configured budget (flext-xjoph).
+            return (
+                f"{indent}from {parent_mod or '.'} import (",
+                f"{nested_indent}{child_name} as {export_name},",
+                f"{indent})",
             )
         return f"{indent}import {mod} as {export_name}"
 
