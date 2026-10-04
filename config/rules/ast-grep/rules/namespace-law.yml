@@ -18,7 +18,11 @@
 # body holds that one class, its alias binding, __all__ and imports; a
 # function other than the executable `main` entry point, a value binding that
 # is not an alias of a name, and any further class are loose objects.
-# Typing declarations are ban-manual-typing-alias-outside-typings's.
+# Typing declarations are ban-manual-typing-alias-outside-typings's. The one
+# admitted value binding is the facade's self-typed singleton: the
+# class-nesting cutover itself keeps it at module level (it reads the owner
+# while the owner is being defined), and the pattern owner publishes it as
+# the process-wide facade instance (`from flext_cli import cli, config`).
 id: ban-loose-module-object
 language: python
 severity: error
@@ -58,6 +62,41 @@ rule:
         - kind: expression_statement
         - inside:
             kind: module
+        # The facade's self-typed singleton: the binding reads the owner
+        # class while it is being defined, so the class-nesting cutover
+        # keeps it at module level; it is admitted only when the
+        # annotation, the fetch_global receiver and a class this module
+        # defines carry one name.
+        - not:
+            all:
+              - has:
+                  kind: assignment
+                  all:
+                    - has:
+                        field: type
+                        pattern: $OWNER
+                    - has:
+                        field: right
+                        kind: call
+                        has:
+                          field: function
+                          kind: attribute
+                          all:
+                            - has:
+                                field: object
+                                kind: identifier
+                                pattern: $OWNER
+                            - has:
+                                field: attribute
+                                kind: identifier
+                                regex: "^fetch_global$"
+              - inside:
+                  kind: module
+                  has:
+                    kind: class_definition
+                    has:
+                      field: name
+                      pattern: $OWNER
         - has:
             kind: assignment
             all:
