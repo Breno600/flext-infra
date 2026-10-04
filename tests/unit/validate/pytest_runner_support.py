@@ -105,6 +105,7 @@ def profile_parent(runner: FlextInfraPytestRunner, output: Path) -> int:
             env=u.Cli.process_env(
                 overrides={
                     c.Infra.PYTEST_ENV_TARGET: str(runner.target),
+                    c.Infra.PYTEST_ENV_TARGET_FILE: str(runner.target_file or ""),
                     c.Infra.PYTEST_ENV_REPORTS: str(runner.reports),
                     cache.database_environment_variable: str(runner.testmon_db),
                 },

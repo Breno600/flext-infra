@@ -98,34 +98,25 @@ class TestsFlextInfraPytestProfile:
 
     @staticmethod
     @pytest.mark.slow
-    def test_profiled_collection_keeps_plugin_packages_rewritable(
-        cached_runner_project: Path,
-    ) -> None:
-        """A profiled child imports no plugin package before pytest starts.
-
-        Loading ``flext_infra`` as a pytest plugin marks it for assertion
-        rewriting; a child that imported it first makes pytest warn, and the
-        collection gate rejects every warning.
-        """
-        pyproject = cached_runner_project / c.PYPROJECT_FILENAME
-        pyproject.write_text(
-            pyproject.read_text(encoding="utf-8") + 'addopts = "-p flext_infra"\n',
-            encoding="utf-8",
-        )
-        runner = runner_for(cached_runner_project, profile_collection=True)
-
-        tm.that(tm.ok(runner.execute()), eq=0)
-
-    @staticmethod
-    @pytest.mark.slow
     @pytest.mark.parametrize("profile_collection", [False, True])
     def test_complete_suite_persists_cache_and_zero_diagnostic_evidence(
         cached_runner_project: Path,
         *,
         profile_collection: bool,
     ) -> None:
-        """One public execution collects every test and publishes real evidence."""
+        """One public execution collects every test and publishes real evidence.
+
+        The profiled run loads ``flext_infra`` as a plugin package, as consumer
+        projects do: a child that imported it before pytest makes pytest warn
+        that it cannot rewrite it, and the collection gate rejects warnings.
+        """
         cache = config.Infra.codegen.make.testmon_cache
+        if profile_collection:
+            pyproject = cached_runner_project / c.PYPROJECT_FILENAME
+            pyproject.write_text(
+                pyproject.read_text(encoding="utf-8") + 'addopts = "-p flext_infra"\n',
+                encoding="utf-8",
+            )
         runner = runner_for(
             cached_runner_project,
             profile_collection=profile_collection,
