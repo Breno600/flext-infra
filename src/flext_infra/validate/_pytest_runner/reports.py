@@ -135,7 +135,12 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
                 )
                 raise RuntimeError(msg)
             inventory_count = len(inventory.node_ids)
-            deselected = inventory_count - len(selected.node_ids)
+            # A declared file runs under noselect: its whole inventory executes.
+            deselected = (
+                0
+                if self.target_file is not None
+                else inventory_count - len(selected.node_ids)
+            )
         accounting = m.Infra.TestmonRunAccounting(
             executed_count=executed,
             reported_count=reported_count,
