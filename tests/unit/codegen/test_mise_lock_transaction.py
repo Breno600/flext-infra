@@ -10,16 +10,13 @@ from __future__ import annotations
 import hashlib
 import json
 import sys
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
 from flext_infra.bootstrap import FlextInfraBootstrap
 from tests import c, u
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class TestsMiseLockTransaction:
