@@ -61,7 +61,8 @@ class TestsFlextInfraLazyInitRuntime:
         package_root.joinpath("api.py").write_text(
             "from pathlib import Path\n"
             "COUNTER = Path(__file__).with_name('imports.txt')\n"
-            "COUNTER.write_text(COUNTER.read_text() + 'x' if COUNTER.exists() else 'x')\n"
+            "COUNTER.write_text("
+            "COUNTER.read_text() + 'x' if COUNTER.exists() else 'x')\n"
             "class FlextDemo:\n    pass\n"
             "primary = FlextDemo\n"
             "__all__ = ('FlextDemo', 'primary')\n",

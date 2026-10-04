@@ -84,7 +84,7 @@ class TestsFlextInfraLazyInitProjectionManifest:
     def test_manifest_excludes_itself_and_non_projected_plans(
         tmp_path: Path,
     ) -> None:
-        """Only .agents/.codex projections feed entries; the manifest never self-refs."""
+        """Only .agents/.codex projections feed entries; no manifest self-reference."""
         projected = _plan(tmp_path, ".agents/aihub-hooks/x.py", b"kept")
         engine = _plan(tmp_path, "src/engine.py", b"ignored")
         existing = _plan(

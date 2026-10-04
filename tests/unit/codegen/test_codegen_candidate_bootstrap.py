@@ -166,7 +166,7 @@ class TestsFlextInfraCodegenCandidateBootstrap:
     def test_docs_config_conflict_recovers_from_declared_template(
         tmp_path: Path,
     ) -> None:
-        """A conflicted docs projection is repaired before normal generation parses it."""
+        """A conflicted docs projection is repaired before generation parses it."""
         source, _ = tests_u.Tests.render_make_environment(
             tmp_path / "source",
             c.Infra.MakeProfile.STANDALONE,
