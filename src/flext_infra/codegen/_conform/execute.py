@@ -351,15 +351,12 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         verified = self.plan(request)
         if verified.failure:
             return r[m.Infra.CodegenResult].from_failure(verified)
-        residual = tuple(
-            file
-            for file in verified.value.files
-            if u.Infra.codegen_file_requires_effect(file)
+        fixed_point = u.Infra.codegen_fixed_point(
+            verified.value.files,
+            subject="Makefile bootstrap",
         )
-        if residual:
-            return r[m.Infra.CodegenResult].fail(
-                f"Makefile bootstrap did not reach a fixed point: {residual[0].path}",
-            )
+        if fixed_point.failure:
+            return r[m.Infra.CodegenResult].from_failure(fixed_point)
         return r[m.Infra.CodegenResult].ok(
             m.Infra.CodegenResult(plan=verified.value, written_files=written),
         )
@@ -376,16 +373,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         planned = self.plan(request)
         if planned.failure:
             return r[bool].from_failure(planned)
-        residual = tuple(
-            file
-            for file in planned.value.files
-            if u.Infra.codegen_file_requires_effect(file)
-        )
-        if residual:
-            return r[bool].fail(
-                f"bootstrap did not reach a fixed point: {residual[0].path}",
-            )
-        return r[bool].ok(value=True)
+        return u.Infra.codegen_fixed_point(planned.value.files, subject="bootstrap")
 
     def _execute_managed(
         self,

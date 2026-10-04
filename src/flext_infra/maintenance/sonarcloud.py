@@ -161,20 +161,18 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
             The resulting ``p.Result[bool]``.
 
         """
-        token = self.required_token()
-        if token.failure:
-            return r[bool].from_failure(token)
-        key = self.project_key(self.repository_root)
-        if key.failure:
-            return r[bool].from_failure(key)
-        planned = self.settings_plan(config.Infra.codegen.sonarcloud, key.value)
+        credentials = self.project_credentials()
+        if credentials.failure:
+            return r[bool].from_failure(credentials)
+        token, key = credentials.value
+        planned = self.settings_plan(config.Infra.codegen.sonarcloud, key)
         if planned.failure:
             return r[bool].from_failure(planned)
         plan = planned.value
         auth_body = self.call(
             plan.api_url,
             plan.timeout_seconds,
-            token.value,
+            token,
             "GET",
             c.Infra.SONARCLOUD_API_AUTH_VALIDATE_PATH,
             (),
@@ -190,7 +188,7 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
             return r[bool].from_failure(auth)
         if not auth.value.valid:
             return r[bool].fail("SonarCloud rejected SONAR_TOKEN as invalid")
-        current = self._server_values(plan, token.value)
+        current = self._server_values(plan, token)
         if current.failure:
             return r[bool].from_failure(current)
         if self.in_sync_with(plan, current.value):
@@ -200,14 +198,14 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
         written = self.call(
             plan.api_url,
             plan.timeout_seconds,
-            token.value,
+            token,
             "POST",
             request.api_path,
             request.form,
         )
         if written.failure:
             return r[bool].from_failure(written)
-        readback = self._server_values(plan, token.value)
+        readback = self._server_values(plan, token)
         if readback.failure:
             return r[bool].from_failure(readback)
         if not self.in_sync_with(plan, readback.value):
