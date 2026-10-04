@@ -635,6 +635,11 @@ Infra:
       custom_handler_profile_overrides: {}
       standalone_check_gates:
         smells: smells
+      # Operator ruling flext-uz0dt (2026-09-18, reaffirmed 2026-10-04 in
+      # flext-qtmy2): markdown-code runs only when requested explicitly; make
+      # fix still repairs it.
+      opt_in_check_gates:
+        - markdown-code
       custom_handler_policy:
         filename: custom.mk
         # Custom behavior is one private whole-verb replacement or one lifecycle

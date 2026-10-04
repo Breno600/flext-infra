@@ -223,7 +223,14 @@ class FlextInfraGate:
             The resulting ``m.Infra.Issue``.
 
         """
-        detail = (result.stderr or result.stdout).strip() or "no diagnostics"
+        detail = (
+            "\n".join(
+                stream.strip()
+                for stream in (result.stderr, result.stdout)
+                if stream.strip()
+            )
+            or "no diagnostics"
+        )
         return m.Infra.Issue(
             file=file,
             line=line,

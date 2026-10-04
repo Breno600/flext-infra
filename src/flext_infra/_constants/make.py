@@ -99,13 +99,6 @@ class FlextInfraConstantsMake:
         for gate in FlextInfraConstantsCheck.SARIF_TOOL_INFO
         if gate not in FlextInfraConstantsCheck.MUTATING_GATES
     )
-    # Every read-only gate is a default check gate. The former default-check
-    # exclusion of `markdown-code` / `markdown-format` is retired: generated
-    # docs are prettier-stable now (the gen render + `.prettierignore` exclude
-    # the generated trees, and `make docs` fmt plus `make fix` markdown-code
-    # hold zero findings at the fixed point), so no commit has to choose
-    # between the gen fixed point and `prettier --check`.
-    CANONICAL_DEFAULT_GATE_IDS: ClassVar[t.VariadicTuple[str]] = CANONICAL_GATE_IDS
     CANONICAL_FIXABLE_GATE_IDS: ClassVar[t.VariadicTuple[str]] = (
         "lint",
         "markdown",

@@ -208,15 +208,10 @@ class FlextInfraConstantsCheck:
         "Existing fence marker (pytest-markdown-docs) "
         "opting a block out of code validation."
     )
-    MARKDOWN_CODE_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?P<file>\S+):\d+:\d+:\s+unformatted:\s+",
+    MARKDOWN_CODE_SOURCE_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"(?P<file>[^\s/:]+_b\d+\.py)(?::(?P<line>\d+))?",
     )
-    "Ruff format ``--check`` concise verdict line over extracted sources."
-    MARKDOWN_CODE_FORMAT_ERROR_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^error: Failed to format (?P<file>\S+):",
-        re.MULTILINE,
-    )
-    "Ruff format hard-failure line over extracted sources (parse errors)."
+    "Extracted-source name (``MARKDOWN_CODE_SOURCE_FORMAT``) inside any ruff line."
     VALID_GATE_SEVERITIES: ClassVar[frozenset[str]] = frozenset(GateSeverity)
     "Severity levels accepted by gate output parsers — derived from GateSeverity."
     PYRIGHT_DIAGNOSTICS_KEY: ClassVar[str] = "generalDiagnostics"
