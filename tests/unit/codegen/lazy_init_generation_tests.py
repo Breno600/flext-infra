@@ -237,7 +237,7 @@ class TestsFlextInfraCodegenGeneration:
         owner: str,
         rendered_owner: str,
     ) -> None:
-        """The static import names the absolute owner the compact lazy key targets."""
+        """The static import names the absolute owner the compact lazy key resolves to."""
         package = "demo_pkg.servers._rfc"
         plan = self._plan(
             package,
@@ -663,8 +663,7 @@ class TestsFlextInfraCodegenGeneration:
             "[tool.ruff.lint.isort]\nknown-first-party = []\n" if declared_empty else ""
         )
         (tmp_path / c.PYPROJECT_FILENAME).write_text(
-            '[project]\nname = "configured-workspace"\nversion = "1.0.0"\n'
-            f'authors = [{{ name = "Fixture Author" }}]\n{table}',
+            f'[project]\nname = "configured-workspace"\nversion = "1.0.0"\nauthors = [{{ name = "Fixture Author" }}]\n{table}',
             encoding="utf-8",
         )
         plan = self._plan(
