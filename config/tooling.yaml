@@ -91,6 +91,11 @@ Infra:
           - .snapshots/**
           - .benchmarks/**
           - .hypothesis/**
+          # CHANGELOG.md files are release-please output: their bullets embed
+          # compare/commit URLs that cannot reflow under the line budget, and
+          # hand-wrapping them is overwritten by the next release render
+          # (operator authorization 2026-10-03).
+          - CHANGELOG.md
           - .mypy_cache/**
           - .pytest_cache/**
           - .ruff_cache/**

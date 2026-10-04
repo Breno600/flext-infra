@@ -36,10 +36,10 @@ if TYPE_CHECKING:
     from flext_infra._models._config.beads import FlextInfraConfigModelsBeads
     from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
     from flext_infra._models._config.contract import FlextInfraConfigModelsContract
-    from flext_infra._models._config.make import (
-        ExternalCacheDirectorySpec,
-        FlextInfraConfigModelsMake,
+    from flext_infra._models._config.external_cache import (
+        FlextInfraExternalCacheDirectorySpec,
     )
+    from flext_infra._models._config.make import FlextInfraConfigModelsMake
     from flext_infra._models._config.provider import FlextInfraConfigModelsProvider
     from flext_infra._models._config.release import FlextInfraConfigModelsRelease
     from flext_infra._models._config.render import FlextInfraConfigModelsRender
@@ -110,7 +110,6 @@ if TYPE_CHECKING:
 
 
 __all__: tuple[str, ...] = (
-    "ExternalCacheDirectorySpec",
     "FlextInfraCodegen",
     "FlextInfraConfigModels",
     "FlextInfraConfigModelsArtifact",
@@ -126,6 +125,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraConfigModelsStatic",
     "FlextInfraConfigModelsTemplates",
     "FlextInfraConfigModelsWorkspace",
+    "FlextInfraExternalCacheDirectorySpec",
     "FlextInfraModelsBase",
     "FlextInfraModelsCensus",
     "FlextInfraModelsCheck",
@@ -197,10 +197,8 @@ _LAZY_IMPORTS = MappingProxyType(
             "._config.beads": ("FlextInfraConfigModelsBeads",),
             "._config.contexts": ("FlextInfraConfigModelsContexts",),
             "._config.contract": ("FlextInfraConfigModelsContract",),
-            "._config.make": (
-                "ExternalCacheDirectorySpec",
-                "FlextInfraConfigModelsMake",
-            ),
+            "._config.external_cache": ("FlextInfraExternalCacheDirectorySpec",),
+            "._config.make": ("FlextInfraConfigModelsMake",),
             "._config.provider": ("FlextInfraConfigModelsProvider",),
             "._config.release": ("FlextInfraConfigModelsRelease",),
             "._config.render": ("FlextInfraConfigModelsRender",),
