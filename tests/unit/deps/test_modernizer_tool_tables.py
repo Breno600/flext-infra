@@ -122,6 +122,20 @@ class TestsFlextInfraDepsModernizerToolTables:
             eq={"custom: custom marker", *policy.standard_markers},
         )
 
+    @staticmethod
+    def test_projected_slow_timeout_key_is_registered_by_the_loaded_plugin(
+        pytestconfig: pytest.Config,
+    ) -> None:
+        """The ini key the pytest table projects is one the flext-tests plugin owns.
+
+        ``getini`` raises ``ValueError`` for an unregistered name, which strict
+        config collection turns into ``Unknown config option`` in every consumer.
+        """
+        tm.that(
+            pytestconfig.getini(c.Infra.FLEXT_SLOW_TIMEOUT_SECONDS),
+            eq=str(config.Infra.tooling.tools.pytest.slow_timeout_seconds),
+        )
+
     @pytest.mark.parametrize("follow_untyped", [False, True])
     def test_mypy_source_analysis_override_round_trips_policy(
         self,
