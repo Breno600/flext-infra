@@ -291,8 +291,11 @@ class TestsFlextInfraLintRecipes:
             path=module,
         )
 
-        notice = u.Infra.copyright_notice(tmp_path)
+        notice = u.Infra.copyright_notice(tmp_path, module=module)
+        sibling = u.Infra.copyright_notice(tmp_path, module=tmp_path / "other.py")
         tm.that(notice, has="Sample Author")
+        tm.that(notice, has="\nsample\nSPDX-License-Identifier:")
+        tm.that(sibling, has="\nother\nSPDX-License-Identifier:")
         tm.that(repaired, eq=f'"""Sample module.\n\n{notice}\n"""\n\nVALUE = 1\n')
 
     def test_a_module_without_a_copyright_finding_needs_no_author(

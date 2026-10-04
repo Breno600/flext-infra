@@ -5,9 +5,9 @@ The tooling owner maps each Ruff rule code to one recipe
 then these recipes to the findings left. Every repair is derived from the
 source itself: a docstring section from the signature, the summary and the
 raise statement, a summary from the declared name, the notice from the
-project's declared author and copyright year, and a static method from a
-method Ruff reports as never reading its instance: only its receiver
-parameter and its decorator list change, its body keeps every byte. A
+project's declared author, copyright year and module path, and a static
+method from a method Ruff reports as never reading its instance: only its
+receiver parameter and its decorator list change, its body keeps every byte. A
 finding the recipe cannot place raises; nothing is skipped.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
@@ -30,19 +30,24 @@ class FlextInfraUtilitiesLintRecipes:
     """Apply the declared recipe of each lint finding to one module source."""
 
     @staticmethod
-    def copyright_notice(pkg_dir: Path) -> str:
+    def copyright_notice(pkg_dir: Path, *, module: Path | None = None) -> str:
         """Render the copyright notice of the project that owns ``pkg_dir``.
 
         The author is the manifest's first declared author and the year is the
         scaffold copyright year, the same owners the scaffold templates
-        render.
+        render. ``module`` names the file that carries the notice. Its
+        project-relative path, without the suffix every module shares, is the
+        line between the copyright sentence and the SPDX line: the sentence
+        and the license stay legal, and the notice is not one stamp.
 
         Returns:
-            The two-line notice: the copyright line and the SPDX line.
+            The copyright sentence, that module identity when ``module`` is
+            given, and the SPDX line.
 
         Raises:
-            ValueError: If the path is outside any project manifest or the
-                manifest declares no author name.
+            ValueError: If the path is outside any project manifest, the
+                manifest declares no author name, or ``module`` has no
+                identity.
 
         """
         for candidate in (pkg_dir, *pkg_dir.parents):
@@ -59,11 +64,28 @@ class FlextInfraUtilitiesLintRecipes:
                 msg = f"project manifest declares no author name: {candidate}"
                 raise ValueError(msg)
             scaffold = config.Infra.codegen.scaffold.project
-            return (
+            copyright_line = (
                 f"Copyright (c) {scaffold.copyright_year} {author}. "
-                "All rights reserved.\n"
-                f"SPDX-License-Identifier: {scaffold.supported_licenses[0]}"
+                "All rights reserved."
             )
+            spdx = f"SPDX-License-Identifier: {scaffold.supported_licenses[0]}"
+            if module is None:
+                return f"{copyright_line}\n{spdx}"
+            try:
+                identity = module.resolve().relative_to(candidate.resolve())
+            except ValueError:
+                identity = module
+            marker = identity.with_suffix("").as_posix()
+            if (
+                not marker
+                or marker == "."
+                or len(marker) > config.Infra.tooling.tools.ruff.line_length
+            ):
+                marker = identity.stem
+            if not marker:
+                msg = f"module has no notice identity: {module}"
+                raise ValueError(msg)
+            return f"{copyright_line}\n{marker}\n{spdx}"
         msg = f"package is outside any project manifest: {pkg_dir}"
         raise ValueError(msg)
 
@@ -145,7 +167,7 @@ class FlextInfraUtilitiesLintRecipes:
         for definition, text in summaries.items():
             edits.append(cls._summary_edit(lines, definition, text))
         if wants_notice:
-            notice = cls.copyright_notice(path.parent)
+            notice = cls.copyright_notice(path.parent, module=path)
             module_docstring = cls._docstring_expr(tree)
             if module_docstring is None:
                 offset = len(lines[0]) if lines and lines[0].startswith("#!") else 0
