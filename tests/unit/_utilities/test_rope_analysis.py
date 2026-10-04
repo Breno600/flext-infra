@@ -12,8 +12,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import u
-from tests import u as test_u
+from tests import u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -38,7 +37,7 @@ class TestsFlextInfraRopeAnalysis:
         suffix: str,
     ) -> None:
         """Bare dots and renamed symbols retain their actual package provenance."""
-        project, package = test_u.Tests.demo_project(tmp_path)
+        project, package = u.Tests.demo_project(tmp_path)
         nested = package / "inner" / "leaf"
         nested.mkdir(parents=True)
         for directory in (package, nested.parent, nested):
@@ -63,7 +62,7 @@ class TestsFlextInfraRopeAnalysis:
         tmp_path: Path,
     ) -> None:
         """An invalid relative import is not converted into an absolute import."""
-        project, package = test_u.Tests.demo_project(tmp_path)
+        project, package = u.Tests.demo_project(tmp_path)
         source = package / "consumer.py"
         source.write_text("from .. import Owner\n", encoding="utf-8")
         with u.Infra.open_project(project) as rope_project:

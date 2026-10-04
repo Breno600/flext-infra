@@ -1130,6 +1130,37 @@ class TestsFlextInfraCodegenMakeEnvironment:
 
     @staticmethod
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
+    def test_ci_rebuilds_the_shim_farm_from_the_pinned_release(
+        tmp_path: Path,
+        profile: c.Infra.MakeProfile,
+    ) -> None:
+        """CI publishes a shim farm rebuilt by the pinned Mise, never a cached one.
+
+        Mise never replaces a shim bound to another binary, so a farm restored
+        from a tool cache keeps running the Mise release that built it, and an
+        older release rejects a newer lockfile revision.
+        """
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path,
+            profile,
+            bootstrap=True,
+        )
+        makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding="utf-8",
+        )
+        ci_branch = makefile.split('if [ -n "$${GITHUB_PATH:-}" ]; then', 1)[1]
+        ci_branch = ci_branch.split("\tfi;", 1)[0]
+        steps = (
+            'rm -rf "$$shim_farm"',
+            'mise_offline project "$$pinned_mise" -C "$$project_root" reshim',
+            '"$$shim_farm" >> "$$GITHUB_PATH"',
+        )
+        positions = [ci_branch.find(step) for step in steps]
+        tm.that(min(positions), ne=-1)
+        tm.that(positions, eq=sorted(positions))
+
+    @staticmethod
+    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
     def test_bootstrap_selects_the_github_credential_from_declared_sources(
         tmp_path: Path,
         profile: c.Infra.MakeProfile,

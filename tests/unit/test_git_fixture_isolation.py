@@ -10,8 +10,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import u
-from tests import c, u as test_u
+from tests import c, u
 
 
 class TestsFlextInfraGitFixtureIsolation:
@@ -34,7 +33,7 @@ class TestsFlextInfraGitFixtureIsolation:
             "GIT_COMMON_DIR": str(poison / ".git"),
         }
         with tm.scope(env=poisoned_environment):
-            test_u.Tests.initialize_git_repo(target)
+            u.Tests.initialize_git_repo(target)
 
         tm.that((target / ".git").is_dir(), eq=True)
         resolved = tm.ok(

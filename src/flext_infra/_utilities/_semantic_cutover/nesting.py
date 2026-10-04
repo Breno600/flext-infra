@@ -12,6 +12,9 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import m, t
+from flext_infra._utilities._semantic_cutover.class_scope import (
+    FlextInfraUtilitiesSemanticCutoverClassScope,
+)
 from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
 )
@@ -44,6 +47,7 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
     FlextInfraUtilitiesSemanticCutoverNestingCst,
     FlextInfraUtilitiesSemanticCutoverNestingOwner,
     FlextInfraUtilitiesSemanticCutoverEdits,
+    FlextInfraUtilitiesSemanticCutoverClassScope,
 ):
     """Plan class nesting from semantic module ownership instead of record lists."""
 
@@ -87,37 +91,6 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         return ancestors(owner_name) | {
             name for name in classes if owner_name in ancestors(name)
         }
-
-    @staticmethod
-    def _immediate_suite_loads(statement: ast.stmt) -> frozenset[str]:
-        """Return names a class suite evaluates while the class is being built.
-
-        Function and lambda bodies run later. Annotations are stored, not
-        evaluated. A name in any other statement is looked up immediately.
-
-        Returns:
-            The names loaded immediately by ``statement``.
-
-        """
-        names: set[str] = set()
-
-        def visit(node: ast.AST) -> None:
-            if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.Lambda):
-                return
-            if isinstance(node, ast.AnnAssign):
-                if node.value is not None:
-                    visit(node.value)
-                return
-            if isinstance(node, ast.ClassDef):
-                return
-            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
-                names.add(node.id)
-                return
-            for child in ast.iter_child_nodes(node):
-                visit(child)
-
-        visit(statement)
-        return frozenset(names)
 
     @classmethod
     def _suite_reference_pins(

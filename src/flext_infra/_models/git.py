@@ -261,7 +261,10 @@ class FlextInfraModelsGit(
         ] = None
 
     class GitRefHeadsRequest(m.ContractModel):
-        """List every ref below one namespace (``refs/heads``, ``refs/remotes/origin``)."""
+        """List every ref below one namespace.
+
+        Namespaces include ``refs/heads`` and ``refs/remotes/origin``.
+        """
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
