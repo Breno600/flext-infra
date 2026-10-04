@@ -145,6 +145,8 @@ class FlextInfraConstantsSourceCode:
         "FlextModelsBase",
     })
     "Pydantic bases that resolve class-body annotations at runtime, not statically."
+    PROTOCOL_BASE: ClassVar[str] = "Protocol"
+    "typing base that must stay last in a protocol class's base list."
     ENCODING_COOKIE_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^[ \t\f]*#.*?coding[:=][ \t]*[-\w.]+",
     )

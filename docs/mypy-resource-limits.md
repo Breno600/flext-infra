@@ -2,8 +2,6 @@
 
 <!-- TOC START -->
 
-- No sections found
-
 <!-- TOC END -->
 
 The same validated memory (MiB) and wall-time (seconds) settings apply on Linux and
