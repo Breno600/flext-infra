@@ -11,8 +11,8 @@ from typing import Annotated, Self
 
 from flext_core import m, u
 from flext_infra import t
-from flext_infra._constants import FlextInfraConstantsRelease as cr
-from flext_infra._models import FlextInfraModelsMixins as mm
+from flext_infra._constants import FlextInfraConstantsRelease
+from flext_infra._models import FlextInfraModelsMixins
 
 
 class FlextInfraModelsRelease:
@@ -104,7 +104,7 @@ class FlextInfraModelsRelease:
             m.Field(description="Resolved internal dependency versions"),
         ]
 
-    class BuildRecord(mm.ProjectNameMixin, m.StrictBoundaryModel):
+    class BuildRecord(FlextInfraModelsMixins.ProjectNameMixin, m.StrictBoundaryModel):
         """Base model for build result data."""
 
         path: Annotated[
@@ -170,7 +170,7 @@ class FlextInfraModelsRelease:
         ]
         next: Annotated[t.NonEmptyStr, m.Field(description="Version to release")]
         bump: Annotated[
-            cr.VersionBump,
+            FlextInfraConstantsRelease.VersionBump,
             m.Field(description="Bump derived from merged PRs"),
         ]
         previous_tag: Annotated[
@@ -197,7 +197,7 @@ class FlextInfraModelsRelease:
         @property
         def tag(self) -> str:
             """Tag that will identify ``next``."""
-            return cr.TAG_FORMAT.format(version=self.next)
+            return FlextInfraConstantsRelease.TAG_FORMAT.format(version=self.next)
 
         @m.computed_field
         @property
@@ -287,9 +287,9 @@ class FlextInfraModelsRelease:
             return self
 
     class ReleasePhaseDispatchConfig(
-        mm.ProjectNamesListMixin,
-        mm.RepositoryRootPathMixin,
-        mm.VersionTagMixin,
+        FlextInfraModelsMixins.ProjectNamesListMixin,
+        FlextInfraModelsMixins.RepositoryRootPathMixin,
+        FlextInfraModelsMixins.VersionTagMixin,
         m.ArbitraryTypesModel,
     ):
         """Resolved input of one release phase: the repository,
@@ -297,7 +297,10 @@ class FlextInfraModelsRelease:
         """
 
         dry_run: Annotated[bool, m.Field(description="Dry run flag")] = False
-        phase: Annotated[cr.ReleasePhase, m.Field(description="Release phase")]
+        phase: Annotated[
+            FlextInfraConstantsRelease.ReleasePhase,
+            m.Field(description="Release phase"),
+        ]
         index: Annotated[
             bool,
             m.Field(description="Publish verified artifacts to the package index"),
