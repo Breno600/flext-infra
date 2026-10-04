@@ -12,13 +12,13 @@ from typing import Annotated, ClassVar
 
 from flext_core import m, u
 from flext_infra import c, t
-from flext_infra._models.mixins import FlextInfraModelsMixins as mm
+from flext_infra._models.mixins import FlextInfraModelsMixins
 
 
 class FlextInfraModelsCheck:
     """Quality-gate check domain models."""
 
-    class RunCommand(mm.WriteMixin, m.ContractModel):
+    class RunCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra check run``.
 
         Inherits canonical ``repository_root`` (``--repository-root``),
@@ -133,7 +133,7 @@ class FlextInfraModelsCheck:
             m.Field(description="Optional cProfile output destination"),
         ] = None
 
-    class FixPyreflyConfigCommand(mm.WriteMixin, m.ContractModel):
+    class FixPyreflyConfigCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra check fix-pyrefly-settings``."""
 
     class Issue(m.ContractModel):
@@ -157,7 +157,7 @@ class FlextInfraModelsCheck:
                 f"{self.file}:{self.line}:{self.column} {code_part}{self.message}"
             ).strip()
 
-    class GateResult(mm.ProjectNameMixin, m.ArbitraryTypesModel):
+    class GateResult(FlextInfraModelsMixins.ProjectNameMixin, m.ArbitraryTypesModel):
         """Result summary for a single quality gate execution."""
 
         gate: Annotated[str, m.Field(description="Gate name")]
@@ -194,7 +194,7 @@ class FlextInfraModelsCheck:
             """Number of findings that fail the gate: every issue blocks."""
             return len(self.issues)
 
-    class ProjectResult(mm.ProjectNameMixin, m.ArbitraryTypesModel):
+    class ProjectResult(FlextInfraModelsMixins.ProjectNameMixin, m.ArbitraryTypesModel):
         """Aggregated gate results for a single project.
 
         Enforcement exemption: ``gates`` is a ``MutableMapping`` populated
