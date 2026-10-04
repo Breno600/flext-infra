@@ -62,8 +62,8 @@ class FlextInfraUtilitiesDocsContract:
             return content
         return after_toc
 
-    @staticmethod
-    def docs_contract_update_toc(content: str) -> t.StrIntPair:
+    @classmethod
+    def docs_contract_update_toc(cls, content: str) -> t.StrIntPair:
         """Normalize the managed table of contents in Markdown content.
 
         Returns:
@@ -71,8 +71,7 @@ class FlextInfraUtilitiesDocsContract:
 
         """
         original = content
-        strip_toc = FlextInfraUtilitiesDocsContract._docs_contract_strip_invented_toc_before_frontmatter
-        content = strip_toc(
+        content = cls._docs_contract_strip_invented_toc_before_frontmatter(
             content,
         )
         toc = FlextInfraUtilitiesDocsContract.docs_contract_build_toc(content)
