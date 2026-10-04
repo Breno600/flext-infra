@@ -1010,7 +1010,8 @@ class TestsFlextInfraCodegenConform:
         root = tmp_path / "arbitrary-root"
         u.Tests.seed_locked_taplo(tmp_path)
         service, request = TestsFlextInfraConformSupport.check_conform_service(
-            root, workspace,
+            root,
+            workspace,
         )
 
         first = tm.ok(service.plan(request))
