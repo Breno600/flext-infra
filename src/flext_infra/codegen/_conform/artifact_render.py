@@ -87,13 +87,13 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 resolved = u.Infra.load_project_managed_artifacts(repository_root)
                 if resolved.failure:
                     return r[m.Infra.CodegenArtifactComposition].from_failure(resolved)
-                blocks = resolved.value.artifacts.Gitignore.preserved_blocks
+                artifacts = resolved.value.artifacts
             else:
-                blocks = render_inputs.managed_artifacts.resolution.artifacts.Gitignore.preserved_blocks
+                artifacts = render_inputs.managed_artifacts.resolution.artifacts
             composed = u.Infra.preserve_project_gitignore_blocks(
                 rendered,
                 repository_root,
-                blocks,
+                artifacts.Gitignore.preserved_blocks,
             )
             if composed.failure:
                 return r[m.Infra.CodegenArtifactComposition].from_failure(composed)
@@ -494,13 +494,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 uv_link_mode=self.link_mode(target.repository, codegen.toolchain),
                 uv_version=codegen.toolchain.uv_version,
                 mise_lockfile_platforms=codegen.toolchain.mise_lockfile_platforms,
-                npm_package_manager=codegen.toolchain.npm_package_manager,
-                qlty_selector=codegen.toolchain.qlty_selector,
-                jscpd_selector=codegen.toolchain.jscpd_selector,
-                prettier_selector=codegen.toolchain.prettier_selector,
-                ast_grep_selector=codegen.toolchain.ast_grep_selector,
-                scc_selector=codegen.toolchain.scc_selector,
-                waza_selector=codegen.toolchain.waza_selector,
                 make=codegen.make,
                 extra_verbs=(
                     self._merge_extra_verbs(

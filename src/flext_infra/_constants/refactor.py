@@ -126,7 +126,9 @@ class FlextInfraConstantsRefactor:
           through its bases, every class the facade's family package
           declares in ``__all__``;
         - ``class-stem``: the captured class name starts with the project's
-          class stem (``Tests`` + stem under the tests tree);
+          class stem as class nesting derives it (``Tests`` + stem under the
+          tests tree; ``Examples``/``Scripts`` + stem or the bare stem under
+          those surfaces);
         - ``package-layers``: the finding's package provides every layer the
           rule names in ``arg`` (a declared facade letter, a module, a
           private module or a subpackage of that name);

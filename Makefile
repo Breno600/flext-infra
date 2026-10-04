@@ -863,8 +863,14 @@ mise_receipt launcher-version "$$lock_stage/artifacts/bin/mise"; \
 	python_executable=$$(cat "$$scratch/python-path.log"); \
 	# CI receives only the shim farm: a project bin/ on PATH would bind every \
 	# shim to that repository launcher (mise resolves shims through PATH). \
+	# A restored tool cache keeps the shims bound to the Mise release that built \
+	# them, and Mise never replaces a shim bound to another binary, so CI rebuilds \
+	# the farm from the pinned release before publishing it. \
 	if [ -n "$${GITHUB_PATH:-}" ]; then \
-printf '%s\n' "$$mise_storage_root/shims" >> "$$GITHUB_PATH"; \
+shim_farm="$$mise_storage_root/shims"; \
+		rm -rf "$$shim_farm"; \
+		mise_checked "$$scratch/reshim.log" mise_offline project "$$pinned_mise" -C "$$project_root" reshim; \
+		printf '%s\n' "$$shim_farm" >> "$$GITHUB_PATH"; \
 fi; \
 	printf 'setup: entering lifecycle (submodules, environment, hooks) make=%s\n' "$(SELF_MAKE_EXECUTABLE)"; \
 	mise_runtime_path="$$mise_storage_root/bootstrap/mise-$${runtime_release}"; \
@@ -1007,8 +1013,13 @@ endef
 
 .PHONY: $(PUBLIC_VERBS) $(addprefix _builtin-,$(PUBLIC_VERBS))
 .PHONY: _builtin_gen_init _builtin_gen_all
-$(filter-out help clean upg,$(PUBLIC_VERBS)): _builtin_require_mise_pin
 
+# OPTIONS=Y (or HELP=Y) displays a built-in verb's contract without effects:
+# no prerequisite, hook or handler of that verb runs. A script verb keeps its
+# entry, and the promoted dispatcher renders its contract per WHAT.
+VERB_CONTRACT := $(filter 1 TRUE Y YES true y yes True Yes,$(OPTIONS) $(HELP))
+ifeq ($(VERB_CONTRACT),)
+$(filter-out help clean upg,$(BUILTIN_VERBS)): _builtin_require_mise_pin
 
 
 
@@ -1397,6 +1408,155 @@ upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle
 upg: TOOL_BOOTSTRAP_RESOLVE := 1
 upg: TOOL_BOOTSTRAP_LOCK := 1
 upg: _builtin_require_runtime_root _bootstrap_setup_tools
+else
+
+help:
+	@printf '  %-16s %s\n' 'help' 'Show the complete selector-free public interface.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make help to execute it.'
+
+setup:
+	@printf '  %-16s %s\n' 'setup' 'Provision the declared environment and hooks.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make setup to execute it.'
+
+upg:
+	@printf '  %-16s %s\n' 'upg' 'Resolve the newest declared releases, write the uv and mise locks, then prove the upgraded tree still converges and passes every active check gate.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make upg to execute it.'
+
+build:
+	@printf '  %-16s %s\n' 'build' 'Build the project distribution artifacts.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make build to execute it.'
+
+check:
+	@printf '  %-16s %s\n' 'check' 'Run the configured non-test gates except the dedicated smells audit.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make check to execute it.'
+
+smells:
+	@printf '  %-16s %s\n' 'smells' 'Run the strict code-smell audit as a dedicated gate.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make smells to execute it.'
+
+test:
+	@printf '  %-16s %s\n' 'test' 'Run incremental tests through the persistent testmon cache.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make test to execute it.'
+
+test-full:
+	@printf '  %-16s %s\n' 'test-full' 'Run incremental then all tests, including external and CI-excluded markers, through the same persistent testmon cache.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make test-full to execute it.'
+
+test-file:
+	@printf '  %-16s %s\n' 'test-file' 'Run one declared test file through the budgeted and slow phases with the same persistent testmon cache (FILE=<repository-relative path>).'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make test-file to execute it.'
+
+profile-test:
+	@printf '  %-16s %s\n' 'profile-test' 'Profile the canonical pytest entry and its collection children on the same persistent testmon database, without the outer bounded-gate wrapper.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make profile-test to execute it.'
+
+profile-test-report:
+	@printf '  %-16s %s\n' 'profile-test-report' 'Render the parent pytest profile and the aggregated child profiles from that run.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make profile-test-report to execute it.'
+
+fmt:
+	@printf '  %-16s %s\n' 'fmt' 'Apply ruff format --preview and every declared formatter gate. Ruff is the rule; change code, never ruff.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make fmt to execute it.'
+
+fix:
+	@printf '  %-16s %s\n' 'fix' 'Apply the safe fixes of ruff check --fix --preview plus every other configured safe correction; never deletes information. Ruff is the rule; change code, never ruff.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make fix to execute it.'
+
+fix-namespace:
+	@printf '  %-16s %s\n' 'fix-namespace' 'Apply the canonical namespace enforcer to the selected workspace.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make fix-namespace to execute it.'
+
+fix-accessors:
+	@printf '  %-16s %s\n' 'fix-accessors' 'Migrate forbidden accessor names and every resolved consumer.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make fix-accessors to execute it.'
+
+audit:
+	@printf '  %-16s %s\n' 'audit' 'Inspect ownership, dependency, and generated-state health.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make audit to execute it.'
+
+status:
+	@printf '  %-16s %s\n' 'status' 'Report the resolved runtime and repository state.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make status to execute it.'
+
+verify-clean:
+	@printf '  %-16s %s\n' 'verify-clean' 'Verify that managed artifacts and generated documentation match their sources and leave no unstaged change to a tracked file.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make verify-clean to execute it.'
+
+docs:
+	@printf '  %-16s %s\n' 'docs' 'Generate, fix, format, and check documentation.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make docs to execute it.'
+
+clean:
+	@printf '  %-16s %s\n' 'clean' 'Remove every declared disposable artifact.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make clean to execute it.'
+
+bootstrap-candidate:
+	@printf '  %-16s %s\n' 'bootstrap-candidate' 'Bootstrap declared candidate worktrees with this branch-matched generator.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make bootstrap-candidate to execute it.'
+
+release-plan:
+	@printf '  %-16s %s\n' 'release-plan' 'Resolve the release decision through the public protocol.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make release-plan to execute it.'
+
+release-version:
+	@printf '  %-16s %s\n' 'release-version' 'Materialize the planned version.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make release-version to execute it.'
+
+release-tag:
+	@printf '  %-16s %s\n' 'release-tag' 'Tag the verified release commit.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make release-tag to execute it.'
+
+release-build:
+	@printf '  %-16s %s\n' 'release-build' 'Build the release receipt and artifacts.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make release-build to execute it.'
+
+publication:
+	@printf '  %-16s %s\n' 'publication' 'Publish only receipt-attested release artifacts.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make publication to execute it.'
+
+gen:
+	@printf '  %-16s %s\n' 'gen' 'Regenerate every managed projection atomically.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make gen to execute it.'
+
+initialize:
+	@printf '  %-16s %s\n' 'initialize' 'Materialize the declared package initializer graph.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make initialize to execute it.'
+
+mod:
+	@printf '  %-16s %s\n' 'mod' 'Apply the declared structural codemods; committed rule-test snapshots are verified, never rewritten.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make mod to execute it.'
+
+mod-text:
+	@printf '  %-16s %s\n' 'mod-text' 'Apply the declared Sed text rules with exact receipts and guarded publication.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make mod-text to execute it.'
+
+mod-text-candidate:
+	@printf '  %-16s %s\n' 'mod-text-candidate' 'Apply declared Sed text rules to the configured candidate workspace.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make mod-text-candidate to execute it.'
+
+mod-snapshots:
+	@printf '  %-16s %s\n' 'mod-snapshots' 'Regenerate the owned ast-grep rule-test snapshots from their tests for a reviewed commit.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make mod-snapshots to execute it.'
+
+waza:
+	@printf '  %-16s %s\n' 'waza' 'Validate provider-neutral governance semantics with Waza.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make waza to execute it.'
+
+duplication:
+	@printf '  %-16s %s\n' 'duplication' 'Run the canonical jscpd duplicate-code gate.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make duplication to execute it.'
+
+sonarcloud-sync:
+	@printf '  %-16s %s\n' 'sonarcloud-sync' 'Write the SSOT SonarCloud issue exclusions to the server-side project settings (requires SONAR_TOKEN).'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make sonarcloud-sync to execute it.'
+
+sonarcloud-issues:
+	@printf '  %-16s %s\n' 'sonarcloud-issues' 'Read unresolved new-code SonarCloud issues on the published integration branch (requires SONAR_TOKEN).'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make sonarcloud-issues to execute it.'
+
+endif
+$(filter-out help clean upg,$(SCRIPT_VERBS)): _builtin_require_mise_pin
+
 
 # Only the runtime root resolves the Mise release. An attached member's pin and
 # launchers are projections of that root, published by the root's `make gen`.
@@ -1819,15 +1979,15 @@ _builtin_build_artifacts:
 # An absent CI token runs every active default gate.
 _builtin_check_all: _builtin_require_environment
 	@set -eu; \
-		gates="lint,security,markdown,duplication,pyrefly,mypy,pyright,loc-cap,runtime-census,fresh-import,index-declarations,codemod,layout,direnv"; \
+		gates="lint,security,markdown,markdown-format,markdown-code,duplication,pyrefly,mypy,pyright,loc-cap,runtime-census,fresh-import,index-declarations,codemod,layout,direnv"; \
 		if [ "$(strip $(CI))" = "Y" ]; then \
-			gates="lint,security,markdown,duplication,loc-cap,runtime-census,fresh-import,index-declarations,codemod,layout,direnv"; \
-			printf 'INFO: CI=Y runs check gates: lint security markdown duplication loc-cap runtime-census fresh-import index-declarations codemod layout direnv\n'; \
+			gates="lint,security,markdown,markdown-format,markdown-code,duplication,pyrefly,mypy,pyright,loc-cap,runtime-census,fresh-import,index-declarations,codemod,layout,direnv"; \
+			printf 'INFO: CI=Y runs check gates: lint security markdown markdown-format markdown-code duplication pyrefly mypy pyright loc-cap runtime-census fresh-import index-declarations codemod layout direnv\n'; \
 		elif [ "$(strip $(CI))" = "N" ]; then \
-			gates="pyrefly,mypy,pyright"; \
-			printf 'INFO: CI=N runs check gates: pyrefly mypy pyright\n'; \
+			gates=""; \
+			printf 'INFO: CI=N runs check gates: \n'; \
 		else \
-			printf 'INFO: default context runs check gates: lint security markdown duplication pyrefly mypy pyright loc-cap runtime-census fresh-import index-declarations codemod layout direnv\n'; \
+			printf 'INFO: default context runs check gates: lint security markdown markdown-format markdown-code duplication pyrefly mypy pyright loc-cap runtime-census fresh-import index-declarations codemod layout direnv\n'; \
 		fi; \
 		if [ -z "$$gates" ]; then \
 			printf 'ERROR: no active check gates remain in the selected context\n' >&2; \

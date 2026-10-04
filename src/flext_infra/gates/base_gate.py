@@ -39,6 +39,13 @@ class FlextInfraGate:
     # A gate that analyzes Python sources is selected only for a project whose
     # detected content holds a first-party Python target.
     requires_python_targets: ClassVar[bool] = False
+    # Shared check-invocation defaults. A gate replaces the value, or overrides
+    # the reader when the value depends on the project.
+    check_timeout: ClassVar[int] = c.Infra.TIMEOUT_DEFAULT
+    check_report_filename: ClassVar[str] = ""
+    check_env: ClassVar[t.StrMapping | None] = None
+    check_remove_env_keys: ClassVar[t.StrSequence] = (c.Infra.ENV_VAR_FORCE_COLOR,)
+    check_report_evidence: ClassVar[t.StrSequence] = ()
 
     def selected_for(self, project_dir: Path) -> bool:
         """Whether this project's detected content selects the gate at all.
@@ -282,29 +289,53 @@ class FlextInfraGate:
             severity="ERROR",
         )
 
-    def _checker_stderr_issues(
+    def _checker_issues(
         self,
         result: p.Cli.CommandOutput,
         project_dir: Path,
+        diagnostics: t.SequenceOf[m.Infra.Issue],
     ) -> t.SequenceOf[m.Infra.Issue]:
-        """Retain checker failures while accounting for native informational logs.
+        """Join a type checker's report with its stderr and an unexplained exit.
+
+        Stderr lines outside the checker's informational prefixes are failures;
+        a failed run that leaves nothing else to report is surfaced as the
+        ``<gate>-exec`` issue rather than silently passing.
 
         Returns:
-            The resulting ``t.SequenceOf[m.Infra.Issue]``.
+            The report diagnostics, stderr failures and the bare-exit issue.
 
         """
-        return tuple(
+        issues = (
+            *diagnostics,
+            *(
+                m.Infra.Issue(
+                    file=str(project_dir),
+                    line=0,
+                    column=0,
+                    code=f"{self.gate_id}-stderr",
+                    message=line,
+                    severity="ERROR",
+                )
+                for line in result.stderr.splitlines()
+                if line.strip()
+                and line.lstrip().split(maxsplit=1)[0] not in self.checker_info_prefixes
+            ),
+        )
+        if issues or u.Cli.process_succeeded(result.outcome):
+            return issues
+        message = (result.stderr or result.stdout).strip() or (
+            f"{self.gate_id} exited with code {result.outcome.raw_return_code} "
+            "without JSON diagnostics"
+        )
+        return (
             m.Infra.Issue(
-                file=str(project_dir),
-                line=0,
-                column=0,
-                code=f"{self.gate_id}-stderr",
-                message=line,
-                severity="ERROR",
-            )
-            for line in result.stderr.splitlines()
-            if line.strip()
-            and line.lstrip().split(maxsplit=1)[0] not in self.checker_info_prefixes
+                file=c.PYPROJECT_FILENAME,
+                line=1,
+                column=1,
+                code=f"{self.gate_id}-exec",
+                message=message,
+                severity=c.Infra.ERROR,
+            ),
         )
 
     def _parsed_gate_execution(
@@ -570,14 +601,16 @@ class FlextInfraGate:
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Parse tool output into (passed, issues). Default: no-op (check overridden).
+        """Parse tool output into (passed, issues).
 
-        Returns:
-            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+        Concrete gates that run the template check implement this method.
+
+        Raises:
+            NotImplementedError: If the concrete gate did not implement parsing.
 
         """
-        _ = result, project_dir, ctx
-        return True, ()
+        msg = "FlextInfraGate._parse_check_output() must be implemented"
+        raise NotImplementedError(msg)
 
     def _check_timeout(self, project_dir: Path, ctx: m.Infra.GateContext) -> int:
         """Timeout for the check command. Override for long-running tools.
@@ -587,8 +620,7 @@ class FlextInfraGate:
 
         """
         _ = project_dir, ctx
-        timeout: int = c.Infra.TIMEOUT_DEFAULT
-        return timeout
+        return self.check_timeout
 
     def _check_report_path(
         self,
@@ -601,8 +633,9 @@ class FlextInfraGate:
             The resulting ``Path | None``.
 
         """
-        _ = project_dir, ctx
-        return None
+        if not self.check_report_filename:
+            return None
+        return ctx.reports_dir / f"{project_dir.name}-{self.check_report_filename}"
 
     def _validate_check_report(
         self,
@@ -611,8 +644,23 @@ class FlextInfraGate:
         ctx: m.Infra.GateContext,
         targets: t.StrSequence,
     ) -> None:
-        """Validate native execution evidence against the exact submitted targets."""
-        _ = result, project_dir, ctx, targets
+        """Validate native execution evidence against the exact submitted targets.
+
+        Raises:
+            ValueError: If declared native-report evidence is absent from the
+                tool output.
+
+        """
+        _ = project_dir, ctx, targets
+        missing = [
+            token
+            for token in self.check_report_evidence
+            if token not in result.stdout and token not in result.stderr
+        ]
+        if not missing:
+            return
+        msg = "native report missing evidence: " + ", ".join(missing)
+        raise ValueError(msg)
 
     def _check_env(
         self,
@@ -626,7 +674,7 @@ class FlextInfraGate:
 
         """
         _ = project_dir, ctx
-        return None
+        return self.check_env
 
     def _check_remove_env_keys(
         self,
@@ -644,7 +692,7 @@ class FlextInfraGate:
 
         """
         _ = project_dir, ctx
-        return (c.Infra.ENV_VAR_FORCE_COLOR,)
+        return self.check_remove_env_keys
 
     # ------------------------------------------------------------------
     # Template method: fix
