@@ -542,13 +542,13 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             parent: Path,
             distribution: str,
             *,
-            workspace: str,
-            database: str,
-            issue_prefix: str,
+            identity: str,
         ) -> Path:
             """Initialize ``parent`` and copy a ledger-less governed member into it.
 
-            The caller declares the member's Beads route and attaches it.
+            ``parent`` owns the ``<identity>-workspace`` Beads workspace, the
+            ``<identity>-database`` database and the ``<identity>-prefix`` issue
+            prefix. The caller declares the member's Beads route and attaches it.
 
             Returns:
                 The copied member checkout at ``apps/member``.
@@ -566,9 +566,9 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             cls.initialize_governed_project(
                 parent,
                 distribution,
-                workspace=workspace,
-                database=database,
-                issue_prefix=issue_prefix,
+                workspace=f"{identity}-workspace",
+                database=f"{identity}-database",
+                issue_prefix=f"{identity}-prefix",
             )
             member = parent / "apps" / "member"
             shutil.copytree(source, member)
