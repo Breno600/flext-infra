@@ -458,3 +458,40 @@ class TestsFlextInfraLintRecipes:
         )
 
         tm.that(repaired, eq=source)
+
+    @staticmethod
+    def test_static_method_leaves_an_override_of_a_parent_method() -> None:
+        """A subclass method that redefines its base method keeps its receiver."""
+        source = (
+            "class Base:\n"
+            "    def hook(self) -> int:\n"
+            "        return id(self)\n"
+            "\n"
+            "\n"
+            "class Child(Base):\n"
+            "    def hook(self) -> int:\n"
+            "        return 1\n"
+        )
+
+        repaired = TestsFlextInfraLintRecipes._apply(
+            source,
+            ("no-self-use", 7, "Method `hook` could be a function"),
+        )
+
+        tm.that(repaired, eq=source)
+
+    @staticmethod
+    def test_static_method_leaves_a_method_that_reads_its_receiver() -> None:
+        """Zero-argument ``super()`` reads the receiver, so the method keeps it."""
+        source = (
+            "class Sample(Base):\n"
+            "    def run(self) -> int:\n"
+            "        return super().run() + 1\n"
+        )
+
+        repaired = TestsFlextInfraLintRecipes._apply(
+            source,
+            ("no-self-use", 2, "Method `run` could be a function"),
+        )
+
+        tm.that(repaired, eq=source)
