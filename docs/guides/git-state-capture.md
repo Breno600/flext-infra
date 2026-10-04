@@ -2,8 +2,6 @@
 
 <!-- TOC START -->
 
-- No sections found
-
 <!-- TOC END -->
 
 `u.Infra` owns scoped WIP capture. Callers select literal repository-relative paths in
