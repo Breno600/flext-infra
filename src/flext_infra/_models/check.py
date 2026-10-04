@@ -136,6 +136,67 @@ class FlextInfraModelsCheck:
     class FixPyreflyConfigCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra check fix-pyrefly-settings``."""
 
+    class SarifLocation(m.ContractModel):
+        """Native SARIF location, including the optional end of its source span."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(validate_by_name=True)
+
+        uri: str = m.Field(
+            validation_alias=m.AliasPath("physicalLocation", "artifactLocation", "uri"),
+            description="Artifact URI",
+        )
+        start_line: int = m.Field(
+            validation_alias=m.AliasPath("physicalLocation", "region", "startLine"),
+            description="Start line (1-based)",
+        )
+        start_column: int = m.Field(
+            validation_alias=m.AliasPath("physicalLocation", "region", "startColumn"),
+            description="Native start column",
+        )
+        end_line: int | None = m.Field(
+            None,
+            validation_alias=m.AliasPath("physicalLocation", "region", "endLine"),
+            description="Native end line when supplied by the scanner",
+        )
+        end_column: int | None = m.Field(
+            None,
+            validation_alias=m.AliasPath("physicalLocation", "region", "endColumn"),
+            description="Native end column when supplied by the scanner",
+        )
+        uri_base_id: str = m.Field(
+            "%SRCROOT%",
+            validation_alias=m.AliasPath(
+                "physicalLocation", "artifactLocation", "uriBaseId",
+            ),
+            description="URI base identifier",
+            validate_default=True,
+        )
+
+        @u.model_serializer
+        def _serialize(self) -> t.JsonMapping:
+            """Emit native optional span coordinates only when present.
+
+            Returns:
+                The resulting ``t.JsonMapping``.
+            """
+            region: t.JsonDict = {
+                "startLine": self.start_line,
+                "startColumn": self.start_column,
+            }
+            if self.end_line is not None:
+                region["endLine"] = self.end_line
+            if self.end_column is not None:
+                region["endColumn"] = self.end_column
+            return {
+                "physicalLocation": {
+                    "artifactLocation": {
+                        "uri": self.uri,
+                        "uriBaseId": self.uri_base_id,
+                    },
+                    "region": region,
+                },
+            }
+
     class Issue(m.ContractModel):
         """Single issue reported by a quality gate tool."""
 
@@ -146,6 +207,18 @@ class FlextInfraModelsCheck:
         message: Annotated[str, m.Field(description="Human-readable issue description")]
         severity: Annotated[str, m.Field(description="Issue severity level")] = (
             c.Infra.ERROR
+        )
+        locations: t.VariadicTuple[FlextInfraModelsCheck.SarifLocation] = m.Field(
+            (),
+            description="Native primary source spans when supplied by the scanner",
+            validate_default=True,
+        )
+        related_locations: t.VariadicTuple[FlextInfraModelsCheck.SarifLocation] = (
+            m.Field(
+                (),
+                description="All native comparison locations, including other projects",
+                validate_default=True,
+            )
         )
 
         @m.computed_field
@@ -277,72 +350,6 @@ class FlextInfraModelsCheck:
                 "helpUri": self.help_uri,
             }
 
-    class SarifLocation(m.ContractModel):
-        """Compact SARIF location source span."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(validate_by_name=True)
-
-        uri: Annotated[
-            str,
-            m.Field(
-                validation_alias=m.AliasPath(
-                    "physicalLocation",
-                    "artifactLocation",
-                    "uri",
-                ),
-                description="Artifact URI",
-            ),
-        ]
-        start_line: Annotated[
-            int,
-            m.Field(
-                validation_alias=m.AliasPath("physicalLocation", "region", "startLine"),
-                description="Start line (1-based)",
-            ),
-        ]
-        start_column: Annotated[
-            int,
-            m.Field(
-                validation_alias=m.AliasPath(
-                    "physicalLocation",
-                    "region",
-                    "startColumn",
-                ),
-                description="Start column (1-based)",
-            ),
-        ]
-        uri_base_id: str = m.Field(
-            "%SRCROOT%",
-            validation_alias=m.AliasPath(
-                "physicalLocation",
-                "artifactLocation",
-                "uriBaseId",
-            ),
-            description="URI base identifier",
-            validate_default=True,
-        )
-
-        @u.model_serializer
-        def _serialize(self) -> t.JsonMapping:
-            """Serialize.
-
-            Returns:
-                The resulting ``t.JsonMapping``.
-
-            """
-            return {
-                "physicalLocation": {
-                    "artifactLocation": {
-                        "uri": self.uri,
-                        "uriBaseId": self.uri_base_id,
-                    },
-                    "region": {
-                        "startLine": self.start_line,
-                        "startColumn": self.start_column,
-                    },
-                },
-            }
-
     class SarifResult(m.ContractModel):
         """SARIF result entry."""
 
@@ -363,6 +370,14 @@ class FlextInfraModelsCheck:
         locations: list[FlextInfraModelsCheck.SarifLocation] = m.Field(
             description="Result locations",
         )
+        related_locations: t.VariadicTuple[FlextInfraModelsCheck.SarifLocation] = (
+            m.Field(
+                (),
+                validation_alias="relatedLocations",
+                description="Native related source spans",
+                validate_default=True,
+            )
+        )
 
         @u.model_serializer
         def _serialize(self) -> t.JsonMapping:
@@ -372,7 +387,7 @@ class FlextInfraModelsCheck:
                 The resulting ``t.JsonMapping``.
 
             """
-            return {
+            result: t.MutableJsonMapping = {
                 "ruleId": self.rule_id,
                 "level": self.level,
                 "message": {"text": self.message},
@@ -380,6 +395,12 @@ class FlextInfraModelsCheck:
                     location.model_dump(by_alias=True) for location in self.locations
                 ],
             }
+            if self.related_locations:
+                result["relatedLocations"] = [
+                    location.model_dump(by_alias=True)
+                    for location in self.related_locations
+                ]
+            return result
 
     class SarifRun(m.ContractModel):
         """SARIF run entry."""

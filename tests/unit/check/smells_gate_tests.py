@@ -13,6 +13,7 @@ from flext_tests import tm
 
 from flext_infra import c
 from flext_infra.check.gate_registry import FlextInfraGateRegistry
+from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 from flext_infra.gates.smells import FlextInfraSmellsGate
 from tests import m, u
 
@@ -144,3 +145,63 @@ class TestsFlextInfraSmellsGate:
 
         tm.that(execution.result.passed, eq=True)
         tm.that(execution.issues, length=0)
+
+    def test_workspace_report_round_trips_native_comparison_spans(
+        self,
+        tmp_path: Path,
+        smells_project: Path,
+    ) -> None:
+        """The public checker retains exactly the spans emitted by real qlty."""
+        self._configure(tmp_path)
+        source = (
+            Path(__file__).resolve().parents[3] / "src/flext_infra/gates/smells.py"
+        ).read_text(encoding=c.Cli.ENCODING_DEFAULT)
+        for name in ("first.py", "second.py", "third.py"):
+            (self._package(smells_project) / name).write_text(
+                source,
+                encoding=c.Cli.ENCODING_DEFAULT,
+            )
+        reports_dir = tmp_path / "reports"
+        projects = tm.ok(
+            FlextInfraWorkspaceChecker.model_validate({
+                "repository_root": tmp_path,
+            }).run_projects(
+                [smells_project.name],
+                [c.Infra.SMELLS],
+                reports_dir=reports_dir,
+            ),
+        )
+        execution = projects[0].gates[c.Infra.SMELLS]
+        native = u.Cli.json_as_mapping(tm.ok(u.Cli.json_parse(execution.raw_output)))
+        report = m.Infra.SarifReport.model_validate_json(
+            (reports_dir / c.Infra.CHECK_REPORT_SARIF_FILENAME).read_text(
+                encoding=c.Cli.ENCODING_DEFAULT,
+            ),
+        )
+        native_results = tuple(
+            result
+            for run in u.Cli.json_deep_mapping_list(native, "runs")
+            for result in u.Cli.json_deep_mapping_list(run, "results")
+        )
+        report_results = tuple(result for run in report.runs for result in run.results)
+        tm.that(len(report_results), eq=len(native_results))
+        tm.that(execution.finding_count, eq=len(native_results))
+        for observed, published in zip(native_results, report_results, strict=True):
+            tm.that(
+                published.locations,
+                eq=[
+                    m.Infra.SarifLocation.model_validate(location)
+                    for location in u.Cli.json_deep_mapping_list(observed, "locations")
+                ],
+            )
+            tm.that(
+                published.related_locations,
+                eq=tuple(
+                    m.Infra.SarifLocation.model_validate(location)
+                    for location in u.Cli.json_deep_mapping_list(
+                        observed, "relatedLocations",
+                    )
+                ),
+            )
+        round_trip = m.Infra.SarifReport.model_validate_json(report.model_dump_json())
+        tm.that(round_trip, eq=report)

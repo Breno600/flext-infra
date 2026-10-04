@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import pytest
 from flext_tests import tm
 
 from tests import m, t
@@ -13,6 +14,38 @@ from tests import m, t
 
 class TestsFlextInfraModels:
     """Tests for ``FlextInfraModels``."""
+
+    @staticmethod
+    @pytest.mark.parametrize("end", [None, (12, 0)])
+    def test_sarif_locations_round_trip_optional_spans(
+        end: t.Pair[int, int] | None,
+    ) -> None:
+        """SARIF protocol coordinates and related-location order survive JSON."""
+        primary = m.Infra.SarifLocation(
+            uri="src/first.py",
+            start_line=3,
+            start_column=0,
+            end_line=end[0] if end else None,
+            end_column=end[1] if end else None,
+        )
+        related = m.Infra.SarifLocation(
+            uri="other-project/src/second.py",
+            start_line=7,
+            start_column=2,
+        )
+        result = m.Infra.SarifResult(
+            rule_id="similar-code",
+            level="error",
+            message="Native comparison",
+            locations=[primary],
+            related_locations=(related, primary),
+        )
+        published = result.model_dump_json()
+        restored = m.Infra.SarifResult.model_validate_json(published)
+        tm.that(restored, eq=result)
+        tm.that("endLine" in primary.model_dump_json(), eq=end is not None)
+        tm.that("endColumn" in primary.model_dump_json(), eq=end is not None)
+        tm.that(published, has="relatedLocations")
 
     @staticmethod
     def _sample_issues() -> t.Triple[m.Infra.Issue, m.Infra.Issue, m.Infra.Issue]:

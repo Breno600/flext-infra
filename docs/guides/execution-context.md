@@ -245,6 +245,11 @@ verb runs only the qlty smell scan and fails when it finds defects. The
 `runtime-census` gate stays in `make check` and grades every runtime enforcement
 finding, including rules that qlty also classifies as smells. An empty or
 malformed qlty SARIF response is a failed scan, not a zero-finding receipt.
+Native primary source spans and all `relatedLocations` pass through the typed issue
+and SARIF report contracts without dropping comparison locations outside the primary
+project. Optional end coordinates are emitted only when the scanner supplies them;
+point-only diagnostics from other gates remain point-only. The Markdown summary still
+uses the primary location, while the SARIF artifact carries the comparison evidence.
 
 ## Bounded Mypy failure status
 

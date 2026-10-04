@@ -90,7 +90,7 @@ class FlextInfraWorkspaceCheckReportsMixin:
                         m.Infra.SarifRule(
                             id=rule_id,
                             short_description=f"{tool_name} ({gate}) issue",
-                            helpUri=tool_url,
+                            help_uri=tool_url,
                         ),
                     )
                     sarif_results.append(cls._sarif_issue(issue, rule_id))
@@ -119,16 +119,19 @@ class FlextInfraWorkspaceCheckReportsMixin:
             else "error"
         )
         return m.Infra.SarifResult(
-            ruleId=rule_id,
+            rule_id=rule_id,
             level=level,
             message=issue.message,
-            locations=[
+            locations=list(issue.locations)
+            if issue.locations
+            else [
                 m.Infra.SarifLocation(
                     uri=issue.file,
                     start_line=issue.line,
                     start_column=issue.column,
                 ),
             ],
+            related_locations=issue.related_locations,
         )
 
     @classmethod
