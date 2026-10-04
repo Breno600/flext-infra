@@ -44,7 +44,7 @@ class TestsFlextInfraGateRegistry:
         opt_in = frozenset(make.opt_in_check_gates)
         tm.that(default <= allowed, eq=True)
         tm.that(opt_in <= allowed, eq=True)
-        tm.that(default & opt_in, eq=frozenset())
+        tm.that(default.isdisjoint(opt_in), eq=True)
         tm.that(
             frozenset(c.Infra.CANONICAL_FIXABLE_GATE_IDS)
             <= frozenset(c.Infra.CANONICAL_GATE_IDS),
