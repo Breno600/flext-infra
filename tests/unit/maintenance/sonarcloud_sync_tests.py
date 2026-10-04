@@ -97,7 +97,6 @@ class TestsFlextInfraSonarcloudSettingsSync:
 
     @staticmethod
     def _cli(
-        self,
         repository_root: Path,
         env: t.StrMapping | None = None,
         *,

@@ -20,7 +20,7 @@ class FlextInfraModelsMixins:
     Structure (flat — no sub-namespaces): CLI parameter mixins, field
     contract mixins, violation/detail mixins, release mixins, github
     mixins, and project-name variants. All exposed directly under
-    ``mm.<Mixin>`` for consumers.
+    ``FlextInfraModelsMixins.<Mixin>`` for consumers.
     """
 
     # ═══════════════════ CLI PARAMETER MIXINS ═══════════════════
