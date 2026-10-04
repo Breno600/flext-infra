@@ -132,6 +132,7 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
                 artifacts=m.Infra.ProjectManagedArtifactsConfig(
                     Mise=m.Infra.ProjectMiseConfig(tools={}),
                     Gitignore=m.Infra.ProjectGitignoreConfig(patterns=()),
+                    Ruff=m.Infra.ProjectRuffConfig(per_file_ignores={}),
                 ),
                 mise_tool_sources={},
             ),
@@ -325,6 +326,9 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         gitignore_patterns: list[str] = []
         gitignore_blocks: list[m.Infra.ProjectGitignorePreservedBlock] = []
         gitignore_block_markers: dict[str, Path] = {}
+        ruff_ignores: MutableMapping[str, tuple[str, ...]] = {}
+        ruff_sources: MutableMapping[str, Path] = {}
+        ruff_failure: str | None = None
 
         for source, content in sorted(payloads.items()):
             try:
@@ -358,6 +362,17 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
                             )
                         gitignore_block_markers[marker] = source
                     gitignore_blocks.append(block)
+            if artifacts.Ruff is not None and ruff_failure is None:
+                for pattern, rules in artifacts.Ruff.per_file_ignores.items():
+                    previous = ruff_sources.get(pattern)
+                    if previous is not None:
+                        ruff_failure = (
+                            "duplicate project Ruff per-file ignore "
+                            f"{pattern!r}: {previous} and {source}"
+                        )
+                        break
+                    ruff_ignores[pattern] = tuple(rules)
+                    ruff_sources[pattern] = source
             if artifacts.Mise is None:
                 continue
             for selector, tool in artifacts.Mise.tools.items():
@@ -370,19 +385,26 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
 
                 mise_tools[selector] = tool
                 mise_sources[selector] = source
-        artifacts = m.Infra.ProjectManagedArtifactsConfig(
-            Mise=m.Infra.ProjectMiseConfig(tools=dict(sorted(mise_tools.items()))),
-            Gitignore=m.Infra.ProjectGitignoreConfig(
-                patterns=tuple(gitignore_patterns),
-                preserved_blocks=tuple(gitignore_blocks),
-            ),
-        )
-        return r[m.Infra.ProjectManagedArtifactsResolution].ok(
-            m.Infra.ProjectManagedArtifactsResolution(
-                artifacts=artifacts,
-                mise_tool_sources=dict(sorted(mise_sources.items())),
-            ),
-        )
+        if ruff_failure is not None:
+            outcome = r[m.Infra.ProjectManagedArtifactsResolution].fail(ruff_failure)
+        else:
+            artifacts = m.Infra.ProjectManagedArtifactsConfig(
+                Mise=m.Infra.ProjectMiseConfig(tools=dict(sorted(mise_tools.items()))),
+                Gitignore=m.Infra.ProjectGitignoreConfig(
+                    patterns=tuple(gitignore_patterns),
+                    preserved_blocks=tuple(gitignore_blocks),
+                ),
+                Ruff=m.Infra.ProjectRuffConfig(
+                    per_file_ignores=dict(sorted(ruff_ignores.items())),
+                ),
+            )
+            outcome = r[m.Infra.ProjectManagedArtifactsResolution].ok(
+                m.Infra.ProjectManagedArtifactsResolution(
+                    artifacts=artifacts,
+                    mise_tool_sources=dict(sorted(mise_sources.items())),
+                ),
+            )
+        return outcome
 
     @classmethod
     def compose_mise_toml_from_snapshot(
