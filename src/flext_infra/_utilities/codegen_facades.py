@@ -336,8 +336,9 @@ class FlextInfraUtilitiesCodegenFacades:
         lines[facade.lineno - 1 : facade.lineno - 1] = [*rendered, "\n"]
         return "".join(lines)
 
-    @staticmethod
+    @classmethod
     def _insert_bases(
+        cls,
         source: str,
         namespace: ast.ClassDef,
         additions: t.SequenceOf[t.Pair[str, str]],
@@ -349,15 +350,25 @@ class FlextInfraUtilitiesCodegenFacades:
         if last_base.end_lineno is None or last_base.end_col_offset is None:
             message = "utility namespace base has no source span"
             raise ValueError(message)
+        # A base listed after Protocol has no consistent MRO, so owners
+        # projected onto a protocol namespace go before its terminal Protocol.
+        precede = cls._base_name(last_base) == c.Infra.PROTOCOL_BASE
         lines = source.encode(c.Cli.ENCODING_DEFAULT).splitlines(keepends=True)
-        offset = sum(map(len, lines[: last_base.end_lineno - 1]))
-        offset += last_base.end_col_offset
+        line, column = (
+            (last_base.lineno, last_base.col_offset)
+            if precede
+            else (last_base.end_lineno, last_base.end_col_offset)
+        )
+        offset = sum(map(len, lines[: line - 1])) + column
         separator = (
             ", "
             if last_base.lineno == namespace.lineno
             else ",\n" + " " * last_base.col_offset
         )
-        inserted = "".join(separator + name for _module, name in additions)
+        inserted = "".join(
+            name + separator if precede else separator + name
+            for _module, name in additions
+        )
         encoded = b"".join(lines)
         return (
             encoded[:offset]
