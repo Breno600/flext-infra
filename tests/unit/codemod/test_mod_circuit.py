@@ -466,3 +466,52 @@ class TestsFlextInfraModCliRoute:
             eq=c.Infra.ModScanFindingClass.NON_ACTIONABLE_WITH_FIX,
         )
         tm.that(report.non_actionable_with_fix, gte=1)
+
+    @staticmethod
+    def test_class_stem_admits_the_surface_prefix_nesting_derives(
+        mod_workspace: Path,
+    ) -> None:
+        """The stem law accepts the owner name class nesting derives per surface."""
+        stem = u.derive_class_stem(mod_workspace.name.replace("_", "-"))
+        modules = {
+            "sample.py": f"{stem}Sample",
+            "examples/constants.py": f"Examples{stem}Constants",
+            "examples/scenario.py": f"{stem}Scenario",
+            "tests/bare.py": f"{stem}Bare",
+            "examples/helper.py": "Helper",
+        }
+        for relative, name in modules.items():
+            path = mod_workspace / relative
+            tm.ok(u.Cli.ensure_dir(path.parent))
+            tm.ok(
+                u.Cli.atomic_write_text_file(
+                    path,
+                    '"""Public refactor-mod fixture module."""\n\n'
+                    "from __future__ import annotations\n\n\n"
+                    f"class {name}:\n"
+                    '    """Fixture namespace."""\n',
+                ),
+            )
+
+        _ = infra_main([
+            "refactor",
+            "mod",
+            "--repository-root",
+            str(mod_workspace),
+        ])
+        report_state = tm.ok(
+            u.Cli.atomic_read_binary_file_state(
+                mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH,
+                required=True,
+            ),
+        )
+        report = m.Infra.ModScanEvidence.model_validate_json(
+            tm.not_none(report_state.content),
+        )
+        flagged = {
+            entry.file.as_posix()
+            for entry in report.entries
+            if entry.rule_id == "require-project-class-stem"
+        }
+
+        tm.that(flagged, eq={"tests/bare.py", "examples/helper.py"})
