@@ -147,24 +147,33 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
             reaches its siblings by bare name while it is executing. A method
             body does not: the enclosing class scope is invisible from inside a
             function, so there the qualified form is the only one that resolves.
-            Walking outward, a function boundary therefore means qualify, and a
-            class that is the owner or is itself being moved under the owner
-            means the reference will land in that shared class scope.
+            An annotation inside a class that is itself being nested does not
+            resolve either: the undefined-name gate rejects the bare name there,
+            including the class's own annotations. An annotation directly on the
+            owner still sees those siblings. Walking outward, a function body
+            therefore means qualify, an annotation inside a moved class means
+            qualify, and any other reference that lands in the owner body keeps
+            the bare name.
 
             Returns:
                 The resulting ``bool``.
 
             """
             child: cst.CSTNode = node
+            in_annotation = False
             current: cst.CSTNode | None = self.get_metadata(
                 ParentNodeProvider,
                 node,
                 None,
             )
             while current is not None:
-                if isinstance(current, cst.FunctionDef | cst.Lambda):
-                    # Decorators, defaults and annotations run in the
-                    # enclosing scope; only the body is a function scope.
+                if isinstance(current, cst.Annotation):
+                    in_annotation = True
+                elif isinstance(current, cst.FunctionDef | cst.Lambda):
+                    # Decorators and defaults run in the enclosing scope; only
+                    # the body is a function scope. Annotations are tracked
+                    # separately because a nested class does not bind its name
+                    # for the undefined-name gate.
                     if child is current.body:
                         return False
                 elif isinstance(
@@ -174,6 +183,8 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
                     return False
                 elif isinstance(current, cst.ClassDef):
                     name = current.name.value
+                    if in_annotation and name in self.definitions:
+                        return False
                     return name in self.definitions or name in set(
                         self.definitions.values(),
                     )
