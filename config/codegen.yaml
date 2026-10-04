@@ -253,7 +253,7 @@ Infra:
         version: v5
       create-github-app-token:
         repository: actions/create-github-app-token
-        version: v2
+        version: v3
 
     uv_exclude_dependencies:
     # Standalone CI installs the project editable while sibling flext packages
