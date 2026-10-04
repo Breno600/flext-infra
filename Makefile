@@ -1524,6 +1524,10 @@ _builtin-help:
 # Why: runners expose umask 002 and `submodule update --init`
 # materializes tracked files as 0664; canonical Mise artifact gates demand
 # exact modes, so provisioning normalizes the umask before checkout.
+# An absent gitlink is cloned at depth 1, the same flag private submodule
+# init uses. Setup's contract is the recorded commit, and a full history
+# cannot finish inside submodule_timeout_seconds when the object database
+# is large.
 _builtin_setup_submodules:
 	@set -eu; \
 	umask 022; \
@@ -1566,7 +1570,7 @@ _builtin_setup_submodules:
 		GIT_TERMINAL_PROMPT=0 timeout --signal=TERM --kill-after=5s "120s" \
 			git -C "$$root" -c credential.helper= \
 			-c "credential.https://$${GH_HOST:-github.com}.helper=$$credential_helper" \
-			submodule update --init --jobs "$${FLEXT_SUBMODULE_JOBS:-8}" -- $$absent; \
+			submodule update --init --depth 1 --jobs "$${FLEXT_SUBMODULE_JOBS:-8}" -- $$absent; \
 	fi; \
 	validate_submodule() { \
 		superproject="$$1"; \
