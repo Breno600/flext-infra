@@ -95,7 +95,11 @@ class TestsFlextInfraCodegenDocsWorkflowProfile:
             job for job in re.split(r"\n  (?=\S)", jobs) if "run: make setup" in job
         ]
         tm.that(setup_jobs, empty=False)
+        action = config.Infra.codegen.github_actions["create-github-app-token"]
         for job in setup_jobs:
             tm.that(job, has="id: private_dependency_token")
+            tm.that(job, has=f"uses: {action.repository}@{action.version}")
+            tm.that(job, has=f"client-id: ${{{{ secrets.{app_id_setting} }}}}")
+            tm.that(job, lacks="app-id:")
             tm.that(job, has=marker)
             tm.that(job.index(marker) < job.index("run: make setup"), eq=True)
