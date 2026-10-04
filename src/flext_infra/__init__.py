@@ -168,6 +168,7 @@ if TYPE_CHECKING:
         FlextInfraCandidateBootstrapService,
     )
     from flext_infra.services.cli_dispatch import FlextInfraCliDispatchService
+    from flext_infra.services.cli_mod_progress import FlextInfraCliModProgress
     from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
     from flext_infra.services.cli_routes import FlextInfraCliRouteService
     from flext_infra.services.cli_routes_codegen import FlextInfraCodegenRoutes
@@ -221,6 +222,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraCleanService",
     "FlextInfraCli",
     "FlextInfraCliDispatchService",
+    "FlextInfraCliModProgress",
     "FlextInfraCliRouteBase",
     "FlextInfraCliRouteService",
     "FlextInfraCodegen",
@@ -515,6 +517,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".services": ("services",),
             ".services.candidate_bootstrap": ("FlextInfraCandidateBootstrapService",),
             ".services.cli_dispatch": ("FlextInfraCliDispatchService",),
+            ".services.cli_mod_progress": ("FlextInfraCliModProgress",),
             ".services.cli_route_base": ("FlextInfraCliRouteBase",),
             ".services.cli_routes": ("FlextInfraCliRouteService",),
             ".services.cli_routes_codegen": ("FlextInfraCodegenRoutes",),

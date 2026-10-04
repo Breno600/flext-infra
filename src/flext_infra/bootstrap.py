@@ -38,7 +38,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
 
-from flext_infra import u
+from flext_infra import c, u
 
 STORAGE_DIRECTORIES = ("cache", "state", "installs", "shims", "uv-cache", "bootstrap")
 """Persistent Mise storage layout (mirrors the bootstrap recipe contract)."""
@@ -46,19 +46,6 @@ STORAGE_DIRECTORIES = ("cache", "state", "installs", "shims", "uv-cache", "boots
 
 class FlextInfraBootstrap:
     """Keep the old lock usable until every new sidecar is published."""
-
-    JOURNAL = "transaction.json"
-    NEW_LOCK = "new.lock"
-    OLD_LOCK = "old.lock"
-    # Artifact set declared by flext-infra/config/codegen.yaml toolchain rows:
-    # Unix launcher, Windows launcher, and the resolved-release pin with modes.
-    ARTIFACTS = (
-        ("bin/mise", 0o755),
-        ("bin/mise.cmd", 0o644),
-        ("mise.version", 0o644),
-    )
-    MUTEX = ".mise-lock-transaction.lock"
-    MUTEX_TIMEOUT_SECONDS = 600.0
 
     @staticmethod
     @contextmanager
@@ -70,7 +57,7 @@ class FlextInfraBootstrap:
                 mutex is not physical; or if Mise transaction mutex is held elsewhere
                 for over.
         """
-        mutex = project / FlextInfraBootstrap.MUTEX
+        mutex = project / c.Infra.MISE_LOCK_MUTEX_FILENAME
         if mutex.is_symlink():
             raise ValueError(f"Mise transaction mutex is a symlink: {mutex}")
         flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
@@ -90,7 +77,7 @@ class FlextInfraBootstrap:
             else:
                 import fcntl
 
-                deadline = time.monotonic() + FlextInfraBootstrap.MUTEX_TIMEOUT_SECONDS
+                deadline = time.monotonic() + c.Infra.MISE_LOCK_MUTEX_TIMEOUT_SECONDS
                 while True:
                     try:
                         fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -99,7 +86,7 @@ class FlextInfraBootstrap:
                         if time.monotonic() >= deadline:
                             raise ValueError(
                                 "Mise transaction mutex is held elsewhere for over "
-                                f"{FlextInfraBootstrap.MUTEX_TIMEOUT_SECONDS:.0f}s: "
+                                f"{c.Infra.MISE_LOCK_MUTEX_TIMEOUT_SECONDS:.0f}s: "
                                 f"{mutex}",
                             ) from None
                         time.sleep(0.2)
@@ -203,7 +190,15 @@ class FlextInfraBootstrap:
         if content is None or b"<<<<<<< " not in content:
             return cls._sidecars(content, project)
         index = subprocess.run(
-            ["git", "-C", str(project), "ls-files", "-u", "--", "mise.lock"],
+            [
+                cls._git_executable(),
+                "-C",
+                str(project),
+                "ls-files",
+                "-u",
+                "--",
+                "mise.lock",
+            ],
             check=True,
             capture_output=True,
         ).stdout
@@ -212,7 +207,7 @@ class FlextInfraBootstrap:
         ):
             raise ValueError("conflicted mise.lock has no Git stage-2 source")
         prior = subprocess.run(
-            ["git", "-C", str(project), "show", ":2:mise.lock"],
+            [cls._git_executable(), "-C", str(project), "show", ":2:mise.lock"],
             check=True,
             capture_output=True,
         ).stdout
@@ -273,12 +268,12 @@ class FlextInfraBootstrap:
             json.dump(journal, stream, sort_keys=True)
             stream.flush()
             os.fsync(stream.fileno())
-        Path(candidate).replace(stage / cls.JOURNAL)
+        Path(candidate).replace(stage / c.Infra.MISE_LOCK_JOURNAL_FILENAME)
         cls._sync_directory(stage)
 
     @classmethod
     def _read_journal(cls, stage: Path) -> dict[str, str] | None:
-        content = cls._bytes(stage / cls.JOURNAL)
+        content = cls._bytes(stage / c.Infra.MISE_LOCK_JOURNAL_FILENAME)
         if content is None:
             return None
         payload = json.loads(content)
@@ -308,7 +303,7 @@ class FlextInfraBootstrap:
     def _artifact_refs(cls, root: Path) -> dict[str, str]:
         return {
             relative: cls._digest(cls._bytes(root / relative)) or ""
-            for relative, _mode in cls.ARTIFACTS
+            for relative, _mode in c.Infra.MISE_LOCK_ARTIFACTS
         }
 
     @classmethod
@@ -333,10 +328,10 @@ class FlextInfraBootstrap:
     ) -> None:
         old_refs = cls._journal_artifacts(journal, "old_artifacts")
         new_refs = cls._journal_artifacts(journal, "new_artifacts")
-        declared = {relative for relative, _mode in cls.ARTIFACTS}
+        declared = {relative for relative, _mode in c.Infra.MISE_LOCK_ARTIFACTS}
         if set(old_refs) != declared or set(new_refs) != declared:
             raise ValueError("Mise transaction artifact manifest is incomplete")
-        for relative, mode in cls.ARTIFACTS:
+        for relative, mode in c.Infra.MISE_LOCK_ARTIFACTS:
             source = stage / "new-artifacts" / relative
             expected = new_refs[relative]
             if cls._digest(cls._bytes(source)) != expected:
@@ -439,8 +434,8 @@ class FlextInfraBootstrap:
             return
         if journal.get("project") != str(project):
             raise ValueError(f"Mise lock journal belongs to another project: {stage}")
-        old = cls._bytes(stage / cls.OLD_LOCK)
-        new = cls._bytes(stage / cls.NEW_LOCK)
+        old = cls._bytes(stage / c.Infra.MISE_LOCK_OLD_FILENAME)
+        new = cls._bytes(stage / c.Infra.MISE_LOCK_NEW_FILENAME)
         if new is None:
             raise ValueError(f"Mise lock journal lost new lock: {stage}")
         if cls._digest(old) != (journal.get("old") or None) or cls._digest(
@@ -559,7 +554,7 @@ class FlextInfraBootstrap:
             if any(not value for value in new_artifacts.values()):
                 raise ValueError("staged Mise launcher/pin set is incomplete")
             old_artifacts = cls._artifact_refs(project)
-            for relative, _mode in cls.ARTIFACTS:
+            for relative, _mode in c.Infra.MISE_LOCK_ARTIFACTS:
                 destination = stage / "new-artifacts" / relative
                 cls._ensure_parent(stage, destination)
                 shutil.copyfile(artifact_stage / relative, destination)
@@ -579,11 +574,11 @@ class FlextInfraBootstrap:
                         f"Mise sidecar changed outside transaction: {destination}",
                     )
         if old is not None:
-            with (stage / cls.OLD_LOCK).open("xb") as stream:
+            with (stage / c.Infra.MISE_LOCK_OLD_FILENAME).open("xb") as stream:
                 stream.write(old)
                 stream.flush()
                 os.fsync(stream.fileno())
-        with (stage / cls.NEW_LOCK).open("xb") as stream:
+        with (stage / c.Infra.MISE_LOCK_NEW_FILENAME).open("xb") as stream:
             stream.write(new)
             stream.flush()
             os.fsync(stream.fileno())
@@ -796,7 +791,13 @@ class FlextInfraBootstrap:
         """
         try:
             completed = subprocess.run(
-                ["git", "-C", str(project), "show", "HEAD:mise.lock"],
+                [
+                    FlextInfraBootstrap._git_executable(),
+                    "-C",
+                    str(project),
+                    "show",
+                    "HEAD:mise.lock",
+                ],
                 capture_output=True,
                 check=False,
             )
@@ -1101,7 +1102,7 @@ class FlextInfraBootstrap:
                 return
             finally:
                 shutil.rmtree(scratch, ignore_errors=True)
-                if stage.exists() and not (stage / cls.JOURNAL).exists():
+                if stage.exists() and not (stage / c.Infra.MISE_LOCK_JOURNAL_FILENAME).exists():
                     shutil.rmtree(stage, ignore_errors=True)
         held_stage = Path(
             tempfile.mkdtemp(
@@ -1168,7 +1169,7 @@ class FlextInfraBootstrap:
         except ValueError as held_error:
             failures.append(f"held: {held_error}")
         finally:
-            if held_stage.exists() and not (held_stage / cls.JOURNAL).exists():
+            if held_stage.exists() and not (held_stage / c.Infra.MISE_LOCK_JOURNAL_FILENAME).exists():
                 shutil.rmtree(held_stage, ignore_errors=True)
         raise ValueError(
             "reconcile: no seed produced a lock the pinned Mise satisfies ("
@@ -1245,6 +1246,21 @@ class FlextInfraBootstrap:
         print(f"converge: staged lock installs with holds {sorted(holds)}")
 
     @staticmethod
+    def _git_executable() -> str:
+        """Resolve git to an absolute path so PATH cannot substitute it.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            ValueError: If git executable is absent from PATH.
+        """
+        resolved = shutil.which("git")
+        if resolved is None:
+            raise ValueError("git executable is absent from PATH")
+        return resolved
+
+    @staticmethod
     def _uv_binary() -> str:
         """Prefer the Mise-resolved uv shim, exactly as the lifecycle does.
 
@@ -1258,7 +1274,10 @@ class FlextInfraBootstrap:
         )
         if shim.is_file() and os.access(shim, os.X_OK):
             return str(shim)
-        return "uv"
+        resolved = shutil.which("uv")
+        if resolved is None:
+            raise ValueError("uv executable is absent from PATH")
+        return resolved
 
     @classmethod
     def _uv_run(cls, arguments: list[str]) -> str:
