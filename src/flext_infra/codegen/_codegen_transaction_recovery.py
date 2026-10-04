@@ -69,7 +69,8 @@ class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):
                 for entry in current_journal.directories
             )
             recorded = FlextInfraMiseArtifactsJournal.record_directories(
-                current_journal, directories,
+                current_journal,
+                directories,
             )
             if recorded.failure:
                 failed = self._compensate_directory_persistence(
@@ -95,7 +96,8 @@ class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):
             current_journal = recorded.value
             current_state = persisted.value
         manifested = FlextInfraMiseArtifactsJournal.record_transaction_manifests(
-            layout, current_journal,
+            layout,
+            current_journal,
         )
         if manifested.failure:
             return result_type.from_failure(manifested)
@@ -253,7 +255,9 @@ class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):
 
         """
         written = FlextInfraMiseArtifactsJournal.write(
-            layout, journal, expected=expected,
+            layout,
+            journal,
+            expected=expected,
         )
         if written.success:
             self._journal_receipts[layout.journal_path] = written.value
