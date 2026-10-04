@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from flext_infra import p
-from flext_infra.typings import t
+from flext_infra import p, t
+from flext_infra._typings.base import CliResultValue
 
 
 class FlextInfraCliRouteBase:
@@ -26,7 +26,7 @@ class FlextInfraCliRouteBase:
         return value
 
     @staticmethod
-    def result_handler[TParams, TResult: t.Cli.ResultValue](
+    def result_handler[TParams, TResult: CliResultValue](
         handler: Callable[[TParams], p.Result[TResult]],
     ) -> p.Cli.ResultRouteHandler:
         """Erase one concrete result payload at the heterogeneous route boundary.
