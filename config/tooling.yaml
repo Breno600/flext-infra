@@ -194,7 +194,9 @@ Infra:
           ban-relative-imports: all
           # Every module carries the copyright notice (CPY001) in the shape the
           # scaffold templates render from the project's declared author and
-          # copyright year; the SPDX line follows it in the module docstring.
+          # copyright year. The fix recipe writes the module's project-relative
+          # path, without its shared suffix, between that sentence and the
+          # SPDX line so the notice is not one stamp.
           copyright-notice-rgx: 'Copyright \(c\) \d{4} \S[^\n]*\. All rights reserved\.'
           # Repairs make fix applies after Ruff's own fixes, to findings Ruff
           # reports without a fix: each Ruff rule name maps to one recipe the
