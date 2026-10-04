@@ -642,8 +642,11 @@ class FlextInfraPytestRunnerExecution(
             execution_mode=execution_mode,
         )
         outcome = self._run_suite(command, report_dir, execution_mode=execution_mode)
+        # A declared file always executes under noselect, so an empty testmon
+        # selection over a restored cache is never a cache hit for it.
         cache_hit = (
-            not complete
+            self.target_file is None
+            and not complete
             and outcome.raw_return_code
             in {pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED}
             and not outcome.timed_out
