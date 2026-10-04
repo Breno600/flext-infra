@@ -413,7 +413,8 @@ class FlextInfraModTextGateEngine:
             if fix and updated != source:
                 if source.startswith(c.Infra.AUTOGEN_HEADERS):
                     return r[m.Infra.ModTextReport].fail(
-                        f"generated findings require generator repair: {path}",
+                        "generated findings require canonical generator repair: "
+                        f"{path}",
                     )
                 if path.suffix == c.Infra.EXT_PYTHON:
                     ast.parse(updated, filename=str(path))
