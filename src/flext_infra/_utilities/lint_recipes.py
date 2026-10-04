@@ -143,7 +143,7 @@ class FlextInfraUtilitiesLintRecipes:
                 cls._with_sections(raw, " " * docstring.col_offset, wanted),
             ))
         for definition, text in summaries.items():
-            edits.append(cls._summary_edit(lines, definition, text, path))
+            edits.append(cls._summary_edit(lines, definition, text))
         if wants_notice:
             notice = cls.copyright_notice(path.parent)
             module_docstring = cls._docstring_expr(tree)
@@ -243,25 +243,25 @@ class FlextInfraUtilitiesLintRecipes:
         lines: t.StrSequence,
         definition: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
         text: str,
-        path: Path,
     ) -> t.Triple[int, int, str]:
         """Return the edit that places ``text`` as ``definition``'s summary.
 
         A body on its own line receives the summary before that line. A body
-        that shares the definition line is legal Python, including a protocol
-        stub: the definition expands so the summary and the same suite occupy
-        the following lines.
+        that shares the suite colon's line is legal Python, including a
+        protocol stub on a wrapped signature: that line expands so the summary
+        and the same suite occupy the following lines.
 
         Returns:
             The span to replace and the summary text that replaces it.
 
-        Raises:
-            ValueError: If an inline definition has no suite colon before its
-                body.
-
         """
         first = definition.body[0]
-        if first.lineno != definition.lineno:
+        line = lines[first.lineno - 1]
+        body_at = cls._utf8_chars(line, first.col_offset)
+        colon = body_at
+        while colon > 0 and line[colon - 1] in " \t":
+            colon -= 1
+        if colon == 0 or line[colon - 1] != ":":
             decorators = (
                 first.decorator_list
                 if isinstance(
@@ -273,20 +273,10 @@ class FlextInfraUtilitiesLintRecipes:
             first_line = min((first.lineno, *(item.lineno for item in decorators)))
             offset = cls._offset(lines, first_line, 0)
             return (offset, offset, f'{" " * first.col_offset}"""{text}"""\n')
-        line = lines[definition.lineno - 1]
-        body_at = cls._utf8_chars(line, first.col_offset)
-        colon = body_at
-        while colon > 0 and line[colon - 1] in " \t":
-            colon -= 1
-        if colon == 0 or line[colon - 1] != ":":
-            msg = (
-                f"{path}: definition at line {definition.lineno} "
-                "has no suite colon before its inline body"
-            )
-            raise ValueError(msg)
         suite = line[body_at:].removesuffix("\n").removesuffix("\r")
-        block = " " * (cls._utf8_chars(line, definition.col_offset) + 4)
-        start = cls._offset(lines, definition.lineno, 0)
+        header = lines[definition.lineno - 1]
+        block = " " * (cls._utf8_chars(header, definition.col_offset) + 4)
+        start = cls._offset(lines, first.lineno, 0)
         return (
             start,
             start + len(line),
