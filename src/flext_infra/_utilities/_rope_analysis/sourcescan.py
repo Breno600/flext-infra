@@ -407,6 +407,8 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
                 return ((), (reference,))
             case ast.Call(func=ast.Name(id="MappingProxyType"), args=[mapping]):
                 value = mapping
+            case _:
+                pass
         if not isinstance(value, ast.Dict):
             return cls.mapping_entries_refs(value)
         targets: MutableMapping[str, list[str]] = {}
@@ -421,10 +423,12 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
                         elts=[
                             ast.Constant(value=str(module)),
                             ast.Constant(value=str()),
-                        ]
+                        ],
                     ),
                 ):
                     targets.setdefault(module, []).append(name)
+                case _:
+                    continue
         return (
             tuple((module, tuple(targets[module])) for module in sorted(targets)),
             (),
