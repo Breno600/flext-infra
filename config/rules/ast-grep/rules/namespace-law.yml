@@ -358,7 +358,8 @@ message: >-
 # in __all__, exactly once, to the facade class that module defines. Each
 # branch captures its own variable, so each carries its own context. A name
 # declared in __all__ and never bound is the type checkers'
-# unsupported-dunder-all finding.
+# unsupported-dunder-all finding. An import of the alias is a binding too:
+# mypy keeps the imported type and rejects the later assignment.
 id: ban-runtime-alias-rebind
 language: python
 severity: error
@@ -373,10 +374,41 @@ metadata:
       - not: module-export
     REBOUND:
       is: runtime-alias
+    SHADOWED:
+      is: runtime-alias
     ALIAS:
       is: runtime-alias
 rule:
   any:
+    # Bound after a module-level import of the same name. Listed first: the
+    # engine reads the captures of the first matching branch only, and the
+    # undeclared branch matches every module-level binding.
+    - all:
+        - kind: expression_statement
+        - inside:
+            kind: module
+        - has:
+            kind: assignment
+            has:
+              field: left
+              kind: identifier
+              pattern: $SHADOWED
+        - follows:
+            stopBy: end
+            kind: import_from_statement
+            any:
+              - has:
+                  field: name
+                  kind: dotted_name
+                  has:
+                    kind: identifier
+                    pattern: $SHADOWED
+              - has:
+                  field: name
+                  kind: aliased_import
+                  has:
+                    field: alias
+                    pattern: $SHADOWED
     # Bound by a module that does not declare it.
     - all:
         - kind: expression_statement
@@ -446,6 +478,8 @@ constraints:
   UNDECLARED:
     regex: "^[^_]"
   REBOUND:
+    regex: "^[^_]"
+  SHADOWED:
     regex: "^[^_]"
   ALIAS:
     regex: "^[^_]"

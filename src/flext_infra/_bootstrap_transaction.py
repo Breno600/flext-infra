@@ -41,13 +41,15 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
         """
         mutex = project / c.Infra.MISE_LOCK_MUTEX_FILENAME
         if mutex.is_symlink():
-            raise ValueError(f"Mise transaction mutex is a symlink: {mutex}")
+            msg = f"Mise transaction mutex is a symlink: {mutex}"
+            raise ValueError(msg)
         flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
         descriptor = os.open(mutex, flags, 0o600)
         try:
             observed = os.fstat(descriptor)
             if not stat.S_ISREG(observed.st_mode) or observed.st_nlink != 1:
-                raise ValueError(f"Mise transaction mutex is not physical: {mutex}")
+                msg = f"Mise transaction mutex is not physical: {mutex}"
+                raise ValueError(msg)
             if observed.st_size == 0:
                 os.write(descriptor, b"\0")
                 os.fsync(descriptor)
@@ -66,11 +68,12 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
                         break
                     except OSError:
                         if time.monotonic() >= deadline:
-                            raise ValueError(
+                            msg = (
                                 "Mise transaction mutex is held elsewhere for over "
                                 f"{c.Infra.MISE_LOCK_MUTEX_TIMEOUT_SECONDS:.0f}s: "
-                                f"{mutex}",
-                            ) from None
+                                f"{mutex}"
+                            )
+                            raise ValueError(msg) from None
                         time.sleep(0.2)
             try:
                 yield
@@ -86,7 +89,8 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
     def _physical_directory(path: Path) -> None:
         observed = path.lstat()
         if not stat.S_ISDIR(observed.st_mode):
-            raise ValueError(f"transaction directory is not physical: {path}")
+            msg = f"transaction directory is not physical: {path}"
+            raise ValueError(msg)
 
     @staticmethod
     def _bytes(path: Path) -> bytes | None:
@@ -95,7 +99,8 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
         except FileNotFoundError:
             return None
         if not stat.S_ISREG(observed.st_mode) or observed.st_nlink != 1:
-            raise ValueError(f"transaction file is not physical: {path}")
+            msg = f"transaction file is not physical: {path}"
+            raise ValueError(msg)
         return path.read_bytes()
 
     @staticmethod
@@ -112,7 +117,8 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
             or selector.parts[:2] != (".mise", "locks")
             or ".." in selector.parts
         ):
-            raise ValueError(f"unsafe mise.lock sidecar: {relative}")
+            msg = f"unsafe mise.lock sidecar: {relative}"
+            raise ValueError(msg)
         return selector
 
     @classmethod
@@ -122,40 +128,41 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
         payload = tomllib.loads(content.decode("utf-8"))
         tools = payload.get("tools")
         if not isinstance(tools, dict):
-            raise ValueError("mise.lock has no tools table")
+            msg = "mise.lock has no tools table"
+            raise ValueError(msg)
         result: t.StrDict = {}
         for entries in tools.values():
             for entry in entries if isinstance(entries, list) else (entries,):
                 if not isinstance(entry, dict):
-                    raise ValueError("mise.lock tool entry is not a table")
+                    msg = "mise.lock tool entry is not a table"
+                    raise ValueError(msg)
                 for graph, filename in (("aube", "aube-lock.yaml"), ("uv", "uv.lock")):
                     annotation = entry.get(graph)
                     if annotation is None:
                         continue
                     if not isinstance(annotation, dict):
-                        raise ValueError(f"mise.lock {graph} annotation is not a table")
+                        msg = f"mise.lock {graph} annotation is not a table"
+                        raise ValueError(msg)
                     relative = annotation.get("path")
                     digest = annotation.get("digest")
                     if not isinstance(relative, str) or not isinstance(digest, str):
-                        raise ValueError(f"mise.lock {graph} annotation is incomplete")
+                        msg = f"mise.lock {graph} annotation is incomplete"
+                        raise ValueError(msg)
                     selector = cls._sidecar_selector(relative)
                     if not digest.startswith("sha256:"):
-                        raise ValueError(
-                            f"invalid mise.lock sidecar digest: {relative}",
-                        )
+                        msg = f"invalid mise.lock sidecar digest: {relative}"
+                        raise ValueError(msg)
                     cls._reject_symlink_path(root, relative)
                     sidecar = root.joinpath(*selector.parts)
                     cls._physical_directory(sidecar)
                     source = cls._bytes(sidecar / filename)
                     if source is None:
-                        raise ValueError(
-                            f"mise.lock sidecar is absent: {sidecar / filename}",
-                        )
+                        msg = f"mise.lock sidecar is absent: {sidecar / filename}"
+                        raise ValueError(msg)
                     actual = hashlib.sha256(source.replace(b"\r\n", b"\n")).hexdigest()
                     if actual != digest.removeprefix("sha256:"):
-                        raise ValueError(
-                            f"mise.lock sidecar digest differs: {sidecar / filename}",
-                        )
+                        msg = f"mise.lock sidecar digest differs: {sidecar / filename}"
+                        raise ValueError(msg)
                     result[relative] = cls._tree_digest(sidecar)
         return result
 
@@ -174,14 +181,17 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
             return cls._sidecars(content, project)
         index = cls._git_output(project, "ls-files", "-u", "--", "mise.lock")
         if index is None:
-            raise ValueError(f"git cannot read the unmerged index of {project}")
+            msg = f"git cannot read the unmerged index of {project}"
+            raise ValueError(msg)
         if not any(
             line.split(b"\t", 1)[0].endswith(b" 2") for line in index.splitlines()
         ):
-            raise ValueError("conflicted mise.lock has no Git stage-2 source")
+            msg = "conflicted mise.lock has no Git stage-2 source"
+            raise ValueError(msg)
         prior = cls._git_output(project, "show", ":2:mise.lock")
         if prior is None:
-            raise ValueError(f"git cannot read the stage-2 mise.lock of {project}")
+            msg = f"git cannot read the stage-2 mise.lock of {project}"
+            raise ValueError(msg)
         return cls._sidecars(prior, project)
 
     @classmethod
@@ -196,7 +206,8 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
             elif stat.S_ISREG(observed.st_mode) and observed.st_nlink == 1:
                 checksum.update(b"F\0" + relative + b"\0" + path.read_bytes())
             else:
-                raise ValueError(f"nonphysical mise sidecar entry: {path}")
+                msg = f"nonphysical mise sidecar entry: {path}"
+                raise ValueError(msg)
         return checksum.hexdigest()
 
     @staticmethod
@@ -229,7 +240,8 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
                 finally:
                     os.close(descriptor)
             else:
-                raise ValueError(f"nonphysical Mise stage entry: {path}")
+                msg = f"nonphysical Mise stage entry: {path}"
+                raise ValueError(msg)
         cls._sync_directory(root)
 
     @classmethod
@@ -252,20 +264,23 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
             isinstance(key, str) and isinstance(value, str)
             for key, value in payload.items()
         ):
-            raise ValueError(f"invalid Mise lock transaction journal: {stage}")
+            msg = f"invalid Mise lock transaction journal: {stage}"
+            raise ValueError(msg)
         return payload
 
     @staticmethod
     def _journal_refs(journal: t.StrDict, name: str) -> t.StrDict:
         raw = journal.get(name)
         if raw is None:
-            raise ValueError(f"Mise lock journal lacks {name}")
+            msg = f"Mise lock journal lacks {name}"
+            raise ValueError(msg)
         payload = json.loads(raw)
         if not isinstance(payload, dict) or not all(
             isinstance(key, str) and isinstance(value, str)
             for key, value in payload.items()
         ):
-            raise ValueError(f"Mise lock journal has invalid {name}")
+            msg = f"Mise lock journal has invalid {name}"
+            raise ValueError(msg)
         for relative in payload:
             FlextInfraBootstrapTransactionMixin._sidecar_selector(relative)
         return payload
@@ -281,13 +296,15 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
     def _journal_artifacts(cls, journal: t.StrDict, name: str) -> t.StrDict:
         raw = journal.get(name)
         if raw is None:
-            raise ValueError(f"Mise lock journal lacks {name}")
+            msg = f"Mise lock journal lacks {name}"
+            raise ValueError(msg)
         payload = json.loads(raw)
         if not isinstance(payload, dict) or not all(
             isinstance(key, str) and isinstance(value, str)
             for key, value in payload.items()
         ):
-            raise ValueError(f"Mise lock journal has invalid {name}")
+            msg = f"Mise lock journal has invalid {name}"
+            raise ValueError(msg)
         return payload
 
     @classmethod
@@ -301,18 +318,21 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
         new_refs = cls._journal_artifacts(journal, "new_artifacts")
         declared = {relative for relative, _mode in c.Infra.MISE_LOCK_ARTIFACTS}
         if set(old_refs) != declared or set(new_refs) != declared:
-            raise ValueError("Mise transaction artifact manifest is incomplete")
+            msg = "Mise transaction artifact manifest is incomplete"
+            raise ValueError(msg)
         for relative, mode in c.Infra.MISE_LOCK_ARTIFACTS:
             source = stage / "new-artifacts" / relative
             expected = new_refs[relative]
             if cls._digest(cls._bytes(source)) != expected:
-                raise ValueError(f"staged Mise artifact changed: {source}")
+                msg = f"staged Mise artifact changed: {source}"
+                raise ValueError(msg)
             target = project / relative
             current = cls._digest(cls._bytes(target))
             if current == expected:
                 continue
             if current != (old_refs[relative] or None):
-                raise ValueError(f"Mise artifact changed outside transaction: {target}")
+                msg = f"Mise artifact changed outside transaction: {target}"
+                raise ValueError(msg)
             pending = stage / "pending-artifacts" / relative
             cls._ensure_parent(stage, pending)
             shutil.copyfile(source, pending)
@@ -331,11 +351,14 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
         cls._physical_directory(project)
         cls._physical_directory(stage)
         if stage.parent != project.parent or stage == project:
-            raise ValueError("Mise lock stage must be a sibling of its destination")
+            msg = "Mise lock stage must be a sibling of its destination"
+            raise ValueError(msg)
         if stage.stat().st_dev != project.stat().st_dev:
-            raise ValueError("Mise lock stage is not on the destination filesystem")
+            msg = "Mise lock stage is not on the destination filesystem"
+            raise ValueError(msg)
         if not stage.name.startswith(f".{project.name}.mise-lock-stage."):
-            raise ValueError(f"unexpected Mise lock transaction stage: {stage}")
+            msg = f"unexpected Mise lock transaction stage: {stage}"
+            raise ValueError(msg)
 
     @staticmethod
     def _reject_symlink_path(project: Path, relative: str) -> None:
@@ -343,7 +366,8 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
         for part in PurePosixPath(relative).parts:
             cursor /= part
             if cursor.is_symlink():
-                raise ValueError(f"Mise sidecar path contains a symlink: {cursor}")
+                msg = f"Mise sidecar path contains a symlink: {cursor}"
+                raise ValueError(msg)
 
     @classmethod
     def _ensure_parent(cls, root: Path, target: Path) -> None:
@@ -353,7 +377,8 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
             ValueError: If Mise sidecar escapes transaction root.
         """
         if not target.is_relative_to(root):
-            raise ValueError(f"Mise sidecar escapes transaction root: {target}")
+            msg = f"Mise sidecar escapes transaction root: {target}"
+            raise ValueError(msg)
         missing: list[Path] = []
         cursor = target.parent
         while cursor != root:
@@ -377,7 +402,8 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
             stage.name.replace(".mise-lock-stage.", ".mise-lock-cleanup.", 1),
         )
         if retired.exists() or retired.is_symlink():
-            raise ValueError(f"Mise cleanup target already exists: {retired}")
+            msg = f"Mise cleanup target already exists: {retired}"
+            raise ValueError(msg)
         Path(stage).rename(retired)
         cls._sync_directory(stage.parent)
         shutil.rmtree(retired)
@@ -404,15 +430,18 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
             cls._retire_stage(stage)
             return
         if journal.get("project") != str(project):
-            raise ValueError(f"Mise lock journal belongs to another project: {stage}")
+            msg = f"Mise lock journal belongs to another project: {stage}"
+            raise ValueError(msg)
         old = cls._bytes(stage / c.Infra.MISE_LOCK_OLD_FILENAME)
         new = cls._bytes(stage / c.Infra.MISE_LOCK_NEW_FILENAME)
         if new is None:
-            raise ValueError(f"Mise lock journal lost new lock: {stage}")
+            msg = f"Mise lock journal lost new lock: {stage}"
+            raise ValueError(msg)
         if cls._digest(old) != (journal.get("old") or None) or cls._digest(
             new,
         ) != journal.get("new"):
-            raise ValueError(f"Mise lock journal digest changed: {stage}")
+            msg = f"Mise lock journal digest changed: {stage}"
+            raise ValueError(msg)
         old_refs = cls._journal_refs(journal, "old_refs")
         new_refs = cls._journal_refs(journal, "new_refs")
         for relative in old_refs | new_refs:
@@ -437,9 +466,8 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
                         destination.exists()
                         or cls._tree_digest(backup) != old_refs[relative]
                     ):
-                        raise ValueError(
-                            f"old Mise sidecar changed during recovery: {backup}",
-                        )
+                        msg = f"old Mise sidecar changed during recovery: {backup}"
+                        raise ValueError(msg)
                     cls._ensure_parent(project, destination)
                     Path(backup).rename(destination)
                     cls._sync_directory(backup.parent)
@@ -449,23 +477,21 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
                         not destination.exists()
                         or cls._tree_digest(destination) != old_refs[relative]
                     ):
-                        raise ValueError(
-                            f"old Mise sidecar missing during recovery: {destination}",
-                        )
+                        msg = f"old Mise sidecar missing during recovery: {destination}"
+                        raise ValueError(msg)
                 elif destination.exists():
-                    raise ValueError(
-                        f"unowned Mise sidecar changed during recovery: {destination}",
-                    )
+                    msg = f"unowned Mise sidecar changed during recovery: {destination}"
+                    raise ValueError(msg)
             cls._retire_stage(stage)
             return
         if live != new:
-            raise ValueError(
-                f"Mise lock changed outside transaction: {project / 'mise.lock'}",
-            )
+            msg = f"Mise lock changed outside transaction: {project / 'mise.lock'}"
+            raise ValueError(msg)
         for relative, expected in new_refs.items():
             destination = project / relative
             if not destination.exists() or cls._tree_digest(destination) != expected:
-                raise ValueError(f"committed Mise sidecar differs: {destination}")
+                msg = f"committed Mise sidecar differs: {destination}"
+                raise ValueError(msg)
         for relative, expected in old_refs.items():
             if relative in new_refs:
                 continue
@@ -473,17 +499,15 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
             retired = stage / "retired-sidecars" / relative
             if destination.exists():
                 if cls._tree_digest(destination) != expected:
-                    raise ValueError(
-                        f"stale sidecar changed during recovery: {destination}",
-                    )
+                    msg = f"stale sidecar changed during recovery: {destination}"
+                    raise ValueError(msg)
                 cls._ensure_parent(stage, retired)
                 Path(destination).rename(retired)
                 cls._sync_directory(destination.parent)
                 cls._sync_directory(retired.parent)
             elif not retired.exists():
-                raise ValueError(
-                    f"stale sidecar disappeared during recovery: {destination}",
-                )
+                msg = f"stale sidecar disappeared during recovery: {destination}"
+                raise ValueError(msg)
         if "new_artifacts" in journal:
             cls._recover_artifacts(project, stage, journal)
         cls._retire_stage(stage)
@@ -508,12 +532,14 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
             cls._physical_directory(retired)
             journal = cls._read_journal(retired)
             if journal is None or journal.get("project") != str(project):
-                raise ValueError(f"unowned Mise cleanup directory: {retired}")
+                msg = f"unowned Mise cleanup directory: {retired}"
+                raise ValueError(msg)
             shutil.rmtree(retired)
         old = cls._bytes(project / "mise.lock")
         new = cls._bytes(stage / "mise.lock")
         if new is None:
-            raise ValueError(f"staged mise.lock is absent: {stage}")
+            msg = f"staged mise.lock is absent: {stage}"
+            raise ValueError(msg)
         old_refs = cls._previous_sidecars(old, project)
         new_refs = cls._sidecars(new, stage)
         artifact_stage = stage / "artifacts"
@@ -523,7 +549,8 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
             cls._physical_directory(artifact_stage)
             new_artifacts = cls._artifact_refs(artifact_stage)
             if any(not value for value in new_artifacts.values()):
-                raise ValueError("staged Mise launcher/pin set is incomplete")
+                msg = "staged Mise launcher/pin set is incomplete"
+                raise ValueError(msg)
             old_artifacts = cls._artifact_refs(project)
             for relative, _mode in c.Infra.MISE_LOCK_ARTIFACTS:
                 destination = stage / "new-artifacts" / relative
@@ -536,14 +563,12 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
             destination = project / relative
             if destination.exists():
                 if relative not in old_refs:
-                    raise ValueError(
-                        f"unowned Mise sidecar occupies target: {destination}",
-                    )
+                    msg = f"unowned Mise sidecar occupies target: {destination}"
+                    raise ValueError(msg)
                 actual = cls._tree_digest(destination)
                 if actual != expected and actual != old_refs[relative]:
-                    raise ValueError(
-                        f"Mise sidecar changed outside transaction: {destination}",
-                    )
+                    msg = f"Mise sidecar changed outside transaction: {destination}"
+                    raise ValueError(msg)
         if old is not None:
             with (stage / c.Infra.MISE_LOCK_OLD_FILENAME).open("xb") as stream:
                 stream.write(old)
