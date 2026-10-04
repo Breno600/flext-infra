@@ -47,6 +47,7 @@ class TestsFlextInfraCodemodContextOwnPackage:
         self,
         tmp_path: Path,
         module: str,
+        *,
         admitted: bool,
     ) -> None:
         """Test internal tiers are own namespaces."""
