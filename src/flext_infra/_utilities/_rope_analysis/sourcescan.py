@@ -402,31 +402,29 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             if len(call.args) > cls._INSTALL_LAZY_IMPORTS_ARG_INDEX
             else cls._keyword_value(call, "lazy_imports")
         )
-        if isinstance(value, ast.Name):
-            return ((), (value.id,))
-        if (
-            isinstance(value, ast.Call)
-            and FlextInfraUtilitiesRopeAnalysisAstHelpers.name_of(value.func)
-            == "MappingProxyType"
-            and len(value.args) == 1
-        ):
-            value = value.args[0]
+        match value:
+            case ast.Name(id=reference):
+                return ((), (reference,))
+            case ast.Call(func=ast.Name(id="MappingProxyType"), args=[mapping]):
+                value = mapping
         if not isinstance(value, ast.Dict):
             return cls.mapping_entries_refs(value)
         targets: MutableMapping[str, list[str]] = {}
         for key, target in zip(value.keys, value.values, strict=True):
-            if not isinstance(key, ast.Constant) or not isinstance(key.value, str):
-                continue
-            if isinstance(target, ast.Constant) and isinstance(target.value, str):
-                module = target.value
-            else:
-                match cls.literal_string_sequence(target):
-                    case (module, _):
-                        pass
-                    case _:
-                        module = ""
-            if module:
-                targets.setdefault(module, []).append(key.value)
+            match key, target:
+                case (
+                    ast.Constant(value=str(name)),
+                    ast.Constant(value=str(module)),
+                ) | (
+                    ast.Constant(value=str(name)),
+                    ast.Tuple(
+                        elts=[
+                            ast.Constant(value=str(module)),
+                            ast.Constant(value=str()),
+                        ]
+                    ),
+                ):
+                    targets.setdefault(module, []).append(name)
         return (
             tuple((module, tuple(targets[module])) for module in sorted(targets)),
             (),

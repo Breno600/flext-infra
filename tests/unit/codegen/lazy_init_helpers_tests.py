@@ -483,7 +483,8 @@ class TestsFlextInfraLazyInitHelpers:
         exports_content = self._generated_init(package_root)
 
         tm.that(init_content, lacks="_LAZY_MODULES")
-        tm.that(exports_content, has='"flext_cli": (')
+        entries, _refs = u.Infra.lazy_import_mapping_source(exports_content)
+        tm.that(dict(entries).get("flext_cli", ()), has="r")
         tm.that(init_content, has="__all__: tuple[str, ...]")
         tm.that(init_content, has="install_lazy_exports(")
         tm.that(init_content, lacks="__unit__")
@@ -510,8 +511,8 @@ class TestsFlextInfraLazyInitHelpers:
             has="    from flext_cli import c, d, e, h, m, p, r, s, t, u, x",
         )
         tm.that(init_content, lacks="FlextMeltanoConstants as c")
-        tm.that(exports_content, has='"flext_cli": (')
-        tm.that(exports_content, has='".constants": (')
+        tm.that(dict(entries).get("flext_cli", ()), has="c")
+        tm.that(dict(entries).get(".constants", ()), has="FlextMeltanoConstants")
 
     def test_existing_root_composes_public_parent_aliases(self, tmp_path: Path) -> None:
         """Test existing root composes public parent aliases."""
@@ -533,7 +534,8 @@ class TestsFlextInfraLazyInitHelpers:
         tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
         generated = self._generated_init(package_root)
         exports = self._generated_init(package_root)
-        tm.that(exports, has='"flext_cli": (')
+        entries, _refs = u.Infra.lazy_import_mapping_source(exports)
+        tm.that(dict(entries).get("flext_cli", ()), has="r")
         tm.that(generated, has='    "r",')
         tm.that(generated, has='    "c",')
 
@@ -714,8 +716,9 @@ class TestsFlextInfraLazyInitHelpers:
 
         tm.that(generated, has='"FlextDemoGitService"')
         tm.that(generated, has='"FlextDemoWorkService"')
-        tm.that(exports, has='".git": ("FlextDemoGitService",)')
-        tm.that(exports, has='".work": ("FlextDemoWorkService",)')
+        entries, _refs = u.Infra.lazy_import_mapping_source(exports)
+        tm.that(dict(entries).get(".git", ()), has="FlextDemoGitService")
+        tm.that(dict(entries).get(".work", ()), has="FlextDemoWorkService")
 
     def test_nested_tests_namespace_uses_public_test_facades(
         self,

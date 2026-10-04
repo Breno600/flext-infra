@@ -156,10 +156,13 @@ class TestsFlextInfraLazyInitRuntime:
         tm.that(result.stdout.splitlines(), eq=["True"] * 7)
 
     @staticmethod
-    def test_child_package_preserves_its_same_named_public_export(
+    @pytest.mark.parametrize("same_named_export", [False, True])
+    def test_child_package_preserves_export_ownership(
         tmp_path: Path,
+        *,
+        same_named_export: bool,
     ) -> None:
-        """A child facade's same-named export precedes the module fallback."""
+        """Child packages resolve as modules; competing public owners fail loud."""
         repository, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-child-runtime",
@@ -170,18 +173,25 @@ class TestsFlextInfraLazyInitRuntime:
         (child / c.Infra.INIT_PY).write_text("", encoding=c.Cli.ENCODING_DEFAULT)
         (child / "api.py").write_text(
             "class PublishedChild:\n    pass\n"
-            "child = PublishedChild\n"
-            "__all__ = ('PublishedChild', 'child')\n",
+            + (
+                "child = PublishedChild\n__all__ = ('PublishedChild', 'child')\n"
+                if same_named_export
+                else "__all__ = ('PublishedChild',)\n"
+            ),
             encoding=c.Cli.ENCODING_DEFAULT,
         )
+        if same_named_export:
+            with pytest.raises(RuntimeError, match="ownership is ambiguous"):
+                u.Tests.run_lazy_init(repository)
+            return
         tm.that(u.Tests.run_lazy_init(repository), eq=0)
         probe_env = dict(os.environ)
         probe_env["PYTHONPATH"] = str(repository / c.Infra.DEFAULT_SRC_DIR)
         probe = (
             "import flext_child_runtime as package\n"
-            "from flext_child_runtime.child import child, PublishedChild\n"
+            "import flext_child_runtime.child as child\n"
             "print(package.child is child)\n"
-            "print(package.child is PublishedChild)\n"
+            "print(package.PublishedChild is child.PublishedChild)\n"
         )
         result = tm.ok(u.Cli.run([sys.executable, "-c", probe], env=probe_env))
         tm.that(result.stdout.splitlines(), eq=["True", "True"])
