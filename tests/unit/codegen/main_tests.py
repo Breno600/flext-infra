@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import FlextInfraCliRouteService, c, config, main as infra_main
+from flext_infra import FlextInfraCliRouteService, c, config, main
 from tests import m, t, u
 
 
@@ -129,7 +129,7 @@ class TestsFlextInfraCodegenMain:
         @staticmethod
         def test_success(real_git_repo: Path) -> None:
             """Init returns 0 on empty workspace."""
-            result = infra_main([
+            result = main([
                 "codegen",
                 "init",
                 "--repository-root",
@@ -144,7 +144,7 @@ class TestsFlextInfraCodegenMain:
             pyproject = repository / c.PYPROJECT_FILENAME
             before = pyproject.read_bytes()
             makefile = repository / c.Infra.MAKEFILE_FILENAME
-            result = infra_main([
+            result = main([
                 "codegen",
                 "init",
                 "--check",
@@ -158,7 +158,7 @@ class TestsFlextInfraCodegenMain:
         @staticmethod
         def test_enforce_mode(real_git_repo: Path) -> None:
             """Init in enforce mode (not check)."""
-            result = infra_main([
+            result = main([
                 "codegen",
                 "init",
                 "--repository-root",
@@ -172,7 +172,7 @@ class TestsFlextInfraCodegenMain:
         @staticmethod
         def test_init_command(real_git_repo: Path) -> None:
             """main() with init command returns 0."""
-            result = infra_main([
+            result = main([
                 "codegen",
                 "init",
                 "--repository-root",
@@ -183,13 +183,13 @@ class TestsFlextInfraCodegenMain:
         @staticmethod
         def test_unknown_command() -> None:
             """main() with unknown command returns non-zero exit code."""
-            result = infra_main(["codegen", "unknown-command"])
+            result = main(["codegen", "unknown-command"])
             tm.that(result, ne=0)
 
         @staticmethod
         def test_no_command() -> None:
             """main() with no command returns non-zero exit code."""
-            result = infra_main(["codegen"])
+            result = main(["codegen"])
             tm.that(result, ne=0)
 
         @staticmethod
@@ -199,7 +199,7 @@ class TestsFlextInfraCodegenMain:
             """Initialization accepts only the exact Git worktree root."""
             custom_root = real_git_repo / "custom"
             custom_root.mkdir()
-            result = infra_main([
+            result = main([
                 "codegen",
                 "init",
                 "--repository-root",
@@ -217,7 +217,7 @@ class TestsFlextInfraCodegenMain:
         @staticmethod
         def test_entry_point_returns_int(real_git_repo: Path) -> None:
             """main() returns an integer exit code."""
-            result = infra_main([
+            result = main([
                 "codegen",
                 "init",
                 "--repository-root",

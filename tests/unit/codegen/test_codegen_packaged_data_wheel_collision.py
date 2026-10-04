@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, infra, main as infra_main
+from flext_infra import c, config, infra, main
 from tests import t, u
 
 if TYPE_CHECKING:
@@ -109,7 +109,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             The resulting ``int``.
 
         """
-        return infra_main([
+        return main([
             c.Infra.CLI_GROUP_CODEGEN,
             "conform",
             "--root",
