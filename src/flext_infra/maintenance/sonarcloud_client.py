@@ -59,6 +59,20 @@ class FlextInfraSonarcloudClient[TResult: CliResultValue](s[TResult]):
             f"{organization}{c.Infra.SONARCLOUD_PROJECT_KEY_SEPARATOR}{repository}",
         )
 
+    def project_credentials(self) -> p.Result[t.Pair[t.SecretStr, str]]:
+        """Resolve the exact token and the project key of this checkout.
+
+        Returns:
+            The ``(token, project key)`` pair every authenticated call needs.
+        """
+        token = self.required_token()
+        if token.failure:
+            return r[t.Pair[t.SecretStr, str]].from_failure(token)
+        key = self.project_key(self.repository_root)
+        if key.failure:
+            return r[t.Pair[t.SecretStr, str]].from_failure(key)
+        return r[t.Pair[t.SecretStr, str]].ok((token.value, key.value))
+
     @staticmethod
     def call(
         api_url: str,
