@@ -28,15 +28,9 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
-        "FlextInfraModelsGitIdentity": (".identity", "FlextInfraModelsGitIdentity"),
-        "FlextInfraModelsGitWorktreeFacts": (
-            ".worktree_facts",
-            "FlextInfraModelsGitWorktreeFacts",
-        ),
-        "FlextInfraModelsGitWorktreeState": (
-            ".worktree_state",
-            "FlextInfraModelsGitWorktreeState",
-        ),
+        "FlextInfraModelsGitIdentity": ".identity",
+        "FlextInfraModelsGitWorktreeFacts": ".worktree_facts",
+        "FlextInfraModelsGitWorktreeState": ".worktree_state",
     }),
     public_exports=__all__,
 )

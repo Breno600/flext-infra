@@ -62,51 +62,18 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
-        "FlextInfraCodegenConformArtifactRender": (
-            ".artifact_render",
-            "FlextInfraCodegenConformArtifactRender",
-        ),
-        "FlextInfraCodegenConformBeadsRoutes": (
-            ".beads_routes",
-            "FlextInfraCodegenConformBeadsRoutes",
-        ),
-        "FlextInfraCodegenConformBootstrap": (
-            ".bootstrap",
-            "FlextInfraCodegenConformBootstrap",
-        ),
-        "FlextInfraCodegenConformContextRender": (
-            ".context_render",
-            "FlextInfraCodegenConformContextRender",
-        ),
-        "FlextInfraCodegenConformDocsOwnership": (
-            ".docs_ownership",
-            "FlextInfraCodegenConformDocsOwnership",
-        ),
-        "FlextInfraCodegenConformExecute": (
-            ".execute",
-            "FlextInfraCodegenConformExecute",
-        ),
-        "FlextInfraCodegenConformExistingPlan": (
-            ".existing_plan",
-            "FlextInfraCodegenConformExistingPlan",
-        ),
-        "FlextInfraCodegenConformFilePlans": (
-            ".file_plans",
-            "FlextInfraCodegenConformFilePlans",
-        ),
-        "FlextInfraCodegenConformGitignore": (
-            ".gitignore",
-            "FlextInfraCodegenConformGitignore",
-        ),
-        "FlextInfraCodegenConformPlan": (".plan", "FlextInfraCodegenConformPlan"),
-        "FlextInfraCodegenConformPyprojectPolicy": (
-            ".pyproject_policy",
-            "FlextInfraCodegenConformPyprojectPolicy",
-        ),
-        "FlextInfraCodegenConformScaffoldPlan": (
-            ".scaffold_plan",
-            "FlextInfraCodegenConformScaffoldPlan",
-        ),
+        "FlextInfraCodegenConformArtifactRender": ".artifact_render",
+        "FlextInfraCodegenConformBeadsRoutes": ".beads_routes",
+        "FlextInfraCodegenConformBootstrap": ".bootstrap",
+        "FlextInfraCodegenConformContextRender": ".context_render",
+        "FlextInfraCodegenConformDocsOwnership": ".docs_ownership",
+        "FlextInfraCodegenConformExecute": ".execute",
+        "FlextInfraCodegenConformExistingPlan": ".existing_plan",
+        "FlextInfraCodegenConformFilePlans": ".file_plans",
+        "FlextInfraCodegenConformGitignore": ".gitignore",
+        "FlextInfraCodegenConformPlan": ".plan",
+        "FlextInfraCodegenConformPyprojectPolicy": ".pyproject_policy",
+        "FlextInfraCodegenConformScaffoldPlan": ".scaffold_plan",
     }),
     public_exports=__all__,
 )

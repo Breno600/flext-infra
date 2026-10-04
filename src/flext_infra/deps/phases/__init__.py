@@ -42,31 +42,13 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
-        "FlextInfraConsolidateGroupsPhase": (
-            ".consolidate_groups",
-            "FlextInfraConsolidateGroupsPhase",
-        ),
-        "FlextInfraEnsurePackagingPhase": (
-            ".ensure_packaging",
-            "FlextInfraEnsurePackagingPhase",
-        ),
-        "FlextInfraEnsurePyreflyConfigPhase": (
-            ".ensure_pyrefly",
-            "FlextInfraEnsurePyreflyConfigPhase",
-        ),
-        "FlextInfraEnsurePyrightConfigPhase": (
-            ".ensure_pyright",
-            "FlextInfraEnsurePyrightConfigPhase",
-        ),
-        "FlextInfraEnsureRuffConfigPhase": (
-            ".ensure_ruff",
-            "FlextInfraEnsureRuffConfigPhase",
-        ),
-        "FlextInfraInjectCommentsPhase": (
-            ".inject_comments",
-            "FlextInfraInjectCommentsPhase",
-        ),
-        "FlextInfraToolTablesPhase": (".tool_tables", "FlextInfraToolTablesPhase"),
+        "FlextInfraConsolidateGroupsPhase": ".consolidate_groups",
+        "FlextInfraEnsurePackagingPhase": ".ensure_packaging",
+        "FlextInfraEnsurePyreflyConfigPhase": ".ensure_pyrefly",
+        "FlextInfraEnsurePyrightConfigPhase": ".ensure_pyright",
+        "FlextInfraEnsureRuffConfigPhase": ".ensure_ruff",
+        "FlextInfraInjectCommentsPhase": ".inject_comments",
+        "FlextInfraToolTablesPhase": ".tool_tables",
     }),
     public_exports=__all__,
 )

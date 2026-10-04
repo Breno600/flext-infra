@@ -14,7 +14,7 @@ import pytest
 from flext_tests import tm
 
 import flext_core
-from flext_infra import c, m, t, u
+from flext_infra import c, config, m, t, u
 from flext_infra.codegen.codegen_generation import FlextInfraCodegenGeneration
 from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
 
@@ -113,7 +113,7 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(content, lacks="_LAZY_IMPORTS =")
         tm.that(content, contains="MappingProxyType(")
         tm.that(content, lacks="build_lazy_import_map(")
-        tm.that(content, contains='"Demo": (".api", "Demo")')
+        tm.that(content, contains='"Demo": ".api"')
         tm.that(content, contains="from demo_pkg.__version__ import __version__\n")
         tm.that(
             content,
@@ -154,14 +154,15 @@ class TestsFlextInfraCodegenGeneration:
     ) -> None:
         """A generated singleton map stays valid across formatter and lint gates."""
         export = "FlextCliProtocolsBase"
-        owner = "flext_cli._protocols._base_parts.flextcliprotocolsbase_part_05"
+        package_name = u.Infra.project_package_name(Path.cwd())
+        owner = f"{package_name}._protocols._base_parts.flextcliprotocolsbase_part_05"
         eager = (
-            {"__version__": ("flext_cli.__version__", "__version__")}
+            {"__version__": (f"{package_name}.__version__", "__version__")}
             if with_eager_version
             else {}
         )
         plan = self._plan(
-            "flext_cli",
+            package_name,
             (export, *eager),
             {export: (owner, export)},
             eager_dunders=eager,
@@ -208,7 +209,7 @@ class TestsFlextInfraCodegenGeneration:
             content,
             has="from demo_pkg.servers._base.constants import BaseConstants",
         )
-        tm.that(content, has='"BaseConstants": (".._base.constants", "BaseConstants")')
+        tm.that(content, has='"BaseConstants": ".._base.constants"')
         tm.that(content, lacks="from .._base.constants import")
 
     @staticmethod
@@ -250,7 +251,7 @@ class TestsFlextInfraCodegenGeneration:
 
         compile(content, "__init__.py", "exec")
         tm.that(content, contains=f"from {absolute_owner} import Demo")
-        tm.that(content, contains=f'"Demo": ("{rendered_owner}", "Demo")')
+        tm.that(content, contains=f'"Demo": "{rendered_owner}"')
         tm.that(resolve_name(rendered_owner, package), eq=absolute_owner)
 
     def test_root_initializer_contains_static_and_lazy_contracts(self) -> None:
@@ -268,7 +269,7 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(content, contains="    from demo_pkg.api import Demo")
         runtime_prefix = content.split("if TYPE_CHECKING:", maxsplit=1)[0]
         tm.that(runtime_prefix, lacks="from demo_pkg.api import Demo")
-        tm.that(content, contains='"Demo": (".api", "Demo")')
+        tm.that(content, contains='"Demo": ".api"')
         tm.that(content, contains="install_lazy_exports(")
         tm.that(content, lacks="__unit__")
 
@@ -420,7 +421,7 @@ class TestsFlextInfraCodegenGeneration:
 
         compile(init_content, "__init__.py", "exec")
         tm.that(init_content, contains="from flext_core.lazy import")
-        tm.that(init_content, contains='"FlextModel": (".base", "FlextModel")')
+        tm.that(init_content, contains='"FlextModel": ".base"')
         tm.that(init_content, contains="install_lazy_exports(")
 
     def test_tests_root_renders_only_its_facade_contract(self) -> None:
@@ -466,8 +467,8 @@ class TestsFlextInfraCodegenGeneration:
 
         compile(init_content, "__init__.py", "exec")
         tm.that(init_content, contains="from flext_tests import tm")
-        tm.that(init_content, contains='"c": (".constants", "c"),')
-        tm.that(init_content, contains='"u": (".utilities", "u"),')
+        tm.that(init_content, contains='"c": ".constants",')
+        tm.that(init_content, contains='"u": ".utilities",')
         import_block = init_content.split(
             (
                 f"from {c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE} import "
@@ -724,16 +725,17 @@ class TestsFlextInfraCodegenGeneration:
     def test_expanded_single_entry_mapping_keeps_its_trailing_comma(self) -> None:
         """An exploded one-entry mapping carries the comma COM812 requires.
 
-        The entry fits one line while the inline mapping does not, which is
-        the shape whose comma-less rendering ``make fix`` rewrote.
+        Derive the long target from the configured width rather than freezing
+        today's compact-versus-expanded boundary.
         """
+        module = "demo_pkg." + "owner" * config.Infra.tooling.tools.ruff.line_length
         plan = self._plan(
             "demo_pkg",
             ("FlextDemoGeneratedFacade",),
             MappingProxyType({
                 "FlextDemoGeneratedFacade": (
-                    "demo_pkg._generated_parts.facade_part_04",
-                    "FlextDemoGeneratedFacade",
+                    module,
+                    "PublishedFacade",
                 ),
             }),
         )
@@ -742,5 +744,5 @@ class TestsFlextInfraCodegenGeneration:
 
         tm.that(
             content,
-            contains='            "FlextDemoGeneratedFacade",\n        ),\n    }),',
+            contains='            "PublishedFacade",\n        ),\n    }),',
         )

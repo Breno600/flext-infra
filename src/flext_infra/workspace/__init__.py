@@ -42,32 +42,14 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
-        "FlextInfraFlextBindingService": (
-            ".flext_binding",
-            "FlextInfraFlextBindingService",
-        ),
-        "FlextInfraRopeWorkspace": (".rope", "FlextInfraRopeWorkspace"),
-        "FlextInfraWorkspaceDetector": (".detector", "FlextInfraWorkspaceDetector"),
-        "FlextInfraWorkspaceEnvironmentContracts": (
-            ".environment_contracts",
-            "FlextInfraWorkspaceEnvironmentContracts",
-        ),
-        "FlextInfraWorkspaceEnvironmentMixin": (
-            ".environment",
-            "FlextInfraWorkspaceEnvironmentMixin",
-        ),
-        "FlextInfraWorkspaceEnvironmentProvenance": (
-            ".environment_provenance",
-            "FlextInfraWorkspaceEnvironmentProvenance",
-        ),
-        "FlextInfraWorkspaceGovernanceMixin": (
-            "._governance",
-            "FlextInfraWorkspaceGovernanceMixin",
-        ),
-        "FlextInfraWorkspacePropagation": (
-            ".propagation",
-            "FlextInfraWorkspacePropagation",
-        ),
+        "FlextInfraFlextBindingService": ".flext_binding",
+        "FlextInfraRopeWorkspace": ".rope",
+        "FlextInfraWorkspaceDetector": ".detector",
+        "FlextInfraWorkspaceEnvironmentContracts": ".environment_contracts",
+        "FlextInfraWorkspaceEnvironmentMixin": ".environment",
+        "FlextInfraWorkspaceEnvironmentProvenance": ".environment_provenance",
+        "FlextInfraWorkspaceGovernanceMixin": "._governance",
+        "FlextInfraWorkspacePropagation": ".propagation",
     }),
     public_exports=__all__,
 )

@@ -30,10 +30,10 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
-        "FlextInfraPromotedBase": (".base", "FlextInfraPromotedBase"),
-        "FlextInfraPromotedDiscovery": (".discovery", "FlextInfraPromotedDiscovery"),
-        "FlextInfraPromotedDispatch": (".dispatch", "FlextInfraPromotedDispatch"),
-        "FlextInfraPromotedRegistry": (".registry", "FlextInfraPromotedRegistry"),
+        "FlextInfraPromotedBase": ".base",
+        "FlextInfraPromotedDiscovery": ".discovery",
+        "FlextInfraPromotedDispatch": ".dispatch",
+        "FlextInfraPromotedRegistry": ".registry",
     }),
     public_exports=__all__,
 )

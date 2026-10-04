@@ -32,23 +32,11 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
-        "FlextInfraCleanService": (".clean", "FlextInfraCleanService"),
-        "FlextInfraPythonVersionEnforcer": (
-            ".python_version",
-            "FlextInfraPythonVersionEnforcer",
-        ),
-        "FlextInfraSonarcloudClient": (
-            ".sonarcloud_client",
-            "FlextInfraSonarcloudClient",
-        ),
-        "FlextInfraSonarcloudIssues": (
-            ".sonarcloud_issues",
-            "FlextInfraSonarcloudIssues",
-        ),
-        "FlextInfraSonarcloudSettingsSync": (
-            ".sonarcloud",
-            "FlextInfraSonarcloudSettingsSync",
-        ),
+        "FlextInfraCleanService": ".clean",
+        "FlextInfraPythonVersionEnforcer": ".python_version",
+        "FlextInfraSonarcloudClient": ".sonarcloud_client",
+        "FlextInfraSonarcloudIssues": ".sonarcloud_issues",
+        "FlextInfraSonarcloudSettingsSync": ".sonarcloud",
     }),
     public_exports=__all__,
 )

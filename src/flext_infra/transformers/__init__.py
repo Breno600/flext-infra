@@ -28,11 +28,8 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
-        "FlextInfraRopeTransformer": (".rope_transformer", "FlextInfraRopeTransformer"),
-        "FlextInfraSemanticPublication": (
-            "._semantic_publication",
-            "FlextInfraSemanticPublication",
-        ),
+        "FlextInfraRopeTransformer": ".rope_transformer",
+        "FlextInfraSemanticPublication": "._semantic_publication",
     }),
     public_exports=__all__,
 )

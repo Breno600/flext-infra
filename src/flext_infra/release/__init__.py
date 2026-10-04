@@ -40,39 +40,15 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
-        "FlextInfraReleaseArtifactMixin": (
-            "._release_artifact",
-            "FlextInfraReleaseArtifactMixin",
-        ),
-        "FlextInfraReleaseBoundaryMixin": (
-            "._release_boundary",
-            "FlextInfraReleaseBoundaryMixin",
-        ),
-        "FlextInfraReleaseBuildMixin": (
-            "._release_build",
-            "FlextInfraReleaseBuildMixin",
-        ),
-        "FlextInfraReleaseMetadataMixin": (
-            "._release_metadata",
-            "FlextInfraReleaseMetadataMixin",
-        ),
-        "FlextInfraReleaseOrchestrator": (
-            ".orchestrator",
-            "FlextInfraReleaseOrchestrator",
-        ),
-        "FlextInfraReleasePlanMixin": ("._release_plan", "FlextInfraReleasePlanMixin"),
-        "FlextInfraReleaseProjectMixin": (
-            "._release_project",
-            "FlextInfraReleaseProjectMixin",
-        ),
-        "FlextInfraReleasePublishMixin": (
-            "._release_publish",
-            "FlextInfraReleasePublishMixin",
-        ),
-        "FlextInfraReleaseSourceMixin": (
-            "._release_source",
-            "FlextInfraReleaseSourceMixin",
-        ),
+        "FlextInfraReleaseArtifactMixin": "._release_artifact",
+        "FlextInfraReleaseBoundaryMixin": "._release_boundary",
+        "FlextInfraReleaseBuildMixin": "._release_build",
+        "FlextInfraReleaseMetadataMixin": "._release_metadata",
+        "FlextInfraReleaseOrchestrator": ".orchestrator",
+        "FlextInfraReleasePlanMixin": "._release_plan",
+        "FlextInfraReleaseProjectMixin": "._release_project",
+        "FlextInfraReleasePublishMixin": "._release_publish",
+        "FlextInfraReleaseSourceMixin": "._release_source",
     }),
     public_exports=__all__,
 )

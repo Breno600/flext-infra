@@ -67,7 +67,7 @@ class TestsFlextInfraLazyInitHelpers:
         exports_content = self._generated_init(package_root)
 
         tm.that(init_content, has="import install_lazy_exports")
-        tm.that(init_content, has='"m": (".models", "m")')
+        tm.that(init_content, has='"m": ".models"')
         tm.that(exports_content, has='"FlextDemoModels"')
         tm.that(exports_content, has='"m"')
 
@@ -641,10 +641,7 @@ class TestsFlextInfraLazyInitHelpers:
 
             tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
             generated = self._generated_init(package_root)
-            entries, _refs = u.Infra.module_mapping_assignment_source(
-                generated,
-                u.Infra.lazy_imports_name_source(generated),
-            )
+            entries, _refs = u.Infra.lazy_import_mapping_source(generated)
             sources = dict(entries)
 
             tm.that(sources.get("nearest_parent", ()), has="r")

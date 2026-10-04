@@ -52,40 +52,19 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
-        "FlextInfraCandidateBootstrapService": (
-            ".candidate_bootstrap",
-            "FlextInfraCandidateBootstrapService",
-        ),
-        "FlextInfraCliDispatchService": (
-            ".cli_dispatch",
-            "FlextInfraCliDispatchService",
-        ),
-        "FlextInfraCliModProgress": (".cli_mod_progress", "FlextInfraCliModProgress"),
-        "FlextInfraCliRouteBase": (".cli_route_base", "FlextInfraCliRouteBase"),
-        "FlextInfraCliRouteService": (".cli_routes", "FlextInfraCliRouteService"),
-        "FlextInfraCodegen": (".codegen", "FlextInfraCodegen"),
-        "FlextInfraCodegenRoutes": (".cli_routes_codegen", "FlextInfraCodegenRoutes"),
-        "FlextInfraCodegenVscodeMixin": (
-            "._codegen.vscode",
-            "FlextInfraCodegenVscodeMixin",
-        ),
-        "FlextInfraRefactorRoutes": (
-            ".cli_routes_refactor",
-            "FlextInfraRefactorRoutes",
-        ),
-        "FlextInfraValidationCommandRoutes": (
-            ".cli_routes_validate_commands",
-            "FlextInfraValidationCommandRoutes",
-        ),
-        "FlextInfraValidationRoutes": (
-            ".cli_routes_validate",
-            "FlextInfraValidationRoutes",
-        ),
-        "FlextInfraWorkspaceRoutes": (
-            ".cli_routes_workspace",
-            "FlextInfraWorkspaceRoutes",
-        ),
-        "_codegen": ("._codegen", ""),
+        "FlextInfraCandidateBootstrapService": ".candidate_bootstrap",
+        "FlextInfraCliDispatchService": ".cli_dispatch",
+        "FlextInfraCliModProgress": ".cli_mod_progress",
+        "FlextInfraCliRouteBase": ".cli_route_base",
+        "FlextInfraCliRouteService": ".cli_routes",
+        "FlextInfraCodegen": ".codegen",
+        "FlextInfraCodegenRoutes": ".cli_routes_codegen",
+        "FlextInfraCodegenVscodeMixin": "._codegen.vscode",
+        "FlextInfraRefactorRoutes": ".cli_routes_refactor",
+        "FlextInfraValidationCommandRoutes": ".cli_routes_validate_commands",
+        "FlextInfraValidationRoutes": ".cli_routes_validate",
+        "FlextInfraWorkspaceRoutes": ".cli_routes_workspace",
+        "_codegen": "._codegen",
     }),
     public_exports=__all__,
 )

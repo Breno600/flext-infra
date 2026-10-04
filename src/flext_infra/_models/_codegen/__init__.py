@@ -46,31 +46,13 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
-        "FlextInfraCodegen": (".base", "FlextInfraCodegen"),
-        "FlextInfraModelsCodegenFixModels": (
-            ".fix",
-            "FlextInfraModelsCodegenFixModels",
-        ),
-        "FlextInfraModelsCodegenJournalModels": (
-            ".journal",
-            "FlextInfraModelsCodegenJournalModels",
-        ),
-        "FlextInfraModelsCodegenLazyInitModels": (
-            ".lazy_init",
-            "FlextInfraModelsCodegenLazyInitModels",
-        ),
-        "FlextInfraModelsCodegenPipelineModels": (
-            ".pipeline",
-            "FlextInfraModelsCodegenPipelineModels",
-        ),
-        "FlextInfraModelsCodegenScaffoldModels": (
-            ".scaffold",
-            "FlextInfraModelsCodegenScaffoldModels",
-        ),
-        "FlextInfraModelsCodegenTransactionModels": (
-            ".transaction",
-            "FlextInfraModelsCodegenTransactionModels",
-        ),
+        "FlextInfraCodegen": ".base",
+        "FlextInfraModelsCodegenFixModels": ".fix",
+        "FlextInfraModelsCodegenJournalModels": ".journal",
+        "FlextInfraModelsCodegenLazyInitModels": ".lazy_init",
+        "FlextInfraModelsCodegenPipelineModels": ".pipeline",
+        "FlextInfraModelsCodegenScaffoldModels": ".scaffold",
+        "FlextInfraModelsCodegenTransactionModels": ".transaction",
     }),
     public_exports=__all__,
 )

@@ -118,7 +118,7 @@ class FlextInfraModelsCodegenRender:
             description="Canonical rendered root ``__all__`` tuple.",
         )
         lazy_export_mapping: t.NonEmptyStr = m.Field(
-            description="Immutable elected export-to-target mapping installer argument.",
+            description="Immutable elected export-to-target installer argument.",
         )
 
     class StaticPackageInitRender(m.ArbitraryTypesModel):

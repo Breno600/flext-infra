@@ -89,98 +89,32 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
-        "FlextInfraConfigFixer": (".fix_pyrefly_config", "FlextInfraConfigFixer"),
-        "FlextInfraConfigFixerSteps": (
-            "._pyrefly_fix_steps",
-            "FlextInfraConfigFixerSteps",
-        ),
-        "FlextInfraConsolidateGroupsPhase": (
-            ".phases.consolidate_groups",
-            "FlextInfraConsolidateGroupsPhase",
-        ),
-        "FlextInfraDependencyDetectionAnalysis": (
-            ".detection_analysis",
-            "FlextInfraDependencyDetectionAnalysis",
-        ),
-        "FlextInfraDependencyDetectionRunnersMixin": (
-            "._detection_runners",
-            "FlextInfraDependencyDetectionRunnersMixin",
-        ),
-        "FlextInfraDependencyDetectionService": (
-            ".detection",
-            "FlextInfraDependencyDetectionService",
-        ),
-        "FlextInfraDependencyDetectorRuntime": (
-            ".detector_runtime",
-            "FlextInfraDependencyDetectorRuntime",
-        ),
-        "FlextInfraDependencyDetectorRuntimeSteps": (
-            "._detector_runtime_steps",
-            "FlextInfraDependencyDetectorRuntimeSteps",
-        ),
-        "FlextInfraDepsFloorProfileWriter": (
-            "._floor_profile_writer",
-            "FlextInfraDepsFloorProfileWriter",
-        ),
-        "FlextInfraEnsurePackagingPhase": (
-            ".phases.ensure_packaging",
-            "FlextInfraEnsurePackagingPhase",
-        ),
-        "FlextInfraEnsurePyreflyConfigPhase": (
-            ".phases.ensure_pyrefly",
-            "FlextInfraEnsurePyreflyConfigPhase",
-        ),
-        "FlextInfraEnsurePyrightConfigPhase": (
-            ".phases.ensure_pyright",
-            "FlextInfraEnsurePyrightConfigPhase",
-        ),
-        "FlextInfraEnsureRuffConfigPhase": (
-            ".phases.ensure_ruff",
-            "FlextInfraEnsureRuffConfigPhase",
-        ),
-        "FlextInfraExtraPathsManager": (".extra_paths", "FlextInfraExtraPathsManager"),
-        "FlextInfraExtraPathsSyncMixin": (
-            "._extra_paths_sync",
-            "FlextInfraExtraPathsSyncMixin",
-        ),
-        "FlextInfraInjectCommentsPhase": (
-            ".phases.inject_comments",
-            "FlextInfraInjectCommentsPhase",
-        ),
-        "FlextInfraLockIntegrityVerifier": (
-            ".lock_integrity",
-            "FlextInfraLockIntegrityVerifier",
-        ),
-        "FlextInfraPyprojectModernizer": (
-            ".modernizer",
-            "FlextInfraPyprojectModernizer",
-        ),
-        "FlextInfraPyprojectModernizerBase": (
-            "._modernizer.base",
-            "FlextInfraPyprojectModernizerBase",
-        ),
-        "FlextInfraPyprojectModernizerDocument": (
-            "._modernizer.document",
-            "FlextInfraPyprojectModernizerDocument",
-        ),
-        "FlextInfraPyprojectModernizerRun": (
-            "._modernizer.run",
-            "FlextInfraPyprojectModernizerRun",
-        ),
-        "FlextInfraPyprojectModernizerTooling": (
-            "._modernizer.tooling",
-            "FlextInfraPyprojectModernizerTooling",
-        ),
-        "FlextInfraRuntimeDevDependencyDetector": (
-            ".detector",
-            "FlextInfraRuntimeDevDependencyDetector",
-        ),
-        "FlextInfraToolTablesPhase": (
-            ".phases.tool_tables",
-            "FlextInfraToolTablesPhase",
-        ),
-        "_modernizer": ("._modernizer", ""),
-        "phases": (".phases", ""),
+        "FlextInfraConfigFixer": ".fix_pyrefly_config",
+        "FlextInfraConfigFixerSteps": "._pyrefly_fix_steps",
+        "FlextInfraConsolidateGroupsPhase": ".phases.consolidate_groups",
+        "FlextInfraDependencyDetectionAnalysis": ".detection_analysis",
+        "FlextInfraDependencyDetectionRunnersMixin": "._detection_runners",
+        "FlextInfraDependencyDetectionService": ".detection",
+        "FlextInfraDependencyDetectorRuntime": ".detector_runtime",
+        "FlextInfraDependencyDetectorRuntimeSteps": "._detector_runtime_steps",
+        "FlextInfraDepsFloorProfileWriter": "._floor_profile_writer",
+        "FlextInfraEnsurePackagingPhase": ".phases.ensure_packaging",
+        "FlextInfraEnsurePyreflyConfigPhase": ".phases.ensure_pyrefly",
+        "FlextInfraEnsurePyrightConfigPhase": ".phases.ensure_pyright",
+        "FlextInfraEnsureRuffConfigPhase": ".phases.ensure_ruff",
+        "FlextInfraExtraPathsManager": ".extra_paths",
+        "FlextInfraExtraPathsSyncMixin": "._extra_paths_sync",
+        "FlextInfraInjectCommentsPhase": ".phases.inject_comments",
+        "FlextInfraLockIntegrityVerifier": ".lock_integrity",
+        "FlextInfraPyprojectModernizer": ".modernizer",
+        "FlextInfraPyprojectModernizerBase": "._modernizer.base",
+        "FlextInfraPyprojectModernizerDocument": "._modernizer.document",
+        "FlextInfraPyprojectModernizerRun": "._modernizer.run",
+        "FlextInfraPyprojectModernizerTooling": "._modernizer.tooling",
+        "FlextInfraRuntimeDevDependencyDetector": ".detector",
+        "FlextInfraToolTablesPhase": ".phases.tool_tables",
+        "_modernizer": "._modernizer",
+        "phases": ".phases",
     }),
     public_exports=__all__,
 )

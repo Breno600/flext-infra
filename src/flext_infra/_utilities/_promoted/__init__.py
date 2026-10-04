@@ -42,26 +42,11 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
-        "FlextInfraUtilitiesPromotedCommands": (
-            ".commands",
-            "FlextInfraUtilitiesPromotedCommands",
-        ),
-        "FlextInfraUtilitiesPromotedExecution": (
-            ".execution",
-            "FlextInfraUtilitiesPromotedExecution",
-        ),
-        "FlextInfraUtilitiesPromotedInvocation": (
-            ".invocation",
-            "FlextInfraUtilitiesPromotedInvocation",
-        ),
-        "FlextInfraUtilitiesPromotedRendering": (
-            ".rendering",
-            "FlextInfraUtilitiesPromotedRendering",
-        ),
-        "FlextInfraUtilitiesPromotedWorkspace": (
-            ".workspace",
-            "FlextInfraUtilitiesPromotedWorkspace",
-        ),
+        "FlextInfraUtilitiesPromotedCommands": ".commands",
+        "FlextInfraUtilitiesPromotedExecution": ".execution",
+        "FlextInfraUtilitiesPromotedInvocation": ".invocation",
+        "FlextInfraUtilitiesPromotedRendering": ".rendering",
+        "FlextInfraUtilitiesPromotedWorkspace": ".workspace",
     }),
     public_exports=__all__,
 )

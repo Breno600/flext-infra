@@ -42,26 +42,11 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
-        "FlextInfraUtilitiesRopeAnalysisAstHelpers": (
-            ".asthelpers",
-            "FlextInfraUtilitiesRopeAnalysisAstHelpers",
-        ),
-        "FlextInfraUtilitiesRopeAnalysisBase": (
-            ".base",
-            "FlextInfraUtilitiesRopeAnalysisBase",
-        ),
-        "FlextInfraUtilitiesRopeAnalysisExports": (
-            ".exports",
-            "FlextInfraUtilitiesRopeAnalysisExports",
-        ),
-        "FlextInfraUtilitiesRopeAnalysisImportState": (
-            ".importstate",
-            "FlextInfraUtilitiesRopeAnalysisImportState",
-        ),
-        "FlextInfraUtilitiesRopeAnalysisSourceScan": (
-            ".sourcescan",
-            "FlextInfraUtilitiesRopeAnalysisSourceScan",
-        ),
+        "FlextInfraUtilitiesRopeAnalysisAstHelpers": ".asthelpers",
+        "FlextInfraUtilitiesRopeAnalysisBase": ".base",
+        "FlextInfraUtilitiesRopeAnalysisExports": ".exports",
+        "FlextInfraUtilitiesRopeAnalysisImportState": ".importstate",
+        "FlextInfraUtilitiesRopeAnalysisSourceScan": ".sourcescan",
     }),
     public_exports=__all__,
 )

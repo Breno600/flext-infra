@@ -127,4 +127,7 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
             u.Cli.template_render(self._ROOT_TEMPLATE, self._empty_root_render()),
         )
 
-        tm.that(rendered, has="    MappingProxyType({}),\n    public_exports=__all__,\n)")
+        tm.that(
+            rendered,
+            has="    MappingProxyType({}),\n    public_exports=__all__,\n)",
+        )

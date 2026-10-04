@@ -36,13 +36,10 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
-        "FlextInfraPytestRunnerBase": (".base", "FlextInfraPytestRunnerBase"),
-        "FlextInfraPytestRunnerCommand": (".command", "FlextInfraPytestRunnerCommand"),
-        "FlextInfraPytestRunnerExecution": (
-            ".execution",
-            "FlextInfraPytestRunnerExecution",
-        ),
-        "FlextInfraPytestRunnerReports": (".reports", "FlextInfraPytestRunnerReports"),
+        "FlextInfraPytestRunnerBase": ".base",
+        "FlextInfraPytestRunnerCommand": ".command",
+        "FlextInfraPytestRunnerExecution": ".execution",
+        "FlextInfraPytestRunnerReports": ".reports",
     }),
     public_exports=__all__,
 )

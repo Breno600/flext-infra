@@ -36,16 +36,13 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
-        "FlextInfraProtocolsBase": (".base", "FlextInfraProtocolsBase"),
-        "FlextInfraProtocolsCheck": (".check", "FlextInfraProtocolsCheck"),
-        "FlextInfraProtocolsDeps": (".deps", "FlextInfraProtocolsDeps"),
-        "FlextInfraProtocolsDocs": (".docs", "FlextInfraProtocolsDocs"),
-        "FlextInfraProtocolsPromoted": (".promoted", "FlextInfraProtocolsPromoted"),
-        "FlextInfraProtocolsRope": (".rope", "FlextInfraProtocolsRope"),
-        "FlextInfraProtocolsRopeRuntime": (
-            ".rope_runtime",
-            "FlextInfraProtocolsRopeRuntime",
-        ),
+        "FlextInfraProtocolsBase": ".base",
+        "FlextInfraProtocolsCheck": ".check",
+        "FlextInfraProtocolsDeps": ".deps",
+        "FlextInfraProtocolsDocs": ".docs",
+        "FlextInfraProtocolsPromoted": ".promoted",
+        "FlextInfraProtocolsRope": ".rope",
+        "FlextInfraProtocolsRopeRuntime": ".rope_runtime",
     }),
     public_exports=__all__,
 )

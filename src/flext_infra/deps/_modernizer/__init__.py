@@ -34,22 +34,10 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
-        "FlextInfraPyprojectModernizerBase": (
-            ".base",
-            "FlextInfraPyprojectModernizerBase",
-        ),
-        "FlextInfraPyprojectModernizerDocument": (
-            ".document",
-            "FlextInfraPyprojectModernizerDocument",
-        ),
-        "FlextInfraPyprojectModernizerRun": (
-            ".run",
-            "FlextInfraPyprojectModernizerRun",
-        ),
-        "FlextInfraPyprojectModernizerTooling": (
-            ".tooling",
-            "FlextInfraPyprojectModernizerTooling",
-        ),
+        "FlextInfraPyprojectModernizerBase": ".base",
+        "FlextInfraPyprojectModernizerDocument": ".document",
+        "FlextInfraPyprojectModernizerRun": ".run",
+        "FlextInfraPyprojectModernizerTooling": ".tooling",
     }),
     public_exports=__all__,
 )

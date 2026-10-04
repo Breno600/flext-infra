@@ -34,19 +34,10 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
-        "FlextInfraGateRegistry": (".gate_registry", "FlextInfraGateRegistry"),
-        "FlextInfraWorkspaceCheckGatesMixin": (
-            ".workspace_check_gates",
-            "FlextInfraWorkspaceCheckGatesMixin",
-        ),
-        "FlextInfraWorkspaceCheckReportsMixin": (
-            "._workspace_check_reports",
-            "FlextInfraWorkspaceCheckReportsMixin",
-        ),
-        "FlextInfraWorkspaceChecker": (
-            ".workspace_check",
-            "FlextInfraWorkspaceChecker",
-        ),
+        "FlextInfraGateRegistry": ".gate_registry",
+        "FlextInfraWorkspaceCheckGatesMixin": ".workspace_check_gates",
+        "FlextInfraWorkspaceCheckReportsMixin": "._workspace_check_reports",
+        "FlextInfraWorkspaceChecker": ".workspace_check",
     }),
     public_exports=__all__,
 )

@@ -383,8 +383,9 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             return (values, "")
         return ((), FlextInfraUtilitiesRopeAnalysisAstHelpers.name_of(public_exports))
 
-    @staticmethod
+    @classmethod
     def lazy_import_mapping_source(
+        cls,
         source: str,
     ) -> t.Pair[t.VariadicTuple[t.Pair[str, t.StrSequence]], t.StrSequence]:
         """Read elected installer targets, including immutable inline mappings.
@@ -393,14 +394,13 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             Target modules and their export names, plus referenced map symbols.
 
         """
-        scan = FlextInfraUtilitiesRopeAnalysisSourceScan
-        call = scan._first_call(source, "install_lazy_exports")
+        call = cls._first_call(source, "install_lazy_exports")
         if call is None:
             return ((), ())
         value = (
-            call.args[scan._INSTALL_LAZY_IMPORTS_ARG_INDEX]
-            if len(call.args) > scan._INSTALL_LAZY_IMPORTS_ARG_INDEX
-            else scan._keyword_value(call, "lazy_imports")
+            call.args[cls._INSTALL_LAZY_IMPORTS_ARG_INDEX]
+            if len(call.args) > cls._INSTALL_LAZY_IMPORTS_ARG_INDEX
+            else cls._keyword_value(call, "lazy_imports")
         )
         if isinstance(value, ast.Name):
             return ((), (value.id,))
@@ -412,17 +412,19 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         ):
             value = value.args[0]
         if not isinstance(value, ast.Dict):
-            return scan.mapping_entries_refs(value)
+            return cls.mapping_entries_refs(value)
         targets: MutableMapping[str, list[str]] = {}
         for key, target in zip(value.keys, value.values, strict=True):
             if not isinstance(key, ast.Constant) or not isinstance(key.value, str):
                 continue
-            parts = scan.literal_string_sequence(target)
-            module = (
-                target.value
-                if isinstance(target, ast.Constant) and isinstance(target.value, str)
-                else parts[0] if len(parts) == 2 else ""
-            )
+            if isinstance(target, ast.Constant) and isinstance(target.value, str):
+                module = target.value
+            else:
+                match cls.literal_string_sequence(target):
+                    case (module, _):
+                        pass
+                    case _:
+                        module = ""
             if module:
                 targets.setdefault(module, []).append(key.value)
         return (

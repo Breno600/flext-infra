@@ -21,8 +21,6 @@ __all__: tuple[str, ...] = ("FlextInfraCodegenVscodeMixin",)
 install_lazy_exports(
     __name__,
     globals(),
-    MappingProxyType({
-        "FlextInfraCodegenVscodeMixin": (".vscode", "FlextInfraCodegenVscodeMixin"),
-    }),
+    MappingProxyType({"FlextInfraCodegenVscodeMixin": ".vscode"}),
     public_exports=__all__,
 )

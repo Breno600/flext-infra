@@ -21,6 +21,6 @@ __all__: tuple[str, ...] = ("_fixtures",)
 install_lazy_exports(
     __name__,
     globals(),
-    MappingProxyType({"_fixtures": ("._fixtures", "")}),
+    MappingProxyType({"_fixtures": "._fixtures"}),
     public_exports=__all__,
 )

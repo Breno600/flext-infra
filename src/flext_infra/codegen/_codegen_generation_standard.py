@@ -174,8 +174,15 @@ class FlextInfraCodegenGenerationStandardMixin(
 
         """
         indent = "        "
-        if values[1] == f'"{name}"':
-            return (f'{indent}"{name}": {values[0]},',)
+        if values[1] in {f'"{name}"', '""'}:
+            compact = f'{indent}"{name}": {values[0]},'
+            if len(compact) <= config.Infra.tooling.tools.ruff.line_length:
+                return (compact,)
+            return (
+                f'{indent}"{name}": (',
+                f"{indent}    {values[0]}",
+                f"{indent}),",
+            )
         inner = ", ".join(values)
         compact = f'{indent}"{name}": ({inner}),'
         if len(compact) <= config.Infra.tooling.tools.ruff.line_length:
@@ -226,7 +233,7 @@ class FlextInfraCodegenGenerationStandardMixin(
         )
         inner = ", ".join(
             f'"{name}": "{module}"'
-            if name == attr
+            if name == attr or not attr
             else f'"{name}": ("{module}", "{attr}")'
             for name, (module, attr) in entries
         )

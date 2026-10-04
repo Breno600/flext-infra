@@ -136,124 +136,39 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
-        "FlextInfraUtilitiesGitAttestationMixin": (
-            ".attestation",
-            "FlextInfraUtilitiesGitAttestationMixin",
-        ),
-        "FlextInfraUtilitiesGitMutationScopeMixin": (
-            ".mutation_scope",
-            "FlextInfraUtilitiesGitMutationScopeMixin",
-        ),
-        "FlextInfraUtilitiesGitRemote": (".remote", "FlextInfraUtilitiesGitRemote"),
-        "FlextInfraUtilitiesGitRepo": (".repo", "FlextInfraUtilitiesGitRepo"),
-        "FlextInfraUtilitiesGitScopeMixin": (
-            ".scope",
-            "FlextInfraUtilitiesGitScopeMixin",
-        ),
-        "FlextInfraUtilitiesGitSemanticIdentityMixin": (
-            ".semantic_identity",
-            "FlextInfraUtilitiesGitSemanticIdentityMixin",
-        ),
-        "FlextInfraUtilitiesGitSemanticIndexMixin": (
-            ".semantic_index",
-            "FlextInfraUtilitiesGitSemanticIndexMixin",
-        ),
-        "FlextInfraUtilitiesGitSemanticLaneMixin": (
-            ".semantic_lane",
-            "FlextInfraUtilitiesGitSemanticLaneMixin",
-        ),
-        "FlextInfraUtilitiesGitSemanticPathsMixin": (
-            ".semantic_paths",
-            "FlextInfraUtilitiesGitSemanticPathsMixin",
-        ),
-        "FlextInfraUtilitiesGitSemanticPublishMixin": (
-            ".semantic_publish",
-            "FlextInfraUtilitiesGitSemanticPublishMixin",
-        ),
-        "FlextInfraUtilitiesGitSemanticRefsMixin": (
-            ".semantic_refs",
-            "FlextInfraUtilitiesGitSemanticRefsMixin",
-        ),
-        "FlextInfraUtilitiesGitSemanticSubmoduleMixin": (
-            ".semantic_submodule",
-            "FlextInfraUtilitiesGitSemanticSubmoduleMixin",
-        ),
-        "FlextInfraUtilitiesGitSemanticWorktreeMixin": (
-            ".semantic_worktree",
-            "FlextInfraUtilitiesGitSemanticWorktreeMixin",
-        ),
-        "FlextInfraUtilitiesGitStateCaptureMixin": (
-            ".state_capture",
-            "FlextInfraUtilitiesGitStateCaptureMixin",
-        ),
-        "FlextInfraUtilitiesGitStateCheckpointMixin": (
-            ".state_checkpoint",
-            "FlextInfraUtilitiesGitStateCheckpointMixin",
-        ),
-        "FlextInfraUtilitiesGitStateFilesMixin": (
-            ".state_files",
-            "FlextInfraUtilitiesGitStateFilesMixin",
-        ),
-        "FlextInfraUtilitiesGitStatePublicationMixin": (
-            ".state_publication",
-            "FlextInfraUtilitiesGitStatePublicationMixin",
-        ),
-        "FlextInfraUtilitiesGitStateSnapshotMixin": (
-            ".state_snapshot",
-            "FlextInfraUtilitiesGitStateSnapshotMixin",
-        ),
-        "FlextInfraUtilitiesGitStateTransitionMixin": (
-            ".state_transition",
-            "FlextInfraUtilitiesGitStateTransitionMixin",
-        ),
-        "FlextInfraUtilitiesGitStateTreesMixin": (
-            ".state_trees",
-            "FlextInfraUtilitiesGitStateTreesMixin",
-        ),
-        "FlextInfraUtilitiesGitWorktreeCheckpointMixin": (
-            ".worktree_checkpoint",
-            "FlextInfraUtilitiesGitWorktreeCheckpointMixin",
-        ),
-        "FlextInfraUtilitiesGitWorktreeDiscoveryMixin": (
-            ".worktree_discovery",
-            "FlextInfraUtilitiesGitWorktreeDiscoveryMixin",
-        ),
-        "FlextInfraUtilitiesGitWorktreeFactsMixin": (
-            ".worktree_facts",
-            "FlextInfraUtilitiesGitWorktreeFactsMixin",
-        ),
-        "FlextInfraUtilitiesGitWorktreeIO": (
-            ".worktree_io",
-            "FlextInfraUtilitiesGitWorktreeIO",
-        ),
+        "FlextInfraUtilitiesGitAttestationMixin": ".attestation",
+        "FlextInfraUtilitiesGitMutationScopeMixin": ".mutation_scope",
+        "FlextInfraUtilitiesGitRemote": ".remote",
+        "FlextInfraUtilitiesGitRepo": ".repo",
+        "FlextInfraUtilitiesGitScopeMixin": ".scope",
+        "FlextInfraUtilitiesGitSemanticIdentityMixin": ".semantic_identity",
+        "FlextInfraUtilitiesGitSemanticIndexMixin": ".semantic_index",
+        "FlextInfraUtilitiesGitSemanticLaneMixin": ".semantic_lane",
+        "FlextInfraUtilitiesGitSemanticPathsMixin": ".semantic_paths",
+        "FlextInfraUtilitiesGitSemanticPublishMixin": ".semantic_publish",
+        "FlextInfraUtilitiesGitSemanticRefsMixin": ".semantic_refs",
+        "FlextInfraUtilitiesGitSemanticSubmoduleMixin": ".semantic_submodule",
+        "FlextInfraUtilitiesGitSemanticWorktreeMixin": ".semantic_worktree",
+        "FlextInfraUtilitiesGitStateCaptureMixin": ".state_capture",
+        "FlextInfraUtilitiesGitStateCheckpointMixin": ".state_checkpoint",
+        "FlextInfraUtilitiesGitStateFilesMixin": ".state_files",
+        "FlextInfraUtilitiesGitStatePublicationMixin": ".state_publication",
+        "FlextInfraUtilitiesGitStateSnapshotMixin": ".state_snapshot",
+        "FlextInfraUtilitiesGitStateTransitionMixin": ".state_transition",
+        "FlextInfraUtilitiesGitStateTreesMixin": ".state_trees",
+        "FlextInfraUtilitiesGitWorktreeCheckpointMixin": ".worktree_checkpoint",
+        "FlextInfraUtilitiesGitWorktreeDiscoveryMixin": ".worktree_discovery",
+        "FlextInfraUtilitiesGitWorktreeFactsMixin": ".worktree_facts",
+        "FlextInfraUtilitiesGitWorktreeIO": ".worktree_io",
         "FlextInfraUtilitiesGitWorktreeMaterializationMixin": (
-            ".worktree_materialization",
-            "FlextInfraUtilitiesGitWorktreeMaterializationMixin",
+            ".worktree_materialization"
         ),
-        "FlextInfraUtilitiesGitWorktreeMeasureMixin": (
-            ".worktree_measure",
-            "FlextInfraUtilitiesGitWorktreeMeasureMixin",
-        ),
-        "FlextInfraUtilitiesGitWorktreeMixin": (
-            ".worktree",
-            "FlextInfraUtilitiesGitWorktreeMixin",
-        ),
-        "FlextInfraUtilitiesGitWorktreePatchMixin": (
-            ".worktree_patch",
-            "FlextInfraUtilitiesGitWorktreePatchMixin",
-        ),
-        "FlextInfraUtilitiesGitWorktreeRemovalMixin": (
-            ".worktree_removal",
-            "FlextInfraUtilitiesGitWorktreeRemovalMixin",
-        ),
-        "FlextInfraUtilitiesGitWorktreeRootsMixin": (
-            ".worktree_roots",
-            "FlextInfraUtilitiesGitWorktreeRootsMixin",
-        ),
-        "FlextInfraUtilitiesGitWorktreeStatusMixin": (
-            ".worktree_status",
-            "FlextInfraUtilitiesGitWorktreeStatusMixin",
-        ),
+        "FlextInfraUtilitiesGitWorktreeMeasureMixin": ".worktree_measure",
+        "FlextInfraUtilitiesGitWorktreeMixin": ".worktree",
+        "FlextInfraUtilitiesGitWorktreePatchMixin": ".worktree_patch",
+        "FlextInfraUtilitiesGitWorktreeRemovalMixin": ".worktree_removal",
+        "FlextInfraUtilitiesGitWorktreeRootsMixin": ".worktree_roots",
+        "FlextInfraUtilitiesGitWorktreeStatusMixin": ".worktree_status",
     }),
     public_exports=__all__,
 )

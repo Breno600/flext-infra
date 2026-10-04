@@ -29,10 +29,10 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
-        "CliResultValue": (".base", "CliResultValue"),
-        "FlextInfraTypesAdapters": (".adapters", "FlextInfraTypesAdapters"),
-        "FlextInfraTypesBase": (".base", "FlextInfraTypesBase"),
-        "FlextInfraTypesRope": (".rope", "FlextInfraTypesRope"),
+        "CliResultValue": ".base",
+        "FlextInfraTypesAdapters": ".adapters",
+        "FlextInfraTypesBase": ".base",
+        "FlextInfraTypesRope": ".rope",
     }),
     public_exports=__all__,
 )

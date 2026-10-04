@@ -12,9 +12,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from flext_core import m
 from flext_tests import tm
-from pydantic import ValidationError
 
 from flext_infra import infra
 from tests import c, t, u
@@ -128,32 +126,69 @@ class TestsFlextInfraLazyInitRuntime:
             "from flext_core import FlextModels\n"
             "class FlextRuntimeModels(FlextModels):\n"
             "    class Payload(FlextModels.ContractModel):\n"
-            "        count: int\n"
+            '        count: int = FlextModels.Field(description="Payload count.")\n'
             "m = FlextRuntimeModels\n"
             "__all__ = ('FlextRuntimeModels', 'm')\n",
             encoding=c.Cli.ENCODING_DEFAULT,
         )
         tm.that(u.Tests.run_lazy_init(repository), eq=0)
-        with tm.scope(python_paths=[str(repository / c.Infra.DEFAULT_SRC_DIR)]):
-            package = importlib.import_module("flext_runtime_model")
-            tm.that("flext_runtime_model.models" in sys.modules, eq=False)
-            models = package.m
-            tm.that(models is package.FlextRuntimeModels, eq=True)
-            tm.that(models is package.m, eq=True)
-            tm.that(issubclass(models, m), eq=True)
-            payload = models.Payload.model_validate({"count": 7})
-            tm.that(payload.count, eq=7)
-            tm.that(
-                models.Payload.model_validate_json(payload.model_dump_json()),
-                eq=payload,
-            )
-            with pytest.raises(ValidationError, match="count"):
-                models.Payload.model_validate({"count": "invalid"})
-            tm.that(dir(package), eq=list(package.__all__))
+        probe_env = dict(os.environ)
+        probe_env["PYTHONPATH"] = str(repository / c.Infra.DEFAULT_SRC_DIR)
+        probe = (
+            "import sys\n"
+            "from flext_core import FlextModels, e\n"
+            "import flext_runtime_model as package\n"
+            "print('flext_runtime_model.models' not in sys.modules)\n"
+            "models = package.m\n"
+            "print(models is package.FlextRuntimeModels is package.m)\n"
+            "print(issubclass(models, FlextModels))\n"
+            "payload = models.Payload.model_validate({'count': 7})\n"
+            "print(payload.count == 7)\n"
+            "print(models.Payload.model_validate_json(payload.model_dump_json())"
+            " == payload)\n"
+            "try:\n"
+            "    models.Payload.model_validate({'count': 'invalid'})\n"
+            "except e.PydanticValidationError as error:\n"
+            "    print('count' in str(error))\n"
+            "print(dir(package) == list(package.__all__))\n"
+        )
+        result = tm.ok(u.Cli.run([sys.executable, "-c", probe], env=probe_env))
+        tm.that(result.stdout.splitlines(), eq=["True"] * 7)
 
     @staticmethod
-    def test_generated_empty_package_uses_the_same_lazy_runtime(tmp_path: Path) -> None:
-        """An empty elected map still installs the public lazy failure boundary."""
+    def test_child_package_preserves_its_same_named_public_export(
+        tmp_path: Path,
+    ) -> None:
+        """A child facade's same-named export precedes the module fallback."""
+        repository, package_root = u.Tests.create_lazy_init_workspace(
+            tmp_path,
+            project_name="flext-child-runtime",
+            package_name="flext_child_runtime",
+        )
+        child = package_root / "child"
+        child.mkdir()
+        (child / c.Infra.INIT_PY).write_text("", encoding=c.Cli.ENCODING_DEFAULT)
+        (child / "api.py").write_text(
+            "class PublishedChild:\n    pass\n"
+            "child = PublishedChild\n"
+            "__all__ = ('PublishedChild', 'child')\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+        tm.that(u.Tests.run_lazy_init(repository), eq=0)
+        probe_env = dict(os.environ)
+        probe_env["PYTHONPATH"] = str(repository / c.Infra.DEFAULT_SRC_DIR)
+        probe = (
+            "import flext_child_runtime as package\n"
+            "from flext_child_runtime.child import child, PublishedChild\n"
+            "print(package.child is child)\n"
+            "print(package.child is PublishedChild)\n"
+        )
+        result = tm.ok(u.Cli.run([sys.executable, "-c", probe], env=probe_env))
+        tm.that(result.stdout.splitlines(), eq=["True", "True"])
+
+    @staticmethod
+    def test_empty_package_preserves_its_unmanaged_initializer(tmp_path: Path) -> None:
+        """No published declarations means no generated root contract is invented."""
         repository, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-empty-runtime",
@@ -163,13 +198,22 @@ class TestsFlextInfraLazyInitRuntime:
             "__all__ = ()\n",
             encoding=c.Cli.ENCODING_DEFAULT,
         )
+        initializer = package_root / c.Infra.INIT_PY
+        original = initializer.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         tm.that(u.Tests.run_lazy_init(repository), eq=0)
-        with tm.scope(python_paths=[str(repository / c.Infra.DEFAULT_SRC_DIR)]):
-            package = importlib.import_module("flext_empty_runtime")
-            tm.that(package.__all__, eq=())
-            tm.that(dir(package), eq=[])
-            with pytest.raises(AttributeError, match="undeclared"):
-                _ = package.undeclared
+        tm.that(initializer.read_text(encoding=c.Cli.ENCODING_DEFAULT), eq=original)
+        probe_env = dict(os.environ)
+        probe_env["PYTHONPATH"] = str(repository / c.Infra.DEFAULT_SRC_DIR)
+        probe = (
+            "import flext_empty_runtime as package\n"
+            "print(not hasattr(package, '__all__'))\n"
+            "try:\n"
+            "    package.undeclared\n"
+            "except AttributeError as error:\n"
+            "    print('undeclared' in str(error))\n"
+        )
+        result = tm.ok(u.Cli.run([sys.executable, "-c", probe], env=probe_env))
+        tm.that(result.stdout.splitlines(), eq=["True", "True"])
 
     @staticmethod
     def test_generated_root_preserves_import_failures(tmp_path: Path) -> None:

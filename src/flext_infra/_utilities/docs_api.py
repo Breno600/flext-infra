@@ -261,7 +261,6 @@ class FlextInfraUtilitiesDocsApi:
         project_root: Path,
         *,
         package_name: str,
-        source: str,
         exports: t.StrSequence,
     ) -> t.StrMapping:
         """Return target modules declared by the package lazy import map.
@@ -577,7 +576,6 @@ class FlextInfraUtilitiesDocsApi:
             FlextInfraUtilitiesDocsApi._lazy_export_target_map(
                 project_root,
                 package_name=package_name,
-                source=source,
                 exports=all_exports,
             ),
         )

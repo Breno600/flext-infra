@@ -50,34 +50,13 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
-        "FlextInfraUtilitiesPyprojectConformBase": (
-            ".base",
-            "FlextInfraUtilitiesPyprojectConformBase",
-        ),
-        "FlextInfraUtilitiesPyprojectDocument": (
-            ".document",
-            "FlextInfraUtilitiesPyprojectDocument",
-        ),
-        "FlextInfraUtilitiesPyprojectOverlay": (
-            ".overlay",
-            "FlextInfraUtilitiesPyprojectOverlay",
-        ),
-        "FlextInfraUtilitiesPyprojectRequirements": (
-            ".requirements",
-            "FlextInfraUtilitiesPyprojectRequirements",
-        ),
-        "FlextInfraUtilitiesPyprojectSession": (
-            ".session",
-            "FlextInfraUtilitiesPyprojectSession",
-        ),
-        "FlextInfraUtilitiesPyprojectTomlPhases": (
-            ".toml_phases",
-            "FlextInfraUtilitiesPyprojectTomlPhases",
-        ),
-        "FlextInfraUtilitiesPyprojectUvSources": (
-            ".uv_sources",
-            "FlextInfraUtilitiesPyprojectUvSources",
-        ),
+        "FlextInfraUtilitiesPyprojectConformBase": ".base",
+        "FlextInfraUtilitiesPyprojectDocument": ".document",
+        "FlextInfraUtilitiesPyprojectOverlay": ".overlay",
+        "FlextInfraUtilitiesPyprojectRequirements": ".requirements",
+        "FlextInfraUtilitiesPyprojectSession": ".session",
+        "FlextInfraUtilitiesPyprojectTomlPhases": ".toml_phases",
+        "FlextInfraUtilitiesPyprojectUvSources": ".uv_sources",
     }),
     public_exports=__all__,
 )
