@@ -190,7 +190,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         summary = (
             f"{project.name}: {len(merged_violations)} runtime violation(s)"
             if not passed
-            else f"{project.name}: runtime census passed ({len(real_modules)} module(s))"
+            else f"{project.name}: runtime census passed ({len(real_modules)} modules)"
         )
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
@@ -250,7 +250,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
             return r[bool].from_failure(report_result)
         report = report_result.value
         if report.passed:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         if self.output_format == c.Cli.OutputFormats.JSON:
             return r[bool].fail(report.model_dump_json())
         return r[bool].fail(self._render_text_summary(report))

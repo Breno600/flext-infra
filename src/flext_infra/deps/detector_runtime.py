@@ -78,7 +78,7 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
             return r[bool].from_failure(pip_check_result)
         pip_ok = pip_check_result.value
         if params.output_format == c.Cli.OutputFormats.JSON:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         write_result = self._write_workspace_report(
             params,
             root,
@@ -160,7 +160,7 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
                 pip_check=c.Infra.RK_OK if pip_ok else "FAIL",
             )
         if params.no_fail or (total_issues == 0 and pip_ok):
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         return r[bool].fail("dependency issues detected")
 
 

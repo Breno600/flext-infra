@@ -10,12 +10,14 @@ from pathlib import Path
 from typing import Annotated, ClassVar, Self, override
 
 from flext_core import FlextService, r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, m, p, u
 from flext_infra._base_payload import FlextInfraCommandPayloadMixin
 from flext_infra._settings import settings
+from flext_infra._typings.base import CliResultValue
+from flext_infra.typings import t
 
 
-class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
+class FlextInfraServiceBase[TDomainResult: CliResultValue](
     FlextService[TDomainResult],
     FlextInfraCommandPayloadMixin,
 ):
@@ -116,7 +118,7 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
     @m.field_validator("output_dir", mode="before")
     @classmethod
     def _normalize_output_dir(cls, value: str | Path | None) -> Path | None:
-        """Preserve relative output dirs so callers can scope them under workspace roots.
+        """Preserve relative output dirs so callers scope them under workspace roots.
 
         Returns:
             The resulting ``Path | None``.
@@ -174,7 +176,7 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
         if report_result.failure:
             return r[bool].from_failure(report_result)
         report = report_result.unwrap()
-        return r[bool].ok(True) if report.passed else r[bool].fail(report.summary)
+        return r[bool].ok(value=True) if report.passed else r[bool].fail(report.summary)
 
     @override
     def execute(self) -> p.Result[TDomainResult]:

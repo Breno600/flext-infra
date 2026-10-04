@@ -84,7 +84,7 @@ class FlextInfraUtilitiesRopeHelpers(FlextInfraUtilitiesRopeMethodOrderMixin):
         *,
         kind: str = "function",
     ) -> str | None:
-        """Return the full top-level def/class block named ``name``, decorators included.
+        """Return the top-level def/class block named ``name``, decorators included.
 
         Returns:
             The full top-level def/class block named ``name``, decorators included.

@@ -139,8 +139,8 @@ class TestsFlextInfraConstants(FlextTestsConstants, FlextInfraConstants):
             FlextInfraConstants.Infra.MAKE_REPOSITORY_ROOT,
             *FlextInfraConstants.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
             *DIRENV_SESSION_ENV_KEYS,
-            # The host's GitHub credential (and the aliases Make unexports)
-            # never enters a test; a test that needs one passes its own.
+            # The host's GitHub credential under every name Make reads never
+            # enters a test; a test that needs one passes its own.
             "GITHUB_TOKEN",
             "GH_TOKEN",
             "MISE_GITHUB_TOKEN",

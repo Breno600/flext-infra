@@ -133,7 +133,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
             copy_result = u.Cli.files_copy(source_path, destination_path)
             if copy_result.failure:
                 return r[bool].from_failure(copy_result)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def git_copy_worktree_state(

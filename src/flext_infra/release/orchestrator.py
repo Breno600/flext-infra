@@ -96,9 +96,9 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
             return r[bool].from_failure(plan)
         if not plan.value.releasable:
             self.logger.info("release_version_none", current=ctx.version)
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         if ctx.dry_run:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         exists = u.Cli.capture([c.Infra.GIT, "tag", "-l", plan.value.tag], cwd=root)
         if exists.failure:
             return r[bool].from_failure(exists)
@@ -182,13 +182,34 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
             return r[bool].from_failure(head)
         subject, _, oid = head.value.strip().partition("\n")
         if not u.Infra.release_subject(subject, ctx.version):
+            # A hot integration lane keeps landing after the release commit:
+            # the contract is to tag the MERGED release commit wherever it now
+            # sits, not to demand the lane stop. Locate it in history and fail
+            # loud only when it truly is not there.
             expected = c.Infra.RELEASE_COMMIT_SUBJECT.format(version=ctx.version)
-            return r[bool].fail(
-                f"release tag requires HEAD to be the release commit {expected!r}, "
-                f"found {subject!r}",
+            located = u.Cli.capture(
+                [
+                    c.Infra.GIT,
+                    "log",
+                    f"--grep={expected}",
+                    "-n",
+                    "1",
+                    "--format=%H",
+                    c.Infra.GIT_HEAD,
+                ],
+                cwd=root,
             )
+            if located.failure:
+                return r[bool].from_failure(located)
+            located_oid = located.value.strip()
+            if not located_oid:
+                return r[bool].fail(
+                    f"release tag requires the release commit {expected!r} in "
+                    f"history, found head subject {subject!r}",
+                )
+            oid = located_oid
         if ctx.dry_run:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         existing = u.Cli.capture(
             [c.Infra.GIT, "rev-list", "-n", "1", ctx.tag],
             cwd=root,
@@ -198,7 +219,17 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
                 return r[bool].fail(f"release tag {ctx.tag} already points elsewhere")
         else:
             created = u.Cli.run_checked(
-                [c.Infra.GIT, "tag", "-a", ctx.tag, "-m", f"release: {ctx.tag}"],
+                # Tag the release commit's own oid: when HEAD moved past it
+                # (hot lane), the tag must still mark the released state.
+                [
+                    c.Infra.GIT,
+                    "tag",
+                    "-a",
+                    ctx.tag,
+                    "-m",
+                    f"release: {ctx.tag}",
+                    oid,
+                ],
                 cwd=root,
             )
             if created.failure:

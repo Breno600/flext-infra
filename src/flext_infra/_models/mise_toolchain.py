@@ -105,20 +105,6 @@ class FlextInfraModelsMiseToolchain:
         Python linters and type checkers remain owned by pyproject manifests.
         """
 
-        # Selector families rejected while their capabilities are suspended.
-        # Nothing stays suspended -- gc and beads are
-        # operator-owned forks resolved as latest, so the default frees every
-        # selector family and the vocabulary stays declared on this owner.
-        suspended_mise_selector_patterns: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default=(),
-                description=(
-                    "Mise selector families rejected while suspended; empty "
-                    "frees every toolchain"
-                ),
-            ),
-        ] = ()
         python_version: Annotated[
             t.NonEmptyStr,
             m.Field(
@@ -127,6 +113,15 @@ class FlextInfraModelsMiseToolchain:
                     "Python toolchain line: major.minor ('3.13') or the full "
                     "install pin ('3.13.15') when the mise asset registry "
                     "requires it"
+                ),
+            ),
+        ]
+        worktree_environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                pattern=r"^\.[A-Za-z][A-Za-z0-9._-]*$",
+                description=(
+                    "Sibling directory for physical linked-worktree environments"
                 ),
             ),
         ]
@@ -226,7 +221,9 @@ class FlextInfraModelsMiseToolchain:
             t.NonEmptyStr,
             m.Field(
                 pattern=r"^\.[A-Za-z0-9._-]+\.lock$",
-                description="Ignored project-root mutex for Mise lock publication/recovery",
+                description=(
+                    "Ignored project-root mutex for Mise lock publication/recovery"
+                ),
             ),
         ]
         mise_lockfile_platforms: Annotated[
@@ -255,18 +252,6 @@ class FlextInfraModelsMiseToolchain:
         npm_package_manager: Annotated[
             Literal["aube"],
             m.Field(description="Mise npm installer with a locked dependency graph"),
-        ]
-        github_credential_commands: Annotated[
-            t.VariadicTuple[t.VariadicTuple[t.NonEmptyStr]],
-            m.Field(
-                description=(
-                    "Commands that print the GitHub credential when the caller's "
-                    "environment carries none, in precedence order. The first "
-                    "whose executable is on PATH is the selected source and must "
-                    "deliver; none present means anonymous GitHub access. "
-                    "Override toolchain.github_credential_commands."
-                ),
-            ),
         ]
         mise_selector: Annotated[
             t.NonEmptyStr,
@@ -510,15 +495,6 @@ class FlextInfraModelsMiseToolchain:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(min_length=1, description="Explicitly reinjected host variables"),
         ]
-        credential_commands: Annotated[
-            t.VariadicTuple[t.VariadicTuple[t.NonEmptyStr]],
-            m.Field(
-                description=(
-                    "Declared GitHub credential commands consulted, in order, "
-                    "only when the caller's environment carries no credential"
-                ),
-            ),
-        ]
         version_pin_file: Annotated[
             t.NonEmptyStr,
             m.Field(
@@ -570,9 +546,31 @@ class FlextInfraModelsMiseToolchain:
             t.NonEmptyStr,
             m.Field(
                 pattern=r"^[A-Za-z0-9._/-]+\.py$",
-                description="Project-relative generated publisher of a staged mise.lock",
+                description=(
+                    "Project-relative generated publisher of a staged mise.lock"
+                ),
             ),
         ]
+        lock_converge_script: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                pattern=r"^[A-Za-z0-9._/-]+\.py$",
+                description=(
+                    "Project-relative generated script `make upg` runs to hold "
+                    "broken releases inside a lock stage"
+                ),
+            ),
+        ]
+        credential_commands: Annotated[
+            t.VariadicTuple[t.VariadicTuple[t.NonEmptyStr]],
+            m.Field(
+                description=(
+                    "Candidate commands (in probe order) that print a GitHub "
+                    "token for private tool downloads; the bootstrap probes "
+                    "each in turn and takes the first non-empty output."
+                ),
+            ),
+        ] = ()
         transaction_lock_file: Annotated[
             t.NonEmptyStr,
             m.Field(

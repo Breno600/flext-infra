@@ -24,6 +24,94 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraCodegenMakeEnvironment:
     """Prove generated operations ignore the caller shell environment."""
 
+    def test_make_authenticates_real_mise_without_external_token_setup(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A generated public verb supplies gh's credential to the real Mise child."""
+        project_root, _ = self._render_makefile(
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
+        )
+        tm.ok(
+            u.Cli.run_checked(
+                ["uv", "venv", "--python", sys.executable, str(project_root / ".venv")],
+                cwd=project_root,
+            ),
+        )
+        (project_root / "auth_probe.py").write_text(
+            "import os, subprocess\n"
+            "credential = subprocess.run(['gh', 'auth', 'token'], "
+            "check=True, capture_output=True, text=True).stdout.rstrip('\\n')\n"
+            "assert credential\n"
+            "assert all(os.environ[name] == credential for name in "
+            "('GITHUB_TOKEN', 'GH_TOKEN', 'MISE_GITHUB_TOKEN'))\n"
+            "print('mise-authenticated')\n",
+            encoding="utf-8",
+        )
+        (project_root / "custom.mk").write_text(
+            "_custom-status:\n"
+            '\t@"$(SETUP_MISE)" -C "$(PROJECT_ROOT)" exec -- '
+            '"$(RUNTIME_PYTHON)" "$(PROJECT_ROOT)/auth_probe.py"\n',
+            encoding="utf-8",
+        )
+        process = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "status"],
+                cwd=project_root,
+                env={"MISE_GITHUB_TOKEN": "stale-token-must-not-reach-mise"},
+            ),
+        )
+        tm.that(
+            u.Cli.process_succeeded(process.outcome),
+            eq=True,
+            msg=process.stdout + process.stderr,
+        )
+        tm.that(process.stdout, has="mise-authenticated")
+
+    @pytest.mark.parametrize("verb", ["setup", "status", "help"])
+    @pytest.mark.parametrize("credential", ["", "invalid-test-credential"])
+    def test_make_handles_missing_gh_auth_at_the_declared_boundary(
+        self,
+        tmp_path: Path,
+        verb: str,
+        credential: str,
+    ) -> None:
+        """Setup proceeds to its launcher preflight; other verbs require gh auth."""
+        project_root, _ = self._render_makefile(
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
+        )
+        empty_config = tmp_path / "empty-gh-config"
+        empty_config.mkdir()
+        (project_root / "bin" / "mise").unlink()
+        process = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", verb],
+                cwd=project_root,
+                env={
+                    "GH_CONFIG_DIR": str(empty_config),
+                    "GH_TOKEN": credential,
+                    "GITHUB_TOKEN": credential,
+                    "GH_ENTERPRISE_TOKEN": "",
+                    "GITHUB_ENTERPRISE_TOKEN": "",
+                    "GH_HOST": "github.com",
+                    "MISE_GITHUB_TOKEN": "must-not-be-a-fallback",
+                    "SETUP_BOOTSTRAP_ONLY": "Y",
+                },
+            ),
+        )
+        if verb == "setup":
+            tm.that(process.outcome.raw_return_code, ne=0)
+            tm.that(process.stderr, has="missing generated mise launcher")
+            tm.that(process.stderr, lacks="authentication is required")
+        elif verb == "help":
+            tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
+        else:
+            tm.that(process.outcome.raw_return_code, ne=0)
+            tm.that(process.stderr, has="authentication is required")
+        tm.that((project_root / ".venv").exists(), eq=False)
+
     @staticmethod
     @pytest.mark.remote
     def test_upg_replaces_newer_lock_revision_before_older_mise_reads_it(
@@ -675,10 +763,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
             ),
         )
         tm.that(u.Cli.process_succeeded(environment.outcome), eq=True)
-        # Law (operator 2026-10-01, flext-h2a9h): in development the
-        # environment is the checkout's own .venv, never a configurable
-        # location outside it. Anchor to the checkout, not to the resolver,
-        # so relocating the resolver and the templates together still fails.
+        # Primary standalone checkouts retain their local environment;
+        # linked Git worktrees are exercised separately above.
         checkout_venv = project_root.resolve() / c.Infra.ENVIRONMENT_DIRECTORY
         tm.that(u.Infra.runtime_environment_dir(project_root), eq=checkout_venv)
         tm.that(environment.stdout, has=f"RUNTIME_VENV={checkout_venv}\n")
@@ -1044,15 +1130,15 @@ class TestsFlextInfraCodegenMakeEnvironment:
 
     @staticmethod
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
-    def test_bootstrap_selects_the_github_credential_from_declared_sources(
+    def test_ci_rebuilds_the_shim_farm_from_the_pinned_release(
         tmp_path: Path,
         profile: c.Infra.MakeProfile,
     ) -> None:
-        """The credential source is selected once; a selected source must deliver.
+        """CI publishes a shim farm rebuilt by the pinned Mise, never a cached one.
 
-        The caller's ``GITHUB_TOKEN`` wins; otherwise each declared command whose
-        executable is on PATH is consulted in order, and its failure or empty
-        output stops the verb instead of degrading to anonymous access.
+        Mise never replaces a shim bound to another binary, so a farm restored
+        from a tool cache keeps running the Mise release that built it, and an
+        older release rejects a newer lockfile revision.
         """
         project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
@@ -1062,22 +1148,35 @@ class TestsFlextInfraCodegenMakeEnvironment:
         makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
             encoding="utf-8",
         )
-        commands = config.Infra.codegen.toolchain.github_credential_commands
+        ci_branch = makefile.split('if [ -n "$${GITHUB_PATH:-}" ]; then', 1)[1]
+        ci_branch = ci_branch.split("\tfi;", 1)[0]
+        steps = (
+            'rm -rf "$$shim_farm"',
+            'mise_offline project "$$pinned_mise" -C "$$project_root" reshim',
+            '"$$shim_farm" >> "$$GITHUB_PATH"',
+        )
+        positions = [ci_branch.find(step) for step in steps]
+        tm.that(min(positions), ne=-1)
+        tm.that(positions, eq=sorted(positions))
+
+    @staticmethod
+    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
+    def test_bootstrap_selects_the_github_credential_from_declared_sources(
+        tmp_path: Path,
+        profile: c.Infra.MakeProfile,
+    ) -> None:
+        """Bootstrap forwards the caller token without consulting a keyring."""
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path,
+            profile,
+            bootstrap=True,
+        )
+        makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding="utf-8",
+        )
         tm.that(makefile, has="export GITHUB_TOKEN")
-        tm.that(bool(commands), eq=True)
-        for command in commands:
-            rendered = " ".join(command)
-            tm.that(
-                makefile,
-                has=[
-                    f"command -v {command[0]} >/dev/null 2>&1; then",
-                    f'caller_github_token="$$({rendered})"',
-                    "the selected GitHub credential source failed: %s\\n' "
-                    f"'{rendered}' >&2; exit 2;",
-                    "the selected GitHub credential source printed nothing",
-                ],
-            )
-            tm.that(makefile, lacks=f"$$({rendered} 2>/dev/null)")
+        tm.that(makefile, has="unexport GH_TOKEN MISE_GITHUB_TOKEN GITHUB_API_TOKEN")
+        tm.that(makefile, lacks=["gh auth token", "selected GitHub credential source"])
 
     @staticmethod
     def test_public_gate_fails_closed_before_managed_environment_exists(

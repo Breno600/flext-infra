@@ -94,7 +94,7 @@ class FlextInfraConstantsCodegen(
         ("models.py", "Models", "FlextTestsModels", "Test models"),
         ("utilities.py", "Utilities", "FlextTestsUtilities", "Test utilities"),
     )
-    "Base module definitions for tests/: (filename, class_suffix, base_class, docstring)."
+    "Base module definitions for tests/: (filename, class_suffix, base_class, doc)."
     # Canonical root config/settings pair: a
     # private `_config.py`/`_settings.py` module exporting the singleton.
     # Consumed by the scaffold generator.
@@ -102,7 +102,7 @@ class FlextInfraConstantsCodegen(
         ("_config.py", "Config", "FlextConfig", "Runtime config"),
         ("_settings.py", "Settings", "FlextSettings", "Runtime settings"),
     )
-    "Runtime singleton modules for src/: (filename, class_suffix, base_class, docstring)."
+    "Runtime singleton modules for src/: (filename, class_suffix, base_class, doc)."
     VIOLATION_PATTERN: ClassVar[t.RegexPattern] = re.compile(
         r"\[(?P<rule>[a-z0-9][a-z0-9-]*)\]\s+"
         r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)",
@@ -114,6 +114,9 @@ class FlextInfraConstantsCodegen(
     "Module binding the flext-core lazy engine writes and resolves exports from."
     MISE_RELEASE_COMPONENT_COUNT: ClassVar[int] = 3
     "Number of numeric components in a generated Mise release version."
+    MISE_BOOTSTRAP_CREDENTIAL_COMMANDS: ClassVar[
+        t.VariadicTuple[t.VariadicTuple[str]]
+    ] = (("gh", "auth", "token"),)
     MISE_RELEASE_PATTERN: ClassVar[str] = (
         rf"[0-9]+(\.[0-9]+){{{MISE_RELEASE_COMPONENT_COUNT - 1}}}"
     )
@@ -246,9 +249,12 @@ class FlextInfraConstantsCodegen(
         "PATHEXT",
         "SYSTEMROOT",
         "WINDIR",
-        # The one GitHub credential variable (optional) and the network
-        # policy key the lock-time provenance fetch reads.
+        # The one GitHub credential under every name its readers use
+        # (optional) and the network policy key the lock-time provenance
+        # fetch reads.
         "GITHUB_TOKEN",
+        "GH_TOKEN",
+        "MISE_GITHUB_TOKEN",
         "MISE_HTTP_TIMEOUT",
         "FLEXT_MYPY_PROFILE_OUTPUT",
         # The generated launchers bake their release; the bootstrap passes the

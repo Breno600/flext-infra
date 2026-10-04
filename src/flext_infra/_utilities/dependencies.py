@@ -19,7 +19,7 @@ from packaging.utils import canonicalize_name
 from packaging.version import InvalidVersion, Version
 
 from flext_core import r
-from flext_infra import c, t
+from flext_infra import c, m, t
 from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
 
 # Why: dependency_waves subscripts r[t.SequenceOf[t.StrSequence]] at runtime, so
@@ -27,7 +27,7 @@ from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
 # facade import and stays cycle-free.
 
 if TYPE_CHECKING:
-    from flext_infra import m, p
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesDependencies:
@@ -363,7 +363,7 @@ class FlextInfraUtilitiesDependencies:
 
     @classmethod
     def resolved_dependency_versions(cls) -> t.MappingKV[str, str]:
-        """Read registry versions from the provisioned runtime, never release provenance.
+        """Read registry versions from the provisioned runtime, not release provenance.
 
         Returns:
             The resulting ``t.MappingKV[str, str]``.
@@ -815,6 +815,55 @@ class FlextInfraUtilitiesDependencies:
         if base is None:
             return ()
         return (base, *(item for item in profiles if item.project == distribution))
+
+    @classmethod
+    def composed_dependency_profile(
+        cls,
+        profiles: t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec],
+        *,
+        upstream: str,
+        distribution: str,
+    ) -> m.Infra.ScaffoldDependencyProfileSpec | None:
+        """Compose the shared upstream and project-specific dependency rows once.
+
+        Returns:
+            The resulting ``m.Infra.ScaffoldDependencyProfileSpec | None``.
+        """
+        rows = cls.dependency_profile_rows(
+            profiles,
+            upstream=upstream,
+            distribution=distribution,
+        )
+        if not rows:
+            return None
+        profile, *additions = rows
+        if not additions:
+            return profile
+        return m.Infra.ScaffoldDependencyProfileSpec.model_validate(
+            {
+                **profile.model_dump(),
+                "runtime": tuple(
+                    dict.fromkeys((
+                        *profile.runtime,
+                        *(
+                            requirement
+                            for item in additions
+                            for requirement in item.runtime
+                        ),
+                    )),
+                ),
+                "codegen": tuple(
+                    dict.fromkeys((
+                        *profile.codegen,
+                        *(
+                            requirement
+                            for item in additions
+                            for requirement in item.codegen
+                        ),
+                    )),
+                ),
+            },
+        )
 
 
 __all__: list[str] = ["FlextInfraUtilitiesDependencies"]

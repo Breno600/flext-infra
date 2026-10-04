@@ -24,7 +24,7 @@ class FlextInfraReleaseSourceMixin(FlextInfraReleaseArtifactMixin):
         stage_path: Path,
         gitleaks_config: Path,
     ) -> p.Result[t.Pair[m.Infra.SourceSnapshot, str]]:
-        """Extract HEAD of a clean project, scan it, and return identity and license digest.
+        """Extract HEAD of a clean project; scan, return identity + license digest.
 
         Returns:
             The resulting ``p.Result[t.Pair[m.Infra.SourceSnapshot, str]]``.
@@ -220,7 +220,7 @@ class FlextInfraReleaseSourceMixin(FlextInfraReleaseArtifactMixin):
             return r[bool].fail("gitleaks detected a secret in staged release source")
         if not u.Cli.process_succeeded(scan.value.outcome):
             return r[bool].fail(f"gitleaks failed with exit code {code}")
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraReleaseSourceMixin"]

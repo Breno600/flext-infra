@@ -96,7 +96,7 @@ class FlextInfraUtilitiesGitStateCaptureMixin(
             cls._state_apply(checkpoint, destination_root)
         except (GitCommandError, OSError, ValueError) as exc:
             return r[bool].fail(str(exc), exception=exc)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _state_cleanup(
@@ -156,7 +156,7 @@ class FlextInfraUtilitiesGitStateCaptureMixin(
             cls._state_cleanup(checkpoint, destination_root, saved_commit, publication)
         except (GitCommandError, OSError, ValueError) as exc:
             return r[bool].fail(str(exc), exception=exc)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraUtilitiesGitStateCaptureMixin"]

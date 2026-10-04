@@ -189,7 +189,10 @@ class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
                         for alias in node.names
                     )
                 ):
-                    msg = "dynamic environment migration conflicts with a settings binding"
+                    msg = (
+                        "dynamic environment migration conflicts "
+                        "with a settings binding"
+                    )
                     raise ValueError(msg)
                 if isinstance(node, ast.ImportFrom) and any(
                     alias.name == "*" for alias in node.names
@@ -229,7 +232,10 @@ class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
             and path.parent.name == package.rsplit(".", maxsplit=1)[-1]
         ]
         if len(owners) != 1:
-            msg = f"dynamic environment migration requires one declared settings owner: {package}"
+            msg = (
+                f"dynamic environment migration requires one "
+                f"declared settings owner: {package}"
+            )
             raise ValueError(msg)
         methods = {
             node.name
@@ -237,7 +243,10 @@ class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
             if isinstance(node, ast.FunctionDef)
         }
         if not {"env_lookup", "env_required"} <= methods:
-            msg = f"settings owner lacks optional/required dynamic environment reads: {package}"
+            msg = (
+                f"settings owner lacks optional/required "
+                f"dynamic environment reads: {package}"
+            )
             raise ValueError(msg)
 
 

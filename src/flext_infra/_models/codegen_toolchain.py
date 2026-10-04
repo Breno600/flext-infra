@@ -109,7 +109,9 @@ class FlextInfraModelsCodegenToolchain:
         journal_path: Annotated[
             Path,
             m.Field(
-                description="Direct journal under the authenticated scope Git directory",
+                description=(
+                    "Direct journal under the authenticated scope Git directory"
+                ),
             ),
         ]
         transaction_id: Annotated[

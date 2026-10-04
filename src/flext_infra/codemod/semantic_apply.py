@@ -108,7 +108,7 @@ class FlextInfraCodemodSemanticApply:
             "import_alignment_files": len(alignment.value),
             "future_annotations": len(future_annotations),
         }
-        residue = r[bool].ok(True)
+        residue = r[bool].ok(value=True)
         if future_annotations:
             residue = cls._check_residue(
                 "future-annotations",
@@ -165,7 +165,7 @@ class FlextInfraCodemodSemanticApply:
         if not changed:
             # Every phase just planned against this identical source snapshot.
             # With no publication there is no second state to validate.
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
 
         def validate_published() -> p.Result[bool]:
             published = dict(cls._source_inventory(root, preflight))
@@ -182,12 +182,14 @@ class FlextInfraCodemodSemanticApply:
                 ),
             )
 
-        return cls._publish(
-            root,
-            original,
-            working,
-            changed,
-            validator=validate_published,
+        return cls._check_definition_time(original, working, changed).flat_map(
+            lambda _: cls._publish(
+                root,
+                original,
+                working,
+                changed,
+                validator=validate_published,
+            ),
         )
 
     @classmethod
@@ -295,7 +297,39 @@ class FlextInfraCodemodSemanticApply:
             return r[bool].fail(
                 f"{phase} phase left residue after application: {files}",
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
+
+    @staticmethod
+    def _check_definition_time(
+        original: t.MappingKV[Path, str],
+        working: t.MappingKV[Path, str],
+        changed: set[Path],
+    ) -> p.Result[bool]:
+        """Reject a plan whose class suites would raise NameError at import.
+
+        A rewrite that names a class inside its own suite, or reads an
+        enclosing class member from a nested suite, still parses and passes
+        every replan, so the fixed point alone cannot see it. Only errors the
+        original source did not already carry are attributed to the plan.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        broken: list[str] = []
+        for path in sorted(changed):
+            before = frozenset(u.Infra.definition_time_name_errors(original[path]))
+            broken.extend(
+                f"{path}: {error}"
+                for error in u.Infra.definition_time_name_errors(working[path])
+                if error not in before
+            )
+        if broken:
+            return r[bool].fail(
+                "semantic plan introduces definition-time NameError(s); nothing "
+                f"published for mandatory owner repair: {'; '.join(broken)}",
+            )
+        return r[bool].ok(value=True)
 
     @classmethod
     def _verify_fixed_point(
@@ -503,7 +537,7 @@ class FlextInfraCodemodSemanticApply:
                 ),
             )
         if not semantic_plans:
-            return validator() if validator is not None else r[bool].ok(True)
+            return validator() if validator is not None else r[bool].ok(value=True)
         return FlextInfraSemanticPublication.publish_semantic_file_plans(
             semantic_plans,
             repository_root=root,

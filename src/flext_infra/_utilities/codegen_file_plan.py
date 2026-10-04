@@ -90,7 +90,10 @@ class FlextInfraUtilitiesCodegenFilePlan:
                     }:
                         raise
                     if time.monotonic() >= deadline:
-                        raise FlextInfraUtilitiesCodegenFilePlan.JournalLeaseTimeoutError(
+                        timeout_error = (
+                            FlextInfraUtilitiesCodegenFilePlan.JournalLeaseTimeoutError
+                        )
+                        raise timeout_error(
                             lock_path,
                         ) from error
                     time.sleep(c.Infra.JOURNAL_LEASE_POLL_SECONDS)
@@ -177,6 +180,30 @@ class FlextInfraUtilitiesCodegenFilePlan:
             desired_content=plan.desired_content,
             desired_mode=plan.desired_mode,
         )
+
+    @staticmethod
+    def codegen_fixed_point(
+        plans: t.SequenceOf[m.Infra.CodegenFilePlan],
+        *,
+        subject: str,
+    ) -> p.Result[bool]:
+        """Reject a re-plan that still has to change any generated destination.
+
+        Returns:
+            Success only when no plan requires an effect; otherwise the failure
+            names every residual destination.
+
+        """
+        residual = [
+            str(plan.path)
+            for plan in plans
+            if FlextInfraUtilitiesCodegenFilePlan.codegen_file_requires_effect(plan)
+        ]
+        if residual:
+            return r[bool].fail(
+                f"{subject} did not reach a fixed point: {', '.join(residual)}",
+            )
+        return r[bool].ok(value=True)
 
     @staticmethod
     def codegen_file_drift_report(

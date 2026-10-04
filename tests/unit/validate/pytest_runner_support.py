@@ -21,6 +21,7 @@ def runner_for(
     ci_context: bool = False,
     profile_collection: bool = False,
     slow_phase: bool = False,
+    target_file: Path | None = None,
 ) -> FlextInfraPytestRunner:
     """Bind one runner to the fixture project's canonical cache paths.
 
@@ -53,6 +54,7 @@ def runner_for(
         ),
         started_at_monotonic=time.monotonic(),
         target=cache.target_directory,
+        target_file=target_file,
         reports=cache.reports_directory,
         testmon_db=testmon_db,
         slow_phase=slow_phase,

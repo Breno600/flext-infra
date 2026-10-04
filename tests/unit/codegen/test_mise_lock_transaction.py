@@ -10,14 +10,13 @@ from __future__ import annotations
 import hashlib
 import json
 import sys
-from typing import TYPE_CHECKING
+from pathlib import Path
 
+import pytest
 from flext_tests import tm
 
+from flext_infra.bootstrap import FlextInfraBootstrap
 from tests import c, u
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class TestsMiseLockTransaction:
@@ -326,3 +325,78 @@ class TestsMiseLockTransaction:
         tm.that(stage.exists(), eq=False)
         for relative, _mode in bootstrap.artifact_specs:
             tm.that((root / relative).read_bytes(), eq=f"new {relative}\n".encode())
+
+
+class TestsMiseHoldConvergence:
+    """Broken releases are held per tool so upgrade never blocks on them."""
+
+    @staticmethod
+    def test_failing_install_tools_parses_mise_diagnostics() -> None:
+        """Test failing install tools parses mise diagnostics."""
+        parsed = FlextInfraBootstrap._failing_install_tools(
+            "mise ERROR Failed to install tools:"
+            " github:kucherenko/jscpd@5.3.3, github:qltysh/qlty@0.645.0\n",
+        )
+        tm.that(
+            parsed
+            == [
+                ("github:kucherenko/jscpd", "5.3.3"),
+                ("github:qltysh/qlty", "0.645.0"),
+            ],
+        )
+
+    @staticmethod
+    def test_failing_install_tools_refuses_unparsable_diagnostics() -> None:
+        """Test failing install tools refuses unparsable diagnostics."""
+        with pytest.raises(ValueError, match="named no failing tool"):
+            FlextInfraBootstrap._failing_install_tools("boom")
+
+    @staticmethod
+    def test_hold_manifest_version_rewrites_only_the_named_section(
+        tmp_path: Path,
+    ) -> None:
+        """Test hold manifest version rewrites only the named section."""
+        manifest = tmp_path / ".mise.toml"
+        manifest.write_text(
+            '[tools]\npython = "3.13"\n'
+            '[tools."github:kucherenko/jscpd"]\nversion = "5.3.3"\n'
+            '[tools."github:microsoft/waza"]\nversion = "latest"\n'
+            'version_prefix = "v"\n',
+            encoding="utf-8",
+        )
+        FlextInfraBootstrap._hold_manifest_version(
+            manifest,
+            "github:kucherenko/jscpd",
+            "5.3.2",
+        )
+        content = manifest.read_text(encoding="utf-8")
+        tm.that('version = "5.3.2"' in content)
+        tm.that('version = "latest"' in content)
+        tm.that('version = "5.3.3"' not in content)
+
+    @staticmethod
+    def test_remote_release_candidates_walk_below_the_failed_release(
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Test remote release candidates walk below the failed release."""
+
+        def fake_ls_remote(
+            runtime: Path,
+            arguments: list[str],
+            environment: dict[str, str],
+        ) -> str:
+            tm.that(arguments[:1] == ["ls-remote"])
+            return "v5.4.0\n5.3.3\nv5.3.2\n5.2.0\nnot-a-version\n"
+
+        monkeypatch.setattr(
+            FlextInfraBootstrap,
+            "_run",
+            staticmethod(fake_ls_remote),
+        )
+        candidates = FlextInfraBootstrap._remote_release_candidates(
+            Path("/runtime"),
+            {},
+            "github:kucherenko/jscpd",
+            "5.3.3",
+        )
+        tm.that(candidates == ["5.3.2", "5.2.0"])

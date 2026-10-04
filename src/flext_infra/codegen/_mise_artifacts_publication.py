@@ -45,7 +45,7 @@ class FlextInfraMisePublication:
 
         """
         if not u.Infra.codegen_file_requires_effect(plan):
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         before = u.Infra.codegen_file_before_state(plan)
         if before.failure:
             return r[bool].from_failure(before)

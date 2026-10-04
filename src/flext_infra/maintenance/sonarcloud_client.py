@@ -11,13 +11,14 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, settings, t, u
+from flext_infra._typings.base import CliResultValue
 from flext_infra.base import s
 
 if TYPE_CHECKING:
     from flext_infra import p
 
 
-class FlextInfraSonarcloudClient[TResult: t.Cli.ResultValue](s[TResult]):
+class FlextInfraSonarcloudClient[TResult: CliResultValue](s[TResult]):
     """Derive one project identity and authenticate without persisting secrets."""
 
     @staticmethod
@@ -57,6 +58,20 @@ class FlextInfraSonarcloudClient[TResult: t.Cli.ResultValue](s[TResult]):
         return r[str].ok(
             f"{organization}{c.Infra.SONARCLOUD_PROJECT_KEY_SEPARATOR}{repository}",
         )
+
+    def project_credentials(self) -> p.Result[t.Pair[t.SecretStr, str]]:
+        """Resolve the exact token and the project key of this checkout.
+
+        Returns:
+            The ``(token, project key)`` pair every authenticated call needs.
+        """
+        token = self.required_token()
+        if token.failure:
+            return r[t.Pair[t.SecretStr, str]].from_failure(token)
+        key = self.project_key(self.repository_root)
+        if key.failure:
+            return r[t.Pair[t.SecretStr, str]].from_failure(key)
+        return r[t.Pair[t.SecretStr, str]].ok((token.value, key.value))
 
     @staticmethod
     def call(

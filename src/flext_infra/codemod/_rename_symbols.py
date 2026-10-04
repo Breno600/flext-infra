@@ -132,7 +132,7 @@ class FlextInfraRenameSymbols:
                         declared_prefix is None
                         or not runtime.same_name(declared_prefix, actual_prefix)
                     ):
-                        msg = f"retired member has an independently owned namespace: {text}"
+                        msg = f"retired member owns an independent namespace: {text}"
                         raise ValueError(msg)
                 target = runtime.resolve_symbol(
                     scope,
@@ -223,20 +223,21 @@ class FlextInfraRenameSymbols:
                             raise TypeError(msg)
                         path = Path(change.resource.real_path)
                         if path not in sources:
-                            msg = f"CSV Rope campaign escaped authenticated inventory: {path}"
+                            msg = f"CSV Rope campaign escaped known inventory: {path}"
                             raise ValueError(msg)
                         original = sources[path]
+                        matcher = SequenceMatcher(
+                            a=original,
+                            b=change.new_contents,
+                            autojunk=False,
+                        ).get_opcodes()
                         rewrites = tuple(
                             m.Infra.SourceRewrite(
                                 start=start,
                                 end=end,
                                 text=change.new_contents[updated_start:updated_end],
                             )
-                            for kind, start, end, updated_start, updated_end in SequenceMatcher(
-                                a=original,
-                                b=change.new_contents,
-                                autojunk=False,
-                            ).get_opcodes()
+                            for kind, start, end, updated_start, updated_end in matcher
                             if kind != "equal"
                         )
                         spans = cls._eligible_spans(
@@ -253,7 +254,10 @@ class FlextInfraRenameSymbols:
                                 if begin <= edit.start and edit.end <= finish
                             )
                             if not containing:
-                                msg = f"Rope CSV edit has no single authenticated member span: {path}"
+                                msg = (
+                                    f"Rope CSV edit has no single authenticated "
+                                    f"member span: {path}"
+                                )
                                 raise ValueError(msg)
                             if not all(containing):
                                 continue

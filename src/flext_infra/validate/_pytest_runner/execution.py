@@ -176,11 +176,13 @@ class FlextInfraPytestRunnerExecution(
         # For a zero-test project (no test module under the config-owned
         # roots) rc=5 is the DECLARED inventory outcome in both phases.
         owns_no_tests = self._owns_no_tests()
-        # A project may declare no slow-marked item at all, so the slow phase
-        # accepts an empty complete inventory as its declared outcome.
+        # A slow phase may own no slow item, and a declared file may sit
+        # entirely outside this phase's marker. Both are empty scopes. A
+        # whole-suite budgeted inventory that collects nothing stays a failure.
+        scope_may_be_empty = self.slow_phase or self.target_file is not None
         accepted = {pytest.ExitCode.OK} | (
             set()
-            if complete and not self.slow_phase
+            if complete and not scope_may_be_empty
             else {pytest.ExitCode.NO_TESTS_COLLECTED}
         )
         if owns_no_tests:
@@ -214,13 +216,15 @@ class FlextInfraPytestRunnerExecution(
         if outcome.raw_return_code == pytest.ExitCode.NO_TESTS_COLLECTED and node_ids:
             msg = "pytest reported no collection with a nonempty manifest"
             raise RuntimeError(msg)
-        if complete and not node_ids and not owns_no_tests and not self.slow_phase:
+        if complete and not node_ids and not owns_no_tests and not scope_may_be_empty:
             msg = "complete pytest inventory must contain at least one test"
             raise RuntimeError(msg)
-        # A slow phase whose complete inventory holds no slow-marked item owns
-        # no test in its scope: it publishes the typed zero-test receipt, the
-        # same declared outcome as a project without test modules.
-        owns_no_tests = owns_no_tests or (complete and self.slow_phase and not node_ids)
+        # An empty complete inventory in an allowed scope owns no in-scope
+        # test. Collection diagnostics already ran, so a collection failure
+        # never becomes this receipt.
+        owns_no_tests = owns_no_tests or (
+            complete and not node_ids and scope_may_be_empty
+        )
         u.Cli.atomic_write_text_file(
             report_dir / f"{artifact}.txt",
             "\n".join(node_ids) + "\n",
@@ -328,7 +332,10 @@ class FlextInfraPytestRunnerExecution(
                 f"forwarded_signal={outcome.forwarded_signal}; receipt={receipt}\n",
             )
         if outcome.raw_return_code == 0 and not u.Cli.process_succeeded(outcome):
-            msg = f"pytest {phase} reported zero after an interrupted lifecycle: {receipt}"
+            msg = (
+                f"pytest {phase} reported zero after an interrupted "
+                f"lifecycle: {receipt}"
+            )
             raise RuntimeError(msg)
 
     @staticmethod
@@ -597,9 +604,14 @@ class FlextInfraPytestRunnerExecution(
         selection_plan = self._resolve_selection(
             report_dir,
             complete=complete,
-            # The slow phase always proves its inventory, so a project without
-            # slow-marked items reaches the zero-test receipt even on a cold cache.
-            verify_inventory=pre_digest is not None or self.slow_phase,
+            # The slow phase and a declared file always prove their inventory,
+            # so a scope with no matching item reaches the zero-test receipt
+            # even on a cold cache.
+            verify_inventory=(
+                pre_digest is not None
+                or self.slow_phase
+                or self.target_file is not None
+            ),
             execution_mode=execution_mode,
         )
         u.Cli.atomic_write_text_file(
@@ -607,7 +619,18 @@ class FlextInfraPytestRunnerExecution(
             selection_plan.model_dump_json(indent=2) + "\n",
         ).unwrap()
         selection = selection_plan.node_ids
-        if not selection and not cache_restored and not selection_plan.owns_no_tests:
+        # A declared file whose inventory was collected still runs: testmon may
+        # select nothing for a file that has in-scope tests, and noselect
+        # executes that file. An empty scope is owns_no_tests and is not this
+        # guard. A suite with no proved inventory stays a failure.
+        if (
+            not selection
+            and not cache_restored
+            and not selection_plan.owns_no_tests
+            and not (
+                self.target_file is not None and selection_plan.inventory_collected
+            )
+        ):
             msg = "empty incremental selection requires an integrity-checked cache"
             raise RuntimeError(msg)
         # Workers execute one centrally ordered selection. The collection plugin
@@ -619,8 +642,11 @@ class FlextInfraPytestRunnerExecution(
             execution_mode=execution_mode,
         )
         outcome = self._run_suite(command, report_dir, execution_mode=execution_mode)
+        # A declared file always executes under noselect, so an empty testmon
+        # selection over a restored cache is never a cache hit for it.
         cache_hit = (
-            not complete
+            self.target_file is None
+            and not complete
             and outcome.raw_return_code
             in {pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED}
             and not outcome.timed_out

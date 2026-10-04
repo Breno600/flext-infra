@@ -82,7 +82,9 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         self,
         *,
         serial: bool = False,
-        execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
+        execution_mode: c.Infra.PytestExecutionMode = (
+            c.Infra.PytestExecutionMode.INCREMENTAL
+        ),
     ) -> float:
         """Derive the graceful suite stop instant from the entrypoint deadline.
 
@@ -115,7 +117,9 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
     def ci_excluded_markers(
         self,
         *,
-        execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
+        execution_mode: c.Infra.PytestExecutionMode = (
+            c.Infra.PytestExecutionMode.INCREMENTAL
+        ),
     ) -> t.StrTuple:
         """Use the same CI token as generated workflows and pre-commit hooks.
 
@@ -234,13 +238,31 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             *(("-m", expression) if expression else ()),
         )
 
+    def _node_targets(self) -> t.StrTuple:
+        """Return the pytest node targets of this invocation.
+
+        A declared single-file target replaces the suite directory as the
+        only node target; the default remains the configured test root.
+
+        Returns:
+            The resulting ``t.StrTuple``.
+
+        """
+        return (
+            (str(self.target_file),)
+            if self.target_file is not None
+            else (str(self.target),)
+        )
+
     def build_selection_command(
         self,
         *,
         report_log: Path,
         manifest_path: Path,
         complete: bool = False,
-        execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
+        execution_mode: c.Infra.PytestExecutionMode = (
+            c.Infra.PytestExecutionMode.INCREMENTAL
+        ),
     ) -> t.VariadicTuple[str]:
         """Build the read-only argv that resolves the testmon selection once.
 
@@ -271,7 +293,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             )
         )
         pytest_arguments = (
-            str(self.target),
+            *self._node_targets(),
             *testmon,
             "--collect-only",
             f"{c.Infra.PYTEST_COLLECTION_MANIFEST_OPTION}={manifest_path}",
@@ -304,7 +326,9 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         selection_plan: m.Infra.PytestSelectionPlan | None = None,
         *,
         serialize: bool = False,
-        execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
+        execution_mode: c.Infra.PytestExecutionMode = (
+            c.Infra.PytestExecutionMode.INCREMENTAL
+        ),
     ) -> t.VariadicTuple[str]:
         """Build the testmon suite argv (never the cov plugin).
 
@@ -339,7 +363,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             serial=serial,
             execution_mode=execution_mode,
             targets=(
-                (str(self.target),)
+                self._node_targets()
                 if (
                     selection_plan is None
                     or selection_plan.whole_target
@@ -360,7 +384,16 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                     else ()
                 ),
                 "--testmon",
-                *(("--testmon-noselect",) if selection else ("--testmon-forceselect",)),
+                # Why: a declared single-file target is the operator's chosen
+                # scope; the cache must never deselect it (a file never run
+                # before has no traces, so testmon selection resolves empty
+                # and the phase would pass with zero tests). The execution
+                # still feeds the persistent database for future runs.
+                *(
+                    ("--testmon-noselect",)
+                    if (selection or self.target_file is not None)
+                    else ("--testmon-forceselect",)
+                ),
                 "--testmon-env",
                 f"'{self.testmon_environment(execution_mode)}'",
                 *self._NO_COVERAGE,
@@ -389,7 +422,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             report_dir,
             serial=workers == "0",
             execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
-            targets=(str(self.target),),
+            targets=self._node_targets(),
             workers=workers,
             trailing=(
                 *self._plugin_policy_args(
@@ -418,6 +451,10 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
 
         """
         pytest = config.Infra.tooling.tools.pytest
+        suite_stop = self.suite_stop_monotonic(
+            serial=serial,
+            execution_mode=execution_mode,
+        )
         return (
             sys.executable,
             "-m",
@@ -435,7 +472,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             *pytest.progress_args,
             *pytest.report_args,
             f"--timeout={pytest.case_timeout_seconds}",
-            f"{c.Infra.PYTEST_SUITE_STOP_OPTION}={self.suite_stop_monotonic(serial=serial, execution_mode=execution_mode)!r}",
+            f"{c.Infra.PYTEST_SUITE_STOP_OPTION}={suite_stop!r}",
             f"--maxfail={pytest.max_failures}",
             f"--junitxml={report_dir / 'junit.xml'}",
             f"--report-log={report_dir / 'events.jsonl'}",

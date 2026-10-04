@@ -15,6 +15,7 @@ from flext_cli import m
 from flext_infra import t
 from flext_infra._constants import (
     FlextInfraConstantsCodegenProject,
+    FlextInfraConstantsPromoted,
     FlextInfraConstantsWorkspace,
 )
 from flext_infra._models._config.beads import FlextInfraConfigModelsBeads
@@ -67,6 +68,16 @@ class FlextInfraConfigModelsContexts:
             t.NonEmptyStr,
             m.Field(description="Runtime-root-local development environment"),
         ] = FlextInfraConstantsWorkspace.ENVIRONMENT_DIRECTORY
+        worktree_environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description="Declared sibling directory for linked worktree environments",
+            ),
+        ]
+        contract_env_values: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(description="OPTIONS or HELP values that display a verb contract"),
+        ] = tuple(sorted(FlextInfraConstantsPromoted.PROMOTED_ENV_ENABLED_VALUES))
 
     class MakefileRenderSpec(MakeCommandContext):
         """Field-only render input for an existing repository Makefile."""
@@ -112,34 +123,6 @@ class FlextInfraConfigModelsContexts:
         mise_lockfile_platforms: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(description="Platforms carried by artifact-tool lock entries"),
-        ]
-        npm_package_manager: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Configured Mise installer for npm CLIs"),
-        ]
-        qlty_selector: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Configured Mise selector for qlty"),
-        ]
-        jscpd_selector: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Configured Mise selector for jscpd"),
-        ]
-        prettier_selector: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Configured Mise selector for Prettier"),
-        ]
-        ast_grep_selector: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Configured Mise selector for ast-grep"),
-        ]
-        scc_selector: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Configured Mise selector for scc"),
-        ]
-        waza_selector: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Configured Mise selector for Waza"),
         ]
         make: Annotated[
             FlextInfraConfigModelsMake.MakeSpec,
@@ -301,7 +284,9 @@ class FlextInfraConfigModelsContexts:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 default=(),
-                description="Repository-relative files omitted from declared data directories",
+                description=(
+                    "Repository-relative files omitted from declared data directories"
+                ),
             ),
         ] = ()
         docs_audit: Annotated[
@@ -486,7 +471,9 @@ class FlextInfraConfigModelsContexts:
         repository_namespace_packages: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                description="Implicit namespace directories shipped from the repository root",
+                description=(
+                    "Implicit namespace directories shipped from the repository root"
+                ),
             ),
         ] = ()
         root_modules: Annotated[
@@ -535,79 +522,6 @@ class FlextInfraConfigModelsContexts:
                 ge=1,
                 description="Supply-chain cooldown rendered as mise release age",
             ),
-        ]
-        kubectl_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Exact kubectl toolchain version"),
-        ]
-        helm_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Exact Helm toolchain version"),
-        ]
-        kind_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Exact kind toolchain version"),
-        ]
-        direnv_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Compatible direnv major.minor line"),
-        ]
-        uv_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Compatible uv major.minor line"),
-        ]
-        qlty_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Moving qlty release selector, e.g. 'latest'"),
-        ]
-        node_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Compatible Node.js major.minor line"),
-        ]
-        jscpd_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Moving jscpd release selector, e.g. 'latest'"),
-        ]
-        waza_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Moving Waza release selector, e.g. 'latest'"),
-        ]
-        taplo_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Taplo release selector; the committed mise.lock pins the "
-                    "version generation authenticates"
-                ),
-            ),
-        ]
-        ast_grep_selector: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Mise selector for the ast-grep CLI"),
-        ]
-        ast_grep_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Exact ast-grep analyzer version"),
-        ]
-        gitleaks_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Exact Gitleaks scanner version"),
-        ]
-        scc_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Exact scc code-counter version"),
-        ]
-        kubeconform_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Compatible kubeconform minor line"),
-        ]
-        go_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Exact Go runtime version"),
-        ]
-        make_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Moving Make release selector, e.g. 'latest'"),
         ]
         author_name: Annotated[
             t.NonEmptyStr,
@@ -658,7 +572,9 @@ class FlextInfraConfigModelsContexts:
         flext_source: Annotated[
             t.NonEmptyStr | None,
             m.Field(
-                description="Direct Git infrastructure requirement declared for scaffolding",
+                description=(
+                    "Direct Git infrastructure requirement declared for scaffolding"
+                ),
             ),
         ] = None
 
@@ -749,7 +665,9 @@ class FlextInfraConfigModelsContexts:
         repository_namespace_packages: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                description="Implicit namespace directories shipped from the repository root",
+                description=(
+                    "Implicit namespace directories shipped from the repository root"
+                ),
             ),
         ] = ()
         root_modules: Annotated[
@@ -767,14 +685,19 @@ class FlextInfraConfigModelsContexts:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 default=(),
-                description="Repository-relative data files and directories shipped with the package",
+                description=(
+                    "Repository-relative data files and directories"
+                    " shipped with the package"
+                ),
             ),
         ] = ()
         packaged_data_excludes: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 default=(),
-                description="Repository-relative files omitted from declared data directories",
+                description=(
+                    "Repository-relative files omitted from declared data directories"
+                ),
             ),
         ] = ()
         cli_module: Annotated[

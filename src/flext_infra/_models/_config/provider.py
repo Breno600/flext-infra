@@ -102,7 +102,9 @@ class FlextInfraConfigModelsProvider:
     class CiPrivateSubmoduleDeployKeySpec(
         FlextInfraConfigModelsContract.ConfigContract,
     ):
-        """One read-only deploy key that unlocks a private workspace subproject in CI."""
+        """One read-only deploy key that unlocks
+        a private workspace subproject in CI.
+        """
 
         secret: Annotated[
             t.NonEmptyStr,
@@ -113,7 +115,9 @@ class FlextInfraConfigModelsProvider:
         submodule: Annotated[
             t.NonEmptyStr,
             m.Field(
-                description="gitmodules submodule name (git config submodule.<name>.url)",
+                description=(
+                    "gitmodules submodule name (git config submodule.<name>.url)"
+                ),
             ),
         ]
         path: Annotated[
@@ -155,7 +159,9 @@ class FlextInfraConfigModelsProvider:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 min_length=1,
-                description="Pinned official SSH host-key lines used only in runner temp",
+                description=(
+                    "Pinned official SSH host-key lines used only in runner temp"
+                ),
             ),
         ]
 

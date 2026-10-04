@@ -12,7 +12,6 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import time
 from collections.abc import Generator
 from pathlib import Path
 from warnings import WarningMessage
@@ -96,7 +95,10 @@ class FlextInfraPytestCollection:
             if set(collected) != set(order):
                 missing = sorted(set(order) - set(collected))
                 unexpected = sorted(set(collected) - set(order))
-                msg = f"Runner collection differs from selection: {missing=}, {unexpected=}"
+                msg = (
+                    f"Runner collection differs from selection: "
+                    f"{missing=}, {unexpected=}"
+                )
                 raise ValueError(msg)
             session.items.sort(key=lambda item: order[item.nodeid])
         yield
@@ -134,11 +136,13 @@ class FlextInfraPytestCollection:
         def __init__(self, *, stop_at_monotonic: float) -> None:
             self.stop_at_monotonic = stop_at_monotonic
             self.session: pytest.Session | None = None
+            self.controller: DSession | None = None
             self.completed_items: set[str] = set()
 
         def pytest_sessionstart(self, session: pytest.Session) -> None:
             """Bind the controller session that owns the stop decision."""
             self.session = session
+            self.controller = session if isinstance(session, DSession) else None
 
         def pytest_runtest_logreport(self, report: pytest.TestReport) -> None:
             """Request the stop once a completed item crosses the instant.
@@ -148,11 +152,7 @@ class FlextInfraPytestCollection:
             being interrupted after its own final result.
             """
             session = self.session
-            if (
-                session is None
-                or report.when != "teardown"
-                or time.monotonic() < self.stop_at_monotonic
-            ):
+            if session is None or report.when != "teardown":
                 return
             self.completed_items.add(report.nodeid)
             total_items = len(session.items)
@@ -164,7 +164,7 @@ class FlextInfraPytestCollection:
             if not getattr(report, "nodes_files_lines", None):
                 return
             reason = f"suite stop instant {self.stop_at_monotonic:.3f} reached"
-            controller = session.config.pluginmanager.getplugin("dsession")
+            controller = self.controller
             if isinstance(controller, DSession):
                 if not controller.shouldstop:
                     controller.shouldstop = reason

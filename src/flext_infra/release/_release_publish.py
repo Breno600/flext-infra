@@ -21,7 +21,7 @@ class FlextInfraReleasePublishMixin(FlextInfraReleaseBuildMixin):
     """
 
     def phase_publish(self, ctx: m.Infra.ReleasePhaseDispatchConfig) -> p.Result[bool]:
-        """Publish the receipt's artifacts as a GitHub release and, on request, to the index.
+        """Publish receipt artifacts as a GitHub release and, if asked, the index.
 
         Returns:
             The resulting ``p.Result[bool]``.
@@ -44,7 +44,7 @@ class FlextInfraReleasePublishMixin(FlextInfraReleaseBuildMixin):
             dry_run=ctx.dry_run,
             index=ctx.index,
         )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def _verified_receipt(
         self,
@@ -177,7 +177,7 @@ class FlextInfraReleasePublishMixin(FlextInfraReleaseBuildMixin):
             if uploaded.failure:
                 return uploaded
             self.logger.info("release_index_wave_published", projects=", ".join(wave))
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraReleasePublishMixin"]

@@ -603,8 +603,10 @@ class FlextInfraUtilitiesDocsApi:
         contract: t.JsonMapping = t.Infra.INFRA_MAPPING_ADAPTER.validate_python({
             "package_name": package_name,
             "description": project.description,
-            "doc_summary": FlextInfraUtilitiesRopeAnalysis.module_docstring_summary_source(
-                source,
+            "doc_summary": (
+                FlextInfraUtilitiesRopeAnalysis.module_docstring_summary_source(
+                    source,
+                )
             ),
             "classifiers": list(project.classifiers),
             "keywords": list(project.keywords),

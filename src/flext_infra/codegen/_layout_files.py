@@ -123,9 +123,9 @@ class FlextInfraCodegenLayoutFilesMixin:
             )
             if moved.failure:
                 return r[bool].from_failure(moved)
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         source.rename(target)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def _archive_move(
         self,
@@ -154,7 +154,7 @@ class FlextInfraCodegenLayoutFilesMixin:
             if untracked.failure:
                 return r[bool].from_failure(untracked)
         source.rename(target)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def _remove_tracked_or_unlinked(
         self,
@@ -177,9 +177,9 @@ class FlextInfraCodegenLayoutFilesMixin:
             )
             if removed.failure:
                 return r[bool].from_failure(removed)
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         source.unlink()
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def _git_tracked(project_dir: Path, rel: str) -> bool:

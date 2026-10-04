@@ -288,7 +288,7 @@ class FlextInfraUtilitiesGitAttestationMixin(
             return r[bool].fail(
                 "attestation does not match HEAD: " + ", ".join(mismatches),
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def _attestation_report(

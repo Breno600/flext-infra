@@ -12,7 +12,7 @@ from typing import Annotated, ClassVar, Literal, Self
 from flext_cli import m, u
 
 from flext_infra import c, t
-from flext_infra._models import FlextInfraModelsMixins as mm
+from flext_infra._models import FlextInfraModelsMixins
 
 
 class FlextInfraModelsCore:
@@ -100,7 +100,10 @@ class FlextInfraModelsCore:
         counts: Annotated[t.IntMapping, m.Field(description="Violation counts")]
         violations: Annotated[t.StrSequence, m.Field(description="Violations")]
 
-    class StubAnalysisReport(mm.ProjectNameMixin, m.ArbitraryTypesModel):
+    class StubAnalysisReport(
+        FlextInfraModelsMixins.ProjectNameMixin,
+        m.ArbitraryTypesModel,
+    ):
         """Structured typed-dependency analysis result for a project."""
 
         mypy_hints: Annotated[
@@ -114,7 +117,9 @@ class FlextInfraModelsCore:
         unresolved_missing: Annotated[
             t.MutableSequenceOf[str],
             m.Field(
-                description="Missing external imports without an installed typed dependency",
+                description=(
+                    "Missing external imports without an installed typed dependency"
+                ),
             ),
         ] = m.Field(default_factory=list)
         total_missing: Annotated[

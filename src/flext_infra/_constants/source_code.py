@@ -128,7 +128,7 @@ class FlextInfraConstantsSourceCode:
     ENCODING_DEFAULT: ClassVar[str] = "utf-8"
     "Default text encoding for file operations."
 
-    # --- Source code template constants and parsing patterns (was: class SourceCode) ---
+    # --- Source code template constants/parsing patterns (was: class SourceCode) ---
     TOC_START: ClassVar[str] = "<!-- TOC START -->"
     "Marker for table of contents start."
     TOC_END: ClassVar[str] = "<!-- TOC END -->"
@@ -144,7 +144,9 @@ class FlextInfraConstantsSourceCode:
         "BaseSettings",
         "FlextModelsBase",
     })
-    "Pydantic bases that resolve class-body annotations at runtime, not only for a type checker."
+    "Pydantic bases that resolve class-body annotations at runtime, not statically."
+    PROTOCOL_BASE: ClassVar[str] = "Protocol"
+    "typing base that must stay last in a protocol class's base list."
     ENCODING_COOKIE_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^[ \t\f]*#.*?coding[:=][ \t]*[-\w.]+",
     )
@@ -249,7 +251,7 @@ class FlextInfraConstantsSourceCode:
 
     @staticmethod
     def compile_from_module_import_line(module_name: str) -> t.RegexPattern:
-        """Compile ``^from <module_name> import .+$`` (MULTILINE) for whole-line replace.
+        """Compile ``^from <module_name> import .+$`` (MULTILINE) for line replace.
 
         Returns:
             The resulting ``t.RegexPattern``.

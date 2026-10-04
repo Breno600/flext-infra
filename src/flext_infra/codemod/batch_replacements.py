@@ -60,7 +60,7 @@ class FlextInfraModReplacements:
                 "generated findings require canonical generator repair: "
                 + ", ".join(generated),
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def publish(cls, root: Path, report: m.Infra.ModScanReport) -> p.Result[bool]:
@@ -99,7 +99,8 @@ class FlextInfraModReplacements:
                     Mapping,
                 ):
                     return r[bool].fail(
-                        f"ast-grep finding lacks byte coordinates: {path}:{finding.rule_id}",
+                        f"ast-grep finding lacks byte coordinates: "
+                        f"{path}:{finding.rule_id}",
                     )
                 offsets = m.Infra.ModReplacementOffsets.model_validate(raw_offsets)
                 matched = m.Infra.ModReplacementOffsets.model_validate(raw_match)
@@ -150,7 +151,7 @@ class FlextInfraModReplacements:
         formatted = FlextInfraRuffFormatGate.format_files(root, tuple(sorted(grouped)))
         if formatted.failure:
             return r[bool].from_failure(formatted)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraModReplacements"]

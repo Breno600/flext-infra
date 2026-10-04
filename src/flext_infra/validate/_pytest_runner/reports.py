@@ -129,10 +129,18 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
                 )
             )
             if not set(selected.node_ids).issubset(inventory.node_ids):
-                msg = "testmon selected node IDs outside the complete collection inventory"
+                msg = (
+                    "testmon selected node IDs outside the complete "
+                    "collection inventory"
+                )
                 raise RuntimeError(msg)
             inventory_count = len(inventory.node_ids)
-            deselected = inventory_count - len(selected.node_ids)
+            # A declared file runs under noselect: its whole inventory executes.
+            deselected = (
+                0
+                if self.target_file is not None
+                else inventory_count - len(selected.node_ids)
+            )
         accounting = m.Infra.TestmonRunAccounting(
             executed_count=executed,
             reported_count=reported_count,
@@ -256,7 +264,7 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
                 report_dir / "pytest.log",
             )
             raise ValueError(msg)
-        return r.ok(True)
+        return r.ok(value=True)
 
     @staticmethod
     def _write_diagnostics(

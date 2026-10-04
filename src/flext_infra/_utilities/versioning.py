@@ -236,8 +236,16 @@ class FlextInfraUtilitiesVersioning:
             tag = raw_tag.strip()
             if not tag:
                 continue
+            remainder = tag.removeprefix(prefix)
+            if not remainder[:1].isdigit():
+                # Foreign tag namespace — cycle-control markers (val*), fork
+                # tags, anything that only collides with the prefix. Those are
+                # not release candidates, so skipping keeps them out of the
+                # ranking; a tag that LOOKS like a version (digit-leading) but
+                # does not parse still fails loud below.
+                continue
             try:
-                parsed = Version(tag.removeprefix(prefix))
+                parsed = Version(remainder)
             except InvalidVersion as exc:
                 return r[str].fail(f"invalid release tag {tag}: {exc}")
             if highest_version is None or parsed > highest_version:

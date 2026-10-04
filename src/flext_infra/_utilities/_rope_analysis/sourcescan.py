@@ -248,8 +248,9 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         base = ".".join(current_parts[: max(base_count, 0)])
         return ".".join(part for part in (base, imported_module) if part)
 
-    @staticmethod
+    @classmethod
     def imported_symbol_binding_source(
+        cls,
         source: str,
         *,
         current_module: str,
@@ -274,7 +275,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             for alias in node.names:
                 if (alias.asname or alias.name) != symbol_name:
                     continue
-                module_name = FlextInfraUtilitiesRopeAnalysisSourceScan.relative_import_module_name(
+                module_name = cls.relative_import_module_name(
                     current_module=current_module,
                     imported_module=node.module or "",
                     level=node.level,

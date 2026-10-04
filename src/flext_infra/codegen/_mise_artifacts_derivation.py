@@ -50,7 +50,7 @@ class FlextInfraMiseArtifactsDerivation:
             )
             if launcher.failure:
                 return launcher
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def validate(cls, project_root: Path, runtime_root: Path) -> p.Result[bool]:
@@ -78,7 +78,7 @@ class FlextInfraMiseArtifactsDerivation:
         if sidecars.failure:
             return sidecars
         if project_root.resolve() == runtime_root.resolve():
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         for relative, _mode in c.Infra.ARTIFACT_SPECS:
             projected = cls._read(project_root / relative)
             if projected.failure:
@@ -91,7 +91,7 @@ class FlextInfraMiseArtifactsDerivation:
                     f"{project_root / relative} differs from the runtime root "
                     f"{runtime_root / relative}; run make upg in {runtime_root}",
                 )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def pinned_release(cls, root: Path) -> p.Result[str]:
@@ -128,7 +128,7 @@ class FlextInfraMiseArtifactsDerivation:
         """
         lock_path = project_root / c.Infra.MISE_LOCK_FILENAME
         if not lock_path.is_file():
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         source = cls._read(lock_path)
         if source.failure:
             return r[bool].from_failure(source)
@@ -159,7 +159,7 @@ class FlextInfraMiseArtifactsDerivation:
                         f"{c.Infra.MISE_LOCK_FILENAME} tool {selector} references "
                         f"the aube sidecar {relative}: {mismatch.error}; run make upg",
                     )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def _sidecar_annotation(
@@ -199,7 +199,7 @@ class FlextInfraMiseArtifactsDerivation:
             return r[bool].fail(
                 f"{lockfile} digest {actual} differs from the locked {digest}",
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def resolves_at_run_time(artifacts: m.Infra.MiseToolchainArtifactSet) -> bool:
@@ -253,7 +253,7 @@ class FlextInfraMiseArtifactsDerivation:
             )
         if mode & 0o100 and not path.stat().st_mode & 0o100:
             return r[bool].fail(f"{path} is not executable; run make upg")
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def _read(path: Path) -> p.Result[str]:

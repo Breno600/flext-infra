@@ -144,7 +144,7 @@ class FlextInfraUtilitiesGitignore:
             return r[str].ok(rendered)
         current = content.decode(c.Cli.ENCODING_DEFAULT)
         lines = current.splitlines(keepends=True)
-        found: dict[str, list[int]] = {marker: [] for marker in markers}
+        found: t.MutableMappingKV[str, list[int]] = {marker: [] for marker in markers}
         for index, line in enumerate(lines):
             text = line.rstrip("\r\n")
             if text in found:

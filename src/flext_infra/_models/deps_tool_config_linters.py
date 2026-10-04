@@ -427,11 +427,17 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         overrides: Annotated[
             t.VariadicTuple[FlextInfraModelsDepsToolConfigLinters.MypyOverrideConfig],
             m.Field(
-                description="Per-module mypy overrides for auto-generated files and PEP 695 generics.",
+                description=(
+                    "Per-module mypy overrides for "
+                    "auto-generated files and PEP 695 generics."
+                ),
             ),
         ] = m.Field(
             default_factory=tuple,
-            description="Per-module mypy overrides for auto-generated files and PEP 695 generics.",
+            description=(
+                "Per-module mypy overrides for "
+                "auto-generated files and PEP 695 generics."
+            ),
         )
 
     class PydanticMypyConfig(m.ArbitraryTypesModel):
@@ -440,7 +446,9 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         init_forbid_extra: Annotated[
             bool,
             m.Field(
-                description="Enable forbid-extra init behavior in pydantic mypy plugin.",
+                description=(
+                    "Enable forbid-extra init behavior in pydantic mypy plugin."
+                ),
             ),
         ]
         init_typed: Annotated[

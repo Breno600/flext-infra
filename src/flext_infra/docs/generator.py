@@ -153,7 +153,7 @@ class FlextInfraDocGenerator(
             return r[bool].from_failure(current)
         if any(u.Infra.codegen_file_requires_effect(plan) for plan in current.value):
             return r[bool].fail("docs generation did not reach an unchanged render")
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def _generation_reports(
         self,

@@ -80,7 +80,7 @@ class FlextInfraLockIntegrityVerifier(FlextInfraServiceBase[bool]):
         )
         if failures:
             return r[bool].fail("; ".join(failures))
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraLockIntegrityVerifier"]

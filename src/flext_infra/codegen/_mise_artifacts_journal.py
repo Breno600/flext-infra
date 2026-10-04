@@ -514,7 +514,7 @@ class FlextInfraMiseArtifactsJournal:
         removed = files.delete_state(journal_snapshot)
         if removed.failure:
             return r[bool].from_failure(removed)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _relocate_journal(

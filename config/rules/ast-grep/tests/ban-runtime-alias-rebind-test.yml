@@ -25,3 +25,27 @@ invalid:
     from flext_core import FlextConstants
     c = FlextConstants
     __all__ = ["c"]
+  - |
+    from flext_core import s
+    class FlextFooServiceBase(s):
+        pass
+    s = FlextFooServiceBase
+    __all__ = ["FlextFooServiceBase", "s"]
+  - |
+    from flext_core import FlextSettings, s
+    class FlextFooServiceBase(s):
+        pass
+    s = FlextFooServiceBase
+    __all__ = ["FlextFooServiceBase", "s"]
+  - |
+    from flext_core import FlextSettings, FlextService as s
+    class FlextFooServiceBase(s):
+        pass
+    s = FlextFooServiceBase
+    __all__ = ["FlextFooServiceBase", "s"]
+  - |
+    from flext_core import FlextService as s
+    class FlextFooServiceBase(s):
+        pass
+    s = FlextFooServiceBase
+    __all__ = ["FlextFooServiceBase", "s"]

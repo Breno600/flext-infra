@@ -402,7 +402,7 @@ class FlextInfraMiseRecovery:
                 removed = files.delete_state(action.current)
                 if removed.failure:
                     return r[bool].from_failure(removed)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def _verify_rollback(
         self,
@@ -436,7 +436,7 @@ class FlextInfraMiseRecovery:
                 expected.add(self._identity(action.current))
             if identity not in expected:
                 return r[bool].fail(f"generated file was not restored: {entry.path}")
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def _classify_identity(state: m.Cli.AtomicFileState) -> _FileOwnershipIdentity:

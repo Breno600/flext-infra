@@ -145,6 +145,54 @@ class TestsFlextInfraCodegenGeneration:
         assert formatted.success, formatted.error
         assert target.read_text(encoding="utf-8") == rendered
 
+    @pytest.mark.parametrize("with_eager_version", [False, True])
+    def test_singleton_lazy_map_survives_format_and_regeneration(
+        self,
+        tmp_path: Path,
+        *,
+        with_eager_version: bool,
+    ) -> None:
+        """A generated singleton map stays valid across formatter and lint gates."""
+        export = "FlextCliProtocolsBase"
+        owner = "flext_cli._protocols._base_parts.flextcliprotocolsbase_part_05"
+        eager = (
+            {"__version__": ("flext_cli.__version__", "__version__")}
+            if with_eager_version
+            else {}
+        )
+        plan = self._plan(
+            "flext_cli",
+            (export, *eager),
+            {export: (owner, export)},
+            eager_dunders=eager,
+        )
+        rendered = FlextInfraCodegenGeneration.render_init(plan)
+        target = tmp_path / "__init__.py"
+        target.write_text(rendered, encoding="utf-8")
+        project_config = str(Path.cwd() / "pyproject.toml")
+
+        formatted = u.Cli.run([
+            "ruff",
+            "format",
+            "--config",
+            project_config,
+            str(target),
+        ])
+        assert formatted.success, formatted.error
+        tm.that(target.read_text(encoding="utf-8"), eq=rendered)
+
+        checked = u.Cli.run([
+            "ruff",
+            "check",
+            "--select",
+            "I,COM812",
+            "--config",
+            project_config,
+            str(target),
+        ])
+        assert checked.success, checked.error
+        tm.that(FlextInfraCodegenGeneration.render_init(plan), eq=rendered)
+
     def test_sibling_private_exports_import_their_absolute_owner(self) -> None:
         """The static import names the absolute owner; the lazy key stays compact."""
         plan = self._plan(

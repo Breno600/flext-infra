@@ -31,7 +31,7 @@ class FlextInfraCodegenProjectNew(
         str,
         m.Field(
             min_length=1,
-            description="Distribution name in kebab-case (e.g. flext-demo / acme-demo).",
+            description="Distribution name in kebab-case (e.g. flext-demo).",
         ),
     ]
     kind: Annotated[

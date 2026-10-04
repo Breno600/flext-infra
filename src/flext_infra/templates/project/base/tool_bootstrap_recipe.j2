@@ -9,6 +9,7 @@
 	fi; \
 	caller_path="$$PATH"; \
 	mise_trusted_config_paths="$$project_root"; \
+	mise_lock_drift="$${SETUP_MISE_LOCK_DRIFT:-}"; \
 {% for name, value in bootstrap.fixed_environment if name == "MISE_LOCKFILE_PLATFORMS" -%}
 	mise_lockfile_platforms="{{ value }}"; \
 {% endfor -%}
@@ -109,6 +110,8 @@
 			'{{ name }}={{ value }}' \
 {% endfor -%}
 			$${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
+			$${mise_lock_drift:+"MISE_LOCKFILE=false"} \
+			$${mise_lock_drift:+"MISE_LOCKED=false"} \
 {% for name, relative in bootstrap.transient_environment -%}
 			"{{ name }}=$$scratch/{{ relative }}" \
 {% endfor -%}
@@ -161,17 +164,8 @@
 	{{ mise_runtime_environment(project_root, mise, bootstrap) }}; \
 {# Only the bootstrap reaches GitHub: `install --yes` for a tool missing from
    the persistent cache, and `make upg` (release resolution, lock, launcher).
-   Every other Mise call runs through mise_offline; offline tool execution
-   never selects a credential source. -#}
-{% for command in bootstrap.credential_commands -%}
-	if [ -z "$$caller_github_token" ] && command -v {{ command[0] }} >/dev/null 2>&1; then \
-		caller_github_token="$$({{ command | join(' ') }})" \
-			|| { printf 'ERROR: the selected GitHub credential source failed: %s\n' '{{ command | join(' ') }}' >&2; exit 2; }; \
-		if [ -z "$$caller_github_token" ]; then \
-			printf 'ERROR: the selected GitHub credential source printed nothing: %s\n' '{{ command | join(' ') }}' >&2; exit 2; \
-		fi; \
-	fi; \
-{% endfor -%}
+   Every other Mise call runs through mise_offline. The Makefile preamble owns
+   the credential selection; the passthrough carries it into env -i. -#}
 	mise_checked() { \
 		mise_log="$$1"; shift; \
 		printf 'setup probe: begin stage=%s log=%s\n' "$${mise_log##*/}" "$$mise_log" >&2; \
@@ -208,10 +202,10 @@
 	mise_receipt runtime-version "$$pinned_mise"; \
 	runtime_release="$$receipt_release"; \
 	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
-		mise_checked_stdout "$$scratch/resolve.stdout" "$$scratch/resolve.stderr" mise_exec no-config env MISE_CACHE_DIR="$$scratch/resolve-cache" MISE_FETCH_REMOTE_VERSIONS_CACHE=0s "$$pinned_mise" latest {{ bootstrap.release_selector }}; \
+		mise_checked_stdout "$$scratch/resolve.stdout" "$$scratch/resolve.stderr" mise_exec no-config env MISE_CACHE_DIR="$$scratch/resolve-cache" MISE_FETCH_REMOTE_VERSIONS_CACHE=0s MISE_MINIMUM_RELEASE_AGE=0s "$$pinned_mise" latest {{ bootstrap.release_selector }}; \
 		resolved_release=$$(cat "$$scratch/resolve.stdout"); \
 		if ! printf '%s\n' "$$resolved_release" | grep -Eq '^{{ bootstrap.resolved_release_pattern }}$$'; then \
-			mise ls-remote {{ bootstrap.release_selector }} >"$$scratch/lsremote.stdout" 2>"$$scratch/lsremote.stderr" || true; \
+			MISE_MINIMUM_RELEASE_AGE=0s mise ls-remote {{ bootstrap.release_selector }} >"$$scratch/lsremote.stdout" 2>"$$scratch/lsremote.stderr" || true; \
 			resolved_release=$$(grep -E '^{{ bootstrap.resolved_release_pattern }}$$' "$$scratch/lsremote.stdout" | tail -1); \
 		fi; \
 		if ! printf '%s\n' "$$resolved_release" | grep -Eq '^{{ bootstrap.resolved_release_pattern }}$$'; then \
@@ -259,6 +253,7 @@
 	fi; \
 	locked_manifest=; \
 	if [ "$$bootstrap_lock" = "1" ]; then \
+		mise_lock_drift=; \
 		# Stage on the destination filesystem: the bumped lock is resolved and \
 		# installed from a private stage, and published by one rename only after \
 		# both succeed. A failed or killed run leaves mise.lock untouched; no \
@@ -282,7 +277,21 @@
 			cat "$$scratch/lock.log" >&2; \
 			exit 2; \
 		fi; \
-		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" install --yes; \
+		# A broken upstream release fails the staged install. The generated \
+		# converge script holds every failing tool at its newest installable release \
+		# inside the stage (loud INFO per hold; the committed manifest never \
+		# changes, so the next upg retries the newest release), then the \
+		# install is retried against the held stage before publication. \
+		if mise_exec project "$$pinned_mise" -C "$$lock_stage" install --yes >"$$scratch/install.log" 2>&1; then :; \
+		else install_status=$$?; cat "$$scratch/install.log" >&2; \
+			printf 'upg relock: staged install failed (exit %s); holding failing tools at their newest installable releases\n' "$$install_status" >&2; \
+			converge_python=$$(command -v python3 || true); \
+			if [ -z "$$converge_python" ]; then \
+				printf 'ERROR: converge needs a host python3 (stdlib only); provision one and retry\n' >&2; exit 2; \
+			fi; \
+			mise_checked "$$scratch/converge.log" "$$converge_python" "$$project_root/{{ bootstrap.lock_converge_script }}" "$$mise_storage_root" "$$lock_stage" "$$runtime_release"; \
+			mise_checked "$$scratch/install-retry.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" install --yes; \
+		fi; \
 		mise_checked "$$scratch/staged-python.log" mise_offline project "$$pinned_mise" -C "$$lock_stage" which python; \
 		staged_python=$$(cat "$$scratch/staged-python.log"); \
 		if [ ! -x "$$staged_python" ]; then printf 'ERROR: staged Mise Python is not executable: %s\n' "$$staged_python" >&2; exit 2; fi; \
@@ -306,19 +315,21 @@
 		mise_trusted_config_paths="$$project_root"; \
 		if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then locked_manifest="$$scratch/locked-manifest.toml"; fi; \
 	else \
-		# ``locked`` mode converges every tool on exactly the version the \
-		# committed mise.lock pins. Setup never locks (operator 2026-10-02): \
-		# an offline dry-run proves the lock satisfies the manifest, and a lock \
-		# that does not (mixed-generation merge, interrupted ``upg``, a lock \
-		# written by another Mise release) fails loud; ``make upg`` is its only \
-		# writer. Only ``install --yes`` may reach the network, for a tool \
-		# missing from the persistent cache. \
+		# Only ``make upg`` writes locks; setup never does, and it always runs. \
+		# ``locked`` mode installs every tool at exactly the version the \
+		# committed mise.lock pins. When an offline dry-run shows the lock \
+		# drifted from .mise.toml (mixed-generation merge, interrupted ``upg``, \
+		# a lock written by another Mise release), setup warns and installs \
+		# from .mise.toml with the lockfile disabled for the rest of this \
+		# bootstrap, leaving mise.lock untouched for the next ``make upg``. \
+		# Only ``install --yes`` may reach the network. \
 		if mise_offline project "$$pinned_mise" -C "$$project_root" install --dry-run >"$$scratch/install-probe.log" 2>&1; then \
 			:; \
 		else \
+			probe_status=$$?; \
 			cat "$$scratch/install-probe.log" >&2; \
-			printf 'ERROR: mise.lock does not satisfy .mise.toml under Mise %s; run make upg\n' "$$runtime_release" >&2; \
-			exit 2; \
+			printf 'WARN: mise.lock drifts from .mise.toml under pinned Mise %s (probe exit %s); setup installs from .mise.toml without touching mise.lock; make upg rewrites it\n' "$$runtime_release" "$$probe_status" >&2; \
+			mise_lock_drift=1; \
 		fi; \
 		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$project_root" install --yes; \
 	fi; \
@@ -349,9 +360,15 @@
 	python_executable=$$(cat "$$scratch/python-path.log"); \
 	# CI receives only the shim farm: a project bin/ on PATH would bind every \
 	# shim to that repository launcher (mise resolves shims through PATH). \
+	# A restored tool cache keeps the shims bound to the Mise release that built \
+	# them, and Mise never replaces a shim bound to another binary, so CI rebuilds \
+	# the farm from the pinned release before publishing it. \
 	if [ -n "$${GITHUB_PATH:-}" ]; then \
 {% for name, relative in bootstrap.persistent_environment if name == "MISE_SHIMS_DIR" -%}
-		printf '%s\n' "$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}" >> "$$GITHUB_PATH"; \
+		shim_farm="$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}"; \
+		rm -rf "$$shim_farm"; \
+		mise_checked "$$scratch/reshim.log" mise_offline project "$$pinned_mise" -C "$$project_root" reshim; \
+		printf '%s\n' "$$shim_farm" >> "$$GITHUB_PATH"; \
 {% endfor -%}
 	fi; \
 	printf 'setup: entering lifecycle (submodules, environment, hooks) make=%s\n' "$(SELF_MAKE_EXECUTABLE)"; \
@@ -366,6 +383,7 @@
 		"MISE_TRUSTED_CONFIG_PATHS=$$project_root" \
 		"MISE_VERSION=$$runtime_release" \
 		"MISE_INSTALL_PATH=$$mise_runtime_path" \
+		$${mise_lock_drift:+"SETUP_MISE_LOCK_DRIFT=1"} \
 		$(PROJECT_TOOL_EXEC) env \
 		$${locked_manifest:+"UPG_LOCKED_MISE_MANIFEST=$$locked_manifest"} \
 		"SETUP_DIRENV=$$direnv_executable" \

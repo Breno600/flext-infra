@@ -24,7 +24,7 @@ from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
 from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra import p, t
 
 
 class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
@@ -58,7 +58,7 @@ class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
         if not discovered.success:
             return r[bool].fail("version-file: project discovery failed")
 
-        outcomes: dict[str, int] = {"generated": 0, "skipped": 0}
+        outcomes: t.MutableIntMapping = {"generated": 0, "skipped": 0}
         for project_info in self._filtered_projects(discovered.value):
             outcome = self._sync_project(project_info.path, template_path)
             if outcome.failure:
@@ -70,7 +70,7 @@ class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
             f"version-file: {verb} {outcomes['generated']}, "
             f"skipped {outcomes['skipped']}",
         )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def _sync_project(self, project: Path, template_path: Path) -> p.Result[str]:
         """Render one project's ``__version__.py`` and name the outcome.

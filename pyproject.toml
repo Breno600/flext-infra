@@ -424,6 +424,9 @@ extend-safe-fixes = [
 ]
 ignore = [
   "camelcase-imported-as-lowercase",
+  "implicit-namespace-package",
+  "missing-required-import",
+  "typing-only-first-party-import",
   "typing-only-standard-library-import",
   "typing-only-third-party-import",
 ]
@@ -543,6 +546,12 @@ split-on-trailing-comma = false
   "runtime-import-in-type-checking-block",
   "typing-only-first-party-import",
   "unused-import",
+]
+"**/tests/python/**" = [
+  "raise-vanilla-args",
+  "start-process-with-partial-path",
+  "subprocess-without-shell-equals-true",
+  "suspicious-subprocess-import",
 ]
 "scripts/**" = [
   "any-type",
