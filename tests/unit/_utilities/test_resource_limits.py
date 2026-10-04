@@ -13,8 +13,8 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m, u
-from tests import u as test_u
+from flext_infra import c, config, m
+from tests import u
 
 
 class TestsFlextInfraUtilitiesResourceLimits:
@@ -30,7 +30,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
             timeout_seconds=config.Infra.tooling.tools.mypy.timeout_seconds,
         )
         command = u.Infra.mypy_limited_command(
-            test_u.Tests.mypy_workload(tmp_path),
+            u.Tests.mypy_workload(tmp_path),
             limit,
         )
         result = u.Cli.run_raw(command, timeout=u.Infra.mypy_runner_timeout(limit))
@@ -41,7 +41,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
     @staticmethod
     def test_mypy_profile_records_the_real_checker(tmp_path: Path) -> None:
         """Keep the public profiling contract while removing executable selection."""
-        project = test_u.Tests.mypy_workload(tmp_path)
+        project = u.Tests.mypy_workload(tmp_path)
         profile = tmp_path / "checker.pstats"
         invocation = m.Infra.MypyInvocation(
             targets=project.targets,
@@ -110,8 +110,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
         tmp_path: Path,
     ) -> None:
         """An unprovisioned target never borrows the orchestrator's interpreter."""
-        test_u.Tests.initialize_git_repo(tmp_path)
-        project = test_u.Tests.mypy_workload(tmp_path)
+        u.Tests.initialize_git_repo(tmp_path)
+        project = u.Tests.mypy_workload(tmp_path)
         invocation = m.Infra.MypyInvocation(
             targets=project.targets,
             config_file=project.config_file,
@@ -119,7 +119,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         )
         with pytest.raises(FileNotFoundError, match="managed workspace interpreter"):
             u.Infra.mypy_command(invocation)
-        tm.ok(test_u.Tests.create_python_environment(tmp_path))
+        tm.ok(u.Tests.create_python_environment(tmp_path))
         with pytest.raises(FileNotFoundError, match="managed workspace checker"):
             u.Infra.mypy_command(invocation)
 
@@ -128,7 +128,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         tmp_path: Path,
     ) -> None:
         """A hostile request cannot turn the supervisor into an arbitrary executor."""
-        project = test_u.Tests.mypy_workload(tmp_path)
+        project = u.Tests.mypy_workload(tmp_path)
         command = u.Infra.mypy_limited_command(project, host_system="Darwin")
         injected = project.model_dump_json()[:-1] + ',"command":["/bin/sh"]}'
         result = u.Cli.run_raw(
@@ -162,7 +162,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
             memory_limit_mb=max(1, c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT // 2)
             if scenario == "memory"
             else c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
-            timeout_seconds=test_u.Tests.mypy_deadline_limit().timeout_seconds
+            timeout_seconds=u.Tests.mypy_deadline_limit().timeout_seconds
             if scenario == "deadline"
             else config.Infra.tooling.tools.mypy.timeout_seconds,
         )
@@ -174,7 +174,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
                 source += f"allocation = bytearray({limit.memory_limit_bytes * 2}); "
             source += f"time.sleep({limit.timeout_seconds + 1})"
         command = u.Infra.mypy_limited_command(
-            test_u.Tests.mypy_workload(tmp_path, source),
+            u.Tests.mypy_workload(tmp_path, source),
             limit,
         )
         result = u.Cli.run_raw(command, timeout=u.Infra.mypy_runner_timeout(limit))
@@ -214,12 +214,12 @@ class TestsFlextInfraUtilitiesResourceLimits:
         request: pytest.FixtureRequest,
     ) -> None:
         """Kill a TERM-resistant descendant after leader exit or deadline."""
-        limit = test_u.Tests.mypy_deadline_limit()
+        limit = u.Tests.mypy_deadline_limit()
         policy = config.Infra.tooling.tools.pytest
         pid_file = tmp_path / "descendant.pid"
         error_file = tmp_path / "descendant.stderr"
         request.addfinalizer(
-            lambda: test_u.Tests.reap_mypy_descendant(
+            lambda: u.Tests.reap_mypy_descendant(
                 pid_file,
                 policy.termination_grace_seconds,
             ),
@@ -245,7 +245,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         )
         result = u.Cli.run_raw(
             u.Infra.mypy_limited_command(
-                test_u.Tests.mypy_workload(tmp_path, source),
+                u.Tests.mypy_workload(tmp_path, source),
                 limit,
             ),
             timeout=u.Infra.mypy_runner_timeout(limit),
@@ -279,7 +279,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         )
         started = u.Cli.process_start(
             u.Infra.mypy_limited_command(
-                test_u.Tests.mypy_workload(
+                u.Tests.mypy_workload(
                     tmp_path,
                     "import time; print('ready', flush=True); "
                     f"time.sleep({limit.timeout_seconds + 1})",

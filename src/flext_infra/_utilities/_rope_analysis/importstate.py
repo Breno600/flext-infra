@@ -102,8 +102,9 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
             current_package,
         )
 
-    @staticmethod
+    @classmethod
     def resolve_module_semantic_state(
+        cls,
         rope_project: t.Infra.RopeProject,
         resource: t.Infra.RopeResource,
     ) -> m.Infra.ModuleSemanticState:
@@ -127,8 +128,7 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         if cached is not None:
             return cached
         pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
-        state_from = FlextInfraUtilitiesRopeAnalysisImportState._module_semantic_state_from_pymodule
-        state = state_from(
+        state = cls._module_semantic_state_from_pymodule(
             rope_project=rope_project,
             resource=resource,
             pymodule=pymodule,

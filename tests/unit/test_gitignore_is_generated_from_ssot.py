@@ -18,7 +18,7 @@ from flext_tests import tm
 import flext_infra
 from flext_infra import c, config
 from flext_infra.codegen.conform import FlextInfraCodegenConform
-from tests import u as test_u
+from tests import u
 
 
 class TestsFlextInfraGitignoreIsGeneratedFromSsot:
@@ -42,7 +42,7 @@ class TestsFlextInfraGitignoreIsGeneratedFromSsot:
             Whether one policy snapshot keeps *relative_path* trackable.
 
         """
-        return test_u.Tests.is_tracked_under(rendered, relative_path)
+        return u.Tests.is_tracked_under(rendered, relative_path)
 
     def test_every_managed_file_survives_the_ignore_policy(self) -> None:
         """No committed managed artifact is ignored by the shipped policy.
@@ -54,7 +54,7 @@ class TestsFlextInfraGitignoreIsGeneratedFromSsot:
         """
         committed = config.Infra.codegen.managed_files
         rendered = (
-            "\n".join(test_u.Tests.ignore_patterns_for(self._repository_root())) + "\n"
+            "\n".join(u.Tests.ignore_patterns_for(self._repository_root())) + "\n"
         )
         blocked = tuple(
             item.path.as_posix()
@@ -81,13 +81,13 @@ class TestsFlextInfraGitignoreIsGeneratedFromSsot:
         )
 
         tm.that(
-            test_u.Tests.is_tracked_under(
+            u.Tests.is_tracked_under(
                 rendered,
                 "src/probe_project/vendor/docx/document.py",
             ),
             eq=True,
         )
-        tm.that(test_u.Tests.is_tracked_under(rendered, "vendor/module.go"), eq=False)
+        tm.that(u.Tests.is_tracked_under(rendered, "vendor/module.go"), eq=False)
 
     @staticmethod
     def test_declared_projects_are_trackable_under_the_rendered_policy() -> None:
@@ -100,10 +100,10 @@ class TestsFlextInfraGitignoreIsGeneratedFromSsot:
         contract holds for any manifest instead of freezing today's projects.
         """
         projects = ("probe-project", "nested/probe-project")
-        workspace = test_u.Tests.workspace_spec(
-            test_u.Tests.repository_ref("probe-root"),
+        workspace = u.Tests.workspace_spec(
+            u.Tests.repository_ref("probe-root"),
             subprojects=tuple(
-                test_u.Tests.repository_ref(
+                u.Tests.repository_ref(
                     Path(item).name,
                     path=Path(item),
                     role=c.Infra.MakeProfile.STANDALONE,
@@ -124,7 +124,7 @@ class TestsFlextInfraGitignoreIsGeneratedFromSsot:
         blocked = tuple(
             project
             for project in projects
-            if not test_u.Tests.is_tracked_under(rendered, f"{project}/pyproject.toml")
+            if not u.Tests.is_tracked_under(rendered, f"{project}/pyproject.toml")
         )
 
         tm.that(blocked, eq=())
