@@ -10,8 +10,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import u
-from tests import u as test_u
+from tests import u
 
 
 class TestsFlextInfraGitWorktreeState:
@@ -20,7 +19,7 @@ class TestsFlextInfraGitWorktreeState:
     @staticmethod
     def _lane(parent: Path, source: Path) -> Path:
         lane = parent / "lane"
-        test_u.Tests.git_run(source, "worktree", "add", "--detach", str(lane))
+        u.Tests.git_run(source, "worktree", "add", "--detach", str(lane))
         return lane
 
     @staticmethod
@@ -32,15 +31,15 @@ class TestsFlextInfraGitWorktreeState:
             ("ls-files", "--stage"),
         ):
             tm.that(
-                test_u.Tests.git_capture(lane, *args),
-                eq=test_u.Tests.git_capture(source, *args),
+                u.Tests.git_capture(lane, *args),
+                eq=u.Tests.git_capture(source, *args),
             )
 
     def test_partial_staging_binary_modes_deletions_and_untracked(
         self,
         tmp_path: Path,
     ) -> None:
-        source = test_u.Tests.git_repository(tmp_path)
+        source = u.Tests.git_repository(tmp_path)
         partial = source / "partial.txt"
         partial.write_text("base\n", encoding="utf-8")
         binary = source / "binary.dat"
@@ -49,7 +48,7 @@ class TestsFlextInfraGitWorktreeState:
         deleted.write_text("base\n", encoding="utf-8")
         recreated = source / "recreated.txt"
         recreated.write_text("base\n", encoding="utf-8")
-        test_u.Tests.git_run(
+        u.Tests.git_run(
             source,
             "add",
             "partial.txt",
@@ -57,13 +56,13 @@ class TestsFlextInfraGitWorktreeState:
             "deleted.txt",
             "recreated.txt",
         )
-        test_u.Tests.git_run(source, "commit", "-m", "tracked fixtures")
+        u.Tests.git_run(source, "commit", "-m", "tracked fixtures")
         lane = self._lane(tmp_path, source)
         partial.write_text("staged\n", encoding="utf-8")
         binary.write_bytes(b"\x00staged\xff")
         deleted.unlink()
-        test_u.Tests.git_run(source, "add", "partial.txt", "binary.dat", "deleted.txt")
-        test_u.Tests.git_run(source, "rm", "recreated.txt")
+        u.Tests.git_run(source, "add", "partial.txt", "binary.dat", "deleted.txt")
+        u.Tests.git_run(source, "rm", "recreated.txt")
         recreated.write_text("untracked replacement\n", encoding="utf-8")
         partial.write_text("unstaged without final newline", encoding="utf-8")
         partial.chmod(0o751)
@@ -71,7 +70,7 @@ class TestsFlextInfraGitWorktreeState:
         binary.chmod(0o600)
         added = source / "added.txt"
         added.write_text("index content\n", encoding="utf-8")
-        test_u.Tests.git_run(source, "add", "added.txt")
+        u.Tests.git_run(source, "add", "added.txt")
         added.unlink()
         untracked = source / "untracked.dat"
         untracked.write_bytes(b"\xff\x00untracked")
@@ -92,15 +91,15 @@ class TestsFlextInfraGitWorktreeState:
         tm.that((lane / added.name).exists(), eq=False)
 
     def test_exclusions_are_literal_subtrees(self, tmp_path: Path) -> None:
-        source = test_u.Tests.git_repository(tmp_path)
+        source = u.Tests.git_repository(tmp_path)
         excluded = source / "[private]"
         excluded.mkdir()
         (excluded / "tracked.txt").write_text("base\n", encoding="utf-8")
-        test_u.Tests.git_run(source, "add", "[private]/tracked.txt")
-        test_u.Tests.git_run(source, "commit", "-m", "excluded fixture")
+        u.Tests.git_run(source, "add", "[private]/tracked.txt")
+        u.Tests.git_run(source, "commit", "-m", "excluded fixture")
         lane = self._lane(tmp_path, source)
         (excluded / "tracked.txt").write_text("staged\n", encoding="utf-8")
-        test_u.Tests.git_run(source, "add", "[private]/tracked.txt")
+        u.Tests.git_run(source, "add", "[private]/tracked.txt")
         (excluded / "untracked.txt").write_text("untracked\n", encoding="utf-8")
         (source / "public.txt").write_text("public\n", encoding="utf-8")
 
@@ -120,23 +119,23 @@ class TestsFlextInfraGitWorktreeState:
         self,
         tmp_path: Path,
     ) -> None:
-        source = test_u.Tests.git_repository(tmp_path)
+        source = u.Tests.git_repository(tmp_path)
         lane = self._lane(tmp_path, source)
         (source / "new.txt").write_text("source\n", encoding="utf-8")
         (lane / "owned.txt").write_text("destination\n", encoding="utf-8")
-        before = test_u.Tests.git_capture(lane, "status", "--porcelain=v1")
+        before = u.Tests.git_capture(lane, "status", "--porcelain=v1")
 
         result = u.Infra.git_copy_worktree_state(source, lane)
 
         tm.that(result.failure, eq=True)
-        tm.that(test_u.Tests.git_capture(lane, "status", "--porcelain=v1"), eq=before)
+        tm.that(u.Tests.git_capture(lane, "status", "--porcelain=v1"), eq=before)
         tm.that((lane / "owned.txt").read_text(), eq="destination\n")
         tm.that((lane / "new.txt").exists(), eq=False)
 
     @staticmethod
     def test_other_repository_is_rejected(tmp_path: Path) -> None:
-        source = test_u.Tests.git_repository(tmp_path)
-        destination = test_u.Tests.git_repository(tmp_path, "other")
+        source = u.Tests.git_repository(tmp_path)
+        destination = u.Tests.git_repository(tmp_path, "other")
         (source / "new.txt").write_text("source\n", encoding="utf-8")
 
         result = u.Infra.git_copy_worktree_state(source, destination)
@@ -145,13 +144,13 @@ class TestsFlextInfraGitWorktreeState:
         tm.that((destination / "new.txt").exists(), eq=False)
 
     def test_ignored_destination_collision_is_rejected(self, tmp_path: Path) -> None:
-        source = test_u.Tests.git_repository(tmp_path)
+        source = u.Tests.git_repository(tmp_path)
         (source / ".gitignore").write_text("hidden.txt\n", encoding="utf-8")
-        test_u.Tests.git_run(source, "add", ".gitignore")
-        test_u.Tests.git_run(source, "commit", "-m", "ignore fixture")
+        u.Tests.git_run(source, "add", ".gitignore")
+        u.Tests.git_run(source, "commit", "-m", "ignore fixture")
         lane = self._lane(tmp_path, source)
         (source / "hidden.txt").write_text("source\n", encoding="utf-8")
-        test_u.Tests.git_run(source, "add", "-f", "hidden.txt")
+        u.Tests.git_run(source, "add", "-f", "hidden.txt")
         (lane / "hidden.txt").write_text("destination\n", encoding="utf-8")
 
         result = u.Infra.git_copy_worktree_state(source, lane)
