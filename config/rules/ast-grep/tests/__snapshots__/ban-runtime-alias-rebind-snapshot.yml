@@ -55,6 +55,46 @@ snapshots:
       start: 34
       end: 55
   ? |
+    from flext_cli import p
+    class FlextFooProtocols(p):
+        pass
+    p = FlextFooProtocols
+    __all__ = ["FlextFooProtocols", "p"]
+  : labels:
+    - source: p = FlextFooProtocols
+      style: primary
+      start: 61
+      end: 82
+    - source: |
+        from flext_cli import p
+        class FlextFooProtocols(p):
+            pass
+        p = FlextFooProtocols
+        __all__ = ["FlextFooProtocols", "p"]
+      style: secondary
+      start: 0
+      end: 120
+    - source: p
+      style: secondary
+      start: 61
+      end: 62
+    - source: p = FlextFooProtocols
+      style: secondary
+      start: 61
+      end: 82
+    - source: p
+      style: secondary
+      start: 22
+      end: 23
+    - source: p
+      style: secondary
+      start: 22
+      end: 23
+    - source: from flext_cli import p
+      style: secondary
+      start: 0
+      end: 23
+  ? |
     from flext_core import FlextConstants
     c = FlextConstants
     __all__ = ["c"]

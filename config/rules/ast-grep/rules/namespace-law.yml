@@ -450,6 +450,30 @@ rule:
                   has:
                     field: alias
                     pattern: $SHADOWED
+        # ENFORCE-046 Pattern-A consumer admission: a consumer's canonical
+        # facade imports the letter and rebinds it to the consumer-named
+        # class the module defines (flext-core forbids the bare-class import
+        # a peer uses). A peer target ($CONSUMER excludes ^(?:Tests)?Flext[A-Z])
+        # or a target this module does not define stays a finding.
+        - not:
+            all:
+              - pattern: $SHADOWED = $CONSUMER
+              - inside:
+                  kind: module
+                  any:
+                    - has:
+                        kind: class_definition
+                        has:
+                          field: name
+                          pattern: $CONSUMER
+                    - has:
+                        kind: decorated_definition
+                        has:
+                          field: definition
+                          kind: class_definition
+                          has:
+                            field: name
+                            pattern: $CONSUMER
     # Bound by a module that does not declare it.
     - all:
         - kind: expression_statement
@@ -515,6 +539,9 @@ rule:
                     field: name
                     pattern: $TARGET
 # A runtime alias is a public identifier; dunders are module protocol.
+# $CONSUMER admits only non-peer class names: the complement of the facade
+# naming law's ^(?:Tests)?Flext[A-Z] peer pattern, enumerated for Rust regex
+# (no lookaround).
 constraints:
   UNDECLARED:
     regex: "^[^_]"
@@ -524,6 +551,8 @@ constraints:
     regex: "^[^_]"
   ALIAS:
     regex: "^[^_]"
+  CONSUMER:
+    regex: "^(?:[^FT].*|F|F[^l].*|Fl|Fl[^e].*|Fle|Fle[^x].*|Flex|Flex[^t].*|Flext|Flext[^A-Z].*|T|T[^e].*|Te|Te[^s].*|Tes|Tes[^t].*|Test|Test[^s].*|Tests|Tests[^F].*|TestsF|TestsF[^l].*|TestsFl|TestsFl[^e].*|TestsFle|TestsFle[^x].*|TestsFlex|TestsFlex[^t].*|TestsFlext|TestsFlext[^A-Z].*)$"
 message: >-
   Runtime alias bound outside its owner: the module that declares it in
   __all__ binds it once, to the facade class it defines.
