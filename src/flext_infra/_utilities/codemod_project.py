@@ -123,6 +123,29 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 cycles.update(dict.fromkeys(members, members))
         return cycles
 
+    @staticmethod
+    def _source_scan_ignored(root: Path, file_path: Path) -> bool:
+        """Return whether ``file_path`` lies in a source-scan-ignored tree.
+
+        The names are the codegen artifact SSOT (``source_scan_ignored``),
+        the same list Rope uses when it builds the import graph. ``legado``
+        is one of those names.
+
+        Returns:
+            Whether ``file_path`` lies in a source-scan-ignored tree.
+
+        """
+        resolved = file_path.resolve()
+        root_resolved = root.resolve()
+        parts = (
+            resolved.relative_to(root_resolved).parts
+            if resolved.is_relative_to(root_resolved)
+            else resolved.parts
+        )
+        return bool(
+            frozenset(config.Infra.codegen.source_scan_ignored).intersection(parts),
+        )
+
     @classmethod
     def import_closes_cycle(
         cls,
@@ -142,21 +165,28 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             Whether one import of ``file_path`` is an edge of a cycle.
 
         Raises:
-            ValueError: If source module is absent from the project import graph.
+            ValueError: If a production module under the package source root is
+                absent from the project import graph.
 
         """
         graph, modules = facts.import_graph, facts.import_modules
         source = modules.get(file_path.resolve())
         if source is None:
             layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
-            if layout is not None and file_path.is_relative_to(layout.src_dir):
+            # Project-level files and trees the source scan already ignores
+            # (codegen ``source_scan_ignored``, including ``legado``) have no
+            # import-graph node. They are not missing production modules, so
+            # an import in one cannot close a cycle of the scanned graph.
+            if (
+                layout is not None
+                and file_path.is_relative_to(layout.src_dir)
+                and not cls._source_scan_ignored(root, file_path)
+            ):
                 msg = (
                     f"source module is absent from the project import graph: "
                     f"{file_path}"
                 )
                 raise ValueError(msg)
-            # Project-level files are scanned by ast-grep but have no package
-            # import graph node, so none of their imports can close a cycle.
             return False
         package = (
             source if file_path.name == c.Infra.INIT_PY else source.rpartition(".")[0]

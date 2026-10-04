@@ -381,3 +381,75 @@ class TestsFlextInfraSharedHelperPromotion:
             )
         for path, original in sources.items():
             tm.that(path.read_text(encoding="utf-8"), eq=original)
+
+    def test_destination_import_of_the_moving_helper_is_replaced(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Test a destination import of the helper is replaced by the move."""
+        root, source, helper = self._workspace(tmp_path, reexport=False)
+        utilities = root / c.Infra.DIR_TESTS / c.Infra.UTILITIES_PY
+        imported = f"from tests.unit._fixtures.behavior import {helper}\n"
+        utilities.write_text(
+            imported + "\n" + utilities.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        sources = {
+            path: path.read_text(encoding="utf-8") for path in root.rglob("*.py")
+        }
+        with infra.rope_workspace(root) as rope:
+            edits = tm.ok(
+                u.Infra.plan_semantic_cutover(
+                    c.Infra.SemanticCutoverPhase.CLASS_NESTING,
+                    rope_workspace=rope,
+                    sources=sources,
+                ),
+            )
+            proposed = dict(sources)
+            proposed.update({edit.file_path: edit.updated_source for edit in edits})
+            tm.that(
+                proposed[utilities],
+                has=f"class {helper}",
+                lacks=imported.strip(),
+            )
+            tm.that(proposed[source], lacks=f"class {helper}")
+            tm.that(
+                tm.ok(
+                    u.Infra.plan_semantic_cutover(
+                        c.Infra.SemanticCutoverPhase.CLASS_NESTING,
+                        rope_workspace=rope,
+                        sources=proposed,
+                    ),
+                ),
+                empty=True,
+            )
+        for path, original in sources.items():
+            tm.that(path.read_text(encoding="utf-8"), eq=original)
+
+    def test_destination_homonym_still_rejects_the_move(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Test a different object with the same name still rejects the move."""
+        root, _, helper = self._workspace(tmp_path, reexport=False)
+        utilities = root / c.Infra.DIR_TESTS / c.Infra.UTILITIES_PY
+        utilities.write_text(
+            f"class {helper}:\n"
+            "    def value(self) -> str:\n"
+            "        return 'other'\n\n" + utilities.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        sources = {
+            path: path.read_text(encoding="utf-8") for path in root.rglob("*.py")
+        }
+        with (
+            infra.rope_workspace(root) as rope,
+            pytest.raises(ValueError, match="already binds"),
+        ):
+            u.Infra.plan_semantic_cutover(
+                c.Infra.SemanticCutoverPhase.CLASS_NESTING,
+                rope_workspace=rope,
+                sources=sources,
+            )
+        for path, original in sources.items():
+            tm.that(path.read_text(encoding="utf-8"), eq=original)

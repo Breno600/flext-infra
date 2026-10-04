@@ -5,9 +5,9 @@ The tooling owner maps each Ruff rule code to one recipe
 then these recipes to the findings left. Every repair is derived from the
 source itself: a docstring section from the signature, the summary and the
 raise statement, a summary from the declared name, the notice from the
-project's declared author and copyright year, and a static method from a
-method Ruff reports as never reading its instance: only its receiver
-parameter and its decorator list change, its body keeps every byte. A
+project's declared author, copyright year and module path, and a static
+method from a method Ruff reports as never reading its instance: only its
+receiver parameter and its decorator list change, its body keeps every byte. A
 finding the recipe cannot place raises; nothing is skipped.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
@@ -30,19 +30,24 @@ class FlextInfraUtilitiesLintRecipes:
     """Apply the declared recipe of each lint finding to one module source."""
 
     @staticmethod
-    def copyright_notice(pkg_dir: Path) -> str:
+    def copyright_notice(pkg_dir: Path, *, module: Path | None = None) -> str:
         """Render the copyright notice of the project that owns ``pkg_dir``.
 
         The author is the manifest's first declared author and the year is the
         scaffold copyright year, the same owners the scaffold templates
-        render.
+        render. ``module`` names the file that carries the notice. Its
+        project-relative path, without the suffix every module shares, is the
+        line between the copyright sentence and the SPDX line: the sentence
+        and the license stay legal, and the notice is not one stamp.
 
         Returns:
-            The two-line notice: the copyright line and the SPDX line.
+            The copyright sentence, that module identity when ``module`` is
+            given, and the SPDX line.
 
         Raises:
-            ValueError: If the path is outside any project manifest or the
-                manifest declares no author name.
+            ValueError: If the path is outside any project manifest, the
+                manifest declares no author name, or ``module`` has no
+                identity.
 
         """
         for candidate in (pkg_dir, *pkg_dir.parents):
@@ -59,11 +64,28 @@ class FlextInfraUtilitiesLintRecipes:
                 msg = f"project manifest declares no author name: {candidate}"
                 raise ValueError(msg)
             scaffold = config.Infra.codegen.scaffold.project
-            return (
+            copyright_line = (
                 f"Copyright (c) {scaffold.copyright_year} {author}. "
-                "All rights reserved.\n"
-                f"SPDX-License-Identifier: {scaffold.supported_licenses[0]}"
+                "All rights reserved."
             )
+            spdx = f"SPDX-License-Identifier: {scaffold.supported_licenses[0]}"
+            if module is None:
+                return f"{copyright_line}\n{spdx}"
+            try:
+                identity = module.resolve().relative_to(candidate.resolve())
+            except ValueError:
+                identity = module
+            marker = identity.with_suffix("").as_posix()
+            if (
+                not marker
+                or marker == "."
+                or len(marker) > config.Infra.tooling.tools.ruff.line_length
+            ):
+                marker = identity.stem
+            if not marker:
+                msg = f"module has no notice identity: {module}"
+                raise ValueError(msg)
+            return f"{copyright_line}\n{marker}\n{spdx}"
         msg = f"package is outside any project manifest: {pkg_dir}"
         raise ValueError(msg)
 
@@ -143,20 +165,9 @@ class FlextInfraUtilitiesLintRecipes:
                 cls._with_sections(raw, " " * docstring.col_offset, wanted),
             ))
         for definition, text in summaries.items():
-            first = definition.body[0]
-            decorators = (
-                first.decorator_list
-                if isinstance(
-                    first,
-                    ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
-                )
-                else []
-            )
-            first_line = min((first.lineno, *(item.lineno for item in decorators)))
-            offset = cls._offset(lines, first_line, 0)
-            edits.append((offset, offset, f'{" " * first.col_offset}"""{text}"""\n'))
+            edits.append(cls._summary_edit(lines, definition, text))
         if wants_notice:
-            notice = cls.copyright_notice(path.parent)
+            notice = cls.copyright_notice(path.parent, module=path)
             module_docstring = cls._docstring_expr(tree)
             if module_docstring is None:
                 offset = len(lines[0]) if lines and lines[0].startswith("#!") else 0
@@ -171,7 +182,11 @@ class FlextInfraUtilitiesLintRecipes:
                 start, end, raw = cls._literal(lines, module_docstring, path)
                 edits.append((start, end, cls._with_notice(raw, notice)))
         rewritten = source
-        for start, end, text in sorted(edits, key=lambda edit: edit[0], reverse=True):
+        for start, end, text in sorted(
+            edits,
+            key=lambda edit: (edit[0], edit[1]),
+            reverse=True,
+        ):
             rewritten = f"{rewritten[:start]}{text}{rewritten[end:]}"
         return rewritten
 
@@ -244,6 +259,66 @@ class FlextInfraUtilitiesLintRecipes:
             raise ValueError(msg)
         return max(enclosing, key=lambda node: node.lineno)
 
+    @classmethod
+    def _summary_edit(
+        cls,
+        lines: t.StrSequence,
+        definition: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+        text: str,
+    ) -> t.Triple[int, int, str]:
+        """Return the edit that places ``text`` as ``definition``'s summary.
+
+        A body on its own line receives the summary before that line. A body
+        that shares the suite colon's line is legal Python, including a
+        protocol stub on a wrapped signature: that line expands so the summary
+        and the same suite occupy the following lines.
+
+        Returns:
+            The span to replace and the summary text that replaces it.
+
+        """
+        first = definition.body[0]
+        line = lines[first.lineno - 1]
+        body_at = cls._utf8_chars(line, first.col_offset)
+        colon = body_at
+        while colon > 0 and line[colon - 1] in " \t":
+            colon -= 1
+        if colon == 0 or line[colon - 1] != ":":
+            decorators = (
+                first.decorator_list
+                if isinstance(
+                    first,
+                    ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+                )
+                else []
+            )
+            first_line = min((first.lineno, *(item.lineno for item in decorators)))
+            offset = cls._offset(lines, first_line, 0)
+            return (offset, offset, f'{" " * first.col_offset}"""{text}"""\n')
+        suite = line[body_at:].removesuffix("\n").removesuffix("\r")
+        header = lines[definition.lineno - 1]
+        block = " " * (cls._utf8_chars(header, definition.col_offset) + 4)
+        start = cls._offset(lines, first.lineno, 0)
+        return (
+            start,
+            start + len(line),
+            f'{line[:colon]}\n{block}"""{text}"""\n{block}{suite}\n',
+        )
+
+    @staticmethod
+    def _utf8_chars(line: str, col_offset: int) -> int:
+        """Return the character index of a UTF-8 AST column on ``line``.
+
+        Returns:
+            The character index of a UTF-8 AST column on ``line``.
+
+        """
+        return len(
+            line.encode(c.Cli.ENCODING_DEFAULT)[:col_offset].decode(
+                c.Cli.ENCODING_DEFAULT,
+            ),
+        )
+
     @staticmethod
     def _defined_at(
         tree: ast.Module,
@@ -252,11 +327,13 @@ class FlextInfraUtilitiesLintRecipes:
     ) -> ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef:
         """Return the class or function defined at ``line``.
 
+        An inline body is a legal definition. The summary edit expands it.
+
         Returns:
             The class or function defined at ``line``.
 
         Raises:
-            ValueError: Always; or if ``node.body[0].lineno == node.lineno``.
+            ValueError: If no class or function is defined at ``line``.
 
         """
         for node in ast.walk(tree):
@@ -264,9 +341,6 @@ class FlextInfraUtilitiesLintRecipes:
                 isinstance(node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef)
                 and node.lineno == line
             ):
-                if node.body[0].lineno == node.lineno:
-                    msg = f"{path}: definition at line {line} has its body inline"
-                    raise ValueError(msg)
                 return node
         msg = f"{path}: no class or function is defined at line {line}"
         raise ValueError(msg)

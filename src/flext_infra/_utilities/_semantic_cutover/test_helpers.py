@@ -188,7 +188,15 @@ class FlextInfraUtilitiesSemanticTestHelpers(
                 continue
             target = cls._test_utilities_owner(workspace, path, sources)
             target_resource = project.get_resource(target.relative_to(root).as_posix())
-            if name in project.get_pymodule(target_resource).get_attributes():
+            target_module = project.get_pymodule(target_resource)
+            if name in target_module.get_attributes() and not (
+                cls._destination_imports_moving_declaration(
+                    project,
+                    resource,
+                    name,
+                    target_module.get_attribute(name),
+                )
+            ):
                 msg = f"shared helper destination already binds {name}: {target}"
                 raise ValueError(msg)
             return m.Infra.ClassMoveRequest(
@@ -200,6 +208,31 @@ class FlextInfraUtilitiesSemanticTestHelpers(
                 apply=False,
             )
         return None
+
+    @staticmethod
+    def _destination_imports_moving_declaration(
+        project: p.Infra.RopeProject,
+        source: p.Infra.RopeResource,
+        name: str,
+        bound: p.Infra.RopePyName,
+    ) -> bool:
+        """Return whether this binding imports the declaration being moved.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
+        if (
+            not isinstance(bound, p.Infra.RopeImportedName)
+            or bound.imported_name != name
+        ):
+            return False
+        runtime = FlextInfraUtilitiesRopeRuntimeModules
+        expected = project.get_pymodule(source).get_attribute(name)
+        return runtime.same_name(expected, bound) and (
+            runtime.imported_module_path(project, bound)
+            == Path(source.real_path).resolve()
+        )
 
     @staticmethod
     def _test_utilities_owner(

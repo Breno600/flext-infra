@@ -279,3 +279,40 @@ __all__: list[str] = ["LIMIT", "write"]
 
         tm.fail(planned, has="requires exactly one declared module owner")
         tm.fail(planned, has="rival_owners")
+
+    def test_nested_class_annotations_keep_a_resolvable_name(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Annotations inside a moved class name the owner, not a dropped bare name."""
+        source = (
+            '"""Registry annotations."""\n\n'
+            "from __future__ import annotations\n\n"
+            "from typing import ClassVar\n\n\n"
+            "class _Handler:\n"
+            "    @staticmethod\n"
+            "    def current() -> _Registry:\n"
+            "        return _Registry.current()\n\n\n"
+            "class _Registry:\n"
+            "    _current: ClassVar[_Registry | None] = None\n\n"
+            "    @classmethod\n"
+            "    def start(cls) -> _Registry:\n"
+            "        return cls()\n\n"
+            "    @classmethod\n"
+            "    def current(cls) -> _Registry:\n"
+            "        return cls()\n"
+        )
+        root, module = self._family_module(tmp_path, "registry_helpers", source)
+        owner = self._derived_owner(root, "registry_helpers")
+
+        updated, residue = self._plan(root, {module: source})
+
+        nested = updated[module.resolve()]
+        qualified = f"{owner}._Registry"
+        tm.that(nested, has=f"def current() -> {qualified}:")
+        tm.that(nested, has=f"return {qualified}.current()")
+        tm.that(nested, has=f"_current: ClassVar[{qualified} | None] = None")
+        tm.that(nested, has=f"def start(cls) -> {qualified}:")
+        tm.that(nested, has=f"def current(cls) -> {qualified}:")
+        tm.that(residue, eq={})
+        compile(nested, str(module), "exec")

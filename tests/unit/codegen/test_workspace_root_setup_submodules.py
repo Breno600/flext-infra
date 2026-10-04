@@ -189,7 +189,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         rendered = self._render_repository_root_makefile(tmp_path)
 
         tm.that(rendered, has="_builtin_setup_environment: _builtin_setup_submodules")
-        tm.that(rendered, has="submodule update --init --")
+        tm.that(rendered, has="submodule update --init --depth 1 --")
         # uv syncs the runtime root's project (UV_PROJECT := RUNTIME_ROOT).
         tm.that(rendered, has='$(UV) sync --project "$(UV_PROJECT)"')
         tm.that(rendered, lacks="submodule update --init --recursive")
