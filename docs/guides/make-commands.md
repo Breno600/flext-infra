@@ -59,9 +59,12 @@ phase, fix, or changed-only selector may be attached to a standard verb. When
 `make setup` initializes an absent governed submodule, it uses the explicit GitHub
 credential selected by the root Make contract in a Git credential helper scoped to that
 invocation. The token stays in the process environment, outside command arguments and
-logs. `make.submodule_timeout_seconds` in `config/codegen.yaml` bounds the clone; a
-timed-out or incomplete checkout fails the verb. Existing submodule worktrees are
-validated without fetching or rewriting them.
+logs. `make.submodule_timeout_seconds` in `config/codegen.yaml` bounds the clone.
+Provisioning uses `git submodule update --init --depth 1`, the same depth
+private submodule init uses, because setup only needs the recorded gitlink
+and a full history of a large object database cannot finish inside that
+deadline. A timed-out or incomplete checkout fails the verb. Existing
+submodule worktrees are validated without fetching or rewriting them.
 
 `make help` is the complete live inventory. Additional declared verbs such as `upg`,
 `docs`, `audit`, `status`, `waza`, `duplication`, and the release verbs retain their own
