@@ -52,7 +52,8 @@ class FlextInfraBootstrap(FlextInfraBootstrapMiseMixin):
             return str(shim)
         resolved = shutil.which("uv")
         if resolved is None:
-            raise ValueError("uv executable is absent from PATH")
+            msg = "uv executable is absent from PATH"
+            raise ValueError(msg)
         return resolved
 
     @classmethod
@@ -105,7 +106,8 @@ class FlextInfraBootstrap(FlextInfraBootstrapMiseMixin):
             cls._uv_run(["lock", "--project", str(stage / "mirror")])
             cls._uv_run(["lock", "--check", "--project", str(stage / "mirror")])
             if candidate.exists():
-                raise ValueError(f"lock staging path already exists: {candidate}")
+                msg = f"lock staging path already exists: {candidate}"
+                raise ValueError(msg)
             shutil.copyfile(stage / "mirror" / "uv.lock", candidate)
             Path(candidate).replace(lock)
             print("relock: published uv.lock")
@@ -138,11 +140,12 @@ class FlextInfraBootstrap(FlextInfraBootstrapMiseMixin):
             "recover",
             "reconcile",
         }:
-            raise ValueError(
+            msg = (
                 "usage: bootstrap.py (publish|recover) PROJECT STAGE"
                 " | reconcile PROJECT RELEASE | relock PROJECT"
-                " | converge PROJECT STAGE RELEASE",
+                " | converge PROJECT STAGE RELEASE"
             )
+            raise ValueError(msg)
         project = Path(arguments[1]).absolute()
         if arguments[0] == "reconcile":
             with cls._serialized(project):

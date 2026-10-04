@@ -282,29 +282,53 @@ class FlextInfraGate:
             severity="ERROR",
         )
 
-    def _checker_stderr_issues(
+    def _checker_issues(
         self,
         result: p.Cli.CommandOutput,
         project_dir: Path,
+        diagnostics: t.SequenceOf[m.Infra.Issue],
     ) -> t.SequenceOf[m.Infra.Issue]:
-        """Retain checker failures while accounting for native informational logs.
+        """Join a type checker's report with its stderr and an unexplained exit.
+
+        Stderr lines outside the checker's informational prefixes are failures;
+        a failed run that leaves nothing else to report is surfaced as the
+        ``<gate>-exec`` issue rather than silently passing.
 
         Returns:
-            The resulting ``t.SequenceOf[m.Infra.Issue]``.
+            The report diagnostics, stderr failures and the bare-exit issue.
 
         """
-        return tuple(
+        issues = (
+            *diagnostics,
+            *(
+                m.Infra.Issue(
+                    file=str(project_dir),
+                    line=0,
+                    column=0,
+                    code=f"{self.gate_id}-stderr",
+                    message=line,
+                    severity="ERROR",
+                )
+                for line in result.stderr.splitlines()
+                if line.strip()
+                and line.lstrip().split(maxsplit=1)[0] not in self.checker_info_prefixes
+            ),
+        )
+        if issues or u.Cli.process_succeeded(result.outcome):
+            return issues
+        message = (result.stderr or result.stdout).strip() or (
+            f"{self.gate_id} exited with code {result.outcome.raw_return_code} "
+            "without JSON diagnostics"
+        )
+        return (
             m.Infra.Issue(
-                file=str(project_dir),
-                line=0,
-                column=0,
-                code=f"{self.gate_id}-stderr",
-                message=line,
-                severity="ERROR",
-            )
-            for line in result.stderr.splitlines()
-            if line.strip()
-            and line.lstrip().split(maxsplit=1)[0] not in self.checker_info_prefixes
+                file=c.PYPROJECT_FILENAME,
+                line=1,
+                column=1,
+                code=f"{self.gate_id}-exec",
+                message=message,
+                severity=c.Infra.ERROR,
+            ),
         )
 
     def _parsed_gate_execution(
