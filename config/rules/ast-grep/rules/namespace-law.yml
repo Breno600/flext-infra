@@ -396,15 +396,17 @@ rule:
         - follows:
             stopBy: end
             kind: import_from_statement
+            # A field relation reaches only the first imported name; the
+            # module path is the statement's first named child.
             any:
               - has:
-                  field: name
                   kind: dotted_name
+                  not:
+                    nthChild: 1
                   has:
                     kind: identifier
                     pattern: $SHADOWED
               - has:
-                  field: name
                   kind: aliased_import
                   has:
                     field: alias
