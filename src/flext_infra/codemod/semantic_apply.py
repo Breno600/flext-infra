@@ -166,9 +166,6 @@ class FlextInfraCodemodSemanticApply:
             # Every phase just planned against this identical source snapshot.
             # With no publication there is no second state to validate.
             return r[bool].ok(value=True)
-        scoped = cls._check_definition_time(original, working, changed)
-        if scoped.failure:
-            return scoped
 
         def validate_published() -> p.Result[bool]:
             published = dict(cls._source_inventory(root, preflight))
@@ -185,12 +182,14 @@ class FlextInfraCodemodSemanticApply:
                 ),
             )
 
-        return cls._publish(
-            root,
-            original,
-            working,
-            changed,
-            validator=validate_published,
+        return cls._check_definition_time(original, working, changed).flat_map(
+            lambda _: cls._publish(
+                root,
+                original,
+                working,
+                changed,
+                validator=validate_published,
+            ),
         )
 
     @classmethod
