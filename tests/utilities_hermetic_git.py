@@ -43,7 +43,7 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
         """
         toml = TestsFlextInfraUtilitiesTomlMixin
         lock = (project_root / c.Infra.UV_LOCK_FILENAME).read_text(encoding="utf-8")
-        sources: t.MutableMappingKV[str, t.Triple[str, str, str]] = {}
+        sources: dict[str, t.Triple[str, str, str]] = {}
         for package in toml.toml_tables_at(lock, "package"):
             source = toml.toml_mapping(package.get("source"))
             locator = source.get("git")
