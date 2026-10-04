@@ -174,19 +174,15 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
 
         """
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
-        candidates: t.MutableSequenceOf[Path] = [scope.path / "docs/api-reference.md"]
-        for parent in (scope.path / "docs/api-reference", scope.path / "docs/api"):
-            if parent.exists():
-                candidates.extend(sorted(parent.rglob("*.md")))
+        api_reference = scope.path / c.Infra.DIR_DOCS / "api-reference"
+        candidates: t.MutableSequenceOf[Path] = (
+            sorted(api_reference.rglob("*.md")) if api_reference.exists() else []
+        )
         for path in candidates:
-            if not path.exists():
-                continue
             rel = path.relative_to(scope.path).as_posix()
-            if path.is_relative_to(scope.path / c.Infra.DIR_DOCS) and (
-                FlextInfraUtilitiesDocsScope.excluded_doc_path(
-                    scope.path,
-                    path.relative_to(scope.path / c.Infra.DIR_DOCS),
-                )
+            if FlextInfraUtilitiesDocsScope.excluded_doc_path(
+                scope.path,
+                path.relative_to(scope.path / c.Infra.DIR_DOCS),
             ):
                 continue
             if rel == "docs/api-reference/README.md" or rel.startswith(

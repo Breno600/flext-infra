@@ -41,7 +41,8 @@ class FlextInfraBootstrapProcessMixin:
             remove_env_keys=() if environment is None else tuple(os.environ),
         )
         if executed.failure:
-            raise ValueError(f"{command[0]} could not run: {executed.error}")
+            msg = f"{command[0]} could not run: {executed.error}"
+            raise ValueError(msg)
         return executed.value
 
     @classmethod
@@ -63,11 +64,12 @@ class FlextInfraBootstrapProcessMixin:
         if not u.Cli.process_succeeded(completed.outcome):
             sys.stderr.write(completed.stdout)
             sys.stderr.write(completed.stderr)
-            raise ValueError(
+            msg = (
                 f"{tool} exited {completed.outcome.raw_return_code}: "
                 f"{' '.join(command[1:])}\n"
-                + (completed.stdout + completed.stderr).strip(),
+                + (completed.stdout + completed.stderr).strip()
             )
+            raise ValueError(msg)
         if completed.stderr:
             sys.stderr.write(completed.stderr)
         return completed
@@ -84,7 +86,8 @@ class FlextInfraBootstrapProcessMixin:
         """
         resolved = shutil.which("git")
         if resolved is None:
-            raise ValueError("git executable is absent from PATH")
+            msg = "git executable is absent from PATH"
+            raise ValueError(msg)
         return resolved
 
     @classmethod
