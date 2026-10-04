@@ -11,7 +11,7 @@ from typing import Annotated, ClassVar
 
 from flext_core import m
 from flext_infra import c, t
-from flext_infra._models.mixins import FlextInfraModelsMixins as mm
+from flext_infra._models.mixins import FlextInfraModelsMixins
 
 
 class FlextInfraModelsCensus:
@@ -20,8 +20,8 @@ class FlextInfraModelsCensus:
     """Namespace for unified census pipeline data contracts."""
 
     class ReferenceSite(
-        mm.AbsoluteFilePathTextMixin,
-        mm.RequiredNonNegativeLineMixin,
+        FlextInfraModelsMixins.AbsoluteFilePathTextMixin,
+        FlextInfraModelsMixins.RequiredNonNegativeLineMixin,
         m.ArbitraryTypesModel,
     ):
         """Single reference site supporting a census classification."""
@@ -34,10 +34,10 @@ class FlextInfraModelsCensus:
         ] = c.Infra.DEFAULT_SRC_DIR
 
     class Object(
-        mm.AbsoluteFilePathTextMixin,
-        mm.RequiredNonNegativeLineMixin,
-        mm.ProjectNameMixin,
-        mm.NestedClassPathMixin,
+        FlextInfraModelsMixins.AbsoluteFilePathTextMixin,
+        FlextInfraModelsMixins.RequiredNonNegativeLineMixin,
+        FlextInfraModelsMixins.ProjectNameMixin,
+        FlextInfraModelsMixins.NestedClassPathMixin,
         m.ArbitraryTypesModel,
     ):
         """Single discovered Python object with tier and classification metadata."""
@@ -95,9 +95,9 @@ class FlextInfraModelsCensus:
         ] = ""
 
     class RemovalCandidate(
-        mm.AbsoluteFilePathTextMixin,
-        mm.RequiredNonNegativeLineMixin,
-        mm.ProjectNameMixin,
+        FlextInfraModelsMixins.AbsoluteFilePathTextMixin,
+        FlextInfraModelsMixins.RequiredNonNegativeLineMixin,
+        FlextInfraModelsMixins.ProjectNameMixin,
         m.ArbitraryTypesModel,
     ):
         """Explicit aggressive-removal candidate derived from census results."""
@@ -131,7 +131,7 @@ class FlextInfraModelsCensus:
             description="Script references supporting this candidate",
         )
 
-    class Violation(mm.ProjectNameMixin, m.ArbitraryTypesModel):
+    class Violation(FlextInfraModelsMixins.ProjectNameMixin, m.ArbitraryTypesModel):
         """One census analysis finding over the object inventory."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
@@ -232,7 +232,7 @@ class FlextInfraModelsCensus:
             m.Field(description="Whether all definitions have identical values"),
         ] = False
 
-    class ProjectReport(mm.ProjectNameMixin, m.ArbitraryTypesModel):
+    class ProjectReport(FlextInfraModelsMixins.ProjectNameMixin, m.ArbitraryTypesModel):
         """Per-project census summary."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)

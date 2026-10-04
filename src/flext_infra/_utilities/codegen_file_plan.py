@@ -182,6 +182,30 @@ class FlextInfraUtilitiesCodegenFilePlan:
         )
 
     @staticmethod
+    def codegen_fixed_point(
+        plans: t.SequenceOf[m.Infra.CodegenFilePlan],
+        *,
+        subject: str,
+    ) -> p.Result[bool]:
+        """Reject a re-plan that still has to change any generated destination.
+
+        Returns:
+            Success only when no plan requires an effect; otherwise the failure
+            names every residual destination.
+
+        """
+        residual = [
+            str(plan.path)
+            for plan in plans
+            if FlextInfraUtilitiesCodegenFilePlan.codegen_file_requires_effect(plan)
+        ]
+        if residual:
+            return r[bool].fail(
+                f"{subject} did not reach a fixed point: {', '.join(residual)}",
+            )
+        return r[bool].ok(value=True)
+
+    @staticmethod
     def codegen_file_drift_report(
         plans: t.SequenceOf[m.Infra.CodegenFilePlan],
         *,

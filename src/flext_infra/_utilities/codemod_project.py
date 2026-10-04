@@ -657,8 +657,10 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
     def _has_class_stem(root: Path, file_path: Path, name: str) -> bool:
         """Return whether a class name carries the project's class stem.
 
-        The stem is derived from the project name; a module of the project's
-        tests tree prefixes it with ``Tests``.
+        The prefix is the one class nesting derives for the module's owner:
+        a module of a non-public lazy root (tests, examples, scripts) carries
+        the surface-prefixed stem. Outside the tests tree the bare stem also
+        names scenario classes.
 
         Returns:
             Whether a class name carries the project's class stem.
@@ -671,9 +673,13 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         if layout is None:
             msg = f"project layout is unresolved: {root}"
             raise ValueError(msg)
-        tests = file_path.is_relative_to(root / c.Infra.DIR_TESTS)
-        prefix = f"Tests{layout.class_stem}" if tests else layout.class_stem
-        return name.startswith(prefix)
+        prefix = FlextInfraUtilitiesCodegenNamespace.project_prefix(
+            file_path,
+            project_layout=layout,
+        )
+        if file_path.is_relative_to(root / c.Infra.DIR_TESTS):
+            return name.startswith(prefix)
+        return name.startswith((prefix, layout.class_stem))
 
     @classmethod
     def _package_has_layers(cls, package: Path, layers: t.StrSequence) -> bool:

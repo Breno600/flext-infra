@@ -49,10 +49,10 @@ class FlextInfraPyreflyGate(FlextInfraGate):
         ctx: m.Infra.GateContext,
         check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Build check command.
+        """Run Pyrefly against the project config, writing its JSON report file.
 
         Returns:
-            The resulting ``t.StrSequence``.
+            The Pyrefly invocation bound to ``sys.executable``.
 
         """
         json_file = self._check_report_path(project_dir, ctx)
@@ -108,10 +108,10 @@ class FlextInfraPyreflyGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Parse check output.
+        """Read Pyrefly's freshly written JSON report file into findings.
 
         Returns:
-            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+            The run's verdict and its diagnostics or stderr failures.
 
         """
         json_file = self._check_report_path(project_dir, ctx)
@@ -139,36 +139,21 @@ class FlextInfraPyreflyGate(FlextInfraGate):
                     file=str(json_file),
                 ),
             )
-        report = validated.value
-        issues: t.MutableSequenceOf[m.Infra.Issue] = [
-            m.Infra.Issue(
-                file=diag.path,
-                line=diag.line,
-                column=diag.column,
-                code=diag.name,
-                message=diag.description,
-                severity=diag.severity,
-            )
-            for diag in report.errors
-        ]
-        issues.extend(self._checker_stderr_issues(result, project_dir))
-        if (not issues) and not u.Cli.process_succeeded(result.outcome):
-            message = (result.stderr or result.stdout).strip()
-            if not message:
-                message = (
-                    f"pyrefly exited with code {result.outcome.raw_return_code} "
-                    "without JSON diagnostics"
-                )
-            issues.append(
+        issues = self._checker_issues(
+            result,
+            project_dir,
+            tuple(
                 m.Infra.Issue(
-                    file=c.PYPROJECT_FILENAME,
-                    line=1,
-                    column=1,
-                    code="pyrefly-exec",
-                    message=message,
-                    severity=c.Infra.ERROR,
-                ),
-            )
+                    file=diag.path,
+                    line=diag.line,
+                    column=diag.column,
+                    code=diag.name,
+                    message=diag.description,
+                    severity=diag.severity,
+                )
+                for diag in validated.value.errors
+            ),
+        )
         return (
             u.Cli.process_succeeded(result.outcome)
             and not any(
