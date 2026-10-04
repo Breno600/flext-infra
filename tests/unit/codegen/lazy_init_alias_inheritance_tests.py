@@ -178,10 +178,7 @@ class TestsFlextInfraLazyInitAliasInheritance:
         generated = child_root.joinpath(c.Infra.INIT_PY).read_text(
             encoding=c.Cli.ENCODING_DEFAULT,
         )
-        entries, _refs = u.Infra.module_mapping_assignment_source(
-            generated,
-            u.Infra.lazy_imports_name_source(generated),
-        )
+        entries, _refs = u.Infra.lazy_import_mapping_source(generated)
         sources = dict(entries)
 
         tm.that(sources.get("flext_cli", ()), has="r")
@@ -225,10 +222,7 @@ class TestsFlextInfraLazyInitAliasInheritance:
         generated = child_root.joinpath(c.Infra.INIT_PY).read_text(
             encoding=c.Cli.ENCODING_DEFAULT,
         )
-        entries, _refs = u.Infra.module_mapping_assignment_source(
-            generated,
-            u.Infra.lazy_imports_name_source(generated),
-        )
+        entries, _refs = u.Infra.lazy_import_mapping_source(generated)
         sources = dict(entries)
         inherited = {name for names in sources.values() for name in names}
 

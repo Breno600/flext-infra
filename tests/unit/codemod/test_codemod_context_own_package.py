@@ -11,8 +11,8 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m, u
-from tests import u as test_u
+from flext_infra import c, m
+from tests import u
 
 
 class TestsFlextInfraCodemodContextOwnPackage:
@@ -50,7 +50,7 @@ class TestsFlextInfraCodemodContextOwnPackage:
         admitted: bool,
     ) -> None:
         """Test internal tiers are own namespaces."""
-        project = test_u.Tests.mk_project(
+        project = u.Tests.mk_project(
             tmp_path,
             "demo",
             pyproject='[project]\nname = "demo"\nversion = "0.1.0"\n',

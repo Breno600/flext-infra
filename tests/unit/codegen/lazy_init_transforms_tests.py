@@ -92,7 +92,8 @@ class TestsFlextInfraLazyInitTransforms:
 
         tm.that(result, eq=0)
         tm.that(init_content, has='"FlextDemoModel"')
-        tm.that(init_content, has='".model": ("FlextDemoModel",)')
+        entries, _refs = u.Infra.lazy_import_mapping_source(init_content)
+        tm.that(dict(entries).get(".model", ()), has="FlextDemoModel")
         for _filename, class_name in test_modules:
             tm.that(init_content, lacks=class_name)
         tm.that(init_content, lacks="_test_tmp")

@@ -12,9 +12,9 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, u
+from flext_infra import c, config
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
-from tests import u as test_u
+from tests import u
 
 
 class TestsFlextInfraCodegenMiseArtifacts:
@@ -231,7 +231,7 @@ class TestsFlextInfraCodegenMiseArtifacts:
         version: str = "latest",
     ) -> Path:
         root.mkdir(parents=True)
-        test_u.Tests.initialize_git_repo(root)
+        u.Tests.initialize_git_repo(root)
         cls._write_triple(root)
         cls._write_config(root, selector=selector, version=version)
         (root / "pyproject.toml").write_text(
@@ -281,7 +281,7 @@ class TestsFlextInfraCodegenMiseArtifacts:
         """Test full validation requires committed launchers."""
         root = tmp_path / "project"
         root.mkdir()
-        test_u.Tests.initialize_git_repo(root)
+        u.Tests.initialize_git_repo(root)
         self._write_config(root)
 
         result = FlextInfraCodegenMiseArtifacts.model_validate({
@@ -350,10 +350,10 @@ class TestsFlextInfraCodegenMiseArtifacts:
     def test_shipped_jscpd_plan_uses_only_configured_route() -> None:
         """The generated plan must contain only the typed jscpd route."""
         toolchain = config.Infra.codegen.toolchain
-        plan = test_u.Tests.toml_payload(
+        plan = u.Tests.toml_payload(
             (Path(__file__).parents[3] / ".mise.toml").read_text(encoding="utf-8"),
         )
-        tools = test_u.Tests.toml_mapping(plan["tools"])
+        tools = u.Tests.toml_mapping(plan["tools"])
 
         # jscpd declares a host-invariant version so mise writes one lock
         # entry per tool; the per-platform asset patterns were removed.

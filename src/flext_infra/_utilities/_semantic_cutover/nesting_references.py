@@ -147,7 +147,10 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
             until that class statement finishes, so the planner leaves both
             ends of an immediate suite reference at module level. A method body
             does not see the owner scope either, so there the qualified form is
-            the one that resolves when the method later runs. An annotation
+            the one that resolves when the method later runs. A class header
+            belongs to the suite around the class, so only a class body decides
+            the name; a nested model's decorator in the owner body keeps the
+            bare name of a member that moved above it. An annotation
             inside a class that is itself being nested does not resolve as a
             bare name: the undefined-name gate rejects it, including the
             class's own annotations. An annotation directly on the owner still
@@ -182,7 +185,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
                     cst.ListComp | cst.SetComp | cst.DictComp | cst.GeneratorExp,
                 ):
                     return False
-                elif isinstance(current, cst.ClassDef):
+                elif isinstance(current, cst.ClassDef) and child is current.body:
                     name = current.name.value
                     if in_annotation and name in self.definitions:
                         return False

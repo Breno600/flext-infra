@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core import build_lazy_import_map, install_lazy_exports
+from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_tests import api, d, e, h, r, td, tf, tk, tm, x
@@ -85,43 +85,49 @@ __all__: tuple[str, ...] = (
     "x",
 )
 
-_LAZY_IMPORTS = MappingProxyType(
-    build_lazy_import_map(
-        MappingProxyType({
-            ".base": ("TestsFlextInfraServiceBase", "s"),
-            ".constants": ("TestsFlextInfraConstants", "c"),
-            ".constants_scan": ("TestsFlextInfraConstantsScanMixin",),
-            ".fixtures": ("fixtures",),
-            ".integration": ("integration",),
-            ".models": ("TestsFlextInfraModels", "m"),
-            ".protocols": ("TestsFlextInfraProtocols", "p"),
-            ".refactor": ("refactor",),
-            ".typings": ("TestsFlextInfraTypes", "t"),
-            ".unit": ("unit",),
-            ".utilities": ("TestsFlextInfraUtilities", "u"),
-            ".utilities_codegen": ("TestsFlextInfraUtilitiesCodegenMixin",),
-            ".utilities_deps": ("TestsFlextInfraUtilitiesDepsMixin",),
-            ".utilities_fixture_docs": ("TestsFlextInfraUtilitiesDocsFixtureMixin",),
-            ".utilities_fixture_project": (
-                "TestsFlextInfraUtilitiesProjectFixtureMixin",
-            ),
-            ".utilities_fixture_tooling": (
-                "TestsFlextInfraUtilitiesToolingFixtureMixin",
-            ),
-            ".utilities_fixture_workspace": (
-                "TestsFlextInfraUtilitiesWorkspaceFixtureMixin",
-            ),
-            ".utilities_gates": ("TestsFlextInfraUtilitiesGatesMixin",),
-            ".utilities_git": ("TestsFlextInfraUtilitiesGitMixin",),
-            ".utilities_promoted": ("TestsFlextInfraUtilitiesPromotedMixin",),
-            ".utilities_release": ("TestsFlextInfraUtilitiesReleaseMixin",),
-            ".utilities_toml": ("TestsFlextInfraUtilitiesTomlMixin",),
-            ".utilities_workspace_env": ("TestsFlextInfraUtilitiesWorkspaceEnvMixin",),
-            "flext_tests": ("api", "d", "e", "h", "r", "td", "tf", "tk", "tm", "x"),
-        }),
-        alias_groups=MappingProxyType({}),
-        sort_keys=False,
-    ),
+install_lazy_exports(
+    __name__,
+    globals(),
+    MappingProxyType({
+        "TestsFlextInfraConstants": ".constants",
+        "TestsFlextInfraConstantsScanMixin": ".constants_scan",
+        "TestsFlextInfraModels": ".models",
+        "TestsFlextInfraProtocols": ".protocols",
+        "TestsFlextInfraServiceBase": ".base",
+        "TestsFlextInfraTypes": ".typings",
+        "TestsFlextInfraUtilities": ".utilities",
+        "TestsFlextInfraUtilitiesCodegenMixin": ".utilities_codegen",
+        "TestsFlextInfraUtilitiesDepsMixin": ".utilities_deps",
+        "TestsFlextInfraUtilitiesDocsFixtureMixin": ".utilities_fixture_docs",
+        "TestsFlextInfraUtilitiesGatesMixin": ".utilities_gates",
+        "TestsFlextInfraUtilitiesGitMixin": ".utilities_git",
+        "TestsFlextInfraUtilitiesProjectFixtureMixin": ".utilities_fixture_project",
+        "TestsFlextInfraUtilitiesPromotedMixin": ".utilities_promoted",
+        "TestsFlextInfraUtilitiesReleaseMixin": ".utilities_release",
+        "TestsFlextInfraUtilitiesTomlMixin": ".utilities_toml",
+        "TestsFlextInfraUtilitiesToolingFixtureMixin": ".utilities_fixture_tooling",
+        "TestsFlextInfraUtilitiesWorkspaceEnvMixin": ".utilities_workspace_env",
+        "TestsFlextInfraUtilitiesWorkspaceFixtureMixin": ".utilities_fixture_workspace",
+        "api": "flext_tests",
+        "c": ".constants",
+        "d": "flext_tests",
+        "e": "flext_tests",
+        "fixtures": ".fixtures",
+        "h": "flext_tests",
+        "integration": ".integration",
+        "m": ".models",
+        "p": ".protocols",
+        "r": "flext_tests",
+        "refactor": ".refactor",
+        "s": ".base",
+        "t": ".typings",
+        "td": "flext_tests",
+        "tf": "flext_tests",
+        "tk": "flext_tests",
+        "tm": "flext_tests",
+        "u": ".utilities",
+        "unit": ".unit",
+        "x": "flext_tests",
+    }),
+    public_exports=__all__,
 )
-
-install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

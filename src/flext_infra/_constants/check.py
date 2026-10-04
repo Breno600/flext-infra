@@ -63,12 +63,12 @@ class FlextInfraConstantsCheck:
 
     @unique
     class GateKind(StrEnum):
-        """Who owns a gate's rule catalog, which decides where the gate blocks.
+        """Who owns a gate's rule catalog.
 
-        Only ``EXTERNAL`` gates run in the fast contexts (CI and pre-commit):
-        an external tool applying its own per-file rule catalog. Whole-program
-        type checkers and the validators whose rules this package owns run
-        locally and at pre-push, where they block.
+        ``EXTERNAL`` is an external tool applying its own per-file rule
+        catalog, ``TYPE_CHECKER`` a whole-program type checker, and ``INFRA``
+        a validator whose rules this package owns. The CI partition is
+        declared by ``make.ci.local_check_gates``, not by the kind.
         """
 
         EXTERNAL = "external"

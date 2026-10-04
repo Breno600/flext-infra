@@ -246,8 +246,9 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         base = ".".join(current_parts[: max(base_count, 0)])
         return ".".join(part for part in (base, imported_module) if part)
 
-    @staticmethod
+    @classmethod
     def imported_symbol_binding_source(
+        cls,
         source: str,
         *,
         current_module: str,
@@ -272,8 +273,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             for alias in node.names:
                 if (alias.asname or alias.name) != symbol_name:
                     continue
-                relative_module_name = FlextInfraUtilitiesRopeAnalysisSourceScan.relative_import_module_name
-                module_name = relative_module_name(
+                module_name = cls.relative_import_module_name(
                     current_module=current_module,
                     imported_module=node.module or "",
                     level=node.level,
@@ -383,26 +383,52 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             return (values, "")
         return ((), FlextInfraUtilitiesRopeAnalysisAstHelpers.name_of(public_exports))
 
-    @staticmethod
-    def lazy_imports_name_source(source: str) -> str:
-        """Return the local symbol passed as the lazy import map.
+    @classmethod
+    def lazy_import_mapping_source(
+        cls,
+        source: str,
+    ) -> t.Pair[t.VariadicTuple[t.Pair[str, t.StrSequence]], t.StrSequence]:
+        """Read elected installer targets, including immutable inline mappings.
 
         Returns:
-            The local symbol passed as the lazy import map.
+            Target modules and their export names, plus referenced map symbols.
 
         """
-        scan = FlextInfraUtilitiesRopeAnalysisSourceScan
-        call = scan._first_call(source, "install_lazy_exports")
+        call = cls._first_call(source, "install_lazy_exports")
         if call is None:
-            return ""
-        if len(call.args) > scan._INSTALL_LAZY_IMPORTS_ARG_INDEX:
-            return FlextInfraUtilitiesRopeAnalysisAstHelpers.name_of(
-                call.args[scan._INSTALL_LAZY_IMPORTS_ARG_INDEX],
-            )
-        keyword_value = scan._keyword_value(call, "lazy_imports")
-        if keyword_value is None:
-            return ""
-        return FlextInfraUtilitiesRopeAnalysisAstHelpers.name_of(keyword_value)
+            return ((), ())
+        value = (
+            call.args[cls._INSTALL_LAZY_IMPORTS_ARG_INDEX]
+            if len(call.args) > cls._INSTALL_LAZY_IMPORTS_ARG_INDEX
+            else cls._keyword_value(call, "lazy_imports")
+        )
+        match value:
+            case ast.Name(id=reference):
+                return ((), (reference,))
+            case ast.Call(func=ast.Name(id="MappingProxyType"), args=[mapping]):
+                value = mapping
+        if not isinstance(value, ast.Dict):
+            return cls.mapping_entries_refs(value)
+        targets: MutableMapping[str, list[str]] = {}
+        for key, target in zip(value.keys, value.values, strict=True):
+            match key, target:
+                case (
+                    ast.Constant(value=str(name)),
+                    ast.Constant(value=str(module)),
+                ) | (
+                    ast.Constant(value=str(name)),
+                    ast.Tuple(
+                        elts=[
+                            ast.Constant(value=str(module)),
+                            ast.Constant(value=str()),
+                        ]
+                    ),
+                ):
+                    targets.setdefault(module, []).append(name)
+        return (
+            tuple((module, tuple(targets[module])) for module in sorted(targets)),
+            (),
+        )
 
     @staticmethod
     def export_target_modules_source(

@@ -485,12 +485,11 @@ endef
 
 .PHONY: $(PUBLIC_VERBS) $(addprefix _builtin-,$(PUBLIC_VERBS))
 .PHONY: _builtin_gen_init _builtin_gen_all
-$(filter-out help clean upg,$(PUBLIC_VERBS)): _builtin_require_mise_pin
 
 {# Provisioning creates the physical environment. Activation producers use that
    existing environment to regenerate activation inputs before consuming them.
    All other operational verbs activate before their handlers and hooks. -#}
-{% for verb in profile.verbs + (extra_verbs | list) if verb.name not in ("setup", "upg") %}
+{% macro public_verb_entry(verb) -%}
 {% if verb.produces_activation %}
 # The pre hook and selected producer run once before activation. The producer
 # owns the complete generation transaction; activation adds no second writer.
@@ -512,6 +511,16 @@ _activated-{{ verb.name }}: _builtin_require_environment
 {% endif %}
 	$(call RUN_PUBLIC,{{ verb.name }})
 {% endif %}
+{%- endmacro -%}
+{% macro verb_help_line(verb) %}@printf '  %-16s %s\n' '{{ verb.name }}' '{{ verb.description | replace("\n", " ") | trim | replace("$", "$$") | replace("'", "'\"'\"'") }}'{% endmacro -%}
+# OPTIONS=Y (or HELP=Y) displays a built-in verb's contract without effects:
+# no prerequisite, hook or handler of that verb runs. A script verb keeps its
+# entry, and the promoted dispatcher renders its contract per WHAT.
+VERB_CONTRACT := $(filter {{ ((contract_env_values | list) + (contract_env_values | map("lower") | list) + (contract_env_values | map("capitalize") | list)) | unique(case_sensitive=true) | join(" ") }},$(OPTIONS) $(HELP))
+ifeq ($(VERB_CONTRACT),)
+$(filter-out help clean upg,$(BUILTIN_VERBS)): _builtin_require_mise_pin
+{% for verb in profile.verbs if verb.name not in ("setup", "upg") %}
+{{ public_verb_entry(verb) }}
 {% endfor %}
 
 # `setup` keeps its own recipe (it must not require the environment it is about
@@ -534,6 +543,17 @@ upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle
 upg: TOOL_BOOTSTRAP_RESOLVE := 1
 upg: TOOL_BOOTSTRAP_LOCK := 1
 upg: _builtin_require_runtime_root _bootstrap_setup_tools
+else
+{% for verb in profile.verbs %}
+{{ verb.name }}:
+	{{ verb_help_line(verb) }}
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make {{ verb.name }} to execute it.'
+{% endfor %}
+endif
+$(filter-out help clean upg,$(SCRIPT_VERBS)): _builtin_require_mise_pin
+{% for verb in extra_verbs if verb.name not in ("setup", "upg") %}
+{{ public_verb_entry(verb) }}
+{% endfor %}
 
 # Only the runtime root resolves the Mise release. An attached member's pin and
 # launchers are projections of that root, published by the root's `make gen`.
@@ -564,7 +584,7 @@ _setup_activated:
 _builtin-help:
 	@printf '%s\n' '{{ dist }} [{{ make_profile }}]' '';
 {% for verb in profile.verbs + (extra_verbs | list) %}
-	@printf '  %-16s %s\n' '{{ verb.name }}' '{{ verb.description | replace("\n", " ") | trim | replace("$", "$$") | replace("'", "'\"'\"'") }}';
+	{{ verb_help_line(verb) }};
 {% endfor %}
 
 # A project owns the sources declared by its manifest. The generated setup
