@@ -6,7 +6,8 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from collections.abc import MutableMapping
+import ast
+from collections.abc import MutableMapping, Sequence
 from pathlib import Path
 
 from flext_infra import c, config, m, p, t
@@ -214,6 +215,15 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
                 return 0
             if changes:
                 candidate_rewrites.setdefault(consumer, []).extend(changes)
+        if cls._has_uncovered_wrapper_member(
+            project,
+            sources,
+            flatten,
+            candidate_rewrites,
+        ):
+            # A caller still names the wrapper. Flattening would drop that
+            # name, so the wrapper stays a real namespace.
+            return 0
         candidate_rewrites.setdefault(path, []).extend(
             FlextInfraUtilitiesRopeRuntimeRefactors.unwrap_class_rewrites(
                 sources[path],
@@ -229,6 +239,55 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         for consumer, consumer_rewrites in candidate_rewrites.items():
             rewrites.setdefault(consumer, []).extend(consumer_rewrites)
         return 1
+
+    @classmethod
+    def _has_uncovered_wrapper_member(
+        cls,
+        project: p.Infra.RopeProject,
+        sources: t.MappingKV[Path, str],
+        flatten: m.Infra.FamilyWrapperFlatten,
+        rewrites: t.MappingKV[Path, Sequence[m.Infra.SourceRewrite]],
+    ) -> bool:
+        """Return whether a resolved wrapper member has no planned rewrite.
+
+        Returns:
+            Whether a resolved wrapper member has no planned rewrite.
+
+        """
+        runtime = FlextInfraUtilitiesRopeRuntimeModules
+        root = Path(project.root.real_path)
+        for path, source in sources.items():
+            if source.startswith(c.Infra.AUTOGEN_HEADERS):
+                continue
+            resource = project.get_resource(path.relative_to(root).as_posix())
+            module = project.get_pymodule(resource)
+            covered = rewrites.get(path, ())
+            for node in ast.walk(ast.parse(source)):
+                if (
+                    not isinstance(node, ast.Attribute)
+                    or node.attr not in flatten.names
+                ):
+                    continue
+                start, end = cls._expression_range(source, node)
+                if any(edit.start <= start and end <= edit.end for edit in covered):
+                    continue
+                scope = runtime.scope_at(module, start)
+                resolved = runtime.resolve_symbol(scope, node.value)
+                if runtime.same_name(flatten.wrapper, resolved):
+                    return True
+                # An unresolved attribute that still spells the wrapper is a
+                # caller the occurrence finder did not bind (a lazy facade).
+                # Flattening would drop that name.
+                value = node.value
+                spells_wrapper = (
+                    isinstance(value, ast.Name) and value.id == flatten.wrapper_name
+                ) or (
+                    isinstance(value, ast.Attribute)
+                    and value.attr == flatten.wrapper_name
+                )
+                if resolved is None and spells_wrapper:
+                    return True
+        return False
 
 
 __all__: list[str] = ["FlextInfraUtilitiesSemanticFamilyFlatten"]

@@ -21,41 +21,9 @@ from flext_infra._constants import (
     FlextInfraConstantsMake,
 )
 from flext_infra._models._config.contract import FlextInfraConfigModelsContract
-
-
-class ExternalCacheDirectorySpec(FlextInfraConfigModelsContract.ConfigContract):
-    """External-cache path pair every tool cache spec owns identically."""
-
-    home_cache_directory: Annotated[
-        Path,
-        m.Field(description="Standard cache directory below the user home"),
-    ]
-    external_storage_directory: Annotated[
-        Path,
-        m.Field(description="FLEXT-owned directory below the cache home"),
-    ]
-
-    @u.model_validator(mode="after")
-    def require_relative_cache_directories(self) -> Self:
-        """Keep both cache directories normalized and repository-relative.
-
-        Returns:
-            The resulting ``Self``.
-
-        Raises:
-            ValueError: If cache.
-
-        """
-        for name, path in (
-            ("home_cache_directory", self.home_cache_directory),
-            ("external_storage_directory", self.external_storage_directory),
-        ):
-            if path.is_absolute() or any(
-                part in {"", ".", ".."} for part in path.parts
-            ):
-                msg = f"cache {name} must be normalized and relative"
-                raise ValueError(msg)
-        return self
+from flext_infra._models._config.external_cache import (
+    FlextInfraExternalCacheDirectorySpec,
+)
 
 
 def _shared_mypy_cache_spec() -> FlextInfraConfigModelsMake.MypyCacheSpec:
@@ -413,7 +381,7 @@ class FlextInfraConfigModelsMake:
             return self
 
     class MypyCacheSpec(
-        ExternalCacheDirectorySpec,
+        FlextInfraExternalCacheDirectorySpec,
         FlextInfraConfigModelsContract.ConfigContract,
     ):
         """Project-keyed shared Mypy cache: one analysis per project, reused across relocks."""
@@ -691,7 +659,7 @@ class FlextInfraConfigModelsMake:
                 return self
 
         class TestmonCacheSpec(
-            ExternalCacheDirectorySpec,
+            FlextInfraExternalCacheDirectorySpec,
             FlextInfraConfigModelsContract.ConfigContract,
         ):
             """Persistent pytest-testmon database and runner paths."""
@@ -761,7 +729,7 @@ class FlextInfraConfigModelsMake:
                 return self
 
         class CodemodRulesCacheSpec(
-            ExternalCacheDirectorySpec,
+            FlextInfraExternalCacheDirectorySpec,
             FlextInfraConfigModelsContract.ConfigContract,
         ):
             """Content-keyed parsed codemod rule catalogs shared by every process."""
@@ -776,7 +744,7 @@ class FlextInfraConfigModelsMake:
             ]
 
         class MypyCacheSpec(
-            ExternalCacheDirectorySpec,
+            FlextInfraExternalCacheDirectorySpec,
             FlextInfraConfigModelsContract.ConfigContract,
         ):
             """Project-keyed shared Mypy cache: one analysis per project,

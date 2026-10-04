@@ -195,6 +195,84 @@ class TestsFlextInfraLintRecipes:
             ),
         )
 
+    def test_summary_docstring_expands_an_inline_protocol_body(self) -> None:
+        """An inline protocol stub is legal Python and receives a summary."""
+        source = (
+            "class Sample:\n"
+            '    """Define the sample."""\n'
+            "\n"
+            "    def __call__(self) -> int: ...\n"
+        )
+
+        repaired = self._apply(
+            source,
+            ("undocumented-public-method", 4, "Missing docstring in public method"),
+        )
+
+        tm.that(
+            repaired,
+            eq=(
+                "class Sample:\n"
+                '    """Define the sample."""\n'
+                "\n"
+                "    def __call__(self) -> int:\n"
+                '        """Provide ``__call__``."""\n'
+                "        ...\n"
+            ),
+        )
+        ast.parse(repaired)
+
+    def test_summary_docstring_expands_a_wrapped_signature_stub(self) -> None:
+        """A stub whose suite shares the signature's last line expands there."""
+        source = (
+            "class Sample:\n"
+            "    def __call__[T](\n"
+            "        self,\n"
+            "        operation: Callable[[], T],\n"
+            "    ) -> T: ...\n"
+        )
+
+        repaired = self._apply(
+            source,
+            ("undocumented-public-method", 2, "Missing docstring in public method"),
+        )
+
+        tm.that(
+            repaired,
+            eq=(
+                "class Sample:\n"
+                "    def __call__[T](\n"
+                "        self,\n"
+                "        operation: Callable[[], T],\n"
+                "    ) -> T:\n"
+                '        """Provide ``__call__``."""\n'
+                "        ...\n"
+            ),
+        )
+        ast.parse(repaired)
+
+    def test_summary_docstring_expands_an_inline_body_under_its_class(self) -> None:
+        """A class summary stays before the method its inline body expands into."""
+        source = "class Sample:\n    def __call__(self) -> int: ...\n"
+
+        repaired = self._apply(
+            source,
+            ("undocumented-public-class", 1, "Missing docstring in public class"),
+            ("undocumented-public-method", 2, "Missing docstring in public method"),
+        )
+
+        tm.that(
+            repaired,
+            eq=(
+                "class Sample:\n"
+                '    """Define ``Sample``."""\n'
+                "    def __call__(self) -> int:\n"
+                '        """Provide ``__call__``."""\n'
+                "        ...\n"
+            ),
+        )
+        ast.parse(repaired)
+
     def test_copyright_notice_follows_the_module_summary(
         self,
         tmp_path: Path,
@@ -213,8 +291,11 @@ class TestsFlextInfraLintRecipes:
             path=module,
         )
 
-        notice = u.Infra.copyright_notice(tmp_path)
+        notice = u.Infra.copyright_notice(tmp_path, module=module)
+        sibling = u.Infra.copyright_notice(tmp_path, module=tmp_path / "other.py")
         tm.that(notice, has="Sample Author")
+        tm.that(notice, has="\nsample\nSPDX-License-Identifier:")
+        tm.that(sibling, has="\nother\nSPDX-License-Identifier:")
         tm.that(repaired, eq=f'"""Sample module.\n\n{notice}\n"""\n\nVALUE = 1\n')
 
     def test_a_module_without_a_copyright_finding_needs_no_author(

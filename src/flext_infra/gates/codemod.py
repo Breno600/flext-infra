@@ -159,7 +159,7 @@ class FlextInfraCodemodGate(FlextInfraGate):
             # matching error count and the exact terminal diagnostic below.
             # Additional native diagnostics make that scan incomplete.
             report, expected_stderr = self._validated_scan_report(scan, ruleset)
-            if scan.stderr != expected_stderr:
+            if scan.stderr.strip() != expected_stderr:
                 # ast-grep can continue after a traversal error and still return
                 # DiagnosticError because another file has an error match.
                 # Only the complete terminal diagnostic proves a clean walk.
@@ -240,9 +240,14 @@ class FlextInfraCodemodGate(FlextInfraGate):
         if any(finding.rule_id not in ruleset.rule_ids for finding in report.root):
             msg = f"{ruleset.provider}: ast-grep reported an unelected rule"
             raise ValueError(msg)
-        receipt = c.Infra.AST_GREP_ERROR_FINDING_RECEIPT.format(count=error_count)
-        help_line = c.Infra.AST_GREP_ERROR_FINDING_HELP
-        expected_stderr = f"{receipt}\n{help_line}\n\n" if error_count else ""
+        expected_stderr = (
+            "\n".join((
+                c.Infra.AST_GREP_ERROR_FINDING_RECEIPT.format(count=error_count),
+                c.Infra.AST_GREP_ERROR_FINDING_HELP,
+            ))
+            if error_count
+            else ""
+        )
         return report, expected_stderr
 
     @staticmethod
