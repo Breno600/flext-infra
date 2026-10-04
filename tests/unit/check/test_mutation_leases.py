@@ -29,9 +29,7 @@ class TestsFlextInfraMutationLeases:
         git_owned: bool,
     ) -> None:
         """Test format waits for scope writer and does not apply lint."""
-        root = (
-            u.Tests.git_repository(tmp_path) if git_owned else tmp_path / "files"
-        )
+        root = u.Tests.git_repository(tmp_path) if git_owned else tmp_path / "files"
         root.mkdir(exist_ok=True)
         (root / "pyproject.toml").write_text("[tool.ruff]\n", encoding="utf-8")
         source = root / "src"
