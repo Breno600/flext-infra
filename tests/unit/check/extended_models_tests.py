@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 from flext_tests import tm
 
-from tests import m, t
+from tests import m, t, u
 
 
 class TestsFlextInfraModels:
@@ -33,19 +33,51 @@ class TestsFlextInfraModels:
             start_line=7,
             start_column=2,
         )
-        result = m.Infra.SarifResult(
-            rule_id="similar-code",
-            level="error",
-            message="Native comparison",
-            locations=[primary],
-            related_locations=(related, primary),
-        )
+        result = m.Infra.SarifResult.model_validate({
+            "rule_id": "similar-code",
+            "level": "error",
+            "message": "Native comparison",
+            "locations": [primary],
+            "related_locations": (related, primary),
+        })
         published = result.model_dump_json()
         restored = m.Infra.SarifResult.model_validate_json(published)
         tm.that(restored, eq=result)
         tm.that("endLine" in primary.model_dump_json(), eq=end is not None)
         tm.that("endColumn" in primary.model_dump_json(), eq=end is not None)
         tm.that(published, has="relatedLocations")
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        "region",
+        [None, {}, {"startLine": 7}, {"startLine": 0, "startColumn": 0}],
+    )
+    def test_native_partial_sarif_spans_preserve_missing_coordinates(
+        region: t.JsonMapping | None,
+    ) -> None:
+        """Partial primary and related SARIF spans retain absence and zero."""
+        physical: t.JsonDict = {"artifactLocation": {"uri": "src/partial.py"}}
+        if region is not None:
+            physical["region"] = dict(region)
+        native: t.JsonDict = {
+            "ruleId": "similar-code",
+            "level": "error",
+            "message": {"text": "Partial native comparison"},
+            "locations": [{"physicalLocation": physical}],
+            "relatedLocations": [{"physicalLocation": physical}],
+        }
+        payload = tm.ok(u.Cli.json_dumps(native))
+        result = m.Infra.SarifResult.model_validate_json(payload)
+        emitted = u.Cli.json_as_mapping(
+            tm.ok(u.Cli.json_parse(result.model_dump_json())),
+        )
+        for key in ("locations", "relatedLocations"):
+            location = u.Cli.json_deep_mapping_list(emitted, key)[0]
+            published_region = u.Cli.json_deep_mapping(
+                u.Cli.json_deep_mapping(location, "physicalLocation"),
+                "region",
+            )
+            tm.that(published_region, eq=region or {})
 
     @staticmethod
     def _sample_issues() -> t.Triple[m.Infra.Issue, m.Infra.Issue, m.Infra.Issue]:

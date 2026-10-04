@@ -87,11 +87,11 @@ class FlextInfraWorkspaceCheckReportsMixin:
                     rule_id = issue.code or gate
                     rules_by_id.setdefault(
                         rule_id,
-                        m.Infra.SarifRule(
-                            id=rule_id,
-                            short_description=f"{tool_name} ({gate}) issue",
-                            help_uri=tool_url,
-                        ),
+                        m.Infra.SarifRule.model_validate({
+                            "id": rule_id,
+                            "short_description": f"{tool_name} ({gate}) issue",
+                            "help_uri": tool_url,
+                        }),
                     )
                     sarif_results.append(cls._sarif_issue(issue, rule_id))
         return m.Infra.SarifReport(
@@ -118,11 +118,11 @@ class FlextInfraWorkspaceCheckReportsMixin:
             if issue.severity.lower() == c.Infra.SeverityLevel.WARNING
             else "error"
         )
-        return m.Infra.SarifResult(
-            rule_id=rule_id,
-            level=level,
-            message=issue.message,
-            locations=list(issue.locations)
+        return m.Infra.SarifResult.model_validate({
+            "rule_id": rule_id,
+            "level": level,
+            "message": issue.message,
+            "locations": list(issue.locations)
             if issue.locations
             else [
                 m.Infra.SarifLocation(
@@ -131,8 +131,8 @@ class FlextInfraWorkspaceCheckReportsMixin:
                     start_column=issue.column,
                 ),
             ],
-            related_locations=issue.related_locations,
-        )
+            "related_locations": issue.related_locations,
+        })
 
     @classmethod
     def _write_reports_and_summary(

@@ -247,8 +247,9 @@ finding, including rules that qlty also classifies as smells. An empty or
 malformed qlty SARIF response is a failed scan, not a zero-finding receipt.
 Native primary source spans and all `relatedLocations` pass through the typed issue
 and SARIF report contracts without dropping comparison locations outside the primary
-project. Optional end coordinates are emitted only when the scanner supplies them;
-point-only diagnostics from other gates remain point-only. The Markdown summary still
+project. Coordinates are emitted only when the scanner supplies them, including explicit
+zeros; line-only and regionless native locations do not acquire invented coordinates.
+Point-only diagnostics from other gates remain point-only. The Markdown summary still
 uses the primary location, while the SARIF artifact carries the comparison evidence.
 
 ## Bounded Mypy failure status

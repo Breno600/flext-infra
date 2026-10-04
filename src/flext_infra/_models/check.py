@@ -145,11 +145,13 @@ class FlextInfraModelsCheck:
             validation_alias=m.AliasPath("physicalLocation", "artifactLocation", "uri"),
             description="Artifact URI",
         )
-        start_line: int = m.Field(
+        start_line: int | None = m.Field(
+            None,
             validation_alias=m.AliasPath("physicalLocation", "region", "startLine"),
             description="Start line (1-based)",
         )
-        start_column: int = m.Field(
+        start_column: int | None = m.Field(
+            None,
             validation_alias=m.AliasPath("physicalLocation", "region", "startColumn"),
             description="Native start column",
         )
@@ -166,7 +168,9 @@ class FlextInfraModelsCheck:
         uri_base_id: str = m.Field(
             "%SRCROOT%",
             validation_alias=m.AliasPath(
-                "physicalLocation", "artifactLocation", "uriBaseId",
+                "physicalLocation",
+                "artifactLocation",
+                "uriBaseId",
             ),
             description="URI base identifier",
             validate_default=True,
@@ -179,10 +183,11 @@ class FlextInfraModelsCheck:
             Returns:
                 The resulting ``t.JsonMapping``.
             """
-            region: t.JsonDict = {
-                "startLine": self.start_line,
-                "startColumn": self.start_column,
-            }
+            region: t.JsonDict = {}
+            if self.start_line is not None:
+                region["startLine"] = self.start_line
+            if self.start_column is not None:
+                region["startColumn"] = self.start_column
             if self.end_line is not None:
                 region["endLine"] = self.end_line
             if self.end_column is not None:

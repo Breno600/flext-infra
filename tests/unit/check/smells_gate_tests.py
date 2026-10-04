@@ -15,7 +15,7 @@ from flext_infra import c
 from flext_infra.check.gate_registry import FlextInfraGateRegistry
 from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 from flext_infra.gates.smells import FlextInfraSmellsGate
-from tests import m, u
+from tests import m, t, u
 
 
 @pytest.fixture
@@ -38,6 +38,45 @@ def smells_project(tmp_path: Path) -> Path:
 
 class TestsFlextInfraSmellsGate:
     """Exercise observable gate behavior with the real setup-provisioned tool."""
+
+    @staticmethod
+    def _assert_native_span(original: t.JsonMapping, retained: t.JsonMapping) -> None:
+        """Compare raw protocol coordinates without the production span parser."""
+        original_physical = u.Cli.json_deep_mapping(original, "physicalLocation")
+        retained_physical = u.Cli.json_deep_mapping(retained, "physicalLocation")
+        tm.that(
+            u.Cli.json_pick_str(
+                u.Cli.json_deep_mapping(retained_physical, "artifactLocation"),
+                "uri",
+            ),
+            eq=u.Cli.json_pick_str(
+                u.Cli.json_deep_mapping(original_physical, "artifactLocation"),
+                "uri",
+            ),
+        )
+        original_region = u.Cli.json_deep_mapping(original_physical, "region")
+        retained_region = u.Cli.json_deep_mapping(retained_physical, "region")
+        for coordinate in ("startLine", "startColumn", "endLine", "endColumn"):
+            tm.that(coordinate in retained_region, eq=coordinate in original_region)
+            tm.that(retained_region.get(coordinate), eq=original_region.get(coordinate))
+
+    @classmethod
+    def _assert_native_result(
+        cls,
+        original: t.JsonMapping,
+        retained: t.JsonMapping,
+    ) -> None:
+        """Retain every primary and comparison location in native order."""
+        for key in ("locations", "relatedLocations"):
+            native_locations = u.Cli.json_deep_mapping_list(original, key)
+            emitted_locations = u.Cli.json_deep_mapping_list(retained, key)
+            tm.that(len(emitted_locations), eq=len(native_locations))
+            for observed, emitted in zip(
+                native_locations,
+                emitted_locations,
+                strict=True,
+            ):
+                cls._assert_native_span(observed, emitted)
 
     @staticmethod
     def _ctx(root: Path) -> m.Infra.GateContext:
@@ -173,35 +212,32 @@ class TestsFlextInfraSmellsGate:
         )
         execution = projects[0].gates[c.Infra.SMELLS]
         native = u.Cli.json_as_mapping(tm.ok(u.Cli.json_parse(execution.raw_output)))
-        report = m.Infra.SarifReport.model_validate_json(
-            (reports_dir / c.Infra.CHECK_REPORT_SARIF_FILENAME).read_text(
-                encoding=c.Cli.ENCODING_DEFAULT,
-            ),
+        report_text = (reports_dir / c.Infra.CHECK_REPORT_SARIF_FILENAME).read_text(
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
+        published = u.Cli.json_as_mapping(tm.ok(u.Cli.json_parse(report_text)))
         native_results = tuple(
             result
             for run in u.Cli.json_deep_mapping_list(native, "runs")
             for result in u.Cli.json_deep_mapping_list(run, "results")
         )
-        report_results = tuple(result for run in report.runs for result in run.results)
+        report_results = tuple(
+            result
+            for run in u.Cli.json_deep_mapping_list(published, "runs")
+            for result in u.Cli.json_deep_mapping_list(run, "results")
+        )
+        tm.that(bool(native_results), eq=True)
+        tm.that(
+            any(
+                u.Cli.json_deep_mapping_list(result, "relatedLocations")
+                for result in native_results
+            ),
+            eq=True,
+        )
         tm.that(len(report_results), eq=len(native_results))
         tm.that(execution.finding_count, eq=len(native_results))
-        for observed, published in zip(native_results, report_results, strict=True):
-            tm.that(
-                published.locations,
-                eq=[
-                    m.Infra.SarifLocation.model_validate(location)
-                    for location in u.Cli.json_deep_mapping_list(observed, "locations")
-                ],
-            )
-            tm.that(
-                published.related_locations,
-                eq=tuple(
-                    m.Infra.SarifLocation.model_validate(location)
-                    for location in u.Cli.json_deep_mapping_list(
-                        observed, "relatedLocations",
-                    )
-                ),
-            )
+        for observed, emitted in zip(native_results, report_results, strict=True):
+            self._assert_native_result(observed, emitted)
+        report = m.Infra.SarifReport.model_validate_json(report_text)
         round_trip = m.Infra.SarifReport.model_validate_json(report.model_dump_json())
         tm.that(round_trip, eq=report)
