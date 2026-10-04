@@ -131,8 +131,10 @@ class TestsFlextInfraApplyRenames:
                 (
                     sys.executable,
                     "-c",
-                    "import consumer; print(consumer.__doc__); "
-                    "print(consumer.read.__doc__)",
+                    (
+                        "import consumer; print(consumer.__doc__); "
+                        "print(consumer.read.__doc__)"
+                    ),
                 ),
                 cwd=mod_workspace,
             ),

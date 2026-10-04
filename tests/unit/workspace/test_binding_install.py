@@ -71,8 +71,10 @@ class TestsFlextInfraBindingInstall:
             (
                 supplier,
                 "binding-candidate",
-                "\n[project.optional-dependencies]\n"
-                f'feature = ["binding-extra @ {extra.as_uri()}"]\n',
+                (
+                    "\n[project.optional-dependencies]\n"
+                    f'feature = ["binding-extra @ {extra.as_uri()}"]\n'
+                ),
             ),
         ):
             (root / c.PYPROJECT_FILENAME).write_text(
@@ -173,8 +175,10 @@ class TestsFlextInfraBindingInstall:
             u.Cli.run((
                 str(python),
                 "-c",
-                "import binding_candidate, binding_extra; "
-                "print(binding_candidate.VALUE, binding_extra.VALUE)",
+                (
+                    "import binding_candidate, binding_extra; "
+                    "print(binding_candidate.VALUE, binding_extra.VALUE)"
+                ),
             )),
         )
         tm.that(installed.stdout.strip(), eq="installed installed")
