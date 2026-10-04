@@ -15,6 +15,7 @@ from flext_cli import m
 from flext_infra import t
 from flext_infra._constants import (
     FlextInfraConstantsCodegenProject,
+    FlextInfraConstantsPromoted,
     FlextInfraConstantsWorkspace,
 )
 from flext_infra._models._config.beads import FlextInfraConfigModelsBeads
@@ -73,6 +74,10 @@ class FlextInfraConfigModelsContexts:
                 description="Declared sibling directory for linked worktree environments",
             ),
         ]
+        contract_env_values: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(description="OPTIONS or HELP values that display a verb contract"),
+        ] = tuple(sorted(FlextInfraConstantsPromoted.PROMOTED_ENV_ENABLED_VALUES))
 
     class MakefileRenderSpec(MakeCommandContext):
         """Field-only render input for an existing repository Makefile."""
