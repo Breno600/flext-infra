@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, main as infra_main
+from flext_infra import c, main
 from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 from tests import t, u
 
@@ -219,8 +219,8 @@ class TestsFlextInfraModRuleFixtureSnapshots:
         snapshot = self._snapshot(mod_workspace)
         route = ["refactor", "mod-snapshots", "--repository-root", str(mod_workspace)]
 
-        tm.that(infra_main(route), ne=0)
+        tm.that(main(route), ne=0)
         tm.that(snapshot.exists(), eq=False)
-        tm.that(infra_main([*route, "--apply"]), eq=0)
+        tm.that(main([*route, "--apply"]), eq=0)
         tm.that(snapshot.exists(), eq=True)
-        tm.that(infra_main(route), eq=0)
+        tm.that(main(route), eq=0)
