@@ -14,11 +14,12 @@ from flext_core import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra._typings.adapters import FlextInfraTypesAdapters
-    from flext_infra._typings.base import FlextInfraTypesBase
+    from flext_infra._typings.base import CliResultValue, FlextInfraTypesBase
     from flext_infra._typings.rope import FlextInfraTypesRope
 
 
 __all__: tuple[str, ...] = (
+    "CliResultValue",
     "FlextInfraTypesAdapters",
     "FlextInfraTypesBase",
     "FlextInfraTypesRope",
@@ -28,7 +29,7 @@ _LAZY_IMPORTS = MappingProxyType(
     build_lazy_import_map(
         MappingProxyType({
             ".adapters": ("FlextInfraTypesAdapters",),
-            ".base": ("FlextInfraTypesBase",),
+            ".base": ("CliResultValue", "FlextInfraTypesBase"),
             ".rope": ("FlextInfraTypesRope",),
         }),
         alias_groups=MappingProxyType({}),
