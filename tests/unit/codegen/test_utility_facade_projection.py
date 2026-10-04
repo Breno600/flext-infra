@@ -275,3 +275,55 @@ class TestsFlextInfraUtilityFacadeProjection:
         tm.that(facade.read_text(), eq=original)
         self._write(facade, updated)
         tm.that(u.Infra.render_utility_facade(package, family="p"), eq=updated)
+
+    @pytest.mark.parametrize("multiline", [False, True])
+    def test_protocol_owner_precedes_terminal_protocol_base(
+        self,
+        tmp_path: Path,
+        *,
+        multiline: bool,
+    ) -> None:
+        """A projected owner keeps ``Protocol`` as the namespace's last base."""
+        package = tmp_path / "src" / "flext_sample"
+        self._write(package / "__init__.py", "")
+        self._write(
+            package / "_models" / "payload.py",
+            "from flext_sample import p\n"
+            "def consume(value: p.Sample.Payload) -> None:\n    pass\n",
+        )
+        self._write(
+            package / "_protocols" / "payload.py",
+            "from typing import Protocol\n\n"
+            "class PayloadOwner(Protocol):\n"
+            "    class Payload(Protocol):\n        pass\n",
+        )
+        facade = package / "protocols.py"
+        header = (
+            "    class Sample(\n        p,\n        Protocol,\n    ):\n"
+            if multiline
+            else "    class Sample(p, Protocol):\n"
+        )
+        self._write(
+            facade,
+            "from typing import Protocol\n\nfrom upstream import p\n\n"
+            "class FlextSampleProtocols(p):\n"
+            + header
+            + "        pass\n\np = FlextSampleProtocols\n\n"
+            + '__all__ = ["FlextSampleProtocols", "p"]\n',
+        )
+
+        updated = u.Infra.render_utility_facade(package, family="p")
+
+        assert updated is not None
+        facade_class = next(
+            node for node in ast.parse(updated).body if isinstance(node, ast.ClassDef)
+        )
+        namespace = next(
+            node for node in facade_class.body if isinstance(node, ast.ClassDef)
+        )
+        tm.that(
+            [ast.unparse(base) for base in namespace.bases],
+            eq=["p", "PayloadOwner", "Protocol"],
+        )
+        self._write(facade, updated)
+        tm.that(u.Infra.render_utility_facade(package, family="p"), eq=updated)

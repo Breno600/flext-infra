@@ -12,7 +12,7 @@
         id: private_dependency_token
         uses: {{ github_actions["create-github-app-token"].repository }}@{{ github_actions["create-github-app-token"].version }}
         with:
-          app-id: {% raw %}${{ secrets.{% endraw %}{{ private_dependency_auth.app_id_secret }}{% raw %} }}{% endraw %}
+          client-id: {% raw %}${{ secrets.{% endraw %}{{ private_dependency_auth.app_id_secret }}{% raw %} }}{% endraw %}
           private-key: {% raw %}${{ secrets.{% endraw %}{{ private_dependency_auth.private_key_secret }}{% raw %} }}{% endraw %}
           owner: {% raw %}${{ github.repository_owner }}{% endraw %}
 
