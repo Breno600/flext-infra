@@ -225,6 +225,9 @@ if TYPE_CHECKING:
     from flext_infra._utilities._semantic_cutover.bindings import (
         FlextInfraUtilitiesSemanticCutoverBindings,
     )
+    from flext_infra._utilities._semantic_cutover.class_scope import (
+        FlextInfraUtilitiesSemanticCutoverClassScope,
+    )
     from flext_infra._utilities._semantic_cutover.dynamic_environment import (
         FlextInfraUtilitiesSemanticCutoverDynamicEnvironment,
     )
@@ -600,6 +603,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesSemanticCutoverAliases",
     "FlextInfraUtilitiesSemanticCutoverBase",
     "FlextInfraUtilitiesSemanticCutoverBindings",
+    "FlextInfraUtilitiesSemanticCutoverClassScope",
     "FlextInfraUtilitiesSemanticCutoverDynamicEnvironment",
     "FlextInfraUtilitiesSemanticCutoverEdits",
     "FlextInfraUtilitiesSemanticCutoverFacadeBaseCst",
@@ -742,6 +746,9 @@ _LAZY_IMPORTS = MappingProxyType(
             "._semantic_cutover.base": ("FlextInfraUtilitiesSemanticCutoverBase",),
             "._semantic_cutover.bindings": (
                 "FlextInfraUtilitiesSemanticCutoverBindings",
+            ),
+            "._semantic_cutover.class_scope": (
+                "FlextInfraUtilitiesSemanticCutoverClassScope",
             ),
             "._semantic_cutover.dynamic_environment": (
                 "FlextInfraUtilitiesSemanticCutoverDynamicEnvironment",

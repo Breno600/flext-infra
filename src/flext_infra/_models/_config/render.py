@@ -242,7 +242,9 @@ class FlextInfraConfigModelsRender:
         worktree_environment_directory: Annotated[
             t.NonEmptyStr,
             m.Field(
-                description="Declared sibling directory for linked worktree environments",
+                description=(
+                    "Declared sibling directory for linked worktree environments"
+                ),
             ),
         ]
 
