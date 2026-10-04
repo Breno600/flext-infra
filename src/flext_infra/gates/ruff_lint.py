@@ -49,10 +49,10 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         ctx: m.Infra.GateContext,
         check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Build check command.
+        """Lint read-only with the config-owned check flags.
 
         Returns:
-            The resulting ``t.StrSequence``.
+            The Ruff lint invocation in check mode.
 
         """
         _ = project_dir
