@@ -142,18 +142,19 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
             """Report whether a moved class stays reachable by its bare name here.
 
             References are rewritten before the structural move, so the current
-            tree cannot answer this; the plan can. After nesting, the owner's
-            class body holds every moved class as a sibling, and a class body
-            reaches its siblings by bare name while it is executing. A method
-            body does not: the enclosing class scope is invisible from inside a
-            function, so there the qualified form is the only one that resolves.
-            An annotation inside a class that is itself being nested does not
-            resolve either: the undefined-name gate rejects the bare name there,
-            including the class's own annotations. An annotation directly on the
-            owner still sees those siblings. Walking outward, a function body
-            therefore means qualify, an annotation inside a moved class means
-            qualify, and any other reference that lands in the owner body keeps
-            the bare name.
+            tree cannot answer this; the plan can. A nested class suite looks
+            names up in the module globals, and the owner name is not bound
+            until that class statement finishes, so the planner leaves both
+            ends of an immediate suite reference at module level. A method body
+            does not see the owner scope either, so there the qualified form is
+            the one that resolves when the method later runs. An annotation
+            inside a class that is itself being nested does not resolve as a
+            bare name: the undefined-name gate rejects it, including the
+            class's own annotations. An annotation directly on the owner still
+            sees those siblings. Walking outward, a function body therefore
+            means qualify, an annotation inside a moved class means qualify,
+            and any other reference that lands in the owner body keeps the
+            bare name.
 
             Returns:
                 The resulting ``bool``.

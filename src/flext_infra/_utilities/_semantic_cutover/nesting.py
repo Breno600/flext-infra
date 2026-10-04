@@ -88,6 +88,67 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
             name for name in classes if owner_name in ancestors(name)
         }
 
+    @staticmethod
+    def _immediate_suite_loads(statement: ast.stmt) -> frozenset[str]:
+        """Return names a class suite evaluates while the class is being built.
+
+        Function and lambda bodies run later. Annotations are stored, not
+        evaluated. A name in any other statement is looked up immediately.
+
+        Returns:
+            The names loaded immediately by ``statement``.
+
+        """
+        names: set[str] = set()
+
+        def visit(node: ast.AST) -> None:
+            if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.Lambda):
+                return
+            if isinstance(node, ast.AnnAssign):
+                if node.value is not None:
+                    visit(node.value)
+                return
+            if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
+                names.add(node.id)
+                return
+            for child in ast.iter_child_nodes(node):
+                visit(child)
+
+        visit(statement)
+        return frozenset(names)
+
+    @classmethod
+    def _suite_reference_pins(
+        cls,
+        classes: t.MappingKV[str, ast.ClassDef],
+        movable: frozenset[str],
+    ) -> frozenset[str]:
+        """Return classes that must stay at module level to keep suite lookups.
+
+        A nested class suite looks names up in the module globals. The owner
+        name is not bound until its class statement finishes, so neither the
+        bare sibling nor ``Owner.Sibling`` resolves during that suite. A base
+        in the class header does see the owner, and a later method call does
+        too. An immediate load of another class that would move under the same
+        owner therefore keeps both classes where the module already resolves
+        them.
+
+        Returns:
+            The movable classes pinned by an immediate suite reference.
+
+        """
+        pinned: set[str] = set()
+        for name, node in classes.items():
+            if name not in movable:
+                continue
+            for statement in node.body:
+                referenced = set(cls._immediate_suite_loads(statement) & movable)
+                referenced.discard(name)
+                if referenced:
+                    pinned.add(name)
+                    pinned.update(referenced)
+        return frozenset(pinned)
+
     @classmethod
     def _class_nesting_definitions(
         cls,
@@ -148,7 +209,10 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
             name: owner for name in classes if name != owner and name not in bound
         }
         definitions.update((name, owner) for name in movable.value)
-        return planned.ok(definitions)
+        pinned = cls._suite_reference_pins(classes, frozenset(definitions))
+        return planned.ok({
+            name: owner for name, owner in definitions.items() if name not in pinned
+        })
 
     @classmethod
     def _plan_class_nesting(
