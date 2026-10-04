@@ -13,7 +13,7 @@ import tempfile
 import tomllib
 from pathlib import Path
 
-from flext_infra import c, u
+from flext_infra import c, t, u
 from flext_infra._bootstrap_transaction import FlextInfraBootstrapTransactionMixin
 
 STORAGE_DIRECTORIES = ("cache", "state", "installs", "shims", "uv-cache", "bootstrap")
@@ -98,11 +98,11 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
         scratch: Path,
         cooldown: str,
         platforms: str,
-    ) -> dict[str, str]:
+    ) -> t.StrDict:
         """Build the isolated Mise environment the bootstrap recipe runs in.
 
         Returns:
-            The resulting ``dict[str, str]``.
+            The resulting ``t.StrDict``.
         """
         for name in (
             "home",
@@ -163,7 +163,7 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
         cls,
         runtime: Path,
         arguments: list[str],
-        environment: dict[str, str],
+        environment: t.StrDict,
     ) -> str:
         """Run one isolated Mise command; warnings and failures escape loudly.
 
@@ -185,7 +185,7 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
         cls,
         runtime: Path,
         stage: Path,
-        environment: dict[str, str],
+        environment: t.StrDict,
     ) -> tuple[bool, str]:
         """Prove the staged lock installs without mutating tools.
 
@@ -207,7 +207,7 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
         cls,
         runtime: Path,
         stage: Path,
-        environment: dict[str, str],
+        environment: t.StrDict,
     ) -> bool:
         """Prove the staged lock satisfies the manifest without mutating tools.
 
@@ -249,7 +249,7 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
     def _remote_release_candidates(
         cls,
         runtime: Path,
-        environment: dict[str, str],
+        environment: t.StrDict,
         selector: str,
         failed_version: str,
         limit: int = 8,
@@ -318,7 +318,7 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
         cooldown: str,
         platforms: str,
         failed_tools: list[tuple[str, str]],
-    ) -> dict[str, str]:
+    ) -> t.StrDict:
         """Hold every failing tool at its newest installable release, in stage.
 
         Candidates walk ``ls-remote`` newest-first below the failed release;
@@ -327,13 +327,13 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
         nothing is silently skipped.
 
         Returns:
-            The resulting ``dict[str, str]`` of held ``selector -> version``.
+            The resulting ``t.StrDict`` of held ``selector -> version``.
 
         Raises:
             ValueError: If any failing tool has no installable candidate below
                 its failed release, or if Mise exited or warned during.
         """
-        holds: dict[str, str] = {}
+        holds: t.StrDict = {}
         scratch = Path(tempfile.mkdtemp(prefix="mise-hold."))
         try:
             environment = cls._mise_environment(

@@ -22,7 +22,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
 
-from flext_infra import c
+from flext_infra import c, t
 from flext_infra._bootstrap_process import FlextInfraBootstrapProcessMixin
 
 
@@ -116,14 +116,14 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
         return selector
 
     @classmethod
-    def _sidecars(cls, content: bytes | None, root: Path) -> dict[str, str]:
+    def _sidecars(cls, content: bytes | None, root: Path) -> t.StrDict:
         if content is None:
             return {}
         payload = tomllib.loads(content.decode("utf-8"))
         tools = payload.get("tools")
         if not isinstance(tools, dict):
             raise ValueError("mise.lock has no tools table")
-        result: dict[str, str] = {}
+        result: t.StrDict = {}
         for entries in tools.values():
             for entry in entries if isinstance(entries, list) else (entries,):
                 if not isinstance(entry, dict):
@@ -160,11 +160,11 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
         return result
 
     @classmethod
-    def _previous_sidecars(cls, content: bytes | None, project: Path) -> dict[str, str]:
+    def _previous_sidecars(cls, content: bytes | None, project: Path) -> t.StrDict:
         """Read the owned graph from Git stage 2 during a lock merge conflict.
 
         Returns:
-            The resulting ``dict[str, str]``.
+            The resulting ``t.StrDict``.
 
         Raises:
             ValueError: If git cannot read the unmerged index; or if conflicted
@@ -233,7 +233,7 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
         cls._sync_directory(root)
 
     @classmethod
-    def _write_journal(cls, stage: Path, journal: dict[str, str]) -> None:
+    def _write_journal(cls, stage: Path, journal: t.StrDict) -> None:
         candidate = stage / "transaction.json.new"
         with candidate.open("x", encoding="utf-8") as stream:
             json.dump(journal, stream, sort_keys=True)
@@ -243,7 +243,7 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
         cls._sync_directory(stage)
 
     @classmethod
-    def _read_journal(cls, stage: Path) -> dict[str, str] | None:
+    def _read_journal(cls, stage: Path) -> t.StrDict | None:
         content = cls._bytes(stage / c.Infra.MISE_LOCK_JOURNAL_FILENAME)
         if content is None:
             return None
@@ -256,7 +256,7 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
         return payload
 
     @staticmethod
-    def _journal_refs(journal: dict[str, str], name: str) -> dict[str, str]:
+    def _journal_refs(journal: t.StrDict, name: str) -> t.StrDict:
         raw = journal.get(name)
         if raw is None:
             raise ValueError(f"Mise lock journal lacks {name}")
@@ -271,14 +271,14 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
         return payload
 
     @classmethod
-    def _artifact_refs(cls, root: Path) -> dict[str, str]:
+    def _artifact_refs(cls, root: Path) -> t.StrDict:
         return {
             relative: cls._digest(cls._bytes(root / relative)) or ""
             for relative, _mode in c.Infra.MISE_LOCK_ARTIFACTS
         }
 
     @classmethod
-    def _journal_artifacts(cls, journal: dict[str, str], name: str) -> dict[str, str]:
+    def _journal_artifacts(cls, journal: t.StrDict, name: str) -> t.StrDict:
         raw = journal.get(name)
         if raw is None:
             raise ValueError(f"Mise lock journal lacks {name}")
@@ -295,7 +295,7 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
         cls,
         project: Path,
         stage: Path,
-        journal: dict[str, str],
+        journal: t.StrDict,
     ) -> None:
         old_refs = cls._journal_artifacts(journal, "old_artifacts")
         new_refs = cls._journal_artifacts(journal, "new_artifacts")
@@ -517,8 +517,8 @@ class FlextInfraBootstrapTransactionMixin(FlextInfraBootstrapProcessMixin):
         old_refs = cls._previous_sidecars(old, project)
         new_refs = cls._sidecars(new, stage)
         artifact_stage = stage / "artifacts"
-        new_artifacts: dict[str, str] = {}
-        old_artifacts: dict[str, str] = {}
+        new_artifacts: t.StrDict = {}
+        old_artifacts: t.StrDict = {}
         if artifact_stage.exists() or artifact_stage.is_symlink():
             cls._physical_directory(artifact_stage)
             new_artifacts = cls._artifact_refs(artifact_stage)
