@@ -575,73 +575,23 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
         @property
-        def kubectl_version(self) -> str:
-            """Exact kubectl version."""
-            ...
-
-        @property
-        def helm_version(self) -> str:
-            """Exact Helm version."""
-            ...
-
-        @property
-        def kind_version(self) -> str:
-            """Exact kind version."""
-            ...
-
-        @property
         def environment_path_prepends(self) -> t.SequenceOf[str]:
             """Extra directories prepended to PATH by shell activation."""
             ...
 
         @property
-        def taplo_version(self) -> str:
-            """Exact Taplo formatter version."""
+        def tool_versions(self) -> t.MappingKV[str, str]:
+            """Effective release selector per tool: pins layered over entries."""
             ...
 
         @property
-        def ast_grep_selector(self) -> str:
-            """Mise selector for the ast-grep CLI."""
+        def tool_selectors(self) -> t.MappingKV[str, str]:
+            """Declared Mise selector of every selector-bearing fleet tool."""
             ...
 
         @property
-        def ast_grep_version(self) -> str:
-            """Exact ast-grep analyzer version."""
-            ...
-
-        @property
-        def gitleaks_version(self) -> str:
-            """Exact Gitleaks scanner version."""
-            ...
-
-        @property
-        def scc_version(self) -> str:
-            """Exact scc code-counter version."""
-            ...
-
-        @property
-        def kubeconform_version(self) -> str:
-            """Compatible kubeconform minor line."""
-            ...
-
-        @property
-        def qlty_version(self) -> str:
-            """Exact qlty code-smell scanner version."""
-            ...
-
-        @property
-        def uv_version(self) -> str:
-            """Compatible uv major.minor line."""
-            ...
-
-        @property
-        def go_version(self) -> str:
-            """Exact Go runtime version backing go: mise selectors."""
-            ...
-
-        @property
-        def make_version(self) -> str:
-            """Moving Make release selector provisioned by mise."""
+        def tool_version_prefixes(self) -> t.MappingKV[str, str]:
+            """Declared release tag prefix of every prefix-bearing tool."""
             ...
 
     @runtime_checkable

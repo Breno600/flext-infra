@@ -126,7 +126,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 rendered,
                 path=live_path,
                 toolchain_root=repository_root,
-                taplo_version=config.Infra.codegen.toolchain.taplo_version,
+                taplo_version=config.Infra.codegen.toolchain.tool_versions["taplo"],
             )
             if formatted.failure:
                 return r[m.Infra.CodegenArtifactComposition].from_failure(formatted)
@@ -492,7 +492,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 ),
                 workspace_gitlinks=gitlinks.value,
                 uv_link_mode=self.link_mode(target.repository, codegen.toolchain),
-                uv_version=codegen.toolchain.uv_version,
+                uv_version=codegen.toolchain.tool_versions["uv"],
                 mise_lockfile_platforms=codegen.toolchain.mise_lockfile_platforms,
                 make=codegen.make,
                 extra_verbs=(
