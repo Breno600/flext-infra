@@ -15,7 +15,7 @@ from flext_infra._base_payload import FlextInfraCommandPayloadMixin
 from flext_infra._settings import settings
 
 
-class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
+class FlextInfraServiceBase[TDomainResult](
     FlextService[TDomainResult],
     FlextInfraCommandPayloadMixin,
 ):
