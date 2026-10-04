@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core import build_lazy_import_map, install_lazy_exports
+from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra.maintenance.clean import FlextInfraCleanService
@@ -28,18 +28,27 @@ __all__: tuple[str, ...] = (
     "FlextInfraSonarcloudSettingsSync",
 )
 
-_LAZY_IMPORTS = MappingProxyType(
-    build_lazy_import_map(
-        MappingProxyType({
-            ".clean": ("FlextInfraCleanService",),
-            ".python_version": ("FlextInfraPythonVersionEnforcer",),
-            ".sonarcloud": ("FlextInfraSonarcloudSettingsSync",),
-            ".sonarcloud_client": ("FlextInfraSonarcloudClient",),
-            ".sonarcloud_issues": ("FlextInfraSonarcloudIssues",),
-        }),
-        alias_groups=MappingProxyType({}),
-        sort_keys=False,
-    ),
+install_lazy_exports(
+    __name__,
+    globals(),
+    MappingProxyType({
+        "FlextInfraCleanService": (".clean", "FlextInfraCleanService"),
+        "FlextInfraPythonVersionEnforcer": (
+            ".python_version",
+            "FlextInfraPythonVersionEnforcer",
+        ),
+        "FlextInfraSonarcloudClient": (
+            ".sonarcloud_client",
+            "FlextInfraSonarcloudClient",
+        ),
+        "FlextInfraSonarcloudIssues": (
+            ".sonarcloud_issues",
+            "FlextInfraSonarcloudIssues",
+        ),
+        "FlextInfraSonarcloudSettingsSync": (
+            ".sonarcloud",
+            "FlextInfraSonarcloudSettingsSync",
+        ),
+    }),
+    public_exports=__all__,
 )
-
-install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

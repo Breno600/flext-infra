@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core import build_lazy_import_map, install_lazy_exports
+from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra.validate import _pytest_runner
@@ -68,34 +68,67 @@ __all__: tuple[str, ...] = (
     "_pytest_runner",
 )
 
-_LAZY_IMPORTS = MappingProxyType(
-    build_lazy_import_map(
-        MappingProxyType({
-            "._pytest_diag_xml": ("FlextInfraPytestDiagXmlMixin",),
-            "._pytest_runner": ("_pytest_runner",),
-            "._pytest_runner.base": ("FlextInfraPytestRunnerBase",),
-            "._pytest_runner.command": ("FlextInfraPytestRunnerCommand",),
-            "._pytest_runner.execution": ("FlextInfraPytestRunnerExecution",),
-            "._pytest_runner.reports": ("FlextInfraPytestRunnerReports",),
-            "._skill_rule_runner": ("FlextInfraSkillRuleRunnerMixin",),
-            ".cprofile_report": ("FlextInfraCProfileReport",),
-            ".fresh_import": ("FlextInfraValidateFreshImport",),
-            ".inventory": ("FlextInfraInventoryService",),
-            ".lazy_map_freshness": ("FlextInfraValidateLazyMapFreshness",),
-            ".loc_delta": ("FlextInfraLocDeltaValidator",),
-            ".manual_command": ("FlextInfraManualCommandValidator",),
-            ".namespace_validator": ("FlextInfraNamespaceValidator",),
-            ".pytest_diag": ("FlextInfraPytestDiagExtractor",),
-            ".pytest_runner": ("FlextInfraPytestRunner",),
-            ".runtime_census": ("FlextInfraRuntimeCensusValidator",),
-            ".scanner": ("FlextInfraTextPatternScanner",),
-            ".skill_validator": ("FlextInfraSkillValidator",),
-            ".stub_chain": ("FlextInfraStubSupplyChain",),
-            ".testmon_db": ("FlextInfraTestmonDbInspector",),
-        }),
-        alias_groups=MappingProxyType({}),
-        sort_keys=False,
-    ),
+install_lazy_exports(
+    __name__,
+    globals(),
+    MappingProxyType({
+        "FlextInfraCProfileReport": (".cprofile_report", "FlextInfraCProfileReport"),
+        "FlextInfraInventoryService": (".inventory", "FlextInfraInventoryService"),
+        "FlextInfraLocDeltaValidator": (".loc_delta", "FlextInfraLocDeltaValidator"),
+        "FlextInfraManualCommandValidator": (
+            ".manual_command",
+            "FlextInfraManualCommandValidator",
+        ),
+        "FlextInfraNamespaceValidator": (
+            ".namespace_validator",
+            "FlextInfraNamespaceValidator",
+        ),
+        "FlextInfraPytestDiagExtractor": (
+            ".pytest_diag",
+            "FlextInfraPytestDiagExtractor",
+        ),
+        "FlextInfraPytestDiagXmlMixin": (
+            "._pytest_diag_xml",
+            "FlextInfraPytestDiagXmlMixin",
+        ),
+        "FlextInfraPytestRunner": (".pytest_runner", "FlextInfraPytestRunner"),
+        "FlextInfraPytestRunnerBase": (
+            "._pytest_runner.base",
+            "FlextInfraPytestRunnerBase",
+        ),
+        "FlextInfraPytestRunnerCommand": (
+            "._pytest_runner.command",
+            "FlextInfraPytestRunnerCommand",
+        ),
+        "FlextInfraPytestRunnerExecution": (
+            "._pytest_runner.execution",
+            "FlextInfraPytestRunnerExecution",
+        ),
+        "FlextInfraPytestRunnerReports": (
+            "._pytest_runner.reports",
+            "FlextInfraPytestRunnerReports",
+        ),
+        "FlextInfraRuntimeCensusValidator": (
+            ".runtime_census",
+            "FlextInfraRuntimeCensusValidator",
+        ),
+        "FlextInfraSkillRuleRunnerMixin": (
+            "._skill_rule_runner",
+            "FlextInfraSkillRuleRunnerMixin",
+        ),
+        "FlextInfraSkillValidator": (".skill_validator", "FlextInfraSkillValidator"),
+        "FlextInfraStubSupplyChain": (".stub_chain", "FlextInfraStubSupplyChain"),
+        "FlextInfraTestmonDbInspector": (".testmon_db", "FlextInfraTestmonDbInspector"),
+        "FlextInfraTextPatternScanner": (".scanner", "FlextInfraTextPatternScanner"),
+        "FlextInfraValidateFreshImport": (
+            ".fresh_import",
+            "FlextInfraValidateFreshImport",
+        ),
+        "FlextInfraValidateLazyMapFreshness": (
+            ".lazy_map_freshness",
+            "FlextInfraValidateLazyMapFreshness",
+        ),
+        "_pytest_runner": ("._pytest_runner", ""),
+    }),
+    public_exports=__all__,
 )
-
-install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

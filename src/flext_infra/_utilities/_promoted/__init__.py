@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core import build_lazy_import_map, install_lazy_exports
+from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra._utilities._promoted.commands import (
@@ -38,18 +38,30 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesPromotedWorkspace",
 )
 
-_LAZY_IMPORTS = MappingProxyType(
-    build_lazy_import_map(
-        MappingProxyType({
-            ".commands": ("FlextInfraUtilitiesPromotedCommands",),
-            ".execution": ("FlextInfraUtilitiesPromotedExecution",),
-            ".invocation": ("FlextInfraUtilitiesPromotedInvocation",),
-            ".rendering": ("FlextInfraUtilitiesPromotedRendering",),
-            ".workspace": ("FlextInfraUtilitiesPromotedWorkspace",),
-        }),
-        alias_groups=MappingProxyType({}),
-        sort_keys=False,
-    ),
+install_lazy_exports(
+    __name__,
+    globals(),
+    MappingProxyType({
+        "FlextInfraUtilitiesPromotedCommands": (
+            ".commands",
+            "FlextInfraUtilitiesPromotedCommands",
+        ),
+        "FlextInfraUtilitiesPromotedExecution": (
+            ".execution",
+            "FlextInfraUtilitiesPromotedExecution",
+        ),
+        "FlextInfraUtilitiesPromotedInvocation": (
+            ".invocation",
+            "FlextInfraUtilitiesPromotedInvocation",
+        ),
+        "FlextInfraUtilitiesPromotedRendering": (
+            ".rendering",
+            "FlextInfraUtilitiesPromotedRendering",
+        ),
+        "FlextInfraUtilitiesPromotedWorkspace": (
+            ".workspace",
+            "FlextInfraUtilitiesPromotedWorkspace",
+        ),
+    }),
+    public_exports=__all__,
 )
-
-install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

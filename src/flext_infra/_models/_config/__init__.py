@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core import build_lazy_import_map, install_lazy_exports
+from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra._models._config.artifact import FlextInfraConfigModelsArtifact
@@ -50,28 +50,49 @@ __all__: tuple[str, ...] = (
     "FlextInfraExternalCacheDirectorySpec",
 )
 
-_LAZY_IMPORTS = MappingProxyType(
-    build_lazy_import_map(
-        MappingProxyType({
-            ".artifact": ("FlextInfraConfigModelsArtifact",),
-            ".base": ("FlextInfraConfigModels",),
-            ".beads": ("FlextInfraConfigModelsBeads",),
-            ".contexts": ("FlextInfraConfigModelsContexts",),
-            ".contract": ("FlextInfraConfigModelsContract",),
-            ".external_cache": ("FlextInfraExternalCacheDirectorySpec",),
-            ".make": ("FlextInfraConfigModelsMake",),
-            ".provider": ("FlextInfraConfigModelsProvider",),
-            ".release": ("FlextInfraConfigModelsRelease",),
-            ".render": ("FlextInfraConfigModelsRender",),
-            ".root": ("FlextInfraConfigModelsRoot",),
-            ".scaffold": ("FlextInfraConfigModelsScaffold",),
-            ".static": ("FlextInfraConfigModelsStatic",),
-            ".templates": ("FlextInfraConfigModelsTemplates",),
-            ".workspace": ("FlextInfraConfigModelsWorkspace",),
-        }),
-        alias_groups=MappingProxyType({}),
-        sort_keys=False,
-    ),
+install_lazy_exports(
+    __name__,
+    globals(),
+    MappingProxyType({
+        "FlextInfraConfigModels": (".base", "FlextInfraConfigModels"),
+        "FlextInfraConfigModelsArtifact": (
+            ".artifact",
+            "FlextInfraConfigModelsArtifact",
+        ),
+        "FlextInfraConfigModelsBeads": (".beads", "FlextInfraConfigModelsBeads"),
+        "FlextInfraConfigModelsContexts": (
+            ".contexts",
+            "FlextInfraConfigModelsContexts",
+        ),
+        "FlextInfraConfigModelsContract": (
+            ".contract",
+            "FlextInfraConfigModelsContract",
+        ),
+        "FlextInfraConfigModelsMake": (".make", "FlextInfraConfigModelsMake"),
+        "FlextInfraConfigModelsProvider": (
+            ".provider",
+            "FlextInfraConfigModelsProvider",
+        ),
+        "FlextInfraConfigModelsRelease": (".release", "FlextInfraConfigModelsRelease"),
+        "FlextInfraConfigModelsRender": (".render", "FlextInfraConfigModelsRender"),
+        "FlextInfraConfigModelsRoot": (".root", "FlextInfraConfigModelsRoot"),
+        "FlextInfraConfigModelsScaffold": (
+            ".scaffold",
+            "FlextInfraConfigModelsScaffold",
+        ),
+        "FlextInfraConfigModelsStatic": (".static", "FlextInfraConfigModelsStatic"),
+        "FlextInfraConfigModelsTemplates": (
+            ".templates",
+            "FlextInfraConfigModelsTemplates",
+        ),
+        "FlextInfraConfigModelsWorkspace": (
+            ".workspace",
+            "FlextInfraConfigModelsWorkspace",
+        ),
+        "FlextInfraExternalCacheDirectorySpec": (
+            ".external_cache",
+            "FlextInfraExternalCacheDirectorySpec",
+        ),
+    }),
+    public_exports=__all__,
 )
-
-install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core import build_lazy_import_map, install_lazy_exports
+from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra.refactor._accessor_report import (
@@ -86,38 +86,83 @@ __all__: tuple[str, ...] = (
     "FlextInfraWrapperRootNamespaceRewriteMixin",
 )
 
-_LAZY_IMPORTS = MappingProxyType(
-    build_lazy_import_map(
-        MappingProxyType({
-            "._accessor_report": ("FlextInfraAccessorMigrationReportMixin",),
-            "._accessor_rewrite": ("FlextInfraAccessorMigrationRewriteMixin",),
-            "._census_apply_formatting": (
-                "FlextInfraRefactorCensusApplyFormattingMixin",
-            ),
-            "._census_collect": ("FlextInfraRefactorCensusCollectMixin",),
-            "._census_collect_helpers": (
-                "FlextInfraRefactorCensusCollectHelpersMixin",
-            ),
-            "._census_filters": ("FlextInfraRefactorCensusFiltersMixin",),
-            "._census_objects": ("FlextInfraRefactorCensusObjectsMixin",),
-            "._census_project": ("FlextInfraRefactorCensusProjectMixin",),
-            "._census_removal": ("FlextInfraRefactorCensusRemovalMixin",),
-            "._census_render": ("FlextInfraRefactorCensusRenderMixin",),
-            "._namespace_enforcer_project": (
-                "FlextInfraNamespaceEnforcerProjectMixin",
-            ),
-            "._project_classifier_deps": ("FlextInfraProjectClassifierDepsMixin",),
-            "._project_classifier_family": ("FlextInfraProjectClassifierFamilyMixin",),
-            "._wrapper_rewrite": ("FlextInfraWrapperRootNamespaceRewriteMixin",),
-            ".accessor_migration": ("FlextInfraAccessorMigrationOrchestrator",),
-            ".census": ("FlextInfraRefactorCensus",),
-            ".namespace_enforcer": ("FlextInfraNamespaceEnforcer",),
-            ".project_classifier": ("FlextInfraProjectClassifier",),
-            ".wrapper_root_namespace": ("FlextInfraWrapperRootNamespaceRefactor",),
-        }),
-        alias_groups=MappingProxyType({}),
-        sort_keys=False,
-    ),
+install_lazy_exports(
+    __name__,
+    globals(),
+    MappingProxyType({
+        "FlextInfraAccessorMigrationOrchestrator": (
+            ".accessor_migration",
+            "FlextInfraAccessorMigrationOrchestrator",
+        ),
+        "FlextInfraAccessorMigrationReportMixin": (
+            "._accessor_report",
+            "FlextInfraAccessorMigrationReportMixin",
+        ),
+        "FlextInfraAccessorMigrationRewriteMixin": (
+            "._accessor_rewrite",
+            "FlextInfraAccessorMigrationRewriteMixin",
+        ),
+        "FlextInfraNamespaceEnforcer": (
+            ".namespace_enforcer",
+            "FlextInfraNamespaceEnforcer",
+        ),
+        "FlextInfraNamespaceEnforcerProjectMixin": (
+            "._namespace_enforcer_project",
+            "FlextInfraNamespaceEnforcerProjectMixin",
+        ),
+        "FlextInfraProjectClassifier": (
+            ".project_classifier",
+            "FlextInfraProjectClassifier",
+        ),
+        "FlextInfraProjectClassifierDepsMixin": (
+            "._project_classifier_deps",
+            "FlextInfraProjectClassifierDepsMixin",
+        ),
+        "FlextInfraProjectClassifierFamilyMixin": (
+            "._project_classifier_family",
+            "FlextInfraProjectClassifierFamilyMixin",
+        ),
+        "FlextInfraRefactorCensus": (".census", "FlextInfraRefactorCensus"),
+        "FlextInfraRefactorCensusApplyFormattingMixin": (
+            "._census_apply_formatting",
+            "FlextInfraRefactorCensusApplyFormattingMixin",
+        ),
+        "FlextInfraRefactorCensusCollectHelpersMixin": (
+            "._census_collect_helpers",
+            "FlextInfraRefactorCensusCollectHelpersMixin",
+        ),
+        "FlextInfraRefactorCensusCollectMixin": (
+            "._census_collect",
+            "FlextInfraRefactorCensusCollectMixin",
+        ),
+        "FlextInfraRefactorCensusFiltersMixin": (
+            "._census_filters",
+            "FlextInfraRefactorCensusFiltersMixin",
+        ),
+        "FlextInfraRefactorCensusObjectsMixin": (
+            "._census_objects",
+            "FlextInfraRefactorCensusObjectsMixin",
+        ),
+        "FlextInfraRefactorCensusProjectMixin": (
+            "._census_project",
+            "FlextInfraRefactorCensusProjectMixin",
+        ),
+        "FlextInfraRefactorCensusRemovalMixin": (
+            "._census_removal",
+            "FlextInfraRefactorCensusRemovalMixin",
+        ),
+        "FlextInfraRefactorCensusRenderMixin": (
+            "._census_render",
+            "FlextInfraRefactorCensusRenderMixin",
+        ),
+        "FlextInfraWrapperRootNamespaceRefactor": (
+            ".wrapper_root_namespace",
+            "FlextInfraWrapperRootNamespaceRefactor",
+        ),
+        "FlextInfraWrapperRootNamespaceRewriteMixin": (
+            "._wrapper_rewrite",
+            "FlextInfraWrapperRootNamespaceRewriteMixin",
+        ),
+    }),
+    public_exports=__all__,
 )
-
-install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

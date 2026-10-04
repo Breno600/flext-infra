@@ -201,6 +201,8 @@ class FlextInfraUtilitiesDocsApi:
                 source,
                 symbol_name,
             )
+            if symbol_name
+            else FlextInfraUtilitiesRopeAnalysis.lazy_import_mapping_source(source)
         )
         next_visited = visited | frozenset({key})
         if not entries and not refs:
@@ -268,16 +270,11 @@ class FlextInfraUtilitiesDocsApi:
             Target modules declared by the package lazy import map.
 
         """
-        lazy_imports_name = FlextInfraUtilitiesRopeAnalysis.lazy_imports_name_source(
-            source,
-        )
-        if not lazy_imports_name:
-            return {}
         target_map = cls._resolve_lazy_import_targets(
             project_root,
             root_package=package_name,
             module_name=package_name,
-            symbol_name=lazy_imports_name,
+            symbol_name="",
         )
         export_names = frozenset(exports)
         return {

@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core import build_lazy_import_map, install_lazy_exports
+from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra.codegen._conform.artifact_render import (
@@ -58,25 +58,55 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenConformScaffoldPlan",
 )
 
-_LAZY_IMPORTS = MappingProxyType(
-    build_lazy_import_map(
-        MappingProxyType({
-            ".artifact_render": ("FlextInfraCodegenConformArtifactRender",),
-            ".beads_routes": ("FlextInfraCodegenConformBeadsRoutes",),
-            ".bootstrap": ("FlextInfraCodegenConformBootstrap",),
-            ".context_render": ("FlextInfraCodegenConformContextRender",),
-            ".docs_ownership": ("FlextInfraCodegenConformDocsOwnership",),
-            ".execute": ("FlextInfraCodegenConformExecute",),
-            ".existing_plan": ("FlextInfraCodegenConformExistingPlan",),
-            ".file_plans": ("FlextInfraCodegenConformFilePlans",),
-            ".gitignore": ("FlextInfraCodegenConformGitignore",),
-            ".plan": ("FlextInfraCodegenConformPlan",),
-            ".pyproject_policy": ("FlextInfraCodegenConformPyprojectPolicy",),
-            ".scaffold_plan": ("FlextInfraCodegenConformScaffoldPlan",),
-        }),
-        alias_groups=MappingProxyType({}),
-        sort_keys=False,
-    ),
+install_lazy_exports(
+    __name__,
+    globals(),
+    MappingProxyType({
+        "FlextInfraCodegenConformArtifactRender": (
+            ".artifact_render",
+            "FlextInfraCodegenConformArtifactRender",
+        ),
+        "FlextInfraCodegenConformBeadsRoutes": (
+            ".beads_routes",
+            "FlextInfraCodegenConformBeadsRoutes",
+        ),
+        "FlextInfraCodegenConformBootstrap": (
+            ".bootstrap",
+            "FlextInfraCodegenConformBootstrap",
+        ),
+        "FlextInfraCodegenConformContextRender": (
+            ".context_render",
+            "FlextInfraCodegenConformContextRender",
+        ),
+        "FlextInfraCodegenConformDocsOwnership": (
+            ".docs_ownership",
+            "FlextInfraCodegenConformDocsOwnership",
+        ),
+        "FlextInfraCodegenConformExecute": (
+            ".execute",
+            "FlextInfraCodegenConformExecute",
+        ),
+        "FlextInfraCodegenConformExistingPlan": (
+            ".existing_plan",
+            "FlextInfraCodegenConformExistingPlan",
+        ),
+        "FlextInfraCodegenConformFilePlans": (
+            ".file_plans",
+            "FlextInfraCodegenConformFilePlans",
+        ),
+        "FlextInfraCodegenConformGitignore": (
+            ".gitignore",
+            "FlextInfraCodegenConformGitignore",
+        ),
+        "FlextInfraCodegenConformPlan": (".plan", "FlextInfraCodegenConformPlan"),
+        "FlextInfraCodegenConformPyprojectPolicy": (
+            ".pyproject_policy",
+            "FlextInfraCodegenConformPyprojectPolicy",
+        ),
+        "FlextInfraCodegenConformScaffoldPlan": (
+            ".scaffold_plan",
+            "FlextInfraCodegenConformScaffoldPlan",
+        ),
+    }),
+    public_exports=__all__,
 )
-
-install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

@@ -108,12 +108,12 @@ class TestsFlextInfraCodegenGeneration:
         compile(content, "__init__.py", "exec")
         tm.that(content, lacks="_LAZY_MODULES")
         tm.that(content, lacks="_LAZY_ALIAS_GROUPS")
-        # _LAZY_IMPORTS is the canonical metadata binding flext_core reads
-        # (lazy.merge child inheritance + runtime_alias_names).
-        tm.that(content, contains="_LAZY_IMPORTS = MappingProxyType(")
+        # The installer publishes its normalized metadata; the projection
+        # provides only the elected flat targets.
+        tm.that(content, lacks="_LAZY_IMPORTS =")
         tm.that(content, contains="MappingProxyType(")
-        tm.that(content, contains="build_lazy_import_map(")
-        tm.that(content, contains='".api": ("Demo",)')
+        tm.that(content, lacks="build_lazy_import_map(")
+        tm.that(content, contains='"Demo": (".api", "Demo")')
         tm.that(content, contains="from demo_pkg.__version__ import __version__\n")
         tm.that(
             content,
@@ -208,7 +208,7 @@ class TestsFlextInfraCodegenGeneration:
             content,
             has="from demo_pkg.servers._base.constants import BaseConstants",
         )
-        tm.that(content, has='".._base.constants": ("BaseConstants",)')
+        tm.that(content, has='"BaseConstants": (".._base.constants", "BaseConstants")')
         tm.that(content, lacks="from .._base.constants import")
 
     @staticmethod
@@ -250,7 +250,7 @@ class TestsFlextInfraCodegenGeneration:
 
         compile(content, "__init__.py", "exec")
         tm.that(content, contains=f"from {absolute_owner} import Demo")
-        tm.that(content, contains=f'"{rendered_owner}": ("Demo",)')
+        tm.that(content, contains=f'"Demo": ("{rendered_owner}", "Demo")')
         tm.that(resolve_name(rendered_owner, package), eq=absolute_owner)
 
     def test_root_initializer_contains_static_and_lazy_contracts(self) -> None:
@@ -268,7 +268,7 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(content, contains="    from demo_pkg.api import Demo")
         runtime_prefix = content.split("if TYPE_CHECKING:", maxsplit=1)[0]
         tm.that(runtime_prefix, lacks="from demo_pkg.api import Demo")
-        tm.that(content, contains='".api": ("Demo",)')
+        tm.that(content, contains='"Demo": (".api", "Demo")')
         tm.that(content, contains="install_lazy_exports(")
         tm.that(content, lacks="__unit__")
 
@@ -348,7 +348,7 @@ class TestsFlextInfraCodegenGeneration:
             init_content,
             contains=(
                 f"from {c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE} import "
-                f"{', '.join(c.Infra.LAZY_BOOTSTRAP_HELPERS)}"
+                "install_lazy_exports"
             ),
         )
         tm.that(init_content, contains='__all__: tuple[str, ...] = ("Demo", "Nested")')
@@ -420,7 +420,7 @@ class TestsFlextInfraCodegenGeneration:
 
         compile(init_content, "__init__.py", "exec")
         tm.that(init_content, contains="from flext_core.lazy import")
-        tm.that(init_content, contains='".base": ("FlextModel",)')
+        tm.that(init_content, contains='"FlextModel": (".base", "FlextModel")')
         tm.that(init_content, contains="install_lazy_exports(")
 
     def test_tests_root_renders_only_its_facade_contract(self) -> None:
@@ -466,12 +466,12 @@ class TestsFlextInfraCodegenGeneration:
 
         compile(init_content, "__init__.py", "exec")
         tm.that(init_content, contains="from flext_tests import tm")
-        tm.that(init_content, contains='".constants": ("TestsDemoConstants", "c"),')
-        tm.that(init_content, contains='".utilities": ("TestsDemoUtilities", "u"),')
+        tm.that(init_content, contains='"c": (".constants", "c"),')
+        tm.that(init_content, contains='"u": (".utilities", "u"),')
         import_block = init_content.split(
             (
                 f"from {c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE} import "
-                f"{', '.join(c.Infra.LAZY_BOOTSTRAP_HELPERS)}\n"
+                "install_lazy_exports\n"
             ),
             maxsplit=1,
         )[1]
@@ -740,4 +740,7 @@ class TestsFlextInfraCodegenGeneration:
 
         content = FlextInfraCodegenGeneration.render_init(plan)
 
-        tm.that(content, contains='("FlextDemoGeneratedFacade",),\n        }),')
+        tm.that(
+            content,
+            contains='            "FlextDemoGeneratedFacade",\n        ),\n    }),',
+        )

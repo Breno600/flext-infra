@@ -66,9 +66,8 @@ class TestsFlextInfraLazyInitHelpers:
         init_content = self._generated_init(package_root)
         exports_content = self._generated_init(package_root)
 
-        tm.that(init_content, has="build_lazy_import_map, install_lazy_exports")
-        # _LAZY_IMPORTS is the canonical metadata binding flext_core reads.
-        tm.that(init_content, has="_LAZY_IMPORTS = MappingProxyType(")
+        tm.that(init_content, has="import install_lazy_exports")
+        tm.that(init_content, has='"m": (".models", "m")')
         tm.that(exports_content, has='"FlextDemoModels"')
         tm.that(exports_content, has='"m"')
 
@@ -404,7 +403,7 @@ class TestsFlextInfraLazyInitHelpers:
         )
         # Lazy inits cover EVERY python surface (src, tests, examples,
         # scripts): the tests root is a generated PEP 562 facade too.
-        tm.that(init_content, has="_LAZY_IMPORTS = MappingProxyType(")
+        tm.that(init_content, has="install_lazy_exports(")
         tm.that(init_content, has='"TestsFlextDemoConstants"')
         tm.that(tests_root.joinpath("__unit__.py").exists(), eq=False)
         compile(init_content, "tests/__init__.py", "exec")

@@ -384,25 +384,51 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         return ((), FlextInfraUtilitiesRopeAnalysisAstHelpers.name_of(public_exports))
 
     @staticmethod
-    def lazy_imports_name_source(source: str) -> str:
-        """Return the local symbol passed as the lazy import map.
+    def lazy_import_mapping_source(
+        source: str,
+    ) -> t.Pair[t.VariadicTuple[t.Pair[str, t.StrSequence]], t.StrSequence]:
+        """Read elected installer targets, including immutable inline mappings.
 
         Returns:
-            The local symbol passed as the lazy import map.
+            Target modules and their export names, plus referenced map symbols.
 
         """
         scan = FlextInfraUtilitiesRopeAnalysisSourceScan
         call = scan._first_call(source, "install_lazy_exports")
         if call is None:
-            return ""
-        if len(call.args) > scan._INSTALL_LAZY_IMPORTS_ARG_INDEX:
-            return FlextInfraUtilitiesRopeAnalysisAstHelpers.name_of(
-                call.args[scan._INSTALL_LAZY_IMPORTS_ARG_INDEX],
+            return ((), ())
+        value = (
+            call.args[scan._INSTALL_LAZY_IMPORTS_ARG_INDEX]
+            if len(call.args) > scan._INSTALL_LAZY_IMPORTS_ARG_INDEX
+            else scan._keyword_value(call, "lazy_imports")
+        )
+        if isinstance(value, ast.Name):
+            return ((), (value.id,))
+        if (
+            isinstance(value, ast.Call)
+            and FlextInfraUtilitiesRopeAnalysisAstHelpers.name_of(value.func)
+            == "MappingProxyType"
+            and len(value.args) == 1
+        ):
+            value = value.args[0]
+        if not isinstance(value, ast.Dict):
+            return scan.mapping_entries_refs(value)
+        targets: MutableMapping[str, list[str]] = {}
+        for key, target in zip(value.keys, value.values, strict=True):
+            if not isinstance(key, ast.Constant) or not isinstance(key.value, str):
+                continue
+            parts = scan.literal_string_sequence(target)
+            module = (
+                target.value
+                if isinstance(target, ast.Constant) and isinstance(target.value, str)
+                else parts[0] if len(parts) == 2 else ""
             )
-        keyword_value = scan._keyword_value(call, "lazy_imports")
-        if keyword_value is None:
-            return ""
-        return FlextInfraUtilitiesRopeAnalysisAstHelpers.name_of(keyword_value)
+            if module:
+                targets.setdefault(module, []).append(key.value)
+        return (
+            tuple((module, tuple(targets[module])) for module in sorted(targets)),
+            (),
+        )
 
     @staticmethod
     def export_target_modules_source(

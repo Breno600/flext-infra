@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core import build_lazy_import_map, install_lazy_exports
+from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra.workspace._governance import FlextInfraWorkspaceGovernanceMixin
@@ -38,21 +38,36 @@ __all__: tuple[str, ...] = (
     "FlextInfraWorkspacePropagation",
 )
 
-_LAZY_IMPORTS = MappingProxyType(
-    build_lazy_import_map(
-        MappingProxyType({
-            "._governance": ("FlextInfraWorkspaceGovernanceMixin",),
-            ".detector": ("FlextInfraWorkspaceDetector",),
-            ".environment": ("FlextInfraWorkspaceEnvironmentMixin",),
-            ".environment_contracts": ("FlextInfraWorkspaceEnvironmentContracts",),
-            ".environment_provenance": ("FlextInfraWorkspaceEnvironmentProvenance",),
-            ".flext_binding": ("FlextInfraFlextBindingService",),
-            ".propagation": ("FlextInfraWorkspacePropagation",),
-            ".rope": ("FlextInfraRopeWorkspace",),
-        }),
-        alias_groups=MappingProxyType({}),
-        sort_keys=False,
-    ),
+install_lazy_exports(
+    __name__,
+    globals(),
+    MappingProxyType({
+        "FlextInfraFlextBindingService": (
+            ".flext_binding",
+            "FlextInfraFlextBindingService",
+        ),
+        "FlextInfraRopeWorkspace": (".rope", "FlextInfraRopeWorkspace"),
+        "FlextInfraWorkspaceDetector": (".detector", "FlextInfraWorkspaceDetector"),
+        "FlextInfraWorkspaceEnvironmentContracts": (
+            ".environment_contracts",
+            "FlextInfraWorkspaceEnvironmentContracts",
+        ),
+        "FlextInfraWorkspaceEnvironmentMixin": (
+            ".environment",
+            "FlextInfraWorkspaceEnvironmentMixin",
+        ),
+        "FlextInfraWorkspaceEnvironmentProvenance": (
+            ".environment_provenance",
+            "FlextInfraWorkspaceEnvironmentProvenance",
+        ),
+        "FlextInfraWorkspaceGovernanceMixin": (
+            "._governance",
+            "FlextInfraWorkspaceGovernanceMixin",
+        ),
+        "FlextInfraWorkspacePropagation": (
+            ".propagation",
+            "FlextInfraWorkspacePropagation",
+        ),
+    }),
+    public_exports=__all__,
 )
-
-install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

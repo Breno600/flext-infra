@@ -40,11 +40,10 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
             docstring='"""Tests package."""',
             runtime_import_lines=(
                 f"from {c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE} import "
-                f"{', '.join(c.Infra.LAZY_BOOTSTRAP_HELPERS)}"
+                "install_lazy_exports"
             ),
             exports_tuple="()",
-            lazy_module_mapping="        MappingProxyType({}),",
-            lazy_alias_mapping="        alias_groups=MappingProxyType({}),",
+            lazy_export_mapping="    MappingProxyType({}),",
         )
 
     @staticmethod
@@ -122,10 +121,10 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
 
         Ruff respects magic trailing commas and COM812 demands one on every
         exploded call, so the projection is the one-argument-per-line form
-        with a trailing comma after each argument and after the inner call.
+        with a trailing comma after each argument, including the flat map.
         """
         rendered = tm.ok(
             u.Cli.template_render(self._ROOT_TEMPLATE, self._empty_root_render()),
         )
 
-        tm.that(rendered, has="        sort_keys=False,\n    ),\n)")
+        tm.that(rendered, has="    MappingProxyType({}),\n    public_exports=__all__,\n)")

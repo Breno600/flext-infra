@@ -12,7 +12,9 @@ import sys
 from pathlib import Path
 
 import pytest
+from flext_core import m
 from flext_tests import tm
+from pydantic import ValidationError
 
 from flext_infra import infra
 from tests import c, t, u
@@ -110,6 +112,64 @@ class TestsFlextInfraLazyInitRuntime:
                 [name for name in package.__all__ if not hasattr(package, name)],
                 eq=[],
             )
+
+    @staticmethod
+    def test_generated_model_alias_preserves_mro_and_pydantic_roundtrip(
+        tmp_path: Path,
+    ) -> None:
+        """Resolve deferred annotations through the generated public model alias."""
+        repository, package_root = u.Tests.create_lazy_init_workspace(
+            tmp_path,
+            project_name="flext-runtime-model",
+            package_name="flext_runtime_model",
+        )
+        package_root.joinpath("models.py").write_text(
+            "from __future__ import annotations\n"
+            "from flext_core import FlextModels\n"
+            "class FlextRuntimeModels(FlextModels):\n"
+            "    class Payload(FlextModels.ContractModel):\n"
+            "        count: int\n"
+            "m = FlextRuntimeModels\n"
+            "__all__ = ('FlextRuntimeModels', 'm')\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+        tm.that(u.Tests.run_lazy_init(repository), eq=0)
+        with tm.scope(python_paths=[str(repository / c.Infra.DEFAULT_SRC_DIR)]):
+            package = importlib.import_module("flext_runtime_model")
+            tm.that("flext_runtime_model.models" in sys.modules, eq=False)
+            models = package.m
+            tm.that(models is package.FlextRuntimeModels, eq=True)
+            tm.that(models is package.m, eq=True)
+            tm.that(issubclass(models, m), eq=True)
+            payload = models.Payload.model_validate({"count": 7})
+            tm.that(payload.count, eq=7)
+            tm.that(
+                models.Payload.model_validate_json(payload.model_dump_json()),
+                eq=payload,
+            )
+            with pytest.raises(ValidationError, match="count"):
+                models.Payload.model_validate({"count": "invalid"})
+            tm.that(dir(package), eq=list(package.__all__))
+
+    @staticmethod
+    def test_generated_empty_package_uses_the_same_lazy_runtime(tmp_path: Path) -> None:
+        """An empty elected map still installs the public lazy failure boundary."""
+        repository, package_root = u.Tests.create_lazy_init_workspace(
+            tmp_path,
+            project_name="flext-empty-runtime",
+            package_name="flext_empty_runtime",
+        )
+        package_root.joinpath("api.py").write_text(
+            "__all__ = ()\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+        tm.that(u.Tests.run_lazy_init(repository), eq=0)
+        with tm.scope(python_paths=[str(repository / c.Infra.DEFAULT_SRC_DIR)]):
+            package = importlib.import_module("flext_empty_runtime")
+            tm.that(package.__all__, eq=())
+            tm.that(dir(package), eq=[])
+            with pytest.raises(AttributeError, match="undeclared"):
+                _ = package.undeclared
 
     @staticmethod
     def test_generated_root_preserves_import_failures(tmp_path: Path) -> None:

@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core import build_lazy_import_map, install_lazy_exports
+from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra.services import _codegen
@@ -48,26 +48,44 @@ __all__: tuple[str, ...] = (
     "_codegen",
 )
 
-_LAZY_IMPORTS = MappingProxyType(
-    build_lazy_import_map(
-        MappingProxyType({
-            "._codegen": ("_codegen",),
-            "._codegen.vscode": ("FlextInfraCodegenVscodeMixin",),
-            ".candidate_bootstrap": ("FlextInfraCandidateBootstrapService",),
-            ".cli_dispatch": ("FlextInfraCliDispatchService",),
-            ".cli_mod_progress": ("FlextInfraCliModProgress",),
-            ".cli_route_base": ("FlextInfraCliRouteBase",),
-            ".cli_routes": ("FlextInfraCliRouteService",),
-            ".cli_routes_codegen": ("FlextInfraCodegenRoutes",),
-            ".cli_routes_refactor": ("FlextInfraRefactorRoutes",),
-            ".cli_routes_validate": ("FlextInfraValidationRoutes",),
-            ".cli_routes_validate_commands": ("FlextInfraValidationCommandRoutes",),
-            ".cli_routes_workspace": ("FlextInfraWorkspaceRoutes",),
-            ".codegen": ("FlextInfraCodegen",),
-        }),
-        alias_groups=MappingProxyType({}),
-        sort_keys=False,
-    ),
+install_lazy_exports(
+    __name__,
+    globals(),
+    MappingProxyType({
+        "FlextInfraCandidateBootstrapService": (
+            ".candidate_bootstrap",
+            "FlextInfraCandidateBootstrapService",
+        ),
+        "FlextInfraCliDispatchService": (
+            ".cli_dispatch",
+            "FlextInfraCliDispatchService",
+        ),
+        "FlextInfraCliModProgress": (".cli_mod_progress", "FlextInfraCliModProgress"),
+        "FlextInfraCliRouteBase": (".cli_route_base", "FlextInfraCliRouteBase"),
+        "FlextInfraCliRouteService": (".cli_routes", "FlextInfraCliRouteService"),
+        "FlextInfraCodegen": (".codegen", "FlextInfraCodegen"),
+        "FlextInfraCodegenRoutes": (".cli_routes_codegen", "FlextInfraCodegenRoutes"),
+        "FlextInfraCodegenVscodeMixin": (
+            "._codegen.vscode",
+            "FlextInfraCodegenVscodeMixin",
+        ),
+        "FlextInfraRefactorRoutes": (
+            ".cli_routes_refactor",
+            "FlextInfraRefactorRoutes",
+        ),
+        "FlextInfraValidationCommandRoutes": (
+            ".cli_routes_validate_commands",
+            "FlextInfraValidationCommandRoutes",
+        ),
+        "FlextInfraValidationRoutes": (
+            ".cli_routes_validate",
+            "FlextInfraValidationRoutes",
+        ),
+        "FlextInfraWorkspaceRoutes": (
+            ".cli_routes_workspace",
+            "FlextInfraWorkspaceRoutes",
+        ),
+        "_codegen": ("._codegen", ""),
+    }),
+    public_exports=__all__,
 )
-
-install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

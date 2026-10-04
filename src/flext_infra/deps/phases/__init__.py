@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core import build_lazy_import_map, install_lazy_exports
+from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra.deps.phases.consolidate_groups import (
@@ -38,20 +38,35 @@ __all__: tuple[str, ...] = (
     "FlextInfraToolTablesPhase",
 )
 
-_LAZY_IMPORTS = MappingProxyType(
-    build_lazy_import_map(
-        MappingProxyType({
-            ".consolidate_groups": ("FlextInfraConsolidateGroupsPhase",),
-            ".ensure_packaging": ("FlextInfraEnsurePackagingPhase",),
-            ".ensure_pyrefly": ("FlextInfraEnsurePyreflyConfigPhase",),
-            ".ensure_pyright": ("FlextInfraEnsurePyrightConfigPhase",),
-            ".ensure_ruff": ("FlextInfraEnsureRuffConfigPhase",),
-            ".inject_comments": ("FlextInfraInjectCommentsPhase",),
-            ".tool_tables": ("FlextInfraToolTablesPhase",),
-        }),
-        alias_groups=MappingProxyType({}),
-        sort_keys=False,
-    ),
+install_lazy_exports(
+    __name__,
+    globals(),
+    MappingProxyType({
+        "FlextInfraConsolidateGroupsPhase": (
+            ".consolidate_groups",
+            "FlextInfraConsolidateGroupsPhase",
+        ),
+        "FlextInfraEnsurePackagingPhase": (
+            ".ensure_packaging",
+            "FlextInfraEnsurePackagingPhase",
+        ),
+        "FlextInfraEnsurePyreflyConfigPhase": (
+            ".ensure_pyrefly",
+            "FlextInfraEnsurePyreflyConfigPhase",
+        ),
+        "FlextInfraEnsurePyrightConfigPhase": (
+            ".ensure_pyright",
+            "FlextInfraEnsurePyrightConfigPhase",
+        ),
+        "FlextInfraEnsureRuffConfigPhase": (
+            ".ensure_ruff",
+            "FlextInfraEnsureRuffConfigPhase",
+        ),
+        "FlextInfraInjectCommentsPhase": (
+            ".inject_comments",
+            "FlextInfraInjectCommentsPhase",
+        ),
+        "FlextInfraToolTablesPhase": (".tool_tables", "FlextInfraToolTablesPhase"),
+    }),
+    public_exports=__all__,
 )
-
-install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

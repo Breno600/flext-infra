@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core import build_lazy_import_map, install_lazy_exports
+from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra._utilities import (
@@ -640,277 +640,664 @@ __all__: tuple[str, ...] = (
     "_semantic_cutover",
 )
 
-_LAZY_IMPORTS = MappingProxyType(
-    build_lazy_import_map(
-        MappingProxyType({
-            "._docs_audit_detectors": ("FlextInfraUtilitiesDocsAuditDetectorsMixin",),
-            "._docs_command_contract": ("FlextInfraUtilitiesDocsCommandContractMixin",),
-            "._docs_generate_plan": ("FlextInfraUtilitiesDocsGeneratePlanMixin",),
-            "._docs_generate_project": ("FlextInfraUtilitiesDocsGenerateProjectMixin",),
-            "._docs_generate_root": ("FlextInfraUtilitiesDocsGenerateRootMixin",),
-            "._docs_generate_sources": ("FlextInfraUtilitiesDocsGenerateSourcesMixin",),
-            "._docs_github_links": ("FlextInfraUtilitiesDocsGithubLinks",),
-            "._docs_guides": ("FlextInfraUtilitiesDocsGuidesMixin",),
-            "._docs_scope_build": ("FlextInfraUtilitiesDocsScopeBuildMixin",),
-            "._docs_scope_paths": ("FlextInfraUtilitiesDocsScopePathsMixin",),
-            "._docs_scope_policy": ("FlextInfraUtilitiesDocsScopePolicyMixin",),
-            "._docs_scope_projects": ("FlextInfraUtilitiesDocsScopeProjectsMixin",),
-            "._docs_scope_selection": ("FlextInfraUtilitiesDocsScopeSelectionMixin",),
-            "._docs_scope_state": ("FlextInfraUtilitiesDocsScopeStateMixin",),
-            "._git": ("_git",),
-            "._git.attestation": ("FlextInfraUtilitiesGitAttestationMixin",),
-            "._git.mutation_scope": ("FlextInfraUtilitiesGitMutationScopeMixin",),
-            "._git.remote": ("FlextInfraUtilitiesGitRemote",),
-            "._git.repo": ("FlextInfraUtilitiesGitRepo",),
-            "._git.scope": ("FlextInfraUtilitiesGitScopeMixin",),
-            "._git.semantic_identity": ("FlextInfraUtilitiesGitSemanticIdentityMixin",),
-            "._git.semantic_index": ("FlextInfraUtilitiesGitSemanticIndexMixin",),
-            "._git.semantic_lane": ("FlextInfraUtilitiesGitSemanticLaneMixin",),
-            "._git.semantic_paths": ("FlextInfraUtilitiesGitSemanticPathsMixin",),
-            "._git.semantic_publish": ("FlextInfraUtilitiesGitSemanticPublishMixin",),
-            "._git.semantic_refs": ("FlextInfraUtilitiesGitSemanticRefsMixin",),
-            "._git.semantic_submodule": (
-                "FlextInfraUtilitiesGitSemanticSubmoduleMixin",
-            ),
-            "._git.semantic_worktree": ("FlextInfraUtilitiesGitSemanticWorktreeMixin",),
-            "._git.state_capture": ("FlextInfraUtilitiesGitStateCaptureMixin",),
-            "._git.state_checkpoint": ("FlextInfraUtilitiesGitStateCheckpointMixin",),
-            "._git.state_files": ("FlextInfraUtilitiesGitStateFilesMixin",),
-            "._git.state_publication": ("FlextInfraUtilitiesGitStatePublicationMixin",),
-            "._git.state_snapshot": ("FlextInfraUtilitiesGitStateSnapshotMixin",),
-            "._git.state_transition": ("FlextInfraUtilitiesGitStateTransitionMixin",),
-            "._git.state_trees": ("FlextInfraUtilitiesGitStateTreesMixin",),
-            "._git.worktree": ("FlextInfraUtilitiesGitWorktreeMixin",),
-            "._git.worktree_checkpoint": (
-                "FlextInfraUtilitiesGitWorktreeCheckpointMixin",
-            ),
-            "._git.worktree_discovery": (
-                "FlextInfraUtilitiesGitWorktreeDiscoveryMixin",
-            ),
-            "._git.worktree_facts": ("FlextInfraUtilitiesGitWorktreeFactsMixin",),
-            "._git.worktree_io": ("FlextInfraUtilitiesGitWorktreeIO",),
-            "._git.worktree_materialization": (
-                "FlextInfraUtilitiesGitWorktreeMaterializationMixin",
-            ),
-            "._git.worktree_measure": ("FlextInfraUtilitiesGitWorktreeMeasureMixin",),
-            "._git.worktree_patch": ("FlextInfraUtilitiesGitWorktreePatchMixin",),
-            "._git.worktree_removal": ("FlextInfraUtilitiesGitWorktreeRemovalMixin",),
-            "._git.worktree_roots": ("FlextInfraUtilitiesGitWorktreeRootsMixin",),
-            "._git.worktree_status": ("FlextInfraUtilitiesGitWorktreeStatusMixin",),
-            "._mypy_profile": ("FlextInfraMypyProfiler",),
-            "._mypy_supervisor": ("FlextInfraMypyDarwinSupervisor",),
-            "._project_discovery_candidates": (
-                "FlextInfraUtilitiesProjectDiscoveryCandidatesMixin",
-            ),
-            "._project_discovery_shape": (
-                "FlextInfraUtilitiesProjectDiscoveryShapeMixin",
-            ),
-            "._promoted": ("_promoted",),
-            "._promoted.commands": ("FlextInfraUtilitiesPromotedCommands",),
-            "._promoted.execution": ("FlextInfraUtilitiesPromotedExecution",),
-            "._promoted.invocation": ("FlextInfraUtilitiesPromotedInvocation",),
-            "._promoted.rendering": ("FlextInfraUtilitiesPromotedRendering",),
-            "._promoted.workspace": ("FlextInfraUtilitiesPromotedWorkspace",),
-            "._pyproject": ("_pyproject",),
-            "._pyproject.base": ("FlextInfraUtilitiesPyprojectConformBase",),
-            "._pyproject.document": ("FlextInfraUtilitiesPyprojectDocument",),
-            "._pyproject.overlay": ("FlextInfraUtilitiesPyprojectOverlay",),
-            "._pyproject.requirements": ("FlextInfraUtilitiesPyprojectRequirements",),
-            "._pyproject.session": ("FlextInfraUtilitiesPyprojectSession",),
-            "._pyproject.toml_phases": ("FlextInfraUtilitiesPyprojectTomlPhases",),
-            "._pyproject.uv_sources": ("FlextInfraUtilitiesPyprojectUvSources",),
-            "._rope": ("_rope",),
-            "._rope.project": ("FlextInfraRopeProject",),
-            "._rope_analysis": ("_rope_analysis",),
-            "._rope_analysis.asthelpers": (
-                "FlextInfraUtilitiesRopeAnalysisAstHelpers",
-            ),
-            "._rope_analysis.base": ("FlextInfraUtilitiesRopeAnalysisBase",),
-            "._rope_analysis.exports": ("FlextInfraUtilitiesRopeAnalysisExports",),
-            "._rope_analysis.importstate": (
-                "FlextInfraUtilitiesRopeAnalysisImportState",
-            ),
-            "._rope_analysis.sourcescan": (
-                "FlextInfraUtilitiesRopeAnalysisSourceScan",
-            ),
-            "._rope_core_pymodule": ("FlextInfraUtilitiesRopeCorePyModuleMixin",),
-            "._rope_core_resources": ("FlextInfraUtilitiesRopeCoreResourcesMixin",),
-            "._rope_method_order": ("FlextInfraUtilitiesRopeMethodOrderMixin",),
-            "._semantic_cutover": ("_semantic_cutover",),
-            "._semantic_cutover.alias_cst": (
-                "FlextInfraUtilitiesSemanticCutoverAliasCst",
-            ),
-            "._semantic_cutover.aliases": (
-                "FlextInfraUtilitiesSemanticCutoverAliases",
-            ),
-            "._semantic_cutover.base": ("FlextInfraUtilitiesSemanticCutoverBase",),
-            "._semantic_cutover.bindings": (
-                "FlextInfraUtilitiesSemanticCutoverBindings",
-            ),
-            "._semantic_cutover.class_scope": (
-                "FlextInfraUtilitiesSemanticCutoverClassScope",
-            ),
-            "._semantic_cutover.dynamic_environment": (
-                "FlextInfraUtilitiesSemanticCutoverDynamicEnvironment",
-            ),
-            "._semantic_cutover.edits": ("FlextInfraUtilitiesSemanticCutoverEdits",),
-            "._semantic_cutover.facade_base_cst": (
-                "FlextInfraUtilitiesSemanticCutoverFacadeBaseCst",
-            ),
-            "._semantic_cutover.facade_bases": (
-                "FlextInfraUtilitiesSemanticCutoverFacadeBases",
-            ),
-            "._semantic_cutover.facade_owners": (
-                "FlextInfraUtilitiesSemanticCutoverFacadeOwners",
-            ),
-            "._semantic_cutover.family_flatten": (
-                "FlextInfraUtilitiesSemanticFamilyFlatten",
-            ),
-            "._semantic_cutover.family_references": (
-                "FlextInfraUtilitiesSemanticFamilyReferences",
-            ),
-            "._semantic_cutover.family_type_references": (
-                "FlextInfraUtilitiesSemanticFamilyTypeReferences",
-            ),
-            "._semantic_cutover.helper_references": (
-                "FlextInfraUtilitiesSemanticHelperReferences",
-            ),
-            "._semantic_cutover.model_fields": (
-                "FlextInfraUtilitiesSemanticCutoverModelFields",
-            ),
-            "._semantic_cutover.model_fields_bindings": (
-                "FlextInfraUtilitiesSemanticCutoverModelFieldsBindings",
-            ),
-            "._semantic_cutover.module_layout": (
-                "FlextInfraUtilitiesSemanticCutoverModuleLayout",
-            ),
-            "._semantic_cutover.nesting": (
-                "FlextInfraUtilitiesSemanticCutoverNesting",
-            ),
-            "._semantic_cutover.nesting_cst": (
-                "FlextInfraUtilitiesSemanticCutoverNestingCst",
-            ),
-            "._semantic_cutover.nesting_module_aliases": (
-                "FlextInfraUtilitiesSemanticCutoverNestingModuleAliases",
-            ),
-            "._semantic_cutover.nesting_owner": (
-                "FlextInfraUtilitiesSemanticCutoverNestingOwner",
-            ),
-            "._semantic_cutover.nesting_references": (
-                "FlextInfraUtilitiesSemanticCutoverNestingReferences",
-            ),
-            "._semantic_cutover.nesting_types": (
-                "FlextInfraUtilitiesSemanticNestingTypes",
-            ),
-            "._semantic_cutover.private_import_cst": (
-                "FlextInfraUtilitiesSemanticCutoverPrivateImportCst",
-            ),
-            "._semantic_cutover.private_imports": (
-                "FlextInfraUtilitiesSemanticCutoverPrivateImports",
-            ),
-            "._semantic_cutover.self_facade": (
-                "FlextInfraUtilitiesSemanticCutoverSelfFacade",
-            ),
-            ".base": ("FlextInfraUtilitiesBase",),
-            ".census": ("FlextInfraUtilitiesRefactorCensus",),
-            ".codegen": ("FlextInfraUtilitiesCodegen",),
-            ".codegen_facades": ("FlextInfraUtilitiesCodegenFacades",),
-            ".codegen_file_plan": ("FlextInfraUtilitiesCodegenFilePlan",),
-            ".codegen_path_cutover": ("FlextInfraUtilitiesCodegenPathCutover",),
-            ".codemod_project": ("FlextInfraUtilitiesCodemodProject",),
-            ".codemod_rules": ("FlextInfraUtilitiesCodemodRules",),
-            ".compatibility_alias_validation": (
-                "FlextInfraUtilitiesCompatibilityAliasValidation",
-            ),
-            ".deferred_self_reference_rewrite": (
-                "FlextInfraUtilitiesDeferredSelfReferenceRewrite",
-            ),
-            ".dependencies": ("FlextInfraUtilitiesDependencies",),
-            ".discovery": ("FlextInfraUtilitiesDiscovery",),
-            ".docs": ("FlextInfraUtilitiesDocs",),
-            ".docs_api": ("FlextInfraUtilitiesDocsApi",),
-            ".docs_audit": ("FlextInfraUtilitiesDocsAudit",),
-            ".docs_build": ("FlextInfraUtilitiesDocsBuild",),
-            ".docs_collection": ("FlextInfraUtilitiesDocsCollection",),
-            ".docs_collection_sources": ("FlextInfraUtilitiesDocsCollectionSources",),
-            ".docs_collection_verify": ("FlextInfraUtilitiesDocsCollectionVerify",),
-            ".docs_contract": ("FlextInfraUtilitiesDocsContract",),
-            ".docs_fix": ("FlextInfraUtilitiesDocsFix",),
-            ".docs_generate": ("FlextInfraUtilitiesDocsGenerate",),
-            ".docs_render": ("FlextInfraUtilitiesDocsRender",),
-            ".docs_scope": ("FlextInfraUtilitiesDocsScope",),
-            ".docs_validate": ("FlextInfraUtilitiesDocsValidate",),
-            ".git": ("FlextInfraUtilitiesGit",),
-            ".gitignore": ("FlextInfraUtilitiesGitignore",),
-            ".iteration": ("FlextInfraUtilitiesIteration",),
-            ".iteration_directory": ("FlextInfraUtilitiesIterationDirectory",),
-            ".iteration_matching": ("FlextInfraUtilitiesIterationMatching",),
-            ".iteration_workspace": ("FlextInfraUtilitiesIterationWorkspace",),
-            ".lint_recipes": ("FlextInfraUtilitiesLintRecipes",),
-            ".log_parser": ("FlextInfraUtilitiesLogParser",),
-            ".managed_conflicts": ("FlextInfraUtilitiesManagedConflicts",),
-            ".namespace": ("FlextInfraUtilitiesCodegenNamespace",),
-            ".namespace_analysis": ("FlextInfraUtilitiesRefactorNamespaceFlext",),
-            ".namespace_common": ("FlextInfraUtilitiesRefactorNamespaceCommon",),
-            ".namespace_config": ("FlextInfraUtilitiesNamespaceConfig",),
-            ".namespace_moves": ("FlextInfraUtilitiesRefactorNamespaceMoves",),
-            ".network": ("FlextInfraUtilitiesNetwork",),
-            ".private_import_ancestry": ("FlextInfraUtilitiesPrivateImportAncestry",),
-            ".private_import_facades": ("FlextInfraUtilitiesPrivateImportFacades",),
-            ".private_import_validation": (
-                "FlextInfraUtilitiesPrivateImportValidation",
-            ),
-            ".process": ("FlextInfraUtilitiesProcess",),
-            ".project_discovery": ("FlextInfraUtilitiesProjectDiscovery",),
-            ".project_managed_artifacts": (
-                "FlextInfraUtilitiesProjectManagedArtifacts",
-            ),
-            ".promoted": ("FlextInfraUtilitiesPromoted",),
-            ".protected_edit": ("FlextInfraUtilitiesProtectedEdit",),
-            ".protected_edit_apply": ("FlextInfraUtilitiesProtectedEditApply",),
-            ".protected_edit_linting": ("FlextInfraUtilitiesProtectedEditLinting",),
-            ".protected_edit_preview": ("FlextInfraUtilitiesProtectedEditPreview",),
-            ".protected_edit_writes": ("FlextInfraUtilitiesProtectedEditWrites",),
-            ".pyproject": ("FlextInfraUtilitiesPyproject",),
-            ".pyproject_conform": ("FlextInfraUtilitiesPyprojectConform",),
-            ".pyrefly": ("FlextInfraUtilitiesPyrefly",),
-            ".qualified_names": ("FlextInfraUtilitiesQualifiedNames",),
-            ".refactor": ("FlextInfraUtilitiesRefactor",),
-            ".release": ("FlextInfraUtilitiesRelease",),
-            ".repository": ("FlextInfraUtilitiesRepository",),
-            ".resource_limits": ("FlextInfraUtilitiesResourceLimits",),
-            ".rope_analysis": ("FlextInfraUtilitiesRopeAnalysis",),
-            ".rope_analysis_introspection": (
-                "FlextInfraUtilitiesRopeAnalysisIntrospection",
-            ),
-            ".rope_analysis_workspace": ("FlextInfraUtilitiesRopeAnalysisWorkspace",),
-            ".rope_class_move": ("FlextInfraUtilitiesRopeClassMove",),
-            ".rope_core": ("FlextInfraUtilitiesRopeCore",),
-            ".rope_helpers": ("FlextInfraUtilitiesRopeHelpers",),
-            ".rope_imports": ("FlextInfraUtilitiesRopeImports",),
-            ".rope_inventory": ("FlextInfraUtilitiesRopeInventory",),
-            ".rope_module_patch": ("FlextInfraUtilitiesRopeModulePatch",),
-            ".rope_runtime": ("FlextInfraUtilitiesRopeRuntime",),
-            ".rope_runtime_base": ("FlextInfraUtilitiesRopeRuntimeBase",),
-            ".rope_runtime_modules": ("FlextInfraUtilitiesRopeRuntimeModules",),
-            ".rope_runtime_refactors": ("FlextInfraUtilitiesRopeRuntimeRefactors",),
-            ".rope_runtime_types": ("FlextInfraUtilitiesRopeRuntimeTypes",),
-            ".rope_source": ("FlextInfraUtilitiesRopeSource",),
-            ".rope_structure": ("FlextInfraUtilitiesRopeStructure",),
-            ".semantic_cutover": ("FlextInfraUtilitiesSemanticCutover",),
-            ".transformer_header": ("FlextInfraUtilitiesTransformerHeader",),
-            ".transformer_header_parser": (
-                "FlextInfraUtilitiesTransformerHeaderParser",
-            ),
-            ".versioning": ("FlextInfraUtilitiesVersioning",),
-            ".workspace_fingerprint": ("FlextInfraUtilitiesWorkspaceFingerprint",),
-            ".workspace_manifest": ("FlextInfraUtilitiesWorkspaceManifest",),
-            ".worktree_lifecycle": ("FlextInfraWorktreeLifecycle",),
-            ".worktree_provisioning": ("FlextInfraWorktreeProvisioning",),
-        }),
-        alias_groups=MappingProxyType({}),
-        sort_keys=False,
-    ),
+install_lazy_exports(
+    __name__,
+    globals(),
+    MappingProxyType({
+        "FlextInfraMypyDarwinSupervisor": (
+            "._mypy_supervisor",
+            "FlextInfraMypyDarwinSupervisor",
+        ),
+        "FlextInfraMypyProfiler": ("._mypy_profile", "FlextInfraMypyProfiler"),
+        "FlextInfraRopeProject": ("._rope.project", "FlextInfraRopeProject"),
+        "FlextInfraUtilitiesBase": (".base", "FlextInfraUtilitiesBase"),
+        "FlextInfraUtilitiesCodegen": (".codegen", "FlextInfraUtilitiesCodegen"),
+        "FlextInfraUtilitiesCodegenFacades": (
+            ".codegen_facades",
+            "FlextInfraUtilitiesCodegenFacades",
+        ),
+        "FlextInfraUtilitiesCodegenFilePlan": (
+            ".codegen_file_plan",
+            "FlextInfraUtilitiesCodegenFilePlan",
+        ),
+        "FlextInfraUtilitiesCodegenNamespace": (
+            ".namespace",
+            "FlextInfraUtilitiesCodegenNamespace",
+        ),
+        "FlextInfraUtilitiesCodegenPathCutover": (
+            ".codegen_path_cutover",
+            "FlextInfraUtilitiesCodegenPathCutover",
+        ),
+        "FlextInfraUtilitiesCodemodProject": (
+            ".codemod_project",
+            "FlextInfraUtilitiesCodemodProject",
+        ),
+        "FlextInfraUtilitiesCodemodRules": (
+            ".codemod_rules",
+            "FlextInfraUtilitiesCodemodRules",
+        ),
+        "FlextInfraUtilitiesCompatibilityAliasValidation": (
+            ".compatibility_alias_validation",
+            "FlextInfraUtilitiesCompatibilityAliasValidation",
+        ),
+        "FlextInfraUtilitiesDeferredSelfReferenceRewrite": (
+            ".deferred_self_reference_rewrite",
+            "FlextInfraUtilitiesDeferredSelfReferenceRewrite",
+        ),
+        "FlextInfraUtilitiesDependencies": (
+            ".dependencies",
+            "FlextInfraUtilitiesDependencies",
+        ),
+        "FlextInfraUtilitiesDiscovery": (".discovery", "FlextInfraUtilitiesDiscovery"),
+        "FlextInfraUtilitiesDocs": (".docs", "FlextInfraUtilitiesDocs"),
+        "FlextInfraUtilitiesDocsApi": (".docs_api", "FlextInfraUtilitiesDocsApi"),
+        "FlextInfraUtilitiesDocsAudit": (".docs_audit", "FlextInfraUtilitiesDocsAudit"),
+        "FlextInfraUtilitiesDocsAuditDetectorsMixin": (
+            "._docs_audit_detectors",
+            "FlextInfraUtilitiesDocsAuditDetectorsMixin",
+        ),
+        "FlextInfraUtilitiesDocsBuild": (".docs_build", "FlextInfraUtilitiesDocsBuild"),
+        "FlextInfraUtilitiesDocsCollection": (
+            ".docs_collection",
+            "FlextInfraUtilitiesDocsCollection",
+        ),
+        "FlextInfraUtilitiesDocsCollectionSources": (
+            ".docs_collection_sources",
+            "FlextInfraUtilitiesDocsCollectionSources",
+        ),
+        "FlextInfraUtilitiesDocsCollectionVerify": (
+            ".docs_collection_verify",
+            "FlextInfraUtilitiesDocsCollectionVerify",
+        ),
+        "FlextInfraUtilitiesDocsCommandContractMixin": (
+            "._docs_command_contract",
+            "FlextInfraUtilitiesDocsCommandContractMixin",
+        ),
+        "FlextInfraUtilitiesDocsContract": (
+            ".docs_contract",
+            "FlextInfraUtilitiesDocsContract",
+        ),
+        "FlextInfraUtilitiesDocsFix": (".docs_fix", "FlextInfraUtilitiesDocsFix"),
+        "FlextInfraUtilitiesDocsGenerate": (
+            ".docs_generate",
+            "FlextInfraUtilitiesDocsGenerate",
+        ),
+        "FlextInfraUtilitiesDocsGeneratePlanMixin": (
+            "._docs_generate_plan",
+            "FlextInfraUtilitiesDocsGeneratePlanMixin",
+        ),
+        "FlextInfraUtilitiesDocsGenerateProjectMixin": (
+            "._docs_generate_project",
+            "FlextInfraUtilitiesDocsGenerateProjectMixin",
+        ),
+        "FlextInfraUtilitiesDocsGenerateRootMixin": (
+            "._docs_generate_root",
+            "FlextInfraUtilitiesDocsGenerateRootMixin",
+        ),
+        "FlextInfraUtilitiesDocsGenerateSourcesMixin": (
+            "._docs_generate_sources",
+            "FlextInfraUtilitiesDocsGenerateSourcesMixin",
+        ),
+        "FlextInfraUtilitiesDocsGithubLinks": (
+            "._docs_github_links",
+            "FlextInfraUtilitiesDocsGithubLinks",
+        ),
+        "FlextInfraUtilitiesDocsGuidesMixin": (
+            "._docs_guides",
+            "FlextInfraUtilitiesDocsGuidesMixin",
+        ),
+        "FlextInfraUtilitiesDocsRender": (
+            ".docs_render",
+            "FlextInfraUtilitiesDocsRender",
+        ),
+        "FlextInfraUtilitiesDocsScope": (".docs_scope", "FlextInfraUtilitiesDocsScope"),
+        "FlextInfraUtilitiesDocsScopeBuildMixin": (
+            "._docs_scope_build",
+            "FlextInfraUtilitiesDocsScopeBuildMixin",
+        ),
+        "FlextInfraUtilitiesDocsScopePathsMixin": (
+            "._docs_scope_paths",
+            "FlextInfraUtilitiesDocsScopePathsMixin",
+        ),
+        "FlextInfraUtilitiesDocsScopePolicyMixin": (
+            "._docs_scope_policy",
+            "FlextInfraUtilitiesDocsScopePolicyMixin",
+        ),
+        "FlextInfraUtilitiesDocsScopeProjectsMixin": (
+            "._docs_scope_projects",
+            "FlextInfraUtilitiesDocsScopeProjectsMixin",
+        ),
+        "FlextInfraUtilitiesDocsScopeSelectionMixin": (
+            "._docs_scope_selection",
+            "FlextInfraUtilitiesDocsScopeSelectionMixin",
+        ),
+        "FlextInfraUtilitiesDocsScopeStateMixin": (
+            "._docs_scope_state",
+            "FlextInfraUtilitiesDocsScopeStateMixin",
+        ),
+        "FlextInfraUtilitiesDocsValidate": (
+            ".docs_validate",
+            "FlextInfraUtilitiesDocsValidate",
+        ),
+        "FlextInfraUtilitiesGit": (".git", "FlextInfraUtilitiesGit"),
+        "FlextInfraUtilitiesGitAttestationMixin": (
+            "._git.attestation",
+            "FlextInfraUtilitiesGitAttestationMixin",
+        ),
+        "FlextInfraUtilitiesGitMutationScopeMixin": (
+            "._git.mutation_scope",
+            "FlextInfraUtilitiesGitMutationScopeMixin",
+        ),
+        "FlextInfraUtilitiesGitRemote": (
+            "._git.remote",
+            "FlextInfraUtilitiesGitRemote",
+        ),
+        "FlextInfraUtilitiesGitRepo": ("._git.repo", "FlextInfraUtilitiesGitRepo"),
+        "FlextInfraUtilitiesGitScopeMixin": (
+            "._git.scope",
+            "FlextInfraUtilitiesGitScopeMixin",
+        ),
+        "FlextInfraUtilitiesGitSemanticIdentityMixin": (
+            "._git.semantic_identity",
+            "FlextInfraUtilitiesGitSemanticIdentityMixin",
+        ),
+        "FlextInfraUtilitiesGitSemanticIndexMixin": (
+            "._git.semantic_index",
+            "FlextInfraUtilitiesGitSemanticIndexMixin",
+        ),
+        "FlextInfraUtilitiesGitSemanticLaneMixin": (
+            "._git.semantic_lane",
+            "FlextInfraUtilitiesGitSemanticLaneMixin",
+        ),
+        "FlextInfraUtilitiesGitSemanticPathsMixin": (
+            "._git.semantic_paths",
+            "FlextInfraUtilitiesGitSemanticPathsMixin",
+        ),
+        "FlextInfraUtilitiesGitSemanticPublishMixin": (
+            "._git.semantic_publish",
+            "FlextInfraUtilitiesGitSemanticPublishMixin",
+        ),
+        "FlextInfraUtilitiesGitSemanticRefsMixin": (
+            "._git.semantic_refs",
+            "FlextInfraUtilitiesGitSemanticRefsMixin",
+        ),
+        "FlextInfraUtilitiesGitSemanticSubmoduleMixin": (
+            "._git.semantic_submodule",
+            "FlextInfraUtilitiesGitSemanticSubmoduleMixin",
+        ),
+        "FlextInfraUtilitiesGitSemanticWorktreeMixin": (
+            "._git.semantic_worktree",
+            "FlextInfraUtilitiesGitSemanticWorktreeMixin",
+        ),
+        "FlextInfraUtilitiesGitStateCaptureMixin": (
+            "._git.state_capture",
+            "FlextInfraUtilitiesGitStateCaptureMixin",
+        ),
+        "FlextInfraUtilitiesGitStateCheckpointMixin": (
+            "._git.state_checkpoint",
+            "FlextInfraUtilitiesGitStateCheckpointMixin",
+        ),
+        "FlextInfraUtilitiesGitStateFilesMixin": (
+            "._git.state_files",
+            "FlextInfraUtilitiesGitStateFilesMixin",
+        ),
+        "FlextInfraUtilitiesGitStatePublicationMixin": (
+            "._git.state_publication",
+            "FlextInfraUtilitiesGitStatePublicationMixin",
+        ),
+        "FlextInfraUtilitiesGitStateSnapshotMixin": (
+            "._git.state_snapshot",
+            "FlextInfraUtilitiesGitStateSnapshotMixin",
+        ),
+        "FlextInfraUtilitiesGitStateTransitionMixin": (
+            "._git.state_transition",
+            "FlextInfraUtilitiesGitStateTransitionMixin",
+        ),
+        "FlextInfraUtilitiesGitStateTreesMixin": (
+            "._git.state_trees",
+            "FlextInfraUtilitiesGitStateTreesMixin",
+        ),
+        "FlextInfraUtilitiesGitWorktreeCheckpointMixin": (
+            "._git.worktree_checkpoint",
+            "FlextInfraUtilitiesGitWorktreeCheckpointMixin",
+        ),
+        "FlextInfraUtilitiesGitWorktreeDiscoveryMixin": (
+            "._git.worktree_discovery",
+            "FlextInfraUtilitiesGitWorktreeDiscoveryMixin",
+        ),
+        "FlextInfraUtilitiesGitWorktreeFactsMixin": (
+            "._git.worktree_facts",
+            "FlextInfraUtilitiesGitWorktreeFactsMixin",
+        ),
+        "FlextInfraUtilitiesGitWorktreeIO": (
+            "._git.worktree_io",
+            "FlextInfraUtilitiesGitWorktreeIO",
+        ),
+        "FlextInfraUtilitiesGitWorktreeMaterializationMixin": (
+            "._git.worktree_materialization",
+            "FlextInfraUtilitiesGitWorktreeMaterializationMixin",
+        ),
+        "FlextInfraUtilitiesGitWorktreeMeasureMixin": (
+            "._git.worktree_measure",
+            "FlextInfraUtilitiesGitWorktreeMeasureMixin",
+        ),
+        "FlextInfraUtilitiesGitWorktreeMixin": (
+            "._git.worktree",
+            "FlextInfraUtilitiesGitWorktreeMixin",
+        ),
+        "FlextInfraUtilitiesGitWorktreePatchMixin": (
+            "._git.worktree_patch",
+            "FlextInfraUtilitiesGitWorktreePatchMixin",
+        ),
+        "FlextInfraUtilitiesGitWorktreeRemovalMixin": (
+            "._git.worktree_removal",
+            "FlextInfraUtilitiesGitWorktreeRemovalMixin",
+        ),
+        "FlextInfraUtilitiesGitWorktreeRootsMixin": (
+            "._git.worktree_roots",
+            "FlextInfraUtilitiesGitWorktreeRootsMixin",
+        ),
+        "FlextInfraUtilitiesGitWorktreeStatusMixin": (
+            "._git.worktree_status",
+            "FlextInfraUtilitiesGitWorktreeStatusMixin",
+        ),
+        "FlextInfraUtilitiesGitignore": (".gitignore", "FlextInfraUtilitiesGitignore"),
+        "FlextInfraUtilitiesIteration": (".iteration", "FlextInfraUtilitiesIteration"),
+        "FlextInfraUtilitiesIterationDirectory": (
+            ".iteration_directory",
+            "FlextInfraUtilitiesIterationDirectory",
+        ),
+        "FlextInfraUtilitiesIterationMatching": (
+            ".iteration_matching",
+            "FlextInfraUtilitiesIterationMatching",
+        ),
+        "FlextInfraUtilitiesIterationWorkspace": (
+            ".iteration_workspace",
+            "FlextInfraUtilitiesIterationWorkspace",
+        ),
+        "FlextInfraUtilitiesLintRecipes": (
+            ".lint_recipes",
+            "FlextInfraUtilitiesLintRecipes",
+        ),
+        "FlextInfraUtilitiesLogParser": (".log_parser", "FlextInfraUtilitiesLogParser"),
+        "FlextInfraUtilitiesManagedConflicts": (
+            ".managed_conflicts",
+            "FlextInfraUtilitiesManagedConflicts",
+        ),
+        "FlextInfraUtilitiesNamespaceConfig": (
+            ".namespace_config",
+            "FlextInfraUtilitiesNamespaceConfig",
+        ),
+        "FlextInfraUtilitiesNetwork": (".network", "FlextInfraUtilitiesNetwork"),
+        "FlextInfraUtilitiesPrivateImportAncestry": (
+            ".private_import_ancestry",
+            "FlextInfraUtilitiesPrivateImportAncestry",
+        ),
+        "FlextInfraUtilitiesPrivateImportFacades": (
+            ".private_import_facades",
+            "FlextInfraUtilitiesPrivateImportFacades",
+        ),
+        "FlextInfraUtilitiesPrivateImportValidation": (
+            ".private_import_validation",
+            "FlextInfraUtilitiesPrivateImportValidation",
+        ),
+        "FlextInfraUtilitiesProcess": (".process", "FlextInfraUtilitiesProcess"),
+        "FlextInfraUtilitiesProjectDiscovery": (
+            ".project_discovery",
+            "FlextInfraUtilitiesProjectDiscovery",
+        ),
+        "FlextInfraUtilitiesProjectDiscoveryCandidatesMixin": (
+            "._project_discovery_candidates",
+            "FlextInfraUtilitiesProjectDiscoveryCandidatesMixin",
+        ),
+        "FlextInfraUtilitiesProjectDiscoveryShapeMixin": (
+            "._project_discovery_shape",
+            "FlextInfraUtilitiesProjectDiscoveryShapeMixin",
+        ),
+        "FlextInfraUtilitiesProjectManagedArtifacts": (
+            ".project_managed_artifacts",
+            "FlextInfraUtilitiesProjectManagedArtifacts",
+        ),
+        "FlextInfraUtilitiesPromoted": (".promoted", "FlextInfraUtilitiesPromoted"),
+        "FlextInfraUtilitiesPromotedCommands": (
+            "._promoted.commands",
+            "FlextInfraUtilitiesPromotedCommands",
+        ),
+        "FlextInfraUtilitiesPromotedExecution": (
+            "._promoted.execution",
+            "FlextInfraUtilitiesPromotedExecution",
+        ),
+        "FlextInfraUtilitiesPromotedInvocation": (
+            "._promoted.invocation",
+            "FlextInfraUtilitiesPromotedInvocation",
+        ),
+        "FlextInfraUtilitiesPromotedRendering": (
+            "._promoted.rendering",
+            "FlextInfraUtilitiesPromotedRendering",
+        ),
+        "FlextInfraUtilitiesPromotedWorkspace": (
+            "._promoted.workspace",
+            "FlextInfraUtilitiesPromotedWorkspace",
+        ),
+        "FlextInfraUtilitiesProtectedEdit": (
+            ".protected_edit",
+            "FlextInfraUtilitiesProtectedEdit",
+        ),
+        "FlextInfraUtilitiesProtectedEditApply": (
+            ".protected_edit_apply",
+            "FlextInfraUtilitiesProtectedEditApply",
+        ),
+        "FlextInfraUtilitiesProtectedEditLinting": (
+            ".protected_edit_linting",
+            "FlextInfraUtilitiesProtectedEditLinting",
+        ),
+        "FlextInfraUtilitiesProtectedEditPreview": (
+            ".protected_edit_preview",
+            "FlextInfraUtilitiesProtectedEditPreview",
+        ),
+        "FlextInfraUtilitiesProtectedEditWrites": (
+            ".protected_edit_writes",
+            "FlextInfraUtilitiesProtectedEditWrites",
+        ),
+        "FlextInfraUtilitiesPyproject": (".pyproject", "FlextInfraUtilitiesPyproject"),
+        "FlextInfraUtilitiesPyprojectConform": (
+            ".pyproject_conform",
+            "FlextInfraUtilitiesPyprojectConform",
+        ),
+        "FlextInfraUtilitiesPyprojectConformBase": (
+            "._pyproject.base",
+            "FlextInfraUtilitiesPyprojectConformBase",
+        ),
+        "FlextInfraUtilitiesPyprojectDocument": (
+            "._pyproject.document",
+            "FlextInfraUtilitiesPyprojectDocument",
+        ),
+        "FlextInfraUtilitiesPyprojectOverlay": (
+            "._pyproject.overlay",
+            "FlextInfraUtilitiesPyprojectOverlay",
+        ),
+        "FlextInfraUtilitiesPyprojectRequirements": (
+            "._pyproject.requirements",
+            "FlextInfraUtilitiesPyprojectRequirements",
+        ),
+        "FlextInfraUtilitiesPyprojectSession": (
+            "._pyproject.session",
+            "FlextInfraUtilitiesPyprojectSession",
+        ),
+        "FlextInfraUtilitiesPyprojectTomlPhases": (
+            "._pyproject.toml_phases",
+            "FlextInfraUtilitiesPyprojectTomlPhases",
+        ),
+        "FlextInfraUtilitiesPyprojectUvSources": (
+            "._pyproject.uv_sources",
+            "FlextInfraUtilitiesPyprojectUvSources",
+        ),
+        "FlextInfraUtilitiesPyrefly": (".pyrefly", "FlextInfraUtilitiesPyrefly"),
+        "FlextInfraUtilitiesQualifiedNames": (
+            ".qualified_names",
+            "FlextInfraUtilitiesQualifiedNames",
+        ),
+        "FlextInfraUtilitiesRefactor": (".refactor", "FlextInfraUtilitiesRefactor"),
+        "FlextInfraUtilitiesRefactorCensus": (
+            ".census",
+            "FlextInfraUtilitiesRefactorCensus",
+        ),
+        "FlextInfraUtilitiesRefactorNamespaceCommon": (
+            ".namespace_common",
+            "FlextInfraUtilitiesRefactorNamespaceCommon",
+        ),
+        "FlextInfraUtilitiesRefactorNamespaceFlext": (
+            ".namespace_analysis",
+            "FlextInfraUtilitiesRefactorNamespaceFlext",
+        ),
+        "FlextInfraUtilitiesRefactorNamespaceMoves": (
+            ".namespace_moves",
+            "FlextInfraUtilitiesRefactorNamespaceMoves",
+        ),
+        "FlextInfraUtilitiesRelease": (".release", "FlextInfraUtilitiesRelease"),
+        "FlextInfraUtilitiesRepository": (
+            ".repository",
+            "FlextInfraUtilitiesRepository",
+        ),
+        "FlextInfraUtilitiesResourceLimits": (
+            ".resource_limits",
+            "FlextInfraUtilitiesResourceLimits",
+        ),
+        "FlextInfraUtilitiesRopeAnalysis": (
+            ".rope_analysis",
+            "FlextInfraUtilitiesRopeAnalysis",
+        ),
+        "FlextInfraUtilitiesRopeAnalysisAstHelpers": (
+            "._rope_analysis.asthelpers",
+            "FlextInfraUtilitiesRopeAnalysisAstHelpers",
+        ),
+        "FlextInfraUtilitiesRopeAnalysisBase": (
+            "._rope_analysis.base",
+            "FlextInfraUtilitiesRopeAnalysisBase",
+        ),
+        "FlextInfraUtilitiesRopeAnalysisExports": (
+            "._rope_analysis.exports",
+            "FlextInfraUtilitiesRopeAnalysisExports",
+        ),
+        "FlextInfraUtilitiesRopeAnalysisImportState": (
+            "._rope_analysis.importstate",
+            "FlextInfraUtilitiesRopeAnalysisImportState",
+        ),
+        "FlextInfraUtilitiesRopeAnalysisIntrospection": (
+            ".rope_analysis_introspection",
+            "FlextInfraUtilitiesRopeAnalysisIntrospection",
+        ),
+        "FlextInfraUtilitiesRopeAnalysisSourceScan": (
+            "._rope_analysis.sourcescan",
+            "FlextInfraUtilitiesRopeAnalysisSourceScan",
+        ),
+        "FlextInfraUtilitiesRopeAnalysisWorkspace": (
+            ".rope_analysis_workspace",
+            "FlextInfraUtilitiesRopeAnalysisWorkspace",
+        ),
+        "FlextInfraUtilitiesRopeClassMove": (
+            ".rope_class_move",
+            "FlextInfraUtilitiesRopeClassMove",
+        ),
+        "FlextInfraUtilitiesRopeCore": (".rope_core", "FlextInfraUtilitiesRopeCore"),
+        "FlextInfraUtilitiesRopeCorePyModuleMixin": (
+            "._rope_core_pymodule",
+            "FlextInfraUtilitiesRopeCorePyModuleMixin",
+        ),
+        "FlextInfraUtilitiesRopeCoreResourcesMixin": (
+            "._rope_core_resources",
+            "FlextInfraUtilitiesRopeCoreResourcesMixin",
+        ),
+        "FlextInfraUtilitiesRopeHelpers": (
+            ".rope_helpers",
+            "FlextInfraUtilitiesRopeHelpers",
+        ),
+        "FlextInfraUtilitiesRopeImports": (
+            ".rope_imports",
+            "FlextInfraUtilitiesRopeImports",
+        ),
+        "FlextInfraUtilitiesRopeInventory": (
+            ".rope_inventory",
+            "FlextInfraUtilitiesRopeInventory",
+        ),
+        "FlextInfraUtilitiesRopeMethodOrderMixin": (
+            "._rope_method_order",
+            "FlextInfraUtilitiesRopeMethodOrderMixin",
+        ),
+        "FlextInfraUtilitiesRopeModulePatch": (
+            ".rope_module_patch",
+            "FlextInfraUtilitiesRopeModulePatch",
+        ),
+        "FlextInfraUtilitiesRopeRuntime": (
+            ".rope_runtime",
+            "FlextInfraUtilitiesRopeRuntime",
+        ),
+        "FlextInfraUtilitiesRopeRuntimeBase": (
+            ".rope_runtime_base",
+            "FlextInfraUtilitiesRopeRuntimeBase",
+        ),
+        "FlextInfraUtilitiesRopeRuntimeModules": (
+            ".rope_runtime_modules",
+            "FlextInfraUtilitiesRopeRuntimeModules",
+        ),
+        "FlextInfraUtilitiesRopeRuntimeRefactors": (
+            ".rope_runtime_refactors",
+            "FlextInfraUtilitiesRopeRuntimeRefactors",
+        ),
+        "FlextInfraUtilitiesRopeRuntimeTypes": (
+            ".rope_runtime_types",
+            "FlextInfraUtilitiesRopeRuntimeTypes",
+        ),
+        "FlextInfraUtilitiesRopeSource": (
+            ".rope_source",
+            "FlextInfraUtilitiesRopeSource",
+        ),
+        "FlextInfraUtilitiesRopeStructure": (
+            ".rope_structure",
+            "FlextInfraUtilitiesRopeStructure",
+        ),
+        "FlextInfraUtilitiesSemanticCutover": (
+            ".semantic_cutover",
+            "FlextInfraUtilitiesSemanticCutover",
+        ),
+        "FlextInfraUtilitiesSemanticCutoverAliasCst": (
+            "._semantic_cutover.alias_cst",
+            "FlextInfraUtilitiesSemanticCutoverAliasCst",
+        ),
+        "FlextInfraUtilitiesSemanticCutoverAliases": (
+            "._semantic_cutover.aliases",
+            "FlextInfraUtilitiesSemanticCutoverAliases",
+        ),
+        "FlextInfraUtilitiesSemanticCutoverBase": (
+            "._semantic_cutover.base",
+            "FlextInfraUtilitiesSemanticCutoverBase",
+        ),
+        "FlextInfraUtilitiesSemanticCutoverBindings": (
+            "._semantic_cutover.bindings",
+            "FlextInfraUtilitiesSemanticCutoverBindings",
+        ),
+        "FlextInfraUtilitiesSemanticCutoverClassScope": (
+            "._semantic_cutover.class_scope",
+            "FlextInfraUtilitiesSemanticCutoverClassScope",
+        ),
+        "FlextInfraUtilitiesSemanticCutoverDynamicEnvironment": (
+            "._semantic_cutover.dynamic_environment",
+            "FlextInfraUtilitiesSemanticCutoverDynamicEnvironment",
+        ),
+        "FlextInfraUtilitiesSemanticCutoverEdits": (
+            "._semantic_cutover.edits",
+            "FlextInfraUtilitiesSemanticCutoverEdits",
+        ),
+        "FlextInfraUtilitiesSemanticCutoverFacadeBaseCst": (
+            "._semantic_cutover.facade_base_cst",
+            "FlextInfraUtilitiesSemanticCutoverFacadeBaseCst",
+        ),
+        "FlextInfraUtilitiesSemanticCutoverFacadeBases": (
+            "._semantic_cutover.facade_bases",
+            "FlextInfraUtilitiesSemanticCutoverFacadeBases",
+        ),
+        "FlextInfraUtilitiesSemanticCutoverFacadeOwners": (
+            "._semantic_cutover.facade_owners",
+            "FlextInfraUtilitiesSemanticCutoverFacadeOwners",
+        ),
+        "FlextInfraUtilitiesSemanticCutoverModelFields": (
+            "._semantic_cutover.model_fields",
+            "FlextInfraUtilitiesSemanticCutoverModelFields",
+        ),
+        "FlextInfraUtilitiesSemanticCutoverModelFieldsBindings": (
+            "._semantic_cutover.model_fields_bindings",
+            "FlextInfraUtilitiesSemanticCutoverModelFieldsBindings",
+        ),
+        "FlextInfraUtilitiesSemanticCutoverModuleLayout": (
+            "._semantic_cutover.module_layout",
+            "FlextInfraUtilitiesSemanticCutoverModuleLayout",
+        ),
+        "FlextInfraUtilitiesSemanticCutoverNesting": (
+            "._semantic_cutover.nesting",
+            "FlextInfraUtilitiesSemanticCutoverNesting",
+        ),
+        "FlextInfraUtilitiesSemanticCutoverNestingCst": (
+            "._semantic_cutover.nesting_cst",
+            "FlextInfraUtilitiesSemanticCutoverNestingCst",
+        ),
+        "FlextInfraUtilitiesSemanticCutoverNestingModuleAliases": (
+            "._semantic_cutover.nesting_module_aliases",
+            "FlextInfraUtilitiesSemanticCutoverNestingModuleAliases",
+        ),
+        "FlextInfraUtilitiesSemanticCutoverNestingOwner": (
+            "._semantic_cutover.nesting_owner",
+            "FlextInfraUtilitiesSemanticCutoverNestingOwner",
+        ),
+        "FlextInfraUtilitiesSemanticCutoverNestingReferences": (
+            "._semantic_cutover.nesting_references",
+            "FlextInfraUtilitiesSemanticCutoverNestingReferences",
+        ),
+        "FlextInfraUtilitiesSemanticCutoverPrivateImportCst": (
+            "._semantic_cutover.private_import_cst",
+            "FlextInfraUtilitiesSemanticCutoverPrivateImportCst",
+        ),
+        "FlextInfraUtilitiesSemanticCutoverPrivateImports": (
+            "._semantic_cutover.private_imports",
+            "FlextInfraUtilitiesSemanticCutoverPrivateImports",
+        ),
+        "FlextInfraUtilitiesSemanticCutoverSelfFacade": (
+            "._semantic_cutover.self_facade",
+            "FlextInfraUtilitiesSemanticCutoverSelfFacade",
+        ),
+        "FlextInfraUtilitiesSemanticFamilyFlatten": (
+            "._semantic_cutover.family_flatten",
+            "FlextInfraUtilitiesSemanticFamilyFlatten",
+        ),
+        "FlextInfraUtilitiesSemanticFamilyReferences": (
+            "._semantic_cutover.family_references",
+            "FlextInfraUtilitiesSemanticFamilyReferences",
+        ),
+        "FlextInfraUtilitiesSemanticFamilyTypeReferences": (
+            "._semantic_cutover.family_type_references",
+            "FlextInfraUtilitiesSemanticFamilyTypeReferences",
+        ),
+        "FlextInfraUtilitiesSemanticHelperReferences": (
+            "._semantic_cutover.helper_references",
+            "FlextInfraUtilitiesSemanticHelperReferences",
+        ),
+        "FlextInfraUtilitiesSemanticNestingTypes": (
+            "._semantic_cutover.nesting_types",
+            "FlextInfraUtilitiesSemanticNestingTypes",
+        ),
+        "FlextInfraUtilitiesTransformerHeader": (
+            ".transformer_header",
+            "FlextInfraUtilitiesTransformerHeader",
+        ),
+        "FlextInfraUtilitiesTransformerHeaderParser": (
+            ".transformer_header_parser",
+            "FlextInfraUtilitiesTransformerHeaderParser",
+        ),
+        "FlextInfraUtilitiesVersioning": (
+            ".versioning",
+            "FlextInfraUtilitiesVersioning",
+        ),
+        "FlextInfraUtilitiesWorkspaceFingerprint": (
+            ".workspace_fingerprint",
+            "FlextInfraUtilitiesWorkspaceFingerprint",
+        ),
+        "FlextInfraUtilitiesWorkspaceManifest": (
+            ".workspace_manifest",
+            "FlextInfraUtilitiesWorkspaceManifest",
+        ),
+        "FlextInfraWorktreeLifecycle": (
+            ".worktree_lifecycle",
+            "FlextInfraWorktreeLifecycle",
+        ),
+        "FlextInfraWorktreeProvisioning": (
+            ".worktree_provisioning",
+            "FlextInfraWorktreeProvisioning",
+        ),
+        "_git": ("._git", ""),
+        "_promoted": ("._promoted", ""),
+        "_pyproject": ("._pyproject", ""),
+        "_rope": ("._rope", ""),
+        "_rope_analysis": ("._rope_analysis", ""),
+        "_semantic_cutover": ("._semantic_cutover", ""),
+    }),
+    public_exports=__all__,
 )
-
-install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

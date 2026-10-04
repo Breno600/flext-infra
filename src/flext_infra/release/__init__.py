@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core import build_lazy_import_map, install_lazy_exports
+from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra.release._release_artifact import FlextInfraReleaseArtifactMixin
@@ -36,22 +36,43 @@ __all__: tuple[str, ...] = (
     "FlextInfraReleaseSourceMixin",
 )
 
-_LAZY_IMPORTS = MappingProxyType(
-    build_lazy_import_map(
-        MappingProxyType({
-            "._release_artifact": ("FlextInfraReleaseArtifactMixin",),
-            "._release_boundary": ("FlextInfraReleaseBoundaryMixin",),
-            "._release_build": ("FlextInfraReleaseBuildMixin",),
-            "._release_metadata": ("FlextInfraReleaseMetadataMixin",),
-            "._release_plan": ("FlextInfraReleasePlanMixin",),
-            "._release_project": ("FlextInfraReleaseProjectMixin",),
-            "._release_publish": ("FlextInfraReleasePublishMixin",),
-            "._release_source": ("FlextInfraReleaseSourceMixin",),
-            ".orchestrator": ("FlextInfraReleaseOrchestrator",),
-        }),
-        alias_groups=MappingProxyType({}),
-        sort_keys=False,
-    ),
+install_lazy_exports(
+    __name__,
+    globals(),
+    MappingProxyType({
+        "FlextInfraReleaseArtifactMixin": (
+            "._release_artifact",
+            "FlextInfraReleaseArtifactMixin",
+        ),
+        "FlextInfraReleaseBoundaryMixin": (
+            "._release_boundary",
+            "FlextInfraReleaseBoundaryMixin",
+        ),
+        "FlextInfraReleaseBuildMixin": (
+            "._release_build",
+            "FlextInfraReleaseBuildMixin",
+        ),
+        "FlextInfraReleaseMetadataMixin": (
+            "._release_metadata",
+            "FlextInfraReleaseMetadataMixin",
+        ),
+        "FlextInfraReleaseOrchestrator": (
+            ".orchestrator",
+            "FlextInfraReleaseOrchestrator",
+        ),
+        "FlextInfraReleasePlanMixin": ("._release_plan", "FlextInfraReleasePlanMixin"),
+        "FlextInfraReleaseProjectMixin": (
+            "._release_project",
+            "FlextInfraReleaseProjectMixin",
+        ),
+        "FlextInfraReleasePublishMixin": (
+            "._release_publish",
+            "FlextInfraReleasePublishMixin",
+        ),
+        "FlextInfraReleaseSourceMixin": (
+            "._release_source",
+            "FlextInfraReleaseSourceMixin",
+        ),
+    }),
+    public_exports=__all__,
 )
-
-install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)
