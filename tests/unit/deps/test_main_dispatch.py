@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from flext_tests import tm
 
-from flext_infra import main as infra_main
+from flext_infra import main
 
 
 class TestsFlextInfraDepsMainDispatch:
@@ -20,4 +20,4 @@ class TestsFlextInfraDepsMainDispatch:
         # pyproject normalization is consumed only by the codegen owner.
         """Verify subcommand help is available."""
         for subcommand in ("detect", "extra-paths", "modernize", "verify-locks"):
-            tm.that(infra_main(["deps", subcommand, "--help"]), eq=0)
+            tm.that(main(["deps", subcommand, "--help"]), eq=0)

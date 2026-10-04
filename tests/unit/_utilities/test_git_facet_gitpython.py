@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import FlextInfraGitService, c, m, main as infra_main, u
+from flext_infra import FlextInfraGitService, c, m, main, u
 from tests import u as test_u
 
 
@@ -264,7 +264,7 @@ class TestsFlextInfraGitFacet:
     ) -> None:
         """The public CLI passes a clean checkout and exposes a dirty Git report."""
         argv = ["workspace", "verify-clean", "--repo-root", str(real_git_repo)]
-        tm.that(infra_main(argv), eq=0)
+        tm.that(main(argv), eq=0)
         _ = capsys.readouterr()
 
         if change == "untracked":
@@ -281,7 +281,7 @@ class TestsFlextInfraGitFacet:
                     ),
                 )
 
-        tm.that(infra_main(argv), eq=1)
+        tm.that(main(argv), eq=1)
         output = capsys.readouterr()
         tm.that(output.out + output.err, has=changed_path.name)
 
@@ -293,7 +293,7 @@ class TestsFlextInfraGitFacet:
     ) -> None:
         """The public CLI passes a clean checkout and exposes a dirty Git report."""
         argv = ["workspace", "verify-clean", "--repo-root", str(real_git_repo)]
-        tm.that(infra_main(argv), eq=0)
+        tm.that(main(argv), eq=0)
         _ = capsys.readouterr()
 
         if change == "untracked":
@@ -310,7 +310,7 @@ class TestsFlextInfraGitFacet:
                     ),
                 )
 
-        tm.that(infra_main(argv), eq=1)
+        tm.that(main(argv), eq=1)
         output = capsys.readouterr()
         tm.that(output.out + output.err, has=changed_path.name)
 

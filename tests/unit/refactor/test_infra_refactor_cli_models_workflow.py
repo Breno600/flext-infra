@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
-from flext_infra import main as infra_main
+from flext_infra import main
 from tests import u
 
 if TYPE_CHECKING:
@@ -52,7 +52,7 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
             "--dry-run",
         ]
         with redirect_stdout(buffer):
-            result = infra_main(["refactor", *cli_args])
+            result = main(["refactor", *cli_args])
         tm.that(result, ne=0)
 
     @staticmethod
@@ -78,7 +78,7 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
         u.Tests.initialize_git_repo(workspace)
 
         with redirect_stdout(StringIO()):
-            result = infra_main([
+            result = main([
                 "refactor",
                 "wrapper-root-namespace",
                 f"--repository-root={workspace!s}",
@@ -111,7 +111,7 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
         )
         u.Tests.initialize_git_repo(workspace)
 
-        result = infra_main([
+        result = main([
             "refactor",
             "wrapper-root-namespace",
             f"--repository-root={workspace!s}",
@@ -144,7 +144,7 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
         )
         u.Tests.provision_checkout(workspace)
 
-        result = infra_main([
+        result = main([
             "refactor",
             "wrapper-root-namespace",
             f"--repository-root={workspace!s}",
