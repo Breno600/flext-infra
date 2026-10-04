@@ -28,24 +28,6 @@ _TRACKED_CODEGEN_CONFIG_PATH = (
 )
 
 
-def pytest_addoption(parser: pytest.Parser) -> None:
-    """Register the slow-timeout ini option consumed by the test suite.
-
-    Why (root cause, rc0 plugin gap): the pyproject ``[tool.pytest.ini_options]``
-    declares ``flext_slow_timeout_seconds`` (consumed by ``flext_tests``) and
-    ``tests/unit/deps/test_modernizer_pytest`` reads it back through
-    ``config.getini``. The installed ``flext-tests 0.12.0rc0`` entry-point does
-    not register the option, so pytest aborts collection with
-    ``Unknown config option`` before any test runs. This conftest owns its ini
-    surface and declares the option here; a real plugin re-registering the same
-    name is a no-op merge.
-    """
-    parser.addini(
-        "flext_slow_timeout_seconds",
-        help="Seconds after which a test is flagged slow (flext-tests option)",
-    )
-
-
 @pytest.fixture
 def rope_workspace(tmp_path: Path) -> Iterator[p.Infra.RopeWorkspaceDsl]:
     """Provide one real Rope workspace through the public composition root.
