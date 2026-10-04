@@ -15,7 +15,7 @@ from flext_infra import c, t
 from flext_infra._models._config.base import FlextInfraConfigModels
 from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
 from flext_infra._models._git import FlextInfraModelsGitIdentity
-from flext_infra._models.mixins import FlextInfraModelsMixins as mm
+from flext_infra._models.mixins import FlextInfraModelsMixins
 
 
 class FlextInfraModelsWorkspace:
@@ -67,7 +67,9 @@ class FlextInfraModelsWorkspace:
             ),
         ]
 
-    class EnvironmentContractViolation(mm.PositiveLineMixin, m.ContractModel):
+    class EnvironmentContractViolation(
+        FlextInfraModelsMixins.PositiveLineMixin, m.ContractModel,
+    ):
         """One static ``.envrc``/``.envrc.local`` contract violation.
 
         The line is carried as a typed field; the consuming gate renders the
@@ -153,7 +155,9 @@ class FlextInfraModelsWorkspace:
             m.Field(description="Editable directory metadata"),
         ]
 
-    class ProjectInfo(mm.ProjectEntryNameMixin, m.ArbitraryTypesModel):
+    class ProjectInfo(
+        FlextInfraModelsMixins.ProjectEntryNameMixin, m.ArbitraryTypesModel,
+    ):
         """Discovered project metadata for workspace operations."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(

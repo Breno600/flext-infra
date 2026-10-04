@@ -14,7 +14,7 @@ from flext_cli import m
 from flext_infra import t
 from flext_infra._models.deps_toml import FlextInfraModelsDepsToml
 from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
-from flext_infra._models.mixins import FlextInfraModelsMixins as mm
+from flext_infra._models.mixins import FlextInfraModelsMixins
 
 
 class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsToml):
@@ -81,7 +81,7 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             m.Field(description="Active consumer resolution constraints"),
         ]
 
-    class DetectCommand(mm.WriteMixin, m.ContractModel):
+    class DetectCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra deps detect``.
 
         Inherits ``apply``/``dry_run``, ``repository_root``, ``projects``,
@@ -144,10 +144,10 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
                 return None
             return Path(self.limits).expanduser().resolve()
 
-    class ExtraPathsCommand(mm.WriteMixin, m.ContractModel):
+    class ExtraPathsCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra deps extra-paths``."""
 
-    class ModernizeCommand(mm.WriteMixin, m.ContractModel):
+    class ModernizeCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra deps modernize``."""
 
         check: Annotated[
@@ -412,7 +412,9 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             m.Field(0, description="Raw issue count"),
         ] = 0
 
-    class ProjectDependencyReport(mm.ProjectNameMixin, m.ArbitraryTypesModel):
+    class ProjectDependencyReport(
+        FlextInfraModelsMixins.ProjectNameMixin, m.ArbitraryTypesModel,
+    ):
         """Project-level dependency report combining deptry results."""
 
         deptry: FlextInfraModelsDeps.DeptryReport = m.Field(description="Deptry report")

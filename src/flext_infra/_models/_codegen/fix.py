@@ -12,14 +12,14 @@ from typing import Annotated, ClassVar, Literal
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._models import FlextInfraModelsMixins as mm
+from flext_infra._models import FlextInfraModelsMixins
 from flext_infra._models._codegen.scaffold import FlextInfraModelsCodegenScaffoldModels
 
 
 class FlextInfraModelsCodegenFixModels:
     """Auto-fix, consolidation, and namespace policy models."""
 
-    class AutoFixResult(mm.ProjectNameMixin, m.ArbitraryTypesModel):
+    class AutoFixResult(FlextInfraModelsMixins.ProjectNameMixin, m.ArbitraryTypesModel):
         """Result of auto-fixing namespace violations for a project."""
 
         violations_fixed: Annotated[
@@ -176,15 +176,19 @@ class FlextInfraModelsCodegenFixModels:
         )
 
     class BulkFixItem(
-        mm.AbsoluteFilePathTextMixin,
-        mm.PositiveLineMixin,
+        FlextInfraModelsMixins.AbsoluteFilePathTextMixin,
+        FlextInfraModelsMixins.PositiveLineMixin,
         m.ArbitraryTypesModel,
     ):
         """Shared line-addressable item used by bulk codegen fixes."""
 
         name: Annotated[t.NonEmptyStr, m.Field(description="Item identifier")]
 
-    class ConstantDefinition(mm.ProjectNameMixin, mm.NestedClassPathMixin, BulkFixItem):
+    class ConstantDefinition(
+        FlextInfraModelsMixins.ProjectNameMixin,
+        FlextInfraModelsMixins.NestedClassPathMixin,
+        BulkFixItem,
+    ):
         """A single constant extracted from a constants.py file."""
 
         value_repr: Annotated[
@@ -209,7 +213,9 @@ class FlextInfraModelsCodegenFixModels:
             m.Field(description="Canonical parent reference"),
         ] = ""
 
-    class DirectConstantRef(mm.ProjectNameMixin, m.ArbitraryTypesModel):
+    class DirectConstantRef(
+        FlextInfraModelsMixins.ProjectNameMixin, m.ArbitraryTypesModel,
+    ):
         """Direct FlextXConstants.Y.Z reference that should use c.* alias."""
 
         full_ref: Annotated[
