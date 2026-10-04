@@ -11,7 +11,12 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import FlextInfraPyprojectModernizer, FlextInfraToolTablesPhase, config
+from flext_infra import (
+    FlextInfraEnsureRuffConfigPhase,
+    FlextInfraPyprojectModernizer,
+    FlextInfraToolTablesPhase,
+    config,
+)
 from tests import c, m, t, u
 
 
@@ -414,8 +419,6 @@ class TestsFlextInfraDepsModernizerToolTables:
         namespace-packages contract only holds for live roots; the workspace
         SSOT's exclusions decide (bead flext-x44z3).
         """
-        from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
-
         project_dir = self._workspace_with_exclusion(tmp_path, "scripts")
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
             u.Tests.toml_payload('[project]\nname = "flext-sample"\n'),
