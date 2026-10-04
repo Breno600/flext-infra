@@ -95,7 +95,8 @@ class FlextInfraModelsCodegenLazyInitModels:
         critical: Annotated[bool, m.Field(description="Whether failure is critical")]
 
     class QualityGateProjectFinding(
-        FlextInfraModelsMixins.ProjectNameMixin, m.ArbitraryTypesModel,
+        FlextInfraModelsMixins.ProjectNameMixin,
+        m.ArbitraryTypesModel,
     ):
         """Per-project quality gate findings."""
 

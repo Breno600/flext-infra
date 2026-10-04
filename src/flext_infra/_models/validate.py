@@ -101,7 +101,8 @@ class FlextInfraModelsCore:
         violations: Annotated[t.StrSequence, m.Field(description="Violations")]
 
     class StubAnalysisReport(
-        FlextInfraModelsMixins.ProjectNameMixin, m.ArbitraryTypesModel,
+        FlextInfraModelsMixins.ProjectNameMixin,
+        m.ArbitraryTypesModel,
     ):
         """Structured typed-dependency analysis result for a project."""
 

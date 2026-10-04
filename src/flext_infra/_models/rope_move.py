@@ -19,7 +19,8 @@ class FlextInfraModelsRopeMove:
     """Data-only contracts for semantic class relocation."""
 
     class ClassMoveRequest(
-        FlextInfraModelsMixins.PositiveLineMixin, m.ArbitraryTypesModel,
+        FlextInfraModelsMixins.PositiveLineMixin,
+        m.ArbitraryTypesModel,
     ):
         """One exact, prevalidated Rope class-move request."""
 

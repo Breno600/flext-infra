@@ -214,7 +214,8 @@ class FlextInfraModelsCodegenFixModels:
         ] = ""
 
     class DirectConstantRef(
-        FlextInfraModelsMixins.ProjectNameMixin, m.ArbitraryTypesModel,
+        FlextInfraModelsMixins.ProjectNameMixin,
+        m.ArbitraryTypesModel,
     ):
         """Direct FlextXConstants.Y.Z reference that should use c.* alias."""
 

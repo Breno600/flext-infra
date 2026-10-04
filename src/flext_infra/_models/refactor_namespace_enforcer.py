@@ -28,7 +28,8 @@ class FlextInfraModelsNamespaceEnforcer:
         error_type: Annotated[t.NonEmptyStr, m.Field(description="Error type")]
 
     class ProjectEnforcementReport(
-        FlextInfraModelsMixins.ProjectNameMixin, m.ArbitraryTypesModel,
+        FlextInfraModelsMixins.ProjectNameMixin,
+        m.ArbitraryTypesModel,
     ):
         """Rule-catalog relocation outcome of one project."""
 

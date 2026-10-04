@@ -413,7 +413,8 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         ] = 0
 
     class ProjectDependencyReport(
-        FlextInfraModelsMixins.ProjectNameMixin, m.ArbitraryTypesModel,
+        FlextInfraModelsMixins.ProjectNameMixin,
+        m.ArbitraryTypesModel,
     ):
         """Project-level dependency report combining deptry results."""
 

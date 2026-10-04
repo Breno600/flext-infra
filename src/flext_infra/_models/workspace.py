@@ -68,7 +68,8 @@ class FlextInfraModelsWorkspace:
         ]
 
     class EnvironmentContractViolation(
-        FlextInfraModelsMixins.PositiveLineMixin, m.ContractModel,
+        FlextInfraModelsMixins.PositiveLineMixin,
+        m.ContractModel,
     ):
         """One static ``.envrc``/``.envrc.local`` contract violation.
 
@@ -156,7 +157,8 @@ class FlextInfraModelsWorkspace:
         ]
 
     class ProjectInfo(
-        FlextInfraModelsMixins.ProjectEntryNameMixin, m.ArbitraryTypesModel,
+        FlextInfraModelsMixins.ProjectEntryNameMixin,
+        m.ArbitraryTypesModel,
     ):
         """Discovered project metadata for workspace operations."""
 

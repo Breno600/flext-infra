@@ -20,7 +20,8 @@ class FlextInfraModelsCodegenScaffoldModels:
     """Census and scaffold models for the codegen pipeline."""
 
     class CensusViolation(
-        FlextInfraModelsMixins.RequiredNonNegativeLineMixin, m.ArbitraryTypesModel,
+        FlextInfraModelsMixins.RequiredNonNegativeLineMixin,
+        m.ArbitraryTypesModel,
     ):
         """A single namespace violation detected by the census service."""
 
@@ -43,7 +44,8 @@ class FlextInfraModelsCodegenScaffoldModels:
         ]
 
     class ScaffoldResult(
-        FlextInfraModelsMixins.ProjectNameMixin, m.ArbitraryTypesModel,
+        FlextInfraModelsMixins.ProjectNameMixin,
+        m.ArbitraryTypesModel,
     ):
         """Result of scaffolding base modules for a project.
 

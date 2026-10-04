@@ -37,7 +37,8 @@ class FlextInfraModelsRefactor(
         """Repository-scoped request for authenticated Sed rule replay."""
 
     class RefactorNamespaceEnforceInput(
-        FlextInfraModelsMixins.WriteMixin, m.ContractModel,
+        FlextInfraModelsMixins.WriteMixin,
+        m.ContractModel,
     ):
         """CLI/service request for namespace enforcement."""
 
