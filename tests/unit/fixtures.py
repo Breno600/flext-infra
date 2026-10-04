@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import config, infra
+from flext_infra import config, infra, u as infra_u
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from tests import c, m, p, t, u
 
@@ -459,7 +459,7 @@ def real_detector_project(
     setup = tm.ok(u.Tests.run_isolated_make(["setup"], cwd=root, capture=False))
     u.Tests.record_dependency_command_output(setup)
     tm.that(u.Cli.process_succeeded(setup.outcome), eq=True, msg=setup.stderr)
-    runtime = u.Infra.runtime_environment_dir(root)
+    runtime = infra_u.Infra.runtime_environment_dir(root)
     executable = c.Infra.DEPTRY + (".exe" if os.name == "nt" else "")
     tool_path = runtime / ("Scripts" if os.name == "nt" else "bin") / executable
     tm.that(tool_path.is_file(), eq=True)
