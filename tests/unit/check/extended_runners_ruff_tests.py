@@ -188,7 +188,9 @@ class TestsFlextInfraRealGateRunners:
         project_dir = u.Tests.mk_project(
             tmp_path,
             "pyright-project",
-            pyproject='[tool.pyright]\ninclude = ["src"]\ntypeCheckingMode = "strict"\n',
+            pyproject=(
+                '[tool.pyright]\ninclude = ["src"]\ntypeCheckingMode = "strict"\n'
+            ),
             with_src=True,
         )
         (project_dir / "src" / "demo.py").write_text(

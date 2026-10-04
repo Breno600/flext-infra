@@ -164,13 +164,15 @@ class TestsFlextInfraAuditorStaleSymbols:
             (
                 '"""Demo package."""\n\n'
                 "from typing import TYPE_CHECKING\n\n"
-                "from flext_core.lazy import build_lazy_import_map, install_lazy_exports\n\n"
+                "from flext_core.lazy import "
+                "build_lazy_import_map, install_lazy_exports\n\n"
                 "if TYPE_CHECKING:\n"
                 "    from demo_pkg.facade import LiveSymbol as LiveSymbol\n\n"
                 "_LAZY_MODULES: dict[str, t.VariadicTuple[str]] = {\n"
                 '    ".facade": ("LiveSymbol",),\n'
                 "}\n\n"
-                "_LAZY_IMPORTS = build_lazy_import_map(_LAZY_MODULES, sort_keys=False)\n\n"
+                "_LAZY_IMPORTS = "
+                "build_lazy_import_map(_LAZY_MODULES, sort_keys=False)\n\n"
                 '_PUBLIC_EXPORTS: t.VariadicTuple[str] = ("LiveSymbol",)\n'
                 "__all__: t.VariadicTuple[str] = tuple(_PUBLIC_EXPORTS)\n\n"
                 "install_lazy_exports(\n"

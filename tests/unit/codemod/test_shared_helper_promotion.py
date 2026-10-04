@@ -76,7 +76,8 @@ class TestsFlextInfraSharedHelperPromotion:
             "ORDINARY = 'Shared'\n\n"
             "def echo(value: 'Shared') -> 'Shared':\n"
             "    return value\n\n"
-            "def annotated(value: \"Annotated[Shared, 'Shared']\") -> \"Literal['Shared']\":\n"
+            "def annotated(value: \"Annotated[Shared, 'Shared']\")"
+            " -> \"Literal['Shared']\":\n"
             "    return 'Shared'\n",
             encoding="utf-8",
         )

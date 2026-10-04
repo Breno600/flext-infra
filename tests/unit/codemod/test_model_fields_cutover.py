@@ -55,7 +55,8 @@ class TestsModelFieldsCutover:
             "    def __getattr__(self, name: str) -> None:\n"
             "        raise RuntimeError('unexpected attribute access')\n"
             "inspect_definition(Populated, label='valid')\n"
-            "for invalid in (None, object(), 1, str, Empty, Pretender, Poison(), Populated(value='x')):\n"
+            "for invalid in (None, object(), 1, str, Empty, Pretender, Poison(),"
+            " Populated(value='x')):\n"
             "    try:\n"
             "        inspect_definition(invalid, label='original boundary error')\n"
             "    except ValueError as error:\n"
@@ -172,7 +173,8 @@ class TestsModelFieldsCutover:
             ),
             (
                 "    fields = candidate.model_fields\n"
-                "    if not isinstance(fields, dict) or not fields: raise ValueError('invalid')\n"
+                "    if not isinstance(fields, dict) or not fields:"
+                " raise ValueError('invalid')\n"
             ),
         ],
     )

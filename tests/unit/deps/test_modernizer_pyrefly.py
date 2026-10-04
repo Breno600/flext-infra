@@ -268,6 +268,7 @@ class TestsFlextInfraModernizerPyrefly:
             "VALUE = 2\n",
             encoding="utf-8",
         )
+        scaffold_project = config.Infra.codegen.scaffold.project
 
         tooling_runtime = tm.ok(
             FlextInfraPyprojectModernizer(
@@ -277,10 +278,10 @@ class TestsFlextInfraModernizerPyrefly:
                 project_name="flext-consumer",
                 package_name="flext_consumer",
                 path=project_dir / c.PYPROJECT_FILENAME,
-                scaffold_project=config.Infra.codegen.scaffold.project,
+                scaffold_project=scaffold_project,
                 upstream=next(
                     profile.upstream
-                    for profile in config.Infra.codegen.scaffold.project.dependency_profiles
+                    for profile in scaffold_project.dependency_profiles
                     if profile.project is None
                 ),
                 runtime_dependency_overlay=(),

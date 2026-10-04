@@ -63,8 +63,12 @@ class TestsFlextInfraProjectGitignorePatterns:
         root = self._project(
             tmp_path / "project",
             {
-                "one.yaml": "ManagedArtifacts:\n  Gitignore:\n    patterns: [.dmypy/, logs/]\n",
-                "two.yaml": "ManagedArtifacts:\n  Gitignore:\n    patterns: [logs/, .serena/]\n",
+                "one.yaml": (
+                    "ManagedArtifacts:\n  Gitignore:\n    patterns: [.dmypy/, logs/]\n"
+                ),
+                "two.yaml": (
+                    "ManagedArtifacts:\n  Gitignore:\n    patterns: [logs/, .serena/]\n"
+                ),
             },
         )
 

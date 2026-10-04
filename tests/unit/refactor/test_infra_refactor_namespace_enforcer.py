@@ -29,7 +29,14 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path)
         service_file = pkg / "service.py"
         _ = service_file.write_text(
-            "from __future__ import annotations\nfrom typing import Protocol\n\nclass ServiceContract(Protocol):\n    def run(self) -> str:\n        ...\n\nclass ServiceImpl:\n    def run(self) -> str:\n        return 'ok'",
+            "from __future__ import annotations\n"
+            "from typing import Protocol\n\n"
+            "class ServiceContract(Protocol):\n"
+            "    def run(self) -> str:\n"
+            "        ...\n\n"
+            "class ServiceImpl:\n"
+            "    def run(self) -> str:\n"
+            "        return 'ok'",
             encoding="utf-8",
         )
         u.Tests.provision_checkout(workspace)
@@ -91,7 +98,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         workspace, project, _pkg = u.Tests.namespace_workspace(
             tmp_path,
             pyproject=(
-                "[project]\nname='sample'\n\n[tool.flext.namespace]\nscan_dirs = ['src']\n"
+                "[project]\nname='sample'\n\n"
+                "[tool.flext.namespace]\nscan_dirs = ['src']\n"
             ),
         )
         examples_dir = project / "examples"
@@ -120,7 +128,11 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         docs_dir = project / "docs"
         docs_dir.mkdir(parents=True)
         _ = (docs_dir / "contracts.py").write_text(
-            "from __future__ import annotations\nfrom typing import Protocol\n\nclass HiddenContract(Protocol):\n    def run(self) -> str:\n        ...\n",
+            "from __future__ import annotations\n"
+            "from typing import Protocol\n\n"
+            "class HiddenContract(Protocol):\n"
+            "    def run(self) -> str:\n"
+            "        ...\n",
             encoding="utf-8",
         )
 

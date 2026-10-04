@@ -94,6 +94,7 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
             manifest = root / "config" / "workspace.yaml"
             manifest.parent.mkdir(parents=True, exist_ok=True)
             provider = u.Tests.provider()
+            url = u.Tests.WorktreeFixture.governed_repository_url("fixture-duplication")
             manifest.write_text(
                 "version: 3\n"
                 "name: duplication-workspace\n"
@@ -101,7 +102,7 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
                 "  name: fixture-duplication\n"
                 "  distribution: fixture-duplication\n"
                 f"  provider: {provider.name}\n"
-                f"  url: {u.Tests.WorktreeFixture.governed_repository_url('fixture-duplication')}\n"
+                f"  url: {url}\n"
                 "  path: .\n"
                 "  role: standalone\n"
                 "  state: active\n"
