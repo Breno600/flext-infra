@@ -16,7 +16,7 @@ from typing import Annotated
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._models.mixins import FlextInfraModelsMixins as mm
+from flext_infra._models.mixins import FlextInfraModelsMixins
 
 
 class FlextInfraModelsLayout:
@@ -193,7 +193,7 @@ class FlextInfraModelsLayout:
             m.Field(description="Execution status"),
         ] = "planned"
 
-    class LayoutProjectReport(mm.ProjectNameMixin, _LayoutContract):
+    class LayoutProjectReport(FlextInfraModelsMixins.ProjectNameMixin, _LayoutContract):
         """Per-project layout plan or apply outcome."""
 
         findings: Annotated[
