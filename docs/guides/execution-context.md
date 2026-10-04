@@ -90,7 +90,8 @@ overlay.
 
 Code in a checkout runs in the environment of its `RUNTIME_ROOT`. The generated Makefile
 exports `RUNTIME_ROOT`, and flext-infra reads it as a typed declaration: the
-`fresh-import` validation runs its probes with the platform-specific Python interpreter in the derived `RUNTIME_VENV`, never
+`fresh-import` validation runs its probes with the platform-specific
+Python interpreter in the derived `RUNTIME_VENV`, never
 with the interpreter hosting the tool. Without a declaration, the owner derives the
 checkout's Git root; a declaration without an interpreter fails.
 
@@ -112,7 +113,8 @@ resolves the Mise release once, through Mise itself (`mise latest` of
 subject to Mise's `minimum_release_age`), and generates both launchers with
 `mise generate install-script --version <release> --windows`, run by that release. A
 held release carries its reason beside it in the configuration and returns to `latest`
-when the newest release outside the cooldown works. Each launcher embeds the release and its checksums, so
+when the newest release outside the cooldown works. Each launcher embeds
+the release and its checksums, so
 direct, PATH, or shim calls never query the network to choose a version.
 `mise.version` holds a generated header followed by the single release line.
 
