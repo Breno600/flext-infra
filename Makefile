@@ -863,8 +863,14 @@ mise_receipt launcher-version "$$lock_stage/artifacts/bin/mise"; \
 	python_executable=$$(cat "$$scratch/python-path.log"); \
 	# CI receives only the shim farm: a project bin/ on PATH would bind every \
 	# shim to that repository launcher (mise resolves shims through PATH). \
+	# A restored tool cache keeps the shims bound to the Mise release that built \
+	# them, and Mise never replaces a shim bound to another binary, so CI rebuilds \
+	# the farm from the pinned release before publishing it. \
 	if [ -n "$${GITHUB_PATH:-}" ]; then \
-printf '%s\n' "$$mise_storage_root/shims" >> "$$GITHUB_PATH"; \
+shim_farm="$$mise_storage_root/shims"; \
+		rm -rf "$$shim_farm"; \
+		mise_checked "$$scratch/reshim.log" mise_offline project "$$pinned_mise" -C "$$project_root" reshim; \
+		printf '%s\n' "$$shim_farm" >> "$$GITHUB_PATH"; \
 fi; \
 	printf 'setup: entering lifecycle (submodules, environment, hooks) make=%s\n' "$(SELF_MAKE_EXECUTABLE)"; \
 	mise_runtime_path="$$mise_storage_root/bootstrap/mise-$${runtime_release}"; \
