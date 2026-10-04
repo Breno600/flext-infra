@@ -319,7 +319,10 @@ class TestsFlextInfraScriptDispatchMakefile:
         )
         tm.that(
             rendered,
-            has=["_builtin-profile-test:\n", "_builtin-profile-test-report:\n"],
+            has=[
+                "_builtin-profile-test: _builtin_require_environment\n",
+                "_builtin-profile-test-report: _builtin_require_environment\n",
+            ],
         )
         profile_test = rendered.split("_builtin-profile-test:", 1)[1].split(
             "\n\n",
