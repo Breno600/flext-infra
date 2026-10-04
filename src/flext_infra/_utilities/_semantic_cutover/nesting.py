@@ -108,6 +108,8 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
                 if node.value is not None:
                     visit(node.value)
                 return
+            if isinstance(node, ast.ClassDef):
+                return
             if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
                 names.add(node.id)
                 return
@@ -120,33 +122,85 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
     @classmethod
     def _suite_reference_pins(
         cls,
+        tree: ast.Module,
         classes: t.MappingKV[str, ast.ClassDef],
         movable: frozenset[str],
+        owner: str,
     ) -> frozenset[str]:
         """Return classes that must stay at module level to keep suite lookups.
 
         A nested class suite looks names up in the module globals. The owner
         name is not bound until its class statement finishes, so neither the
         bare sibling nor ``Owner.Sibling`` resolves during that suite. A base
-        in the class header does see the owner, and a later method call does
-        too. An immediate load of another class that would move under the same
-        owner therefore keeps both classes where the module already resolves
-        them.
+        in the class header does see the enclosing scope. An immediate load
+        from a class that is moving, or from a class already nested in the
+        owner, keeps its target at module level. A class that stays outside
+        also keeps the bases it names there: qualifying those bases through
+        the owner fails when the owner statement has not run yet.
 
         Returns:
             The movable classes pinned by an immediate suite reference.
 
         """
+        pinned = cls._pins_from_suite_loads(tree, movable, owner)
+        return cls._pins_from_outside_bases(classes, movable, pinned)
+
+    @classmethod
+    def _pins_from_suite_loads(
+        cls,
+        tree: ast.Module,
+        movable: frozenset[str],
+        owner: str,
+    ) -> set[str]:
+        """Return classes pinned because a suite loads them immediately.
+
+        Returns:
+            The movable classes named by an immediate suite load.
+
+        """
         pinned: set[str] = set()
-        for name, node in classes.items():
-            if name not in movable:
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ClassDef) or node.name == owner:
                 continue
             for statement in node.body:
                 referenced = set(cls._immediate_suite_loads(statement) & movable)
-                referenced.discard(name)
-                if referenced:
-                    pinned.add(name)
-                    pinned.update(referenced)
+                referenced.discard(node.name)
+                if not referenced:
+                    continue
+                if node.name in movable:
+                    pinned.add(node.name)
+                pinned.update(referenced)
+        return pinned
+
+    @staticmethod
+    def _pins_from_outside_bases(
+        classes: t.MappingKV[str, ast.ClassDef],
+        movable: frozenset[str],
+        pinned: set[str],
+    ) -> frozenset[str]:
+        """Pin bases of classes that stay at module level.
+
+        Returns:
+            ``pinned`` plus every movable base those classes name.
+
+        """
+        changed = True
+        while changed:
+            changed = False
+            for name, node in classes.items():
+                if name in movable and name not in pinned:
+                    continue
+                for base in node.bases:
+                    current: ast.expr = base
+                    while isinstance(current, ast.Attribute):
+                        current = current.value
+                    if (
+                        isinstance(current, ast.Name)
+                        and current.id in movable
+                        and current.id not in pinned
+                    ):
+                        pinned.add(current.id)
+                        changed = True
         return frozenset(pinned)
 
     @classmethod
@@ -209,7 +263,12 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
             name: owner for name in classes if name != owner and name not in bound
         }
         definitions.update((name, owner) for name in movable.value)
-        pinned = cls._suite_reference_pins(classes, frozenset(definitions))
+        pinned = cls._suite_reference_pins(
+            tree,
+            classes,
+            frozenset(definitions),
+            owner,
+        )
         return planned.ok({
             name: owner for name, owner in definitions.items() if name not in pinned
         })

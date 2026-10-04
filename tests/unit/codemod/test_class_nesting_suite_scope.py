@@ -139,3 +139,35 @@ class TestsFlextInfraClassNestingSuiteScope:
         nested_child = getattr(owner, child)
         nested_base = getattr(owner, base)
         tm.that(nested_child.__bases__, eq=(nested_base,))
+
+    def test_nested_view_keeps_a_module_level_base_importable(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A class already inside the owner does not pull its target's base in."""
+        alias, _module_name, owner_name = self._models_owner()
+        payload = f"{owner_name}Payload"
+        holder = f"{owner_name}Holder"
+        source = (
+            '"""Models."""\n\n'
+            "from __future__ import annotations\n\n"
+            f'__all__: list[str] = ["{owner_name}", "{alias}"]\n\n'
+            f"class {payload}:\n"
+            '    """Payload."""\n\n'
+            f"class {holder}({payload}):\n"
+            '    """Holder."""\n\n'
+            f"class {owner_name}:\n"
+            '    """Owner."""\n\n'
+            "    class View:\n"
+            '        """View."""\n\n'
+            f"        item = {holder}\n\n"
+            f"{alias} = {owner_name}\n"
+        )
+        published = self._publish(tmp_path, source)
+        loaded = self._load(published, tmp_path)
+        owner = getattr(loaded, owner_name)
+        holder_cls = getattr(loaded, holder)
+        payload_cls = getattr(loaded, payload)
+        tm.that(owner.View.item, eq=holder_cls)
+        tm.that(holder_cls.__bases__, eq=(payload_cls,))
+        tm.that(f"\nclass {holder}({payload}):" in published, eq=True)
