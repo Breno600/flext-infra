@@ -231,13 +231,14 @@ gate. `make check` fails when the selection
 contains no projects or when a selected project has no `pyproject.toml`; no project is
 skipped silently.
 
-Local runs, CI, and hooks derive their gates from the same active set, preserving the
-declared typing partition: `CI=N make check` runs the intersection with
-`make.ci.local_check_gates`, `CI=Y make check` runs the complement, and `make check`
-without `CI` runs the union. The `check` pre-push hook drops the inherited `CI` to run
-every active gate; the hook's other verbs keep the local token. The CI workflow runs
-both partitions without overlap. Validators keep their severity, and active functional
-gates still require execution without warnings or residual findings.
+Local runs, CI, and hooks derive their gates from the same active set: `CI=N make check`
+runs the intersection with `make.ci.local_check_gates`, `CI=Y make check` runs the
+complement, and `make check` without `CI` runs the union. The declared local set is
+empty, so the CI workflow's single `CI=Y make check` runs every active gate, including
+the Mypy, Pyright, and Pyrefly type checkers, and `CI=N make check` fails because no
+gate remains. The `check` pre-push hook drops the inherited `CI` to run every active
+gate; the hook's other verbs keep the local token. Validators keep their severity, and
+active functional gates still require execution without warnings or residual findings.
 
 `smells` is not part of the `make check` partitions. The selector-free `make smells`
 verb runs only the qlty smell scan and fails when it finds defects. The

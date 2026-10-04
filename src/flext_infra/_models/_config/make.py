@@ -72,10 +72,10 @@ class FlextInfraConfigModelsMake:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 description=(
-                    "Gate ids run by make check under the local CI token: the "
-                    "slow whole-program type checkers. This is the ONLY "
-                    "declared set; the CI token runs its strict complement and "
-                    "an unset token runs every active default gate."
+                    "Gate ids run by make check under the local CI token. This "
+                    "is the ONLY declared set; the CI token runs its strict "
+                    "complement and an unset token runs every active default "
+                    "gate."
                 ),
             ),
         ]
