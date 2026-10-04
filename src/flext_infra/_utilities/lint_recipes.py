@@ -143,18 +143,7 @@ class FlextInfraUtilitiesLintRecipes:
                 cls._with_sections(raw, " " * docstring.col_offset, wanted),
             ))
         for definition, text in summaries.items():
-            first = definition.body[0]
-            decorators = (
-                first.decorator_list
-                if isinstance(
-                    first,
-                    ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
-                )
-                else []
-            )
-            first_line = min((first.lineno, *(item.lineno for item in decorators)))
-            offset = cls._offset(lines, first_line, 0)
-            edits.append((offset, offset, f'{" " * first.col_offset}"""{text}"""\n'))
+            edits.append(cls._summary_edit(lines, definition, text, path))
         if wants_notice:
             notice = cls.copyright_notice(path.parent)
             module_docstring = cls._docstring_expr(tree)
@@ -171,7 +160,11 @@ class FlextInfraUtilitiesLintRecipes:
                 start, end, raw = cls._literal(lines, module_docstring, path)
                 edits.append((start, end, cls._with_notice(raw, notice)))
         rewritten = source
-        for start, end, text in sorted(edits, key=lambda edit: edit[0], reverse=True):
+        for start, end, text in sorted(
+            edits,
+            key=lambda edit: (edit[0], edit[1]),
+            reverse=True,
+        ):
             rewritten = f"{rewritten[:start]}{text}{rewritten[end:]}"
         return rewritten
 
@@ -244,6 +237,76 @@ class FlextInfraUtilitiesLintRecipes:
             raise ValueError(msg)
         return max(enclosing, key=lambda node: node.lineno)
 
+    @classmethod
+    def _summary_edit(
+        cls,
+        lines: t.StrSequence,
+        definition: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+        text: str,
+        path: Path,
+    ) -> t.Triple[int, int, str]:
+        """Return the edit that places ``text`` as ``definition``'s summary.
+
+        A body on its own line receives the summary before that line. A body
+        that shares the definition line is legal Python, including a protocol
+        stub: the definition expands so the summary and the same suite occupy
+        the following lines.
+
+        Returns:
+            The span to replace and the summary text that replaces it.
+
+        Raises:
+            ValueError: If an inline definition has no suite colon before its
+                body.
+
+        """
+        first = definition.body[0]
+        if first.lineno != definition.lineno:
+            decorators = (
+                first.decorator_list
+                if isinstance(
+                    first,
+                    ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+                )
+                else []
+            )
+            first_line = min((first.lineno, *(item.lineno for item in decorators)))
+            offset = cls._offset(lines, first_line, 0)
+            return (offset, offset, f'{" " * first.col_offset}"""{text}"""\n')
+        line = lines[definition.lineno - 1]
+        body_at = cls._utf8_chars(line, first.col_offset)
+        colon = body_at
+        while colon > 0 and line[colon - 1] in " \t":
+            colon -= 1
+        if colon == 0 or line[colon - 1] != ":":
+            msg = (
+                f"{path}: definition at line {definition.lineno} "
+                "has no suite colon before its inline body"
+            )
+            raise ValueError(msg)
+        suite = line[body_at:].removesuffix("\n").removesuffix("\r")
+        block = " " * (cls._utf8_chars(line, definition.col_offset) + 4)
+        start = cls._offset(lines, definition.lineno, 0)
+        return (
+            start,
+            start + len(line),
+            f'{line[:colon]}\n{block}"""{text}"""\n{block}{suite}\n',
+        )
+
+    @staticmethod
+    def _utf8_chars(line: str, col_offset: int) -> int:
+        """Return the character index of a UTF-8 AST column on ``line``.
+
+        Returns:
+            The character index of a UTF-8 AST column on ``line``.
+
+        """
+        return len(
+            line.encode(c.Cli.ENCODING_DEFAULT)[:col_offset].decode(
+                c.Cli.ENCODING_DEFAULT,
+            ),
+        )
+
     @staticmethod
     def _defined_at(
         tree: ast.Module,
@@ -252,11 +315,13 @@ class FlextInfraUtilitiesLintRecipes:
     ) -> ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef:
         """Return the class or function defined at ``line``.
 
+        An inline body is a legal definition. The summary edit expands it.
+
         Returns:
             The class or function defined at ``line``.
 
         Raises:
-            ValueError: Always; or if ``node.body[0].lineno == node.lineno``.
+            ValueError: If no class or function is defined at ``line``.
 
         """
         for node in ast.walk(tree):
@@ -264,9 +329,6 @@ class FlextInfraUtilitiesLintRecipes:
                 isinstance(node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef)
                 and node.lineno == line
             ):
-                if node.body[0].lineno == node.lineno:
-                    msg = f"{path}: definition at line {line} has its body inline"
-                    raise ValueError(msg)
                 return node
         msg = f"{path}: no class or function is defined at line {line}"
         raise ValueError(msg)
