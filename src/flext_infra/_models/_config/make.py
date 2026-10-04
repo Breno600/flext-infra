@@ -1241,4 +1241,3 @@ class FlextInfraConfigModelsMake:
             default=None,
             description="Permit toolchain declarations",
         )
-

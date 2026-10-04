@@ -1102,7 +1102,10 @@ class FlextInfraBootstrap:
                 return
             finally:
                 shutil.rmtree(scratch, ignore_errors=True)
-                if stage.exists() and not (stage / c.Infra.MISE_LOCK_JOURNAL_FILENAME).exists():
+                if (
+                    stage.exists()
+                    and not (stage / c.Infra.MISE_LOCK_JOURNAL_FILENAME).exists()
+                ):
                     shutil.rmtree(stage, ignore_errors=True)
         held_stage = Path(
             tempfile.mkdtemp(
@@ -1169,7 +1172,10 @@ class FlextInfraBootstrap:
         except ValueError as held_error:
             failures.append(f"held: {held_error}")
         finally:
-            if held_stage.exists() and not (held_stage / c.Infra.MISE_LOCK_JOURNAL_FILENAME).exists():
+            if (
+                held_stage.exists()
+                and not (held_stage / c.Infra.MISE_LOCK_JOURNAL_FILENAME).exists()
+            ):
                 shutil.rmtree(held_stage, ignore_errors=True)
         raise ValueError(
             "reconcile: no seed produced a lock the pinned Mise satisfies ("
@@ -1266,6 +1272,9 @@ class FlextInfraBootstrap:
 
         Returns:
             The resulting ``str``.
+
+        Raises:
+            ValueError: If uv executable is absent from PATH.
         """
         shim = (
             FlextInfraBootstrap._mise_storage_root()
