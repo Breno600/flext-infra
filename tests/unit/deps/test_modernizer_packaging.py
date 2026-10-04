@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Literal
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, main as infra_main
+from flext_infra import c, main
 from tests import t, u
 
 if TYPE_CHECKING:
@@ -109,7 +109,7 @@ class TestsFlextInfraDepsModernizerPackaging:
             The resulting ``int``.
 
         """
-        return infra_main([
+        return main([
             c.Infra.CLI_GROUP_CODEGEN,
             "conform",
             "--root",
@@ -201,7 +201,7 @@ class TestsFlextInfraDepsModernizerPackaging:
         )
         tm.that(u.Tests.toml_mapping(repaired["force-include"]), lacks="stale.txt")
 
-        fixed_point = infra_main([
+        fixed_point = main([
             c.Infra.CLI_GROUP_CODEGEN,
             "conform",
             "--root",
