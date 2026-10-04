@@ -43,9 +43,8 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
         home = u.Cli.env_read("HOME", dict(os.environ)).unwrap()
         if home:
             return Path(home) / ".local/share/mise"
-        raise ValueError(
-            "MISE_DATA_DIR, XDG_DATA_HOME, or HOME must identify Mise storage",
-        )
+        msg = "MISE_DATA_DIR, XDG_DATA_HOME, or HOME must identify Mise storage"
+        raise ValueError(msg)
 
     @classmethod
     def _pinned_runtime(cls, storage: Path, release: str) -> Path:
@@ -66,7 +65,8 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
         for candidate in candidates:
             if candidate.is_file() and os.access(candidate, os.X_OK):
                 return candidate
-        raise ValueError(f"missing pinned Mise runtime {exact}; run make setup")
+        msg = f"missing pinned Mise runtime {exact}; run make setup"
+        raise ValueError(msg)
 
     @staticmethod
     def _manifest_settings(manifest: Path) -> tuple[str, str]:
@@ -82,13 +82,13 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
         payload = tomllib.loads(manifest.read_text(encoding="utf-8"))
         settings = payload.get("settings")
         if not isinstance(settings, dict):
-            raise ValueError(f"Mise manifest has no settings table: {manifest}")
+            msg = f"Mise manifest has no settings table: {manifest}"
+            raise ValueError(msg)
         cooldown = settings.get("minimum_release_age")
         platforms = settings.get("lockfile_platforms")
         if not isinstance(cooldown, str) or not isinstance(platforms, list):
-            raise ValueError(
-                f"Mise manifest lacks cooldown or lockfile platforms: {manifest}",
-            )
+            msg = f"Mise manifest lacks cooldown or lockfile platforms: {manifest}"
+            raise ValueError(msg)
         return cooldown, ",".join(str(platform) for platform in platforms)
 
     @staticmethod
@@ -175,9 +175,8 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
         """
         completed = cls._checked("Mise", [str(runtime), *arguments], environment)
         if "mise WARN" in completed.stdout or "mise WARN" in completed.stderr:
-            raise ValueError(
-                f"Mise warned during {' '.join(arguments)}; reconcile stopped",
-            )
+            msg = f"Mise warned during {' '.join(arguments)}; reconcile stopped"
+            raise ValueError(msg)
         return completed.stdout.strip()
 
     @classmethod
@@ -239,10 +238,11 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
                 if selector and version and version[0].isdigit():
                     tools.append((selector, version))
         if not tools:
-            raise ValueError(
+            msg = (
                 "staged install failed but named no failing tool:"
-                f" {probe_output.strip()[:400]}",
+                f" {probe_output.strip()[:400]}"
             )
+            raise ValueError(msg)
         return tools
 
     @classmethod
@@ -307,7 +307,8 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
                 lines[index] = f'version = "{version}"\n'
                 manifest.write_text("".join(lines), encoding="utf-8")
                 return
-        raise ValueError(f"Mise manifest has no declared version to hold: {selector}")
+        msg = f"Mise manifest has no declared version to hold: {selector}"
+        raise ValueError(msg)
 
     @classmethod
     def _hold_stage_tools(
@@ -367,10 +368,11 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
                         held = candidate
                         break
                 if held is None:
-                    raise ValueError(
+                    msg = (
                         f"no installable release found below {failed_version}"
-                        f" for {selector}; upgrade needs an operator decision",
+                        f" for {selector}; upgrade needs an operator decision"
                     )
+                    raise ValueError(msg)
                 holds[selector] = held
                 print(
                     f"hold: {selector} held at {held}: release {failed_version}"
@@ -401,7 +403,8 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
         cls._physical_directory(project)
         manifest = project / ".mise.toml"
         if not manifest.is_file():
-            raise ValueError(f"missing Mise manifest: {manifest}")
+            msg = f"missing Mise manifest: {manifest}"
+            raise ValueError(msg)
         storage = cls._mise_storage_root()
         for relative in STORAGE_DIRECTORIES:
             (storage / relative).mkdir(parents=True, exist_ok=True)
@@ -522,9 +525,8 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
                         environment,
                     )
                     if not satisfied:
-                        raise ValueError(
-                            f"held lock still fails install: {sorted(holds)}",
-                        )
+                        msg = f"held lock still fails install: {sorted(holds)}"
+                        raise ValueError(msg)
                 try:
                     cls.publish(project, held_stage)
                 except ValueError:
@@ -550,11 +552,12 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
                 and not (held_stage / c.Infra.MISE_LOCK_JOURNAL_FILENAME).exists()
             ):
                 shutil.rmtree(held_stage, ignore_errors=True)
-        raise ValueError(
+        msg = (
             "reconcile: no seed produced a lock the pinned Mise satisfies ("
             + "; ".join(failures)
-            + "); run make upg at the runtime root",
+            + "); run make upg at the runtime root"
         )
+        raise ValueError(msg)
 
     @classmethod
     def converge(cls, project: Path, stage: Path, release: str) -> None:
@@ -575,7 +578,8 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
         cls._physical_directory(stage)
         manifest = stage / ".mise.toml"
         if not manifest.is_file():
-            raise ValueError(f"missing staged Mise manifest: {manifest}")
+            msg = f"missing staged Mise manifest: {manifest}"
+            raise ValueError(msg)
         storage = cls._mise_storage_root()
         runtime = cls._pinned_runtime(storage, release)
         cooldown, platforms = cls._manifest_settings(manifest)
@@ -619,9 +623,8 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
         finally:
             shutil.rmtree(scratch, ignore_errors=True)
         if not satisfied:
-            raise ValueError(
-                f"converge: held lock still fails install: {sorted(holds)}",
-            )
+            msg = f"converge: held lock still fails install: {sorted(holds)}"
+            raise ValueError(msg)
         print(f"converge: staged lock installs with holds {sorted(holds)}")
 
 
