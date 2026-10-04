@@ -45,12 +45,10 @@ class FlextInfraSonarcloudIssues(FlextInfraSonarcloudClient[bool]):
         Returns:
             The resulting ``p.Result[bool]``.
         """
-        token = self.required_token()
-        if token.failure:
-            return r[bool].from_failure(token)
-        key = self.project_key(self.repository_root)
-        if key.failure:
-            return r[bool].from_failure(key)
+        credentials = self.project_credentials()
+        if credentials.failure:
+            return r[bool].from_failure(credentials)
+        token, key = credentials.value
         branch = u.Infra.repository_baseline_branch(
             self.repository_root,
             preference=config.Infra.codegen.branch_policy.integration_branch_preference,
@@ -66,10 +64,10 @@ class FlextInfraSonarcloudIssues(FlextInfraSonarcloudClient[bool]):
             body = self.call(
                 sonarcloud.api_url,
                 sonarcloud.api_timeout_seconds,
-                token.value,
+                token,
                 "GET",
                 c.Infra.SONARCLOUD_API_ISSUES_SEARCH_PATH,
-                self.search_form(key.value, branch.value, page),
+                self.search_form(key, branch.value, page),
             )
             if body.failure:
                 return r[bool].from_failure(body)
@@ -113,7 +111,7 @@ class FlextInfraSonarcloudIssues(FlextInfraSonarcloudClient[bool]):
                 return r[bool].fail("SonarCloud returned more issues than its total")
             page += 1
         u.Cli.info(
-            f"sonarcloud-issues: {key.value} branch={branch.value} "
+            f"sonarcloud-issues: {key} branch={branch.value} "
             f"unresolved-new-code={total}",
         )
         for issue in findings:
