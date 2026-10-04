@@ -41,14 +41,7 @@ def runner_for(
         repository_root=cached_runner_project,
         ci_context=ci_context,
         collection_command_prefix=(
-            (
-                sys.executable,
-                "-X",
-                "utf8",
-                "-m",
-                "flext_infra._pytest_entry",
-                "profile-collection",
-            )
+            (sys.executable, "-c", c.Infra.PYTEST_PROFILE_LAUNCHER)
             if profile_collection
             else ()
         ),
@@ -129,12 +122,8 @@ def profile_parent(runner: FlextInfraPytestRunner, output: Path) -> int:
     return outcome.raw_return_code
 
 
-def profile_collection(
-    output: Path,
-    receipt: Path,
-    arguments: t.StrTuple,
-) -> p.Cli.CommandOutput:
-    """Use the real child transport invoked by the canonical profiling runner.
+def profile_collection(output: Path, arguments: t.StrTuple) -> p.Cli.CommandOutput:
+    """Use the real child launcher invoked by the canonical profiling runner.
 
     Returns:
         The resulting ``p.Cli.CommandOutput``.
@@ -144,14 +133,12 @@ def profile_collection(
         u.Cli.run_raw(
             (
                 sys.executable,
-                "-m",
-                "flext_infra._pytest_entry",
-                "profile-collection",
+                "-c",
+                c.Infra.PYTEST_PROFILE_LAUNCHER,
                 str(output),
-                str(receipt),
                 *arguments,
             ),
-            cwd=receipt.parent,
+            cwd=output.parent,
             timeout=config.Infra.tooling.tools.pytest.run_timeout_seconds,
         ),
     )

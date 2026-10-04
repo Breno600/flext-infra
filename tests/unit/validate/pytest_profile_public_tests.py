@@ -7,7 +7,6 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import pstats
-import time
 from pathlib import Path
 
 import pytest
@@ -46,90 +45,27 @@ class TestsFlextInfraPytestProfile:
         arguments: t.StrTuple,
         expected_exit: int,
     ) -> None:
-        """The real pytest module exits natively and leaves a bound profile."""
-        context = m.Infra.PytestRunContext(
-            execution_mode=c.Infra.PytestExecutionMode.INCREMENTAL,
-            testmon_db=tmp_path.parent / "testmon.db",
-            deadline_monotonic=(
-                time.monotonic() + config.Infra.tooling.tools.pytest.run_timeout_seconds
-            ),
-            report_directory=tmp_path,
-        )
-        receipt = tmp_path / "run-context.json"
-        receipt.write_text(context.model_dump_json(), encoding="utf-8")
+        """The real pytest module exits natively and leaves its raw profile."""
         profile = tmp_path / "collection.pstats"
-        result = profile_collection(profile, receipt, arguments)
+        result = profile_collection(profile, arguments)
         assert result.outcome.raw_return_code == expected_exit
         assert not result.outcome.timed_out
         assert result.outcome.forwarded_signal is None
         if expected_exit == pytest.ExitCode.USAGE_ERROR:
             assert arguments[0] in result.stderr
         assert pstats.Stats(str(profile)).get_stats_profile().func_profiles
-        recorded = m.Infra.PytestRunContext.model_validate_json(
-            profile.with_suffix(".pstats.json").read_text(encoding="utf-8"),
-        )
-        assert recorded.model_copy(update={"profile_sha256": None}) == context
-        assert recorded.profile_sha256 is not None
-
-    @staticmethod
-    @pytest.mark.slow
-    @pytest.mark.parametrize("expired", [False, True])
-    def test_profile_child_rejects_invalid_run_receipt(
-        tmp_path: Path,
-        *,
-        expired: bool,
-    ) -> None:
-        """A transported receipt cannot silently select another run's artifacts."""
-        context = m.Infra.PytestRunContext(
-            execution_mode=c.Infra.PytestExecutionMode.INCREMENTAL,
-            testmon_db=tmp_path.parent / "testmon.db",
-            deadline_monotonic=(
-                time.monotonic() - 1
-                if expired
-                else time.monotonic()
-                + config.Infra.tooling.tools.pytest.run_timeout_seconds
-            ),
-            report_directory=tmp_path if expired else tmp_path / "other-run",
-        )
-        receipt = tmp_path / "run-context.json"
-        receipt.write_text(context.model_dump_json(), encoding="utf-8")
-        profile = tmp_path / "collection.pstats"
-        profile.with_suffix(".pstats.json").write_text(
-            context.model_dump_json(),
-            encoding="utf-8",
-        )
-        result = profile_collection(profile, receipt, ("--version",))
-        assert result.outcome.raw_return_code != 0
-        assert not result.outcome.timed_out
-        assert result.outcome.forwarded_signal is None
-        assert "ValueError" in result.stderr
-        expected = "expired deadline" if expired else "receipt does not match"
-        assert expected in result.stderr
-        assert pstats.Stats(str(profile)).get_stats_profile().func_profiles
-        assert not profile.with_suffix(".pstats.json").exists()
 
     @staticmethod
     @pytest.mark.slow
     def test_profile_failure_exposes_the_write_error(tmp_path: Path) -> None:
         """A real profile I/O failure remains visible rather than becoming success."""
-        context = m.Infra.PytestRunContext(
-            execution_mode=c.Infra.PytestExecutionMode.INCREMENTAL,
-            testmon_db=tmp_path.parent / "testmon.db",
-            deadline_monotonic=(
-                time.monotonic() + config.Infra.tooling.tools.pytest.run_timeout_seconds
-            ),
-            report_directory=tmp_path,
-        )
-        receipt = tmp_path / "run-context.json"
-        receipt.write_text(context.model_dump_json(), encoding="utf-8")
         output = tmp_path / "collection.pstats"
         output.mkdir()
-        result = profile_collection(output, receipt, ("--version",))
+        result = profile_collection(output, ("--version",))
         assert result.outcome.raw_return_code != 0
         assert not result.outcome.timed_out
         assert result.outcome.forwarded_signal is None
         assert "IsADirectoryError" in result.stderr
-        assert not output.with_suffix(".pstats.json").exists()
 
     @staticmethod
     @pytest.mark.parametrize("complete", [False, True])
@@ -156,10 +92,29 @@ class TestsFlextInfraPytestProfile:
         assert profiled_command == (
             *profiled.collection_command_prefix,
             str(manifest.with_suffix(".pstats")),
-            str(manifest.parent / "run-context.json"),
             *plain_command[3:],
         )
-        assert "profile-collection" not in profiled.build_command(report)
+        assert c.Infra.PYTEST_PROFILE_LAUNCHER not in profiled.build_command(report)
+
+    @staticmethod
+    @pytest.mark.slow
+    def test_profiled_collection_keeps_plugin_packages_rewritable(
+        cached_runner_project: Path,
+    ) -> None:
+        """A profiled child imports no plugin package before pytest starts.
+
+        Loading ``flext_infra`` as a pytest plugin marks it for assertion
+        rewriting; a child that imported it first makes pytest warn, and the
+        collection gate rejects every warning.
+        """
+        pyproject = cached_runner_project / c.PYPROJECT_FILENAME
+        pyproject.write_text(
+            pyproject.read_text(encoding="utf-8") + 'addopts = "-p flext_infra"\n',
+            encoding="utf-8",
+        )
+        runner = runner_for(cached_runner_project, profile_collection=True)
+
+        tm.that(tm.ok(runner.execute()), eq=0)
 
     @staticmethod
     @pytest.mark.slow
@@ -204,7 +159,6 @@ class TestsFlextInfraPytestProfile:
             # The class body runs on import, unlike its methods: this proves the
             # public runner was first imported while the parent profiler was active.
             assert FlextInfraPytestRunner.__name__ in parent_stats.func_profiles
-            assert "PytestRunContext" in stats.get_stats_profile().func_profiles
             policy = config.Infra.tooling.tools.pytest
             report = FlextInfraCProfileReport(
                 repository_root=cached_runner_project,

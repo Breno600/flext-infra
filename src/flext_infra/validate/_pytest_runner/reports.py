@@ -36,6 +36,20 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         ).unwrap()
 
     @staticmethod
+    def _bind_child_profile(report_dir: Path, profile: Path) -> None:
+        """Bind one completed child profile to this run's receipt by digest."""
+        context = m.Infra.PytestRunContext.model_validate_json(
+            (report_dir / "run-context.json").read_text(encoding="utf-8"),
+        )
+        receipt = context.model_copy(
+            update={"profile_sha256": u.Cli.sha256_bytes(profile.read_bytes())},
+        )
+        u.Cli.atomic_write_text_file(
+            profile.with_suffix(".pstats.json"),
+            receipt.model_dump_json(indent=2) + "\n",
+        ).unwrap()
+
+    @staticmethod
     def _failure_detail(message: str, pytest_log: Path) -> str:
         """Attach the bounded log tail to an artifact failure.
 
