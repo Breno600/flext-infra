@@ -319,9 +319,12 @@ class TestsFlextInfraScriptDispatchMakefile:
         )
         tm.that(
             rendered,
-            has=[".PHONY: profile-test\n", ".PHONY: profile-test-report\n"],
+            has=["_builtin-profile-test:\n", "_builtin-profile-test-report:\n"],
         )
-        profile_test = rendered.split("profile-test:", 1)[1].split("\n\n", 1)[0]
+        profile_test = rendered.split("_builtin-profile-test:", 1)[1].split(
+            "\n\n",
+            1,
+        )[0]
         gate_runner = rendered.split("_builtin_test_all:", 1)[1].split("\n\n", 1)[0]
         datafile = config.Infra.codegen.make.testmon_cache.database_environment_variable
         # The diagnostic reuses the canonical runner's testmon database guard
@@ -335,7 +338,10 @@ class TestsFlextInfraScriptDispatchMakefile:
         # Only the bounded gate adds the outer hard wall clock wrapper.
         tm.that(profile_test, lacks="PYTEST_BOUNDED")
         tm.that(gate_runner, has="PYTEST_BOUNDED")
-        report = rendered.split("profile-test-report:", 1)[1].split("\n\n", 1)[0]
+        report = rendered.split("_builtin-profile-test-report:", 1)[1].split(
+            "\n\n",
+            1,
+        )[0]
         tm.that(report, has="flext_infra._cprofile_entry")
         tm.that(report, has="$(PROFILE_REPORTS_DIR)/pytest.pstats")
         tm.that(report, has="$(PROFILE_REPORTS_DIR)/pytest.pstats.json")
