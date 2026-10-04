@@ -126,7 +126,7 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         issues: t.SequenceOf[m.Infra.Issue],
         recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
     ) -> frozenset[t.Pair[str, str]]:
-        """Index the methods a subclass of this project redefines.
+        """Index the methods on an override chain of this project.
 
         The index exists only for the static-method recipe, so a run without
         its findings builds none. A module Ruff reports as ``invalid-syntax``
@@ -134,7 +134,7 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         finding remains for its owner.
 
         Returns:
-            The overridden ``(class name, method name)`` pairs.
+            The ``(class name, method name)`` pairs on an override chain.
 
         """
         if not any(
@@ -214,7 +214,7 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
         hooks: t.StrSequence,
     ) -> None:
-        """Report overridden hooks and raise on any other recipe-owned finding.
+        """Report retained receivers and raise on any other recipe-owned finding.
 
         Raises:
             ValueError: If a recipe-owned finding survives every recipe phase.
@@ -222,8 +222,9 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         """
         if hooks:
             u.Cli.info(
-                f"lint: {len(hooks)} no-self-use finding(s) are hooks a subclass "
-                f"overrides, left to their owner: {', '.join(hooks)}",
+                f"lint: {len(hooks)} no-self-use finding(s) are on an override "
+                f"chain or read their receiver, left to their owner: "
+                f"{', '.join(hooks)}",
             )
         left = sorted(
             located
@@ -244,7 +245,7 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         """Locate the static-method findings the recipe leaves to their owner.
 
         Returns:
-            ``file:line:code`` of each finding on a method a subclass overrides.
+            ``file:line:code`` of each finding the static-method recipe keeps.
 
         """
         by_file: MutableMapping[Path, list[m.Infra.Issue]] = {}
