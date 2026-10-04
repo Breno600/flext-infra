@@ -10,8 +10,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import c, m, u
-from tests import u as test_u
+from flext_infra import c, m
+from tests import u
 
 
 class TestsFlextInfraGitSweepSemantics:
@@ -25,10 +25,10 @@ class TestsFlextInfraGitSweepSemantics:
             The repository root and its integration branch.
 
         """
-        repository = test_u.Tests.git_repository(tmp_path)
-        _ = test_u.Tests.configure_local_origin(repository, tmp_path / "remote")
-        integration = test_u.Tests.integration_branch(repository)
-        _ = test_u.Tests.git_run(repository, "switch", integration)
+        repository = u.Tests.git_repository(tmp_path)
+        _ = u.Tests.configure_local_origin(repository, tmp_path / "remote")
+        integration = u.Tests.integration_branch(repository)
+        _ = u.Tests.git_run(repository, "switch", integration)
         return repository, integration
 
     @staticmethod
@@ -40,8 +40,8 @@ class TestsFlextInfraGitSweepSemantics:
 
         """
         (repository / name).write_text(text, encoding="utf-8")
-        test_u.Tests.commit_git_changes(repository, f"add {name}")
-        return test_u.Tests.git_capture(repository, "rev-parse", c.Infra.GIT_HEAD)
+        u.Tests.commit_git_changes(repository, f"add {name}")
+        return u.Tests.git_capture(repository, "rev-parse", c.Infra.GIT_HEAD)
 
     def test_ref_heads_lists_local_and_remote_tracking_tips(
         self,
@@ -50,7 +50,7 @@ class TestsFlextInfraGitSweepSemantics:
         """Local and remote-tracking namespaces map names to tips, without HEAD."""
         repository, integration = self._published(tmp_path)
         tm.ok(u.Infra.git_fetch_remote(m.Infra.GitRemoteRequest(repo_root=repository)))
-        head = test_u.Tests.git_capture(repository, "rev-parse", c.Infra.GIT_HEAD)
+        head = u.Tests.git_capture(repository, "rev-parse", c.Infra.GIT_HEAD)
 
         local = tm.ok(
             u.Infra.git_ref_heads(
@@ -75,12 +75,12 @@ class TestsFlextInfraGitSweepSemantics:
 
     def test_stash_drop_removes_exactly_the_named_entry(self, tmp_path: Path) -> None:
         """Dropping by commit oid keeps every other stash entry intact."""
-        repository = test_u.Tests.git_repository(tmp_path)
+        repository = u.Tests.git_repository(tmp_path)
         _ = self._commit_file(repository, "tracked.txt", "base\n")
         tracked = repository / "tracked.txt"
         for text in ("first\n", "second\n"):
             tracked.write_text(text, encoding="utf-8")
-            _ = test_u.Tests.git_run(repository, "stash", "push", "--message", text)
+            _ = u.Tests.git_run(repository, "stash", "push", "--message", text)
         request = m.Infra.GitRepoRequest(repo_root=repository)
         newest, oldest = tm.ok(u.Infra.git_stash_oids(request)).oids
 
@@ -101,7 +101,7 @@ class TestsFlextInfraGitSweepSemantics:
         tmp_path: Path,
     ) -> None:
         """A switched new branch keeps the dirty tree; an existing name fails."""
-        repository = test_u.Tests.git_repository(tmp_path)
+        repository = u.Tests.git_repository(tmp_path)
         (repository / "dirty.txt").write_text("kept\n", encoding="utf-8")
 
         tm.ok(
@@ -127,8 +127,8 @@ class TestsFlextInfraGitSweepSemantics:
     @staticmethod
     def test_switch_branch_moves_to_an_existing_branch(tmp_path: Path) -> None:
         """Switching lands on an existing branch; an unknown one fails."""
-        repository = test_u.Tests.git_repository(tmp_path)
-        _ = test_u.Tests.git_run(repository, "branch", "existing")
+        repository = u.Tests.git_repository(tmp_path)
+        _ = u.Tests.git_run(repository, "branch", "existing")
 
         tm.ok(
             u.Infra.git_switch_branch(
@@ -156,7 +156,7 @@ class TestsFlextInfraGitSweepSemantics:
                 m.Infra.GitBranchCreateRequest(repo_root=repository, branch="lane"),
             ),
         )
-        oid = test_u.Tests.git_capture(repository, "rev-parse", "refs/heads/lane")
+        oid = u.Tests.git_capture(repository, "rev-parse", "refs/heads/lane")
         remote = m.Infra.GitRemoteBranchRequest(repo_root=repository, branch="lane")
 
         absent = tm.ok(u.Infra.git_remote_branch_oid(remote))
@@ -191,12 +191,12 @@ class TestsFlextInfraGitSweepSemantics:
     ) -> None:
         """A squash-merged branch is a no-op merge; new work is not."""
         repository, integration = self._published(tmp_path)
-        _ = test_u.Tests.git_run(repository, "switch", "--create", "squashed")
+        _ = u.Tests.git_run(repository, "switch", "--create", "squashed")
         _ = self._commit_file(repository, "feature.txt", "feature\n")
-        _ = test_u.Tests.git_run(repository, "switch", integration)
-        _ = test_u.Tests.git_run(repository, "merge", "--squash", "squashed")
-        test_u.Tests.commit_git_changes(repository, "squash feature")
-        _ = test_u.Tests.git_run(repository, "switch", "--create", "pending")
+        _ = u.Tests.git_run(repository, "switch", integration)
+        _ = u.Tests.git_run(repository, "merge", "--squash", "squashed")
+        u.Tests.commit_git_changes(repository, "squash feature")
+        _ = u.Tests.git_run(repository, "switch", "--create", "pending")
         _ = self._commit_file(repository, "pending.txt", "pending\n")
 
         squashed = tm.ok(
@@ -227,20 +227,20 @@ class TestsFlextInfraGitSweepSemantics:
     ) -> None:
         """Fast-forward succeeds on a descendant and fails on a diverged line."""
         repository, integration = self._published(tmp_path)
-        _ = test_u.Tests.git_run(repository, "switch", "--create", "ahead")
+        _ = u.Tests.git_run(repository, "switch", "--create", "ahead")
         ahead = self._commit_file(repository, "ahead.txt", "ahead\n")
-        _ = test_u.Tests.git_run(repository, "switch", integration)
+        _ = u.Tests.git_run(repository, "switch", integration)
 
         tm.ok(
             u.Infra.git_merge_ff_only(
                 m.Infra.GitCommitishRequest(repo_root=repository, commitish="ahead"),
             ),
         )
-        head = test_u.Tests.git_capture(repository, "rev-parse", c.Infra.GIT_HEAD)
+        head = u.Tests.git_capture(repository, "rev-parse", c.Infra.GIT_HEAD)
         _ = self._commit_file(repository, "local.txt", "local\n")
-        _ = test_u.Tests.git_run(repository, "switch", "ahead")
+        _ = u.Tests.git_run(repository, "switch", "ahead")
         _ = self._commit_file(repository, "other.txt", "other\n")
-        _ = test_u.Tests.git_run(repository, "switch", integration)
+        _ = u.Tests.git_run(repository, "switch", integration)
         diverged = u.Infra.git_merge_ff_only(
             m.Infra.GitCommitishRequest(repo_root=repository, commitish="ahead"),
         )
@@ -251,9 +251,9 @@ class TestsFlextInfraGitSweepSemantics:
     @staticmethod
     def test_last_activity_is_not_older_than_the_head_commit(tmp_path: Path) -> None:
         """Last activity covers at least the HEAD commit time."""
-        repository = test_u.Tests.git_repository(tmp_path)
+        repository = u.Tests.git_repository(tmp_path)
         committed = int(
-            test_u.Tests.git_capture(repository, "log", "-1", "--format=%ct"),
+            u.Tests.git_capture(repository, "log", "-1", "--format=%ct"),
         )
 
         activity = tm.ok(
@@ -265,14 +265,14 @@ class TestsFlextInfraGitSweepSemantics:
     @staticmethod
     def test_commit_rejected_by_a_hook_is_a_failure(tmp_path: Path) -> None:
         """A rejecting pre-commit hook yields a failed result, never an exception."""
-        repository = test_u.Tests.git_repository(tmp_path)
+        repository = u.Tests.git_repository(tmp_path)
         hook = repository / ".git" / "hooks" / "pre-commit"
         hook.parent.mkdir(parents=True, exist_ok=True)
         hook.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
         hook.chmod(0o755)
         (repository / "gated.txt").write_text("gated\n", encoding="utf-8")
-        _ = test_u.Tests.git_run(repository, "add", "gated.txt")
-        head = test_u.Tests.git_capture(repository, "rev-parse", c.Infra.GIT_HEAD)
+        _ = u.Tests.git_run(repository, "add", "gated.txt")
+        head = u.Tests.git_capture(repository, "rev-parse", c.Infra.GIT_HEAD)
 
         gated = u.Infra.git_commit(
             m.Infra.GitCommitRequest(repo_root=repository, message="gated"),
@@ -280,6 +280,6 @@ class TestsFlextInfraGitSweepSemantics:
 
         tm.that(gated.failure, eq=True)
         tm.that(
-            test_u.Tests.git_capture(repository, "rev-parse", c.Infra.GIT_HEAD),
+            u.Tests.git_capture(repository, "rev-parse", c.Infra.GIT_HEAD),
             eq=head,
         )
