@@ -365,25 +365,14 @@ class TestsFlextInfraRepositoryLocalTopology:
             The resulting ``Path``.
 
         """
-        child_source = tmp_path / "child-source"
-        u.Tests.WorktreeFixture.initialize_governed_project(
-            child_source,
-            "fixture-member",
-            workspace="member-workspace",
-            database="member-database",
-            issue_prefix="member-prefix",
-            beads_owner=False,
-        )
         parent = tmp_path / "parent"
-        u.Tests.WorktreeFixture.initialize_governed_project(
+        member = u.Tests.WorktreeFixture.copied_member(
             parent,
             "fixture-parent",
             workspace="parent-workspace",
             database="parent-database",
             issue_prefix="parent-prefix",
         )
-        member = parent / "apps" / "member"
-        shutil.copytree(child_source, member)
         # A composed project follows the workspace ledger through its own
         # declared identity. The ``.beads -> ../.beads`` link that used to
         # carry it is prohibited, and both conform and the detector reject it.

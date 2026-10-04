@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import os
+import shutil
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -536,6 +537,44 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 issue_prefix="fixture-workspace",
             )
             return child
+
+        @classmethod
+        def copied_member(
+            cls,
+            parent: Path,
+            distribution: str,
+            *,
+            workspace: str,
+            database: str,
+            issue_prefix: str,
+        ) -> Path:
+            """Initialize ``parent`` and copy a ledger-less governed member into it.
+
+            The caller declares the member's Beads route and attaches it.
+
+            Returns:
+                The copied member checkout at ``apps/member``.
+
+            """
+            source = parent.parent / "child-source"
+            cls.initialize_governed_project(
+                source,
+                "fixture-member",
+                workspace="member-workspace",
+                database="member-database",
+                issue_prefix="member-prefix",
+                beads_owner=False,
+            )
+            cls.initialize_governed_project(
+                parent,
+                distribution,
+                workspace=workspace,
+                database=database,
+                issue_prefix=issue_prefix,
+            )
+            member = parent / "apps" / "member"
+            shutil.copytree(source, member)
+            return member
 
         @staticmethod
         def _lane(primary_root: Path, outermost_project: Path, branch: str) -> Path:

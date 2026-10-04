@@ -16,6 +16,7 @@ from flext_tests import tm
 from flext_infra import c, config, m, t, u
 from tests.unit.validate.pytest_runner_support import (
     declare_parallel_project,
+    declared_project_runner,
     runner_for,
     summary,
 )
@@ -190,13 +191,7 @@ class TestsFlextInfraPytestRunner:
             declared_name,
             policy.run_timeout_seconds,
         )
-        pyproject = cached_runner_project / "pyproject.toml"
-        pyproject.write_text(
-            pyproject.read_text(encoding="utf-8")
-            + f'\n[project]\nname = "{declared_name}"\nversion = "0.1.0"\n',
-            encoding="utf-8",
-        )
-        runner = runner_for(cached_runner_project)
+        runner = declared_project_runner(cached_runner_project, declared_name)
         report = (
             cached_runner_project
             / config.Infra.codegen.make.testmon_cache.reports_directory
