@@ -2,8 +2,6 @@
 
 <!-- TOC START -->
 
-- No sections found
-
 <!-- TOC END -->
 
 `make mod` owns model-field access migration. The ast-grep rule reports dynamic
