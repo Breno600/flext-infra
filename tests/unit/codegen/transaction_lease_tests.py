@@ -133,7 +133,7 @@ class TestsFlextInfraTransactionLease:
                     lambda: owner.validate_artifacts(root, scope_root),
                 ),
             )
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
 
         tm.ok(transaction.run_locked(prepare=True, operation=publish))
 

@@ -217,7 +217,7 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
         return satisfied
 
     @staticmethod
-    def _failing_install_tools(probe_output: str) -> list[tuple[str, str]]:
+    def failing_install_tools(probe_output: str) -> list[tuple[str, str]]:
         """Extract the ``selector@version`` pairs a failed install probe named.
 
         Returns:
@@ -246,7 +246,7 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
         return tools
 
     @classmethod
-    def _remote_release_candidates(
+    def remote_release_candidates(
         cls,
         runtime: Path,
         environment: t.StrDict,
@@ -284,7 +284,7 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
         return candidates[:limit]
 
     @staticmethod
-    def _hold_manifest_version(manifest: Path, selector: str, version: str) -> None:
+    def hold_manifest_version(manifest: Path, selector: str, version: str) -> None:
         """Rewrite one tool's declared version inside a staged manifest copy.
 
         The committed manifest keeps its policy (``latest`` or pin); the hold
@@ -346,13 +346,13 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
             )
             for selector, failed_version in failed_tools:
                 held: str | None = None
-                for candidate in cls._remote_release_candidates(
+                for candidate in cls.remote_release_candidates(
                     runtime,
                     environment,
                     selector,
                     failed_version,
                 ):
-                    cls._hold_manifest_version(
+                    cls.hold_manifest_version(
                         stage / ".mise.toml",
                         selector,
                         candidate,
@@ -517,7 +517,7 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
                         held_stage,
                         cooldown,
                         platforms,
-                        cls._failing_install_tools(probe_output),
+                        cls.failing_install_tools(probe_output),
                     )
                     satisfied, _ = cls._probe_stage(
                         runtime,
@@ -608,7 +608,7 @@ class FlextInfraBootstrapMiseMixin(FlextInfraBootstrapTransactionMixin):
             stage,
             cooldown,
             platforms,
-            cls._failing_install_tools(probe_output),
+            cls.failing_install_tools(probe_output),
         )
         scratch = Path(tempfile.mkdtemp(prefix="mise-converge."))
         try:

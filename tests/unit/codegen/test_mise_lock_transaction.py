@@ -333,7 +333,7 @@ class TestsMiseHoldConvergence:
     @staticmethod
     def test_failing_install_tools_parses_mise_diagnostics() -> None:
         """Test failing install tools parses mise diagnostics."""
-        parsed = FlextInfraBootstrap._failing_install_tools(
+        parsed = FlextInfraBootstrap.failing_install_tools(
             "mise ERROR Failed to install tools:"
             " github:kucherenko/jscpd@5.3.3, github:qltysh/qlty@0.645.0\n",
         )
@@ -349,7 +349,7 @@ class TestsMiseHoldConvergence:
     def test_failing_install_tools_refuses_unparsable_diagnostics() -> None:
         """Test failing install tools refuses unparsable diagnostics."""
         with pytest.raises(ValueError, match="named no failing tool"):
-            FlextInfraBootstrap._failing_install_tools("boom")
+            FlextInfraBootstrap.failing_install_tools("boom")
 
     @staticmethod
     def test_hold_manifest_version_rewrites_only_the_named_section(
@@ -364,7 +364,7 @@ class TestsMiseHoldConvergence:
             'version_prefix = "v"\n',
             encoding="utf-8",
         )
-        FlextInfraBootstrap._hold_manifest_version(
+        FlextInfraBootstrap.hold_manifest_version(
             manifest,
             "github:kucherenko/jscpd",
             "5.3.2",
@@ -381,9 +381,9 @@ class TestsMiseHoldConvergence:
         """Test remote release candidates walk below the failed release."""
 
         def fake_ls_remote(
-            runtime: Path,
+            _runtime: Path,
             arguments: list[str],
-            environment: dict[str, str],
+            _environment: dict[str, str],
         ) -> str:
             tm.that(arguments[:1] == ["ls-remote"])
             return "v5.4.0\n5.3.3\nv5.3.2\n5.2.0\nnot-a-version\n"
@@ -393,7 +393,7 @@ class TestsMiseHoldConvergence:
             "_run",
             staticmethod(fake_ls_remote),
         )
-        candidates = FlextInfraBootstrap._remote_release_candidates(
+        candidates = FlextInfraBootstrap.remote_release_candidates(
             Path("/runtime"),
             {},
             "github:kucherenko/jscpd",

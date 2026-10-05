@@ -536,7 +536,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
                         session,
                         lambda current: owner.commit_locked(
                             current,
-                            lambda: r[bool].ok(True),
+                            lambda: r[bool].ok(value=True),
                         ),
                     ),
                     has="journal changed",
@@ -546,7 +546,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
                 eq=replacement,
             )
             tm.that(original.read_bytes(), eq=replacement.content)
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
 
         tm.ok(owner.run_files_locked(roots, replace_journal))
         tm.that(target.exists(), eq=False)

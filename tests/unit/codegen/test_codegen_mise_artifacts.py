@@ -14,6 +14,9 @@ from flext_tests import tm
 
 from flext_infra import c, config
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+from flext_infra.codegen.mise_artifacts_workspace import (
+    FlextInfraMiseWorkspacePlanner,
+)
 from tests import u
 
 
@@ -83,10 +86,6 @@ class TestsFlextInfraCodegenMiseArtifacts:
         tmp_path: Path,
     ) -> None:
         """A scope root still carrying the bootstrap seed starts from the packaged triple."""
-        from flext_infra.codegen.mise_artifacts_workspace import (
-            FlextInfraMiseWorkspacePlanner,
-        )
-
         root = tmp_path / "seed-project"
         for relative, _mode in c.Infra.ARTIFACT_SPECS:
             path = root / relative

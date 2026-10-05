@@ -801,13 +801,7 @@ class TestsFlextInfraCodegenCiMatrix:
     def test_docs_failure_upload_keeps_audit_failure_and_scopes_hidden_reports(
         rendered_project: Path,
     ) -> None:
-        """A generated Docs job fails on audit findings and retains safe reports.
-
-        Raises:
-            TypeError: If Docs workflow steps must be a sequence; or if Docs report
-                paths must be text.
-
-        """
+        """A generated Docs job fails on audit findings and retains safe reports."""
         workflow = u.Cli.yaml_load_mapping(
             rendered_project / ".github" / "workflows" / "docs.yml",
         )

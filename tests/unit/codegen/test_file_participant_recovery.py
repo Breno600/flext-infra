@@ -82,7 +82,7 @@ class TestsFlextInfraFileParticipantRecovery:
             tm.that(second.exists(), eq=False)
         # A fresh public transaction entry authenticates and reconciles the tree;
         # the previous implementation refuses its unregistered phase directory.
-        tm.ok(owner.run_files_locked(roots, lambda _scope: r[bool].ok(True)))
+        tm.ok(owner.run_files_locked(roots, lambda _scope: r[bool].ok(value=True)))
 
     @staticmethod
     def test_fresh_import_failure_restores_published_initializer(
@@ -128,7 +128,7 @@ class TestsFlextInfraFileParticipantRecovery:
         )
         tm.that(restored.content, eq=before.content)
         tm.that(restored.mode, eq=before.mode)
-        tm.ok(owner.run_files_locked(roots, lambda _scope: r[bool].ok(True)))
+        tm.ok(owner.run_files_locked(roots, lambda _scope: r[bool].ok(value=True)))
 
     @staticmethod
     def test_recovers_external_only_prepared_journal(tmp_path: Path) -> None:
@@ -156,7 +156,7 @@ class TestsFlextInfraFileParticipantRecovery:
 
         recovered = transaction.run_files_locked(
             roots,
-            lambda _scope_root: r[bool].ok(True),
+            lambda _scope_root: r[bool].ok(value=True),
         )
 
         tm.ok(recovered)
@@ -199,7 +199,7 @@ class TestsFlextInfraFileParticipantRecovery:
         if foreign_change != "none":
             (staging / "foreign.bin").write_bytes(b"preserve")
 
-        recovered = owner.run_files_locked(roots, lambda _scope: r[bool].ok(True))
+        recovered = owner.run_files_locked(roots, lambda _scope: r[bool].ok(value=True))
 
         if foreign_change == "none":
             tm.ok(recovered)
@@ -252,7 +252,7 @@ class TestsFlextInfraFileParticipantRecovery:
         if with_foreign_file:
             (staging / "foreign.bin").write_bytes(b"not journaled")
 
-        recovered = owner.run_files_locked(roots, lambda _scope: r[bool].ok(True))
+        recovered = owner.run_files_locked(roots, lambda _scope: r[bool].ok(value=True))
 
         if with_foreign_file:
             tm.fail(recovered)
@@ -343,6 +343,6 @@ class TestsFlextInfraFileParticipantRecovery:
                     tm.ok(u.Cli.atomic_read_binary_file_state(target, required=True)),
                     eq=before,
                 )
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
 
         tm.ok(owner.run_files_locked(roots, fail_session))
