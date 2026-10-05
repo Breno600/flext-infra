@@ -225,9 +225,9 @@ plugins = [
   {{ item | tojson }},
 {% endfor %}
 ]
-{% if tooling.tools.mypy.disable_error_code %}
+{% if tooling.tools.mypy.ruling_disable_error_codes %}
 disable_error_code = [
-{% for item in tooling.tools.mypy.disable_error_code %}
+{% for item in tooling.tools.mypy.ruling_disable_error_codes %}
   {{ item | tojson }},
 {% endfor %}
 ]
