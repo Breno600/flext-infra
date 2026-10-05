@@ -55,6 +55,7 @@ class MiseLockConverge:
         ("MISE_LOCKED", "true"),
         ("MISE_LOCKFILE_PLATFORMS", "linux-x64,linux-x64-musl,linux-arm64,macos-x64,macos-arm64,windows-x64"),
         ("MISE_MINIMUM_RELEASE_AGE", "7d"),
+        ("MISE_NPM_PACKAGE_MANAGER", "bun"),
     )
     TRANSIENT_ENVIRONMENT = (
         ("HOME", "home"),

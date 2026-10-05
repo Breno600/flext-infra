@@ -99,6 +99,11 @@ Infra:
           version: latest
         - name: node
           version: latest
+        # bun is the npm installer the toolchain declares (above) and a
+        # bootstrap prerequisite: mise does not auto-install the npm backend's
+        # own runtime, and the safe-mode bootstrap runs under env -i.
+        - name: bun
+          version: latest
         # Prettier is the markdown formatter (markdown-format gate): provisioned
         # through npm so the fleet binary version is owned by this SSOT alone.
         # Pinned to 3.5.x: prettier 3.7+ changed markdown formatting (list-
@@ -121,14 +126,15 @@ Infra:
           selector: github:qltysh/qlty
           version: latest
           form: table
-        # Held at 5.3.3 (operator resilience lane 2026-10-02): under the 7-day
-        # cooldown, `latest` resolves to 5.3.2, whose release lacks platform
-        # assets, so Mise aborts every lock pass ("refusing to replace") and no
-        # lock the pinned Mise accepts can exist. Hold the asset-covered
-        # release until a newer one regains full platform coverage.
+        # Back on `latest` (2026-10-04 re-measurement): the 2026-10-02 hold's
+        # premise is gone — every release v5.2.0 through v5.4.0 now ships the
+        # full 19-asset platform set (verified via the GitHub releases API),
+        # so the cooldown `latest` resolves to installs cleanly and `make upg`
+        # re-records the resolution in mise.lock. Re-pin only on a measured,
+        # dated failure again.
         - name: jscpd
           selector: github:kucherenko/jscpd
-          version: "5.3.3"
+          version: latest
           form: table
         # microsoft/waza also publishes azd-extension tags, and GitHub marks
         # one of them latest; the tool's own releases are the `v` tags.
@@ -139,10 +145,12 @@ Infra:
           form: table
       # Pins layered over the tools table by the override files.
       tool_version_pins: {}
-      # ast-grep's native binary is selected by its npm lifecycle script.
-      # The embedded aube installer preserves the locked dependency graph;
-      # the approved package lifecycle is declared in the mise projection.
-      npm_package_manager: aube
+      # bun installs the npm CLIs (operator choice 2026-10-05): faster than
+      # the embedded aube and no aube dependency-graph sidecars — mise.lock
+      # keeps the top-level pin only. The bootstrap carries
+      # MISE_NPM_PACKAGE_MANAGER because mise safe mode ignores project
+      # [settings].
+      npm_package_manager: bun
       # False keeps Python resolution and installation on precompiled builds:
       # compiling from source selected releases ahead of their published
       # builds and stalled the fleet bootstrap (operator 2026-10-01).
