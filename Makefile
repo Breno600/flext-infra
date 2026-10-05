@@ -733,25 +733,7 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 		mise_exec "$$mise_offline_mode" env 'MISE_OFFLINE=true' "$$@"; \
 	}; \
 	bootstrap_state="$(PROJECT_ROOT)/../.$(notdir $(PROJECT_ROOT)).mise-bootstrap-state"; \
-	{ \
-		printf "scratch='%s'\n" "$$scratch"; \
-		printf "project_root='%s'\n" "$$project_root"; \
-		printf "project_parent='%s'\n" "$$project_parent"; \
-		printf "mise_storage_root='%s'\n" "$$mise_storage_root"; \
-		printf "pinned_mise='%s'\n" "$$pinned_mise"; \
-		printf "caller_path='%s'\n" "$$caller_path"; \
-		printf "caller_mise_version='%s'\n" "$$caller_mise_version"; \
-		printf "caller_github_token='%s'\n" "$$caller_github_token"; \
-		printf "caller_gh_token='%s'\n" "$$caller_gh_token"; \
-		printf "caller_mise_github_token='%s'\n" "$$caller_mise_github_token"; \
-		printf "caller_mise_http_timeout='%s'\n" "$$caller_mise_http_timeout"; \
-		printf "caller_flext_mypy_profile_output='%s'\n" "$$caller_flext_mypy_profile_output"; \
-		printf "caller_comspec='%s'\n" "$$caller_comspec"; \
-		printf "caller_pathext='%s'\n" "$$caller_pathext"; \
-		printf "caller_systemroot='%s'\n" "$$caller_systemroot"; \
-		printf "caller_windir='%s'\n" "$$caller_windir"; \
-		printf "mise_lockfile_platforms='%s'\n" "$$mise_lockfile_platforms"; \
-	} > "$$bootstrap_state"; \
+	set | grep -E '^[A-Za-z_][A-Za-z0-9_]*=' > "$$bootstrap_state"
 # The only tolerated Mise warning: ephemeral CI runners ship pre-seeded
 	# shims (python3, make) and `mise install` always announces it declines to
 	# replace them while every real install still succeeds (cosmos-main PR 346
@@ -760,9 +742,10 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 	bootstrap_state="$(PROJECT_ROOT)/../.$(notdir $(PROJECT_ROOT)).mise-bootstrap-state"; \
 	. "$$bootstrap_state"; \
 	rm -f "$$bootstrap_state"; \
-	# The probe shell is a separate recipe shell: it re-derives its state from
-	# the state file shell 1 wrote, and re-declares the two functions shell 1
-	# owns (shell functions do not cross recipe shells).
+	pinned_mise="$$mise"; \
+	mise_pin_file="$$project_root/mise.version"; \
+	mise_pin=; if [ -f "$$mise_pin_file" ]; then mise_pin=$$(awk '!/^[[:space:]]*(#|$$)/ { lines++; release = $$0 } END { if (lines == 1) print release }' "$$mise_pin_file"); fi; \
+	scratch=$$(mktemp -d "$${TMPDIR:-/tmp}/flext-setup-probe.XXXXXX"); \
 mise_exec() { \
 		mise_config_mode="$$1"; shift; \
 		case "$$mise_config_mode" in \
@@ -861,7 +844,7 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 	}; \
 	mise_checked() { \
 		mise_log="$$1"; shift; \
-		case "$$mise_log" in /*) mise_log="$${TMPDIR:-/tmp}/$${mise_log##*/}" ;; esac; \
+		case "$$mise_log" in */*) ;; /*) mise_log="$${TMPDIR:-/tmp}/$${mise_log##*/}" ;; esac; \
 		printf 'setup probe: begin stage=%s log=%s\n' "$${mise_log##*/}" "$$mise_log" >&2; \
 		if "$$@" >"$$mise_log" 2>&1; then :; \
 		else mise_status=$$?; cat "$$mise_log"; printf 'setup probe: failed stage=%s exit=%s\n' "$${mise_log##*/}" "$$mise_status" >&2; return "$$mise_status"; fi; \
@@ -873,8 +856,8 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 	}; \
 	mise_checked_stdout() { \
 		mise_stdout_log="$$1"; mise_stderr_log="$$2"; shift 2; \
-		case "$$mise_stdout_log" in /*) mise_stdout_log="$${TMPDIR:-/tmp}/$${mise_stdout_log##*/}" ;; esac; \
-		case "$$mise_stderr_log" in /*) mise_stderr_log="$${TMPDIR:-/tmp}/$${mise_stderr_log##*/}" ;; esac; \
+		case "$$mise_stdout_log" in */*) ;; /*) mise_stdout_log="$${TMPDIR:-/tmp}/$${mise_stdout_log##*/}" ;; esac; \
+		case "$$mise_stderr_log" in */*) ;; /*) mise_stderr_log="$${TMPDIR:-/tmp}/$${mise_stderr_log##*/}" ;; esac; \
 		if "$$@" >"$$mise_stdout_log" 2>"$$mise_stderr_log"; then :; \
 		else mise_status=$$?; cat "$$mise_stderr_log" >&2; cat "$$mise_stdout_log"; return "$$mise_status"; fi; \
 		cat "$$mise_stderr_log" >&2; cat "$$mise_stdout_log"; \
