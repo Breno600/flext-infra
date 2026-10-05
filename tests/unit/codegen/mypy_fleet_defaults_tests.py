@@ -1,11 +1,7 @@
-"""Fleet-mandatory mypy defaults: pydantic.mypy always on, ruling codes suppressed.
+"""Validate fleet-mandatory Mypy policy through the typed YAML owner.
 
-Operator ruling 2026-10-05: Pydantic 2 is the fleet contract; the
-pydantic.mypy plugin is its type surface and stays mandatory, and
-prop-decorator/call-arg are suspended everywhere. A project overlay that
-omits both keys still inherits them through the model defaults — consumers
-must never re-declare the law to keep it, and code edited to quiet those two
-mypy codes is a regression.
+Pydantic 2 and its plugin remain mandatory. Configuration, not declaration
+defaults, owns the selected policy; tests validate its public input contract.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -13,34 +9,46 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import pytest
 from flext_tests import tm
 
-from flext_infra import config
+from flext_core import e
+from flext_infra import config, m
 
 
 class TestsMypyFleetMandatoryDefaults:
-    """The mypy policy defaults carry the ruling to every consumer."""
+    """The selected SSOT policy survives validation and rejects weakening."""
 
     @staticmethod
-    def test_defaults_carry_plugin_and_ruling_codes() -> None:
-        """Omitted keys resolve to the mandatory plugin and ruling codes."""
-        fields = type(config.Infra.tooling.tools.mypy).model_fields
-        tm.that(
-            list(fields["plugins"].get_default(call_default_factory=True)),
-            eq=["pydantic.mypy"],
-        )
-        tm.that(
-            list(
-                fields["disable_error_code"].get_default(
-                    call_default_factory=True,
-                ),
-            ),
-            eq=["prop-decorator", "call-arg"],
-        )
-
-    @staticmethod
-    def test_this_repository_declares_the_same_law() -> None:
-        """The repo's own declared policy agrees with the mandatory defaults."""
+    def test_selected_policy_round_trips() -> None:
+        """The same typed SSOT supplies production and expected policy values."""
         policy = config.Infra.tooling.tools.mypy
-        tm.that(list(policy.plugins), eq=["pydantic.mypy"])
-        tm.that(list(policy.disable_error_code), eq=["prop-decorator", "call-arg"])
+        validated = m.Infra.MypyConfig.model_validate(policy.model_dump(by_alias=True))
+        tm.that(tuple(validated.plugins), eq=tuple(policy.plugins))
+        tm.that(
+            tuple(validated.disable_error_code),
+            eq=tuple(policy.disable_error_code),
+        )
+
+    @pytest.mark.parametrize("change", ["empty", "missing", "additional"])
+    def test_selected_policy_rejects_unauthorized_suspensions(self, change: str) -> None:
+        """No complete payload may remove a required code or suspend another."""
+        payload = config.Infra.tooling.tools.mypy.model_dump(by_alias=True)
+        codes = list(config.Infra.tooling.tools.mypy.disable_error_code)
+        if change == "empty":
+            codes.clear()
+        elif change == "missing":
+            codes.pop()
+        else:
+            codes.append("assignment")
+        payload["disable-error-code"] = codes
+        with pytest.raises(e.PydanticValidationError, match="Mypy ruling"):
+            m.Infra.MypyConfig.model_validate(payload)
+
+    @staticmethod
+    def test_selected_policy_requires_a_declared_suspension_field() -> None:
+        """Missing policy does not silently introduce schema-owned defaults."""
+        payload = config.Infra.tooling.tools.mypy.model_dump(by_alias=True)
+        del payload["disable-error-code"]
+        with pytest.raises(e.PydanticValidationError, match="disable-error-code"):
+            m.Infra.MypyConfig.model_validate(payload)

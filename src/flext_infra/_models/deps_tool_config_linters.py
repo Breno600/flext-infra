@@ -444,12 +444,27 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                     "Mypy error codes an operator ruling suspends project-wide; "
                     "rendered as [tool.mypy] disable_error_code. The pydantic "
                     "mypy plugin stays mandatory (Pydantic 2 is the contract)."
-                    " The default carries the 2026-10-05 ruling fleet-wide:"
-                    " prop-decorator and call-arg are suspended everywhere and"
-                    " code edited to quiet them is a regression."
                 ),
             ),
-        ] = m.Field(default_factory=lambda: ("prop-decorator", "call-arg"))
+        ]
+
+        @m.field_validator("disable_error_code")
+        @classmethod
+        def require_mypy_ruling_codes(cls, codes: t.StrSequence) -> t.StrSequence:
+            """Validate the operator's immutable Mypy diagnostic contract.
+
+            Returns:
+                The declared policy without adding or replacing configured values.
+
+            Raises:
+                ValueError: If a mandatory code is removed or another is suspended.
+
+            """
+            if set(codes) != {"prop-decorator", "call-arg"}:
+                msg = "Mypy ruling requires only prop-decorator and call-arg"
+                raise ValueError(msg)
+            return codes
+
         boolean_settings: Annotated[
             t.BoolMapping,
             m.Field(
