@@ -56,6 +56,10 @@ class FlextInfraUtilitiesCodegen(
                     ",".join(toolchain.mise_lockfile_platforms),
                 ),
                 ("MISE_MINIMUM_RELEASE_AGE", f"{toolchain.dependency_cooldown_days}d"),
+                # The npm backend's installer: setup/upg run under MISE_SAFE,
+                # which ignores the project [settings.npm] the projection
+                # carries, so the bootstrap declares it explicitly.
+                ("MISE_NPM_PACKAGE_MANAGER", toolchain.npm_package_manager),
             ),
             offline_environment=tuple(c.Infra.MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT),
             transient_environment=tuple(c.Infra.MISE_BOOTSTRAP_TRANSIENT_ENVIRONMENT),

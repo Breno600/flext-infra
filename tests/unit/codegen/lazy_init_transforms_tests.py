@@ -50,7 +50,10 @@ class TestsFlextInfraLazyInitTransforms:
         tm.that(result, eq=0)
         tm.that(
             init_content,
-            has=f"from {package_root.name}._utilities.mapper import FlextDemoUtilitiesMapper",
+            has=(
+                f"from {package_root.name}._utilities.mapper "
+                "import FlextDemoUtilitiesMapper"
+            ),
         )
         tm.that(init_content, has="FlextDemoUtilitiesMapper")
         tm.that(init_content, has="__all__: tuple[str, ...]")

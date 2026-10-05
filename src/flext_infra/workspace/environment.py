@@ -36,25 +36,28 @@ class FlextInfraWorkspaceEnvironmentMixin:
             The resulting ``p.Result[m.Infra.WorkspaceEnvironmentSyncResult]``.
 
         """
-        result_type = m.Infra.WorkspaceEnvironmentSyncResult
         repository_root = request.repository_root
         if not (repository_root / c.PYPROJECT_FILENAME).is_file():
             result = cls._remove_generated_environment_files(request)
         else:
             envrc_result = cls._sync_envrc(request)
             if envrc_result.failure:
-                return r[result_type].from_failure(envrc_result)
+                return r[m.Infra.WorkspaceEnvironmentSyncResult].from_failure(
+                    envrc_result,
+                )
             changed = (
                 (repository_root / c.Infra.ENVRC_FILENAME,)
                 if envrc_result.value
                 else ()
             )
-            result = r[result_type].ok(result_type(changed_files=changed))
+            result = r[m.Infra.WorkspaceEnvironmentSyncResult].ok(
+                m.Infra.WorkspaceEnvironmentSyncResult(changed_files=changed),
+            )
         if result.failure:
             return result
         allow_result = cls._allow_direnv_if_requested(request, runner=runner)
         if allow_result.failure:
-            return r[result_type].from_failure(allow_result)
+            return r[m.Infra.WorkspaceEnvironmentSyncResult].from_failure(allow_result)
         return result
 
     @classmethod
@@ -166,7 +169,6 @@ class FlextInfraWorkspaceEnvironmentMixin:
             The resulting ``p.Result[m.Infra.WorkspaceEnvironmentSyncResult]``.
 
         """
-        result_type = m.Infra.WorkspaceEnvironmentSyncResult
         removed: list[Path] = []
         for filename in c.Infra.WORKSPACE_ENV_FILES:
             target_path = request.repository_root / filename
@@ -175,10 +177,12 @@ class FlextInfraWorkspaceEnvironmentMixin:
                 apply=request.apply,
             )
             if result.failure:
-                return r[result_type].from_failure(result)
+                return r[m.Infra.WorkspaceEnvironmentSyncResult].from_failure(result)
             if result.value:
                 removed.append(target_path)
-        return r[result_type].ok(result_type(changed_files=tuple(removed)))
+        return r[m.Infra.WorkspaceEnvironmentSyncResult].ok(
+            m.Infra.WorkspaceEnvironmentSyncResult(changed_files=tuple(removed)),
+        )
 
     @classmethod
     def _remove_generated_environment_file(

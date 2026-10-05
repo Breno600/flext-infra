@@ -35,7 +35,7 @@ class FlextInfraSettingsModels:
                 validation_alias="FLEXT_STANDALONE",
                 description="Force standalone mode and skip workspace auto-detection.",
             ),
-        ]
+        ] = False
         repository_root: Annotated[
             Path | None,
             m.Field(
@@ -43,7 +43,7 @@ class FlextInfraSettingsModels:
                 validation_alias="FLEXT_REPOSITORY_ROOT",
                 description="Explicit repository root for dependency orchestration.",
             ),
-        ]
+        ] = None
         use_https: Annotated[
             bool,
             m.Field(
@@ -51,7 +51,7 @@ class FlextInfraSettingsModels:
                 validation_alias="FLEXT_USE_HTTPS",
                 description="Prefer HTTPS repository URLs during dependency sync.",
             ),
-        ]
+        ] = False
         github_head_ref: Annotated[
             str | None,
             m.Field(
@@ -59,7 +59,7 @@ class FlextInfraSettingsModels:
                 validation_alias="GITHUB_HEAD_REF",
                 description="GitHub Actions head ref for dependency sync.",
             ),
-        ]
+        ] = None
         github_ref_name: Annotated[
             str | None,
             m.Field(
@@ -67,7 +67,7 @@ class FlextInfraSettingsModels:
                 validation_alias="GITHUB_REF_NAME",
                 description="GitHub Actions ref name for dependency sync.",
             ),
-        ]
+        ] = None
         uv_executable: Annotated[
             str | None,
             m.Field(
@@ -75,7 +75,7 @@ class FlextInfraSettingsModels:
                 validation_alias="UV",
                 description="uv launcher path resolved for dependency orchestration.",
             ),
-        ]
+        ] = None
         runtime_root: Annotated[
             Path | None,
             m.Field(
@@ -88,7 +88,7 @@ class FlextInfraSettingsModels:
                     "Git root."
                 ),
             ),
-        ]
+        ] = None
         virtual_env: Annotated[
             str | None,
             m.Field(
@@ -96,7 +96,7 @@ class FlextInfraSettingsModels:
                 validation_alias="VIRTUAL_ENV",
                 description="Active virtualenv root for promoted Python commands.",
             ),
-        ]
+        ] = None
         dispatch_what: Annotated[
             str | None,
             m.Field(
@@ -104,7 +104,7 @@ class FlextInfraSettingsModels:
                 validation_alias="WHAT",
                 description="Make-dispatch WHAT verb for promoted commands.",
             ),
-        ]
+        ] = None
         flext_command_dispatched: Annotated[
             str | None,
             m.Field(
@@ -112,7 +112,7 @@ class FlextInfraSettingsModels:
                 validation_alias="FLEXT_COMMAND_DISPATCHED",
                 description="Dispatcher marker exported to a promoted command.",
             ),
-        ]
+        ] = None
         flext_command_path: Annotated[
             str | None,
             m.Field(
@@ -120,7 +120,7 @@ class FlextInfraSettingsModels:
                 validation_alias="FLEXT_COMMAND_PATH",
                 description="Resolved path of the promoted command being dispatched.",
             ),
-        ]
+        ] = None
         system_path: Annotated[
             str | None,
             m.Field(
@@ -128,7 +128,7 @@ class FlextInfraSettingsModels:
                 validation_alias="PATH",
                 description="Process PATH captured for isolated subprocess builds.",
             ),
-        ]
+        ] = None
         sonar_token: Annotated[
             t.SecretStr | None,
             m.Field(
@@ -139,7 +139,7 @@ class FlextInfraSettingsModels:
                     "sonarcloud-sync verb, never read from any other source."
                 ),
             ),
-        ]
+        ] = None
 
 
 __all__: list[str] = ["FlextInfraSettingsModels"]

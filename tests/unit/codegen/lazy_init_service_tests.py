@@ -20,7 +20,8 @@ if TYPE_CHECKING:
     from tests import p, t
 
 
-# NOTE (multi-agent, flext-wkii.17.15): prove scoped writes and read-only drift publicly.
+# NOTE (multi-agent, flext-wkii.17.15): prove scoped writes and read-only drift
+# publicly.
 class TestsFlextInfraCodegenLazyInitService:
     """Validate real service execution without mocks or internal branching asserts."""
 
