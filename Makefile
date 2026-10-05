@@ -742,6 +742,7 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 	}; \
 	mise_checked() { \
 		mise_log="$$1"; shift; \
+		case "$$mise_log" in /*) mise_log="$${TMPDIR:-/tmp}/$${mise_log##*/}" ;; esac; \
 		printf 'setup probe: begin stage=%s log=%s\n' "$${mise_log##*/}" "$$mise_log" >&2; \
 		if "$$@" >"$$mise_log" 2>&1; then :; \
 		else mise_status=$$?; cat "$$mise_log"; printf 'setup probe: failed stage=%s exit=%s\n' "$${mise_log##*/}" "$$mise_status" >&2; return "$$mise_status"; fi; \
@@ -753,6 +754,8 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 	}; \
 	mise_checked_stdout() { \
 		mise_stdout_log="$$1"; mise_stderr_log="$$2"; shift 2; \
+		case "$$mise_stdout_log" in /*) mise_stdout_log="$${TMPDIR:-/tmp}/$${mise_stdout_log##*/}" ;; esac; \
+		case "$$mise_stderr_log" in /*) mise_stderr_log="$${TMPDIR:-/tmp}/$${mise_stderr_log##*/}" ;; esac; \
 		if "$$@" >"$$mise_stdout_log" 2>"$$mise_stderr_log"; then :; \
 		else mise_status=$$?; cat "$$mise_stderr_log" >&2; cat "$$mise_stdout_log"; return "$$mise_status"; fi; \
 		cat "$$mise_stderr_log" >&2; cat "$$mise_stdout_log"; \
