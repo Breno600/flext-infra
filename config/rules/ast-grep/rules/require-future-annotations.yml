@@ -180,22 +180,12 @@ rule:
   pattern:
     context: "__all__: t.VariadicTuple[str] = $VALUE"
     selector: assignment
-  inside:
-    kind: expression_statement
-    inside:
-      kind: module
-constraints:
-  VALUE:
-    kind: tuple
-    not:
-      has:
-        not:
-          any:
-            - kind: comment
-            - all:
-                - kind: string
-                - regex: "^[\"']"
 fix: "__all__ = $VALUE"
 message: >-
-  Infer the literal export tuple instead of retaining a redundant type-only
+  Infer the export tuple instead of retaining a redundant type-only
   facade dependency; preserve the original export values and order.
+  Under `from __future__ import annotations` (mandated fleet-side) the
+  annotation is never evaluated, so the rewrite is behavior-neutral for
+  every right-hand side — a per-element literal-only constraint here
+  evaluated inverted under ast-grep 0.45.3 and was removed (the test
+  suite pins the semantics).
