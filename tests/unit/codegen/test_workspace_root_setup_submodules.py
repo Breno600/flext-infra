@@ -234,6 +234,45 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
         tm.that(self._git_state(child), eq=("conflict", state[1]))
 
+    def _prepare_clone_state(
+        self,
+        checkout: Path,
+        state: str,
+        tmp_path: Path,
+        *,
+        with_content: bool,
+    ) -> None:
+        git_dir = Path(self._git_stdout(checkout, "rev-parse", "--absolute-git-dir"))
+        head = self._git_stdout(checkout, "rev-parse", "HEAD")
+        if state.startswith("strategy-"):
+            self._git_stdout(
+                checkout.parent,
+                "config",
+                f"submodule.{checkout.name}.update",
+                state.removeprefix("strategy-"),
+            )
+        if state.startswith("staged-deletions"):
+            self._git_stdout(checkout, "read-tree", "--empty")
+        elif with_content:
+            if state.endswith("ignored"):
+                (git_dir / "info" / "exclude").write_text(
+                    "preserve.txt\n",
+                    encoding="utf-8",
+                )
+            (checkout / "preserve.txt").write_text("local work\n", encoding="utf-8")
+        elif state.startswith("foreign-tree"):
+            if state == "foreign-tree-index":
+                self._git_stdout(checkout, "read-tree", "--empty")
+            foreign = tmp_path / "foreign-worktree"
+            foreign.mkdir()
+            self._git_stdout(checkout, "config", "core.worktree", str(foreign))
+        elif state == "symlink-index":
+            (git_dir / "index").symlink_to(tmp_path / "foreign-index")
+        elif state == "extra-ref":
+            self._git_stdout(checkout, "branch", "preserved", head)
+        elif state == "stash-ref":
+            self._git_stdout(checkout, "update-ref", "refs/stash", head)
+
     @pytest.mark.parametrize(
         "state",
         [
@@ -319,40 +358,18 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         )
         tm.that(index.exists(), eq=False)
         head = self._git_stdout(checkout, "rev-parse", "HEAD")
-        if state.startswith("strategy-"):
-            self._git_stdout(
-                workspace,
-                "config",
-                f"submodule.{member}.update",
-                state.removeprefix("strategy-"),
-            )
         local_content = state in {
             "untracked",
             "ignored",
             "head-at-pin-untracked",
             "head-at-pin-ignored",
         }
-        if state.startswith("staged-deletions"):
-            self._git_stdout(checkout, "read-tree", "--empty")
-        elif local_content:
-            if state.endswith("ignored"):
-                (git_dir / "info" / "exclude").write_text(
-                    "preserve.txt\n",
-                    encoding="utf-8",
-                )
-            (checkout / "preserve.txt").write_text("local work\n", encoding="utf-8")
-        elif state.startswith("foreign-tree"):
-            if state == "foreign-tree-index":
-                self._git_stdout(checkout, "read-tree", "--empty")
-            foreign = tmp_path / "foreign-worktree"
-            foreign.mkdir()
-            self._git_stdout(checkout, "config", "core.worktree", str(foreign))
-        elif state == "symlink-index":
-            index.symlink_to(tmp_path / "foreign-index")
-        elif state == "extra-ref":
-            self._git_stdout(checkout, "branch", "preserved", head)
-        elif state == "stash-ref":
-            self._git_stdout(checkout, "update-ref", "refs/stash", head)
+        self._prepare_clone_state(
+            checkout,
+            state,
+            tmp_path,
+            with_content=local_content,
+        )
         prior_index = index.read_bytes() if index.exists() else None
         env = {**os.environ, "GIT_ALLOW_PROTOCOL": "file"}
         if state == "relocated-index":
@@ -384,6 +401,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
             tm.that(
                 u.Cli.process_succeeded(process.outcome),
                 eq=state == "staged-deletions-at-pin",
+                msg=process.stdout + process.stderr,
             )
             tm.that(self._git_stdout(checkout, "rev-parse", "HEAD"), eq=head)
             tm.that(index.read_bytes() if index.exists() else None, eq=prior_index)
@@ -391,9 +409,15 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
                 tm.that(index.is_symlink(), eq=True)
                 tm.that(index.readlink(), eq=tmp_path / "foreign-index")
             elif state == "extra-ref":
-                tm.that(self._git_stdout(checkout, "rev-parse", "refs/heads/preserved"), eq=head)
+                tm.that(
+                    self._git_stdout(checkout, "rev-parse", "refs/heads/preserved"),
+                    eq=head,
+                )
             elif state == "stash-ref":
-                tm.that(self._git_stdout(checkout, "rev-parse", "refs/stash"), eq=head)
+                tm.that(
+                    self._git_stdout(checkout, "rev-parse", "refs/stash"),
+                    eq=head,
+                )
             if local_content:
                 tm.that(
                     (checkout / "preserve.txt").read_text(encoding="utf-8"),

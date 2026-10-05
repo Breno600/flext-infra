@@ -1707,6 +1707,8 @@ _builtin-help:
 # init uses. Setup's contract is the recorded commit, and a full history
 # cannot finish inside submodule_timeout_seconds when the object database
 # is large.
+# Derive the physical index from its Git directory: --git-path resolves
+# a final symlink and cannot prove that the index entry itself is absent.
 _builtin_setup_submodules:
 	@set -eu; \
 	umask 022; \
@@ -1757,7 +1759,8 @@ _builtin_setup_submodules:
 			printf 'ERROR: %s: checkout identity does not match the governed child\n' "$$path" >&2; \
 			exit 2; \
 		fi; \
-		index=$$(git -C "$$child" rev-parse --path-format=absolute --git-path index); \
+		git_dir=$$(git -C "$$child" rev-parse --absolute-git-dir); \
+		index="$$git_dir/index"; \
 		if [ -e "$$index" ] || [ -L "$$index" ]; then continue; fi; \
 		content=$$(git -C "$$child" ls-files --others --directory); \
 		reflog=$$(git -C "$$child" reflog show --format=%gs HEAD); \

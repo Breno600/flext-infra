@@ -78,12 +78,11 @@ class TestsFlextInfraFileGateAndReconcileMakefile:
         """
         return rendered.split("_builtin_file_gate_all:", 1)[1].split("\n\n", 1)[0]
 
-    def test_file_gate_verb_is_declared_fleet_wide(self) -> None:
+    @staticmethod
+    def test_file_gate_verb_is_declared_fleet_wide() -> None:
         """The codegen SSOT declares file-gate once with no profile restriction."""
         verb = next(
-            verb
-            for verb in config.Infra.codegen.make.verbs
-            if verb.name == "file-gate"
+            verb for verb in config.Infra.codegen.make.verbs if verb.name == "file-gate"
         )
         tm.that(
             "fast per-file gates" in verb.description,
@@ -125,7 +124,7 @@ class TestsFlextInfraFileGateAndReconcileMakefile:
             # Ruff lint and format are the hard gates: no `|| true` on them.
             tm.that(body.count('-m ruff check "$$file"'), eq=1)
             tm.that(body.count('-m ruff format --check "$$file"'), eq=1)
-            tm.that(body, has='printf \'ERROR: file-gate requires FILE=')
+            tm.that(body, has="printf 'ERROR: file-gate requires FILE=")
             # The advisory scanners stay reportable, never blocking.
             tm.that(
                 body,
@@ -148,7 +147,7 @@ class TestsFlextInfraFileGateAndReconcileMakefile:
             role=c.Infra.MakeProfile.WORKSPACE,
         )
         lifecycle = rendered.split("_setup_lifecycle:", 1)[1].split(
-            ".PHONY: _setup_activated", 1
+            ".PHONY: _setup_activated", 1,
         )[0]
         # The step is gated on the drift signal the bootstrap recipe exports.
         tm.that(lifecycle, has='[ "$${SETUP_MISE_LOCK_DRIFT:-}" = "1" ]')
@@ -175,7 +174,7 @@ class TestsFlextInfraFileGateAndReconcileMakefile:
         # exports the drift signal for its own probe, so only the lifecycle
         # section proves the reconcile step is workspace-only.
         lifecycle = rendered.split("_setup_lifecycle:", 1)[1].split(
-            ".PHONY: _setup_activated", 1
+            ".PHONY: _setup_activated", 1,
         )[0]
         tm.that(
             lifecycle,
