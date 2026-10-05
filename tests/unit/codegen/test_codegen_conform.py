@@ -17,7 +17,7 @@ import pytest
 from flext_tests import tm
 
 from flext_core import r
-from flext_infra import config, infra
+from flext_infra import config, infra, t
 from flext_infra.codegen import (
     FlextInfraCodegenConform,
     FlextInfraCodegenMiseArtifacts,
