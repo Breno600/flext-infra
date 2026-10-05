@@ -140,11 +140,7 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         resource = holder.get_resource()
         if resource is None:
             return None
-<<<<<<< HEAD
         return resource.real_path
-=======
-        return str(resource.real_path)
->>>>>>> 86390c20e (wip(flext-20yyv): origin-aware accessor rewrites; dry-run contract; report receipts)
 
     @staticmethod
     def source_offset(source: str, node: p.Infra.RopeAstNode) -> int:
