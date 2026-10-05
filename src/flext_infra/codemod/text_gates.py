@@ -271,14 +271,14 @@ class FlextInfraModTextGateEngine:
         )
         unknown_flags = set(flag_names).difference(c.Infra.CODEMOD_TEXT_FLAG_NAMES)
         if unknown_flags:
-            return r[
-                tuple[str, t.VariadicTuple[str], re.Pattern[str]]
-            ].fail(f"unknown regex flag names {sorted(unknown_flags)} in {source}")
+            return r[tuple[str, t.VariadicTuple[str], re.Pattern[str]]].fail(
+                f"unknown regex flag names {sorted(unknown_flags)} in {source}"
+            )
         find = entry.get(c.Infra.CODEMOD_TEXT_KEY_FIND)
         if not isinstance(find, str) or not find:
-            return r[
-                tuple[str, t.VariadicTuple[str], re.Pattern[str]]
-            ].fail(f"text rule requires a non-empty find regex in {source}")
+            return r[tuple[str, t.VariadicTuple[str], re.Pattern[str]]].fail(
+                f"text rule requires a non-empty find regex in {source}"
+            )
         try:
             compiled = re.compile(find)
         except re.error as error:
@@ -294,9 +294,7 @@ class FlextInfraModTextGateEngine:
         entry: t.MappingKV[str, t.JsonValue],
         source: Path,
         compiled: re.Pattern[str],
-    ) -> p.Result[
-        tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]
-    ]:
+    ) -> p.Result[tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]]:
         """Validate distributions, the capture map, and the expected receipt.
 
         Returns:
@@ -313,9 +311,7 @@ class FlextInfraModTextGateEngine:
             for name in declared
         ):
             return FlextInfraModTextGateEngine._selector_failure(source)
-        distributions = tuple(
-            name for name in declared if isinstance(name, str)
-        )
+        distributions = tuple(name for name in declared if isinstance(name, str))
         if len(set(distributions)) != len(distributions):
             return FlextInfraModTextGateEngine._selector_failure(source)
         raw_captures = entry.get(c.Infra.CODEMOD_TEXT_KEY_CAPTURE_EQUALS, {})
@@ -335,12 +331,16 @@ class FlextInfraModTextGateEngine:
         if expected is not None and (
             not isinstance(expected, int) or isinstance(expected, bool) or expected < 0
         ):
-            return r[tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]].fail(
+            return r[
+                tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]
+            ].fail(
                 f"text rule expected receipt must be non-negative in {source}",
             )
-        return r[
-            tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]
-        ].ok((distributions, captures, expected))
+        return r[tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]].ok((
+            distributions,
+            captures,
+            expected,
+        ))
 
     @staticmethod
     def _selector_failure(
