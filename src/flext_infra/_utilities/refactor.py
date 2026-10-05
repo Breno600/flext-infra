@@ -198,7 +198,7 @@ class FlextInfraUtilitiesRefactor:
     @staticmethod
     def publish_refactor_report_evidence(
         root: Path,
-        report: m.ContractModel,
+        report: m.ArbitraryTypesModel,
         *,
         relative_path: Path,
     ) -> p.Result[Path]:
@@ -237,7 +237,8 @@ class FlextInfraUtilitiesRefactor:
             or published.value.mode != c.Infra.MOD_SCAN_REPORT_MODE
         ):
             return r[Path].fail(
-                f"published refactor evidence differs from planned bytes: {report_path}",
+                "published refactor evidence differs from planned bytes: "
+                f"{report_path}",
             )
         return r[Path].ok(report_path)
 

@@ -39,15 +39,19 @@ def _legacy_module_source() -> str:
     )
 
 
-def _materialize_fixture(tmp_path: Path) -> t.Triple[Path]:
-    """Build one workspace whose origin-named package owns the rename target."""
-    workspace, _project, pkg = u.Tests.namespace_workspace(
+def _materialize_fixture(tmp_path: Path) -> t.Triple[Path, Path, Path]:
+    """Build one workspace whose origin-named package owns the rename target.
+
+    Returns:
+        The resulting ``t.Triple[Path, Path, Path]``.
+    """
+    workspace, project, pkg = u.Tests.namespace_workspace(
         tmp_path,
         package_name="flext_core",
     )
     origin_file = pkg / "legacy.py"
     _ = origin_file.write_text(_legacy_module_source(), encoding="utf-8")
-    foreign_pkg = _project / "src" / "other_pkg"
+    foreign_pkg = project / "src" / "other_pkg"
     foreign_pkg.mkdir(parents=True, exist_ok=True)
     _ = (foreign_pkg / "__init__.py").write_text("", encoding="utf-8")
     foreign_file = foreign_pkg / "legacy.py"

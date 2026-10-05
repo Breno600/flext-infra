@@ -140,7 +140,7 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         resource = holder.get_resource()
         if resource is None:
             return None
-        return str(resource.real_path)
+        return resource.real_path
 
     @staticmethod
     def source_offset(source: str, node: p.Infra.RopeAstNode) -> int:
