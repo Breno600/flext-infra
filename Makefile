@@ -761,7 +761,13 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 		fi; \
 	}; \
 	mise_receipt() { \
-		mise_receipt_log="$$scratch/$$1"; shift; \
+		probe_log_dir="$$scratch"; \
+		case "$$probe_log_dir" in ""|"/") \
+			probe_log_dir=$$(mktemp -d "$${TMPDIR:-/tmp}/flext-setup-probe.XXXXXX"); \
+			trap 'rm -rf "$$probe_log_dir"' EXIT; \
+		 ;; \
+		esac; \
+		mise_receipt_log="$$probe_log_dir/$$1"; shift; \
 		mise_checked_stdout "$$mise_receipt_log.stdout" "$$mise_receipt_log.stderr" mise_offline no-config "$$1" --version; \
 		receipt_output=$$(cat "$$mise_receipt_log.stdout"); \
 		receipt_release=$$(printf '%s\n' "$$receipt_output" | grep -E '^(mise )?[0-9]+\.[0-9]+\.[0-9]+$$' | tail -1 | sed 's/^mise //'); \
