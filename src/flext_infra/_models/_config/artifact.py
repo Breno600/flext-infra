@@ -11,7 +11,7 @@ from pathlib import Path, PureWindowsPath
 from types import MappingProxyType
 from typing import Annotated, Literal, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import t
 from flext_infra._constants import (
@@ -379,7 +379,7 @@ class FlextInfraConfigModelsArtifact:
         # of projects it serves is NOT its knowledge — each repository's own
         # .gitmodules is the read-only topology authority.
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_github_artifact_ownership(self) -> Self:
             """Require one full-managed conform owner for every GitHub template.
 
@@ -596,7 +596,7 @@ class FlextInfraConfigModelsArtifact:
             m.Field(description="Governed root artifact policy"),
         ] = None
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_publication_identity(self) -> Self:
             """Bind one complete desired state to its exact project and target.
 
@@ -744,7 +744,7 @@ class FlextInfraConfigModelsArtifact:
             ),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_source_paths(self) -> Self:
             """Keep campaign drivers and scan roots inside their declared owners.
 

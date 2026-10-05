@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Annotated, ClassVar, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import t
 from flext_infra._constants import FlextInfraConstantsSharedInfra
@@ -179,7 +179,7 @@ class FlextInfraConfigModelsProvider:
             m.Field(min_length=1, description="Ordered deploy-key materializations"),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_private_submodule_identity(self) -> Self:
             """Keep path, key, and host identities complete and unambiguous.
 

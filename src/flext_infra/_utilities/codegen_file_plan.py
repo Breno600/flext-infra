@@ -26,6 +26,11 @@ else:
     import fcntl
 
 if TYPE_CHECKING:
+    # Both lock backends are declared for the checker: typeshed publishes
+    # msvcrt only for the win32 platform, so the nt branch stays verifiable
+    # while the checker runs on POSIX.
+    import fcntl
+    import msvcrt
     from pathlib import Path
 
 
