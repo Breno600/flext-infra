@@ -87,9 +87,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                     if node.level > len(parts):
                         return None
                     prefix = ".".join(parts[: len(parts) - node.level + 1])
-                    imported = ".".join(
-                        part for part in (prefix, node.module) if part
-                    )
+                    imported = ".".join(part for part in (prefix, node.module) if part)
                 else:
                     imported = node.module or ""
                 for alias in node.names:
@@ -165,9 +163,20 @@ class FlextInfraUtilitiesRopeSourceBases:
                     if required_line is not None and not (
                         node.lineno <= required_line <= (node.end_lineno or node.lineno)
                     ):
+                        # An out-of-range class under a required-line inventory
+                        # still binds TERMINALLY: a module-path reference here
+                        # routes the resolver through provider/member chains
+                        # that cannot resolve a nested re-export and cycle
+                        # (flext-20yyv). Its lineage is outside the requested
+                        # line, so it registers with no bases of its own.
+                        outer_identity = f"{module}:{scope}{node.name}:{node.lineno}"
+                        definitions[outer_identity] = m.Infra.SourceClassDefinition(
+                            identity=outer_identity,
+                            bases=(),
+                            members={},
+                        )
                         bindings[node.name] = m.Infra.SourceClassReference(
-                            target=module,
-                            attributes=tuple(f"{scope}{node.name}".split(".")),
+                            target=outer_identity,
                             qualified_base=f"{module}.{scope}{node.name}",
                         )
                         continue
@@ -176,10 +185,14 @@ class FlextInfraUtilitiesRopeSourceBases:
                         cls._reference(base, visible, module) for base in node.bases
                     )
                     if node.type_params:
-                        bases = (*bases, m.Infra.SourceClassReference(
-                            target="typing", attributes=("Generic",),
-                            qualified_base="typing.Generic",
-                        ))
+                        bases = (
+                            *bases,
+                            m.Infra.SourceClassReference(
+                                target="typing",
+                                attributes=("Generic",),
+                                qualified_base="typing.Generic",
+                            ),
+                        )
                     identity = f"{module}:{scope}{node.name}:{node.lineno}"
                     members: MutableMapping[
                         str,
@@ -262,11 +275,14 @@ class FlextInfraUtilitiesRopeSourceBases:
                     bindings[node.name] = None
                 elif isinstance(node, ast.If):
                     if isinstance(node.test, ast.Constant) and isinstance(
-                        node.test.value, bool,
+                        node.test.value,
+                        bool,
                     ):
                         collect(
                             node.body if node.test.value else node.orelse,
-                            bindings, lexical, scope,
+                            bindings,
+                            lexical,
+                            scope,
                         )
                         continue
                     if node.orelse and any(
@@ -343,7 +359,8 @@ class FlextInfraUtilitiesRopeSourceBases:
             if isinstance(
                 value,
                 FlextInfraUtilitiesRopeRuntime.runtime_type(
-                    "rope.base.pyobjectsdef", "PyClass",
+                    "rope.base.pyobjectsdef",
+                    "PyClass",
                 ),
             ):
                 module = value.get_module()
@@ -373,8 +390,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                     identity = f"{name}:{path}:{line}"
                     if identity not in definitions:
                         message = (
-                            "Inventoried module lacks its class definition: "
-                            f"{identity}"
+                            f"Inventoried module lacks its class definition: {identity}"
                         )
                         raise ValueError(message)
                     return identity
@@ -436,9 +452,15 @@ class FlextInfraUtilitiesRopeSourceBases:
                 if imported.level > len(parts):
                     message = f"Relative import escapes package: {package}.{name}"
                     raise ValueError(message)
-                name = ".".join(filter(None, (
-                    ".".join(parts[: len(parts) - imported.level + 1]), name,
-                )))
+                name = ".".join(
+                    filter(
+                        None,
+                        (
+                            ".".join(parts[: len(parts) - imported.level + 1]),
+                            name,
+                        ),
+                    )
+                )
             module = project.get_module(name)
             resource = project.find_module(name)
             if resource is not None:
@@ -463,7 +485,9 @@ class FlextInfraUtilitiesRopeSourceBases:
                 imported = provider_module(binding.imported_module)
                 if imported.get_name() not in namespaces:
                     return provider_reference(
-                        imported, (binding.imported_name, *remaining), visiting | {target},
+                        imported,
+                        (binding.imported_name, *remaining),
+                        visiting | {target},
                     )
                 return resolve(
                     m.Infra.SourceClassReference(
@@ -477,7 +501,9 @@ class FlextInfraUtilitiesRopeSourceBases:
                 imported = provider_module(binding)
                 if imported.get_name() not in namespaces:
                     return provider_reference(
-                        imported, tuple(remaining), visiting | {target},
+                        imported,
+                        tuple(remaining),
+                        visiting | {target},
                     )
                 return resolve(
                     m.Infra.SourceClassReference(
@@ -541,7 +567,9 @@ class FlextInfraUtilitiesRopeSourceBases:
                     target = resolve(binding, visiting | {key})
                 else:
                     target = external_reference(
-                        target, tuple(attributes), visiting,
+                        target,
+                        tuple(attributes),
+                        visiting,
                     )
                     attributes.clear()
             for attribute in attributes:
@@ -581,11 +609,13 @@ class FlextInfraUtilitiesRopeSourceBases:
                 message = f"External class has no declared source or native identity: {identity}"
                 raise ValueError(message)
             return tuple(
-                resolve(m.Infra.SourceClassReference(
-                    target=base.__module__,
-                    attributes=tuple(base.__qualname__.split(".")),
-                    qualified_base=f"{base.__module__}.{base.__qualname__}",
-                ))
+                resolve(
+                    m.Infra.SourceClassReference(
+                        target=base.__module__,
+                        attributes=tuple(base.__qualname__.split(".")),
+                        qualified_base=f"{base.__module__}.{base.__qualname__}",
+                    )
+                )
                 for base in value.builtin.__bases__
             )
 
@@ -690,7 +720,8 @@ class FlextInfraUtilitiesRopeSourceBases:
                 1,
             )
             return m.Infra.SourceClassReference(
-                target=".".join(parts[:index]), attributes=tuple(parts[index:]),
+                target=".".join(parts[:index]),
+                attributes=tuple(parts[index:]),
                 qualified_base=root,
             )
 
