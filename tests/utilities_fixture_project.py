@@ -369,6 +369,17 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
         )
 
     @staticmethod
+    def write_member_package(project_dir: Path, name: str) -> None:
+        """Give one declared member its empty import package and topology input."""
+        package = project_dir / "src" / name.replace("-", "_")
+        package.mkdir(parents=True, exist_ok=True)
+        (package / "__init__.py").write_text("", encoding="utf-8")
+        TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
+            project_dir,
+            name,
+        )
+
+    @staticmethod
     def is_project_valid(project_name: str) -> bool:
         """Validate the lightweight project-name fixture contract.
 

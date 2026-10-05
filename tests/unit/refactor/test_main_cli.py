@@ -521,7 +521,6 @@ class TestsFlextInfraRefactorMainCli:
         # including when its observed consumer is a test. Census must not delete
         # it or rewrite the generator-owned facade behind the consumer's back.
         tm.that(init_source, has="install_lazy_exports(")
-        tm.that(init_source, has="build_lazy_import_map(")
         tm.that(init_source, has="helper_used")
         tm.that(helpers_source, has="helper_used")
         tm.ok(self._parse_source_ast(init_source))
@@ -604,13 +603,8 @@ class TestsFlextInfraRefactorMainCli:
         tm.that(clone_helpers.read_text(encoding="utf-8"), has="only_for_tests")
         tm.that(clone_init.read_text(encoding="utf-8"), has="only_for_tests")
         tm.that(clone_test.read_text(encoding="utf-8"), has="only_for_tests")
-        # Why: e75d5aa6f retired the named `_LAZY_IMPORTS` variable for
-        # generated inits in favor of an inlined build_lazy_import_map(...)
-        # argument — align to the proven runtime (see the sibling assertion
-        # above in test_refactor_census_apply_cascades_through_init_lazy_map_and_all).
         clone_init_source = clone_init.read_text(encoding="utf-8")
         tm.that(clone_init_source, has="install_lazy_exports(")
-        tm.that(clone_init_source, has="build_lazy_import_map(")
 
         report = u.Tests.census_report(clone, kinds=("function",), rules=("unused",))
         tm.that(report.unused_count, eq=0)

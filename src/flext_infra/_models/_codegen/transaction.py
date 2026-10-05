@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, ClassVar, Literal, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import t
 from flext_infra._models._codegen.journal import FlextInfraModelsCodegenJournalModels
@@ -70,7 +70,7 @@ class FlextInfraModelsCodegenTransactionModels:
             m.Field(description="Recoverable artifact transitions"),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_lifecycle(self) -> Self:
             """Bind staging and publication payloads to one safe project set.
 
@@ -158,7 +158,7 @@ class FlextInfraModelsCodegenTransactionModels:
             m.Field(description="Locked explicit file participant topology"),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_file_only(self) -> Self:
             if self.layout.projects or not self.layout.file_participants:
                 msg = "file-only session must contain only file capabilities"
@@ -188,7 +188,7 @@ class FlextInfraModelsCodegenTransactionModels:
             m.Field(description="Ordered destinations published by completed phases"),
         ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_cursor(self) -> Self:
             if self.journal.state != "prepared":
                 msg = "active codegen transaction session must remain prepared"

@@ -146,6 +146,27 @@ class TestsFlextInfraConformSupport:
         u.Tests.seed_locked_taplo(root)
 
     @staticmethod
+    def check_conform_service(
+        root: Path,
+        workspace: m.Infra.WorkspaceSpec,
+        *,
+        what: c.Infra.CodegenConformSurface = c.Infra.CodegenConformSurface.ALL,
+    ) -> t.Pair[FlextInfraCodegenConform, m.Infra.CodegenConformRequest]:
+        """Build the CHECK-mode conform service of one fixture workspace.
+
+        Returns:
+            The conform service and the request it was built for.
+
+        """
+        request = u.Tests.conform_request(root, what=what)
+        service = FlextInfraCodegenConform(
+            repository_root=root,
+            request=request,
+            initial_workspace=workspace,
+        )
+        return service, request
+
+    @staticmethod
     def self_check_conform_service(
         root: Path,
     ) -> t.Pair[FlextInfraCodegenConform, m.Infra.CodegenConformRequest]:
@@ -171,30 +192,3 @@ class TestsFlextInfraConformSupport:
         package.mkdir(parents=True)
         (package / "__init__.py").write_text("", encoding="utf-8")
         return TestsFlextInfraConformSupport.check_conform_service(root, workspace)
-
-    @staticmethod
-    def check_conform_service(
-        root: Path,
-        workspace: m.Infra.WorkspaceSpec,
-        *,
-        what: c.Infra.CodegenConformSurface = c.Infra.CodegenConformSurface.ALL,
-    ) -> t.Pair[FlextInfraCodegenConform, m.Infra.CodegenConformRequest]:
-        """Build the CHECK-mode conform service bound to one declared workspace.
-
-        Returns:
-            The resulting ``t.Pair[FlextInfraCodegenConform,
-                m.Infra.CodegenConformRequest]``.
-
-        """
-        request = u.Tests.conform_request(
-            root,
-            what=what,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.CHECK,
-        )
-        service = FlextInfraCodegenConform(
-            repository_root=root,
-            request=request,
-            initial_workspace=workspace,
-        )
-        return service, request
