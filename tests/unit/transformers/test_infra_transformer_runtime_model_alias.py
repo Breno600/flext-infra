@@ -94,7 +94,8 @@ class TestsFlextInfraRuntimeModelAlias:
         (tmp_path / "runtime_model.py").write_text(updated, encoding="utf-8")
         probe = (
             "from runtime_model import _Row\n"
-            'row = _Row.model_validate_json(\'{"skills": ["skill"], "rows": ["row"]}\')\n'
+            "row = _Row.model_validate_json("
+            '\'{"skills": ["skill"], "rows": ["row"]}\')\n'
             "print(row.skills[0], row.rows[0])\n"
         )
         outcome = tm.ok(u.Cli.run([sys.executable, "-c", probe], cwd=tmp_path))
