@@ -382,18 +382,6 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         plugins: Annotated[t.StrSequence, m.Field(description="Mypy plugins list.")] = (
             m.Field(default_factory=tuple)
         )
-        disable_error_code: Annotated[
-            t.StrSequence,
-            m.Field(
-                alias="disable-error-code",
-                description=(
-                    "Mypy error codes suspended fleet-wide (operator law "
-                    "2026-10-05): false positives the pydantic-2 canonical "
-                    "forms generate (call-arg on validators). The pydantic "
-                    "plugin stays mandatory"
-                ),
-            ),
-        ] = ()
         facade_rebind_error_codes: Annotated[
             t.StrSequence,
             m.Field(
