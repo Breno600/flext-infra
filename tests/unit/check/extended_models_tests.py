@@ -217,6 +217,80 @@ class TestsFlextInfraModels:
         tm.that(project.passed, eq=False)
 
     @staticmethod
+    def test_informational_gate_findings_keep_reported_but_pass_project() -> None:
+        """Informational findings stay in the report but never fail the project.
+
+        The config-owned posture names gate ids; the project verdict ignores
+        exactly those gates while their findings still count as findings.
+        """
+        gate = m.Infra.GateResult(
+            gate="pyright",
+            project="p",
+            passed=False,
+            errors=["a.py:1:1 reportPrivateUsage warning"],
+            duration=0.0,
+        )
+        execution = m.Infra.GateExecution(
+            result=gate,
+            issues=(
+                m.Infra.Issue(
+                    file="a.py",
+                    line=1,
+                    column=1,
+                    code="reportPrivateUsage",
+                    message="warning",
+                    severity="warning",
+                ),
+            ),
+            raw_output="",
+        )
+        project = m.Infra.ProjectResult(
+            project="p",
+            gates={"pyright": execution},
+            informational_gates=("pyright",),
+        )
+
+        tm.that(project.total_findings, eq=1)
+        tm.that(project.passed, eq=True)
+
+    @staticmethod
+    def test_informational_posture_covers_only_declared_gates() -> None:
+        """A blocking gate outside the informational set still fails the project.
+
+        One informational failure and one blocking failure together keep the
+        project red: the posture excuses only the gate ids it declares.
+        """
+        informational = m.Infra.GateExecution(
+            result=m.Infra.GateResult(
+                gate="pyright",
+                project="p",
+                passed=False,
+                errors=["a.py:1:1 reportPrivateUsage warning"],
+                duration=0.0,
+            ),
+            issues=(),
+            raw_output="",
+        )
+        blocking = m.Infra.GateExecution(
+            result=m.Infra.GateResult(
+                gate="lint",
+                project="p",
+                passed=False,
+                errors=["b.py:2:1 E501 line too long"],
+                duration=0.0,
+            ),
+            issues=(),
+            raw_output="",
+        )
+        project = m.Infra.ProjectResult(
+            project="p",
+            gates={"pyright": informational, "lint": blocking},
+            informational_gates=("pyright",),
+        )
+
+        tm.that(project.passed, eq=False)
+
+    @staticmethod
     def test_passed_all_gates_pass() -> None:
         """Test _ProjectResult.passed when all gates pass."""
         gate1 = m.Infra.GateResult(

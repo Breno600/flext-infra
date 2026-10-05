@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, ClassVar
 from flext_cli import cli
 
 from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, config, m, p, t, u
 
 if TYPE_CHECKING:
     from flext_infra.check.gate_registry import FlextInfraGateRegistry
@@ -175,7 +175,10 @@ class FlextInfraWorkspaceCheckGatesMixin:
 
         """
         project_name = project_dir.name
-        result = m.Infra.ProjectResult(project=project_name)
+        result = m.Infra.ProjectResult(
+            project=project_name,
+            informational_gates=config.Infra.codegen.make.informational_check_gates,
+        )
         mutating = ctx.apply_fixes and not ctx.check_only
         executions: MutableMapping[str, m.Infra.GateExecution] = {}
 
