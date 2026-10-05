@@ -32,6 +32,9 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
         (``pydantic.BaseModel`` and friends) must read attributes through
         packages exactly like through modules, so both shapes satisfy the
         contract.
+
+        Returns:
+            The resulting ``TypeGuard[t.Infra.RopePyModule]``.
         """
         return isinstance(
             value,
