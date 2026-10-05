@@ -355,7 +355,18 @@ Infra:
         # Every real call-arg stays active; re-measure on the next
         # mypy/pydantic bump and retire the suspension when upstream fixes
         # the repros.
-        disable-error-code: [prop-decorator, call-arg]
+        #
+        # attr-defined (same sharpening, 2026-10-05, bead gc-eqvqx5): mypy
+        # resolves every family facade letter import (`from flext_cli import
+        # u`) to the PARENT letter type because the subclass rebind inside
+        # flext_cli.utilities (`u = FlextCliUtilities`) does not re-type the
+        # module symbol under mypy; every runtime-installed namespace member
+        # (u.Cli, u.Infra, ...) then reports attr-defined although the
+        # attribute exists at runtime (PEP 562 namespace machinery; probe:
+        # hasattr(flext_cli.u, 'Cli') is True). The cure owner is the letter
+        # export surface in flext-cli/flext-core; suspend the code here
+        # until that lands.
+        disable-error-code: [prop-decorator, call-arg, attr-defined]
         # The canonical facade form imports the parent letter, subclasses it
         # and rebinds the letter (`from flext_core import u`,
         # `class FlextCliUtilities(u)`, `u = FlextCliUtilities`). Mypy 2.3.1
@@ -401,6 +412,20 @@ Infra:
           pythonVersion: "3.13"
           typeCheckingMode: strict
         extended-settings:
+          # Dated tooling resolution (operator sharpening 2026-10-05, bead
+          # gc-eqvqx5): pyright 1.1.414 has no pydantic-plugin equivalent, so
+          # reportCallIssue fires on every runtime-valid pydantic model
+          # constructor whose parameters come from Annotated-only
+          # Field(default_factory=...) declarations (repro: a bare
+          # Annotated-default model reports "Arguments missing" under
+          # pyright while the identical construction succeeds at runtime
+          # and under the mypy plugin), from plain-class field mixins,
+          # PrivateAttr synthesis and populate_by_name aliases. Pyright
+          # offers no finer granularity than the rule itself; mypy with the
+          # mandatory pydantic plugin remains the call-contract authority
+          # and the runtime behavior stays under the tests plus the
+          # runtime-census and fresh-import gates.
+          reportCallIssue: none
           reportConstantRedefinition: error
           reportIncompatibleMethodOverride: error
           reportInconsistentConstructor: error
