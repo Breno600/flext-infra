@@ -33,11 +33,16 @@ class FlextInfraUtilitiesRopeSourceBases:
             ValueError: If the expression or its lexical binding is not a class.
 
         """
-        while isinstance(expression, ast.Subscript):
-            expression = expression.value
+        # Unwrap Subscript and Attribute in ONE loop: a chained form like
+        # `_CLUSTERS[0].environment` is Attribute(Subscript(Name)) — consuming
+        # attributes first left the inner Subscript unprocessed and raised
+        # "Unsupported class reference" on every consumer whose SSOT-derived
+        # constants subscript a module-level binding (cosmos-main
+        # tests/constants.py, bead cosmos-gamnt).
         attributes: list[str] = []
-        while isinstance(expression, ast.Attribute):
-            attributes.insert(0, expression.attr)
+        while isinstance(expression, ast.Subscript | ast.Attribute):
+            if isinstance(expression, ast.Attribute):
+                attributes.insert(0, expression.attr)
             expression = expression.value
         if not isinstance(expression, ast.Name):
             message = (

@@ -373,6 +373,16 @@ Infra:
                 runtime-import-in-type-checking-block,
               ]
               authority: operator-direct-order-2026-10-05-tc001-tc004-off-pydantic
+              reason: >-
+                Operator direct order 2026-10-05 (in-session): the
+                flake8-type-checking family must stay OFF because moving
+                annotation-only imports into TYPE_CHECKING breaks
+                runtime-evaluated Pydantic model bases; the four rules stay
+                declared by name in this SSOT and never execute. The reason
+                field was restored by the stabilisation lane — the config
+                model requires it per entry and its absence made every
+                FlextInfraConfig load (and therefore make gen) fail
+                validation.
             - rules: [missing-required-import, implicit-namespace-package]
               authority: operator-ruling-2026-10-03-import-banners-off-global
               reason: >-
