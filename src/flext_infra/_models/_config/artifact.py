@@ -86,7 +86,7 @@ class FlextInfraConfigModelsArtifact:
                     "owner (Pylance settingsNotOverridable)."
                 ),
             ),
-        ] = ()
+        ]
 
     class CodegenLocCapSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Per-module logical-LOC ceiling policy (scc code lines)."""
@@ -737,7 +737,7 @@ class FlextInfraConfigModelsArtifact:
                     "to current public Rope owner identities"
                 ),
             ),
-        ] = m.Field(default_factory=lambda: MappingProxyType[str, t.StrSequence]({}))
+        ]
         text_globs: Annotated[
             t.StrSequence,
             m.Field(
@@ -747,7 +747,7 @@ class FlextInfraConfigModelsArtifact:
                     "documentation and configuration text surfaces"
                 ),
             ),
-        ] = ()
+        ]
         python_documentation: Annotated[
             bool,
             m.Field(
@@ -757,14 +757,14 @@ class FlextInfraConfigModelsArtifact:
                     "without changing executable strings"
                 ),
             ),
-        ] = False
+        ]
         exclude_globs: Annotated[
             t.StrSequence,
             m.Field(
                 default=(),
                 description="Generated projections excluded from campaign targets",
             ),
-        ] = ()
+        ]
 
         @staticmethod
         def _is_escaping_path(value: str) -> bool:
@@ -819,7 +819,7 @@ class FlextInfraConfigModelsArtifact:
         file_glob: Annotated[
             t.NonEmptyStr | None,
             m.Field(default=None, description="Optional file glob filter"),
-        ] = None
+        ]
         flags: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(

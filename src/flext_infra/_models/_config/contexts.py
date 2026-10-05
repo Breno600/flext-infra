@@ -245,9 +245,7 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
                 default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
                 description="Repository-owned documentation audit declarations",
             ),
-        ] = m.Field(
-            default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
-        )
+        ]
         namespace_scan_dirs: Annotated[
             t.StrSequence,
             m.Field(
@@ -554,7 +552,7 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
                 default=(),
                 description="Directories holding rule fixtures and snapshots",
             ),
-        ] = ()
+        ]
 
     class ProfileSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Execution semantics for one generated Make profile."""
