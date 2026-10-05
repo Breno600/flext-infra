@@ -433,7 +433,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                 )
             identity = external_identity(binding.get_object())
             for attribute in remaining:
-                identity = member(identity, attribute)
+                identity = member(identity, attribute, visiting)
             return identity
 
         def external_reference(
@@ -489,7 +489,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                     )
                     attributes.clear()
             for attribute in attributes:
-                target = member(target, attribute)
+                target = member(target, attribute, visiting)
             return target
 
         def bases(identity: str) -> t.StrTuple:
@@ -568,7 +568,11 @@ class FlextInfraUtilitiesRopeSourceBases:
             linearizations[identity] = tuple(result)
             return linearizations[identity]
 
-        def member(identity: str, name: str) -> str:
+        def member(identity: str, name: str, visiting: frozenset[str]) -> str:
+            # visiting threads the resolver's cycle guard through this hop:
+            # a member reference resolves through resolve(), and dropping the
+            # set here let provider/member chains restart with an empty guard
+            # and recurse until the interpreter limit (flext-20yyv).
             for ancestor in linearize(identity):
                 if ancestor in definitions:
                     members = definitions[ancestor].members
@@ -580,7 +584,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                             f"Non-class member shadows required base: {ancestor}.{name}"
                         )
                         raise ValueError(message)
-                    return resolve(reference)
+                    return resolve(reference, visiting)
                 value = external[ancestor]
                 external_members = value.get_attributes()
                 if name in external_members:
@@ -606,7 +610,13 @@ class FlextInfraUtilitiesRopeSourceBases:
 
         root_ids = frozenset(resolve(root_reference(root)) for root in roots)
         derived = set(roots)
-        for definition in definitions.values():
+        # Snapshot before iterating: linearize() may lazily insert a missing
+        # ancestor definition (definitions[identity] = ...) while resolving a
+        # lineage, and mutating the mapping under .values() crashes with
+        # "dictionary changed size during iteration". The pass qualifies the
+        # definitions inventory already holds; a lazily added ancestor is
+        # qualified by its own insertion path.
+        for definition in tuple(definitions.values()):
             try:
                 linearize(definition.identity)
             except ValueError as error:
