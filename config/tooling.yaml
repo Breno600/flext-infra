@@ -184,15 +184,8 @@ Infra:
           #   imports) — the fix enforces the declared contract, no semantics.
           # - camelcase-imported-as-lowercase (N813): pure alias rename, the
           #   bound object is unchanged.
-          # - typing-only-first-party-import (TC001): the fix moves an import
-          #   used only in annotations into TYPE_CHECKING; every module runs
-          #   under `from __future__ import annotations`, the runtime-evaluated
-          #   model bases are derived below (flake8-type-checking), and the
-          #   eager-by-law lazy roots never see the rule (scoped __init__.py
-          #   exception), so no runtime-read annotation loses its import.
           extend-safe-fixes:
             - relative-imports
-            - typing-only-first-party-import
             - camelcase-imported-as-lowercase
           # Every import is absolute: make mod rewrites relative imports and
           # the lazy-init generator renders absolute import statements.
@@ -251,37 +244,39 @@ Infra:
           # Each exception exists only with the operator ruling that authorized
           # it and its reason; Ruff receives the unscoped entries as `ignore`
           # and the scoped ones as `per-file-ignores`. Repositories declare no
-          # exception of their own. Operator order 2026-10-05: TC001-TC004 are
-          # NEVER EXECUTED by Ruff on ANY file — the four type-checking rules
-          # stay in this table by name, the unscoped ones as global `ignore`
-          # entries, and no ruling may remove them.
+          # exception of their own.
           authorized-exceptions:
-            # Operator ruling 2026-10-05: the whole flake8-type-checking
-            # family TC001-TC004 — typing-only-first-party-import,
+            # Operator order 2026-10-05 (direct, latest — canonical authority
+            # bead flext-p7bxt): the whole flake8-type-checking family
+            # TC001-TC004 — typing-only-first-party-import,
             # typing-only-third-party-import,
             # typing-only-standard-library-import and
-            # runtime-import-in-type-checking-block — is DISABLED for every
-            # file: Ruff must not execute these rules anywhere. Declared by
-            # rule name (the fleet's canonical naming format). This supersedes
-            # the TC arms of the 2026-10-01 rulings (TC002/TC003 pydantic,
-            # TC004/TC001 lazy-root scoped forms) and of the 2026-10-03 ruling
-            # (TC001 global): the pydantic hazard those older rulings worked
-            # around is moot because the rules never run. TC004 lives in its
-            # own dedicated entry below (tc001-tc004-never-executed), so this
-            # entry carries only TC001-TC003 — one rule never enters two
-            # unscoped entries.
-            - rules: [
-                typing-only-first-party-import,
-                typing-only-third-party-import,
-                typing-only-standard-library-import,
-              ]
-              authority: operator-ruling-2026-10-05-tc-family-off-global
+            # runtime-import-in-type-checking-block — is DISABLED in Ruff so
+            # it never enforces them on any file. Declared by rule name in
+            # this one unscoped entry (rendered as the global ignore, which
+            # overrides the select surface); the names stay declared here in
+            # the SSOT — they are never removed, and never re-enforced. This
+            # supersedes both the same-day "tc-family-off-global" attribution
+            # (revoked as unverifiable) and the transient enforced state of
+            # #1675, per the operator's direct correction.
+            - rules:
+                - typing-only-first-party-import
+                - typing-only-third-party-import
+                - typing-only-standard-library-import
+                - runtime-import-in-type-checking-block
+              authority: flext-p7bxt
               reason: >-
-                Operator ruling 2026-10-05: TC001-TC004 are blocked from
-                executing on every file; Ruff receives them as global ignores
-                declared by rule name — TC001-TC003 here, TC004 in its
-                dedicated entry below. No file may surface a
-                flake8-type-checking finding.
+                Operator direct order 2026-10-05: TC001-TC004 must be
+                disabled in Ruff so it does not enforce them; the rules are
+                blocked from executing on every file while remaining declared
+                by name in the SSOT. Canonical authority: bead flext-p7bxt
+                (tracker-verifiable). Why they can never be re-enabled: the
+                flake8-type-checking family breaks Pydantic classes — Pydantic
+                evaluates field annotations at runtime, so the TC autofix
+                moving a runtime-required import into a TYPE_CHECKING block
+                leaves models "not fully defined" (the OptionSpec /
+                RuntimeCommandCase PydanticUserError wave); model_rebuild
+                stays forbidden, so no workaround exists.
             - rules: [missing-required-import, implicit-namespace-package]
               authority: operator-ruling-2026-10-03-import-banners-off-global
               reason: >-
@@ -297,7 +292,6 @@ Infra:
               rules:
                 - commented-out-code
                 - line-too-long
-                - typing-only-first-party-import
               authority: operator-ruling-2026-10-02-promoted-script-surface
               reason: >-
                 Promoted command scripts declare TOML metadata headers the

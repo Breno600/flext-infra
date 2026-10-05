@@ -51,7 +51,7 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                     *self._roots(),
                     "unpublished_contract.models.Contract",
                     "unpublished_contract.models.Derived",
-                ))
+                )),
             ),
         )
         tm.that(root.exists(), eq=False)
@@ -88,10 +88,12 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                 "planned_contract.models.Contract",
                 "planned_contract.m.Contract",
                 "planned_contract.models.Facade.Contract",
-            ))
+            )),
         )
         actual = u.Infra.runtime_evaluated_base_classes(
-            tmp_path, planned, self._roots()
+            tmp_path,
+            planned,
+            self._roots(),
         )
         tm.that(actual, eq=expected)
         for path, source in planned.items():
@@ -124,7 +126,7 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
             sorted((
                 *self._roots(),
                 *(("c3_contract.models.Joint.Contract",) if model_on_right else ()),
-            ))
+            )),
         )
         tm.that(
             u.Infra.runtime_evaluated_base_classes(
@@ -157,7 +159,7 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                     *self._roots(),
                     "collision_contract.models.Contract",
                     "collision_contract.models.First.Contract",
-                ))
+                )),
             ),
         )
 

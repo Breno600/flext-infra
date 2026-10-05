@@ -23,13 +23,17 @@ if TYPE_CHECKING:
 class TestsFlextInfraRopeRuntimePymodule:
     """Validate the module predicate over rope modules and packages."""
 
+    @staticmethod
     @pytest.mark.parametrize("regular_package", [False, True])
     def test_module_precedes_namespace_but_not_regular_package(
-        self,
         tmp_path: Path,
         regular_package: bool,
     ) -> None:
-        """Python source wins over a data directory, not an initialized package."""
+        """Python source wins over a data directory, not an initialized package.
+
+        Raises:
+            AssertionError: If Native Rope finder did not resolve the fixture module.
+        """
         root = tmp_path / "consumer"
         source = root / "src"
         source.mkdir(parents=True)
