@@ -60,9 +60,8 @@ scratch_tmp="$$(cd "$$scratch/tmp" && pwd -P)"; \
 TMPDIR="$$scratch_tmp"; TMP="$$scratch_tmp"; TEMP="$$scratch_tmp"; \
 export TMPDIR TMP TEMP; \
 {%- endmacro -%}
-{#- Each phase is its own bounded runner process with its own entrypoint clock:
-    the budgeted phase never carries slow-marked items, which run afterwards in
-    their own phase, each within the per-item slow bound (gate-budget rule). -#}
+{#- Normal incremental verbs admit only the bounded phase. Slow-marked items
+    remain owned by the explicitly requested full verb. -#}
 {#- Tests run on the pinned toolchain (PROJECT_TOOL_EXEC), the same one every
     verb's tools resolve from, so a test observes the runtime's tool versions. -#}
 {%- macro pytest_test_runner(operations=("",)) -%}
@@ -73,8 +72,8 @@ export TMPDIR TMP TEMP; \
 {%- endfor %}
 {%- endmacro -%}
 {#- The single-file verb validates its FILE input and exports the target in
-    the same shell as the guarded runners; the declared file then runs through
-    the budgeted and slow phases like any suite. The exported variable name
+    the same shell as the guarded runner for the normal incremental phase.
+    The exported variable name
     mirrors c.Infra.PYTEST_ENV_TARGET_FILE in flext-infra/_constants/make.py;
     the entry fails loudly on a mismatch. -#}
 {%- macro pytest_test_file_runner() -%}
@@ -83,9 +82,7 @@ case "$(FILE)" in /*|*..*) printf 'ERROR: FILE must stay a repository-relative p
 if [ ! -f "$(PROJECT_ROOT)/$(FILE)" ]; then printf 'ERROR: FILE is not an existing repository file: %s\n' "$(FILE)" >&2; exit 2; fi; \
 {{ pytest_testmon_guard() }}
 {{ pytest_scratch_root() }}
-{%- for operation in ("file", "file-slow") %}
-export FLEXT_PYTEST_TARGET_FILE="$(FILE)"; {{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry {{ operation }}{% if not loop.last %}; \{% endif %}
-{%- endfor %}
+export FLEXT_PYTEST_TARGET_FILE="$(FILE)"; {{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry file
 {%- endmacro -%}
 # @flext-generated: continuous
 # @flext-owner: flext-infra/config/codegen.yaml + flext-infra/src/flext_infra/templates/project/base/Makefile.j2
@@ -784,7 +781,7 @@ _builtin_check_all: _builtin_require_environment
 
 _builtin_test_all: _builtin_require_environment
 {{ test_report_recipe(
-    runner=pytest_test_runner(("", "slow")),
+    runner=pytest_test_runner(),
 ) }}
 
 _builtin_test_full_all: _builtin_require_environment

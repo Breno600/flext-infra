@@ -2124,8 +2124,7 @@ mkdir -p "$$scratch/tmp"; \
 scratch_tmp="$$(cd "$$scratch/tmp" && pwd -P)"; \
 TMPDIR="$$scratch_tmp"; TMP="$$scratch_tmp"; TEMP="$$scratch_tmp"; \
 export TMPDIR TMP TEMP; \
-TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry; \
-TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry slow
+TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry
 
 _builtin_test_full_all: _builtin_require_environment
 	@set -eu; \
@@ -2165,8 +2164,7 @@ mkdir -p "$$scratch/tmp"; \
 scratch_tmp="$$(cd "$$scratch/tmp" && pwd -P)"; \
 TMPDIR="$$scratch_tmp"; TMP="$$scratch_tmp"; TEMP="$$scratch_tmp"; \
 export TMPDIR TMP TEMP; \
-export FLEXT_PYTEST_TARGET_FILE="$(FILE)"; TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry file; \
-export FLEXT_PYTEST_TARGET_FILE="$(FILE)"; TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry file-slow
+export FLEXT_PYTEST_TARGET_FILE="$(FILE)"; TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry file
 
 # The fast per-file pre-gate (operator P0, val2026100417xx): `make file-gate
 # FILE=<repository-relative path>` gates exactly one file with the fast gates

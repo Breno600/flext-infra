@@ -428,6 +428,7 @@ ignore = [
   "camelcase-imported-as-lowercase",
   "implicit-namespace-package",
   "missing-required-import",
+  "runtime-import-in-type-checking-block",
   "typing-only-first-party-import",
   "typing-only-standard-library-import",
   "typing-only-third-party-import",
@@ -544,12 +545,7 @@ known-first-party = ["flext_core", "flext_infra"]
 split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
-"**/__init__.py" = [
-  "non-empty-init-module",
-  "runtime-import-in-type-checking-block",
-  "typing-only-first-party-import",
-  "unused-import",
-]
+"**/__init__.py" = ["non-empty-init-module", "unused-import"]
 "**/tests/python/**" = [
   "raise-vanilla-args",
   "start-process-with-partial-path",
