@@ -287,8 +287,15 @@ class FlextInfraModelsMiseToolchain:
             ),
         ]
         npm_package_manager: Annotated[
-            Literal["aube"],
-            m.Field(description="Mise npm installer with a locked dependency graph"),
+            Literal["aube", "bun"],
+            m.Field(
+                description=(
+                    "Mise npm installer. aube replays the locked dependency "
+                    "graph; bun installs faster with --trust lifecycle "
+                    "approval and no aube sidecars (the lock keeps the "
+                    "top-level pin only). Operator choice 2026-10-05"
+                ),
+            ),
         ]
         tools: Annotated[
             t.VariadicTuple[FlextInfraModelsMiseToolchain.MiseToolEntry],
@@ -340,7 +347,11 @@ class FlextInfraModelsMiseToolchain:
         @m.computed_field
         @property
         def python_required_version(self) -> str:
-            """PEP 440 requirement spanning the configured Python minor line."""
+            """PEP 440 requirement spanning the configured Python minor line.
+
+            Returns:
+                The resulting ``str``.
+            """
             major, minor = self.python_version.split(".")[:2]
             next_minor = int(minor) + 1
             return f">={self.python_version},<{major}.{next_minor}"
@@ -348,13 +359,21 @@ class FlextInfraModelsMiseToolchain:
         @m.computed_field
         @property
         def python_selector(self) -> str:
-            """Pyenv-style selector for the configured Python minor line."""
+            """Pyenv-style selector for the configured Python minor line.
+
+            Returns:
+                The resulting ``str``.
+            """
             return self.python_version
 
         @m.computed_field
         @property
         def tool_versions(self) -> t.MappingKV[str, str]:
-            """Effective release selector per tool: pins layered over entries."""
+            """Effective release selector per tool: pins layered over entries.
+
+            Returns:
+                The resulting ``t.MappingKV[str, str]``.
+            """
             return {
                 entry.name: self.tool_version_pins.get(entry.name, entry.version)
                 for entry in self.tools
@@ -363,7 +382,11 @@ class FlextInfraModelsMiseToolchain:
         @m.computed_field
         @property
         def tool_selectors(self) -> t.MappingKV[str, str]:
-            """Declared Mise selector of every selector-bearing fleet tool."""
+            """Declared Mise selector of every selector-bearing fleet tool.
+
+            Returns:
+                The resulting ``t.MappingKV[str, str]``.
+            """
             return {
                 entry.name: entry.selector
                 for entry in self.tools
@@ -373,7 +396,11 @@ class FlextInfraModelsMiseToolchain:
         @m.computed_field
         @property
         def tool_version_prefixes(self) -> t.MappingKV[str, str]:
-            """Declared release tag prefix of every prefix-bearing fleet tool."""
+            """Declared release tag prefix of every prefix-bearing fleet tool.
+
+            Returns:
+                The resulting ``t.MappingKV[str, str]``.
+            """
             return {
                 entry.name: entry.version_prefix
                 for entry in self.tools

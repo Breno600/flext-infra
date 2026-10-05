@@ -200,7 +200,7 @@ class FlextInfraConstantsBase(
     OK: ClassVar[str] = "✓"
     FAIL: ClassVar[str] = "✗"
     WARN: ClassVar[str] = "⚠"
-    SKIP: ClassVar[str] = "–"
+    SKIP: ClassVar[str] = "-"
 
     # CLI tool binary names
     GIT: ClassVar[str] = "git"

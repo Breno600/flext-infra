@@ -86,7 +86,11 @@ class FlextInfraModelsDocsGeneration:
         @m.computed_field
         @property
         def repository_root(self) -> Path:
-            """The physical repository root owning this scope's docs policy."""
+            """The physical repository root owning this scope's docs policy.
+
+            Returns:
+                The resulting ``Path``.
+            """
             return (
                 self.path
                 if self.repository_root_override is None

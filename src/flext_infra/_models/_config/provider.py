@@ -53,7 +53,11 @@ class FlextInfraConfigModelsProvider:
         @m.computed_field
         @property
         def internal_distribution_prefix(self) -> str:
-            """Derive the internal distribution namespace from the owner name."""
+            """Derive the internal distribution namespace from the owner name.
+
+            Returns:
+                The resulting ``str``.
+            """
             namespace, _, _ = self.distribution.partition("-")
             return f"{namespace}-"
 
@@ -102,9 +106,7 @@ class FlextInfraConfigModelsProvider:
     class CiPrivateSubmoduleDeployKeySpec(
         FlextInfraConfigModelsContract.ConfigContract,
     ):
-        """One read-only deploy key that unlocks
-        a private workspace subproject in CI.
-        """
+        """One read-only deploy key that unlocks a private workspace subproject in CI."""
 
         secret: Annotated[
             t.NonEmptyStr,

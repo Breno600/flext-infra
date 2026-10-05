@@ -431,9 +431,7 @@ class FlextInfraModelsDepsToolConfig(
 
         @property
         def slow_suite_stop_reserve_seconds(self) -> int:
-            """Derive the slow-phase reserve: in-flight items bounded
-            by the slow ceiling.
-            """
+            """Derive the slow-phase reserve: in-flight items bounded by the slow ceiling."""
             return (
                 self.xdist_items_per_worker * self.slow_timeout_seconds
                 + self.termination_grace_seconds
@@ -628,19 +626,15 @@ class FlextInfraModelsDepsToolConfig(
             t.StrSequence,
             m.Field(
                 alias="exclude-also",
-                default_factory=tuple,
                 description=(
                     "Coverage report line patterns excluded from runtime coverage."
                 ),
             ),
-        ]
+        ] = ()
         omit: Annotated[
             t.StrSequence,
-            m.Field(
-                default_factory=tuple,
-                description="Glob patterns excluded from coverage collection.",
-            ),
-        ]
+            m.Field(description="Glob patterns excluded from coverage collection."),
+        ] = ()
 
     class VultureConfig(m.ArbitraryTypesModel):
         """Vulture production-reachability policy loaded from YAML."""
@@ -915,6 +909,15 @@ class FlextInfraModelsDepsToolConfig(
         mypy_facade_rebind_modules: Annotated[
             t.StrTuple,
             m.Field(description="Modules written in the canonical facade-rebind form"),
+        ]
+        ruff_runtime_evaluated_base_classes: Annotated[
+            t.StrTuple,
+            m.Field(
+                description=(
+                    "Imported base classes whose subclasses evaluate their "
+                    "annotations at runtime"
+                ),
+            ),
         ]
         pyrefly_search_path: Annotated[
             t.StrTuple,

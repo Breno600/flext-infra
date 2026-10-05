@@ -95,10 +95,7 @@ class FlextInfraUtilitiesCodegenFilePlan:
                     }:
                         raise
                     if time.monotonic() >= deadline:
-                        timeout_error = (
-                            FlextInfraUtilitiesCodegenFilePlan.JournalLeaseTimeoutError
-                        )
-                        raise timeout_error(
+                        raise FlextInfraUtilitiesCodegenFilePlan.JournalLeaseTimeoutError(
                             lock_path,
                         ) from error
                     time.sleep(c.Infra.JOURNAL_LEASE_POLL_SECONDS)

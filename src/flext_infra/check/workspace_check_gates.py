@@ -9,14 +9,16 @@ from __future__ import annotations
 import time
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from flext_cli import cli
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
-from flext_infra.check.gate_registry import FlextInfraGateRegistry
-from flext_infra.gates.base_gate import FlextInfraGate
+
+if TYPE_CHECKING:
+    from flext_infra.check.gate_registry import FlextInfraGateRegistry
+    from flext_infra.gates.base_gate import FlextInfraGate
 
 
 class FlextInfraWorkspaceCheckGatesMixin:

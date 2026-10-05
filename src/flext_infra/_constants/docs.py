@@ -61,15 +61,41 @@ class FlextInfraConstantsDocs:
     DOCS_FRAGMENT_PREFIX: ClassVar[str] = "#"
     PYTHON_FENCE_RUFF_EXTEND_IGNORE: ClassVar[t.StrSequence] = (
         "undocumented-public-module",
+        "undocumented-public-function",
+        "undocumented-public-class",
+        "undocumented-public-method",
+        "undocumented-public-init",
         "missing-copyright-notice",
         "implicit-namespace-package",
         "print",
+        "assert",
+        "boolean-positional-value-in-call",
+        "no-self-use",
+        "pytest-assert-in-except",
+        "magic-value-comparison",
+        "docstring-missing-returns",
+        "docstring-missing-exception",
     )
     """Only module-header (docstring, copyright notice) and package rules are
     inapplicable to a standalone Markdown fence, which is not a module file;
-    ``print`` is the fence demonstrating its output. All names, behavior,
-    types, docstring, and security rules remain active and require correction
-    in the authored source."""
+    the pydocstyle public-surface family is inapplicable for the same reason
+    (the surrounding prose is the fence's documentation), as is the
+    docstring-completeness contract (example helpers keep their one-line
+    docstrings; full Args/Returns sections are authored-source law),
+    ``print`` is the fence demonstrating its output, ``assert`` and the
+    pytest-idiom rules are the test-idiom contract of executable fences,
+    which the pytest markdown-docs plugin runs as tests during ``make test``
+    (the fleet's justified per-rule S101/PT test-idiom exception) — fences
+    teaching exception semantics show real ``except`` blocks, the
+    boolean-trap call-site rule is inapplicable because a fence must
+    faithfully demonstrate the owning API's declared call signature;
+    ``no-self-use`` is inapplicable for the same reason on adapter fences,
+    where ``self`` is the port protocol's interface contract rather than an
+    unused receiver, and magic-value-comparison is inapplicable because a
+    fence's concrete
+    literals are narrative data illustrating one scenario, never
+    config-owned values. All names, behavior, types, and security rules
+    remain active and require correction in the authored source."""
     MACHINE_PATH_RE: ClassVar[t.RegexPattern] = re.compile(
         r"(?<![\w./-])/(?:home|Users)/(?P<user>[A-Za-z0-9_.-]+)(?=/|\b)",
     )

@@ -58,8 +58,8 @@ class FlextInfraModelsTransformers:
         ]
         changes: Annotated[
             t.VariadicTuple[str],
-            m.Field(default_factory=tuple, description="Recorded migration operations"),
-        ]
+            m.Field(description="Recorded migration operations"),
+        ] = ()
 
     class SemanticMigrationEdit(m.ContractModel):
         """One validated in-memory semantic source rewrite."""
@@ -191,7 +191,11 @@ class FlextInfraModelsTransformers:
         @m.computed_field
         @property
         def has_violations(self) -> bool:
-            """True if any imports need redirecting or moving."""
+            """True if any imports need redirecting or moving.
+
+            Returns:
+                The resulting ``bool``.
+            """
             return bool(self.category_b or self.category_c or self.category_d)
 
     class SourceRewrite(m.ArbitraryTypesModel):
@@ -252,7 +256,7 @@ class FlextInfraModelsTransformers:
         docstring_span: Annotated[
             tuple[int, int] | None,
             m.Field(default=None, description="Wrapper docstring line span"),
-        ]
+        ] = None
 
     class HeaderInfo(m.ArbitraryTypesModel):
         """Structural summary of a module header."""

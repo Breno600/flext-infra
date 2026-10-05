@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     from flext_infra._models._config.provider import FlextInfraConfigModelsProvider
     from flext_infra._models._config.release import FlextInfraConfigModelsRelease
     from flext_infra._models._config.render import FlextInfraConfigModelsRender
+    from flext_infra._models._config.repository import FlextInfraConfigModelsRepository
     from flext_infra._models._config.root import FlextInfraConfigModelsRoot
     from flext_infra._models._config.scaffold import FlextInfraConfigModelsScaffold
     from flext_infra._models._config.static import FlextInfraConfigModelsStatic
@@ -120,6 +121,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraConfigModelsProvider",
     "FlextInfraConfigModelsRelease",
     "FlextInfraConfigModelsRender",
+    "FlextInfraConfigModelsRepository",
     "FlextInfraConfigModelsRoot",
     "FlextInfraConfigModelsScaffold",
     "FlextInfraConfigModelsStatic",
@@ -194,6 +196,7 @@ install_lazy_exports(
         "FlextInfraConfigModelsProvider": "._config.provider",
         "FlextInfraConfigModelsRelease": "._config.release",
         "FlextInfraConfigModelsRender": "._config.render",
+        "FlextInfraConfigModelsRepository": "._config.repository",
         "FlextInfraConfigModelsRoot": "._config.root",
         "FlextInfraConfigModelsScaffold": "._config.scaffold",
         "FlextInfraConfigModelsStatic": "._config.static",
