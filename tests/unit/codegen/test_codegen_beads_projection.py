@@ -149,7 +149,7 @@ class TestsFlextInfraCodegenBeadsProjection:
             pytest.fail("conform must produce the managed .mise.toml")
         tm.that(
             rendered_mise,
-            has=f'make = "{config.Infra.codegen.toolchain.make_version}"',
+            has=f'make = "{config.Infra.codegen.toolchain.tool_versions["make"]}"',
         )
         tm.that(rendered_mise, lacks="conda")
         tm.that(rendered_mise, lacks="stale")

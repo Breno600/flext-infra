@@ -278,9 +278,9 @@ class TestsFlextInfraCodegenCatalogExtensions:
         toolchain = config.Infra.codegen.toolchain
         mise = tm.not_none(u.Tests.planned_text(plan, c.Infra.MISE_TOML_FILENAME))
         tm.that(mise, has=f'python = "{toolchain.python_version}"')
-        tm.that(mise, has=f'direnv = "{toolchain.direnv_version}"')
-        tm.that(mise, has=f'go = "{toolchain.go_version}"')
-        tm.that(mise, has=f'make = "{toolchain.make_version}"')
+        tm.that(mise, has=f'direnv = "{toolchain.tool_versions["direnv"]}"')
+        tm.that(mise, has=f'go = "{toolchain.tool_versions["go"]}"')
+        tm.that(mise, has=f'make = "{toolchain.tool_versions["make"]}"')
         tm.that(mise, lacks="credential_command")
         tm.that(
             mise,
