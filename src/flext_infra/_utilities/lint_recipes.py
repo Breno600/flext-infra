@@ -19,7 +19,7 @@ from __future__ import annotations
 import ast
 import re
 import textwrap
-from collections.abc import MutableMapping
+from collections.abc import Iterable, MutableMapping
 from operator import itemgetter
 from pathlib import Path
 
@@ -28,7 +28,40 @@ from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
 
 
 class FlextInfraUtilitiesLintRecipes:
-    """Apply the declared recipe of each lint finding to one module source."""
+    """Lint-gate policy and repair utilities behind the ``u.Infra`` facade."""
+
+    @staticmethod
+    def ruff_finding_severity(code: str, advisory: Iterable[str]) -> str:
+        """Severity one Ruff finding reports at.
+
+        Rules declared advisory (operator ruling 2026-10-05) report as
+        warnings: they keep flowing to every report surface while the gate
+        verdict ignores them.
+
+        Returns:
+            The resulting ``str``.
+
+        """
+        return (
+            c.Infra.GateSeverity.WARNING.value
+            if code in frozenset(advisory)
+            else c.Infra.GateSeverity.ERROR.value
+        )
+
+    @staticmethod
+    def blocking_gate_findings(
+        issues: t.SequenceOf[m.Infra.Issue],
+    ) -> tuple[m.Infra.Issue, ...]:
+        """Findings whose severity still fails a gate verdict.
+
+        Warnings never block (operator ruling 2026-10-05); a tool error
+        arrives as an ``error``-severity issue and keeps blocking.
+
+        Returns:
+            The resulting ``tuple[m.Infra.Issue, ...]``.
+
+        """
+        return tuple(issue for issue in issues if issue.severity.lower() != "warning")
 
     @staticmethod
     def copyright_notice(pkg_dir: Path, *, module: Path | None = None) -> str:
@@ -292,7 +325,7 @@ class FlextInfraUtilitiesLintRecipes:
                     first,
                     ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
                 )
-                else []
+                else ()
             )
             first_line = min((first.lineno, *(item.lineno for item in decorators)))
             offset = cls._offset(lines, first_line, 0)

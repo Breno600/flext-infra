@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m, p, u
+from flext_infra import c, m, p, t, u
 from flext_infra.codegen._conform import FlextInfraCodegenConformExecute
 
 if TYPE_CHECKING:
@@ -74,11 +74,17 @@ class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
 
         """
         payload = u.Infra.pyproject_payload(root / c.PYPROJECT_FILENAME)
-        names: list[str] = []
-        for spec in payload.get("project", {}).get("dependencies", []):
-            if "git+" in spec and " @ " in spec:
-                names.append(spec.split(" @ ", 1)[0].strip())
-        return tuple(names)
+        project = payload.get("project")
+        if not isinstance(project, dict):
+            return ()
+        dependencies = project.get("dependencies")
+        if not isinstance(dependencies, list):
+            return ()
+        return tuple(
+            spec.split(" @ ", 1)[0].strip()
+            for spec in dependencies
+            if isinstance(spec, str) and "git+" in spec and " @ " in spec
+        )
 
 
 __all__: list[str] = ["FlextInfraCodegenConform"]

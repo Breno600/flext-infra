@@ -189,3 +189,213 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                 {tmp_path / "src" / "invalid_contract" / "models.py": source},
                 self._roots(),
             )
+
+    @pytest.mark.parametrize("aliased", [False, True])
+    def test_qualified_provider_import_keeps_its_class_attributes(
+        self,
+        tmp_path: Path,
+        *,
+        aliased: bool,
+    ) -> None:
+        """A module binding is resolved with its attributes, never as a class."""
+        root = self._roots()[0]
+        module, _, name = root.rpartition(".")
+        source = (
+            f"import {module} as provider\nclass Contract(provider.{name}): pass\n"
+            if aliased
+            else f"import {module}\nclass Contract({root}): pass\n"
+        )
+        source += "class Consumer(Contract): pass\n"
+        tm.that(
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {tmp_path / "src" / "qualified_contract" / "models.py": source},
+                self._roots(),
+            ),
+            eq=tuple(sorted((*self._roots(), "qualified_contract.models.Contract"))),
+        )
+
+    def test_libcst_module_alias_resolves_the_published_class(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """The original real-consumer base has a complete installed source identity."""
+        source = (
+            "import libcst as cst\n"
+            "class Transformer(cst.CSTTransformer): pass\n"
+        )
+        tm.that(
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {tmp_path / "src" / "transformer_contract" / "visitor.py": source},
+                self._roots(),
+            ),
+            eq=tuple(sorted(self._roots())),
+        )
+
+    def test_provider_reexports_and_inherited_aliases_use_declared_source(
+        self,
+        tmp_path: Path,
+        installed_dependency_path: Path,
+    ) -> None:
+        """Static provider provenance supplies lazy exports without importing them."""
+        provider = installed_dependency_path / "declared_provider"
+        provider.mkdir()
+        tm.ok(u.Cli.atomic_write_text_file(
+            provider / "__init__.py",
+            "from .models import Facade as exports\n"
+            "raise RuntimeError('provider must not be imported during planning')\n",
+        ))
+        tm.ok(u.Cli.atomic_write_text_file(
+            provider / "models.py",
+            self._root_import()
+            + "class Contracts:\n    class Payload(RuntimeRoot): pass\n"
+            "class Parent(Contracts): pass\n"
+            "class Facade(Parent): Alias = Parent.Payload\n",
+        ))
+        source = (
+            "from declared_provider import exports as schemas\n"
+            "class Consumer(schemas.Alias): pass\n"
+        )
+        tm.that(
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {tmp_path / "src" / "provider_contract" / "models.py": source},
+                self._roots(),
+            ),
+            eq=tuple(sorted((*self._roots(), "declared_provider.exports.Alias"))),
+        )
+        tm.that("declared_provider" in sys.modules, eq=False)
+
+    def test_planned_reexport_overrides_an_installed_provider(
+        self,
+        tmp_path: Path,
+        installed_dependency_path: Path,
+    ) -> None:
+        """A same-name installed distribution cannot override the captured plan."""
+        provider = installed_dependency_path / "planned_provider"
+        provider.mkdir()
+        tm.ok(u.Cli.atomic_write_text_file(
+            provider / "__init__.py", "from .models import Contract\n",
+        ))
+        tm.ok(u.Cli.atomic_write_text_file(
+            provider / "models.py", "class Contract: pass\n",
+        ))
+        bridge = installed_dependency_path / "declared_bridge"
+        bridge.mkdir()
+        tm.ok(u.Cli.atomic_write_text_file(
+            bridge / "__init__.py",
+            "from planned_provider.models import Contract\nFacade = Contract\n",
+        ))
+        package = tmp_path / "src" / "planned_provider"
+        planned = {
+            package / "__init__.py": "from .models import Contract\n",
+            package / "models.py": self._root_import()
+            + "class Contract(RuntimeRoot): pass\n",
+            package / "consumer.py": (
+                "from planned_provider import Contract\n"
+                "from declared_bridge import Facade\n"
+                "class Consumer(Contract): pass\n"
+                "class BridgedConsumer(Facade): pass\n"
+            ),
+        }
+        tm.that(
+            u.Infra.runtime_evaluated_base_classes(tmp_path, planned, self._roots()),
+            eq=tuple(sorted((
+                *self._roots(), "planned_provider.Contract", "declared_bridge.Facade",
+            ))),
+        )
+
+    def test_configured_root_can_be_an_unpublished_planned_class(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        package = tmp_path / "src" / "unpublished_root"
+        roots = ("unpublished_root.Contract",)
+        planned = {
+            package / "__init__.py": "from .models import Contract\n",
+            package / "models.py": self._root_import()
+            + "class Contract(RuntimeRoot): pass\n",
+            package / "consumer.py": (
+                "from unpublished_root import Contract\n"
+                "class Consumer(Contract): pass\n"
+            ),
+        }
+        tm.that(
+            u.Infra.runtime_evaluated_base_classes(tmp_path, planned, roots),
+            eq=roots,
+        )
+
+    @pytest.mark.parametrize("value", ["0", "RuntimeRoot()"])
+    def test_field_or_call_value_cannot_be_a_class_alias(
+        self,
+        tmp_path: Path,
+        value: str,
+    ) -> None:
+        """A shadowing value fails instead of borrowing the ancestor's class."""
+        source = self._root_import() + (
+            "class Parent:\n    class Contract(RuntimeRoot): pass\n"
+            f"class Shadow(Parent): Contract = {value}\n"
+            "class Consumer(Shadow.Contract): pass\n"
+        )
+        with pytest.raises(ValueError, match="Non-class member shadows required base"):
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {tmp_path / "src" / "value_contract" / "models.py": source},
+                self._roots(),
+            )
+
+    def test_missing_explicit_external_base_is_not_deselected(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        source = self._root_import() + (
+            "import absent_provider_contract as missing\n"
+            "class Invalid(RuntimeRoot, missing.Required): pass\n"
+        )
+        with pytest.raises(u.Infra.rope_module_not_found_error_types()):
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {tmp_path / "src" / "missing_contract" / "models.py": source},
+                self._roots(),
+            )
+
+    def test_imported_module_is_not_a_class_identity(self, tmp_path: Path) -> None:
+        source = "import libcst as cst\nclass Invalid(cst): pass\n"
+        with pytest.raises(ValueError, match="Module used as a class base"):
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {tmp_path / "src" / "module_contract" / "models.py": source},
+                self._roots(),
+            )
+
+    def test_duplicate_class_identity_through_alias_fails(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        source = self._root_import() + (
+            "Alias = RuntimeRoot\nclass Invalid(RuntimeRoot, Alias): pass\n"
+        )
+        with pytest.raises(ValueError, match="Duplicate class base"):
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {tmp_path / "src" / "duplicate_contract" / "models.py": source},
+                self._roots(),
+            )
+
+    def test_conditional_required_alias_is_not_chosen_from_one_branch(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        source = self._root_import() + (
+            "class Model(RuntimeRoot): pass\nclass Plain: pass\n"
+            "if unknown_condition:\n    Alias = Model\n"
+            "else:\n    Alias = Plain\n"
+            "class Consumer(Alias): pass\n"
+        )
+        with pytest.raises(ValueError, match="Non-class binding used as a base"):
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {tmp_path / "src" / "conditional_contract" / "models.py": source},
+                self._roots(),
+            )

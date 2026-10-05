@@ -151,6 +151,10 @@ class FlextInfraConfigModelsProvider:
                 description="CI secret holding the private-dependency App key",
             ),
         ]
+        repositories: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(min_length=1, description="Selected repositories granted contents-read only"),
+        ]
 
     class CiPrivateSubmodulesSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Per-distribution private submodule init contract for generated CI."""

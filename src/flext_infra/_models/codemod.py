@@ -90,7 +90,7 @@ class FlextInfraModelsCodemod:
             t.JsonMapping,
             m.Field(
                 validation_alias=m.AliasPath("metaVariables", "single"),
-                default_factory=lambda: MappingProxyType({}),
+                default_factory=lambda: MappingProxyType[str, t.JsonValue]({}),
                 description=(
                     "Captured single metavariables; ast-grep omits the payload "
                     "for a match that captures none"
@@ -101,7 +101,7 @@ class FlextInfraModelsCodemod:
             t.JsonMapping,
             m.Field(
                 validation_alias=m.AliasPath("metaVariables", "transformed"),
-                default_factory=lambda: MappingProxyType({}),
+                default_factory=lambda: MappingProxyType[str, t.JsonValue]({}),
                 description="Metavariables the rule derived through transform",
             ),
         ]
