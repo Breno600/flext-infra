@@ -273,10 +273,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                         value = pymodule.get_attribute(parts[index]).get_object()
                         for attribute in parts[index + 1 :]:
                             value = value.get_attribute(attribute).get_object()
-                    except FlextInfraUtilitiesRopeRuntime.runtime_type(
-                        "rope.base.exceptions",
-                        "AttributeNotFoundError",
-                    ) as error:
+                    except exceptions.AttributeNotFoundError as error:
                         # PEP 562 lazy namespaces resolve their exports only
                         # at runtime; rope's static attribute lookup cannot
                         # see them, so the base is unresolved for this
@@ -354,14 +351,10 @@ class FlextInfraUtilitiesRopeSourceBases:
                         # invisible to rope's static lookup: the base cannot
                         # contribute to the derivation, and the remaining
                         # bases still describe the lineage.
-                        if str(error).startswith(
-                            "Unresolved external base:",
-                        ) or str(error).startswith(
-                            "No source module for required base:",
-                        ):
+                        if str(error).startswith("Unresolved external base:"):
                             continue
                         raise
-                return tuple(parents)
+                return tuple(parents) if parents else (object_id,)
             value = external[identity]
             parents = tuple(value.get_superclasses())
             if isinstance(
