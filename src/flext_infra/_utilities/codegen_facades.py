@@ -71,7 +71,7 @@ class FlextInfraUtilitiesCodegenFacades:
         Package consumers select called utility methods or referenced protocol
         and model members through imports resolved to this package's facade.
         Discovery scans Python modules recursively in the configured private
-        family and follows owner base chains. Named namespace declarations,
+        family and follows owner base chains. Existing namespace runtime bindings,
         including simple assignment aliases, are retained rather than replaced.
         Missing owners contribute imports and bases only; a namespace without
         bases is updated through its unique concrete-syntax class span.
@@ -127,7 +127,8 @@ class FlextInfraUtilitiesCodegenFacades:
         declared.update(
             target.id
             for member in namespace.body
-            if isinstance(member, ast.Assign | ast.AnnAssign | ast.TypeAlias)
+            if isinstance(member, ast.Assign | ast.TypeAlias)
+            or (isinstance(member, ast.AnnAssign) and member.value is not None)
             for target in (
                 member.targets
                 if isinstance(member, ast.Assign)
