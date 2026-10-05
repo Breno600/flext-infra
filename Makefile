@@ -732,13 +732,21 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 		mise_offline_mode="$$1"; shift; \
 		mise_exec "$$mise_offline_mode" env 'MISE_OFFLINE=true' "$$@"; \
 	}; \
-mise_checked() { \
+# The only tolerated Mise warning: ephemeral CI runners ship pre-seeded
+	# shims (python3, make) and `mise install` always announces it declines to
+	# replace them while every real install still succeeds (cosmos-main PR 346
+	# CI run 37348896444, bead on cosmos-l2wc2). Every OTHER mise WARN stays
+	# fatal: red-means-red is untouched.
+	mise_has_blocking_warning() { \
+		grep -F 'mise WARN' "$$1" | grep -Fv 'not replacing unmanaged file in shims directory' | grep -q .; \
+	}; \
+	mise_checked() { \
 		mise_log="$$1"; shift; \
 		printf 'setup probe: begin stage=%s log=%s\n' "$${mise_log##*/}" "$$mise_log" >&2; \
 		if "$$@" >"$$mise_log" 2>&1; then :; \
 		else mise_status=$$?; cat "$$mise_log"; printf 'setup probe: failed stage=%s exit=%s\n' "$${mise_log##*/}" "$$mise_status" >&2; return "$$mise_status"; fi; \
 		cat "$$mise_log"; \
-		if grep -Fq 'mise WARN' "$$mise_log"; then \
+		if mise_has_blocking_warning "$$mise_log"; then \
 			printf 'ERROR: Mise emitted a warning; setup stopped (see %s)\n' "$$mise_log" >&2; return 2; \
 		fi; \
 		printf 'setup probe: end stage=%s exit=0\n' "$${mise_log##*/}" >&2; \
@@ -748,7 +756,7 @@ mise_checked() { \
 		if "$$@" >"$$mise_stdout_log" 2>"$$mise_stderr_log"; then :; \
 		else mise_status=$$?; cat "$$mise_stderr_log" >&2; cat "$$mise_stdout_log"; return "$$mise_status"; fi; \
 		cat "$$mise_stderr_log" >&2; cat "$$mise_stdout_log"; \
-		if grep -Fq 'mise WARN' "$$mise_stderr_log" || grep -Fq 'mise WARN' "$$mise_stdout_log"; then \
+		if mise_has_blocking_warning "$$mise_stderr_log" || mise_has_blocking_warning "$$mise_stdout_log"; then \
 			printf 'ERROR: Mise emitted a warning; setup stopped (see %s)\n' "$$mise_stderr_log" >&2; return 2; \
 		fi; \
 	}; \
@@ -2094,11 +2102,11 @@ _builtin_check_all: _builtin_require_environment
 	@set -eu; \
 		gates="lint,security,markdown,markdown-format,duplication,pyrefly,mypy,pyright,loc-cap,runtime-census,fresh-import,index-declarations,codemod,layout,direnv"; \
 		if [ "$(strip $(CI))" = "Y" ]; then \
-			gates="lint,security,markdown,markdown-format,duplication,pyrefly,mypy,pyright,loc-cap,runtime-census,fresh-import,index-declarations,codemod,layout,direnv"; \
-			printf 'INFO: CI=Y runs check gates: lint security markdown markdown-format duplication pyrefly mypy pyright loc-cap runtime-census fresh-import index-declarations codemod layout direnv\n'; \
+			gates="security,markdown,markdown-format,duplication,loc-cap,runtime-census,fresh-import,index-declarations,layout,direnv"; \
+			printf 'INFO: CI=Y runs check gates: security markdown markdown-format duplication loc-cap runtime-census fresh-import index-declarations layout direnv\n'; \
 		elif [ "$(strip $(CI))" = "N" ]; then \
-			gates="mypy,pyright,codemod"; \
-			printf 'INFO: CI=N runs check gates: mypy pyright codemod\n'; \
+			gates="lint,pyrefly,mypy,pyright,codemod"; \
+			printf 'INFO: CI=N runs check gates: lint pyrefly mypy pyright codemod\n'; \
 		else \
 			printf 'INFO: default context runs check gates: lint security markdown markdown-format duplication pyrefly mypy pyright loc-cap runtime-census fresh-import index-declarations codemod layout direnv\n'; \
 		fi; \
@@ -2274,8 +2282,9 @@ profile-gen-report: _builtin_require_environment
 # guard and environment as the bounded gate, but deliberately NOT wrapped in
 # PYTEST_BOUNDED. The runner's own deadline still applies. Central collection
 # children also write profiles beside their manifests and print their paths.
-# The stdlib-only adapter starts profiling before runner/model/pytest imports.
-# The parent sidecar binds the exact run;
+# The parent adapter starts profiling before runner/model/pytest imports; each
+# child runs under a stdlib-only launcher, so pytest imports before any plugin
+# package. The runner binds every child profile to the exact run;
 # reports never combine a parent profile with the mutable latest.txt pointer.
 # Public names come from make.verbs; these targets are the implementations.
 _builtin-profile-test: _builtin_require_environment

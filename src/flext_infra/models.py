@@ -48,6 +48,7 @@ from flext_infra._models.mise_toolchain import (
     FlextInfraModelsMiseToolchain,
 )
 
+
 class FlextInfraModels(FlextCliModels):
     """Merged model namespace for flext-infra domain objects."""
 

@@ -249,7 +249,23 @@ class FlextInfraUtilitiesRopeSourceBases:
         active: set[str] = set()
 
         def external_identity(value: t.Infra.RopePyObject) -> str:
-            if not FlextInfraUtilitiesRopeRuntime.abstract_class(value):
+            if not (
+                FlextInfraUtilitiesRopeRuntime.abstract_class(value)
+                or isinstance(
+                    value,
+                    FlextInfraUtilitiesRopeRuntime.runtime_type(
+                        "rope.base.pyobjects",
+                        "PyModule",
+                    ),
+                )
+                or isinstance(
+                    value,
+                    FlextInfraUtilitiesRopeRuntime.runtime_type(
+                        "rope.base.pyobjects",
+                        "PyPackage",
+                    ),
+                )
+            ):
                 message = "Rope did not resolve a required base to a class"
                 raise TypeError(message)
             for identity, known in external.items():
@@ -289,8 +305,22 @@ class FlextInfraUtilitiesRopeSourceBases:
                     project.get_module("builtins").get_attribute(parts[1]).get_object()
                 )
                 return external_identity(value)
-            message = f"No source module for required base: {target}"
-            raise ValueError(message)
+            # Installed distributions have no source resource in the planned
+            # tree either: rope resolves their module objects from the
+            # environment, and member() walks attributes on the resolved
+            # identity — the same contract the builtins case above relies on.
+            try:
+                module = project.get_module(parts[0])
+                value = module
+                for attribute in parts[1:]:
+                    value = value.get_attribute(attribute).get_object()
+            except (
+                exceptions.ModuleNotFoundError,
+                exceptions.AttributeNotFoundError,
+            ) as error:
+                message = f"No source module for required base: {target}"
+                raise ValueError(message) from error
+            return external_identity(module if len(parts) == 1 else value)
 
         object_id = external_reference("builtins.object")
         root_ids = frozenset(external_reference(root) for root in roots)
@@ -440,6 +470,19 @@ class FlextInfraUtilitiesRopeSourceBases:
             return linearizations[identity]
 
         def member(identity: str, name: str) -> str:
+            module_or_package = external.get(identity)
+            if module_or_package is not None and not (
+                FlextInfraUtilitiesRopeRuntime.abstract_class(module_or_package)
+            ):
+                # A module or package identity carries attributes directly and
+                # has no MRO to linearize.
+                external_members = module_or_package.get_attributes()
+                if name in external_members:
+                    return external_identity(
+                        external_members[name].get_object(),
+                    )
+                message = f"Missing inherited class member: {identity}.{name}"
+                raise ValueError(message)
             for ancestor in linearize(identity):
                 if ancestor in definitions:
                     members = definitions[ancestor].members

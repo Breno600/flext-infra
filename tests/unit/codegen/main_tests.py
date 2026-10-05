@@ -285,7 +285,9 @@ class TestsFlextInfraCodegenMain:
             infra_git_repo: Path,
         ) -> None:
             """Report a managed conflict without touching live bytes or journals."""
-            pyproject = TestsFlextInfraCodegenMain._seed_managed_conflict(infra_git_repo)
+            pyproject = TestsFlextInfraCodegenMain._seed_managed_conflict(
+                infra_git_repo
+            )
             before = pyproject.read_bytes()
             journal, transaction = TestsFlextInfraCodegenMain._mise_transaction_state(
                 infra_git_repo,
