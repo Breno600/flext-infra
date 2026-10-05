@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, ClassVar, Literal, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import c, t
 from flext_infra._models import FlextInfraModelsMixins
@@ -189,7 +189,7 @@ class FlextInfraModelsCore:
             description="Explicit Markdown deselection node IDs",
         )
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def require_unique_node_ids(self) -> Self:
             """Reject incomplete identifiers and ambiguous worker manifests.
 
@@ -329,7 +329,7 @@ class FlextInfraModelsCore:
             description="Public pytest item properties transported by report-log",
         )
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def require_event_payload(self) -> Self:
             """Reject incomplete runtime events instead of reporting zero findings.
 

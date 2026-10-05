@@ -16,7 +16,7 @@ from flext_infra.codemod import FlextInfraModGateEngine
 
 
 @pytest.mark.slow
-class TestsJointModFixedPoint:
+class TestsFlextInfraJointModFixedPoint:
     """Exercise real configured rules through the public refactor CLI."""
 
     @staticmethod

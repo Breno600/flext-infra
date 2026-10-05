@@ -19,4 +19,4 @@ class TestsFlextInfraToolchainGoBackend:
         """Keep Go policy explicit while mise resolves its newest release."""
         toolchain = config.Infra.codegen.toolchain
 
-        tm.that(toolchain.go_version, eq="latest")
+        tm.that(toolchain.tool_versions["go"], eq="latest")

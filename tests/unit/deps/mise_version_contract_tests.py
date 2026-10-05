@@ -18,15 +18,15 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import t
+from flext_infra import config, t
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _RESOLVED_IDENTITY_SEPARATOR = "~"
 
 
-def _declared_versions(tools: t.JsonMapping) -> dict[str, str]:
+def _declared_versions(tools: t.JsonMapping) -> t.StrDict:
     """Return the version string each declared mise tool carries."""
-    versions: dict[str, str] = {}
+    versions: t.StrDict = {}
     for name, entry in tools.items():
         if isinstance(entry, dict):
             value = entry.get("version")
@@ -38,9 +38,9 @@ def _declared_versions(tools: t.JsonMapping) -> dict[str, str]:
     return versions
 
 
-def _lock_specifiers(tools: t.JsonMapping) -> dict[str, set[str]]:
+def _lock_specifiers(tools: t.JsonMapping) -> t.MutableMappingKV[str, set[str]]:
     """Return every specifier the committed lock records for each tool."""
-    specifiers: dict[str, set[str]] = {}
+    specifiers: t.MutableMappingKV[str, set[str]] = {}
     for name, entries in tools.items():
         recorded: set[str] = set()
         for entry in entries if isinstance(entries, list) else [entries]:
@@ -57,12 +57,18 @@ class TestsFlextInfraMiseVersionContract:
 
     @staticmethod
     def test_declared_versions_carry_no_resolved_identity() -> None:
-        """No declared ``*_version`` value may embed a resolved identity."""
-        source = (_REPO_ROOT / "config" / "codegen.yaml").read_text(encoding="utf-8")
+        """No declared tool version may embed a resolved identity."""
+        toolchain = config.Infra.codegen.toolchain
         offenders = tuple(
-            line.strip()
-            for line in source.splitlines()
-            if "_version" in line and _RESOLVED_IDENTITY_SEPARATOR in line
+            f"tools[{entry.name}]={entry.version}"
+            for entry in toolchain.tools
+            if _RESOLVED_IDENTITY_SEPARATOR in entry.version
+        ) + tuple(
+            f"{field}={value}"
+            for field, value in toolchain
+            if field.endswith("_version")
+            and isinstance(value, str)
+            and _RESOLVED_IDENTITY_SEPARATOR in value
         )
         tm.that(offenders, eq=())
 
