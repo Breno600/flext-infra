@@ -103,9 +103,12 @@ class TestsFlextInfraCiIntegrationBranchTriggers:
             Path(__file__).resolve().parents[3]
             / "src/flext_infra/templates/project/base"
         )
-        rendered = tm.ok(u.Cli.template_render(
-            root / ".github/workflows/ci.yml.j2", spec,
-        ))
+        rendered = tm.ok(
+            u.Cli.template_render(
+                root / ".github/workflows/ci.yml.j2",
+                spec,
+            )
+        )
         steps = u.CodegenTestSupport.Ci.ci_job_steps(rendered)
         approval = tuple(step for step in steps if step.get("id") == "approval")
         tm.that(approval, len=1)
@@ -113,20 +116,29 @@ class TestsFlextInfraCiIntegrationBranchTriggers:
             approval[0]["run"],
             eq=f"{codegen.make.ci.variable}={codegen.make.ci.value} make pre-commit",
         )
-        tm.that(rendered, lacks=[
-            "make gen", "Candidate cleanliness", "continue-on-error",
-            "make upg", "make dep",
-        ])
-        hook = tm.ok(u.Cli.template_render(
-            root / ".pre-commit-config.yaml.j2",
-            m.Infra.MakeWorkflowRenderSpec(dist=spec.dist, make=codegen.make),
-        ))
+        tm.that(
+            rendered,
+            lacks=[
+                "make gen",
+                "Candidate cleanliness",
+                "continue-on-error",
+                "make upg",
+                "make dep",
+            ],
+        )
+        hook = tm.ok(
+            u.Cli.template_render(
+                root / ".pre-commit-config.yaml.j2",
+                m.Infra.MakeWorkflowRenderSpec(dist=spec.dist, make=codegen.make),
+            )
+        )
         tm.that(hook, has="make pre-commit")
         tm.that(hook, lacks=["make fmt", "make fix"])
         tm.that(
             codegen.make.approval_verbs,
             eq=tuple(
-                step.verb for step in codegen.make.workflow
+                step.verb
+                for step in codegen.make.workflow
                 if "pre_commit" in step.contexts
             ),
         )
@@ -140,29 +152,43 @@ class TestsFlextInfraCiIntegrationBranchTriggers:
             repository_branch="integration/cache-consumer",
             ci_trigger_branches=(),
         )
-        rendered = tm.ok(u.Cli.template_render(
-            TestsFlextInfraCiIntegrationBranchTriggers.ci_template, spec,
-        ))
+        rendered = tm.ok(
+            u.Cli.template_render(
+                TestsFlextInfraCiIntegrationBranchTriggers.ci_template,
+                spec,
+            )
+        )
         steps = u.CodegenTestSupport.Ci.ci_job_steps(rendered)
         saves = tuple(
             step for step in steps if step.get("name") == "Save testmon database"
         )
         tm.that(bool(saves), eq=spec.make.testmon_cache_policy.save_enabled)
         if saves:
-            tm.that(saves[0]["if"], has=[
-                "github.event_name == 'push'", "!cancelled()",
-                "testmon_saveable", "testmon_digest",
-                *spec.make.testmon_cache_policy.allowed_save_refs,
-            ])
-            if spec.repository_branch not in spec.make.testmon_cache_policy.allowed_save_refs:
+            tm.that(
+                saves[0]["if"],
+                has=[
+                    "github.event_name == 'push'",
+                    "!cancelled()",
+                    "testmon_saveable",
+                    "testmon_digest",
+                    *spec.make.testmon_cache_policy.allowed_save_refs,
+                ],
+            )
+            if (
+                spec.repository_branch
+                not in spec.make.testmon_cache_policy.allowed_save_refs
+            ):
                 tm.that(saves[0]["if"], lacks=spec.repository_branch)
             cache_input = u.Cli.json_as_mapping(saves[0]["with"])
             restore = next(
-                step for step in steps
-                if step.get("name") == "Restore testmon database"
+                step for step in steps if step.get("name") == "Restore testmon database"
             )
-            tm.that(cache_input["path"], eq="${{ steps.approval.outputs.testmon_database }}")
-            tm.that(cache_input["key"], eq=u.Cli.json_as_mapping(restore["with"])["key"])
+            tm.that(
+                cache_input["path"], eq="${{ steps.approval.outputs.testmon_database }}"
+            )
+            tm.that(
+                cache_input["key"], eq=u.Cli.json_as_mapping(restore["with"])["key"]
+            )
 
     @staticmethod
     @pytest.mark.parametrize("missing", ("setup", "audit", "check", "test"))

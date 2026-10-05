@@ -405,7 +405,10 @@ class FlextInfraModelsDepsToolConfig(
         ]
         ci_excluded_fixtures: Annotated[
             t.StrTuple,
-            m.Field(alias="ci-excluded-fixtures", description="Fixtures that need local-only provisioning"),
+            m.Field(
+                alias="ci-excluded-fixtures",
+                description="Fixtures that need local-only provisioning",
+            ),
         ] = ()
 
         @property

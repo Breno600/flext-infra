@@ -465,8 +465,10 @@ class FlextInfraGate:
             issues=tuple(issues),
             raw_output=raw_output,
             outcome=(
-                c.Infra.ToolOutcome.ERROR if not verdict
-                else c.Infra.ToolOutcome.FINDINGS if issues
+                c.Infra.ToolOutcome.ERROR
+                if not verdict
+                else c.Infra.ToolOutcome.FINDINGS
+                if issues
                 else c.Infra.ToolOutcome.CLEAN
             ),
         )
@@ -504,8 +506,10 @@ class FlextInfraGate:
             issues=tuple(issues),
             raw_output=raw_output,
             outcome=(
-                c.Infra.ToolOutcome.FINDINGS if issues
-                else c.Infra.ToolOutcome.CLEAN if passed
+                c.Infra.ToolOutcome.FINDINGS
+                if issues
+                else c.Infra.ToolOutcome.CLEAN
+                if passed
                 else c.Infra.ToolOutcome.ERROR
             ),
         )

@@ -137,7 +137,8 @@ class FlextInfraModelsWorkspace:
         """Native PEP 610 VCS identity, independent of a moving requested ref."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            extra="ignore", frozen=True,
+            extra="ignore",
+            frozen=True,
         )
         vcs: Annotated[str, m.Field(description="Native VCS kind")]
         commit_id: Annotated[str, m.Field(description="Installed full commit identity")]
@@ -157,7 +158,8 @@ class FlextInfraModelsWorkspace:
         ] = None
         url: str = m.Field(default="", description="PEP 610 origin URL")
         vcs_info: FlextInfraModelsWorkspace.DirectUrlVcsInfo | None = m.Field(
-            default=None, description="Installed immutable VCS identity",
+            default=None,
+            description="Installed immutable VCS identity",
         )
 
     class LockedPackageSource(m.ContractModel):
@@ -165,9 +167,13 @@ class FlextInfraModelsWorkspace:
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore", frozen=True)
         git: str | None = m.Field(default=None, description="Locked VCS URL and SHA")
-        registry: str | None = m.Field(default=None, description="Locked registry artifact")
+        registry: str | None = m.Field(
+            default=None, description="Locked registry artifact"
+        )
         editable: str | None = m.Field(default=None, description="Local root source")
-        directory: str | None = m.Field(default=None, description="Noneditable directory")
+        directory: str | None = m.Field(
+            default=None, description="Noneditable directory"
+        )
 
     class LockedPackage(m.ContractModel):
         """Installed identity selected from the committed uv lock."""
