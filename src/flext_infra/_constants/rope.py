@@ -16,6 +16,9 @@ if TYPE_CHECKING:
 class FlextInfraConstantsRope:
     """Rope Project configuration constants — accessed via c.Infra.*."""
 
+    ROPE_WALK_DEPTH_BUDGET: ClassVar[int] = 32
+    "Bound for the external-base walk's provider/reexport hops; a legitimate chain is a few hops, so exceeding it means the static graph cannot terminate (cross-facade rebinds) and the base is unresolved."
+
     @unique
     class RopeScopeKind(StrEnum):
         """Semantic scope kinds returned by rope's ``PyScope.get_kind()``.
