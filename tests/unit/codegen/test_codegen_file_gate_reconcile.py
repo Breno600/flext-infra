@@ -1,4 +1,4 @@
-"""Rendered contract for the fleet-wide file-gate verb and the setup reconcile.
+"""Rendered contract for the fleet-wide file-gate verb and the setup lock law.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -19,12 +19,13 @@ pytestmark = [pytest.mark.slow]
 
 
 class TestsFlextInfraFileGateAndReconcileMakefile:
-    """`file-gate` reaches every profile; the reconcile step is workspace-only.
+    """`file-gate` reaches every profile; setup never writes the lock.
 
     The fast per-file pre-gate (operator P0, val2026100417xx) is a fleet
-    surface declared once in the codegen SSOT. The mise.lock drift branch of
-    `make setup` repairs the lock through the bootstrap reconcile owner in
-    workspace checkouts only, and never fails the setup that carries it.
+    surface declared once in the codegen SSOT. The `make setup` lifecycle
+    never rebuilds `mise.lock`: locks update only through `make upg`
+    (operator P0, flext-k538b), and the drift branch warns and installs
+    unlocked instead.
     """
 
     @staticmethod
@@ -78,7 +79,8 @@ class TestsFlextInfraFileGateAndReconcileMakefile:
         """
         return rendered.split("_builtin_file_gate_all:", 1)[1].split("\n\n", 1)[0]
 
-    def test_file_gate_verb_is_declared_fleet_wide(self) -> None:
+    @staticmethod
+    def test_file_gate_verb_is_declared_fleet_wide() -> None:
         """The codegen SSOT declares file-gate once with no profile restriction."""
         verb = next(
             verb for verb in config.Infra.codegen.make.verbs if verb.name == "file-gate"
@@ -136,7 +138,7 @@ class TestsFlextInfraFileGateAndReconcileMakefile:
             )
             tm.that(body, has="$(RUNTIME_PYTHON)")
 
-    def test_workspace_render_wires_reconcile_into_setup_drift(
+    def test_setup_lifecycle_never_wires_a_reconcile_call(
         self,
         tmp_path: Path,
     ) -> None:
@@ -146,7 +148,8 @@ class TestsFlextInfraFileGateAndReconcileMakefile:
             role=c.Infra.MakeProfile.WORKSPACE,
         )
         lifecycle = rendered.split("_setup_lifecycle:", 1)[1].split(
-            ".PHONY: _setup_activated", 1
+            ".PHONY: _setup_activated",
+            1,
         )[0]
         # The step is gated on the drift signal the bootstrap recipe exports.
         tm.that(lifecycle, has='[ "$${SETUP_MISE_LOCK_DRIFT:-}" = "1" ]')
@@ -173,7 +176,8 @@ class TestsFlextInfraFileGateAndReconcileMakefile:
         # exports the drift signal for its own probe, so only the lifecycle
         # section proves the reconcile step is workspace-only.
         lifecycle = rendered.split("_setup_lifecycle:", 1)[1].split(
-            ".PHONY: _setup_activated", 1
+            ".PHONY: _setup_activated",
+            1,
         )[0]
         tm.that(
             lifecycle,

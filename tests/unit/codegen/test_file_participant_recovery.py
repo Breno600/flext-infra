@@ -12,11 +12,11 @@ import pytest
 from flext_tests import tm
 
 from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, m, p, t
 from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 from flext_infra.validate import FlextInfraValidateFreshImport
-from tests import u as test_u
+from tests import u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -32,7 +32,7 @@ class TestsFlextInfraFileParticipantRecovery:
         invalid_later_plan: str,
     ) -> None:
         """A rejected phase cannot strand earlier replacements outside its journal."""
-        root = test_u.Tests.git_repository(tmp_path)
+        root = u.Tests.git_repository(tmp_path)
         nested = root / "unregistered"
         nested.mkdir()
         first = root / "first.md"
@@ -89,7 +89,7 @@ class TestsFlextInfraFileParticipantRecovery:
         tmp_path: Path,
     ) -> None:
         """Test fresh import failure restores published initializer."""
-        root = test_u.Tests.git_repository(tmp_path)
+        root = u.Tests.git_repository(tmp_path)
         package = root / c.Infra.DEFAULT_SRC_DIR / "flext_import_probe"
         package.mkdir(parents=True)
         initializer = package / c.Infra.INIT_PY
@@ -133,7 +133,7 @@ class TestsFlextInfraFileParticipantRecovery:
     @staticmethod
     def test_recovers_external_only_prepared_journal(tmp_path: Path) -> None:
         """Test recovers external only prepared journal."""
-        workspace = test_u.Tests.create_docs_workspace(tmp_path, project_names=())
+        workspace = u.Tests.create_docs_workspace(tmp_path, project_names=())
         docs_root = tmp_path / "published-docs"
         docs_root.mkdir()
         roots = {"@docs-0": docs_root}
@@ -169,7 +169,7 @@ class TestsFlextInfraFileParticipantRecovery:
         foreign_change: str,
     ) -> None:
         """Recover owned publications, but retain foreign trees and their evidence."""
-        root = test_u.Tests.git_repository(tmp_path)
+        root = u.Tests.git_repository(tmp_path)
         owner = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
@@ -222,7 +222,7 @@ class TestsFlextInfraFileParticipantRecovery:
         with_foreign_file: bool,
     ) -> None:
         """A pre-manifest crash receipt permits only exact empty-directory cleanup."""
-        root = test_u.Tests.git_repository(tmp_path)
+        root = u.Tests.git_repository(tmp_path)
         owner = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
@@ -272,7 +272,7 @@ class TestsFlextInfraFileParticipantRecovery:
         journal_change: str,
     ) -> None:
         """Retain the causal failure and publications when journal authority changes."""
-        root = test_u.Tests.git_repository(tmp_path)
+        root = u.Tests.git_repository(tmp_path)
         owner = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root),
         )

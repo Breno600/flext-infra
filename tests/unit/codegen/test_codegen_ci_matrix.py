@@ -432,7 +432,8 @@ class TestsFlextInfraCodegenCiMatrix:
             workflow,
             lacks=(
                 'rm -f "$key_path"\n\n\n'
-                "      # Why: GitHub runners expose umask 002, so git checkout materializes"
+                "      # Why: GitHub runners expose umask 002, "
+                "so git checkout materializes"
             ),
         )
         # Included fragments start on their own line: a rationale comment is
@@ -1007,7 +1008,7 @@ class TestsFlextInfraCodegenCiMatrix:
 
     @staticmethod
     def test_root_dockerignore_reincludes_bootstrap_surface() -> None:
-        """Root hand-maintained .dockerignore lets clean-machine bootstrap files into the context."""
+        """Hand-maintained root .dockerignore admits clean-machine bootstrap files."""
         root = Path(__file__).resolve().parents[3]
         dockerignore = root / ".dockerignore"
         tm.that(dockerignore.is_file(), eq=True)
