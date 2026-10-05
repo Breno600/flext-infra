@@ -740,6 +740,8 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 		printf "pinned_mise=%s\n" "$${pinned_mise:-}"; \
 		printf "mise=%s\n" "$${mise:-}"; \
 		printf "mise_pin=%s\n" "$${mise_pin:-}"; \
+		printf "caller_xdg_data_home=%s\n" "$${caller_xdg_data_home:-}"; \
+		printf "caller_home=%s\n" "$${caller_home:-}"; \
 		printf "caller_path=%s\n" "$${caller_path:-}"; \
 		printf "caller_mise_version=%s\n" "$${caller_mise_version:-}"; \
 		printf "caller_github_token=%s\n" "$${caller_github_token:-}"; \
