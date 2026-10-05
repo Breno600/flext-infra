@@ -319,18 +319,6 @@ Infra:
                 The facade letters are imported as their facade class under
                 the letter (FlextInfraConstants as c), so type checkers see a
                 class rather than a variable rebind.
-            - rules: [runtime-import-in-type-checking-block]
-              authority: operator-order-2026-10-05-tc001-tc004-never-executed
-              reason: >-
-                Operator order 2026-10-05: TC004
-                (runtime-import-in-type-checking-block) is NEVER EXECUTED by
-                Ruff on ANY file — pydantic resolves model annotations at
-                runtime through the codegen-derived
-                runtime-evaluated-base-classes, and the generated lazy
-                initializers resolve TYPE_CHECKING exports at runtime
-                (PEP 562), so the rule's reading is false across the fleet.
-                Supersedes the scoped 2026-10-01 __init__-only tc004-tid252
-                exception (kept below for the per-file surface).
             - files: "**/__init__.py"
               rules: [unused-import]
               authority: operator-ruling-2026-10-01-init-declared-letter-f401
