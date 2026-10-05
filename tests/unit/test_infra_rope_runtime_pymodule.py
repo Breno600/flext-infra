@@ -8,6 +8,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+from flext_tests import tm
+
+from flext_infra import FlextInfraRopeWorkspace, c, u
 from flext_infra._utilities._rope.project import FlextInfraRopeProject
 from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
 from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
@@ -18,6 +22,37 @@ if TYPE_CHECKING:
 
 class TestsFlextInfraRopeRuntimePymodule:
     """Validate the module predicate over rope modules and packages."""
+
+    @pytest.mark.parametrize("regular_package", [False, True])
+    def test_module_precedes_namespace_but_not_regular_package(
+        self,
+        tmp_path: Path,
+        regular_package: bool,
+    ) -> None:
+        """Python source wins over a data directory, not an initialized package."""
+        root = tmp_path / "consumer"
+        source = root / "src"
+        source.mkdir(parents=True)
+        (source / "contract.py").write_text(
+            "class ModuleContract:\n    pass\n",
+            encoding=c.Infra.ENCODING_DEFAULT,
+        )
+        package = source / "contract"
+        package.mkdir()
+        if regular_package:
+            (package / c.Infra.INIT_PY).write_text(
+                "class PackageContract:\n    pass\n",
+                encoding=c.Infra.ENCODING_DEFAULT,
+            )
+        with FlextInfraRopeWorkspace.open_workspace(root) as workspace:
+            resource = workspace.rope_project.find_module("contract")
+            tm.that(resource, none=False)
+            if resource is None:
+                message = "Native Rope finder did not resolve the fixture module"
+                raise AssertionError(message)
+            module = u.Infra.resolve_pymodule(workspace.rope_project, resource)
+            expected = "PackageContract" if regular_package else "ModuleContract"
+            tm.that(module.get_attribute(expected).get_object().get_name(), eq=expected)
 
     @staticmethod
     def test_pymodule_contract_accepts_packages(tmp_path: Path) -> None:

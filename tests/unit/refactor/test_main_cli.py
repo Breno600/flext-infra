@@ -736,7 +736,7 @@ class TestsFlextInfraRefactorMainCli:
         self,
         tmp_path: Path,
     ) -> None:
-        """Test refactor census dry run validates unused candidate after import cleanup."""
+        """Test census dry run validates unused candidate after import cleanup."""
         workspace, service_file = (
             self._build_unused_top_level_workspace_with_source_import(tmp_path)
         )

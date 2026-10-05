@@ -67,7 +67,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
         budget = config.Infra.tooling.tools.mypy.timeout_seconds // 2
         (tmp_path / "config").mkdir()
         (tmp_path / "config" / "tooling.yaml").write_text(
-            f"Infra:\n  tooling:\n    tools:\n      mypy:\n        timeout_seconds: {budget}\n",
+            "Infra:\n  tooling:\n    tools:\n      mypy:\n"
+            f"        timeout_seconds: {budget}\n",
             encoding="utf-8",
         )
         expected_limit = m.Infra.MypyResourceLimit(
@@ -88,7 +89,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
         above = config.Infra.tooling.tools.mypy.timeout_seconds + 1
         (tmp_path / "config").mkdir()
         (tmp_path / "config" / "tooling.yaml").write_text(
-            f"Infra:\n  tooling:\n    tools:\n      mypy:\n        timeout_seconds: {above}\n",
+            "Infra:\n  tooling:\n    tools:\n      mypy:\n"
+            f"        timeout_seconds: {above}\n",
             encoding="utf-8",
         )
 
@@ -224,7 +226,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
                 policy.termination_grace_seconds,
             ),
         )
-        sleep = f"time.sleep({u.Infra.mypy_runner_timeout(limit) + policy.slow_timeout_seconds})"
+        sleep_seconds = u.Infra.mypy_runner_timeout(limit) + policy.slow_timeout_seconds
+        sleep = f"time.sleep({sleep_seconds})"
         tail = f"sys.exit({expected})" if leader_exits else sleep
         descendant = (
             "import signal,time; signal.signal(signal.SIGTERM, signal.SIG_IGN); "

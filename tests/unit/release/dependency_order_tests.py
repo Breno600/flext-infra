@@ -37,7 +37,8 @@ class TestsFlextInfraReleaseDependencyOrder:
         project.mkdir(parents=True, exist_ok=True)
         rendered = ", ".join(f'"{dependency}"' for dependency in dependencies)
         (project / "pyproject.toml").write_text(
-            f'[project]\nname = "{name}"\nversion = "0.1.0"\ndependencies = [{rendered}]\n',
+            f'[project]\nname = "{name}"\nversion = "0.1.0"\n'
+            f"dependencies = [{rendered}]\n",
             encoding="utf-8",
         )
 

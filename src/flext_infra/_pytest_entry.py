@@ -36,20 +36,11 @@ class FlextInfraPytestEntry:
 
         """
         mode = sys.argv[1] if len(sys.argv) > 1 else ""
-        if mode in {"profile", "profile-collection"}:
+        if mode == "profile":
             from flext_infra._pytest_profile import FlextInfraPytestProfile
 
-            adapter = FlextInfraPytestProfile(Path(sys.argv[2]))
-            if mode == "profile-collection":
-                return adapter.run_collection(Path(sys.argv[3]), tuple(sys.argv[4:]))
-            return adapter.run_parent(
+            return FlextInfraPytestProfile(Path(sys.argv[2])).run_parent(
                 started_at_monotonic=cls._STARTED_AT_MONOTONIC,
-                collection_command_prefix=(
-                    sys.executable,
-                    "-m",
-                    "flext_infra._pytest_entry",
-                    "profile-collection",
-                ),
             )
 
         from flext_infra.validate.pytest_runner import FlextInfraPytestRunner

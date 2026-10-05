@@ -69,7 +69,7 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         violations.extend(
             ("duplicate Markdown executed origin",)
             if len(set(diagnostics.markdown_items)) != len(diagnostics.markdown_items)
-            else ()
+            else (),
         )
         proofs = {proof.node_id: proof for proof in diagnostics.markdown_attempts}
         if len(proofs) != len(diagnostics.markdown_attempts):
@@ -120,6 +120,20 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         u.Cli.atomic_write_text_file(
             report_dir.parent / "latest.txt",
             f"{report_dir.name}\n",
+        ).unwrap()
+
+    @staticmethod
+    def _bind_child_profile(report_dir: Path, profile: Path) -> None:
+        """Bind one completed child profile to this run's receipt by digest."""
+        context = m.Infra.PytestRunContext.model_validate_json(
+            (report_dir / "run-context.json").read_text(encoding="utf-8"),
+        )
+        receipt = context.model_copy(
+            update={"profile_sha256": u.Cli.sha256_bytes(profile.read_bytes())},
+        )
+        u.Cli.atomic_write_text_file(
+            profile.with_suffix(".pstats.json"),
+            receipt.model_dump_json(indent=2) + "\n",
         ).unwrap()
 
     @staticmethod

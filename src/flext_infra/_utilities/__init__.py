@@ -428,6 +428,9 @@ if TYPE_CHECKING:
         FlextInfraUtilitiesRopeRuntimeTypes,
     )
     from flext_infra._utilities.rope_source import FlextInfraUtilitiesRopeSource
+    from flext_infra._utilities.rope_source_bases import (
+        FlextInfraUtilitiesRopeSourceBases,
+    )
     from flext_infra._utilities.rope_structure import FlextInfraUtilitiesRopeStructure
     from flext_infra._utilities.semantic_cutover import (
         FlextInfraUtilitiesSemanticCutover,
@@ -597,6 +600,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesRopeRuntimeRefactors",
     "FlextInfraUtilitiesRopeRuntimeTypes",
     "FlextInfraUtilitiesRopeSource",
+    "FlextInfraUtilitiesRopeSourceBases",
     "FlextInfraUtilitiesRopeStructure",
     "FlextInfraUtilitiesSemanticCutover",
     "FlextInfraUtilitiesSemanticCutoverAliasCst",
@@ -797,6 +801,7 @@ install_lazy_exports(
         "FlextInfraUtilitiesRopeRuntimeRefactors": ".rope_runtime_refactors",
         "FlextInfraUtilitiesRopeRuntimeTypes": ".rope_runtime_types",
         "FlextInfraUtilitiesRopeSource": ".rope_source",
+        "FlextInfraUtilitiesRopeSourceBases": ".rope_source_bases",
         "FlextInfraUtilitiesRopeStructure": ".rope_structure",
         "FlextInfraUtilitiesSemanticCutover": ".semantic_cutover",
         "FlextInfraUtilitiesSemanticCutoverAliasCst": "._semantic_cutover.alias_cst",

@@ -26,6 +26,23 @@ class FlextInfraConstantsCheck:
     PYTEST_SELECTED_COLLECTION_OPTION: ClassVar[str] = "--flext-selected-collection"
     PYTEST_SUITE_STOP_OPTION: ClassVar[str] = "--flext-suite-stop-monotonic"
     PYTEST_COLLECTION_MANIFEST_OPTION: ClassVar[str] = "--flext-collection-manifest"
+    PYTEST_PROFILE_LAUNCHER: ClassVar[str] = (
+        "import cProfile, runpy, sys\n"
+        "output = sys.argv.pop(1)\n"
+        "profile = cProfile.Profile()\n"
+        "try:\n"
+        "    profile.runcall(\n"
+        "        runpy.run_module, 'pytest', run_name='__main__', alter_sys=True\n"
+        "    )\n"
+        "finally:\n"
+        "    profile.dump_stats(output)\n"
+    )
+    """``python -c`` profiled pytest child: ``<output.pstats> <pytest args...>``.
+
+    Stdlib only, so pytest installs assertion rewriting before any plugin
+    package (``flext_infra`` included) is imported; pytest's ``SystemExit``
+    still sets the exit status, unlike ``python -m cProfile``.
+    """
 
     @unique
     class SarifSchema(StrEnum):
@@ -208,15 +225,10 @@ class FlextInfraConstantsCheck:
         "Existing fence marker (pytest-markdown-docs) "
         "opting a block out of code validation."
     )
-    MARKDOWN_CODE_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?P<file>\S+):\d+:\d+:\s+unformatted:\s+",
+    MARKDOWN_CODE_SOURCE_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"(?P<file>[^\s/:]+_b\d+\.py)(?::(?P<line>\d+))?",
     )
-    "Ruff format ``--check`` concise verdict line over extracted sources."
-    MARKDOWN_CODE_FORMAT_ERROR_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^error: Failed to format (?P<file>\S+):",
-        re.MULTILINE,
-    )
-    "Ruff format hard-failure line over extracted sources (parse errors)."
+    "Extracted-source name (``MARKDOWN_CODE_SOURCE_FORMAT``) inside any ruff line."
     VALID_GATE_SEVERITIES: ClassVar[frozenset[str]] = frozenset(GateSeverity)
     "Severity levels accepted by gate output parsers — derived from GateSeverity."
     PYRIGHT_DIAGNOSTICS_KEY: ClassVar[str] = "generalDiagnostics"
