@@ -245,6 +245,12 @@ verb runs only the qlty smell scan and fails when it finds defects. The
 `runtime-census` gate stays in `make check` and grades every runtime enforcement
 finding, including rules that qlty also classifies as smells. An empty or
 malformed qlty SARIF response is a failed scan, not a zero-finding receipt.
+Native primary source spans and all `relatedLocations` pass through the typed issue
+and SARIF report contracts without dropping comparison locations outside the primary
+project. Coordinates are emitted only when the scanner supplies them, including explicit
+zeros; line-only and regionless native locations do not acquire invented coordinates.
+Point-only diagnostics from other gates remain point-only. The Markdown summary still
+uses the primary location, while the SARIF artifact carries the comparison evidence.
 
 ## Bounded Mypy failure status
 
@@ -288,6 +294,13 @@ and rejects extra output from the
 Timeouts, forwarded signals, other exit codes, malformed JSON, and disagreement between
 exit code and diagnostic severities remain failures, even when stdout exists. Both
 whole-project checks and `check_files` scan every elected provider rule.
+
+AST replacements publish through the authenticated file-plan boundary, then reuse
+the import normalizer on only the rewritten files. Unused imports and formatting
+are normalized before the next mod check; normalization failures remain blocking.
+The root facade export rule preserves literal tuple values and order while removing
+an unnecessary type-only annotation dependency. It does not change classes, aliases
+or inheritance, and it does not rewrite initializer projections.
 
 `GateExecution.issues` retains each finding's original file, position, rule, message,
 and severity. SARIF reports each finding at its native level; raw scanner output remains
