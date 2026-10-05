@@ -307,17 +307,10 @@ class TestsFlextInfraCodegenConform:
 
         """
         u.Tests.seed_locked_taplo(root.parent)
-        workspace = TestsFlextInfraCodegenConform._hook_workspace(hook_path)
-        request = u.Tests.conform_request(
+        service, request = TestsFlextInfraConformSupport.check_conform_service(
             root,
+            TestsFlextInfraCodegenConform._hook_workspace(hook_path),
             what=c.Infra.CodegenConformSurface.PYPROJECT,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.CHECK,
-        )
-        service = FlextInfraCodegenConform(
-            repository_root=root,
-            request=request,
-            initial_workspace=workspace,
         )
         plan = tm.ok(service.plan(request))
         pyproject = next(
@@ -984,18 +977,7 @@ class TestsFlextInfraCodegenConform:
         root = tmp_path / "flext"
         # The governed tree above the workspace carries the committed Taplo pin.
         u.Tests.seed_locked_taplo(tmp_path)
-        request = u.Tests.conform_request(
-            root,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.CHECK,
-        )
-        planned = FlextInfraCodegenConform(
-            repository_root=root,
-            request=request,
-            initial_workspace=workspace,
-        ).plan(request)
-        tm.ok(planned)
-        environment = planned.value.uv_environments[0]
+        environment = u.Tests.conform_plan(root, workspace).uv_environments[0]
         tm.that(environment.environment_root, eq=root.resolve())
         tm.that(environment.groups, eq=("dev", "codegen", "workspace"))
         tm.that(
@@ -1027,15 +1009,9 @@ class TestsFlextInfraCodegenConform:
         )
         root = tmp_path / "arbitrary-root"
         u.Tests.seed_locked_taplo(tmp_path)
-        request = u.Tests.conform_request(
+        service, request = TestsFlextInfraConformSupport.check_conform_service(
             root,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.CHECK,
-        )
-        service = FlextInfraCodegenConform(
-            repository_root=root,
-            request=request,
-            initial_workspace=workspace,
+            workspace,
         )
 
         first = tm.ok(service.plan(request))
