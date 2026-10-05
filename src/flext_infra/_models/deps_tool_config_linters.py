@@ -405,7 +405,7 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         plugins: Annotated[
             t.StrSequence,
             m.Field(
-                description="Mypy plugins, including mandatory Pydantic 2 support."
+                description="Mypy plugins, including mandatory Pydantic 2 support.",
             ),
         ]
 

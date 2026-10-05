@@ -65,6 +65,7 @@ install_lazy_exports(
         "FlextInfraConfigModelsProvider": ".provider",
         "FlextInfraConfigModelsRelease": ".release",
         "FlextInfraConfigModelsRender": ".render",
+        "FlextInfraConfigModelsRepository": ".repository",
         "FlextInfraConfigModelsRoot": ".root",
         "FlextInfraConfigModelsScaffold": ".scaffold",
         "FlextInfraConfigModelsStatic": ".static",

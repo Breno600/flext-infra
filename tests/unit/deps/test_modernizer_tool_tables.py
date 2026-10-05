@@ -85,7 +85,7 @@ class TestsFlextInfraDepsModernizerToolTables:
         )
         tm.that(
             set(u.Tests.toml_strings(mypy["disable_error_code"])),
-            eq=set(mypy_policy.ruling_disable_error_codes),
+            eq=set(mypy_policy.disable_error_code),
         )
         tm.that(
             list(u.Tests.toml_list(mypy["overrides"])),
