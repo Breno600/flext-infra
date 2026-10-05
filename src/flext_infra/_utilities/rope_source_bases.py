@@ -110,8 +110,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                     )
                     identity = f"{module}:{scope}{node.name}:{node.lineno}"
                     members: MutableMapping[
-                        str,
-                        m.Infra.SourceClassReference | None,
+                        str, m.Infra.SourceClassReference | None,
                     ] = {}
                     # Class locals are visible to a nested class's base expressions,
                     # but are not a closure for that nested class's own body.
@@ -152,7 +151,8 @@ class FlextInfraUtilitiesRopeSourceBases:
                 elif isinstance(node, ast.Import):
                     for alias in node.names:
                         target = (
-                            alias.name if alias.asname else alias.name.partition(".")[0]
+                            alias.name
+                            if alias.asname else alias.name.partition(".")[0]
                         )
                         bindings[alias.asname or target] = m.Infra.SourceClassReference(
                             target=target,
@@ -173,13 +173,14 @@ class FlextInfraUtilitiesRopeSourceBases:
                                 head = head.value
                             reference = (
                                 cls._reference(value, visible, module)
-                                if isinstance(
-                                    value,
-                                    (ast.Name, ast.Attribute, ast.Subscript),
+                                if isinstance(head, ast.Name)
+                                and isinstance(
+                                    value, (ast.Name, ast.Attribute, ast.Subscript),
                                 )
                                 and isinstance(head, ast.Name)
                                 and not (
-                                    head.id in visible and visible[head.id] is None
+                                    head.id in visible
+                                    and visible[head.id] is None
                                 )
                                 else None
                             )
@@ -265,8 +266,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                 resource = project.find_module(module)
                 if resource is not None:
                     pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
-                        project,
-                        resource,
+                        project, resource,
                     )
                     value = pymodule.get_attribute(parts[index]).get_object()
                     for attribute in parts[index + 1 :]:
@@ -276,7 +276,8 @@ class FlextInfraUtilitiesRopeSourceBases:
             # native namespace, not an ambient import of a planned package.
             if parts[0] == "builtins" and len(parts) == 2:
                 value = (
-                    project.get_module("builtins").get_attribute(parts[1]).get_object()
+                    project.get_module("builtins")
+                    .get_attribute(parts[1]).get_object()
                 )
                 return external_identity(value)
             message = f"No source module for required base: {target}"
@@ -333,16 +334,14 @@ class FlextInfraUtilitiesRopeSourceBases:
                 declared = definitions[identity].bases
                 return (
                     tuple(resolve(base) for base in declared)
-                    if declared
-                    else (object_id,)
+                    if declared else (object_id,)
                 )
             value = external[identity]
             parents = tuple(value.get_superclasses())
             if isinstance(
                 value,
                 FlextInfraUtilitiesRopeRuntime.runtime_type(
-                    "rope.base.pyobjectsdef",
-                    "PyClass",
+                    "rope.base.pyobjectsdef", "PyClass",
                 ),
             ):
                 module = value.get_module()
@@ -368,8 +367,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                     raise ValueError(message)
             return (
                 tuple(external_identity(base) for base in parents)
-                if parents
-                else (object_id,)
+                if parents else (object_id,)
             )
 
         def linearize(identity: str) -> t.StrTuple:
@@ -424,8 +422,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                 if isinstance(
                     value,
                     FlextInfraUtilitiesRopeRuntime.runtime_type(
-                        "rope.base.pyobjectsdef",
-                        "PyClass",
+                        "rope.base.pyobjectsdef", "PyClass",
                     ),
                 ):
                     scope = value.get_scope()
