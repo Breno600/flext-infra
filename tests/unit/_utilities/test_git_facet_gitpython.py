@@ -103,19 +103,6 @@ class TestsFlextInfraGitFacet:
         _ = u.Tests.git_run(repository, "commit", "-am", name)
 
     @staticmethod
-    def _add_lane(tmp_path: Path, repository: Path, branch: str) -> Path:
-        """Create one branch and check it out as a worktree lane under ``tmp_path``.
-
-        Returns:
-            The resulting ``Path``.
-
-        """
-        lane = tmp_path / branch
-        _ = u.Tests.git_run(repository, "branch", branch)
-        _ = u.Tests.git_run(repository, "worktree", "add", str(lane), branch)
-        return lane
-
-    @staticmethod
     def _update_submodules(lane: Path) -> None:
         """Initialize every declared submodule inside the lane checkout."""
         _ = u.Tests.git_run(
@@ -413,7 +400,7 @@ class TestsFlextInfraGitFacet:
         repository = u.Tests.git_repository(tmp_path)
         source = u.Tests.git_repository(tmp_path, "member-source")
         self._add_submodule(repository, source, "member")
-        lane = test_u.Tests.git_linked_lane(tmp_path, repository, "fixture-lane")
+        lane = u.Tests.git_linked_lane(tmp_path, repository, "fixture-lane")
         self._update_submodules(lane)
         gitmodules = (repository / ".gitmodules").read_text(encoding="utf-8")
         gitlink = tm.ok(
@@ -462,7 +449,7 @@ class TestsFlextInfraGitFacet:
         member_source = u.Tests.git_repository(tmp_path, "member-source")
         self._add_submodule(member_source, nested_source, "nested")
         self._add_submodule(repository, member_source, "member")
-        lane = test_u.Tests.git_linked_lane(tmp_path, repository, "dirty-lane")
+        lane = u.Tests.git_linked_lane(tmp_path, repository, "dirty-lane")
         self._update_submodules(lane)
         (lane / "member" / "nested" / "dirty.txt").write_text(
             "dirty\n",
@@ -479,7 +466,7 @@ class TestsFlextInfraGitFacet:
         tmp_path: Path,
     ) -> None:
         repository = u.Tests.git_repository(tmp_path)
-        lane = self._add_lane(tmp_path, repository, "locked-lane")
+        lane = u.Tests.git_linked_lane(tmp_path, repository, "locked-lane")
         _ = u.Tests.git_run(repository, "worktree", "lock", str(lane))
 
         result = u.Infra.git_remove_clean_worktree(repository, lane)
