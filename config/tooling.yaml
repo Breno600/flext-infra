@@ -353,18 +353,26 @@ Infra:
                 module that exists to bind those libraries directly, so its
                 imports are the licensed surface. Every other module stays
                 blocked by the same rule.
-            # Operator ruling 2026-10-05: the whole flake8-type-checking
-            # family TC001-TC004 — typing-only-first-party-import,
+            # Operator DIRECT order 2026-10-05 (stated in-session, in
+            # response to the revoke below): "para ruff, tc001-tc004 essas
+            # rules tem que estar desligadas por quebrar as classes
+            # pydantic" — the whole flake8-type-checking family
+            # TC001-TC004 (typing-only-first-party-import,
             # typing-only-third-party-import,
             # typing-only-standard-library-import and
-            # runtime-import-in-type-checking-block — is ENFORCED on every
-            # file; no global or unscoped ignore entry may carry any of the
-            # four names. This REVOKES the same-day "tc-family-off-global"
-            # attribution found in a parallel lane (never verifiable in the
-            # canonical tracker against the later direct order) and restores
-            # the 2026-10-01/03 scoped rulings it had claimed to supersede:
-            # TC004/TC001 lazy-root dunder-init scope and the TC002/TC003
-            # pydantic rationale stand again.
+            # runtime-import-in-type-checking-block) is DISABLED for every
+            # file, declared by name: moving annotation-only imports into
+            # TYPE_CHECKING breaks runtime-evaluated pydantic model bases.
+            # This supersedes the same-day ENFORCED restoration (#1675) and
+            # the 2026-10-01/03 scoped rulings; the attribution is now
+            # verifiable in the session transcript and beads.
+            - rules: [
+                typing-only-first-party-import,
+                typing-only-third-party-import,
+                typing-only-standard-library-import,
+                runtime-import-in-type-checking-block,
+              ]
+              authority: operator-direct-order-2026-10-05-tc001-tc004-off-pydantic
             - rules: [missing-required-import, implicit-namespace-package]
               authority: operator-ruling-2026-10-03-import-banners-off-global
               reason: >-

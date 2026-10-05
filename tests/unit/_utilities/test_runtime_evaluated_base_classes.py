@@ -91,7 +91,9 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
             )),
         )
         actual = u.Infra.runtime_evaluated_base_classes(
-            tmp_path, planned, self._roots(),
+            tmp_path,
+            planned,
+            self._roots(),
         )
         tm.that(actual, eq=expected)
         for path, source in planned.items():
