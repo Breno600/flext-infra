@@ -272,8 +272,10 @@ def test_check_only_reports_drift(member_root: Path) -> None:
     models_path.write_text(
         MODELS.replace(
             'sku: str = m.Field(description="Stock keeping unit of the ordered item.")',
-            'sku: str = m.Field(description="Stock keeping unit of the ordered item.")\n'
-            '    weight: float = m.Field(default=1.0, description="Drift probe weight.")',
+            'sku: str = m.Field(description="Stock keeping unit of the ordered item.")'
+            "\n"
+            "    weight: float = m.Field("
+            'default=1.0, description="Drift probe weight.")',
         ),
         encoding="utf-8",
     )

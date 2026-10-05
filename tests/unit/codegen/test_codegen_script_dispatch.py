@@ -12,7 +12,6 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import config
-from flext_infra.codegen import FlextInfraCodegenConform
 from tests import c, m, t, u
 
 pytestmark = [pytest.mark.slow]
@@ -52,23 +51,10 @@ class TestsFlextInfraScriptDispatchMakefile:
             root_repository,
             project=u.Tests.project_spec("demo-root"),
         )
-        root = tmp_path / "demo-root"
-        request = u.Tests.conform_request(
-            root,
-            what=c.Infra.CodegenConformSurface.MAKEFILE,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.CHECK,
+        rendered: str = u.Tests.conform_makefile_text(
+            tmp_path / "demo-root",
+            workspace,
         )
-        planned = FlextInfraCodegenConform(
-            repository_root=root,
-            request=request,
-            initial_workspace=workspace,
-        ).plan(request)
-        plan = tm.ok(planned)
-        makefile = next(
-            file for file in plan.files if file.path.name == c.Infra.MAKEFILE_FILENAME
-        )
-        rendered: str = u.Tests.codegen_file_text(makefile)
         return rendered
 
     def test_script_dispatch_repo_routes_extra_verbs_and_normalizes_what(

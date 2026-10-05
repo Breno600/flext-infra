@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Annotated, Literal, Self
 
-from flext_core import m, t, u
+from flext_core import m, t
 
 
 class FlextInfraModelsMiseToolchain:
@@ -80,7 +80,7 @@ class FlextInfraModelsMiseToolchain:
             ),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_required_custom_types(self) -> Self:
             """Reject ambiguous duplicate type declarations at the owner.
 
@@ -95,6 +95,63 @@ class FlextInfraModelsMiseToolchain:
                 msg = "beads required_custom_types must be unique"
                 raise ValueError(msg)
             return self
+
+    class MiseToolEntry(_ConfigContract):
+        """One declarative fleet tool rendered into generated ``.mise.toml``.
+
+        The entry table is the single toolchain surface: per-tool YAML keys,
+        model fields, and template lines do not exist (ADR-005 s1 data-backed
+        structures, ADR-018 p.10 deriving beats listing).
+        """
+
+        name: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Tool identity; the [tools] key when no selector is declared"
+                ),
+            ),
+        ]
+        selector: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(
+                default=None,
+                description=(
+                    "Full Mise selector (npm:, aqua:, github:) rendered as the "
+                    "[tools] key"
+                ),
+            ),
+        ] = None
+        version: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Release selector: 'latest', a major.minor line, or an "
+                    "exact released version; never a lock build identity"
+                ),
+            ),
+        ]
+        version_prefix: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(
+                default=None,
+                description=(
+                    "Release tag prefix keeping unrelated tags out of resolution"
+                ),
+            ),
+        ] = None
+        form: Annotated[
+            Literal["scalar", "inline", "table"],
+            m.Field(
+                default="scalar",
+                description=(
+                    "Rendered [tools] shape; the projection byte contract. "
+                    "scalar (default) is the bare assignment, inline declares "
+                    "the npm lifecycle approval (allow_builds derives from the "
+                    "npm selector), table carries version_prefix"
+                ),
+            ),
+        ] = "scalar"
 
     class ToolchainSpec(_ConfigContract):
         """Language-runtime and native-tool versions shared by generated projects.
@@ -163,22 +220,6 @@ class FlextInfraModelsMiseToolchain:
                 ),
             ),
         ] = ()
-        kubectl_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Exact kubectl version, e.g. '1.32.0'"),
-        ]
-        helm_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Exact Helm version, e.g. '3.19.4'"),
-        ]
-        kind_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Exact kind version, e.g. '0.31.0'"),
-        ]
-        direnv_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Compatible direnv major.minor line"),
-        ]
         environment_path_prepends: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
@@ -191,10 +232,6 @@ class FlextInfraModelsMiseToolchain:
                 ),
             ),
         ] = ()
-        uv_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Compatible uv major.minor line"),
-        ]
         mise_lockfile: Annotated[
             bool,
             m.Field(
@@ -253,6 +290,29 @@ class FlextInfraModelsMiseToolchain:
             Literal["aube"],
             m.Field(description="Mise npm installer with a locked dependency graph"),
         ]
+        tools: Annotated[
+            t.VariadicTuple[FlextInfraModelsMiseToolchain.MiseToolEntry],
+            m.Field(
+                min_length=1,
+                description=(
+                    "Declarative fleet tool table rendered into generated "
+                    ".mise.toml [tools]; entry order is the projection order. "
+                    "Override toolchain.tools entries; never the projection"
+                ),
+            ),
+        ]
+        tool_version_pins: Annotated[
+            t.MappingKV[t.NonEmptyStr, t.NonEmptyStr],
+            m.Field(
+                description=(
+                    "Exact-version pins layered over the tools table by the "
+                    "override files (dict keys deep-merge per tool); `latest` "
+                    "re-resolves upstream and drifts from mise.lock between "
+                    "upg runs, so overrides pin the versions mise.lock "
+                    "resolves and `make upg` advances them deliberately"
+                ),
+            ),
+        ]
         mise_selector: Annotated[
             t.NonEmptyStr,
             m.Field(
@@ -269,128 +329,6 @@ class FlextInfraModelsMiseToolchain:
                     "Mise release `make upg` writes to mise.version and the "
                     "launchers: 'latest', or a held release while upstream's "
                     "newest one is broken"
-                ),
-            ),
-        ]
-        qlty_selector: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Mise selector for qlty. Override toolchain.qlty_selector; "
-                    "never the .mise.toml key."
-                ),
-            ),
-        ]
-        qlty_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Moving qlty release selector, e.g. 'latest'"),
-        ]
-        node_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Compatible Node.js major.minor line"),
-        ]
-        jscpd_selector: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Mise selector for jscpd. Override toolchain.jscpd_selector; "
-                    "never the .mise.toml key."
-                ),
-            ),
-        ]
-        jscpd_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Moving jscpd release selector, e.g. 'latest'"),
-        ]
-        prettier_selector: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Mise selector for prettier. Override toolchain.prettier_selector; "
-                    "never the .mise.toml key."
-                ),
-            ),
-        ]
-        prettier_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Prettier release selector, e.g. 'latest'"),
-        ]
-        waza_selector: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Mise selector for Waza. Override toolchain.waza_selector; "
-                    "never the .mise.toml key."
-                ),
-            ),
-        ]
-        waza_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Moving Waza release selector, e.g. 'latest'"),
-        ]
-        waza_version_prefix: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Release tag prefix of the Waza tool. The repository also "
-                    "publishes azd-extension tags that GitHub marks latest; the "
-                    "prefix keeps them out of resolution."
-                ),
-            ),
-        ]
-        taplo_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Taplo release selector; the committed mise.lock pins the "
-                    "version generation authenticates"
-                ),
-            ),
-        ]
-        ast_grep_selector: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Mise selector for the ast-grep CLI"),
-        ]
-        ast_grep_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Exact ast-grep analyzer version"),
-        ]
-        gitleaks_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Exact Gitleaks scanner version"),
-        ]
-        scc_selector: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Mise selector for scc. Override toolchain.scc_selector; "
-                    "never the .mise.toml key."
-                ),
-            ),
-        ]
-        scc_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="scc release selector (latest)"),
-        ]
-        kubeconform_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Compatible kubeconform minor line"),
-        ]
-        go_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Go runtime selector; mise resolves the go backend through it"
-                ),
-            ),
-        ]
-        make_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Moving Make release selector (latest); mise provisions make "
-                    "so direnv always resolves a real binary rather than a stale "
-                    "host shim. Override toolchain.make_version; never pin."
                 ),
             ),
         ]
@@ -413,7 +351,36 @@ class FlextInfraModelsMiseToolchain:
             """Pyenv-style selector for the configured Python minor line."""
             return self.python_version
 
-        @u.model_validator(mode="after")
+        @m.computed_field
+        @property
+        def tool_versions(self) -> t.MappingKV[str, str]:
+            """Effective release selector per tool: pins layered over entries."""
+            return {
+                entry.name: self.tool_version_pins.get(entry.name, entry.version)
+                for entry in self.tools
+            }
+
+        @m.computed_field
+        @property
+        def tool_selectors(self) -> t.MappingKV[str, str]:
+            """Declared Mise selector of every selector-bearing fleet tool."""
+            return {
+                entry.name: entry.selector
+                for entry in self.tools
+                if entry.selector is not None
+            }
+
+        @m.computed_field
+        @property
+        def tool_version_prefixes(self) -> t.MappingKV[str, str]:
+            """Declared release tag prefix of every prefix-bearing fleet tool."""
+            return {
+                entry.name: entry.version_prefix
+                for entry in self.tools
+                if entry.version_prefix is not None
+            }
+
+        @m.model_validator(mode="after")
         def _validate_version_selectors(self) -> Self:
             """Reject build-identity selectors mise/aube cannot resolve.
 
@@ -422,26 +389,70 @@ class FlextInfraModelsMiseToolchain:
             ("no version ... matches range") and the whole toolchain lifecycle
             (make upg/gen/setup, and therefore CI) breaks. Only real selectors
             (``latest``, a major.minor line, or a released version) may reach
-            the lock.
+            the lock. Tool identities are unique and every non-scalar form
+            carries the selector its projection renders as the [tools] key.
 
             Returns:
                 The resulting ``Self``.
 
             Raises:
-                ValueError: If ``offenders``.
+                ValueError: If ``offenders``, ``duplicate_names``, or ``keyless``.
 
             """
-            offenders = sorted(
-                field
-                for field, value in self
-                if field.endswith("_version")
-                and isinstance(value, str)
-                and "~" in value
+            offenders = (
+                sorted(
+                    f"tools[{entry.name}].version"
+                    for entry in self.tools
+                    if "~" in entry.version
+                )
+                + sorted(
+                    f"tool_version_pins[{name}]"
+                    for name, pinned in self.tool_version_pins.items()
+                    if "~" in pinned
+                )
+                + sorted(
+                    field
+                    for field, value in self
+                    if field.endswith("_version")
+                    and isinstance(value, str)
+                    and "~" in value
+                )
             )
             if offenders:
                 msg = (
                     "toolchain version selectors must be resolvable package "
                     "versions, not build identities: " + ", ".join(offenders)
+                )
+                raise ValueError(msg)
+            unknown_pins = sorted(
+                set(self.tool_version_pins) - {entry.name for entry in self.tools},
+            )
+            if unknown_pins:
+                msg = "tool_version_pins must name declared tools: " + ", ".join(
+                    unknown_pins,
+                )
+                raise ValueError(msg)
+            duplicate_names = sorted(
+                {
+                    entry.name
+                    for entry in self.tools
+                    if [other.name for other in self.tools].count(entry.name) > 1
+                },
+            )
+            if duplicate_names:
+                msg = "toolchain tools must declare unique names: " + ", ".join(
+                    duplicate_names,
+                )
+                raise ValueError(msg)
+            keyless = sorted(
+                entry.name
+                for entry in self.tools
+                if entry.form in {"inline", "table"} and entry.selector is None
+            )
+            if keyless:
+                msg = (
+                    "toolchain tools with inline/table form must declare their "
+                    "selector: " + ", ".join(keyless)
                 )
                 raise ValueError(msg)
             return self
@@ -667,7 +678,7 @@ class FlextInfraModelsMiseToolchain:
                     msg = f"relative path must not be absolute or escape: {path}"
                     raise ValueError(msg)
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_environment_contract(self) -> Self:
             """Reject shell-unsafe, ambiguous, or escaping generated values.
 

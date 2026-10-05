@@ -11,7 +11,6 @@ These pages are generated from public modules and their docstrings.
 - [flext_infra.api](api.md)
 - [flext_infra.base](base.md)
 - [flext_infra.base_selection](base_selection.md)
-- [flext_infra.bootstrap](bootstrap.md)
 - [flext_infra.cli](cli.md)
 - [flext_infra.constants](constants.md)
 - [flext_infra.git](git.md)

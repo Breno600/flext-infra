@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Annotated, Literal, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import t
 from flext_infra._models.deps_tool_config_linters import (
@@ -449,7 +449,7 @@ class FlextInfraModelsDepsToolConfig(
             """Xdist depth per worker: the running item plus one queued, or a chunk."""
             return max(2, self.parallel_schedule_chunk)
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_execution_limits(self) -> Self:
             """Keep item and termination budgets inside the hard invocation cap.
 

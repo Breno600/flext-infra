@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 from typing import Annotated, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import t
 from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
@@ -50,7 +50,7 @@ class FlextInfraConfigModelsContract:
             ),
         ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_evidence_files(self) -> Self:
             files = self.historical_evidence_files
             if len(set(files)) != len(files):
@@ -83,7 +83,7 @@ class FlextInfraConfigModelsContract:
             m.Field(description="Literal terms forbidden in current documentation"),
         ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_patterns(self) -> Self:
             for pattern in self.placeholder_patterns:
                 re.compile(pattern)

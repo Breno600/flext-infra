@@ -273,6 +273,25 @@ class TestsFlextInfraUtilitiesGitMixin:
         return root
 
     @staticmethod
+    def git_linked_lane(parent: Path, repository: Path, branch: str) -> Path:
+        """Create ``branch`` and check it out as a linked worktree under ``parent``.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
+        lane = parent / branch
+        _ = TestsFlextInfraUtilitiesGitMixin.git_run(repository, "branch", branch)
+        _ = TestsFlextInfraUtilitiesGitMixin.git_run(
+            repository,
+            "worktree",
+            "add",
+            str(lane),
+            branch,
+        )
+        return lane
+
+    @staticmethod
     def provision_runtime_environment(runtime_root: Path) -> Path:
         """Create a declared runtime root's environment as real fixture state.
 
