@@ -289,6 +289,13 @@ Timeouts, forwarded signals, other exit codes, malformed JSON, and disagreement 
 exit code and diagnostic severities remain failures, even when stdout exists. Both
 whole-project checks and `check_files` scan every elected provider rule.
 
+AST replacements publish through the authenticated file-plan boundary, then reuse
+the import normalizer on only the rewritten files. Unused imports and formatting
+are normalized before the next mod check; normalization failures remain blocking.
+The root facade export rule preserves literal tuple values and order while removing
+an unnecessary type-only annotation dependency. It does not change classes, aliases
+or inheritance, and it does not rewrite initializer projections.
+
 `GateExecution.issues` retains each finding's original file, position, rule, message,
 and severity. SARIF reports each finding at its native level; raw scanner output remains
 available on the execution. A passing gate therefore proves both the scanner contract
