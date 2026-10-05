@@ -122,7 +122,7 @@ class FlextInfraModelsRelease:
         artifacts: Annotated[
             t.VariadicTuple[FlextInfraModelsRelease.BuildArtifact],
             m.Field(default=(), description="Validated wheel and sdist artifacts"),
-        ]
+        ] = ()
         commit_oid: Annotated[
             t.Infra.ReleaseCommitOid | None,
             m.Field(default=None, description="Source commit object ID"),
@@ -228,7 +228,7 @@ class FlextInfraModelsRelease:
         records: Annotated[
             t.VariadicTuple[FlextInfraModelsRelease.BuildRecord],
             m.Field(default=(), description="Per-project build records"),
-        ]
+        ] = ()
         dry_run: Annotated[bool, m.Field(description="Metadata-only build report")]
         build_constraints_sha256: Annotated[
             t.Infra.ReleaseArtifactSha256,

@@ -36,7 +36,9 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                 "undeclared, the target checkout's own environment"
             ),
         ),
-    ]
+    ] = m.Field(
+        default_factory=lambda: type(settings).fetch_global().Infra.runtime_root,
+    )
 
     _PRELUDE: ClassVar[str] = (
         "import importlib, sys\n"

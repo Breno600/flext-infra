@@ -64,11 +64,8 @@ class FlextInfraModelsNamespaceEnforcer:
         workspace: Annotated[t.NonEmptyStr, m.Field(description="Repository root path")]
         projects: Annotated[
             t.SequenceOf[FlextInfraModelsNamespaceEnforcer.ProjectEnforcementReport],
-            m.Field(
-                default_factory=tuple,
-                description="Per-project enforcement reports for the workspace.",
-            ),
-        ]
+            m.Field(description="Per-project enforcement reports for the workspace."),
+        ] = ()
 
         @m.computed_field
         @property
