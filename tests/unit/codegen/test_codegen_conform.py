@@ -1094,7 +1094,8 @@ class TestsFlextInfraCodegenConform:
             ),
         )
         package_root = (root / "src/consumer/__init__.py").read_text(encoding="utf-8")
-        tm.that(package_root, has='"flext_cli": (')
+        entries, _refs = u.Infra.lazy_import_mapping_source(package_root)
+        tm.that(dict(entries).get("flext_cli", ()), has="r")
         tm.that(package_root, has='"r"')
 
     @staticmethod
