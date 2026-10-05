@@ -103,6 +103,7 @@ class FlextInfraModelsCheck:
         ]
 
         @m.computed_field
+        @property
         def memory_limit_bytes(self) -> int:
             """Validated memory limit converted to bytes for the platform owner.
 
@@ -152,6 +153,7 @@ class FlextInfraModelsCheck:
         )
 
         @m.computed_field
+        @property
         def formatted(self) -> str:
             """Format issue as ``file:line:col [code] message``.
 
@@ -195,6 +197,7 @@ class FlextInfraModelsCheck:
         )
 
         @m.computed_field
+        @property
         def finding_count(self) -> int:
             """Number of findings that fail the gate: every issue blocks.
 
@@ -217,6 +220,7 @@ class FlextInfraModelsCheck:
         )
 
         @m.computed_field
+        @property
         def passed(self) -> bool:
             """Whether every gate passed.
 
@@ -226,6 +230,7 @@ class FlextInfraModelsCheck:
             return all(v.result.passed for v in self.gates.values())
 
         @m.computed_field
+        @property
         def total_findings(self) -> int:
             """Total blocking findings across all gates.
 

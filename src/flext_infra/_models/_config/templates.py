@@ -143,6 +143,7 @@ class FlextInfraConfigModelsTemplates:
         ] = ()
 
         @m.computed_field
+        @property
         def managed_tool_tables(self) -> t.VariadicTuple[str]:
             """First ``tool.*`` segment of each declared conflict section.
 

@@ -1108,6 +1108,7 @@ class FlextInfraConfigModelsMake:
             return self
 
         @m.computed_field
+        @property
         def check_gates_allowed(self) -> t.VariadicTuple[str]:
             """Canonical generated Make check-gate vocabulary.
 
@@ -1126,6 +1127,7 @@ class FlextInfraConfigModelsMake:
             )
 
         @m.computed_field
+        @property
         def check_gates_default(self) -> t.VariadicTuple[str]:
             """Active default gates, shared by local, CI, hooks, and project gates.
 
@@ -1140,6 +1142,7 @@ class FlextInfraConfigModelsMake:
             return tuple(gate for gate in declared if gate not in standalone)
 
         @m.computed_field
+        @property
         def check_gates_local(self) -> t.VariadicTuple[str]:
             """Intersect the local partition with the same active default universe.
 
@@ -1150,6 +1153,7 @@ class FlextInfraConfigModelsMake:
             return tuple(gate for gate in self.check_gates_default if gate in local)
 
         @m.computed_field
+        @property
         def check_gates_ci(self) -> t.VariadicTuple[str]:
             """Preserve the CI partition within the same active default universe.
 
@@ -1161,6 +1165,7 @@ class FlextInfraConfigModelsMake:
 
         @staticmethod
         @m.computed_field
+        @property
         def check_gates_fixable() -> t.VariadicTuple[str]:
             """Gates ``make fix`` can actually repair.
 
@@ -1174,6 +1179,7 @@ class FlextInfraConfigModelsMake:
             return FlextInfraConstantsMake.CANONICAL_FIXABLE_GATE_IDS
 
         @m.computed_field
+        @property
         def custom_handler_policies(
             self,
         ) -> Mapping[str, FlextInfraConfigModelsMake.CustomHandlerPolicy]:

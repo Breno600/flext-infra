@@ -51,6 +51,7 @@ class FlextInfraConfigModelsProvider:
         ]
 
         @m.computed_field
+        @property
         def internal_distribution_prefix(self) -> str:
             """Derive the internal distribution namespace from the owner name.
 

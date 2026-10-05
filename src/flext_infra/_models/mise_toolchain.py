@@ -338,6 +338,7 @@ class FlextInfraModelsMiseToolchain:
         ]
 
         @m.computed_field
+        @property
         def python_required_version(self) -> str:
             """PEP 440 requirement spanning the configured Python minor line.
 
@@ -349,6 +350,7 @@ class FlextInfraModelsMiseToolchain:
             return f">={self.python_version},<{major}.{next_minor}"
 
         @m.computed_field
+        @property
         def python_selector(self) -> str:
             """Pyenv-style selector for the configured Python minor line.
 
@@ -358,6 +360,7 @@ class FlextInfraModelsMiseToolchain:
             return self.python_version
 
         @m.computed_field
+        @property
         def tool_versions(self) -> t.MappingKV[str, str]:
             """Effective release selector per tool: pins layered over entries.
 
@@ -370,6 +373,7 @@ class FlextInfraModelsMiseToolchain:
             }
 
         @m.computed_field
+        @property
         def tool_selectors(self) -> t.MappingKV[str, str]:
             """Declared Mise selector of every selector-bearing fleet tool.
 
@@ -383,6 +387,7 @@ class FlextInfraModelsMiseToolchain:
             }
 
         @m.computed_field
+        @property
         def tool_version_prefixes(self) -> t.MappingKV[str, str]:
             """Declared release tag prefix of every prefix-bearing fleet tool.
 

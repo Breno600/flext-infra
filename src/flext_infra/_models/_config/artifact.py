@@ -238,6 +238,7 @@ class FlextInfraConfigModelsArtifact:
         ]
 
         @m.computed_field
+        @property
         def vscode_files_exclude_map(self) -> Mapping[str, bool]:
             """Derived VS Code ``files.exclude`` entries from the artifact SSOT.
 
@@ -251,6 +252,7 @@ class FlextInfraConfigModelsArtifact:
             }
 
         @m.computed_field
+        @property
         def vscode_watcher_exclude_map(self) -> Mapping[str, bool]:
             """Derived VS Code ``files.watcherExclude`` entries from the SSOT.
 
@@ -264,6 +266,7 @@ class FlextInfraConfigModelsArtifact:
             }
 
         @m.computed_field
+        @property
         def vscode_search_exclude_map(self) -> Mapping[str, bool]:
             """Derived VS Code ``search.exclude`` entries from the artifact SSOT.
 
@@ -273,6 +276,7 @@ class FlextInfraConfigModelsArtifact:
             return dict(self.vscode_files_exclude_map)
 
         @m.computed_field
+        @property
         def source_scan_ignored(self) -> t.VariadicTuple[str]:
             """Derived ``source_scan.ignored_resources`` names from the SSOT.
 
@@ -292,6 +296,7 @@ class FlextInfraConfigModelsArtifact:
         # (extra_ignored / allowed dirs) land in their typed owner;
         # this projection is the seam they will extend.
         @m.computed_field
+        @property
         def gitignore_sections(
             self,
         ) -> t.VariadicTuple[
@@ -369,6 +374,7 @@ class FlextInfraConfigModelsArtifact:
             return tuple(sections)
 
         @m.computed_field
+        @property
         def gitignore_artifact_patterns(self) -> t.VariadicTuple[str]:
             """Derived ``.gitignore`` artifact patterns from the SSOT (stable order).
 

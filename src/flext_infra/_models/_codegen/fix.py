@@ -91,6 +91,7 @@ class FlextInfraModelsCodegenFixModels:
         ]
 
         @m.computed_field
+        @property
         def directory(self) -> str:
             """Private family package beside the facade module.
 
@@ -100,6 +101,7 @@ class FlextInfraModelsCodegenFixModels:
             return f"_{self.module}"
 
         @m.computed_field
+        @property
         def directories(self) -> frozenset[str]:
             """Public and private family package directory names.
 
@@ -109,6 +111,7 @@ class FlextInfraModelsCodegenFixModels:
             return frozenset({self.module, f"_{self.module}"})
 
         @m.computed_field
+        @property
         def file_names(self) -> frozenset[str]:
             """Public and private facade module file names.
 

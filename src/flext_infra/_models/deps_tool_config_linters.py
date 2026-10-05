@@ -217,6 +217,7 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         ]
 
         @m.computed_field
+        @property
         def ignore(self) -> t.StrSequence:
             """Rules excepted for every file, rendered as Ruff ``ignore``.
 
@@ -233,6 +234,7 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             )
 
         @m.computed_field
+        @property
         def per_file_ignores(self) -> t.Infra.PerFileIgnores:
             """Scoped exceptions, rendered as Ruff ``per-file-ignores``.
 

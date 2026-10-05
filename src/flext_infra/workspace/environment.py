@@ -43,7 +43,7 @@ class FlextInfraWorkspaceEnvironmentMixin:
             envrc_result = cls._sync_envrc(request)
             if envrc_result.failure:
                 return r[m.Infra.WorkspaceEnvironmentSyncResult].from_failure(
-                    envrc_result
+                    envrc_result,
                 )
             changed = (
                 (repository_root / c.Infra.ENVRC_FILENAME,)

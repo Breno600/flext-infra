@@ -202,6 +202,7 @@ class FlextInfraModelsLayout:
         ] = ()
 
         @m.computed_field
+        @property
         def actionable(self) -> t.VariadicTuple[FlextInfraModelsLayout.LayoutFinding]:
             """Findings the engine acts on in apply mode (never review).
 
@@ -213,6 +214,7 @@ class FlextInfraModelsLayout:
             )
 
         @m.computed_field
+        @property
         def applied_count(self) -> int:
             """Number of findings executed by an apply run.
 

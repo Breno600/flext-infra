@@ -49,6 +49,7 @@ class FlextInfraModelsNamespaceEnforcer:
         ] = 0
 
         @m.computed_field
+        @property
         def has_violations(self) -> bool:
             """Whether relocatable findings remain in this project.
 
@@ -70,6 +71,7 @@ class FlextInfraModelsNamespaceEnforcer:
         ]
 
         @m.computed_field
+        @property
         def has_violations(self) -> bool:
             """Whether any project carries a violation.
 

@@ -189,6 +189,7 @@ class FlextInfraModelsTransformers:
         ] = m.Field(default_factory=frozenset[str])
 
         @m.computed_field
+        @property
         def has_violations(self) -> bool:
             """True if any imports need redirecting or moving.
 

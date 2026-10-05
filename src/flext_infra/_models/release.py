@@ -194,6 +194,7 @@ class FlextInfraModelsRelease:
         ] = False
 
         @m.computed_field
+        @property
         def tag(self) -> str:
             """Tag that will identify ``next``.
 
@@ -203,6 +204,7 @@ class FlextInfraModelsRelease:
             return FlextInfraConstantsRelease.TAG_FORMAT.format(version=self.next)
 
         @m.computed_field
+        @property
         def releasable(self) -> bool:
             """Whether a release commit is due: a declared release, or a real bump.
 
