@@ -413,7 +413,7 @@ class TestsFlextInfraGitFacet:
         repository = u.Tests.git_repository(tmp_path)
         source = u.Tests.git_repository(tmp_path, "member-source")
         self._add_submodule(repository, source, "member")
-        lane = test_u.Tests.git_linked_lane(tmp_path, repository, "fixture-lane")
+        lane = u.Tests.git_linked_lane(tmp_path, repository, "fixture-lane")
         self._update_submodules(lane)
         gitmodules = (repository / ".gitmodules").read_text(encoding="utf-8")
         gitlink = tm.ok(
@@ -462,7 +462,7 @@ class TestsFlextInfraGitFacet:
         member_source = u.Tests.git_repository(tmp_path, "member-source")
         self._add_submodule(member_source, nested_source, "nested")
         self._add_submodule(repository, member_source, "member")
-        lane = test_u.Tests.git_linked_lane(tmp_path, repository, "dirty-lane")
+        lane = u.Tests.git_linked_lane(tmp_path, repository, "dirty-lane")
         self._update_submodules(lane)
         (lane / "member" / "nested" / "dirty.txt").write_text(
             "dirty\n",

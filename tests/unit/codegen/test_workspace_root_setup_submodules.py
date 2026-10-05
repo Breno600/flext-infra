@@ -58,7 +58,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
             project=u.Tests.project_spec("flext"),
             subprojects=(member,),
         )
-        rendered: str = test_u.Tests.conform_makefile_text(
+        rendered: str = u.Tests.conform_makefile_text(
             tmp_path / "render-root",
             workspace,
         )
