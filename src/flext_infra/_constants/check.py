@@ -26,6 +26,23 @@ class FlextInfraConstantsCheck:
     PYTEST_SELECTED_COLLECTION_OPTION: ClassVar[str] = "--flext-selected-collection"
     PYTEST_SUITE_STOP_OPTION: ClassVar[str] = "--flext-suite-stop-monotonic"
     PYTEST_COLLECTION_MANIFEST_OPTION: ClassVar[str] = "--flext-collection-manifest"
+    PYTEST_PROFILE_LAUNCHER: ClassVar[str] = (
+        "import cProfile, runpy, sys\n"
+        "output = sys.argv.pop(1)\n"
+        "profile = cProfile.Profile()\n"
+        "try:\n"
+        "    profile.runcall(\n"
+        "        runpy.run_module, 'pytest', run_name='__main__', alter_sys=True\n"
+        "    )\n"
+        "finally:\n"
+        "    profile.dump_stats(output)\n"
+    )
+    """``python -c`` profiled pytest child: ``<output.pstats> <pytest args...>``.
+
+    Stdlib only, so pytest installs assertion rewriting before any plugin
+    package (``flext_infra`` included) is imported; pytest's ``SystemExit``
+    still sets the exit status, unlike ``python -m cProfile``.
+    """
 
     @unique
     class SarifSchema(StrEnum):

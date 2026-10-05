@@ -178,7 +178,10 @@ class TestsFlextInfraPyprojectConformTopologySources:
             dependencies,
             eq={
                 f"{cli.distribution} @ git+{cli.url}@{candidate_commit}",
-                f"{infra.distribution} @ git+{infra.url}@{u.Tests.provider_branch()}",
+                (
+                    f"{infra.distribution} @ "
+                    f"git+{infra.url}@{test_u.Tests.provider_branch()}"
+                ),
             },
         )
         tm.that(
