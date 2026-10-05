@@ -81,9 +81,7 @@ class TestsFlextInfraFileGateAndReconcileMakefile:
     def test_file_gate_verb_is_declared_fleet_wide(self) -> None:
         """The codegen SSOT declares file-gate once with no profile restriction."""
         verb = next(
-            verb
-            for verb in config.Infra.codegen.make.verbs
-            if verb.name == "file-gate"
+            verb for verb in config.Infra.codegen.make.verbs if verb.name == "file-gate"
         )
         tm.that(
             "fast per-file gates" in verb.description,
@@ -125,7 +123,7 @@ class TestsFlextInfraFileGateAndReconcileMakefile:
             # Ruff lint and format are the hard gates: no `|| true` on them.
             tm.that(body.count('-m ruff check "$$file"'), eq=1)
             tm.that(body.count('-m ruff format --check "$$file"'), eq=1)
-            tm.that(body, has='printf \'ERROR: file-gate requires FILE=')
+            tm.that(body, has="printf 'ERROR: file-gate requires FILE=")
             # The advisory scanners stay reportable, never blocking.
             tm.that(
                 body,
