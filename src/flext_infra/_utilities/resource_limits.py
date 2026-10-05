@@ -316,15 +316,16 @@ class FlextInfraUtilitiesResourceLimits:
         tooling = project_dir / "config" / "tooling.yaml"
         if not tooling.is_file():
             return None
-        node: t.JsonValue = u.Cli.yaml_safe_load(tooling).unwrap()
+        loaded: t.JsonMapping = u.Cli.yaml_safe_load(tooling).unwrap()
+        current: t.JsonValue = dict(loaded)
         for key in ("Infra", "tooling", "tools", "mypy", "timeout_seconds"):
-            if not isinstance(node, dict):
+            if not isinstance(current, dict):
                 msg = f"project tooling.yaml level above {key!r} is not a mapping"
                 raise TypeError(msg)
-            if key not in node:
+            if key not in current:
                 return None
-            node = node[key]
-        raw_budget = node
+            current = current[key]
+        raw_budget = current
         if not isinstance(raw_budget, int) or isinstance(raw_budget, bool):
             msg = f"project mypy budget must be a plain integer: {raw_budget!r}"
             raise TypeError(msg)

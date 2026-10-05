@@ -70,7 +70,7 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     )
     isolation.enter_context(
         u.Tests.env_vars_context({
-            str(spec.data_home_environment_variable): cache_home,
+            spec.data_home_environment_variable: cache_home,
         }),
     )
     session.stash[_SESSION_ISOLATION] = isolation

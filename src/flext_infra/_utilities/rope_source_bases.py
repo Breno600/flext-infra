@@ -490,7 +490,21 @@ class FlextInfraUtilitiesRopeSourceBases:
 
         derived = set(roots)
         for definition in definitions.values():
-            linearize(definition.identity)
+            try:
+                linearize(definition.identity)
+            except ValueError as error:
+                # Same contract as the reference loop below: a lineage that
+                # crosses an unresolved external base (a PEP 562 lazy
+                # namespace, or a third-party module such as libcst that no
+                # project source module backs) cannot be derived; the class
+                # simply does not qualify as runtime-evaluated.
+                if str(error).startswith(
+                    "Unresolved external base:",
+                ) or str(error).startswith(
+                    "No source module for required base:",
+                ):
+                    continue
+                raise
             for reference in definition.bases:
                 try:
                     lineage = linearize(resolve(reference))

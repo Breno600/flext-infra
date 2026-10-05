@@ -228,8 +228,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
                 policy.termination_grace_seconds,
             ),
         )
-        sleep_seconds = u.Infra.mypy_runner_timeout(limit) + policy.slow_timeout_seconds
-        sleep = f"time.sleep({sleep_seconds})"
+        bound = u.Infra.mypy_runner_timeout(limit) + policy.slow_timeout_seconds
+        sleep = f"time.sleep({bound})"
         tail = f"sys.exit({expected})" if leader_exits else sleep
         descendant = (
             "import signal,time; signal.signal(signal.SIGTERM, signal.SIG_IGN); "
@@ -309,8 +309,9 @@ class TestsFlextInfraUtilitiesResourceLimits:
     @staticmethod
     def test_mypy_resource_contract_rejects_non_positive_limits() -> None:
         """Reject invalid external configuration before spawning a process."""
+        invalid: int = 0
         with pytest.raises(ValueError, match="greater than 0"):
-            m.Infra.MypyResourceLimit(memory_limit_mb=0, timeout_seconds=0)
+            m.Infra.MypyResourceLimit(memory_limit_mb=invalid, timeout_seconds=invalid)
 
     @staticmethod
     def test_mypy_resource_limit_parses_environment_at_boundary() -> None:
