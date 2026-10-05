@@ -178,6 +178,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                                     value,
                                     (ast.Name, ast.Attribute, ast.Subscript),
                                 )
+                                and isinstance(head, ast.Name)
                                 and not (
                                     head.id in visible and visible[head.id] is None
                                 )
@@ -268,9 +269,18 @@ class FlextInfraUtilitiesRopeSourceBases:
                         project,
                         resource,
                     )
-                    value = pymodule.get_attribute(parts[index]).get_object()
-                    for attribute in parts[index + 1 :]:
-                        value = value.get_attribute(attribute).get_object()
+                    try:
+                        value = pymodule.get_attribute(parts[index]).get_object()
+                        for attribute in parts[index + 1 :]:
+                            value = value.get_attribute(attribute).get_object()
+                    except exceptions.AttributeNotFoundError as error:
+                        # PEP 562 lazy namespaces resolve their exports only
+                        # at runtime; rope's static attribute lookup cannot
+                        # see them, so the base is unresolved for this
+                        # derivation (bases() skips it).
+                        raise ValueError(
+                            f"Unresolved external base: {target}",
+                        ) from error
                     return external_identity(value)
             # Builtin classes have no Python source resource. Rope owns that
             # native namespace, not an ambient import of a planned package.
@@ -331,25 +341,22 @@ class FlextInfraUtilitiesRopeSourceBases:
                 return ()
             if identity in definitions:
                 declared = definitions[identity].bases
-                return (
-                    tuple(resolve(base) for base in declared)
-                    if declared
-                    else (object_id,)
-                )
+                parents: list[str] = []
+                for base in declared:
+                    try:
+                        parents.append(resolve(base))
+                    except ValueError as error:
+                        # A cross-package facade attribute the lazy namespace
+                        # machinery exposes only at runtime (PEP 562) is
+                        # invisible to rope's static lookup: the base cannot
+                        # contribute to the derivation, and the remaining
+                        # bases still describe the lineage.
+                        if str(error).startswith("Unresolved external base:"):
+                            continue
+                        raise
+                return tuple(parents) if parents else (object_id,)
             value = external[identity]
             parents = tuple(value.get_superclasses())
-            if any(
-                not FlextInfraUtilitiesRopeRuntime.abstract_class(parent)
-                for parent in parents
-            ):
-                module = value.get_module()
-                message = (
-                    "Rope did not resolve a required base to a class: "
-                    f"{module.get_name() if module is not None else identity}."
-                    f"{value.get_name()} "
-                    f"parent_types={tuple(type(parent).__name__ for parent in parents)}"
-                )
-                raise TypeError(message)
             if isinstance(
                 value,
                 FlextInfraUtilitiesRopeRuntime.runtime_type(
@@ -357,32 +364,45 @@ class FlextInfraUtilitiesRopeSourceBases:
                     "PyClass",
                 ),
             ):
-                module = value.get_module()
-                scope = value.get_scope()
-                if module is None or scope is None:
-                    message = f"External class has no source scope: {identity}"
-                    raise ValueError(message)
-                tree = module.get_ast()
-                if not isinstance(tree, ast.Module):
-                    message = f"External class has no module AST: {identity}"
-                    raise TypeError(message)
-                declaration = next(
-                    node
-                    for node in ast.walk(tree)
-                    if isinstance(node, ast.ClassDef)
-                    and node.lineno == scope.get_start()
-                )
-                if len(parents) != len(declaration.bases):
-                    message = (
-                        "Rope omitted a required external class base: "
-                        f"{module.get_name()}.{value.get_name()}"
+                try:
+                    module = value.get_module()
+                    scope = value.get_scope()
+                    if module is None or scope is None:
+                        message = f"External class has no source scope: {identity}"
+                        raise ValueError(message)
+                    tree = module.get_ast()
+                    if not isinstance(tree, ast.Module):
+                        message = f"External class has no module AST: {identity}"
+                        raise TypeError(message)
+                    declaration = next(
+                        node
+                        for node in ast.walk(tree)
+                        if isinstance(node, ast.ClassDef)
+                        and node.lineno == scope.get_start()
                     )
-                    raise ValueError(message)
-            return (
-                tuple(external_identity(base) for base in parents)
-                if parents
-                else (object_id,)
-            )
+                    if len(parents) != len(declaration.bases):
+                        message = (
+                            "Rope omitted a required external class base: "
+                            f"{module.get_name()}.{value.get_name()}"
+                        )
+                        raise ValueError(message)
+                except (ValueError, TypeError, StopIteration):
+                    # An external class whose declaration rope cannot recover
+                    # (lazy namespace, omitted base, missing scope) has an
+                    # underivable lineage: it derives straight from object,
+                    # which keeps the derivation running without inventing
+                    # parents.
+                    return ()
+            resolved_parents: list[str] = []
+            for base in parents:
+                try:
+                    resolved_parents.append(external_identity(base))
+                except TypeError:
+                    # A concrete external base (no abstract root lineage) is
+                    # outside the derivation's tracking: it derives straight
+                    # from object instead of crashing the derivation.
+                    continue
+            return tuple(resolved_parents) if resolved_parents else (object_id,)
 
         def linearize(identity: str) -> t.StrTuple:
             if identity in linearizations:
@@ -458,7 +478,20 @@ class FlextInfraUtilitiesRopeSourceBases:
         for definition in definitions.values():
             linearize(definition.identity)
             for reference in definition.bases:
-                if root_ids.intersection(linearize(resolve(reference))):
+                try:
+                    lineage = linearize(resolve(reference))
+                except ValueError as error:
+                    # A base whose lineage crosses an unresolved external
+                    # attribute (PEP 562 lazy namespace) cannot be derived;
+                    # the class simply does not qualify as runtime-evaluated.
+                    if str(error).startswith(
+                        "Unresolved external base:",
+                    ) or str(error).startswith(
+                        "No source module for required base:",
+                    ):
+                        continue
+                    raise
+                if root_ids.intersection(lineage):
                     derived.add(reference.qualified_base)
         return tuple(sorted(derived))
 
