@@ -134,8 +134,6 @@ class TestsFlextInfraSmellsGate:
         mode = u.Cli.json_walk_path(language, ("smells", "mode"))
         if mode is None:
             mode = u.Cli.json_walk_path(config.data, ("smells", "mode"))
-        if language["enabled"] is False or mode == "disabled":
-            return False
         identical = cls._comparison_rule(config, "identical_code")
         similar = cls._comparison_rule(config, "similar_code")
         limits = [
@@ -143,8 +141,6 @@ class TestsFlextInfraSmellsGate:
             for rule in (identical, similar)
             if rule["enabled"] is True
         ]
-        if not limits:
-            return False
         nodes = u.Cli.json_walk_path(
             language,
             ("smells", "duplication", "nodes_threshold"),
@@ -168,7 +164,11 @@ class TestsFlextInfraSmellsGate:
                 f"def {function}(value):\n{body}\n    return value\n",
                 encoding=c.Cli.ENCODING_DEFAULT,
             )
-        return True
+        return (
+            language["enabled"] is True
+            and mode != "disabled"
+            and (identical["enabled"] is True or similar["enabled"] is True)
+        )
 
     @staticmethod
     def _assert_native_span(original: t.JsonMapping, retained: t.JsonMapping) -> None:
@@ -368,7 +368,13 @@ class TestsFlextInfraSmellsGate:
                 eq=True,
             )
         else:
-            tm.that(native_results, length=0)
+            tm.that(
+                any(
+                    u.Cli.json_deep_mapping_list(result, "relatedLocations")
+                    for result in native_results
+                ),
+                eq=False,
+            )
         tm.that(len(report_results), eq=len(native_results))
         tm.that(execution.finding_count, eq=len(native_results))
         for observed, emitted in zip(native_results, report_results, strict=True):
