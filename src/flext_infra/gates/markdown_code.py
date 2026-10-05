@@ -136,12 +136,13 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         origin: Mapping[str, t.Pair[str, int]],
         *,
         default_message: str,
-        file_pattern: re.Pattern[str],
     ) -> t.SequenceOf[m.Infra.Issue]:
         """Translate one ruff result into origin-mapped findings coded with this gate.
 
-        A failed run without mapped findings never reads as a clean pass: the
-        tool-level error becomes the finding.
+        Every ruff line that names an extracted source (verdict, parse error or
+        any other diagnostic) maps to its documentation file and line, carrying
+        the ruff line as evidence. A failed run naming no source never reads
+        as a clean pass: the tool-level error becomes the finding.
 
         Returns:
             The resulting ``t.SequenceOf[m.Infra.Issue]``.
@@ -149,14 +150,14 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         """
         issues: t.MutableSequenceOf[m.Infra.Issue] = []
         for line in (result.stdout + "\n" + result.stderr).splitlines():
-            match = file_pattern.match(line.strip())
+            match = c.Infra.MARKDOWN_CODE_SOURCE_RE.search(line)
             issue = (
                 self._origin_issue(
                     origin,
                     match.group("file"),
                     code=self.gate_id,
-                    message=default_message,
-                    line=1,
+                    message=f"{default_message}: {line.strip()}",
+                    line=int(match.group("line") or 1),
                 )
                 if match
                 else None
@@ -253,7 +254,6 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                         default_message=(
                             "embedded block does not survive the format round-trip"
                         ),
-                        file_pattern=c.Infra.MARKDOWN_CODE_FORMAT_ERROR_RE,
                     ),
                 )
                 if format_ok:
@@ -267,7 +267,6 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                         default_message=(
                             "embedded code is not ruff-formatted (fix via `make fix`)"
                         ),
-                        file_pattern=c.Infra.MARKDOWN_CODE_FORMAT_FILE_RE,
                     ),
                 )
             passed = format_ok
