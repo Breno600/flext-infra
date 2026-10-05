@@ -54,7 +54,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
         config_path = tmp_path / ".taplo.toml"
         config_path.write_text('include = ["**/*.toml"]\n', encoding="utf-8")
         formatter = infra_u.Infra.format_toml_source
-        taplo_version = config.Infra.codegen.toolchain.taplo_version
+        taplo_version = config.Infra.codegen.toolchain.tool_versions["taplo"]
         process_timeout_seconds = (
             config.Infra.tooling.tools.tomlsort.process_timeout_seconds
         )
@@ -101,7 +101,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
                 'name="demo"\n',
                 path=future_root / "pyproject.toml",
                 toolchain_root=future_root,
-                taplo_version=config.Infra.codegen.toolchain.taplo_version,
+                taplo_version=config.Infra.codegen.toolchain.tool_versions["taplo"],
                 process_timeout_seconds=(
                     config.Infra.tooling.tools.tomlsort.process_timeout_seconds
                 ),
@@ -141,7 +141,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
             'name="demo"\n',
             path=tmp_path / "pyproject.toml",
             toolchain_root=tmp_path,
-            taplo_version=config.Infra.codegen.toolchain.taplo_version,
+            taplo_version=config.Infra.codegen.toolchain.tool_versions["taplo"],
             process_timeout_seconds=(
                 config.Infra.tooling.tools.tomlsort.process_timeout_seconds
             ),
@@ -157,7 +157,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
             'name="demo"\n',
             path=tmp_path / "pyproject.toml",
             toolchain_root=tmp_path,
-            taplo_version=config.Infra.codegen.toolchain.taplo_version,
+            taplo_version=config.Infra.codegen.toolchain.tool_versions["taplo"],
             process_timeout_seconds=(
                 config.Infra.tooling.tools.tomlsort.process_timeout_seconds
             ),
