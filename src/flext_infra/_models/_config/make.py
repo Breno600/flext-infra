@@ -11,7 +11,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Annotated, Literal, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import t
 from flext_infra._constants import (
@@ -80,7 +80,7 @@ class FlextInfraConfigModelsMake:
             ),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_local_check_gates(self) -> Self:
             """Every locally owned gate must be in the allowed check vocabulary.
 
@@ -151,7 +151,7 @@ class FlextInfraConfigModelsMake:
             ),
         ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_contexts(self) -> Self:
             """Require unique contexts and retain every step in the local workflow.
 
@@ -265,7 +265,7 @@ class FlextInfraConfigModelsMake:
             ),
         ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_actions(self) -> Self:
             """Reject unknown, duplicated, or out-of-lifecycle docs actions.
 
@@ -358,7 +358,7 @@ class FlextInfraConfigModelsMake:
             m.Field(description="Actions cache key namespace"),
         ] = "flext-testmon"
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def require_ascending_quota_ladder(self) -> Self:
             """Keep the quota ladder strictly ascending within the percent scale.
 
@@ -425,7 +425,7 @@ class FlextInfraConfigModelsMake:
             ),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def require_external_cache_contract(self) -> Self:
             """Keep the official cache variable and the external path policy exact.
 
@@ -551,7 +551,7 @@ class FlextInfraConfigModelsMake:
             ),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _reject_unsafe_fixes(self) -> Self:
             """Keep the lint repair information-preserving.
 
@@ -635,7 +635,7 @@ class FlextInfraConfigModelsMake:
                 m.Field(description="Actions cache key namespace"),
             ] = "flext-testmon"
 
-            @u.model_validator(mode="after")
+            @m.model_validator(mode="after")
             def require_ascending_quota_ladder(self) -> Self:
                 """Keep the quota ladder strictly ascending within the percent scale.
 
@@ -694,7 +694,7 @@ class FlextInfraConfigModelsMake:
                 m.Field(description="Repository-relative pytest reports root"),
             ]
 
-            @u.model_validator(mode="after")
+            @m.model_validator(mode="after")
             def require_external_database_contract(self) -> Self:
                 """Keep testmon's official path variable and external path policy exact.
 
@@ -750,9 +750,7 @@ class FlextInfraConfigModelsMake:
             FlextInfraExternalCacheDirectorySpec,
             FlextInfraConfigModelsContract.ConfigContract,
         ):
-            """Project-keyed shared Mypy cache: one analysis per project,
-            reused across relocks.
-            """
+            """Project-keyed shared Mypy cache: one analysis per project, reused across relocks."""
 
             cache_environment_variable: Annotated[
                 FlextInfraConstantsMake.MypyCacheEnvironment,
@@ -790,7 +788,7 @@ class FlextInfraConfigModelsMake:
                 ),
             ]
 
-            @u.model_validator(mode="after")
+            @m.model_validator(mode="after")
             def require_external_cache_contract(self) -> Self:
                 """Keep the official cache variable and the external path policy exact.
 
@@ -950,27 +948,57 @@ class FlextInfraConfigModelsMake:
                 ),
             ),
         ] = m.Field(default_factory=lambda: MappingProxyType({}))
-        opt_in_check_gates: Annotated[
+        informational_check_gates: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
+                default=(),
                 description=(
-                    "Built-in gates that stay allowed and explicitly invocable "
-                    "but never join the default check, CI, or hook gate sets"
+                    "Check gates whose findings stay informational: reported in "
+                    "the check report and SARIF but never failing `make check`. "
+                    "Operator law 2026-10-05: mypy, pyright and codemod "
+                    "findings must not block CI."
                 ),
             ),
         ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
+        def _validate_informational_check_gates(self) -> Self:
+            """Informational gates must be unique declared gate vocabulary.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If make informational_check_gates must be unique;
+                    or if make informational_check_gates name unknown gates.
+
+            """
+            if len(set(self.informational_check_gates)) != len(
+                self.informational_check_gates,
+            ):
+                msg = "make informational_check_gates must be unique"
+                raise ValueError(msg)
+            unknown = sorted(
+                set(self.informational_check_gates) - set(self.check_gates_allowed),
+            )
+            if unknown:
+                msg = (
+                    "make informational_check_gates name unknown gates: "
+                    f"{', '.join(unknown)}"
+                )
+                raise ValueError(msg)
+            return self
+
+        @m.model_validator(mode="after")
         def _validate_project_check_gates(self) -> Self:
-            """Project gates are unique built-in strangers; opt-in gates are built-ins.
+            """Project gates must be unique and must not shadow a built-in.
 
             Returns:
                 The resulting ``Self``.
 
             Raises:
                 ValueError: If make project_check_gates must be unique; or if make
-                    project_check_gates shadow built-in gates; or if make
-                    opt_in_check_gates name unknown gates.
+                    project_check_gates shadow built-in gates.
 
             """
             if len(set(self.project_check_gates)) != len(self.project_check_gates):
@@ -984,15 +1012,9 @@ class FlextInfraConfigModelsMake:
                     f"{', '.join(shadowed)}"
                 )
                 raise ValueError(msg)
-            unknown = sorted(set(self.opt_in_check_gates) - builtin)
-            if unknown:
-                msg = (
-                    f"make opt_in_check_gates name unknown gates: {', '.join(unknown)}"
-                )
-                raise ValueError(msg)
             return self
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_verbs(self) -> Self:
             """Validate declared public verbs against workflow and contract.
 
@@ -1133,6 +1155,9 @@ class FlextInfraConfigModelsMake:
             the whole vocabulary: a consuming repository owns gates this
             package knows nothing about, and rejecting them as unknown is what
             kept working handlers unreachable from `make check`.
+
+            Returns:
+                The resulting ``t.VariadicTuple[str]``.
             """
             return (
                 *FlextInfraConstantsMake.CANONICAL_GATE_IDS,
@@ -1142,28 +1167,37 @@ class FlextInfraConfigModelsMake:
         @m.computed_field
         @property
         def check_gates_default(self) -> t.VariadicTuple[str]:
-            """Active default gates, shared by local, CI, hooks, and project gates."""
-            excluded = frozenset((
-                *self.standalone_check_gates.values(),
-                *self.opt_in_check_gates,
-            ))
+            """Active default gates, shared by local, CI, hooks, and project gates.
+
+            Returns:
+                The resulting ``t.VariadicTuple[str]``.
+            """
+            standalone = frozenset(self.standalone_check_gates.values())
             declared = (
-                *FlextInfraConstantsMake.CANONICAL_GATE_IDS,
+                *FlextInfraConstantsMake.CANONICAL_DEFAULT_GATE_IDS,
                 *self.project_check_gates,
             )
-            return tuple(gate for gate in declared if gate not in excluded)
+            return tuple(gate for gate in declared if gate not in standalone)
 
         @m.computed_field
         @property
         def check_gates_local(self) -> t.VariadicTuple[str]:
-            """Intersect the local partition with the same active default universe."""
+            """Intersect the local partition with the same active default universe.
+
+            Returns:
+                The resulting ``t.VariadicTuple[str]``.
+            """
             local = frozenset(self.ci.local_check_gates)
             return tuple(gate for gate in self.check_gates_default if gate in local)
 
         @m.computed_field
         @property
         def check_gates_ci(self) -> t.VariadicTuple[str]:
-            """Preserve the CI partition within the same active default universe."""
+            """Preserve the CI partition within the same active default universe.
+
+            Returns:
+                The resulting ``t.VariadicTuple[str]``.
+            """
             local = frozenset(self.check_gates_local)
             return tuple(gate for gate in self.check_gates_default if gate not in local)
 
@@ -1175,6 +1209,9 @@ class FlextInfraConfigModelsMake:
             Asking for a gate that cannot fix anything still pays its full cost;
             a fix pass built from the ALLOWED vocabulary once timed out doing
             exactly that.
+
+            Returns:
+                The resulting ``t.VariadicTuple[str]``.
             """
             return FlextInfraConstantsMake.CANONICAL_FIXABLE_GATE_IDS
 
@@ -1190,6 +1227,10 @@ class FlextInfraConfigModelsMake:
             a workspace root orchestrating its subprojects -- declares only the
             fields it relaxes, so the engine never has to know which project
             it is conforming.
+
+            Returns:
+                The resulting ``Mapping[str,
+                    FlextInfraConfigModelsMake.CustomHandlerPolicy]``.
             """
             base = self.custom_handler_policy
             overrides = self.custom_handler_profile_overrides

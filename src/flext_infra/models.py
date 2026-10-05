@@ -22,6 +22,7 @@ from flext_infra._models.docs import FlextInfraModelsDocs
 from flext_infra._models.gates import FlextInfraModelsGates
 from flext_infra._models.git import FlextInfraModelsGit
 from flext_infra._models.layout import FlextInfraModelsLayout
+from flext_infra._models.mise_toolchain import FlextInfraModelsMiseToolchain
 from flext_infra._models.mixins import FlextInfraModelsMixins
 from flext_infra._models.promoted import FlextInfraModelsPromoted
 from flext_infra._models.refactor import FlextInfraModelsRefactor
@@ -65,6 +66,7 @@ class FlextInfraModels(FlextCliModels):
         FlextInfraModelsTestmon,
         FlextInfraModelsCore,
         FlextInfraModelsBase,
+        FlextInfraModelsMiseToolchain,
     ):
         """Infrastructure-domain models - all classes exposed directly."""
 

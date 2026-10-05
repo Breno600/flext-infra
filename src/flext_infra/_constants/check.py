@@ -262,7 +262,7 @@ class FlextInfraConstantsCheck:
     # rendered from this typed SSOT at scan time, never a hand-maintained file).
     JSCPD_BINARY: ClassVar[str] = "jscpd"
     (
-        "Provisioned by mise from codegen.toolchain.jscpd_version; "
+        "Provisioned by mise from codegen.toolchain.tools entry 'jscpd'; "
         "never a runner or a version here."
     )
 
@@ -271,7 +271,7 @@ class FlextInfraConstantsCheck:
     # `make fix`. The binary is mise-provisioned, never a runner or version).
     PRETTIER_BINARY: ClassVar[str] = "prettier"
     (
-        "Provisioned by mise from codegen.toolchain.prettier_version; "
+        "Provisioned by mise from codegen.toolchain.tools entry 'prettier'; "
         "never a runner or a version here."
     )
     JSCPD_MODE: ClassVar[str] = "strict"

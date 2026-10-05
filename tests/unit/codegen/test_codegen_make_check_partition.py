@@ -55,14 +55,50 @@ class TestsFlextInfraCodegenMakeCheckPartition:
         )
 
     @staticmethod
-    def test_ci_partition_runs_the_active_type_checkers() -> None:
-        """No active type checker is hidden from CI, so type regressions surface."""
+    def test_ci_partition_runs_the_non_local_type_checkers() -> None:
+        """Active type checkers follow the declared partition for any value.
+
+        The informative (local-only) set is config-owned: a checker declared
+        in ``ci.local_check_gates`` stays out of CI, and every checker outside
+        the declared local set surfaces in the CI partition.
+        """
         make = config.Infra.codegen.make
         active_type_checkers = c.Infra.TYPE_CHECKER_GATES & set(
             make.check_gates_default,
         )
         tm.that(bool(active_type_checkers), eq=True)
-        tm.that(active_type_checkers <= set(make.check_gates_ci), eq=True)
+        local = frozenset(make.ci.local_check_gates)
+        tm.that(
+            active_type_checkers & local <= set(make.check_gates_local),
+            eq=True,
+        )
+        tm.that(
+            active_type_checkers - local <= set(make.check_gates_ci),
+            eq=True,
+        )
+
+    @staticmethod
+    def test_informational_posture_is_a_unique_declared_vocabulary_subset() -> None:
+        """The informational posture names unique gates that still run in CI.
+
+        The posture never removes a gate from any partition: informational
+        gates run, report their findings, and only their blocking power is
+        withheld (operator law 2026-10-05).
+        """
+        make = config.Infra.codegen.make
+        posture = make.informational_check_gates
+        tm.that(len(set(posture)), eq=len(posture))
+        tm.that(set(posture) <= set(make.check_gates_allowed), eq=True)
+        tm.that(set(posture) <= set(make.check_gates_ci), eq=True)
+
+    @staticmethod
+    def test_informational_posture_rejects_unknown_gates() -> None:
+        """An informational gate outside the declared vocabulary fails loud."""
+        payload = config.Infra.codegen.make.model_dump(exclude_computed_fields=True)
+        payload["informational_check_gates"] = ("fixture-unknown-gate",)
+
+        with pytest.raises(ValueError, match="unknown gates"):
+            _ = m.Infra.MakeSpec.model_validate(payload)
 
     @staticmethod
     def test_project_declared_gates_follow_the_declared_partition() -> None:

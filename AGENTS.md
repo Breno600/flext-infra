@@ -110,8 +110,9 @@ entrypoint blocks publication; no message classifier converts either to success.
 
 Configuration declares `latest`; only `make upg` resolves newer releases and writes
 the committed `uv.lock` and `mise.lock`. `make setup` installs from those locks (the CI
-path), never writes them, and always runs: on a drifted lock it warns and installs
-without touching it. Generation and runtime verbs use those installed identities without
+path), never writes them, and preserves the first failed install: a drifted Mise lock
+stops setup without disabling the declared lock policy or retrying. Repair the lock
+through `make upg`. Generation and runtime verbs use those installed identities without
 installing or upgrading tools, and ignore host Mise tool declarations. Fix the
 configuration/templates when the lifecycle is wrong; do not install, resolve or
 synchronize dependencies manually. `APPLY` stays removed. Git dependencies follow

@@ -12,7 +12,6 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import config
-from flext_infra.codegen import FlextInfraCodegenConform
 from tests import c, m, t, u
 
 pytestmark = [pytest.mark.slow]
@@ -52,23 +51,10 @@ class TestsFlextInfraScriptDispatchMakefile:
             root_repository,
             project=u.Tests.project_spec("demo-root"),
         )
-        root = tmp_path / "demo-root"
-        request = u.Tests.conform_request(
-            root,
-            what=c.Infra.CodegenConformSurface.MAKEFILE,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.CHECK,
+        rendered: str = u.Tests.conform_makefile_text(
+            tmp_path / "demo-root",
+            workspace,
         )
-        planned = FlextInfraCodegenConform(
-            repository_root=root,
-            request=request,
-            initial_workspace=workspace,
-        ).plan(request)
-        plan = tm.ok(planned)
-        makefile = next(
-            file for file in plan.files if file.path.name == c.Infra.MAKEFILE_FILENAME
-        )
-        rendered: str = u.Tests.codegen_file_text(makefile)
         return rendered
 
     def test_script_dispatch_repo_routes_extra_verbs_and_normalizes_what(
@@ -247,7 +233,7 @@ class TestsFlextInfraScriptDispatchMakefile:
         # The regeneration contract published on every projection speaks gen.
         tm.that("# @flext-regenerate: make gen" in rendered, eq=True)
         # The custom-surface policy names gen (not codegen) for hooks/handlers.
-        handler_policies: dict[str, m.Infra.CustomHandlerPolicy] = dict(
+        handler_policies: t.MutableMappingKV[str, m.Infra.CustomHandlerPolicy] = dict(
             config.Infra.codegen.make.custom_handler_policies,
         )
         for policy in handler_policies.values():
@@ -464,3 +450,61 @@ class TestsFlextInfraScriptDispatchMakefile:
             eq=True,
         )
         tm.that("$(PROJECT_ROOT)/scripts" in rendered, eq=False)
+
+    def test_every_pytest_verb_declares_the_project_scratch_root(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Every pytest-running verb declares the project scratch root.
+
+        The fleet's test law rejects a test scratch under /tmp: the caller of
+        pytest must declare a project scratch root through TMPDIR (cosmos-charts
+        CI run 37235165752 died in pytest_configure on an inherited /tmp). The
+        Makefile verb is that caller, so each pytest verb renders ONE shared
+        declaration next to its testmon database guard. The transient sandbox
+        mirrors the Mise bootstrap mechanism: one mktemp directory beside the
+        checkout, the standard temp triplet resolved physical inside it,
+        deleted when the recipe shell exits.
+        """
+        rendered = self._render_root_makefile(
+            tmp_path,
+            extra_verbs=(),
+            script_dispatch=None,
+        )
+        verbs = (
+            "_builtin_test_all:",
+            "_builtin_test_full_all:",
+            "_builtin_test_file_all:",
+            "_builtin-profile-test:",
+        )
+        bodies = {
+            verb: rendered.split(verb, 1)[1].split("\n\n", 1)[0] for verb in verbs
+        }
+        sandbox = (
+            'scratch="$$(mktemp -d "$$project_parent/'
+            '.$${project_root##*/}.pytest-scratch.XXXXXX")"'
+        )
+        for body in bodies.values():
+            tm.that(
+                body,
+                has=[
+                    sandbox,
+                    'mkdir -p "$$scratch/tmp"',
+                    "export TMPDIR TMP TEMP",
+                    "trap 'find \"$$scratch\" -depth -delete' EXIT",
+                ],
+            )
+            # The pytest entry runs after the declaration in the same shell.
+            tm.that(
+                body.index("export TMPDIR TMP TEMP") < body.index("_pytest_entry"),
+                eq=True,
+            )
+            # No verb owns a private variant of the shared fragment.
+            tm.that(body.count(sandbox), eq=1)
+        # The declaration is ONE rendered fragment across the four verbs.
+        tm.that(rendered.count("pytest-scratch.XXXXXX"), eq=len(verbs))
+        # The sandbox lives beside the checkout, never inside it and never
+        # under /tmp: the rejected durable in-tree scratch stays dead.
+        tm.that(rendered, lacks=".test-tmp")
+        tm.that(rendered, lacks="PROJECT_SCRATCH")
+        tm.that(rendered, lacks='TMPDIR="$$test_tmp"')
