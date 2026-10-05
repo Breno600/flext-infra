@@ -104,7 +104,15 @@ class FlextInfraCodegenGenerationStandardMixin(
                     cls._type_checking_sort_key(rendered_module, root_names),
                     cls._format_import("", rendered_module, parts),
                 ))
-        lazy_module = c.Infra.LAZY_BOOTSTRAP_MODULE
+        # Only the bootstrap owner imports the helpers from the module that
+        # defines them; every other distribution imports them from the
+        # bootstrap root, which publishes them (see the root render below).
+        lazy_module = (
+            c.Infra.LAZY_BOOTSTRAP_MODULE
+            if current_pkg.split(".", maxsplit=1)[0]
+            == c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
+            else c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
+        )
         statements.append((
             cls._type_checking_sort_key(lazy_module, root_names),
             cls._format_import("", lazy_module, c.Infra.LAZY_BOOTSTRAP_HELPERS),
