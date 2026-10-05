@@ -19,7 +19,7 @@ from flext_tests import tm
 
 from flext_infra import c, config, m
 from flext_infra.codegen.conform import FlextInfraCodegenConform
-from tests import u, u as test_u
+from tests import u
 
 
 class TestsFlextInfraCodegenRepositoryRootScope:
@@ -66,7 +66,7 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         }
         for verb, local_body in expected.items():
             execution = tm.ok(
-                test_u.Cli.run_raw(
+                u.Cli.run_raw(
                     [c.Infra.MAKE, "--dry-run", f"_builtin-{verb}"],
                     cwd=repository_root,
                     remove_env_keys=("MAKEFLAGS",),
@@ -81,7 +81,7 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         """The workspace profile declares propagate through the workspace CLI."""
         repository_root = self._render_root_makefile(tmp_path)
         execution = tm.ok(
-            test_u.Cli.run_raw(
+            u.Cli.run_raw(
                 [c.Infra.MAKE, "--dry-run", "_builtin-propagate"],
                 cwd=repository_root,
                 remove_env_keys=("MAKEFLAGS",),

@@ -105,7 +105,7 @@ class TestsFlextInfraCodegenMakeContracts:
     def test_scaffold_make_help_documents_and_lists_custom_hooks(
         infra_git_repo: Path,
     ) -> None:
-        """Scaffold help lists the selector-free interface; hooks stay lifecycle-only."""
+        """Scaffold help lists the selector-free interface; hooks are lifecycle-only."""
         root = infra_git_repo
         workspace = TestsFlextInfraConformSupport.standalone_workspace(root)
         TestsFlextInfraConformSupport.apply_conform_surface(

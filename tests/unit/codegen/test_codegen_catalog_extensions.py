@@ -306,7 +306,8 @@ class TestsFlextInfraCodegenCatalogExtensions:
         config_dir = tmp_path / "config"
         config_dir.mkdir()
         (config_dir / "tooling.yaml").write_text(
-            "ManagedArtifacts:\n  Mise:\n    tools:\n      node:\n        version: '26'\n",
+            "ManagedArtifacts:\n  Mise:\n    tools:\n"
+            "      node:\n        version: '26'\n",
             encoding="utf-8",
         )
         # The composer reads the committed catalog: the overlay must be in HEAD.

@@ -212,7 +212,7 @@ class FlextInfraModelsRefactor(
                     " public Rope owner identities"
                 ),
             ),
-        ]
+        ] = m.Field(default_factory=lambda: MappingProxyType[str, t.StrSequence]({}))
         text_globs: Annotated[
             t.StrSequence,
             m.Field(
@@ -222,7 +222,7 @@ class FlextInfraModelsRefactor(
                     " and configuration text surfaces"
                 ),
             ),
-        ]
+        ] = ()
         python_documentation: Annotated[
             bool,
             m.Field(
@@ -232,7 +232,7 @@ class FlextInfraModelsRefactor(
                     " preserving executable string payloads"
                 ),
             ),
-        ]
+        ] = False
         exclude_globs: Annotated[
             t.StrSequence,
             m.Field(
@@ -241,7 +241,7 @@ class FlextInfraModelsRefactor(
                     "Declared generated projections excluded from campaign targets"
                 ),
             ),
-        ]
+        ] = ()
 
     class ApplyRenamesReport(m.ArbitraryTypesModel):
         """Summary of one CSV-driven rename pass."""

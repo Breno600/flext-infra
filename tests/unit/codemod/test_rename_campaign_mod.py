@@ -17,7 +17,7 @@ from flext_infra import FlextInfraConfig, c, infra, m
 from tests import u
 
 
-class TestsRenameCampaignMod:
+class TestsFlextInfraRenameCampaignMod:
     """Use separate processes and real config files, never patched owner state."""
 
     @staticmethod

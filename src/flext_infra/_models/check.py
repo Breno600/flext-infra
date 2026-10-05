@@ -105,7 +105,11 @@ class FlextInfraModelsCheck:
         @m.computed_field
         @property
         def memory_limit_bytes(self) -> int:
-            """Validated memory limit converted to bytes for the platform owner."""
+            """Validated memory limit converted to bytes for the platform owner.
+
+            Returns:
+                The resulting ``int``.
+            """
             return self.memory_limit_mb * c.Infra.BYTES_PER_MIB
 
     class MypyInvocation(m.ContractModel):
@@ -151,7 +155,11 @@ class FlextInfraModelsCheck:
         @m.computed_field
         @property
         def formatted(self) -> str:
-            """Format issue as ``file:line:col [code] message``."""
+            """Format issue as ``file:line:col [code] message``.
+
+            Returns:
+                The resulting ``str``.
+            """
             code_part = f"[{self.code}] " if self.code else ""
             return (
                 f"{self.file}:{self.line}:{self.column} {code_part}{self.message}"
@@ -191,7 +199,11 @@ class FlextInfraModelsCheck:
         @m.computed_field
         @property
         def finding_count(self) -> int:
-            """Number of findings that fail the gate: every issue blocks."""
+            """Number of findings that fail the gate: every issue blocks.
+
+            Returns:
+                The resulting ``int``.
+            """
             return len(self.issues)
 
     class ProjectResult(FlextInfraModelsMixins.ProjectNameMixin, m.ArbitraryTypesModel):
@@ -210,13 +222,21 @@ class FlextInfraModelsCheck:
         @m.computed_field
         @property
         def passed(self) -> bool:
-            """Whether every gate passed."""
+            """Whether every gate passed.
+
+            Returns:
+                The resulting ``bool``.
+            """
             return all(v.result.passed for v in self.gates.values())
 
         @m.computed_field
         @property
         def total_findings(self) -> int:
-            """Total blocking findings across all gates."""
+            """Total blocking findings across all gates.
+
+            Returns:
+                The resulting ``int``.
+            """
             return sum(v.finding_count for v in self.gates.values())
 
     class LoopOutcome(m.ArbitraryTypesModel):

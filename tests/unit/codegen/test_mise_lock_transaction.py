@@ -40,7 +40,7 @@ def _converge_module() -> ModuleType:
     return module
 
 
-class TestsMiseLockTransaction:
+class TestsFlextInfraMiseLockTransaction:
     """Exercise the consumer script through its generated CLI boundary."""
 
     @staticmethod
@@ -193,7 +193,7 @@ class TestsMiseLockTransaction:
         self,
         tmp_path: Path,
     ) -> None:
-        """The public publisher consumes Git's prior lock without editing a projection."""
+        """The public publisher reads Git's prior lock without editing a projection."""
         root, _ = u.Tests.render_make_environment(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,

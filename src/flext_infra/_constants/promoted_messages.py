@@ -136,8 +136,10 @@ class FlextInfraConstantsPromotedMessages:
         "",
         "make <verb> shows the verb help and every WHAT.",
         "make help WHAT=<verb> shows the same help.",
-        "make help WHAT=<verb>/<action> or make <verb> WHAT=<action>"
-        " OPTIONS=Y shows one action.",
+        (
+            "make help WHAT=<verb>/<action> or make <verb> WHAT=<action>"
+            " OPTIONS=Y shows one action."
+        ),
         "Mutating commands execute their declared operation directly.",
         "New commands live in scripts/<verb>/<WHAT>.sh|py with a flext-command header.",
     )
