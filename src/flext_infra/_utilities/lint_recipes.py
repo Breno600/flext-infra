@@ -144,7 +144,7 @@ class FlextInfraUtilitiesLintRecipes:
             ))
         for definition, text in summaries.items():
             first = definition.body[0]
-            decorators = (
+            decorators: list[ast.expr] = (
                 first.decorator_list
                 if isinstance(
                     first,

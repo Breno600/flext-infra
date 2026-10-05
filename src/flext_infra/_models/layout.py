@@ -170,7 +170,11 @@ class FlextInfraModelsLayout:
         project_overrides: Annotated[
             Mapping[str, FlextInfraModelsLayout.LayoutProjectOverrideSpec],
             m.Field(description="Per-project layout deltas keyed by project name"),
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        ] = m.Field(
+            default_factory=lambda: MappingProxyType[
+                str, FlextInfraModelsLayout.LayoutProjectOverrideSpec
+            ]({}),
+        )
 
     class LayoutFinding(_LayoutContract):
         """One planned or executed layout decision for a project entry."""

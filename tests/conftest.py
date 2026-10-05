@@ -71,7 +71,7 @@ def _isolated_cache_home(
     """
     spec = config.Infra.codegen.make.codemod_rules_cache
     with u.Tests.env_vars_context({
-        str(spec.data_home_environment_variable): str(
+        spec.data_home_environment_variable: str(
             tmp_path_factory.mktemp("xdg-cache"),
         ),
     }):
