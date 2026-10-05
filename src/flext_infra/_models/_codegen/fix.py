@@ -25,14 +25,14 @@ class FlextInfraModelsCodegenFixModels:
         violations_fixed: Annotated[
             t.MutableSequenceOf[FlextInfraModelsCodegenScaffoldModels.CensusViolation],
             m.Field(default_factory=list, description="Fixed violations"),
-        ] = m.Field(default_factory=list)
+        ]
         violations_skipped: Annotated[
             t.MutableSequenceOf[FlextInfraModelsCodegenScaffoldModels.CensusViolation],
             m.Field(
                 default_factory=list,
                 description="Skipped violations (not auto-fixable)",
             ),
-        ] = m.Field(default_factory=list)
+        ]
         files_modified: t.StrSequence = m.Field(
             default_factory=tuple,
             description="Modified file paths",
@@ -51,8 +51,8 @@ class FlextInfraModelsCodegenFixModels:
         ]
         changes: Annotated[
             t.StrSequence,
-            m.Field(description="Applied replacements"),
-        ] = ()
+            m.Field(default_factory=tuple, description="Applied replacements"),
+        ]
 
     class ConsolidatorReport(m.ContractModel):
         """JSON report emitted by the constants consolidator."""
@@ -71,8 +71,8 @@ class FlextInfraModelsCodegenFixModels:
         ] = 0
         files: Annotated[
             t.SequenceOf[FlextInfraModelsCodegenFixModels.ConsolidatorFileResult],
-            m.Field(description="Per-file processing results"),
-        ] = ()
+            m.Field(default_factory=tuple, description="Per-file processing results"),
+        ]
 
     class FacadeFamily(m.ContractModel):
         """One facade family the core package declares (c, t, p, m, u)."""

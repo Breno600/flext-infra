@@ -100,20 +100,20 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
         end_line: Annotated[
             int | None,
             m.Field(default=None, description="Diagnostic end line"),
-        ] = None
+        ]
         end_column: Annotated[
             int | None,
             m.Field(default=None, description="Diagnostic end column"),
-        ] = None
+        ]
         message: Annotated[t.NonEmptyStr, m.Field(description="Diagnostic message")]
         hint: Annotated[
             str | None,
             m.Field(default=None, description="Diagnostic hint"),
-        ] = None
+        ]
         code: Annotated[
             str | None,
             m.Field(default=None, description="Mypy diagnostic code"),
-        ] = None
+        ]
         severity: Annotated[
             Literal["error", "note"],
             m.Field(description="Mypy diagnostic severity"),
