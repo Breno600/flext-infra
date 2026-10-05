@@ -382,6 +382,19 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         plugins: Annotated[t.StrSequence, m.Field(description="Mypy plugins list.")] = (
             m.Field(default_factory=tuple)
         )
+        disable_error_code: Annotated[
+            t.StrSequence,
+            m.Field(
+                alias="disable-error-code",
+                description=(
+                    "Mypy error codes disabled fleet-wide. Operator ruling"
+                    " val20261005xxxx: pydantic 2 with the mypy plugin makes"
+                    " prop-decorator (the plugin rewrites properties) and"
+                    " call-arg (camelCase aliases are valid at runtime) false"
+                    " positives; pydantic 2 is mandatory."
+                ),
+            ),
+        ] = m.Field(default_factory=tuple)
         facade_rebind_error_codes: Annotated[
             t.StrSequence,
             m.Field(
