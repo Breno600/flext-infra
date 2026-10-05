@@ -14,9 +14,9 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m, p, u
+from flext_infra import c, config, m, p
 from flext_infra.codegen.conform import FlextInfraCodegenConform
-from tests import t, u as test_u
+from tests import t, u
 
 pytestmark = pytest.mark.slow
 
@@ -48,15 +48,15 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
 
     @staticmethod
     def _render_repository_root_makefile(tmp_path: Path) -> str:
-        root_repository = test_u.Tests.repository_ref("flext")
-        member = test_u.Tests.repository_ref(
+        root_repository = u.Tests.repository_ref("flext")
+        member = u.Tests.repository_ref(
             "flext-core",
             path=Path("flext-core"),
             role=c.Infra.MakeProfile.STANDALONE,
         )
-        workspace = test_u.Tests.workspace_spec(
+        workspace = u.Tests.workspace_spec(
             root_repository,
-            project=test_u.Tests.project_spec("flext"),
+            project=u.Tests.project_spec("flext"),
             subprojects=(member,),
         )
 
@@ -93,7 +93,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
             "from __future__ import annotations\n\n__all__: list[str] = []\n",
             encoding="utf-8",
         )
-        test_u.Tests.initialize_git_repo(member)
+        u.Tests.initialize_git_repo(member)
         tm.ok(
             u.Cli.run_checked(
                 [c.Infra.GIT, "checkout", "-b", "0.12.0-dev"],
@@ -103,7 +103,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         tm.ok(u.Cli.run_checked([c.Infra.GIT, "checkout", "main"], cwd=member))
         remote_root = tmp_path / "member-remote"
         remote_root.mkdir()
-        origin = test_u.Tests.configure_local_origin(member, remote_root)
+        origin = u.Tests.configure_local_origin(member, remote_root)
         tm.ok(
             u.Cli.run_checked(
                 [c.Infra.GIT, "push", "-u", c.Infra.GIT_ORIGIN, "0.12.0-dev"],
@@ -128,7 +128,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
             "[tool.uv.workspace]\nmembers = ['flext-core']\n",
             encoding="utf-8",
         )
-        test_u.Tests.initialize_git_repo(source)
+        u.Tests.initialize_git_repo(source)
         tm.ok(
             u.Cli.run_checked(
                 [
@@ -146,7 +146,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
                 cwd=source,
             ),
         )
-        test_u.Tests.commit_git_changes(source, "Declare workspace project")
+        u.Tests.commit_git_changes(source, "Declare workspace project")
         tm.ok(
             u.Cli.run_checked(
                 [c.Infra.GIT, "checkout", "-b", "0.12.0-dev"],
@@ -156,7 +156,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         tm.ok(u.Cli.run_checked([c.Infra.GIT, "checkout", "main"], cwd=source))
         remote_root = tmp_path / "workspace-remote"
         remote_root.mkdir()
-        workspace_origin = test_u.Tests.configure_local_origin(source, remote_root)
+        workspace_origin = u.Tests.configure_local_origin(source, remote_root)
         tm.ok(
             u.Cli.run_checked(
                 [c.Infra.GIT, "push", "-u", c.Infra.GIT_ORIGIN, "0.12.0-dev"],
@@ -310,7 +310,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         fake_bin = tmp_path / "failing-git-bin"
         fake_bin.mkdir()
         command_fragment = "branch --show-current"
-        test_u.Tests.write_executable(
+        u.Tests.write_executable(
             fake_bin / "git",
             "#!/bin/sh\n"
             "set -eu\n"
