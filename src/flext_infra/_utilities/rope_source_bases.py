@@ -282,6 +282,15 @@ class FlextInfraUtilitiesRopeSourceBases:
                         raise ValueError(
                             f"Unresolved external base: {target}",
                         ) from error
+                    if not FlextInfraUtilitiesRopeRuntime.abstract_class(value):
+                        # A cross-package facade rebind (flext_cli.FlextCliConfig)
+                        # resolves through a TYPE_CHECKING import aimed at a
+                        # data package, so rope lands on the unknown-object
+                        # placeholder instead of a class: the base cannot
+                        # contribute to the derivation (bases() skips it).
+                        raise ValueError(
+                            f"Unresolved external base: {target}",
+                        )
                     return external_identity(value)
             # Builtin classes have no Python source resource. Rope owns that
             # native namespace, not an ambient import of a planned package.
