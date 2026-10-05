@@ -421,7 +421,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
                         elts=[
                             ast.Constant(value=str(module)),
                             ast.Constant(value=str()),
-                        ]
+                        ],
                     ),
                 ):
                     targets.setdefault(module, []).append(name)
