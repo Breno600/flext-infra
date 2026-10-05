@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 from flext_tests import tm
 
 from flext_core import r
-from tests import TestsFlextInfraUtilities as u, c, m, p, t
+from tests import c, m, p, t, u
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator

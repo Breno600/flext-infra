@@ -14,6 +14,7 @@ from flext_tests import tm
 
 from flext_infra import c, config
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
 from tests import u
 
 
@@ -82,11 +83,7 @@ class TestsFlextInfraCodegenMiseArtifacts:
         self,
         tmp_path: Path,
     ) -> None:
-        """A scope root carrying the bootstrap seed starts from the packaged triple."""
-        from flext_infra.codegen.mise_artifacts_workspace import (
-            FlextInfraMiseWorkspacePlanner,
-        )
-
+        """A scope root still carrying the bootstrap seed starts from the packaged triple."""
         root = tmp_path / "seed-project"
         for relative, _mode in c.Infra.ARTIFACT_SPECS:
             path = root / relative
@@ -359,8 +356,8 @@ class TestsFlextInfraCodegenMiseArtifacts:
         # jscpd declares a host-invariant version so mise writes one lock
         # entry per tool; the per-platform asset patterns were removed.
         tm.that(
-            tools.get(toolchain.jscpd_selector),
-            eq={"version": toolchain.jscpd_version},
+            tools.get(toolchain.tool_selectors["jscpd"]),
+            eq={"version": toolchain.tool_versions["jscpd"]},
         )
         tm.that("npm:jscpd" in tools, eq=False)
 

@@ -18,12 +18,15 @@ from __future__ import annotations
 import sys
 import sysconfig
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
-from flext_core import p as core_p
 from flext_infra import FlextInfraFlextBindingService, c, config
 from tests import t, u
+
+if TYPE_CHECKING:
+    from flext_core import p as core_p
 
 
 class TestsFlextInfraWorktreeBinding:

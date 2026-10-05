@@ -46,7 +46,7 @@ class FlextInfraCProfileReport(s[bool]):
         ),
     ] = None
 
-    @u.model_validator(mode="after")
+    @m.model_validator(mode="after")
     def _validate_report_paths(self) -> Self:
         """Keep profile input and output inside the workspace report tree.
 

@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class TestsPyrightPublicContract:
+class TestsFlextInfraPyrightPublicContract:
     """Exercise the configured semantic owner with real source and type stubs."""
 
     @staticmethod

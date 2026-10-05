@@ -18,6 +18,7 @@ from flext_infra._utilities.iteration_workspace import (
 )
 from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
 from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.rope_source_bases import FlextInfraUtilitiesRopeSourceBases
 
 
 class FlextInfraUtilitiesRopeAnalysisWorkspace:
@@ -104,8 +105,27 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             if isinstance(node, ast.ImportFrom)
             for alias in node.names
         }
+
+        def _base_names(node: ast.ClassDef) -> set[str]:
+            """Resolve direct base names, seeing through ``Generic[T]`` subscripts.
+
+            The canonical facade-rebind form subclasses the imported letter
+            through a PEP 695 generic class, so the base reaches the AST as
+            ``ast.Subscript(value=Name(letter))`` and a plain ``ast.Name``
+            walk misses it.
+
+            Returns:
+                The resulting ``set[str]``.
+            """
+            names = set[str]()
+            for base in node.bases:
+                candidate = base.value if isinstance(base, ast.Subscript) else base
+                if isinstance(candidate, ast.Name):
+                    names.add(candidate.id)
+            return names
+
         bases_by_class = {
-            node.name: {base.id for base in node.bases if isinstance(base, ast.Name)}
+            node.name: _base_names(node)
             for node in tree.body
             if isinstance(node, ast.ClassDef)
         }
@@ -142,6 +162,69 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
 
         """
         root = project_root.resolve()
+        return tuple(
+            sorted({
+                module
+                for file_path, source in cls._project_sources(
+                    root,
+                    planned_sources,
+                ).items()
+                if (
+                    module := cls.facade_rebind_module(
+                        file_path,
+                        source,
+                        project_root=root,
+                    )
+                )
+            }),
+        )
+
+    @classmethod
+    def runtime_evaluated_base_classes(
+        cls,
+        project_root: Path,
+        planned_sources: t.MappingKV[Path, str],
+        roots: t.StrSequence,
+    ) -> t.StrTuple:
+        """Return the class bases whose subclasses evaluate annotations at runtime.
+
+        Ruff qualifies imported bases by their import and local bases as
+        ``<module>.<expression>``, not by the declaration's lexical identity.
+        The source inventory keeps those spellings separate from identities,
+        resolves aliases and inherited nested members in C3 order, and treats
+        planned bytes as authoritative before publication. External names use
+        Rope's source resolver, never Python imports of the project being planned.
+
+        Returns:
+            The declared roots and the derived bases, by qualified name.
+
+        """
+        root = project_root.resolve()
+        sources = {
+            cls.module_name_for_file(path, project_root=root): (path, source)
+            for path, source in cls._project_sources(root, planned_sources).items()
+            if cls.module_name_for_file(path, project_root=root)
+        }
+        # An unpublished project may have no directory yet. Parsing uses its
+        # existing filesystem ancestor; only the captured inventory resolves
+        # owned modules, so this neither creates a tree nor invents an overlay.
+        parse_root = next(path for path in (root, *root.parents) if path.is_dir())
+        with FlextInfraUtilitiesRopeCore.open_project(parse_root) as project:
+            return FlextInfraUtilitiesRopeSourceBases.runtime_bases(
+                project, sources, roots,
+            )
+
+    @staticmethod
+    def _project_sources(
+        root: Path,
+        planned_sources: t.MappingKV[Path, str],
+    ) -> t.MappingKV[Path, str]:
+        """Read the project's Python sources, the planned bytes overriding disk.
+
+        Returns:
+            Each source by resolved path.
+
+        """
         sources: MutableMapping[Path, str] = {}
         if root.is_dir():
             files = FlextInfraUtilitiesIterationWorkspace.iter_python_files(
@@ -153,19 +236,7 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
                 )
         for file_path, source in planned_sources.items():
             sources[file_path.resolve()] = source
-        return tuple(
-            sorted({
-                module
-                for file_path, source in sources.items()
-                if (
-                    module := cls.facade_rebind_module(
-                        file_path,
-                        source,
-                        project_root=root,
-                    )
-                )
-            }),
-        )
+        return sources
 
     @staticmethod
     def _is_generated_init_stub(file_path: Path) -> bool:
