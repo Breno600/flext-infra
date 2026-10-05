@@ -322,8 +322,11 @@ class FlextInfraUtilitiesRopeSourceBases:
 
         def external_identity(value: t.Infra.RopePyObject) -> str:
             if not FlextInfraUtilitiesRopeRuntime.abstract_class(value):
-                message = "Rope did not resolve a required base to a class"
-                raise TypeError(message)
+                # Rope lands on the unknown-object placeholder for bases it
+                # cannot type through re-exports and runtime-only namespaces:
+                # the recognized verdict degrades the base in every caller.
+                message = "Unresolved external base: non-class rope object"
+                raise ValueError(message)
             if isinstance(
                 value,
                 FlextInfraUtilitiesRopeRuntime.runtime_type(
