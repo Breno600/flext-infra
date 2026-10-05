@@ -198,7 +198,11 @@ class FlextInfraUtilitiesRefactor:
     @staticmethod
     def publish_refactor_report_evidence(
         root: Path,
+<<<<<<< HEAD
         report: m.ArbitraryTypesModel,
+=======
+        report: m.ContractModel,
+>>>>>>> 86390c20e (wip(flext-20yyv): origin-aware accessor rewrites; dry-run contract; report receipts)
         *,
         relative_path: Path,
     ) -> p.Result[Path]:
@@ -237,8 +241,12 @@ class FlextInfraUtilitiesRefactor:
             or published.value.mode != c.Infra.MOD_SCAN_REPORT_MODE
         ):
             return r[Path].fail(
+<<<<<<< HEAD
                 "published refactor evidence differs from planned bytes: "
                 f"{report_path}",
+=======
+                f"published refactor evidence differs from planned bytes: {report_path}",
+>>>>>>> 86390c20e (wip(flext-20yyv): origin-aware accessor rewrites; dry-run contract; report receipts)
             )
         return r[Path].ok(report_path)
 

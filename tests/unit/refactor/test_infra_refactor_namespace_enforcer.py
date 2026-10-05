@@ -157,7 +157,6 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             "#!/usr/bin/env python3\n# -*- coding: utf-8 -*-\nu.Cli.print('ok')\n",
             encoding="utf-8",
         )
-        u.Tests.provision_checkout(workspace)
 
         _ = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(apply=True)
 
@@ -184,7 +183,6 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             "    temp_dir: Path\n",
             encoding="utf-8",
         )
-        u.Tests.provision_checkout(workspace)
 
         _ = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(apply=True)
 
@@ -291,7 +289,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
 
         _first = enforcer.enforce(apply=True)
         enforced_sources = {
-            path: path.read_text(encoding="utf-8") for path in sorted(pkg.rglob("*.py"))
+            path: path.read_text(encoding="utf-8")
+            for path in sorted(pkg.rglob("*.py"))
         }
 
         second = enforcer.enforce(apply=True)
@@ -313,7 +312,9 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         )
 
         tm.that(result.failure, eq=False)
-        receipt = (workspace / c.Infra.NAMESPACE_ENFORCE_REPORT_RELATIVE_PATH).resolve()
+        receipt = (
+            workspace / c.Infra.NAMESPACE_ENFORCE_REPORT_RELATIVE_PATH
+        ).resolve()
         tm.that(receipt.exists(), eq=True)
         published = json.loads(receipt.read_text(encoding="utf-8"))
         tm.that(published["workspace"], eq=str(workspace))
