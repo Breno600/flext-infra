@@ -70,7 +70,7 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     )
     isolation.enter_context(
         u.Tests.env_vars_context({
-            str(spec.data_home_environment_variable): cache_home,
+            spec.data_home_environment_variable: cache_home,
         }),
     )
     session.stash[_SESSION_ISOLATION] = isolation
@@ -93,6 +93,43 @@ def pytest_sessionfinish(session: pytest.Session) -> None:
             "checkout (flext-eles2)",
             returncode=pytest.ExitCode.TESTS_FAILED,
         )
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Resolve native-engine and provisioning applicability before fixtures execute.
+
+    Raises:
+        ValueError: If requires_engine arguments must be canonical engine names.
+    """
+    policy = config.Infra.codegen.make.ci
+    if u.Infra.env_value(policy.variable).strip() != policy.value:
+        return
+    excluded_fixtures = frozenset(
+        config.Infra.tooling.tools.pytest.ci_excluded_fixtures
+    )
+    excluded_engines = frozenset(policy.local_check_gates)
+    selected: list[pytest.Item] = []
+    deselected: list[pytest.Item] = []
+    for item in items:
+        engines = tuple(
+            engine
+            for marker in item.iter_markers("requires_engine")
+            for engine in marker.args
+        )
+        if any(not isinstance(engine, str) for engine in engines):
+            msg = "requires_engine arguments must be canonical engine names"
+            raise ValueError(msg)
+        fixtures = tuple(item.fixturenames) if isinstance(item, pytest.Function) else ()
+        target = (
+            deselected
+            if excluded_engines.intersection(engines)
+            or excluded_fixtures.intersection(fixtures)
+            else selected
+        )
+        target.append(item)
+    if deselected:
+        deselected[0].config.hook.pytest_deselected(items=deselected)
+    items[:] = selected
 
 
 @pytest.fixture

@@ -448,6 +448,19 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         """
         resolved: list[m.Infra.ManagedGitlinkSpec] = []
         for repository in workspace.subprojects:
+            ci = codegen.make.ci
+            if u.Infra.env_value(ci.variable).strip() == ci.value:
+                if workspace.integration is None:
+                    return r[t.VariadicTuple[m.Infra.ManagedGitlinkSpec]].fail(
+                        "CI member topology requires the root integration declaration",
+                    )
+                resolved.append(
+                    m.Infra.ManagedGitlinkSpec(
+                        repository=repository,
+                        branch=workspace.integration.branch,
+                    )
+                )
+                continue
             # A governed member follows its workspace's declared line unless
             # its own manifest declares otherwise (the ``.`` gitmodule branch).
             branch = u.Infra.resolve_integration_branch(

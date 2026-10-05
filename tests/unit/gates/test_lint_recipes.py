@@ -138,6 +138,7 @@ class TestsFlextInfraLintRecipes:
 
         function = ast.parse(repaired).body[0]
         tm.that(function, is_=ast.FunctionDef)
+        assert isinstance(function, ast.FunctionDef)
         tm.that(
             ast.get_docstring(function) or "",
             has='ValueError: If ``not body.startswith(\'"""\')``.',
@@ -166,6 +167,7 @@ class TestsFlextInfraLintRecipes:
 
         function = ast.parse(repaired).body[0]
         tm.that(function, is_=ast.FunctionDef)
+        assert isinstance(function, ast.FunctionDef)
         docstring = ast.get_docstring(function) or ""
         tm.that(docstring, has="RuntimeError: If selection failed.")
         tm.that(docstring, lacks="failed (")

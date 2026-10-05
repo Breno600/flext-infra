@@ -108,10 +108,29 @@ read-only — no verb repeats another verb's work across the canonical sequence
 | `smells` — qlty                   | read-only scan                     | —                       | —                                          |
 
 `make fmt` never runs a lint pass and `make fix` never runs the format-only gates: each
-operation runs once per verb. `rumdl check --fix` repairs fixable findings and returns a
-failing status for residual findings. A mutation that cannot complete its declared
+operation runs once per verb. `rumdl check --fix` repairs fixable findings and returns
+a failing status for residual findings. A mutation that cannot complete its declared
 repair stays red before `make check`; on a green tree, repeated `make fix` and
 `make fmt` are no-ops.
+
+## Repair selector verbs and the mod loop
+
+`make fix-namespace` and `make fix-accessors` are repair selectors over the same
+engines `make mod` invokes as callback phases of its joint fixed point:
+
+- `fix-namespace` runs the rule catalog's relocation cascade (protocol,
+  typing-alias, future-annotations, module-import, package-root-import,
+  own-package-import, facade-class) once per project and rescans for the
+  residue; `make mod` runs the identical cascade between its semantic and
+  text phases.
+- `fix-accessors` rewrites accessor names whose defining module resolves
+  (through Rope) inside the rename catalog's origin package; a homonym owned
+  by the scanned repository or another library is skipped with a warning, and
+  `make mod` applies the identical origin-aware rewrite as a callback phase.
+- Both verbs default to dry-run on the documented CLI (`refactor
+namespace-enforce` / `refactor accessor-migrate` without `--apply` reports
+  without writing) and publish their structured receipts under
+  `.reports/refactor/`; a second run over a converged tree writes nothing.
 
 ## Information-preserving repair
 

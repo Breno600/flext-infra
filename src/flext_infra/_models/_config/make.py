@@ -79,6 +79,12 @@ class FlextInfraConfigModelsMake:
                 ),
             ),
         ]
+        informative_check_gates: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                description="CI check findings are informative; execution errors block"
+            ),
+        ] = ()
 
         @m.model_validator(mode="after")
         def _validate_local_check_gates(self) -> Self:
@@ -91,7 +97,9 @@ class FlextInfraConfigModelsMake:
                 ValueError: If make.ci.local_check_gates contains unknown gates.
             """
             allowed = set(FlextInfraConstantsMake.CANONICAL_GATE_IDS)
-            unknown = sorted(set(self.local_check_gates) - allowed)
+            unknown = sorted(
+                set((*self.local_check_gates, *self.informative_check_gates)) - allowed,
+            )
             if unknown:
                 msg = (
                     "make.ci.local_check_gates contains unknown gates: "
@@ -848,17 +856,13 @@ class FlextInfraConfigModelsMake:
             FlextInfraConfigModelsMake.MakeWorkInProgressSpec,
             m.Field(description="WIP branch and draft PR gate predicate"),
         ]
-        # Why (operator law 2026-08-24): git-hook stages are OFF by default and
-        # re-enabled case by case via these config gates. The workflow keeps
-        # owning WHICH steps belong to each stage; the booleans only govern
-        # whether the stage is generated and installed at all.
         pre_commit: Annotated[
-            bool,
+            Literal[True],
             m.Field(
-                default=False,
-                description="Generate and install the pre-commit git-hook stage",
+                default=True,
+                description="Mandatory projected approval hook; host owns installation",
             ),
-        ] = False
+        ] = True
         pre_push: Annotated[
             bool,
             m.Field(
@@ -948,17 +952,27 @@ class FlextInfraConfigModelsMake:
                 ),
             ),
         ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        opt_in_check_gates: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                description=(
+                    "Built-in gates that stay allowed and explicitly invocable "
+                    "but never join the default check, CI, or hook gate sets"
+                ),
+            ),
+        ] = ()
 
         @m.model_validator(mode="after")
         def _validate_project_check_gates(self) -> Self:
-            """Project gates must be unique and must not shadow a built-in.
+            """Project gates are unique built-in strangers; opt-in gates are built-ins.
 
             Returns:
                 The resulting ``Self``.
 
             Raises:
                 ValueError: If make project_check_gates must be unique; or if make
-                    project_check_gates shadow built-in gates.
+                    project_check_gates shadow built-in gates; or if make
+                    opt_in_check_gates name unknown gates.
 
             """
             if len(set(self.project_check_gates)) != len(self.project_check_gates):
@@ -970,6 +984,12 @@ class FlextInfraConfigModelsMake:
                 msg = (
                     "make project_check_gates shadow built-in gates: "
                     f"{', '.join(shadowed)}"
+                )
+                raise ValueError(msg)
+            unknown = sorted(set(self.opt_in_check_gates) - builtin)
+            if unknown:
+                msg = (
+                    f"make opt_in_check_gates name unknown gates: {', '.join(unknown)}"
                 )
                 raise ValueError(msg)
             return self
@@ -1075,7 +1095,7 @@ class FlextInfraConfigModelsMake:
             partial_workflow = sorted(
                 verb.name
                 for verb in self.verbs
-                if verb.name in workflow_verbs
+                if verb.name in {*workflow_verbs, "pre-commit"}
                 and set(verb.profiles)
                 != set(FlextInfraConstantsCodegenProject.MakeProfile)
             )
@@ -1084,6 +1104,20 @@ class FlextInfraConfigModelsMake:
                     "make workflow verbs must exist in every profile: "
                     f"{', '.join(partial_workflow)}"
                 )
+                raise ValueError(msg)
+            approval = tuple(
+                step.verb for step in self.workflow if "ci" in step.contexts
+            )
+            hook = tuple(
+                step.verb for step in self.workflow if "pre_commit" in step.contexts
+            )
+            if approval != hook or approval != ("setup", "audit", "check", "test"):
+                msg = (
+                    "CI and pre-commit require the same setup/audit/check/test workflow"
+                )
+                raise ValueError(msg)
+            if "pre-commit" not in declared:
+                msg = "make pre-commit must be declared in every profile"
                 raise ValueError(msg)
             unknown_fmt_gates = set(self.fmt_gates) - set(
                 FlextInfraConstantsCheck.SARIF_TOOL_INFO,
@@ -1107,6 +1141,12 @@ class FlextInfraConfigModelsMake:
 
         @m.computed_field
         @property
+        def approval_verbs(self) -> t.VariadicTuple[str]:
+            """Ordered approval derived once from the validated workflow."""
+            return tuple(step.verb for step in self.workflow if "ci" in step.contexts)
+
+        @m.computed_field
+        @property
         def check_gates_allowed(self) -> t.VariadicTuple[str]:
             """Canonical generated Make check-gate vocabulary.
 
@@ -1127,17 +1167,16 @@ class FlextInfraConfigModelsMake:
         @m.computed_field
         @property
         def check_gates_default(self) -> t.VariadicTuple[str]:
-            """Active default gates, shared by local, CI, hooks, and project gates.
-
-            Returns:
-                The resulting ``t.VariadicTuple[str]``.
-            """
-            standalone = frozenset(self.standalone_check_gates.values())
+            """Active default gates, shared by local, CI, hooks, and project gates."""
+            excluded = frozenset((
+                *self.standalone_check_gates.values(),
+                *self.opt_in_check_gates,
+            ))
             declared = (
-                *FlextInfraConstantsMake.CANONICAL_DEFAULT_GATE_IDS,
+                *FlextInfraConstantsMake.CANONICAL_GATE_IDS,
                 *self.project_check_gates,
             )
-            return tuple(gate for gate in declared if gate not in standalone)
+            return tuple(gate for gate in declared if gate not in excluded)
 
         @m.computed_field
         @property

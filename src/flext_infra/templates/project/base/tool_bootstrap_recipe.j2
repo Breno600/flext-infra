@@ -9,7 +9,6 @@
 	fi; \
 	caller_path="$$PATH"; \
 	mise_trusted_config_paths="$$project_root"; \
-	mise_lock_drift="$${SETUP_MISE_LOCK_DRIFT:-}"; \
 {% for name, value in bootstrap.fixed_environment if name == "MISE_LOCKFILE_PLATFORMS" -%}
 	mise_lockfile_platforms="{{ value }}"; \
 {% endfor -%}
@@ -88,6 +87,9 @@
 		esac; \
 	done; \
 	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
+	if [ -z "$$scratch" ] || [ ! -d "$$scratch" ]; then \
+		printf 'ERROR: mise bootstrap scratch creation failed (template: %s/.%s.mise-bootstrap.XXXXXX)\n' "$$project_parent" "$${project_root##*/}" >&2; exit 2; \
+	fi; \
 	readonly scratch; \
 	lock_stage=; \
 	trap 'bootstrap_status=$$?; trap - EXIT; \
@@ -137,8 +139,6 @@
 			'{{ name }}={{ value }}' \
 {% endfor -%}
 			$${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
-			$${mise_lock_drift:+"MISE_LOCKFILE=false"} \
-			$${mise_lock_drift:+"MISE_LOCKED=false"} \
 {% for name, relative in bootstrap.transient_environment -%}
 			"{{ name }}=$$scratch/{{ relative }}" \
 {% endfor -%}
@@ -192,14 +192,22 @@
 {# Only the bootstrap reaches GitHub: `install --yes` for a tool missing from
    the persistent cache, and `make upg` (release resolution, lock, launcher).
    Every other Mise call runs through mise_offline. The Makefile preamble owns
-   the credential selection; the passthrough carries it into env -i. -#}
+   the credential selection; the passthrough carries it into env -i. #}
+	# The only tolerated Mise warning: ephemeral CI runners ship pre-seeded \
+	# shims (python3, make) and `mise install` always announces it declines to \
+	# replace them while every real install still succeeds (cosmos-main PR 346 \
+	# CI run 37348896444, bead on cosmos-l2wc2). Every OTHER mise WARN stays \
+	# fatal: red-means-red is untouched. \
+	mise_has_blocking_warning() { \
+		grep -F 'mise WARN' "$$1" | grep -Fv 'not replacing unmanaged file in shims directory' | grep -q .; \
+	}; \
 	mise_checked() { \
 		mise_log="$$1"; shift; \
 		printf 'setup probe: begin stage=%s log=%s\n' "$${mise_log##*/}" "$$mise_log" >&2; \
 		if "$$@" >"$$mise_log" 2>&1; then :; \
 		else mise_status=$$?; cat "$$mise_log"; printf 'setup probe: failed stage=%s exit=%s\n' "$${mise_log##*/}" "$$mise_status" >&2; return "$$mise_status"; fi; \
 		cat "$$mise_log"; \
-		if grep -Fq 'mise WARN' "$$mise_log"; then \
+		if mise_has_blocking_warning "$$mise_log"; then \
 			printf 'ERROR: Mise emitted a warning; setup stopped (see %s)\n' "$$mise_log" >&2; return 2; \
 		fi; \
 		printf 'setup probe: end stage=%s exit=0\n' "$${mise_log##*/}" >&2; \
@@ -209,7 +217,7 @@
 		if "$$@" >"$$mise_stdout_log" 2>"$$mise_stderr_log"; then :; \
 		else mise_status=$$?; cat "$$mise_stderr_log" >&2; cat "$$mise_stdout_log"; return "$$mise_status"; fi; \
 		cat "$$mise_stderr_log" >&2; cat "$$mise_stdout_log"; \
-		if grep -Fq 'mise WARN' "$$mise_stderr_log" || grep -Fq 'mise WARN' "$$mise_stdout_log"; then \
+		if mise_has_blocking_warning "$$mise_stderr_log" || mise_has_blocking_warning "$$mise_stdout_log"; then \
 			printf 'ERROR: Mise emitted a warning; setup stopped (see %s)\n' "$$mise_stderr_log" >&2; return 2; \
 		fi; \
 	}; \
@@ -280,7 +288,6 @@
 	fi; \
 	locked_manifest=; \
 	if [ "$$bootstrap_lock" = "1" ]; then \
-		mise_lock_drift=; \
 		# Stage on the destination filesystem: the bumped lock is resolved and \
 		# installed from a private stage, and published by one rename only after \
 		# both succeed. A failed or killed run leaves mise.lock untouched; no \
@@ -342,22 +349,8 @@
 		mise_trusted_config_paths="$$project_root"; \
 		if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then locked_manifest="$$scratch/locked-manifest.toml"; fi; \
 	else \
-		# Only ``make upg`` writes locks; setup never does, and it always runs. \
-		# ``locked`` mode installs every tool at exactly the version the \
-		# committed mise.lock pins. When an offline dry-run shows the lock \
-		# drifted from .mise.toml (mixed-generation merge, interrupted ``upg``, \
-		# a lock written by another Mise release), setup warns and installs \
-		# from .mise.toml with the lockfile disabled for the rest of this \
-		# bootstrap, leaving mise.lock untouched for the next ``make upg``. \
-		# Only ``install --yes`` may reach the network. \
-		if mise_offline project "$$pinned_mise" -C "$$project_root" install --dry-run >"$$scratch/install-probe.log" 2>&1; then \
-			:; \
-		else \
-			probe_status=$$?; \
-			cat "$$scratch/install-probe.log" >&2; \
-			printf 'WARN: mise.lock drifts from .mise.toml under pinned Mise %s (probe exit %s); setup installs from .mise.toml without touching mise.lock; make upg rewrites it\n' "$$runtime_release" "$$probe_status" >&2; \
-			mise_lock_drift=1; \
-		fi; \
+		# Setup consumes the declared lock policy in one install. An invalid \
+		# lock stops here with its original cause; only make upg repairs it. \
 		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$project_root" install --yes; \
 	fi; \
 	mise_checked_stdout "$$scratch/ast-grep-version.stdout" "$$scratch/ast-grep-version.stderr" mise_offline project "$$pinned_mise" -C "$$project_root" exec -- ast-grep --version; \
@@ -412,7 +405,6 @@
 		"MISE_TRUSTED_CONFIG_PATHS=$$project_root" \
 		"MISE_VERSION=$$runtime_release" \
 		"MISE_INSTALL_PATH=$$mise_runtime_path" \
-		$${mise_lock_drift:+"SETUP_MISE_LOCK_DRIFT=1"} \
 		$(PROJECT_TOOL_EXEC) env \
 		$${locked_manifest:+"UPG_LOCKED_MISE_MANIFEST=$$locked_manifest"} \
 		"SETUP_DIRENV=$$direnv_executable" \

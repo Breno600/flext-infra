@@ -121,7 +121,8 @@ class TestsFlextInfraDirenvGate:
             prefix: str,
         ) -> None:
             """resolve_home=False skips ${HOME} targets (generation-time lint)."""
-            violations = FlextInfraWorkspaceEnvironmentContracts.envrc_contract_violations(
+            contracts = FlextInfraWorkspaceEnvironmentContracts
+            violations = contracts.envrc_contract_violations(
                 f'source_env "{prefix}/.config/environment.d/projects/absent.envrc"\n',
                 root=tmp_path,
                 resolve_home=False,

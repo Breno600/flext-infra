@@ -230,7 +230,14 @@ class FlextInfraGate:
             The resulting ``m.Infra.Issue``.
 
         """
-        detail = (result.stderr or result.stdout).strip() or "no diagnostics"
+        detail = (
+            "\n".join(
+                stream.strip()
+                for stream in (result.stderr, result.stdout)
+                if stream.strip()
+            )
+            or "no diagnostics"
+        )
         return m.Infra.Issue(
             file=file,
             line=line,
@@ -352,13 +359,40 @@ class FlextInfraGate:
 
         """
         passed, issues = self._parse_check_output(result, project_dir, ctx)
+        if self.gate_id == c.Infra.LINT and result.stderr.strip():
+            issues.append(self._native_error_issue(project_dir, result.stderr))
+            passed = False
+        policy = config.Infra.codegen.make.ci
+        informative = (
+            u.Infra.env_value(policy.variable) == policy.value
+            and self.gate_id in policy.informative_check_gates
+        )
+        outcome = u.Infra.tool_outcome(
+            result.outcome,
+            findings=len(issues),
+            findings_exit_codes=self._findings_exit_codes(),
+        )
+        if any(
+            issue.code == c.Infra.ToolOutcome.ERROR
+            or issue.code in {f"{self.gate_id}-stderr", f"{self.gate_id}-exec"}
+            for issue in issues
+        ):
+            outcome = c.Infra.ToolOutcome.ERROR
+        if informative:
+            return self._build_gate_execution(
+                project_dir,
+                verdict=outcome is not c.Infra.ToolOutcome.ERROR,
+                issues=issues,
+                raw_output=self._raw_output(result),
+                started=started,
+            ).model_copy(update={"outcome": outcome})
         return self._build_check_gate_execution(
             project_dir,
             passed=passed,
             issues=issues,
             raw_output=self._raw_output(result),
             started=started,
-        )
+        ).model_copy(update={"outcome": outcome})
 
     def _detected_gate_execution(
         self,
@@ -430,6 +464,13 @@ class FlextInfraGate:
             ),
             issues=tuple(issues),
             raw_output=raw_output,
+            outcome=(
+                c.Infra.ToolOutcome.ERROR
+                if not verdict
+                else c.Infra.ToolOutcome.FINDINGS
+                if issues
+                else c.Infra.ToolOutcome.CLEAN
+            ),
         )
 
     def _build_check_gate_execution(
@@ -443,21 +484,34 @@ class FlextInfraGate:
     ) -> m.Infra.GateExecution:
         """Assemble a gate execution from parsed check output.
 
-        Every parsed finding blocks the gate, whatever its native severity.
+        Every parsed finding blocks the gate except the ones a gate reports
+        as ``warning`` severity: a warning finding stays in the gate log, the
+        summary and the SARIF reports while never failing the run (operator
+        ruling 2026-10-05: rules the operator never authorized as blocking
+        are informative only). A blocking verdict still requires the tool
+        run itself to have succeeded.
 
         Returns:
             The resulting ``m.Infra.GateExecution``.
 
         """
+        blocking = u.Infra.blocking_gate_findings(issues)
         return m.Infra.GateExecution(
             result=self._gate_result(
                 project_dir,
-                passed=passed and not issues,
+                passed=passed and not blocking,
                 errors=[issue.formatted for issue in issues],
                 started=started,
             ),
             issues=tuple(issues),
             raw_output=raw_output,
+            outcome=(
+                c.Infra.ToolOutcome.FINDINGS
+                if issues
+                else c.Infra.ToolOutcome.CLEAN
+                if passed
+                else c.Infra.ToolOutcome.ERROR
+            ),
         )
 
     def _build_project_error_gate_result(

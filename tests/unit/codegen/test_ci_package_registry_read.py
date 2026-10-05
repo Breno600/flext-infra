@@ -35,7 +35,7 @@ class TestsFlextInfraCiPackageRegistryRead:
         rendered = tm.ok(u.Cli.template_render(cls.ci_template, spec))
         jobs = tm.ok(u.Cli.yaml_parse(rendered))["jobs"]
         assert isinstance(jobs, Mapping)
-        permissions: dict[str, t.JsonValue] = {}
+        permissions: t.MutableJsonMapping = {}
         for name, job in jobs.items():
             assert isinstance(job, Mapping)
             permissions[name] = job["permissions"]

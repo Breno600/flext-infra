@@ -319,6 +319,19 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             ),
         ] = m.Field(default_factory=tuple)
         fix: Annotated[bool, m.Field(description="Enable automatic ruff fixes")]
+        informative_rules: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                alias="informative-rules",
+                description=(
+                    "Ruff rule names reported as warnings: their findings "
+                    "stay visible in the gate log, the summary, and the SARIF "
+                    "reports, but never fail the lint gate (operator ruling "
+                    "2026-10-05: rules the operator never authorized as "
+                    "blocking are informative only)."
+                ),
+            ),
+        ] = ()
         findings_exit_codes: Annotated[
             t.VariadicTuple[int],
             m.Field(
@@ -405,16 +418,6 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         plugins: Annotated[t.StrSequence, m.Field(description="Mypy plugins list.")] = (
             m.Field(default_factory=tuple)
         )
-        disable_error_code: Annotated[
-            t.StrSequence,
-            m.Field(
-                alias="disable-error-code",
-                description=(
-                    "Mypy error codes suspended fleet-side at this gate-owner"
-                    " config for a dated, proven toolchain limitation."
-                ),
-            ),
-        ] = m.Field(default_factory=tuple)
         facade_rebind_error_codes: Annotated[
             t.StrSequence,
             m.Field(

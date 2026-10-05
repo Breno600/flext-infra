@@ -45,6 +45,9 @@ class FlextInfraModels(FlextCliModels):
         FlextInfraModelsCensus,
         FlextInfraModelsCheck,
         FlextInfraConfigModels,
+        # FlextInfraCodegen already linearizes CodegenRender and
+        # CodegenToolchain (its MRO contains both): listing the ancestors
+        # beside their own subclass makes the C3 merge inconsistent.
         FlextInfraCodegen,
         FlextInfraModelsCodemod,
         FlextInfraModelsDeps,
