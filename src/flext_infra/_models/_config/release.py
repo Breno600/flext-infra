@@ -147,7 +147,7 @@ class FlextInfraConfigModelsRelease:
                     "Empty means every resolved project is eligible."
                 ),
             ),
-        ]
+        ] = ()
         bump_types: Annotated[
             Mapping[t.NonEmptyStr, FlextInfraConstantsRelease.VersionBump],
             m.Field(
@@ -158,14 +158,20 @@ class FlextInfraConfigModelsRelease:
                 },
                 description="Conventional Commits type -> semantic version bump",
             ),
-        ]
+        ] = m.Field(
+            default_factory=lambda: {
+                "feat": FlextInfraConstantsRelease.VersionBump.MINOR,
+                "fix": FlextInfraConstantsRelease.VersionBump.PATCH,
+                "perf": FlextInfraConstantsRelease.VersionBump.PATCH,
+            },
+        )
         publish_url: Annotated[
             t.NonEmptyStr,
             m.Field(
                 default=FlextInfraConstantsRelease.PYPI_UPLOAD_URL,
                 description="Package index upload endpoint for verified artifacts",
             ),
-        ]
+        ] = FlextInfraConstantsRelease.PYPI_UPLOAD_URL
         build_constraints: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsRelease.BuildConstraintSpec],
             m.Field(

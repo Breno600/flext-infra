@@ -273,36 +273,7 @@ class TestsFlextInfraGitFacet:
         tm.that(output.out + output.err, has=changed_path.name)
 
     @staticmethod
-    def test_changed_paths_reports_tracked_and_untracked_files(
-        real_git_repo: Path,
-        capsys: pytest.CaptureFixture[str],
-        change: str,
-    ) -> None:
-        """The public CLI passes a clean checkout and exposes a dirty Git report."""
-        argv = ["workspace", "verify-clean", "--repo-root", str(real_git_repo)]
-        tm.that(main(argv), eq=0)
-        _ = capsys.readouterr()
-
-        if change == "untracked":
-            changed_path = real_git_repo / "dirty.txt"
-            changed_path.write_text("dirty\n", encoding="utf-8")
-        else:
-            changed_path = real_git_repo / "README.md"
-            changed_path.write_text("# Changed Repository\n", encoding="utf-8")
-            if change == "staged":
-                tm.ok(
-                    u.Cli.run_checked(
-                        [c.Infra.GIT, "add", changed_path.name],
-                        cwd=real_git_repo,
-                    ),
-                )
-
-        tm.that(main(argv), eq=1)
-        output = capsys.readouterr()
-        tm.that(output.out + output.err, has=changed_path.name)
-
-    @staticmethod
-    def test_changed_paths_reports_tracked_and_untracked_files(
+    def test_git_changed_paths_reports_tracked_and_untracked_files(
         real_git_repo: Path,
     ) -> None:
         """The public Git facade returns the complete existing worktree delta."""

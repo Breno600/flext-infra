@@ -14,7 +14,7 @@ from tests import t
 _TEST_REPOSITORY_ROOT = Path(__file__).resolve().parent
 
 
-class ExtraPathsTestSupport:
+class TestsFlextInfraExtraPathsSupport:
     """Factory helpers for validated extra-path manager instances."""
 
     @staticmethod

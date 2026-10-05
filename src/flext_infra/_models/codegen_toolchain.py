@@ -243,7 +243,11 @@ class FlextInfraModelsCodegenToolchain:
         @m.computed_field
         @property
         def states(self) -> t.VariadicTuple[m.Cli.AtomicFileState]:
-            """The triple in ``c.Infra.ARTIFACT_SPECS`` order."""
+            """The triple in ``c.Infra.ARTIFACT_SPECS`` order.
+
+            Returns:
+                The resulting ``t.VariadicTuple[m.Cli.AtomicFileState]``.
+            """
             return (self.unix_launcher, self.windows_launcher, self.version_pin)
 
     class MiseToolchainWorkspacePlan(m.ArbitraryTypesModel):
@@ -272,7 +276,11 @@ class FlextInfraModelsCodegenToolchain:
         @m.computed_field
         @property
         def sources(self) -> t.VariadicTuple[m.Cli.AtomicFileState]:
-            """Every state the publication reads: declarations, then the triple."""
+            """Every state the publication reads: declarations, then the triple.
+
+            Returns:
+                The resulting ``t.VariadicTuple[m.Cli.AtomicFileState]``.
+            """
             return (
                 *(
                     state

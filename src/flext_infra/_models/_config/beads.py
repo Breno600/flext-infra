@@ -198,5 +198,9 @@ class FlextInfraConfigModelsBeads:
         @m.computed_field
         @property
         def changed(self) -> bool:
-            """Whether the sync altered any environment file."""
+            """Whether the sync altered any environment file.
+
+            Returns:
+                The resulting ``bool``.
+            """
             return bool(self.changed_files)

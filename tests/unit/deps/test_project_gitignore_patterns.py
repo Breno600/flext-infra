@@ -174,8 +174,10 @@ class TestsFlextInfraProjectGitignorePatterns:
             "# BEGIN external projection\n/only-start\n",
             "# END external projection\n",
             "# END external projection\n# BEGIN external projection\n",
-            "# BEGIN external projection\n# BEGIN external projection\n"
-            "# END external projection\n",
+            (
+                "# BEGIN external projection\n# BEGIN external projection\n"
+                "# END external projection\n"
+            ),
             "# BEGIN external projection extra\n# END external projection\n",
         ],
     )

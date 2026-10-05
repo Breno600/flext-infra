@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Annotated, Self
+from typing import Annotated, Self, TypeAlias
 
 from flext_cli import m
 
@@ -89,9 +89,9 @@ class FlextInfraConfigModelsContract:
                 re.compile(pattern)
             return self
 
-    BeadsEndpointSpec = FlextInfraModelsMiseToolchain.BeadsEndpointSpec
-    BeadsToolSpec = FlextInfraModelsMiseToolchain.BeadsToolSpec
-    MiseBootstrapEnvironmentSpec = (
+    BeadsEndpointSpec: TypeAlias = FlextInfraModelsMiseToolchain.BeadsEndpointSpec
+    BeadsToolSpec: TypeAlias = FlextInfraModelsMiseToolchain.BeadsToolSpec
+    MiseBootstrapEnvironmentSpec: TypeAlias = (
         FlextInfraModelsMiseToolchain.MiseBootstrapEnvironmentSpec
     )
-    ToolchainSpec = FlextInfraModelsMiseToolchain.ToolchainSpec
+    ToolchainSpec: TypeAlias = FlextInfraModelsMiseToolchain.ToolchainSpec
