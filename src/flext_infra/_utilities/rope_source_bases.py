@@ -361,7 +361,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                         ):
                             continue
                         raise
-                return tuple(parents) if parents else (object_id,)
+                return tuple(parents)
             value = external[identity]
             parents = tuple(value.get_superclasses())
             if isinstance(
@@ -399,7 +399,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                     # underivable lineage: it derives straight from object,
                     # which keeps the derivation running without inventing
                     # parents.
-                    return (object_id,)
+                    return ()
             resolved_parents: list[str] = []
             for base in parents:
                 try:
