@@ -218,6 +218,13 @@ severity: error
 files:
   - "**/*.py"
 ignores:
+  # Generator-contract bootstrap modules: the generator emits these fixed
+  # file names importing the framework facade directly — the own-package
+  # facade is not importable at that bootstrap layer
+  # (operator-ruling-2026-10-05-bootstrap-model-imports).
+  - "**/_config_models.py"
+  - "**/_settings_models.py"
+  - "**/utilities.py"
   - "**/__init__.py"
   - "**/_constants/**"
   - "**/_models/**"
@@ -267,6 +274,11 @@ severity: error
 files:
   - "**/*.py"
 ignores:
+  # Lockstep with ENFORCE-003: generator-contract bootstrap modules
+  # (operator-ruling-2026-10-05-bootstrap-model-imports).
+  - "**/_config_models.py"
+  - "**/_settings_models.py"
+  - "**/utilities.py"
   - "**/__init__.py"
   - "**/_constants/**"
   - "**/_models/**"
