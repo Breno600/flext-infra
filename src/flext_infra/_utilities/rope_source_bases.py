@@ -338,6 +338,18 @@ class FlextInfraUtilitiesRopeSourceBases:
                 )
             value = external[identity]
             parents = tuple(value.get_superclasses())
+            if any(
+                not FlextInfraUtilitiesRopeRuntime.abstract_class(parent)
+                for parent in parents
+            ):
+                module = value.get_module()
+                message = (
+                    "Rope did not resolve a required base to a class: "
+                    f"{module.get_name() if module is not None else identity}."
+                    f"{value.get_name()} "
+                    f"parent_types={tuple(type(parent).__name__ for parent in parents)}"
+                )
+                raise TypeError(message)
             if isinstance(
                 value,
                 FlextInfraUtilitiesRopeRuntime.runtime_type(
