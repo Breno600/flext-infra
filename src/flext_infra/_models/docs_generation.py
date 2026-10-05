@@ -11,7 +11,7 @@ from typing import Annotated, ClassVar, Literal, Self
 
 from flext_cli import m as cli_m
 
-from flext_core import m, u
+from flext_core import m
 from flext_infra import t
 
 
@@ -59,7 +59,7 @@ class FlextInfraModelsDocsGeneration:
             ),
         ] = None
 
-        @u.field_validator("path", "report_dir")
+        @m.field_validator("path", "report_dir")
         @classmethod
         def _validate_absolute_lexical_path(cls, value: Path) -> Path:
             if not value.is_absolute() or ".." in value.parts:
@@ -67,7 +67,7 @@ class FlextInfraModelsDocsGeneration:
                 raise ValueError(msg)
             return value
 
-        @u.field_validator("repository_root_override")
+        @m.field_validator("repository_root_override")
         @classmethod
         def _validate_absolute_lexical_repository_root_override(
             cls,
@@ -86,21 +86,25 @@ class FlextInfraModelsDocsGeneration:
         @m.computed_field
         @property
         def repository_root(self) -> Path:
-            """The physical repository root owning this scope's docs policy."""
+            """The physical repository root owning this scope's docs policy.
+
+            Returns:
+                The resulting ``Path``.
+            """
             return (
                 self.path
                 if self.repository_root_override is None
                 else self.repository_root_override
             )
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_report_owner(self) -> Self:
             if not self.report_dir.is_relative_to(self.path):
                 msg = f"docs report directory escapes its scope: {self.report_dir}"
                 raise ValueError(msg)
             return self
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_repository_root_owns_path(self) -> Self:
             if not self.path.is_relative_to(self.repository_root):
                 msg = f"docs scope path escapes its repository root: {self.path}"
@@ -129,7 +133,7 @@ class FlextInfraModelsDocsGeneration:
             m.Field(description="Exact desired mode, or absence"),
         ]
 
-        @u.field_validator("relative_path")
+        @m.field_validator("relative_path")
         @classmethod
         def _validate_relative_path(cls, value: Path) -> Path:
             if (
@@ -142,7 +146,7 @@ class FlextInfraModelsDocsGeneration:
                 raise ValueError(msg)
             return value
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_desired_tuple(self) -> Self:
             if (self.desired_content is None) != (self.desired_mode is None):
                 msg = "docs artifact content and mode must be present together"
@@ -192,7 +196,7 @@ class FlextInfraModelsDocsGeneration:
             m.Field(description="Absolute lexical physical workspace root"),
         ]
 
-        @u.field_validator("repository_root")
+        @m.field_validator("repository_root")
         @classmethod
         def _validate_absolute_repository_root(cls, value: Path) -> Path:
             if not value.is_absolute() or ".." in value.parts:
@@ -203,7 +207,7 @@ class FlextInfraModelsDocsGeneration:
                 raise ValueError(msg)
             return value
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_unique_complete_inputs(self) -> Self:
             scope_names = tuple(item.scope.name for item in self.scopes)
             if len(set(scope_names)) != len(scope_names):

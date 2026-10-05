@@ -238,9 +238,9 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
         return r[m.Infra.StubAnalysisReport].ok(
             m.Infra.StubAnalysisReport(
                 project=proj.name,
-                mypy_hints=mypy_hints,
-                internal_missing=internal,
-                unresolved_missing=unresolved,
+                mypy_hints=list(mypy_hints),
+                internal_missing=list(internal),
+                unresolved_missing=list(unresolved),
                 total_missing=len(missing_imports),
             ),
         )

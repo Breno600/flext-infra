@@ -42,7 +42,10 @@ class TestsFlextInfraMiseDistributionPolicy:
         config_dir = root / "config"
         config_dir.mkdir()
         toolchain = config.Infra.codegen.toolchain
-        selector, version = toolchain.qlty_selector, toolchain.qlty_version
+        selector, version = (
+            toolchain.tool_selectors["qlty"],
+            toolchain.tool_versions["qlty"],
+        )
         (config_dir / "tools.yaml").write_text(
             "ManagedArtifacts:\n  Mise:\n    tools:\n"
             f'      "{selector}":\n        version: "{version}.divergent"\n',
