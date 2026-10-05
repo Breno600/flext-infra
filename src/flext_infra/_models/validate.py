@@ -431,7 +431,8 @@ class FlextInfraModelsCore:
         markdown_attempts: t.VariadicTuple[
             FlextInfraModelsCore.PytestMarkdownAttempt
         ] = m.Field(
-            default_factory=tuple, description="Observed SDK execution attempts",
+            default_factory=tuple,
+            description="Observed SDK execution attempts",
         )
         markdown_items: t.VariadicTuple[FlextInfraModelsCore.PytestMarkdownItem] = (
             m.Field(default_factory=tuple, description="Executed call-phase origins")
