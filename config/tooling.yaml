@@ -501,6 +501,7 @@ Infra:
           - "*/protocols.py"
           - "*/_protocols/*"
       pyrefly:
+        findings-exit-codes: [1]
         disable-project-excludes-heuristics: true
         python-version: "3.13"
         use-ignore-files: false
@@ -745,6 +746,7 @@ Infra:
           - "resilience: resilience tests"
           - "discovery: catalog and stream discovery tests"
           - "singer: Singer protocol contract tests"
+          - "requires_engine: native check engine required by this test"
         # External-token gates never run inside
         # offline verification (`make test`); the runner records their exclusion.
         # `make test-full` first completes that incremental phase, then executes
@@ -755,6 +757,9 @@ Infra:
         # local and pre-push execution retain slow tests. The full phase of
         # `make test-full` includes these markers in every context.
         ci-excluded-markers: [slow]
+        # Fixtures declaring local engines or resolution cannot execute in approval.
+        ci-excluded-fixtures:
+          [resolved_make_templates, detector_project, mod_workspace, smells_project, _clear_make_ci_token]
         standard-addopts:
           - --benchmark-disable
           - --strict-markers

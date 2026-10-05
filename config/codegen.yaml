@@ -235,11 +235,8 @@ Infra:
     # really exercise their subprojects in CI opt in through
     # config/codegen-overrides.yaml.
     checkout_submodules: "false"
-    # The root workspace checkout exercises its flext-infra subproject in CI:
-    # the bootstrap library (post-#1361) is read from the submodule src, so
-    # the root's generated workflows must materialize it before make setup.
-    checkout_submodules_overrides:
-      flext: "true"
+    # CI consumes installed locked providers, never member checkouts.
+    checkout_submodules_overrides: {}
 
     # Runner packages a distribution's own tests need (Ubuntu apt names),
     # installed by the generated CI before the gates run. A test that drives
@@ -451,14 +448,14 @@ Infra:
       # ladder, and the refs allowed to publish (never pull requests).
       testmon_cache_policy:
         mode: stable
-        save_enabled: false
+        save_enabled: true
         max_bootstrap_generations: 3
         max_stable_generations: 3
         per_repo_budget_bytes: 52428800
         warning_threshold_percent: 80
         maintenance_threshold_percent: 90
         block_threshold_percent: 95
-        allowed_save_refs: [main, 0.12.0-dev]
+        allowed_save_refs: [main, 0.12.0-dev, develop]
         key_prefix: flext-testmon
       # The Mypy gate shares one analysis per project name across checkouts
       # (u.Infra.mypy_cache_directory). Relocks retain the directory; Mypy
@@ -488,7 +485,7 @@ Infra:
         # Other pre-push verbs use this token to preserve local test behavior;
         # pre-push check unsets CI so it runs every active check gate.
         local_value: N
-        local_check_gates: [lint, mypy, pyright, codemod, smells, pyrefly]
+        local_check_gates: [mypy, pyright, codemod, smells, pyrefly]
         # local_check_gates is the only declared partition: CI=N runs
         # MakeSpec.check_gates_local (its intersection with the active default
         # gates) and CI=Y runs MakeSpec.check_gates_ci, the strict complement.
@@ -505,25 +502,21 @@ Infra:
         # tooling.tools.pytest.ci-excluded-markers defines the slow-test
         # exclusion for CI and pre-commit, not local/pre-push runs.
         # An absent CI uses testmon for incremental developer runs.
-      # Git-hook stages are disabled by default;
-      # the workflow below still declares stage membership so re-enabling is a
-      # one-key change, case by case. CI owns read-only setup, generation drift,
-      # and checks; it never renders an apply/fmt/fix invocation.
-      pre_commit: false
+      # CI and pre-commit consume the same ordered read-only approval.
+      # Hook installation belongs to the host runtime, not project setup.
+      pre_commit: true
       pre_push: false
       workflow:
-      # Pre-commit runs fmt+fix, then the fast check partition. Pre-push
-      # runs check with CI unset to cover the complete active gate universe,
-      # and adds gen+test with the declared local token.
-        - {verb: setup, contexts: [local, ci]}
+        - {verb: setup, contexts: [local, ci, pre_commit]}
+        - {verb: audit, contexts: [local, ci, pre_commit]}
         - {verb: gen, contexts: [local, pre_push]}
-        - {verb: fmt, contexts: [local, pre_commit]}
-        - {verb: fix, contexts: [local, pre_commit]}
+        - {verb: fmt, contexts: [local]}
+        - {verb: fix, contexts: [local]}
         - {verb: check, contexts: [local, ci, pre_push, pre_commit]}
       # CI also runs the incremental suite with the persistent testmon cache.
       # The full suite remains a separate local verb that first runs this
       # incremental phase and then exercises the complete inventory.
-        - {verb: test, contexts: [local, ci, pre_push]}
+        - {verb: test, contexts: [local, ci, pre_push, pre_commit]}
       # Artifacts `make clean` removes. Read by Makefile.j2 for the cache
       # sweep and the root-level directory/file lists.
       clean:
@@ -591,6 +584,8 @@ Infra:
           description: Show the complete selector-free public interface.
         - name: setup
           description: Provision the declared environment and hooks.
+        - name: pre-commit
+          description: Approve this project through locked setup, audit, check, and incremental tests with the enforced CI contract.
         - name: upg
           description: Resolve the newest declared releases, write the uv and mise locks, then prove the upgraded tree still converges and passes every active check gate.
         # Workspace-only (topology owns applicability): a standalone Makefile

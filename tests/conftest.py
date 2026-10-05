@@ -95,6 +95,37 @@ def pytest_sessionfinish(session: pytest.Session) -> None:
         )
 
 
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Resolve native-engine and provisioning applicability before fixtures execute."""
+    policy = config.Infra.codegen.make.ci
+    if u.Infra.env_value(policy.variable).strip() != policy.value:
+        return
+    excluded_fixtures = frozenset(config.Infra.tooling.tools.pytest.ci_excluded_fixtures)
+    excluded_engines = frozenset(policy.local_check_gates)
+    selected: list[pytest.Item] = []
+    deselected: list[pytest.Item] = []
+    for item in items:
+        engines = tuple(
+            engine
+            for marker in item.iter_markers("requires_engine")
+            for engine in marker.args
+        )
+        if any(not isinstance(engine, str) for engine in engines):
+            msg = "requires_engine arguments must be canonical engine names"
+            raise ValueError(msg)
+        fixtures = tuple(item.fixturenames) if isinstance(item, pytest.Function) else ()
+        target = (
+            deselected
+            if excluded_engines.intersection(engines)
+            or excluded_fixtures.intersection(fixtures)
+            else selected
+        )
+        target.append(item)
+    if deselected:
+        deselected[0].config.hook.pytest_deselected(items=deselected)
+    items[:] = selected
+
+
 @pytest.fixture
 def installed_dependency_path(tmp_path: Path) -> Iterator[Path]:
     """Expose real non-src package files through the selected import environment.

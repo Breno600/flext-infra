@@ -561,6 +561,15 @@ class FlextInfraWorkspaceDetector(
                 "governed subproject branch differs from the workspace "
                 f"integration line: {path.as_posix()}",
             )
+        ci = config.Infra.codegen.make.ci
+        if u.Infra.env_value(ci.variable).strip() == ci.value:
+            if declared_member is None:
+                return result_type.fail(
+                    f"CI requires a root-owned member identity: {path.as_posix()}",
+                )
+            if u.Infra.git_remote_identity(declared_member.url) != u.Infra.git_remote_identity(declared_url):
+                return result_type.fail(f"CI member URL differs from root topology: {path.as_posix()}")
+            return result_type.ok(declared_member)
         subproject_root = (repository_root / path).resolve()
         if not subproject_root.is_relative_to(repository_root):
             return result_type.fail(
