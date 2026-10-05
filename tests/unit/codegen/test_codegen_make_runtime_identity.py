@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from flext_infra import config
 from flext_tests import tm
 
 from tests import c, u
@@ -41,7 +42,7 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
         tm.that(len(locked_uv), eq=1)
         version = locked_uv[0]["version"]
         tm.that(isinstance(version, str), eq=True)
-        (root / "custom.mk").write_text(
+        (root / config.Infra.codegen.make.custom_handler_policy.filename).write_text(
             ".PHONY: post-status\n"
             'post-status:\n\t@test "$$APPLICATION_STATE" = "$(PROJECT_ROOT)"\n'
             "\t@printf 'application-environment-preserved\\n'\n",
@@ -72,7 +73,7 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
 
     @staticmethod
     @pytest.mark.parametrize(
-        ("operational_status", "remove_scratch", "close_stderr"),
+        ("operational_status", "remove_scratch", "fail_preparation_diagnostic"),
         [
             (0, False, False),
             (37, False, False),
@@ -85,9 +86,9 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
         tmp_path: Path,
         operational_status: int,
         remove_scratch: bool,
-        close_stderr: bool,
+        fail_preparation_diagnostic: bool,
     ) -> None:
-        """Real nested commands retain their primary exit even when cleanup fails."""
+        """Nested runtime cleans failed preparation and preserves executed exits."""
         root, _ = u.Tests.render_make_environment(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,
@@ -103,7 +104,7 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
         }
         scratch_pattern = f".{root.name}.mise-bootstrap.*"
         tm.that(tuple(root.parent.glob(scratch_pattern)), eq=())
-        command = ""
+        command = ': >"$(PROJECT_ROOT)/leaf-ran"; '
         if remove_scratch:
             command += (
                 'for path in "$(PROJECT_ROOT)/../.'
@@ -111,8 +112,9 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
                 'find "$$path" -depth -delete; done; '
             )
         command += f"exit {operational_status}"
-        diagnostic_redirect = " 2>&-" if close_stderr else ""
-        (root / "custom.mk").write_text(
+        # Closing stderr here fails preparation, before the selected command runs.
+        diagnostic_redirect = " 2>&-" if fail_preparation_diagnostic else ""
+        (root / config.Infra.codegen.make.custom_handler_policy.filename).write_text(
             ".PHONY: _custom-status post-status\n"
             "_custom-status:\n"
             "\t@if $(PROJECT_TOOL_EXEC) $(SELF_MAKE) post-status; "
@@ -136,7 +138,13 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
         )
 
         leaf_status = int((root / "leaf-status").read_text(encoding="utf-8"))
-        failed = operational_status != 0 or remove_scratch or close_stderr
+        tm.that(
+            (root / "leaf-ran").exists(),
+            eq=not fail_preparation_diagnostic,
+        )
+        failed = (
+            operational_status != 0 or remove_scratch or fail_preparation_diagnostic
+        )
         if operational_status != 0:
             tm.that(leaf_status, eq=operational_status)
         elif failed:
