@@ -138,13 +138,13 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
             "_custom-status:\n"
             "\t@if $(PROJECT_TOOL_EXEC) $(SELF_MAKE) post-status; "
             "then status=0; else status=$$?; fi; "
-            "printf '%s\\n' \"$$status\" >\"$(PROJECT_ROOT)/nested-status\"; "
+            'printf \'%s\\n\' "$$status" >"$(PROJECT_ROOT)/nested-status"; '
             'exit "$$status"\n'
             "post-status:\n"
             f"\t@if $(PROJECT_TOOL_EXEC) {caller} '{command}'"
             f"{diagnostic_redirect}; "
             "then status=0; else status=$$?; fi; "
-            "printf '%s\\n' \"$$status\" >\"$(PROJECT_ROOT)/leaf-status\"; "
+            'printf \'%s\\n\' "$$status" >"$(PROJECT_ROOT)/leaf-status"; '
             'exit "$$status"\n',
             encoding="utf-8",
         )
