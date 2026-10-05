@@ -41,7 +41,10 @@ class TestsFlextInfraCiSystemPackages:
         tm.that(rendered.count(self.step_name), eq=1)
         tm.that(
             rendered,
-            has="apt-get install -y -qq --no-install-recommends engine-calc engine-fonts",
+            has=(
+                "apt-get install -y -qq --no-install-recommends "
+                "engine-calc engine-fonts"
+            ),
         )
         tm.that(
             rendered.index(self.step_name) < rendered.index("setup (blocking)"),

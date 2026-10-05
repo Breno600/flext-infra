@@ -37,7 +37,7 @@ class FlextInfraWorkspacePropagation(s[bool]):
                 "conform fails before any effect without it"
             ),
         ),
-    ]
+    ] = None
 
     @override
     def execute(self) -> p.Result[bool]:

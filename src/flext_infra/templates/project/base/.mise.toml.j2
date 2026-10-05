@@ -22,42 +22,41 @@ lockfile_platforms = [{% for platform in mise_lockfile_platforms %}"{{ platform 
 [settings.python]
 compile = {{ "true" if python_compile else "false" }}
 [settings.npm]
+{% if npm_package_manager == "bun" -%}
+# bun installs the npm CLIs with the --trust lifecycle approval the inline
+# tool below declares; the lock keeps the top-level pin only.
+{% else -%}
 # Aube replays the locked dependency graph. Only the configured ast-grep
 # package is approved below to run its native binary-selection lifecycle.
+{% endif -%}
 package_manager = "{{ npm_package_manager }}"
 [tool_config]
 locked = {{ "true" if mise_locked else "false" }}
 # End SECTION: settings
 
 # === SECTION: tools (managed) ===
-# Source: config:python_version, config:codegen.scaffold.project.dev native toolchain floors
-#         (kubectl_version, helm_version, kind_version, taplo_version, ast_grep_selector/ast_grep_version,
-#          gitleaks_version, scc_selector/scc_version, kubeconform_version, qlty_selector/qlty_version,
-#          node_version, jscpd_selector/jscpd_version,
-#          prettier_selector/prettier_version, waza_selector/waza_version/waza_version_prefix,
-#          go_version, make_version)
+# Source: config:python_version + config:codegen.toolchain.tools entries
+#         (name, selector, version, version_prefix, form; entry order is the
+#         projection order, form fixes the rendered shape)
 [tools]
 python = "{{ python_version }}"
-uv = "{{ uv_version }}"
-# Native toolchain (single source: Infra.codegen.toolchain in codegen.yaml).
-kubectl = "{{ kubectl_version }}"
-helm = "{{ helm_version }}"
-kind = "{{ kind_version }}"
-direnv = "{{ direnv_version }}"
-taplo = "{{ taplo_version }}"
-"{{ ast_grep_selector }}" = { version = "{{ ast_grep_version }}", allow_builds = ["{{ ast_grep_selector.removeprefix('npm:') }}"] }
-gitleaks = "{{ gitleaks_version }}"
-"{{ scc_selector }}" = "{{ scc_version }}"
-kubeconform = "{{ kubeconform_version }}"
-node = "{{ node_version }}"
-"{{ prettier_selector }}" = "{{ prettier_version }}"
-go = "{{ go_version }}"
-make = "{{ make_version }}"
-[tools."{{ qlty_selector }}"]
-version = "{{ qlty_version }}"
-[tools."{{ jscpd_selector }}"]
-version = "{{ jscpd_version }}"
-[tools."{{ waza_selector }}"]
-version = "{{ waza_version }}"
-version_prefix = "{{ waza_version_prefix }}"
+# Native toolchain (single source: Infra.codegen.toolchain.tools in codegen.yaml).
+{%- for entry in tools %}{% if entry.form == "table" %}
+[tools."{{ entry.selector }}"]
+version = "{{ tool_versions[entry.name] }}"
+{%- if entry.version_prefix %}
+version_prefix = "{{ entry.version_prefix }}"
+{%- endif %}
+{%- elif entry.form == "inline" %}
+{%- if npm_package_manager == "bun" %}
+"{{ entry.selector }}" = { version = "{{ tool_versions[entry.name] }}", bun_args = "--trust" }
+{%- else %}
+"{{ entry.selector }}" = { version = "{{ tool_versions[entry.name] }}", allow_builds = ["{{ entry.selector.removeprefix("npm:") }}"] }
+{%- endif %}
+{%- elif entry.selector %}
+"{{ entry.selector }}" = "{{ tool_versions[entry.name] }}"
+{%- else %}
+{{ entry.name }} = "{{ tool_versions[entry.name] }}"
+{%- endif %}
+{%- endfor %}
 # End SECTION: tools

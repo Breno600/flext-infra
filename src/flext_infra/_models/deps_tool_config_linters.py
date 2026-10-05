@@ -219,7 +219,11 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         @m.computed_field
         @property
         def ignore(self) -> t.StrSequence:
-            """Rules excepted for every file, rendered as Ruff ``ignore``."""
+            """Rules excepted for every file, rendered as Ruff ``ignore``.
+
+            Returns:
+                The resulting ``t.StrSequence``.
+            """
             return tuple(
                 sorted({
                     rule
@@ -232,7 +236,11 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         @m.computed_field
         @property
         def per_file_ignores(self) -> t.Infra.PerFileIgnores:
-            """Scoped exceptions, rendered as Ruff ``per-file-ignores``."""
+            """Scoped exceptions, rendered as Ruff ``per-file-ignores``.
+
+            Returns:
+                The resulting ``t.Infra.PerFileIgnores``.
+            """
             return {
                 pattern: tuple(
                     sorted({
@@ -384,6 +392,17 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 ),
             ),
         ]
+        disable_error_code: Annotated[
+            t.StrSequence,
+            m.Field(
+                alias="disable-error-code",
+                description=(
+                    "Mypy error codes an operator ruling suspends project-wide; "
+                    "rendered as [tool.mypy] disable_error_code. The pydantic "
+                    "mypy plugin stays mandatory (Pydantic 2 is the contract)."
+                ),
+            ),
+        ] = m.Field(default_factory=tuple)
         boolean_settings: Annotated[
             t.BoolMapping,
             m.Field(

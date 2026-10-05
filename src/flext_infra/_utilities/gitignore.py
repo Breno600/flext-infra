@@ -6,6 +6,8 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from itertools import pairwise
+from operator import itemgetter
 from pathlib import Path
 
 from flext_core import r
@@ -169,11 +171,8 @@ class FlextInfraUtilitiesGitignore:
                 ends[0],
                 "".join(lines[begins[0] : ends[0] + 1]),
             ))
-        sections.sort(key=lambda item: item[0])
-        if any(
-            previous[1] >= current[0]
-            for previous, current in zip(sections, sections[1:])
-        ):
+        sections.sort(key=itemgetter(0))
+        if any(previous[1] >= current[0] for previous, current in pairwise(sections)):
             return r[str].fail(f"overlapping gitignore preserved blocks: {destination}")
         composed = rendered
         for _, _, external in sections:
