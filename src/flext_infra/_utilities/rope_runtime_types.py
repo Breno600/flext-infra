@@ -23,7 +23,23 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
 
     @classmethod
     def pymodule(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopePyModule]:
-        return isinstance(value, cls.runtime_type("rope.base.pyobjectsdef", "PyModule"))
+        """Accept every rope module-like object: modules and packages.
+
+        ``find_module`` resolves an installed third-party package to its
+        folder resource and ``get_pymodule`` returns a ``PyPackage`` for it,
+        which is rope's ``_PyModule`` sibling of ``PyModule`` — never a
+        ``PyModule`` instance. External base resolution
+        (``pydantic.BaseModel`` and friends) must read attributes through
+        packages exactly like through modules, so both shapes satisfy the
+        contract.
+        """
+        return isinstance(
+            value,
+            (
+                cls.runtime_type("rope.base.pyobjectsdef", "PyModule"),
+                cls.runtime_type("rope.base.pyobjectsdef", "PyPackage"),
+            ),
+        )
 
     @classmethod
     def from_import_info(
