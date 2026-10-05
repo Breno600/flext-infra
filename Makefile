@@ -2102,11 +2102,11 @@ _builtin_check_all: _builtin_require_environment
 	@set -eu; \
 		gates="lint,security,markdown,markdown-format,duplication,pyrefly,mypy,pyright,loc-cap,runtime-census,fresh-import,index-declarations,codemod,layout,direnv"; \
 		if [ "$(strip $(CI))" = "Y" ]; then \
-			gates="security,markdown,markdown-format,duplication,loc-cap,runtime-census,fresh-import,index-declarations,layout,direnv"; \
-			printf 'INFO: CI=Y runs check gates: security markdown markdown-format duplication loc-cap runtime-census fresh-import index-declarations layout direnv\n'; \
+			gates="security,markdown,markdown-format,duplication,pyrefly,loc-cap,runtime-census,fresh-import,index-declarations,layout,direnv"; \
+			printf 'INFO: CI=Y runs check gates: security markdown markdown-format duplication pyrefly loc-cap runtime-census fresh-import index-declarations layout direnv\n'; \
 		elif [ "$(strip $(CI))" = "N" ]; then \
-			gates="lint,pyrefly,mypy,pyright,codemod"; \
-			printf 'INFO: CI=N runs check gates: lint pyrefly mypy pyright codemod\n'; \
+			gates="lint,mypy,pyright,codemod"; \
+			printf 'INFO: CI=N runs check gates: lint mypy pyright codemod\n'; \
 		else \
 			printf 'INFO: default context runs check gates: lint security markdown markdown-format duplication pyrefly mypy pyright loc-cap runtime-census fresh-import index-declarations codemod layout direnv\n'; \
 		fi; \

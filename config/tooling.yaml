@@ -270,7 +270,13 @@ Infra:
                 disabled in Ruff so it does not enforce them; the rules are
                 blocked from executing on every file while remaining declared
                 by name in the SSOT. Canonical authority: bead flext-p7bxt
-                (tracker-verifiable).
+                (tracker-verifiable). Why they can never be re-enabled: the
+                flake8-type-checking family breaks Pydantic classes — Pydantic
+                evaluates field annotations at runtime, so the TC autofix
+                moving a runtime-required import into a TYPE_CHECKING block
+                leaves models "not fully defined" (the OptionSpec /
+                RuntimeCommandCase PydanticUserError wave); model_rebuild
+                stays forbidden, so no workaround exists.
             - rules: [missing-required-import, implicit-namespace-package]
               authority: operator-ruling-2026-10-03-import-banners-off-global
               reason: >-

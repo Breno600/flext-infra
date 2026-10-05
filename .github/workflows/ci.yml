@@ -200,9 +200,9 @@ jobs:
         # Why: explicit CI=Y on every make invocation (job env is not enough for matrix/docker parity).
         run: CI=Y make check
         # The CI partition, the complement of make.ci.local_check_gates:
-        # security markdown markdown-format duplication loc-cap runtime-census fresh-import index-declarations layout direnv.
+        # security markdown markdown-format duplication pyrefly loc-cap runtime-census fresh-import index-declarations layout direnv.
         # These gates block locally and at pre-push
-        # (CI=N runs lint pyrefly mypy pyright codemod).
+        # (CI=N runs lint mypy pyright codemod).
 
       - name: test (blocking)
         # Why: explicit CI=Y on every make invocation (job env is not enough for matrix/docker parity).
