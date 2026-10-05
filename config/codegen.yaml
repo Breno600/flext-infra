@@ -492,8 +492,9 @@ Infra:
         # gates) and CI=Y runs MakeSpec.check_gates_ci, the strict complement.
         # An unset CI runs all active gates. Mypy, pyright, the codemod
         # (ast-grep) rule set and smells (qlty similar-code) DO NOT EXECUTE
-        # under CI=Y at all — operator order 2026-10-05: never blocking, never
-        # advisory, not run; they stay active (blocking) locally, at pre-push,
+        # under CI=Y, even as advisory engines. Lint and remaining types do
+        # execute: findings are informative, while machinery errors block.
+        # The excluded engines stay active (blocking) locally, at pre-push,
         # and on every unset-CI run, so findings still surface before
         # integration. Mypy stays bounded by MYPY_MEMORY_LIMIT_MB and the
         # project-owned tools.mypy.timeout_seconds budget.
@@ -670,6 +671,11 @@ Infra:
       custom_handler_profile_overrides: {}
       standalone_check_gates:
         smells: smells
+      # Operator ruling flext-uz0dt (2026-09-18, reaffirmed 2026-10-04 in
+      # flext-qtmy2): markdown-code runs only when requested explicitly; make
+      # fix still repairs it.
+      opt_in_check_gates:
+        - markdown-code
       custom_handler_policy:
         filename: custom.mk
         # Custom behavior is one private whole-verb replacement or one lifecycle

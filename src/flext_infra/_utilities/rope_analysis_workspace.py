@@ -211,7 +211,9 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
         parse_root = next(path for path in (root, *root.parents) if path.is_dir())
         with FlextInfraUtilitiesRopeCore.open_project(parse_root) as project:
             return FlextInfraUtilitiesRopeSourceBases.runtime_bases(
-                project, sources, roots,
+                project,
+                sources,
+                roots,
             )
 
     @staticmethod

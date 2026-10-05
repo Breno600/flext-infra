@@ -139,17 +139,24 @@ class FlextInfraPytestCollection:
         monitoring.use_tool_id(tool, "flext-markdown-attempts")
         try:
             monitoring.register_callback(
-                tool, monitoring.events.PY_START, observer.start,
+                tool,
+                monitoring.events.PY_START,
+                observer.start,
             )
             monitoring.register_callback(
-                tool, monitoring.events.PY_UNWIND, observer.unwind,
+                tool,
+                monitoring.events.PY_UNWIND,
+                observer.unwind,
             )
             monitoring.set_local_events(tool, code, monitoring.events.PY_START)
             monitoring.set_events(tool, monitoring.events.PY_UNWIND)
             try:
                 yield
             except BaseException as error:
-                if observer.first_error is not None and observer.first_error is not error:
+                if (
+                    observer.first_error is not None
+                    and observer.first_error is not error
+                ):
                     raise observer.first_error from error
                 raise
             finally:

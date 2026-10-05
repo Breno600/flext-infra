@@ -251,12 +251,13 @@ Infra:
           # Each exception exists only with the operator ruling that authorized
           # it and its reason; Ruff receives the unscoped entries as `ignore`
           # and the scoped ones as `per-file-ignores`. Repositories declare no
-          # exception of their own. Operator order 2026-10-05: TC001-TC004 are
-          # NEVER EXECUTED by Ruff on ANY file — the four type-checking rules
-          # stay in this table by name, the unscoped ones as global `ignore`
-          # entries, and no ruling may remove them.
+          # exception of their own. Direct operator order 2026-10-05:
+          # TC001-TC004 NEVER EXECUTE on any file. Their four rule names stay
+          # in the canonical tooling owner as one unscoped global exception;
+          # select ALL does not reactivate them. Scoped exceptions are not
+          # substitutes for this global execution prohibition.
           authorized-exceptions:
-            # Operator ruling 2026-10-05: the whole flake8-type-checking
+            # Operator order 2026-10-05 (latest): the whole flake8-type-checking
             # family TC001-TC004 — typing-only-first-party-import,
             # typing-only-third-party-import,
             # typing-only-standard-library-import and
@@ -279,6 +280,9 @@ Infra:
                 Operator ruling 2026-10-05: TC001-TC004 are blocked from
                 executing on every file; Ruff receives them as global ignores
                 declared by rule name in this single unscoped exception.
+                Pydantic evaluates model annotations at runtime; moving their
+                required imports into TYPE_CHECKING can break model declaration.
+                No model or import workaround substitutes for this prohibition.
                 No file may surface a flake8-type-checking finding.
             - rules: [missing-required-import, implicit-namespace-package]
               authority: operator-ruling-2026-10-03-import-banners-off-global
