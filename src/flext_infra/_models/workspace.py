@@ -65,7 +65,7 @@ class FlextInfraModelsWorkspace:
                 default=None,
                 description="Catalog-declared member reference for this entry",
             ),
-        ]
+        ] = None
 
     class EnvironmentContractViolation(
         FlextInfraModelsMixins.PositiveLineMixin,

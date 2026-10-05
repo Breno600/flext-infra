@@ -340,6 +340,16 @@ Infra:
         # variable changes it.
         timeout_seconds: 120
         plugins: [pydantic.mypy]
+        # Operator law 2026-10-05: the pydantic plugin above is MANDATORY in
+        # every projection (Pydantic 2 is the fleet contract) and these false
+        # positives the canonical forms generate are suspended, never worked
+        # around in code: call-arg fires on @m.model_validator(mode="after");
+        # prop-decorator fires on @u.computed_field @property (operator ruling
+        # u3-field-computed-field-staticmethod-rebind: flext-core rebinds
+        # model_validator/computed_field/Field through staticmethod(...),
+        # collapsing the pydantic overloads mypy reads — consumers must not
+        # churn model code to please the checker). One key, one render.
+        disable-error-code: [prop-decorator, call-arg]
         # The canonical facade form imports the parent letter, subclasses it
         # and rebinds the letter (`from flext_core import u`,
         # `class FlextCliUtilities(u)`, `u = FlextCliUtilities`). Mypy 2.3.1
@@ -450,6 +460,11 @@ Infra:
         disable-project-excludes-heuristics: true
         python-version: "3.13"
         use-ignore-files: false
+        # Operator law 2026-10-05: prop-decorator fires on the canonical
+        # @m.computed_field + @property form and is suspended, never worked
+        # around in code.
+        ignored-errors:
+          - prop-decorator
         strict-errors:
           # --- type safety ---
           - bad-argument-count
