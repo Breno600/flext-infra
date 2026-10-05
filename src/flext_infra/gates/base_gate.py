@@ -443,16 +443,22 @@ class FlextInfraGate:
     ) -> m.Infra.GateExecution:
         """Assemble a gate execution from parsed check output.
 
-        Every parsed finding blocks the gate, whatever its native severity.
+        Every parsed finding blocks the gate except the ones a gate reports
+        as ``warning`` severity: a warning finding stays in the gate log, the
+        summary and the SARIF reports while never failing the run (operator
+        ruling 2026-10-05: rules the operator never authorized as blocking
+        are informative only). A blocking verdict still requires the tool
+        run itself to have succeeded.
 
         Returns:
             The resulting ``m.Infra.GateExecution``.
 
         """
+        blocking = u.Infra.blocking_gate_findings(issues)
         return m.Infra.GateExecution(
             result=self._gate_result(
                 project_dir,
-                passed=passed and not issues,
+                passed=passed and not blocking,
                 errors=[issue.formatted for issue in issues],
                 started=started,
             ),

@@ -26,7 +26,7 @@ from flext_infra._models._config.external_cache import (
 )
 
 
-def _shared_mypy_cache_spec() -> FlextInfraConfigModelsMake.MypyCacheSpec:
+def _shared_mypy_cache_spec() -> FlextInfraConfigModelsMake.MakeSpec.MypyCacheSpec:
     """Build the declared default shared Mypy analysis cache policy.
 
     Declared here (module scope) so the field default is one shared policy that
@@ -34,9 +34,9 @@ def _shared_mypy_cache_spec() -> FlextInfraConfigModelsMake.MypyCacheSpec:
     to repeat the same block just to satisfy a required field.
 
     Returns:
-        The resulting ``FlextInfraConfigModelsMake.MypyCacheSpec``.
+        The resulting ``FlextInfraConfigModelsMake.MakeSpec.MypyCacheSpec``.
     """
-    return FlextInfraConfigModelsMake.MypyCacheSpec()
+    return FlextInfraConfigModelsMake.MakeSpec.MypyCacheSpec()
 
 
 def _default_testmon_cache_policy() -> (
@@ -381,80 +381,6 @@ class FlextInfraConfigModelsMake:
                     "warning < maintenance < block <= 100"
                 )
                 raise ValueError(msg)
-            return self
-
-    class MypyCacheSpec(
-        FlextInfraExternalCacheDirectorySpec,
-        FlextInfraConfigModelsContract.ConfigContract,
-    ):
-        """Project-keyed shared Mypy cache, one analysis reused across relocks."""
-
-        cache_environment_variable: Annotated[
-            FlextInfraConstantsMake.MypyCacheEnvironment,
-            m.Field(
-                default=FlextInfraConstantsMake.MypyCacheEnvironment.CACHE_DIR,
-                description="Mypy's cache-directory environment variable",
-            ),
-        ]
-        data_home_environment_variable: Annotated[
-            FlextInfraConstantsMake.MypyCacheEnvironment,
-            m.Field(
-                default=FlextInfraConstantsMake.MypyCacheEnvironment.DATA_HOME,
-                description="XDG persistent cache-home variable",
-            ),
-        ]
-        user_home_environment_variable: Annotated[
-            FlextInfraConstantsMake.MypyCacheEnvironment,
-            m.Field(
-                default=FlextInfraConstantsMake.MypyCacheEnvironment.USER_HOME,
-                description="User home variable for the XDG default",
-            ),
-        ]
-        home_cache_directory: Annotated[
-            Path,
-            m.Field(
-                default=Path(".cache"),
-                description="Standard cache directory below the user home",
-            ),
-        ]
-        external_storage_directory: Annotated[
-            Path,
-            m.Field(
-                default=Path("flext/infra/mypy"),
-                description="FLEXT-owned directory below the cache home",
-            ),
-        ]
-
-        @m.model_validator(mode="after")
-        def require_external_cache_contract(self) -> Self:
-            """Keep the official cache variable and the external path policy exact.
-
-            Returns:
-                The resulting ``Self``.
-
-            Raises:
-                ValueError: If mypy cache.
-            """
-            for name, actual, expected in (
-                (
-                    "cache_environment_variable",
-                    self.cache_environment_variable,
-                    FlextInfraConstantsMake.MypyCacheEnvironment.CACHE_DIR,
-                ),
-                (
-                    "data_home_environment_variable",
-                    self.data_home_environment_variable,
-                    FlextInfraConstantsMake.MypyCacheEnvironment.DATA_HOME,
-                ),
-                (
-                    "user_home_environment_variable",
-                    self.user_home_environment_variable,
-                    FlextInfraConstantsMake.MypyCacheEnvironment.USER_HOME,
-                ),
-            ):
-                if actual != expected:
-                    msg = f"mypy cache {name} must be {expected.value}"
-                    raise ValueError(msg)
             return self
 
     class MakeWorkInProgressSpec(FlextInfraConfigModelsContract.ConfigContract):
@@ -893,7 +819,7 @@ class FlextInfraConfigModelsMake:
             m.Field(description="Content-keyed parsed codemod rule catalog cache"),
         ]
         mypy_cache: Annotated[
-            FlextInfraConfigModelsMake.MypyCacheSpec,
+            FlextInfraConfigModelsMake.MakeSpec.MypyCacheSpec,
             m.Field(
                 default_factory=_shared_mypy_cache_spec,
                 description="Project-keyed shared Mypy analysis cache policy",
@@ -947,7 +873,7 @@ class FlextInfraConfigModelsMake:
                     "Public Make verb to checker gate mapping outside make check"
                 ),
             ),
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        ] = m.Field(default_factory=lambda: MappingProxyType[str, t.NonEmptyStr]({}))
 
         @m.model_validator(mode="after")
         def _validate_project_check_gates(self) -> Self:

@@ -143,6 +143,21 @@ Infra:
         # Ruff exits 1 when it reports violations (2 on an error): a repair
         # verb completes with findings under this status; any other fails it.
         findings-exit-codes: [1]
+        # Operator ruling 2026-10-05: rules the operator never authorized as
+        # blocking are informative only. The lint gate keeps reporting these
+        # in the gate log, the summary, and the SARIF reports, but their
+        # findings never fail the run. Re-measure each entry as the fleet
+        # converges and retire the rule from this list when its census
+        # reaches zero.
+        informative-rules:
+          - too-many-arguments
+          - too-many-positional-arguments
+          - too-many-locals
+          - too-many-return-statements
+          - too-many-branches
+          - too-many-public-methods
+          - too-many-statements
+          - complex-structure
         line-length: 88
         preview: true
         respect-gitignore: true
@@ -253,6 +268,16 @@ Infra:
           # and the scoped ones as `per-file-ignores`. Repositories declare no
           # exception of their own.
           authorized-exceptions:
+            - files: "**/framework.py"
+              rules: [banned-api]
+              authority: operator-ruling-2026-10-05-cli-owner-adapter
+              reason: >-
+                The banned click/typer/rich/tabulate/argparse API governs
+                consumer modules so they route through the owning package's
+                CLI facade; each CLI owner's framework adapter is the one
+                module that exists to bind those libraries directly, so its
+                imports are the licensed surface. Every other module stays
+                blocked by the same rule.
             - rules: [missing-required-import, implicit-namespace-package, typing-only-first-party-import]
               authority: operator-ruling-2026-10-03-tc001-off-global
               reason: >-
@@ -290,11 +315,16 @@ Infra:
             - rules:
                 - typing-only-third-party-import
                 - typing-only-standard-library-import
-              authority: operator-ruling-2026-10-01-tc002-tc003-pydantic
+                - runtime-import-in-type-checking-block
+              authority: operator-ruling-2026-10-05-tc001-tc004-off-global
               reason: >-
-                Pydantic evaluates field annotations at runtime, so moving
-                third-party and standard-library annotation imports into a
-                TYPE_CHECKING block breaks model construction.
+                Operator ruling 2026-10-05 (extends the 2026-10-01
+                tc002-tc003-pydantic ruling): TC001-TC004 stay OFF for every
+                file in their name format — pydantic evaluates field
+                annotations at runtime (typing-only moves break model
+                construction), and the generated lazy-init initializers
+                resolve exports at runtime, which TC004 reads as runtime use.
+                The rules stay declared here, never removed from this file.
             - rules: [camelcase-imported-as-lowercase]
               authority: operator-ruling-2026-10-01-n813-accepted
               reason: >-

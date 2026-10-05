@@ -180,6 +180,15 @@ class FlextInfraNamespaceEnforcerProjectMixin:
                     u.Infra.rewrite_missing_future_annotations(
                         py_files=tuple(names_by_file),
                     )
+                case (
+                    c.Infra.CodemodRelocation.MODULE_IMPORT
+                    | c.Infra.CodemodRelocation.PACKAGE_ROOT_IMPORT
+                    | c.Infra.CodemodRelocation.OWN_PACKAGE_IMPORT
+                    | c.Infra.CodemodRelocation.FACADE_CLASS
+                ):
+                    # Detection-only relocations: their rules declare no rope
+                    # repair; the phase reports their findings and moves on.
+                    pass
         self._rope_project.validate(self._rope_project.root)
         return len(self._relocation_findings(project_root, py_files))
 

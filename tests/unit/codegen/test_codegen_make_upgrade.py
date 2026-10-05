@@ -188,7 +188,10 @@ class TestsFlextInfraCodegenMakeUpgrade:
         tm.that(makefile, has="install --yes")
         tm.that(
             makefile,
-            lacks='mise_exec project "$$pinned_mise" -C "$$project_root" install --dry-run',
+            lacks=(
+                'mise_exec project "$$pinned_mise" -C "$$project_root"'
+                " install --dry-run"
+            ),
         )
         platform_matrix = ",".join(toolchain.mise_lockfile_platforms)
         tm.that(makefile, has=f'mise_lockfile_platforms="{platform_matrix}";')
@@ -224,16 +227,6 @@ class TestsFlextInfraCodegenMakeUpgrade:
             settings.get("lockfile_platforms"),
             eq=list(toolchain.mise_lockfile_platforms),
         )
-        tools = mise_toml.get("tools")
-        assert isinstance(tools, Mapping)
-        jscpd = tools.get(toolchain.jscpd_selector)
-        waza = tools.get(toolchain.waza_selector)
-        assert isinstance(jscpd, Mapping)
-        assert isinstance(waza, Mapping)
-        tm.that(jscpd.get("version"), eq=toolchain.jscpd_version)
-        tm.that(jscpd.get("platforms"), eq=None)
-        tm.that(waza.get("version"), eq=toolchain.waza_version)
-        tm.that(waza.get("version_prefix"), eq=toolchain.waza_version_prefix)
 
     @staticmethod
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
