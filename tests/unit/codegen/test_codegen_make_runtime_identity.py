@@ -9,9 +9,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from flext_infra import config
 from flext_tests import tm
 
+from flext_infra import config
 from tests import c, u
 
 pytestmark = pytest.mark.slow
@@ -92,6 +92,7 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
     def test_nested_runtime_preserves_failure_and_cleans_owned_resources(
         tmp_path: Path,
         operational_status: int,
+        *,
         remove_scratch: bool,
         fail_preparation_diagnostic: bool,
         fail_exit_diagnostic: bool,
@@ -138,13 +139,13 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
             "\t@if $(PROJECT_TOOL_EXEC) $(SELF_MAKE) post-status; "
             "then status=0; else status=$$?; fi; "
             "printf '%s\\n' \"$$status\" >\"$(PROJECT_ROOT)/nested-status\"; "
-            "exit \"$$status\"\n"
+            'exit "$$status"\n'
             "post-status:\n"
             f"\t@if $(PROJECT_TOOL_EXEC) {caller} '{command}'"
             f"{diagnostic_redirect}; "
             "then status=0; else status=$$?; fi; "
             "printf '%s\\n' \"$$status\" >\"$(PROJECT_ROOT)/leaf-status\"; "
-            "exit \"$$status\"\n",
+            'exit "$$status"\n',
             encoding="utf-8",
         )
 
