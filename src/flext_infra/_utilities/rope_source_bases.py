@@ -409,33 +409,13 @@ class FlextInfraUtilitiesRopeSourceBases:
                     return provider_reference(
                         imported, (binding.imported_name, *remaining), visiting | {target},
                     )
-                    try:
-                        value = pymodule.get_attribute(parts[index]).get_object()
-                        for attribute in parts[index + 1 :]:
-                            value = value.get_attribute(attribute).get_object()
-                    except exceptions.AttributeNotFoundError as error:
-                        # PEP 562 lazy namespaces resolve their exports only
-                        # at runtime; rope's static attribute lookup cannot
-                        # see them, so the base is unresolved for this
-                        # derivation (bases() skips it).
-                        raise ValueError(
-                            f"Unresolved external base: {target}",
-                        ) from error
-                    if not FlextInfraUtilitiesRopeRuntime.abstract_class(value):
-                        # A cross-package facade rebind (flext_cli.FlextCliConfig)
-                        # resolves through a TYPE_CHECKING import aimed at a
-                        # data package, so rope lands on the unknown-object
-                        # placeholder instead of a class: the base cannot
-                        # contribute to the derivation (bases() skips it).
-                        raise ValueError(
-                            f"Unresolved external base: {target}",
-                        )
-                    return external_identity(value)
-            # Builtin classes have no Python source resource. Rope owns that
-            # native namespace, not an ambient import of a planned package.
-            if parts[0] == "builtins" and len(parts) == 2:
-                value = (
-                    project.get_module("builtins").get_attribute(parts[1]).get_object()
+                return resolve(
+                    m.Infra.SourceClassReference(
+                        target=f"{imported.get_name()}.{binding.imported_name}",
+                        attributes=tuple(remaining),
+                        qualified_base=target,
+                    ),
+                    visiting | {target},
                 )
             if isinstance(binding, p.Infra.RopeImportedModule):
                 imported = provider_module(binding)
