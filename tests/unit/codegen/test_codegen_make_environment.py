@@ -535,22 +535,18 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(stale.stderr, has="uv.lock drifts from pyproject.toml")
         tm.that(self._locks(checkout), eq=resolved_locks)
 
-        # A committed mise.lock missing a declared tool drifts from .mise.toml:
-        # setup warns, installs from the manifest with the lockfile disabled,
-        # and never rewrites mise.lock.
+        # Missing a declared tool must stop the locked install before lifecycle
+        # execution, even when the tool is already present in warm storage.
         drifted = u.Tests.resolved_make_checkout(
             template,
             tmp_path / "drifted",
             profile,
         )
         mise_lock = drifted / c.Infra.MISE_LOCK_FILENAME
-        lock_text = mise_lock.read_text(encoding="utf-8")
-        first_tool = lock_text.index("[[tools.")
-        next_tool = lock_text.index("\n[", first_tool + 1)
-        mise_lock.write_text(
-            lock_text[:first_tool] + lock_text[next_tool + 1 :],
-            encoding="utf-8",
-        )
+        lock_document = u.Tests.toml_doc(mise_lock.read_text(encoding="utf-8"))
+        locked_tools = tm.not_none(u.Cli.toml_table_child(lock_document, "tools"))
+        del locked_tools[next(iter(locked_tools))]
+        tm.ok(u.Cli.atomic_write_text_file(mise_lock, u.Cli.toml_dumps(lock_document)))
         drifted_locks = {
             **resolved_locks,
             c.Infra.MISE_LOCK_FILENAME: mise_lock.read_bytes(),
@@ -568,10 +564,22 @@ class TestsFlextInfraCodegenMakeEnvironment:
         )
         tm.that(
             u.Cli.process_succeeded(unsatisfied.outcome),
-            eq=True,
+            eq=False,
             msg=unsatisfied.stdout + unsatisfied.stderr,
         )
-        tm.that(unsatisfied.stderr, has="mise.lock drifts from .mise.toml")
+        tm.that(unsatisfied.stdout, has="is not in the lockfile")
+        output = unsatisfied.stdout + unsatisfied.stderr
+        tm.that(output.count("setup probe: begin stage=install.log"), eq=1)
+        failure = tm.not_none(
+            re.search(r"setup probe: failed stage=install.log exit=(\d+)", output),
+        )
+        cleanup = tm.not_none(
+            re.search(r"mise scratch: cleaned path=.* exit=(\d+)", output),
+        )
+        tm.that(cleanup.group(1), eq=failure.group(1))
+        tm.that(output, lacks=["WARN:", "mise WARN", "[warn]"])
+        tm.that(unsatisfied.stdout, lacks="setup: entering lifecycle")
+        tm.that(u.Infra.runtime_environment_dir(drifted).exists(), eq=False)
         tm.that(self._locks(drifted), eq=drifted_locks)
 
     @staticmethod
@@ -931,9 +939,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
 
         The generated Makefile confines every uv upgrade to the `upg`
         lifecycle and every `mise lock --bump` to the shared bootstrap gated by
-        a switch that only `upg` sets; `setup` never writes a lock and always
-        runs, installing exactly what the lock pins or, on drift, warning and
-        installing without touching it.
+        a switch that only `upg` sets; `setup` consumes the declared lock policy
+        and preserves install failures without rewriting the lock.
         """
         project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
@@ -955,9 +962,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         toolchain = config.Infra.codegen.toolchain
         lock_invocations = re.findall(r"lock --bump([^;]*);", makefile)
         tm.that(tuple(arguments.strip() for arguments in lock_invocations), eq=("",))
-        # Only upg writes locks, and setup always runs: no reconcile or relock
-        # path survives; a drifted mise.lock is installed around with the
-        # lockfile disabled for that setup, never rewritten.
+        # Only upg writes locks; setup has no reconcile or relock path.
         tm.that(
             makefile,
             lacks=[
@@ -967,9 +972,6 @@ class TestsFlextInfraCodegenMakeEnvironment:
                 "flext_infra/bootstrap.py",
             ],
         )
-        tm.that(makefile, has="mise.lock drifts from .mise.toml")
-        tm.that(makefile, has='$${mise_lock_drift:+"MISE_LOCKED=false"}')
-        tm.that(makefile, has='$${mise_lock_drift:+"SETUP_MISE_LOCK_DRIFT=1"}')
         # Only a missing-tool install and the upg resolution reach the network;
         # every other Mise call runs through the declared offline wrapper.
         offline = " ".join(

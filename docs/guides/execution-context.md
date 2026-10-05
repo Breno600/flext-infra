@@ -153,12 +153,11 @@ conflict, or sidecars that no longer match stage 2, fails without changing the l
 
 Mise reaches GitHub only to install a tool missing from the persistent cache and inside
 `make upg`. Only `make upg` writes `mise.lock` and `uv.lock`; `make setup` never writes
-either and always runs. Every Mise call except `install --yes` runs with the offline
-settings declared once in `MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT`. An offline
-`install --dry-run` checks that the committed lock satisfies `.mise.toml`. When it does
-not, setup prints a `WARN`, installs from `.mise.toml` with `MISE_LOCKFILE=false` and
-`MISE_LOCKED=false` for the rest of that setup (the lifecycle inherits
-`SETUP_MISE_LOCK_DRIFT`), and leaves `mise.lock` untouched. On the uv side, setup syncs
+either. Every Mise call except `install --yes` runs with the offline settings declared
+once in `MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT`. Setup performs one install using the
+typed lock policy. A missing or incompatible lock entry fails with Mise's original
+diagnostic and exit status, without disabling lockfiles, retrying, or entering the
+lifecycle. Only `make upg` repairs the lock. On the uv side, setup syncs
 `--locked`; when `uv.lock` drifts from `pyproject.toml` it prints a `WARN` and syncs the
 committed lock `--frozen`, which never writes it. The next `make upg` rewrites both
 locks. `make upg` resolves once
