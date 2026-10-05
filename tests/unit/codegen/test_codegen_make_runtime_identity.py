@@ -64,7 +64,94 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
             eq=True,
             msg=result.stdout + result.stderr,
         )
+        tm.that(result.outcome.raw_return_code, eq=c.Cli.EXIT_CODE_SUCCESS)
         tm.that(result.stdout, has=f"uv {version} ")
         tm.that(result.stdout, has="application-environment-preserved")
         tm.that(result.stderr, lacks="invalid-host")
         tm.that(lock.read_bytes(), eq=lock_before)
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        ("operational_status", "remove_scratch", "close_stderr"),
+        [
+            (0, False, False),
+            (37, False, False),
+            (0, True, False),
+            (37, True, False),
+            (0, False, True),
+        ],
+    )
+    def test_nested_runtime_preserves_failure_and_cleans_owned_resources(
+        tmp_path: Path,
+        operational_status: int,
+        remove_scratch: bool,
+        close_stderr: bool,
+    ) -> None:
+        """Real nested commands retain their primary exit even when cleanup fails."""
+        root, _ = u.Tests.render_make_environment(
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
+        )
+        tm.ok(u.Tests.create_python_environment(root))
+        bootstrap = u.Infra.mise_bootstrap_environment()
+        preserved = {
+            relative: (root / relative).read_bytes()
+            for relative in (
+                bootstrap.lock_file,
+                *(relative for relative, _mode in bootstrap.artifact_specs),
+            )
+        }
+        scratch_pattern = f".{root.name}.mise-bootstrap.*"
+        tm.that(tuple(root.parent.glob(scratch_pattern)), eq=())
+        command = ""
+        if remove_scratch:
+            command += (
+                'for path in "$(PROJECT_ROOT)/../.'
+                '$(notdir $(PROJECT_ROOT)).mise-bootstrap."*; do '
+                'find "$$path" -depth -delete; done; '
+            )
+        command += f"exit {operational_status}"
+        diagnostic_redirect = " 2>&-" if close_stderr else ""
+        (root / "custom.mk").write_text(
+            ".PHONY: _custom-status post-status\n"
+            "_custom-status:\n"
+            "\t@if $(PROJECT_TOOL_EXEC) $(SELF_MAKE) post-status; "
+            "then status=0; else status=$$?; fi; "
+            "printf '%s\\n' \"$$status\" >\"$(PROJECT_ROOT)/nested-status\"; "
+            "exit \"$$status\"\n"
+            "post-status:\n"
+            f"\t@if $(PROJECT_TOOL_EXEC) $(SHELL) -c '{command}'"
+            f"{diagnostic_redirect}; "
+            "then status=0; else status=$$?; fi; "
+            "printf '%s\\n' \"$$status\" >\"$(PROJECT_ROOT)/leaf-status\"; "
+            "exit \"$$status\"\n",
+            encoding="utf-8",
+        )
+
+        result = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "status"],
+                cwd=root,
+            ),
+        )
+
+        leaf_status = int((root / "leaf-status").read_text(encoding="utf-8"))
+        failed = operational_status != 0 or remove_scratch or close_stderr
+        if operational_status != 0:
+            tm.that(leaf_status, eq=operational_status)
+        elif failed:
+            tm.that(leaf_status, gt=0)
+        else:
+            tm.that(leaf_status, eq=c.Cli.EXIT_CODE_SUCCESS)
+        # GNU Make returns 2 for a failed recipe, regardless of the leaf's exit.
+        expected_make_status = 2 if failed else c.Cli.EXIT_CODE_SUCCESS
+        tm.that(
+            int((root / "nested-status").read_text(encoding="utf-8")),
+            eq=expected_make_status,
+        )
+        tm.that(result.outcome.raw_return_code, eq=expected_make_status)
+        tm.that(result.outcome.timed_out, eq=False)
+        tm.that(result.outcome.forwarded_signal, eq=None)
+        tm.that(tuple(root.parent.glob(scratch_pattern)), eq=())
+        for relative, original in preserved.items():
+            tm.that((root / relative).read_bytes(), eq=original)
