@@ -9,8 +9,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from importlib import import_module
 from types import ModuleType
+from typing import TYPE_CHECKING
 
-from flext_infra import p
+if TYPE_CHECKING:
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesRopeRuntimeBase:

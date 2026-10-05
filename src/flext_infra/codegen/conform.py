@@ -25,6 +25,7 @@ class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
         root: Path,
         *,
         ports: m.Infra.CodegenConformPorts | None,
+        refresh_git_peers: bool = False,
     ) -> p.Result[bool]:
         """Conform every projection of ``root``, then lock it without upgrading.
 
@@ -33,8 +34,13 @@ class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
 
         Conform settles ``pyproject.toml`` and every rendered projection first,
         so the lock resolves against them; it upgrades nothing (only ``upg``
-        resolves the newest releases). Identical inputs regenerate identical
-        bytes, so a rerun changes nothing.
+        resolves the newest releases). ``refresh_git_peers`` refreshes the
+        metadata of the dependencies declared through git only — moving
+        sources by declaration — because a peer that moved on the
+        integration branch carries stale cached requires-dist a retaining
+        lock cannot see through; the propagate caller owns the flag and the
+        default stays hermetic. Identical inputs regenerate identical bytes,
+        so a rerun changes nothing.
 
         Returns:
             The resulting ``p.Result[bool]``.
@@ -50,7 +56,29 @@ class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
         )
         if conformed.failure:
             return r[bool].from_failure(conformed)
-        return u.Cli.run_checked([c.Infra.UV, "lock", "--project", str(root)], cwd=root)
+        command = [c.Infra.UV, "lock", "--project", str(root)]
+        for name in cls._git_dependency_names(root) if refresh_git_peers else ():
+            command.extend(("--refresh-package", name))
+        return u.Cli.run_checked(command, cwd=root)
+
+    @staticmethod
+    def _git_dependency_names(root: Path) -> t.StrSequence:
+        """Return the dependency names ``root`` declares through git.
+
+        Branch-tracked git dependencies are moving sources by declaration:
+        their cached metadata outlives the peer's tip, so the propagate
+        caller refreshes exactly these and nothing else.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
+        payload = u.Infra.pyproject_payload(root / c.PYPROJECT_FILENAME)
+        names: list[str] = []
+        for spec in payload.get("project", {}).get("dependencies", []):
+            if "git+" in spec and " @ " in spec:
+                names.append(spec.split(" @ ", 1)[0].strip())
+        return tuple(names)
 
 
 __all__: list[str] = ["FlextInfraCodegenConform"]

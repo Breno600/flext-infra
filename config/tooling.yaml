@@ -183,11 +183,16 @@ Infra:
           #   (ban-relative-imports: all, and make mod rewrites relative
           #   imports) — the fix enforces the declared contract, no semantics.
           # - camelcase-imported-as-lowercase (N813): pure alias rename, the
-          #   bound object is unchanged. TC001 stays OUT of this list: its fix
-          #   moves first-party imports into TYPE_CHECKING, which breaks the
-          #   eager-by-law lazy roots (see the scoped __init__.py exception).
+          #   bound object is unchanged.
+          # - typing-only-first-party-import (TC001): the fix moves an import
+          #   used only in annotations into TYPE_CHECKING; every module runs
+          #   under `from __future__ import annotations`, the runtime-evaluated
+          #   model bases are derived below (flake8-type-checking), and the
+          #   eager-by-law lazy roots never see the rule (scoped __init__.py
+          #   exception), so no runtime-read annotation loses its import.
           extend-safe-fixes:
             - relative-imports
+            - typing-only-first-party-import
             - camelcase-imported-as-lowercase
           # Every import is absolute: make mod rewrites relative imports and
           # the lazy-init generator renders absolute import statements.
@@ -215,6 +220,14 @@ Infra:
             docstring-missing-yields: yields-section
             docstring-missing-exception: raises-section
             no-self-use: static-method
+          # Pydantic evaluates model field annotations at runtime, so an
+          # import used only in a model annotation is runtime, not typing-only.
+          # Ruff follows imported bases only by qualified name: codegen derives
+          # every project class base that subclasses a root below into
+          # runtime-evaluated-base-classes (tooling_runtime), never a list here.
+          flake8-type-checking:
+            runtime-evaluated-roots:
+              - pydantic.BaseModel
           # Banned API messages are policy data, never template literals.
           banned-api:
             argparse: "Use cli.register_result_command + Pydantic model from flext_cli."
@@ -491,6 +504,10 @@ Infra:
         disable-project-excludes-heuristics: true
         python-version: "3.13"
         use-ignore-files: false
+        # prop-decorator suspension lives in the MYPY ruling surface above
+        # (ruling-disable-error-codes): the pyrefly release the non-producer
+        # repositories resolve does not know the code and rejects it as an
+        # unknown variant, so a pyrefly-side suspension cannot be fleet-wide.
         strict-errors:
           # --- type safety ---
           - bad-argument-count

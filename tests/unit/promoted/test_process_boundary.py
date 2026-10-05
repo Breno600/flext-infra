@@ -15,10 +15,10 @@ from typing import TYPE_CHECKING, Final
 
 import pytest
 
-from tests import t
-
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
+    from tests import t
 
 
 class TestsFlextInfraPromotedProcessBoundary:

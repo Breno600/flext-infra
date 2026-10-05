@@ -485,7 +485,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             plans.append(planned.value)
         layout = u.Infra.layout(root)
         if layout is not None and layout.class_stem:
-            families: t.VariadicTuple[Literal["u", "p"]] = ("u", "p")
+            families: t.VariadicTuple[Literal["u", "p", "m"]] = ("u", "p", "m")
             for family in families:
                 rendered = u.Infra.render_utility_facade(
                     layout.package_dir,
