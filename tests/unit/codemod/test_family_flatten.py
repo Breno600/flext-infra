@@ -59,7 +59,10 @@ class TestsFlextInfraFamilyFlatten:
         )
         consumer.write_text(references, encoding="utf-8")
         homonym = package / "unrelated.py"
-        unrelated = "class Other:\n    class Wrapper:\n        TEXT = 'unrelated'\nVALUE = Other.Wrapper.TEXT\n"
+        unrelated = (
+            "class Other:\n    class Wrapper:\n        TEXT = 'unrelated'\n"
+            "VALUE = Other.Wrapper.TEXT\n"
+        )
         homonym.write_text(unrelated, encoding="utf-8")
         sources = {path: source, consumer: references, homonym: unrelated}
         # Imports and MRO must resolve the proposed wrapper, not its disk name.
@@ -120,7 +123,10 @@ class TestsFlextInfraFamilyFlatten:
         (family / "__init__.py").write_text("", encoding="utf-8")
         path = family / "payload.py"
         owner = f"{u.derive_class_stem(root.name)}ModelsPayload"
-        source = f"from enum import Enum\nclass {owner}:\n    {entity}\n\n__all__ = ['{owner}']\n"
+        source = (
+            f"from enum import Enum\nclass {owner}:\n    {entity}\n\n"
+            f"__all__ = ['{owner}']\n"
+        )
         path.write_text(source, encoding="utf-8")
         with infra.rope_workspace(root) as rope:
             planned = u.Infra.plan_semantic_cutover(
@@ -169,9 +175,8 @@ class TestsFlextInfraFamilyFlatten:
     ) -> None:
         """Test flatten removes wrapper docstring and promotes alias member."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
-        family = (
-            package / u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
-        )
+        directory = u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
+        family = package / directory
         family.mkdir()
         (family / c.Infra.INIT_PY).write_text("", encoding="utf-8")
         path = family / "payload.py"
@@ -190,7 +195,7 @@ class TestsFlextInfraFamilyFlatten:
         path.write_text(source, encoding="utf-8")
         consumer = package / "consumer.py"
         references = (
-            f"from {package.name}.{u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory}.payload import "
+            f"from {package.name}.{directory}.payload import "
             f"{owner} as Part\n\nmember: Part.Wrapper.Grouped\n"
         )
         consumer.write_text(references, encoding="utf-8")

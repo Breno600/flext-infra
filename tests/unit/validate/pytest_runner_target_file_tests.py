@@ -12,7 +12,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import config
-from tests.unit.validate.pytest_runner_support import runner_for
+from tests.unit.validate.pytest_runner_support import runner_for, summary
 
 
 @pytest.mark.unit
@@ -80,3 +80,41 @@ class TestsFlextInfraPytestTargetFile:
         tm.that("--testmon-noselect" in argv, eq=True)
         tm.that("--testmon-forceselect" not in argv, eq=True)
         tm.that(relative.as_posix() in argv, eq=True)
+
+    @staticmethod
+    @pytest.mark.slow
+    def test_declared_file_rerun_over_a_warm_cache_executes_again(
+        cached_runner_project: Path,
+    ) -> None:
+        """An unchanged declared file reruns green, never as a cache hit."""
+        cache = config.Infra.codegen.make.testmon_cache
+        relative = Path(cache.target_directory) / "rerun_case.py"
+        (cached_runner_project / relative).write_text(
+            "def test_rerun() -> None:\n    return None\n",
+            encoding="utf-8",
+        )
+        for _ in range(2):
+            runner = runner_for(cached_runner_project, target_file=relative)
+            tm.that(tm.ok(runner.execute()), eq=pytest.ExitCode.OK.value)
+            report = summary(cached_runner_project / cache.reports_directory)
+            tm.that(report, has="executed=1\n")
+
+    @staticmethod
+    @pytest.mark.slow
+    def test_declared_file_partial_selection_stays_green(
+        cached_runner_project: Path,
+    ) -> None:
+        """A partly selected declared file runs only its selected tests."""
+        cache = config.Infra.codegen.make.testmon_cache
+        relative = Path(cache.target_directory) / "partial_case.py"
+        declared = cached_runner_project / relative
+        kept = "def test_kept() -> None:\n    return None\n\n\n"
+        for expected, value in ((2, 1), (1, 2)):
+            declared.write_text(
+                kept + f"def test_edited() -> None:\n    assert {value}\n",
+                encoding="utf-8",
+            )
+            runner = runner_for(cached_runner_project, target_file=relative)
+            tm.that(tm.ok(runner.execute()), eq=pytest.ExitCode.OK.value)
+            report = summary(cached_runner_project / cache.reports_directory)
+            tm.that(report, has=f"executed={expected}\n")

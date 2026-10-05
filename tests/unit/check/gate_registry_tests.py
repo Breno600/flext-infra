@@ -37,10 +37,19 @@ class TestsFlextInfraGateRegistry:
 
     @staticmethod
     def test_default_and_fixable_are_subsets_of_check_vocabulary() -> None:
-        """Test default and fixable are subsets of check vocabulary."""
-        allowed = frozenset(c.Infra.CANONICAL_GATE_IDS)
-        tm.that(frozenset(c.Infra.CANONICAL_DEFAULT_GATE_IDS) <= allowed, eq=True)
-        tm.that(frozenset(c.Infra.CANONICAL_FIXABLE_GATE_IDS) <= allowed, eq=True)
+        """Default gates stay in the vocabulary and leave out every opt-in gate."""
+        make = config.Infra.codegen.make
+        allowed = frozenset(make.check_gates_allowed)
+        default = frozenset(make.check_gates_default)
+        opt_in = frozenset(make.opt_in_check_gates)
+        tm.that(default <= allowed, eq=True)
+        tm.that(opt_in <= allowed, eq=True)
+        tm.that(default.isdisjoint(opt_in), eq=True)
+        tm.that(
+            frozenset(c.Infra.CANONICAL_FIXABLE_GATE_IDS)
+            <= frozenset(c.Infra.CANONICAL_GATE_IDS),
+            eq=True,
+        )
 
     @staticmethod
     def test_every_allowed_gate_resolves_in_the_registry() -> None:

@@ -34,7 +34,7 @@ class TestsFlextInfraDocsRender:
     def test_project_navigation_discovers_maintained_pages(
         tmp_path: Path,
     ) -> None:
-        """The real MkDocs navigation includes manual guides beyond generated indexes."""
+        """The real MkDocs navigation has manual guides beyond generated indexes."""
         scope = m.Infra.DocScope(
             name="flext-demo",
             path=tmp_path,

@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core import build_lazy_import_map, install_lazy_exports
+from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra._constants.base import FlextInfraConstantsBase
@@ -68,35 +68,32 @@ __all__: tuple[str, ...] = (
     "FlextInfraConstantsWorkspace",
 )
 
-_LAZY_IMPORTS = MappingProxyType(
-    build_lazy_import_map(
-        MappingProxyType({
-            ".base": ("FlextInfraConstantsBase",),
-            ".census": ("FlextInfraConstantsCensus",),
-            ".check": ("FlextInfraConstantsCheck",),
-            ".cli": ("FlextInfraConstantsCli",),
-            ".codegen": ("FlextInfraConstantsCodegen",),
-            ".codegen_detection": ("FlextInfraConstantsCodegenDetection",),
-            ".codegen_lazy": ("FlextInfraConstantsCodegenLazy",),
-            ".codegen_project": ("FlextInfraConstantsCodegenProject",),
-            ".codegen_render_names": ("FlextInfraConstantsCodegenRenderNames",),
-            ".deps": ("FlextInfraConstantsDeps",),
-            ".docs": ("FlextInfraConstantsDocs",),
-            ".git": ("FlextInfraConstantsGit",),
-            ".make": ("FlextInfraConstantsMake",),
-            ".namespace": ("FlextInfraConstantsNamespace",),
-            ".promoted": ("FlextInfraConstantsPromoted",),
-            ".promoted_messages": ("FlextInfraConstantsPromotedMessages",),
-            ".refactor": ("FlextInfraConstantsRefactor",),
-            ".release": ("FlextInfraConstantsRelease",),
-            ".rope": ("FlextInfraConstantsRope",),
-            ".source_code": ("FlextInfraConstantsSourceCode",),
-            ".validate": ("FlextInfraConstantsSharedInfra",),
-            ".workspace": ("FlextInfraConstantsWorkspace",),
-        }),
-        alias_groups=MappingProxyType({}),
-        sort_keys=False,
-    ),
+install_lazy_exports(
+    __name__,
+    globals(),
+    MappingProxyType({
+        "FlextInfraConstantsBase": ".base",
+        "FlextInfraConstantsCensus": ".census",
+        "FlextInfraConstantsCheck": ".check",
+        "FlextInfraConstantsCli": ".cli",
+        "FlextInfraConstantsCodegen": ".codegen",
+        "FlextInfraConstantsCodegenDetection": ".codegen_detection",
+        "FlextInfraConstantsCodegenLazy": ".codegen_lazy",
+        "FlextInfraConstantsCodegenProject": ".codegen_project",
+        "FlextInfraConstantsCodegenRenderNames": ".codegen_render_names",
+        "FlextInfraConstantsDeps": ".deps",
+        "FlextInfraConstantsDocs": ".docs",
+        "FlextInfraConstantsGit": ".git",
+        "FlextInfraConstantsMake": ".make",
+        "FlextInfraConstantsNamespace": ".namespace",
+        "FlextInfraConstantsPromoted": ".promoted",
+        "FlextInfraConstantsPromotedMessages": ".promoted_messages",
+        "FlextInfraConstantsRefactor": ".refactor",
+        "FlextInfraConstantsRelease": ".release",
+        "FlextInfraConstantsRope": ".rope",
+        "FlextInfraConstantsSharedInfra": ".validate",
+        "FlextInfraConstantsSourceCode": ".source_code",
+        "FlextInfraConstantsWorkspace": ".workspace",
+    }),
+    public_exports=__all__,
 )
-
-install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

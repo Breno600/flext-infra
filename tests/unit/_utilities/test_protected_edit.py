@@ -17,9 +17,10 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+@pytest.mark.usefixtures("provisioned_workspace")
 class TestsFlextInfraUtilitiesProtectedEdit:
     @staticmethod
-    @pytest.fixture(autouse=True)
+    @pytest.fixture
     def provisioned_workspace(tmp_path: Path) -> None:
         """The edited workspace is a checkout whose environment owns the tools."""
         u.Tests.provision_checkout(tmp_path)

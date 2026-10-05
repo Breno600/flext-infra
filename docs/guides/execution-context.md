@@ -153,12 +153,11 @@ conflict, or sidecars that no longer match stage 2, fails without changing the l
 
 Mise reaches GitHub only to install a tool missing from the persistent cache and inside
 `make upg`. Only `make upg` writes `mise.lock` and `uv.lock`; `make setup` never writes
-either and always runs. Every Mise call except `install --yes` runs with the offline
-settings declared once in `MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT`. An offline
-`install --dry-run` checks that the committed lock satisfies `.mise.toml`. When it does
-not, setup prints a `WARN`, installs from `.mise.toml` with `MISE_LOCKFILE=false` and
-`MISE_LOCKED=false` for the rest of that setup (the lifecycle inherits
-`SETUP_MISE_LOCK_DRIFT`), and leaves `mise.lock` untouched. On the uv side, setup syncs
+either. Every Mise call except `install --yes` runs with the offline settings declared
+once in `MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT`. Setup performs one install using the
+typed lock policy. A missing or incompatible lock entry fails with Mise's original
+diagnostic and exit status, without disabling lockfiles, retrying, or entering the
+lifecycle. Only `make upg` repairs the lock. On the uv side, setup syncs
 `--locked`; when `uv.lock` drifts from `pyproject.toml` it prints a `WARN` and syncs the
 committed lock `--frozen`, which never writes it. The next `make upg` rewrites both
 locks. `make upg` resolves once
@@ -231,19 +230,26 @@ gate. `make check` fails when the selection
 contains no projects or when a selected project has no `pyproject.toml`; no project is
 skipped silently.
 
-Local runs, CI, and hooks derive their gates from the same active set, preserving the
-declared typing partition: `CI=N make check` runs the intersection with
-`make.ci.local_check_gates`, `CI=Y make check` runs the complement, and `make check`
-without `CI` runs the union. The `check` pre-push hook drops the inherited `CI` to run
-every active gate; the hook's other verbs keep the local token. The CI workflow runs
-both partitions without overlap. Validators keep their severity, and active functional
-gates still require execution without warnings or residual findings.
+Local runs, CI, and hooks derive their gates from the same active set: `CI=N make check`
+runs the intersection with `make.ci.local_check_gates`, `CI=Y make check` runs the
+complement, and `make check` without `CI` runs the union. The declared local set is
+empty, so the CI workflow's single `CI=Y make check` runs every active gate, including
+the Mypy, Pyright, and Pyrefly type checkers, and `CI=N make check` fails because no
+gate remains. The `check` pre-push hook drops the inherited `CI` to run every active
+gate; the hook's other verbs keep the local token. Validators keep their severity, and
+active functional gates still require execution without warnings or residual findings.
 
 `smells` is not part of the `make check` partitions. The selector-free `make smells`
 verb runs only the qlty smell scan and fails when it finds defects. The
 `runtime-census` gate stays in `make check` and grades every runtime enforcement
 finding, including rules that qlty also classifies as smells. An empty or
 malformed qlty SARIF response is a failed scan, not a zero-finding receipt.
+Native primary source spans and all `relatedLocations` pass through the typed issue
+and SARIF report contracts without dropping comparison locations outside the primary
+project. Coordinates are emitted only when the scanner supplies them, including explicit
+zeros; line-only and regionless native locations do not acquire invented coordinates.
+Point-only diagnostics from other gates remain point-only. The Markdown summary still
+uses the primary location, while the SARIF artifact carries the comparison evidence.
 
 ## Bounded Mypy failure status
 
@@ -287,6 +293,13 @@ and rejects extra output from the
 Timeouts, forwarded signals, other exit codes, malformed JSON, and disagreement between
 exit code and diagnostic severities remain failures, even when stdout exists. Both
 whole-project checks and `check_files` scan every elected provider rule.
+
+AST replacements publish through the authenticated file-plan boundary, then reuse
+the import normalizer on only the rewritten files. Unused imports and formatting
+are normalized before the next mod check; normalization failures remain blocking.
+The root facade export rule preserves literal tuple values and order while removing
+an unnecessary type-only annotation dependency. It does not change classes, aliases
+or inheritance, and it does not rewrite initializer projections.
 
 `GateExecution.issues` retains each finding's original file, position, rule, message,
 and severity. SARIF reports each finding at its native level; raw scanner output remains

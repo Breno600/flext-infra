@@ -11,12 +11,12 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, main as infra_main, u
+from flext_infra import c, main, u
 from flext_infra.codemod import FlextInfraModGateEngine
 
 
 @pytest.mark.slow
-class TestsJointModFixedPoint:
+class TestsFlextInfraJointModFixedPoint:
     """Exercise real configured rules through the public refactor CLI."""
 
     @staticmethod
@@ -27,7 +27,7 @@ class TestsJointModFixedPoint:
             The resulting ``int``.
 
         """
-        return infra_main([
+        return main([
             "refactor",
             "mod",
             "--repository-root",
@@ -152,7 +152,8 @@ class TestsJointModFixedPoint:
         sample = mod_workspace / "sample.py"
         u.Cli.atomic_write_text_file(
             sample,
-            '"""Cross-phase source."""\nfrom __future__ import annotations\n\nmarker = list()\n',
+            '"""Cross-phase source."""\nfrom __future__ import annotations\n\n'
+            "marker = list()\n",
         ).unwrap()
 
         tm.that(self._run(mod_workspace), eq=0)
@@ -176,7 +177,8 @@ class TestsJointModFixedPoint:
         sample = mod_workspace / "sample.py"
         u.Cli.atomic_write_text_file(
             sample,
-            '"""Cyclic source."""\nfrom __future__ import annotations\n\nmarker = dict()\n',
+            '"""Cyclic source."""\nfrom __future__ import annotations\n\n'
+            "marker = dict()\n",
         ).unwrap()
 
         tm.that(self._run(mod_workspace), ne=0)

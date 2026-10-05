@@ -132,6 +132,7 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
                 artifacts=m.Infra.ProjectManagedArtifactsConfig(
                     Mise=m.Infra.ProjectMiseConfig(tools={}),
                     Gitignore=m.Infra.ProjectGitignoreConfig(patterns=()),
+                    Ruff=m.Infra.ProjectRuffConfig(per_file_ignores={}),
                 ),
                 mise_tool_sources={},
             ),
@@ -320,61 +321,160 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
             return r[m.Infra.ProjectManagedArtifactsResolution].ok(
                 cls.empty_snapshot().resolution,
             )
+        fragments: list[tuple[Path, m.Infra.ProjectManagedArtifactsFragment]] = []
+        for source, content in sorted(payloads.items()):
+            parsed = cls._parse_project_fragment(source, content)
+            if parsed.failure:
+                return r[m.Infra.ProjectManagedArtifactsResolution].from_failure(parsed)
+            fragments.append((source, parsed.value))
+        return cls._compose_project_fragments(fragments)
+
+    @staticmethod
+    def _parse_project_fragment(
+        source: Path,
+        content: bytes,
+    ) -> p.Result[m.Infra.ProjectManagedArtifactsFragment]:
+        """Decode one project YAML source into its managed-artifact fragment.
+
+        Returns:
+            The fragment, empty when the source declares no ``ManagedArtifacts``.
+
+        """
+        try:
+            source_text = content.decode(c.Cli.ENCODING_DEFAULT)
+        except UnicodeDecodeError as exc:
+            return r[m.Infra.ProjectManagedArtifactsFragment].fail_op(
+                f"decode project config source {source}",
+                exc,
+            )
+        loaded = u.Cli.yaml_parse(source_text)
+        if loaded.failure:
+            return r[m.Infra.ProjectManagedArtifactsFragment].from_failure(loaded)
+        managed = loaded.value.get("ManagedArtifacts")
+        if not managed:
+            return r[m.Infra.ProjectManagedArtifactsFragment].ok(
+                m.Infra.ProjectManagedArtifactsFragment(),
+            )
+        project_config = m.Infra.ProjectConfigDocument.model_validate({
+            "ManagedArtifacts": managed,
+        })
+        return r[m.Infra.ProjectManagedArtifactsFragment].ok(
+            project_config.ManagedArtifacts,
+        )
+
+    @staticmethod
+    def _merge_unique_keys[V](
+        label: str,
+        source: Path,
+        items: t.MappingKV[str, V],
+        merged: MutableMapping[str, V],
+        owners: MutableMapping[str, Path],
+    ) -> str | None:
+        """Merge keyed entries of one source, refusing keys another source owns.
+
+        Returns:
+            The duplicate-key failure message, or ``None`` when every key merged.
+
+        """
+        for key, value in items.items():
+            previous = owners.get(key)
+            if previous is not None:
+                return f"duplicate project {label} {key!r}: {previous} and {source}"
+            merged[key] = value
+            owners[key] = source
+        return None
+
+    @staticmethod
+    def _merge_gitignore(
+        source: Path,
+        gitignore: m.Infra.ProjectGitignoreConfig | None,
+        patterns: list[str],
+        blocks: list[m.Infra.ProjectGitignorePreservedBlock],
+        markers: MutableMapping[str, Path],
+    ) -> str | None:
+        """Merge one source's gitignore patterns and uniquely owned blocks.
+
+        Returns:
+            The duplicate-marker failure message, or ``None`` when all merged.
+
+        """
+        if gitignore is None:
+            return None
+        patterns.extend(
+            pattern
+            for pattern in dict.fromkeys(gitignore.patterns)
+            if pattern not in patterns
+        )
+        for block in gitignore.preserved_blocks:
+            failure = FlextInfraUtilitiesProjectManagedArtifacts._merge_unique_keys(
+                "gitignore preserved marker",
+                source,
+                dict.fromkeys((block.begin, block.end), source),
+                markers,
+                markers,
+            )
+            if failure is not None:
+                return failure
+            blocks.append(block)
+        return None
+
+    @classmethod
+    def _compose_project_fragments(
+        cls,
+        fragments: t.SequenceOf[tuple[Path, m.Infra.ProjectManagedArtifactsFragment]],
+    ) -> p.Result[m.Infra.ProjectManagedArtifactsResolution]:
+        """Compose source fragments in path order into one resolution.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ProjectManagedArtifactsResolution]``.
+
+        """
         mise_tools: MutableMapping[str, m.Infra.ProjectMiseTool] = {}
         mise_sources: MutableMapping[str, Path] = {}
+        ruff_ignores: MutableMapping[str, t.SequenceOf[t.Infra.RuffRule]] = {}
+        ruff_sources: MutableMapping[str, Path] = {}
         gitignore_patterns: list[str] = []
         gitignore_blocks: list[m.Infra.ProjectGitignorePreservedBlock] = []
-        gitignore_block_markers: dict[str, Path] = {}
-
-        for source, content in sorted(payloads.items()):
-            try:
-                source_text = content.decode(c.Cli.ENCODING_DEFAULT)
-            except UnicodeDecodeError as exc:
-                return r[m.Infra.ProjectManagedArtifactsResolution].fail_op(
-                    f"decode project config source {source}",
-                    exc,
+        gitignore_markers: MutableMapping[str, Path] = {}
+        for source, fragment in fragments:
+            failure = (
+                cls._merge_gitignore(
+                    source,
+                    fragment.Gitignore,
+                    gitignore_patterns,
+                    gitignore_blocks,
+                    gitignore_markers,
                 )
-            loaded = u.Cli.yaml_parse(source_text)
-            if loaded.failure:
-                return r[m.Infra.ProjectManagedArtifactsResolution].from_failure(loaded)
-            managed = loaded.value.get("ManagedArtifacts")
-            if not managed:
-                continue
-            project_config = m.Infra.ProjectConfigDocument.model_validate({
-                "ManagedArtifacts": managed,
-            })
-            artifacts = project_config.ManagedArtifacts
-            if artifacts.Gitignore is not None:
-                for pattern in artifacts.Gitignore.patterns:
-                    if pattern not in gitignore_patterns:
-                        gitignore_patterns.append(pattern)
-                for block in artifacts.Gitignore.preserved_blocks:
-                    for marker in (block.begin, block.end):
-                        previous = gitignore_block_markers.get(marker)
-                        if previous is not None:
-                            return r[m.Infra.ProjectManagedArtifactsResolution].fail(
-                                "duplicate project gitignore preserved marker "
-                                f"{marker!r}: {previous} and {source}",
-                            )
-                        gitignore_block_markers[marker] = source
-                    gitignore_blocks.append(block)
-            if artifacts.Mise is None:
-                continue
-            for selector, tool in artifacts.Mise.tools.items():
-                previous = mise_sources.get(selector)
-                if previous is not None:
-                    return r[m.Infra.ProjectManagedArtifactsResolution].fail(
-                        "duplicate project Mise selector "
-                        f"{selector!r}: {previous} and {source}",
-                    )
-
-                mise_tools[selector] = tool
-                mise_sources[selector] = source
+                or cls._merge_unique_keys(
+                    "Ruff per-file ignore",
+                    source,
+                    {
+                        pattern: tuple(rules)
+                        for pattern, rules in fragment.Ruff.per_file_ignores.items()
+                    }
+                    if fragment.Ruff
+                    else {},
+                    ruff_ignores,
+                    ruff_sources,
+                )
+                or cls._merge_unique_keys(
+                    "Mise selector",
+                    source,
+                    fragment.Mise.tools if fragment.Mise else {},
+                    mise_tools,
+                    mise_sources,
+                )
+            )
+            if failure is not None:
+                return r[m.Infra.ProjectManagedArtifactsResolution].fail(failure)
         artifacts = m.Infra.ProjectManagedArtifactsConfig(
             Mise=m.Infra.ProjectMiseConfig(tools=dict(sorted(mise_tools.items()))),
             Gitignore=m.Infra.ProjectGitignoreConfig(
                 patterns=tuple(gitignore_patterns),
                 preserved_blocks=tuple(gitignore_blocks),
+            ),
+            Ruff=m.Infra.ProjectRuffConfig(
+                per_file_ignores=dict(sorted(ruff_ignores.items())),
             ),
         )
         return r[m.Infra.ProjectManagedArtifactsResolution].ok(

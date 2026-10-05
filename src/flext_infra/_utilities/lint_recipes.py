@@ -20,6 +20,7 @@ import ast
 import re
 import textwrap
 from collections.abc import MutableMapping
+from operator import itemgetter
 from pathlib import Path
 
 from flext_infra import c, config, m, t
@@ -100,8 +101,9 @@ class FlextInfraUtilitiesLintRecipes:
     ) -> str:
         """Return ``source`` with the declared recipe of every issue applied.
 
-        A static-method finding on a hook a subclass overrides is filtered
-        out by the caller (``overridden_findings``) and never reaches here.
+        A static-method finding on an override chain or on a method that reads
+        its receiver is filtered out by the caller (``overridden_findings``)
+        and never reaches here.
 
         ``path`` names the module in every refusal and locates the project
         whose declared author signs the notice; the notice is derived only
@@ -184,7 +186,7 @@ class FlextInfraUtilitiesLintRecipes:
         rewritten = source
         for start, end, text in sorted(
             edits,
-            key=lambda edit: (edit[0], edit[1]),
+            key=itemgetter(0, 1),
             reverse=True,
         ):
             rewritten = f"{rewritten[:start]}{text}{rewritten[end:]}"
@@ -397,15 +399,17 @@ class FlextInfraUtilitiesLintRecipes:
     def overridden_methods(
         sources: t.SequenceOf[str],
     ) -> frozenset[t.Pair[str, str]]:
-        """Return each ``(class, method)`` a subclass in ``sources`` redefines.
+        """Return each ``(class, method)`` on an override chain in ``sources``.
 
-        Ruff judges a method alone and cannot see that a subclass overrides
-        it; declaring such a hook static would break every override. Bases
-        are matched by their declared name, transitively, so an ambiguous
-        name only keeps more methods with their owner.
+        Ruff judges a method alone and cannot see its override chain: both the
+        base method a subclass redefines and the redefinition itself stay
+        instance methods, since declaring either static breaks the chain's
+        shared signature. Bases are matched by their declared name,
+        transitively, so an ambiguous name only keeps more methods with their
+        owner.
 
         Returns:
-            The overridden ``(class name, method name)`` pairs.
+            The ``(class name, method name)`` pairs on an override chain.
 
         """
         bases: MutableMapping[str, set[str]] = {}
@@ -433,10 +437,11 @@ class FlextInfraUtilitiesLintRecipes:
                     pending.extend(bases.get(base, ()))
             ancestors[name] = seen
         return frozenset(
-            (ancestor, method)
+            pair
             for name, found in ancestors.items()
             for ancestor in found
             for method in methods[name] & methods.get(ancestor, set())
+            for pair in ((ancestor, method), (name, method))
         )
 
     @classmethod
@@ -449,7 +454,10 @@ class FlextInfraUtilitiesLintRecipes:
         recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
         overridden: frozenset[t.Pair[str, str]],
     ) -> t.VariadicTuple[m.Infra.Issue]:
-        """Return the static-method findings whose method a subclass overrides.
+        """Return the static-method findings the recipe must not convert.
+
+        A method on an override chain, or one whose body reads its receiver,
+        keeps its receiver.
 
         Returns:
             The findings the static-method recipe leaves to their owner.
@@ -461,7 +469,25 @@ class FlextInfraUtilitiesLintRecipes:
             for issue in issues
             if recipes.get(issue.code) is c.Infra.LintFixRecipe.STATIC_METHOD
             for owner, method in (cls._receiver_method_at(tree, issue, path),)
-            if (owner.name, method.name) in overridden
+            if (owner.name, method.name) in overridden or cls._reads_receiver(method)
+        )
+
+    @staticmethod
+    def _reads_receiver(method: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+        """Tell whether the body reads its receiver, by name or through ``super()``.
+
+        Zero-argument ``super()`` and ``__class__`` bind the receiver
+        implicitly, so a static declaration would break them as well.
+
+        Returns:
+            Whether the body reads its receiver.
+
+        """
+        receiver = (*method.args.posonlyargs, *method.args.args)[0].arg
+        return any(
+            isinstance(node, ast.Name) and node.id in {receiver, "super", "__class__"}
+            for statement in method.body
+            for node in ast.walk(statement)
         )
 
     @staticmethod
@@ -620,7 +646,12 @@ class FlextInfraUtilitiesLintRecipes:
         )
         raw = "".join(lines)[start:end]
         body = raw.lstrip("rRuU")
-        if not (body.startswith('"""') and body.endswith('"""') and len(body) >= 6):
+        delimiter = '"""'
+        if not (
+            body.startswith(delimiter)
+            and body.endswith(delimiter)
+            and len(body) >= 2 * len(delimiter)
+        ):
             msg = f'{path}: docstring at line {value.lineno} is not a """ literal'
             raise ValueError(msg)
         return start, end, raw

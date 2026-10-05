@@ -103,9 +103,7 @@ class TestsFlextInfraWorkspaceMemberLedgerIdentity:
         member = u.Tests.WorktreeFixture.copied_member(
             parent,
             "fixture-workspace",
-            workspace="root-workspace",
-            database="root-database",
-            issue_prefix="root-prefix",
+            identity="root",
         )
         u.Tests.WorktreeFixture.link_member_beads(
             member,

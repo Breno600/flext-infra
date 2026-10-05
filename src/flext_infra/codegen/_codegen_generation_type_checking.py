@@ -249,8 +249,9 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
                 ),
             )
 
-    @staticmethod
+    @classmethod
     def generate_type_checking(
+        cls,
         groups: t.MappingKV[str, t.StrPairSequence],
         *,
         include_flext_types: bool = True,
@@ -270,26 +271,18 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
             return ("if TYPE_CHECKING:", "    from flext_core import FlextTypes")
         normalized_groups: MutableMapping[str, t.StrPairSequence] = {}
         for mod, items in groups.items():
-            normalize_path = FlextInfraCodegenGenerationTypeCheckingMixin._normalize_type_checking_module_path
-            resolved = normalize_path(
+            resolved = cls._normalize_type_checking_module_path(
                 mod,
                 local_package_root,
             )
-            FlextInfraCodegenGenerationTypeCheckingMixin._reject_noncanonical_type_checking_import(
+            cls._reject_noncanonical_type_checking_import(
                 resolved,
                 local_package_root,
                 items,
             )
             normalized_groups[resolved] = (*normalized_groups.get(resolved, ()), *items)
-        collapsed = FlextInfraCodegenGenerationTypeCheckingMixin._collapse_to_children(
-            normalized_groups,
-            child_packages,
-        )
-        merged_groups = (
-            FlextInfraCodegenGenerationTypeCheckingMixin._merge_root_alias_groups(
-                collapsed,
-            )
-        )
+        collapsed = cls._collapse_to_children(normalized_groups, child_packages)
+        merged_groups = cls._merge_root_alias_groups(collapsed)
         root_name = "" if not local_package_root else local_package_root.split(".")[0]
         # Derive the set of first-party roots for isort sectioning. When the
         # caller provides an explicit root_names (e.g. test facades need both
@@ -299,35 +292,23 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
             root_names if root_names is not None else frozenset({root_name})
         )
         lines: t.MutableSequenceOf[str] = ["if TYPE_CHECKING:"]
-        flext_types_emitted = (
-            include_flext_types
-            and not FlextInfraCodegenGenerationTypeCheckingMixin._has_flext_types(
-                collapsed,
-            )
+        flext_types_emitted = include_flext_types and not cls._has_flext_types(
+            collapsed,
         )
         if flext_types_emitted:
             lines.append("    from flext_core import FlextTypes")
 
         package = local_package_root or ""
         rendered_mods = {
-            mod: FlextInfraCodegenGenerationTypeCheckingMixin._absolute_import_module(
-                package,
-                mod,
-            )
-            for mod in merged_groups
+            mod: cls._absolute_import_module(package, mod) for mod in merged_groups
         }
 
         def type_checking_module_key(mod: str) -> t.StrPair:
-            owner = (
-                FlextInfraCodegenGenerationTypeCheckingMixin._type_checking_sort_owner(
-                    rendered_mods[mod],
-                    () if mod == "." else merged_groups[mod],
-                )
+            owner = cls._type_checking_sort_owner(
+                rendered_mods[mod],
+                () if mod == "." else merged_groups[mod],
             )
-            return FlextInfraCodegenGenerationTypeCheckingMixin._type_checking_sort_key(
-                owner,
-                effective_root_names,
-            )
+            return cls._type_checking_sort_key(owner, effective_root_names)
 
         sorted_mods = sorted(merged_groups, key=type_checking_module_key)
         # ``from flext_core import FlextTypes`` (when emitted above) is the
@@ -336,10 +317,7 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
         # than against an empty prior state, and so the local-section blank that
         # follows the absolutes is preserved.
         previous_section: str | None = (
-            FlextInfraCodegenGenerationTypeCheckingMixin._type_checking_sort_key(
-                "flext_core",
-                effective_root_names,
-            )[0]
+            cls._type_checking_sort_key("flext_core", effective_root_names)[0]
             if flext_types_emitted
             else None
         )
@@ -347,7 +325,7 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
             current_section = type_checking_module_key(mod)[0]
             if previous_section is not None and current_section != previous_section:
                 lines.append("")
-            FlextInfraCodegenGenerationTypeCheckingMixin._emit_type_checking_module(
+            cls._emit_type_checking_module(
                 mod,
                 rendered_mods[mod],
                 merged_groups[mod],

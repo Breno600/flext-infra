@@ -510,7 +510,7 @@ class FlextInfraUtilitiesCodegenNamespace:
         )
 
     @classmethod
-    def _resolve_project_prefix(
+    def project_prefix(
         cls,
         file_path: Path,
         *,
@@ -641,7 +641,7 @@ class FlextInfraUtilitiesCodegenNamespace:
             enforce_contract=enforce_contract,
             export_symbols=export_symbols,
             include_in_lazy_init=include_in_lazy_init,
-            project_prefix=cls._resolve_project_prefix(
+            project_prefix=cls.project_prefix(
                 file_path,
                 project_layout=project_layout,
             ),

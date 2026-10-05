@@ -22,6 +22,7 @@ from flext_infra._models.docs import FlextInfraModelsDocs
 from flext_infra._models.gates import FlextInfraModelsGates
 from flext_infra._models.git import FlextInfraModelsGit
 from flext_infra._models.layout import FlextInfraModelsLayout
+from flext_infra._models.mise_toolchain import FlextInfraModelsMiseToolchain
 from flext_infra._models.mixins import FlextInfraModelsMixins
 from flext_infra._models.promoted import FlextInfraModelsPromoted
 from flext_infra._models.refactor import FlextInfraModelsRefactor
@@ -36,6 +37,16 @@ from flext_infra._models.validate import FlextInfraModelsCore
 from flext_infra._models.workspace import FlextInfraModelsWorkspace
 from flext_infra._models.worktree import FlextInfraModelsWorktree
 
+
+from flext_infra._models.codegen_toolchain import (
+    FlextInfraModelsCodegenToolchain,
+)
+from flext_infra._models.codegen_render import (
+    FlextInfraModelsCodegenRender,
+)
+from flext_infra._models.mise_toolchain import (
+    FlextInfraModelsMiseToolchain,
+)
 
 class FlextInfraModels(FlextCliModels):
     """Merged model namespace for flext-infra domain objects."""
@@ -65,6 +76,9 @@ class FlextInfraModels(FlextCliModels):
         FlextInfraModelsTestmon,
         FlextInfraModelsCore,
         FlextInfraModelsBase,
+        FlextInfraModelsCodegenToolchain,
+        FlextInfraModelsCodegenRender,
+        FlextInfraModelsMiseToolchain,
     ):
         """Infrastructure-domain models - all classes exposed directly."""
 

@@ -278,8 +278,9 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             return "\n".join((*lines[: start_line - 1], replacement, *lines[end_line:]))
         return source
 
-    @staticmethod
+    @classmethod
     def _move_typing_alias_lines(
+        cls,
         *,
         project_root: Path,
         source_file: Path,
@@ -332,25 +333,19 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         if not moved_lines:
             return
         kept_source = "\n".join(kept_lines)
-        kept_source = (
-            FlextInfraUtilitiesRefactorNamespaceMoves._drop_moved_alias_exports(
-                source=kept_source,
-                alias_names=public_alias_names,
-            )
+        kept_source = cls._drop_moved_alias_exports(
+            source=kept_source,
+            alias_names=public_alias_names,
         )
         kept_lines = kept_source.splitlines()
-        required_imports = (
-            FlextInfraUtilitiesRefactorNamespaceMoves._collect_required_import_lines(
-                source=source,
-                blocks=moved_lines,
-            )
+        required_imports = cls._collect_required_import_lines(
+            source=source,
+            blocks=moved_lines,
         )
-        orphaned_imports = (
-            FlextInfraUtilitiesRefactorNamespaceMoves._collect_orphaned_import_lines(
-                source=source,
-                kept_source=kept_source,
-                max_line=min(moved_line_numbers),
-            )
+        orphaned_imports = cls._collect_orphaned_import_lines(
+            source=source,
+            kept_source=kept_source,
+            max_line=min(moved_line_numbers),
         )
         target_file = FlextInfraUtilitiesRefactorNamespaceCommon.canonical_target_file(
             project_root=project_root,
@@ -384,9 +379,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             ):
                 if bound in later_layers:
                     return
-        target_bindings = FlextInfraUtilitiesRefactorNamespaceMoves._import_bindings(
-            target_source,
-        )
+        target_bindings = cls._import_bindings(target_source)
         for import_line in required_imports:
             for _name, bound in FlextInfraUtilitiesRopeSource.parse_import_names(
                 import_line.partition(" import ")[2],
@@ -394,8 +387,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                 existing = target_bindings.get(bound)
                 if existing is not None and existing != import_line:
                     return
-        collect_missing = FlextInfraUtilitiesRefactorNamespaceMoves._collect_missing_runtime_alias_imports
-        fallback_runtime_imports = collect_missing(
+        fallback_runtime_imports = cls._collect_missing_runtime_alias_imports(
             target_source=target_source,
             blocks=moved_lines,
         )
@@ -428,8 +420,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             for import_line in candidate_imports
             if import_line not in target_lines
             if (
-                filtered
-                := FlextInfraUtilitiesRefactorNamespaceMoves._strip_self_bound_aliases(
+                filtered := cls._strip_self_bound_aliases(
                     import_line=import_line,
                     target_source=target_source,
                 )
@@ -443,13 +434,11 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         for moved_line in moved_lines:
             if moved_line not in target_lines:
                 updated_target += f"\n\n{moved_line}"
-        source_imports = (
-            FlextInfraUtilitiesRefactorNamespaceMoves._typing_alias_source_imports(
-                project_root=project_root,
-                target_file=target_file,
-                kept_source=kept_source,
-                alias_names=alias_names,
-            )
+        source_imports = cls._typing_alias_source_imports(
+            project_root=project_root,
+            target_file=target_file,
+            kept_source=kept_source,
+            alias_names=alias_names,
         )
         if source_imports is None:
             return

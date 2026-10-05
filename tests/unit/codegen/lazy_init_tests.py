@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def governed_project(tmp_path: Path) -> Path:
     """Provide the project manifest every scanned package belongs to.
 
@@ -41,6 +41,7 @@ def governed_project(tmp_path: Path) -> Path:
     return tmp_path
 
 
+@pytest.mark.usefixtures("governed_project")
 class TestsFlextInfraCodegenLazyInit:
     """Test suite for FlextInfraCodegenLazyInit directory scanning behavior."""
 

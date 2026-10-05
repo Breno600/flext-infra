@@ -30,14 +30,28 @@ Infra:
     layout:
       # Consumer ecosystem root keep-lists.
       project_overrides:
+        # ai-hub provider discovery requires the workspace root sgconfig.yml.
+        flext:
+          keep_root_files:
+            - sgconfig.yml
+          archive_names:
+            - CHANGELOG.md
         flext-cli:
           archive_names:
             - settings.json
+            - CHANGELOG.md
           gitignore_additions:
             - settings.json
         flext-core:
           archive_names:
             - config.json
+            - CHANGELOG.md
+        flext-infra:
+          archive_names:
+            - CHANGELOG.md
+        flext-tests:
+          archive_names:
+            - CHANGELOG.md
         flext-tap-oracle-wms:
           archive_names:
             - config.json

@@ -12,8 +12,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import u
-from tests import u as test_u
+from tests import u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -38,7 +37,7 @@ class TestsFlextInfraRopeAnalysis:
         suffix: str,
     ) -> None:
         """Bare dots and renamed symbols retain their actual package provenance."""
-        project, package = test_u.Tests.demo_project(tmp_path)
+        project, package = u.Tests.demo_project(tmp_path)
         nested = package / "inner" / "leaf"
         nested.mkdir(parents=True)
         for directory in (package, nested.parent, nested):
@@ -63,7 +62,7 @@ class TestsFlextInfraRopeAnalysis:
         tmp_path: Path,
     ) -> None:
         """An invalid relative import is not converted into an absolute import."""
-        project, package = test_u.Tests.demo_project(tmp_path)
+        project, package = u.Tests.demo_project(tmp_path)
         source = package / "consumer.py"
         source.write_text("from .. import Owner\n", encoding="utf-8")
         with u.Infra.open_project(project) as rope_project:
@@ -85,3 +84,31 @@ class TestsFlextInfraRopeAnalysis:
         # The rejection names the offending runtime type; its prose is not a contract.
         with pytest.raises(TypeError, match=r"\bobject\b"):
             u.Infra.ensure_ast_node(object())
+
+    @staticmethod
+    def test_call_headed_assignment_binds_as_non_class(tmp_path: Path) -> None:
+        """A call-headed value is a non-class binding, never a base reference.
+
+        Generated package-data modules assign validated payloads
+        (``Payload.model_validate_json(resource).section``); the inventory
+        records that binding as ``None`` instead of feeding the call to the
+        class-reference resolver.
+        """
+        project, package = u.Tests.demo_project(tmp_path)
+        source = package / "data_module.py"
+        source.write_text(
+            "class Owner:\n"
+            "    pass\n"
+            "\n"
+            "\n"
+            "PAYLOAD_SECTION: dict[str, Owner] = Owner.factory(\n"
+            "    resource_text('values.json'),\n"
+            ").items\n",
+            encoding="utf-8",
+        )
+        bases = u.Infra.runtime_evaluated_base_classes(
+            project,
+            {source: source.read_text(encoding="utf-8")},
+            (),
+        )
+        tm.that(bases, eq=())

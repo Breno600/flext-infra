@@ -82,8 +82,10 @@ class FlextInfraUtilitiesCodegenPathCutover:
         # loop publishes it and replans before the next semantic operation.
         transformations = (
             (
-                "${files}.resolve_relative(${layout}.scope_root, "
-                "${path}, purpose=${purpose})",
+                (
+                    "${files}.resolve_relative(${layout}.scope_root, "
+                    "${path}, purpose=${purpose})"
+                ),
                 "${files}.resolve_transaction(${layout}, ${path}, purpose=${purpose})",
             ),
             (

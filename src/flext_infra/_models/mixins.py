@@ -20,7 +20,7 @@ class FlextInfraModelsMixins:
     Structure (flat — no sub-namespaces): CLI parameter mixins, field
     contract mixins, violation/detail mixins, release mixins, github
     mixins, and project-name variants. All exposed directly under
-    ``mm.<Mixin>`` for consumers.
+    ``FlextInfraModelsMixins.<Mixin>`` for consumers.
     """
 
     # ═══════════════════ CLI PARAMETER MIXINS ═══════════════════
@@ -161,7 +161,11 @@ class FlextInfraModelsMixins:
         @m.computed_field
         @property
         def dry_run(self) -> bool:
-            """Whether writes are disabled (inverse of apply)."""
+            """Whether writes are disabled (inverse of apply).
+
+            Returns:
+                The resulting ``bool``.
+            """
             return not self.apply
 
     # ═══════════════════ RELEASE MIXINS ═══════════════════

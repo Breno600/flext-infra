@@ -19,11 +19,33 @@ from flext_tests import tm
 
 from flext_infra import c, config, m
 from flext_infra.codegen.conform import FlextInfraCodegenConform
-from tests import u, u as test_u
+from tests import u
 
 
 class TestsFlextInfraCodegenRepositoryRootScope:
     """Tests for ``FlextInfraCodegenRepositoryRootScope``."""
+
+    def test_normal_test_verbs_admit_only_incremental_execution(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Normal public recipes retain testmon without appending slow or full."""
+        root = self._render_root_makefile(tmp_path)
+        rendered = (root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding=c.Infra.ENCODING_DEFAULT,
+        )
+        cache = config.Infra.codegen.make.testmon_cache
+        for target in ("_builtin_test_all:", "_builtin_test_file_all:"):
+            recipe = rendered.split(target, 1)[1].split("\n\n", 1)[0]
+            tm.that(recipe.count("-m flext_infra._pytest_entry"), eq=1)
+            tm.that(
+                recipe,
+                lacks=["_pytest_entry slow", "file-slow", "_pytest_entry full"],
+            )
+            tm.that(
+                recipe,
+                has=f'{cache.database_environment_variable}="$$database"',
+            )
 
     @staticmethod
     def test_conform_owns_repository_root_makefile() -> None:
@@ -66,7 +88,7 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         }
         for verb, local_body in expected.items():
             execution = tm.ok(
-                test_u.Cli.run_raw(
+                u.Cli.run_raw(
                     [c.Infra.MAKE, "--dry-run", f"_builtin-{verb}"],
                     cwd=repository_root,
                     remove_env_keys=("MAKEFLAGS",),
@@ -81,7 +103,7 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         """The workspace profile declares propagate through the workspace CLI."""
         repository_root = self._render_root_makefile(tmp_path)
         execution = tm.ok(
-            test_u.Cli.run_raw(
+            u.Cli.run_raw(
                 [c.Infra.MAKE, "--dry-run", "_builtin-propagate"],
                 cwd=repository_root,
                 remove_env_keys=("MAKEFLAGS",),

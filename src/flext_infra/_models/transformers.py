@@ -191,7 +191,11 @@ class FlextInfraModelsTransformers:
         @m.computed_field
         @property
         def has_violations(self) -> bool:
-            """True if any imports need redirecting or moving."""
+            """True if any imports need redirecting or moving.
+
+            Returns:
+                The resulting ``bool``.
+            """
             return bool(self.category_b or self.category_c or self.category_d)
 
     class SourceRewrite(m.ArbitraryTypesModel):

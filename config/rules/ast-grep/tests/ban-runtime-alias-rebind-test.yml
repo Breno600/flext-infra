@@ -1,6 +1,11 @@
 # Shape only: the engine admits a finding when the captured alias is a
 # runtime alias of the own package (and, for an undeclared binding, not in
 # the module's __all__) — so every module-level binding is a syntactic match.
+# The ENFORCE-046 Pattern-A consumer admission (an imported letter rebound to
+# the consumer-named class the module defines) cannot be asserted here: this
+# suite is shape-only, and the undeclared branch flags every binding. It is
+# proven by the semantic engine scans: a consumer facade with the letter shape
+# scans clean, a peer rebind stays a finding.
 id: ban-runtime-alias-rebind
 valid:
   - |
@@ -25,3 +30,34 @@ invalid:
     from flext_core import FlextConstants
     c = FlextConstants
     __all__ = ["c"]
+  - |
+    from flext_core import s
+    class FlextFooServiceBase(s):
+        pass
+    s = FlextFooServiceBase
+    __all__ = ["FlextFooServiceBase", "s"]
+  - |
+    from flext_core import FlextSettings, s
+    class FlextFooServiceBase(s):
+        pass
+    s = FlextFooServiceBase
+    __all__ = ["FlextFooServiceBase", "s"]
+  - |
+    from flext_core import FlextSettings, FlextService as s
+    class FlextFooServiceBase(s):
+        pass
+    s = FlextFooServiceBase
+    __all__ = ["FlextFooServiceBase", "s"]
+  - |
+    from flext_core import FlextService as s
+    class FlextFooServiceBase(s):
+        pass
+    s = FlextFooServiceBase
+    __all__ = ["FlextFooServiceBase", "s"]
+  # A peer-named target stays a finding even in a consumer-style module.
+  - |
+    from flext_cli import p
+    class FlextFooProtocols(p):
+        pass
+    p = FlextFooProtocols
+    __all__ = ["FlextFooProtocols", "p"]
