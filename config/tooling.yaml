@@ -301,13 +301,13 @@ Infra:
                 The facade letters are imported as their facade class under
                 the letter (FlextInfraConstants as c), so type checkers see a
                 class rather than a variable rebind.
-            - files: "**/__init__.py"
-              rules: [runtime-import-in-type-checking-block]
-              authority: operator-ruling-2026-10-01-tc004-tid252
+            - rules: [runtime-import-in-type-checking-block]
+              authority: operator-ruling-2026-10-05-tc001-tc004-off-global
               reason: >-
-                Generated lazy-init package initializers declare their exports
-                under TYPE_CHECKING and resolve them lazily at runtime, which
-                TC004 reads as runtime use.
+                Operator ruling 2026-10-05: TC001-TC004 must never execute for
+                any file. Keep all four canonical names in the tooling SSOT
+                as global ignores; TC001-TC003 already have unscoped entries
+                above. TC004 is not restricted to package initializers.
             - files: "**/__init__.py"
               rules: [typing-only-first-party-import]
               authority: operator-ruling-2026-10-01-tc001-lazy-root-eager
