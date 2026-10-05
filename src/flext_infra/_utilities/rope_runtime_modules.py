@@ -114,6 +114,34 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         result = resolver(pymodule, offset)
         return result if isinstance(result, p.Infra.RopeImportedName) else None
 
+    @classmethod
+    def name_definition_resource_path(
+        cls,
+        pymodule: t.Infra.RopePyModule,
+        offset: int,
+    ) -> str | None:
+        """Resolve the defining module's on-disk path of the name at ``offset``.
+
+        Imported chains (``ImportedName``/``ImportedModule``) resolve through
+        to their foreign definition; a builtin, dynamic, or unresolvable name
+        resolves to ``None`` so callers can refuse unsafe rewrites.
+
+        Returns:
+            The resulting ``str | None``.
+
+        """
+        resolver = cls._runtime_callable("rope.base.evaluate", "eval_location")
+        result = resolver(pymodule, offset)
+        if not isinstance(result, p.Infra.RopePyName):
+            return None
+        holder, _lineno = result.get_definition_location()
+        if holder is None:
+            return None
+        resource = holder.get_resource()
+        if resource is None:
+            return None
+        return resource.real_path
+
     @staticmethod
     def source_offset(source: str, node: p.Infra.RopeAstNode) -> int:
         """Resolve Rope AST byte coordinates to a Python source offset.

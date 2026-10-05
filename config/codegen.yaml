@@ -624,9 +624,9 @@ Infra:
         - name: fix
           description: Apply the safe fixes of ruff check --fix --preview plus every other configured safe correction; never deletes information. Ruff is the rule; change code, never ruff.
         - name: fix-namespace
-          description: Apply the canonical namespace enforcer to the selected workspace.
+          description: Apply the canonical namespace enforcer to the selected workspace; the same relocation cascade runs as a callback phase of make mod.
         - name: fix-accessors
-          description: Migrate forbidden accessor names and every resolved consumer.
+          description: Migrate accessor names owned by the rename catalog's origin package and every resolved consumer; homonyms are skipped with a warning; the same origin-aware rewrite runs as a callback phase of make mod.
         - name: audit
           description: Inspect ownership, dependency, and generated-state health.
         - name: status

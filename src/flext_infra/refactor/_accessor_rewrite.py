@@ -1,7 +1,7 @@
 """Accessor token rewriting + manual-warning detection — extracted concern.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
+SPDX-License-Identifier: MIT.
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ from tokenize import NAME, generate_tokens
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import c, m, u
+from flext_infra.refactor._accessor_origin import FlextInfraAccessorOriginResolver
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -20,18 +21,21 @@ if TYPE_CHECKING:
 
 
 class FlextInfraAccessorMigrationRewriteMixin:
-    """Token-level get_/set_/is_ rewriting plus public-accessor warning scan.
+    """Origin-aware get_/set_/is_ rewriting plus public-accessor warning scan.
 
     Composed into FlextInfraAccessorMigrationOrchestrator via inheritance; owns
-    the automated-rename catalog and the idempotent token rewrite + the manual
+    the automated-rename catalog, the Rope-proven token rewrite, and the manual
     review-warning detection over loose public accessors.
     """
 
     # Rename rules sourced from c.ENFORCEMENT_ACCESSOR_RENAMES (flext-core SSOT).
     # All entries target flext-core surface (origin="flext_core"); adding a
     # rename = one entry in flext-core's enforcement constant, never duplicated
-    # here. Token-level rename is idempotent — once source_name has been
-    # renamed, subsequent passes find zero matching tokens.
+    # here. The rewrite only renames an occurrence whose defining module
+    # resolves inside the rule's origin package — homonyms owned by the scanned
+    # repository, by another library, or by a builtin are skipped with a
+    # warning, so the verb stays safe on non-flext consumers. Once a source
+    # name has been renamed, subsequent passes find zero matching tokens.
     _AUTOMATED_RULES: ClassVar[t.VariadicTuple[m.Infra.AccessorMigrationRule]] = tuple(
         m.Infra.AccessorMigrationRule(
             source_name=src,
@@ -47,6 +51,10 @@ class FlextInfraAccessorMigrationRewriteMixin:
     _MANUAL_WARNING_REASON: ClassVar[str] = (
         "Public {prefix}-prefixed accessor: rename to canonical verb "
         "(drop the prefix or use resolve_/fetch_/build_/etc.)"
+    )
+    _SKIPPED_ORIGIN_REASON: ClassVar[str] = (
+        "Skipped homonym: resolves to {definition}; only {origin}-owned "
+        "definitions are renamed automatically"
     )
 
     def _apply_automated_rewrites(
@@ -65,6 +73,7 @@ class FlextInfraAccessorMigrationRewriteMixin:
         resource = u.Infra.resolve_resource_from_path(rope_project, py_file)
         if resource is None:
             return source, ()
+        resolver = FlextInfraAccessorOriginResolver(rope_project)
         updated_source = source
         changes: t.MutableSequenceOf[m.Infra.AccessorMigrationChange] = []
         for rule in self._AUTOMATED_RULES:
@@ -72,38 +81,45 @@ class FlextInfraAccessorMigrationRewriteMixin:
                 updated_source,
                 rule=rule,
                 file_path=py_file,
+                resolver=resolver,
             )
             changes.extend(rule_changes)
-        return updated_source, changes
+        return updated_source, tuple(changes)
 
-    @staticmethod
+    @classmethod
     def _rename_symbol_tokens(
+        cls,
         source: str,
         *,
         rule: m.Infra.AccessorMigrationRule,
         file_path: Path,
+        resolver: FlextInfraAccessorOriginResolver,
     ) -> t.Pair[str, t.SequenceOf[m.Infra.AccessorMigrationChange]]:
-        """Rename symbol tokens.
+        """Rename only origin-owned occurrences of one rule's source name.
 
         Returns:
             The resulting ``t.Pair[str,
                 t.SequenceOf[m.Infra.AccessorMigrationChange]]``.
 
         """
-        token_lines: t.MutableSequenceOf[m.Infra.AccessorMigrationChange] = []
+        token_changes: t.MutableSequenceOf[m.Infra.AccessorMigrationChange] = []
         rewrite_ranges: t.MutableSequenceOf[t.Triple[int, int, str]] = []
+        skipped_by_definition: dict[str, int] = {}
         for token in generate_tokens(io.StringIO(source).readline):
             if token.type != NAME or token.string != rule.source_name:
                 continue
             line, column = token.start
-            start = FlextInfraAccessorMigrationRewriteMixin._offset_from_position(
-                source,
-                line,
-                column,
-            )
+            start = cls._offset_from_position(source, line, column)
             end = start + len(rule.source_name)
+            definition = resolver.occurrence_origin(file_path, start)
+            if definition is None or not resolver.is_origin_path(
+                definition,
+                origin=rule.origin,
+            ):
+                skipped_by_definition[definition or "an unresolved module"] = line
+                continue
             rewrite_ranges.append((start, end, rule.replacement_name))
-            token_lines.append(
+            token_changes.append(
                 m.Infra.AccessorMigrationChange(
                     file=str(file_path),
                     line=line,
@@ -113,8 +129,25 @@ class FlextInfraAccessorMigrationRewriteMixin:
                     reason=rule.reason,
                 ),
             )
+        for definition, first_line in sorted(
+            skipped_by_definition.items(),
+            key=itemgetter(1),
+        ):
+            token_changes.append(
+                m.Infra.AccessorMigrationChange(
+                    file=str(file_path),
+                    line=first_line,
+                    original_name=rule.source_name,
+                    replacement_name="",
+                    automated=False,
+                    reason=cls._SKIPPED_ORIGIN_REASON.format(
+                        definition=definition,
+                        origin=rule.origin,
+                    ),
+                ),
+            )
         if not rewrite_ranges:
-            return source, ()
+            return source, tuple(token_changes)
         updated_source = source
         for start, end, replacement in sorted(
             rewrite_ranges,
@@ -122,7 +155,7 @@ class FlextInfraAccessorMigrationRewriteMixin:
             reverse=True,
         ):
             updated_source = updated_source[:start] + replacement + updated_source[end:]
-        return updated_source, tuple(token_lines)
+        return updated_source, tuple(token_changes)
 
     @staticmethod
     def _offset_from_position(source: str, line: int, column: int) -> int:

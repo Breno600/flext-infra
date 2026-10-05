@@ -1525,11 +1525,11 @@ fix:
 	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make fix to execute it.'
 
 fix-namespace:
-	@printf '  %-16s %s\n' 'fix-namespace' 'Apply the canonical namespace enforcer to the selected workspace.'
+	@printf '  %-16s %s\n' 'fix-namespace' 'Apply the canonical namespace enforcer to the selected workspace; the same relocation cascade runs as a callback phase of make mod.'
 	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make fix-namespace to execute it.'
 
 fix-accessors:
-	@printf '  %-16s %s\n' 'fix-accessors' 'Migrate forbidden accessor names and every resolved consumer.'
+	@printf '  %-16s %s\n' 'fix-accessors' 'Migrate accessor names owned by the rename catalog'"'"'s origin package and every resolved consumer; homonyms are skipped with a warning; the same origin-aware rewrite runs as a callback phase of make mod.'
 	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make fix-accessors to execute it.'
 
 audit:
@@ -1677,9 +1677,9 @@ _builtin-help:
 
 	@printf '  %-16s %s\n' 'fix' 'Apply the safe fixes of ruff check --fix --preview plus every other configured safe correction; never deletes information. Ruff is the rule; change code, never ruff.';
 
-	@printf '  %-16s %s\n' 'fix-namespace' 'Apply the canonical namespace enforcer to the selected workspace.';
+	@printf '  %-16s %s\n' 'fix-namespace' 'Apply the canonical namespace enforcer to the selected workspace; the same relocation cascade runs as a callback phase of make mod.';
 
-	@printf '  %-16s %s\n' 'fix-accessors' 'Migrate forbidden accessor names and every resolved consumer.';
+	@printf '  %-16s %s\n' 'fix-accessors' 'Migrate accessor names owned by the rename catalog'"'"'s origin package and every resolved consumer; homonyms are skipped with a warning; the same origin-aware rewrite runs as a callback phase of make mod.';
 
 	@printf '  %-16s %s\n' 'audit' 'Inspect ownership, dependency, and generated-state health.';
 
