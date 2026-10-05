@@ -115,6 +115,22 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             ),
         ]
 
+    class RuffTypeCheckingConfig(m.ArbitraryTypesModel):
+        """Ruff flake8-type-checking settings loaded from YAML."""
+
+        runtime_evaluated_roots: Annotated[
+            t.SequenceOf[t.NonEmptyStr],
+            m.Field(
+                alias="runtime-evaluated-roots",
+                min_length=1,
+                description=(
+                    "Qualified base classes whose subclasses evaluate their "
+                    "annotations at runtime; codegen derives every project "
+                    "base inheriting one into runtime-evaluated-base-classes."
+                ),
+            ),
+        ]
+
     class RuffAuthorizedException(m.ArbitraryTypesModel):
         """One operator-authorized Ruff exception, recorded with its authority.
 
@@ -205,6 +221,13 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         pydocstyle: FlextInfraModelsDepsToolConfigLinters.RuffPydocstyleConfig = (
             m.Field(description="Ruff pydocstyle configuration")
         )
+        flake8_type_checking: Annotated[
+            FlextInfraModelsDepsToolConfigLinters.RuffTypeCheckingConfig,
+            m.Field(
+                alias="flake8-type-checking",
+                description="Ruff flake8-type-checking configuration",
+            ),
+        ]
         authorized_exceptions: Annotated[
             tuple[FlextInfraModelsDepsToolConfigLinters.RuffAuthorizedException, ...],
             m.Field(
@@ -379,9 +402,18 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 ),
             ),
         ]
-        plugins: Annotated[t.StrSequence, m.Field(description="Mypy plugins list.")] = (
-            m.Field(default_factory=tuple)
-        )
+        plugins: Annotated[
+            t.StrSequence,
+            m.Field(
+                description=(
+                    "Mypy plugins list. pydantic.mypy is mandatory on every"
+                    " project (operator ruling 2026-10-05): Pydantic 2 is the"
+                    " fleet contract and the plugin is its type surface, so"
+                    " this default keeps it on wherever a project overlay does"
+                    " not declare its own list."
+                ),
+            ),
+        ] = m.Field(default_factory=lambda: ("pydantic.mypy",))
         facade_rebind_error_codes: Annotated[
             t.StrSequence,
             m.Field(
@@ -400,9 +432,12 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                     "Mypy error codes an operator ruling suspends project-wide; "
                     "rendered as [tool.mypy] disable_error_code. The pydantic "
                     "mypy plugin stays mandatory (Pydantic 2 is the contract)."
+                    " The default carries the 2026-10-05 ruling fleet-wide:"
+                    " prop-decorator and call-arg are suspended everywhere and"
+                    " code edited to quiet them is a regression."
                 ),
             ),
-        ] = m.Field(default_factory=tuple)
+        ] = m.Field(default_factory=lambda: ("prop-decorator", "call-arg"))
         boolean_settings: Annotated[
             t.BoolMapping,
             m.Field(

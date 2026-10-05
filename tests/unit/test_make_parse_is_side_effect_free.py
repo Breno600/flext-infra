@@ -18,13 +18,16 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from flext_tests import tm
 
 import flext_infra
 from flext_infra import c
-from tests import t
+
+if TYPE_CHECKING:
+    from tests import t
 
 
 class TestsFlextInfraMakeParseIsSideEffectFree:
