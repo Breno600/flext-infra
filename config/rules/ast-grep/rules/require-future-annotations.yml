@@ -165,3 +165,47 @@ message: >-
   The copyright notice must be the last lines of the module docstring; the
   notice-last phase of make mod moves the notice paragraph after the rest of
   the docstring text.
+---
+# Literal exports already infer their immutable string tuple. An annotation
+# must not be the only reason a facade depends on its own typing namespace.
+#
+# Scope is the fleet-wide facade family (src/<package>/constants.py, models.py,
+# protocols.py, typings.py and utilities.py), expressed with the same
+# **/src/**/<module>.py globs ban-concrete-flext-cli-import uses, so every
+# family distribution and workspace layout runs the same export hygiene
+# instead of only the flext package itself.
+#
+# The element constraint is a positive first-character class: a literal
+# element starts with a quote and a retained comment starts with `#`. `has`
+# also visits the tuple's anonymous `(`, `,` and `)` tokens, which no `kind`
+# matcher can ever match, so a negated any/[comment, string] would reject
+# every parenthesized tuple; excluding all five characters up front keeps the
+# punctuation out and lets any other child (identifier, call, number,
+# f-string, bytes, star) block the fix.
+id: infer-literal-facade-exports
+language: python
+severity: error
+files:
+  - "**/src/**/constants.py"
+  - "**/src/**/models.py"
+  - "**/src/**/protocols.py"
+  - "**/src/**/typings.py"
+  - "**/src/**/utilities.py"
+rule:
+  pattern:
+    context: "__all__: t.VariadicTuple[str] = $VALUE"
+    selector: assignment
+  inside:
+    kind: expression_statement
+    inside:
+      kind: module
+constraints:
+  VALUE:
+    kind: tuple
+    not:
+      has:
+        regex: "^[^\"'(),#]"
+fix: "__all__ = $VALUE"
+message: >-
+  Infer the literal export tuple instead of retaining a redundant type-only
+  facade dependency; preserve the original export values and order.

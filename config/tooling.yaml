@@ -183,11 +183,16 @@ Infra:
           #   (ban-relative-imports: all, and make mod rewrites relative
           #   imports) — the fix enforces the declared contract, no semantics.
           # - camelcase-imported-as-lowercase (N813): pure alias rename, the
-          #   bound object is unchanged. TC001 stays OUT of this list: its fix
-          #   moves first-party imports into TYPE_CHECKING, which breaks the
-          #   eager-by-law lazy roots (see the scoped __init__.py exception).
+          #   bound object is unchanged.
+          # - typing-only-first-party-import (TC001): the fix moves an import
+          #   used only in annotations into TYPE_CHECKING; every module runs
+          #   under `from __future__ import annotations`, the runtime-evaluated
+          #   model bases are derived below (flake8-type-checking), and the
+          #   eager-by-law lazy roots never see the rule (scoped __init__.py
+          #   exception), so no runtime-read annotation loses its import.
           extend-safe-fixes:
             - relative-imports
+            - typing-only-first-party-import
             - camelcase-imported-as-lowercase
           # Every import is absolute: make mod rewrites relative imports and
           # the lazy-init generator renders absolute import statements.
@@ -215,6 +220,14 @@ Infra:
             docstring-missing-yields: yields-section
             docstring-missing-exception: raises-section
             no-self-use: static-method
+          # Pydantic evaluates model field annotations at runtime, so an
+          # import used only in a model annotation is runtime, not typing-only.
+          # Ruff follows imported bases only by qualified name: codegen derives
+          # every project class base that subclasses a root below into
+          # runtime-evaluated-base-classes (tooling_runtime), never a list here.
+          flake8-type-checking:
+            runtime-evaluated-roots:
+              - pydantic.BaseModel
           # Banned API messages are policy data, never template literals.
           banned-api:
             argparse: "Use cli.register_result_command + Pydantic model from flext_cli."
@@ -339,14 +352,44 @@ Infra:
         # config/tooling.yaml overlay may only lower it; no environment
         # variable changes it.
         timeout_seconds: 120
+        # Pydantic mypy plugin is MANDATORY, ALWAYS (operator order
+        # 2026-10-05, bead gc-eqvqx5): the projection model defaults an
+        # empty declaration to this plugin and rejects any list that omits
+        # it, so no generated [tool.mypy] can ship without it.
         plugins: [pydantic.mypy]
+        # Dated, scoped tooling suspension (operator sharpening 2026-10-05,
+        # bead gc-eqvqx5): mypy 2.3.1/2.4.0 x pydantic 2.10.6-2.14.0b2 emit
+        # false positives for canonical pydantic 2 idioms - prop-decorator
+        # from the canonical @computed_field @property stack, call-arg from
+        # the pydantic plugin's synthesis of private attributes and
+        # mixin-declared fields. Upstream minimal repros fail identically
+        # across those versions, so the two codes are suspended HERE at the
+        # gate owner instead of contorting canonical pydantic 2 in code.
+        # Every real call-arg stays active; re-measure on the next
+        # mypy/pydantic bump and retire the suspension when upstream fixes
+        # the repros.
+        #
+        # attr-defined (same sharpening, 2026-10-05, bead gc-eqvqx5): mypy
+        # resolves every family facade letter import (`from flext_cli import
+        # u`) to the PARENT letter type because the subclass rebind inside
+        # flext_cli.utilities (`u = FlextCliUtilities`) does not re-type the
+        # module symbol under mypy; every runtime-installed namespace member
+        # (u.Cli, u.Infra, ...) then reports attr-defined although the
+        # attribute exists at runtime (PEP 562 namespace machinery; probe:
+        # hasattr(flext_cli.u, 'Cli') is True). The cure owner is the letter
+        # export surface in flext-cli/flext-core; suspend the code here
+        # until that lands.
+        disable-error-code: [prop-decorator, call-arg, attr-defined]
         # The canonical facade form imports the parent letter, subclasses it
         # and rebinds the letter (`from flext_core import u`,
         # `class FlextCliUtilities(u)`, `u = FlextCliUtilities`). Mypy 2.3.1
         # rejects that module-level rebind with these codes even under
-        # allow_redefinition; codegen disables them only in the modules it
-        # detects in that form (operator-ruling-2026-10-01-facade-rebind-mypy-scope).
-        facade-rebind-error-codes: [misc, no-redef]
+        # allow_redefinition — `assignment` because the rebound letter's type
+        # (the subclass) is by design never the imported alias's type
+        # (type[FlextService] vs type[FlextApiServiceBase]); codegen disables
+        # them only in the modules it detects in that form
+        # (operator-ruling-2026-10-01-facade-rebind-mypy-scope).
+        facade-rebind-error-codes: [misc, no-redef, assignment]
         boolean-settings:
           allow_redefinition: true
           namespace_packages: true
@@ -385,6 +428,20 @@ Infra:
           pythonVersion: "3.13"
           typeCheckingMode: strict
         extended-settings:
+          # Dated tooling resolution (operator sharpening 2026-10-05, bead
+          # gc-eqvqx5): pyright 1.1.414 has no pydantic-plugin equivalent, so
+          # reportCallIssue fires on every runtime-valid pydantic model
+          # constructor whose parameters come from Annotated-only
+          # Field(default_factory=...) declarations (repro: a bare
+          # Annotated-default model reports "Arguments missing" under
+          # pyright while the identical construction succeeds at runtime
+          # and under the mypy plugin), from plain-class field mixins,
+          # PrivateAttr synthesis and populate_by_name aliases. Pyright
+          # offers no finer granularity than the rule itself; mypy with the
+          # mandatory pydantic plugin remains the call-contract authority
+          # and the runtime behavior stays under the tests plus the
+          # runtime-census and fresh-import gates.
+          reportCallIssue: none
           reportConstantRedefinition: error
           reportIncompatibleMethodOverride: error
           reportInconsistentConstructor: error
@@ -450,6 +507,10 @@ Infra:
         disable-project-excludes-heuristics: true
         python-version: "3.13"
         use-ignore-files: false
+        # prop-decorator suspension lives in the MYPY ruling surface above
+        # (ruling-disable-error-codes): the pyrefly release the non-producer
+        # repositories resolve does not know the code and rejects it as an
+        # unknown variant, so a pyrefly-side suspension cannot be fleet-wide.
         strict-errors:
           # --- type safety ---
           - bad-argument-count

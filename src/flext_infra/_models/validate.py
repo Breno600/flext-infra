@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, ClassVar, Literal, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import c, t
 from flext_infra._models import FlextInfraModelsMixins
@@ -132,7 +132,7 @@ class FlextInfraModelsCore:
 
         node_ids: t.StrTuple = m.Field(description="Unique node IDs in execution order")
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def require_unique_node_ids(self) -> Self:
             """Reject incomplete identifiers and ambiguous worker manifests.
 
@@ -247,7 +247,7 @@ class FlextInfraModelsCore:
             description="TestReport outcome",
         )
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def require_event_payload(self) -> Self:
             """Reject incomplete runtime events instead of reporting zero findings.
 

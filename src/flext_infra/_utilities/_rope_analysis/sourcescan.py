@@ -8,12 +8,31 @@ from __future__ import annotations
 
 import ast
 from collections.abc import MutableMapping
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra import t
 from flext_infra._utilities._rope_analysis.asthelpers import (
     FlextInfraUtilitiesRopeAnalysisAstHelpers,
 )
+
+if TYPE_CHECKING:
+    from flext_infra import t
+
+
+def _is_sequence_constructor_wrap(value: ast.expr) -> bool:
+    """Whether one expression wraps a bare name in a sequence constructor call.
+
+    Returns:
+        The resulting ``bool``.
+
+    """
+    return (
+        isinstance(value, ast.Call)
+        and isinstance(value.func, ast.Name)
+        and value.func.id in {"tuple", "list", "frozenset", "set"}
+        and len(value.args) == 1
+        and not value.keywords
+        and isinstance(value.args[0], ast.Name)
+    )
 
 
 class FlextInfraUtilitiesRopeAnalysisSourceScan:
@@ -91,14 +110,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         """
         if isinstance(value, ast.Name):
             return value.id
-        if (
-            isinstance(value, ast.Call)
-            and isinstance(value.func, ast.Name)
-            and value.func.id in {"tuple", "list", "frozenset", "set"}
-            and len(value.args) == 1
-            and not value.keywords
-            and isinstance(value.args[0], ast.Name)
-        ):
+        if _is_sequence_constructor_wrap(value):
             return value.args[0].id
         return ""
 

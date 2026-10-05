@@ -348,7 +348,7 @@ class FlextInfraPyprojectModernizerDocument:
                 rendered,
                 path=path,
                 toolchain_root=self.root,
-                taplo_version=config.Infra.codegen.toolchain.taplo_version,
+                taplo_version=config.Infra.codegen.toolchain.tool_versions["taplo"],
                 process_timeout_seconds=(
                     config.Infra.tooling.tools.tomlsort.process_timeout_seconds
                 ),

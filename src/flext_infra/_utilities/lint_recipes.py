@@ -20,6 +20,7 @@ import ast
 import re
 import textwrap
 from collections.abc import MutableMapping
+from operator import itemgetter
 from pathlib import Path
 
 from flext_infra import c, config, m, t
@@ -185,7 +186,7 @@ class FlextInfraUtilitiesLintRecipes:
         rewritten = source
         for start, end, text in sorted(
             edits,
-            key=lambda edit: (edit[0], edit[1]),
+            key=itemgetter(0, 1),
             reverse=True,
         ):
             rewritten = f"{rewritten[:start]}{text}{rewritten[end:]}"
@@ -645,7 +646,12 @@ class FlextInfraUtilitiesLintRecipes:
         )
         raw = "".join(lines)[start:end]
         body = raw.lstrip("rRuU")
-        if not (body.startswith('"""') and body.endswith('"""') and len(body) >= 6):
+        delimiter = '"""'
+        if not (
+            body.startswith(delimiter)
+            and body.endswith(delimiter)
+            and len(body) >= 2 * len(delimiter)
+        ):
             msg = f'{path}: docstring at line {value.lineno} is not a """ literal'
             raise ValueError(msg)
         return start, end, raw

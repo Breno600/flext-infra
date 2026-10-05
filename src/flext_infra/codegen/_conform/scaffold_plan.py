@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, config, m, p, t, u
 from flext_infra.codegen._conform.existing_plan import (
     FlextInfraCodegenConformExistingPlan,
 )
@@ -236,14 +236,22 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
         }
         tooling = render_inputs.tooling_runtime
         rebinds = u.Infra.facade_rebind_modules(root, planned_sources)
+        type_checking = config.Infra.tooling.tools.ruff.lint.flake8_type_checking
+        runtime_bases = u.Infra.runtime_evaluated_base_classes(
+            root,
+            planned_sources,
+            type_checking.runtime_evaluated_roots,
+        )
         first_party = tuple(
             FlextInfraToolTablesPhase.first_party_namespaces(
                 path=root,
                 planned_sources=tuple(planned_sources),
             ),
         )
-        if rebinds == tuple(tooling.mypy_facade_rebind_modules) and (
-            first_party == tuple(tooling.first_party)
+        if (
+            rebinds == tuple(tooling.mypy_facade_rebind_modules)
+            and first_party == tuple(tooling.first_party)
+            and runtime_bases == tuple(tooling.ruff_runtime_evaluated_base_classes)
         ):
             return result_type.ok(planned)
         final_inputs = render_inputs.model_copy(
@@ -251,6 +259,7 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
                 "tooling_runtime": tooling.model_copy(
                     update={
                         "mypy_facade_rebind_modules": rebinds,
+                        "ruff_runtime_evaluated_base_classes": runtime_bases,
                         "first_party": first_party,
                     },
                 ),
