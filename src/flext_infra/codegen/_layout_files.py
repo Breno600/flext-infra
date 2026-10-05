@@ -15,7 +15,7 @@ from pathlib import Path
 
 from flext_core import r
 from flext_infra import config, m, p, t, u
-from flext_infra.codegen._layout_plan import FlextInfraCodegenLayoutPlanMixin
+from ._layout_plan import FlextInfraCodegenLayoutPlanMixin
 
 
 class FlextInfraCodegenLayoutFilesMixin:

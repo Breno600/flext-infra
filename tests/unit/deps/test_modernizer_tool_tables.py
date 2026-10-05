@@ -11,13 +11,13 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_core import e
 from flext_infra import (
     FlextInfraEnsureRuffConfigPhase,
     FlextInfraPyprojectModernizer,
     FlextInfraToolTablesPhase,
     config,
 )
+from flext_core import e
 from flext_infra.gates.mypy import FlextInfraMypyGate
 from tests import c, m, t, u
 
