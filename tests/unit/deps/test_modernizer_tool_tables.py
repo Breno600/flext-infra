@@ -13,6 +13,7 @@ from flext_tests import tm
 
 from flext_core import e
 from flext_infra import FlextInfraPyprojectModernizer, FlextInfraToolTablesPhase, config
+from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
 from flext_infra.gates.mypy import FlextInfraMypyGate
 from tests import c, m, t, u
 
@@ -102,6 +103,17 @@ class TestsFlextInfraDepsModernizerToolTables:
             **mypy_policy.string_settings,
         }.items():
             tm.that(mypy[key], eq=value)
+        second = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
+            u.Tests.toml_payload(
+                u.Cli.toml_dumps(u.Cli.toml_document_from_mapping(payload)),
+            ),
+        )
+        changes = FlextInfraToolTablesPhase(config.Infra.tooling).apply_payload(
+            second,
+            path=tmp_path / "flext-sample" / c.PYPROJECT_FILENAME,
+        )
+        tm.that(second, eq=payload)
+        tm.that(changes, eq=())
 
     @staticmethod
     @pytest.mark.parametrize(
@@ -114,16 +126,46 @@ class TestsFlextInfraDepsModernizerToolTables:
         """The typed policy cannot remove mandatory Pydantic 2 support."""
         payload = config.Infra.tooling.tools.mypy.model_dump()
         payload["plugins"] = plugins
-        with pytest.raises(e.PydanticValidationError, match="pydantic.mypy"):
+        with pytest.raises(e.PydanticValidationError, match=r"pydantic\.mypy"):
             m.Infra.MypyConfig.model_validate(payload)
 
     @pytest.mark.slow
+    @pytest.mark.parametrize("enable_unrelated", [False, True])
     def test_mypy_projected_policy_keeps_plugin_and_unsuspended_errors(
         self,
         tmp_path: Path,
+        *,
+        enable_unrelated: bool,
     ) -> None:
         """A real Mypy consumer suppresses only the declared codes with its plugin."""
-        payload, _ = self._applied(tmp_path)
+        tooling = config.Infra.tooling
+        if enable_unrelated:
+            policy = tooling.tools.mypy
+            validated = m.Infra.MypyConfig.model_validate({
+                **policy.model_dump(by_alias=True),
+                "string-settings": {
+                    **policy.string_settings,
+                    "enable_error_code": "arg-type",
+                },
+            })
+            tooling = tooling.model_copy(
+                update={"tools": tooling.tools.model_copy(update={"mypy": validated})},
+            )
+        payload, _ = self._applied(tmp_path, tool_config=tooling)
+        mypy = self._table(payload, "mypy")
+        tm.that(
+            tuple(u.Tests.toml_strings(mypy["plugins"])),
+            eq=tuple(tooling.tools.mypy.plugins),
+        )
+        tm.that(
+            set(u.Tests.toml_strings(mypy["disable_error_code"])),
+            eq=set(tooling.tools.mypy.disable_error_code),
+        )
+        if enable_unrelated:
+            tm.that(
+                mypy["enable_error_code"],
+                eq=tooling.tools.mypy.string_settings["enable_error_code"],
+            )
         project = tmp_path / "flext-sample"
         (project / c.PYPROJECT_FILENAME).write_text(
             u.Cli.toml_dumps(u.Cli.toml_document_from_mapping(payload)),
@@ -152,7 +194,10 @@ class TestsFlextInfraDepsModernizerToolTables:
         tm.that(accepted.issues, eq=())
 
         source.write_text(
-            declarations + 'invalid = Model(value="incorrect")\n',
+            declarations
+            + "def requires_integer(value: int) -> int:\n"
+            + "    return value\n"
+            + 'invalid = requires_integer("incorrect")\n',
             encoding="utf-8",
         )
         rejected = gate.check(project, context)
@@ -494,8 +539,6 @@ class TestsFlextInfraDepsModernizerToolTables:
         namespace-packages contract only holds for live roots; the workspace
         SSOT's exclusions decide (bead flext-x44z3).
         """
-        from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
-
         project_dir = self._workspace_with_exclusion(tmp_path, "scripts")
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
             u.Tests.toml_payload('[project]\nname = "flext-sample"\n'),

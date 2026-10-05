@@ -402,19 +402,30 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 ),
             ),
         ]
-        plugins: Annotated[t.StrSequence, m.Field(description="Mypy plugins list.")] = (
-            m.Field(default_factory=tuple)
-        )
-        disable_error_code: Annotated[
+        plugins: Annotated[
             t.StrSequence,
             m.Field(
-                alias="disable-error-code",
-                description=(
-                    "Mypy error codes suspended fleet-side at this gate-owner"
-                    " config for a dated, proven toolchain limitation."
-                ),
+                description="Mypy plugins, including mandatory Pydantic 2 support.",
             ),
-        ] = m.Field(default_factory=tuple)
+        ]
+
+        @m.field_validator("plugins")
+        @classmethod
+        def require_pydantic_plugin(cls, plugins: t.StrSequence) -> t.StrSequence:
+            """Reject configurations without the mandatory Pydantic 2 plugin.
+
+            Returns:
+                The validated plugin declarations.
+
+            Raises:
+                ValueError: If Pydantic 2 support is missing or replaced by v1.
+
+            """
+            if "pydantic.mypy" not in plugins or "pydantic.v1.mypy" in plugins:
+                msg = "Mypy requires pydantic.mypy and forbids pydantic.v1.mypy"
+                raise ValueError(msg)
+            return plugins
+
         facade_rebind_error_codes: Annotated[
             t.StrSequence,
             m.Field(
@@ -488,31 +499,61 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         )
 
         @m.model_validator(mode="after")
-        def _require_pydantic_plugin(self) -> Self:
-            """Keep the pydantic mypy plugin structural in every projection.
-
-            Operator order 2026-10-05 (bead gc-eqvqx5): the pydantic mypy
-            plugin is MANDATORY, ALWAYS. An empty declaration defaults to
-            the plugin; no projection may emit ``[tool.mypy]`` without it,
-            so no codegen path can omit it.
+        def reject_policy_shadow(self) -> Self:
+            """Refuse ambiguous options and re-enabling suspended diagnostics.
 
             Returns:
-                The validated configuration.
+                The validated settings without modifying their declared values.
 
             Raises:
-                ValueError: If a declared plugins list omits the pydantic
-                    mypy plugin.
+                ValueError: If generic settings bypass a dedicated policy owner.
 
             """
-            if not self.plugins:
-                self.plugins = ("pydantic.mypy",)
-                return self
-            if "pydantic.mypy" not in self.plugins:
-                msg = (
-                    "tools.mypy.plugins must include the pydantic mypy plugin"
-                    " (operator order 2026-10-05, bead gc-eqvqx5); got"
-                    f" {self.plugins!r}"
-                )
+            boolean_keys = {
+                key.strip().replace("-", "_") for key in self.boolean_settings
+            }
+            strings = {
+                key.strip().replace("-", "_"): value
+                for key, value in self.string_settings.items()
+            }
+            reserved = {
+                c.Infra.PLUGINS,
+                "disable_error_code",
+                c.Infra.PYTHON_VERSION_UNDERSCORE,
+                "overrides",
+                "mypy_path",
+            }
+            if (boolean_keys | strings.keys()) & reserved:
+                msg = "Mypy policy cannot be shadowed by generic options"
+                raise ValueError(msg)
+            if (
+                boolean_keys & strings.keys()
+                or len(boolean_keys) != len(self.boolean_settings)
+                or len(strings) != len(self.string_settings)
+            ):
+                msg = "Mypy policy rejects duplicate generic options"
+                raise ValueError(msg)
+            if "enable_error_code" in boolean_keys:
+                msg = "Mypy policy enable_error_code requires a string setting"
+                raise ValueError(msg)
+            if any(
+                not key.isascii() or not key.isidentifier()
+                for key in (*self.boolean_settings, *self.string_settings)
+            ):
+                msg = "Mypy policy requires plain option names, not TOML syntax"
+                raise ValueError(msg)
+            if self.boolean_settings.get("ignore_errors", False) or (
+                "ignore_errors" in strings
+            ):
+                msg = "Mypy policy cannot ignore unsuspended diagnostics"
+                raise ValueError(msg)
+            enabled = {
+                code.strip()
+                for code in strings.get("enable_error_code", "").split(",")
+                if code.strip()
+            }
+            if enabled.intersection(self.disable_error_code):
+                msg = "Mypy policy cannot re-enable suspended error codes"
                 raise ValueError(msg)
             return self
 
