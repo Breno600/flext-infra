@@ -399,7 +399,6 @@ mise_exec() { \
 'LC_ALL=C' \
 'MISE_SAFE=1' \
 'MISE_PARANOID=true' \
-'MISE_QUIET=1' \
 'MISE_NO_ENV=1' \
 'MISE_NO_HOOKS=1' \
 'MISE_AUTO_ENV=false' \
@@ -659,7 +658,6 @@ mise_exec() { \
 'LC_ALL=C' \
 'MISE_SAFE=1' \
 'MISE_PARANOID=true' \
-'MISE_QUIET=1' \
 'MISE_NO_ENV=1' \
 'MISE_NO_HOOKS=1' \
 'MISE_AUTO_ENV=false' \
