@@ -39,7 +39,10 @@ class FlextInfraUtilitiesGitStatePublicationMixin(
                     raise ValueError(msg)
                 return url
             case _:
-                msg = "checkpoint publication requires one identical fetch and push endpoint"
+                msg = (
+                    "checkpoint publication requires one identical "
+                    "fetch and push endpoint"
+                )
                 raise ValueError(msg)
 
     @classmethod
@@ -151,7 +154,7 @@ class FlextInfraUtilitiesGitStatePublicationMixin(
             cls._state_verify_publication(checkpoint, publication)
         except (GitCommandError, OSError, ValueError) as exc:
             return r[bool].fail(str(exc), exception=exc)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraUtilitiesGitStatePublicationMixin"]

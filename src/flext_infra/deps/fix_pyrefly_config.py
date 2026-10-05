@@ -53,7 +53,7 @@ class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bo
         )
         if fix_result.failure:
             return r[bool].from_failure(fix_result)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def process_file(
         self,

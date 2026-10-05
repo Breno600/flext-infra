@@ -341,7 +341,7 @@ class FlextInfraUtilitiesDocsRender:
         """Return a thin pointer to the canonical Collection Rules.
 
         SSOT: the actual content lives in ``flext/AGENTS.md`` §9 — duplicating
-        it 33× per project (once for ``docs/index.md`` and once for
+        it 33x per project (once for ``docs/index.md`` and once for
         ``README.md``) is the "fake markdown" the user flagged. Each project
         page now points back to the canonical source instead of carrying a
         copy. ``scope`` is preserved on the signature for symmetry with the
@@ -359,7 +359,12 @@ class FlextInfraUtilitiesDocsRender:
         return [
             "## Collection Rules",
             "",
-            f"Read [`/flext/AGENTS.md`]({agents_link}) §9 — Agent Execution Pre-requisites — for the canonical pre-change checklist (parent FLEXT chain, Scope bootstrap, skill loading, zero-debt baseline, slot registry verification).",
+            (
+                f"Read [`/flext/AGENTS.md`]({agents_link}) §9 — Agent Execution "
+                "Pre-requisites — for the canonical pre-change checklist "
+                "(parent FLEXT chain, Scope bootstrap, skill loading, "
+                "zero-debt baseline, slot registry verification)."
+            ),
         ]
 
     @staticmethod
@@ -385,7 +390,10 @@ class FlextInfraUtilitiesDocsRender:
                 "`docs`) execute their declared operations directly."
             ),
             "",
-            f"See [`/flext/AGENTS.md`]({agents_link}) for the build, test, and Python quality gates.",
+            (
+                f"See [`/flext/AGENTS.md`]({agents_link}) for the build, test, "
+                "and Python quality gates."
+            ),
         ]
 
     @staticmethod
@@ -442,7 +450,10 @@ class FlextInfraUtilitiesDocsRender:
                 f"- Package: `{scope.package_name}`",
                 f"- Description: {description}",
                 "",
-                "This project portal is generated from `pyproject.toml`, package exports, and real docstrings.",
+                (
+                    "This project portal is generated from `pyproject.toml`, "
+                    "package exports, and real docstrings."
+                ),
                 "",
                 "## Start Here",
                 "",
@@ -494,7 +505,10 @@ class FlextInfraUtilitiesDocsRender:
             "",
             c.Infra.GENERATED_HEADER,
             "",
-            f"**Version**: `{version}` | **Python**: 3.13+ | **Project class**: `{scope.project_class}`",
+            (
+                f"**Version**: `{version}` | **Python**: 3.13+ | "
+                f"**Project class**: `{scope.project_class}`"
+            ),
             "",
             (
                 "> **Alpha (0.12.0).** This package is alpha quality. Every "
@@ -518,14 +532,31 @@ class FlextInfraUtilitiesDocsRender:
             "",
             "## Operation Flow",
             "",
-            "- Public surface: see [`docs/index.md`](docs/index.md) and [`docs/api-reference/README.md`](docs/api-reference/README.md).",
-            "- Generated module overview: [`docs/api-reference/generated/overview.md`](docs/api-reference/generated/overview.md).",
-            "- Settings env prefix: see project `pyproject.toml` `[tool.flext]` and `FlextSettings` ConfigDict.",
+            (
+                "- Public surface: see [`docs/index.md`](docs/index.md) and "
+                "[`docs/api-reference/README.md`](docs/api-reference/README.md)."
+            ),
+            (
+                "- Generated module overview: "
+                "[`docs/api-reference/generated/overview.md`](docs/api-reference/generated/overview.md)."
+            ),
+            (
+                "- Settings env prefix: see project `pyproject.toml` "
+                "`[tool.flext]` and `FlextSettings` ConfigDict."
+            ),
             "",
             "## Integration Points",
             "",
-            "- Parent FLEXT chain: read this project's `pyproject.toml` `dependencies` array filtered by `flext-*`. The FLEXT cascade is encoded in the inheritance lists of the facade classes listed under Module Map above.",
-            f"- Public extensions exposed by this project: {FlextInfraUtilitiesDocsRender._preview(facades)}.",
+            (
+                "- Parent FLEXT chain: read this project's `pyproject.toml` "
+                "`dependencies` array filtered by `flext-*`. The FLEXT cascade "
+                "is encoded in the inheritance lists of the facade classes "
+                "listed under Module Map above."
+            ),
+            (
+                "- Public extensions exposed by this project: "
+                f"{FlextInfraUtilitiesDocsRender._preview(facades)}."
+            ),
             "- Library abstraction boundaries: see AGENTS.md §2.7.",
             "",
             *FlextInfraUtilitiesDocsRender._quality_gates_lines(
@@ -560,7 +591,10 @@ class FlextInfraUtilitiesDocsRender:
             "",
             c.Infra.GENERATED_HEADER,
             "",
-            "Curated operational guides live here. Keep API behavior in generated reference pages sourced from code and docstrings.",
+            (
+                "Curated operational guides live here. Keep API behavior in "
+                "generated reference pages sourced from code and docstrings."
+            ),
             "",
             *entries,
             "- [Back to project docs](../index.md)",
@@ -755,7 +789,10 @@ class FlextInfraUtilitiesDocsRender:
             f"- Package: `{scope.package_name}`",
             f"- Version: `{data.get('version', '')}`",
             f"- Description: {data.get('description', '') or '_not declared_'}",
-            f"- Doc summary: {str(data.get('doc_summary', '')).strip() or '_not declared_'}",
+            (
+                f"- Doc summary: "
+                f"{str(data.get('doc_summary', '')).strip() or '_not declared_'}"
+            ),
             f"- Classifiers: {classifiers}",
             f"- Project class: `{scope.project_class}`",
             f"- Keywords: {keywords}",
@@ -890,11 +927,17 @@ class FlextInfraUtilitiesDocsRender:
             c.Infra.GENERATED_HEADER,
             "",
             f"- Version: `{str(data.get('version', '')).strip() or 'unknown'}`",
-            f"- Description: {str(data.get('description', '')).strip() or '_not declared_'}",
+            (
+                f"- Description: "
+                f"{str(data.get('description', '')).strip() or '_not declared_'}"
+            ),
             f"- Governed projects: `{project_count}`",
             f"- Project classes: {classes}",
             "",
-            "Generated from workspace discovery, `pyproject.toml`, public exports, and docstrings.",
+            (
+                "Generated from workspace discovery, `pyproject.toml`, "
+                "public exports, and docstrings."
+            ),
             "",
             "## Next Pages",
             "",
@@ -967,7 +1010,10 @@ class FlextInfraUtilitiesDocsRender:
             "",
             c.Infra.GENERATED_HEADER,
             "",
-            "Project links resolve to the generated root API reference for each governed FLEXT package.",
+            (
+                "Project links resolve to the generated root API reference "
+                "for each governed FLEXT package."
+            ),
             "",
             "| project | class | package | description |",
             "|---|---|---|---|",

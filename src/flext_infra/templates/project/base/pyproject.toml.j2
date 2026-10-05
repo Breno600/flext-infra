@@ -198,7 +198,7 @@ include = [
   {{ ("/" ~ namespace ~ "/**") | tojson }},
 {% endfor %}
 ]
-{% if packaged_data_files or root_modules %}
+{% if packaged_data_files or root_modules or hatch_build_hook_path %}
 
 [tool.hatch.build.targets.sdist.force-include]
 {% for data_file in packaged_data_files %}
@@ -207,6 +207,10 @@ include = [
 {% for module in root_modules %}
 {{ ("src/" ~ module ~ ".py") | tojson }} = {{ ("src/" ~ module ~ ".py") | tojson }}
 {% endfor %}
+{% if hatch_build_hook_path %}
+{# uv 0.12 builds the wheel FROM the sdist: the declared custom hook must ride in it. Force-include keeps the wheel/sdist source patterns equal (release metadata contract). #}
+{{ hatch_build_hook_path | tojson }} = {{ hatch_build_hook_path | tojson }}
+{% endif %}
 {% endif %}
 {% endif %}
 
@@ -221,6 +225,13 @@ plugins = [
   {{ item | tojson }},
 {% endfor %}
 ]
+{% if tooling.tools.mypy.disable_error_code %}
+disable_error_code = [
+{% for item in tooling.tools.mypy.disable_error_code %}
+  {{ item | tojson }},
+{% endfor %}
+]
+{% endif %}
 python_version = {{ python_version | tojson }}
 {% for key, value in tooling.tools.mypy.boolean_settings | dictsort %}
 {{ key }} = {{ value | lower }}
@@ -424,6 +435,16 @@ unfixable = [
 
 [tool.ruff.lint.flake8-copyright]
 notice-rgx = {{ tooling.tools.ruff.lint.copyright_notice_rgx | tojson }}
+
+{# Bases derived from the project's own classes: each imported base that
+   subclasses a declared runtime-evaluated root keeps its annotation imports
+   at runtime (Pydantic evaluates field annotations). #}
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = [
+{% for item in tooling_runtime.ruff_runtime_evaluated_base_classes %}
+  {{ item | tojson }},
+{% endfor %}
+]
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = {{ tooling.tools.ruff.lint.ban_relative_imports | tojson }}

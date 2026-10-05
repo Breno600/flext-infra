@@ -201,6 +201,8 @@ class FlextInfraUtilitiesDocsApi:
                 source,
                 symbol_name,
             )
+            if symbol_name
+            else FlextInfraUtilitiesRopeAnalysis.lazy_import_mapping_source(source)
         )
         next_visited = visited | frozenset({key})
         if not entries and not refs:
@@ -259,7 +261,6 @@ class FlextInfraUtilitiesDocsApi:
         project_root: Path,
         *,
         package_name: str,
-        source: str,
         exports: t.StrSequence,
     ) -> t.StrMapping:
         """Return target modules declared by the package lazy import map.
@@ -268,16 +269,11 @@ class FlextInfraUtilitiesDocsApi:
             Target modules declared by the package lazy import map.
 
         """
-        lazy_imports_name = FlextInfraUtilitiesRopeAnalysis.lazy_imports_name_source(
-            source,
-        )
-        if not lazy_imports_name:
-            return {}
         target_map = cls._resolve_lazy_import_targets(
             project_root,
             root_package=package_name,
             module_name=package_name,
-            symbol_name=lazy_imports_name,
+            symbol_name="",
         )
         export_names = frozenset(exports)
         return {
@@ -580,7 +576,6 @@ class FlextInfraUtilitiesDocsApi:
             FlextInfraUtilitiesDocsApi._lazy_export_target_map(
                 project_root,
                 package_name=package_name,
-                source=source,
                 exports=all_exports,
             ),
         )
@@ -603,8 +598,10 @@ class FlextInfraUtilitiesDocsApi:
         contract: t.JsonMapping = t.Infra.INFRA_MAPPING_ADAPTER.validate_python({
             "package_name": package_name,
             "description": project.description,
-            "doc_summary": FlextInfraUtilitiesRopeAnalysis.module_docstring_summary_source(
-                source,
+            "doc_summary": (
+                FlextInfraUtilitiesRopeAnalysis.module_docstring_summary_source(
+                    source,
+                )
             ),
             "classifiers": list(project.classifiers),
             "keywords": list(project.keywords),

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Annotated, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 
 class FlextInfraModelsTestmon:
@@ -78,7 +78,7 @@ class FlextInfraModelsTestmon:
             ),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def require_execution_or_verified_deselection(self) -> Self:
             """Zero execution requires positive accounting against a valid cache.
 
@@ -105,7 +105,10 @@ class FlextInfraModelsTestmon:
                     and self.deselected_count == self.inventory_count
                 )
             ):
-                msg = "zero execution requires a restored cache and complete deselection accounting"
+                msg = (
+                    "zero execution requires a restored cache "
+                    "and complete deselection accounting"
+                )
                 raise ValueError(msg)
             return self
 

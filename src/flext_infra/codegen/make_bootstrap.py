@@ -24,7 +24,7 @@ class FlextInfraCodegenMakeBootstrap(FlextInfraCodegenExecutionBase[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Apply or check only this checkout's canonical declared Make bootstrap surface.
+        """Apply or check this checkout's canonical declared Make bootstrap surface.
 
         Returns:
             The resulting ``p.Result[bool]``.
@@ -74,7 +74,7 @@ class FlextInfraCodegenMakeBootstrap(FlextInfraCodegenExecutionBase[bool]):
         )
         if conformed.failure:
             return r[bool].from_failure(conformed)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraCodegenMakeBootstrap"]

@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
-from tests.unit.deps.extra_paths_support import ExtraPathsTestSupport
+from tests.unit.deps.extra_paths_support import TestsFlextInfraExtraPathsSupport
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -31,9 +31,9 @@ class TestsFlextInfraExtraPathsArePure:
         tmp_path: Path,
     ) -> None:
         """A UV workspace project is a distribution, not a search path."""
-        _ = ExtraPathsTestSupport.workspace_with_dependency(tmp_path)
+        _ = TestsFlextInfraExtraPathsSupport.workspace_with_dependency(tmp_path)
 
-        manager = ExtraPathsTestSupport.manager(tmp_path)
+        manager = TestsFlextInfraExtraPathsSupport.manager(tmp_path)
         result = manager.pyrefly_search_paths(project_dir=tmp_path, is_root=True)
 
         tm.that(result, eq=("src", "."))
@@ -43,7 +43,11 @@ class TestsFlextInfraExtraPathsArePure:
         tmp_path: Path,
     ) -> None:
         """A member never reaches out of its own root to find a dependency."""
-        consumer = ExtraPathsTestSupport.project(tmp_path, "flext-ldap", "flext_ldap")
+        consumer = TestsFlextInfraExtraPathsSupport.project(
+            tmp_path,
+            "flext-ldap",
+            "flext_ldap",
+        )
         consumer.joinpath("pyproject.toml").write_text(
             (
                 "[project]\n"
@@ -54,9 +58,13 @@ class TestsFlextInfraExtraPathsArePure:
             ),
             encoding="utf-8",
         )
-        _ = ExtraPathsTestSupport.project(tmp_path, "flext-core", "flext_core")
+        _ = TestsFlextInfraExtraPathsSupport.project(
+            tmp_path,
+            "flext-core",
+            "flext_core",
+        )
 
-        manager = ExtraPathsTestSupport.manager(tmp_path)
+        manager = TestsFlextInfraExtraPathsSupport.manager(tmp_path)
         search_paths = manager.pyrefly_search_paths(project_dir=consumer, is_root=False)
         extra_paths = manager.pyright_extra_paths(project_dir=consumer, is_root=False)
 
@@ -74,24 +82,26 @@ class TestsFlextInfraExtraPathsArePure:
         derived from sibling existence differ there, so `make gen` in the lane
         would rewrite what the primary just generated.
         """
-        with_siblings = ExtraPathsTestSupport.project(
+        with_siblings = TestsFlextInfraExtraPathsSupport.project(
             tmp_path / "workspace",
             "flext-ldap",
             "flext_ldap",
         )
-        _ = ExtraPathsTestSupport.project(
+        _ = TestsFlextInfraExtraPathsSupport.project(
             tmp_path / "workspace",
             "flext-core",
             "flext_core",
         )
-        alone = ExtraPathsTestSupport.project(
+        alone = TestsFlextInfraExtraPathsSupport.project(
             tmp_path / "lane",
             "flext-ldap",
             "flext_ldap",
         )
 
-        workspace_manager = ExtraPathsTestSupport.manager(tmp_path / "workspace")
-        lane_manager = ExtraPathsTestSupport.manager(tmp_path / "lane")
+        workspace_manager = TestsFlextInfraExtraPathsSupport.manager(
+            tmp_path / "workspace",
+        )
+        lane_manager = TestsFlextInfraExtraPathsSupport.manager(tmp_path / "lane")
 
         tm.that(
             workspace_manager.pyrefly_search_paths(

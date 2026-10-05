@@ -13,7 +13,7 @@ from flext_tests import tm
 
 from flext_infra import m
 from flext_infra.codegen import FlextInfraCodegenLazyInitProjectionManifest
-from tests import u as test_u
+from tests import u
 
 
 def _plan(
@@ -64,7 +64,7 @@ class TestsFlextInfraLazyInitProjectionManifest:
         manifest = one.value[0]
         tm.that(manifest.path, eq=tmp_path / ".agents" / "projections.lock.json")
         assert manifest.desired_content is not None
-        parsed = test_u.Tests.json_payload(manifest.desired_content.decode("utf-8"))
+        parsed = u.Tests.json_payload(manifest.desired_content.decode("utf-8"))
         tm.that(parsed["apiVersion"], eq="flext-infra/projections-lock/v1")
         entries = parsed["entries"]
         assert isinstance(entries, list)
@@ -84,7 +84,7 @@ class TestsFlextInfraLazyInitProjectionManifest:
     def test_manifest_excludes_itself_and_non_projected_plans(
         tmp_path: Path,
     ) -> None:
-        """Only .agents/.codex projections feed entries; the manifest never self-refs."""
+        """Only .agents/.codex projections feed entries; no manifest self-reference."""
         projected = _plan(tmp_path, ".agents/aihub-hooks/x.py", b"kept")
         engine = _plan(tmp_path, "src/engine.py", b"ignored")
         existing = _plan(
@@ -98,7 +98,7 @@ class TestsFlextInfraLazyInitProjectionManifest:
         tm.that(result.failure, eq=False)
         tm.that(len(result.value), eq=1)
         assert result.value[0].desired_content is not None
-        parsed = test_u.Tests.json_payload(
+        parsed = u.Tests.json_payload(
             result.value[0].desired_content.decode("utf-8"),
         )
         entries = parsed["entries"]

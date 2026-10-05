@@ -16,7 +16,7 @@ from flext_cli import m
 
 from flext_infra import c, t
 from flext_infra._models import (
-    FlextInfraModelsMixins as mm,
+    FlextInfraModelsMixins,
     FlextInfraModelsNamespaceEnforcer,
 )
 
@@ -54,7 +54,7 @@ class FlextInfraModelsScan:
             m.Field(description="Optional project root containing the scanned file."),
         ] = None
 
-    class ScanViolation(mm.PositiveLineMixin, m.ContractModel):
+    class ScanViolation(FlextInfraModelsMixins.PositiveLineMixin, m.ContractModel):
         """A single violation found during file scanning."""
 
         message: Annotated[
@@ -196,7 +196,10 @@ class FlextInfraModelsScan:
         distributions: Annotated[
             t.StrSequence,
             m.Field(
-                description="Declared project distributions selected for this rule; empty selects all",
+                description=(
+                    "Declared project distributions selected "
+                    "for this rule; empty selects all"
+                ),
             ),
         ] = ()
         find: Annotated[

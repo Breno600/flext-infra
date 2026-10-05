@@ -78,7 +78,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         del cls
         source = project_path / "dist"
         if not source.is_dir():
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         staged = stage_path / "dist"
         try:
             staged.mkdir(parents=True, exist_ok=True)
@@ -90,7 +90,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
                 shutil.copy2(entry, staged / entry.name)
         except OSError as exc:
             return r[bool].fail_op(f"mirror release inputs {source}", exc)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def _build_staged(
         self,
@@ -163,7 +163,9 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
             timeout=c.Infra.TIMEOUT_LONG,
             env={
                 c.Infra.SOURCE_DATE_EPOCH: str(snapshot.source_date_epoch),
-                c.Infra.UV_HTTP_CONNECT_TIMEOUT: c.Infra.UV_RELEASE_HTTP_CONNECT_TIMEOUT,
+                c.Infra.UV_HTTP_CONNECT_TIMEOUT: (
+                    c.Infra.UV_RELEASE_HTTP_CONNECT_TIMEOUT
+                ),
                 c.Infra.UV_HTTP_TIMEOUT: c.Infra.UV_RELEASE_HTTP_TIMEOUT,
                 c.Infra.UV_HTTP_RETRIES: c.Infra.UV_RELEASE_HTTP_RETRIES,
             },

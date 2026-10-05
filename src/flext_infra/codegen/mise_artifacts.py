@@ -102,7 +102,7 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
                 "Mise payload carries a lockfile annotation in the selector: "
                 f"{', '.join(annotated)}",
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _validate_config(cls, project_root: Path) -> p.Result[bool]:

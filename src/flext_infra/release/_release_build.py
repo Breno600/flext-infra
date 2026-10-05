@@ -119,7 +119,7 @@ class FlextInfraReleaseBuildMixin(FlextInfraReleaseProjectMixin):
             return r[bool].from_failure(written)
         if failures:
             return r[bool].fail(f"build failed: {failures} project(s)")
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def internal_locked_versions(

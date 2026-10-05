@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core.lazy import build_lazy_import_map, install_lazy_exports
+from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra._utilities._semantic_cutover.alias_cst import (
@@ -24,6 +24,9 @@ if TYPE_CHECKING:
     )
     from flext_infra._utilities._semantic_cutover.bindings import (
         FlextInfraUtilitiesSemanticCutoverBindings,
+    )
+    from flext_infra._utilities._semantic_cutover.class_scope import (
+        FlextInfraUtilitiesSemanticCutoverClassScope,
     )
     from flext_infra._utilities._semantic_cutover.dynamic_environment import (
         FlextInfraUtilitiesSemanticCutoverDynamicEnvironment,
@@ -95,6 +98,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesSemanticCutoverAliases",
     "FlextInfraUtilitiesSemanticCutoverBase",
     "FlextInfraUtilitiesSemanticCutoverBindings",
+    "FlextInfraUtilitiesSemanticCutoverClassScope",
     "FlextInfraUtilitiesSemanticCutoverDynamicEnvironment",
     "FlextInfraUtilitiesSemanticCutoverEdits",
     "FlextInfraUtilitiesSemanticCutoverFacadeBaseCst",
@@ -118,50 +122,40 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesSemanticNestingTypes",
 )
 
-_LAZY_IMPORTS = MappingProxyType(
-    build_lazy_import_map(
-        MappingProxyType({
-            ".alias_cst": ("FlextInfraUtilitiesSemanticCutoverAliasCst",),
-            ".aliases": ("FlextInfraUtilitiesSemanticCutoverAliases",),
-            ".base": ("FlextInfraUtilitiesSemanticCutoverBase",),
-            ".bindings": ("FlextInfraUtilitiesSemanticCutoverBindings",),
-            ".dynamic_environment": (
-                "FlextInfraUtilitiesSemanticCutoverDynamicEnvironment",
-            ),
-            ".edits": ("FlextInfraUtilitiesSemanticCutoverEdits",),
-            ".facade_base_cst": ("FlextInfraUtilitiesSemanticCutoverFacadeBaseCst",),
-            ".facade_bases": ("FlextInfraUtilitiesSemanticCutoverFacadeBases",),
-            ".facade_owners": ("FlextInfraUtilitiesSemanticCutoverFacadeOwners",),
-            ".family_flatten": ("FlextInfraUtilitiesSemanticFamilyFlatten",),
-            ".family_references": ("FlextInfraUtilitiesSemanticFamilyReferences",),
-            ".family_type_references": (
-                "FlextInfraUtilitiesSemanticFamilyTypeReferences",
-            ),
-            ".helper_references": ("FlextInfraUtilitiesSemanticHelperReferences",),
-            ".model_fields": ("FlextInfraUtilitiesSemanticCutoverModelFields",),
-            ".model_fields_bindings": (
-                "FlextInfraUtilitiesSemanticCutoverModelFieldsBindings",
-            ),
-            ".module_layout": ("FlextInfraUtilitiesSemanticCutoverModuleLayout",),
-            ".nesting": ("FlextInfraUtilitiesSemanticCutoverNesting",),
-            ".nesting_cst": ("FlextInfraUtilitiesSemanticCutoverNestingCst",),
-            ".nesting_module_aliases": (
-                "FlextInfraUtilitiesSemanticCutoverNestingModuleAliases",
-            ),
-            ".nesting_owner": ("FlextInfraUtilitiesSemanticCutoverNestingOwner",),
-            ".nesting_references": (
-                "FlextInfraUtilitiesSemanticCutoverNestingReferences",
-            ),
-            ".nesting_types": ("FlextInfraUtilitiesSemanticNestingTypes",),
-            ".private_import_cst": (
-                "FlextInfraUtilitiesSemanticCutoverPrivateImportCst",
-            ),
-            ".private_imports": ("FlextInfraUtilitiesSemanticCutoverPrivateImports",),
-            ".self_facade": ("FlextInfraUtilitiesSemanticCutoverSelfFacade",),
-        }),
-        alias_groups=MappingProxyType({}),
-        sort_keys=False,
-    ),
+install_lazy_exports(
+    __name__,
+    globals(),
+    MappingProxyType({
+        "FlextInfraUtilitiesSemanticCutoverAliasCst": ".alias_cst",
+        "FlextInfraUtilitiesSemanticCutoverAliases": ".aliases",
+        "FlextInfraUtilitiesSemanticCutoverBase": ".base",
+        "FlextInfraUtilitiesSemanticCutoverBindings": ".bindings",
+        "FlextInfraUtilitiesSemanticCutoverClassScope": ".class_scope",
+        "FlextInfraUtilitiesSemanticCutoverDynamicEnvironment": ".dynamic_environment",
+        "FlextInfraUtilitiesSemanticCutoverEdits": ".edits",
+        "FlextInfraUtilitiesSemanticCutoverFacadeBaseCst": ".facade_base_cst",
+        "FlextInfraUtilitiesSemanticCutoverFacadeBases": ".facade_bases",
+        "FlextInfraUtilitiesSemanticCutoverFacadeOwners": ".facade_owners",
+        "FlextInfraUtilitiesSemanticCutoverModelFields": ".model_fields",
+        "FlextInfraUtilitiesSemanticCutoverModelFieldsBindings": (
+            ".model_fields_bindings"
+        ),
+        "FlextInfraUtilitiesSemanticCutoverModuleLayout": ".module_layout",
+        "FlextInfraUtilitiesSemanticCutoverNesting": ".nesting",
+        "FlextInfraUtilitiesSemanticCutoverNestingCst": ".nesting_cst",
+        "FlextInfraUtilitiesSemanticCutoverNestingModuleAliases": (
+            ".nesting_module_aliases"
+        ),
+        "FlextInfraUtilitiesSemanticCutoverNestingOwner": ".nesting_owner",
+        "FlextInfraUtilitiesSemanticCutoverNestingReferences": ".nesting_references",
+        "FlextInfraUtilitiesSemanticCutoverPrivateImportCst": ".private_import_cst",
+        "FlextInfraUtilitiesSemanticCutoverPrivateImports": ".private_imports",
+        "FlextInfraUtilitiesSemanticCutoverSelfFacade": ".self_facade",
+        "FlextInfraUtilitiesSemanticFamilyFlatten": ".family_flatten",
+        "FlextInfraUtilitiesSemanticFamilyReferences": ".family_references",
+        "FlextInfraUtilitiesSemanticFamilyTypeReferences": ".family_type_references",
+        "FlextInfraUtilitiesSemanticHelperReferences": ".helper_references",
+        "FlextInfraUtilitiesSemanticNestingTypes": ".nesting_types",
+    }),
+    public_exports=__all__,
 )
-
-install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

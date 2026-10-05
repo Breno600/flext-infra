@@ -42,7 +42,7 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
         """
         raw = u.Cli.toml_value(container, key)
         if raw is None:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         items: p.Result[t.StrSequence] = u.validate_value(
             t.Infra.STR_SEQ_ADAPTER,
             u.Cli.json_as_sequence(raw),
@@ -74,7 +74,7 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
             marker = f"; {parsed.marker}" if parsed.marker is not None else ""
             rendered.append(f"{parsed.name}{extras}{pin.value}{marker}")
         u.Cli.toml_sync_string_list(container, key, rendered)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _release_pyproject(

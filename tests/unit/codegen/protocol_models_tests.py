@@ -11,12 +11,14 @@ import sys
 from collections.abc import Iterator
 from pathlib import Path
 from types import ModuleType
-from typing import get_type_hints
+from typing import TYPE_CHECKING, get_type_hints
 
 import pytest
 
-from flext_infra import t
 from flext_infra.codegen.protocol_models import FlextInfraCodegenProtocolModels
+
+if TYPE_CHECKING:
+    from flext_infra import t
 
 MEMBER = "demo_member"
 
@@ -270,8 +272,10 @@ def test_check_only_reports_drift(member_root: Path) -> None:
     models_path.write_text(
         MODELS.replace(
             'sku: str = m.Field(description="Stock keeping unit of the ordered item.")',
-            'sku: str = m.Field(description="Stock keeping unit of the ordered item.")\n'
-            '    weight: float = m.Field(default=1.0, description="Drift probe weight.")',
+            'sku: str = m.Field(description="Stock keeping unit of the ordered item.")'
+            "\n"
+            "    weight: float = m.Field("
+            'default=1.0, description="Drift probe weight.")',
         ),
         encoding="utf-8",
     )

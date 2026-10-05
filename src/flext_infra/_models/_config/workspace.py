@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, Literal, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import t
 from flext_infra._constants import FlextInfraConstantsCodegenProject
@@ -31,7 +31,7 @@ class FlextInfraConfigModelsWorkspace:
             m.Field(description="Canonical generator surface for this target"),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_path(self) -> Self:
             if self.path.is_absolute() or not self.path.parts:
                 msg = "candidate bootstrap path must be relative"
@@ -62,7 +62,7 @@ class FlextInfraConfigModelsWorkspace:
             m.Field(description="Full immutable Git commit OID"),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_source(self) -> Self:
             if not self.url.startswith("https://") or not self.url.endswith(".git"):
                 msg = "candidate dependency URL must be canonical HTTPS Git"
@@ -248,7 +248,7 @@ class FlextInfraConfigModelsWorkspace:
             m.Field(description="Refactor file-selection configuration"),
         ] = None
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_references(self) -> Self:
             """Reject ambiguous paths and policy references in the full document.
 
@@ -393,7 +393,7 @@ class FlextInfraConfigModelsWorkspace:
             m.Field(description="Observed external or fork Git submodule paths"),
         ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_topology_paths(self) -> Self:
             """Reject duplicate, ambiguous, or escaping topology paths.
 

@@ -314,6 +314,7 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                 project_root / c.Infra.MAKEFILE_FILENAME,
                 project_root / ".envrc",
                 project_root / "bin" / "mise-lock-transaction.py",
+                project_root / "bin" / "mise-lock-converge.py",
             }
             if bootstrap:
                 paths.update(

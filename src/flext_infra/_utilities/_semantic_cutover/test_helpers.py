@@ -104,7 +104,10 @@ class FlextInfraUtilitiesSemanticTestHelpers(
                         sources={path: working[path] for path in editable},
                     )
                     if not any(edit.file_path == path for edit in planned):
-                        msg = f"shared test helper move did not remove its declaration: {path}"
+                        msg = (
+                            f"shared test helper move did not remove "
+                            f"its declaration: {path}"
+                        )
                         raise ValueError(msg)
                     for edit in planned:
                         working[edit.file_path] = edit.updated_source
@@ -159,7 +162,10 @@ class FlextInfraUtilitiesSemanticTestHelpers(
                 if isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef))
             ):
                 continue
-            offset = FlextInfraUtilitiesRopeCorePyModuleMixin.find_identifier_offset_in_lines(
+            find_offset = (
+                FlextInfraUtilitiesRopeCorePyModuleMixin.find_identifier_offset_in_lines
+            )
+            offset = find_offset(
                 sources[path].splitlines(keepends=True),
                 line=declaration.lineno,
                 symbol=name,
@@ -182,7 +188,15 @@ class FlextInfraUtilitiesSemanticTestHelpers(
                 continue
             target = cls._test_utilities_owner(workspace, path, sources)
             target_resource = project.get_resource(target.relative_to(root).as_posix())
-            if name in project.get_pymodule(target_resource).get_attributes():
+            target_module = project.get_pymodule(target_resource)
+            if name in target_module.get_attributes() and not (
+                cls._destination_imports_moving_declaration(
+                    project,
+                    resource,
+                    name,
+                    target_module.get_attribute(name),
+                )
+            ):
                 msg = f"shared helper destination already binds {name}: {target}"
                 raise ValueError(msg)
             return m.Infra.ClassMoveRequest(
@@ -194,6 +208,31 @@ class FlextInfraUtilitiesSemanticTestHelpers(
                 apply=False,
             )
         return None
+
+    @staticmethod
+    def _destination_imports_moving_declaration(
+        project: p.Infra.RopeProject,
+        source: p.Infra.RopeResource,
+        name: str,
+        bound: p.Infra.RopePyName,
+    ) -> bool:
+        """Return whether this binding imports the declaration being moved.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
+        if (
+            not isinstance(bound, p.Infra.RopeImportedName)
+            or bound.imported_name != name
+        ):
+            return False
+        runtime = FlextInfraUtilitiesRopeRuntimeModules
+        expected = project.get_pymodule(source).get_attribute(name)
+        return runtime.same_name(expected, bound) and (
+            runtime.imported_module_path(project, bound)
+            == Path(source.real_path).resolve()
+        )
 
     @staticmethod
     def _test_utilities_owner(
@@ -222,7 +261,10 @@ class FlextInfraUtilitiesSemanticTestHelpers(
             and policy.is_internal_namespace
         )
         if len(owners) != 1:
-            msg = f"shared test helper requires one utilities facade: {path}; owners={owners}"
+            msg = (
+                f"shared test helper requires one utilities facade: {path}; "
+                f"owners={owners}"
+            )
             raise ValueError(msg)
         return owners[0]
 

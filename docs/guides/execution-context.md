@@ -90,19 +90,19 @@ overlay.
 
 Code in a checkout runs in the environment of its `RUNTIME_ROOT`. The generated Makefile
 exports `RUNTIME_ROOT`, and flext-infra reads it as a typed declaration: the
-`fresh-import` validation runs its probes with the platform-specific Python interpreter in `<RUNTIME_ROOT>/.venv`, never
+`fresh-import` validation runs its probes with the platform-specific
+Python interpreter in the derived `RUNTIME_VENV`, never
 with the interpreter hosting the tool. Without a declaration, the owner derives the
 checkout's Git root; a declaration without an interpreter fails.
 
-The `.venv` belongs to the `RUNTIME_ROOT`. A member attached as a submodule uses the
-`.venv` of its containing Git superproject; a standalone checkout or linked worktree has
-its own. In development there is no other option: the environment is always
-`<RUNTIME_ROOT>/.venv`, rendered from its constant owner, and that location is law,
-never configuration. The generated Makefile, the generated `.envrc`, and
-`runtime_environment_dir` resolve that root through the same physical path, so entering
-the checkout through a symlink does not change the selected environment. No environment
-lives outside the checkout that owns it, and none is borrowed from another checkout
-through a symlink.
+The environment belongs to the `RUNTIME_ROOT`. A member attached as a submodule uses
+its containing Git superproject's environment. A primary standalone checkout keeps
+`<RUNTIME_ROOT>/.venv`. A linked Git worktree owns a physical sibling environment at
+`<RUNTIME_ROOT>/../<toolchain.worktree_environment_directory>/<worktree-name>`.
+The directory component is declared in `config/codegen.yaml`; Git's distinct worktree
+and common directories identify the linked checkout. The generated Makefile, generated
+`.envrc`, and `runtime_environment_dir` derive the same path. Neither a caller
+variable nor a checkout-local symlink may redirect the environment.
 
 ## Mise launchers
 
@@ -113,7 +113,8 @@ resolves the Mise release once, through Mise itself (`mise latest` of
 subject to Mise's `minimum_release_age`), and generates both launchers with
 `mise generate install-script --version <release> --windows`, run by that release. A
 held release carries its reason beside it in the configuration and returns to `latest`
-when the newest release outside the cooldown works. Each launcher embeds the release and its checksums, so
+when the newest release outside the cooldown works. Each launcher embeds
+the release and its checksums, so
 direct, PATH, or shim calls never query the network to choose a version.
 `mise.version` holds a generated header followed by the single release line.
 
@@ -140,6 +141,10 @@ graphs, publishes them before replacing `mise.lock`, and records a durable journ
 If publication stops after a graph moves, the next upgrade restores the committed
 graph before starting its own publication. The lock rename is the commit point; a
 failed upgrade leaves the previous lock usable without a live `.bak` copy.
+When a broken upstream release fails the staged install, the generated
+`bin/mise-lock-converge.py` holds each failing tool at its newest installable release
+inside the stage only, under the same isolated environment the bootstrap declares; the
+committed `.mise.toml` never changes, so the next upgrade retries the newest release.
 When Git leaves the generated `mise.lock` unmerged, the publisher reads the exact
 stage-2 lock from that repository's index solely to authenticate the existing
 sidecars. It still derives the replacement lock from `.mise.toml` through `make upg`
@@ -147,10 +152,15 @@ and publishes that replacement transactionally. A malformed lock without a Git
 conflict, or sidecars that no longer match stage 2, fails without changing the lock.
 
 Mise reaches GitHub only to install a tool missing from the persistent cache and inside
-`make upg`. `make setup` never locks: every Mise call except `install --yes` runs with
-the offline settings declared once in `MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT`, an offline
-`install --dry-run` proves the committed lock satisfies `.mise.toml`, and a lock that
-does not stops setup with `run make upg` and stays untouched. `make upg` resolves once
+`make upg`. Only `make upg` writes `mise.lock` and `uv.lock`; `make setup` never writes
+either. Every Mise call except `install --yes` runs with the offline settings declared
+once in `MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT`. Setup performs one install using the
+typed lock policy. A missing or incompatible lock entry fails with Mise's original
+diagnostic and exit status, without disabling lockfiles, retrying, or entering the
+lifecycle. Only `make upg` repairs the lock. On the uv side, setup syncs
+`--locked`; when `uv.lock` drifts from `pyproject.toml` it prints a `WARN` and syncs the
+committed lock `--frozen`, which never writes it. The next `make upg` rewrites both
+locks. `make upg` resolves once
 per manifest: when the `.mise.toml` that its `gen` renders is byte-identical to the
 manifest its first half locked, the relock half installs from the published lock instead
 of resolving again. Wherever a lock runs, the bootstrap forwards the GitHub credential
@@ -186,24 +196,17 @@ never authorizes broad exclusions or changes to the native payload.
 
 ## Bootstrap credentials
 
-The GitHub credential is optional and has one variable, `GITHUB_TOKEN`, which mise,
-gh, and uv all read. The network bootstrap (`make setup`, `make upg`) selects its
-source once, before any effect, from declared sources only:
-
-1. the caller's `GITHUB_TOKEN`, when it is set; ai-hub propagates it into each project
-   through `.envrc.ai-hub`, which its direnv library sources on every evaluation;
-2. otherwise the first `toolchain.github_credential_commands` entry in
-   `flext-infra/config/codegen.yaml` whose executable is on `PATH` (by default
-   `gh auth token`).
-
-A selected source must deliver: a command that fails or prints nothing stops the verb
-with its cause, and nothing degrades to anonymous access after a failure. Only when no
-source is present does mise reach GitHub anonymously. The value is never printed. Make
-unexports the tool-scoped aliases `GH_TOKEN`, `MISE_GITHUB_TOKEN`, and
-`GITHUB_API_TOKEN` from every recipe, because an alias of the same credential would
-shadow or outrank `GITHUB_TOKEN`. An invalid token preserves the backend's native
-error, without an anonymous retry or source switch. CI jobs inject `GITHUB_TOKEN`;
-containers receive the variable or a BuildKit secret explicitly.
+The GitHub credential is optional and is selected once, in the generated Makefile
+preamble, for every verb: the first non-empty of the caller's `GITHUB_TOKEN`,
+`GH_TOKEN`, `MISE_GITHUB_TOKEN`, then `gh auth token` when gh is installed and
+authenticated. Make exports that one value as `GITHUB_TOKEN`, `GH_TOKEN`, and
+`MISE_GITHUB_TOKEN`, so gh, uv, and mise read the same credential and no inherited
+alias can shadow it; `GITHUB_API_TOKEN` is unexported. The network bootstrap passes
+the three names into its isolated `env -i` Mise environment. With no token, public
+GitHub requests use the upstream tool's native unauthenticated behavior. The value
+is never printed. An invalid token preserves the backend's native error, without an
+anonymous retry or source switch. CI jobs inject `GITHUB_TOKEN`; containers receive
+the variable or a BuildKit secret explicitly.
 
 ## Evidence and checkpoints
 
@@ -227,19 +230,26 @@ gate. `make check` fails when the selection
 contains no projects or when a selected project has no `pyproject.toml`; no project is
 skipped silently.
 
-Local runs, CI, and hooks derive their gates from the same active set, preserving the
-declared typing partition: `CI=N make check` runs the intersection with
-`make.ci.local_check_gates`, `CI=Y make check` runs the complement, and `make check`
-without `CI` runs the union. The `check` pre-push hook drops the inherited `CI` to run
-every active gate; the hook's other verbs keep the local token. The CI workflow runs
-both partitions without overlap. Validators keep their severity, and active functional
-gates still require execution without warnings or residual findings.
+Local runs, CI, and hooks derive their gates from the same active set: `CI=N make check`
+runs the intersection with `make.ci.local_check_gates`, `CI=Y make check` runs the
+complement, and `make check` without `CI` runs the union. The declared local set is
+empty, so the CI workflow's single `CI=Y make check` runs every active gate, including
+the Mypy, Pyright, and Pyrefly type checkers, and `CI=N make check` fails because no
+gate remains. The `check` pre-push hook drops the inherited `CI` to run every active
+gate; the hook's other verbs keep the local token. Validators keep their severity, and
+active functional gates still require execution without warnings or residual findings.
 
 `smells` is not part of the `make check` partitions. The selector-free `make smells`
 verb runs only the qlty smell scan and fails when it finds defects. The
 `runtime-census` gate stays in `make check` and grades every runtime enforcement
 finding, including rules that qlty also classifies as smells. An empty or
 malformed qlty SARIF response is a failed scan, not a zero-finding receipt.
+Native primary source spans and all `relatedLocations` pass through the typed issue
+and SARIF report contracts without dropping comparison locations outside the primary
+project. Coordinates are emitted only when the scanner supplies them, including explicit
+zeros; line-only and regionless native locations do not acquire invented coordinates.
+Point-only diagnostics from other gates remain point-only. The Markdown summary still
+uses the primary location, while the SARIF artifact carries the comparison evidence.
 
 ## Bounded Mypy failure status
 
@@ -283,6 +293,13 @@ and rejects extra output from the
 Timeouts, forwarded signals, other exit codes, malformed JSON, and disagreement between
 exit code and diagnostic severities remain failures, even when stdout exists. Both
 whole-project checks and `check_files` scan every elected provider rule.
+
+AST replacements publish through the authenticated file-plan boundary, then reuse
+the import normalizer on only the rewritten files. Unused imports and formatting
+are normalized before the next mod check; normalization failures remain blocking.
+The root facade export rule preserves literal tuple values and order while removing
+an unnecessary type-only annotation dependency. It does not change classes, aliases
+or inheritance, and it does not rewrite initializer projections.
 
 `GateExecution.issues` retains each finding's original file, position, rule, message,
 and severity. SARIF reports each finding at its native level; raw scanner output remains

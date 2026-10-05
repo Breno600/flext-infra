@@ -21,6 +21,7 @@ def runner_for(
     ci_context: bool = False,
     profile_collection: bool = False,
     slow_phase: bool = False,
+    target_file: Path | None = None,
 ) -> FlextInfraPytestRunner:
     """Bind one runner to the fixture project's canonical cache paths.
 
@@ -53,10 +54,27 @@ def runner_for(
         ),
         started_at_monotonic=time.monotonic(),
         target=cache.target_directory,
+        target_file=target_file,
         reports=cache.reports_directory,
         testmon_db=testmon_db,
         slow_phase=slow_phase,
     )
+
+
+def declared_project_runner(project_root: Path, name: str) -> FlextInfraPytestRunner:
+    """Declare the fixture as project ``name`` and bind a runner to it.
+
+    Returns:
+        The resulting ``FlextInfraPytestRunner``.
+
+    """
+    pyproject = project_root / c.PYPROJECT_FILENAME
+    pyproject.write_text(
+        pyproject.read_text(encoding="utf-8")
+        + f'\n[project]\nname = "{name}"\nversion = "0.1.0"\n',
+        encoding="utf-8",
+    )
+    return runner_for(project_root)
 
 
 def declare_parallel_project(project_root: Path) -> None:

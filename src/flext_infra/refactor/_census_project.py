@@ -114,7 +114,10 @@ class FlextInfraRefactorCensusProjectMixin:
                     self._violation(
                         item,
                         kind="wrong_tier",
-                        description=f"Expected tier '{item.expected_tier}' but found '{item.actual_tier}'",
+                        description=(
+                            f"Expected tier '{item.expected_tier}' "
+                            f"but found '{item.actual_tier}'"
+                        ),
                     ),
                 )
             candidate = self._removal_candidate(item, include_unused=include_unused)

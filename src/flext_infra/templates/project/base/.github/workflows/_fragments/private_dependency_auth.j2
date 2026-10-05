@@ -4,13 +4,15 @@
       # token: secrets.GITHUB_TOKEN is scoped to the repository that runs the
       # workflow, and uv drives dependency clones through plain git, which
       # carries no credential at all. The declared App mints an installation
-      # token for the owner, and git reads it from a 0600 file outside the
-      # checkout — never from the environment of the build itself.
+      # token for the owner. The 0600 store feeds uv. Setup's submodule
+      # command clears credential.helper and sends github.token, so the same
+      # url.insteadOf rewrite CI uses keeps this minted token on every
+      # https://github.com/ fetch. The token stays out of the build environment.
       - name: Mint the private-dependency installation token
         id: private_dependency_token
         uses: {{ github_actions["create-github-app-token"].repository }}@{{ github_actions["create-github-app-token"].version }}
         with:
-          app-id: {% raw %}${{ secrets.{% endraw %}{{ private_dependency_auth.app_id_secret }}{% raw %} }}{% endraw %}
+          client-id: {% raw %}${{ secrets.{% endraw %}{{ private_dependency_auth.app_id_secret }}{% raw %} }}{% endraw %}
           private-key: {% raw %}${{ secrets.{% endraw %}{{ private_dependency_auth.private_key_secret }}{% raw %} }}{% endraw %}
           owner: {% raw %}${{ github.repository_owner }}{% endraw %}
 
@@ -28,4 +30,5 @@
           install -m 600 /dev/null "$store"
           printf 'https://x-access-token:%s@github.com\n' "$PRIVATE_DEPENDENCY_TOKEN" > "$store"
           git config --global credential.helper "store --file=$store"
+          git config --global url."https://x-access-token:${PRIVATE_DEPENDENCY_TOKEN}@github.com/".insteadOf "https://github.com/"
 {%- endif -%}

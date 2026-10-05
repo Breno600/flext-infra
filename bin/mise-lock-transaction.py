@@ -19,7 +19,7 @@ import subprocess
 import sys
 import time
 import tomllib
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
 
@@ -31,17 +31,17 @@ class MiseLockTransaction:
     NEW_LOCK = "new.lock"
     OLD_LOCK = "old.lock"
     ARTIFACTS = (
-("bin/mise", 0o755),
-("bin/mise.cmd", 0o644),
-("mise.version", 0o644),
-)
+        ("bin/mise", 0o755),
+        ("bin/mise.cmd", 0o644),
+        ("mise.version", 0o644),
+    )
     MUTEX_TIMEOUT_SECONDS = 600.0
     LOCK = "mise.lock"
     NATIVE_GRAPHS = (("aube", "aube-lock.yaml"), ("uv", "uv.lock"))
 
     @staticmethod
     @contextmanager
-    def _serialized(project: Path) -> Iterator[None]:
+    def _serialized(project: Path) -> Generator[None]:
         """Serialize all publisher versions on one declared physical mutex."""
         mutex = project / ".mise-lock-transaction.lock"
         if mutex.is_symlink():

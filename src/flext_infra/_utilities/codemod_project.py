@@ -123,6 +123,29 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 cycles.update(dict.fromkeys(members, members))
         return cycles
 
+    @staticmethod
+    def _source_scan_ignored(root: Path, file_path: Path) -> bool:
+        """Return whether ``file_path`` lies in a source-scan-ignored tree.
+
+        The names are the codegen artifact SSOT (``source_scan_ignored``),
+        the same list Rope uses when it builds the import graph. ``legado``
+        is one of those names.
+
+        Returns:
+            Whether ``file_path`` lies in a source-scan-ignored tree.
+
+        """
+        resolved = file_path.resolve()
+        root_resolved = root.resolve()
+        parts = (
+            resolved.relative_to(root_resolved).parts
+            if resolved.is_relative_to(root_resolved)
+            else resolved.parts
+        )
+        return bool(
+            frozenset(config.Infra.codegen.source_scan_ignored).intersection(parts),
+        )
+
     @classmethod
     def import_closes_cycle(
         cls,
@@ -142,18 +165,28 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             Whether one import of ``file_path`` is an edge of a cycle.
 
         Raises:
-            ValueError: If source module is absent from the project import graph.
+            ValueError: If a production module under the package source root is
+                absent from the project import graph.
 
         """
         graph, modules = facts.import_graph, facts.import_modules
         source = modules.get(file_path.resolve())
         if source is None:
             layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
-            if layout is not None and file_path.is_relative_to(layout.src_dir):
-                msg = f"source module is absent from the project import graph: {file_path}"
+            # Project-level files and trees the source scan already ignores
+            # (codegen ``source_scan_ignored``, including ``legado``) have no
+            # import-graph node. They are not missing production modules, so
+            # an import in one cannot close a cycle of the scanned graph.
+            if (
+                layout is not None
+                and file_path.is_relative_to(layout.src_dir)
+                and not cls._source_scan_ignored(root, file_path)
+            ):
+                msg = (
+                    f"source module is absent from the project import graph: "
+                    f"{file_path}"
+                )
                 raise ValueError(msg)
-            # Project-level files are scanned by ast-grep but have no package
-            # import graph node, so none of their imports can close a cycle.
             return False
         package = (
             source if file_path.name == c.Infra.INIT_PY else source.rpartition(".")[0]
@@ -624,8 +657,10 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
     def _has_class_stem(root: Path, file_path: Path, name: str) -> bool:
         """Return whether a class name carries the project's class stem.
 
-        The stem is derived from the project name; a module of the project's
-        tests tree prefixes it with ``Tests``.
+        The prefix is the one class nesting derives for the module's owner:
+        a module of a non-public lazy root (tests, examples, scripts) carries
+        the surface-prefixed stem. Outside the tests tree the bare stem also
+        names scenario classes.
 
         Returns:
             Whether a class name carries the project's class stem.
@@ -638,9 +673,13 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         if layout is None:
             msg = f"project layout is unresolved: {root}"
             raise ValueError(msg)
-        tests = file_path.is_relative_to(root / c.Infra.DIR_TESTS)
-        prefix = f"Tests{layout.class_stem}" if tests else layout.class_stem
-        return name.startswith(prefix)
+        prefix = FlextInfraUtilitiesCodegenNamespace.project_prefix(
+            file_path,
+            project_layout=layout,
+        )
+        if file_path.is_relative_to(root / c.Infra.DIR_TESTS):
+            return name.startswith(prefix)
+        return name.startswith((prefix, layout.class_stem))
 
     @classmethod
     def _package_has_layers(cls, package: Path, layers: t.StrSequence) -> bool:
@@ -765,7 +804,10 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         for violation in validation.value.violations:
             match = c.Infra.VIOLATION_PATTERN.match(violation)
             if match is None:
-                msg = f"namespace violation does not follow the report format: {violation}"
+                msg = (
+                    f"namespace violation does not follow the report format: "
+                    f"{violation}"
+                )
                 raise ValueError(msg)
             parsed.append(
                 m.Infra.CensusViolation(

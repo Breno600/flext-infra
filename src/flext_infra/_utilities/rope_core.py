@@ -52,7 +52,9 @@ class FlextInfraUtilitiesRopeCore(
         resolved_root = repository_root.resolve()
         project_roots = tuple(
             project_root
-            for project_root in FlextInfraUtilitiesProjectDiscovery.discover_rope_project_roots(
+            for project_root in (
+                FlextInfraUtilitiesProjectDiscovery.discover_rope_project_roots
+            )(
                 resolved_root,
             )
             if project_root.resolve().is_relative_to(resolved_root)
@@ -113,7 +115,10 @@ class FlextInfraUtilitiesRopeCore(
             else tuple(path.resolve() for path in project_roots)
         )
         if not roots or any(not path.is_relative_to(resolved) for path in roots):
-            msg = "Rope project roots must be nonempty and remain inside the declared workspace"
+            msg = (
+                "Rope project roots must be nonempty and remain "
+                "inside the declared workspace"
+            )
             raise ValueError(msg)
         rope_project = FlextInfraUtilitiesRopeCore._new_project(
             resolved,

@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraDocServiceBase(FlextInfraProjectSelectionServiceBase[bool], ABC):
-    """Shared abstract base for ``audit``, ``build``, ``fix``, ``generate``, ``validate``."""
+    """Shared base for audit/build/fix/generate/validate verbs."""
 
     output_dir: Annotated[Path | None, m.Field(description="Docs output dir")] = Path(
         c.Infra.DEFAULT_DOCS_OUTPUT_DIR,
@@ -61,7 +61,7 @@ class FlextInfraDocServiceBase(FlextInfraProjectSelectionServiceBase[bool], ABC)
                     f"{report.scope}: {report.reason}" for report in failures
                 )
                 return e.fail_operation(label, f"{len(failures)} failure(s)\n{details}")
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraDocServiceBase"]

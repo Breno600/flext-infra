@@ -97,13 +97,16 @@ class TestsFlextInfraSonarcloudSettingsSync:
 
     @staticmethod
     def _cli(
-        self,
         repository_root: Path,
         env: t.StrMapping | None = None,
         *,
         verb: str = c.Infra.VERB_SONARCLOUD_SYNC,
     ) -> t.Pair[int, str]:
-        """Run a public SonarCloud route in a child process."""
+        """Run a public SonarCloud route in a child process.
+
+        Returns:
+            The resulting ``t.Pair[int, str]``.
+        """
         result = tm.ok(
             u.Cli.run_raw(
                 [
@@ -256,7 +259,8 @@ class TestsFlextInfraSonarcloudSettingsSync:
         tm.that(code, ne=0)
         tm.that(output, has="SONAR_TOKEN is required")
 
-    def test_issue_search_response_parses_published_page_contract(self) -> None:
+    @staticmethod
+    def test_issue_search_response_parses_published_page_contract() -> None:
         """A missing line stays explicit while page accounting remains required."""
         payload = tm.ok(
             u.Cli.json_dumps({
@@ -276,7 +280,7 @@ class TestsFlextInfraSonarcloudSettingsSync:
                         "message": "Second",
                     },
                 ],
-            })
+            }),
         )
 
         response = m.Infra.SonarcloudIssueSearch.model_validate_json(payload)

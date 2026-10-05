@@ -7,6 +7,16 @@ valid:
     c = FlextFooConstants
     __all__ = ["FlextFooConstants", "c"]
   - |
+    class FlextFooApi:
+        pass
+    api: FlextFooApi = FlextFooApi.fetch_global()
+    __all__ = ["FlextFooApi", "api"]
+  - |
+    class FlextFooConfig:
+        pass
+    config: FlextFooConfig = FlextFooConfig.fetch_global()
+    __all__ = ["FlextFooConfig", "config"]
+  - |
     def main() -> None:
         return None
   - |
@@ -34,3 +44,19 @@ invalid:
         pass
     class Second:
         pass
+  - |
+    class FlextFooApi:
+        pass
+    api = FlextFooApi.fetch_global()
+  - |
+    class FlextFooApi:
+        pass
+    api: FlextFooOther = FlextFooApi.fetch_global()
+  - |
+    class FlextFooApi:
+        pass
+    api: FlextFooApi = FlextFooApi.fetch_logger()
+  - |
+    class FlextFooApi:
+        pass
+    api: FlextFooApi = FlextFooOther.fetch_global()

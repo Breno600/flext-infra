@@ -65,7 +65,7 @@ class FlextInfraUtilitiesNetwork:
                 exception=exc,
             )
         else:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         finally:
             connection.close()
 

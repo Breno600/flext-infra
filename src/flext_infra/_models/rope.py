@@ -12,7 +12,7 @@ from typing import Annotated, ClassVar
 from flext_cli import m
 
 from flext_infra import c, p, t
-from flext_infra._models import FlextInfraModelsMixins as mm
+from flext_infra._models import FlextInfraModelsMixins
 from flext_infra._models._codegen.base import FlextInfraCodegen
 
 
@@ -58,13 +58,27 @@ class FlextInfraModelsRope:
             ),
         ] = False
 
-    class ClassInfo(mm.PositiveLineMixin, m.ContractModel):
+    class ClassInfo(FlextInfraModelsMixins.PositiveLineMixin, m.ContractModel):
         """Semantic class info from rope — name, line, bases in one shot."""
 
         name: Annotated[str, m.Field(description="Class name")]
         bases: Annotated[t.StrSequence, m.Field(description="Base class names")] = ()
 
-    class ScopeDefinition(mm.PositiveLineMixin, m.ContractModel):
+    class SourceClassReference(m.ContractModel):
+        """A lexical binding and its attribute path, distinct from Ruff's spelling."""
+
+        target: str
+        attributes: t.StrTuple = ()
+        qualified_base: str = ""
+
+    class SourceClassDefinition(m.ContractModel):
+        """One source declaration, preserving ordered bases and member shadowing."""
+
+        identity: str
+        bases: t.VariadicTuple[FlextInfraModelsRope.SourceClassReference]
+        members: t.MappingKV[str, FlextInfraModelsRope.SourceClassReference | None]
+
+    class ScopeDefinition(FlextInfraModelsMixins.PositiveLineMixin, m.ContractModel):
         """One semantic scope (def/class) discovered via rope's scope tree.
 
         Built from ``PyScope.get_kind()``/``get_scopes()`` and the scope's
@@ -82,7 +96,7 @@ class FlextInfraModelsRope:
             m.Field(description="Whether the scope is a direct child of the module"),
         ]
 
-    class LogicalStatement(mm.PositiveLineMixin, m.ContractModel):
+    class LogicalStatement(FlextInfraModelsMixins.PositiveLineMixin, m.ContractModel):
         """One logical statement from the rope structure boundary (no ``ast``).
 
         Built from a rope ``LogicalLineFinder`` region plus an indent stack over
@@ -158,8 +172,8 @@ class FlextInfraModelsRope:
         ]
 
     class ConstantInfo(
-        mm.NonNegativeLineMixin,
-        mm.NestedClassPathMixin,
+        FlextInfraModelsMixins.NonNegativeLineMixin,
+        FlextInfraModelsMixins.NestedClassPathMixin,
         m.ContractModel,
     ):
         """Final-annotated constant definition from rope semantic analysis."""
@@ -168,7 +182,7 @@ class FlextInfraModelsRope:
         annotation: Annotated[str, m.Field(description="Type annotation text")] = ""
         value: Annotated[str, m.Field(description="Value representation")] = ""
 
-    class SymbolInfo(mm.NonNegativeLineMixin, m.ContractModel):
+    class SymbolInfo(FlextInfraModelsMixins.NonNegativeLineMixin, m.ContractModel):
         """Top-level symbol metadata from rope semantic analysis."""
 
         name: Annotated[str, m.Field(description="Symbol name")]
@@ -270,7 +284,9 @@ class FlextInfraModelsRope:
         modules: Annotated[
             t.VariadicTuple[FlextInfraModelsRope.RopeModuleIndexEntry],
             m.Field(
-                description="Direct Python module resources that belong to this package",
+                description=(
+                    "Direct Python module resources that belong to this package"
+                ),
             ),
         ] = ()
         direct_child_dirs: Annotated[

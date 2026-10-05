@@ -63,12 +63,12 @@ class FlextInfraConstantsCheck:
 
     @unique
     class GateKind(StrEnum):
-        """Who owns a gate's rule catalog, which decides where the gate blocks.
+        """Who owns a gate's rule catalog.
 
-        Only ``EXTERNAL`` gates run in the fast contexts (CI and pre-commit):
-        an external tool applying its own per-file rule catalog. Whole-program
-        type checkers and the validators whose rules this package owns run
-        locally and at pre-push, where they block.
+        ``EXTERNAL`` is an external tool applying its own per-file rule
+        catalog, ``TYPE_CHECKER`` a whole-program type checker, and ``INFRA``
+        a validator whose rules this package owns. The CI partition is
+        declared by ``make.ci.local_check_gates``, not by the kind.
         """
 
         EXTERNAL = "external"
@@ -174,7 +174,10 @@ class FlextInfraConstantsCheck:
     CHECK_REPORT_SARIF_FILENAME: ClassVar[str] = "check-report.sarif"
     "SARIF 2.1.0 check report: the machine-readable findings owner of ``check run``."
     MUTATING_GATES: ClassVar[frozenset[str]] = frozenset({FORMAT})
-    "Gates that rewrite files: owned by `fmt`/`fix`, never a read-only `check` vocabulary."
+    (
+        "Gates that rewrite files: owned by `fmt`/`fix`, "
+        "never a read-only `check` vocabulary."
+    )
 
     RUFF_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^\s*-->\s*(.+?):\d+:\d+\s*$",
@@ -186,16 +189,25 @@ class FlextInfraConstantsCheck:
         r"^\[warn\]\s+(?P<file>\S+\.md)\s*$",
         re.MULTILINE,
     )
-    "Prettier ``--check`` unformatted-file line (``[warn] <file.md>``); config warns never match."
+    (
+        "Prettier ``--check`` unformatted-file line "
+        "(``[warn] <file.md>``); config warns never match."
+    )
     MARKDOWN_PY_FENCE_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^```(?P<info>python\S*(?:\s+notest)?)\s*$\n(?P<code>.*?)^```\s*$",
         re.MULTILINE | re.DOTALL,
     )
-    "Canonical fenced-Python-block extractor; the flext-tests markdown validator consumes the same pattern."
+    (
+        "Canonical fenced-Python-block extractor; "
+        "the flext-tests markdown validator consumes the same pattern."
+    )
     MARKDOWN_CODE_SOURCE_FORMAT: ClassVar[str] = "{}_b{}.py"
     "Temp-file name for one extracted block: sanitized doc path plus block index."
     MARKDOWN_CODE_SKIP_MARKER: ClassVar[str] = "notest"
-    "Existing fence marker (pytest-markdown-docs) opting a block out of code validation."
+    (
+        "Existing fence marker (pytest-markdown-docs) "
+        "opting a block out of code validation."
+    )
     MARKDOWN_CODE_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^(?P<file>\S+):\d+:\d+:\s+unformatted:\s+",
     )
@@ -233,7 +245,7 @@ class FlextInfraConstantsCheck:
         "--quiet",
         "--no-upgrade-check",
     )
-    "Full-workspace scan: default qlty scope is changed-files-only; --all overrides."
+    "Smells scan arguments; the gate appends explicit targets, scanned in full."
     SMELLS_RULE_PREFIX: ClassVar[str] = "qlty:"
     SMELLS_RULE_TAGS: ClassVar[t.MappingKV[str, str]] = MappingProxyType({
         "boolean-logic": "smell_boolean_logic",
@@ -245,19 +257,28 @@ class FlextInfraConstantsCheck:
         "return-statements": "smell_return_statements",
         "similar-code": "smell_similar_code",
     })
-    "qlty ruleId suffix -> flext-core enforcement tag (texts SSOT: core ENFORCEMENT_RULES_TEXT)."
+    (
+        "qlty ruleId suffix -> flext-core enforcement tag "
+        "(texts SSOT: core ENFORCEMENT_RULES_TEXT)."
+    )
 
     # --- jscpd duplication gate SSOT (flext-infra owns the
     # jscpd plugin behind one centralized `make check` verb; its config is
     # rendered from this typed SSOT at scan time, never a hand-maintained file).
     JSCPD_BINARY: ClassVar[str] = "jscpd"
-    "Provisioned by mise from codegen.toolchain.jscpd_version; never a runner or a version here."
+    (
+        "Provisioned by mise from codegen.toolchain.tools entry 'jscpd'; "
+        "never a runner or a version here."
+    )
 
     # --- markdown-format gate SSOT (operator 2026-09-18: prettier is the
     # markdown formatter owned by `make fmt`; rumdl stays the linter owned by
     # `make fix`. The binary is mise-provisioned, never a runner or version).
     PRETTIER_BINARY: ClassVar[str] = "prettier"
-    "Provisioned by mise from codegen.toolchain.prettier_version; never a runner or a version here."
+    (
+        "Provisioned by mise from codegen.toolchain.tools entry 'prettier'; "
+        "never a runner or a version here."
+    )
     JSCPD_MODE: ClassVar[str] = "strict"
     JSCPD_MIN_LINES: ClassVar[int] = 10
     "Minimum lines for a clone (R2: 10 lines = 62 tokens per consumption-law.md)."
@@ -273,7 +294,10 @@ class FlextInfraConstantsCheck:
         "templates",
         "config",
     )
-    "Canonical scope: source, tests, scripts, examples, templates, config (R2 consumer+family)."
+    (
+        "Canonical scope: source, tests, scripts, examples, "
+        "templates, config (R2 consumer+family)."
+    )
     JSCPD_REPORT_DIRNAME: ClassVar[str] = ".reports/jscpd"
     JSCPD_CONFIG_FILENAME: ClassVar[str] = ".jscpd.generated.json"
     JSCPD_REPORT_FILENAME: ClassVar[str] = "jscpd-report.json"
@@ -300,7 +324,10 @@ class FlextInfraConstantsCheck:
     JSCPD_CONSUMER_FAMILY_SCOPE: ClassVar[bool] = True
     "When true, extend scan scope to consumer+family via [tool.flext.project] keys."
     JSCPD_STRUCTURAL_BAN_FORMS: ClassVar[bool] = True
-    "When true, ban structural forms only for mechanisms with published canonical owner."
+    (
+        "When true, ban structural forms only for mechanisms "
+        "with published canonical owner."
+    )
 
     # --- Manual-command blocker (AGENTS.md `Build & Test`) SSOT ---
     MANUAL_CMD_BLOCKED_TOOLS: ClassVar[frozenset[str]] = frozenset({

@@ -11,7 +11,7 @@ from typing import Annotated, Literal, Self
 
 from flext_cli import m as cli_m
 
-from flext_core import m, u
+from flext_core import m
 from flext_infra import t
 from flext_infra._models._config.artifact import FlextInfraConfigModelsArtifact
 
@@ -110,7 +110,7 @@ class FlextInfraModelsDocsCollection:
             m.Field(description="Complete explicitly associated source inventory"),
         ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _authorization_matches_sources(self) -> Self:
             if self.enabled and not self.sources:
                 msg = "enabled plan collection requires at least one source"
@@ -131,7 +131,9 @@ class FlextInfraModelsDocsCollection:
             description="Source association supplying this revision",
         )
         source_path: Path = m.Field(
-            description="Source-association-relative locator without private root disclosure",
+            description=(
+                "Source-association-relative locator without private root disclosure"
+            ),
         )
         driver: t.NonEmptyStr = m.Field(description="Source driver provenance")
         driver_version: t.NonEmptyStr = m.Field(description="Source driver version")

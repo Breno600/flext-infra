@@ -344,7 +344,8 @@ class FlextInfraUtilitiesRepository:
             return parsed
         return r[t.Pair[str, str]].fail(
             "project.flext_source declares an integration line, never a commit "
-            f"(uv.lock records it and only `make upg` moves it): {project.flext_source}",
+            f"(uv.lock records it and only `make upg` moves it): "
+            f"{project.flext_source}",
         )
 
     @classmethod

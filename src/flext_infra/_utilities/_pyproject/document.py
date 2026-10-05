@@ -178,10 +178,10 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
 
         """
         if not namespace_scan_dirs:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         namespace = u.Cli.toml_ensure_path(document, c.Infra.CONFORM_NAMESPACE_TABLE)
         u.Cli.toml_sync_string_list(namespace, "scan_dirs", list(namespace_scan_dirs))
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def _sync_typecheck_paths(document: t.Cli.TomlDocument) -> p.Result[bool]:
@@ -197,14 +197,14 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         """
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if tool is None:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         pyrefly = u.Cli.toml_table_child(tool, c.Infra.PYREFLY)
         if pyrefly is not None:
             u.Cli.toml_remove_key_if_present(pyrefly, "python-interpreter-path")
 
         pyright = u.Cli.toml_table_child(tool, c.Infra.PYRIGHT)
         if pyright is None:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
 
         # venv / venvPath are owned by deps modernize (workspace vs child
         # runtime). Conform only strips checkout-absolute interpreter pins.
@@ -233,7 +233,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
                 "executionEnvironments",
                 normalized_environments,
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraUtilitiesPyprojectDocument"]

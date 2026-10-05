@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import os
+import shutil
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -268,24 +269,25 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             The resulting ``m.Infra.WorkspaceSpec``.
 
         """
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
         fixture = TestsFlextInfraUtilitiesWorkspaceFixtureMixin
         dev = ", ".join(f'"{item}"' for item in fixture.declared_requirements(name))
         # The governed notice names the manifest's first author, so the
         # minimal project declares the fixture's own scaffold identity.
         spec = TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name)
+        python_required = config.Infra.codegen.toolchain.python_required_version
+        upstream_source = TestsFlextInfraUtilitiesProjectFixtureMixin.flext_source(
+            spec.upstream,
+        )
         package_root = project_dir / "src" / name.replace("-", "_")
         package_root.mkdir(parents=True, exist_ok=True)
         (package_root / "__init__.py").write_text("", encoding="utf-8")
         (project_dir / "pyproject.toml").write_text(
             "[project]\n"
             f'name = "{name}"\n'
+            f'authors = [{{name = "{TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name).author_name}", email = "{TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name).author_email}"}}]\n'
             'version = "0.1.0"\n'
-            f'authors = [{{name = "{spec.author_name}", email = "{spec.author_email}"}}]\n'
-            f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
-            "dependencies = "
-            f'["{TestsFlextInfraUtilitiesProjectFixtureMixin.flext_source(spec.upstream)}"]\n'
+            f'requires-python = "{python_required}"\n'
+            f'dependencies = ["{upstream_source}"]\n'
             "[dependency-groups]\n"
             f"dev = [{dev}]\n",
             encoding="utf-8",
@@ -534,6 +536,44 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             )
             return child
 
+        @classmethod
+        def copied_member(
+            cls,
+            parent: Path,
+            distribution: str,
+            *,
+            identity: str,
+        ) -> Path:
+            """Initialize ``parent`` and copy a ledger-less governed member into it.
+
+            ``parent`` owns the ``<identity>-workspace`` Beads workspace, the
+            ``<identity>-database`` database and the ``<identity>-prefix`` issue
+            prefix. The caller declares the member's Beads route and attaches it.
+
+            Returns:
+                The copied member checkout at ``apps/member``.
+
+            """
+            source = parent.parent / "child-source"
+            cls.initialize_governed_project(
+                source,
+                "fixture-member",
+                workspace="member-workspace",
+                database="member-database",
+                issue_prefix="member-prefix",
+                beads_owner=False,
+            )
+            cls.initialize_governed_project(
+                parent,
+                distribution,
+                workspace=f"{identity}-workspace",
+                database=f"{identity}-database",
+                issue_prefix=f"{identity}-prefix",
+            )
+            member = parent / "apps" / "member"
+            shutil.copytree(source, member)
+            return member
+
         @staticmethod
         def _lane(primary_root: Path, outermost_project: Path, branch: str) -> Path:
             """Resolve the lane through the production topology owner.
@@ -647,10 +687,11 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             # Why: conform's existing-checkout ProjectSpec now derives authors and
             # upstream from live PEP 621 metadata (no fabricated spec) — every
             # governed fixture must declare both.
+            python_required = config.Infra.codegen.toolchain.python_required_version
             pyproject.write_text(
                 f'[project]\nname = "{distribution}"\nversion = "0.12.0.dev0"\n'
                 f'description = "{distribution} governed fixture"\n'
-                f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
+                f'requires-python = "{python_required}"\n'
                 'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
                 f'dependencies = ["flext-core @ {internal_source}"]\n'
                 f'[project.urls]\nRepository = "{repository_url}"\n{tooling}',
@@ -736,7 +777,7 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             distribution: str,
             relative_path: str,
         ) -> None:
-            """Declare and commit ``member`` as a real gitlink submodule of ``parent``."""
+            """Declare and commit ``member`` as a real gitlink of ``parent``."""
             _ = TestsFlextInfraUtilitiesProjectFixtureMixin.provider()
             (parent / c.Infra.GITMODULES).write_text(
                 f'[submodule "{distribution}"]\n'
@@ -804,6 +845,48 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 issue_prefix=issue_prefix,
             )
             return root
+
+        @classmethod
+        def governed_workspace_with_member(
+            cls,
+            root: Path,
+            *,
+            workspace: str = "sample-workspace",
+            member: str = "sample-member",
+            database: str = "sample_workspace",
+            issue_prefix: str = "sample",
+        ) -> Path:
+            """Compose one governed workspace root with one attached member.
+
+            The root declares its own project with the workspace role, exactly
+            as the real composed root does, and the member is a real gitlink
+            declared in the root's ``.gitmodules``.
+
+            Returns:
+                The attached member checkout path.
+
+            """
+            for checkout, distribution in ((root, workspace), (root / member, member)):
+                _ = cls.initialize_governed_project(
+                    checkout,
+                    distribution,
+                    workspace=workspace,
+                    database=database,
+                    issue_prefix=issue_prefix,
+                )
+            cls.attach_submodule(
+                root,
+                root / member,
+                distribution=member,
+                relative_path=member,
+            )
+            fixture = TestsFlextInfraUtilitiesWorkspaceFixtureMixin
+            _ = fixture.write_standalone_workspace_manifest(
+                root,
+                workspace,
+                role=c.Infra.MakeProfile.WORKSPACE,
+            )
+            return root / member
 
         @classmethod
         def initialize_governed_project(

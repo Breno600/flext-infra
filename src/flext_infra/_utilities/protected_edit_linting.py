@@ -429,7 +429,10 @@ class FlextInfraUtilitiesProtectedEditLinting:
                     m.Infra.LintGateResult(
                         tool_name=tool_name,
                         errors=(
-                            f"timeout {timeout_budget}s: lint gate '{tool_name}' did not finish",
+                            (
+                                f"timeout {timeout_budget}s: lint gate "
+                                f"'{tool_name}' did not finish"
+                            ),
                         ),
                     ),
                 )

@@ -76,7 +76,7 @@ class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):
                 f"({text_report.actionable} actionable)",
             )
         cli.display_text("ast: zero findings in both cascades")
-        return r[t.Cli.ResultValue].ok(True)
+        return r[t.Cli.ResultValue].ok(value=True)
 
     @classmethod
     def _execute_apply(
@@ -140,7 +140,7 @@ class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):
                 "semantic phases",
             )
         cli.display_text("ast: mechanical fixed point verified")
-        return r[t.Cli.ResultValue].ok(True)
+        return r[t.Cli.ResultValue].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraCodemodAstScan"]

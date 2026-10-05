@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Annotated, Self
+from typing import Annotated, Self, TypeAlias
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import t
 from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
@@ -50,7 +50,7 @@ class FlextInfraConfigModelsContract:
             ),
         ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_evidence_files(self) -> Self:
             files = self.historical_evidence_files
             if len(set(files)) != len(files):
@@ -64,7 +64,10 @@ class FlextInfraConfigModelsContract:
                     or path.parts[0] != FlextInfraConstantsSharedInfra.DIR_DOCS
                     or path.suffix != ".md"
                 ):
-                    msg = f"historical evidence must be an exact docs Markdown file: {path}"
+                    msg = (
+                        "historical evidence must be "
+                        f"an exact docs Markdown file: {path}"
+                    )
                     raise ValueError(msg)
             return self
 
@@ -80,15 +83,15 @@ class FlextInfraConfigModelsContract:
             m.Field(description="Literal terms forbidden in current documentation"),
         ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_patterns(self) -> Self:
             for pattern in self.placeholder_patterns:
                 re.compile(pattern)
             return self
 
-    BeadsEndpointSpec = FlextInfraModelsMiseToolchain.BeadsEndpointSpec
-    BeadsToolSpec = FlextInfraModelsMiseToolchain.BeadsToolSpec
-    MiseBootstrapEnvironmentSpec = (
+    BeadsEndpointSpec: TypeAlias = FlextInfraModelsMiseToolchain.BeadsEndpointSpec
+    BeadsToolSpec: TypeAlias = FlextInfraModelsMiseToolchain.BeadsToolSpec
+    MiseBootstrapEnvironmentSpec: TypeAlias = (
         FlextInfraModelsMiseToolchain.MiseBootstrapEnvironmentSpec
     )
-    ToolchainSpec = FlextInfraModelsMiseToolchain.ToolchainSpec
+    ToolchainSpec: TypeAlias = FlextInfraModelsMiseToolchain.ToolchainSpec

@@ -25,46 +25,72 @@ class FlextInfraToolTablesPhase:
 
     @staticmethod
     def first_party_namespaces(
-        payload: t.MutableJsonMapping | None = None,
         *,
         path: Path,
         planned_sources: t.SequenceOf[Path] = (),
     ) -> t.StrSequence:
         """Derive the project's first-party namespaces from one source each.
 
-        The live packages under ``src/`` (never a name invented from the
-        distribution), the project's declared package
-        (``[tool.flext.docs].package_name``, which an atomic scaffold declares
-        before its tree exists, so the first write already reaches the fixed
-        point), the config-owned base namespaces, and the declared flext
-        dependencies. Ruff's projected table and the lazy-init renderer both
+        The config-owned base namespaces, the live packages under ``src/``
+        (never a name invented from the distribution), and, for a workspace
+        root, the packages of the subprojects it declares. ``planned_sources``
+        are files a scaffold publishes with the rendered pyproject: their
+        packages under ``src/`` are live in the tree being produced. Ruff's
+        projected known-first-party, deptry's and the lazy-init renderer all
         read this owner.
 
         Returns:
             The sorted first-party namespaces.
 
         """
-        docs = (
-            u.Cli.toml_mapping_path(payload, (c.Infra.TOOL, "flext", "docs"))
-            if payload is not None
-            else None
+        src_dir = path / c.Infra.DEFAULT_SRC_DIR
+        planned_parts = (
+            source.relative_to(src_dir).parts
+            for source in planned_sources
+            if source.is_relative_to(src_dir)
         )
-        declared_package = None if docs is None else docs.get("package_name")
+        planned_packages = {
+            parts[0]
+            for parts in planned_parts
+            if len(parts) > 1 and parts[0].isidentifier()
+        }
         return sorted({
             *config.Infra.tooling.tools.deptry.known_first_party,
-            *u.Infra.discover_first_party_namespaces(path.parent),
-            *(
-                source.relative_to(path.parent).parts[0]
-                for source in planned_sources
-                if source.is_relative_to(path.parent)
-                and len(source.relative_to(path.parent).parts) > 1
-            ),
-            *((declared_package,) if isinstance(declared_package, str) else ()),
-            *(
-                u.Infra.flext_dependency_namespaces_from_payload(payload)
-                if payload is not None
-                else ()
-            ),
+            *u.Infra.discover_first_party_namespaces(path),
+            *planned_packages,
+            *FlextInfraToolTablesPhase._workspace_project_namespaces(path),
+        })
+
+    @staticmethod
+    def _workspace_project_namespaces(project_dir: Path) -> t.StrSequence:
+        """Discover child project packages when generating repository root settings.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        Raises:
+            ValueError: If ``discovered.failure``.
+
+        """
+        if not (project_dir / c.PYPROJECT_FILENAME).is_file():
+            return ()
+        discovered = u.Infra.discover_projects(project_dir)
+        if discovered.failure:
+            # A real discovery error (malformed pyproject, IO) must never
+            # silently generate root Ruff settings with an empty child-package
+            # list — that conformed artifact would drift from the workspace
+            # with no signal. Mirrors _workspace_exclusion_globs fail-loud.
+            raise ValueError(
+                discovered.error or "workspace project discovery is unavailable",
+            )
+        return sorted({
+            project.package_name
+            for project in discovered.value
+            if (
+                project.package_name
+                and project.package_name.isidentifier()
+                and project.declared_subproject
+            )
         })
 
     def _mypy_phase(self) -> m.Infra.DepsToml.PhaseConfig:
@@ -86,6 +112,11 @@ class FlextInfraToolTablesPhase:
                 value=config.Infra.codegen.toolchain.python_version,
             ),
             toml.ListOp(key=c.Infra.PLUGINS, values=mypy.plugins, strategy=replace),
+            toml.ListOp(
+                key="disable_error_code",
+                values=mypy.disable_error_code,
+                strategy=replace,
+            ),
         ]
         operations.append(
             toml.SetOp(
@@ -345,7 +376,7 @@ class FlextInfraToolTablesPhase:
         return u.Infra.apply_toml_phases(
             payload,
             *self._phases(
-                first_party=self.first_party_namespaces(payload, path=path.parent),
+                first_party=self.first_party_namespaces(path=path.parent),
                 path=path.parent,
             ),
         )

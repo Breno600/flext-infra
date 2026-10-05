@@ -87,7 +87,34 @@
 		esac; \
 	done; \
 	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
-	trap 'if [ -n "$${lock_stage:-}" ] && [ -d "$$lock_stage" ] && [ ! -f "$$lock_stage/transaction.json" ]; then find "$$lock_stage" -depth -delete; fi; find "$$scratch" -depth -delete' EXIT; \
+	readonly scratch; \
+	lock_stage=; \
+	trap 'bootstrap_status=$$?; trap - EXIT; \
+		lock_cleanup_status=0; scratch_cleanup_status=0; diagnostic_status=0; scratch_present=0; \
+		if [ -d "$$scratch" ]; then scratch_present=1; fi; \
+		if printf "mise scratch: cleanup path=%s present=%s entering_status=%s\n" "$$scratch" "$$scratch_present" "$$bootstrap_status" >&2; then :; \
+		else diagnostic_status=$$?; fi; \
+		if [ -n "$$lock_stage" ] && [ -d "$$lock_stage" ] && [ ! -f "$$lock_stage/transaction.json" ]; then \
+			if find "$$lock_stage" -depth -delete; then :; else \
+				lock_cleanup_status=$$?; \
+				if printf "ERROR: Mise lock stage cleanup failed: %s exit=%s\n" "$$lock_stage" "$$lock_cleanup_status" >&2; then :; \
+				else diagnostic_status=$$?; fi; \
+			fi; \
+		fi; \
+		if find "$$scratch" -depth -delete; then :; else \
+			scratch_cleanup_status=$$?; \
+			if printf "ERROR: Mise scratch cleanup failed: %s exit=%s\n" "$$scratch" "$$scratch_cleanup_status" >&2; then :; \
+			else diagnostic_status=$$?; fi; \
+		fi; \
+		if [ "$$bootstrap_status" -eq 0 ]; then \
+			if [ "$$lock_cleanup_status" -ne 0 ]; then bootstrap_status=$$lock_cleanup_status; \
+			elif [ "$$scratch_cleanup_status" -ne 0 ]; then bootstrap_status=$$scratch_cleanup_status; \
+			else bootstrap_status=$$diagnostic_status; fi; \
+		fi; \
+		if printf "mise scratch: cleaned path=%s lock_cleanup_status=%s scratch_cleanup_status=%s exit=%s\n" "$$scratch" "$$lock_cleanup_status" "$$scratch_cleanup_status" "$$bootstrap_status" >&2; then :; \
+		else diagnostic_status=$$?; if [ "$$bootstrap_status" -eq 0 ]; then bootstrap_status=$$diagnostic_status; fi; fi; \
+		exit "$$bootstrap_status"' EXIT; \
+	printf 'mise scratch: allocated path=%s\n' "$$scratch" >&2; \
 	mkdir -p{% for _name, relative in bootstrap.transient_environment if relative not in bootstrap.empty_files %} "$$scratch/{{ relative }}"{% endfor %}; \
 {% for relative in bootstrap.empty_files -%}
 	: > "$$scratch/{{ relative }}"; chmod 600 "$$scratch/{{ relative }}"; \
@@ -161,17 +188,8 @@
 	{{ mise_runtime_environment(project_root, mise, bootstrap) }}; \
 {# Only the bootstrap reaches GitHub: `install --yes` for a tool missing from
    the persistent cache, and `make upg` (release resolution, lock, launcher).
-   Every other Mise call runs through mise_offline; offline tool execution
-   never selects a credential source. -#}
-{% for command in bootstrap.credential_commands -%}
-	if [ -z "$$caller_github_token" ] && command -v {{ command[0] }} >/dev/null 2>&1; then \
-		caller_github_token="$$({{ command | join(' ') }})" \
-			|| { printf 'ERROR: the selected GitHub credential source failed: %s\n' '{{ command | join(' ') }}' >&2; exit 2; }; \
-		if [ -z "$$caller_github_token" ]; then \
-			printf 'ERROR: the selected GitHub credential source printed nothing: %s\n' '{{ command | join(' ') }}' >&2; exit 2; \
-		fi; \
-	fi; \
-{% endfor -%}
+   Every other Mise call runs through mise_offline. The Makefile preamble owns
+   the credential selection; the passthrough carries it into env -i. -#}
 	mise_checked() { \
 		mise_log="$$1"; shift; \
 		printf 'setup probe: begin stage=%s log=%s\n' "$${mise_log##*/}" "$$mise_log" >&2; \
@@ -208,10 +226,10 @@
 	mise_receipt runtime-version "$$pinned_mise"; \
 	runtime_release="$$receipt_release"; \
 	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
-		mise_checked_stdout "$$scratch/resolve.stdout" "$$scratch/resolve.stderr" mise_exec no-config env MISE_CACHE_DIR="$$scratch/resolve-cache" MISE_FETCH_REMOTE_VERSIONS_CACHE=0s "$$pinned_mise" latest {{ bootstrap.release_selector }}; \
+		mise_checked_stdout "$$scratch/resolve.stdout" "$$scratch/resolve.stderr" mise_exec no-config env MISE_CACHE_DIR="$$scratch/resolve-cache" MISE_FETCH_REMOTE_VERSIONS_CACHE=0s MISE_MINIMUM_RELEASE_AGE=0s "$$pinned_mise" latest {{ bootstrap.release_selector }}; \
 		resolved_release=$$(cat "$$scratch/resolve.stdout"); \
 		if ! printf '%s\n' "$$resolved_release" | grep -Eq '^{{ bootstrap.resolved_release_pattern }}$$'; then \
-			mise ls-remote {{ bootstrap.release_selector }} >"$$scratch/lsremote.stdout" 2>"$$scratch/lsremote.stderr" || true; \
+			MISE_MINIMUM_RELEASE_AGE=0s mise ls-remote {{ bootstrap.release_selector }} >"$$scratch/lsremote.stdout" 2>"$$scratch/lsremote.stderr" || true; \
 			resolved_release=$$(grep -E '^{{ bootstrap.resolved_release_pattern }}$$' "$$scratch/lsremote.stdout" | tail -1); \
 		fi; \
 		if ! printf '%s\n' "$$resolved_release" | grep -Eq '^{{ bootstrap.resolved_release_pattern }}$$'; then \
@@ -282,7 +300,21 @@
 			cat "$$scratch/lock.log" >&2; \
 			exit 2; \
 		fi; \
-		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" install --yes; \
+		# A broken upstream release fails the staged install. The generated \
+		# converge script holds every failing tool at its newest installable release \
+		# inside the stage (loud INFO per hold; the committed manifest never \
+		# changes, so the next upg retries the newest release), then the \
+		# install is retried against the held stage before publication. \
+		if mise_exec project "$$pinned_mise" -C "$$lock_stage" install --yes >"$$scratch/install.log" 2>&1; then :; \
+		else install_status=$$?; cat "$$scratch/install.log" >&2; \
+			printf 'upg relock: staged install failed (exit %s); holding failing tools at their newest installable releases\n' "$$install_status" >&2; \
+			converge_python=$$(command -v python3 || true); \
+			if [ -z "$$converge_python" ]; then \
+				printf 'ERROR: converge needs a host python3 (stdlib only); provision one and retry\n' >&2; exit 2; \
+			fi; \
+			mise_checked "$$scratch/converge.log" "$$converge_python" "$$project_root/{{ bootstrap.lock_converge_script }}" "$$mise_storage_root" "$$lock_stage" "$$runtime_release"; \
+			mise_checked "$$scratch/install-retry.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" install --yes; \
+		fi; \
 		mise_checked "$$scratch/staged-python.log" mise_offline project "$$pinned_mise" -C "$$lock_stage" which python; \
 		staged_python=$$(cat "$$scratch/staged-python.log"); \
 		if [ ! -x "$$staged_python" ]; then printf 'ERROR: staged Mise Python is not executable: %s\n' "$$staged_python" >&2; exit 2; fi; \
@@ -306,20 +338,8 @@
 		mise_trusted_config_paths="$$project_root"; \
 		if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then locked_manifest="$$scratch/locked-manifest.toml"; fi; \
 	else \
-		# ``locked`` mode converges every tool on exactly the version the \
-		# committed mise.lock pins. Setup never locks (operator 2026-10-02): \
-		# an offline dry-run proves the lock satisfies the manifest, and a lock \
-		# that does not (mixed-generation merge, interrupted ``upg``, a lock \
-		# written by another Mise release) fails loud; ``make upg`` is its only \
-		# writer. Only ``install --yes`` may reach the network, for a tool \
-		# missing from the persistent cache. \
-		if mise_offline project "$$pinned_mise" -C "$$project_root" install --dry-run >"$$scratch/install-probe.log" 2>&1; then \
-			:; \
-		else \
-			cat "$$scratch/install-probe.log" >&2; \
-			printf 'ERROR: mise.lock does not satisfy .mise.toml under Mise %s; run make upg\n' "$$runtime_release" >&2; \
-			exit 2; \
-		fi; \
+		# Setup consumes the declared lock policy in one install. An invalid \
+		# lock stops here with its original cause; only make upg repairs it. \
 		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$project_root" install --yes; \
 	fi; \
 	mise_checked_stdout "$$scratch/ast-grep-version.stdout" "$$scratch/ast-grep-version.stderr" mise_offline project "$$pinned_mise" -C "$$project_root" exec -- ast-grep --version; \
@@ -349,15 +369,23 @@
 	python_executable=$$(cat "$$scratch/python-path.log"); \
 	# CI receives only the shim farm: a project bin/ on PATH would bind every \
 	# shim to that repository launcher (mise resolves shims through PATH). \
+	# A restored tool cache keeps the shims bound to the Mise release that built \
+	# them, and Mise never replaces a shim bound to another binary, so CI rebuilds \
+	# the farm from the pinned release before publishing it. \
 	if [ -n "$${GITHUB_PATH:-}" ]; then \
 {% for name, relative in bootstrap.persistent_environment if name == "MISE_SHIMS_DIR" -%}
-		printf '%s\n' "$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}" >> "$$GITHUB_PATH"; \
+		shim_farm="$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}"; \
+		rm -rf "$$shim_farm"; \
+		mise_checked "$$scratch/reshim.log" mise_offline project "$$pinned_mise" -C "$$project_root" reshim; \
+		printf '%s\n' "$$shim_farm" >> "$$GITHUB_PATH"; \
 {% endfor -%}
 	fi; \
 	printf 'setup: entering lifecycle (submodules, environment, hooks) make=%s\n' "$(SELF_MAKE_EXECUTABLE)"; \
+	scratch_present=0; if [ -d "$$scratch" ]; then scratch_present=1; fi; \
+	printf 'mise scratch: before lifecycle path=%s present=%s\n' "$$scratch" "$$scratch_present" >&2; \
 	mise_runtime_path="$$mise_storage_root/{{ bootstrap.runtime_install_relative_template | replace('{release}', '${runtime_release}') | replace('$', '$$') }}"; \
 	if [ "$(OS)" = "Windows_NT" ]; then mise_runtime_path="$$mise_runtime_path.exe"; fi; \
-	env \
+	if env \
 {% for name, relative in bootstrap.persistent_environment -%}
 		"{{ name }}=$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}" \
 {% endfor -%}
@@ -371,5 +399,10 @@
 		"SETUP_DIRENV=$$direnv_executable" \
 		"SETUP_PYTHON=$$python_executable" \
 		"SETUP_DIRENV_XDG_DATA_HOME=$$caller_xdg_data_home" \
-		"{{ make.ci.variable }}=$({{ make.ci.variable }})" {{ lifecycle }}
+		"{{ make.ci.variable }}=$({{ make.ci.variable }})" {{ lifecycle }}; then lifecycle_status=0; \
+	else lifecycle_status=$$?; fi; \
+	scratch_present=0; if [ -d "$$scratch" ]; then scratch_present=1; fi; \
+	if printf 'mise scratch: after lifecycle path=%s present=%s status=%s\n' "$$scratch" "$$scratch_present" "$$lifecycle_status" >&2; then :; \
+	else lifecycle_diagnostic_status=$$?; if [ "$$lifecycle_status" -eq 0 ]; then lifecycle_status=$$lifecycle_diagnostic_status; fi; fi; \
+	exit "$$lifecycle_status"
 {%- endmacro %}

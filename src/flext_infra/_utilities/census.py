@@ -796,7 +796,7 @@ class FlextInfraUtilitiesRefactorCensus:
         )
         if planned.failure:
             if planned.error_code == c.Infra.CENSUS_UNSUPPORTED_SIMPLE_REMOVAL_CODE:
-                return r[bool].ok(False)
+                return r[bool].ok(value=False)
             return r[bool].from_failure(planned)
         updates, post_write = planned.unwrap()
         try:
@@ -817,7 +817,7 @@ class FlextInfraUtilitiesRefactorCensus:
         finally:
             rope.refresh(preserve_indexes=True, validate_project=False)
         if applied:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         return r[bool].fail(
             "; ".join(reports) if reports else "preview gates rejected removal",
         )
@@ -853,7 +853,7 @@ class FlextInfraUtilitiesRefactorCensus:
         )
         if planned.failure:
             if planned.error_code == c.Infra.CENSUS_UNSUPPORTED_SIMPLE_REMOVAL_CODE:
-                return r[bool].ok(False)
+                return r[bool].ok(value=False)
             return r[bool].from_failure(planned)
         updates, cleanup = planned.unwrap()
 
@@ -875,7 +875,7 @@ class FlextInfraUtilitiesRefactorCensus:
         )
         rope.reload()
         if applied:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         return r[bool].fail(
             "; ".join(reports) if reports else "apply gates rejected removal",
         )

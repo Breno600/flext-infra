@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, config, m, p, t, u
 from flext_infra.codegen._conform.existing_plan import (
     FlextInfraCodegenConformExistingPlan,
 )
@@ -86,6 +86,10 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
             project_name=repository.distribution,
             package_name=project.package_name,
             path=pyproject,
+            scaffold_project=codegen.scaffold.project,
+            upstream=project.upstream,
+            runtime_dependency_overlay=project.runtime_dependency_overlay,
+            declared_project_dependencies=(),
             topology=m.Infra.PyprojectDeclaredTopology(
                 root_modules=project.root_modules,
                 root_packages=project.root_packages,
@@ -134,7 +138,8 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
                 source = (templates_root / entry.source).resolve()
                 if not source.is_relative_to(templates_root) or not source.is_file():
                     return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
-                        f"template source is missing or escapes its root: {entry.source}",
+                        f"template source is missing or escapes its root: "
+                        f"{entry.source}",
                     )
             relative = Path(destination)
             if relative.is_absolute() or ".." in relative.parts:
@@ -201,8 +206,9 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
         """Render the final pyproject over the sources the scaffold plans.
 
         The pyproject renders before the sources, but its facade-rebind Mypy
-        scope and its first-party namespaces are facts of those sources: derived from the tree before
-        publication it omits every facade the scaffold creates, and the next
+        scope and its first-party namespaces are facts of those sources:
+        derived from the tree before publication it omits every facade the
+        scaffold creates, and the next
         generation adds them. Once every source is planned, the scope is
         derived from the planned bytes and the pyproject is rendered once more
         with it; nothing rendered earlier reads that scope.
@@ -230,14 +236,22 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
         }
         tooling = render_inputs.tooling_runtime
         rebinds = u.Infra.facade_rebind_modules(root, planned_sources)
+        type_checking = config.Infra.tooling.tools.ruff.lint.flake8_type_checking
+        runtime_bases = u.Infra.runtime_evaluated_base_classes(
+            root,
+            planned_sources,
+            type_checking.runtime_evaluated_roots,
+        )
         first_party = tuple(
             FlextInfraToolTablesPhase.first_party_namespaces(
                 path=root,
                 planned_sources=tuple(planned_sources),
             ),
         )
-        if rebinds == tuple(tooling.mypy_facade_rebind_modules) and (
-            first_party == tuple(tooling.first_party)
+        if (
+            rebinds == tuple(tooling.mypy_facade_rebind_modules)
+            and first_party == tuple(tooling.first_party)
+            and runtime_bases == tuple(tooling.ruff_runtime_evaluated_base_classes)
         ):
             return result_type.ok(planned)
         final_inputs = render_inputs.model_copy(
@@ -245,6 +259,7 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
                 "tooling_runtime": tooling.model_copy(
                     update={
                         "mypy_facade_rebind_modules": rebinds,
+                        "ruff_runtime_evaluated_base_classes": runtime_bases,
                         "first_party": first_party,
                     },
                 ),
@@ -333,7 +348,8 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
                 template_relpath=entry.source,
                 destination=destination,
                 failure_prefix=(
-                    f"stage=templates repository={render_inputs.target.repository.name} "
+                    f"stage=templates "
+                    f"repository={render_inputs.target.repository.name} "
                 ),
                 project_context=context,
             )

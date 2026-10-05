@@ -189,7 +189,7 @@ class FlextInfraInventoryService(s[bool]):
         result = self.generate(self.repository_root, output_dir=self.output_dir)
         if result.failure:
             return r[bool].from_failure(result)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraInventoryService"]

@@ -50,7 +50,7 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
                 return r[bool].fail(
                     f"Beads-disabled repository still has Beads state: {owner}",
                 )
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         # The ledger directory is a conform projection: absent before the
         # first render is normal; a link, or a non-directory, is not physical.
         if owner.is_symlink() or (owner.exists() and not owner.is_dir()):
@@ -63,7 +63,7 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
             state = self.beads_route_state((root / repository.path).resolve())
             if state.failure:
                 return state
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def beads_route_state(root: Path) -> p.Result[bool]:
@@ -104,7 +104,7 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
             )
         if not route.exists():
             route.mkdir(mode=c.Infra.BEADS_DIRECTORY_MODE, parents=True)
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         if not route.is_dir():
             return r[bool].fail(
                 f"composed project Beads route is not a directory: {route}",
@@ -118,7 +118,7 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
                 + ", ".join(unexpected),
             )
         route.chmod(c.Infra.BEADS_DIRECTORY_MODE)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraCodegenConformBeadsRoutes"]

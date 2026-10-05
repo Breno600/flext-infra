@@ -72,7 +72,7 @@ class FlextInfraWorkspacePropagation(s[bool]):
             )
             if propagated.failure:
                 return propagated
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def _propagate_member(
         self,
@@ -112,6 +112,7 @@ class FlextInfraWorkspacePropagation(s[bool]):
             lambda: FlextInfraCodegenConform.settle_repository(
                 member_root,
                 ports=self.conform_collaborators,
+                refresh_git_peers=True,
             ),
         )
         if published.failure:

@@ -101,7 +101,7 @@ class FlextInfraUtilitiesGitRepo:
             Git.refresh(resolved)
         except (FileNotFoundError, OSError) as exc:
             return r[bool].fail(f"git binary refresh failed: {exc}", exception=exc)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _open_repo(cls, repo_root: Path) -> p.Result[Repo]:

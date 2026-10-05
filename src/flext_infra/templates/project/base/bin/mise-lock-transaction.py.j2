@@ -19,7 +19,7 @@ import subprocess
 import sys
 import time
 import tomllib
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
 
@@ -31,9 +31,9 @@ class MiseLockTransaction:
     NEW_LOCK = "new.lock"
     OLD_LOCK = "old.lock"
     ARTIFACTS = (
-{% for relative, mode in mise_bootstrap.artifact_specs -%}
+{%- for relative, mode in mise_bootstrap.artifact_specs %}
         ("{{ relative }}", 0o{{ '%o' | format(mode) }}),
-{% endfor -%}
+{%- endfor %}
     )
     MUTEX_TIMEOUT_SECONDS = 600.0
     LOCK = "{{ mise_bootstrap.lock_file }}"
@@ -41,7 +41,7 @@ class MiseLockTransaction:
 
     @staticmethod
     @contextmanager
-    def _serialized(project: Path) -> Iterator[None]:
+    def _serialized(project: Path) -> Generator[None]:
         """Serialize all publisher versions on one declared physical mutex."""
         mutex = project / "{{ mise_bootstrap.transaction_lock_file }}"
         if mutex.is_symlink():

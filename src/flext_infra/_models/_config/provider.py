@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Annotated, ClassVar, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import t
 from flext_infra._constants import FlextInfraConstantsSharedInfra
@@ -53,7 +53,11 @@ class FlextInfraConfigModelsProvider:
         @m.computed_field
         @property
         def internal_distribution_prefix(self) -> str:
-            """Derive the internal distribution namespace from the owner name."""
+            """Derive the internal distribution namespace from the owner name.
+
+            Returns:
+                The resulting ``str``.
+            """
             namespace, _, _ = self.distribution.partition("-")
             return f"{namespace}-"
 
@@ -113,7 +117,9 @@ class FlextInfraConfigModelsProvider:
         submodule: Annotated[
             t.NonEmptyStr,
             m.Field(
-                description="gitmodules submodule name (git config submodule.<name>.url)",
+                description=(
+                    "gitmodules submodule name (git config submodule.<name>.url)"
+                ),
             ),
         ]
         path: Annotated[
@@ -155,7 +161,9 @@ class FlextInfraConfigModelsProvider:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 min_length=1,
-                description="Pinned official SSH host-key lines used only in runner temp",
+                description=(
+                    "Pinned official SSH host-key lines used only in runner temp"
+                ),
             ),
         ]
 
@@ -173,7 +181,7 @@ class FlextInfraConfigModelsProvider:
             m.Field(min_length=1, description="Ordered deploy-key materializations"),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_private_submodule_identity(self) -> Self:
             """Keep path, key, and host identities complete and unambiguous.
 

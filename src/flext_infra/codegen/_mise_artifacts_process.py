@@ -70,7 +70,7 @@ class FlextInfraMiseArtifactsProcess:
             written = cls.write_new(path, b"", 0o600)
             if written.failure:
                 return written
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def environment(

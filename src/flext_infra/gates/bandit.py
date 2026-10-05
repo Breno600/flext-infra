@@ -48,10 +48,10 @@ class FlextInfraBanditGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
-        """Get check dirs.
+        """Audit only the ``src`` package surface, never tests or scripts.
 
         Returns:
-            The resulting ``t.StrSequence``.
+            ``src`` when the project has it, otherwise nothing to audit.
 
         """
         _ = ctx
@@ -66,48 +66,32 @@ class FlextInfraBanditGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Parse check output.
+        """Read Bandit's JSON report; every reported result blocks the gate.
 
         Returns:
-            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+            The run's verdict and its findings, parse error or failed exit.
 
         """
-        del project_dir, ctx
-        issues: t.MutableSequenceOf[m.Infra.Issue] = []
-        if not u.Cli.process_succeeded(result.outcome) and not result.stdout.strip():
-            issues.append(
-                self._command_error_issue(
-                    result,
-                    tool=c.Infra.BANDIT,
-                    file="<bandit>",
-                    line=0,
-                    column=0,
-                ),
-            )
-            return False, issues
+        del ctx
         if not result.stdout.strip():
-            issues.append(self._parse_error_issue("bandit produced no JSON output"))
-            return False, issues
+            if u.Cli.process_succeeded(result.outcome):
+                return False, (
+                    self._parse_error_issue("bandit produced no JSON output"),
+                )
+            return self._finalize_parse_result(result, project_dir, (), c.Infra.BANDIT)
         parsed_payload = self._parse_bandit_payload(result.stdout)
         if parsed_payload.failure:
-            issues.append(
+            return False, (
                 self._parse_error_issue(
                     parsed_payload.error or "Tool output parsing failed",
                 ),
             )
-            return False, issues
-        issues.extend(self._bandit_issues(parsed_payload.unwrap()))
-        if not issues and not u.Cli.process_succeeded(result.outcome):
-            issues.append(
-                self._command_error_issue(
-                    result,
-                    tool=c.Infra.BANDIT,
-                    file="<bandit>",
-                    line=0,
-                    column=0,
-                ),
-            )
-        return u.Cli.process_succeeded(result.outcome), issues
+        return self._finalize_parse_result(
+            result,
+            project_dir,
+            self._bandit_issues(parsed_payload.unwrap()),
+            c.Infra.BANDIT,
+        )
 
     @staticmethod
     def _parse_bandit_payload(stdout: str) -> p.Result[t.MappingKV[str, t.JsonValue]]:
