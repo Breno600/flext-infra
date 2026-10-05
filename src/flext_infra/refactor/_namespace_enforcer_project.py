@@ -1,23 +1,20 @@
 """Per-project namespace enforcement — extracted concern of the namespace enforcer.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
+SPDX-License-Identifier: MIT.
 """
 
 from __future__ import annotations
 
-from collections import defaultdict
-from collections.abc import Mapping
-from operator import itemgetter
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import c, m, u
-from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
+from flext_infra import m
+from flext_infra.refactor.namespace_relocations import (
+    FlextInfraNamespaceRelocationCascade,
+)
 
 if TYPE_CHECKING:
-    from collections.abc import MutableMapping
-
     from flext_infra import t
 
 
@@ -27,7 +24,9 @@ class FlextInfraNamespaceEnforcerProjectMixin:
     The rule catalog owns detection: every namespace law is a rule document
     the one scan engine evaluates. A rule that a rope relocation repairs
     names it under ``metadata.relocation``; this pass runs those relocations
-    over what the rules captured and reports the findings that remain.
+    over what the rules captured and reports the findings that remain. The
+    relocation machinery itself is the shared cascade — the same engine the
+    mod loop's relocation callback invokes.
     """
 
     if TYPE_CHECKING:
@@ -68,27 +67,8 @@ class FlextInfraNamespaceEnforcerProjectMixin:
         Returns:
             The resulting ``t.SequenceOf[Path]``.
 
-        Raises:
-            RuntimeError: If ``py_files_result.failure``.
-
         """
-        py_files_result = u.Infra.iter_python_files(
-            m.Infra.SourceScanRequest(project_roots=(project_root,)),
-        )
-        if py_files_result.failure:
-            msg = py_files_result.error or (
-                f"failed to collect Python files for {project_root}"
-            )
-            raise RuntimeError(msg)
-        declared = u.Infra.namespace_meta(project_root).get("scan_dirs")
-        if not isinstance(declared, list) or not declared:
-            return py_files_result.value
-        scope = frozenset(str(item).strip() for item in declared if str(item).strip())
-        return tuple(
-            path
-            for path in py_files_result.value
-            if path.relative_to(project_root).parts[0] in scope
-        )
+        return FlextInfraNamespaceRelocationCascade.scoped_py_files(project_root)
 
     def _relocate_rule_findings(
         self,
@@ -107,16 +87,16 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             The resulting ``t.NonNegativeInt``.
 
         """
-        findings = self._relocation_findings(project_root, py_files)
+        cascade = FlextInfraNamespaceRelocationCascade()
+        findings = cascade.scan_findings(project_root, py_files)
         if not (apply and findings):
             return len(findings)
-        names: MutableMapping[
-            c.Infra.CodemodRelocation,
-            MutableMapping[Path, set[str]],
-        ] = defaultdict(lambda: defaultdict(set))
-        spans: MutableMapping[Path, list[t.IntPair]] = defaultdict(list)
-        imports: MutableMapping[Path, MutableMapping[t.StrPair, set[str]]] = (
-            defaultdict(lambda: defaultdict(set))
+        return cascade.run(
+            project_root=project_root,
+            rope_project=self._rope_project,
+            findings=findings,
+            py_files=py_files,
+            gates=gates,
         )
         classes: list[tuple[Path, str, str, int]] = []
         own_package = u.Infra.project_package_name(project_root)
@@ -180,6 +160,15 @@ class FlextInfraNamespaceEnforcerProjectMixin:
                     u.Infra.rewrite_missing_future_annotations(
                         py_files=tuple(names_by_file),
                     )
+                case (
+                    c.Infra.CodemodRelocation.MODULE_IMPORT
+                    | c.Infra.CodemodRelocation.PACKAGE_ROOT_IMPORT
+                    | c.Infra.CodemodRelocation.OWN_PACKAGE_IMPORT
+                    | c.Infra.CodemodRelocation.FACADE_CLASS
+                ):
+                    # Detection-only relocations: their rules declare no rope
+                    # repair; the phase reports their findings and moves on.
+                    pass
         self._rope_project.validate(self._rope_project.root)
         return len(self._relocation_findings(project_root, py_files))
 

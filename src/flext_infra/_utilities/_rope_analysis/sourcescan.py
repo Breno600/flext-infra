@@ -18,23 +18,6 @@ if TYPE_CHECKING:
     from flext_infra import t
 
 
-def _is_sequence_constructor_wrap(value: ast.expr) -> bool:
-    """Whether one expression wraps a bare name in a sequence constructor call.
-
-    Returns:
-        The resulting ``bool``.
-
-    """
-    return (
-        isinstance(value, ast.Call)
-        and isinstance(value.func, ast.Name)
-        and value.func.id in {"tuple", "list", "frozenset", "set"}
-        and len(value.args) == 1
-        and not value.keywords
-        and isinstance(value.args[0], ast.Name)
-    )
-
-
 class FlextInfraUtilitiesRopeAnalysisSourceScan:
     """Source-level rope parsing, literal scanning, and reference extraction.
 
@@ -110,8 +93,16 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         """
         if isinstance(value, ast.Name):
             return value.id
-        if _is_sequence_constructor_wrap(value):
-            return value.args[0].id
+        if (
+            isinstance(value, ast.Call)
+            and isinstance(value.func, ast.Name)
+            and value.func.id in {"tuple", "list", "frozenset", "set"}
+            and len(value.args) == 1
+            and not value.keywords
+        ):
+            wrapped = value.args[0]
+            if isinstance(wrapped, ast.Name):
+                return wrapped.id
         return ""
 
     @staticmethod

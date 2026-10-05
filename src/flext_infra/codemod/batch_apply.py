@@ -40,6 +40,15 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         default=(),
         description="Typed declared CSV campaigns",
     )
+    phase_callbacks: t.VariadicTuple[t.Port[p.Infra.ModLoopPhase]] = m.Field(
+        exclude=True,
+        default=(),
+        description=(
+            "Injected repair phases the loop invokes as callbacks between the"
+            " semantic and text phases (namespace relocations, accessor"
+            " renames)"
+        ),
+    )
 
     @override
     def execute(self) -> p.Result[t.Cli.ResultValue]:
@@ -159,6 +168,20 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             if semantic.failure:
                 return r[t.Cli.ResultValue].from_failure(semantic)
             phase_states.append(fingerprint(root, after_ast))
+            # Callback phases extend the joint fixed point with repairs that
+            # own their own engines (the shared relocation cascade, the
+            # origin-aware accessor rename); each returns whether it changed
+            # sources, and the loop refreshes and rescans exactly as for its
+            # built-in phases.
+            callback_state = self._apply_phase_callbacks(
+                root,
+                after_ast,
+                rope_workspace,
+            )
+            if callback_state.failure:
+                return r[t.Cli.ResultValue].from_failure(callback_state)
+            after_ast, callback_states = callback_state.value
+            phase_states.extend(callback_states)
             current_text = FlextInfraModTextGateEngine.scan(
                 root,
                 fix=False,
@@ -230,6 +253,45 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                 "with zero actionable findings",
             )
             return r[t.Cli.ResultValue].ok(value=True)
+
+    def _apply_phase_callbacks(
+        self,
+        root: Path,
+        after_ast: m.Infra.ModScanReport,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
+    ) -> p.Result[
+        t.Pair[
+            m.Infra.ModScanReport,
+            t.SequenceOf[t.VariadicTuple[t.Pair[str, str]]],
+        ]
+    ]:
+        """Run every injected repair phase and return the post-phase scan state.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[m.Infra.ModScanReport,
+                t.SequenceOf[...]]]`` — the rescan report plus the fingerprint
+            states the cycle must observe for cross-phase cycle detection.
+
+        """
+        fingerprint = FlextInfraCodemodSemanticApply.source_fingerprint
+        outcome = r[
+            t.Pair[
+                m.Infra.ModScanReport,
+                t.SequenceOf[t.VariadicTuple[t.Pair[str, str]]],
+            ]
+        ]
+        states: list[t.VariadicTuple[t.Pair[str, str]]] = []
+        for callback in self.phase_callbacks:
+            phase_changed = callback.apply(root, after_ast, rope_workspace)
+            if phase_changed.failure:
+                return outcome.from_failure(phase_changed)
+            if not phase_changed.value:
+                continue
+            self.progress.emit(f"mod: phase {callback.name} changed sources")
+            rope_workspace.refresh()
+            after_ast = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
+            states.append(fingerprint(root, after_ast))
+        return outcome.ok((after_ast, tuple(states)))
 
     def _pending_renames(self) -> p.Result[int]:
         """Count pending rename occurrences across the configured campaigns.

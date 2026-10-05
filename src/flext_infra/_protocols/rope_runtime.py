@@ -26,7 +26,8 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
         real_path: str
 
         def get_child(
-            self, name: str
+            self,
+            name: str,
         ) -> FlextInfraProtocolsRopeRuntime.RopeResource: ...
 
     @runtime_checkable
