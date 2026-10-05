@@ -545,11 +545,7 @@ known-first-party = ["flext_core", "flext_infra"]
 split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
-"**/__init__.py" = [
-  "non-empty-init-module",
-  "typing-only-first-party-import",
-  "unused-import",
-]
+"**/__init__.py" = ["non-empty-init-module", "unused-import"]
 "**/tests/python/**" = [
   "raise-vanilla-args",
   "start-process-with-partial-path",

@@ -488,17 +488,17 @@ Infra:
         # Other pre-push verbs use this token to preserve local test behavior;
         # pre-push check unsets CI so it runs every active check gate.
         local_value: N
-        local_check_gates: [mypy, pyright, codemod]
+        local_check_gates: [mypy, pyright, codemod, smells]
         # local_check_gates is the only declared partition: CI=N runs
         # MakeSpec.check_gates_local (its intersection with the active default
         # gates) and CI=Y runs MakeSpec.check_gates_ci, the strict complement.
-        # An unset CI runs all active gates. Mypy, pyright and the codemod
-        # (ast-grep) rule set are INFORMATIVE in CI — operator order
-        # 2026-10-05: they must never block CI; they stay active (blocking)
-        # locally, at pre-push, and on every unset-CI run, so findings still
-        # surface before integration. Mypy stays bounded by
-        # MYPY_MEMORY_LIMIT_MB and the project-owned
-        # tools.mypy.timeout_seconds budget.
+        # An unset CI runs all active gates. Mypy, pyright, the codemod
+        # (ast-grep) rule set and smells (qlty similar-code) DO NOT EXECUTE
+        # under CI=Y at all — operator order 2026-10-05: never blocking, never
+        # advisory, not run; they stay active (blocking) locally, at pre-push,
+        # and on every unset-CI run, so findings still surface before
+        # integration. Mypy stays bounded by MYPY_MEMORY_LIMIT_MB and the
+        # project-owned tools.mypy.timeout_seconds budget.
         # `format` is not a check gate -- it mutates files, so it belongs to
         # make fmt / make fix only.
         # tooling.tools.pytest.ci-excluded-markers defines the slow-test
@@ -674,6 +674,11 @@ Infra:
       custom_handler_profile_overrides: {}
       standalone_check_gates:
         smells: smells
+      # Operator law 2026-10-05: the named gates stay INFORMATIONAL — their
+      # findings are reported in the check report and SARIF, but they never
+      # fail `make check` or CI. Declared here once; the check runner reads
+      # this typed SSOT, never a per-gate or per-repository override.
+      informational_check_gates: [codemod, mypy, pyright]
       custom_handler_policy:
         filename: custom.mk
         # Custom behavior is one private whole-verb replacement or one lifecycle

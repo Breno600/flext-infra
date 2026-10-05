@@ -242,6 +242,20 @@ class MiseLockConverge:
                 return
         raise ValueError(f"Mise manifest has no declared version to hold: {selector}")
 
+    @staticmethod
+    def staged_manifest(stage: Path) -> Path:
+        """Resolve the staged manifest, refusing a path that escapes the stage.
+
+        The stage directory arrives from the command line, so the manifest
+        write is guarded: a symlinked or otherwise relocated ``.mise.toml``
+        that resolves outside the declared stage stops converge loud instead
+        of rewriting an unrelated file.
+        """
+        manifest = (stage / ".mise.toml").resolve()
+        if not manifest.is_relative_to(stage.resolve()):
+            raise ValueError(f"staged manifest escapes the stage: {manifest}")
+        return manifest
+
     @classmethod
     def _hold(
         cls,
@@ -253,8 +267,9 @@ class MiseLockConverge:
     ) -> str:
         """Hold one failing tool at its newest release that installs in the stage."""
         listing = cls._run(runtime, ["ls-remote", selector], environment)
+        manifest = cls.staged_manifest(stage)
         for candidate in cls.release_candidates(listing, failed_version):
-            cls.hold_manifest_version(stage / ".mise.toml", selector, candidate)
+            cls.hold_manifest_version(manifest, selector, candidate)
             try:
                 cls._run(runtime, ["-C", str(stage), "lock"], environment)
             except ValueError as error:
