@@ -21,8 +21,7 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
     @staticmethod
     def _roots() -> t.StrTuple:
         return tuple(
-            config.Infra.tooling.tools.ruff.lint.flake8_type_checking
-            .runtime_evaluated_roots,
+            config.Infra.tooling.tools.ruff.lint.flake8_type_checking.runtime_evaluated_roots,
         )
 
     @classmethod
@@ -31,13 +30,15 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
         return f"from {module} import {name} as RuntimeRoot\n"
 
     def test_unpublished_project_is_not_imported_or_created(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         root = tmp_path / "unpublished"
         package = root / "src" / "unpublished_contract"
         planned = {
             package / "__init__.py": "",
-            package / "models.py": self._root_import() + (
+            package / "models.py": self._root_import()
+            + (
                 "class Contract(RuntimeRoot): pass\n"
                 "class Derived(Contract): pass\n"
                 "class Consumer(Derived): pass\n"
@@ -45,23 +46,28 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
         }
         tm.that(
             u.Infra.runtime_evaluated_base_classes(root, planned, self._roots()),
-            eq=tuple(sorted((
-                *self._roots(), "unpublished_contract.models.Contract",
-                "unpublished_contract.models.Derived",
-            ))),
+            eq=tuple(
+                sorted((
+                    *self._roots(),
+                    "unpublished_contract.models.Contract",
+                    "unpublished_contract.models.Derived",
+                )),
+            ),
         )
         tm.that(root.exists(), eq=False)
         tm.that("unpublished_contract" in sys.modules, eq=False)
 
     def test_import_aliases_relative_generic_bases_and_planned_disk_convergence(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         package = tmp_path / "src" / "planned_contract"
         package.mkdir(parents=True)
         (package / "models.py").write_text("class Contract: pass\n", encoding="utf-8")
         planned = {
             package / "__init__.py": "from .models import Facade as m\n",
-            package / "models.py": self._root_import() + (
+            package / "models.py": self._root_import()
+            + (
                 "class Contract[T](RuntimeRoot): pass\n"
                 "class Facade:\n"
                 "    class Contract(Contract[int]): pass\n"
@@ -76,11 +82,19 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                 "class Qualified(module_alias.Facade.Contract): pass\n"
             ),
         }
-        expected = tuple(sorted((
-            *self._roots(), "planned_contract.models.Contract",
-            "planned_contract.m.Contract", "planned_contract.models.Facade.Contract",
-        )))
-        actual = u.Infra.runtime_evaluated_base_classes(tmp_path, planned, self._roots())
+        expected = tuple(
+            sorted((
+                *self._roots(),
+                "planned_contract.models.Contract",
+                "planned_contract.m.Contract",
+                "planned_contract.models.Facade.Contract",
+            )),
+        )
+        actual = u.Infra.runtime_evaluated_base_classes(
+            tmp_path,
+            planned,
+            self._roots(),
+        )
         tm.that(actual, eq=expected)
         for path, source in planned.items():
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -92,7 +106,10 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
 
     @pytest.mark.parametrize("model_on_right", [False, True])
     def test_nested_member_lookup_obeys_c3_not_depth_first(
-        self, tmp_path: Path, *, model_on_right: bool,
+        self,
+        tmp_path: Path,
+        *,
+        model_on_right: bool,
     ) -> None:
         origin_base = "" if model_on_right else "(RuntimeRoot)"
         right_base = "(RuntimeRoot)" if model_on_right else ""
@@ -105,10 +122,12 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
             "class Joint(Left, Right): pass\n"
             "class Consumer(Joint.Contract): pass\n"
         )
-        expected = tuple(sorted((
-            *self._roots(),
-            *(("c3_contract.models.Joint.Contract",) if model_on_right else ()),
-        )))
+        expected = tuple(
+            sorted((
+                *self._roots(),
+                *(("c3_contract.models.Joint.Contract",) if model_on_right else ()),
+            )),
+        )
         tm.that(
             u.Infra.runtime_evaluated_base_classes(
                 tmp_path,
@@ -135,10 +154,13 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                 {tmp_path / "src" / "collision_contract" / "models.py": source},
                 self._roots(),
             ),
-            eq=tuple(sorted((
-                *self._roots(), "collision_contract.models.Contract",
-                "collision_contract.models.First.Contract",
-            ))),
+            eq=tuple(
+                sorted((
+                    *self._roots(),
+                    "collision_contract.models.Contract",
+                    "collision_contract.models.First.Contract",
+                )),
+            ),
         )
 
     def test_value_shadowing_is_a_visible_invalid_base(self, tmp_path: Path) -> None:

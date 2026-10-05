@@ -15,7 +15,7 @@ from pathlib import Path
 
 from flext_core import r
 from flext_infra import config, m, p, t, u
-from ._layout_plan import FlextInfraCodegenLayoutPlanMixin
+from flext_infra.codegen._layout_plan import FlextInfraCodegenLayoutPlanMixin
 
 
 class FlextInfraCodegenLayoutFilesMixin:
@@ -40,7 +40,8 @@ class FlextInfraCodegenLayoutFilesMixin:
                 return r[t.Pair[t.Infra.LayoutStatus, str]].from_failure(moved)
             applied_status: t.Infra.LayoutStatus = "applied"
             return r[t.Pair[t.Infra.LayoutStatus, str]].ok((
-                applied_status, f"moved {source.name} -> {target.name}",
+                applied_status,
+                f"moved {source.name} -> {target.name}",
             ))
         if (
             source.is_file()
@@ -52,14 +53,16 @@ class FlextInfraCodegenLayoutFilesMixin:
                 return r[t.Pair[t.Infra.LayoutStatus, str]].from_failure(archived)
             status, message = archived.value
             return r[t.Pair[t.Infra.LayoutStatus, str]].ok((
-                status, f"identical target kept; {message}",
+                status,
+                f"identical target kept; {message}",
             ))
         archived = self._archive_path(project_dir, source, archive_rel)
         if archived.failure:
             return r[t.Pair[t.Infra.LayoutStatus, str]].from_failure(archived)
         status, message = archived.value
         return r[t.Pair[t.Infra.LayoutStatus, str]].ok((
-            status, f"collision: target kept; {message}",
+            status,
+            f"collision: target kept; {message}",
         ))
 
     def _archive_path(

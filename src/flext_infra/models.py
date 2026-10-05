@@ -16,6 +16,8 @@ from flext_infra._models._config import FlextInfraConfigModels
 from flext_infra._models.base import FlextInfraModelsBase
 from flext_infra._models.census import FlextInfraModelsCensus
 from flext_infra._models.check import FlextInfraModelsCheck
+from flext_infra._models.codegen_render import FlextInfraModelsCodegenRender
+from flext_infra._models.codegen_toolchain import FlextInfraModelsCodegenToolchain
 from flext_infra._models.codemod import FlextInfraModelsCodemod
 from flext_infra._models.deps import FlextInfraModelsDeps
 from flext_infra._models.docs import FlextInfraModelsDocs
@@ -66,6 +68,8 @@ class FlextInfraModels(FlextCliModels):
         FlextInfraModelsTestmon,
         FlextInfraModelsCore,
         FlextInfraModelsBase,
+        FlextInfraModelsCodegenToolchain,
+        FlextInfraModelsCodegenRender,
         FlextInfraModelsMiseToolchain,
     ):
         """Infrastructure-domain models - all classes exposed directly."""

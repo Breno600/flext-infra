@@ -419,11 +419,7 @@ quote-style = "double"
 skip-magic-trailing-comma = false
 
 [tool.ruff.lint]
-extend-safe-fixes = [
-  "camelcase-imported-as-lowercase",
-  "relative-imports",
-  "typing-only-first-party-import",
-]
+extend-safe-fixes = ["camelcase-imported-as-lowercase", "relative-imports"]
 ignore = [
   "camelcase-imported-as-lowercase",
   "implicit-namespace-package",
@@ -463,7 +459,6 @@ runtime-evaluated-base-classes = [
   "flext_core.m.ArbitraryTypesModel",
   "flext_core.m.ContractModel",
   "flext_core.m.FlexibleModel",
-  "flext_core.m.RootModel",
   "flext_core.m.StrictBoundaryModel",
   "flext_infra.FlextInfraServiceBase",
   "flext_infra._models._codegen.fix.BulkFixItem",
@@ -499,7 +494,6 @@ runtime-evaluated-base-classes = [
   "flext_infra.docs.base.FlextInfraDocServiceBase",
   "flext_infra.m.ArbitraryTypesModel",
   "flext_infra.m.FrozenModel",
-  "flext_infra.maintenance.python_version.FlextInfraPythonVersionEnforcer",
   "flext_infra.maintenance.sonarcloud_client.FlextInfraSonarcloudClient",
   "flext_infra.release._release_artifact.FlextInfraReleaseArtifactMixin",
   "flext_infra.release._release_boundary.FlextInfraReleaseBoundaryMixin",
@@ -510,12 +504,10 @@ runtime-evaluated-base-classes = [
   "flext_infra.release._release_publish.FlextInfraReleasePublishMixin",
   "flext_infra.release._release_source.FlextInfraReleaseSourceMixin",
   "flext_infra.s",
-  "flext_infra.services.cli_dispatch.FlextInfraCliDispatchService",
   "flext_infra.validate._pytest_runner.base.FlextInfraPytestRunnerBase",
   "flext_infra.validate._pytest_runner.command.FlextInfraPytestRunnerCommand",
   "flext_infra.validate._pytest_runner.execution.FlextInfraPytestRunnerExecution",
   "flext_infra.validate._pytest_runner.reports.FlextInfraPytestRunnerReports",
-  "flext_tests.FlextTestsServiceBase",
   "flext_tests.FlextTestsUtilities.Tests",
   "pydantic.BaseModel",
 ]
@@ -606,11 +598,7 @@ split-on-trailing-comma = false
   "verbose-raise",
   "write-whole-file",
 ]
-"scripts/**/*.py" = [
-  "commented-out-code",
-  "line-too-long",
-  "typing-only-first-party-import",
-]
+"scripts/**/*.py" = ["commented-out-code", "line-too-long"]
 "tests/**/*.py" = ["assert"]
 
 [tool.ruff.lint.pydocstyle]

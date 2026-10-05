@@ -30,6 +30,14 @@ class FlextInfraConstantsRefactor:
     "Exact structured mod evidence schema version."
     MOD_SCAN_REPORT_MODE: ClassVar[int] = 0o644
     "Canonical permission bits for structured mod evidence."
+    ACCESSOR_MIGRATION_REPORT_RELATIVE_PATH: ClassVar[Path] = (
+        Path(cb.REPORTS_DIR_NAME) / "refactor" / "accessor-migration.json"
+    )
+    "Canonical single-file evidence snapshot for the latest accessor migration."
+    NAMESPACE_ENFORCE_REPORT_RELATIVE_PATH: ClassVar[Path] = (
+        Path(cb.REPORTS_DIR_NAME) / "refactor" / "namespace-enforce.json"
+    )
+    "Canonical single-file evidence snapshot for the latest namespace enforcement."
     AST_GREP_ERROR_FINDING_RECEIPT: ClassVar[str] = (
         "Error: {count} error(s) found in code."
     )

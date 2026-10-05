@@ -143,11 +143,14 @@ class TestsFlextInfraPytestCollectionManifest:
         """SDK fallback cannot hide TypeError or leak monitoring into a warm run."""
         declaration = cached_runner_project / c.PYPROJECT_FILENAME
         declaration.write_text(
-            declaration.read_text(encoding="utf-8")
-            + 'addopts = ["--markdown-docs"]\n',
+            declaration.read_text(encoding="utf-8") + 'addopts = ["--markdown-docs"]\n',
             encoding="utf-8",
         )
-        source = cached_runner_project / runner_for(cached_runner_project).target / "sample.md"
+        source = (
+            cached_runner_project
+            / runner_for(cached_runner_project).target
+            / "sample.md"
+        )
         source.write_text(
             "```python\nfrom pathlib import Path\n"
             "marker = Path('first-attempt.txt')\n"
