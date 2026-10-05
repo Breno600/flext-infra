@@ -64,6 +64,20 @@ class FlextInfraModelsRope:
         name: Annotated[str, m.Field(description="Class name")]
         bases: Annotated[t.StrSequence, m.Field(description="Base class names")] = ()
 
+    class SourceClassReference(m.ContractModel):
+        """A lexical binding and its attribute path, distinct from Ruff's spelling."""
+
+        target: str
+        attributes: t.StrTuple = ()
+        qualified_base: str = ""
+
+    class SourceClassDefinition(m.ContractModel):
+        """One source declaration, preserving ordered bases and member shadowing."""
+
+        identity: str
+        bases: t.VariadicTuple[FlextInfraModelsRope.SourceClassReference]
+        members: t.MappingKV[str, FlextInfraModelsRope.SourceClassReference | None]
+
     class ScopeDefinition(FlextInfraModelsMixins.PositiveLineMixin, m.ContractModel):
         """One semantic scope (def/class) discovered via rope's scope tree.
 
