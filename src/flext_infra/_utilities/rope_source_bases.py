@@ -173,7 +173,8 @@ class FlextInfraUtilitiesRopeSourceBases:
                                 head = head.value
                             reference = (
                                 cls._reference(value, visible, module)
-                                if isinstance(
+                                if isinstance(head, ast.Name)
+                                and isinstance(
                                     value, (ast.Name, ast.Attribute, ast.Subscript),
                                 )
                                 and not (
