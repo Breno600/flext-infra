@@ -12,8 +12,8 @@ import pytest
 from flext_tests import tm
 
 import flext_infra
-from flext_infra import c, m, u as infra_u
-from tests import u as test_u
+from flext_infra import c, m
+from tests import u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -27,7 +27,7 @@ class TestsFlextInfraRefactorCensusPreview:
         tmp_path: Path,
     ) -> None:
         """Plan one class removal without leaving excess blank lines."""
-        repository_root, package_root = test_u.Tests.create_lazy_init_workspace(
+        repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-demo",
             package_name="flext_demo",
@@ -57,7 +57,7 @@ class TestsFlextInfraRefactorCensusPreview:
         )
 
         with flext_infra.infra.rope_workspace(repository_root) as rope:
-            updates = infra_u.Infra.build_simple_removal_sources(rope, candidate)
+            updates = u.Infra.build_simple_removal_sources(rope, candidate)
 
         tm.that(updates, none=False)
         if updates is None:
@@ -72,7 +72,7 @@ class TestsFlextInfraRefactorCensusPreview:
         tmp_path: Path,
     ) -> None:
         """Plan removal of a base used by a multiline test facade."""
-        repository_root, package_root = test_u.Tests.create_lazy_init_workspace(
+        repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-demo",
             package_name="flext_demo",
@@ -124,7 +124,7 @@ class TestsFlextInfraRefactorCensusPreview:
         )
 
         with flext_infra.infra.rope_workspace(repository_root) as rope:
-            updates = infra_u.Infra.build_simple_removal_sources(rope, candidate)
+            updates = u.Infra.build_simple_removal_sources(rope, candidate)
 
         tm.that(updates, none=False)
         if updates is None:
@@ -139,7 +139,7 @@ class TestsFlextInfraRefactorCensusPreview:
         tmp_path: Path,
     ) -> None:
         """Validate a public preview while preserving the source artifact."""
-        repository_root, package_root = test_u.Tests.create_lazy_init_workspace(
+        repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-demo",
             package_name="flext_demo",
@@ -155,7 +155,7 @@ class TestsFlextInfraRefactorCensusPreview:
             "        return run()\n"
         )
         module_path.write_text(original_source, encoding="utf-8")
-        test_u.Tests.provision_checkout(repository_root)
+        u.Tests.provision_checkout(repository_root)
         candidate = m.Infra.RemovalCandidate(
             project="flext-demo",
             file_path=str(module_path.resolve()),
@@ -168,7 +168,7 @@ class TestsFlextInfraRefactorCensusPreview:
         )
 
         with flext_infra.infra.rope_workspace(repository_root) as rope:
-            preview = infra_u.Infra.preview_simple_removal_candidate(
+            preview = u.Infra.preview_simple_removal_candidate(
                 rope,
                 repository_root,
                 candidate,

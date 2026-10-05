@@ -10,19 +10,32 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import c, m, u
-from tests import u as test_u
+from flext_infra import c, m
+from tests import u
 
 
 class TestsFlextInfraGitRefsSemantics:
     """Prove the single canonical ref owner per fact through the public facade."""
 
     @staticmethod
+    def _linked_lane(tmp_path: Path, repository: Path, branch: str) -> Path:
+        """Register ``branch`` as a linked worktree lane beside the primary.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
+        lane = tmp_path / branch
+        _ = u.Tests.git_run(repository, "branch", branch)
+        _ = u.Tests.git_run(repository, "worktree", "add", str(lane), branch)
+        return lane
+
+    @staticmethod
     def test_current_branch_reports_the_checked_out_branch(
         tmp_path: Path,
     ) -> None:
         """The single branch owner reads the branch the worktree is on."""
-        repository = test_u.Tests.git_repository(tmp_path)
+        repository = u.Tests.git_repository(tmp_path)
 
         branch = tm.ok(
             u.Infra.git_current_branch(m.Infra.GitRepoRequest(repo_root=repository)),
@@ -35,8 +48,8 @@ class TestsFlextInfraGitRefsSemantics:
         tmp_path: Path,
     ) -> None:
         """A detached HEAD has no branch; the owner fails instead of a sentinel."""
-        repository = test_u.Tests.git_repository(tmp_path)
-        _ = test_u.Tests.git_run(repository, "checkout", "--detach", c.Infra.GIT_HEAD)
+        repository = u.Tests.git_repository(tmp_path)
+        _ = u.Tests.git_run(repository, "checkout", "--detach", c.Infra.GIT_HEAD)
 
         result = u.Infra.git_current_branch(
             m.Infra.GitRepoRequest(repo_root=repository),
@@ -48,7 +61,7 @@ class TestsFlextInfraGitRefsSemantics:
     @staticmethod
     def test_ref_exists_distinguishes_present_from_absent(tmp_path: Path) -> None:
         """The ref owner answers the exact-ref question, never raising on absence."""
-        repository = test_u.Tests.git_repository(tmp_path)
+        repository = u.Tests.git_repository(tmp_path)
 
         present = tm.ok(
             u.Infra.git_ref_exists(
@@ -73,7 +86,7 @@ class TestsFlextInfraGitRefsSemantics:
     @staticmethod
     def test_check_branch_format_accepts_and_rejects(tmp_path: Path) -> None:
         """The branch-format owner answers from Git's own check-ref-format."""
-        repository = test_u.Tests.git_repository(tmp_path)
+        repository = u.Tests.git_repository(tmp_path)
 
         valid = tm.ok(
             u.Infra.git_check_branch_format(
@@ -91,7 +104,7 @@ class TestsFlextInfraGitRefsSemantics:
     @staticmethod
     def test_resolve_commit_and_rev_parse_agree_on_head(tmp_path: Path) -> None:
         """Both oid owners resolve the same HEAD to the same 40-hex oid."""
-        repository = test_u.Tests.git_repository(tmp_path)
+        repository = u.Tests.git_repository(tmp_path)
 
         resolved = tm.ok(
             u.Infra.git_resolve_commit(
@@ -116,7 +129,7 @@ class TestsFlextInfraGitRefsSemantics:
     @staticmethod
     def test_resolve_commit_fails_on_an_unknown_commitish(tmp_path: Path) -> None:
         """An unresolvable commit-ish is a failure, never an empty oid."""
-        repository = test_u.Tests.git_repository(tmp_path)
+        repository = u.Tests.git_repository(tmp_path)
 
         result = u.Infra.git_resolve_commit(
             m.Infra.GitCommitishRequest(
@@ -133,8 +146,8 @@ class TestsFlextInfraGitRefsSemantics:
         tmp_path: Path,
     ) -> None:
         """The toplevel owner reports the worktree it was asked about, not the primary."""
-        repository = test_u.Tests.git_repository(tmp_path)
-        lane = test_u.Tests.git_linked_lane(tmp_path, repository, "toplevel-lane")
+        repository = u.Tests.git_repository(tmp_path)
+        lane = self._linked_lane(tmp_path, repository, "toplevel-lane")
 
         primary_root = tm.ok(
             u.Infra.git_show_toplevel(m.Infra.GitRepoRequest(repo_root=repository)),
@@ -151,8 +164,8 @@ class TestsFlextInfraGitRefsSemantics:
         tmp_path: Path,
     ) -> None:
         """The worktree-list owner reports every registered checkout of the repo."""
-        repository = test_u.Tests.git_repository(tmp_path)
-        lane = test_u.Tests.git_linked_lane(tmp_path, repository, "list-lane")
+        repository = u.Tests.git_repository(tmp_path)
+        lane = self._linked_lane(tmp_path, repository, "list-lane")
 
         listed = tm.ok(
             u.Infra.git_list_worktrees(m.Infra.GitRepoRequest(repo_root=repository)),
