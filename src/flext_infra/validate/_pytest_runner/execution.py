@@ -195,6 +195,8 @@ class FlextInfraPytestRunnerExecution(
             detail = log_text.strip()
             msg = f"testmon selection failed ({outcome.raw_return_code}): {detail}"
             raise RuntimeError(msg)
+        if self.collection_command_prefix:
+            self._bind_child_profile(report_dir, manifest_path.with_suffix(".pstats"))
         if not owns_no_tests:
             self._collection_diagnostics(report_log)
         if (

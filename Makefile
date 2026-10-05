@@ -2276,8 +2276,9 @@ profile-gen-report: _builtin_require_environment
 # guard and environment as the bounded gate, but deliberately NOT wrapped in
 # PYTEST_BOUNDED. The runner's own deadline still applies. Central collection
 # children also write profiles beside their manifests and print their paths.
-# The stdlib-only adapter starts profiling before runner/model/pytest imports.
-# The parent sidecar binds the exact run;
+# The parent adapter starts profiling before runner/model/pytest imports; each
+# child runs under a stdlib-only launcher, so pytest imports before any plugin
+# package. The runner binds every child profile to the exact run;
 # reports never combine a parent profile with the mutable latest.txt pointer.
 # Public names come from make.verbs; these targets are the implementations.
 _builtin-profile-test: _builtin_require_environment

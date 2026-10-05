@@ -52,10 +52,7 @@ class FlextInfraPytestRunnerBase(s[int]):
     profile_enabled: Annotated[
         bool,
         m.Field(
-            description=(
-                "Run the suite under the profiling entrypoint bound to this "
-                "invocation's run receipt."
-            ),
+            description="Profile the real suite child and preserve its native exit",
         ),
     ] = False
     slow_phase: Annotated[
