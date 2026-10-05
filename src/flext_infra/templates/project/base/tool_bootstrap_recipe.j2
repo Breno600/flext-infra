@@ -190,13 +190,21 @@
    the persistent cache, and `make upg` (release resolution, lock, launcher).
    Every other Mise call runs through mise_offline. The Makefile preamble owns
    the credential selection; the passthrough carries it into env -i. -#}
+	# The only tolerated Mise warning: ephemeral CI runners ship pre-seeded
+	# shims (python3, make) and `mise install` always announces it declines to
+	# replace them while every real install still succeeds (cosmos-main PR 346
+	# CI run 37348896444, bead on cosmos-l2wc2). Every OTHER mise WARN stays
+	# fatal: red-means-red is untouched.
+	mise_has_blocking_warning() { \
+		grep -F 'mise WARN' "$$1" | grep -Fv 'not replacing unmanaged file in shims directory' | grep -q .; \
+	}; \
 	mise_checked() { \
 		mise_log="$$1"; shift; \
 		printf 'setup probe: begin stage=%s log=%s\n' "$${mise_log##*/}" "$$mise_log" >&2; \
 		if "$$@" >"$$mise_log" 2>&1; then :; \
 		else mise_status=$$?; cat "$$mise_log"; printf 'setup probe: failed stage=%s exit=%s\n' "$${mise_log##*/}" "$$mise_status" >&2; return "$$mise_status"; fi; \
 		cat "$$mise_log"; \
-		if grep -Fq 'mise WARN' "$$mise_log"; then \
+		if mise_has_blocking_warning "$$mise_log"; then \
 			printf 'ERROR: Mise emitted a warning; setup stopped (see %s)\n' "$$mise_log" >&2; return 2; \
 		fi; \
 		printf 'setup probe: end stage=%s exit=0\n' "$${mise_log##*/}" >&2; \
@@ -206,7 +214,7 @@
 		if "$$@" >"$$mise_stdout_log" 2>"$$mise_stderr_log"; then :; \
 		else mise_status=$$?; cat "$$mise_stderr_log" >&2; cat "$$mise_stdout_log"; return "$$mise_status"; fi; \
 		cat "$$mise_stderr_log" >&2; cat "$$mise_stdout_log"; \
-		if grep -Fq 'mise WARN' "$$mise_stderr_log" || grep -Fq 'mise WARN' "$$mise_stdout_log"; then \
+		if mise_has_blocking_warning "$$mise_stderr_log" || mise_has_blocking_warning "$$mise_stdout_log"; then \
 			printf 'ERROR: Mise emitted a warning; setup stopped (see %s)\n' "$$mise_stderr_log" >&2; return 2; \
 		fi; \
 	}; \
