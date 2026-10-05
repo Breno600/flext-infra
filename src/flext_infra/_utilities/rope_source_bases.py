@@ -62,6 +62,58 @@ class FlextInfraUtilitiesRopeSourceBases:
             qualified_base=".".join((binding.qualified_base, *attributes)),
         )
 
+    @staticmethod
+    def _module_import_binding(
+        source: str,
+        module: str,
+        name: str,
+    ) -> m.Infra.SourceClassReference | None:
+        """Return one module's top-level import binding for ``name``.
+
+        Only the leading import block is consulted — the binding a facade
+        class re-exports lives in its home module's imports — and the search
+        stops at the first statement that rebinds ``name``, so a shadowed
+        import never wins.
+
+        Returns:
+            The resulting ``m.Infra.SourceClassReference | None``.
+
+        """
+        package = module.rpartition(".")[0]
+        for node in ast.parse(source).body:
+            if isinstance(node, ast.ImportFrom):
+                parts = package.split(".") if package else []
+                if node.level:
+                    if node.level > len(parts):
+                        return None
+                    prefix = ".".join(parts[: len(parts) - node.level + 1])
+                    imported = ".".join(
+                        part for part in (prefix, node.module) if part
+                    )
+                else:
+                    imported = node.module or ""
+                for alias in node.names:
+                    if (alias.asname or alias.name) == name:
+                        target = f"{imported}.{alias.name}"
+                        return m.Infra.SourceClassReference(
+                            target=imported,
+                            attributes=(alias.name,),
+                            qualified_base=target,
+                        )
+            elif isinstance(node, ast.Import):
+                for alias in node.names:
+                    first_part = alias.name.partition(".")[0]
+                    bound = alias.asname or first_part
+                    if bound == name:
+                        target = alias.name if alias.asname else first_part
+                        return m.Infra.SourceClassReference(
+                            target=target,
+                            qualified_base=target,
+                        )
+            elif isinstance(node, (ast.Assign, ast.AnnAssign, ast.ClassDef, ast.If)):
+                break
+        return None
+
     @classmethod
     def _inventory(
         cls,
@@ -318,10 +370,14 @@ class FlextInfraUtilitiesRopeSourceBases:
                     if not path or path.rsplit(".", 1)[-1] != value.get_name():
                         message = f"Missing external class declaration: {name}:{line}"
                         raise ValueError(message)
-                    return resolve(m.Infra.SourceClassReference(
-                        target=name, attributes=tuple(path.split(".")),
-                        qualified_base=f"{name}.{path}",
-                    ))
+                    identity = f"{name}:{path}:{line}"
+                    if identity not in definitions:
+                        message = (
+                            "Inventoried module lacks its class definition: "
+                            f"{identity}"
+                        )
+                        raise ValueError(message)
+                    return identity
                 identity = next(
                     (
                         identity
@@ -569,10 +625,40 @@ class FlextInfraUtilitiesRopeSourceBases:
             return linearizations[identity]
 
         def member(identity: str, name: str, visiting: frozenset[str]) -> str:
-            # visiting threads the resolver's cycle guard through this hop:
-            # a member reference resolves through resolve(), and dropping the
-            # set here let provider/member chains restart with an empty guard
-            # and recurse until the interpreter limit (flext-20yyv).
+            # visiting threads the resolver's cycle guard through this hop,
+            # and the hop's own key joins the set: a member chain that keeps
+            # producing fresh references (each resolve starts a new key) must
+            # still trip the guard on the second pass over the same member
+            # path (flext-20yyv).
+            member_key = f"{identity}.{name}"
+            if member_key in visiting:
+                message = f"Cyclic member resolution: {member_key}"
+                raise ValueError(message)
+            visiting = visiting | {member_key}
+            # A facade class re-exports its home module's bindings (preset
+            # classes expose pydantic BaseModel et al. as class attributes
+            # without a class-body binding): resolve the home module's
+            # import binding first — the module-level import chain terminates
+            # on the external provider instead of cycling through the class.
+            # Only the import block is consulted: a full on-demand inventory
+            # walks dependency class trees (conditional pydantic classes) and
+            # its namespace side effects re-enter this resolver.
+            home_module = identity.partition(":")[0]
+            home_bindings = modules.get(home_module)
+            if home_bindings is None:
+                home_resource = project.find_module(home_module)
+                if home_resource is not None:
+                    home_binding = cls._module_import_binding(
+                        home_resource.read(),
+                        home_module,
+                        name,
+                    )
+                    if home_binding is not None:
+                        return resolve(home_binding, visiting)
+            elif home_bindings is not None:
+                home_binding = home_bindings.get(name)
+                if home_binding is not None:
+                    return resolve(home_binding, visiting)
             for ancestor in linearize(identity):
                 if ancestor in definitions:
                     members = definitions[ancestor].members
