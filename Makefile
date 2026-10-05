@@ -732,26 +732,26 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 		mise_offline_mode="$$1"; shift; \
 		mise_exec "$$mise_offline_mode" env 'MISE_OFFLINE=true' "$$@"; \
 	}; \
-	bootstrap_state="$(PROJECT_ROOT)/../.$(notdir $(PROJECT_ROOT)).mise-bootstrap-state"; \
-	{ \
-		printf "scratch='%s'\n" "$$scratch"; \
-		printf "project_root='%s'\n" "$$project_root"; \
-		printf "project_parent='%s'\n" "$$project_parent"; \
-		printf "mise_storage_root='%s'\n" "$$mise_storage_root"; \
-		printf "pinned_mise='%s'\n" "$$pinned_mise"; \
-		printf "caller_path='%s'\n" "$$caller_path"; \
-		printf "caller_mise_version='%s'\n" "$$caller_mise_version"; \
-		printf "caller_github_token='%s'\n" "$$caller_github_token"; \
-		printf "caller_gh_token='%s'\n" "$$caller_gh_token"; \
-		printf "caller_mise_github_token='%s'\n" "$$caller_mise_github_token"; \
-		printf "caller_mise_http_timeout='%s'\n" "$$caller_mise_http_timeout"; \
-		printf "caller_flext_mypy_profile_output='%s'\n" "$$caller_flext_mypy_profile_output"; \
-		printf "caller_comspec='%s'\n" "$$caller_comspec"; \
-		printf "caller_pathext='%s'\n" "$$caller_pathext"; \
-		printf "caller_systemroot='%s'\n" "$$caller_systemroot"; \
-		printf "caller_windir='%s'\n" "$$caller_windir"; \
-		printf "mise_lockfile_platforms='%s'\n" "$$mise_lockfile_platforms"; \
-	} > "$$bootstrap_state"; \
+	bootstrap_state="$(PROJECT_ROOT)/../.$(notdir $(PROJECT_ROOT)).mise-bootstrap-state"; { \
+		printf "scratch='%s'\n" "$${scratch:-}"; \
+		printf "mise='%s'\n" "$${mise:-}"; \
+		printf "project_root='%s'\n" "$${project_root:-}"; \
+		printf "project_parent='%s'\n" "$${project_parent:-}"; \
+		printf "mise_storage_root='%s'\n" "$${mise_storage_root:-}"; \
+		printf "pinned_mise='%s'\n" "$${pinned_mise:-}"; \
+		printf "caller_path='%s'\n" "$${caller_path:-}"; \
+		printf "caller_mise_version='%s'\n" "$${caller_mise_version:-}"; \
+		printf "caller_github_token='%s'\n" "$${caller_github_token:-}"; \
+		printf "caller_gh_token='%s'\n" "$${caller_gh_token:-}"; \
+		printf "caller_mise_github_token='%s'\n" "$${caller_mise_github_token:-}"; \
+		printf "caller_mise_http_timeout='%s'\n" "$${caller_mise_http_timeout:-}"; \
+		printf "caller_flext_mypy_profile_output='%s'\n" "$${caller_flext_mypy_profile_output:-}"; \
+		printf "caller_comspec='%s'\n" "$${caller_comspec:-}"; \
+		printf "caller_pathext='%s'\n" "$${caller_pathext:-}"; \
+		printf "caller_systemroot='%s'\n" "$${caller_systemroot:-}"; \
+		printf "caller_windir='%s'\n" "$${caller_windir:-}"; \
+		printf "mise_lockfile_platforms='%s'\n" "$${mise_lockfile_platforms:-}"; \
+	} > "$$bootstrap_state"
 # The only tolerated Mise warning: ephemeral CI runners ship pre-seeded
 	# shims (python3, make) and `mise install` always announces it declines to
 	# replace them while every real install still succeeds (cosmos-main PR 346
@@ -760,9 +760,8 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 	bootstrap_state="$(PROJECT_ROOT)/../.$(notdir $(PROJECT_ROOT)).mise-bootstrap-state"; \
 	. "$$bootstrap_state"; \
 	rm -f "$$bootstrap_state"; \
-	# The probe shell is a separate recipe shell: it re-derives its state from
-	# the state file shell 1 wrote, and re-declares the two functions shell 1
-	# owns (shell functions do not cross recipe shells).
+	pinned_mise="$$mise"; \
+	scratch=$$(mktemp -d "$${TMPDIR:-/tmp}/flext-setup-probe.XXXXXX"); \
 mise_exec() { \
 		mise_config_mode="$$1"; shift; \
 		case "$$mise_config_mode" in \
