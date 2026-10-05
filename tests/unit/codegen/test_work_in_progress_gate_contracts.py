@@ -39,7 +39,7 @@ _RENDERED_CI = Path(__file__).resolve().parents[3] / ".github" / "workflows" / "
 _WIP = config.Infra.codegen.make.work_in_progress
 
 
-class TestsWorkInProgressGates:
+class TestsFlextInfraWorkInProgressGates:
     """Prove the WIP merge predicate end to end on the rendered artifact."""
 
     @staticmethod

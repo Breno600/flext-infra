@@ -16,6 +16,23 @@ from flext_infra._utilities._rope_analysis.asthelpers import (
 )
 
 
+def _is_sequence_constructor_wrap(value: ast.expr) -> bool:
+    """Whether one expression wraps a bare name in a sequence constructor call.
+
+    Returns:
+        The resulting ``bool``.
+
+    """
+    return (
+        isinstance(value, ast.Call)
+        and isinstance(value.func, ast.Name)
+        and value.func.id in {"tuple", "list", "frozenset", "set"}
+        and len(value.args) == 1
+        and not value.keywords
+        and isinstance(value.args[0], ast.Name)
+    )
+
+
 class FlextInfraUtilitiesRopeAnalysisSourceScan:
     """Source-level rope parsing, literal scanning, and reference extraction.
 
@@ -91,14 +108,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         """
         if isinstance(value, ast.Name):
             return value.id
-        if (
-            isinstance(value, ast.Call)
-            and isinstance(value.func, ast.Name)
-            and value.func.id in {"tuple", "list", "frozenset", "set"}
-            and len(value.args) == 1
-            and not value.keywords
-            and isinstance(value.args[0], ast.Name)
-        ):
+        if _is_sequence_constructor_wrap(value):
             return value.args[0].id
         return ""
 
@@ -407,6 +417,8 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
                 return ((), (reference,))
             case ast.Call(func=ast.Name(id="MappingProxyType"), args=[mapping]):
                 value = mapping
+            case _:
+                pass
         if not isinstance(value, ast.Dict):
             return cls.mapping_entries_refs(value)
         targets: MutableMapping[str, list[str]] = {}
@@ -421,10 +433,12 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
                         elts=[
                             ast.Constant(value=str(module)),
                             ast.Constant(value=str()),
-                        ]
+                        ],
                     ),
                 ):
                     targets.setdefault(module, []).append(name)
+                case _:
+                    continue
         return (
             tuple((module, tuple(targets[module])) for module in sorted(targets)),
             (),

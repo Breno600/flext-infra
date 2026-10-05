@@ -167,8 +167,10 @@ class FlextInfraCodegenPipeline(
                 f"Scaffold: {scaffold_created} files created",
                 f"Auto-fix: {fixed} violations fixed",
                 f"Census after: {after_violations} violations",
-                f"Improvement: {before_violations - after_violations} "
-                f"violations resolved",
+                (
+                    f"Improvement: {before_violations - after_violations} "
+                    f"violations resolved"
+                ),
             ]),
         )
 
