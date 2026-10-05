@@ -348,7 +348,34 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 		esac; \
 	done; \
 	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
-	trap 'if [ -n "$${lock_stage:-}" ] && [ -d "$$lock_stage" ] && [ ! -f "$$lock_stage/transaction.json" ]; then find "$$lock_stage" -depth -delete; fi; find "$$scratch" -depth -delete' EXIT; \
+	readonly scratch; \
+	lock_stage=; \
+	trap 'bootstrap_status=$$?; trap - EXIT; \
+		lock_cleanup_status=0; scratch_cleanup_status=0; diagnostic_status=0; scratch_present=0; \
+		if [ -d "$$scratch" ]; then scratch_present=1; fi; \
+		if printf "mise scratch: cleanup path=%s present=%s entering_status=%s\n" "$$scratch" "$$scratch_present" "$$bootstrap_status" >&2; then :; \
+		else diagnostic_status=$$?; fi; \
+		if [ -n "$$lock_stage" ] && [ -d "$$lock_stage" ] && [ ! -f "$$lock_stage/transaction.json" ]; then \
+			if find "$$lock_stage" -depth -delete; then :; else \
+				lock_cleanup_status=$$?; \
+				if printf "ERROR: Mise lock stage cleanup failed: %s exit=%s\n" "$$lock_stage" "$$lock_cleanup_status" >&2; then :; \
+				else diagnostic_status=$$?; fi; \
+			fi; \
+		fi; \
+		if find "$$scratch" -depth -delete; then :; else \
+			scratch_cleanup_status=$$?; \
+			if printf "ERROR: Mise scratch cleanup failed: %s exit=%s\n" "$$scratch" "$$scratch_cleanup_status" >&2; then :; \
+			else diagnostic_status=$$?; fi; \
+		fi; \
+		if [ "$$bootstrap_status" -eq 0 ]; then \
+			if [ "$$lock_cleanup_status" -ne 0 ]; then bootstrap_status=$$lock_cleanup_status; \
+			elif [ "$$scratch_cleanup_status" -ne 0 ]; then bootstrap_status=$$scratch_cleanup_status; \
+			else bootstrap_status=$$diagnostic_status; fi; \
+		fi; \
+		if printf "mise scratch: cleaned path=%s lock_cleanup_status=%s scratch_cleanup_status=%s exit=%s\n" "$$scratch" "$$lock_cleanup_status" "$$scratch_cleanup_status" "$$bootstrap_status" >&2; then :; \
+		else diagnostic_status=$$?; if [ "$$bootstrap_status" -eq 0 ]; then bootstrap_status=$$diagnostic_status; fi; fi; \
+		exit "$$bootstrap_status"' EXIT; \
+	printf 'mise scratch: allocated path=%s\n' "$$scratch" >&2; \
 	mkdir -p "$$scratch/home" "$$scratch/home" "$$scratch/appdata" "$$scratch/appdata" "$$scratch/xdg-config" "$$scratch/xdg-data" "$$scratch/xdg-cache" "$$scratch/xdg-state" "$$scratch/config" "$$scratch/tmp" "$$scratch/." "$$scratch/system-config" "$$scratch/system-data" "$$scratch/system-installs" "$$scratch/system-shims" "$$scratch/tmp" "$$scratch/tmp" "$$scratch/tmp"; \
 : > "$$scratch/global-config.toml"; chmod 600 "$$scratch/global-config.toml"; \
 : > "$$scratch/system-config/config.toml"; chmod 600 "$$scratch/system-config/config.toml"; \
@@ -583,7 +610,34 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 		esac; \
 	done; \
 	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
-	trap 'if [ -n "$${lock_stage:-}" ] && [ -d "$$lock_stage" ] && [ ! -f "$$lock_stage/transaction.json" ]; then find "$$lock_stage" -depth -delete; fi; find "$$scratch" -depth -delete' EXIT; \
+	readonly scratch; \
+	lock_stage=; \
+	trap 'bootstrap_status=$$?; trap - EXIT; \
+		lock_cleanup_status=0; scratch_cleanup_status=0; diagnostic_status=0; scratch_present=0; \
+		if [ -d "$$scratch" ]; then scratch_present=1; fi; \
+		if printf "mise scratch: cleanup path=%s present=%s entering_status=%s\n" "$$scratch" "$$scratch_present" "$$bootstrap_status" >&2; then :; \
+		else diagnostic_status=$$?; fi; \
+		if [ -n "$$lock_stage" ] && [ -d "$$lock_stage" ] && [ ! -f "$$lock_stage/transaction.json" ]; then \
+			if find "$$lock_stage" -depth -delete; then :; else \
+				lock_cleanup_status=$$?; \
+				if printf "ERROR: Mise lock stage cleanup failed: %s exit=%s\n" "$$lock_stage" "$$lock_cleanup_status" >&2; then :; \
+				else diagnostic_status=$$?; fi; \
+			fi; \
+		fi; \
+		if find "$$scratch" -depth -delete; then :; else \
+			scratch_cleanup_status=$$?; \
+			if printf "ERROR: Mise scratch cleanup failed: %s exit=%s\n" "$$scratch" "$$scratch_cleanup_status" >&2; then :; \
+			else diagnostic_status=$$?; fi; \
+		fi; \
+		if [ "$$bootstrap_status" -eq 0 ]; then \
+			if [ "$$lock_cleanup_status" -ne 0 ]; then bootstrap_status=$$lock_cleanup_status; \
+			elif [ "$$scratch_cleanup_status" -ne 0 ]; then bootstrap_status=$$scratch_cleanup_status; \
+			else bootstrap_status=$$diagnostic_status; fi; \
+		fi; \
+		if printf "mise scratch: cleaned path=%s lock_cleanup_status=%s scratch_cleanup_status=%s exit=%s\n" "$$scratch" "$$lock_cleanup_status" "$$scratch_cleanup_status" "$$bootstrap_status" >&2; then :; \
+		else diagnostic_status=$$?; if [ "$$bootstrap_status" -eq 0 ]; then bootstrap_status=$$diagnostic_status; fi; fi; \
+		exit "$$bootstrap_status"' EXIT; \
+	printf 'mise scratch: allocated path=%s\n' "$$scratch" >&2; \
 	mkdir -p "$$scratch/home" "$$scratch/home" "$$scratch/appdata" "$$scratch/appdata" "$$scratch/xdg-config" "$$scratch/xdg-data" "$$scratch/xdg-cache" "$$scratch/xdg-state" "$$scratch/config" "$$scratch/tmp" "$$scratch/." "$$scratch/system-config" "$$scratch/system-data" "$$scratch/system-installs" "$$scratch/system-shims" "$$scratch/tmp" "$$scratch/tmp" "$$scratch/tmp"; \
 : > "$$scratch/global-config.toml"; chmod 600 "$$scratch/global-config.toml"; \
 : > "$$scratch/system-config/config.toml"; chmod 600 "$$scratch/system-config/config.toml"; \
@@ -873,9 +927,11 @@ shim_farm="$$mise_storage_root/shims"; \
 		printf '%s\n' "$$shim_farm" >> "$$GITHUB_PATH"; \
 fi; \
 	printf 'setup: entering lifecycle (submodules, environment, hooks) make=%s\n' "$(SELF_MAKE_EXECUTABLE)"; \
+	scratch_present=0; if [ -d "$$scratch" ]; then scratch_present=1; fi; \
+	printf 'mise scratch: before lifecycle path=%s present=%s\n' "$$scratch" "$$scratch_present" >&2; \
 	mise_runtime_path="$$mise_storage_root/bootstrap/mise-$${runtime_release}"; \
 	if [ "$(OS)" = "Windows_NT" ]; then mise_runtime_path="$$mise_runtime_path.exe"; fi; \
-	env \
+	if env \
 "MISE_DATA_DIR=$$mise_storage_root" \
 "MISE_CACHE_DIR=$$mise_storage_root/cache" \
 "MISE_STATE_DIR=$$mise_storage_root/state" \
@@ -893,7 +949,12 @@ fi; \
 		"SETUP_DIRENV=$$direnv_executable" \
 		"SETUP_PYTHON=$$python_executable" \
 		"SETUP_DIRENV_XDG_DATA_HOME=$$caller_xdg_data_home" \
-		"CI=$(CI)" $(SELF_MAKE) $(TOOL_BOOTSTRAP_LIFECYCLE)
+		"CI=$(CI)" $(SELF_MAKE) $(TOOL_BOOTSTRAP_LIFECYCLE); then lifecycle_status=0; \
+	else lifecycle_status=$$?; fi; \
+	scratch_present=0; if [ -d "$$scratch" ]; then scratch_present=1; fi; \
+	if printf 'mise scratch: after lifecycle path=%s present=%s status=%s\n' "$$scratch" "$$scratch_present" "$$lifecycle_status" >&2; then :; \
+	else lifecycle_diagnostic_status=$$?; if [ "$$lifecycle_status" -eq 0 ]; then lifecycle_status=$$lifecycle_diagnostic_status; fi; fi; \
+	exit "$$lifecycle_status"
 
 # Every repository evaluates only itself, locally exactly as in CI: a workspace
 # root consumes its members as installed libraries and never fans a verb out
