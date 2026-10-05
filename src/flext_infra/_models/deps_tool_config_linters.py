@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
 from flext_cli import m
 
@@ -382,6 +382,16 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         plugins: Annotated[t.StrSequence, m.Field(description="Mypy plugins list.")] = (
             m.Field(default_factory=tuple)
         )
+        disable_error_code: Annotated[
+            t.StrSequence,
+            m.Field(
+                alias="disable-error-code",
+                description=(
+                    "Mypy error codes suspended fleet-side at this gate-owner"
+                    " config for a dated, proven toolchain limitation."
+                ),
+            ),
+        ] = m.Field(default_factory=tuple)
         facade_rebind_error_codes: Annotated[
             t.StrSequence,
             m.Field(
@@ -424,6 +434,35 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 "auto-generated files and PEP 695 generics."
             ),
         )
+
+        @m.model_validator(mode="after")
+        def _require_pydantic_plugin(self) -> Self:
+            """Keep the pydantic mypy plugin structural in every projection.
+
+            Operator order 2026-10-05 (bead gc-eqvqx5): the pydantic mypy
+            plugin is MANDATORY, ALWAYS. An empty declaration defaults to
+            the plugin; no projection may emit ``[tool.mypy]`` without it,
+            so no codegen path can omit it.
+
+            Returns:
+                The validated configuration.
+
+            Raises:
+                ValueError: If a declared plugins list omits the pydantic
+                    mypy plugin.
+
+            """
+            if not self.plugins:
+                self.plugins = ("pydantic.mypy",)
+                return self
+            if "pydantic.mypy" not in self.plugins:
+                msg = (
+                    "tools.mypy.plugins must include the pydantic mypy plugin"
+                    " (operator order 2026-10-05, bead gc-eqvqx5); got"
+                    f" {self.plugins!r}"
+                )
+                raise ValueError(msg)
+            return self
 
     class PydanticMypyConfig(m.ArbitraryTypesModel):
         """Pydantic mypy plugin settings loaded from YAML."""
