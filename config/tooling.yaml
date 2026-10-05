@@ -373,6 +373,14 @@ Infra:
                 runtime-import-in-type-checking-block,
               ]
               authority: operator-direct-order-2026-10-05-tc001-tc004-off-pydantic
+              reason: >-
+                Operator direct order 2026-10-05: TC001-TC004 are disabled in
+                Ruff so the rules never execute on any file — they break
+                Pydantic classes (field annotations are runtime-evaluated, so
+                moving their imports into TYPE_CHECKING leaves models "not
+                fully defined"), and model_rebuild stays forbidden. The rule
+                names remain declared here in the SSOT and are never removed;
+                canonical tracking beads flext-p7bxt and flext-4536i.
             - rules: [missing-required-import, implicit-namespace-package]
               authority: operator-ruling-2026-10-03-import-banners-off-global
               reason: >-
