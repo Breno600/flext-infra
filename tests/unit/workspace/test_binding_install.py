@@ -71,11 +71,15 @@ class TestsFlextInfraBindingInstall:
             (
                 supplier,
                 "binding-candidate",
-                f'\n[project.optional-dependencies]\nfeature = ["binding-extra @ {extra.as_uri()}"]\n',
+                (
+                    "\n[project.optional-dependencies]\n"
+                    f'feature = ["binding-extra @ {extra.as_uri()}"]\n'
+                ),
             ),
         ):
             (root / c.PYPROJECT_FILENAME).write_text(
-                '[build-system]\nrequires = ["setuptools"]\nbuild-backend = "setuptools.build_meta"\n'
+                '[build-system]\nrequires = ["setuptools"]\n'
+                'build-backend = "setuptools.build_meta"\n'
                 f'[project]\nname = "{name}"\nversion = "1.0.0"\n{optional}'
                 f'\n[tool.setuptools]\npy-modules = ["{name.replace("-", "_")}"]\n',
                 encoding=c.Cli.ENCODING_DEFAULT,
@@ -102,7 +106,8 @@ class TestsFlextInfraBindingInstall:
         declaration = consumer / c.PYPROJECT_FILENAME
         declaration.write_text(
             '[project]\nname = "binding-consumer"\nversion = "1.0.0"\n'
-            f'dependencies = ["Binding_Candidate[feature]>={minimum}{marker}"]\n{constraints}',
+            f'dependencies = ["Binding_Candidate[feature]>={minimum}{marker}"]\n'
+            f"{constraints}",
             encoding=c.Cli.ENCODING_DEFAULT,
         )
         original = declaration.read_bytes()
@@ -170,7 +175,10 @@ class TestsFlextInfraBindingInstall:
             u.Cli.run((
                 str(python),
                 "-c",
-                "import binding_candidate, binding_extra; print(binding_candidate.VALUE, binding_extra.VALUE)",
+                (
+                    "import binding_candidate, binding_extra; "
+                    "print(binding_candidate.VALUE, binding_extra.VALUE)"
+                ),
             )),
         )
         tm.that(installed.stdout.strip(), eq="installed installed")

@@ -296,32 +296,16 @@ class FlextInfraModelsCheck:
             default_factory=dict,
             description="Gate name to execution mapping",
         )
-        informational_gates: t.VariadicTuple[str] = m.Field(
-            default=(),
-            description=(
-                "Gate ids whose findings stay reported but never fail the "
-                "project (config-owned posture)"
-            ),
-        )
 
         @m.computed_field
         @property
         def passed(self) -> bool:
-            """Whether every blocking gate passed.
-
-            Informational gates (``informational_gates``) keep their verdict
-            and findings in the report, but the project verdict ignores them
-            so their debt cannot block `make check` or CI.
+            """Whether every gate passed.
 
             Returns:
                 The resulting ``bool``.
             """
-            informational = frozenset(self.informational_gates)
-            return all(
-                v.result.passed
-                for gate_id, v in self.gates.items()
-                if gate_id not in informational
-            )
+            return all(v.result.passed for v in self.gates.values())
 
         @m.computed_field
         @property
