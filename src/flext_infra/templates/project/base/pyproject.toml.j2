@@ -225,9 +225,9 @@ plugins = [
   {{ item | tojson }},
 {% endfor %}
 ]
-{% if tooling.tools.mypy.ruling_disable_error_codes %}
+{% if tooling.tools.mypy.disable_error_code %}
 disable_error_code = [
-{% for item in tooling.tools.mypy.ruling_disable_error_codes %}
+{% for item in tooling.tools.mypy.disable_error_code %}
   {{ item | tojson }},
 {% endfor %}
 ]
@@ -286,9 +286,6 @@ search-path = [{% for item in tooling_runtime.pyrefly_search_path %}{{ item | to
 use-ignore-files = {{ tooling.tools.pyrefly.use_ignore_files | lower }}
 
 [tool.pyrefly.errors]
-{% for item in tooling.tools.pyrefly.ignored_errors | sort %}
-{{ item }} = "ignore"
-{% endfor %}
 {% for item in tooling.tools.pyrefly.strict_errors | sort %}
 {{ item }} = "error"
 {% endfor %}
@@ -438,6 +435,16 @@ unfixable = [
 
 [tool.ruff.lint.flake8-copyright]
 notice-rgx = {{ tooling.tools.ruff.lint.copyright_notice_rgx | tojson }}
+
+{# Bases derived from the project's own classes: each imported base that
+   subclasses a declared runtime-evaluated root keeps its annotation imports
+   at runtime (Pydantic evaluates field annotations). #}
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = [
+{% for item in tooling_runtime.ruff_runtime_evaluated_base_classes %}
+  {{ item | tojson }},
+{% endfor %}
+]
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = {{ tooling.tools.ruff.lint.ban_relative_imports | tojson }}

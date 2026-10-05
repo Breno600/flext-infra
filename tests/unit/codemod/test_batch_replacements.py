@@ -63,6 +63,26 @@ class TestsFlextInfraBatchReplacements:
         tm.ok(FlextInfraModReplacements.publish(root, report))
         tm.that(path.read_bytes(), eq=original.replace(b"before", b"after"))
 
+    def test_removed_references_leave_no_type_only_import_scaffold(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Publishing a rewrite normalizes imports as well as formatting."""
+        root = u.Tests.git_repository(tmp_path)
+        path = root / "subject.py"
+        original = (
+            b"from __future__ import annotations\n\n"
+            b"from typing import TYPE_CHECKING\n\n"
+            b"if TYPE_CHECKING:\n    from pathlib import Path\n\n"
+            b'value = "before"\n__all__ = ("value",)\n'
+        )
+        report = self._report(path, original)
+        tm.ok(FlextInfraModReplacements.publish(root, report))
+        tm.that(path.read_text(), lacks="TYPE_CHECKING")
+        tm.that(path.read_text(), lacks="from pathlib import Path")
+        tm.that(path.read_text(), has='value = "after"')
+        tm.that(path.read_text(), has='__all__ = ("value",)')
+
     def test_generator_findings_remain_visible_and_unmodified(
         self,
         tmp_path: Path,
