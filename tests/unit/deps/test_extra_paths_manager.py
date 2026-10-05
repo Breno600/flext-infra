@@ -107,7 +107,8 @@ class TestsFlextInfraExtraPathsManager:
 
         tm.fail(
             TestsFlextInfraExtraPathsSupport.manager().sync_one(
-                pyproject, is_root=True,
+                pyproject,
+                is_root=True,
             ),
             has="TOML write",
         )

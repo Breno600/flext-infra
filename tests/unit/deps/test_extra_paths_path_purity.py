@@ -44,7 +44,9 @@ class TestsFlextInfraExtraPathsArePure:
     ) -> None:
         """A member never reaches out of its own root to find a dependency."""
         consumer = TestsFlextInfraExtraPathsSupport.project(
-            tmp_path, "flext-ldap", "flext_ldap",
+            tmp_path,
+            "flext-ldap",
+            "flext_ldap",
         )
         consumer.joinpath("pyproject.toml").write_text(
             (
@@ -57,7 +59,9 @@ class TestsFlextInfraExtraPathsArePure:
             encoding="utf-8",
         )
         _ = TestsFlextInfraExtraPathsSupport.project(
-            tmp_path, "flext-core", "flext_core",
+            tmp_path,
+            "flext-core",
+            "flext_core",
         )
 
         manager = TestsFlextInfraExtraPathsSupport.manager(tmp_path)
