@@ -450,7 +450,10 @@ notice-rgx = "Copyright \\(c\\) \\d{4} \\S[^\\n]*\\. All rights reserved\\."
 
 [tool.ruff.lint.flake8-type-checking]
 runtime-evaluated-base-classes = [
+<<<<<<< HEAD
   "flext_cli.FlextCli",
+=======
+>>>>>>> origin/0.12.0-dev
   "flext_cli.config.FlextCliConfig",
   "flext_cli.m.ArbitraryTypesModel",
   "flext_cli.m.BaseModel",

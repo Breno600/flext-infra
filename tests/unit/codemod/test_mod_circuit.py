@@ -186,7 +186,7 @@ class TestsFlextInfraModCliRoute:
         mod_workspace: Path,
     ) -> None:
         """Carry findings exposed by one rewrite into the next apply iteration."""
-        test_u.Tests.declare_codemod_rules(
+        u.Tests.declare_codemod_rules(
             mod_workspace,
             {
                 "first": (

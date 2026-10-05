@@ -178,9 +178,10 @@ class FlextInfraUtilitiesRopeSourceBases:
                                     value,
                                     (ast.Name, ast.Attribute, ast.Subscript),
                                 )
-                                and isinstance(head, ast.Name)
                                 and not (
-                                    head.id in visible and visible[head.id] is None
+                                    isinstance(head, ast.Name)
+                                    and head.id in visible
+                                    and visible[head.id] is None
                                 )
                                 else None
                             )
@@ -281,6 +282,15 @@ class FlextInfraUtilitiesRopeSourceBases:
                         raise ValueError(
                             f"Unresolved external base: {target}",
                         ) from error
+                    if not FlextInfraUtilitiesRopeRuntime.abstract_class(value):
+                        # A cross-package facade rebind (flext_cli.FlextCliConfig)
+                        # resolves through a TYPE_CHECKING import aimed at a
+                        # data package, so rope lands on the unknown-object
+                        # placeholder instead of a class: the base cannot
+                        # contribute to the derivation (bases() skips it).
+                        raise ValueError(
+                            f"Unresolved external base: {target}",
+                        )
                     return external_identity(value)
             # Builtin classes have no Python source resource. Rope owns that
             # native namespace, not an ambient import of a planned package.
@@ -348,10 +358,14 @@ class FlextInfraUtilitiesRopeSourceBases:
                     except ValueError as error:
                         # A cross-package facade attribute the lazy namespace
                         # machinery exposes only at runtime (PEP 562) is
-                        # invisible to rope's static lookup: the base cannot
-                        # contribute to the derivation, and the remaining
-                        # bases still describe the lineage.
-                        if str(error).startswith("Unresolved external base:"):
+                        # invisible to rope's static lookup, and third-party
+                        # bases (libcst) have no source module resource: the
+                        # base cannot contribute to the derivation, and the
+                        # remaining bases still describe the lineage.
+                        message = str(error)
+                        if message.startswith(
+                            "Unresolved external base:",
+                        ) or message.startswith("No source module for required base:"):
                             continue
                         raise
                 return tuple(parents) if parents else (object_id,)
