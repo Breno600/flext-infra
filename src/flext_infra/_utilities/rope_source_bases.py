@@ -178,9 +178,10 @@ class FlextInfraUtilitiesRopeSourceBases:
                                     value,
                                     (ast.Name, ast.Attribute, ast.Subscript),
                                 )
-                                and isinstance(head, ast.Name)
                                 and not (
-                                    head.id in visible and visible[head.id] is None
+                                    isinstance(head, ast.Name)
+                                    and head.id in visible
+                                    and visible[head.id] is None
                                 )
                                 else None
                             )
@@ -348,10 +349,14 @@ class FlextInfraUtilitiesRopeSourceBases:
                     except ValueError as error:
                         # A cross-package facade attribute the lazy namespace
                         # machinery exposes only at runtime (PEP 562) is
-                        # invisible to rope's static lookup: the base cannot
-                        # contribute to the derivation, and the remaining
-                        # bases still describe the lineage.
-                        if str(error).startswith("Unresolved external base:"):
+                        # invisible to rope's static lookup, and third-party
+                        # bases (libcst) have no source module resource: the
+                        # base cannot contribute to the derivation, and the
+                        # remaining bases still describe the lineage.
+                        message = str(error)
+                        if message.startswith(
+                            "Unresolved external base:",
+                        ) or message.startswith("No source module for required base:"):
                             continue
                         raise
                 return tuple(parents) if parents else (object_id,)

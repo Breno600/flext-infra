@@ -41,10 +41,11 @@ class TestsFlextInfraGateRegistry:
         make = config.Infra.codegen.make
         allowed = frozenset(make.check_gates_allowed)
         default = frozenset(make.check_gates_default)
-        opt_in = frozenset(make.opt_in_check_gates)
+        informational = frozenset(make.informational_check_gates)
+        local_only = frozenset(make.ci.local_check_gates)
         tm.that(default <= allowed, eq=True)
-        tm.that(opt_in <= allowed, eq=True)
-        tm.that(default.isdisjoint(opt_in), eq=True)
+        tm.that(informational <= allowed, eq=True)
+        tm.that(informational.isdisjoint(local_only), eq=True)
         tm.that(
             frozenset(c.Infra.CANONICAL_FIXABLE_GATE_IDS)
             <= frozenset(c.Infra.CANONICAL_GATE_IDS),
