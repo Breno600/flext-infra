@@ -12,6 +12,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import time
 from collections.abc import Generator
 from pathlib import Path
 from warnings import WarningMessage
@@ -153,6 +154,12 @@ class FlextInfraPytestCollection:
             """
             session = self.session
             if session is None or report.when != "teardown":
+                return
+            # The instant is computed in the runner parent and handed to this
+            # process as a CLI option; a clock skew between the two (or a
+            # stale parent clock) must never stop a suite whose deadline has
+            # not actually passed on this process's own monotonic clock.
+            if time.monotonic() < self.stop_at_monotonic:
                 return
             self.completed_items.add(report.nodeid)
             total_items = len(session.items)
