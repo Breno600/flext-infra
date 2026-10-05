@@ -110,13 +110,18 @@ class FlextInfraProtocolsDocs(Protocol):
 
     @runtime_checkable
     class MkDocsLoadConfig(Protocol):
-        """Contract for ``mkdocs.config.load_config``."""
+        """Contract for ``mkdocs.config.load_config``.
+
+        MkDocs 1.6 takes the settings path as ``config_file``; the retired
+        ``config_file_path`` keyword is silently absorbed by ``**kwargs``,
+        which made every build load whatever ``mkdocs.yml`` the working
+        directory happened to hold.
+
+        """
 
         def __call__(
             self,
             config_file: str,
-            *,
-            site_dir: str,
         ) -> MutableMapping[str, cli_p.AttributeProbe]: ...
 
     @runtime_checkable

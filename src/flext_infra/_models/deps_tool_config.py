@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Annotated, Literal, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import t
 from flext_infra._models.deps_tool_config_linters import (
@@ -129,7 +129,10 @@ class FlextInfraModelsDepsToolConfig(
 
             """
             if (self.workers is None) == (self.cpu_fraction is None):
-                msg = "PytestWorkerCeiling requires exactly one of workers or cpu_fraction"
+                msg = (
+                    "PytestWorkerCeiling requires exactly one of"
+                    " workers or cpu_fraction"
+                )
                 raise ValueError(msg)
             return self
 
@@ -165,7 +168,9 @@ class FlextInfraModelsDepsToolConfig(
             m.Field(
                 alias="run-timeout-seconds",
                 gt=0,
-                description="Fleet-default wall-clock maximum for one testmon runner operation.",
+                description=(
+                    "Fleet-default wall-clock maximum for one testmon runner operation."
+                ),
             ),
         ]
         run_timeout_overrides: Annotated[
@@ -202,7 +207,9 @@ class FlextInfraModelsDepsToolConfig(
             Literal["function", "class", "module", "package", "session"],
             m.Field(
                 alias="asyncio-default-fixture-loop-scope",
-                description="Explicit event-loop lifetime for asynchronous pytest fixtures.",
+                description=(
+                    "Explicit event-loop lifetime for asynchronous pytest fixtures."
+                ),
             ),
         ]
         progress_args: Annotated[
@@ -440,7 +447,7 @@ class FlextInfraModelsDepsToolConfig(
             """Xdist depth per worker: the running item plus one queued, or a chunk."""
             return max(2, self.parallel_schedule_chunk)
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_execution_limits(self) -> Self:
             """Keep item and termination budgets inside the hard invocation cap.
 
@@ -620,7 +627,9 @@ class FlextInfraModelsDepsToolConfig(
             m.Field(
                 alias="exclude-also",
                 default_factory=tuple,
-                description="Coverage report line patterns excluded from runtime coverage.",
+                description=(
+                    "Coverage report line patterns excluded from runtime coverage."
+                ),
             ),
         ]
         omit: Annotated[
@@ -904,6 +913,15 @@ class FlextInfraModelsDepsToolConfig(
         mypy_facade_rebind_modules: Annotated[
             t.StrTuple,
             m.Field(description="Modules written in the canonical facade-rebind form"),
+        ]
+        ruff_runtime_evaluated_base_classes: Annotated[
+            t.StrTuple,
+            m.Field(
+                description=(
+                    "Imported base classes whose subclasses evaluate their "
+                    "annotations at runtime"
+                ),
+            ),
         ]
         pyrefly_search_path: Annotated[
             t.StrTuple,

@@ -83,7 +83,7 @@ class FlextInfraDuplicationGate(FlextInfraGate):
                 stdout="",
                 stderr=(
                     f"{c.Infra.JSCPD_BINARY} not found on PATH; `make setup` "
-                    "provisions it from codegen.toolchain.jscpd_version"
+                    "provisions it from codegen.toolchain.tools entry 'jscpd'"
                 ),
                 # jscpd itself exits 1 when it finds clones, so an absent binary
                 # must not borrow that code or the gate would read it as a scan.
@@ -187,8 +187,8 @@ class FlextInfraDuplicationGate(FlextInfraGate):
             ),
         )
 
+    @staticmethod
     def _read_project_config(
-        self,
         project_dir: Path,
     ) -> p.Result[m.Infra.ProjectDuplicationOverrides]:
         """Read ``[tool.flext.project.duplication]`` from pyproject.toml.

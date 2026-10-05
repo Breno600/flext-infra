@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from git import GitCommandError, InvalidGitRepositoryError, Repo
+from git import GitCommandError, HookExecutionError, InvalidGitRepositoryError, Repo
 
 from flext_core import r
 from flext_infra import m
@@ -215,7 +215,7 @@ class FlextInfraUtilitiesGitSemanticPathsMixin(
         cls,
         request: m.Infra.GitCommitRequest,
     ) -> p.Result[m.Infra.GitOidReport]:
-        """Create a commit with the staged tree via ``git commit``.
+        """Create a commit with the staged tree, gated by the repository hooks.
 
         Returns:
             The resulting ``p.Result[m.Infra.GitOidReport]``.
@@ -224,7 +224,7 @@ class FlextInfraUtilitiesGitSemanticPathsMixin(
         try:
             repo = cls._repo(request.repo_root)
             commit = repo.index.commit(request.message)
-        except GitCommandError as exc:
+        except (GitCommandError, HookExecutionError) as exc:
             return r[m.Infra.GitOidReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitOidReport].fail(

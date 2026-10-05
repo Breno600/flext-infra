@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, MutableMapping
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from flext_core import r
 from flext_infra import c, m, u
@@ -60,7 +60,7 @@ class FlextInfraModReplacements:
                 "generated findings require canonical generator repair: "
                 + ", ".join(generated),
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def publish(cls, root: Path, report: m.Infra.ModScanReport) -> p.Result[bool]:
@@ -99,7 +99,8 @@ class FlextInfraModReplacements:
                     Mapping,
                 ):
                     return r[bool].fail(
-                        f"ast-grep finding lacks byte coordinates: {path}:{finding.rule_id}",
+                        f"ast-grep finding lacks byte coordinates: "
+                        f"{path}:{finding.rule_id}",
                     )
                 offsets = m.Infra.ModReplacementOffsets.model_validate(raw_offsets)
                 matched = m.Infra.ModReplacementOffsets.model_validate(raw_match)
@@ -143,14 +144,116 @@ class FlextInfraModReplacements:
         )
         if published.failure:
             return r[bool].from_failure(published)
-        # A node-exact replacement (an emptied statement fix) leaves the
-        # surrounding blank-line skeleton of the source line behind, so the
-        # published bytes must be normalized before the mod circuit's own
-        # first-pass format check reads them.
+        # AST rewrites can also leave imports whose last reference was removed.
+        with u.Infra.open_project(root) as rope_project:
+            normalized = u.Infra.normalize_imports(
+                rope_project,
+                file_paths=tuple(sorted(grouped)),
+            )
+        if normalized.failure:
+            return r[bool].from_failure(normalized)
+        stripped = FlextInfraModReplacements._strip_dead_type_only_scaffolds(
+            tuple(sorted(grouped)),
+        )
+        if stripped.failure:
+            return r[bool].from_failure(stripped)
         formatted = FlextInfraRuffFormatGate.format_files(root, tuple(sorted(grouped)))
         if formatted.failure:
             return r[bool].from_failure(formatted)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
+
+    @staticmethod
+    def _strip_dead_type_only_scaffolds(paths: t.SequenceOf[Path]) -> p.Result[bool]:
+        """Remove ``if TYPE_CHECKING:`` scaffolds whose body an earlier pass emptied.
+
+        Import normalization drops the last real reference inside a type-only
+        block and a statement fix leaves ``pass`` behind; the scaffold then
+        carries no information. The block is removed and the ``TYPE_CHECKING``
+        import goes with it once nothing references it anymore. Unparsable
+        subjects are left untouched; the following format gate stays the owner
+        of any syntax verdict.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        import libcst as cst
+
+        class _DeadScaffold(cst.CSTTransformer):
+            """Remove ``if TYPE_CHECKING:`` blocks whose body is only ``pass``."""
+
+            @override
+            def leave_If(
+                self,
+                original_node: cst.If,
+                updated_node: cst.If,
+            ) -> cst.If | cst.RemovalSentinel:
+                test = updated_node.test
+                body = updated_node.body
+                if isinstance(test, cst.Name) and test.value == "TYPE_CHECKING":
+                    statements = (
+                        body.body
+                        if isinstance(
+                            body,
+                            cst.SimpleStatementSuite | cst.IndentedBlock,
+                        )
+                        else ()
+                    )
+                    if len(statements) == 1 and isinstance(
+                        statements[0],
+                        cst.SimpleStatementLine,
+                    ):
+                        inner = statements[0].body
+                        if len(inner) == 1 and isinstance(inner[0], cst.Pass):
+                            return cst.RemoveFromParent()
+                return updated_node
+
+        class _OrphanImport(cst.CSTTransformer):
+            """Drop the ``TYPE_CHECKING`` name once its block is gone."""
+
+            @override
+            def leave_ImportFrom(
+                self,
+                original_node: cst.ImportFrom,
+                updated_node: cst.ImportFrom,
+            ) -> cst.ImportFrom | cst.RemovalSentinel:
+                module = updated_node.module
+                if not (isinstance(module, cst.Name) and module.value == "typing"):
+                    return updated_node
+                names = updated_node.names
+                if isinstance(names, cst.ImportStar):
+                    return updated_node
+                kept = tuple(
+                    alias
+                    for alias in names
+                    if not (
+                        isinstance(alias.name, cst.Name)
+                        and alias.name.value == "TYPE_CHECKING"
+                    )
+                )
+                if len(kept) == len(names):
+                    return updated_node
+                if not kept:
+                    return cst.RemoveFromParent()
+                return updated_node.with_changes(names=kept)
+
+        changed = False
+        for path in paths:
+            if not path.is_file():
+                continue
+            before = path.read_text(c.Cli.ENCODING_DEFAULT)
+            try:
+                module = cst.parse_module(before)
+            except cst.ParserSyntaxError:
+                continue
+            stripped = module.visit(_DeadScaffold())
+            if stripped.code.count("TYPE_CHECKING") == 1:
+                stripped = stripped.visit(_OrphanImport())
+            if stripped.code == before:
+                continue
+            path.write_text(stripped.code, c.Cli.ENCODING_DEFAULT)
+            changed = True
+        return r[bool].ok(value=changed)
 
 
 __all__: list[str] = ["FlextInfraModReplacements"]

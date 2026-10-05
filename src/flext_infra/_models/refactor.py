@@ -15,7 +15,7 @@ from typing import Annotated, ClassVar
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._models.mixins import FlextInfraModelsMixins as mm
+from flext_infra._models.mixins import FlextInfraModelsMixins
 from flext_infra._models.refactor_ast_grep import FlextInfraModelsRefactorGrep
 from flext_infra._models.refactor_namespace_enforcer import (
     FlextInfraModelsNamespaceEnforcer,
@@ -33,13 +33,16 @@ class FlextInfraModelsRefactor(
     - ``ArbitraryTypesModel`` for mutable report/result payloads.
     """
 
-    class ModTextCommand(mm.WriteMixin, m.ContractModel):
+    class ModTextCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
         """Repository-scoped request for authenticated Sed rule replay."""
 
-    class RefactorNamespaceEnforceInput(mm.WriteMixin, m.ContractModel):
+    class RefactorNamespaceEnforceInput(
+        FlextInfraModelsMixins.WriteMixin,
+        m.ContractModel,
+    ):
         """CLI/service request for namespace enforcement."""
 
-    class AccessorMigrationInput(mm.WriteMixin, m.ContractModel):
+    class AccessorMigrationInput(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
         """CLI/service request for accessor migration dry-runs and applies."""
 
         preview_limit: Annotated[
@@ -180,7 +183,7 @@ class FlextInfraModelsRefactor(
 
     # -- CSV-driven Rename Models ---------------------------------------------
 
-    class ModCommand(mm.WriteMixin, m.ContractModel):
+    class ModCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
         """CLI request for the shared AST, semantic, and text codemod cascade."""
 
         check: Annotated[bool, m.Field(description="Validate without writing")] = False
@@ -189,7 +192,7 @@ class FlextInfraModelsRefactor(
             m.Field(alias="dry-run", description="Inspect without writing"),
         ] = False
 
-    class ApplyRenamesInput(mm.WriteMixin, m.ContractModel):
+    class ApplyRenamesInput(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
         """Validated CLI request for CSV-driven symbol renames."""
 
         csv: Annotated[
@@ -204,28 +207,39 @@ class FlextInfraModelsRefactor(
             t.MappingKV[str, t.StrSequence],
             m.Field(
                 default_factory=lambda: MappingProxyType[str, t.StrSequence]({}),
-                description="CSV expression prefixes mapped to current public Rope owner identities",
+                description=(
+                    "CSV expression prefixes mapped to current"
+                    " public Rope owner identities"
+                ),
             ),
         ]
         text_globs: Annotated[
             t.StrSequence,
             m.Field(
                 default=(),
-                description="Explicit root-relative non-Python documentation and configuration text surfaces",
+                description=(
+                    "Explicit root-relative non-Python documentation"
+                    " and configuration text surfaces"
+                ),
             ),
         ]
         python_documentation: Annotated[
             bool,
             m.Field(
                 default=False,
-                description="Rename comments and actual Python docstrings, preserving executable string payloads",
+                description=(
+                    "Rename comments and actual Python docstrings,"
+                    " preserving executable string payloads"
+                ),
             ),
         ]
         exclude_globs: Annotated[
             t.StrSequence,
             m.Field(
                 default=(),
-                description="Declared generated projections excluded from campaign targets",
+                description=(
+                    "Declared generated projections excluded from campaign targets"
+                ),
             ),
         ]
 
@@ -242,7 +256,9 @@ class FlextInfraModelsRefactor(
         occurrences: Annotated[
             t.NonNegativeInt,
             m.Field(
-                description="Pending authenticated source edit spans from the current scan",
+                description=(
+                    "Pending authenticated source edit spans from the current scan"
+                ),
             ),
         ] = 0
         files_changed: Annotated[

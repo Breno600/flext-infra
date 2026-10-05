@@ -344,7 +344,8 @@ class FlextInfraUtilitiesRepository:
             return parsed
         return r[t.Pair[str, str]].fail(
             "project.flext_source declares an integration line, never a commit "
-            f"(uv.lock records it and only `make upg` moves it): {project.flext_source}",
+            f"(uv.lock records it and only `make upg` moves it): "
+            f"{project.flext_source}",
         )
 
     @classmethod
@@ -458,8 +459,11 @@ class FlextInfraUtilitiesRepository:
                     "declared internal dependency provenance must be HTTPS: "
                     f"{requirement}",
                 )
-            suffix = f"/{name}.git"
-            if not url.endswith(suffix):
+            # ``dep_name`` normalizes PEP 503 (hyphens); repository slugs in
+            # URLs may spell the same distribution with underscores, so the
+            # ownership check compares normalized slugs, never raw spellings.
+            repo_slug = url.removesuffix(".git").rsplit("/", 1)[-1]
+            if repo_slug.replace("_", "-") != name:
                 return r[t.Pair[str, str]].fail(
                     f"internal dependency source must be the {name} repository: "
                     f"{requirement}",
@@ -467,7 +471,8 @@ class FlextInfraUtilitiesRepository:
             if cls.ref_is_commit(ref):
                 # Projection residue of a retired pin: it names no line.
                 continue
-            lines.setdefault((url.removesuffix(suffix), ref), requirement)
+            family_base = url.removesuffix(".git").rsplit("/", 1)[0]
+            lines.setdefault((family_base, ref), requirement)
         if len(lines) > 1:
             declared = "; ".join(sorted(lines.values()))
             return r[t.Pair[str, str]].fail(

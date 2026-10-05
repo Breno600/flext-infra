@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, override
 
 from flext_tests import tm
 
-from flext_infra import main as infra_main
+from flext_infra import main
 from flext_infra.maintenance.python_version import FlextInfraPythonVersionEnforcer
 from tests import u
 
@@ -32,7 +32,7 @@ class TestsFlextInfraInfraMaintenanceMain:
         args = ["maintenance"]
         if argv is not None:
             args.extend(argv)
-        return infra_main(args)
+        return main(args)
 
     @staticmethod
     def _create_workspace(root: Path, *, python_minor: int = 13) -> Path:
@@ -52,7 +52,8 @@ class TestsFlextInfraInfraMaintenanceMain:
         (root / ".python-version").write_text(f"3.{python_minor}\n", encoding="utf-8")
         return root
 
-    def _make_enforcer(self, workspace: Path) -> FlextInfraPythonVersionEnforcer:
+    @staticmethod
+    def _make_enforcer(workspace: Path) -> FlextInfraPythonVersionEnforcer:
         class _TestEnforcer(FlextInfraPythonVersionEnforcer):
             @override
             def _repository_root_from_file(self, file: str | Path) -> Path:

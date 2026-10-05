@@ -50,12 +50,12 @@ class TestsFlextInfraFixerInternals:
         tm.that(u.Infra.anchorize("Hello World"), eq="hello-world")
         tm.that(
             u.Infra.build_toc("# Main\n\nNo sections here.\n"),
-            has="No sections found",
+            eq=f"{c.Infra.TOC_START}\n\n{c.Infra.TOC_END}",
         )
 
+    @staticmethod
     @pytest.mark.parametrize("separator", ["\n", "\n\n", "\n\n\n"])
     def test_fix_keeps_closing_fence_on_its_own_line(
-        self,
         tmp_path: Path,
         separator: str,
     ) -> None:

@@ -42,11 +42,11 @@ class FlextInfraCProfileReport(s[bool]):
     run_receipt: Annotated[
         Path | None,
         m.Field(
-            description="Explicit parent profile receipt for a collection profiling run",
+            description="Parent profile receipt for a collection profiling run",
         ),
     ] = None
 
-    @u.model_validator(mode="after")
+    @m.model_validator(mode="after")
     def _validate_report_paths(self) -> Self:
         """Keep profile input and output inside the workspace report tree.
 
@@ -158,7 +158,7 @@ class FlextInfraCProfileReport(s[bool]):
         written = u.Cli.atomic_write_text_file(self.output, stream.getvalue())
         if written.failure:
             return r[bool].from_failure(written)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraCProfileReport"]

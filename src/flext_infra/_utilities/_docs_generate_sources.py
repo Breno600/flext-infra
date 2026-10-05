@@ -200,7 +200,7 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
                     f"{c.Infra.DOCS_SOURCE_STATE_RACE_MARKER}: {expected.path}; "
                     f"differing={list(differing)}",
                 )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraUtilitiesDocsGenerateSourcesMixin"]

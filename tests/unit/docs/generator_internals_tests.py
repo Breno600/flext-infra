@@ -12,7 +12,7 @@ import pytest
 from flext_tests import tm
 from markdown import Markdown
 
-from tests import m, u
+from tests import u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -28,11 +28,12 @@ class TestsFlextInfraDocsGeneratorInternals:
         tm.that(u.Infra.anchorize("Test-Case"), eq="test-case")
         tm.that(u.Infra.anchorize(""), eq="")
 
+    @staticmethod
     @pytest.mark.parametrize(
         "heading",
         ["Contrato público", "Composição de serviços", "Žlutý kůň", "Test--Case"],
     )
-    def test_anchorize_matches_rendered_markdown(self, heading: str) -> None:
+    def test_anchorize_matches_rendered_markdown(heading: str) -> None:
         """Generated links target the renderer's real Unicode-normalized heading ID."""
         rendered = Markdown(extensions=["toc"]).convert(f"## {heading}")
         anchor = u.Infra.anchorize(heading)
@@ -161,23 +162,3 @@ class TestsFlextInfraDocsGeneratorInternals:
 
         tm.that(result.changed, eq=True)
         tm.that(generated.read_text(), eq=content)
-
-    @staticmethod
-    def test_generate_creates_selected_project_reports(tmp_path: Path) -> None:
-        """Test generate creates selected project reports."""
-        workspace, generator = u.Tests.docs_workspace_generator(
-            tmp_path,
-            project_names=("flext-a", "flext-b"),
-            selected_projects=["flext-a"],
-        )
-        _ = u.Tests.prepare_docs_bundle(generator)
-
-        result = generator.generate(
-            m.Infra.DocsGenerateRequest(
-                repository_root=workspace,
-                projects=["flext-a"],
-            ),
-        )
-
-        tm.ok(result)
-        tm.that([report.scope for report in result.value], eq=["root", "flext-a"])

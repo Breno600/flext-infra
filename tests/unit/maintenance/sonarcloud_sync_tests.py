@@ -99,12 +99,13 @@ class TestsFlextInfraSonarcloudSettingsSync:
     def _cli(
         repository_root: Path,
         env: t.StrMapping | None = None,
+        *,
+        verb: str = c.Infra.VERB_SONARCLOUD_SYNC,
     ) -> t.Pair[int, str]:
-        """Run the public CLI route in a child process without SONAR_TOKEN.
+        """Run a public SonarCloud route in a child process.
 
         Returns:
             The resulting ``t.Pair[int, str]``.
-
         """
         result = tm.ok(
             u.Cli.run_raw(
@@ -113,7 +114,7 @@ class TestsFlextInfraSonarcloudSettingsSync:
                     "-m",
                     "flext_infra",
                     c.Infra.CLI_GROUP_MAINTENANCE,
-                    c.Infra.VERB_SONARCLOUD_SYNC,
+                    verb,
                     "--repository-root",
                     str(repository_root),
                 ],
@@ -250,3 +251,40 @@ class TestsFlextInfraSonarcloudSettingsSync:
 
         tm.that(code, ne=0)
         tm.that(output, has="SONAR_TOKEN is required")
+
+    def test_issue_search_requires_token_before_network(self, tmp_path: Path) -> None:
+        """The read-only public route stops before Git or HTTP without a token."""
+        code, output = self._cli(tmp_path, verb=c.Infra.VERB_SONARCLOUD_ISSUES)
+
+        tm.that(code, ne=0)
+        tm.that(output, has="SONAR_TOKEN is required")
+
+    @staticmethod
+    def test_issue_search_response_parses_published_page_contract() -> None:
+        """A missing line stays explicit while page accounting remains required."""
+        payload = tm.ok(
+            u.Cli.json_dumps({
+                "paging": {"pageIndex": 1, "pageSize": 100, "total": 2},
+                "issues": [
+                    {
+                        "key": "issue-1",
+                        "rule": "python:S1",
+                        "component": "org_repo:a.py",
+                        "line": 4,
+                        "message": "First",
+                    },
+                    {
+                        "key": "issue-2",
+                        "rule": "python:S2",
+                        "component": "org_repo:b.py",
+                        "message": "Second",
+                    },
+                ],
+            }),
+        )
+
+        response = m.Infra.SonarcloudIssueSearch.model_validate_json(payload)
+
+        tm.that(response.paging.total, eq=len(response.issues))
+        tm.that(response.issues[0].line, eq=4)
+        tm.that(response.issues[1].line, eq=None)

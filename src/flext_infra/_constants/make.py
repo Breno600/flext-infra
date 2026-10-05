@@ -62,6 +62,7 @@ class FlextInfraConstantsMake:
     VERB_RUN: ClassVar[str] = "run"
     VERB_CHECKS: ClassVar[str] = "checks"
     VERB_SONARCLOUD_SYNC: ClassVar[str] = "sonarcloud-sync"
+    VERB_SONARCLOUD_ISSUES: ClassVar[str] = "sonarcloud-issues"
 
     CLI_GROUP_CHECK: ClassVar[str] = "check"
     CLI_GROUP_CODEGEN: ClassVar[str] = "codegen"
@@ -98,20 +99,13 @@ class FlextInfraConstantsMake:
         for gate in FlextInfraConstantsCheck.SARIF_TOOL_INFO
         if gate not in FlextInfraConstantsCheck.MUTATING_GATES
     )
-    # markdown-code and markdown-format stay allowed and explicitly invocable
-    # (`--gates markdown-code`), but are not default check gates: they stay
-    # out of the unset-CI default set pending review. markdown-format is
-    # structurally contradictory on the current generated docs: the gen render is not prettier-stable, so no commit can
-    # satisfy both `gen fixed point` and `prettier --check`.
-    CANONICAL_DEFAULT_GATE_IDS: ClassVar[t.VariadicTuple[str]] = tuple(
-        gate
-        for gate in CANONICAL_GATE_IDS
-        if gate
-        not in {
-            FlextInfraConstantsCheck.MARKDOWN_CODE,
-            FlextInfraConstantsCheck.MARKDOWN_FORMAT,
-        }
-    )
+    # Every read-only gate is a default check gate. The former default-check
+    # exclusion of `markdown-code` / `markdown-format` is retired: generated
+    # docs are prettier-stable now (the gen render + `.prettierignore` exclude
+    # the generated trees, and `make docs` fmt plus `make fix` markdown-code
+    # hold zero findings at the fixed point), so no commit has to choose
+    # between the gen fixed point and `prettier --check`.
+    CANONICAL_DEFAULT_GATE_IDS: ClassVar[t.VariadicTuple[str]] = CANONICAL_GATE_IDS
     CANONICAL_FIXABLE_GATE_IDS: ClassVar[t.VariadicTuple[str]] = (
         "lint",
         "markdown",
@@ -149,6 +143,7 @@ class FlextInfraConstantsMake:
 
     PYTEST_ENV_REPORTS: ClassVar[str] = "FLEXT_PYTEST_REPORTS_RAW"
     PYTEST_ENV_TARGET: ClassVar[str] = "FLEXT_PYTEST_TARGET_RAW"
+    PYTEST_ENV_TARGET_FILE: ClassVar[str] = "FLEXT_PYTEST_TARGET_FILE"
     PYTEST_ENV_CI: ClassVar[str] = "CI"
     PYTEST_ENV_TESTMON_DATAFILE: ClassVar[str] = "TESTMON_DATAFILE"
     PYTEST_WARNING_EVENTS_SUFFIX: ClassVar[str] = ".warnings.jsonl"

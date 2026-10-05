@@ -72,7 +72,7 @@ class FlextInfraCodegenCensus(s[str]):
         """Run census on all projects in workspace.
 
         Args:
-            repository_root: Override repository root (defaults to self.repository_root).
+            repository_root: Override root (defaults to self.repository_root).
             output_format: Unused, kept for API compat.
             projects: Pre-discovered projects to skip redundant discovery.
 
@@ -84,8 +84,8 @@ class FlextInfraCodegenCensus(s[str]):
         workspace = repository_root or self.repository_root
         return self._run_project_census(workspace, projects=projects)
 
+    @staticmethod
     def _run_project_census(
-        self,
         workspace: Path,
         *,
         projects: t.SequenceOf[p.Infra.ProjectInfo] | None = None,

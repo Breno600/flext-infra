@@ -42,7 +42,7 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
 
         """
         if not patch:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         direction: list[str] = ["--reverse"] if reverse else []
         try:
             repo = cls._repo(repository_root)
@@ -52,7 +52,7 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
             return r[bool].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[bool].fail(f"git apply --check failed: {exc}", exception=exc)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def git_check_patch(cls, delta: m.Infra.RepositoryDelta) -> p.Result[bool]:
@@ -146,7 +146,7 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
                         f"failed to apply gitlink: {current}: {exc}",
                         exception=exc,
                     )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _git_apply_with_ignored_additions(
@@ -187,7 +187,7 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
                 f"git apply failed on ignored additions: {exc}",
                 exception=exc,
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def git_apply_patch(cls, delta: m.Infra.RepositoryDelta) -> p.Result[bool]:
@@ -198,7 +198,7 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
 
         """
         if not delta.patch:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         check_result = cls.git_check_patch(delta)
         if check_result.failure:
             converged_result = cls._git_source_has_patch(delta)

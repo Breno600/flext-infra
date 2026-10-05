@@ -23,33 +23,8 @@ from flext_infra.refactor.namespace_enforcer import FlextInfraNamespaceEnforcer
 from flext_infra.refactor.wrapper_root_namespace import (
     FlextInfraWrapperRootNamespaceRefactor,
 )
+from flext_infra.services.cli_mod_progress import FlextInfraCliModProgress
 from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
-
-
-class FlextInfraCliModProgress:
-    """Render mod progress at the CLI transport boundary."""
-
-    def emit(self, message: str) -> None:
-        """Show the current canonical mod phase."""
-        cli.display_text(message)
-
-    def emit_rename(self, report: m.Infra.ApplyRenamesReport) -> None:
-        """Show one completed CSV campaign."""
-        cli.display_text(FlextInfraCliModProgress.render_rename(report))
-
-    @staticmethod
-    def render_rename(report: m.Infra.ApplyRenamesReport) -> str:
-        """Render native published paths and pending edit spans.
-
-        Returns:
-            The resulting ``str``.
-
-        """
-        return (
-            f"{report.label}: {report.files_changed} published file(s), "
-            f"{report.occurrences} pending source edit(s), "
-            f"{report.files_scanned} scanned file(s)"
-        )
 
 
 class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
@@ -74,7 +49,7 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
             return r[t.Cli.ResultValue].fail(
                 f"{report.occurrences} pending source edits",
             )
-        return r[t.Cli.ResultValue].ok(True)
+        return r[t.Cli.ResultValue].ok(value=True)
 
     @staticmethod
     def execute_mod(request: m.Infra.ModCommand) -> p.Result[t.Cli.ResultValue]:

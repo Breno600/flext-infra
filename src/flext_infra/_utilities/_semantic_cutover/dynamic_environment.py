@@ -20,7 +20,6 @@ from libcst.metadata import (
     QualifiedNameSource,
 )
 
-from flext_infra import m, t
 from flext_infra._utilities._semantic_cutover.bindings import (
     FlextInfraUtilitiesSemanticCutoverBindings,
 )
@@ -31,7 +30,7 @@ from flext_infra._utilities._semantic_cutover.edits import (
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
+    from flext_infra import m, p, t
 
 
 class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
@@ -190,7 +189,10 @@ class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
                         for alias in node.names
                     )
                 ):
-                    msg = "dynamic environment migration conflicts with a settings binding"
+                    msg = (
+                        "dynamic environment migration conflicts "
+                        "with a settings binding"
+                    )
                     raise ValueError(msg)
                 if isinstance(node, ast.ImportFrom) and any(
                     alias.name == "*" for alias in node.names
@@ -230,7 +232,10 @@ class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
             and path.parent.name == package.rsplit(".", maxsplit=1)[-1]
         ]
         if len(owners) != 1:
-            msg = f"dynamic environment migration requires one declared settings owner: {package}"
+            msg = (
+                f"dynamic environment migration requires one "
+                f"declared settings owner: {package}"
+            )
             raise ValueError(msg)
         methods = {
             node.name
@@ -238,7 +243,10 @@ class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
             if isinstance(node, ast.FunctionDef)
         }
         if not {"env_lookup", "env_required"} <= methods:
-            msg = f"settings owner lacks optional/required dynamic environment reads: {package}"
+            msg = (
+                f"settings owner lacks optional/required "
+                f"dynamic environment reads: {package}"
+            )
             raise ValueError(msg)
 
 

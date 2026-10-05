@@ -417,7 +417,8 @@ class FlextInfraUtilitiesPyproject:
         # process that rewrites a manifest (gen, mod, a test) reads its new
         # content on the next call instead of a stale parse.
         return FlextInfraUtilitiesPyproject._parsed_pyproject_payload(
-            pyproject_path, live.value
+            pyproject_path,
+            live.value,
         )
 
     @staticmethod

@@ -56,19 +56,35 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
         )
 
     @staticmethod
-    def _format_module_alias_import(indent: str, mod: str, export_name: str) -> str:
+    def _format_module_alias_import(
+        indent: str,
+        mod: str,
+        export_name: str,
+    ) -> t.StrSequence:
         """Format a module alias import as a from-import of its parent package.
 
         Returns:
-            The resulting ``str``.
+            The resulting ``t.StrSequence``.
 
         """
         if "." in mod and mod != ".":
             parent_mod, _, child_name = mod.rpartition(".")
-            return (
+            compact = (
                 f"{indent}from {parent_mod or '.'} import {child_name} as {export_name}"
             )
-        return f"{indent}import {mod} as {export_name}"
+            line_length = config.Infra.tooling.tools.ruff.line_length
+            if len(compact) <= line_length:
+                return (compact,)
+            nested_indent = f"{indent}    "
+            # One symbol per wrapped line is the only form Ruff's isort accepts
+            # (I001); the width contract matches _format_import so the render
+            # stays inside the configured budget (flext-xjoph).
+            return (
+                f"{indent}from {parent_mod or '.'} import (",
+                f"{nested_indent}{child_name} as {export_name},",
+                f"{indent})",
+            )
+        return (f"{indent}import {mod} as {export_name}",)
 
     @staticmethod
     def _format_type_checking_module_alias_import(
@@ -82,12 +98,10 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
             The resulting ``t.StrSequence``.
 
         """
-        return (
-            FlextInfraCodegenGenerationImportsMixin._format_module_alias_import(
-                indent,
-                mod,
-                export_name,
-            ),
+        return FlextInfraCodegenGenerationImportsMixin._format_module_alias_import(
+            indent,
+            mod,
+            export_name,
         )
 
     @staticmethod

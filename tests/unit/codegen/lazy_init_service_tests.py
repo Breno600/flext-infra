@@ -13,14 +13,15 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import config
-from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
 from tests import c, u
 
 if TYPE_CHECKING:
+    from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
     from tests import p, t
 
 
-# NOTE (multi-agent, flext-wkii.17.15): prove scoped writes and read-only drift publicly.
+# NOTE (multi-agent, flext-wkii.17.15): prove scoped writes and read-only drift
+# publicly.
 class TestsFlextInfraCodegenLazyInitService:
     """Validate real service execution without mocks or internal branching asserts."""
 
@@ -495,9 +496,9 @@ class TestsFlextInfraCodegenLazyInitService:
             msg=f"{ruff_check.value.stdout}\n{ruff_check.value.stderr}",
         )
 
+    @staticmethod
     @pytest.mark.parametrize("width_offset", [-1, 0, 1])
     def test_export_tuple_is_formatter_stable_at_line_width(
-        self,
         tmp_path: Path,
         width_offset: int,
     ) -> None:
@@ -694,9 +695,9 @@ class TestsFlextInfraCodegenLazyInitService:
     # it (stdlib-module-shadowing). Apply must remove generator-owned residue,
     # never write a new initializer, drop the child from the parent inventory
     # in the same pass, and a following check must be a byte fixed point.
+    @staticmethod
     @pytest.mark.parametrize("directory_name", ["typing", "done-check", "class", "123"])
     def test_invalid_directory_is_never_a_generated_package(
-        self,
         tmp_path: Path,
         directory_name: str,
     ) -> None:

@@ -59,8 +59,8 @@ class FlextInfraPyprojectModernizerDocument:
             .project_kind
         )
 
+    @staticmethod
     def _read_document_state(
-        self,
         path: Path,
         *,
         source: str | None = None,
@@ -348,7 +348,7 @@ class FlextInfraPyprojectModernizerDocument:
                 rendered,
                 path=path,
                 toolchain_root=self.root,
-                taplo_version=config.Infra.codegen.toolchain.taplo_version,
+                taplo_version=config.Infra.codegen.toolchain.tool_versions["taplo"],
                 process_timeout_seconds=(
                     config.Infra.tooling.tools.tomlsort.process_timeout_seconds
                 ),

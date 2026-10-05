@@ -8,6 +8,10 @@
 # config/settings import only stdlib/pydantic), so their own bootstrap
 # environment reads — e.g. the operator config-dir relocation knob — are the
 # typed boundary itself, not a bypass of it.
+# The stdlib-only native hook client is the same declared-boundary class
+# (ai-hub ADR-0018: it runs as `python3 -I -S`, may never import the typed
+# facades, and relays a provider-named variable whose name is runtime data
+# beneath the hash-verified typed contract of its immutable release).
 id: ban-ambient-environ-read
 language: python
 severity: error
@@ -20,6 +24,7 @@ ignores:
   - "**/config.py"
   - "**/_config/**"
   - "**/_config.py"
+  - "**/hook_client.py"
 rule:
   any:
     - pattern: os.environ[$KEY]

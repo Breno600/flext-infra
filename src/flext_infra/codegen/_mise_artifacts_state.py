@@ -202,7 +202,10 @@ class FlextInfraMiseArtifactsState:
                     before.parent_inode,
                 ) != (parent.device, parent.inode):
                     return result_type.fail(
-                        f"generation destination parent differs from journal: {before.path}",
+                        (
+                            f"generation destination parent differs "
+                            f"from journal: {before.path}"
+                        ),
                     )
                 bound.append(publication)
                 continue
@@ -213,7 +216,10 @@ class FlextInfraMiseArtifactsState:
                 or parent.inode is None
             ):
                 return result_type.fail(
-                    f"generation destination has no created parent authority: {before.path}",
+                    (
+                        f"generation destination has no created "
+                        f"parent authority: {before.path}"
+                    ),
                 )
             expected = m.Cli.AtomicFileState.model_validate({
                 **before.model_dump(),
@@ -225,7 +231,10 @@ class FlextInfraMiseArtifactsState:
                 return result_type.from_failure(observed)
             if observed.value != expected:
                 return result_type.fail(
-                    f"generation destination changed after parent creation: {before.path}",
+                    (
+                        f"generation destination changed "
+                        f"after parent creation: {before.path}"
+                    ),
                 )
             bound.append(
                 m.Infra.CodegenStagedFile.model_validate({
@@ -295,7 +304,10 @@ class FlextInfraMiseArtifactsState:
                         observed.value.parent_inode,
                     ) != (chain.value.anchor_device, chain.value.anchor_inode):
                         return result_type.fail(
-                            f"{phase} directory anchor changed during planning: {directory}",
+                            (
+                                f"{phase} directory anchor changed "
+                                f"during planning: {directory}"
+                            ),
                         )
                     before = observed.value
                 entry = m.Infra.CodegenJournalDirectory(
@@ -530,7 +542,10 @@ class FlextInfraMiseArtifactsState:
             )
             if entry is None or entry.created is None:
                 return r[bool].fail(
-                    f"transaction root has no durable physical identity: {relative.value}",
+                    (
+                        f"transaction root has no durable "
+                        f"physical identity: {relative.value}"
+                    ),
                 )
             if entry.manifest is None:
                 # A created directory receipt owns only that empty directory,
@@ -567,7 +582,10 @@ class FlextInfraMiseArtifactsState:
                 continue
             if entry.created is None:
                 return r[bool].fail(
-                    f"journaled directory exists without durable identity: {entry.path}",
+                    (
+                        f"journaled directory exists "
+                        f"without durable identity: {entry.path}"
+                    ),
                 )
             if cls._hosts_lease_lock(layout, target.value):
                 # The journal lease lock file persists by identity across
@@ -599,7 +617,7 @@ class FlextInfraMiseArtifactsState:
                         return r[bool].from_failure(selector)
                     relative = selector.value
                     if relative in journaled or relative in preserved:
-                        return r[bool].ok(True)
+                        return r[bool].ok(value=True)
                     # An ancestor is preservable when everything between it
                     # and a preserved descendant is itself journaled: the
                     # descendant's own guard already authenticated its subtree.
@@ -608,7 +626,7 @@ class FlextInfraMiseArtifactsState:
                         any(candidate.startswith(prefix) for candidate in preserved),
                     )
 
-                authenticated = r[bool].ok(True)
+                authenticated = r[bool].ok(value=True)
                 for resident in residents:
                     authenticated = _journaled_resident(resident, journaled, preserved)
                     if authenticated.failure:
@@ -618,7 +636,7 @@ class FlextInfraMiseArtifactsState:
                 if residents and authenticated.value:
                     continue
                 return r[bool].from_failure(removed)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def _hosts_lease_lock(
@@ -690,7 +708,10 @@ class FlextInfraMiseArtifactsState:
                 != transaction.value
             ):
                 return r[bool].fail(
-                    f"Mise transaction root identity is not journaled: {relative.value}",
+                    (
+                        f"Mise transaction root identity "
+                        f"is not journaled: {relative.value}"
+                    ),
                 )
             if recorded.manifest is None:
                 empty = u.Cli.atomic_read_empty_directory_state(
@@ -701,7 +722,10 @@ class FlextInfraMiseArtifactsState:
                     return r[bool].from_failure(empty)
                 if empty.value != recorded.created:
                     return r[bool].fail(
-                        f"unmanifested transaction root identity changed: {relative.value}",
+                        (
+                            f"unmanifested transaction root "
+                            f"identity changed: {relative.value}"
+                        ),
                     )
             else:
                 authorized = verify.authorized_cleanup_manifest(
@@ -720,7 +744,7 @@ class FlextInfraMiseArtifactsState:
         # them. Pre-restore authentication of every recorded tree and resident
         # aborted the rollback before it started, which replaced the tested
         # mixed outcome with a lost publication.
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @classmethod
     def _validate_transaction_root(
@@ -728,7 +752,7 @@ class FlextInfraMiseArtifactsState:
         target: Path,
     ) -> p.Result[t.Pair[int, int] | bool]:
         if not target.exists() and not target.is_symlink():
-            return r[tuple[int, int] | bool].ok(False)
+            return r[tuple[int, int] | bool].ok(value=False)
         identifier = target.name.removeprefix(c.Infra.TRANSACTION_DIR_PREFIX)
         if (
             not target.name.startswith(c.Infra.TRANSACTION_DIR_PREFIX)

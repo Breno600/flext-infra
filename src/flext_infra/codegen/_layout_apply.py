@@ -112,9 +112,9 @@ class FlextInfraCodegenLayoutApplyMixin(
         moved = self._move_entry(project_dir, source, target, finding.path)
         if moved.failure:
             return r[m.Infra.LayoutFinding].from_failure(moved)
-        status: t.Infra.LayoutStatus = "applied"
+        status, message = moved.value
         return r[m.Infra.LayoutFinding].ok(
-            finding.model_copy(update={"status": status, "message": moved.value}),
+            finding.model_copy(update={"status": status, "message": message}),
         )
 
     def _apply_archive(
@@ -162,7 +162,7 @@ class FlextInfraCodegenLayoutApplyMixin(
             if moved.failure:
                 return r[bool].from_failure(moved)
         self._prune_empty_dirs(source)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraCodegenLayoutApplyMixin"]

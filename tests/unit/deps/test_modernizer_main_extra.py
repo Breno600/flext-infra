@@ -40,6 +40,7 @@ class TestsFlextInfraDepsModernizerMainExtra:
         tm.that(modernizer.run(), eq=0)
         return (modernizer_workspace / c.PYPROJECT_FILENAME).read_text(encoding="utf-8")
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("content", "expected"),
         [
@@ -49,7 +50,6 @@ class TestsFlextInfraDepsModernizerMainExtra:
         ],
     )
     def test_run_handles_root_edge_cases(
-        self,
         tmp_path: Path,
         content: str | None,
         expected: int,
@@ -188,7 +188,8 @@ class TestsFlextInfraDepsModernizerMainExtra:
                 "[project]\n"
                 'name = "workspace"\n'
                 'version = "0.1.0"\n'
-                'dependencies = ["requests>=2.0", "httpx[socks]>=0.1; python_version < \'3.14\'", "flext-core"]\n\n'
+                'dependencies = ["requests>=2.0", '
+                '"httpx[socks]>=0.1; python_version < \'3.14\'", "flext-core"]\n\n'
                 "[tool.uv.workspace]\n"
                 'members = ["flext-core"]\n\n'
                 "[tool.poetry.dependencies]\n"
@@ -218,7 +219,7 @@ class TestsFlextInfraDepsModernizerMainExtra:
     def test_run_apply_rewrites_constraints_as_open_floor(
         modernizer_workspace: Path,
     ) -> None:
-        """Use installed versions as floors without imposing an artificial upper bound."""
+        """Use installed versions as floors without an artificial upper bound."""
         (modernizer_workspace / c.PYPROJECT_FILENAME).write_text(
             (
                 "[project]\n"

@@ -91,6 +91,11 @@ Infra:
           - .snapshots/**
           - .benchmarks/**
           - .hypothesis/**
+          # CHANGELOG.md files are release-please output: their bullets embed
+          # compare/commit URLs that cannot reflow under the line budget, and
+          # hand-wrapping them is overwritten by the next release render
+          # (operator authorization 2026-10-03).
+          - CHANGELOG.md
           - .mypy_cache/**
           - .pytest_cache/**
           - .ruff_cache/**
@@ -158,7 +163,7 @@ Infra:
           # --unsafe-fixes), and these rules are never auto-fixed at all,
           # because their fixes delete a diagnostic print, an assignment, a
           # redefinition, a duplicated key/value/test case or a version block
-          # (T201 once deleted print(..., file=sys.stderr) from a consumer
+          # (print once deleted print(..., file=sys.stderr) from a consumer
           # script and turned its failures silent). Ruff keeps reporting them;
           # the author decides. Also guards direct and IDE Ruff runs.
           unfixable:
@@ -174,29 +179,38 @@ Infra:
           # The only channel that promotes an unsafe Ruff fix into make fix:
           # a rule enters here with evidence that its fix preserves code,
           # comments and diagnostics. Evidence declared per entry:
-          # - relative-imports (TID252): the fleet contract is absolute-only
+          # - relative-imports (relative-imports): the fleet contract is absolute-only
           #   (ban-relative-imports: all, and make mod rewrites relative
           #   imports) — the fix enforces the declared contract, no semantics.
           # - camelcase-imported-as-lowercase (N813): pure alias rename, the
-          #   bound object is unchanged. TC001 stays OUT of this list: its fix
-          #   moves first-party imports into TYPE_CHECKING, which breaks the
-          #   eager-by-law lazy roots (see the scoped __init__.py exception).
+          #   bound object is unchanged.
+          # - typing-only-first-party-import (TC001): the fix moves an import
+          #   used only in annotations into TYPE_CHECKING; every module runs
+          #   under `from __future__ import annotations`, the runtime-evaluated
+          #   model bases are derived below (flake8-type-checking), and the
+          #   eager-by-law lazy roots never see the rule (scoped __init__.py
+          #   exception), so no runtime-read annotation loses its import.
           extend-safe-fixes:
             - relative-imports
+            - typing-only-first-party-import
             - camelcase-imported-as-lowercase
           # Every import is absolute: make mod rewrites relative imports and
           # the lazy-init generator renders absolute import statements.
           ban-relative-imports: all
           # Every module carries the copyright notice (CPY001) in the shape the
           # scaffold templates render from the project's declared author and
-          # copyright year; the SPDX line follows it in the module docstring.
+          # copyright year. The fix recipe writes the module's project-relative
+          # path, without its shared suffix, between that sentence and the
+          # SPDX line so the notice is not one stamp.
           copyright-notice-rgx: 'Copyright \(c\) \d{4} \S[^\n]*\. All rights reserved\.'
           # Repairs make fix applies after Ruff's own fixes, to findings Ruff
           # reports without a fix: each Ruff rule name maps to one recipe the
           # lint gate derives from the source (docstring sections from the
           # signature, summary and raise statement; summaries from the declared
           # name; the notice from the project's declared author and copyright
-          # year).
+          # year; a method that never reads its instance becomes a static
+          # method, its signature and decorators edited and its body kept
+          # byte for byte).
           fix-recipes:
             missing-copyright-notice: copyright-notice
             undocumented-public-class: summary-docstring
@@ -205,6 +219,15 @@ Infra:
             docstring-missing-returns: returns-section
             docstring-missing-yields: yields-section
             docstring-missing-exception: raises-section
+            no-self-use: static-method
+          # Pydantic evaluates model field annotations at runtime, so an
+          # import used only in a model annotation is runtime, not typing-only.
+          # Ruff follows imported bases only by qualified name: codegen derives
+          # every project class base that subclasses a root below into
+          # runtime-evaluated-base-classes (tooling_runtime), never a list here.
+          flake8-type-checking:
+            runtime-evaluated-roots:
+              - pydantic.BaseModel
           # Banned API messages are policy data, never template literals.
           banned-api:
             argparse: "Use cli.register_result_command + Pydantic model from flext_cli."
@@ -222,14 +245,67 @@ Infra:
           # the Google convention, the shape the docstring fix recipes render.
           # Ruff then disables the docstring rules that convention does not
           # use, one of each mutually exclusive pair select ALL enables
-          # (D203/D211, D212/D213) included, so no run warns about them.
+          # (D203/D211, multi-line-summary-first-line/D213) included, so no run warns about them.
           pydocstyle:
             convention: google
           # Each exception exists only with the operator ruling that authorized
           # it and its reason; Ruff receives the unscoped entries as `ignore`
           # and the scoped ones as `per-file-ignores`. Repositories declare no
-          # exception of their own.
+          # exception of their own. Operator order 2026-10-05: TC001-TC004 are
+          # NEVER EXECUTED by Ruff on ANY file — the four type-checking rules
+          # stay in this table by name, the unscoped ones as global `ignore`
+          # entries, and no ruling may remove them.
           authorized-exceptions:
+            # Operator ruling 2026-10-05: the whole flake8-type-checking
+            # family TC001-TC004 — typing-only-first-party-import,
+            # typing-only-third-party-import,
+            # typing-only-standard-library-import and
+            # runtime-import-in-type-checking-block — is DISABLED for every
+            # file: Ruff must not execute these rules anywhere. Declared by
+            # rule name (the fleet's canonical naming format). This supersedes
+            # the TC arms of the 2026-10-01 rulings (TC002/TC003 pydantic,
+            # TC004/TC001 lazy-root scoped forms) and of the 2026-10-03 ruling
+            # (TC001 global): the pydantic hazard those older rulings worked
+            # around is moot because the rules never run. TC004 lives in its
+            # own dedicated entry below (tc001-tc004-never-executed), so this
+            # entry carries only TC001-TC003 — one rule never enters two
+            # unscoped entries.
+            - rules: [
+                typing-only-first-party-import,
+                typing-only-third-party-import,
+                typing-only-standard-library-import,
+              ]
+              authority: operator-ruling-2026-10-05-tc-family-off-global
+              reason: >-
+                Operator ruling 2026-10-05: TC001-TC004 are blocked from
+                executing on every file; Ruff receives them as global ignores
+                declared by rule name — TC001-TC003 here, TC004 in its
+                dedicated entry below. No file may surface a
+                flake8-type-checking finding.
+            - rules: [missing-required-import, implicit-namespace-package]
+              authority: operator-ruling-2026-10-03-import-banners-off-global
+              reason: >-
+                Operator ruling 2026-10-03: I001 (unsorted-imports) stays
+                enforced as the import-order contract; I002
+                (missing-required-import) and the isort-only I003 slot are
+                DISABLED — required-import banners duplicate the
+                absolute-import law (ban-relative-imports: all) and F401
+                already governs unused imports. The lazy-root __init__
+                exception remains the only lazy form; model_rebuild stays
+                forbidden.
+            - files: "scripts/**/*.py"
+              rules:
+                - commented-out-code
+                - line-too-long
+                - typing-only-first-party-import
+              authority: operator-ruling-2026-10-02-promoted-script-surface
+              reason: >-
+                Promoted command scripts declare TOML metadata headers the
+                discovery parser reads literally, so those lines cannot reflow
+                under the line budget, and the orchestration glue keeps
+                documented-disabled blocks and deferred annotation imports
+                inline; the member repository validates this surface
+                end-to-end through its own gates.
             - files: "tests/**/*.py"
               rules: [assert]
               authority: universal-core-2026-07-20-test-idiom-s101
@@ -237,35 +313,12 @@ Infra:
                 Pytest assertions are the test contract. Ruff's S101 assert
                 restriction applies to runtime code, while tests intentionally
                 use Python assert statements to report failed expectations.
-            - rules:
-                - typing-only-third-party-import
-                - typing-only-standard-library-import
-              authority: operator-ruling-2026-10-01-tc002-tc003-pydantic
-              reason: >-
-                Pydantic evaluates field annotations at runtime, so moving
-                third-party and standard-library annotation imports into a
-                TYPE_CHECKING block breaks model construction.
             - rules: [camelcase-imported-as-lowercase]
               authority: operator-ruling-2026-10-01-n813-accepted
               reason: >-
                 The facade letters are imported as their facade class under
                 the letter (FlextInfraConstants as c), so type checkers see a
                 class rather than a variable rebind.
-            - files: "**/__init__.py"
-              rules: [runtime-import-in-type-checking-block]
-              authority: operator-ruling-2026-10-01-tc004-tid252
-              reason: >-
-                Generated lazy-init package initializers declare their exports
-                under TYPE_CHECKING and resolve them lazily at runtime, which
-                TC004 reads as runtime use.
-            - files: "**/__init__.py"
-              rules: [typing-only-first-party-import]
-              authority: operator-ruling-2026-10-01-tc001-lazy-root-eager
-              reason: >-
-                Generated lazy-init package initializers import the facade
-                namespaces eagerly by law: the namespace machinery resolves
-                them at runtime (PEP 562), so first-party imports stay eager
-                in every __init__.py.
             - files: "**/__init__.py"
               rules: [unused-import]
               authority: operator-ruling-2026-10-01-init-declared-letter-f401
@@ -279,19 +332,67 @@ Infra:
                 Generated lazy-init package initializers must execute the lazy
                 installation, which is not a re-export.
 
+
+            - files: "scripts/**"
+              rules: [any-type, unused-function-argument, undocumented-public-class, undocumented-public-method, undocumented-public-function, undocumented-public-init, unnecessary-multiline-docstring, blank-line-after-function, missing-blank-line-after-summary, multi-line-summary-first-line, raw-string-in-exception, f-string-in-exception, commented-out-code, shebang-not-executable, boolean-type-hint-positional-argument, boolean-default-value-positional-argument, read-whole-file, write-whole-file, if-exp-instead-of-or-operator, repeated-append, logging-string-concat, non-lowercase-variable-in-function, invalid-module-name, manual-list-comprehension, manual-list-copy, multiple-starts-ends-with, missing-maxsplit-arg, import-private-name, magic-value-comparison, literal-membership, unspecified-encoding, os-path-abspath, os-path-exists, os-path-join, os-path-dirname, builtin-open, path-constructor-current-directory, avoidable-escaped-quote, unsorted-dunder-all, used-dummy-variable, unused-noqa, noqa-comments, suspicious-subprocess-import, subprocess-without-shell-equals-true, start-process-with-partial-path, print, runtime-cast-value, banned-api, relative-imports, raise-vanilla-args, error-instead-of-exception, verbose-raise]
+              authority: operator-ruling-2026-10-02-mcb-scripts-automation
+              reason: >-
+                Repository automation helpers (mcb scripts/**, migrated from
+                mcb config/managed-artifacts.yaml when the project per-file
+                declaration surface retired): CLI entrypoints print to stdout,
+                drive subprocesses and use os.path; the sys.path bootstrap
+                forces module-level imports after executable code. Scoped to
+                scripts/** so shipped source keeps every rule.
+            - files: "**/tests/python/**"
+              rules: [suspicious-subprocess-import, subprocess-without-shell-equals-true, start-process-with-partial-path, raise-vanilla-args]
+              authority: operator-ruling-2026-10-02-mcb-tests-python
+              reason: >-
+                mcb tests/python exercises the scripts automation end to end and
+                legitimately drives subprocesses (migrated from the retired
+                project per-file surface: S404/S603/S607/TRY003).
       mypy:
         # Wall-time bound for the bounded Mypy execution (SSOT). A project
         # config/tooling.yaml overlay may only lower it; no environment
         # variable changes it.
         timeout_seconds: 120
+        # Pydantic mypy plugin is MANDATORY, ALWAYS (operator order
+        # 2026-10-05, bead gc-eqvqx5): the projection model defaults an
+        # empty declaration to this plugin and rejects any list that omits
+        # it, so no generated [tool.mypy] can ship without it.
         plugins: [pydantic.mypy]
+        # Dated, scoped tooling suspension (operator sharpening 2026-10-05,
+        # bead gc-eqvqx5): mypy 2.3.1/2.4.0 x pydantic 2.10.6-2.14.0b2 emit
+        # false positives for canonical pydantic 2 idioms - prop-decorator
+        # from the canonical @computed_field @property stack, call-arg from
+        # the pydantic plugin's synthesis of private attributes and
+        # mixin-declared fields. Upstream minimal repros fail identically
+        # across those versions, so the two codes are suspended HERE at the
+        # gate owner instead of contorting canonical pydantic 2 in code.
+        # Every real call-arg stays active; re-measure on the next
+        # mypy/pydantic bump and retire the suspension when upstream fixes
+        # the repros.
+        #
+        # attr-defined (same sharpening, 2026-10-05, bead gc-eqvqx5): mypy
+        # resolves every family facade letter import (`from flext_cli import
+        # u`) to the PARENT letter type because the subclass rebind inside
+        # flext_cli.utilities (`u = FlextCliUtilities`) does not re-type the
+        # module symbol under mypy; every runtime-installed namespace member
+        # (u.Cli, u.Infra, ...) then reports attr-defined although the
+        # attribute exists at runtime (PEP 562 namespace machinery; probe:
+        # hasattr(flext_cli.u, 'Cli') is True). The cure owner is the letter
+        # export surface in flext-cli/flext-core; suspend the code here
+        # until that lands.
+        disable-error-code: [prop-decorator, call-arg, attr-defined]
         # The canonical facade form imports the parent letter, subclasses it
         # and rebinds the letter (`from flext_core import u`,
         # `class FlextCliUtilities(u)`, `u = FlextCliUtilities`). Mypy 2.3.1
         # rejects that module-level rebind with these codes even under
-        # allow_redefinition; codegen disables them only in the modules it
-        # detects in that form (operator-ruling-2026-10-01-facade-rebind-mypy-scope).
-        facade-rebind-error-codes: [misc, no-redef]
+        # allow_redefinition — `assignment` because the rebound letter's type
+        # (the subclass) is by design never the imported alias's type
+        # (type[FlextService] vs type[FlextApiServiceBase]); codegen disables
+        # them only in the modules it detects in that form
+        # (operator-ruling-2026-10-01-facade-rebind-mypy-scope).
+        facade-rebind-error-codes: [misc, no-redef, assignment]
         boolean-settings:
           allow_redefinition: true
           namespace_packages: true
@@ -330,6 +431,20 @@ Infra:
           pythonVersion: "3.13"
           typeCheckingMode: strict
         extended-settings:
+          # Dated tooling resolution (operator sharpening 2026-10-05, bead
+          # gc-eqvqx5): pyright 1.1.414 has no pydantic-plugin equivalent, so
+          # reportCallIssue fires on every runtime-valid pydantic model
+          # constructor whose parameters come from Annotated-only
+          # Field(default_factory=...) declarations (repro: a bare
+          # Annotated-default model reports "Arguments missing" under
+          # pyright while the identical construction succeeds at runtime
+          # and under the mypy plugin), from plain-class field mixins,
+          # PrivateAttr synthesis and populate_by_name aliases. Pyright
+          # offers no finer granularity than the rule itself; mypy with the
+          # mandatory pydantic plugin remains the call-contract authority
+          # and the runtime behavior stays under the tests plus the
+          # runtime-census and fresh-import gates.
+          reportCallIssue: none
           reportConstantRedefinition: error
           reportIncompatibleMethodOverride: error
           reportInconsistentConstructor: error
@@ -395,6 +510,10 @@ Infra:
         disable-project-excludes-heuristics: true
         python-version: "3.13"
         use-ignore-files: false
+        # prop-decorator suspension lives in the MYPY ruling surface above
+        # (ruling-disable-error-codes): the pyrefly release the non-producer
+        # repositories resolve does not know the code and rejects it as an
+        # unknown variant, so a pyrefly-side suspension cannot be fleet-wide.
         strict-errors:
           # --- type safety ---
           - bad-argument-count
@@ -537,6 +656,15 @@ Infra:
           # its runners). This measurement ceiling permits a complete cold
           # local run of the 241-case suite.
           cosmos-charts: 600
+          # algar-oud-mig budgeted suite measured on 2026-10-03 (operator
+          # exception docs/guides/testing.md: the global budget is 180s):
+          # the 124s entry clock SIGTERM'd the suite at 64% (~194s projected
+          # full runtime) once every OUD-bound case started owning a per-test
+          # LDAP namespace (worker+run token, teardown included). This
+          # measurement ceiling covers the documented operator budget plus
+          # the namespace lifecycle overhead before the measured
+          # parallel-worker ceiling lands.
+          algar-oud-mig: 300
         termination-grace-seconds: 2
         # One failure stops the invocation. The next run starts from the
         # corrected owner instead of accumulating a backlog of unrelated

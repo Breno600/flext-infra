@@ -16,7 +16,7 @@ from flext_infra.gates.direnv import FlextInfraDirenvGate
 from flext_infra.workspace.environment_contracts import (
     FlextInfraWorkspaceEnvironmentContracts,
 )
-from tests import TestsFlextInfraUtilities as u
+from tests import u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -114,23 +114,24 @@ class TestsFlextInfraDirenvGate:
             )
             tm.that(violations, eq=())
 
+        @staticmethod
         @pytest.mark.parametrize("prefix", ["${HOME}", "$HOME", "~"])
         def test_home_targets_validated_only_when_resolving(
-            self,
             tmp_path: Path,
             prefix: str,
         ) -> None:
             """resolve_home=False skips ${HOME} targets (generation-time lint)."""
-            violations = FlextInfraWorkspaceEnvironmentContracts.envrc_contract_violations(
+            contracts = FlextInfraWorkspaceEnvironmentContracts
+            violations = contracts.envrc_contract_violations(
                 f'source_env "{prefix}/.config/environment.d/projects/absent.envrc"\n',
                 root=tmp_path,
                 resolve_home=False,
             )
             tm.that(violations, eq=())
 
+        @staticmethod
         @pytest.mark.parametrize("prefix", ["${HOME}", "$HOME", "~"])
         def test_home_targets_resolve_against_the_real_home(
-            self,
             tmp_path: Path,
             prefix: str,
         ) -> None:

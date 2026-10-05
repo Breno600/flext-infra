@@ -65,6 +65,7 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
                 f"lane {request.branch} starts from {request.base}, "
                 f"not {current.value.text}",
             )
+        entered = False
         for step in (
             lambda: cls._git_enter_lane(request),
             produce,
@@ -72,7 +73,12 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
         ):
             outcome = step()
             if outcome.failure:
+                if entered:
+                    restore = cls._git_restore_base(request)
+                    if restore.failure:
+                        return restore
                 return outcome
+            entered = True
         ahead = u.Cli.capture(
             [c.Infra.GIT, "rev-list", "--count", f"{request.base}..{request.branch}"],
             cwd=root,
@@ -82,6 +88,30 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
         if ahead.value.strip() == "0":
             return cls._git_discard_empty_lane(request)
         return cls._git_open_pull_request(request)
+
+    @classmethod
+    def _git_restore_base(cls, request: m.Infra.GitLaneRequest) -> p.Result[bool]:
+        """Return the checkout to ``base`` after a failed ``produce`` step.
+
+        The lane carries only what ``produce`` wrote this run — machine
+        output the next rerun regenerates byte-identically — so dropping the
+        uncommitted output and switching back un-wedges the clean guard for
+        the rerun without discarding any committed lane history.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        root = request.repo_root
+        for command in (
+            [c.Infra.GIT, "reset", "--hard"],
+            [c.Infra.GIT, "clean", "-fd"],
+            [c.Infra.GIT, "switch", request.base],
+        ):
+            outcome = u.Cli.run_checked(command, cwd=root)
+            if outcome.failure:
+                return outcome
+        return r[bool].ok(value=False)
 
     @classmethod
     def _git_discard_empty_lane(cls, request: m.Infra.GitLaneRequest) -> p.Result[bool]:
@@ -99,11 +129,11 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
             outcome = u.Cli.run_checked(command, cwd=root)
             if outcome.failure:
                 return outcome
-        return r[bool].ok(False)
+        return r[bool].ok(value=False)
 
     @classmethod
     def _git_enter_lane(cls, request: m.Infra.GitLaneRequest) -> p.Result[bool]:
-        """Continue the lane where it exists (local, then remote), else start it at HEAD.
+        """Continue the lane where it exists (local then remote), else start at HEAD.
 
         Returns:
             The resulting ``p.Result[bool]``.
@@ -162,7 +192,7 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
             if line.strip()
         )
         if not produced:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         staged = cls.git_add_paths(
             m.Infra.GitPathsRequest(repo_root=root, paths=produced),
         )

@@ -365,25 +365,12 @@ class TestsFlextInfraRepositoryLocalTopology:
             The resulting ``Path``.
 
         """
-        child_source = tmp_path / "child-source"
-        u.Tests.WorktreeFixture.initialize_governed_project(
-            child_source,
-            "fixture-member",
-            workspace="member-workspace",
-            database="member-database",
-            issue_prefix="member-prefix",
-            beads_owner=False,
-        )
         parent = tmp_path / "parent"
-        u.Tests.WorktreeFixture.initialize_governed_project(
+        member = u.Tests.WorktreeFixture.copied_member(
             parent,
             "fixture-parent",
-            workspace="parent-workspace",
-            database="parent-database",
-            issue_prefix="parent-prefix",
+            identity="parent",
         )
-        member = parent / "apps" / "member"
-        shutil.copytree(child_source, member)
         # A composed project follows the workspace ledger through its own
         # declared identity. The ``.beads -> ../.beads`` link that used to
         # carry it is prohibited, and both conform and the detector reject it.
@@ -779,6 +766,7 @@ class TestsFlextInfraRepositoryLocalTopology:
 
         tm.fail(result, has="No item found with id origin")
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("missing_key", "expected_error"),
         [
@@ -787,7 +775,6 @@ class TestsFlextInfraRepositoryLocalTopology:
         ],
     )
     def test_gitmodule_requires_complete_contract(
-        self,
         tmp_path: Path,
         missing_key: str,
         expected_error: str,
@@ -855,9 +842,9 @@ class TestsFlextInfraRepositoryLocalTopology:
 
         tm.fail(result, has="failed to read Git submodule declarations")
 
+    @staticmethod
     @pytest.mark.parametrize("declared_path", ["../escape", "/absolute/escape"])
     def test_gitmodule_rejects_escaping_path(
-        self,
         tmp_path: Path,
         declared_path: str,
     ) -> None:

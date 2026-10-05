@@ -9,14 +9,16 @@ from __future__ import annotations
 import time
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from flext_cli import cli
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
-from flext_infra.check.gate_registry import FlextInfraGateRegistry
-from flext_infra.gates.base_gate import FlextInfraGate
+
+if TYPE_CHECKING:
+    from flext_infra.check.gate_registry import FlextInfraGateRegistry
+    from flext_infra.gates.base_gate import FlextInfraGate
 
 
 class FlextInfraWorkspaceCheckGatesMixin:
@@ -27,8 +29,8 @@ class FlextInfraWorkspaceCheckGatesMixin:
     _default_reports_dir: Path
     _gate_logger: ClassVar[p.Logger] = u.fetch_logger(__name__)
 
+    @staticmethod
     def _isolate_context(
-        self,
         ctx: m.Infra.GateContext,
         target: m.Infra.CheckProjectTarget,
     ) -> m.Infra.GateContext:
@@ -300,8 +302,8 @@ class FlextInfraWorkspaceCheckGatesMixin:
 
         return _handler
 
+    @staticmethod
     def _execute_gate(
-        self,
         gate_instance: FlextInfraGate,
         project_dir: Path,
         ctx: m.Infra.GateContext,

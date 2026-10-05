@@ -22,8 +22,9 @@ if TYPE_CHECKING:
 class TestsFlextInfraPytestFailClosedConfig:
     """Prove canonical pytest settings replace local bypasses deterministically."""
 
+    @staticmethod
     @pytest.mark.asyncio
-    async def test_declared_async_provider_executes_coroutines(self) -> None:
+    async def test_declared_async_provider_executes_coroutines() -> None:
         """Exercise the installed provider rather than merely registering a marker."""
         await asyncio.sleep(0)
         tm.that(asyncio.current_task() is not None, eq=True)

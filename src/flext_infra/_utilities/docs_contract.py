@@ -62,8 +62,8 @@ class FlextInfraUtilitiesDocsContract:
             return content
         return after_toc
 
-    @staticmethod
-    def docs_contract_update_toc(content: str) -> t.StrIntPair:
+    @classmethod
+    def docs_contract_update_toc(cls, content: str) -> t.StrIntPair:
         """Normalize the managed table of contents in Markdown content.
 
         Returns:
@@ -71,7 +71,7 @@ class FlextInfraUtilitiesDocsContract:
 
         """
         original = content
-        content = FlextInfraUtilitiesDocsContract._docs_contract_strip_invented_toc_before_frontmatter(
+        content = cls._docs_contract_strip_invented_toc_before_frontmatter(
             content,
         )
         toc = FlextInfraUtilitiesDocsContract.docs_contract_build_toc(content)
@@ -156,7 +156,8 @@ class FlextInfraUtilitiesDocsContract:
             items,
         )
         if not items:
-            items = ["- No sections found"]
+            # An honest empty TOC block: no fake bullet, no sentinel text.
+            return f"{c.Infra.TOC_START}\n\n{c.Infra.TOC_END}"
         return f"{c.Infra.TOC_START}\n\n" + "\n".join(items) + f"\n\n{c.Infra.TOC_END}"
 
     @staticmethod

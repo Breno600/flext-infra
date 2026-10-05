@@ -142,7 +142,7 @@ class FlextInfraManualCommandValidator(s[bool]):
 
     @staticmethod
     def _is_sed_inplace(arg: str) -> bool:
-        """Check whether the argument is a GNU/BSD in-place edit flag (``-i``, ``-i.bak``, ``--in-place``).
+        """Check for GNU/BSD in-place edit flags (``-i``, ``-i.bak``, ``--in-place``).
 
         Returns:
             The resulting ``bool``.

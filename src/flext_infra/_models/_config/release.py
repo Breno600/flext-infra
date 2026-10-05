@@ -10,7 +10,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Annotated, ClassVar, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import t
 from flext_infra._constants import FlextInfraConstantsRelease
@@ -96,7 +96,7 @@ class FlextInfraConfigModelsRelease:
             m.Field(description="Per-distribution deviations from the shared contract"),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_anchors(self) -> Self:
             """Every anchor must name a target, or the tool rewrites nothing.
 

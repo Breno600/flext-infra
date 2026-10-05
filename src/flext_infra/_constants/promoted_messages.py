@@ -36,16 +36,25 @@ class FlextInfraConstantsPromotedMessages:
             "{verb} WHAT={what}: missing required parameter: {name}; example: {example}"
         )
         INVALID_CHOICE = "{verb} WHAT={what}: invalid {name}={value!r}; valid: {valid}"
-        ALL_CHOICES_DIVERGE = "{path}: WHAT choices differ from the promoted commands of {verb}: declared={declared} actual={actual}"
+        ALL_CHOICES_DIVERGE = (
+            "{path}: WHAT choices differ from the promoted commands of"
+            " {verb}: declared={declared} actual={actual}"
+        )
         PARAM_MUST_BE_REQUIRED = "{path}: parameter {name} must be required"
         DUPLICATE_COMMAND = "duplicate command: {verb} WHAT={what}"
-        DUPLICATE_ALIAS = "duplicate alias: {alias} points to {previous_verb} WHAT={previous_what} and {verb} WHAT={what}"
+        DUPLICATE_ALIAS = (
+            "duplicate alias: {alias} points to {previous_verb}"
+            " WHAT={previous_what} and {verb} WHAT={what}"
+        )
         NO_COMMANDS = "no promoted command found in scripts/<verb>/<WHAT>"
         VERB_DOMAINS = "verb '{verb}' declares more than one domain: {domains}"
         ALIAS_OUTSIDE_ALL = "{path}: aliases may be declared only in WHAT=all"
         ALIAS_COLLIDES_VERB = "alias '{alias}' collides with a promoted verb"
         ALIAS_UNKNOWN_VERB = "alias '{alias}' points to unknown verb {verb}"
-        ALIAS_UNKNOWN_WHAT = "alias '{alias}' points to {verb} WHAT={what}, but the action does not exist"
+        ALIAS_UNKNOWN_WHAT = (
+            "alias '{alias}' points to {verb} WHAT={what},"
+            " but the action does not exist"
+        )
         UNKNOWN_VERB = "unknown verb '{verb}'"
         INVALID_WHAT = "invalid WHAT='{what}' for {verb}. Valid: {valid}"
         NO_SCRIPTS_DIR = "no scripts directory found"
@@ -60,12 +69,18 @@ class FlextInfraConstantsPromotedMessages:
         PARAMS_DEFAULT_TYPE = "{path}: params.default must be a string"
         BASH_MISSING = "bash not found on PATH; .sh commands require bash"
         PROCESS_START_FAILED = "command process could not start"
-        WORKSPACE_PYTHON_MISSING = "Workspace Python is missing: {python}; run make setup at the workspace root"
+        WORKSPACE_PYTHON_MISSING = (
+            "Workspace Python is missing: {python};"
+            " run make setup at the workspace root"
+        )
         OWNER_UNKNOWN = "Command owner project is unknown: {path}"
         LOCAL_PYTHON_MISSING = (
             "Local Python is missing: {python}; create or sync .venv before using make"
         )
-        ACTIVE_PYTHON_MISMATCH = "Active Python is not the expected one: {python}; run make with the .venv PATH"
+        ACTIVE_PYTHON_MISMATCH = (
+            "Active Python is not the expected one: {python};"
+            " run make with the .venv PATH"
+        )
         NOT_DISPATCHED = (
             "ERROR: public commands must run through make <verb> WHAT=<action>\n"
         )
@@ -121,7 +136,10 @@ class FlextInfraConstantsPromotedMessages:
         "",
         "make <verb> shows the verb help and every WHAT.",
         "make help WHAT=<verb> shows the same help.",
-        "make help WHAT=<verb>/<action> or make <verb> WHAT=<action> OPTIONS=Y shows one action.",
+        (
+            "make help WHAT=<verb>/<action> or make <verb> WHAT=<action>"
+            " OPTIONS=Y shows one action."
+        ),
         "Mutating commands execute their declared operation directly.",
         "New commands live in scripts/<verb>/<WHAT>.sh|py with a flext-command header.",
     )

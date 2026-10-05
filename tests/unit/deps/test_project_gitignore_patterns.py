@@ -7,13 +7,16 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from flext_tests import tm
 
 from flext_infra import c, config, m, u
 from flext_infra.codegen.conform import FlextInfraCodegenConform
-from tests import t
+
+if TYPE_CHECKING:
+    from tests import t
 
 
 class TestsFlextInfraProjectGitignorePatterns:
@@ -72,7 +75,6 @@ class TestsFlextInfraProjectGitignorePatterns:
 
         patterns = tm.ok(resolved).artifacts.Gitignore.patterns
         assert sorted(patterns) == [".dmypy/", ".serena/", "logs/"]
-        assert len(patterns) == 3
 
     def test_absent_declaration_adds_no_section(self, tmp_path: Path) -> None:
         """Test absent declaration adds no section."""
@@ -175,8 +177,10 @@ class TestsFlextInfraProjectGitignorePatterns:
             "# BEGIN external projection\n/only-start\n",
             "# END external projection\n",
             "# END external projection\n# BEGIN external projection\n",
-            "# BEGIN external projection\n# BEGIN external projection\n"
-            "# END external projection\n",
+            (
+                "# BEGIN external projection\n# BEGIN external projection\n"
+                "# END external projection\n"
+            ),
             "# BEGIN external projection extra\n# END external projection\n",
         ],
     )

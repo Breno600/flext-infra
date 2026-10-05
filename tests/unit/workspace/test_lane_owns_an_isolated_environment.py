@@ -1,4 +1,4 @@
-"""Lane provisioning owns a real local environment.
+"""Lane provisioning owns a real sibling environment.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -10,12 +10,12 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import FlextInfraWorktreeService, c, u as infra_u
+from flext_infra import FlextInfraWorktreeService, c, config
 from tests import u
 
 
 class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
-    """Lane provisioning owns a real local environment, never a borrowed one."""
+    """Lane provisioning owns a real sibling environment, never a borrowed one."""
 
     @staticmethod
     def _repository(tmp_path: Path) -> Path:
@@ -29,7 +29,9 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         (repository / "Makefile").write_text(
             "PROJECT_ROOT := $(CURDIR)\n"
             "RUNTIME_ROOT := $(PROJECT_ROOT)\n"
-            f"RUNTIME_VENV := $(RUNTIME_ROOT)/{c.Infra.ENVIRONMENT_DIRECTORY}\n"
+            "RUNTIME_VENV := $(abspath $(RUNTIME_ROOT)/../"
+            f"{config.Infra.codegen.toolchain.worktree_environment_directory}/"
+            "$(notdir $(RUNTIME_ROOT)))\n"
             ".PHONY: setup\n"
             "setup:\n"
             '\t@test "$(RUNTIME_ROOT)" = "$(PROJECT_ROOT)"\n'
@@ -80,14 +82,14 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
     def _lane(repository: Path, branch: str) -> Path:
         return Path(u.Tests.WorktreeFixture.add_worktree(repository, branch))
 
-    def test_setup_runs_in_lane_and_creates_real_local_environment(
+    def test_setup_runs_in_lane_and_creates_real_sibling_environment(
         self,
         tmp_path: Path,
     ) -> None:
-        """Test setup runs in lane and creates real local environment."""
+        """Test setup runs in lane and creates a real sibling environment."""
         repository = self._repository(tmp_path)
         primary_sentinel = (
-            infra_u.Infra.runtime_environment_dir(repository) / "primary-sentinel"
+            u.Infra.runtime_environment_dir(repository) / "primary-sentinel"
         )
         primary_sentinel.parent.mkdir(parents=True, exist_ok=True)
         primary_sentinel.write_text("untouched\n", encoding="utf-8")
@@ -101,9 +103,10 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         ):
             tm.ok(FlextInfraWorktreeService.setup_lane(lane))
 
-        lane_venv = infra_u.Infra.runtime_environment_dir(lane)
+        lane_venv = u.Infra.runtime_environment_dir(lane)
         assert lane_venv.is_dir()
         assert not lane_venv.is_symlink()
+        assert not (lane / c.Infra.ENVIRONMENT_DIRECTORY).exists()
         assert primary_sentinel.read_text(encoding="utf-8") == "untouched\n"
         assert (lane / "setup-runs.log").read_text(encoding="utf-8") == (
             f"{lane.resolve()}|unset|unset|unset\n"
@@ -120,7 +123,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         target.mkdir()
         sentinel = target / "sentinel"
         sentinel.write_text("protected\n", encoding="utf-8")
-        lane_venv = infra_u.Infra.runtime_environment_dir(lane)
+        lane_venv = u.Infra.runtime_environment_dir(lane)
         lane_venv.parent.mkdir(parents=True, exist_ok=True)
         lane_venv.symlink_to(target, target_is_directory=True)
 
@@ -153,7 +156,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         """Test existing real lane environment is preserved."""
         repository = self._repository(tmp_path)
         lane = self._lane(repository, "feature/preserve-local")
-        sentinel = infra_u.Infra.runtime_environment_dir(lane) / "sentinel"
+        sentinel = u.Infra.runtime_environment_dir(lane) / "sentinel"
         sentinel.parent.mkdir(parents=True, exist_ok=True)
         sentinel.write_text("local\n", encoding="utf-8")
 
@@ -168,5 +171,5 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         lane = self._lane(repository, "feature/git-only")
 
         assert lane.is_dir()
-        assert not infra_u.Infra.runtime_environment_dir(lane).exists()
+        assert not u.Infra.runtime_environment_dir(lane).exists()
         assert not (lane / "setup-runs.log").exists()

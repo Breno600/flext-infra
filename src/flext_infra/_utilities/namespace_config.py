@@ -136,7 +136,7 @@ class FlextInfraUtilitiesNamespaceConfig:
 
     @staticmethod
     def namespace_include_dynamic_dirs(project_root: Path) -> bool:
-        """Return whether namespace enforcement scans non-canonical dirs (off when unset).
+        """Return whether namespace enforcement scans non-canonical dirs (off if unset).
 
         Returns:
             Whether namespace enforcement scans non-canonical dirs (off when unset).

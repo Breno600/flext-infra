@@ -12,9 +12,10 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, u
+from flext_infra import FlextInfraMiseWorkspacePlanner, c, config
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
-from tests import u as test_u
+from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
+from tests import u
 
 
 class TestsFlextInfraCodegenMiseArtifacts:
@@ -83,10 +84,6 @@ class TestsFlextInfraCodegenMiseArtifacts:
         tmp_path: Path,
     ) -> None:
         """A scope root still carrying the bootstrap seed starts from the packaged triple."""
-        from flext_infra.codegen.mise_artifacts_workspace import (
-            FlextInfraMiseWorkspacePlanner,
-        )
-
         root = tmp_path / "seed-project"
         for relative, _mode in c.Infra.ARTIFACT_SPECS:
             path = root / relative
@@ -114,9 +111,9 @@ class TestsFlextInfraCodegenMiseArtifacts:
             expected = packaged.joinpath(Path(relative).name).read_bytes()
             tm.that(state.content, eq=expected)
 
+    @staticmethod
     @pytest.mark.parametrize("shape", ["absolute", "tilde"])
     def test_packaged_launcher_runs_its_baked_release_offline(
-        self,
         tmp_path: Path,
         shape: str,
     ) -> None:
@@ -231,14 +228,15 @@ class TestsFlextInfraCodegenMiseArtifacts:
         version: str = "latest",
     ) -> Path:
         root.mkdir(parents=True)
-        test_u.Tests.initialize_git_repo(root)
+        u.Tests.initialize_git_repo(root)
         cls._write_triple(root)
         cls._write_config(root, selector=selector, version=version)
         (root / "pyproject.toml").write_text(
             "[project]\n"
             f'name = "{config.Infra.name}"\n'
             'version = "0.1.0"\n'
-            f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
+            'requires-python = "'
+            f'{config.Infra.codegen.toolchain.python_required_version}"\n'
             "dependencies = []\n",
             encoding="utf-8",
         )
@@ -281,7 +279,7 @@ class TestsFlextInfraCodegenMiseArtifacts:
         """Test full validation requires committed launchers."""
         root = tmp_path / "project"
         root.mkdir()
-        test_u.Tests.initialize_git_repo(root)
+        u.Tests.initialize_git_repo(root)
         self._write_config(root)
 
         result = FlextInfraCodegenMiseArtifacts.model_validate({
@@ -350,16 +348,16 @@ class TestsFlextInfraCodegenMiseArtifacts:
     def test_shipped_jscpd_plan_uses_only_configured_route() -> None:
         """The generated plan must contain only the typed jscpd route."""
         toolchain = config.Infra.codegen.toolchain
-        plan = test_u.Tests.toml_payload(
+        plan = u.Tests.toml_payload(
             (Path(__file__).parents[3] / ".mise.toml").read_text(encoding="utf-8"),
         )
-        tools = test_u.Tests.toml_mapping(plan["tools"])
+        tools = u.Tests.toml_mapping(plan["tools"])
 
         # jscpd declares a host-invariant version so mise writes one lock
         # entry per tool; the per-platform asset patterns were removed.
         tm.that(
-            tools.get(toolchain.jscpd_selector),
-            eq={"version": toolchain.jscpd_version},
+            tools.get(toolchain.tool_selectors["jscpd"]),
+            eq={"version": toolchain.tool_versions["jscpd"]},
         )
         tm.that("npm:jscpd" in tools, eq=False)
 

@@ -106,7 +106,10 @@ class FlextInfraNamespaceEnforcer(FlextInfraNamespaceEnforcerProjectMixin):
             f"Workspace: {report.workspace}",
             f"Projects: {len(report.projects)}",
             f"Violations: {'YES' if report.has_violations else 'NO'}",
-            f"Relocation findings: {sum(project.relocation_findings for project in projects)}",
+            (
+                f"Relocation findings: "
+                f"{sum(project.relocation_findings for project in projects)}"
+            ),
             f"Files scanned: {sum(project.files_scanned for project in projects)}",
         ]
         return "\n".join(lines)

@@ -12,6 +12,9 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import m, t
+from flext_infra._utilities._semantic_cutover.class_scope import (
+    FlextInfraUtilitiesSemanticCutoverClassScope,
+)
 from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
 )
@@ -20,6 +23,9 @@ from flext_infra._utilities._semantic_cutover.family_flatten import (
 )
 from flext_infra._utilities._semantic_cutover.nesting_cst import (
     FlextInfraUtilitiesSemanticCutoverNestingCst,
+)
+from flext_infra._utilities._semantic_cutover.nesting_owner import (
+    FlextInfraUtilitiesSemanticCutoverNestingOwner,
 )
 from flext_infra._utilities._semantic_cutover.test_helpers import (
     FlextInfraUtilitiesSemanticTestHelpers,
@@ -39,7 +45,9 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
     FlextInfraUtilitiesSemanticTestHelpers,
     FlextInfraUtilitiesSemanticFamilyFlatten,
     FlextInfraUtilitiesSemanticCutoverNestingCst,
+    FlextInfraUtilitiesSemanticCutoverNestingOwner,
     FlextInfraUtilitiesSemanticCutoverEdits,
+    FlextInfraUtilitiesSemanticCutoverClassScope,
 ):
     """Plan class nesting from semantic module ownership instead of record lists."""
 
@@ -85,6 +93,90 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         }
 
     @classmethod
+    def _suite_reference_pins(
+        cls,
+        tree: ast.Module,
+        classes: t.MappingKV[str, ast.ClassDef],
+        movable: frozenset[str],
+        owner: str,
+    ) -> frozenset[str]:
+        """Return classes that must stay at module level to keep suite lookups.
+
+        A nested class suite looks names up in the module globals. The owner
+        name is not bound until its class statement finishes, so neither the
+        bare sibling nor ``Owner.Sibling`` resolves during that suite. A base
+        in the class header does see the enclosing scope. An immediate load
+        from a class that is moving, or from a class already nested in the
+        owner, keeps its target at module level. A class that stays outside
+        also keeps the bases it names there: qualifying those bases through
+        the owner fails when the owner statement has not run yet.
+
+        Returns:
+            The movable classes pinned by an immediate suite reference.
+
+        """
+        pinned = cls._pins_from_suite_loads(tree, movable, owner)
+        return cls._pins_from_outside_bases(classes, movable, pinned)
+
+    @classmethod
+    def _pins_from_suite_loads(
+        cls,
+        tree: ast.Module,
+        movable: frozenset[str],
+        owner: str,
+    ) -> set[str]:
+        """Return classes pinned because a suite loads them immediately.
+
+        Returns:
+            The movable classes named by an immediate suite load.
+
+        """
+        pinned: set[str] = set()
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ClassDef) or node.name == owner:
+                continue
+            for statement in node.body:
+                referenced = set(cls._immediate_suite_loads(statement) & movable)
+                referenced.discard(node.name)
+                if not referenced:
+                    continue
+                if node.name in movable:
+                    pinned.add(node.name)
+                pinned.update(referenced)
+        return pinned
+
+    @staticmethod
+    def _pins_from_outside_bases(
+        classes: t.MappingKV[str, ast.ClassDef],
+        movable: frozenset[str],
+        pinned: set[str],
+    ) -> frozenset[str]:
+        """Pin bases of classes that stay at module level.
+
+        Returns:
+            ``pinned`` plus every movable base those classes name.
+
+        """
+        changed = True
+        while changed:
+            changed = False
+            for name, node in classes.items():
+                if name in movable and name not in pinned:
+                    continue
+                for base in node.bases:
+                    current: ast.expr = base
+                    while isinstance(current, ast.Attribute):
+                        current = current.value
+                    if (
+                        isinstance(current, ast.Name)
+                        and current.id in movable
+                        and current.id not in pinned
+                    ):
+                        pinned.add(current.id)
+                        changed = True
+        return frozenset(pinned)
+
+    @classmethod
     def _class_nesting_definitions(
         cls,
         rope_workspace: p.Infra.RopeWorkspaceDsl,
@@ -103,23 +195,55 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         ) or FlextInfraUtilitiesCodegenNamespace.facade_family_of_directory(
             file_path.parent.name,
         )
-        classes = {
-            node.name: node
-            for node in ast.parse(source, filename=str(file_path)).body
-            if isinstance(node, ast.ClassDef)
-        }
-        if family is None or len(classes) <= 1:
+        # A dunder module (``__main__``, ``__version__``, a package init) is
+        # never a facade module, whatever family directory holds it.
+        if family is None or file_path.stem.startswith("__"):
             return planned.ok({})
+        tree = ast.parse(source, filename=str(file_path))
+        classes = {
+            node.name: node for node in tree.body if isinstance(node, ast.ClassDef)
+        }
         convention = rope_workspace.convention(file_path)
-        owner = convention.module_policy.expected_family
-        if owner is None or owner not in classes:
-            return planned.fail(
-                "class-nesting requires exactly one declared module owner "
-                f"for {convention.module_name}; discovered: {', '.join(classes)}",
-            )
-        bound = cls._inheritance_bound_to_owner(classes, owner)
-        return planned.ok({
+        loose = cls._loose_members(
+            tree,
+            values=not convention.module_policy.allow_type_alias,
+        )
+        if len(classes) <= 1 and not loose:
+            return planned.ok({})
+        owned = cls._module_owner(
+            convention,
+            file_path,
+            classes,
+            cls._declared_names(tree),
+        )
+        if owned.failure:
+            return planned.from_failure(owned)
+        owner = owned.value
+        movable = cls._movable_members(
+            tree,
+            loose,
+            owner=owner,
+            module_name=convention.module_name,
+        )
+        if movable.failure:
+            return planned.from_failure(movable)
+        bound: frozenset[str] = (
+            cls._inheritance_bound_to_owner(classes, owner)
+            if owner in classes
+            else frozenset()
+        )
+        definitions = {
             name: owner for name in classes if name != owner and name not in bound
+        }
+        definitions.update((name, owner) for name in movable.value)
+        pinned = cls._suite_reference_pins(
+            tree,
+            classes,
+            frozenset(definitions),
+            owner,
+        )
+        return planned.ok({
+            name: owner for name, owner in definitions.items() if name not in pinned
         })
 
     @classmethod

@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import FlextInfraPyprojectModernizer, config, main, u as infra_u
+from flext_infra import FlextInfraPyprojectModernizer, config, main
 from tests import c, m, u
 
 if TYPE_CHECKING:
@@ -53,8 +53,8 @@ class TestsFlextInfraDepsModernizerWorkspace:
         )
         config_path = tmp_path / ".taplo.toml"
         config_path.write_text('include = ["**/*.toml"]\n', encoding="utf-8")
-        formatter = infra_u.Infra.format_toml_source
-        taplo_version = config.Infra.codegen.toolchain.taplo_version
+        formatter = u.Infra.format_toml_source
+        taplo_version = config.Infra.codegen.toolchain.tool_versions["taplo"]
         process_timeout_seconds = (
             config.Infra.tooling.tools.tomlsort.process_timeout_seconds
         )
@@ -97,11 +97,11 @@ class TestsFlextInfraDepsModernizerWorkspace:
         future_root = tmp_path / "future" / "project"
 
         formatted = tm.ok(
-            infra_u.Infra.format_toml_source(
+            u.Infra.format_toml_source(
                 'name="demo"\n',
                 path=future_root / "pyproject.toml",
                 toolchain_root=future_root,
-                taplo_version=config.Infra.codegen.toolchain.taplo_version,
+                taplo_version=config.Infra.codegen.toolchain.tool_versions["taplo"],
                 process_timeout_seconds=(
                     config.Infra.tooling.tools.tomlsort.process_timeout_seconds
                 ),
@@ -137,11 +137,11 @@ class TestsFlextInfraDepsModernizerWorkspace:
             f"{fake_bin}{os.pathsep}{os.environ.get('PATH', '')}",
         )
 
-        formatted = infra_u.Infra.format_toml_source(
+        formatted = u.Infra.format_toml_source(
             'name="demo"\n',
             path=tmp_path / "pyproject.toml",
             toolchain_root=tmp_path,
-            taplo_version=config.Infra.codegen.toolchain.taplo_version,
+            taplo_version=config.Infra.codegen.toolchain.tool_versions["taplo"],
             process_timeout_seconds=(
                 config.Infra.tooling.tools.tomlsort.process_timeout_seconds
             ),
@@ -153,11 +153,11 @@ class TestsFlextInfraDepsModernizerWorkspace:
     @staticmethod
     def test_taplo_fails_loud_without_a_committed_lock(tmp_path: Path) -> None:
         """No mise.lock above the workspace means no offline generation."""
-        formatted = infra_u.Infra.format_toml_source(
+        formatted = u.Infra.format_toml_source(
             'name="demo"\n',
             path=tmp_path / "pyproject.toml",
             toolchain_root=tmp_path,
-            taplo_version=config.Infra.codegen.toolchain.taplo_version,
+            taplo_version=config.Infra.codegen.toolchain.tool_versions["taplo"],
             process_timeout_seconds=(
                 config.Infra.tooling.tools.tomlsort.process_timeout_seconds
             ),
@@ -166,6 +166,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
         error = tm.fail(formatted)
         tm.that(error, has=["no mise.lock", "run make upg"])
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("content", "exists", "expected"),
         [
@@ -175,7 +176,6 @@ class TestsFlextInfraDepsModernizerWorkspace:
         ],
     )
     def test_toml_read_handles_public_file_cases(
-        self,
         tmp_path: Path,
         content: str,
         *,
@@ -213,6 +213,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
         result = u.Infra.resolve_repository_root_or_cwd(deep_path)
         tm.that(str(result), ne="")
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("description", "sort_first"),
         [
@@ -230,7 +231,6 @@ class TestsFlextInfraDepsModernizerWorkspace:
         ],
     )
     def test_conform_preserves_explicit_project_table_boundary(
-        self,
         tmp_path: Path,
         description: str,
         sort_first: t.StrSequence | None,
@@ -439,9 +439,9 @@ class TestsFlextInfraDepsModernizerWorkspace:
         tm.that(ambiguous.run(), eq=2)
         tm.that(exact.run(), eq=0)
 
+    @staticmethod
     @pytest.mark.parametrize("member_kind", ["absolute", "parent-relative", "symlink"])
     def test_modernizer_rejects_configured_members_outside_workspace(
-        self,
         modernizer_workspace: Path,
         member_kind: str,
     ) -> None:
@@ -474,9 +474,9 @@ class TestsFlextInfraDepsModernizerWorkspace:
             original,
         )
 
+    @staticmethod
     @pytest.mark.parametrize("selector_kind", ["absolute", "parent-relative"])
     def test_modernizer_rejects_undeclared_project_paths(
-        self,
         modernizer_workspace: Path,
         selector_kind: str,
     ) -> None:

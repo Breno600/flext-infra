@@ -21,9 +21,9 @@ if TYPE_CHECKING:
 class TestsFlextInfraFamilyFlatten:
     """Exercise the real module graph, not mocked semantic identities."""
 
+    @staticmethod
     @pytest.mark.parametrize("collision", [False, True])
     def test_snapshot_rewrites_alias_and_inherited_consumers_without_effects(
-        self,
         tmp_path: Path,
         *,
         collision: bool,
@@ -59,7 +59,10 @@ class TestsFlextInfraFamilyFlatten:
         )
         consumer.write_text(references, encoding="utf-8")
         homonym = package / "unrelated.py"
-        unrelated = "class Other:\n    class Wrapper:\n        TEXT = 'unrelated'\nVALUE = Other.Wrapper.TEXT\n"
+        unrelated = (
+            "class Other:\n    class Wrapper:\n        TEXT = 'unrelated'\n"
+            "VALUE = Other.Wrapper.TEXT\n"
+        )
         homonym.write_text(unrelated, encoding="utf-8")
         sources = {path: source, consumer: references, homonym: unrelated}
         # Imports and MRO must resolve the proposed wrapper, not its disk name.
@@ -99,6 +102,7 @@ class TestsFlextInfraFamilyFlatten:
         }.items():
             tm.that(file_path.read_text(encoding="utf-8"), eq=original)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "entity",
         [
@@ -107,7 +111,6 @@ class TestsFlextInfraFamilyFlatten:
         ],
     )
     def test_entity_classes_are_not_namespace_wrappers(
-        self,
         tmp_path: Path,
         entity: str,
     ) -> None:
@@ -120,7 +123,10 @@ class TestsFlextInfraFamilyFlatten:
         (family / "__init__.py").write_text("", encoding="utf-8")
         path = family / "payload.py"
         owner = f"{u.derive_class_stem(root.name)}ModelsPayload"
-        source = f"from enum import Enum\nclass {owner}:\n    {entity}\n\n__all__ = ['{owner}']\n"
+        source = (
+            f"from enum import Enum\nclass {owner}:\n    {entity}\n\n"
+            f"__all__ = ['{owner}']\n"
+        )
         path.write_text(source, encoding="utf-8")
         with infra.rope_workspace(root) as rope:
             planned = u.Infra.plan_semantic_cutover(
@@ -131,12 +137,12 @@ class TestsFlextInfraFamilyFlatten:
         tm.ok(planned)
         tm.that(planned.value, empty=True)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "reference",
         ["ALIAS = {owner}.Wrapper", 'alias: "{owner}.Wrapper"'],
     )
     def test_wrapper_used_as_an_entity_is_preserved_without_edits(
-        self,
         tmp_path: Path,
         reference: str,
     ) -> None:
@@ -169,9 +175,8 @@ class TestsFlextInfraFamilyFlatten:
     ) -> None:
         """Test flatten removes wrapper docstring and promotes alias member."""
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
-        family = (
-            package / u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
-        )
+        directory = u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
+        family = package / directory
         family.mkdir()
         (family / c.Infra.INIT_PY).write_text("", encoding="utf-8")
         path = family / "payload.py"
@@ -190,7 +195,7 @@ class TestsFlextInfraFamilyFlatten:
         path.write_text(source, encoding="utf-8")
         consumer = package / "consumer.py"
         references = (
-            f"from {package.name}.{u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory}.payload import "
+            f"from {package.name}.{directory}.payload import "
             f"{owner} as Part\n\nmember: Part.Wrapper.Grouped\n"
         )
         consumer.write_text(references, encoding="utf-8")
@@ -209,3 +214,58 @@ class TestsFlextInfraFamilyFlatten:
         tm.that(flattened[path], has="type WrapperGrouped = WrapperEntity")
         tm.that(flattened[consumer], has="member: Part.WrapperGrouped")
         assert '"""Wrapper doc."""' not in flattened[path], flattened[path]
+
+    @staticmethod
+    def test_composed_facade_keeps_the_wrapper_callers_still_use(
+        tmp_path: Path,
+    ) -> None:
+        """A facade alias that still names the wrapper is not flattened away."""
+        root, package = u.Tests.create_lazy_init_workspace(tmp_path)
+        directory = u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
+        family = package / directory
+        family.mkdir()
+        (family / "__init__.py").write_text("", encoding="utf-8")
+        path = family / "payload.py"
+        owner = f"{u.derive_class_stem(root.name)}ModelsPayload"
+        source = (
+            f"class {owner}:\n"
+            "    class VerbReceipt:\n"
+            "        class Stage:\n"
+            "            pass\n"
+            "        class Report:\n"
+            "            pass\n"
+            f"\n__all__ = ['{owner}']\n"
+        )
+        path.write_text(source, encoding="utf-8")
+        facade_name = f"{u.derive_class_stem(root.name)}Models"
+        project = u.derive_class_stem(root.name)
+        facade = (
+            f"from {package.name}.{directory}.payload import {owner}\n\n"
+            f"class {facade_name}:\n"
+            f"    class {project}({owner}):\n"
+            "        pass\n\n"
+            f"m = {facade_name}\n"
+        )
+        facade_path = package / "models.py"
+        facade_path.write_text(facade, encoding="utf-8")
+        consumer = package / "consumer.py"
+        references = (
+            "from __future__ import annotations\n"
+            f"from {package.name} import m\n\n"
+            f"def render() -> m.{project}.VerbReceipt.Stage:\n"
+            f"    return m.{project}.VerbReceipt.Stage()\n"
+        )
+        consumer.write_text(references, encoding="utf-8")
+        sources = {path: source, facade_path: facade, consumer: references}
+        with infra.rope_workspace(root) as rope:
+            planned = u.Infra.plan_semantic_cutover(
+                c.Infra.SemanticCutoverPhase.CLASS_NESTING,
+                rope_workspace=rope,
+                sources=sources,
+            )
+        tm.ok(planned)
+        updated = dict(sources)
+        updated.update({edit.file_path: edit.updated_source for edit in planned.value})
+        tm.that(updated[path], has="class VerbReceipt:")
+        tm.that(updated[consumer], has=f"m.{project}.VerbReceipt.Stage")
+        tm.that(consumer.read_text(encoding="utf-8"), eq=references)

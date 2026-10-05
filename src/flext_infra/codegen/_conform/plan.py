@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
-from typing import override
 
 from flext_core import r
 from flext_infra import c, config, m, p, t, u
@@ -301,20 +300,6 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                 f"{repository.path.as_posix()}",
             )
         return r[Path].ok(resolved)
-
-    @override
-    @staticmethod
-    def _repository_root_rel(workspace: m.Infra.WorkspaceSpec) -> str:
-        """Return the environment root owned by the inferred target.
-
-        Returns:
-            The environment root owned by the inferred target.
-
-        """
-        if workspace.project is not None:
-            project_root_rel: str = workspace.project.repository_root_rel
-            return project_root_rel
-        return "."
 
     @staticmethod
     def _repository_provider(

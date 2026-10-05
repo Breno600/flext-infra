@@ -307,7 +307,10 @@ class FlextInfraUtilitiesPrivateImportFacades:
                 )
                 raise ValueError(msg)
         if len(canonical) > 1:
-            msg = f"ambiguous declared public exports for {qualified}: {sorted(canonical)}"
+            msg = (
+                f"ambiguous declared public exports for {qualified}: "
+                f"{sorted(canonical)}"
+            )
             raise ValueError(msg)
         if not canonical:
             return None

@@ -148,6 +148,9 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 dist=repository.distribution,
                 infra_cli=config.Infra.name,
                 python_version=codegen.toolchain.python_version,
+                worktree_environment_directory=(
+                    codegen.toolchain.worktree_environment_directory
+                ),
                 uv_link_mode=self.link_mode(repository, codegen.toolchain),
                 # ProjectRenderContext replaces this with the composed map.
                 # Pass the neutral value explicitly so Pydantic never deep-copies
@@ -279,40 +282,15 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             project = project.model_copy(
                 update={"namespace_scan_dirs": workspace.namespace_scan_dirs},
             )
-        rows = u.Infra.dependency_profile_rows(
+        dependency_profile = u.Infra.composed_dependency_profile(
             codegen.scaffold.project.dependency_profiles,
             upstream=project.upstream,
             distribution=repository.distribution,
         )
-        if not rows:
+        if dependency_profile is None:
             return r[m.Infra.ProjectRenderContext].fail(
                 f"unsupported scaffold upstream: {project.upstream}",
             )
-        dependency_profile, *additions = rows
-        if additions:
-            dependency_profile = m.Infra.ScaffoldDependencyProfileSpec.model_validate({
-                **dependency_profile.model_dump(),
-                "runtime": tuple(
-                    dict.fromkeys((
-                        *dependency_profile.runtime,
-                        *(
-                            requirement
-                            for item in additions
-                            for requirement in item.runtime
-                        ),
-                    )),
-                ),
-                "codegen": tuple(
-                    dict.fromkeys((
-                        *dependency_profile.codegen,
-                        *(
-                            requirement
-                            for item in additions
-                            for requirement in item.codegen
-                        ),
-                    )),
-                ),
-            })
         if project.license not in codegen.scaffold.project.supported_licenses:
             supported = ", ".join(codegen.scaffold.project.supported_licenses)
             return r[m.Infra.ProjectRenderContext].fail(
@@ -441,23 +419,6 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 license=project.license,
                 python_required_version=codegen.toolchain.python_required_version,
                 dependency_cooldown_days=codegen.toolchain.dependency_cooldown_days,
-                kubectl_version=codegen.toolchain.kubectl_version,
-                helm_version=codegen.toolchain.helm_version,
-                kind_version=codegen.toolchain.kind_version,
-                direnv_version=codegen.toolchain.direnv_version,
-                uv_version=codegen.toolchain.uv_version,
-                qlty_version=codegen.toolchain.qlty_version,
-                node_version=codegen.toolchain.node_version,
-                jscpd_version=codegen.toolchain.jscpd_version,
-                waza_version=codegen.toolchain.waza_version,
-                taplo_version=codegen.toolchain.taplo_version,
-                ast_grep_selector=codegen.toolchain.ast_grep_selector,
-                ast_grep_version=codegen.toolchain.ast_grep_version,
-                gitleaks_version=codegen.toolchain.gitleaks_version,
-                scc_version=codegen.toolchain.scc_version,
-                kubeconform_version=codegen.toolchain.kubeconform_version,
-                go_version=codegen.toolchain.go_version,
-                make_version=codegen.toolchain.make_version,
                 author_name=project.author_name,
                 author_email=project.author_email,
                 repository=project.homepage,
@@ -534,9 +495,9 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         with. Rendering ``project_id: null`` over it dirties the tree (the
         generated-drift check goes red) and, worse, a pushed rewrite would
         strand every clone's identity — the same class of loss already
-        observed in a consumer rig. When identity.toml is absent, read the id back from the
-        existing marker so an unminted checkout preserves the identity it
-        cloned instead of clobbering it.
+        observed in a consumer rig. When identity.toml is absent, read the id
+        back from the existing marker so an unminted checkout preserves the
+        identity it cloned instead of clobbering it.
 
         Returns:
             The checkout's own ledger identity, or None if unminted.

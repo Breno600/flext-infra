@@ -62,8 +62,8 @@ class FlextInfraSkillRuleRunnerMixin:
             )
             violations.append(f"[{rule_id}] {count} {label}")
 
+    @staticmethod
     def _run_ast_grep_count(
-        self,
         rule: t.MappingKV[str, t.JsonValue],
         skill_dir: Path,
         project_path: Path,
@@ -190,7 +190,10 @@ class FlextInfraSkillRuleRunnerMixin:
         result: p.Cli.CommandOutput = result_wrapper.value
         if result.outcome.raw_return_code not in {0, 1}:
             detail = (result.stderr or result.stdout).strip() or "no diagnostics"
-            msg = f"custom rule exited with code {result.outcome.raw_return_code}: {detail}"
+            msg = (
+                f"custom rule exited with code "
+                f"{result.outcome.raw_return_code}: {detail}"
+            )
             raise RuntimeError(msg)
         count = self._parse_violation_count(result.stdout or "")
         if result.outcome.raw_return_code == 1:

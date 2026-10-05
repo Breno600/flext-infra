@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core import build_lazy_import_map, install_lazy_exports
+from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra.deps import _modernizer, phases
@@ -85,39 +85,36 @@ __all__: tuple[str, ...] = (
     "phases",
 )
 
-_LAZY_IMPORTS = MappingProxyType(
-    build_lazy_import_map(
-        MappingProxyType({
-            "._detection_runners": ("FlextInfraDependencyDetectionRunnersMixin",),
-            "._detector_runtime_steps": ("FlextInfraDependencyDetectorRuntimeSteps",),
-            "._extra_paths_sync": ("FlextInfraExtraPathsSyncMixin",),
-            "._floor_profile_writer": ("FlextInfraDepsFloorProfileWriter",),
-            "._modernizer": ("_modernizer",),
-            "._modernizer.base": ("FlextInfraPyprojectModernizerBase",),
-            "._modernizer.document": ("FlextInfraPyprojectModernizerDocument",),
-            "._modernizer.run": ("FlextInfraPyprojectModernizerRun",),
-            "._modernizer.tooling": ("FlextInfraPyprojectModernizerTooling",),
-            "._pyrefly_fix_steps": ("FlextInfraConfigFixerSteps",),
-            ".detection": ("FlextInfraDependencyDetectionService",),
-            ".detection_analysis": ("FlextInfraDependencyDetectionAnalysis",),
-            ".detector": ("FlextInfraRuntimeDevDependencyDetector",),
-            ".detector_runtime": ("FlextInfraDependencyDetectorRuntime",),
-            ".extra_paths": ("FlextInfraExtraPathsManager",),
-            ".fix_pyrefly_config": ("FlextInfraConfigFixer",),
-            ".lock_integrity": ("FlextInfraLockIntegrityVerifier",),
-            ".modernizer": ("FlextInfraPyprojectModernizer",),
-            ".phases": ("phases",),
-            ".phases.consolidate_groups": ("FlextInfraConsolidateGroupsPhase",),
-            ".phases.ensure_packaging": ("FlextInfraEnsurePackagingPhase",),
-            ".phases.ensure_pyrefly": ("FlextInfraEnsurePyreflyConfigPhase",),
-            ".phases.ensure_pyright": ("FlextInfraEnsurePyrightConfigPhase",),
-            ".phases.ensure_ruff": ("FlextInfraEnsureRuffConfigPhase",),
-            ".phases.inject_comments": ("FlextInfraInjectCommentsPhase",),
-            ".phases.tool_tables": ("FlextInfraToolTablesPhase",),
-        }),
-        alias_groups=MappingProxyType({}),
-        sort_keys=False,
-    ),
+install_lazy_exports(
+    __name__,
+    globals(),
+    MappingProxyType({
+        "FlextInfraConfigFixer": ".fix_pyrefly_config",
+        "FlextInfraConfigFixerSteps": "._pyrefly_fix_steps",
+        "FlextInfraConsolidateGroupsPhase": ".phases.consolidate_groups",
+        "FlextInfraDependencyDetectionAnalysis": ".detection_analysis",
+        "FlextInfraDependencyDetectionRunnersMixin": "._detection_runners",
+        "FlextInfraDependencyDetectionService": ".detection",
+        "FlextInfraDependencyDetectorRuntime": ".detector_runtime",
+        "FlextInfraDependencyDetectorRuntimeSteps": "._detector_runtime_steps",
+        "FlextInfraDepsFloorProfileWriter": "._floor_profile_writer",
+        "FlextInfraEnsurePackagingPhase": ".phases.ensure_packaging",
+        "FlextInfraEnsurePyreflyConfigPhase": ".phases.ensure_pyrefly",
+        "FlextInfraEnsurePyrightConfigPhase": ".phases.ensure_pyright",
+        "FlextInfraEnsureRuffConfigPhase": ".phases.ensure_ruff",
+        "FlextInfraExtraPathsManager": ".extra_paths",
+        "FlextInfraExtraPathsSyncMixin": "._extra_paths_sync",
+        "FlextInfraInjectCommentsPhase": ".phases.inject_comments",
+        "FlextInfraLockIntegrityVerifier": ".lock_integrity",
+        "FlextInfraPyprojectModernizer": ".modernizer",
+        "FlextInfraPyprojectModernizerBase": "._modernizer.base",
+        "FlextInfraPyprojectModernizerDocument": "._modernizer.document",
+        "FlextInfraPyprojectModernizerRun": "._modernizer.run",
+        "FlextInfraPyprojectModernizerTooling": "._modernizer.tooling",
+        "FlextInfraRuntimeDevDependencyDetector": ".detector",
+        "FlextInfraToolTablesPhase": ".phases.tool_tables",
+        "_modernizer": "._modernizer",
+        "phases": ".phases",
+    }),
+    public_exports=__all__,
 )
-
-install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

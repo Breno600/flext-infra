@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 from flext_infra import c, m, u
-from flext_infra.utilities import FlextInfraUtilitiesCodegenFilePlan
+from flext_infra._utilities.codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
 
 
 class TestsFlextInfraCodegenFilePlanState:
@@ -181,8 +181,9 @@ class TestsFlextInfraCodegenFilePlanState:
         assert "mode-only drift" in report
         assert "desired=0o755" in report
 
+    @staticmethod
     @pytest.mark.parametrize("limit", [0, -1])
-    def test_drift_report_rejects_non_positive_limit(self, limit: int) -> None:
+    def test_drift_report_rejects_non_positive_limit(limit: int) -> None:
         """Test drift report rejects non positive limit."""
         with pytest.raises(ValueError, match="limit must be positive"):
             FlextInfraUtilitiesCodegenFilePlan.codegen_file_drift_report(

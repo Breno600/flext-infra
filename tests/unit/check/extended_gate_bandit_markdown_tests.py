@@ -16,7 +16,7 @@ from flext_tests import tm
 from flext_infra import config, m, t
 from flext_infra.gates.bandit import FlextInfraBanditGate
 from flext_infra.gates.markdown import FlextInfraMarkdownGate
-from tests import TestsFlextInfraUtilities as u, c
+from tests import c, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -95,6 +95,7 @@ class TestsFlextInfraBanditAndMarkdownGates:
         tm.that(result.raw_output.startswith("{"), eq=True)
         tm.that(result.raw_output, lacks="Working...")
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("markdown_text", "config_text", "findings_block", "codes"),
         [
@@ -123,7 +124,6 @@ class TestsFlextInfraBanditAndMarkdownGates:
         ],
     )
     def test_markdown_check(
-        self,
         *,
         tmp_path: Path,
         markdown_text: str,

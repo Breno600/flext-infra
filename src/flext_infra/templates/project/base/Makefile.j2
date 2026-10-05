@@ -41,6 +41,25 @@ case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon data
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
 {%- endmacro -%}
+{#- Every pytest-running verb owns its children's scratch the way the Mise
+    bootstrap owns its own: ONE transient sandbox beside the checkout per
+    recipe shell, declared through the standard temp triplet and deleted when
+    the shell exits. The verb DECLARES the project scratch root for the suite
+    it starts instead of inheriting the caller's ambient /tmp (fleet repos
+    reject a test scratch under /tmp; cosmos-charts CI run 37235165752 died in
+    pytest_configure on exactly that). One definition feeds every verb, so no
+    pytest verb can drift back to an undeclared scratch. -#}
+{%- macro pytest_scratch_root() -%}
+project_root="$(PROJECT_ROOT)"; \
+project_parent="$${project_root%/*}"; \
+if [ -z "$$project_parent" ]; then project_parent=/; fi; \
+scratch="$$(mktemp -d "$$project_parent/.$${project_root##*/}.pytest-scratch.XXXXXX")"; \
+trap 'find "$$scratch" -depth -delete' EXIT; \
+mkdir -p "$$scratch/tmp"; \
+scratch_tmp="$$(cd "$$scratch/tmp" && pwd -P)"; \
+TMPDIR="$$scratch_tmp"; TMP="$$scratch_tmp"; TEMP="$$scratch_tmp"; \
+export TMPDIR TMP TEMP; \
+{%- endmacro -%}
 {#- Each phase is its own bounded runner process with its own entrypoint clock:
     the budgeted phase never carries slow-marked items, which run afterwards in
     their own phase, each within the per-item slow bound (gate-budget rule). -#}
@@ -48,8 +67,24 @@ mkdir -p "$$(dirname "$$database")"; \
     verb's tools resolve from, so a test observes the runtime's tool versions. -#}
 {%- macro pytest_test_runner(operations=("",)) -%}
 {{ pytest_testmon_guard() }}
+{{ pytest_scratch_root() }}
 {%- for operation in operations %}
 {{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry{% if operation %} {{ operation }}{% endif %}{% if not loop.last %}; \{% endif %}
+{%- endfor %}
+{%- endmacro -%}
+{#- The single-file verb validates its FILE input and exports the target in
+    the same shell as the guarded runners; the declared file then runs through
+    the budgeted and slow phases like any suite. The exported variable name
+    mirrors c.Infra.PYTEST_ENV_TARGET_FILE in flext-infra/_constants/make.py;
+    the entry fails loudly on a mismatch. -#}
+{%- macro pytest_test_file_runner() -%}
+if [ -z "$(strip $(FILE))" ]; then printf 'ERROR: test-file requires FILE=<repository-relative test file path>\n' >&2; exit 2; fi; \
+case "$(FILE)" in /*|*..*) printf 'ERROR: FILE must stay a repository-relative path: %s\n' "$(FILE)" >&2; exit 2 ;; esac; \
+if [ ! -f "$(PROJECT_ROOT)/$(FILE)" ]; then printf 'ERROR: FILE is not an existing repository file: %s\n' "$(FILE)" >&2; exit 2; fi; \
+{{ pytest_testmon_guard() }}
+{{ pytest_scratch_root() }}
+{%- for operation in ("file", "file-slow") %}
+export FLEXT_PYTEST_TARGET_FILE="$(FILE)"; {{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry {{ operation }}{% if not loop.last %}; \{% endif %}
 {%- endfor %}
 {%- endmacro -%}
 # @flext-generated: continuous
@@ -79,6 +114,7 @@ ifeq ($(strip $(SELF_MAKE_EXECUTABLE)),)
 $(error Current Make executable has no physical path: $(MAKE_COMMAND))
 endif
 .DEFAULT_GOAL := help
+
 ifeq ($(filter command line override,$(origin SETUP_BOOTSTRAP_ONLY)),)
 ifneq ($(filter setup,$(MAKECMDGOALS)),)
 SETUP_BOOTSTRAP_ONLY := Y
@@ -92,15 +128,25 @@ export GEN_INIT_ONLY
 endif
 endif
 
-# GITHUB_TOKEN is the one GitHub credential variable every tool reads (mise,
-# gh, uv). The caller's environment supplies it (ai-hub propagates it through
-# .envrc.ai-hub); when it carries none, the network bootstrap selects the first
-# declared toolchain.github_credential_commands entry whose executable is on
-# PATH, and that source must deliver. With no source present, GitHub access is
-# anonymous. A tool-scoped alias of the same credential never reaches a recipe,
-# where it would shadow or outrank it. The value is never printed.
-export GITHUB_TOKEN
-unexport GH_TOKEN MISE_GITHUB_TOKEN GITHUB_API_TOKEN
+# One GitHub credential for every verb (operator 2026-10-03): the first
+# non-empty of the caller's GITHUB_TOKEN, GH_TOKEN, MISE_GITHUB_TOKEN, then the
+# declared credential command when it is installed. Every name gh, uv and mise
+# read carries that same value, so no inherited alias can shadow it. The value
+# stays in the environment and is never printed.
+GITHUB_TOKEN := $(firstword $(GITHUB_TOKEN) $(GH_TOKEN) $(MISE_GITHUB_TOKEN))
+{% for command in mise_bootstrap.credential_commands -%}
+ifeq ($(GITHUB_TOKEN),)
+GITHUB_TOKEN := $(shell command -v {{ command[0] }} >/dev/null 2>&1 && {{ command | join(' ') }} 2>/dev/null)
+endif
+{% endfor -%}
+ifneq ($(GITHUB_TOKEN),)
+GH_TOKEN := $(GITHUB_TOKEN)
+MISE_GITHUB_TOKEN := $(GITHUB_TOKEN)
+export GITHUB_TOKEN GH_TOKEN MISE_GITHUB_TOKEN
+else
+unexport GITHUB_TOKEN GH_TOKEN MISE_GITHUB_TOKEN
+endif
+unexport GITHUB_API_TOKEN
 
 # === SECTION: project identity (managed) ===
 # Source: config:dist / config:make_profile / config:repository_root_rel / config:uv_link_mode
@@ -171,7 +217,11 @@ else
 override TRACKED_MISE := $(PROJECT_ROOT)/bin/mise
 endif
 override SETUP_MISE := $(TRACKED_MISE)
-override export FLEXT_PYTEST_TARGET_RAW := {{ make.testmon_cache.target_directory }}
+# Caller-overridable test target (a directory or a single test file under
+# it): `make test FLEXT_PYTEST_TARGET_RAW=tests/unit/foo_test.py` runs one
+# file through the same bounded runner. The default stays the declared
+# target_directory; the runner validates the path's shape.
+export FLEXT_PYTEST_TARGET_RAW := {{ make.testmon_cache.target_directory }}
 # === SECTION: REPOSITORY_ROOT isolation (managed) ===
 # Source: physical checkout topology; caller variables cannot select a workspace.
 # Inside a workspace every make run, root
@@ -236,7 +286,28 @@ override MISE_VERSION_PIN := $(RUNTIME_ROOT)/{{ mise_bootstrap.version_pin_file 
 # has been recovered. Parsing it here would freeze a torn pre-recovery value.
 # End SECTION: profile routing
 
+# Git identity distinguishes a linked worktree from a primary submodule:
+# both can have a .git file, but only a linked worktree has distinct Git
+# directory and common directory. The environment path cannot be overridden.
+RUNTIME_LINKED_WORKTREE :=
+ifneq ($(wildcard $(RUNTIME_ROOT)/.git),)
+RUNTIME_GIT_DIR := $(shell git -C "$(RUNTIME_ROOT)" rev-parse --path-format=absolute --git-dir)
+ifneq ($(.SHELLSTATUS),0)
+$(error Cannot resolve Git directory for $(RUNTIME_ROOT))
+endif
+RUNTIME_GIT_COMMON_DIR := $(shell git -C "$(RUNTIME_ROOT)" rev-parse --path-format=absolute --git-common-dir)
+ifneq ($(.SHELLSTATUS),0)
+$(error Cannot resolve Git common directory for $(RUNTIME_ROOT))
+endif
+ifneq ($(RUNTIME_GIT_DIR),$(RUNTIME_GIT_COMMON_DIR))
+RUNTIME_LINKED_WORKTREE := Y
+endif
+endif
+ifeq ($(RUNTIME_LINKED_WORKTREE),Y)
+override RUNTIME_VENV := $(abspath $(RUNTIME_ROOT)/../{{ worktree_environment_directory }}/$(notdir $(RUNTIME_ROOT)))
+else
 override RUNTIME_VENV := $(RUNTIME_ROOT)/{{ environment_directory }}
+endif
 ifeq ($(OS),Windows_NT)
 override RUNTIME_BIN := $(RUNTIME_VENV)/Scripts
 override RUNTIME_PYTHON := $(RUNTIME_BIN)/python.exe
@@ -308,7 +379,11 @@ SETUP_ENVIRONMENT_RECIPE = set -eu; \
 			$(UV) venv --clear --python "$$desired_python" "$(RUNTIME_VENV)"; \
 		fi; \
 	fi; \
-	$(UV) sync --project "$(UV_PROJECT)" $(UV_SYNC_FLAGS) --link-mode "$(UV_LINK_MODE)"; \
+	if $(UV) sync --project "$(UV_PROJECT)" $(UV_SYNC_FLAGS) --locked --link-mode "$(UV_LINK_MODE)"; then :; \
+	else \
+		printf 'WARN: uv.lock drifts from pyproject.toml; setup installs the committed uv.lock without touching it; make upg rewrites it\n' >&2; \
+		$(UV) sync --project "$(UV_PROJECT)" $(UV_SYNC_FLAGS) --frozen --link-mode "$(UV_LINK_MODE)"; \
+	fi; \
 	XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
 		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" allow "$(PROJECT_ROOT)"; \
 	for member in $(WORKSPACE_SUBPROJECTS); do \
@@ -323,7 +398,7 @@ REQUIRE_WORKSPACE_ENVIRONMENT = case "$(PROJECT_ROOT)/" in \
 	"$(RUNTIME_ROOT)/"*) ;; \
 	*) printf 'ERROR: runtime workspace does not contain this project: %s\n' "$(RUNTIME_ROOT)" >&2; exit 2 ;; \
 	esac; \
-	for environment_path in "$(RUNTIME_VENV)" "$(RUNTIME_BIN)" "$(PROJECT_ROOT)/{{ environment_directory }}" "$(PROJECT_ROOT)/{{ environment_directory }}/bin"; do \
+	for environment_path in "$(patsubst %/,%,$(dir $(RUNTIME_VENV)))" "$(RUNTIME_VENV)" "$(RUNTIME_BIN)" "$(PROJECT_ROOT)/{{ environment_directory }}" "$(PROJECT_ROOT)/{{ environment_directory }}/bin"; do \
 		if [ -L "$$environment_path" ]; then \
 			printf 'ERROR: workspace environment must be physical, not a symlink: %s\n' "$$environment_path" >&2; exit 2; \
 		fi; \
@@ -338,14 +413,19 @@ _bootstrap_setup_tools: _builtin_require_workspace
 # Execute the interpreter provisioned by setup without discovering a project
 # workspace or creating a dependency-resolution file during a runtime command.
 UV_RUN := env -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u PROJECT_ROOT PYTHONPATH="$(PROJECT_ROOT)/src" $(UV) run --no-project --python "$(RUNTIME_PYTHON)"
-override PROJECT_INFRA_PYTHONPATH := $(MAKEFILE_ROOT)/src
+# The checked-out flext-infra lane owns every lifecycle verb: a workspace
+# runs the generator it carries (the submodule src), so a broken published
+# dependency tip can never block the local recovery cycle. A checkout without
+# the submodule (standalone member) keeps its own installed copy.
+FLEXT_INFRA_SUBMODULE_SRC := $(RUNTIME_ROOT)/flext-infra/src
+override PROJECT_INFRA_PYTHONPATH := $(if $(wildcard $(FLEXT_INFRA_SUBMODULE_SRC)/flext_infra/.),$(FLEXT_INFRA_SUBMODULE_SRC),$(MAKEFILE_ROOT)/src)
 PROJECT_INFRA_RUN = if [ ! -x "$(FLEXT_INFRA_PYTHON)" ]; then printf 'ERROR: FLEXT_INFRA_PYTHON must name an executable managed Python\n' >&2; exit 2; fi; $(PROJECT_TOOL_EXEC) env -u PYTHONPATH -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u UV_PROJECT_ENVIRONMENT PYTHONPATH="$(PROJECT_INFRA_PYTHONPATH)" $(FLEXT_INFRA_PYTHON)
 PROJECT_FLEXT_INFRA := $(PROJECT_INFRA_RUN) -m flext_infra
 # Scaffold dev tools live in the validated optional dev
-# Setup installs frozen from the committed uv.lock and never re-resolves: it is
-# the CI path and must be stable. A missing or stale lock fails through uv's own
-# error; `make upg` is the only verb that resolves and rewrites it.
-UV_SYNC_FLAGS := --all-extras --all-groups --locked
+# Only `make upg` resolves and rewrites uv.lock. Setup always runs: it syncs
+# `--locked`, and when uv.lock drifts from pyproject.toml it warns and installs
+# the committed lock `--frozen`, which never writes it.
+UV_SYNC_FLAGS := --all-extras --all-groups
 
 ifeq ($(GEN_INIT_ONLY),)
 {{ makefile_custom_include }}
@@ -426,12 +506,11 @@ endef
 
 .PHONY: $(PUBLIC_VERBS) $(addprefix _builtin-,$(PUBLIC_VERBS))
 .PHONY: _builtin_gen_init _builtin_gen_all
-$(filter-out help clean upg,$(PUBLIC_VERBS)): _builtin_require_mise_pin
 
 {# Provisioning creates the physical environment. Activation producers use that
    existing environment to regenerate activation inputs before consuming them.
    All other operational verbs activate before their handlers and hooks. -#}
-{% for verb in profile.verbs + (extra_verbs | list) if verb.name not in ("setup", "upg") %}
+{% macro public_verb_entry(verb) -%}
 {% if verb.produces_activation %}
 # The pre hook and selected producer run once before activation. The producer
 # owns the complete generation transaction; activation adds no second writer.
@@ -453,6 +532,16 @@ _activated-{{ verb.name }}: _builtin_require_environment
 {% endif %}
 	$(call RUN_PUBLIC,{{ verb.name }})
 {% endif %}
+{%- endmacro -%}
+{% macro verb_help_line(verb) %}@printf '  %-16s %s\n' '{{ verb.name }}' '{{ verb.description | replace("\n", " ") | trim | replace("$", "$$") | replace("'", "'\"'\"'") }}'{% endmacro -%}
+# OPTIONS=Y (or HELP=Y) displays a built-in verb's contract without effects:
+# no prerequisite, hook or handler of that verb runs. A script verb keeps its
+# entry, and the promoted dispatcher renders its contract per WHAT.
+VERB_CONTRACT := $(filter {{ ((contract_env_values | list) + (contract_env_values | map("lower") | list) + (contract_env_values | map("capitalize") | list)) | unique(case_sensitive=true) | join(" ") }},$(OPTIONS) $(HELP))
+ifeq ($(VERB_CONTRACT),)
+$(filter-out help clean upg,$(BUILTIN_VERBS)): _builtin_require_mise_pin
+{% for verb in profile.verbs if verb.name not in ("setup", "upg") %}
+{{ public_verb_entry(verb) }}
 {% endfor %}
 
 # `setup` keeps its own recipe (it must not require the environment it is about
@@ -468,11 +557,24 @@ setup: _bootstrap_setup_tools
 # rewrites it. Its first half therefore resolves the toolchain afresh, in a
 # private stage that never reads the committed lock. `_upg_relock` then bumps
 # that lock against the .mise.toml `gen` just rendered, so toolchain policy
-# changes (for example the fleet cooldown) still reach every consumer.
+# changes (for example the fleet cooldown) still reach every consumer; when
+# that manifest is byte-identical to the one the first half locked, the lock
+# already satisfies it and the relock installs from it without resolving again.
 upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle
 upg: TOOL_BOOTSTRAP_RESOLVE := 1
 upg: TOOL_BOOTSTRAP_LOCK := 1
 upg: _builtin_require_runtime_root _bootstrap_setup_tools
+else
+{% for verb in profile.verbs %}
+{{ verb.name }}:
+	{{ verb_help_line(verb) }}
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make {{ verb.name }} to execute it.'
+{% endfor %}
+endif
+$(filter-out help clean upg,$(SCRIPT_VERBS)): _builtin_require_mise_pin
+{% for verb in extra_verbs if verb.name not in ("setup", "upg") %}
+{{ public_verb_entry(verb) }}
+{% endfor %}
 
 # Only the runtime root resolves the Mise release. An attached member's pin and
 # launchers are projections of that root, published by the root's `make gen`.
@@ -503,7 +605,7 @@ _setup_activated:
 _builtin-help:
 	@printf '%s\n' '{{ dist }} [{{ make_profile }}]' '';
 {% for verb in profile.verbs + (extra_verbs | list) %}
-	@printf '  %-16s %s\n' '{{ verb.name }}' '{{ verb.description | replace("\n", " ") | trim | replace("$", "$$") | replace("'", "'\"'\"'") }}';
+	{{ verb_help_line(verb) }};
 {% endfor %}
 
 # A project owns the sources declared by its manifest. The generated setup
@@ -525,7 +627,11 @@ _builtin_recover_mise:
 	if [ -z "$$project_parent" ]; then project_parent=/; fi; \
 	for prior in "$$project_parent/.$${project_root##*/}.mise-lock-stage."*; do \
 		if [ ! -d "$$prior" ]; then continue; fi; \
-		if [ ! -f "$$prior/transaction.json" ]; then printf 'ERROR: uncommitted Mise stage has no recovery journal: %s\n' "$$prior" >&2; exit 2; fi; \
+		if [ ! -f "$$prior/transaction.json" ]; then \
+			printf 'INFO: removing the dead Mise stage (crashed before its lock commit point; nothing was published): %s\n' "$$prior" >&2; \
+			find "$$prior" -depth -delete; \
+			continue; \
+		fi; \
 		if [ ! -f "$$prior/python-path" ]; then printf 'ERROR: Mise transaction lacks its Python receipt: %s\n' "$$prior" >&2; exit 2; fi; \
 		IFS= read -r recovery_python < "$$prior/python-path"; \
 		if [ ! -x "$$recovery_python" ]; then printf 'ERROR: Mise transaction Python is unavailable: %s\n' "$$recovery_python" >&2; exit 2; fi; \
@@ -565,7 +671,9 @@ endif
 # Setup PROVISIONS tooling only — mise, venv, dependencies.
 # It never generates, conforms, or mutates project code; `make gen` is the
 # single public conformance/generation surface.
-# Setup always reconciles directly from the lock. The venv is created when
+# Setup installs from the committed locks and never writes them; when a lock
+# drifts from its manifest it warns and installs without touching it, because
+# only `make upg` rewrites locks. The venv is created when
 # missing and is never cleared while present, because a concurrent lane may be
 # running against it.
 # Governed gitlinks are provisioned in every context, GitHub Actions included:
@@ -615,10 +723,11 @@ _upg_lifecycle: _builtin_setup_submodules
 # The second half belongs to the Makefile `gen` just rendered, so it runs as a
 # fresh make invocation rather than as lines of the recipe already expanded
 # above. It locks mise.lock from the rendered .mise.toml (never from the
-# manifest the generator was provisioned with), installs exactly that lock,
+# manifest the generator was provisioned with) unless that manifest is the one
+# the first half already locked, installs exactly that lock,
 # re-resolves uv.lock against the raised floors and reprovisions frozen from
 # both: the committed locks must match the committed manifests, or `setup`
-# (the CI path, `--locked`) rejects them. The Mise release is not resolved
+# (the CI path) warns of drift on every run. The Mise release is not resolved
 # again; the first half already pinned it.
 .PHONY: _upg_relock
 _upg_relock: TOOL_BOOTSTRAP_LIFECYCLE := _upg_converge
@@ -683,6 +792,45 @@ _builtin_test_full_all: _builtin_require_environment
     runner=pytest_test_runner(("full", "full-slow")),
 ) }}
 
+_builtin_test_file_all: _builtin_require_environment
+{{ test_report_recipe(
+    runner=pytest_test_file_runner(),
+) }}
+
+# The fast per-file pre-gate (operator P0, val2026100417xx): `make file-gate
+# FILE=<repository-relative path>` gates exactly one file with the fast gates
+# (ruff lint, ruff format, pyrefly, pyright, ast-grep, typos) before the file
+# ever reaches the tree-wide `make mod`/`make check` pipeline. Ruff lint and
+# format are the hard gates; the type and spelling scanners report advisories.
+# Empty or non-relative FILE fails loud. This pre-gate never substitutes the
+# tree-wide verbs: code is accepted only after `make mod`, with fmt/fix/check/
+# mod/spells green (ADR-004 §3, ADR-018).
+_builtin_file_gate_all: _builtin_require_environment
+	@set -eu; \
+	if [ -z "$(strip $(FILE))" ]; then printf 'ERROR: file-gate requires FILE=<repository-relative path>\n' >&2; exit 2; fi; \
+	case "$(FILE)" in /*|*..*) printf 'ERROR: FILE must stay a repository-relative path: %s\n' "$(FILE)" >&2; exit 2 ;; esac; \
+	if [ ! -f "$(PROJECT_ROOT)/$(FILE)" ]; then printf 'ERROR: FILE is not an existing repository file: %s\n' "$(FILE)" >&2; exit 2; fi; \
+	file="$(PROJECT_ROOT)/$(FILE)"; \
+	echo "file-gate: ruff check $(FILE)"; \
+	$(RUNTIME_PYTHON) -m ruff check "$$file"; \
+	echo "file-gate: ruff format --check $(FILE)"; \
+	$(RUNTIME_PYTHON) -m ruff format --check "$$file"; \
+	echo "file-gate: pyrefly $(FILE)"; \
+	$(RUNTIME_PYTHON) -m pyrefly check "$$file" || true; \
+	echo "file-gate: pyright $(FILE)"; \
+	$(RUNTIME_PYTHON) -m pyright "$$file" || true; \
+	echo "file-gate: ast-grep scan $(FILE)"; \
+	ast-grep scan "$$file" || true; \
+	echo "file-gate: typos $(FILE)"; \
+	typos "$$file" || true; \
+	echo "file-gate: OK (pre-gate only; tree-wide make mod/check remain the acceptance gates)"
+
+_builtin_tests_all: _builtin_require_environment
+	+@$(SELF_MAKE) test
+{{ test_report_recipe(
+    runner="$(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full",
+) }}
+
 # fmt is format-only (single-pass verb law): ruff formats Python, the
 # fmt_gates formatters run once through the checker's apply mode, and every
 # lint repair belongs to `make fix`. Only a real tool failure (exit >= 2)
@@ -699,6 +847,11 @@ _builtin_fix_all: _builtin_require_environment
 # to no setup/gen/check/test workflow row and never runs implicitly.
 _builtin_sonarcloud_sync_all: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) maintenance sonarcloud-sync --repository-root "$(PROJECT_ROOT)"
+
+# Read the complete unresolved new-code issue set on the published integration
+# branch. This diagnostic never writes SonarCloud settings or issue state.
+_builtin_sonarcloud_issues_all: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) maintenance sonarcloud-issues --repository-root "$(PROJECT_ROOT)"
 
 {% if make_profile == "workspace" %}
 # Member propagation exists only where members exist: this workspace's
@@ -760,18 +913,19 @@ profile-gen-report: _builtin_require_environment
 # guard and environment as the bounded gate, but deliberately NOT wrapped in
 # PYTEST_BOUNDED. The runner's own deadline still applies. Central collection
 # children also write profiles beside their manifests and print their paths.
-# The stdlib-only adapter starts profiling before runner/model/pytest imports.
-# The parent sidecar binds the exact run;
+# The parent adapter starts profiling before runner/model/pytest imports; each
+# child runs under a stdlib-only launcher, so pytest imports before any plugin
+# package. The runner binds every child profile to the exact run;
 # reports never combine a parent profile with the mutable latest.txt pointer.
-.PHONY: profile-test
-profile-test: _builtin_require_environment
+# Public names come from make.verbs; these targets are the implementations.
+_builtin-profile-test: _builtin_require_environment
 	@mkdir -p "$(PROFILE_REPORTS_DIR)"
 	@{{ pytest_testmon_guard() }}
+{{ pytest_scratch_root() }}
 	{{ make.testmon_cache.database_environment_variable }}="$$database" $(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -m flext_infra._pytest_entry profile \
 		"$(PROFILE_REPORTS_DIR)/{{ pytest.profile_suite_filename }}"
 
-.PHONY: profile-test-report
-profile-test-report: _builtin_require_environment
+_builtin-profile-test-report: _builtin_require_environment
 	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -m flext_infra._cprofile_entry \
 		"$(PROFILE_REPORTS_DIR)/{{ pytest.profile_suite_filename }}" "$(PROFILE_REPORTS_DIR)/{{ pytest.profile_suite_filename }}.json"
 
@@ -892,6 +1046,8 @@ _builtin-examples: _builtin_require_environment
 _builtin-check: _builtin_check_all
 _builtin-test: _builtin_test_all
 _builtin-test-full: _builtin_test_full_all
+_builtin-test-file: _builtin_test_file_all
+_builtin-file-gate: _builtin_file_gate_all
 _builtin-fmt: _builtin_fmt_all
 _builtin-fix: _builtin_fix_all
 _builtin-fix-namespace: _builtin_fix_namespace
@@ -926,6 +1082,7 @@ _builtin-{{ verb }}:
 _builtin-duplication:
 	@{{ check_run("duplication") }}
 _builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all
+_builtin-sonarcloud-issues: _builtin_sonarcloud_issues_all
 {% if script_dispatch %}
 # Repository-owned script verbs route through the promoted command framework:
 # custom.mk handlers override via RUN_PUBLIC; otherwise the dispatcher resolves

@@ -39,7 +39,7 @@ class FlextInfraLocDeltaValidator(s[bool]):
         """
         lowered = subject.lower()
         if not any(label in lowered for label in c.Infra.REFACTOR_COMMIT_LABELS):
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         delta = insertions - deletions
         if delta > 0:
             return r[bool].fail(
@@ -47,7 +47,7 @@ class FlextInfraLocDeltaValidator(s[bool]):
                 f"(insertions={insertions}, deletions={deletions}); refactor/cleanup "
                 "commits must be net non-positive",
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def _sum_numstat(numstat: str) -> t.Pair[int, int]:
@@ -89,7 +89,7 @@ class FlextInfraLocDeltaValidator(s[bool]):
         )
         if verdict.failure:
             return r[bool].from_failure(verdict)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraLocDeltaValidator"]

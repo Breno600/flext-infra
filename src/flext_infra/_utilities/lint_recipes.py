@@ -5,8 +5,10 @@ The tooling owner maps each Ruff rule code to one recipe
 then these recipes to the findings left. Every repair is derived from the
 source itself: a docstring section from the signature, the summary and the
 raise statement, a summary from the declared name, the notice from the
-project's declared author and copyright year. A finding the recipe cannot
-place raises; nothing is skipped.
+project's declared author, copyright year and module path, and a static
+method from a method Ruff reports as never reading its instance: only its
+receiver parameter and its decorator list change, its body keeps every byte. A
+finding the recipe cannot place raises; nothing is skipped.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -18,6 +20,7 @@ import ast
 import re
 import textwrap
 from collections.abc import MutableMapping
+from operator import itemgetter
 from pathlib import Path
 
 from flext_infra import c, config, m, t
@@ -28,19 +31,24 @@ class FlextInfraUtilitiesLintRecipes:
     """Apply the declared recipe of each lint finding to one module source."""
 
     @staticmethod
-    def copyright_notice(pkg_dir: Path) -> str:
+    def copyright_notice(pkg_dir: Path, *, module: Path | None = None) -> str:
         """Render the copyright notice of the project that owns ``pkg_dir``.
 
         The author is the manifest's first declared author and the year is the
         scaffold copyright year, the same owners the scaffold templates
-        render.
+        render. ``module`` names the file that carries the notice. Its
+        project-relative path, without the suffix every module shares, is the
+        line between the copyright sentence and the SPDX line: the sentence
+        and the license stay legal, and the notice is not one stamp.
 
         Returns:
-            The two-line notice: the copyright line and the SPDX line.
+            The copyright sentence, that module identity when ``module`` is
+            given, and the SPDX line.
 
         Raises:
-            ValueError: If the path is outside any project manifest or the
-                manifest declares no author name.
+            ValueError: If the path is outside any project manifest, the
+                manifest declares no author name, or ``module`` has no
+                identity.
 
         """
         for candidate in (pkg_dir, *pkg_dir.parents):
@@ -57,11 +65,28 @@ class FlextInfraUtilitiesLintRecipes:
                 msg = f"project manifest declares no author name: {candidate}"
                 raise ValueError(msg)
             scaffold = config.Infra.codegen.scaffold.project
-            return (
+            copyright_line = (
                 f"Copyright (c) {scaffold.copyright_year} {author}. "
-                "All rights reserved.\n"
-                f"SPDX-License-Identifier: {scaffold.supported_licenses[0]}"
+                "All rights reserved."
             )
+            spdx = f"SPDX-License-Identifier: {scaffold.supported_licenses[0]}"
+            if module is None:
+                return f"{copyright_line}\n{spdx}"
+            try:
+                identity = module.resolve().relative_to(candidate.resolve())
+            except ValueError:
+                identity = module
+            marker = identity.with_suffix("").as_posix()
+            if (
+                not marker
+                or marker == "."
+                or len(marker) > config.Infra.tooling.tools.ruff.line_length
+            ):
+                marker = identity.stem
+            if not marker:
+                msg = f"module has no notice identity: {module}"
+                raise ValueError(msg)
+            return f"{copyright_line}\n{marker}\n{spdx}"
         msg = f"package is outside any project manifest: {pkg_dir}"
         raise ValueError(msg)
 
@@ -73,12 +98,17 @@ class FlextInfraUtilitiesLintRecipes:
         *,
         path: Path,
         recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
-        notice: str,
     ) -> str:
         """Return ``source`` with the declared recipe of every issue applied.
 
-        ``path`` names the module in every refusal; a module without a
-        docstring receives one, summarized from its name, to carry the notice.
+        A static-method finding on an override chain or on a method that reads
+        its receiver is filtered out by the caller (``overridden_findings``)
+        and never reaches here.
+
+        ``path`` names the module in every refusal and locates the project
+        whose declared author signs the notice; the notice is derived only
+        when a copyright finding asks for it. A module without a docstring
+        receives one, summarized from its name, to carry the notice.
 
         Returns:
             The repaired module source.
@@ -100,11 +130,7 @@ class FlextInfraUtilitiesLintRecipes:
         ] = {}
         wants_notice = False
         for issue in issues:
-            recipe = recipes.get(issue.code)
-            if recipe is None:
-                msg = f"{path}: lint finding {issue.code} has no declared fix recipe"
-                raise ValueError(msg)
-            match recipe:
+            match cls._recipe_for(issue, recipes, path):
                 case c.Infra.LintFixRecipe.RETURNS_SECTION:
                     function = cls._documented_at(tree, issue.line, path)
                     sections.setdefault(function, {}).setdefault("Returns", []).append(
@@ -125,7 +151,10 @@ class FlextInfraUtilitiesLintRecipes:
                     summaries[definition] = cls._summary_for(definition)
                 case c.Infra.LintFixRecipe.COPYRIGHT_NOTICE:
                     wants_notice = True
-        edits: list[t.Triple[int, int, str]] = []
+                case c.Infra.LintFixRecipe.STATIC_METHOD:
+                    # Planned per method below, after duplicates collapse.
+                    continue
+        edits = list(cls._static_method_plan(source, tree, issues, path, recipes))
         for function, wanted in sections.items():
             docstring = cls._docstring_expr(function)
             if docstring is None:
@@ -138,19 +167,9 @@ class FlextInfraUtilitiesLintRecipes:
                 cls._with_sections(raw, " " * docstring.col_offset, wanted),
             ))
         for definition, text in summaries.items():
-            first = definition.body[0]
-            decorators = (
-                first.decorator_list
-                if isinstance(
-                    first,
-                    ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
-                )
-                else []
-            )
-            first_line = min((first.lineno, *(item.lineno for item in decorators)))
-            offset = cls._offset(lines, first_line, 0)
-            edits.append((offset, offset, f'{" " * first.col_offset}"""{text}"""\n'))
+            edits.append(cls._summary_edit(lines, definition, text))
         if wants_notice:
+            notice = cls.copyright_notice(path.parent, module=path)
             module_docstring = cls._docstring_expr(tree)
             if module_docstring is None:
                 offset = len(lines[0]) if lines and lines[0].startswith("#!") else 0
@@ -165,7 +184,11 @@ class FlextInfraUtilitiesLintRecipes:
                 start, end, raw = cls._literal(lines, module_docstring, path)
                 edits.append((start, end, cls._with_notice(raw, notice)))
         rewritten = source
-        for start, end, text in sorted(edits, key=lambda edit: edit[0], reverse=True):
+        for start, end, text in sorted(
+            edits,
+            key=itemgetter(0, 1),
+            reverse=True,
+        ):
             rewritten = f"{rewritten[:start]}{text}{rewritten[end:]}"
         return rewritten
 
@@ -238,6 +261,66 @@ class FlextInfraUtilitiesLintRecipes:
             raise ValueError(msg)
         return max(enclosing, key=lambda node: node.lineno)
 
+    @classmethod
+    def _summary_edit(
+        cls,
+        lines: t.StrSequence,
+        definition: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+        text: str,
+    ) -> t.Triple[int, int, str]:
+        """Return the edit that places ``text`` as ``definition``'s summary.
+
+        A body on its own line receives the summary before that line. A body
+        that shares the suite colon's line is legal Python, including a
+        protocol stub on a wrapped signature: that line expands so the summary
+        and the same suite occupy the following lines.
+
+        Returns:
+            The span to replace and the summary text that replaces it.
+
+        """
+        first = definition.body[0]
+        line = lines[first.lineno - 1]
+        body_at = cls._utf8_chars(line, first.col_offset)
+        colon = body_at
+        while colon > 0 and line[colon - 1] in " \t":
+            colon -= 1
+        if colon == 0 or line[colon - 1] != ":":
+            decorators = (
+                first.decorator_list
+                if isinstance(
+                    first,
+                    ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+                )
+                else []
+            )
+            first_line = min((first.lineno, *(item.lineno for item in decorators)))
+            offset = cls._offset(lines, first_line, 0)
+            return (offset, offset, f'{" " * first.col_offset}"""{text}"""\n')
+        suite = line[body_at:].removesuffix("\n").removesuffix("\r")
+        header = lines[definition.lineno - 1]
+        block = " " * (cls._utf8_chars(header, definition.col_offset) + 4)
+        start = cls._offset(lines, first.lineno, 0)
+        return (
+            start,
+            start + len(line),
+            f'{line[:colon]}\n{block}"""{text}"""\n{block}{suite}\n',
+        )
+
+    @staticmethod
+    def _utf8_chars(line: str, col_offset: int) -> int:
+        """Return the character index of a UTF-8 AST column on ``line``.
+
+        Returns:
+            The character index of a UTF-8 AST column on ``line``.
+
+        """
+        return len(
+            line.encode(c.Cli.ENCODING_DEFAULT)[:col_offset].decode(
+                c.Cli.ENCODING_DEFAULT,
+            ),
+        )
+
     @staticmethod
     def _defined_at(
         tree: ast.Module,
@@ -246,11 +329,13 @@ class FlextInfraUtilitiesLintRecipes:
     ) -> ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef:
         """Return the class or function defined at ``line``.
 
+        An inline body is a legal definition. The summary edit expands it.
+
         Returns:
             The class or function defined at ``line``.
 
         Raises:
-            ValueError: Always; or if ``node.body[0].lineno == node.lineno``.
+            ValueError: If no class or function is defined at ``line``.
 
         """
         for node in ast.walk(tree):
@@ -258,12 +343,267 @@ class FlextInfraUtilitiesLintRecipes:
                 isinstance(node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef)
                 and node.lineno == line
             ):
-                if node.body[0].lineno == node.lineno:
-                    msg = f"{path}: definition at line {line} has its body inline"
-                    raise ValueError(msg)
                 return node
         msg = f"{path}: no class or function is defined at line {line}"
         raise ValueError(msg)
+
+    @classmethod
+    def _static_method_plan(
+        cls,
+        source: str,
+        tree: ast.Module,
+        issues: t.SequenceOf[m.Infra.Issue],
+        path: Path,
+        recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
+    ) -> t.VariadicTuple[t.Triple[int, int, str]]:
+        """Plan the static-method edits of every finding that selects them.
+
+        Returns:
+            The decorator insertions and receiver removals, one pair per method.
+
+        """
+        lines = source.splitlines(keepends=True)
+        methods = dict.fromkeys(
+            cls._receiver_method_at(tree, issue, path)[1]
+            for issue in issues
+            if recipes.get(issue.code) is c.Infra.LintFixRecipe.STATIC_METHOD
+        )
+        return tuple(
+            edit
+            for method in methods
+            for edit in cls._static_method_edits(source, lines, method, path)
+        )
+
+    @staticmethod
+    def _recipe_for(
+        issue: m.Infra.Issue,
+        recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
+        path: Path,
+    ) -> c.Infra.LintFixRecipe:
+        """Return the declared recipe of one finding.
+
+        Returns:
+            The recipe the tooling owner maps the finding's rule to.
+
+        Raises:
+            ValueError: If the finding's rule has no declared recipe.
+
+        """
+        recipe = recipes.get(issue.code)
+        if recipe is None:
+            msg = f"{path}: lint finding {issue.code} has no declared fix recipe"
+            raise ValueError(msg)
+        return recipe
+
+    @staticmethod
+    def overridden_methods(
+        sources: t.SequenceOf[str],
+    ) -> frozenset[t.Pair[str, str]]:
+        """Return each ``(class, method)`` on an override chain in ``sources``.
+
+        Ruff judges a method alone and cannot see its override chain: both the
+        base method a subclass redefines and the redefinition itself stay
+        instance methods, since declaring either static breaks the chain's
+        shared signature. Bases are matched by their declared name,
+        transitively, so an ambiguous name only keeps more methods with their
+        owner.
+
+        Returns:
+            The ``(class name, method name)`` pairs on an override chain.
+
+        """
+        bases: MutableMapping[str, set[str]] = {}
+        methods: MutableMapping[str, set[str]] = {}
+        for source in sources:
+            for node in ast.walk(ast.parse(source)):
+                if not isinstance(node, ast.ClassDef):
+                    continue
+                bases.setdefault(node.name, set()).update(
+                    ast.unparse(base).rsplit(".", maxsplit=1)[-1] for base in node.bases
+                )
+                methods.setdefault(node.name, set()).update(
+                    item.name
+                    for item in node.body
+                    if isinstance(item, ast.FunctionDef | ast.AsyncFunctionDef)
+                )
+        ancestors: MutableMapping[str, set[str]] = {}
+        for name in bases:
+            seen: set[str] = set()
+            pending = list(bases[name])
+            while pending:
+                base = pending.pop()
+                if base not in seen:
+                    seen.add(base)
+                    pending.extend(bases.get(base, ()))
+            ancestors[name] = seen
+        return frozenset(
+            pair
+            for name, found in ancestors.items()
+            for ancestor in found
+            for method in methods[name] & methods.get(ancestor, set())
+            for pair in ((ancestor, method), (name, method))
+        )
+
+    @classmethod
+    def overridden_findings(
+        cls,
+        source: str,
+        issues: t.SequenceOf[m.Infra.Issue],
+        *,
+        path: Path,
+        recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
+        overridden: frozenset[t.Pair[str, str]],
+    ) -> t.VariadicTuple[m.Infra.Issue]:
+        """Return the static-method findings the recipe must not convert.
+
+        A method on an override chain, or one whose body reads its receiver,
+        keeps its receiver.
+
+        Returns:
+            The findings the static-method recipe leaves to their owner.
+
+        """
+        tree = ast.parse(source)
+        return tuple(
+            issue
+            for issue in issues
+            if recipes.get(issue.code) is c.Infra.LintFixRecipe.STATIC_METHOD
+            for owner, method in (cls._receiver_method_at(tree, issue, path),)
+            if (owner.name, method.name) in overridden or cls._reads_receiver(method)
+        )
+
+    @staticmethod
+    def _reads_receiver(method: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+        """Tell whether the body reads its receiver, by name or through ``super()``.
+
+        Zero-argument ``super()`` and ``__class__`` bind the receiver
+        implicitly, so a static declaration would break them as well.
+
+        Returns:
+            Whether the body reads its receiver.
+
+        """
+        receiver = (*method.args.posonlyargs, *method.args.args)[0].arg
+        return any(
+            isinstance(node, ast.Name) and node.id in {receiver, "super", "__class__"}
+            for statement in method.body
+            for node in ast.walk(statement)
+        )
+
+    @staticmethod
+    def _receiver_method_at(
+        tree: ast.Module,
+        issue: m.Infra.Issue,
+        path: Path,
+    ) -> t.Pair[ast.ClassDef, ast.FunctionDef | ast.AsyncFunctionDef]:
+        """Return the class method Ruff reports as never reading its receiver.
+
+        Ruff reports the finding at the method's name on its ``def`` line and
+        names the method in its message, so line and name select one method.
+
+        Returns:
+            The owning class and the method the finding names.
+
+        Raises:
+            ValueError: If no class method with a receiver matches the finding.
+
+        """
+        for owner in ast.walk(tree):
+            if not isinstance(owner, ast.ClassDef):
+                continue
+            for method in owner.body:
+                if (
+                    isinstance(method, ast.FunctionDef | ast.AsyncFunctionDef)
+                    and method.lineno == issue.line
+                    and f"`{method.name}`" in issue.message
+                    and (*method.args.posonlyargs, *method.args.args)
+                ):
+                    return owner, method
+        msg = f"{path}: no class method with a receiver matches line {issue.line}"
+        raise ValueError(msg)
+
+    @classmethod
+    def _static_method_edits(
+        cls,
+        source: str,
+        lines: t.StrSequence,
+        method: ast.FunctionDef | ast.AsyncFunctionDef,
+        path: Path,
+    ) -> t.VariadicTuple[t.Triple[int, int, str]]:
+        """Declare ``method`` static: drop its receiver, add the decorator.
+
+        The receiver is removed with the separator that follows it; a receiver
+        that was the only parameter leaves empty parentheses. ``@staticmethod``
+        becomes the outermost decorator at the method's own indentation. No
+        other byte of the method changes.
+
+        Returns:
+            The decorator insertion and the receiver removal.
+
+        Raises:
+            ValueError: If a comment or a default sits beside the receiver, or
+                the method does not start its own line.
+
+        """
+        args = method.args
+        receiver = (*args.posonlyargs, *args.args)[0]
+        start = cls._offset(lines, receiver.lineno, receiver.col_offset)
+        cursor = cls._skip_blank(
+            source,
+            cls._offset(
+                lines,
+                receiver.end_lineno or receiver.lineno,
+                receiver.end_col_offset or 0,
+            ),
+            path,
+        )
+        if source[cursor] == ",":
+            cursor = cls._skip_blank(source, cursor + 1, path)
+            if args.posonlyargs == [receiver] and source[cursor] == "/":
+                cursor = cls._skip_blank(source, cursor + 1, path)
+                if source[cursor] == ",":
+                    cursor = cls._skip_blank(source, cursor + 1, path)
+        elif source[cursor] != ")":
+            msg = f"{path}: receiver of {method.name} is not a plain parameter"
+            raise ValueError(msg)
+        if source[cursor] == ")":
+            opening = source.rindex("(", 0, start) + 1
+            if source[opening:start].strip():
+                msg = f"{path}: signature of {method.name} holds more than its receiver"
+                raise ValueError(msg)
+            start = opening
+        first_line = min((
+            method.lineno,
+            *(decorator.lineno for decorator in method.decorator_list),
+        ))
+        head = lines[first_line - 1]
+        indent = head[: len(head) - len(head.lstrip(" \t"))]
+        if not head.lstrip(" \t").startswith(("@", "def ", "async ")):
+            msg = f"{path}: {method.name} does not start its own line"
+            raise ValueError(msg)
+        line_start = cls._offset(lines, first_line, 0)
+        return (
+            (line_start, line_start, f"{indent}@staticmethod\n"),
+            (start, cursor, ""),
+        )
+
+    @staticmethod
+    def _skip_blank(source: str, index: int, path: Path) -> int:
+        """Return the first index at or after ``index`` that is not blank.
+
+        Returns:
+            The index of the next signature token.
+
+        Raises:
+            ValueError: If a comment or line continuation sits in the span.
+
+        """
+        while source[index] in " \t\r\n":
+            index += 1
+        if source[index] in "#\\":
+            msg = f"{path}: comment or continuation beside a removed receiver"
+            raise ValueError(msg)
+        return index
 
     @staticmethod
     def _offset(lines: t.StrSequence, lineno: int, col_offset: int) -> int:
@@ -306,7 +646,12 @@ class FlextInfraUtilitiesLintRecipes:
         )
         raw = "".join(lines)[start:end]
         body = raw.lstrip("rRuU")
-        if not (body.startswith('"""') and body.endswith('"""') and len(body) >= 6):
+        delimiter = '"""'
+        if not (
+            body.startswith(delimiter)
+            and body.endswith(delimiter)
+            and len(body) >= 2 * len(delimiter)
+        ):
             msg = f'{path}: docstring at line {value.lineno} is not a """ literal'
             raise ValueError(msg)
         return start, end, raw

@@ -81,7 +81,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                     f"across {len(rules)} rule file(s)",
                 )
             self.progress.emit("mod: no pending ast-grep or sed-by-list fixes")
-            return r[t.Cli.ResultValue].ok(True)
+            return r[t.Cli.ResultValue].ok(value=True)
         return self._execute_apply(rules)
 
     def _execute_apply(self, rules: t.SequenceOf[Path]) -> p.Result[t.Cli.ResultValue]:
@@ -229,7 +229,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                 "mod: joint AST, semantic, and text fixed point verified "
                 "with zero actionable findings",
             )
-            return r[t.Cli.ResultValue].ok(True)
+            return r[t.Cli.ResultValue].ok(value=True)
 
     def _pending_renames(self) -> p.Result[int]:
         """Count pending rename occurrences across the configured campaigns.
@@ -274,8 +274,9 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             rule_ids = {r for r, _, _, _ in unresolved}
             files = {p for _, p, _, _ in unresolved}
             msg = (
-                f"fix!=match: ast-grep apply did not resolve {len(unresolved)} expected actionable "
-                f"findings in rules {sorted(rule_ids)} across files {sorted(files)}"
+                f"fix!=match: ast-grep apply did not resolve {len(unresolved)} "
+                f"actionable findings in rules {sorted(rule_ids)} "
+                f"across files {sorted(files)}"
             )
             raise RuntimeError(msg)
         # A completed rule may enable a later rule in the declared cascade.
@@ -289,8 +290,9 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             rule_ids = {r for r, _, _, _ in unexpected}
             files = {p for _, p, _, _ in unexpected}
             msg = (
-                f"fix!=match: ast-grep apply introduced {len(unexpected)} new actionable "
-                f"findings in rules {sorted(rule_ids)} across files {sorted(files)}"
+                f"fix!=match: ast-grep apply introduced {len(unexpected)} new "
+                f"actionable findings in rules {sorted(rule_ids)} "
+                f"across files {sorted(files)}"
             )
             raise RuntimeError(msg)
 

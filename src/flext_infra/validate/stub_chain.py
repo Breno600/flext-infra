@@ -238,9 +238,9 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
         return r[m.Infra.StubAnalysisReport].ok(
             m.Infra.StubAnalysisReport(
                 project=proj.name,
-                mypy_hints=mypy_hints,
-                internal_missing=internal,
-                unresolved_missing=unresolved,
+                mypy_hints=list(mypy_hints),
+                internal_missing=list(internal),
+                unresolved_missing=list(unresolved),
                 total_missing=len(missing_imports),
             ),
         )
@@ -267,11 +267,13 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
             )
         if data.internal_missing:
             violations.append(
-                f"{project_dir.name}: {len(data.internal_missing)} internal missing imports",
+                f"{project_dir.name}: {len(data.internal_missing)} "
+                f"internal missing imports",
             )
         if data.unresolved_missing:
             violations.append(
-                f"{project_dir.name}: {len(data.unresolved_missing)} unresolved imports",
+                f"{project_dir.name}: {len(data.unresolved_missing)} "
+                f"unresolved imports",
             )
         return tuple(violations)
 
@@ -314,7 +316,8 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
                 passed=not violations,
                 violations=violations,
                 summary=(
-                    f"typed dependency chain: {len(projects)} projects, {len(violations)} issues"
+                    f"typed dependency chain: {len(projects)} projects, "
+                    f"{len(violations)} issues"
                 ),
             ),
         )
@@ -334,7 +337,7 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
         if report_result.failure:
             return r[bool].from_failure(report_result)
         report = report_result.unwrap()
-        return r[bool].ok(True) if report.passed else r[bool].fail(report.summary)
+        return r[bool].ok(value=True) if report.passed else r[bool].fail(report.summary)
 
     def _run_mypy_hints(self, project_dir: Path) -> p.Result[t.StrSequence]:
         """Run mypy and extract install-package hints.

@@ -56,6 +56,21 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         metadata = u.Infra.read_project_metadata_result(root)
         if metadata.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(metadata)
+        project = workspace.project
+        if project is None:
+            # Existing checkouts declare no scaffold metadata: derive the
+            # tooling identity from live PEP 621 metadata (same rule as the
+            # render pass) instead of referencing an undefined name.
+            derived = self._project_spec_from_existing(
+                repository,
+                root,
+                codegen,
+            )
+            if derived.failure:
+                return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
+                    derived,
+                )
+            project = derived.value
         dist = metadata.value.project.name
         if dist != repository.distribution:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
@@ -91,6 +106,10 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             project_name=repository.distribution,
             package_name=metadata.value.package_name,
             path=pyproject,
+            scaffold_project=codegen.scaffold.project,
+            upstream=project.upstream,
+            runtime_dependency_overlay=project.runtime_dependency_overlay,
+            declared_project_dependencies=metadata.value.project.dependencies,
             topology=m.Infra.PyprojectDeclaredTopology(
                 root_modules=(
                     target.project.root_modules if target.project is not None else ()
@@ -249,7 +268,8 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         )
         if len(entries) != 1 or entries[0].source is None or len(managed) != 1:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
-                f"docs config requires one declared render template and owner: {destination}",
+                f"docs config requires one declared render template "
+                f"and owner: {destination}",
             )
         template = u.Infra.codegen_templates_root(codegen) / entries[0].source
         source = u.Cli.atomic_read_binary_file_state(template, required=True)
@@ -328,7 +348,8 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 continue
             if len(entries) != 1:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
-                    f"managed file requires exactly one render template: {managed.path}",
+                    f"managed file requires exactly one render template: "
+                    f"{managed.path}",
                 )
             entry = entries[0]
             if entry.source is None:
@@ -432,13 +453,19 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         *,
         profile: str | None = None,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
-        """Validate the handwritten Make surface against its profile contract.
+        """Validate custom Make content and plan utility, protocol and model facades.
+
+        Existing handwritten Make content is validated against the selected
+        profile policy. A discovered package layout also contributes ``u``,
+        ``p`` and ``m`` facade plans from consumer-driven owner projection.
+        This method returns file plans; it does not publish their contents.
 
         Returns:
-            The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
+            The custom Make and facade plans, or a typed validation failure.
 
         Raises:
-            ValueError: If rendered.
+            ValueError: If facade rendering fails or a rendered facade has no
+                declaring package module.
 
         """
         policy = config.make.custom_handler_policies.get(
@@ -464,7 +491,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             plans.append(planned.value)
         layout = u.Infra.layout(root)
         if layout is not None and layout.class_stem:
-            families: t.VariadicTuple[Literal["u", "p"]] = ("u", "p")
+            families: t.VariadicTuple[Literal["u", "p", "m"]] = ("u", "p", "m")
             for family in families:
                 rendered = u.Infra.render_utility_facade(
                     layout.package_dir,

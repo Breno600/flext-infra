@@ -13,7 +13,6 @@ import libcst as cst
 from libcst.codemod import CodemodContext
 from libcst.codemod.visitors import AddImportsVisitor
 
-from flext_infra import m, t
 from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
 )
@@ -24,7 +23,7 @@ from flext_infra._utilities._semantic_cutover.model_fields_bindings import (
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
+    from flext_infra import m, p, t
 
 
 class FlextInfraUtilitiesSemanticCutoverModelFields(
@@ -75,7 +74,10 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
                 if not isinstance(target, ast.Name):
                     continue
                 if not cls._rejecting_guard(guard, target.id):
-                    msg = f"untrusted model_fields access lacks a rejecting guard in {path}:{statement.lineno}"
+                    msg = (
+                        f"untrusted model_fields access lacks a rejecting "
+                        f"guard in {path}:{statement.lineno}"
+                    )
                     raise ValueError(msg)
                 if not isinstance(guard, ast.If):
                     msg = "model field rejection must be an if statement"
@@ -91,7 +93,10 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
                     if isinstance(node, ast.Name) and node.id == target.id
                 }
                 if uses != guarded_uses | {target}:
-                    msg = f"model_fields local has additional uses in {path}:{statement.lineno}"
+                    msg = (
+                        f"model_fields local has additional uses "
+                        f"in {path}:{statement.lineno}"
+                    )
                     raise ValueError(msg)
                 if statement.end_lineno is None or guard.test.end_lineno is None:
                     msg = "model field boundary has no complete source span"
@@ -100,7 +105,10 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
                     statement.end_lineno >= guard.lineno
                     or guard.body[0].lineno <= guard.test.end_lineno
                 ):
-                    msg = f"model field boundary requires separate indented statements in {path}:{statement.lineno}"
+                    msg = (
+                        f"model field boundary requires separate indented "
+                        f"statements in {path}:{statement.lineno}"
+                    )
                     raise ValueError(msg)
                 if any(
                     receiver in cls._bound_identifiers(node)

@@ -135,16 +135,18 @@ jobs:
           candidate_status="$(git status --porcelain --untracked-files=all --ignore-submodules=none)"
           test -z "$candidate_status"
 
-      # Setup installs frozen from the committed uv.lock (`uv sync --locked`)
-      # and never rewrites it; the deps audit proves that locked graph.
+      # Setup installs the committed uv.lock and never rewrites it (only
+      # `make upg` does); the deps audit proves that locked graph.
       - name: deps check (blocking)
         run: {{ make.ci.variable }}={{ make.ci.value }} make audit
 {%- endif %}
 {%- if step.verb == "check" %}
-        # Fast partition only, derived from the gate registry kind:
+        # The CI partition, the complement of make.ci.local_check_gates:
         # {{ make.check_gates_ci | join(" ") }}.
-        # Type checkers and flext-infra validators block locally and at
-        # pre-push ({{ make.ci.variable }}={{ make.ci.local_value }} runs {{ make.check_gates_local | join(" ") }}).
+{%- if make.check_gates_local %}
+        # These gates block locally and at pre-push
+        # ({{ make.ci.variable }}={{ make.ci.local_value }} runs {{ make.check_gates_local | join(" ") }}).
+{%- endif %}
 {%- endif %}
 {% endfor %}
       # Mutating gates and tests must validate the committed candidate.

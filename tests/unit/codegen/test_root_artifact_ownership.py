@@ -143,8 +143,10 @@ class TestsFlextInfraRootArtifactOwnership:
                     "[project]\n"
                     'name = "flext-demo"\n'
                     'version = "0.1.0"\n'
-                    f'authors = [{{name = "{project.author_name}", email = "{project.author_email}"}}]\n'
-                    f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
+                    f'authors = [{{name = "{project.author_name}", '
+                    f'email = "{project.author_email}"}}]\n'
+                    'requires-python = "'
+                    f'{config.Infra.codegen.toolchain.python_required_version}"\n'
                     f'dependencies = ["{u.Tests.flext_source(project.upstream)}"]\n'
                     "[project.urls]\n"
                     'Repository = "https://github.com/flext-sh/flext-demo"\n'
@@ -194,8 +196,9 @@ class TestsFlextInfraRootArtifactOwnership:
     class TestsConformPlanNetworkBoundary:
         """The conform plan is a repository-local, offline inventory."""
 
+        @staticmethod
         @pytest.mark.slow
-        def test_plan_never_fetches_origin(self, infra_git_repo: Path) -> None:
+        def test_plan_never_fetches_origin(infra_git_repo: Path) -> None:
             """Planning consumes the existing origin ref without network access."""
             root = infra_git_repo
             dist = u.Tests.repository_ref(config.Infra.name).distribution
@@ -205,7 +208,8 @@ class TestsFlextInfraRootArtifactOwnership:
                     root / "pyproject.toml",
                     f'[project]\nname = "{dist}"\nversion = "0.12.0.dev0"\n'
                     f'description = "{dist} governed fixture"\n'
-                    f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
+                    'requires-python = "'
+                    f'{config.Infra.codegen.toolchain.python_required_version}"\n'
                     'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
                     'dependencies = ["flext-core>=0.1.0"]\n',
                 ),

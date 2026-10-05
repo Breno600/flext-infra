@@ -219,13 +219,32 @@ class FlextInfraConstantsCodegenProject:
     WORKSPACE_MANIFEST_VERSION: ClassVar[int] = 3
     UV_LOCK_FILENAME: ClassVar[str] = "uv.lock"
     MISE_LOCK_FILENAME: ClassVar[str] = "mise.lock"
+    MISE_LOCK_JOURNAL_FILENAME: ClassVar[str] = "transaction.json"
+    "Staged journal the mise.lock publisher commits before the lock rename."
+    MISE_LOCK_NEW_FILENAME: ClassVar[str] = "new.lock"
+    "Staged replacement lock published only after its sidecars match."
+    MISE_LOCK_OLD_FILENAME: ClassVar[str] = "old.lock"
+    "Previous lock retained until the staged replacement is published."
+    MISE_LOCK_MUTEX_FILENAME: ClassVar[str] = ".mise-lock-transaction.lock"
+    "Physical mutex that serializes every publisher on one project."
+    MISE_LOCK_MUTEX_TIMEOUT_SECONDS: ClassVar[float] = 600.0
+    "How long a publisher waits for the project mutex before failing."
+    MISE_LOCK_ARTIFACTS: ClassVar[tuple[tuple[str, int], ...]] = (
+        ("bin/mise", 0o755),
+        ("bin/mise.cmd", 0o644),
+        ("mise.version", 0o644),
+    )
+    "Launcher and pin files the staged lock transaction publishes."
     MISE_LOCK_TRANSACTION_SCRIPT: ClassVar[str] = "bin/mise-lock-transaction.py"
     "Generated publisher the Makefile bootstrap runs to commit a staged mise.lock."
+    MISE_LOCK_CONVERGE_SCRIPT: ClassVar[str] = "bin/mise-lock-converge.py"
+    "Generated script ``make upg`` runs to hold broken releases inside a lock stage."
     MAKEFILE_BOOTSTRAP_DESTINATIONS: ClassVar[frozenset[str]] = frozenset({
         FlextInfraConstantsSharedInfra.MAKEFILE_FILENAME,
         MISE_LOCK_TRANSACTION_SCRIPT,
+        MISE_LOCK_CONVERGE_SCRIPT,
     })
-    "The Makefile surface: the Makefile and the lock publisher its bootstrap runs."
+    "The Makefile surface: the Makefile and the lock scripts its bootstrap runs."
     MISE_LOCK_ANNOTATION: ClassVar[str] = "~"
     "Lockfile cache-key fragment (``<version>~<hash>``); never a selector."
     MISE_MOVING_SELECTOR: ClassVar[str] = "latest"

@@ -10,10 +10,9 @@ import re
 import sys
 from collections.abc import Mapping, MutableMapping, Sequence
 from functools import lru_cache
-from importlib.metadata import Distribution, distributions
+from importlib.metadata import Distribution
 from importlib.util import find_spec
 from pathlib import Path
-from types import MappingProxyType
 
 from flext_cli import u
 from packaging.requirements import Requirement
@@ -109,14 +108,12 @@ class FlextInfraUtilitiesCodemodRules:
             return r[t.Pair[str, t.StrSequence]].fail(
                 f"missing project.name: {pyproject}",
             )
-        # PEP 621: an absent ``dependencies`` key that is not ``dynamic``
-        # declares a project with no dependencies.
-        dynamic = project.get(c.Infra.DYNAMIC, ())
-        if isinstance(dynamic, Sequence) and c.Infra.DEPENDENCIES in dynamic:
-            return r[t.Pair[str, t.StrSequence]].fail(
-                f"dynamic project.dependencies cannot be resolved: {pyproject}",
-            )
-        raw_dependencies = project.get(c.Infra.DEPENDENCIES, ())
+        raw_dependencies = project.get(c.Infra.DEPENDENCIES)
+        if raw_dependencies is None:
+            # ``project.dependencies`` is spec-optional: a project with no
+            # declared runtime dependency has an empty runtime closure, not a
+            # malformed manifest.
+            raw_dependencies = ()
         if not isinstance(raw_dependencies, Sequence) or isinstance(
             raw_dependencies,
             str,
@@ -139,44 +136,26 @@ class FlextInfraUtilitiesCodemodRules:
         ))
 
     @staticmethod
-    def codemod_distributions() -> t.MappingKV[str, Distribution]:
-        """Index the installed distributions the import search path exposes.
-
-        Returns:
-            The read-only index of installed distributions by canonical name.
-
-        """
+    def codemod_distributions() -> MutableMapping[str, Distribution]:
+        indexed: MutableMapping[str, Distribution] = {}
         # Import search paths may repeat the same physical directory. Query each
         # directory once; distinct installations with the same name still fail.
-        return FlextInfraUtilitiesCodemodRules._distributions_on(
-            tuple(dict.fromkeys(str(Path(path).resolve()) for path in sys.path)),
-        )
-
-    @staticmethod
-    @lru_cache(maxsize=8)
-    def _distributions_on(
-        search_path: t.VariadicTuple[str],
-    ) -> t.MappingKV[str, Distribution]:
-        """Read installed metadata once per distinct import search path.
-
-        Returns:
-            The read-only index of installed distributions by canonical name.
-
-        Raises:
-            ValueError: If two installed distributions share a canonical name.
-
-        """
-        indexed: MutableMapping[str, Distribution] = {}
-        for installed in distributions(path=list(search_path)):
+        paths = list(dict.fromkeys(str(Path(path).resolve()) for path in sys.path))
+        for installed in u.installed_distributions(path=paths):
             raw_name = installed.metadata.get("Name")
             if not isinstance(raw_name, str) or not raw_name.strip():
                 continue
             name = canonicalize_name(raw_name)
-            if name in indexed:
-                msg = f"duplicate installed distribution metadata: {name}"
+            previous = indexed.get(name)
+            if previous is not None:
+                msg = (
+                    f"duplicate installed distribution metadata: {name} "
+                    f"({previous.version} at {previous.locate_file('')}; "
+                    f"{installed.version} at {installed.locate_file('')})"
+                )
                 raise ValueError(msg)
             indexed[name] = installed
-        return MappingProxyType(indexed)
+        return indexed
 
     @classmethod
     def codemod_runtime_closure(

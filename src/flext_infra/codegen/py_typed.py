@@ -41,7 +41,7 @@ class FlextInfraCodegenPyTyped(FlextInfraCodegenExecutionBase[bool]):
             return r[bool].fail(
                 f"py.typed drift detected in {changes} package directorie(s)",
             )
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     def run(self, *, check_only: bool = False) -> int:
         """Ensure ``py.typed`` markers exist in every package directory.

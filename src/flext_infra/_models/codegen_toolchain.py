@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, ClassVar, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import t
 
@@ -83,7 +83,7 @@ class FlextInfraModelsCodegenToolchain:
             m.Field(description="Destination-local staging for this transaction"),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_capability(self) -> Self:
             if (
                 not self.root.is_absolute()
@@ -109,7 +109,9 @@ class FlextInfraModelsCodegenToolchain:
         journal_path: Annotated[
             Path,
             m.Field(
-                description="Direct journal under the authenticated scope Git directory",
+                description=(
+                    "Direct journal under the authenticated scope Git directory"
+                ),
             ),
         ]
         transaction_id: Annotated[
@@ -130,7 +132,7 @@ class FlextInfraModelsCodegenToolchain:
             m.Field(description="Explicit non-Mise publication capabilities"),
         ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_participants(self) -> Self:
             participants = (*self.projects, *self.file_participants)
             if not participants:
@@ -192,7 +194,7 @@ class FlextInfraModelsCodegenToolchain:
             m.Field(description="Named launcher states"),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_destination_paths(self) -> Self:
             """Bind every captured state to its declared live destination.
 
@@ -241,7 +243,11 @@ class FlextInfraModelsCodegenToolchain:
         @m.computed_field
         @property
         def states(self) -> t.VariadicTuple[m.Cli.AtomicFileState]:
-            """The triple in ``c.Infra.ARTIFACT_SPECS`` order."""
+            """The triple in ``c.Infra.ARTIFACT_SPECS`` order.
+
+            Returns:
+                The resulting ``t.VariadicTuple[m.Cli.AtomicFileState]``.
+            """
             return (self.unix_launcher, self.windows_launcher, self.version_pin)
 
     class MiseToolchainWorkspacePlan(m.ArbitraryTypesModel):
@@ -270,7 +276,11 @@ class FlextInfraModelsCodegenToolchain:
         @m.computed_field
         @property
         def sources(self) -> t.VariadicTuple[m.Cli.AtomicFileState]:
-            """Every state the publication reads: declarations, then the triple."""
+            """Every state the publication reads: declarations, then the triple.
+
+            Returns:
+                The resulting ``t.VariadicTuple[m.Cli.AtomicFileState]``.
+            """
             return (
                 *(
                     state
@@ -280,7 +290,7 @@ class FlextInfraModelsCodegenToolchain:
                 *self.runtime_artifacts.states,
             )
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_project_layouts(self) -> Self:
             """Bind every mutable project snapshot to the exact stable layout.
 

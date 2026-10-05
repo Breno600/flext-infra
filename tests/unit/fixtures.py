@@ -124,21 +124,26 @@ def _provision_detector_template(run_root: Path, modules: t.StrSequence) -> None
             repository_root=_PROJECT_ROOT,
         ),
     )
+    python_required = config.Infra.codegen.toolchain.python_required_version
+    infrastructure_source = (
+        f"{infrastructure.distribution} @ git+{infrastructure.url}@{integration.branch}"
+    )
     root = u.Tests.mk_project(
         parent,
         _DETECTOR_PROJECT_NAME,
         with_src=True,
         pyproject=(
-            '[build-system]\nrequires = ["hatchling"]\nbuild-backend = "hatchling.build"\n'
+            '[build-system]\nrequires = ["hatchling"]\n'
+            'build-backend = "hatchling.build"\n'
             '[project]\nname = "detector-fixture"\nversion = "0.1.0"\n'
             'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
-            f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
+            f'requires-python = "{python_required}"\n'
             f"dependencies = [{dependencies}]\n"
             '[project.optional-dependencies]\nfeature = ["requests"]\n'
             # A governed checkout declares every internal requirement with its
             # own direct Git source; the scaffold dev SSOT includes flext-tests.
             '[dependency-groups]\ndev = ["deptry", "mypy", "pip", '
-            f'"{infrastructure.distribution} @ git+{infrastructure.url}@{integration.branch}", '
+            f'"{infrastructure_source}", '
             f'"{u.Tests.flext_source("flext-tests")}"]\n'
             "[tool.hatch.metadata]\nallow-direct-references = true\n"
             "[tool.mypy]\n"
@@ -656,7 +661,8 @@ def mod_workspace(tmp_path: Path) -> Path:
     tm.ok(
         u.Cli.atomic_write_text_file(
             package_dir / c.Infra.INIT_PY,
-            '"""Public refactor-mod fixture package."""\n\nfrom __future__ import annotations\n',
+            '"""Public refactor-mod fixture package."""\n\n'
+            "from __future__ import annotations\n",
         ),
     )
     tm.ok(
@@ -675,7 +681,8 @@ def mod_workspace(tmp_path: Path) -> Path:
                 "from flext_core import t\n"
                 "\n"
                 "class _FixtureInfra:\n"
-                '    """Stand-in infra namespace owning every name the fixture uses."""\n'
+                '    """Stand-in infra namespace owning every name'
+                ' the fixture uses."""\n'
                 "\n"
                 "    @staticmethod\n"
                 "    def serialization_lock_execute(\n"

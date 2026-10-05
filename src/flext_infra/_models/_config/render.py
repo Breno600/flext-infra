@@ -239,6 +239,14 @@ class FlextInfraConfigModelsRender:
             t.NonEmptyStr,
             m.Field(description="Runtime-root-local development environment"),
         ] = FlextInfraConstantsWorkspace.ENVIRONMENT_DIRECTORY
+        worktree_environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Declared sibling directory for linked worktree environments"
+                ),
+            ),
+        ]
 
     class SonarcloudIssueExclusionSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One SonarCloud issue exclusion applied as a server-side project setting.
@@ -317,6 +325,17 @@ class FlextInfraConfigModelsRender:
                 ),
             ),
         ]
+        workspace_subprojects: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                description=(
+                    "Workspace-relative member checkout paths of a workspace "
+                    "root; each member is its own repository with its own "
+                    "SonarCloud project, so the root scope excludes them. "
+                    "Empty for a standalone repository"
+                ),
+            ),
+        ] = ()
 
     class UvPackageSelectorSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Package selector for one official uv scoped dependency exclusion."""

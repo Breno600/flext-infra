@@ -56,14 +56,18 @@ class FlextInfraUtilitiesCodegen(
                     ",".join(toolchain.mise_lockfile_platforms),
                 ),
                 ("MISE_MINIMUM_RELEASE_AGE", f"{toolchain.dependency_cooldown_days}d"),
+                # The npm backend's installer: setup/upg run under MISE_SAFE,
+                # which ignores the project [settings.npm] the projection
+                # carries, so the bootstrap declares it explicitly.
+                ("MISE_NPM_PACKAGE_MANAGER", toolchain.npm_package_manager),
             ),
+            offline_environment=tuple(c.Infra.MISE_BOOTSTRAP_OFFLINE_ENVIRONMENT),
             transient_environment=tuple(c.Infra.MISE_BOOTSTRAP_TRANSIENT_ENVIRONMENT),
             persistent_environment=tuple(c.Infra.MISE_BOOTSTRAP_PERSISTENT_ENVIRONMENT),
             empty_files=tuple(c.Infra.MISE_BOOTSTRAP_EMPTY_FILES),
             passthrough_environment=tuple(
                 c.Infra.MISE_BOOTSTRAP_PASSTHROUGH_ENVIRONMENT,
             ),
-            credential_commands=toolchain.github_credential_commands,
             version_pin_file=c.Infra.MISE_VERSION_PIN_FILENAME,
             version_pin_header=c.Infra.MISE_VERSION_PIN_HEADER,
             version_pin_reader=c.Infra.MISE_VERSION_PIN_READER,
@@ -75,9 +79,14 @@ class FlextInfraUtilitiesCodegen(
             artifact_specs=c.Infra.ARTIFACT_SPECS,
             lock_file=c.Infra.MISE_LOCK_FILENAME,
             lock_transaction_script=c.Infra.MISE_LOCK_TRANSACTION_SCRIPT,
+            lock_converge_script=c.Infra.MISE_LOCK_CONVERGE_SCRIPT,
             transaction_lock_file=toolchain.mise_transaction_lock_file,
             runtime_install_relative_template=c.Infra.MISE_RUNTIME_INSTALL_RELATIVE_TEMPLATE,
             resolved_release_pattern=c.Infra.MISE_RELEASE_PATTERN,
+            credential_commands=tuple(
+                tuple(cmd for cmd in command)
+                for command in c.Infra.MISE_BOOTSTRAP_CREDENTIAL_COMMANDS
+            ),
         )
 
     @staticmethod
@@ -90,6 +99,7 @@ class FlextInfraUtilitiesCodegen(
         """
         toolchain = config.Infra.codegen.toolchain
         return m.Infra.EnvrcRenderSpec(
+            worktree_environment_directory=toolchain.worktree_environment_directory,
             environment_path_prepends=toolchain.environment_path_prepends,
             mise_bootstrap=FlextInfraUtilitiesCodegen.mise_bootstrap_environment(),
         )
@@ -144,7 +154,8 @@ class FlextInfraUtilitiesCodegen(
             )
         if physical_project.is_relative_to(storage_root):
             return r[Path].fail(
-                f"persistent Mise storage must not contain the checkout: {storage_root}",
+                f"persistent Mise storage must not contain the checkout: "
+                f"{storage_root}",
             )
         if storage_root.is_symlink():
             return r[Path].fail(
@@ -164,11 +175,13 @@ class FlextInfraUtilitiesCodegen(
             physical_project,
         ):
             return r[Path].fail(
-                f"persistent Mise storage must not contain the checkout: {physical_root}",
+                f"persistent Mise storage must not contain the checkout: "
+                f"{physical_root}",
             )
         if physical_project.is_relative_to(physical_root):
             return r[Path].fail(
-                f"persistent Mise storage must not contain the checkout: {physical_root}",
+                f"persistent Mise storage must not contain the checkout: "
+                f"{physical_root}",
             )
         relative_directories = {
             relative
@@ -246,7 +259,7 @@ class FlextInfraUtilitiesCodegen(
         if path.exists():
             if not path.is_dir():
                 return r[bool].fail(f"persistent Mise path is not a directory: {path}")
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         planned = u.Cli.atomic_plan_directory_chain(path)
         if planned.failure:
             return r[bool].from_failure(planned)
@@ -256,7 +269,7 @@ class FlextInfraUtilitiesCodegen(
         )
         if created.failure:
             return r[bool].from_failure(created)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def generate_module_skeleton(

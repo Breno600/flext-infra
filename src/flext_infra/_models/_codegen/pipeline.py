@@ -9,20 +9,20 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, ClassVar, Literal, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import p, t
 from flext_infra._models._codegen.fix import FlextInfraModelsCodegenFixModels
 from flext_infra._models._codegen.lazy_init import FlextInfraModelsCodegenLazyInitModels
 from flext_infra._models._codegen.scaffold import FlextInfraModelsCodegenScaffoldModels
 from flext_infra._models._config.base import FlextInfraConfigModels
-from flext_infra._models.mixins import FlextInfraModelsMixins as mm
+from flext_infra._models.mixins import FlextInfraModelsMixins
 
 
 class FlextInfraModelsCodegenPipelineModels:
     """Phase analysis and pipeline state models."""
 
-    class CodegenCommand(mm.WriteMixin, m.ContractModel):
+    class CodegenCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
         """CLI request shared by Rope-backed codegen operations."""
 
         check_only: Annotated[bool, m.Field(description="Validate without writing")] = (
@@ -88,7 +88,7 @@ class FlextInfraModelsCodegenPipelineModels:
             m.Field(description="Resolved export contracts verified before commit"),
         ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_unique_paths(self) -> Self:
             """Reject ambiguous receipts with competing path authorities.
 

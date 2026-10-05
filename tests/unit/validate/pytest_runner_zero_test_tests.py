@@ -55,6 +55,7 @@ class TestsFlextInfraPytestRunnerZeroTest:
         *,
         slow_phase: bool = False,
         elapsed_seconds: float = 0.0,
+        target_file: Path | None = None,
     ) -> FlextInfraPytestRunner:
         """Build the public runner exactly as the make verbs do.
 
@@ -73,8 +74,10 @@ class TestsFlextInfraPytestRunnerZeroTest:
             testmon_db=testmon_db,
             apply_changes=True,
             slow_phase=slow_phase,
+            target_file=target_file,
         )
 
+    @pytest.mark.slow
     def test_plural_module_form_still_owns_its_tests(
         self,
         tmp_path: Path,
@@ -94,8 +97,14 @@ class TestsFlextInfraPytestRunnerZeroTest:
             "    tm_value = VALUE == 41\n    assert tm_value\n",
             encoding="utf-8",
         )
-        runner = self._runner(project_root, tmp_path)
-        tm.that(runner._owns_no_tests(), eq=False)
+        outcome = tm.ok(self._runner(project_root, tmp_path).execute())
+
+        tm.that(outcome, eq=pytest.ExitCode.OK.value)
+        summary = self._latest_summary(project_root / cache.reports_directory)
+        plan = m.Infra.PytestSelectionPlan.model_validate_json(
+            self._read(summary.parent / "selection-plan.json"),
+        )
+        tm.that(plan.owns_no_tests, eq=False)
 
     def test_held_testmon_database_lease_refuses_a_concurrent_run(
         self,
@@ -202,6 +211,75 @@ class TestsFlextInfraPytestRunnerZeroTest:
             self._read(summary.parent / "run-accounting.json"),
         )
         tm.that(accounting.executed_count, eq=0)
+
+    @pytest.mark.slow
+    def test_budgeted_phase_of_a_slow_only_file_publishes_receipt(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A file whose items are all slow is an empty budgeted scope.
+
+        The phase exits green so the verb can continue into the slow phase.
+        A whole-suite budgeted inventory that collects nothing stays a failure.
+        """
+        project = self._zero_test_project(tmp_path)
+        cache = config.Infra.codegen.make.testmon_cache
+        relative = Path(cache.target_directory) / "test_slow_only.py"
+        (project / relative).write_text(
+            "import pytest\n\npytestmark = pytest.mark.slow\n\n"
+            "def test_slow_item() -> None:\n    assert True\n",
+            encoding="utf-8",
+        )
+
+        outcome = tm.ok(
+            self._runner(project, tmp_path, target_file=relative).execute(),
+        )
+
+        tm.that(outcome, eq=pytest.ExitCode.OK.value)
+        summary = self._latest_summary(project / cache.reports_directory)
+        plan = m.Infra.PytestSelectionPlan.model_validate_json(
+            self._read(summary.parent / "selection-plan.json"),
+        )
+        tm.that(plan.owns_no_tests, eq=True)
+        accounting = m.Infra.TestmonRunAccounting.model_validate_json(
+            self._read(summary.parent / "run-accounting.json"),
+        )
+        tm.that(accounting.executed_count, eq=0)
+
+    @pytest.mark.slow
+    def test_target_file_collection_failure_stays_red(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A declared file that fails to collect is not an empty scope."""
+        project = self._zero_test_project(tmp_path)
+        cache = config.Infra.codegen.make.testmon_cache
+        relative = Path(cache.target_directory) / "test_broken.py"
+        (project / relative).write_text(
+            "import not_a_real_collection_module\n\n"
+            "def test_broken() -> None:\n    assert True\n",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(RuntimeError, match="testmon selection failed"):
+            self._runner(project, tmp_path, target_file=relative).execute()
+
+    @pytest.mark.slow
+    def test_target_file_failure_stays_red(self, tmp_path: Path) -> None:
+        """A declared file whose test fails still fails the phase."""
+        project = self._zero_test_project(tmp_path)
+        cache = config.Infra.codegen.make.testmon_cache
+        relative = Path(cache.target_directory) / "test_red.py"
+        (project / relative).write_text(
+            "def test_red() -> None:\n    assert False\n",
+            encoding="utf-8",
+        )
+
+        outcome = tm.ok(
+            self._runner(project, tmp_path, target_file=relative).execute(),
+        )
+
+        tm.that(outcome, ne=0)
 
     @staticmethod
     def _read(path: Path) -> str:

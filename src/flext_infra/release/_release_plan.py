@@ -69,7 +69,11 @@ class FlextInfraReleasePlanMixin(FlextInfraReleasePublishMixin):
                 "--merged",
                 c.Infra.GIT_HEAD,
                 "--list",
-                c.Infra.TAG_FORMAT.format(version="*"),
+                # The listing glob demands a digit after the prefix: foreign
+                # tag namespaces that only collide with it (cycle-control
+                # markers like val<date>t<hhmm>) are excluded at the source,
+                # so ``latest`` can never name one.
+                c.Infra.TAG_FORMAT.format(version="[0-9]*"),
                 "--sort=-version:refname",
             ],
             cwd=root,
@@ -104,7 +108,7 @@ class FlextInfraReleasePlanMixin(FlextInfraReleasePublishMixin):
                 latest.removeprefix(c.Infra.TAG_FORMAT.format(version="")),
             )
             if latest
-            else r[bool].ok(True)
+            else r[bool].ok(value=True)
         )
         if ahead.failure:
             return r[m.Infra.ReleasePlan].from_failure(ahead)
@@ -166,7 +170,7 @@ class FlextInfraReleasePlanMixin(FlextInfraReleasePublishMixin):
             return r[bool].from_failure(base if base.failure else head)
         base_oid, head_oid = base.value.strip(), head.value.strip()
         if base_oid == head_oid:
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         content = u.Cli.capture(
             [c.Infra.GIT, "show", f"{base_oid}:{c.PYPROJECT_FILENAME}"],
             cwd=root,
@@ -181,7 +185,7 @@ class FlextInfraReleasePlanMixin(FlextInfraReleasePublishMixin):
         if base_version == version or any(
             u.Infra.release_subject(subject, version) for subject in subjects.value
         ):
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
         subject = c.Infra.RELEASE_COMMIT_SUBJECT.format(version=version)
         return r[bool].fail(
             f"{c.PYPROJECT_FILENAME} version changed outside the release "

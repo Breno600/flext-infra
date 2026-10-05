@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import FlextInfraCliRouteService, c, config, main as infra_main
+from flext_infra import FlextInfraCliRouteService, c, config, main
 from tests import m, t, u
 
 
@@ -41,7 +41,8 @@ class TestsFlextInfraCodegenMain:
         ]
         (repo / "pyproject.toml").write_text(
             f'[project]\nname = "{repository.distribution}"\nversion = "0.1.0"\n'
-            f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
+            'requires-python = "'
+            f'{config.Infra.codegen.toolchain.python_required_version}"\n'
             'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
             f'dependencies = ["flext-core>=0.1.0", '
             f'"flext-infra @ git+{infra.url}@{integration}"]\n\n'
@@ -60,18 +61,15 @@ class TestsFlextInfraCodegenMain:
     def _seed_public_conform_checkout(root: Path) -> None:
         """Seed a minimal governed package tree plus the real config and Mise inputs.
 
-        Conform verifies the declared console entry point through a fresh
-        import. Seed the real package so the fixture's distribution metadata
-        describes a public runtime that actually exists.
+        Conform plans and publishes generated files; the fresh import of the
+        declared package is the check gate's proof, not conform's. One real
+        package module therefore suffices, and conform plans over the
+        fixture's size instead of a copy of the whole distribution.
         """
         project_root = Path(__file__).resolve().parents[3]
-        tm.ok(
-            u.Cli.files_copy_directory(
-                project_root / "src" / "flext_infra",
-                root / "src" / "flext_infra",
-                dirs_exist_ok=True,
-            ),
-        )
+        package_init = root / "src" / "flext_infra" / "__init__.py"
+        package_init.parent.mkdir(parents=True, exist_ok=True)
+        tm.ok(u.Cli.atomic_write_text_file(package_init, ""))
         tests_init = root / "tests" / "__init__.py"
         tests_init.parent.mkdir(parents=True, exist_ok=True)
         tm.ok(u.Cli.atomic_write_text_file(tests_init, ""))
@@ -131,7 +129,7 @@ class TestsFlextInfraCodegenMain:
         @staticmethod
         def test_success(real_git_repo: Path) -> None:
             """Init returns 0 on empty workspace."""
-            result = infra_main([
+            result = main([
                 "codegen",
                 "init",
                 "--repository-root",
@@ -146,7 +144,7 @@ class TestsFlextInfraCodegenMain:
             pyproject = repository / c.PYPROJECT_FILENAME
             before = pyproject.read_bytes()
             makefile = repository / c.Infra.MAKEFILE_FILENAME
-            result = infra_main([
+            result = main([
                 "codegen",
                 "init",
                 "--check",
@@ -160,7 +158,7 @@ class TestsFlextInfraCodegenMain:
         @staticmethod
         def test_enforce_mode(real_git_repo: Path) -> None:
             """Init in enforce mode (not check)."""
-            result = infra_main([
+            result = main([
                 "codegen",
                 "init",
                 "--repository-root",
@@ -174,7 +172,7 @@ class TestsFlextInfraCodegenMain:
         @staticmethod
         def test_init_command(real_git_repo: Path) -> None:
             """main() with init command returns 0."""
-            result = infra_main([
+            result = main([
                 "codegen",
                 "init",
                 "--repository-root",
@@ -185,13 +183,13 @@ class TestsFlextInfraCodegenMain:
         @staticmethod
         def test_unknown_command() -> None:
             """main() with unknown command returns non-zero exit code."""
-            result = infra_main(["codegen", "unknown-command"])
+            result = main(["codegen", "unknown-command"])
             tm.that(result, ne=0)
 
         @staticmethod
         def test_no_command() -> None:
             """main() with no command returns non-zero exit code."""
-            result = infra_main(["codegen"])
+            result = main(["codegen"])
             tm.that(result, ne=0)
 
         @staticmethod
@@ -201,7 +199,7 @@ class TestsFlextInfraCodegenMain:
             """Initialization accepts only the exact Git worktree root."""
             custom_root = real_git_repo / "custom"
             custom_root.mkdir()
-            result = infra_main([
+            result = main([
                 "codegen",
                 "init",
                 "--repository-root",
@@ -219,7 +217,7 @@ class TestsFlextInfraCodegenMain:
         @staticmethod
         def test_entry_point_returns_int(real_git_repo: Path) -> None:
             """main() returns an integer exit code."""
-            result = infra_main([
+            result = main([
                 "codegen",
                 "init",
                 "--repository-root",
@@ -267,7 +265,8 @@ class TestsFlextInfraCodegenMain:
             pyproject.write_text(
                 f'[project]\nname = "{distribution}"\nversion = "0.12.0.dev0"\n'
                 f'description = "{distribution} governed fixture"\n'
-                f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
+                'requires-python = "'
+                f'{config.Infra.codegen.toolchain.python_required_version}"\n'
                 'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
                 'dependencies = ["flext-cli"]\n'
                 "\n"
