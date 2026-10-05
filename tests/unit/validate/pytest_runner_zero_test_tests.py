@@ -281,6 +281,35 @@ class TestsFlextInfraPytestRunnerZeroTest:
 
         tm.that(outcome, ne=0)
 
+    @pytest.mark.slow
+    def test_target_file_rerun_over_a_warm_cache_executes_again(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A second run of one declared file executes it, never a cache hit.
+
+        The declared file always runs under noselect, so the restored cache
+        selects nothing for it; that empty selection must not be read as a
+        cache hit holding executed tests.
+        """
+        project = self._zero_test_project(tmp_path)
+        cache = config.Infra.codegen.make.testmon_cache
+        relative = Path(cache.target_directory) / "test_rerun.py"
+        (project / relative).write_text(
+            "def test_rerun() -> None:\n    assert True\n",
+            encoding="utf-8",
+        )
+        for _ in range(2):
+            outcome = tm.ok(
+                self._runner(project, tmp_path, target_file=relative).execute(),
+            )
+            tm.that(outcome, eq=pytest.ExitCode.OK.value)
+            summary = self._latest_summary(project / cache.reports_directory)
+            accounting = m.Infra.TestmonRunAccounting.model_validate_json(
+                self._read(summary.parent / "run-accounting.json"),
+            )
+            tm.that(accounting.executed_count, eq=1)
+
     @staticmethod
     def _read(path: Path) -> str:
         """Read one published receipt through the files facade.
