@@ -287,8 +287,15 @@ class FlextInfraModelsMiseToolchain:
             ),
         ]
         npm_package_manager: Annotated[
-            Literal["aube"],
-            m.Field(description="Mise npm installer with a locked dependency graph"),
+            Literal["aube", "bun"],
+            m.Field(
+                description=(
+                    "Mise npm installer. aube replays the locked dependency "
+                    "graph; bun installs faster with --trust lifecycle "
+                    "approval and no aube sidecars (the lock keeps the "
+                    "top-level pin only). Operator choice 2026-10-05"
+                ),
+            ),
         ]
         tools: Annotated[
             t.VariadicTuple[FlextInfraModelsMiseToolchain.MiseToolEntry],
