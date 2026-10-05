@@ -26,13 +26,12 @@ def smells_project(tmp_path: Path) -> Path:
 
     """
     name = f"smells-{tmp_path.name}"
-    project = u.Tests.mk_project(
+    return u.Tests.mk_project(
         tmp_path,
         name,
         pyproject=f'[project]\nname = "{name}"\nversion = "0.1.0"\n',
         with_src=True,
     )
-    return project
 
 
 class TestsFlextInfraSmellsGate:
