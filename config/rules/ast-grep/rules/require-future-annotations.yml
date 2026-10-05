@@ -168,14 +168,21 @@ message: >-
 ---
 # Literal exports already infer their immutable string tuple. An annotation
 # must not be the only reason a facade depends on its own typing namespace.
+#
+# Scope is the fleet-wide facade family (src/<package>/constants.py, models.py,
+# protocols.py, typings.py and utilities.py), expressed with the same
+# **/src/**/<module>.py globs ban-concrete-flext-cli-import uses, so every
+# family distribution and workspace layout runs the same export hygiene
+# instead of only the flext package itself.
 id: infer-literal-facade-exports
 language: python
 severity: error
 files:
-  - "src/flext/constants.py"
-  - "src/flext/models.py"
-  - "src/flext/protocols.py"
-  - "src/flext/utilities.py"
+  - "**/src/**/constants.py"
+  - "**/src/**/models.py"
+  - "**/src/**/protocols.py"
+  - "**/src/**/typings.py"
+  - "**/src/**/utilities.py"
 rule:
   pattern:
     context: "__all__: t.VariadicTuple[str] = $VALUE"
