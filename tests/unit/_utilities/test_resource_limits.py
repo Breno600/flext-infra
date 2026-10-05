@@ -13,8 +13,11 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m
-from tests import u
+from flext_infra import config, u
+from tests import c, m
+from tests.utilities_fixture_tooling import (
+    TestsFlextInfraUtilitiesToolingFixtureMixin as tfiutf,
+)
 
 
 class TestsFlextInfraUtilitiesResourceLimits:
@@ -31,7 +34,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
             timeout_seconds=config.Infra.tooling.tools.mypy.timeout_seconds,
         )
         command = u.Infra.mypy_limited_command(
-            u.Tests.mypy_workload(tmp_path),
+            tfiutf.mypy_workload(tmp_path),
             limit,
         )
         result = u.Cli.run_raw(command, timeout=u.Infra.mypy_runner_timeout(limit))
