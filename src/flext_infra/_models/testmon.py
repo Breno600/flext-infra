@@ -39,9 +39,15 @@ class FlextInfraModelsTestmon:
     class TestmonCachePublication(m.Value):
         """Fresh checkpoint receipt from one completed runner invocation."""
 
-        database: Annotated[Path, m.Field(description="Integrity-checked project database")]
-        digest: Annotated[str, m.Field(pattern=r"^[a-f0-9]{64}$", description="Checkpoint digest")]
-        saveable: Annotated[bool, m.Field(description="Completed run may publish this generation")]
+        database: Annotated[
+            Path, m.Field(description="Integrity-checked project database")
+        ]
+        digest: Annotated[
+            str, m.Field(pattern=r"^[a-f0-9]{64}$", description="Checkpoint digest")
+        ]
+        saveable: Annotated[
+            bool, m.Field(description="Completed run may publish this generation")
+        ]
 
     class TestmonRunAccounting(m.Value):
         """Typed proof for an executed suite or an integrity-checked cache hit."""

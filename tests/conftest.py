@@ -100,7 +100,9 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     policy = config.Infra.codegen.make.ci
     if u.Infra.env_value(policy.variable).strip() != policy.value:
         return
-    excluded_fixtures = frozenset(config.Infra.tooling.tools.pytest.ci_excluded_fixtures)
+    excluded_fixtures = frozenset(
+        config.Infra.tooling.tools.pytest.ci_excluded_fixtures
+    )
     excluded_engines = frozenset(policy.local_check_gates)
     selected: list[pytest.Item] = []
     deselected: list[pytest.Item] = []

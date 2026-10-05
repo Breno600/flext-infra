@@ -135,24 +135,34 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         for name in sorted(required):
             distributions = u.installed_distributions(name=name)
             if len(distributions) != 1:
-                return r[int].fail(f"locked provenance needs one installed distribution: {name}")
+                return r[int].fail(
+                    f"locked provenance needs one installed distribution: {name}"
+                )
             distribution = distributions[0]
             location = Path(str(distribution.locate_file(""))).resolve()
             if not location.is_relative_to(Path(prefix).resolve()):
-                return r[int].fail(f"locked dependency is outside the owned environment: {name}")
+                return r[int].fail(
+                    f"locked dependency is outside the owned environment: {name}"
+                )
             matches = tuple(
-                item for item in locked.package
+                item
+                for item in locked.package
                 if item.name == name and item.version == distribution.version
             )
             if len(matches) != 1:
-                return r[int].fail(f"installed version differs from committed lock: {name}")
+                return r[int].fail(
+                    f"installed version differs from committed lock: {name}"
+                )
             item = matches[0]
             raw = distribution.read_text("direct_url.json")
             if raw is None and item.source.git is not None:
-                return r[int].fail(f"locked dependency lacks PEP 610 provenance: {name}")
+                return r[int].fail(
+                    f"locked dependency lacks PEP 610 provenance: {name}"
+                )
             receipt = (
                 m.Infra.DirectUrlReceipt.model_validate_json(raw)
-                if raw is not None else None
+                if raw is not None
+                else None
             )
             if (
                 receipt is not None
@@ -172,7 +182,9 @@ class FlextInfraWorkspaceEnvironmentProvenance:
                     or u.Infra.git_remote_identity(receipt.url)
                     != u.Infra.git_remote_identity(expected.geturl())
                 ):
-                    return r[int].fail(f"installed dependency origin differs from committed lock: {name}")
+                    return r[int].fail(
+                        f"installed dependency origin differs from committed lock: {name}"
+                    )
             files = distribution.files
             if files is None:
                 return r[int].fail(f"installed artifact has no file inventory: {name}")
@@ -180,13 +192,14 @@ class FlextInfraWorkspaceEnvironmentProvenance:
                 if str(file).endswith(".pth"):
                     path = Path(str(distribution.locate_file(file)))
                     for line in path.read_text(encoding="utf-8").splitlines():
-                        if (
-                            Path(line).is_absolute()
-                            and not Path(line).resolve().is_relative_to(
-                                Path(prefix).resolve(),
-                            )
+                        if Path(line).is_absolute() and not Path(
+                            line
+                        ).resolve().is_relative_to(
+                            Path(prefix).resolve(),
                         ):
-                            return r[int].fail(f"CI artifact exposes an external source path: {name}")
+                            return r[int].fail(
+                                f"CI artifact exposes an external source path: {name}"
+                            )
             validated += 1
         return r[int].ok(validated)
 

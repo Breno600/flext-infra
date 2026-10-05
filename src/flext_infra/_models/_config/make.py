@@ -81,7 +81,9 @@ class FlextInfraConfigModelsMake:
         ]
         informative_check_gates: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="CI check findings are informative; execution errors block"),
+            m.Field(
+                description="CI check findings are informative; execution errors block"
+            ),
         ] = ()
 
         @m.model_validator(mode="after")
@@ -1103,12 +1105,16 @@ class FlextInfraConfigModelsMake:
                     f"{', '.join(partial_workflow)}"
                 )
                 raise ValueError(msg)
-            approval = tuple(step.verb for step in self.workflow if "ci" in step.contexts)
+            approval = tuple(
+                step.verb for step in self.workflow if "ci" in step.contexts
+            )
             hook = tuple(
                 step.verb for step in self.workflow if "pre_commit" in step.contexts
             )
             if approval != hook or approval != ("setup", "audit", "check", "test"):
-                msg = "CI and pre-commit require the same setup/audit/check/test workflow"
+                msg = (
+                    "CI and pre-commit require the same setup/audit/check/test workflow"
+                )
                 raise ValueError(msg)
             if "pre-commit" not in declared:
                 msg = "make pre-commit must be declared in every profile"

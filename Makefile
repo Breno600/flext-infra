@@ -385,6 +385,9 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 		esac; \
 	done; \
 	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
+	if [ -z "$$scratch" ] || [ ! -d "$$scratch" ]; then \
+		printf 'ERROR: mise bootstrap scratch creation failed (template: %s/.%s.mise-bootstrap.XXXXXX)\n' "$$project_parent" "$${project_root##*/}" >&2; exit 2; \
+	fi; \
 	readonly scratch; \
 	lock_stage=; \
 	trap 'bootstrap_status=$$?; trap - EXIT; \
@@ -644,6 +647,9 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 		esac; \
 	done; \
 	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
+	if [ -z "$$scratch" ] || [ ! -d "$$scratch" ]; then \
+		printf 'ERROR: mise bootstrap scratch creation failed (template: %s/.%s.mise-bootstrap.XXXXXX)\n' "$$project_parent" "$${project_root##*/}" >&2; exit 2; \
+	fi; \
 	readonly scratch; \
 	lock_stage=; \
 	trap 'bootstrap_status=$$?; trap - EXIT; \
@@ -771,11 +777,6 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 		mise_exec "$$mise_offline_mode" env 'MISE_OFFLINE=true' "$$@"; \
 	}; \
 
-	# The only tolerated Mise warning: ephemeral CI runners ship pre-seeded \
-	# shims (python3, make) and `mise install` always announces it declines to \
-	# replace them while every real install still succeeds (cosmos-main PR 346 \
-	# CI run 37348896444, bead on cosmos-l2wc2). Every OTHER mise WARN stays \
-	# fatal: red-means-red is untouched. \
 	mise_has_blocking_warning() { \
 		grep -F 'mise WARN' "$$1" | grep -Fv 'not replacing unmanaged file in shims directory' | grep -q .; \
 	}; \
