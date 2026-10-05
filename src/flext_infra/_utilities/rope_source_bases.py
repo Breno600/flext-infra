@@ -10,7 +10,7 @@ import ast
 from collections.abc import MutableMapping
 from pathlib import Path
 
-from flext_infra import m, p, t
+from flext_infra import c, m, p, t
 from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
 from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
@@ -72,6 +72,7 @@ class FlextInfraUtilitiesRopeSourceBases:
         definitions: MutableMapping[str, m.Infra.SourceClassDefinition],
         *,
         required_line: int | None = None,
+        allow_conditional: bool = False,
     ) -> t.MappingKV[str, m.Infra.SourceClassReference | None]:
         """Index lexical bindings without installing a cross-module Rope overlay.
 
@@ -239,8 +240,25 @@ class FlextInfraUtilitiesRopeSourceBases:
                             else None
                         )
                 elif isinstance(node, (ast.Try, ast.TryStar)):
-                    message = f"Conditional exception-backed class bindings in {module}"
-                    raise ValueError(message)
+                    if not allow_conditional:
+                        message = (
+                            f"Conditional exception-backed class bindings in {module}"
+                        )
+                        raise ValueError(message)
+                    # External/installed modules may carry conditional imports:
+                    # their bindings resolve at that module's own runtime, not
+                    # statically, so the names read as unknown here while any
+                    # nested declarations still join the definition inventory.
+                    conditional: MutableMapping[
+                        str,
+                        m.Infra.SourceClassReference | None,
+                    ] = {}
+                    collect(node.body, conditional, lexical, scope)
+                    collect(node.orelse, conditional, lexical, scope)
+                    for handler in node.handlers:
+                        collect(handler.body, conditional, lexical, scope)
+                    for name in conditional:
+                        bindings[name] = None
 
         collect(parsed.body, globals_, globals_, "")
         return globals_
@@ -339,6 +357,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                         module.source_code,
                         definitions,
                         required_line=line,
+                        allow_conditional=True,
                     )
                     identity = next(
                         (
@@ -393,7 +412,11 @@ class FlextInfraUtilitiesRopeSourceBases:
             module: t.Infra.RopePyModule,
             attributes: t.StrTuple,
             visiting: frozenset[str] = frozenset(),
+            depth: int = 0,
         ) -> str:
+            if depth > c.Infra.ROPE_WALK_DEPTH_BUDGET:
+                message = f"Unresolved external base: {module.get_name()}"
+                raise ValueError(message)
             if not attributes:
                 message = f"Module used as a class base: {module.get_name()}"
                 raise ValueError(message)
@@ -407,7 +430,10 @@ class FlextInfraUtilitiesRopeSourceBases:
                 imported = provider_module(binding.imported_module)
                 if imported.get_name() not in namespaces:
                     return provider_reference(
-                        imported, (binding.imported_name, *remaining), visiting | {target},
+                        imported,
+                        (binding.imported_name, *remaining),
+                        visiting | {target},
+                        depth + 1,
                     )
                 destination = (
                     f"{imported.get_name()}.{binding.imported_name}"
@@ -424,12 +450,13 @@ class FlextInfraUtilitiesRopeSourceBases:
                         qualified_base=target,
                     ),
                     visiting | {target, destination},
+                    depth + 1,
                 )
             if isinstance(binding, p.Infra.RopeImportedModule):
                 imported = provider_module(binding)
                 if imported.get_name() not in namespaces:
                     return provider_reference(
-                        imported, tuple(remaining), visiting | {target},
+                        imported, tuple(remaining), visiting | {target}, depth + 1,
                     )
                 return resolve(
                     m.Infra.SourceClassReference(
@@ -438,16 +465,18 @@ class FlextInfraUtilitiesRopeSourceBases:
                         qualified_base=target,
                     ),
                     visiting | {target},
+                    depth + 1,
                 )
             identity = external_identity(binding.get_object())
             for attribute in remaining:
-                identity = member(identity, attribute)
+                identity = member(identity, attribute, depth + 1)
             return identity
 
         def external_reference(
             target: str,
             attributes: t.StrTuple,
             visiting: frozenset[str] = frozenset(),
+            depth: int = 0,
         ) -> str:
             try:
                 module = project.get_module(target)
@@ -462,14 +491,20 @@ class FlextInfraUtilitiesRopeSourceBases:
                 ) from error
             if resource is not None:
                 module = FlextInfraUtilitiesRopeCore.resolve_pymodule(project, resource)
-            return provider_reference(module, attributes, visiting)
+            return provider_reference(module, attributes, visiting, depth)
 
         object_id = external_reference("builtins", ("object",))
 
         def resolve(
             reference: m.Infra.SourceClassReference,
             visiting: frozenset[str] = frozenset(),
+            depth: int = 0,
         ) -> str:
+            if depth > c.Infra.ROPE_WALK_DEPTH_BUDGET:
+                message = (
+                    f"Unresolved external base: {reference.target}"
+                )
+                raise ValueError(message)
             target = reference.target
             key = ".".join((target, *reference.attributes))
             if key in visiting:
@@ -499,14 +534,14 @@ class FlextInfraUtilitiesRopeSourceBases:
                     if binding is None:
                         message = f"Unresolved planned base: {module}.{name}"
                         raise ValueError(message)
-                    target = resolve(binding, visiting | {key})
+                    target = resolve(binding, visiting | {key}, depth + 1)
                 else:
                     target = external_reference(
-                        target, tuple(attributes), visiting,
+                        target, tuple(attributes), visiting, depth + 1,
                     )
                     attributes.clear()
             for attribute in attributes:
-                target = member(target, attribute)
+                target = member(target, attribute, depth + 1)
             return target
 
         def bases(identity: str) -> t.StrTuple:
@@ -585,7 +620,7 @@ class FlextInfraUtilitiesRopeSourceBases:
             linearizations[identity] = tuple(result)
             return linearizations[identity]
 
-        def member(identity: str, name: str) -> str:
+        def member(identity: str, name: str, depth: int = 0) -> str:
             for ancestor in linearize(identity):
                 if ancestor in definitions:
                     members = definitions[ancestor].members
@@ -597,7 +632,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                             f"Non-class member shadows required base: {ancestor}.{name}"
                         )
                         raise ValueError(message)
-                    return resolve(reference)
+                    return resolve(reference, frozenset(), depth + 1)
                 value = external[ancestor]
                 external_members = value.get_attributes()
                 if name in external_members:
