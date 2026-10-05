@@ -272,12 +272,12 @@ class FlextInfraModTextGateEngine:
         unknown_flags = set(flag_names).difference(c.Infra.CODEMOD_TEXT_FLAG_NAMES)
         if unknown_flags:
             return r[tuple[str, t.VariadicTuple[str], re.Pattern[str]]].fail(
-                f"unknown regex flag names {sorted(unknown_flags)} in {source}"
+                f"unknown regex flag names {sorted(unknown_flags)} in {source}",
             )
         find = entry.get(c.Infra.CODEMOD_TEXT_KEY_FIND)
         if not isinstance(find, str) or not find:
             return r[tuple[str, t.VariadicTuple[str], re.Pattern[str]]].fail(
-                f"text rule requires a non-empty find regex in {source}"
+                f"text rule requires a non-empty find regex in {source}",
             )
         try:
             compiled = re.compile(find)

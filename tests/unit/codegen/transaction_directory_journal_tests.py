@@ -15,8 +15,8 @@ from flext_tests import tm
 from flext_core import r
 from flext_infra import c, m, p
 from flext_infra.codegen import codegen_transaction as transaction
-from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 from flext_infra.codegen._mise_artifacts_journal import FlextInfraMiseArtifactsJournal
+from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
 from tests import t, u
 
