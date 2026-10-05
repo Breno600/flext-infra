@@ -21,6 +21,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
     """Behavior tests for the canonical Mypy resource-limit command."""
 
     @staticmethod
+    @pytest.mark.requires_engine("mypy")
     def test_mypy_command_checks_source_with_memory_and_time_limits(
         tmp_path: Path,
     ) -> None:
@@ -39,6 +40,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         tm.that(u.Cli.process_succeeded(result.value.outcome), eq=True)
 
     @staticmethod
+    @pytest.mark.requires_engine("mypy")
     def test_mypy_profile_records_the_real_checker(tmp_path: Path) -> None:
         """Keep the public profiling contract while removing executable selection."""
         project = u.Tests.mypy_workload(tmp_path)

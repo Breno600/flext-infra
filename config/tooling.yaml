@@ -373,6 +373,14 @@ Infra:
                 runtime-import-in-type-checking-block,
               ]
               authority: operator-direct-order-2026-10-05-tc001-tc004-off-pydantic
+              reason: >-
+                Operator direct order 2026-10-05: TC001-TC004 are disabled in
+                Ruff so the rules never execute on any file — they break
+                Pydantic classes (field annotations are runtime-evaluated, so
+                moving their imports into TYPE_CHECKING leaves models "not
+                fully defined"), and model_rebuild stays forbidden. The rule
+                names remain declared here in the SSOT and are never removed;
+                canonical tracking beads flext-p7bxt and flext-4536i.
             - rules: [missing-required-import, implicit-namespace-package]
               authority: operator-ruling-2026-10-03-import-banners-off-global
               reason: >-
@@ -598,6 +606,7 @@ Infra:
           - "*/protocols.py"
           - "*/_protocols/*"
       pyrefly:
+        findings-exit-codes: [1]
         disable-project-excludes-heuristics: true
         python-version: "3.13"
         use-ignore-files: false
@@ -842,6 +851,7 @@ Infra:
           - "resilience: resilience tests"
           - "discovery: catalog and stream discovery tests"
           - "singer: Singer protocol contract tests"
+          - "requires_engine: native check engine required by this test"
         # External-token gates never run inside
         # offline verification (`make test`); the runner records their exclusion.
         # `make test-full` first completes that incremental phase, then executes
@@ -852,6 +862,9 @@ Infra:
         # local and pre-push execution retain slow tests. The full phase of
         # `make test-full` includes these markers in every context.
         ci-excluded-markers: [slow]
+        # Fixtures declaring local engines or resolution cannot execute in approval.
+        ci-excluded-fixtures:
+          [resolved_make_templates, detector_project, mod_workspace, smells_project, _clear_make_ci_token]
         standard-addopts:
           - --benchmark-disable
           - --strict-markers

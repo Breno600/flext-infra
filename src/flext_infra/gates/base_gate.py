@@ -359,13 +359,40 @@ class FlextInfraGate:
 
         """
         passed, issues = self._parse_check_output(result, project_dir, ctx)
+        if self.gate_id == c.Infra.LINT and result.stderr.strip():
+            issues.append(self._native_error_issue(project_dir, result.stderr))
+            passed = False
+        policy = config.Infra.codegen.make.ci
+        informative = (
+            u.Infra.env_value(policy.variable) == policy.value
+            and self.gate_id in policy.informative_check_gates
+        )
+        outcome = u.Infra.tool_outcome(
+            result.outcome,
+            findings=len(issues),
+            findings_exit_codes=self._findings_exit_codes(),
+        )
+        if any(
+            issue.code == c.Infra.ToolOutcome.ERROR
+            or issue.code in {f"{self.gate_id}-stderr", f"{self.gate_id}-exec"}
+            for issue in issues
+        ):
+            outcome = c.Infra.ToolOutcome.ERROR
+        if informative:
+            return self._build_gate_execution(
+                project_dir,
+                verdict=outcome is not c.Infra.ToolOutcome.ERROR,
+                issues=issues,
+                raw_output=self._raw_output(result),
+                started=started,
+            ).model_copy(update={"outcome": outcome})
         return self._build_check_gate_execution(
             project_dir,
             passed=passed,
             issues=issues,
             raw_output=self._raw_output(result),
             started=started,
-        )
+        ).model_copy(update={"outcome": outcome})
 
     def _detected_gate_execution(
         self,
@@ -437,6 +464,11 @@ class FlextInfraGate:
             ),
             issues=tuple(issues),
             raw_output=raw_output,
+            outcome=(
+                c.Infra.ToolOutcome.ERROR if not verdict
+                else c.Infra.ToolOutcome.FINDINGS if issues
+                else c.Infra.ToolOutcome.CLEAN
+            ),
         )
 
     def _build_check_gate_execution(
@@ -471,6 +503,11 @@ class FlextInfraGate:
             ),
             issues=tuple(issues),
             raw_output=raw_output,
+            outcome=(
+                c.Infra.ToolOutcome.FINDINGS if issues
+                else c.Infra.ToolOutcome.CLEAN if passed
+                else c.Infra.ToolOutcome.ERROR
+            ),
         )
 
     def _build_project_error_gate_result(

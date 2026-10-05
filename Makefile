@@ -732,135 +732,16 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 		mise_offline_mode="$$1"; shift; \
 		mise_exec "$$mise_offline_mode" env 'MISE_OFFLINE=true' "$$@"; \
 	}; \
-	bootstrap_state="$(PROJECT_ROOT)/../.$(notdir $(PROJECT_ROOT)).mise-bootstrap-state"; { \
-		printf "scratch='%s'\n" "$${scratch:-}"; \
-		printf "mise='%s'\n" "$${mise:-}"; \
-		printf "project_root='%s'\n" "$${project_root:-}"; \
-		printf "project_parent='%s'\n" "$${project_parent:-}"; \
-		printf "mise_storage_root='%s'\n" "$${mise_storage_root:-}"; \
-		printf "pinned_mise='%s'\n" "$${pinned_mise:-}"; \
-		printf "caller_path='%s'\n" "$${caller_path:-}"; \
-		printf "caller_mise_version='%s'\n" "$${caller_mise_version:-}"; \
-		printf "caller_github_token='%s'\n" "$${caller_github_token:-}"; \
-		printf "caller_gh_token='%s'\n" "$${caller_gh_token:-}"; \
-		printf "caller_mise_github_token='%s'\n" "$${caller_mise_github_token:-}"; \
-		printf "caller_mise_http_timeout='%s'\n" "$${caller_mise_http_timeout:-}"; \
-		printf "caller_flext_mypy_profile_output='%s'\n" "$${caller_flext_mypy_profile_output:-}"; \
-		printf "caller_comspec='%s'\n" "$${caller_comspec:-}"; \
-		printf "caller_pathext='%s'\n" "$${caller_pathext:-}"; \
-		printf "caller_systemroot='%s'\n" "$${caller_systemroot:-}"; \
-		printf "caller_windir='%s'\n" "$${caller_windir:-}"; \
-		printf "mise_lockfile_platforms='%s'\n" "$${mise_lockfile_platforms:-}"; \
-	} > "$$bootstrap_state"
 # The only tolerated Mise warning: ephemeral CI runners ship pre-seeded
 	# shims (python3, make) and `mise install` always announces it declines to
 	# replace them while every real install still succeeds (cosmos-main PR 346
 	# CI run 37348896444, bead on cosmos-l2wc2). Every OTHER mise WARN stays
 	# fatal: red-means-red is untouched.
-	bootstrap_state="$(PROJECT_ROOT)/../.$(notdir $(PROJECT_ROOT)).mise-bootstrap-state"; \
-	. "$$bootstrap_state"; \
-	rm -f "$$bootstrap_state"; \
-	pinned_mise="$$mise"; \
-	scratch=$$(mktemp -d "$${TMPDIR:-/tmp}/flext-setup-probe.XXXXXX"); \
-mise_exec() { \
-		mise_config_mode="$$1"; shift; \
-		case "$$mise_config_mode" in \
-			no-config) mise_config_argument='MISE_NO_CONFIG=1' ;; \
-			project) mise_config_argument= ;; \
-			*) printf 'ERROR: invalid Mise config mode: %s\n' "$$mise_config_mode" >&2; return 2 ;; \
-		esac; \
-		mise_runtime_path=; \
-		if [ -n "$$caller_mise_version" ]; then \
-			mise_runtime_path="$$mise_storage_root/bootstrap/mise-$${caller_mise_version#v}"; \
-			if [ "$(OS)" = "Windows_NT" ]; then mise_runtime_path="$$mise_runtime_path.exe"; fi; \
-		fi; \
-		env -i \
-'GIT_CONFIG_NOSYSTEM=1' \
-'GIT_TERMINAL_PROMPT=0' \
-'LANG=C' \
-'LC_ALL=C' \
-'MISE_SAFE=1' \
-'MISE_PARANOID=true' \
-'MISE_NO_ENV=1' \
-'MISE_NO_HOOKS=1' \
-'MISE_AUTO_ENV=false' \
-'MISE_AUTO_INSTALL=false' \
-'MISE_EXEC_AUTO_INSTALL=false' \
-'MISE_TASK_RUN_AUTO_INSTALL=false' \
-'MISE_AUTO_UPDATE=false' \
-'MISE_HTTP_RETRIES=0' \
-'MISE_NETRC=false' \
-'MISE_NOT_FOUND_AUTO_INSTALL=false' \
-'MISE_NOT_FOUND_SYSTEM_FALLBACK=false' \
-'MISE_OVERRIDE_CONFIG_FILENAMES=.mise.toml' \
-'MISE_OVERRIDE_TOOL_VERSIONS_FILENAMES=none' \
-'MISE_GITHUB_GH_CLI_TOKENS=false' \
-'MISE_GITHUB_USE_GIT_CREDENTIALS=false' \
-'MISE_GITHUB_OAUTH_CLIENT_ID=' \
-'MISE_GITHUB_OAUTH_EXPORT_ENV=' \
-'MISE_GITHUB_OAUTH_OPEN_BROWSER=false' \
-'MISE_LOCKFILE=true' \
-'MISE_LOCKED=true' \
-'MISE_MINIMUM_RELEASE_AGE=7d' \
-'MISE_NPM_PACKAGE_MANAGER=bun' \
-$${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
-"HOME=$$scratch/home" \
-"USERPROFILE=$$scratch/home" \
-"APPDATA=$$scratch/appdata" \
-"LOCALAPPDATA=$$scratch/appdata" \
-"XDG_CONFIG_HOME=$$scratch/xdg-config" \
-"XDG_DATA_HOME=$$scratch/xdg-data" \
-"XDG_CACHE_HOME=$$scratch/xdg-cache" \
-"XDG_STATE_HOME=$$scratch/xdg-state" \
-"NETRC=$$scratch/netrc" \
-"GIT_CONFIG_GLOBAL=$$scratch/gitconfig" \
-"MISE_NETRC_FILE=$$scratch/netrc" \
-"MISE_GLOBAL_CONFIG_FILE=$$scratch/global-config.toml" \
-"MISE_CONFIG_DIR=$$scratch/config" \
-"MISE_TMP_DIR=$$scratch/tmp" \
-"MISE_GLOBAL_CONFIG_ROOT=$$scratch/." \
-"MISE_SYSTEM_CONFIG_DIR=$$scratch/system-config" \
-"MISE_SYSTEM_CONFIG_FILE=$$scratch/system-config/config.toml" \
-"MISE_SYSTEM_DATA_DIR=$$scratch/system-data" \
-"MISE_SYSTEM_INSTALLS_DIR=$$scratch/system-installs" \
-"MISE_SYSTEM_SHIMS_DIR=$$scratch/system-shims" \
-"TMPDIR=$$scratch/tmp" \
-"TMP=$$scratch/tmp" \
-"TEMP=$$scratch/tmp" \
-"MISE_DATA_DIR=$$mise_storage_root" \
-"MISE_CACHE_DIR=$$mise_storage_root/cache" \
-"MISE_STATE_DIR=$$mise_storage_root/state" \
-"MISE_INSTALLS_DIR=$$mise_storage_root/installs" \
-"MISE_SHIMS_DIR=$$mise_storage_root/shims" \
-"UV_CACHE_DIR=$$mise_storage_root/uv-cache" \
-"GIT_CEILING_DIRECTORIES=$$project_parent" \
-			"MISE_CEILING_PATHS=$$project_parent" \
-			"MISE_TRUSTED_CONFIG_PATHS=$$mise_trusted_config_paths" \
-$${caller_path:+"PATH=$$caller_path"} \
-$${caller_comspec:+"COMSPEC=$$caller_comspec"} \
-$${caller_pathext:+"PATHEXT=$$caller_pathext"} \
-$${caller_systemroot:+"SYSTEMROOT=$$caller_systemroot"} \
-$${caller_windir:+"WINDIR=$$caller_windir"} \
-$${caller_github_token:+"GITHUB_TOKEN=$$caller_github_token"} \
-$${caller_gh_token:+"GH_TOKEN=$$caller_gh_token"} \
-$${caller_mise_github_token:+"MISE_GITHUB_TOKEN=$$caller_mise_github_token"} \
-$${caller_mise_http_timeout:+"MISE_HTTP_TIMEOUT=$$caller_mise_http_timeout"} \
-$${caller_flext_mypy_profile_output:+"FLEXT_MYPY_PROFILE_OUTPUT=$$caller_flext_mypy_profile_output"} \
-$${caller_mise_version:+"MISE_VERSION=$$caller_mise_version"} \
-$${mise_config_argument:+"$$mise_config_argument"} \
-			$${mise_runtime_path:+"MISE_INSTALL_PATH=$$mise_runtime_path"} \
-			"$$@"; \
-	}; \
-	mise_offline() { \
-		mise_offline_mode="$$1"; shift; \
-		mise_exec "$$mise_offline_mode" env 'MISE_OFFLINE=true' "$$@"; \
-	}; \
 	mise_has_blocking_warning() { \
 		grep -F 'mise WARN' "$$1" | grep -Fv 'not replacing unmanaged file in shims directory' | grep -q .; \
 	}; \
 	mise_checked() { \
 		mise_log="$$1"; shift; \
-		case "$$mise_log" in /*) mise_log="$${TMPDIR:-/tmp}/$${mise_log##*/}" ;; esac; \
 		printf 'setup probe: begin stage=%s log=%s\n' "$${mise_log##*/}" "$$mise_log" >&2; \
 		if "$$@" >"$$mise_log" 2>&1; then :; \
 		else mise_status=$$?; cat "$$mise_log"; printf 'setup probe: failed stage=%s exit=%s\n' "$${mise_log##*/}" "$$mise_status" >&2; return "$$mise_status"; fi; \
@@ -872,8 +753,6 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 	}; \
 	mise_checked_stdout() { \
 		mise_stdout_log="$$1"; mise_stderr_log="$$2"; shift 2; \
-		case "$$mise_stdout_log" in /*) mise_stdout_log="$${TMPDIR:-/tmp}/$${mise_stdout_log##*/}" ;; esac; \
-		case "$$mise_stderr_log" in /*) mise_stderr_log="$${TMPDIR:-/tmp}/$${mise_stderr_log##*/}" ;; esac; \
 		if "$$@" >"$$mise_stdout_log" 2>"$$mise_stderr_log"; then :; \
 		else mise_status=$$?; cat "$$mise_stderr_log" >&2; cat "$$mise_stdout_log"; return "$$mise_status"; fi; \
 		cat "$$mise_stderr_log" >&2; cat "$$mise_stdout_log"; \
@@ -882,13 +761,7 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 		fi; \
 	}; \
 	mise_receipt() { \
-		probe_log_dir="$$scratch"; \
-		case "$$probe_log_dir" in ""|"/") \
-			probe_log_dir=$$(mktemp -d "$${TMPDIR:-/tmp}/flext-setup-probe.XXXXXX"); \
-			trap 'rm -rf "$$probe_log_dir"' EXIT; \
-		 ;; \
-		esac; \
-		mise_receipt_log="$$probe_log_dir/$$1"; shift; \
+		mise_receipt_log="$$scratch/$$1"; shift; \
 		mise_checked_stdout "$$mise_receipt_log.stdout" "$$mise_receipt_log.stderr" mise_offline no-config "$$1" --version; \
 		receipt_output=$$(cat "$$mise_receipt_log.stdout"); \
 		receipt_release=$$(printf '%s\n' "$$receipt_output" | grep -E '^(mise )?[0-9]+\.[0-9]+\.[0-9]+$$' | tail -1 | sed 's/^mise //'); \
@@ -1652,11 +1525,11 @@ fix:
 	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make fix to execute it.'
 
 fix-namespace:
-	@printf '  %-16s %s\n' 'fix-namespace' 'Apply the canonical namespace enforcer to the selected workspace.'
+	@printf '  %-16s %s\n' 'fix-namespace' 'Apply the canonical namespace enforcer to the selected workspace; the same relocation cascade runs as a callback phase of make mod.'
 	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make fix-namespace to execute it.'
 
 fix-accessors:
-	@printf '  %-16s %s\n' 'fix-accessors' 'Migrate forbidden accessor names and every resolved consumer.'
+	@printf '  %-16s %s\n' 'fix-accessors' 'Migrate accessor names owned by the rename catalog'"'"'s origin package and every resolved consumer; homonyms are skipped with a warning; the same origin-aware rewrite runs as a callback phase of make mod.'
 	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make fix-accessors to execute it.'
 
 audit:
@@ -1804,9 +1677,9 @@ _builtin-help:
 
 	@printf '  %-16s %s\n' 'fix' 'Apply the safe fixes of ruff check --fix --preview plus every other configured safe correction; never deletes information. Ruff is the rule; change code, never ruff.';
 
-	@printf '  %-16s %s\n' 'fix-namespace' 'Apply the canonical namespace enforcer to the selected workspace.';
+	@printf '  %-16s %s\n' 'fix-namespace' 'Apply the canonical namespace enforcer to the selected workspace; the same relocation cascade runs as a callback phase of make mod.';
 
-	@printf '  %-16s %s\n' 'fix-accessors' 'Migrate forbidden accessor names and every resolved consumer.';
+	@printf '  %-16s %s\n' 'fix-accessors' 'Migrate accessor names owned by the rename catalog'"'"'s origin package and every resolved consumer; homonyms are skipped with a warning; the same origin-aware rewrite runs as a callback phase of make mod.';
 
 	@printf '  %-16s %s\n' 'audit' 'Inspect ownership, dependency, and generated-state health.';
 

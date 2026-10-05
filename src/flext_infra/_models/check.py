@@ -266,18 +266,22 @@ class FlextInfraModelsCheck:
         )
         issues: t.VariadicTuple[FlextInfraModelsCheck.Issue] = m.Field(
             default_factory=tuple,
-            description="Blocking gate diagnostics",
+            description="Complete native gate diagnostics, including informative findings",
         )
         raw_output: str = m.Field(
             "",
             description="Raw tool output",
             validate_default=True,
         )
+        outcome: c.Infra.ToolOutcome = m.Field(
+            default=c.Infra.ToolOutcome.CLEAN,
+            description="Native process/report verdict, independent of findings policy",
+        )
 
         @m.computed_field
         @property
         def finding_count(self) -> int:
-            """Number of findings that fail the gate: every issue blocks.
+            """Number of native findings, independent of approval blocking policy.
 
             Returns:
                 The resulting ``int``.
@@ -310,7 +314,7 @@ class FlextInfraModelsCheck:
         @m.computed_field
         @property
         def total_findings(self) -> int:
-            """Total blocking findings across all gates.
+            """Total native findings across all gates, including informative ones.
 
             Returns:
                 The resulting ``int``.

@@ -215,9 +215,13 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
             if raw_line.startswith(".PHONY:"):
                 declaration = raw_line.partition(":")[2].strip()
                 names = declaration.split()
+                if {"pre-commit", "_custom-pre-commit"}.intersection(names):
+                    return r[bool].fail("mandatory approval cannot be a custom target")
                 if names and all(target_re.fullmatch(name) for name in names):
                     continue
             target = raw_line.partition(":")[0].strip() if ":" in raw_line else ""
+            if target in {"pre-commit", "_custom-pre-commit"}:
+                return r[bool].fail("mandatory approval cannot be a custom target")
             if target and target_re.fullmatch(target):
                 continue
             if c.Infra.MAKE_ASSIGNMENT_RE.match(
