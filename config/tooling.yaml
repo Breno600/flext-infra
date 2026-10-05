@@ -295,6 +295,14 @@ Infra:
                 Pydantic evaluates field annotations at runtime, so moving
                 third-party and standard-library annotation imports into a
                 TYPE_CHECKING block breaks model construction.
+            - rules: [runtime-import-in-type-checking-block]
+              authority: operator-order-2026-10-05-tc001-tc004-blocked-every-file
+              reason: >-
+                Operator order 2026-10-05: TC001-TC004 stay blocked for every
+                file — Ruff never executes the flake8-type-checking family on
+                any file, and the entries are never removed from this SSOT.
+                The scoped lazy-root ``__init__.py`` entry below remains the
+                documented original case of the same block.
             - rules: [camelcase-imported-as-lowercase]
               authority: operator-ruling-2026-10-01-n813-accepted
               reason: >-
