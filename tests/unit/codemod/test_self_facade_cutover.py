@@ -35,7 +35,8 @@ class TestsFlextInfraSelfFacadeCutover:
             "        return u.Cli.sha256_bytes(b'payload')\n"
             "def unrelated(u: str) -> str:\n"
             "    return u\n"
-            "assert Consumer.digest() == __import__('hashlib').sha256(b'payload').hexdigest()\n"
+            "assert Consumer.digest() == "
+            "__import__('hashlib').sha256(b'payload').hexdigest()\n"
             "assert Consumer.digest.__doc__ == 'Documented public operation.'\n"
             "assert unrelated('local') == 'local'\n"
         )
@@ -69,8 +70,14 @@ class TestsFlextInfraSelfFacadeCutover:
             "value = u.Cli.sha256_bytes(b'payload')\n",
             "class Consumer:\n    value = u.Cli.sha256_bytes(b'payload')\n",
             "def consumer(value=u.Cli.sha256_bytes(b'payload')):\n    return value\n",
-            "def consumer():\n    global u\n    return u.Cli.sha256_bytes(b'payload')\n",
-            "def outer():\n    u = None\n    def consumer():\n        nonlocal u\n        return u\n",
+            (
+                "def consumer():\n    global u\n"
+                "    return u.Cli.sha256_bytes(b'payload')\n"
+            ),
+            (
+                "def outer():\n    u = None\n"
+                "    def consumer():\n        nonlocal u\n        return u\n"
+            ),
         ],
     )
     def test_eager_reference_is_rejected_before_publication(
@@ -97,7 +104,11 @@ class TestsFlextInfraSelfFacadeCutover:
         "declaration",
         [
             "from flext_infra import u as first, u as second\n",
-            "from flext_infra import u as first\nfrom flext_infra import u as second\nfrom flext_infra import u as first\n",
+            (
+                "from flext_infra import u as first\n"
+                "from flext_infra import u as second\n"
+                "from flext_infra import u as first\n"
+            ),
         ],
     )
     def test_multiple_aliases_and_duplicate_imports_preserve_each_use(

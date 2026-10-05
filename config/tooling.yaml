@@ -266,7 +266,10 @@ Infra:
           # Each exception exists only with the operator ruling that authorized
           # it and its reason; Ruff receives the unscoped entries as `ignore`
           # and the scoped ones as `per-file-ignores`. Repositories declare no
-          # exception of their own.
+          # exception of their own. Operator order 2026-10-05: TC001-TC004 are
+          # NEVER EXECUTED by Ruff on ANY file — the four type-checking rules
+          # stay in this table by name, the unscoped ones as global `ignore`
+          # entries, and no ruling may remove them.
           authorized-exceptions:
             - files: "**/framework.py"
               rules: [banned-api]
@@ -278,20 +281,43 @@ Infra:
                 module that exists to bind those libraries directly, so its
                 imports are the licensed surface. Every other module stays
                 blocked by the same rule.
-            - rules: [missing-required-import, implicit-namespace-package, typing-only-first-party-import]
-              authority: operator-ruling-2026-10-03-tc001-off-global
+            # Operator ruling 2026-10-05: the whole flake8-type-checking
+            # family TC001-TC004 — typing-only-first-party-import,
+            # typing-only-third-party-import,
+            # typing-only-standard-library-import and
+            # runtime-import-in-type-checking-block — is DISABLED for every
+            # file: Ruff must not execute these rules anywhere. Declared by
+            # rule name (the fleet's canonical naming format). This supersedes
+            # the TC arms of the 2026-10-01 rulings (TC002/TC003 pydantic,
+            # TC004/TC001 lazy-root scoped forms) and of the 2026-10-03 ruling
+            # (TC001 global): the pydantic hazard those older rulings worked
+            # around is moot because the rules never run. TC004 lives in its
+            # own dedicated entry below (tc001-tc004-never-executed), so this
+            # entry carries only TC001-TC003 — one rule never enters two
+            # unscoped entries.
+            - rules: [
+                typing-only-first-party-import,
+                typing-only-third-party-import,
+                typing-only-standard-library-import,
+              ]
+              authority: operator-ruling-2026-10-05-tc-family-off-global
               reason: >-
-                Operator ruling 2026-10-03 (supersedes the earlier TC001-on):
-                I001 (unsorted-imports) stays enforced as the import-order
-                contract; I002 (missing-required-import), the isort-only I003
-                slot and TC001 (typing-only-first-party-import) are DISABLED —
-                required-import banners duplicate the absolute-import law
-                (ban-relative-imports: all); F401 already governs unused
-                imports; and the TC001 autofix moves runtime-required imports
-                into TYPE_CHECKING, leaving pydantic models "not fully
-                defined" (the OptionSpec/RuntimeCommandCase PydanticUserError
-                wave). The lazy-root __init__ exception remains the only lazy
-                form; model_rebuild stays forbidden.
+                Operator ruling 2026-10-05: TC001-TC004 are blocked from
+                executing on every file; Ruff receives them as global ignores
+                declared by rule name — TC001-TC003 here, TC004 in its
+                dedicated entry below. No file may surface a
+                flake8-type-checking finding.
+            - rules: [missing-required-import, implicit-namespace-package]
+              authority: operator-ruling-2026-10-03-import-banners-off-global
+              reason: >-
+                Operator ruling 2026-10-03: I001 (unsorted-imports) stays
+                enforced as the import-order contract; I002
+                (missing-required-import) and the isort-only I003 slot are
+                DISABLED — required-import banners duplicate the
+                absolute-import law (ban-relative-imports: all) and F401
+                already governs unused imports. The lazy-root __init__
+                exception remains the only lazy form; model_rebuild stays
+                forbidden.
             - files: "scripts/**/*.py"
               rules:
                 - commented-out-code
@@ -312,40 +338,12 @@ Infra:
                 Pytest assertions are the test contract. Ruff's S101 assert
                 restriction applies to runtime code, while tests intentionally
                 use Python assert statements to report failed expectations.
-            - rules:
-                - typing-only-third-party-import
-                - typing-only-standard-library-import
-                - runtime-import-in-type-checking-block
-              authority: operator-ruling-2026-10-05-tc001-tc004-off-global
-              reason: >-
-                Operator ruling 2026-10-05 (extends the 2026-10-01
-                tc002-tc003-pydantic ruling): TC001-TC004 stay OFF for every
-                file in their name format — pydantic evaluates field
-                annotations at runtime (typing-only moves break model
-                construction), and the generated lazy-init initializers
-                resolve exports at runtime, which TC004 reads as runtime use.
-                The rules stay declared here, never removed from this file.
             - rules: [camelcase-imported-as-lowercase]
               authority: operator-ruling-2026-10-01-n813-accepted
               reason: >-
                 The facade letters are imported as their facade class under
                 the letter (FlextInfraConstants as c), so type checkers see a
                 class rather than a variable rebind.
-            - files: "**/__init__.py"
-              rules: [runtime-import-in-type-checking-block]
-              authority: operator-ruling-2026-10-01-tc004-tid252
-              reason: >-
-                Generated lazy-init package initializers declare their exports
-                under TYPE_CHECKING and resolve them lazily at runtime, which
-                TC004 reads as runtime use.
-            - files: "**/__init__.py"
-              rules: [typing-only-first-party-import]
-              authority: operator-ruling-2026-10-01-tc001-lazy-root-eager
-              reason: >-
-                Generated lazy-init package initializers import the facade
-                namespaces eagerly by law: the namespace machinery resolves
-                them at runtime (PEP 562), so first-party imports stay eager
-                in every __init__.py.
             - files: "**/__init__.py"
               rules: [unused-import]
               authority: operator-ruling-2026-10-01-init-declared-letter-f401

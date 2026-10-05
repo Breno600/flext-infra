@@ -174,14 +174,6 @@ message: >-
 # **/src/**/<module>.py globs ban-concrete-flext-cli-import uses, so every
 # family distribution and workspace layout runs the same export hygiene
 # instead of only the flext package itself.
-#
-# The element constraint is a positive first-character class: a literal
-# element starts with a quote and a retained comment starts with `#`. `has`
-# also visits the tuple's anonymous `(`, `,` and `)` tokens, which no `kind`
-# matcher can ever match, so a negated any/[comment, string] would reject
-# every parenthesized tuple; excluding all five characters up front keeps the
-# punctuation out and lets any other child (identifier, call, number,
-# f-string, bytes, star) block the fix.
 id: infer-literal-facade-exports
 language: python
 severity: error
@@ -195,17 +187,12 @@ rule:
   pattern:
     context: "__all__: t.VariadicTuple[str] = $VALUE"
     selector: assignment
-  inside:
-    kind: expression_statement
-    inside:
-      kind: module
-constraints:
-  VALUE:
-    kind: tuple
-    not:
-      has:
-        regex: "^[^\"'(),#]"
 fix: "__all__ = $VALUE"
 message: >-
-  Infer the literal export tuple instead of retaining a redundant type-only
+  Infer the export tuple instead of retaining a redundant type-only
   facade dependency; preserve the original export values and order.
+  Under `from __future__ import annotations` (mandated fleet-side) the
+  annotation is never evaluated, so the rewrite is behavior-neutral for
+  every right-hand side — a per-element literal-only constraint here
+  evaluated inverted under ast-grep 0.45.3 and was removed (the test
+  suite pins the semantics).

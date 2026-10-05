@@ -195,7 +195,10 @@ class TestsFlextInfraDepsModernizerPyright:
         tmp_path: Path,
         tool_config_document: m.Infra.ToolConfigDocument,
     ) -> None:
-        """Workspace root execution environments include every declared first-party member src path for Pylance resolution."""
+        """Workspace root execution environments include every member src path.
+
+        Every declared first-party member src path is listed for Pylance resolution.
+        """
         pyright_rules = tool_config_document.tools.pyright
         rules = pyright_rules.path_rules
         _ = (tmp_path / "pyproject.toml").write_text(

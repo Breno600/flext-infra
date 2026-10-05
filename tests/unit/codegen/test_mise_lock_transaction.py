@@ -396,6 +396,34 @@ class TestsMiseHoldConvergence:
         tm.that('version = "5.3.3"' not in content)
 
     @staticmethod
+    def test_staged_manifest_resolves_inside_the_declared_stage(
+        tmp_path: Path,
+    ) -> None:
+        """The guarded manifest path stays the staged ``.mise.toml`` itself."""
+        stage = tmp_path / "stage"
+        stage.mkdir()
+        manifest = stage / ".mise.toml"
+        manifest.write_text("[tools]\n", encoding="utf-8")
+
+        resolved = _converge_module().MiseLockConverge.staged_manifest(stage)
+
+        tm.that(resolved, eq=manifest.resolve())
+
+    @staticmethod
+    def test_staged_manifest_refuses_an_escape_from_the_stage(
+        tmp_path: Path,
+    ) -> None:
+        """A symlinked manifest resolving outside the stage stops converge loud."""
+        stage = tmp_path / "stage"
+        stage.mkdir()
+        outside = tmp_path / "outside.toml"
+        outside.write_text("[tools]\n", encoding="utf-8")
+        (stage / ".mise.toml").symlink_to(outside)
+
+        with pytest.raises(ValueError, match="escapes the stage"):
+            _converge_module().MiseLockConverge.staged_manifest(stage)
+
+    @staticmethod
     def test_release_candidates_walk_below_the_failed_release() -> None:
         """Candidate releases walk strictly below the failed release, newest first."""
         candidates = _converge_module().MiseLockConverge.release_candidates(
