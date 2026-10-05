@@ -347,6 +347,13 @@ Infra:
         # allow_redefinition; codegen disables them only in the modules it
         # detects in that form (operator-ruling-2026-10-01-facade-rebind-mypy-scope).
         facade-rebind-error-codes: [misc, no-redef]
+        # Operator ruling 2026-10-05 (u3-field-computed-field-staticmethod-rebind):
+        # flext-core rebinds `model_validator`/`computed_field`/`Field` through
+        # `staticmethod(...)` in `_utilities/pydantic.py`, which collapses the
+        # pydantic overloads mypy reads for `prop-decorator` and `call-arg`.
+        # Consumers must not churn model code to please the checker; the codes
+        # are disabled project-wide and the pydantic mypy plugin stays mandatory.
+        ruling-disable-error-codes: [prop-decorator, call-arg]
         boolean-settings:
           allow_redefinition: true
           namespace_packages: true
