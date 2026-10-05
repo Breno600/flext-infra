@@ -55,14 +55,27 @@ class TestsFlextInfraCodegenMakeCheckPartition:
         )
 
     @staticmethod
-    def test_ci_partition_runs_the_active_type_checkers() -> None:
-        """No active type checker is hidden from CI, so type regressions surface."""
+    def test_ci_partition_runs_the_non_local_type_checkers() -> None:
+        """Active type checkers follow the declared partition for any value.
+
+        The informative (local-only) set is config-owned: a checker declared
+        in ``ci.local_check_gates`` stays out of CI, and every checker outside
+        the declared local set surfaces in the CI partition.
+        """
         make = config.Infra.codegen.make
         active_type_checkers = c.Infra.TYPE_CHECKER_GATES & set(
             make.check_gates_default,
         )
         tm.that(bool(active_type_checkers), eq=True)
-        tm.that(active_type_checkers <= set(make.check_gates_ci), eq=True)
+        local = frozenset(make.ci.local_check_gates)
+        tm.that(
+            active_type_checkers & local <= set(make.check_gates_local),
+            eq=True,
+        )
+        tm.that(
+            active_type_checkers - local <= set(make.check_gates_ci),
+            eq=True,
+        )
 
     @staticmethod
     def test_informational_posture_is_a_unique_declared_vocabulary_subset() -> None:

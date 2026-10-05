@@ -384,9 +384,12 @@ Infra:
         # and rebinds the letter (`from flext_core import u`,
         # `class FlextCliUtilities(u)`, `u = FlextCliUtilities`). Mypy 2.3.1
         # rejects that module-level rebind with these codes even under
-        # allow_redefinition; codegen disables them only in the modules it
-        # detects in that form (operator-ruling-2026-10-01-facade-rebind-mypy-scope).
-        facade-rebind-error-codes: [misc, no-redef]
+        # allow_redefinition — `assignment` because the rebound letter's type
+        # (the subclass) is by design never the imported alias's type
+        # (type[FlextService] vs type[FlextApiServiceBase]); codegen disables
+        # them only in the modules it detects in that form
+        # (operator-ruling-2026-10-01-facade-rebind-mypy-scope).
+        facade-rebind-error-codes: [misc, no-redef, assignment]
         boolean-settings:
           allow_redefinition: true
           namespace_packages: true
