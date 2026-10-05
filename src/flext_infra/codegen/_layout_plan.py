@@ -35,6 +35,8 @@ class FlextInfraCodegenLayoutPlanMixin:
         Returns:
             The project's declared identity, ``[project].name``.
 
+        Raises:
+            ValueError: If ``member.failure``; or if unsafe layout project identity.
         """
         pyproject_path = project_dir / c.PYPROJECT_FILENAME
         project_name = u.Infra.project_name_from_payload(
@@ -92,7 +94,10 @@ class FlextInfraCodegenLayoutPlanMixin:
             findings.extend(self._override_move_findings(override, project_dir))
             findings.extend(
                 self._override_empty_dir_findings(
-                    spec, override, project_dir, project_name,
+                    spec,
+                    override,
+                    project_dir,
+                    project_name,
                 ),
             )
         findings.extend(self._gitignore_findings(spec, override, project_dir))
