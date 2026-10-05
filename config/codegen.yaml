@@ -126,14 +126,15 @@ Infra:
           selector: github:qltysh/qlty
           version: latest
           form: table
-        # Held at 5.3.3 (operator resilience lane 2026-10-02): under the 7-day
-        # cooldown, `latest` resolves to 5.3.2, whose release lacks platform
-        # assets, so Mise aborts every lock pass ("refusing to replace") and no
-        # lock the pinned Mise accepts can exist. Hold the asset-covered
-        # release until a newer one regains full platform coverage.
+        # Back on `latest` (2026-10-04 re-measurement): the 2026-10-02 hold's
+        # premise is gone — every release v5.2.0 through v5.4.0 now ships the
+        # full 19-asset platform set (verified via the GitHub releases API),
+        # so the cooldown `latest` resolves to installs cleanly and `make upg`
+        # re-records the resolution in mise.lock. Re-pin only on a measured,
+        # dated failure again.
         - name: jscpd
           selector: github:kucherenko/jscpd
-          version: "5.3.3"
+          version: latest
           form: table
         # microsoft/waza also publishes azd-extension tags, and GitHub marks
         # one of them latest; the tool's own releases are the `v` tags.
