@@ -9,19 +9,22 @@ from __future__ import annotations
 import os
 import re
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
 from flext_infra import config
-from tests import c, t, u
+from tests import c, m, t, u
 
 pytestmark = pytest.mark.slow
 
 
 class TestsFlextInfraCodegenMakeEnvironment:
     """Prove generated operations ignore the caller shell environment."""
+
+
 
     @staticmethod
     @pytest.mark.parametrize("failure_return", [None, 37])
@@ -674,6 +677,13 @@ class TestsFlextInfraCodegenMakeEnvironment:
         for forced in ("PYTHONPYCACHEPREFIX", "export TMPDIR", "PROJECT_STATE_ROOT"):
             tm.that(envrc, lacks=forced)
 
+
+
+
+
+
+
+
     @staticmethod
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
     def test_ci_rebuilds_the_shim_farm_from_the_pinned_release(
@@ -747,6 +757,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
             has=["missing environment interpreter", "make setup creates it"],
         )
 
+
+
     @staticmethod
     def test_workspace_without_local_members_retains_external_flext_sources(
         tmp_path: Path,
@@ -769,3 +781,9 @@ class TestsFlextInfraCodegenMakeEnvironment:
             url, ref = tm.ok(u.Infra.declared_git_source(requirement))
             assert url.endswith(f"/{u.Infra.dep_name(requirement)}.git")
             assert ref == u.Tests.provider_branch()
+
+
+
+
+
+
