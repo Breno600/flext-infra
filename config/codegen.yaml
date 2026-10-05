@@ -486,6 +486,11 @@ Infra:
         # pre-push check unsets CI so it runs every active check gate.
         local_value: N
         local_check_gates: [mypy, pyright, codemod, smells, pyrefly]
+        # mypy and pyright are INFORMATIVE (merge-admin mandate
+        # 2026-10-05): the gates execute in every context they run at all
+        # and their findings never block — base_gate reads the
+        # informative list directly, without a CI environment condition.
+        informative_check_gates: [mypy, pyright]
         # local_check_gates is the only declared partition: CI=N runs
         # MakeSpec.check_gates_local (its intersection with the active default
         # gates) and CI=Y runs MakeSpec.check_gates_ci, the strict complement.
@@ -493,10 +498,11 @@ Infra:
         # (ast-grep) rule set, smells (qlty similar-code) and LINT DO NOT
         # EXECUTE under CI=Y at all — operator order 2026-10-05: never
         # blocking, never
-        # advisory, not run; they stay active (blocking) locally, at pre-push,
-        # and on every unset-CI run, so findings still surface before
-        # integration. Mypy stays bounded by MYPY_MEMORY_LIMIT_MB and the
-        # project-owned tools.mypy.timeout_seconds budget.
+        # advisory, not run; locally and on every unset-CI run they execute
+        # as INFORMATIVE gates (findings surface, nothing blocks), so
+        # findings still surface before integration. Mypy stays bounded by
+        # MYPY_MEMORY_LIMIT_MB and the project-owned tools.mypy
+        # .timeout_seconds budget.
         # `format` is not a check gate -- it mutates files, so it belongs to
         # make fmt / make fix only.
         # tooling.tools.pytest.ci-excluded-markers defines the slow-test
