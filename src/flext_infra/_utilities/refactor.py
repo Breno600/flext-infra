@@ -195,5 +195,51 @@ class FlextInfraUtilitiesRefactor:
             ),
         )
 
+    @staticmethod
+    def publish_refactor_report_evidence(
+        root: Path,
+        report: m.ContractModel,
+        *,
+        relative_path: Path,
+    ) -> p.Result[Path]:
+        """Atomically publish one refactor verb's structured report receipt.
+
+        Mirrors the mod evidence receipt's write discipline (ensure directory,
+        guarded atomic write, byte-exact read-back) for the refactor verbs that
+        own a single report document.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
+        """
+        content = (report.model_dump_json(indent=2) + "\n").encode(
+            c.Cli.ENCODING_DEFAULT,
+        )
+        report_path = root.resolve() / relative_path
+        prepared = u.Cli.ensure_dir(report_path.parent)
+        if prepared.failure:
+            return r[Path].from_failure(prepared)
+        before = u.Cli.atomic_read_binary_file_state(report_path, required=False)
+        if before.failure:
+            return r[Path].from_failure(before)
+        written = u.Cli.atomic_write_binary_file_guarded(
+            before.value,
+            content,
+            permission_mode=c.Infra.MOD_SCAN_REPORT_MODE,
+        )
+        if written.failure:
+            return r[Path].from_failure(written)
+        published = u.Cli.atomic_read_binary_file_state(report_path, required=True)
+        if published.failure:
+            return r[Path].from_failure(published)
+        if (
+            published.value.content != content
+            or published.value.mode != c.Infra.MOD_SCAN_REPORT_MODE
+        ):
+            return r[Path].fail(
+                f"published refactor evidence differs from planned bytes: {report_path}",
+            )
+        return r[Path].ok(report_path)
+
 
 __all__: list[str] = ["FlextInfraUtilitiesRefactor"]
