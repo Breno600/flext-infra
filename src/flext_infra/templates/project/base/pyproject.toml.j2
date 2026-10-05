@@ -225,6 +225,13 @@ plugins = [
   {{ item | tojson }},
 {% endfor %}
 ]
+{% if tooling.tools.mypy.disable_error_code %}
+disable_error_code = [
+{% for item in tooling.tools.mypy.disable_error_code %}
+  {{ item | tojson }},
+{% endfor %}
+]
+{% endif %}
 python_version = {{ python_version | tojson }}
 {% for key, value in tooling.tools.mypy.boolean_settings | dictsort %}
 {{ key }} = {{ value | lower }}
