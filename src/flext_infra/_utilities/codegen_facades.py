@@ -11,7 +11,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-from libcst import Arg, ClassDef, Name, parse_module
+from libcst import Arg, ClassDef, Module, Name, parse_module
 from libcst.metadata import MetadataWrapper, PositionProvider
 
 from flext_infra import c
@@ -85,13 +85,12 @@ class FlextInfraUtilitiesCodegenFacades:
             pkg_dir
             / FlextInfraUtilitiesCodegenNamespace.facade_families()[family].directory
         )
-        owners_exist = owners_dir.is_dir()
         # Why: only owners-without-facade is incomplete -- the owners would have
         # no public surface at all. A facade with no owners directory is the
         # legitimate pure re-export shape this same generator emits for a package
         # that adds no local utilities (src/flext: `class FlextRootUtilities(u)`),
         # and there is simply nothing to project onto it.
-        if not owners_exist:
+        if not owners_dir.is_dir():
             return None
         if facade_path is None:
             # Conform preflights its family directories before rendering files.
@@ -106,7 +105,6 @@ class FlextInfraUtilitiesCodegenFacades:
             ast.parse(source, filename=str(facade_path)),
             facade_path,
         )
-        nested_namespace = namespace is not facade
         reachable = cls._reachable_bases(
             tuple(cls._base_name(base) for base in namespace.bases),
             ancestors,
@@ -124,7 +122,9 @@ class FlextInfraUtilitiesCodegenFacades:
             for target in (
                 member.targets
                 if isinstance(member, ast.Assign)
-                else [member.name if isinstance(member, ast.TypeAlias) else member.target]
+                else [
+                    member.name if isinstance(member, ast.TypeAlias) else member.target,
+                ]
             )
             if isinstance(target, ast.Name)
         )
@@ -132,7 +132,7 @@ class FlextInfraUtilitiesCodegenFacades:
             cls._required_methods(
                 pkg_dir,
                 facade_path,
-                nested_namespace=nested_namespace,
+                nested_namespace=namespace is not facade,
                 namespace=namespace.name,
                 family=family,
             ),
@@ -149,9 +149,9 @@ class FlextInfraUtilitiesCodegenFacades:
             ):
                 continue
             if len(candidates) != 1:
-                detail = ", ".join(f"{module}:{name}" for module, name in candidates)
                 message = (
-                    f"ambiguous {family}.{namespace.name} owner for {method}: {detail}"
+                    f"ambiguous {family}.{namespace.name} owner for {method}: "
+                    + ", ".join(f"{module}:{name}" for module, name in candidates)
                 )
                 raise ValueError(message)
             module, class_name = candidates[0]
@@ -159,7 +159,7 @@ class FlextInfraUtilitiesCodegenFacades:
             reachable.update(cls._reachable_bases((class_name,), ancestors))
         if not additions:
             return source
-        updated = cls._insert_imports(
+        source = cls._insert_imports(
             source,
             facade,
             additions,
@@ -167,10 +167,10 @@ class FlextInfraUtilitiesCodegenFacades:
             family=family,
         )
         _, namespace = cls._facade_classes(
-            ast.parse(updated, filename=str(facade_path)),
+            ast.parse(source, filename=str(facade_path)),
             facade_path,
         )
-        return cls._insert_bases(updated, namespace, additions)
+        return cls._insert_bases(source, namespace, additions)
 
     @staticmethod
     def _required_methods(
@@ -183,9 +183,11 @@ class FlextInfraUtilitiesCodegenFacades:
     ) -> frozenset[str]:
         methods: set[str] = set()
         with FlextInfraUtilitiesRopeCore.open_project(pkg_dir.parent) as project:
-            for path in sorted(pkg_dir.rglob(f"*{c.Infra.EXT_PYTHON}")):
-                if path == facade_path:
-                    continue
+            for path in (
+                candidate
+                for candidate in sorted(pkg_dir.rglob(f"*{c.Infra.EXT_PYTHON}"))
+                if candidate != facade_path
+            ):
                 source = path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
                 # Generated initializers propagate declarations; they are not
                 # authored consumers and may await replacement in this plan.
@@ -196,20 +198,24 @@ class FlextInfraUtilitiesCodegenFacades:
                 tree = ast.parse(source, filename=str(path))
                 pymodule: t.Infra.RopePyModule | None = None
                 lines = source.splitlines(keepends=True)
-                for node in ast.walk(tree):
-                    reference = node.func if isinstance(node, ast.Call) else node
+                for reference in (
+                    node.func if isinstance(node, ast.Call) else node
+                    for node in ast.walk(tree)
+                    if family != "u" or isinstance(node, ast.Call)
+                ):
                     if not isinstance(reference, ast.Attribute):
                         continue
-                    if family == "u" and not isinstance(node, ast.Call):
-                        continue
                     receiver = reference.value
-                    if nested_namespace:
-                        if (
-                            not isinstance(receiver, ast.Attribute)
-                            or receiver.attr != namespace
-                        ):
-                            continue
-                        receiver = receiver.value
+                    if nested_namespace and (
+                        not isinstance(receiver, ast.Attribute)
+                        or receiver.attr != namespace
+                    ):
+                        continue
+                    receiver = (
+                        receiver.value
+                        if nested_namespace and isinstance(receiver, ast.Attribute)
+                        else receiver
+                    )
                     if not isinstance(receiver, ast.Name) or receiver.id != family:
                         continue
                     if pymodule is None:
@@ -255,7 +261,7 @@ class FlextInfraUtilitiesCodegenFacades:
     ]:
         owners: list[t.Triple[str, str, frozenset[str]]] = []
         ancestors: MutableMapping[str, frozenset[str]] = {}
-        for path in sorted(owners_dir.glob("*.py")):
+        for path in sorted(owners_dir.rglob(c.Infra.EXT_PYTHON_GLOB)):
             if path.name == c.Infra.INIT_PY:
                 continue
             tree = ast.parse(
@@ -280,7 +286,8 @@ class FlextInfraUtilitiesCodegenFacades:
                 methods = frozenset(
                     member.name for member in members if not member.name.startswith("_")
                 )
-                owners.append((path.stem, node.name, methods))
+                module = path.relative_to(owners_dir).with_suffix("").as_posix()
+                owners.append((module.replace("/", "."), node.name, methods))
                 ancestors[node.name] = frozenset(
                     name
                     for base in node.bases
@@ -374,7 +381,8 @@ class FlextInfraUtilitiesCodegenFacades:
                 and span.start.line == namespace.lineno
                 and span.start.column
                 == len(
-                    source.splitlines()[namespace.lineno - 1]
+                    source
+                    .splitlines()[namespace.lineno - 1]
                     .encode(c.Cli.ENCODING_DEFAULT)[: namespace.col_offset]
                     .decode(c.Cli.ENCODING_DEFAULT),
                 )
@@ -383,12 +391,16 @@ class FlextInfraUtilitiesCodegenFacades:
                 message = "facade namespace has no unique concrete source span"
                 raise ValueError(message)
             owner = owners[0]
-            return wrapper.module.deep_replace(
+            updated = wrapper.module.deep_replace(
                 owner,
                 owner.with_changes(
                     bases=tuple(Arg(Name(name)) for _module, name in additions),
                 ),
-            ).code
+            )
+            if not isinstance(updated, Module):
+                message = "facade base projection did not preserve the module"
+                raise ValueError(message)
+            return updated.code
         last_base = namespace.bases[-1]
         if last_base.end_lineno is None or last_base.end_col_offset is None:
             message = "utility namespace base has no source span"
