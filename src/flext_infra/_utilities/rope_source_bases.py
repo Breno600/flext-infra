@@ -409,13 +409,21 @@ class FlextInfraUtilitiesRopeSourceBases:
                     return provider_reference(
                         imported, (binding.imported_name, *remaining), visiting | {target},
                     )
+                destination = (
+                    f"{imported.get_name()}.{binding.imported_name}"
+                )
+                if destination in visiting:
+                    # The reexport destination is already being resolved on
+                    # this walk: statically it cannot terminate, so the base
+                    # is unresolved for this derivation (bases() skips it).
+                    raise ValueError(f"Unresolved external base: {target}")
                 return resolve(
                     m.Infra.SourceClassReference(
-                        target=f"{imported.get_name()}.{binding.imported_name}",
+                        target=destination,
                         attributes=tuple(remaining),
                         qualified_base=target,
                     ),
-                    visiting | {target},
+                    visiting | {target, destination},
                 )
             if isinstance(binding, p.Infra.RopeImportedModule):
                 imported = provider_module(binding)
