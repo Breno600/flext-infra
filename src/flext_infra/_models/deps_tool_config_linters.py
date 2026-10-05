@@ -379,9 +379,30 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 ),
             ),
         ]
-        plugins: Annotated[t.StrSequence, m.Field(description="Mypy plugins list.")] = (
-            m.Field(default_factory=tuple)
-        )
+        plugins: Annotated[
+            t.StrSequence,
+            m.Field(
+                description="Mypy plugins, including mandatory Pydantic 2 support."
+            ),
+        ]
+
+        @m.field_validator("plugins")
+        @classmethod
+        def require_pydantic_plugin(cls, plugins: t.StrSequence) -> t.StrSequence:
+            """Reject configurations without the mandatory Pydantic 2 plugin.
+
+            Returns:
+                The validated plugin declarations.
+
+            Raises:
+                ValueError: If Pydantic 2 support is missing or replaced by v1.
+
+            """
+            if "pydantic.mypy" not in plugins or "pydantic.v1.mypy" in plugins:
+                msg = "Mypy requires pydantic.mypy and forbids pydantic.v1.mypy"
+                raise ValueError(msg)
+            return plugins
+
         facade_rebind_error_codes: Annotated[
             t.StrSequence,
             m.Field(

@@ -11,7 +11,9 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
+from flext_core import e
 from flext_infra import FlextInfraPyprojectModernizer, FlextInfraToolTablesPhase, config
+from flext_infra.gates.mypy import FlextInfraMypyGate
 from tests import c, m, t, u
 
 
@@ -64,6 +66,7 @@ class TestsFlextInfraDepsModernizerToolTables:
             tmp_path,
             "[tool.mypy]\n"
             'plugins = ["custom.plugin"]\n'
+            'disable_error_code = ["assignment"]\n'
             "strict_concatenate = true\n"
             'overrides = [{ module = ["stale.*"] }]\n',
         )
@@ -76,6 +79,10 @@ class TestsFlextInfraDepsModernizerToolTables:
         tm.that(
             list(u.Tests.toml_strings(mypy["plugins"])),
             eq=list(mypy_policy.plugins),
+        )
+        tm.that(
+            set(u.Tests.toml_strings(mypy["disable_error_code"])),
+            eq=set(mypy_policy.ruling_disable_error_codes),
         )
         tm.that(
             list(u.Tests.toml_list(mypy["overrides"])),
@@ -92,6 +99,62 @@ class TestsFlextInfraDepsModernizerToolTables:
             **mypy_policy.string_settings,
         }.items():
             tm.that(mypy[key], eq=value)
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        "plugins",
+        [(), ("custom.plugin",), ("pydantic.mypy", "pydantic.v1.mypy")],
+    )
+    def test_mypy_rejects_missing_or_v1_pydantic_plugin(
+        plugins: t.StrSequence,
+    ) -> None:
+        """The typed policy cannot remove mandatory Pydantic 2 support."""
+        payload = config.Infra.tooling.tools.mypy.model_dump()
+        payload["plugins"] = plugins
+        with pytest.raises(e.PydanticValidationError, match="pydantic.mypy"):
+            m.Infra.MypyConfig.model_validate(payload)
+
+    @pytest.mark.slow
+    def test_mypy_projected_policy_keeps_plugin_and_unsuspended_errors(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A real Mypy consumer suppresses only the declared codes with its plugin."""
+        payload, _ = self._applied(tmp_path)
+        project = tmp_path / "flext-sample"
+        (project / c.PYPROJECT_FILENAME).write_text(
+            u.Cli.toml_dumps(u.Cli.toml_document_from_mapping(payload)),
+            encoding="utf-8",
+        )
+        source = project / "src" / "flext_sample" / "model.py"
+        declarations = (
+            "from pydantic import BaseModel, computed_field\n"
+            "class Model(BaseModel):\n"
+            "    value: int\n"
+            "    @computed_field\n"
+            "    @property\n"
+            "    def derived(self) -> int:\n"
+            "        return self.value\n"
+            "def missing_argument() -> Model:\n"
+            "    return Model()\n"
+        )
+        source.write_text(declarations, encoding="utf-8")
+        context = m.Infra.GateContext(
+            repository_root=project,
+            reports_dir=project / ".reports",
+        )
+        gate = FlextInfraMypyGate(project)
+        accepted = gate.check(project, context)
+        tm.that(accepted.result.passed, eq=True)
+        tm.that(accepted.issues, eq=())
+
+        source.write_text(
+            declarations + 'invalid = Model(value="incorrect")\n',
+            encoding="utf-8",
+        )
+        rejected = gate.check(project, context)
+        tm.that(rejected.result.passed, eq=False)
+        tm.that(tuple(issue.code for issue in rejected.issues), eq=("arg-type",))
 
     def test_pytest_table_replaces_policy_and_merges_extensions(
         self,
@@ -444,4 +507,12 @@ class TestsFlextInfraDepsModernizerToolTables:
         tm.that(src_roots, lacks="scripts", has="src")
         tm.that(namespace_packages, lacks="scripts")
         per_file = self._table(payload, "ruff", "lint", "per-file-ignores")
-        tm.that(not any(p.startswith("scripts/") for p in per_file), eq=True)
+        tm.that(
+            per_file,
+            eq={
+                pattern: sorted(rules)
+                for pattern, rules in (
+                    config.Infra.tooling.tools.ruff.lint.per_file_ignores.items()
+                )
+            },
+        )
