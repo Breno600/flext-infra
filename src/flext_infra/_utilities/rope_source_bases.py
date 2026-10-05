@@ -449,8 +449,17 @@ class FlextInfraUtilitiesRopeSourceBases:
             attributes: t.StrTuple,
             visiting: frozenset[str] = frozenset(),
         ) -> str:
-            module = project.get_module(target)
-            resource = project.find_module(target)
+            try:
+                module = project.get_module(target)
+                resource = project.find_module(target)
+            except Exception as error:
+                # Rope's project does not carry the member's runtime
+                # environment: stdlib submodules (collections.abc) and
+                # non-importable namespaces have no source resource here.
+                # The recognized verdict degrades the base in every caller.
+                raise ValueError(
+                    f"No source module for required base: {target}",
+                ) from error
             if resource is not None:
                 module = FlextInfraUtilitiesRopeCore.resolve_pymodule(project, resource)
             return provider_reference(module, attributes, visiting)
