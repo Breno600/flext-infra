@@ -638,8 +638,12 @@ class FlextInfraUtilitiesRopeSourceBases:
                 # with no source module, or a member missing because an
                 # ancestor's lineage was degraded — does not qualify as
                 # runtime-evaluated, and its declared bases are skipped with
-                # it. Structural defects (cycles, duplicates, inconsistent
-                # MRO, shadowing) keep raising.
+                # it. A lineage cycle across split-file class shapes is an
+                # artifact of the line-qualified identity model (the runtime
+                # joins them outside rope's view); a real inheritance cycle
+                # self-destructs at class creation, so degrading is safe.
+                # Structural defects (duplicates, inconsistent MRO, shadowing)
+                # keep raising.
                 message = str(error)
                 if message.startswith(
                     "Unresolved external base:",
@@ -649,15 +653,19 @@ class FlextInfraUtilitiesRopeSourceBases:
                     continue
                 if message.startswith("Missing inherited class member:"):
                     continue
+                if message.startswith("Cyclic class inheritance:"):
+                    continue
                 raise
             for reference in definition.bases:
                 try:
                     lineage = linearize(resolve(reference))
                 except ValueError as error:
                     # A base whose lineage crosses an unresolved external
-                    # attribute (PEP 562 lazy namespace) or a planned module
-                    # binding that is not a class cannot be derived; the
-                    # class simply does not qualify as runtime-evaluated.
+                    # attribute (PEP 562 lazy namespace), a planned module
+                    # binding that is not a class, or a lineage cycle from
+                    # the line-qualified identity model of split-file class
+                    # shapes cannot be derived; the class simply does not
+                    # qualify as runtime-evaluated.
                     if str(error).startswith(
                         "Unresolved external base:",
                     ) or str(error).startswith(
@@ -665,6 +673,8 @@ class FlextInfraUtilitiesRopeSourceBases:
                     ):
                         continue
                     if str(error).startswith("Unresolved planned base:"):
+                        continue
+                    if str(error).startswith("Cyclic class inheritance:"):
                         continue
                     raise
                 if root_ids.intersection(lineage):
