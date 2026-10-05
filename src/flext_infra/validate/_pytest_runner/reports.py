@@ -69,7 +69,7 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         violations.extend(
             ("duplicate Markdown executed origin",)
             if len(set(diagnostics.markdown_items)) != len(diagnostics.markdown_items)
-            else ()
+            else (),
         )
         proofs = {proof.node_id: proof for proof in diagnostics.markdown_attempts}
         if len(proofs) != len(diagnostics.markdown_attempts):

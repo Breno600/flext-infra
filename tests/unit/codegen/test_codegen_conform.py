@@ -636,13 +636,13 @@ class TestsFlextInfraCodegenConform:
         tm.that((root / "config" / "beads.yaml").is_file(), eq=True)
         tm.that((root / "pyproject.toml").is_file(), eq=True)
         tm.that((root / ".env.example").is_file(), eq=True)
-        runtime_roots = (
-            config.Infra.tooling.tools.ruff.lint.flake8_type_checking
-            .runtime_evaluated_roots
-        )
+        runtime_roots = config.Infra.tooling.tools.ruff.lint.flake8_type_checking.runtime_evaluated_roots
         rendered_runtime_bases = u.Tests.toml_strings_at(
             (root / "pyproject.toml").read_text(encoding="utf-8"),
-            "tool", "ruff", "lint", "flake8-type-checking",
+            "tool",
+            "ruff",
+            "lint",
+            "flake8-type-checking",
             "runtime-evaluated-base-classes",
         )
         tm.that(
