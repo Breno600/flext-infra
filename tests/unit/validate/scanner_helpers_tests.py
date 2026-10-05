@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
-from flext_infra import u as infra_u
 from tests import u
 
 if TYPE_CHECKING:
@@ -95,12 +94,12 @@ class TestsFlextInfraScannerHelpers:
         source.mkdir()
         first = source / "first.py"
         first.write_text("", encoding="utf-8")
-        tm.that(infra_u.Infra.git_tracked_scope_paths(source), eq=[first])
+        tm.that(u.Infra.git_tracked_scope_paths(source), eq=[first])
 
         second = source / "second.py"
         second.write_text("", encoding="utf-8")
 
-        tm.that(infra_u.Infra.git_tracked_scope_paths(source), eq=[first, second])
+        tm.that(u.Infra.git_tracked_scope_paths(source), eq=[first, second])
 
     @staticmethod
     def test_tracked_scope_refreshes_repository_identity_after_git_init(
@@ -111,13 +110,13 @@ class TestsFlextInfraScannerHelpers:
         source.mkdir()
         unmanaged = source / "unmanaged.py"
         unmanaged.write_text("", encoding="utf-8")
-        tm.that(infra_u.Infra.git_tracked_scope_paths(source), eq=None)
+        tm.that(u.Infra.git_tracked_scope_paths(source), eq=None)
 
         init_result = u.Cli.run_raw(["git", "init"], cwd=tmp_path)
         tm.ok(init_result)
         tm.that(u.Cli.process_succeeded(init_result.value.outcome), eq=True)
 
-        tm.that(infra_u.Infra.git_tracked_scope_paths(source), eq=[unmanaged])
+        tm.that(u.Infra.git_tracked_scope_paths(source), eq=[unmanaged])
 
     @staticmethod
     def test_empty_git_scope_does_not_fall_back_to_filesystem_scan(
@@ -130,4 +129,4 @@ class TestsFlextInfraScannerHelpers:
         scope = tmp_path / "empty"
         scope.mkdir()
 
-        tm.that(infra_u.Infra.git_tracked_scope_paths(scope), eq=[])
+        tm.that(u.Infra.git_tracked_scope_paths(scope), eq=[])
