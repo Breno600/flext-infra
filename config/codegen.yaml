@@ -488,13 +488,14 @@ Infra:
         # Other pre-push verbs use this token to preserve local test behavior;
         # pre-push check unsets CI so it runs every active check gate.
         local_value: N
-        local_check_gates: [mypy, pyright, codemod, smells]
+        local_check_gates: [lint, mypy, pyright, codemod, smells]
         # local_check_gates is the only declared partition: CI=N runs
         # MakeSpec.check_gates_local (its intersection with the active default
         # gates) and CI=Y runs MakeSpec.check_gates_ci, the strict complement.
         # An unset CI runs all active gates. Mypy, pyright, the codemod
-        # (ast-grep) rule set and smells (qlty similar-code) DO NOT EXECUTE
-        # under CI=Y at all — operator order 2026-10-05: never blocking, never
+        # (ast-grep) rule set, smells (qlty similar-code) and LINT DO NOT
+        # EXECUTE under CI=Y at all — operator order 2026-10-05: never
+        # blocking, never
         # advisory, not run; they stay active (blocking) locally, at pre-push,
         # and on every unset-CI run, so findings still surface before
         # integration. Mypy stays bounded by MYPY_MEMORY_LIMIT_MB and the
@@ -674,6 +675,11 @@ Infra:
       custom_handler_profile_overrides: {}
       standalone_check_gates:
         smells: smells
+      # Operator ruling flext-uz0dt (2026-09-18, reaffirmed 2026-10-04 in
+      # flext-qtmy2): markdown-code runs only when requested explicitly; make
+      # fix still repairs it.
+      opt_in_check_gates:
+        - markdown-code
       custom_handler_policy:
         filename: custom.mk
         # Custom behavior is one private whole-verb replacement or one lifecycle
