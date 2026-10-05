@@ -112,6 +112,7 @@ class FlextInfraWorkspacePropagation(s[bool]):
             lambda: FlextInfraCodegenConform.settle_repository(
                 member_root,
                 ports=self.conform_collaborators,
+                refresh_git_peers=True,
             ),
         )
         if published.failure:

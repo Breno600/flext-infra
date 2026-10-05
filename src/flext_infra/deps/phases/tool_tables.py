@@ -112,6 +112,11 @@ class FlextInfraToolTablesPhase:
                 value=config.Infra.codegen.toolchain.python_version,
             ),
             toml.ListOp(key=c.Infra.PLUGINS, values=mypy.plugins, strategy=replace),
+            toml.ListOp(
+                key="disable_error_code",
+                values=mypy.ruling_disable_error_codes,
+                strategy=replace,
+            ),
         ]
         operations.append(
             toml.SetOp(
