@@ -62,9 +62,7 @@ class FlextInfraConfigModelsArtifact:
         ] = False
 
     class CodegenVscodeSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Fully modeled content of the ``vscode`` section
-        of ``config/codegen.yaml``.
-        """
+        """Fully modeled content of the ``vscode`` section of ``config/codegen.yaml``."""
 
         scalar_settings: Annotated[
             Mapping[str, str | bool | int],
@@ -768,6 +766,24 @@ class FlextInfraConfigModelsArtifact:
             ),
         ] = ()
 
+        @staticmethod
+        def _is_escaping_path(value: str) -> bool:
+            """Whether one configured path escapes its declared relative owner.
+
+            Returns:
+                The resulting ``bool``.
+
+            """
+            path = Path(value)
+            return bool(
+                path.is_absolute()
+                or PureWindowsPath(value).root
+                or not path.parts
+                or ".." in path.parts
+                or "\\" in value
+                or PureWindowsPath(value).drive,
+            )
+
         @m.model_validator(mode="after")
         def _validate_source_paths(self) -> Self:
             """Keep campaign drivers and scan roots inside their declared owners.
@@ -780,15 +796,7 @@ class FlextInfraConfigModelsArtifact:
 
             """
             for value in (self.csv, *self.roots):
-                path = Path(value)
-                if (
-                    path.is_absolute()
-                    or PureWindowsPath(value).root
-                    or not path.parts
-                    or ".." in path.parts
-                    or "\\" in value
-                    or PureWindowsPath(value).drive
-                ):
+                if self._is_escaping_path(value):
                     msg = (
                         f"CSV campaign path must be relative and non-escaping: {value}"
                     )

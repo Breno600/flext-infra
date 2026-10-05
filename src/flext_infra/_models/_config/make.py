@@ -750,9 +750,7 @@ class FlextInfraConfigModelsMake:
             FlextInfraExternalCacheDirectorySpec,
             FlextInfraConfigModelsContract.ConfigContract,
         ):
-            """Project-keyed shared Mypy cache: one analysis per project,
-            reused across relocks.
-            """
+            """Project-keyed shared Mypy cache: one analysis per project, reused across relocks."""
 
             cache_environment_variable: Annotated[
                 FlextInfraConstantsMake.MypyCacheEnvironment,

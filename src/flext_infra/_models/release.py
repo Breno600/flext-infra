@@ -160,9 +160,7 @@ class FlextInfraModelsRelease:
             return self
 
     class ReleasePlan(m.StrictBoundaryModel):
-        """The protocol's decision for one repository,
-        derived and never typed by hand.
-        """
+        """The protocol's decision for one repository, derived and never typed by hand."""
 
         current: Annotated[
             t.NonEmptyStr,
@@ -300,9 +298,7 @@ class FlextInfraModelsRelease:
         FlextInfraModelsMixins.VersionTagMixin,
         m.ArbitraryTypesModel,
     ):
-        """Resolved input of one release phase: the repository,
-        its declared version and its tag.
-        """
+        """Resolved input of one release phase: the repository, its declared version and its tag."""
 
         dry_run: Annotated[bool, m.Field(description="Dry run flag")] = False
         phase: Annotated[

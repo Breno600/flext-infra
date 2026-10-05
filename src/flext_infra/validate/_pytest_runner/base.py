@@ -43,12 +43,6 @@ class FlextInfraPytestRunnerBase(s[int]):
         bool,
         m.Field(description="CI/pre-commit selection captured at the Make boundary."),
     ] = False
-    profile_enabled: Annotated[
-        bool,
-        m.Field(
-            description="Profile the real suite child and preserve its native exit",
-        ),
-    ] = False
     collection_command_prefix: Annotated[
         t.StrTuple,
         m.Field(
@@ -132,7 +126,7 @@ class FlextInfraPytestRunnerBase(s[int]):
 
     @m.model_validator(mode="after")
     def _validate_paths(self) -> Self:
-        """Require repository-contained target and report paths.
+        r"""Require repository-contained target and report paths.
 
         Returns:
             The resulting ``Self``.

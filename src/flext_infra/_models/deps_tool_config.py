@@ -431,9 +431,7 @@ class FlextInfraModelsDepsToolConfig(
 
         @property
         def slow_suite_stop_reserve_seconds(self) -> int:
-            """Derive the slow-phase reserve: in-flight items bounded
-            by the slow ceiling.
-            """
+            """Derive the slow-phase reserve: in-flight items bounded by the slow ceiling."""
             return (
                 self.xdist_items_per_worker * self.slow_timeout_seconds
                 + self.termination_grace_seconds
