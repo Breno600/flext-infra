@@ -359,8 +359,8 @@ class TestsFlextInfraCodegenMiseArtifacts:
         # jscpd declares a host-invariant version so mise writes one lock
         # entry per tool; the per-platform asset patterns were removed.
         tm.that(
-            tools.get(toolchain.jscpd_selector),
-            eq={"version": toolchain.jscpd_version},
+            tools.get(toolchain.tool_selectors["jscpd"]),
+            eq={"version": toolchain.tool_versions["jscpd"]},
         )
         tm.that("npm:jscpd" in tools, eq=False)
 
