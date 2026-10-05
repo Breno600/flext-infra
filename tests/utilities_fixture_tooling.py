@@ -12,6 +12,8 @@ import sys
 from pathlib import Path
 from textwrap import indent
 
+from flext_tests import tm
+
 from flext_infra import config, u
 from tests import c, m, p, t
 from tests.utilities_git import TestsFlextInfraUtilitiesGitMixin
@@ -211,6 +213,24 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(body, encoding=c.Cli.ENCODING_DEFAULT)
         path.chmod(0o755)
+
+    @staticmethod
+    def declare_codemod_rules(root: Path, rules: t.StrMapping) -> None:
+        """Point ``root`` at a local ast-grep catalog holding exactly ``rules``.
+
+        Each key names one rule file and each value is its YAML body.
+        """
+        config_path = root / c.Infra.CODEMOD_CONFIG_RELPATH
+        rules_root = config_path.parent / c.Cli.RULES_DIR_NAME
+        tm.ok(u.Cli.ensure_dir(rules_root))
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                config_path,
+                f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n",
+            ),
+        )
+        for name, body in rules.items():
+            tm.ok(u.Cli.atomic_write_text_file(rules_root / f"{name}.yml", body))
 
     @staticmethod
     def run_isolated_make(
