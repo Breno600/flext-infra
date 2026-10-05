@@ -9,7 +9,7 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_cli import cli as cli_facade
+from flext_cli import FlextCli
 
 from flext_infra import c, m, t, u
 from flext_infra.services.cli_routes import FlextInfraCliRouteService
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from flext_infra import p
 
 
-class FlextInfraCliDispatchService(FlextInfraCliRouteService, type(cli_facade)):
+class FlextInfraCliDispatchService(FlextInfraCliRouteService, FlextCli):
     """Dispatch public command groups through their typed route models."""
 
     app_name: ClassVar[str] = "flext-infra"
