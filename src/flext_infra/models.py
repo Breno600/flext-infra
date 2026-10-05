@@ -38,16 +38,6 @@ from flext_infra._models.workspace import FlextInfraModelsWorkspace
 from flext_infra._models.worktree import FlextInfraModelsWorktree
 
 
-from flext_infra._models.codegen_toolchain import (
-    FlextInfraModelsCodegenToolchain,
-)
-from flext_infra._models.codegen_render import (
-    FlextInfraModelsCodegenRender,
-)
-from flext_infra._models.mise_toolchain import (
-    FlextInfraModelsMiseToolchain,
-)
-
 class FlextInfraModels(FlextCliModels):
     """Merged model namespace for flext-infra domain objects."""
 
@@ -55,8 +45,9 @@ class FlextInfraModels(FlextCliModels):
         FlextInfraModelsCensus,
         FlextInfraModelsCheck,
         FlextInfraConfigModels,
-        FlextInfraModelsCodegenRender,
-        FlextInfraModelsCodegenToolchain,
+        # FlextInfraCodegen already linearizes CodegenRender and
+        # CodegenToolchain (its MRO contains both): listing the ancestors
+        # beside their own subclass makes the C3 merge inconsistent.
         FlextInfraCodegen,
         FlextInfraModelsCodemod,
         FlextInfraModelsDeps,
