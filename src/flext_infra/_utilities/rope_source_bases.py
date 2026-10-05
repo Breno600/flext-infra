@@ -363,7 +363,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                             target=name,
                             attributes=tuple(path.split(".")),
                             qualified_base=f"{name}.{path}",
-                        )
+                        ),
                     )
                 identity = next(
                     (
@@ -431,7 +431,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                             ".".join(parts[: len(parts) - imported.level + 1]),
                             name,
                         ),
-                    )
+                    ),
                 )
             module = project.get_module(name)
             resource = project.find_module(name)
@@ -466,9 +466,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                         visiting | {target},
                         depth + 1,
                     )
-                destination = (
-                    f"{imported.get_name()}.{binding.imported_name}"
-                )
+                destination = f"{imported.get_name()}.{binding.imported_name}"
                 if destination in visiting:
                     # The reexport destination is already being resolved on
                     # this walk: statically it cannot terminate, so the base
@@ -487,7 +485,10 @@ class FlextInfraUtilitiesRopeSourceBases:
                 imported = provider_module(binding)
                 if imported.get_name() not in namespaces:
                     return provider_reference(
-                        imported, tuple(remaining), visiting | {target}, depth + 1,
+                        imported,
+                        tuple(remaining),
+                        visiting | {target},
+                        depth + 1,
                     )
                 return resolve(
                     m.Infra.SourceClassReference(
@@ -532,9 +533,7 @@ class FlextInfraUtilitiesRopeSourceBases:
             depth: int = 0,
         ) -> str:
             if depth > c.Infra.ROPE_WALK_DEPTH_BUDGET:
-                message = (
-                    f"Unresolved external base: {reference.target}"
-                )
+                message = f"Unresolved external base: {reference.target}"
                 raise ValueError(message)
             target = reference.target
             key = ".".join((target, *reference.attributes))
@@ -568,7 +567,10 @@ class FlextInfraUtilitiesRopeSourceBases:
                     target = resolve(binding, visiting | {key}, depth + 1)
                 else:
                     target = external_reference(
-                        target, tuple(attributes), visiting, depth + 1,
+                        target,
+                        tuple(attributes),
+                        visiting,
+                        depth + 1,
                     )
                     attributes.clear()
             for attribute in attributes:
@@ -613,7 +615,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                         target=base.__module__,
                         attributes=tuple(base.__qualname__.split(".")),
                         qualified_base=f"{base.__module__}.{base.__qualname__}",
-                    )
+                    ),
                 )
                 for base in value.builtin.__bases__
             )
