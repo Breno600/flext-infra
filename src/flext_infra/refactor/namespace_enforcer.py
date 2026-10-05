@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from flext_cli import cli
 
 from flext_core import r
-from flext_infra import m, u
+from flext_infra import c, m, u
 from flext_infra.refactor._namespace_enforcer_project import (
     FlextInfraNamespaceEnforcerProjectMixin,
 )
@@ -132,6 +132,13 @@ class FlextInfraNamespaceEnforcer(FlextInfraNamespaceEnforcerProjectMixin):
             gates=params.gates,
         )
         cli.display_text(cls.render_text(report))
+        published = u.Infra.publish_refactor_report_evidence(
+            params.repository_root,
+            report,
+            relative_path=c.Infra.NAMESPACE_ENFORCE_REPORT_RELATIVE_PATH,
+        )
+        if published.failure:
+            return r[m.Infra.WorkspaceEnforcementReport].from_failure(published)
         has_violations: bool = report.has_violations
         if has_violations:
             return r[m.Infra.WorkspaceEnforcementReport].fail(
