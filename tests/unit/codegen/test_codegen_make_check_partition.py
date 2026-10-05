@@ -78,6 +78,29 @@ class TestsFlextInfraCodegenMakeCheckPartition:
         )
 
     @staticmethod
+    def test_informational_posture_is_a_unique_declared_vocabulary_subset() -> None:
+        """The informational posture names unique gates that still run in CI.
+
+        The posture never removes a gate from any partition: informational
+        gates run, report their findings, and only their blocking power is
+        withheld (operator law 2026-10-05).
+        """
+        make = config.Infra.codegen.make
+        posture = make.informational_check_gates
+        tm.that(len(set(posture)), eq=len(posture))
+        tm.that(set(posture) <= set(make.check_gates_allowed), eq=True)
+        tm.that(set(posture) <= set(make.check_gates_ci), eq=True)
+
+    @staticmethod
+    def test_informational_posture_rejects_unknown_gates() -> None:
+        """An informational gate outside the declared vocabulary fails loud."""
+        payload = config.Infra.codegen.make.model_dump(exclude_computed_fields=True)
+        payload["informational_check_gates"] = ("fixture-unknown-gate",)
+
+        with pytest.raises(ValueError, match="unknown gates"):
+            _ = m.Infra.MakeSpec.model_validate(payload)
+
+    @staticmethod
     def test_project_declared_gates_follow_the_declared_partition() -> None:
         """A project gate absent from the local set runs in the CI partition."""
         payload = config.Infra.codegen.make.model_dump(exclude_computed_fields=True)

@@ -948,6 +948,46 @@ class FlextInfraConfigModelsMake:
                 ),
             ),
         ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        informational_check_gates: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                default=(),
+                description=(
+                    "Check gates whose findings stay informational: reported in "
+                    "the check report and SARIF but never failing `make check`. "
+                    "Operator law 2026-10-05: mypy, pyright and codemod "
+                    "findings must not block CI."
+                ),
+            ),
+        ] = ()
+
+        @m.model_validator(mode="after")
+        def _validate_informational_check_gates(self) -> Self:
+            """Informational gates must be unique declared gate vocabulary.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If make informational_check_gates must be unique;
+                    or if make informational_check_gates name unknown gates.
+
+            """
+            if len(set(self.informational_check_gates)) != len(
+                self.informational_check_gates,
+            ):
+                msg = "make informational_check_gates must be unique"
+                raise ValueError(msg)
+            unknown = sorted(
+                set(self.informational_check_gates) - set(self.check_gates_allowed),
+            )
+            if unknown:
+                msg = (
+                    "make informational_check_gates name unknown gates: "
+                    f"{', '.join(unknown)}"
+                )
+                raise ValueError(msg)
+            return self
 
         @m.model_validator(mode="after")
         def _validate_project_check_gates(self) -> Self:
