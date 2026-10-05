@@ -17,7 +17,7 @@ import pytest
 from flext_tests import tm
 
 from flext_core import r
-from flext_infra import config, infra, main
+from flext_infra import config, infra
 from flext_infra.codegen import (
     FlextInfraCodegenConform,
     FlextInfraCodegenMiseArtifacts,
@@ -25,7 +25,6 @@ from flext_infra.codegen import (
     FlextInfraMiseWorkspacePlanner,
 )
 from flext_infra.docs import FlextInfraDocGenerator
-from flext_infra.services.cli_routes_codegen import FlextInfraCodegenRoutes
 from flext_infra.workspace import FlextInfraWorkspaceDetector
 from tests import c, m, p, u
 from tests.unit.codegen.conform_support import TestsFlextInfraConformSupport
@@ -35,8 +34,10 @@ pytestmark = [pytest.mark.slow]
 _LIFECYCLE_EXCEPTION = OSError("conform operation raised after begin")
 
 
-class _FlextInfraCodegenConformLifecycleProbe(FlextInfraCodegenConform):
+class TestsFlextInfraCodegenConformLifecycleProbe(FlextInfraCodegenConform):
     """Inject one public planning outcome after the real transaction begins."""
+
+    __test__ = False
 
     @override
     def plan(
@@ -197,7 +198,7 @@ class TestsFlextInfraCodegenConform:
         execute = (
             FlextInfraCodegenConform.execute_request
             if scenario.endswith("-failure")
-            else _FlextInfraCodegenConformLifecycleProbe.execute_request
+            else TestsFlextInfraCodegenConformLifecycleProbe.execute_request
         )
         ports = infra.codegen_conform_collaborators()
 
@@ -263,7 +264,7 @@ class TestsFlextInfraCodegenConform:
         )
 
         with pytest.raises(OSError, match="raised after begin") as raised:
-            _FlextInfraCodegenConformLifecycleProbe.execute_request(
+            TestsFlextInfraCodegenConformLifecycleProbe.execute_request(
                 request,
                 workspace,
                 ports=infra.codegen_conform_collaborators(),
@@ -271,6 +272,141 @@ class TestsFlextInfraCodegenConform:
 
         tm.that(raised.value is _LIFECYCLE_EXCEPTION, eq=True)
         tm.that(root.exists(), eq=False)
+
+    @staticmethod
+    def _hook_workspace(hook_path: str | Path | None) -> m.Infra.WorkspaceSpec:
+        """Build one standalone project whose manifest owns the Hatch hook.
+
+        Returns:
+            The resulting ``m.Infra.WorkspaceSpec``.
+
+        """
+        repository = u.Tests.repository_ref("hook-project").model_copy(
+            update={"role": c.Infra.MakeProfile.STANDALONE},
+        )
+        project_payload = u.Tests.project_spec("hook-project").model_dump()
+        project_payload["hatch_build_hook_path"] = hook_path
+        return u.Tests.workspace_spec(
+            repository,
+            project=m.Infra.ProjectSpec.model_validate(project_payload),
+        )
+
+    @staticmethod
+    def _planned_hook_pyproject(
+        root: Path,
+        hook_path: str | Path | None,
+    ) -> t.Triple[
+        FlextInfraCodegenConform,
+        m.Infra.CodegenConformRequest,
+        m.Infra.CodegenFilePlan,
+    ]:
+        """Plan the canonical pyproject through the public conform owner.
+
+        Returns:
+            The resulting ``t.Triple[FlextInfraCodegenConform,
+                m.Infra.CodegenConformRequest, m.Infra.CodegenFilePlan]``.
+
+        """
+        u.Tests.seed_locked_taplo(root.parent)
+        service, request = TestsFlextInfraConformSupport.check_conform_service(
+            root,
+            TestsFlextInfraCodegenConform._hook_workspace(hook_path),
+            what=c.Infra.CodegenConformSurface.PYPROJECT,
+        )
+        plan = tm.ok(service.plan(request))
+        pyproject = next(
+            item for item in plan.files if item.path.name == c.PYPROJECT_FILENAME
+        )
+        return service, request, pyproject
+
+    # NOTE (multi-agent, flext-get3j): these tests exercise the public conform
+    # owner so no test-only template path can mask declaration or propagation drift.
+    def test_declared_hatch_build_hook_renders_before_wheel_target(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Test declared hatch build hook renders before wheel target."""
+        _, _, pyproject = self._planned_hook_pyproject(
+            tmp_path / "declared",
+            Path("scripts/hatch_build.py"),
+        )
+        rendered = u.Tests.codegen_file_text(pyproject)
+
+        tm.that(
+            u.Tests.toml_table_at(
+                rendered,
+                "tool",
+                "hatch",
+                "build",
+                "hooks",
+                "custom",
+            )["path"],
+            eq="scripts/hatch_build.py",
+        )
+        tm.that(
+            rendered.index("[tool.hatch.build.hooks.custom]")
+            < rendered.index("[tool.hatch.build.targets.wheel]"),
+            eq=True,
+        )
+
+    def test_absent_hatch_build_hook_emits_no_custom_hook_table(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Test absent hatch build hook emits no custom hook table."""
+        _, _, pyproject = self._planned_hook_pyproject(tmp_path / "absent", None)
+
+        tm.that(
+            u.Tests.codegen_file_text(pyproject),
+            lacks="[tool.hatch.build.hooks.custom]",
+        )
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        "unsafe_path",
+        [
+            "/scripts/hatch_build.py",
+            ".",
+            "..",
+            "../scripts/hatch_build.py",
+            "scripts/../hatch_build.py",
+            r"scripts\hatch_build.py",
+            "C:/scripts/hatch_build.py",
+            r"\\server\share\hatch_build.py",
+        ],
+    )
+    def test_hatch_build_hook_rejects_unsafe_paths(unsafe_path: str) -> None:
+        """Test hatch build hook rejects unsafe paths."""
+        payload = u.Tests.project_spec("unsafe-hook").model_dump()
+        payload["hatch_build_hook_path"] = unsafe_path
+
+        with pytest.raises(c.ValidationError, match="safe project-relative path"):
+            m.Infra.ProjectSpec.model_validate(payload)
+
+    def test_hatch_build_hook_conform_reaches_pyproject_fixed_point(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Test hatch build hook conform reaches pyproject fixed point."""
+        root = tmp_path / "fixed-point"
+        service, request, first = self._planned_hook_pyproject(
+            root,
+            Path("scripts/hatch_build.py"),
+        )
+        root.mkdir(parents=True, exist_ok=True)
+        # Publish exactly what the plan declares: bytes and permission bits, so
+        # the fixed point never depends on the process umask.
+        published = root / c.PYPROJECT_FILENAME
+        published.write_bytes(tm.not_none(first.desired_content))
+        published.chmod(tm.not_none(first.desired_mode))
+
+        second_plan = tm.ok(service.plan(request))
+        second = next(
+            item for item in second_plan.files if item.path.name == c.PYPROJECT_FILENAME
+        )
+
+        tm.that(u.Tests.codegen_file_text(second), eq=u.Tests.codegen_file_text(first))
+        tm.that(u.Infra.codegen_file_requires_effect(second), eq=False)
 
     @staticmethod
     def test_pyproject_plan_rejects_local_path_internal_source(
@@ -500,6 +636,19 @@ class TestsFlextInfraCodegenConform:
         tm.that((root / "config" / "beads.yaml").is_file(), eq=True)
         tm.that((root / "pyproject.toml").is_file(), eq=True)
         tm.that((root / ".env.example").is_file(), eq=True)
+        runtime_roots = (
+            config.Infra.tooling.tools.ruff.lint.flake8_type_checking
+            .runtime_evaluated_roots
+        )
+        rendered_runtime_bases = u.Tests.toml_strings_at(
+            (root / "pyproject.toml").read_text(encoding="utf-8"),
+            "tool", "ruff", "lint", "flake8-type-checking",
+            "runtime-evaluated-base-classes",
+        )
+        tm.that(
+            tuple(rendered_runtime_bases),
+            eq=u.Infra.runtime_evaluated_base_classes(root, {}, runtime_roots),
+        )
         package_name = name.replace("-", "_")
         pythonpath = os.pathsep.join(
             part
@@ -941,7 +1090,8 @@ class TestsFlextInfraCodegenConform:
             ),
         )
         package_root = (root / "src/consumer/__init__.py").read_text(encoding="utf-8")
-        tm.that(package_root, has='"flext_cli": (')
+        entries, _refs = u.Infra.lazy_import_mapping_source(package_root)
+        tm.that(dict(entries).get("flext_cli", ()), has="r")
         tm.that(package_root, has='"r"')
 
     @staticmethod

@@ -87,13 +87,13 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 resolved = u.Infra.load_project_managed_artifacts(repository_root)
                 if resolved.failure:
                     return r[m.Infra.CodegenArtifactComposition].from_failure(resolved)
-                blocks = resolved.value.artifacts.Gitignore.preserved_blocks
+                artifacts = resolved.value.artifacts
             else:
-                blocks = render_inputs.managed_artifacts.resolution.artifacts.Gitignore.preserved_blocks
+                artifacts = render_inputs.managed_artifacts.resolution.artifacts
             composed = u.Infra.preserve_project_gitignore_blocks(
                 rendered,
                 repository_root,
-                blocks,
+                artifacts.Gitignore.preserved_blocks,
             )
             if composed.failure:
                 return r[m.Infra.CodegenArtifactComposition].from_failure(composed)
@@ -126,7 +126,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 rendered,
                 path=live_path,
                 toolchain_root=repository_root,
-                taplo_version=config.Infra.codegen.toolchain.taplo_version,
+                taplo_version=config.Infra.codegen.toolchain.tool_versions["taplo"],
             )
             if formatted.failure:
                 return r[m.Infra.CodegenArtifactComposition].from_failure(formatted)
@@ -492,7 +492,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 ),
                 workspace_gitlinks=gitlinks.value,
                 uv_link_mode=self.link_mode(target.repository, codegen.toolchain),
-                uv_version=codegen.toolchain.uv_version,
+                uv_version=codegen.toolchain.tool_versions["uv"],
                 mise_lockfile_platforms=codegen.toolchain.mise_lockfile_platforms,
                 make=codegen.make,
                 extra_verbs=(

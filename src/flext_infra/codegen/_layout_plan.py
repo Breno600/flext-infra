@@ -37,10 +37,20 @@ class FlextInfraCodegenLayoutPlanMixin:
 
         """
         pyproject_path = project_dir / c.PYPROJECT_FILENAME
-        return u.Infra.project_name_from_payload(
+        project_name = u.Infra.project_name_from_payload(
             pyproject_path,
             u.Infra.pyproject_payload(pyproject_path),
         )
+        member = u.Infra.archive_member_path(project_name)
+        if member.failure:
+            raise ValueError(member.error)
+        if (
+            len(member.value.parts) != 1
+            or member.value.as_posix() != project_name
+            or "\x00" in project_name
+        ):
+            raise ValueError(f"unsafe layout project identity: {project_name}")
+        return project_name
 
     def plan_project(self, project_dir: Path) -> m.Infra.LayoutProjectReport:
         """Classify every root entry of one project without writing anything.
@@ -64,6 +74,15 @@ class FlextInfraCodegenLayoutPlanMixin:
                 continue
             if self._is_ignored_root(spec, override, name):
                 continue
+            if override is not None and name in override.archive_names:
+                findings.append(
+                    self._finding(
+                        "archive",
+                        name,
+                        f"{spec.archive_root}/{project_name}/{name}",
+                    ),
+                )
+                continue
             if name in allowed or name in override_roots:
                 continue
             findings.append(
@@ -72,7 +91,9 @@ class FlextInfraCodegenLayoutPlanMixin:
         if override is not None:
             findings.extend(self._override_move_findings(override, project_dir))
             findings.extend(
-                self._override_empty_dir_findings(spec, override, project_dir),
+                self._override_empty_dir_findings(
+                    spec, override, project_dir, project_name,
+                ),
             )
         findings.extend(self._gitignore_findings(spec, override, project_dir))
         return m.Infra.LayoutProjectReport(
@@ -241,6 +262,7 @@ class FlextInfraCodegenLayoutPlanMixin:
         spec: m.Infra.LayoutSpec,
         override: m.Infra.LayoutProjectOverrideSpec,
         project_dir: Path,
+        project_name: str,
     ) -> t.SequenceOf[m.Infra.LayoutFinding]:
         """Override directories archived once override moves have emptied them.
 
@@ -254,7 +276,7 @@ class FlextInfraCodegenLayoutPlanMixin:
             path = project_dir / name
             if not path.is_dir():
                 continue
-            target = f"{spec.archive_root}/{project_dir.name}/{name}"
+            target = f"{spec.archive_root}/{project_name}/{name}"
             if not any(path.iterdir()):
                 findings.append(self._finding("archive", name, target))
                 continue

@@ -13,9 +13,6 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, config, m, t
-from flext_infra._utilities._docs_command_contract import (
-    FlextInfraUtilitiesDocsCommandContractMixin,
-)
 from flext_infra._utilities._docs_generate_plan import (
     FlextInfraUtilitiesDocsGeneratePlanMixin,
 )
@@ -194,8 +191,7 @@ class FlextInfraUtilitiesDocsGuidesMixin:
                     f"{destination}",
                 )
             relative_path = source_path.relative_to(repository_root).as_posix()
-            contract_issues = FlextInfraUtilitiesDocsCommandContractMixin.docs_command_contract_content_issues
-            issues = contract_issues(
+            issues = u.Infra.docs_command_contract_content_issues(
                 source,
                 relative_path=relative_path,
                 effective_verbs=effective_verbs,

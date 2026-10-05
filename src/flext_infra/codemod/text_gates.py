@@ -149,7 +149,7 @@ class FlextInfraModTextGateEngine:
 
         """
         rules: list[m.Infra.ModTextRule] = []
-        owners: dict[str, Path] = {}
+        owners: t.MutableMappingKV[str, Path] = {}
         for snapshot in snapshots:
             parsed = cls._rules_from_state(snapshot)
             if parsed.failure:
@@ -202,18 +202,18 @@ class FlextInfraModTextGateEngine:
         return r[t.VariadicTuple[m.Infra.ModTextRule]].ok(tuple(rules))
 
     @staticmethod
-    def _build_rule(
-        raw: p.AttributeProbe,
+    def _validated_entry(
+        raw: t.JsonValue,
         source: Path,
-    ) -> p.Result[m.Infra.ModTextRule]:
-        """Validate one raw list entry into a frozen text rule.
+    ) -> p.Result[t.MappingKV[str, t.JsonValue]]:
+        """Require one catalogue entry to be a mapping with only known keys.
 
         Returns:
-            The resulting ``p.Result[m.Infra.ModTextRule]``.
+            The resulting ``p.Result[t.MappingKV[str, t.JsonValue]]``.
 
         """
         if not isinstance(raw, dict):
-            return r[m.Infra.ModTextRule].fail(
+            return r[t.MappingKV[str, t.JsonValue]].fail(
                 f"text rule entry must be a mapping in {source}: {raw!r}",
             )
         unknown = set(raw).difference((
@@ -229,74 +229,198 @@ class FlextInfraModTextGateEngine:
             c.Infra.CODEMOD_TEXT_KEY_DISTRIBUTIONS,
         ))
         if unknown:
-            return r[m.Infra.ModTextRule].fail(
+            return r[t.MappingKV[str, t.JsonValue]].fail(
                 f"unknown text rule keys {sorted(unknown)} in {source}",
             )
+        return r[t.MappingKV[str, t.JsonValue]].ok(raw)
+
+    @staticmethod
+    def _entry_sequence(
+        entry: t.MappingKV[str, t.JsonValue],
+        key: str,
+    ) -> tuple[t.JsonValue, ...]:
+        """Read one entry field as a JSON sequence under bare iteration semantics.
+
+        Returns:
+            The declared sequence contents; a mapping contributes its keys and
+            scalar or absent values contribute nothing.
+
+        """
+        declared = entry.get(key, ())
+        if isinstance(declared, (list, tuple, str, dict)):
+            return tuple(declared)
+        return ()
+
+    @staticmethod
+    def _validated_pattern_fields(
+        entry: t.MappingKV[str, t.JsonValue],
+        source: Path,
+    ) -> p.Result[tuple[str, t.VariadicTuple[str], re.Pattern[str]]]:
+        """Validate the find regex and its declared flag names.
+
+        Returns:
+            The resulting validated ``(find, flags, compiled)`` pattern triple.
+
+        """
         flag_names = tuple(
-            str(flag) for flag in raw.get(c.Infra.CODEMOD_TEXT_KEY_FLAGS, ())
+            str(flag)
+            for flag in FlextInfraModTextGateEngine._entry_sequence(
+                entry,
+                c.Infra.CODEMOD_TEXT_KEY_FLAGS,
+            )
         )
         unknown_flags = set(flag_names).difference(c.Infra.CODEMOD_TEXT_FLAG_NAMES)
         if unknown_flags:
-            return r[m.Infra.ModTextRule].fail(
+            return r[tuple[str, t.VariadicTuple[str], re.Pattern[str]]].fail(
                 f"unknown regex flag names {sorted(unknown_flags)} in {source}",
             )
-        find = raw.get(c.Infra.CODEMOD_TEXT_KEY_FIND)
+        find = entry.get(c.Infra.CODEMOD_TEXT_KEY_FIND)
         if not isinstance(find, str) or not find:
-            return r[m.Infra.ModTextRule].fail(
+            return r[tuple[str, t.VariadicTuple[str], re.Pattern[str]]].fail(
                 f"text rule requires a non-empty find regex in {source}",
-            )
-        expected = raw.get(c.Infra.CODEMOD_TEXT_KEY_EXPECTED)
-        if expected is not None and (
-            not isinstance(expected, int) or isinstance(expected, bool) or expected < 0
-        ):
-            return r[m.Infra.ModTextRule].fail(
-                f"text rule expected receipt must be non-negative in {source}",
-            )
-        capture_equals = raw.get(c.Infra.CODEMOD_TEXT_KEY_CAPTURE_EQUALS, {})
-        distributions = raw.get(c.Infra.CODEMOD_TEXT_KEY_DISTRIBUTIONS, ())
-        if (
-            not isinstance(distributions, (list, tuple))
-            or any(
-                not isinstance(name, str) or not name.strip() or name != name.strip()
-                for name in distributions
-            )
-            or len(set(distributions)) != len(distributions)
-        ):
-            return r[m.Infra.ModTextRule].fail(
-                f"text rule distributions must be unique non-empty names in {source}",
-            )
-        if not isinstance(capture_equals, dict) or any(
-            not isinstance(name, str) or not isinstance(value, str)
-            for name, value in capture_equals.items()
-        ):
-            return r[m.Infra.ModTextRule].fail(
-                f"text rule capture_equals must map captures to strings in {source}",
             )
         try:
             compiled = re.compile(find)
         except re.error as error:
-            return r[m.Infra.ModTextRule].fail(
+            return r[tuple[str, t.VariadicTuple[str], re.Pattern[str]]].fail(
                 f"invalid find regex in {source}: {error}",
             )
-        unknown_captures = set(capture_equals).difference(compiled.groupindex)
+        return r[tuple[str, t.VariadicTuple[str], re.Pattern[str]]].ok(
+            (find, flag_names, compiled),
+        )
+
+    @staticmethod
+    def _validated_selector_fields(
+        entry: t.MappingKV[str, t.JsonValue],
+        source: Path,
+        compiled: re.Pattern[str],
+    ) -> p.Result[tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]]:
+        """Validate distributions, the capture map, and the expected receipt.
+
+        Returns:
+            The resulting validated ``(distributions, captures, expected)`` triple.
+
+        """
+        raw_declared = entry.get(c.Infra.CODEMOD_TEXT_KEY_DISTRIBUTIONS, ())
+        declared = FlextInfraModTextGateEngine._entry_sequence(
+            entry,
+            c.Infra.CODEMOD_TEXT_KEY_DISTRIBUTIONS,
+        )
+        if not isinstance(raw_declared, (list, tuple)) or any(
+            not isinstance(name, str) or not name.strip() or name != name.strip()
+            for name in declared
+        ):
+            return FlextInfraModTextGateEngine._selector_failure(source)
+        distributions = tuple(name for name in declared if isinstance(name, str))
+        if len(set(distributions)) != len(distributions):
+            return FlextInfraModTextGateEngine._selector_failure(source)
+        raw_captures = entry.get(c.Infra.CODEMOD_TEXT_KEY_CAPTURE_EQUALS, {})
+        if not isinstance(raw_captures, dict):
+            return FlextInfraModTextGateEngine._captures_failure(source)
+        captures: dict[str, str] = {}
+        for name, value in raw_captures.items():
+            if not isinstance(value, str):
+                return FlextInfraModTextGateEngine._captures_failure(source)
+            captures[name] = value
+        unknown_captures = set(captures).difference(compiled.groupindex)
         if unknown_captures:
-            return r[m.Infra.ModTextRule].fail(
-                f"unknown regex captures {sorted(unknown_captures)} in {source}",
+            return r[
+                tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]
+            ].fail(f"unknown regex captures {sorted(unknown_captures)} in {source}")
+        expected = entry.get(c.Infra.CODEMOD_TEXT_KEY_EXPECTED)
+        if expected is not None and (
+            not isinstance(expected, int) or isinstance(expected, bool) or expected < 0
+        ):
+            return r[
+                tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]
+            ].fail(
+                f"text rule expected receipt must be non-negative in {source}",
             )
+        return r[tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]].ok((
+            distributions,
+            captures,
+            expected,
+        ))
+
+    @staticmethod
+    def _selector_failure(
+        source: Path,
+    ) -> p.Result[tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]]:
+        """Report invalid distribution declarations with the canonical message.
+
+        Returns:
+            The resulting failure for one invalid distributions declaration.
+
+        """
+        return r[tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]].fail(
+            f"text rule distributions must be unique non-empty names in {source}",
+        )
+
+    @staticmethod
+    def _captures_failure(
+        source: Path,
+    ) -> p.Result[tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]]:
+        """Report invalid capture maps with the canonical message.
+
+        Returns:
+            The resulting failure for one invalid capture_equals mapping.
+
+        """
+        return r[tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]].fail(
+            f"text rule capture_equals must map captures to strings in {source}",
+        )
+
+    @staticmethod
+    def _build_rule(
+        raw: t.JsonValue,
+        source: Path,
+    ) -> p.Result[m.Infra.ModTextRule]:
+        """Validate one raw list entry into a frozen text rule.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ModTextRule]``.
+
+        """
+        entry = FlextInfraModTextGateEngine._validated_entry(raw, source)
+        if entry.failure:
+            return r[m.Infra.ModTextRule].from_failure(entry)
+        pattern = FlextInfraModTextGateEngine._validated_pattern_fields(
+            entry.value,
+            source,
+        )
+        if pattern.failure:
+            return r[m.Infra.ModTextRule].from_failure(pattern)
+        find, flags, compiled = pattern.value
+        selector = FlextInfraModTextGateEngine._validated_selector_fields(
+            entry.value,
+            source,
+            compiled,
+        )
+        if selector.failure:
+            return r[m.Infra.ModTextRule].from_failure(selector)
+        distributions, captures, expected = selector.value
         rule = m.Infra.ModTextRule(
-            rule_id=str(raw.get(c.Infra.CODEMOD_TEXT_KEY_ID, "")),
-            description=str(raw.get(c.Infra.CODEMOD_TEXT_KEY_DESCRIPTION, "")),
+            rule_id=str(entry.value.get(c.Infra.CODEMOD_TEXT_KEY_ID, "")),
+            description=str(entry.value.get(c.Infra.CODEMOD_TEXT_KEY_DESCRIPTION, "")),
             include=tuple(
-                str(glob) for glob in raw.get(c.Infra.CODEMOD_TEXT_KEY_INCLUDE, ())
+                str(glob)
+                for glob in FlextInfraModTextGateEngine._entry_sequence(
+                    entry.value,
+                    c.Infra.CODEMOD_TEXT_KEY_INCLUDE,
+                )
             ),
             exclude=tuple(
-                str(glob) for glob in raw.get(c.Infra.CODEMOD_TEXT_KEY_EXCLUDE, ())
+                str(glob)
+                for glob in FlextInfraModTextGateEngine._entry_sequence(
+                    entry.value,
+                    c.Infra.CODEMOD_TEXT_KEY_EXCLUDE,
+                )
             ),
-            distributions=tuple(distributions),
+            distributions=distributions,
             find=find,
-            replace=str(raw.get(c.Infra.CODEMOD_TEXT_KEY_REPLACE, "")),
-            flags=flag_names,
-            capture_equals=capture_equals,
+            replace=str(entry.value.get(c.Infra.CODEMOD_TEXT_KEY_REPLACE, "")),
+            flags=flags,
+            capture_equals=captures,
             expected=expected,
         )
         if not rule.rule_id:
@@ -413,7 +537,8 @@ class FlextInfraModTextGateEngine:
             if fix and updated != source:
                 if source.startswith(c.Infra.AUTOGEN_HEADERS):
                     return r[m.Infra.ModTextReport].fail(
-                        f"generated findings require generator repair: {path}",
+                        "generated findings require canonical generator repair: "
+                        f"{path}",
                     )
                 if path.suffix == c.Infra.EXT_PYTHON:
                     ast.parse(updated, filename=str(path))

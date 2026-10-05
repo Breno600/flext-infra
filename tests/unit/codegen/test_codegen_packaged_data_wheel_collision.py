@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, infra, main as infra_main
+from flext_infra import c, config, infra, main
 from tests import t, u
 
 if TYPE_CHECKING:
@@ -75,7 +75,8 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             "[project]\n"
             f'name = "{FIXTURE_DISTRIBUTION}"\n'
             'version = "0.1.0"\n'
-            f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
+            'requires-python = "'
+            f'{config.Infra.codegen.toolchain.python_required_version}"\n'
             f'dependencies = ["{declared_source}"]\n',
             encoding="utf-8",
         )
@@ -108,7 +109,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             The resulting ``int``.
 
         """
-        return infra_main([
+        return main([
             c.Infra.CLI_GROUP_CODEGEN,
             "conform",
             "--root",
