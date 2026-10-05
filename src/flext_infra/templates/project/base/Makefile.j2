@@ -60,9 +60,8 @@ scratch_tmp="$$(cd "$$scratch/tmp" && pwd -P)"; \
 TMPDIR="$$scratch_tmp"; TMP="$$scratch_tmp"; TEMP="$$scratch_tmp"; \
 export TMPDIR TMP TEMP; \
 {%- endmacro -%}
-{#- Each phase is its own bounded runner process with its own entrypoint clock:
-    the budgeted phase never carries slow-marked items, which run afterwards in
-    their own phase, each within the per-item slow bound (gate-budget rule). -#}
+{#- Normal incremental verbs admit only the bounded phase. Slow-marked items
+    remain owned by the explicitly requested full verb. -#}
 {#- Tests run on the pinned toolchain (PROJECT_TOOL_EXEC), the same one every
     verb's tools resolve from, so a test observes the runtime's tool versions. -#}
 {%- macro pytest_test_runner(operations=("",)) -%}
@@ -73,8 +72,8 @@ export TMPDIR TMP TEMP; \
 {%- endfor %}
 {%- endmacro -%}
 {#- The single-file verb validates its FILE input and exports the target in
-    the same shell as the guarded runners; the declared file then runs through
-    the budgeted and slow phases like any suite. The exported variable name
+    the same shell as the guarded runner for the normal incremental phase.
+    The exported variable name
     mirrors c.Infra.PYTEST_ENV_TARGET_FILE in flext-infra/_constants/make.py;
     the entry fails loudly on a mismatch. -#}
 {%- macro pytest_test_file_runner() -%}
@@ -83,9 +82,7 @@ case "$(FILE)" in /*|*..*) printf 'ERROR: FILE must stay a repository-relative p
 if [ ! -f "$(PROJECT_ROOT)/$(FILE)" ]; then printf 'ERROR: FILE is not an existing repository file: %s\n' "$(FILE)" >&2; exit 2; fi; \
 {{ pytest_testmon_guard() }}
 {{ pytest_scratch_root() }}
-{%- for operation in ("file", "file-slow") %}
-export FLEXT_PYTEST_TARGET_FILE="$(FILE)"; {{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry {{ operation }}{% if not loop.last %}; \{% endif %}
-{%- endfor %}
+export FLEXT_PYTEST_TARGET_FILE="$(FILE)"; {{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry file
 {%- endmacro -%}
 # @flext-generated: continuous
 # @flext-owner: flext-infra/config/codegen.yaml + flext-infra/src/flext_infra/templates/project/base/Makefile.j2
@@ -98,22 +95,48 @@ export FLEXT_PYTEST_TARGET_FILE="$(FILE)"; {{ make.testmon_cache.database_enviro
 # Free: no
 # End SECTION: header
 
-SHELL := /bin/sh
+override SHELL := /bin/sh
 # GNU MAKE_COMMAND may be a bare name. Resolve it before changing PATH so
 # recursive lifecycle calls keep this invoker instead of selecting a Mise shim.
 ifneq ($(filter /%,$(MAKE_COMMAND)),)
-SELF_MAKE_EXECUTABLE := $(MAKE_COMMAND)
+override SELF_MAKE_EXECUTABLE := $(MAKE_COMMAND)
 else
-SELF_MAKE_EXECUTABLE := $(shell command -v "$(MAKE_COMMAND)")
+override SELF_MAKE_EXECUTABLE := $(shell command -v "$(MAKE_COMMAND)")
 ifneq ($(.SHELLSTATUS),0)
 $(error Cannot resolve current Make executable: $(MAKE_COMMAND))
 endif
 endif
-SELF_MAKE_EXECUTABLE := $(realpath $(SELF_MAKE_EXECUTABLE))
+override SELF_MAKE_EXECUTABLE := $(realpath $(SELF_MAKE_EXECUTABLE))
 ifeq ($(strip $(SELF_MAKE_EXECUTABLE)),)
 $(error Current Make executable has no physical path: $(MAKE_COMMAND))
 endif
 .DEFAULT_GOAL := help
+
+# Approval fixes its context before any topology, activation or credential read.
+ifneq ($(filter pre-commit,$(MAKECMDGOALS)),)
+override {{ make.ci.variable }} := {{ make.ci.value }}
+export {{ make.ci.variable }}
+ifneq ($(strip $(HELP) $(OPTIONS)),)
+$(error Approval cannot run with HELP or OPTIONS)
+endif
+ifneq ($(strip $(foreach flag,n q t,$(findstring $(flag),$(firstword $(MAKEFLAGS))))),)
+$(error Approval requires execution; dry-run, question and touch are forbidden)
+endif
+ifneq ($(strip $(MAKEFILES)),)
+$(error Approval cannot load caller-supplied Makefiles)
+endif
+ifneq ($(filter command line override,$(origin MAKE_COMMAND)),)
+$(error Approval cannot replace the native Make invoker)
+endif
+endif
+
+# Capture the selected approval mode before any project-owned include.
+ifeq ($(strip $({{ make.ci.variable }})),{{ make.ci.value }})
+override APPROVAL_CONTEXT := {{ make.ci.value }}
+ifneq ($(filter upg _upg% dep propagate gen _gen%,$(MAKECMDGOALS)),)
+$(error Resolution, generation and member propagation are forbidden in CI)
+endif
+endif
 
 ifeq ($(filter command line override,$(origin SETUP_BOOTSTRAP_ONLY)),)
 ifneq ($(filter setup,$(MAKECMDGOALS)),)
@@ -136,7 +159,11 @@ endif
 GITHUB_TOKEN := $(firstword $(GITHUB_TOKEN) $(GH_TOKEN) $(MISE_GITHUB_TOKEN))
 {% for command in mise_bootstrap.credential_commands -%}
 ifeq ($(GITHUB_TOKEN),)
+ifeq ($(strip $({{ make.ci.variable }})),{{ make.ci.local_value }})
 GITHUB_TOKEN := $(shell command -v {{ command[0] }} >/dev/null 2>&1 && {{ command | join(' ') }} 2>/dev/null)
+else ifeq ($(strip $({{ make.ci.variable }})),)
+GITHUB_TOKEN := $(shell command -v {{ command[0] }} >/dev/null 2>&1 && {{ command | join(' ') }} 2>/dev/null)
+endif
 endif
 {% endfor -%}
 ifneq ($(GITHUB_TOKEN),)
@@ -171,7 +198,7 @@ PYTEST_REPORT_ARGS := -ra --durations=25 --durations-min=0.001 --tb=short
 PYTEST_PROCESS_TIMEOUT_SECONDS := {{ pytest_process_timeout_seconds }}
 # The pytest process inherits a hard wall-clock boundary, so a hung
 # run is terminated even if the runner itself stalls.
-PYTEST_BOUNDED = {{ timeout_command }} --signal=TERM --kill-after={{ timeout_kill_after_seconds }}s "$(PYTEST_PROCESS_TIMEOUT_SECONDS)s"
+override PYTEST_BOUNDED = {{ timeout_command }} --signal=TERM --kill-after={{ timeout_kill_after_seconds }}s "$(PYTEST_PROCESS_TIMEOUT_SECONDS)s"
 PYTEST_REPORTS_DIR := {{ make.testmon_cache.reports_directory }}
 PYTEST_CACHE_HOME = $(if $(strip $({{ make.testmon_cache.data_home_environment_variable }})),$({{ make.testmon_cache.data_home_environment_variable }}),$(if $(strip $({{ make.testmon_cache.user_home_environment_variable }})),$({{ make.testmon_cache.user_home_environment_variable }})/{{ make.testmon_cache.home_cache_directory }},))
 # One persistent testmon database per project, shared by every checkout and
@@ -251,9 +278,17 @@ SCRIPT_ROOTS :={{ script_dispatch.roots | join(" ") }}
 CUSTOM_MAKEFILE := $(MAKEFILE_ROOT)/{{ make.custom_handler_policy.filename }}
 CUSTOM_DECLARED_TARGETS :=
 ifneq ($(wildcard $(CUSTOM_MAKEFILE)),)
-CUSTOM_DECLARED_TARGETS := $(shell awk '/^(_custom-[a-z][a-z0-9-]*|(pre|post)-[a-z][a-z0-9-]*):/ { target=$$1; sub(/:.*/, "", target); if (!seen[target]++) printf "%s ", target }' "$(CUSTOM_MAKEFILE)")
+CUSTOM_DECLARED_TARGETS := $(shell awk '/^[a-z_][a-z0-9_-]*:/ { target=$$1; sub(/:.*/, "", target); if (!seen[target]++) printf "%s ", target }' "$(CUSTOM_MAKEFILE)")
 ifneq ($(.SHELLSTATUS),0)
 $(error Failed to inspect custom Make targets in $(CUSTOM_MAKEFILE))
+endif
+ifneq ($(filter pre-commit _custom-pre-commit,$(CUSTOM_DECLARED_TARGETS)),)
+$(error Mandatory approval cannot be replaced by custom targets)
+endif
+ifeq ($(APPROVAL_CONTEXT),{{ make.ci.value }})
+ifneq ($(filter {{ make.approval_verbs | join(" ") }}{% for verb in make.approval_verbs %} _custom-{{ verb }}{% endfor %},$(CUSTOM_DECLARED_TARGETS)),)
+$(error Approval stages cannot be replaced by custom targets)
+endif
 endif
 endif
 DOCS_ACTIONS :={% for action in make.docs.actions %} {{ action }}{% endfor %}
@@ -350,7 +385,7 @@ export FLEXT_INFRA_PYTHON UV_PROJECT UV_PROJECT_ENVIRONMENT VIRTUAL_ENV PATH RUN
 define PROJECT_TOOL_RUNTIME
 {{ mise_runtime_command("$(RUNTIME_ROOT)", "$(SETUP_MISE)", mise_bootstrap) }}
 endef
-PROJECT_TOOL_EXEC = $(SHELL) -c '$(subst ','"'"',$(PROJECT_TOOL_RUNTIME))' --
+override PROJECT_TOOL_EXEC = $(SHELL) -c '$(subst ','"'"',$(PROJECT_TOOL_RUNTIME))' --
 
 # One bootstrap serves `setup` (frozen) and `upg` (resolving); the public verb
 # selects its lifecycle, Mise release resolution and tool locking through
@@ -367,6 +402,7 @@ TOOL_BOOTSTRAP_LOCK :=
 # exact base interpreter used to create it, so setup replaces it when Mise moves
 # the configured Python minor line to a newer patch.
 SETUP_ENVIRONMENT_RECIPE = set -eu; \
+	trap 'if [ -n "$${FLEXT_SETUP_CREDENTIAL_STORE:-}" ]; then rm -f "$$FLEXT_SETUP_CREDENTIAL_STORE"; fi' EXIT; \
 	$(REQUIRE_WORKSPACE_ENVIRONMENT); \
 	desired_python="$${SETUP_PYTHON:?missing Mise-resolved Python executable}"; \
 	if [ ! -x "$(RUNTIME_PYTHON)" ]; then \
@@ -379,18 +415,20 @@ SETUP_ENVIRONMENT_RECIPE = set -eu; \
 			$(UV) venv --clear --python "$$desired_python" "$(RUNTIME_VENV)"; \
 		fi; \
 	fi; \
-	if $(UV) sync --project "$(UV_PROJECT)" $(UV_SYNC_FLAGS) --locked --link-mode "$(UV_LINK_MODE)"; then :; \
+	if [ -n "$${FLEXT_SETUP_CREDENTIAL_STORE:-}" ]; then \
+		env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=credential.helper GIT_CONFIG_VALUE_0="store --file=$$FLEXT_SETUP_CREDENTIAL_STORE" $(UV) sync --project "$(UV_PROJECT)" $(UV_SYNC_FLAGS) --locked --link-mode "$(UV_LINK_MODE)"; \
 	else \
-		printf 'WARN: uv.lock drifts from pyproject.toml; setup installs the committed uv.lock without touching it; make upg rewrites it\n' >&2; \
-		$(UV) sync --project "$(UV_PROJECT)" $(UV_SYNC_FLAGS) --frozen --link-mode "$(UV_LINK_MODE)"; \
+		$(UV) sync --project "$(UV_PROJECT)" $(UV_SYNC_FLAGS) --locked --link-mode "$(UV_LINK_MODE)"; \
 	fi; \
+	if [ "$(strip $({{ make.ci.variable }}))" != "{{ make.ci.value }}" ]; then \
 	XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
 		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" allow "$(PROJECT_ROOT)"; \
 	for member in $(WORKSPACE_SUBPROJECTS); do \
 		if [ -f "$(PROJECT_ROOT)/$$member/.envrc" ]; then \
 			XDG_DATA_HOME="$$SETUP_DIRENV_XDG_DATA_HOME" "$$SETUP_DIRENV" allow "$(PROJECT_ROOT)/$$member"; \
 		fi; \
-	done
+	done; \
+	fi
 
 # Reject borrowed environments before bootstrap, activation or custom hooks.
 # Members may use their containing workspace, never an unrelated checkout.
@@ -398,6 +436,9 @@ REQUIRE_WORKSPACE_ENVIRONMENT = case "$(PROJECT_ROOT)/" in \
 	"$(RUNTIME_ROOT)/"*) ;; \
 	*) printf 'ERROR: runtime workspace does not contain this project: %s\n' "$(RUNTIME_ROOT)" >&2; exit 2 ;; \
 	esac; \
+	if [ "$(strip $({{ make.ci.variable }}))" = "{{ make.ci.value }}" ] && [ "$(PROJECT_ROOT)" != "$(RUNTIME_ROOT)" ]; then \
+		printf 'ERROR: CI approval is root-only; attached member execution is forbidden\n' >&2; exit 2; \
+	fi; \
 	for environment_path in "$(patsubst %/,%,$(dir $(RUNTIME_VENV)))" "$(RUNTIME_VENV)" "$(RUNTIME_BIN)" "$(PROJECT_ROOT)/{{ environment_directory }}" "$(PROJECT_ROOT)/{{ environment_directory }}/bin"; do \
 		if [ -L "$$environment_path" ]; then \
 			printf 'ERROR: workspace environment must be physical, not a symlink: %s\n' "$$environment_path" >&2; exit 2; \
@@ -412,25 +453,39 @@ _bootstrap_setup_tools: _builtin_require_workspace
 
 # Execute the interpreter provisioned by setup without discovering a project
 # workspace or creating a dependency-resolution file during a runtime command.
-UV_RUN := env -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u PROJECT_ROOT PYTHONPATH="$(PROJECT_ROOT)/src" $(UV) run --no-project --python "$(RUNTIME_PYTHON)"
+override UV_RUN := env -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u PROJECT_ROOT PYTHONPATH="$(PROJECT_ROOT)/src" $(UV) run --no-project --python "$(RUNTIME_PYTHON)"
 # The checked-out flext-infra lane owns every lifecycle verb: a workspace
 # runs the generator it carries (the submodule src), so a broken published
 # dependency tip can never block the local recovery cycle. A checkout without
 # the submodule (standalone member) keeps its own installed copy.
 FLEXT_INFRA_SUBMODULE_SRC := $(RUNTIME_ROOT)/flext-infra/src
+ifeq ($(strip $({{ make.ci.variable }})),{{ make.ci.value }})
+# Only this candidate's own sources are visible; dependencies stay installed.
+override PROJECT_INFRA_PYTHONPATH := $(MAKEFILE_ROOT)/src
+else
 override PROJECT_INFRA_PYTHONPATH := $(if $(wildcard $(FLEXT_INFRA_SUBMODULE_SRC)/flext_infra/.),$(FLEXT_INFRA_SUBMODULE_SRC),$(MAKEFILE_ROOT)/src)
-PROJECT_INFRA_RUN = if [ ! -x "$(FLEXT_INFRA_PYTHON)" ]; then printf 'ERROR: FLEXT_INFRA_PYTHON must name an executable managed Python\n' >&2; exit 2; fi; $(PROJECT_TOOL_EXEC) env -u PYTHONPATH -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u UV_PROJECT_ENVIRONMENT PYTHONPATH="$(PROJECT_INFRA_PYTHONPATH)" $(FLEXT_INFRA_PYTHON)
-PROJECT_FLEXT_INFRA := $(PROJECT_INFRA_RUN) -m flext_infra
+endif
+override PROJECT_INFRA_RUN = if [ ! -x "$(FLEXT_INFRA_PYTHON)" ]; then printf 'ERROR: FLEXT_INFRA_PYTHON must name an executable managed Python\n' >&2; exit 2; fi; $(PROJECT_TOOL_EXEC) env -u PYTHONPATH -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u UV_PROJECT_ENVIRONMENT PYTHONPATH="$(PROJECT_INFRA_PYTHONPATH)" $(FLEXT_INFRA_PYTHON)
+override PROJECT_FLEXT_INFRA := $(PROJECT_INFRA_RUN) -m flext_infra
 # Scaffold dev tools live in the validated optional dev
 # Only `make upg` resolves and rewrites uv.lock. Setup always runs: it syncs
-# `--locked`, and when uv.lock drifts from pyproject.toml it warns and installs
-# the committed lock `--frozen`, which never writes it.
+# `--locked`; drift and the original install error fail without retry/resolution.
 UV_SYNC_FLAGS := --all-extras --all-groups
+ifeq ($(strip $({{ make.ci.variable }})),{{ make.ci.value }})
+override UV_SYNC_FLAGS := --all-extras --all-groups --no-editable
+endif
 
 ifeq ($(GEN_INIT_ONLY),)
+ifneq ($(strip $({{ make.ci.variable }})),{{ make.ci.value }})
 {{ makefile_custom_include }}
 endif
-SELF_MAKE := "$(SELF_MAKE_EXECUTABLE)" --no-print-directory -f "$(SELF_MAKEFILE)"
+endif
+ifeq ($(APPROVAL_CONTEXT),{{ make.ci.value }})
+override {{ make.ci.variable }} := {{ make.ci.value }}
+export {{ make.ci.variable }}
+override TOOL_BOOTSTRAP_LIFECYCLE := _setup_lifecycle
+endif
+override SELF_MAKE := "$(SELF_MAKE_EXECUTABLE)" --no-print-directory -f "$(SELF_MAKEFILE)"
 
 define RUN_PUBLIC_POST
 	$(if $(filter post-$(1),$(CUSTOM_DECLARED_TARGETS)),+@$(SELF_MAKE) post-$(1))
@@ -523,14 +578,14 @@ _activated-{{ verb.name }}: _builtin_require_environment
 {% else %}
 {% if verb.name not in ("help", "clean") %}
 {{ verb.name }}: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-{{ verb.name }}
+	+@$(if $(filter {{ make.ci.value }},$({{ make.ci.variable }})),$(SELF_MAKE) _activated-{{ verb.name }},direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-{{ verb.name }})
 
 .PHONY: _activated-{{ verb.name }}
 _activated-{{ verb.name }}: _builtin_require_environment
 {% else %}
 {{ verb.name }}:
 {% endif %}
-	$(call RUN_PUBLIC,{{ verb.name }})
+	$(if $(filter {{ make.ci.value }},$({{ make.ci.variable }})),+@$(SELF_MAKE) _builtin-{{ verb.name }},$(call RUN_PUBLIC,{{ verb.name }}))
 {% endif %}
 {%- endmacro -%}
 {% macro verb_help_line(verb) %}@printf '  %-16s %s\n' '{{ verb.name }}' '{{ verb.description | replace("\n", " ") | trim | replace("$", "$$") | replace("'", "'\"'\"'") }}'{% endmacro -%}
@@ -540,7 +595,7 @@ _activated-{{ verb.name }}: _builtin_require_environment
 VERB_CONTRACT := $(filter {{ ((contract_env_values | list) + (contract_env_values | map("lower") | list) + (contract_env_values | map("capitalize") | list)) | unique(case_sensitive=true) | join(" ") }},$(OPTIONS) $(HELP))
 ifeq ($(VERB_CONTRACT),)
 $(filter-out help clean upg,$(BUILTIN_VERBS)): _builtin_require_mise_pin
-{% for verb in profile.verbs if verb.name not in ("setup", "upg") %}
+{% for verb in profile.verbs if verb.name not in ("setup", "upg", "pre-commit") %}
 {{ public_verb_entry(verb) }}
 {% endfor %}
 
@@ -548,6 +603,24 @@ $(filter-out help clean upg,$(BUILTIN_VERBS)): _builtin_require_mise_pin
 # to build), but it still runs the pre-/post-setup lifecycle hooks so a project
 # declaring them in the custom handler surface is actually honoured.
 setup: _bootstrap_setup_tools
+
+# Provisioning-safe approval: never activate before setup creates the venv.
+pre-commit: _builtin_require_workspace
+	+@set -eu; \
+		trap 'if [ -n "$${FLEXT_SETUP_CREDENTIAL_STORE:-}" ]; then rm -f "$$FLEXT_SETUP_CREDENTIAL_STORE"; fi' EXIT; \
+{% for verb in make.approval_verbs %}
+		printf 'approval: {{ verb }} START\n'; \
+		$(SELF_MAKE) MAKEOVERRIDES= MAKEFLAGS= MFLAGS= {{ make.ci.variable }}={{ make.ci.value }} {{ verb }}; \
+{% if verb == "setup" %}
+		if [ -n "$${FLEXT_SETUP_CREDENTIAL_STORE:-}" ]; then rm -f "$$FLEXT_SETUP_CREDENTIAL_STORE"; fi; \
+		unset FLEXT_SETUP_CREDENTIAL_STORE GITHUB_TOKEN GH_TOKEN MISE_GITHUB_TOKEN GIT_CONFIG_COUNT; \
+{% endif %}
+		printf 'approval: {{ verb }} COMPLETE\n'; \
+{% endfor %}
+		printf 'approval: COMPLETE\n'
+
+_builtin-pre-commit:
+	+@$(SELF_MAKE) pre-commit
 
 # `upg` builds the environment from the locks it writes, so like `setup` it
 # must not require an existing environment, and as the only resolver it must
@@ -588,17 +661,18 @@ _builtin_require_runtime_root:
 .PHONY: _setup_lifecycle
 _setup_lifecycle:
 	@set -eu; \
-	case " $(CUSTOM_DECLARED_TARGETS) " in \
+	case "$(strip $({{ make.ci.variable }})): $(CUSTOM_DECLARED_TARGETS) " in \
+		{{ make.ci.value }}:*) ;; \
 		*" pre-setup "*) $(SELF_MAKE) pre-setup ;; \
 	esac
 	@$(SELF_MAKE) _builtin_setup_environment
-	+@XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
-		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" exec "$(PROJECT_ROOT)" $(SELF_MAKE) _setup_activated
+	+@$(if $(filter {{ make.ci.value }},$({{ make.ci.variable }})),$(SELF_MAKE) _setup_activated,XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" "$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" exec "$(PROJECT_ROOT)" $(SELF_MAKE) _setup_activated)
 
 .PHONY: _setup_activated
 _setup_activated:
 	@set -eu; \
-	case " $(CUSTOM_DECLARED_TARGETS) " in \
+	case "$(strip $({{ make.ci.variable }})): $(CUSTOM_DECLARED_TARGETS) " in \
+		{{ make.ci.value }}:*) ;; \
 		*" post-setup "*) $(SELF_MAKE) post-setup ;; \
 	esac
 
@@ -681,7 +755,7 @@ endif
 # derive from the member checkouts, so a member-less CI checkout would render a
 # different workspace and break the gen fixed point. Provisioned
 # members are read as libraries; no verb gates them from here.
-_builtin_setup_environment: _builtin_setup_submodules
+_builtin_setup_environment: $(if $(filter {{ make.ci.value }},$({{ make.ci.variable }})),,_builtin_setup_submodules)
 ifeq ($(MAKE_PROFILE),workspace)
 	@$(SETUP_ENVIRONMENT_RECIPE)
 	@$(UV) pip check --python "$(RUNTIME_VENV)"
@@ -784,7 +858,7 @@ _builtin_check_all: _builtin_require_environment
 
 _builtin_test_all: _builtin_require_environment
 {{ test_report_recipe(
-    runner=pytest_test_runner(("", "slow")),
+    runner=pytest_test_runner(),
 ) }}
 
 _builtin_test_full_all: _builtin_require_environment
@@ -1054,7 +1128,8 @@ _builtin-fix-namespace: _builtin_fix_namespace
 _builtin-fix-accessors: _builtin_fix_accessors
 _builtin-audit:
 	@$(UV) pip check --python "$(RUNTIME_VENV)"
-	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode check
+	@$(if $(filter {{ make.ci.value }},$({{ make.ci.variable }})),$(PROJECT_FLEXT_INFRA) {{ workspace_cli_group }} verify-environment --repository-root "$(PROJECT_ROOT)",:)
+	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --scope self --mode check
 _builtin-status: _builtin_status_diagnostics
 _builtin-verify-clean: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode check

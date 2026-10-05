@@ -5,10 +5,18 @@
       # and selects the whole suite. Restore the newest database of any earlier
       # run: testmon revalidates every recorded file by checksum, so a restored
       # database never hides a changed dependency of a selected test.
+      - name: Resolve project testmon database
+        id: testmon_path
+        run: |
+          set -eu
+          cache_home="{{ '${' }}{{ make.testmon_cache.data_home_environment_variable }}{{ ':-' }}{{ '${' }}{{ make.testmon_cache.user_home_environment_variable }}{{ '}' }}/{{ make.testmon_cache.home_cache_directory }}}"
+          database="$(realpath -m "$cache_home/{{ make.testmon_cache.external_storage_directory }}/{{ dist }}/{{ make.testmon_cache.database_filename }}")"
+          case "$database" in /*) ;; *) exit 2 ;; esac
+          printf 'database=%s\n' "$database" >> "$GITHUB_OUTPUT"
       - name: Restore testmon database
         uses: {{ github_actions["cache"].repository }}/restore@{{ github_actions["cache"].version }}
         with:
-          path: ~/{{ make.testmon_cache.home_cache_directory }}/{{ make.testmon_cache.external_storage_directory }}
-          key: {% raw %}${{ runner.os }}-{% endraw %}{{ python_version }}-{{ make.testmon_cache_policy.key_prefix }}{% raw %}-${{ github.run_id }}-${{ github.run_attempt }}{% endraw %}
+          path: {% raw %}${{ steps.testmon_path.outputs.database }}{% endraw %}
+          key: {% raw %}${{ runner.os }}-{% endraw %}{{ python_version }}-{{ make.testmon_cache_policy.key_prefix }}-{{ dist }}-{% raw %}${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml', 'config/**') }}-${{ github.run_id }}-${{ github.run_attempt }}{% endraw %}
           restore-keys: |
-            {% raw %}${{ runner.os }}-{% endraw %}{{ python_version }}-{{ make.testmon_cache_policy.key_prefix }}-
+            {% raw %}${{ runner.os }}-{% endraw %}{{ python_version }}-{{ make.testmon_cache_policy.key_prefix }}-{{ dist }}-{% raw %}${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml', 'config/**') }}-{% endraw %}

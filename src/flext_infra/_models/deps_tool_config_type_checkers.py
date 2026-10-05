@@ -197,6 +197,11 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
     class PyreflyConfig(m.ArbitraryTypesModel):
         """Pyrefly strict settings loaded from YAML."""
 
+        findings_exit_codes: Annotated[
+            t.VariadicTuple[int],
+            m.Field(alias="findings-exit-codes", description="Native diagnostic statuses"),
+        ] = ()
+
         class PathRulesConfig(m.ArbitraryTypesModel):
             """Path resolution rules loaded from YAML."""
 

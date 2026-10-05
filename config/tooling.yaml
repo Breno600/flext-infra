@@ -266,22 +266,20 @@ Infra:
             # the TC arms of the 2026-10-01 rulings (TC002/TC003 pydantic,
             # TC004/TC001 lazy-root scoped forms) and of the 2026-10-03 ruling
             # (TC001 global): the pydantic hazard those older rulings worked
-            # around is moot because the rules never run. TC004 lives in its
-            # own dedicated entry below (tc001-tc004-never-executed), so this
-            # entry carries only TC001-TC003 — one rule never enters two
-            # unscoped entries.
+            # around is moot because the rules never run. One unscoped entry
+            # carries all four rules exactly once, without a scoped substitute.
             - rules: [
                 typing-only-first-party-import,
                 typing-only-third-party-import,
                 typing-only-standard-library-import,
+                runtime-import-in-type-checking-block,
               ]
               authority: operator-ruling-2026-10-05-tc-family-off-global
               reason: >-
                 Operator ruling 2026-10-05: TC001-TC004 are blocked from
                 executing on every file; Ruff receives them as global ignores
-                declared by rule name — TC001-TC003 here, TC004 in its
-                dedicated entry below. No file may surface a
-                flake8-type-checking finding.
+                declared by rule name in this single unscoped exception.
+                No file may surface a flake8-type-checking finding.
             - rules: [missing-required-import, implicit-namespace-package]
               authority: operator-ruling-2026-10-03-import-banners-off-global
               reason: >-
@@ -507,6 +505,7 @@ Infra:
           - "*/protocols.py"
           - "*/_protocols/*"
       pyrefly:
+        findings-exit-codes: [1]
         disable-project-excludes-heuristics: true
         python-version: "3.13"
         use-ignore-files: false
@@ -751,6 +750,7 @@ Infra:
           - "resilience: resilience tests"
           - "discovery: catalog and stream discovery tests"
           - "singer: Singer protocol contract tests"
+          - "requires_engine: native check engine required by this test"
         # External-token gates never run inside
         # offline verification (`make test`); the runner records their exclusion.
         # `make test-full` first completes that incremental phase, then executes
@@ -761,6 +761,9 @@ Infra:
         # local and pre-push execution retain slow tests. The full phase of
         # `make test-full` includes these markers in every context.
         ci-excluded-markers: [slow]
+        # Fixtures declaring local engines or resolution cannot execute in approval.
+        ci-excluded-fixtures:
+          [resolved_make_templates, detector_project, mod_workspace, smells_project, _clear_make_ci_token]
         standard-addopts:
           - --benchmark-disable
           - --strict-markers
