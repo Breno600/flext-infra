@@ -77,7 +77,8 @@ class TestsFlextInfraUpgOwnedDependencyPin:
             f'codegen = ["{cls._requirement("flext-infra", infra_ref)}"]\n'
             f'dev = ["{cls._requirement("flext-core", core_ref)}"]\n'
             "[tool.uv]\n"
-            f'override-dependencies = ["{cls._requirement("flext-core", cls.COMMIT)}"]\n'
+            "override-dependencies = "
+            f'["{cls._requirement("flext-core", cls.COMMIT)}"]\n'
         )
         (root / c.PYPROJECT_FILENAME).write_text(source, encoding="utf-8")
         return source
