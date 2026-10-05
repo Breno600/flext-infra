@@ -117,6 +117,17 @@ class FlextInfraUtilitiesCodegenFacades:
             for member in namespace.body
             if isinstance(member, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef)
         }
+        declared.update(
+            target.id
+            for member in namespace.body
+            if isinstance(member, ast.Assign | ast.AnnAssign | ast.TypeAlias)
+            for target in (
+                member.targets
+                if isinstance(member, ast.Assign)
+                else [member.name if isinstance(member, ast.TypeAlias) else member.target]
+            )
+            if isinstance(target, ast.Name)
+        )
         for method in sorted(
             cls._required_methods(
                 pkg_dir,
