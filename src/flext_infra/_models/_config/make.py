@@ -1163,10 +1163,9 @@ class FlextInfraConfigModelsMake:
             local = frozenset(self.check_gates_local)
             return tuple(gate for gate in self.check_gates_default if gate not in local)
 
-        @staticmethod
         @m.computed_field
         @property
-        def check_gates_fixable() -> t.VariadicTuple[str]:
+        def check_gates_fixable(self) -> t.VariadicTuple[str]:
             """Gates ``make fix`` can actually repair.
 
             Asking for a gate that cannot fix anything still pays its full cost;
