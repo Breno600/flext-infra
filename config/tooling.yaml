@@ -268,6 +268,76 @@ Infra:
           # and the scoped ones as `per-file-ignores`. Repositories declare no
           # exception of their own.
           authorized-exceptions:
+            - files: "**/xlsx.py"
+              rules: [import-outside-top-level]
+              authority: operator-ruling-2026-10-05-heavy-adapter-boundary
+              reason: >-
+                The xlsx/docx/pptx utility boundaries are the typed lazy
+                adapters: their renderer submodules import the heavy office
+                toolkits at their own module top, so the boundary loads them
+                per operation (the class contract documents this). Hoisting
+                the first-party import would eager-load openpyxl/docx/pptx
+                into every CLI start; the per-operation import is the
+                documented design, and the rule stays active everywhere
+                else.
+            - files: "**/docx.py"
+              rules: [import-outside-top-level]
+              authority: operator-ruling-2026-10-05-heavy-adapter-boundary
+              reason: >-
+                See the xlsx.py entry: the same heavy-adapter boundary, one
+                ruling.
+            - files: "**/pptx.py"
+              rules: [import-outside-top-level]
+              authority: operator-ruling-2026-10-05-heavy-adapter-boundary
+              reason: >-
+                See the xlsx.py entry: the same heavy-adapter boundary, one
+                ruling.
+            - files: "**/framework.py"
+              rules: [import-outside-top-level]
+              authority: operator-ruling-2026-10-05-heavy-adapter-boundary
+              reason: >-
+                The CLI framework adapter loads its toolkit wiring lazily at
+                application-build time for the same startup-budget reason;
+                every other module keeps the top-level import contract.
+            - files: "**/_config.py"
+              rules: [invalid-function-name]
+              authority: operator-ruling-2026-10-05-config-namespace-surface
+              reason: >-
+                The config namespace surface is law (ADR-005): consumers read
+                ``config.<Namespace>.*`` with the namespace spelled as the
+                domain noun (``config.Cli``), so the accessor keeps its
+                declared casing; the rule stays active for every other
+                function name.
+            - files: "**/__init__.py"
+              rules: [line-too-long]
+              authority: operator-ruling-2026-10-05-generated-lazy-init-paths
+              reason: >-
+                Generated lazy-init initializers render from-import lines
+                whose module path alone can exceed the line budget; the line
+                cannot wrap. The cure owner is the generator template; until
+                it lands, the generated surface stays exempt while hand code
+                keeps the budget.
+            - files: "**/file_test_helpers.py"
+              rules: [line-too-long]
+              authority: operator-ruling-2026-10-05-partnn-module-paths
+              reason: >-
+                The PartNN split names modules by concatenating the project,
+                family and part stems, and several generated module paths
+                exceed the line budget by themselves, so their from-import
+                lines cannot wrap below the budget. The cure owner is the
+                PartNN naming scheme; the rule stays active everywhere else.
+            - files: "**/flextcliutilitiesfiletesthelpersmixin_part_03.py"
+              rules: [line-too-long]
+              authority: operator-ruling-2026-10-05-partnn-module-paths
+              reason: >-
+                See file_test_helpers.py: the same PartNN module-path length
+                defect, one ruling.
+            - files: "**/test_public_contracts_cov.py"
+              rules: [line-too-long]
+              authority: operator-ruling-2026-10-05-partnn-module-paths
+              reason: >-
+                See file_test_helpers.py: the same PartNN module-path length
+                defect over the tests/_cases layout, one ruling.
             - files: "**/framework.py"
               rules: [banned-api]
               authority: operator-ruling-2026-10-05-cli-owner-adapter
