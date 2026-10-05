@@ -26,8 +26,9 @@ if TYPE_CHECKING:
 class TestsFlextInfraLazyMapFreshness:
     """Wrapper semantics: runs the check-only generator and formats the report."""
 
+    @staticmethod
     @pytest.fixture
-    def v(self) -> FlextInfraValidateLazyMapFreshness:
+    def v() -> FlextInfraValidateLazyMapFreshness:
         """Shared validator instance.
 
         Returns:
@@ -67,6 +68,7 @@ class TestsFlextInfraLazyMapFreshness:
 
     # Why (suite budget): full-suite xdist can stall durable atomic writes
     # beyond the default case timeout while the lazy-init harness publishes files.
+    @staticmethod
     @pytest.mark.slow
     @staticmethod
     def test_stale_generated_lazy_map_fails_report(

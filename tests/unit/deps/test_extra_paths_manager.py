@@ -58,6 +58,7 @@ class TestsFlextInfraExtraPathsManager:
         tm.that(result.success, eq=True)
         tm.that(result.value, eq=False)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "tool_doc",
         [

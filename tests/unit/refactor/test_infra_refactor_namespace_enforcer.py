@@ -47,6 +47,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(protocols_source, has="from __future__ import annotations")
         tm.that(protocols_source, has="from typing import Protocol")
 
+    @staticmethod
     @pytest.mark.slow
     @staticmethod
     def test_namespace_enforcer_apply_keeps_autofixes_when_other_violations_remain(

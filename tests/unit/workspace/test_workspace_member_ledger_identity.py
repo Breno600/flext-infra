@@ -20,6 +20,7 @@ from tests import t, u
 class TestsFlextInfraWorkspaceMemberLedgerIdentity:
     """Prove parent and member identities remain in their own coordinates."""
 
+    @staticmethod
     @pytest.mark.parametrize("root_produces_activation", [False, True])
     @pytest.mark.parametrize("member_produces_activation", [False, True])
     @staticmethod

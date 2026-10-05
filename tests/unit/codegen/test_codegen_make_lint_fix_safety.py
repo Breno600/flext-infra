@@ -39,6 +39,7 @@ class TestsFlextInfraCodegenMakeLintFixSafety:
 
         tm.that(str(failure.value), has=c.Infra.RUFF_UNSAFE_FIXES_FLAG)
 
+    @staticmethod
     @pytest.mark.slow
     @staticmethod
     def test_scaffold_pyproject_renders_the_fix_safety_policy(

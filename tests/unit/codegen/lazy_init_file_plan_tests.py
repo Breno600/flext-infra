@@ -21,6 +21,7 @@ from tests import c, m, u
 class TestsFlextInfraCodegenLazyInitFilePlans:
     """Prove lazy-init describes effects without owning publication."""
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("scope", tuple(c.Infra.CodegenConformScope))
     @staticmethod

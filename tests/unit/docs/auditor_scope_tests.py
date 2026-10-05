@@ -181,6 +181,7 @@ class TestsFlextInfraAuditorScope:
             has="missing.md",
         )
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("check", "markdown"),
         [
@@ -211,6 +212,7 @@ class TestsFlextInfraAuditorScope:
         tm.that(report.result, eq=c.Infra.ResultStatus.FAIL)
         tm.that(report.items, empty=False)
 
+    @staticmethod
     @pytest.mark.parametrize("scope_name", ["root", "flext-demo", "test"])
     @staticmethod
     def test_audit_report_scope_cannot_permit_findings(

@@ -23,8 +23,12 @@ if TYPE_CHECKING:
 class TestsFlextInfraInfraSelection:
     """Test suite for u.Infra."""
 
-    @pytest.fixture
     @staticmethod
+    @pytest.fixture
+<<<<<<< HEAD
+    @staticmethod
+=======
+>>>>>>> origin/0.12.0-dev
     def workspace_with_projects(tmp_path: Path) -> Path:
         """Create a temporary workspace with test projects.
 
@@ -52,8 +56,9 @@ class TestsFlextInfraInfraSelection:
         )
         return tmp_path
 
+    @staticmethod
     @pytest.fixture
-    def selector(self) -> type[u.Infra]:
+    def selector() -> type[u.Infra]:
         """Provide project selector utilities class.
 
         Returns:
@@ -63,8 +68,12 @@ class TestsFlextInfraInfraSelection:
         selector_cls: type[u.Infra] = u.Infra
         return selector_cls
 
-    @pytest.fixture
     @staticmethod
+    @pytest.fixture
+<<<<<<< HEAD
+    @staticmethod
+=======
+>>>>>>> origin/0.12.0-dev
     def workspace_with_declared_names(tmp_path: Path) -> Path:
         """Create projects whose declared names differ from directory names.
 
@@ -98,8 +107,12 @@ class TestsFlextInfraInfraSelection:
         )
         return tmp_path
 
-    @pytest.fixture
     @staticmethod
+    @pytest.fixture
+<<<<<<< HEAD
+    @staticmethod
+=======
+>>>>>>> origin/0.12.0-dev
     def workspace_with_nested_members(tmp_path: Path) -> Path:
         """Provide ``workspace_with_nested_members``.
 
@@ -278,6 +291,7 @@ class TestsFlextInfraInfraSelection:
             eq=["member-one", "member-two", "workspace"],
         )
 
+    @staticmethod
     @pytest.mark.parametrize("name", [".", "workspace"])
     @staticmethod
     def test_resolve_projects_accepts_root_aliases(

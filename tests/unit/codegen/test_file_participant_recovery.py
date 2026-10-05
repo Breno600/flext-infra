@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 class TestsFlextInfraFileParticipantRecovery:
     """Recover prepared file-only journals through their physical owners."""
 
+    @staticmethod
     @pytest.mark.parametrize("invalid_later_plan", ["participant", "destination"])
     @staticmethod
     def test_later_invalid_plan_leaves_no_partial_staging(
@@ -162,6 +163,7 @@ class TestsFlextInfraFileParticipantRecovery:
         tm.ok(recovered)
         tm.that(recovered.value, eq=True)
 
+    @staticmethod
     @pytest.mark.parametrize("foreign_change", ["none", "extra", "replaced"])
     @staticmethod
     def test_prepared_publication_recovery_requires_original_tree(
@@ -212,6 +214,7 @@ class TestsFlextInfraFileParticipantRecovery:
             tm.that(target.read_bytes(), eq=b"owned publication\n")
             tm.that(session.journal_state.path.exists(), eq=True)
 
+    @staticmethod
     @pytest.mark.parametrize("with_foreign_file", [False, True])
     @pytest.mark.parametrize("journal_state", ["staging", "prepared"])
     @staticmethod
@@ -263,6 +266,7 @@ class TestsFlextInfraFileParticipantRecovery:
             tm.that(staging.exists(), eq=False)
             tm.that(session.journal_state.path.exists(), eq=False)
 
+    @staticmethod
     @pytest.mark.parametrize("journal_change", ["unchanged", "replaced", "missing"])
     @pytest.mark.parametrize("failure_kind", ["validator", "exception", "abort"])
     @staticmethod

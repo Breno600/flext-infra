@@ -62,6 +62,7 @@ class FlextInfraConstantsMake:
     VERB_RUN: ClassVar[str] = "run"
     VERB_CHECKS: ClassVar[str] = "checks"
     VERB_SONARCLOUD_SYNC: ClassVar[str] = "sonarcloud-sync"
+    VERB_SONARCLOUD_ISSUES: ClassVar[str] = "sonarcloud-issues"
 
     CLI_GROUP_CHECK: ClassVar[str] = "check"
     CLI_GROUP_CODEGEN: ClassVar[str] = "codegen"

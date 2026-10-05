@@ -67,6 +67,7 @@ class TestsFlextInfraRunProjects:
 
         tm.fail(result, has="selected no projects")
 
+    @staticmethod
     @pytest.mark.parametrize(
         "report_name",
         [c.Infra.CHECK_REPORT_MARKDOWN_FILENAME, c.Infra.CHECK_REPORT_SARIF_FILENAME],

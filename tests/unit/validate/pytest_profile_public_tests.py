@@ -32,6 +32,7 @@ from tests.unit.validate.pytest_runner_support import (
 class TestsFlextInfraPytestProfile:
     """Exercise the real profiling child transport and its receipt binding."""
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize(
         ("arguments", "expected_exit"),
@@ -71,6 +72,7 @@ class TestsFlextInfraPytestProfile:
         assert recorded.model_copy(update={"profile_sha256": None}) == context
         assert recorded.profile_sha256 is not None
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("expired", [False, True])
     @staticmethod
@@ -108,8 +110,12 @@ class TestsFlextInfraPytestProfile:
         assert pstats.Stats(str(profile)).get_stats_profile().func_profiles
         assert not profile.with_suffix(".pstats.json").exists()
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
+<<<<<<< HEAD
+    @staticmethod
+=======
+>>>>>>> origin/0.12.0-dev
     def test_profile_failure_exposes_the_write_error(tmp_path: Path) -> None:
         """A real profile I/O failure remains visible rather than becoming success."""
         context = m.Infra.PytestRunContext(
@@ -131,6 +137,7 @@ class TestsFlextInfraPytestProfile:
         assert "IsADirectoryError" in result.stderr
         assert not output.with_suffix(".pstats.json").exists()
 
+    @staticmethod
     @pytest.mark.parametrize("complete", [False, True])
     @staticmethod
     def test_collection_profile_preserves_pytest_arguments(
@@ -161,6 +168,7 @@ class TestsFlextInfraPytestProfile:
         )
         assert "profile-collection" not in profiled.build_command(report)
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("profile_collection", [False, True])
     @staticmethod

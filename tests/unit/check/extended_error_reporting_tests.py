@@ -85,6 +85,7 @@ class TestsFlextInfraGateErrorReporting:
             eq=[f"{c.Infra.DEFAULT_SRC_DIR}/{name}" for name in ("one.py", "two.py")],
         )
 
+    @staticmethod
     @pytest.mark.slow
     @staticmethod
     def test_workspace_checker_emits_ruff_stderr_without_findings(
@@ -123,6 +124,7 @@ class TestsFlextInfraGateErrorReporting:
             has=["TOML parse error", "invalid-line-length"],
         )
 
+    @staticmethod
     @pytest.mark.slow
     @staticmethod
     def test_workspace_checker_emits_mypy_plugin_traceback(
@@ -173,6 +175,7 @@ class TestsFlextInfraGateErrorReporting:
             ],
         )
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("readme", "config_text", "expected"),
         [

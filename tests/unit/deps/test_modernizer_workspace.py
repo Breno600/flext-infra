@@ -166,6 +166,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
         error = tm.fail(formatted)
         tm.that(error, has=["no mise.lock", "run make upg"])
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("content", "exists", "expected"),
         [
@@ -213,6 +214,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
         result = u.Infra.resolve_repository_root_or_cwd(deep_path)
         tm.that(str(result), ne="")
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("description", "sort_first"),
         [
@@ -439,6 +441,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
         tm.that(ambiguous.run(), eq=2)
         tm.that(exact.run(), eq=0)
 
+    @staticmethod
     @pytest.mark.parametrize("member_kind", ["absolute", "parent-relative", "symlink"])
     @staticmethod
     def test_modernizer_rejects_configured_members_outside_workspace(
@@ -474,6 +477,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
             original,
         )
 
+    @staticmethod
     @pytest.mark.parametrize("selector_kind", ["absolute", "parent-relative"])
     @staticmethod
     def test_modernizer_rejects_undeclared_project_paths(

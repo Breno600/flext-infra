@@ -429,6 +429,7 @@ class TestsFlextInfraPytestDiag:
         with pytest.raises(ValueError, match="zip"):
             extractor.extract(junit, log, report_log=extractor.report_log)
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("phases", "expected"),
         [

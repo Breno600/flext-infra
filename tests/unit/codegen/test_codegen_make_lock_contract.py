@@ -212,6 +212,7 @@ class TestsFlextInfraCodegenMakeLockContract:
         tm.that(process.stderr, has="run make setup")
         tm.that(pinned_runtime.exists(), eq=False)
 
+    @staticmethod
     @pytest.mark.parametrize("pin_content", [None, "latest\n", " \n", "1.2.3\n4.5.6\n"])
     @staticmethod
     def test_direnv_rejects_unresolved_runtime_pin(
@@ -241,6 +242,7 @@ class TestsFlextInfraCodegenMakeLockContract:
         tm.that(process.stderr, has=str(pin))
         tm.that(process.stdout, lacks=f"[{c.Infra.MakeProfile.STANDALONE}]")
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("verb", "pin_content"),
         [
@@ -290,6 +292,7 @@ class TestsFlextInfraCodegenMakeLockContract:
         tm.that(activation.exists(), eq=False)
         tm.that(u.Infra.runtime_environment_dir(project_root).exists(), eq=False)
 
+    @staticmethod
     @pytest.mark.parametrize("verb", ["help", "clean", "upg"])
     @staticmethod
     def test_bootstrap_and_shell_verbs_do_not_require_the_pin(
@@ -320,6 +323,7 @@ class TestsFlextInfraCodegenMakeLockContract:
             tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
         tm.that(pin.exists(), eq=False)
 
+    @staticmethod
     @pytest.mark.parametrize("attached", [False, True])
     @staticmethod
     def test_setup_bootstraps_from_the_runtime_root_pin(

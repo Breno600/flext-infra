@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 class TestsFlextInfraTypeGates:
     """The selected project's actual findings determine acceptance."""
 
+    @staticmethod
     @pytest.mark.slow
     @staticmethod
     def test_mypy_cache_is_project_keyed_across_checkouts_and_relocks(
@@ -78,8 +79,12 @@ class TestsFlextInfraTypeGates:
                 eq={"fixture-alpha", "fixture-beta"},
             )
 
-    @pytest.fixture
     @staticmethod
+    @pytest.fixture
+<<<<<<< HEAD
+    @staticmethod
+=======
+>>>>>>> origin/0.12.0-dev
     def checker_context(real_python_package: Path) -> m.Infra.GateContext:
         """Configure the existing real package for native checker execution.
 
@@ -101,6 +106,7 @@ class TestsFlextInfraTypeGates:
             reports_dir=reports,
         )
 
+    @staticmethod
     @pytest.mark.slow
     @staticmethod
     def test_mypy_preserves_protocol_member_diagnostics(
@@ -126,6 +132,7 @@ class TestsFlextInfraTypeGates:
         messages = "\n".join(issue.message for issue in result.issues)
         tm.that(messages, has=["Expected", "Actual", "def size", "int", "str"])
 
+    @staticmethod
     @pytest.mark.slow
     @staticmethod
     def test_mypy_preserves_malformed_native_output(
@@ -162,6 +169,7 @@ class TestsFlextInfraTypeGates:
             has="native-plugin-output",
         )
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize(
         "gate_class",
@@ -190,6 +198,7 @@ class TestsFlextInfraTypeGates:
         assert repaired.result.passed, repaired
         assert not repaired.issues
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize(
         ("gate_class", "config_text"),
@@ -233,6 +242,7 @@ class TestsFlextInfraTypeGates:
         assert result.result.passed is False
         assert any(issue.severity in {"warn", "warning"} for issue in result.issues)
 
+    @staticmethod
     @pytest.mark.slow
     @staticmethod
     def test_failed_pyrefly_cannot_reuse_previous_report(
@@ -255,7 +265,11 @@ class TestsFlextInfraTypeGates:
         failed = gate.check(project, checker_context)
         assert failed.result.passed is False
         assert failed.raw_output
+        # The gate's declared report path is replaced per run: the passing
+        # run's report is removed before the failing run, never reused.
+        assert not native_reports[0].exists()
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize(
         "gate_class",
@@ -288,6 +302,7 @@ class TestsFlextInfraTypeGates:
             issue.file.endswith(unselected.name) for issue in full_project.issues
         )
 
+    @staticmethod
     @pytest.mark.parametrize(
         "gate_class",
         [FlextInfraMypyGate, FlextInfraPyrightGate, FlextInfraPyreflyGate],
@@ -307,6 +322,7 @@ class TestsFlextInfraTypeGates:
         # stays visible in the execution errors for every gate posture.
         assert result.result.errors
 
+    @staticmethod
     @pytest.mark.parametrize(
         "gate_class",
         [FlextInfraPyrightGate, FlextInfraPyreflyGate],
@@ -324,6 +340,7 @@ class TestsFlextInfraTypeGates:
             eq=True,
         )
 
+    @staticmethod
     @pytest.mark.parametrize("payload", ["", " ", "not JSON", "{}", "[]", "null"])
     @pytest.mark.parametrize(
         "report_model",

@@ -88,6 +88,7 @@ class TestsFlextInfraDocsGenerator:
         tm.that(workspace / "flext-a/README.md" in paths, eq=True)
         tm.that(all(plan.owner == "docs" for plan in plans), eq=True)
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("selected_projects", [None, (".",), ("flext-a",)])
     @pytest.mark.parametrize("project_name", ["workspace", config.Infra.name])
@@ -444,6 +445,7 @@ class TestsFlextInfraDocsGenerator:
         )
         tm.that(page, lacks="::: flext_a options:")
 
+    @staticmethod
     @pytest.mark.slow
     @staticmethod
     def test_generated_directive_builds_with_real_mkdocstrings(

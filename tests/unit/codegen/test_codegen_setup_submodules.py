@@ -25,6 +25,7 @@ pytestmark = [pytest.mark.slow, pytest.mark.remote]
 class TestsFlextInfraCodegenSetupSubmodules:
     """Tests for ``FlextInfraCodegenSetupSubmodules``."""
 
+    @staticmethod
     @pytest.fixture
     @staticmethod
     def generated_project_template(

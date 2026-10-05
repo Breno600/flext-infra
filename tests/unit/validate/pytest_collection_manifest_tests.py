@@ -91,6 +91,7 @@ class TestsFlextInfraPytestCollectionManifest:
         )
         tm.that(manifest.node_ids, eq=("tests/test_sample.py::test_sample",))
 
+    @staticmethod
     @pytest.mark.slow
     @staticmethod
     def test_missing_collection_manifest_preserves_file_failure(

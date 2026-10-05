@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 class TestsFlextInfraExtendedConfigFixerErrors:
     """Exercise ``FlextInfraConfigFixer`` only through its public surface."""
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("pyproject", "name"),
         [

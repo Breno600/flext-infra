@@ -26,8 +26,12 @@ if TYPE_CHECKING:
 class TestsFlextInfraIndexDeclarationsGate:
     """Every indexed gitlink must be declared in `.gitmodules`."""
 
-    @pytest.fixture
     @staticmethod
+    @pytest.fixture
+<<<<<<< HEAD
+    @staticmethod
+=======
+>>>>>>> origin/0.12.0-dev
     def gate_result(tmp_path: Path) -> Callable[..., m.Infra.GateResult]:
         """Build a repository with the requested defects and run the gate over it.
 

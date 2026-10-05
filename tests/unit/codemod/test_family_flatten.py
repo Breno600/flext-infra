@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 class TestsFlextInfraFamilyFlatten:
     """Exercise the real module graph, not mocked semantic identities."""
 
+    @staticmethod
     @pytest.mark.parametrize("collision", [False, True])
     @staticmethod
     def test_snapshot_rewrites_alias_and_inherited_consumers_without_effects(
@@ -99,6 +100,7 @@ class TestsFlextInfraFamilyFlatten:
         }.items():
             tm.that(file_path.read_text(encoding="utf-8"), eq=original)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "entity",
         [
@@ -131,6 +133,7 @@ class TestsFlextInfraFamilyFlatten:
         tm.ok(planned)
         tm.that(planned.value, empty=True)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "reference",
         ["ALIAS = {owner}.Wrapper", 'alias: "{owner}.Wrapper"'],

@@ -37,6 +37,7 @@ class TestsFlextInfraDocsMainEntry:
         """Return the usage exit code when docs has no subcommand."""
         tm.that(infra_main(["docs"]), eq=1)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "argv",
         [
@@ -49,7 +50,10 @@ class TestsFlextInfraDocsMainEntry:
             ["docs", "validate", "--help"],
         ],
     )
+<<<<<<< HEAD
     @staticmethod
+=======
+>>>>>>> origin/0.12.0-dev
     def test_help_routes(argv: t.SequenceOf[str]) -> None:
         """Expose help successfully for every public docs route."""
         tm.that(infra_main(argv), eq=0)

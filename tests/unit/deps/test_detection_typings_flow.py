@@ -165,6 +165,7 @@ class TestsFlextInfraDepsDetectionTypingsFlow:
             empty=True,
         )
 
+    @staticmethod
     @pytest.mark.parametrize("requirement", ["", " "])
     @staticmethod
     def test_blank_typing_requirement_is_rejected(

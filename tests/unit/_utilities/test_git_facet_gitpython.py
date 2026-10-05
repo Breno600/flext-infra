@@ -206,7 +206,7 @@ class TestsFlextInfraGitFacet:
                 cwd=repository,
             ),
         ).split()
-        assert len(parents) == 3
+        tm.that(parents, length=3)
 
     @staticmethod
     def test_repository_head_and_status_and_service(real_git_repo: Path) -> None:
@@ -215,7 +215,7 @@ class TestsFlextInfraGitFacet:
             m.Infra.GitRepoRequest(repo_root=real_git_repo),
         )
         assert head.success
-        assert len(head.value.oid) == 40
+        tm.that(head.value.oid, length=c.Infra.GIT_OID_HEX_LENGTH_SHA1)
         status = u.Infra.git_status(m.Infra.GitStatusRequest(repo_root=real_git_repo))
         assert status.success
         assert isinstance(status.value.porcelain, str)
@@ -255,6 +255,7 @@ class TestsFlextInfraGitFacet:
         assert dirty.value.dirty is True
         assert "dirty.txt" in dirty.value.porcelain
 
+    @staticmethod
     @pytest.mark.parametrize("change", ["tracked", "staged", "untracked"])
     @staticmethod
     def test_verify_clean_cli_rejects_real_worktree_changes(

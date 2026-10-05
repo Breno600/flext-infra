@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 class TestsFlextInfraRopeAnalysis:
     """Behavior contract for Rope-backed semantic analysis."""
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("statement", "suffix"),
         [

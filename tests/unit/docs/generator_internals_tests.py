@@ -28,11 +28,15 @@ class TestsFlextInfraDocsGeneratorInternals:
         tm.that(u.Infra.anchorize("Test-Case"), eq="test-case")
         tm.that(u.Infra.anchorize(""), eq="")
 
+    @staticmethod
     @pytest.mark.parametrize(
         "heading",
         ["Contrato público", "Composição de serviços", "Žlutý kůň", "Test--Case"],
     )
+<<<<<<< HEAD
     @staticmethod
+=======
+>>>>>>> origin/0.12.0-dev
     def test_anchorize_matches_rendered_markdown(heading: str) -> None:
         """Generated links target the renderer's real Unicode-normalized heading ID."""
         rendered = Markdown(extensions=["toc"]).convert(f"## {heading}")

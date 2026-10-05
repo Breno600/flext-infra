@@ -49,6 +49,7 @@ class TestsFlextInfraCodegenMakeContracts:
         tm.that(rejection.exists(), eq=False)
         tm.that(custom.read_text(encoding="utf-8"), eq=content)
 
+    @staticmethod
     @pytest.mark.slow
     @staticmethod
     def test_valid_private_custom_make_has_no_rejection(
@@ -100,6 +101,7 @@ class TestsFlextInfraCodegenMakeContracts:
 
         tm.fail(result, has="unterminated .PHONY continuation")
 
+    @staticmethod
     @pytest.mark.slow
     @staticmethod
     def test_scaffold_make_help_documents_and_lists_custom_hooks(
@@ -133,6 +135,7 @@ class TestsFlextInfraCodegenMakeContracts:
         tm.that(output.stdout, lacks="Custom hooks (custom.mk):")
         tm.that(output.stdout, lacks="WHAT")
 
+    @staticmethod
     @pytest.mark.slow
     @staticmethod
     def test_scaffold_make_runs_pre_and_post_verb_hooks_in_order(
@@ -207,8 +210,12 @@ class TestsFlextInfraCodegenMakeContracts:
         tm.that("WARN:" in capsys.readouterr().out, eq=False)
         tm.that(Path(f"{custom}.rej").exists(), eq=False)
 
-    @pytest.mark.slow
     @staticmethod
+    @pytest.mark.slow
+<<<<<<< HEAD
+    @staticmethod
+=======
+>>>>>>> origin/0.12.0-dev
     def test_non_regular_custom_make_remains_fatal(infra_git_repo: Path) -> None:
         """Test non regular custom make remains fatal."""
         root = infra_git_repo

@@ -97,10 +97,6 @@ class FlextInfraUtilitiesGitRepo:
         resolved = shutil.which(c.Infra.GIT)
         if resolved is None:
             return r[bool].fail(f"git executable not found on PATH: {c.Infra.GIT}")
-        # GitPython's documented executable attribute already names this
-        # binary: re-pointing it would only respawn ``git version``.
-        if resolved == Git.GIT_PYTHON_GIT_EXECUTABLE:
-            return r[bool].ok(True)
         try:
             Git.refresh(resolved)
         except (FileNotFoundError, OSError) as exc:
@@ -214,17 +210,21 @@ class FlextInfraUtilitiesGitRepo:
                 )
             except GitCommandError as exc:
                 return r[Path].fail(str(exc), exception=exc)
-            # Git lists the main worktree first. Bare shared storage, or a main
-            # entry that is the common git dir itself (a submodule module dir
-            # without core.worktree), has no main checkout, so each registered
-            # worktree is its own primary.
+            # Git lists the main worktree first. Bare shared storage has no main
+            # checkout, so each registered worktree is its own primary.
+            # A composed submodule with core.worktree unset makes Git record
+            # the shared module storage (.git/modules/<name>) as the main
+            # entry's path — that directory is not a checkout, so it is
+            # bare-equivalent and a registered caller is its own primary.
             if git_dir == common_dir:
                 primary_root = caller_root
             elif not entries:
                 return r[Path].fail(
                     f"Git worktree registry is empty for {repository_path}",
                 )
-            elif not entries[0].bare and entries[0].path != common_dir:
+            elif not entries[0].bare and not entries[0].path.is_relative_to(
+                common_dir,
+            ):
                 primary_root = entries[0].path
             elif caller_root in {entry.path for entry in entries}:
                 primary_root = caller_root

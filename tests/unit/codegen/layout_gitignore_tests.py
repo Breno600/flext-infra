@@ -104,6 +104,7 @@ class TestsFlextInfraCodegenLayoutGitignore:
         )
         tm.that(tracked.failure, eq=True)
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("directory_suffix", ["", "-lane"])
     @staticmethod

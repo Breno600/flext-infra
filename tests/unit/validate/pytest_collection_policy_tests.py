@@ -19,6 +19,7 @@ from tests.unit.validate.pytest_runner_support import profile_parent, runner_for
 class TestsFlextInfraPytestCollectionPolicy:
     """Keep collection findings loud, accounted, and identity-preserving."""
 
+    @staticmethod
     @pytest.mark.slow
     @staticmethod
     def test_collection_policy_error_fails_loud_and_names_the_offender(
@@ -32,6 +33,7 @@ class TestsFlextInfraPytestCollectionPolicy:
 
         tm.that(str(raised.value), has=["FLEXT slow timeout policy", "test_policy.py"])
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("profile_collection", [False, True])
     @pytest.mark.parametrize("finding", ["warning", "module-skip", "module-error"])
@@ -108,6 +110,7 @@ class TestsFlextInfraPytestCollectionPolicy:
             # receipt this invocation wrote before the collection failed.
             assert parent.with_suffix(".pstats.json").is_file()
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("homonym", [False, True])
     @staticmethod
@@ -157,6 +160,7 @@ class TestsFlextInfraPytestCollectionPolicy:
         tm.that(identity.category, eq=category)
         tm.that(identity.category_module, eq="runner_sample.notices")
 
+    @staticmethod
     @pytest.mark.slow
     @staticmethod
     def test_warm_inventory_captures_warnings_from_stable_modules(
@@ -193,6 +197,7 @@ class TestsFlextInfraPytestCollectionPolicy:
         tm.that(diagnostics.warning_lines[0], contains="stable inventory finding")
         tm.that((context.parent / "suite-outcome.json").exists(), eq=False)
 
+    @staticmethod
     @pytest.mark.slow
     @staticmethod
     def test_coverage_pass_fails_loud_on_collection_policy_error(

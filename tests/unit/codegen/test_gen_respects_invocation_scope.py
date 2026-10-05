@@ -43,8 +43,12 @@ _MEMBER = "fixture-member"
 class TestsFlextInfraGenRespectsInvocationScope:
     """`gen` recipes write to exactly one root per invocation."""
 
-    @pytest.fixture
     @staticmethod
+    @pytest.fixture
+<<<<<<< HEAD
+    @staticmethod
+=======
+>>>>>>> origin/0.12.0-dev
     def rendered_makefile(tmp_path: Path) -> str:
         """Render the workspace Makefile through the conform owner.
 

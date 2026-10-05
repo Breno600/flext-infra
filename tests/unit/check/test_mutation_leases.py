@@ -21,6 +21,7 @@ from tests import u as test_u
 class TestsFlextInfraMutationLeases:
     """Public formatter behavior respects exact shared writer ownership."""
 
+    @staticmethod
     @pytest.mark.parametrize("git_owned", [False, True])
     @staticmethod
     def test_format_waits_for_scope_writer_and_does_not_apply_lint(

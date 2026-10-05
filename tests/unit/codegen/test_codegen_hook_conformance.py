@@ -145,6 +145,7 @@ class TestsFlextInfraCodegenHookConformance:
         tm.that(rendered.count("bash -eu -o pipefail -c"), eq=expected)
         tm.that(rendered, lacks=".local")
 
+    @staticmethod
     @pytest.mark.parametrize("inherited", ["ci", "local"])
     @staticmethod
     def test_pre_push_check_unsets_inherited_ci_before_the_real_make_runtime(

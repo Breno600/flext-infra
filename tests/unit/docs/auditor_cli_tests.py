@@ -59,6 +59,7 @@ class TestsFlextInfraAuditorCli:
             eq=True,
         )
 
+    @staticmethod
     @pytest.mark.parametrize("package_entrypoint", [False, True])
     @staticmethod
     def test_auditor_main_finding_exits_nonzero(
@@ -88,6 +89,7 @@ class TestsFlextInfraAuditorCli:
             has="missing.md",
         )
 
+    @staticmethod
     @pytest.mark.parametrize("option", ["--strict", "--strict-mode", "--no-strict"])
     @staticmethod
     def test_auditor_cli_rejects_removed_modes(

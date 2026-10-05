@@ -20,6 +20,7 @@ from tests import u
 class TestsFlextInfraCodegenRuntimeProfiles:
     """Tests for ``FlextInfraCodegenRuntimeProfiles``."""
 
+    @staticmethod
     @pytest.mark.parametrize(
         "upstream",
         tuple(
@@ -203,8 +204,12 @@ class TestsFlextInfraCodegenRuntimeProfiles:
             eq=("owned>=2",),
         )
 
-    @pytest.mark.parametrize("invalid", ['["external>=1", 42]', '"external>=1"'])
     @staticmethod
+    @pytest.mark.parametrize("invalid", ['["external>=1", 42]', '"external>=1"'])
+<<<<<<< HEAD
+    @staticmethod
+=======
+>>>>>>> origin/0.12.0-dev
     def test_invalid_custom_requirements_are_not_discarded(invalid: str) -> None:
         """Composition rejects malformed arrays rather than filtering their entries."""
         rendered = '[project]\nname = "sample"\ndependencies = ["owned>=2"]\n'

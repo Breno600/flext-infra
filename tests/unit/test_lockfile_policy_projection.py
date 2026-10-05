@@ -17,6 +17,7 @@ from tests import u
 class TestsFlextInfraLockfilePolicyProjection:
     """Every profile commits the locks `make upg` writes (operator 2026-09-24)."""
 
+    @staticmethod
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
     @pytest.mark.parametrize(
         "lock_filename",
@@ -46,6 +47,7 @@ class TestsFlextInfraLockfilePolicyProjection:
 
         tm.that(u.Tests.is_tracked_under(rendered, lock_filename), eq=True)
 
+    @staticmethod
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
     @pytest.mark.parametrize(
         "relative_path",

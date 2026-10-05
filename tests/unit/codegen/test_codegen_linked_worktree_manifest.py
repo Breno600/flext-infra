@@ -99,6 +99,7 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
             eq=primary_snapshot,
         )
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("beads_content", "expected_error"),
         [

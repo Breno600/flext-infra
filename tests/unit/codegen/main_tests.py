@@ -250,6 +250,7 @@ class TestsFlextInfraCodegenMain:
             )
             tm.that(" ".join(result.value.stdout.split()), contains=route.help_text)
 
+        @staticmethod
         @pytest.mark.slow
         @staticmethod
         def test_managed_conflict_is_planned_and_published_atomically(

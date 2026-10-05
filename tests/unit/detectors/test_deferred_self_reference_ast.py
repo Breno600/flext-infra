@@ -100,6 +100,7 @@ class TestsFlextInfraDeferredSelfReferenceNormalizer:
         )
         tm.that(u.Infra.normalize_deferred_self_references(source), eq=source)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "declaration",
         [
@@ -148,6 +149,7 @@ class TestsFlextInfraDeferredSelfReferenceNormalizer:
 
         tm.that(u.Infra.normalize_deferred_self_references(source), eq=source)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "declaration",
         ["_Kind: object", "class Other:\n        _Kind = str"],

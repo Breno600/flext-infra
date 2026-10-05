@@ -95,6 +95,7 @@ class TestsFlextInfraBanditAndMarkdownGates:
         tm.that(result.raw_output.startswith("{"), eq=True)
         tm.that(result.raw_output, lacks="Working...")
 
+    @staticmethod
     @pytest.mark.parametrize(
         ("markdown_text", "config_text", "findings_block", "codes"),
         [

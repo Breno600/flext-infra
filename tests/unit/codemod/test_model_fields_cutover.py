@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 class TestsModelFieldsCutover:
     """Migration preserves rejection semantics and reaches a stable source."""
 
+    @staticmethod
     @pytest.mark.parametrize(
         "access",
         [
@@ -127,6 +128,7 @@ class TestsModelFieldsCutover:
             )
         tm.fail(result, has="conflicts with a local binding")
 
+    @staticmethod
     @pytest.mark.parametrize(
         "declaration",
         [
@@ -160,6 +162,7 @@ class TestsModelFieldsCutover:
             )
         tm.fail(result)
 
+    @staticmethod
     @pytest.mark.parametrize(
         "body",
         [

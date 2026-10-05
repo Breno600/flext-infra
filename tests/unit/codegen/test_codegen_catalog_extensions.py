@@ -168,6 +168,7 @@ class TestsFlextInfraCodegenCatalogExtensions:
         tm.that(result.failure, eq=True)
         tm.that(result.error, has="conflicting flext-* line sources")
 
+    @staticmethod
     @pytest.mark.parametrize(
         "section",
         [

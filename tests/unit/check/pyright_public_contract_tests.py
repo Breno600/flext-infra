@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 class TestsPyrightPublicContract:
     """Exercise the configured semantic owner with real source and type stubs."""
 
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize(
         ("consumer", "private"),

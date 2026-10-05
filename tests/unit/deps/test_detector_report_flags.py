@@ -21,6 +21,7 @@ pytestmark = [pytest.mark.slow, pytest.mark.remote]
 class TestsFlextInfraDepsDetectorReportFlags:
     """Tests for ``FlextInfraDepsDetectorReportFlags``."""
 
+    @staticmethod
     @pytest.mark.parametrize("no_fail", [False, True])
     @staticmethod
     def test_real_dependency_and_environment_issues_respect_no_fail(
