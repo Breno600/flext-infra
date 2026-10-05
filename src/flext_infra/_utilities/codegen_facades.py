@@ -11,6 +11,9 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
+from libcst import Arg, ClassDef, Name, parse_module
+from libcst.metadata import MetadataWrapper, PositionProvider
+
 from flext_infra import c
 from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
 from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
@@ -61,12 +64,12 @@ class FlextInfraUtilitiesCodegenFacades:
         cls,
         pkg_dir: Path,
         *,
-        family: Literal["u", "p"] = "u",
+        family: Literal["u", "p", "m"] = "u",
     ) -> str | None:
-        """Render uniquely discovered utility or protocol owners without a registry.
+        """Render uniquely discovered utility, protocol or model owners.
 
         Real ``u.<Namespace>.<method>()`` consumers select methods. Definitions
-        Protocol references ``p.<Namespace>.<Type>`` select nested declarations.
+        Protocol and model references select nested declarations.
         The corresponding private family selects unique owners. Existing
         facade content remains unchanged except for missing imports and bases.
 
@@ -109,6 +112,11 @@ class FlextInfraUtilitiesCodegenFacades:
             ancestors,
         )
         additions: list[t.Pair[str, str]] = []
+        declared = {
+            member.name
+            for member in namespace.body
+            if isinstance(member, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef)
+        }
         for method in sorted(
             cls._required_methods(
                 pkg_dir,
@@ -118,6 +126,8 @@ class FlextInfraUtilitiesCodegenFacades:
                 family=family,
             ),
         ):
+            if method in declared:
+                continue
             candidates = tuple(
                 (module, class_name)
                 for module, class_name, methods in owners
@@ -158,7 +168,7 @@ class FlextInfraUtilitiesCodegenFacades:
         *,
         nested_namespace: bool,
         namespace: str,
-        family: Literal["u", "p"],
+        family: Literal["u", "p", "m"],
     ) -> frozenset[str]:
         methods: set[str] = set()
         with FlextInfraUtilitiesRopeCore.open_project(pkg_dir.parent) as project:
@@ -227,7 +237,7 @@ class FlextInfraUtilitiesCodegenFacades:
     def _utility_owners(
         owners_dir: Path,
         *,
-        family: Literal["u", "p"],
+        family: Literal["u", "p", "m"],
     ) -> t.Pair[
         t.VariadicTuple[t.Triple[str, str, frozenset[str]]],
         t.MappingKV[str, frozenset[str]],
@@ -320,7 +330,7 @@ class FlextInfraUtilitiesCodegenFacades:
         additions: t.SequenceOf[t.Pair[str, str]],
         *,
         package: str,
-        family: Literal["u", "p"],
+        family: Literal["u", "p", "m"],
     ) -> str:
         # The owner lives in the package being rendered. Naming this project
         # instead made every generated consumer facade import from flext-infra,
@@ -344,8 +354,30 @@ class FlextInfraUtilitiesCodegenFacades:
         additions: t.SequenceOf[t.Pair[str, str]],
     ) -> str:
         if not namespace.bases:
-            message = "utility namespace has no canonical base chain"
-            raise ValueError(message)
+            wrapper = MetadataWrapper(parse_module(source))
+            positions = wrapper.resolve(PositionProvider)
+            owners = tuple(
+                node
+                for node, span in positions.items()
+                if isinstance(node, ClassDef)
+                and span.start.line == namespace.lineno
+                and span.start.column
+                == len(
+                    source.splitlines()[namespace.lineno - 1]
+                    .encode(c.Cli.ENCODING_DEFAULT)[: namespace.col_offset]
+                    .decode(c.Cli.ENCODING_DEFAULT),
+                )
+            )
+            if len(owners) != 1:
+                message = "facade namespace has no unique concrete source span"
+                raise ValueError(message)
+            owner = owners[0]
+            return wrapper.module.deep_replace(
+                owner,
+                owner.with_changes(
+                    bases=tuple(Arg(Name(name)) for _module, name in additions),
+                ),
+            ).code
         last_base = namespace.bases[-1]
         if last_base.end_lineno is None or last_base.end_col_offset is None:
             message = "utility namespace base has no source span"
