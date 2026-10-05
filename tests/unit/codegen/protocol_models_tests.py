@@ -11,12 +11,14 @@ import sys
 from collections.abc import Iterator
 from pathlib import Path
 from types import ModuleType
-from typing import get_type_hints
+from typing import TYPE_CHECKING, get_type_hints
 
 import pytest
 
-from flext_infra import t
 from flext_infra.codegen.protocol_models import FlextInfraCodegenProtocolModels
+
+if TYPE_CHECKING:
+    from flext_infra import t
 
 MEMBER = "demo_member"
 
