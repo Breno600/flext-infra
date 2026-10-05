@@ -16,7 +16,7 @@ from flext_infra import m, u
 from flext_infra.codemod import FlextInfraApplyRenames
 
 
-class TestsRenamePreflight:
+class TestsFlextInfraRenamePreflight:
     """Observe real native rename events without replacing publication owners."""
 
     @staticmethod

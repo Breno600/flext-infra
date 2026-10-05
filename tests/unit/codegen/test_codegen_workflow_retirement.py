@@ -11,10 +11,10 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, infra, m, u
+from flext_infra import c, config, infra, m
 from flext_infra.codegen import FlextInfraCodegenConform
 from flext_infra.workspace import FlextInfraWorkspaceDetector
-from tests import u as test_u
+from tests import u
 from tests.unit.codegen.conform_support import TestsFlextInfraConformSupport
 
 pytestmark = pytest.mark.slow
@@ -36,7 +36,7 @@ class TestsFlextInfraCodegenWorkflowRetirement:
 
         """
         TestsFlextInfraConformSupport.seed_infra_package_tree(root)
-        manifest_path = test_u.Tests.write_standalone_workspace_manifest(
+        manifest_path = u.Tests.write_standalone_workspace_manifest(
             root,
             config.Infra.name,
         )
@@ -83,7 +83,7 @@ class TestsFlextInfraCodegenWorkflowRetirement:
             workflow.parent.mkdir(parents=True, exist_ok=True)
             workflow.write_text(content, encoding=c.Cli.ENCODING_DEFAULT)
 
-        request = test_u.Tests.conform_request(
+        request = u.Tests.conform_request(
             root,
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.CHECK,
@@ -119,7 +119,7 @@ class TestsFlextInfraCodegenWorkflowRetirement:
         """Both public apply routes preserve the declared release capability."""
         root = infra_git_repo
         workspace = self._declared_workspace(root, publishes_release=declared_release)
-        request = test_u.Tests.conform_request(
+        request = u.Tests.conform_request(
             root,
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.APPLY,

@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class TestsModelFieldsCutover:
+class TestsFlextInfraModelFieldsCutover:
     """Migration preserves rejection semantics and reaches a stable source."""
 
     @staticmethod

@@ -24,10 +24,8 @@ from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, m, u
 from flext_infra.gates.base_gate import FlextInfraGate
-from flext_infra.gates.markdown_code_sources import (
-    FlextInfraMarkdownCodeSources as sources,
-)
-from flext_infra.gates.markdown_support import FlextInfraMarkdownGateBase as markdown
+from flext_infra.gates.markdown_code_sources import FlextInfraMarkdownCodeSources
+from flext_infra.gates.markdown_support import FlextInfraMarkdownGateBase
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -58,7 +56,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             The resulting ``t.SequenceOf[Path]``.
 
         """
-        patterns = markdown.read_ignore_patterns(
+        patterns = FlextInfraMarkdownGateBase.read_ignore_patterns(
             project_dir,
             c.Infra.MARKDOWNLINT_IGNORE_FILENAME,
         )
@@ -189,13 +187,16 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         """
         markdown_files = self._ignore_filtered(
             project_dir,
-            markdown.collect_markdown_files(project_dir),
+            FlextInfraMarkdownGateBase.collect_markdown_files(project_dir),
         )
         return {
             name: (text, origin)
             for name, text, origin in (
-                *sources.fenced_block_sources(project_dir, markdown_files),
-                *sources.docstring_sources(project_dir),
+                *FlextInfraMarkdownCodeSources.fenced_block_sources(
+                    project_dir,
+                    markdown_files,
+                ),
+                *FlextInfraMarkdownCodeSources.docstring_sources(project_dir),
             )
         }
 
@@ -290,7 +291,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         rewritten: t.MutableSequenceOf[Path] = []
         for md_path in self._ignore_filtered(
             project_dir,
-            markdown.collect_markdown_files(project_dir),
+            FlextInfraMarkdownGateBase.collect_markdown_files(project_dir),
         ):
             content = md_path.read_text(c.Cli.ENCODING_DEFAULT)
             relative_posix = md_path.relative_to(project_dir).as_posix()
@@ -302,7 +303,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                 if c.Infra.MARKDOWN_CODE_SKIP_MARKER not in match.group("info")
             ):
                 code = match.group("code")
-                if sources.syntax_broken(code, md_path):
+                if FlextInfraMarkdownCodeSources.syntax_broken(code, md_path):
                     continue
                 staged.append((index, code))
             if not staged:
@@ -310,12 +311,15 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             blocks: t.MutableSequenceOf[str] = []
             round_trips = True
             for index, _original in staged:
-                source = sources_dir / sources.source_name(relative_posix, index)
+                source = sources_dir / FlextInfraMarkdownCodeSources.source_name(
+                    relative_posix,
+                    index,
+                )
                 if not source.is_file():
                     round_trips = False
                     break
                 formatted = source.read_text(c.Cli.ENCODING_DEFAULT)
-                if sources.syntax_broken(formatted, md_path):
+                if FlextInfraMarkdownCodeSources.syntax_broken(formatted, md_path):
                     round_trips = False
                     break
                 blocks.append(formatted)
@@ -337,7 +341,10 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                 """
                 keep = c.Infra.MARKDOWN_CODE_SKIP_MARKER in match.group(
                     "info",
-                ) or sources.syntax_broken(match.group("code"), origin_path)
+                ) or FlextInfraMarkdownCodeSources.syntax_broken(
+                    match.group("code"),
+                    origin_path,
+                )
                 if keep:
                     return match.group(0)
                 return match.group(0).replace(match.group("code"), next(replacements))

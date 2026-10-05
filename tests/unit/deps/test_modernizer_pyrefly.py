@@ -19,7 +19,7 @@ from flext_infra import (
     config,
 )
 from tests import m, t, u
-from tests.unit.deps.extra_paths_support import ExtraPathsTestSupport
+from tests.unit.deps.extra_paths_support import TestsFlextInfraExtraPathsSupport
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -352,7 +352,7 @@ class TestsFlextInfraModernizerPyrefly:
         rules = config.Infra.tooling.tools.pyrefly.path_rules
         (tmp_path / "tests").mkdir()
         (tmp_path / "tests" / "__init__.py").write_text("", encoding="utf-8")
-        _ = ExtraPathsTestSupport.workspace_with_dependency(tmp_path)
+        _ = TestsFlextInfraExtraPathsSupport.workspace_with_dependency(tmp_path)
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python({})
 
         _ = FlextInfraEnsurePyreflyConfigPhase(config.Infra.tooling).apply_payload(

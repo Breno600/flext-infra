@@ -11,12 +11,12 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, main as infra_main, u
+from flext_infra import c, main, u
 from flext_infra.codemod import FlextInfraModGateEngine
 
 
 @pytest.mark.slow
-class TestsJointModFixedPoint:
+class TestsFlextInfraJointModFixedPoint:
     """Exercise real configured rules through the public refactor CLI."""
 
     @staticmethod
@@ -27,7 +27,7 @@ class TestsJointModFixedPoint:
             The resulting ``int``.
 
         """
-        return infra_main([
+        return main([
             "refactor",
             "mod",
             "--repository-root",

@@ -426,6 +426,15 @@ class FlextInfraPytestRunnerExecution(
                 == accounting.inventory_count
             )
         )
+        markdown_complete = (
+            True
+            if context.execution_mode == c.Infra.PytestExecutionMode.COVERAGE
+            else self._reconcile_markdown(
+                report_dir,
+                diagnostics,
+                cache_hit=cache_hit,
+            )
+        )
         rejected = any((
             diagnostics.failed_count,
             diagnostics.error_count,
@@ -434,6 +443,7 @@ class FlextInfraPytestRunnerExecution(
             diagnostics.collection_failed_count,
             diagnostics.collection_skipped_count,
             not accounting_complete,
+            not markdown_complete,
         ))
         accepted_cache_hit = cache_hit and not rejected
         # The zero-test receipt exits green: the suite owns nothing to execute
@@ -642,8 +652,11 @@ class FlextInfraPytestRunnerExecution(
             execution_mode=execution_mode,
         )
         outcome = self._run_suite(command, report_dir, execution_mode=execution_mode)
+        # A declared file always executes under noselect, so an empty testmon
+        # selection over a restored cache is never a cache hit for it.
         cache_hit = (
-            not complete
+            self.target_file is None
+            and not complete
             and outcome.raw_return_code
             in {pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED}
             and not outcome.timed_out

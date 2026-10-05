@@ -66,9 +66,8 @@ class TestsFlextInfraLazyInitHelpers:
         init_content = self._generated_init(package_root)
         exports_content = self._generated_init(package_root)
 
-        tm.that(init_content, has="build_lazy_import_map, install_lazy_exports")
-        # _LAZY_IMPORTS is the canonical metadata binding flext_core reads.
-        tm.that(init_content, has="_LAZY_IMPORTS = MappingProxyType(")
+        tm.that(init_content, has="import install_lazy_exports")
+        tm.that(init_content, has='"m": ".models"')
         tm.that(exports_content, has='"FlextDemoModels"')
         tm.that(exports_content, has='"m"')
 
@@ -107,7 +106,8 @@ class TestsFlextInfraLazyInitHelpers:
         """Keep private sibling modules outside the public package contract."""
         repository_root, package_root = self._workspace(tmp_path)
         (package_root / "_internal.py").write_text(
-            "from __future__ import annotations\n\nclass FlextDemoInternal:\n    pass\n",
+            "from __future__ import annotations\n\n"
+            "class FlextDemoInternal:\n    pass\n",
             encoding=c.Cli.ENCODING_DEFAULT,
         )
 
@@ -328,11 +328,13 @@ class TestsFlextInfraLazyInitHelpers:
             encoding=c.Cli.ENCODING_DEFAULT,
         )
         (child_dir / "colors.py").write_text(
-            'from __future__ import annotations\n\nBLUE = "blue"\n\n__all__: list[str] = ["BLUE"]\n',
+            'from __future__ import annotations\n\nBLUE = "blue"\n\n'
+            '__all__: list[str] = ["BLUE"]\n',
             encoding=c.Cli.ENCODING_DEFAULT,
         )
         (child_dir / "cli.py").write_text(
-            'from __future__ import annotations\n\ndef main() -> str:\n    return "ok"\n',
+            "from __future__ import annotations\n\n"
+            'def main() -> str:\n    return "ok"\n',
             encoding=c.Cli.ENCODING_DEFAULT,
         )
         u.Tests.write_lazy_init_namespace_module(
@@ -404,7 +406,7 @@ class TestsFlextInfraLazyInitHelpers:
         )
         # Lazy inits cover EVERY python surface (src, tests, examples,
         # scripts): the tests root is a generated PEP 562 facade too.
-        tm.that(init_content, has="_LAZY_IMPORTS = MappingProxyType(")
+        tm.that(init_content, has="install_lazy_exports(")
         tm.that(init_content, has='"TestsFlextDemoConstants"')
         tm.that(tests_root.joinpath("__unit__.py").exists(), eq=False)
         compile(init_content, "tests/__init__.py", "exec")
@@ -484,7 +486,8 @@ class TestsFlextInfraLazyInitHelpers:
         exports_content = self._generated_init(package_root)
 
         tm.that(init_content, lacks="_LAZY_MODULES")
-        tm.that(exports_content, has='"flext_cli": (')
+        entries, _refs = u.Infra.lazy_import_mapping_source(exports_content)
+        tm.that(dict(entries).get("flext_cli", ()), has="r")
         tm.that(init_content, has="__all__: tuple[str, ...]")
         tm.that(init_content, has="install_lazy_exports(")
         tm.that(init_content, lacks="__unit__")
@@ -511,8 +514,8 @@ class TestsFlextInfraLazyInitHelpers:
             has="    from flext_cli import c, d, e, h, m, p, r, s, t, u, x",
         )
         tm.that(init_content, lacks="FlextMeltanoConstants as c")
-        tm.that(exports_content, has='"flext_cli": (')
-        tm.that(exports_content, has='".constants": (')
+        tm.that(dict(entries).get("flext_cli", ()), has="c")
+        tm.that(dict(entries).get(".constants", ()), has="FlextMeltanoConstants")
 
     def test_existing_root_composes_public_parent_aliases(self, tmp_path: Path) -> None:
         """Test existing root composes public parent aliases."""
@@ -534,7 +537,8 @@ class TestsFlextInfraLazyInitHelpers:
         tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
         generated = self._generated_init(package_root)
         exports = self._generated_init(package_root)
-        tm.that(exports, has='"flext_cli": (')
+        entries, _refs = u.Infra.lazy_import_mapping_source(exports)
+        tm.that(dict(entries).get("flext_cli", ()), has="r")
         tm.that(generated, has='    "r",')
         tm.that(generated, has='    "c",')
 
@@ -642,10 +646,7 @@ class TestsFlextInfraLazyInitHelpers:
 
             tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
             generated = self._generated_init(package_root)
-            entries, _refs = u.Infra.module_mapping_assignment_source(
-                generated,
-                u.Infra.lazy_imports_name_source(generated),
-            )
+            entries, _refs = u.Infra.lazy_import_mapping_source(generated)
             sources = dict(entries)
 
             tm.that(sources.get("nearest_parent", ()), has="r")
@@ -718,8 +719,9 @@ class TestsFlextInfraLazyInitHelpers:
 
         tm.that(generated, has='"FlextDemoGitService"')
         tm.that(generated, has='"FlextDemoWorkService"')
-        tm.that(exports, has='".git": ("FlextDemoGitService",)')
-        tm.that(exports, has='".work": ("FlextDemoWorkService",)')
+        entries, _refs = u.Infra.lazy_import_mapping_source(exports)
+        tm.that(dict(entries).get(".git", ()), has="FlextDemoGitService")
+        tm.that(dict(entries).get(".work", ()), has="FlextDemoWorkService")
 
     def test_nested_tests_namespace_uses_public_test_facades(
         self,

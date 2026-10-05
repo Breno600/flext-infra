@@ -182,12 +182,14 @@ class FlextInfraCodemodSemanticApply:
                 ),
             )
 
-        return cls._publish(
-            root,
-            original,
-            working,
-            changed,
-            validator=validate_published,
+        return cls._check_definition_time(original, working, changed).flat_map(
+            lambda _: cls._publish(
+                root,
+                original,
+                working,
+                changed,
+                validator=validate_published,
+            ),
         )
 
     @classmethod
@@ -294,6 +296,38 @@ class FlextInfraCodemodSemanticApply:
             files = ", ".join(edit.file_path.as_posix() for edit in planned.value)
             return r[bool].fail(
                 f"{phase} phase left residue after application: {files}",
+            )
+        return r[bool].ok(value=True)
+
+    @staticmethod
+    def _check_definition_time(
+        original: t.MappingKV[Path, str],
+        working: t.MappingKV[Path, str],
+        changed: set[Path],
+    ) -> p.Result[bool]:
+        """Reject a plan whose class suites would raise NameError at import.
+
+        A rewrite that names a class inside its own suite, or reads an
+        enclosing class member from a nested suite, still parses and passes
+        every replan, so the fixed point alone cannot see it. Only errors the
+        original source did not already carry are attributed to the plan.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        broken: list[str] = []
+        for path in sorted(changed):
+            before = frozenset(u.Infra.definition_time_name_errors(original[path]))
+            broken.extend(
+                f"{path}: {error}"
+                for error in u.Infra.definition_time_name_errors(working[path])
+                if error not in before
+            )
+        if broken:
+            return r[bool].fail(
+                "semantic plan introduces definition-time NameError(s); nothing "
+                f"published for mandatory owner repair: {'; '.join(broken)}",
             )
         return r[bool].ok(value=True)
 

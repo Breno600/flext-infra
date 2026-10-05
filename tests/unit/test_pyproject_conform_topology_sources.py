@@ -15,8 +15,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import c, config, m, u
-from tests import TestsFlextInfraUtilities as tu, u as test_u
+from flext_infra import c, config, m
+from tests import u
 
 
 class TestsFlextInfraPyprojectConformTopologySources:
@@ -31,7 +31,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
             The resulting ``m.Infra.RepositoryRef``.
 
         """
-        return test_u.Tests.repository_ref(
+        return u.Tests.repository_ref(
             distribution,
             role=self._ROLE.STANDALONE,
             path=Path(path),
@@ -45,8 +45,8 @@ class TestsFlextInfraPyprojectConformTopologySources:
             The resulting ``m.Infra.WorkspaceSpec``.
 
         """
-        return test_u.Tests.workspace_spec(
-            test_u.Tests.repository_ref("workspace"),
+        return u.Tests.workspace_spec(
+            u.Tests.repository_ref("workspace"),
             subprojects=tuple(members),
         )
 
@@ -58,7 +58,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
             The resulting ``str``.
 
         """
-        return f"{ref.distribution} @ git+{ref.url}@{test_u.Tests.provider_branch()}"
+        return f"{ref.distribution} @ git+{ref.url}@{u.Tests.provider_branch()}"
 
     @staticmethod
     def _toolchain_resolution() -> m.Infra.UvResolutionSpec:
@@ -90,12 +90,12 @@ class TestsFlextInfraPyprojectConformTopologySources:
         workspace = self._workspace(flext_member, other_member).model_copy(
             update={
                 "integration": m.Infra.WorkspaceIntegrationSpec(
-                    provider=test_u.Tests.integration().provider,
+                    provider=u.Tests.integration().provider,
                     branch=workspace_line,
                 ),
             },
         )
-        infra = test_u.Tests.repository_ref("flext-infra")
+        infra = u.Tests.repository_ref("flext-infra")
         infra_requirement = self._inline_requirement(infra)
         source = (
             '[project]\nname = "workspace"\nversion = "0.1.0"\n'
@@ -108,7 +108,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 workspace=workspace,
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
-                family_line=test_u.Tests.provider_branch(),
+                family_line=u.Tests.provider_branch(),
             ),
         )
         expected = {
@@ -116,10 +116,10 @@ class TestsFlextInfraPyprojectConformTopologySources:
             for ref in (flext_member, other_member)
         } | {infra_requirement}
         tm.that(
-            set(tu.Tests.toml_strings_at(rendered, "project", "dependencies")),
+            set(u.Tests.toml_strings_at(rendered, "project", "dependencies")),
             eq=expected,
         )
-        workspace_group = tu.Tests.toml_strings_at(
+        workspace_group = u.Tests.toml_strings_at(
             rendered,
             "dependency-groups",
             "workspace",
@@ -137,7 +137,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 workspace=workspace,
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
-                family_line=test_u.Tests.provider_branch(),
+                family_line=u.Tests.provider_branch(),
             ),
         )
         tm.that(second, eq=rendered)
@@ -168,11 +168,11 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 workspace=workspace,
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
-                family_line=test_u.Tests.provider_branch(),
+                family_line=u.Tests.provider_branch(),
             ),
         )
         dependencies = set(
-            tu.Tests.toml_strings_at(rendered, "project", "dependencies"),
+            u.Tests.toml_strings_at(rendered, "project", "dependencies"),
         )
         tm.that(
             dependencies,
@@ -185,7 +185,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
             },
         )
         tm.that(
-            tu.Tests.toml_strings_at(rendered, "tool", "uv", "override-dependencies"),
+            u.Tests.toml_strings_at(rendered, "tool", "uv", "override-dependencies"),
             eq=(f"{cli.distribution} @ git+{cli.url}@{candidate_commit}",),
         )
         tm.that(
@@ -195,7 +195,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                     workspace=workspace,
                     required_dev_dependencies=(),
                     uv_resolution=self._toolchain_resolution(),
-                    family_line=test_u.Tests.provider_branch(),
+                    family_line=u.Tests.provider_branch(),
                 ),
             ),
             eq=rendered,
@@ -225,7 +225,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
             workspace=workspace,
             required_dev_dependencies=(),
             uv_resolution=self._toolchain_resolution(),
-            family_line=test_u.Tests.provider_branch(),
+            family_line=u.Tests.provider_branch(),
         )
         tm.that(result.failure, eq=True)
         tm.that(result.error or "", contains="candidate dependency Git URL differs")
@@ -252,7 +252,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
             workspace=workspace,
             required_dev_dependencies=(),
             uv_resolution=self._toolchain_resolution(),
-            family_line=test_u.Tests.provider_branch(),
+            family_line=u.Tests.provider_branch(),
         )
         tm.that(result.failure, eq=True)
         tm.that(result.error or "", contains="no declared Git provenance")
@@ -276,7 +276,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
             workspace=workspace,
             required_dev_dependencies=(),
             uv_resolution=self._toolchain_resolution(),
-            family_line=test_u.Tests.provider_branch(),
+            family_line=u.Tests.provider_branch(),
         )
         tm.that(result.failure, eq=True)
         tm.that(result.error or "", contains="not declared requirements: flext-cli")
@@ -297,22 +297,22 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 workspace=self._workspace(infra),
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
-                family_line=test_u.Tests.provider_branch(),
+                family_line=u.Tests.provider_branch(),
             ),
         )
-        parsed = tu.Tests.toml_mapping(u.Cli.toml_parse_text(rendered))
-        tool = tu.Tests.toml_mapping(parsed.get("tool"))
-        uv = tu.Tests.toml_mapping(tool.get("uv"))
+        parsed = u.Tests.toml_mapping(u.Cli.toml_parse_text(rendered))
+        tool = u.Tests.toml_mapping(parsed.get("tool"))
+        uv = u.Tests.toml_mapping(tool.get("uv"))
         tm.that("override-dependencies" not in uv, eq=True)
 
     def _assert_direct_source(self, rendered: str, ref: m.Infra.RepositoryRef) -> None:
         """Assert the canonical standalone output: one direct Git requirement."""
-        dependencies = tu.Tests.toml_strings_at(rendered, "project", "dependencies")
+        dependencies = u.Tests.toml_strings_at(rendered, "project", "dependencies")
         tm.that(dependencies, eq=(self._inline_requirement(ref),))
-        parsed = tu.Tests.toml_mapping(u.Cli.toml_parse_text(rendered))
+        parsed = u.Tests.toml_mapping(u.Cli.toml_parse_text(rendered))
         tool = parsed.get("tool")
         uv_sources = (
-            tu.Tests.toml_mapping(tu.Tests.toml_mapping(tool).get("uv")).get("sources")
+            u.Tests.toml_mapping(u.Tests.toml_mapping(tool).get("uv")).get("sources")
             if tool
             else None
         )
@@ -387,7 +387,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
             ),
         )
 
-        dependencies = tu.Tests.toml_strings_at(rendered, "project", "dependencies")
+        dependencies = u.Tests.toml_strings_at(rendered, "project", "dependencies")
         tm.that(
             dependencies,
             eq=(
@@ -421,11 +421,11 @@ class TestsFlextInfraPyprojectConformTopologySources:
             ),
         )
 
-        group = tu.Tests.toml_strings_at(rendered, "dependency-groups", "dev")
-        parsed = tu.Tests.toml_mapping(u.Cli.toml_parse_text(rendered))
+        group = u.Tests.toml_strings_at(rendered, "dependency-groups", "dev")
+        parsed = u.Tests.toml_mapping(u.Cli.toml_parse_text(rendered))
         tool = parsed.get("tool")
         uv_sources = (
-            tu.Tests.toml_mapping(tu.Tests.toml_mapping(tool).get("uv")).get("sources")
+            u.Tests.toml_mapping(u.Tests.toml_mapping(tool).get("uv")).get("sources")
             if tool
             else None
         )
@@ -437,10 +437,10 @@ class TestsFlextInfraPyprojectConformTopologySources:
         """A member dependency cannot point at a URL its manifest does not own."""
         workspace = self._workspace(self._member_ref("flext-core", "flext-core"))
         core = workspace.subprojects[0]
-        host = test_u.Tests.provider().base_url.rstrip("/").rpartition("/")[0]
+        host = u.Tests.provider().base_url.rstrip("/").rpartition("/")[0]
         foreign = (
             f"{core.distribution} @ git+{host}/foreign-owner/{core.distribution}.git@"
-            f"{test_u.Tests.provider_branch()}"
+            f"{u.Tests.provider_branch()}"
         )
 
         result = u.Infra.pyproject_conform(
