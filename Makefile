@@ -347,6 +347,7 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 		esac; \
 	done; \
 	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
+	printf 'INSTRUMENT assign=[%s]\n' "$$scratch" >&2; \
 	readonly scratch; \
 	lock_stage=; \
 	trap 'bootstrap_status=$$?; trap - EXIT; \
@@ -606,6 +607,7 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 		esac; \
 	done; \
 	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
+	printf 'INSTRUMENT assign=[%s]\n' "$$scratch" >&2; \
 	readonly scratch; \
 	lock_stage=; \
 	trap 'bootstrap_status=$$?; trap - EXIT; \
@@ -761,6 +763,7 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 		fi; \
 	}; \
 	mise_receipt() { \
+		printf 'INSTRUMENT receipt-scratch=[%s]\n' "$$scratch" >&2; \
 		mise_receipt_log="$$scratch/$$1"; shift; \
 		mise_checked_stdout "$$mise_receipt_log.stdout" "$$mise_receipt_log.stderr" mise_offline no-config "$$1" --version; \
 		receipt_output=$$(cat "$$mise_receipt_log.stdout"); \
