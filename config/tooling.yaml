@@ -373,6 +373,16 @@ Infra:
                 runtime-import-in-type-checking-block,
               ]
               authority: operator-direct-order-2026-10-05-tc001-tc004-off-pydantic
+              reason: >-
+                Operator direct order 2026-10-05: TC001-TC004 stay off in
+                Ruff because their autofix moves runtime-required annotation
+                imports into TYPE_CHECKING, leaving runtime-evaluated
+                pydantic model bases "not fully defined" (the
+                OptionSpec/RuntimeCommandCase PydanticUserError wave). The
+                four names stay declared in this SSOT and are never removed
+                nor re-enforced; canonical tracker authority: bead
+                flext-p7bxt and the operator session transcript. Supersedes
+                #1675 and the 2026-10-01/03 scoped TC rulings.
             - rules: [missing-required-import, implicit-namespace-package]
               authority: operator-ruling-2026-10-03-import-banners-off-global
               reason: >-
