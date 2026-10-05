@@ -245,7 +245,9 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
                 default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
                 description="Repository-owned documentation audit declarations",
             ),
-        ]
+        ] = m.Field(
+            default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+        )
         namespace_scan_dirs: Annotated[
             t.StrSequence,
             m.Field(
@@ -270,7 +272,11 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
         @m.computed_field
         @property
         def repository_env_prefix(self) -> str:
-            """Settings environment prefix derived from the distribution name."""
+            """Settings environment prefix derived from the distribution name.
+
+            Returns:
+                The resulting ``str``.
+            """
             return f"{self.dist.upper().replace('-', '_')}_"
 
         @property
@@ -305,13 +311,21 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
         @m.computed_field
         @property
         def config_base_class(self) -> str:
-            """Config base class composed by the generated ``_config.py``."""
+            """Config base class composed by the generated ``_config.py``.
+
+            Returns:
+                The resulting ``str``.
+            """
             return self._config_base.class_name
 
         @m.computed_field
         @property
         def config_base_module(self) -> str:
-            """Import module exposing ``config_base_class``."""
+            """Import module exposing ``config_base_class``.
+
+            Returns:
+                The resulting ``str``.
+            """
             return self._config_base.module
 
         scaffold: Annotated[
@@ -540,7 +554,7 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
                 default=(),
                 description="Directories holding rule fixtures and snapshots",
             ),
-        ]
+        ] = ()
 
     class ProfileSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Execution semantics for one generated Make profile."""

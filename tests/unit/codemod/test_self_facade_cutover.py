@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class TestsSelfFacadeCutover:
+class TestsFlextInfraSelfFacadeCutover:
     """Keep method behavior, docstrings, and local shadowing after migration."""
 
     def test_resolved_body_import_preserves_real_consumer(self, tmp_path: Path) -> None:

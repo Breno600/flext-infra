@@ -144,10 +144,14 @@ class FlextInfraModReplacements:
         )
         if published.failure:
             return r[bool].from_failure(published)
-        # A node-exact replacement (an emptied statement fix) leaves the
-        # surrounding blank-line skeleton of the source line behind, so the
-        # published bytes must be normalized before the mod circuit's own
-        # first-pass format check reads them.
+        # AST rewrites can also leave imports whose last reference was removed.
+        with u.Infra.open_project(root) as rope_project:
+            normalized = u.Infra.normalize_imports(
+                rope_project,
+                file_paths=tuple(sorted(grouped)),
+            )
+        if normalized.failure:
+            return r[bool].from_failure(normalized)
         formatted = FlextInfraRuffFormatGate.format_files(root, tuple(sorted(grouped)))
         if formatted.failure:
             return r[bool].from_failure(formatted)

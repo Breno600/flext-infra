@@ -130,7 +130,10 @@ class TestsFlextInfraDepsDetectionModels:
     @staticmethod
     def test_bool_value() -> None:
         """Verify bool value."""
-        tm.that(FlextInfraDependencyDetectionService.to_infra_value(True), eq=True)
+        tm.that(
+            FlextInfraDependencyDetectionService.to_infra_value(value=True),
+            eq=True,
+        )
 
     @staticmethod
     def test_list_of_valid_values() -> None:
