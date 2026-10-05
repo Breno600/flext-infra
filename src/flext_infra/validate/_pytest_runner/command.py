@@ -315,7 +315,6 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             return (
                 *self.collection_command_prefix,
                 str(manifest_path.with_suffix(".pstats")),
-                str(manifest_path.parent / "run-context.json"),
                 *pytest_arguments,
             )
         return (sys.executable, "-m", "pytest", *pytest_arguments)
@@ -457,16 +456,14 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         )
         return (
             sys.executable,
-            "-m",
-            "flext_infra._pytest_entry" if self.profile_enabled else "pytest",
             *(
                 (
-                    "profile-collection",
+                    "-c",
+                    c.Infra.PYTEST_PROFILE_LAUNCHER,
                     str(report_dir / pytest.profile_suite_filename),
-                    str(report_dir / "run-context.json"),
                 )
                 if self.profile_enabled
-                else ()
+                else ("-m", "pytest")
             ),
             *targets,
             *pytest.progress_args,
