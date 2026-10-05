@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Annotated, Literal, Self
 
-from flext_core import m, t, u
+from flext_core import m, t
 
 
 class FlextInfraModelsMiseToolchain:
@@ -80,7 +80,7 @@ class FlextInfraModelsMiseToolchain:
             ),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_required_custom_types(self) -> Self:
             """Reject ambiguous duplicate type declarations at the owner.
 
@@ -380,7 +380,7 @@ class FlextInfraModelsMiseToolchain:
                 if entry.version_prefix is not None
             }
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_version_selectors(self) -> Self:
             """Reject build-identity selectors mise/aube cannot resolve.
 
@@ -678,7 +678,7 @@ class FlextInfraModelsMiseToolchain:
                     msg = f"relative path must not be absolute or escape: {path}"
                     raise ValueError(msg)
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_environment_contract(self) -> Self:
             """Reject shell-unsafe, ambiguous, or escaping generated values.
 

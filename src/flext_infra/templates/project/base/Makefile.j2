@@ -1059,6 +1059,7 @@ _builtin-{{ verb }}:
 _builtin-duplication:
 	@{{ check_run("duplication") }}
 _builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all
+_builtin-sonarcloud-issues: _builtin_sonarcloud_issues_all
 {% if script_dispatch %}
 # Repository-owned script verbs route through the promoted command framework:
 # custom.mk handlers override via RUN_PUBLIC; otherwise the dispatcher resolves

@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, ClassVar, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import t
 
@@ -83,7 +83,7 @@ class FlextInfraModelsCodegenToolchain:
             m.Field(description="Destination-local staging for this transaction"),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_capability(self) -> Self:
             if (
                 not self.root.is_absolute()
@@ -132,7 +132,7 @@ class FlextInfraModelsCodegenToolchain:
             m.Field(description="Explicit non-Mise publication capabilities"),
         ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_participants(self) -> Self:
             participants = (*self.projects, *self.file_participants)
             if not participants:
@@ -194,7 +194,7 @@ class FlextInfraModelsCodegenToolchain:
             m.Field(description="Named launcher states"),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_destination_paths(self) -> Self:
             """Bind every captured state to its declared live destination.
 
@@ -282,7 +282,7 @@ class FlextInfraModelsCodegenToolchain:
                 *self.runtime_artifacts.states,
             )
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_project_layouts(self) -> Self:
             """Bind every mutable project snapshot to the exact stable layout.
 
