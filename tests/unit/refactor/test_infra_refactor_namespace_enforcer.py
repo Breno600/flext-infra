@@ -6,11 +6,13 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 
 import pytest
 from flext_tests import tm
 
+from flext_infra import c, m
 from flext_infra.refactor.namespace_enforcer import FlextInfraNamespaceEnforcer
 from tests import u
 
@@ -155,6 +157,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             "#!/usr/bin/env python3\n# -*- coding: utf-8 -*-\nu.Cli.print('ok')\n",
             encoding="utf-8",
         )
+        u.Tests.provision_checkout(workspace)
 
         _ = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(apply=True)
 
@@ -181,6 +184,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             "    temp_dir: Path\n",
             encoding="utf-8",
         )
+        u.Tests.provision_checkout(workspace)
 
         _ = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(apply=True)
 
@@ -266,3 +270,51 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         lines = service_file.read_text(encoding="utf-8").splitlines()
         tm.that(lines, has="import os")
         tm.that(lines, lacks="        import os")
+
+    @staticmethod
+    def test_namespace_enforcer_apply_is_idempotent_on_the_second_pass(
+        tmp_path: Path,
+    ) -> None:
+        """A second apply over the enforced tree relocates nothing new."""
+        workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path)
+        service_file = pkg / "service.py"
+        _ = service_file.write_text(
+            "from __future__ import annotations\n"
+            "from typing import Protocol\n\n"
+            "class ServiceContract(Protocol):\n"
+            "    def run(self) -> str:\n"
+            "        ...\n",
+            encoding="utf-8",
+        )
+        u.Tests.provision_checkout(workspace)
+        enforcer = FlextInfraNamespaceEnforcer(repository_root=workspace)
+
+        _first = enforcer.enforce(apply=True)
+        enforced_sources = {
+            path: path.read_text(encoding="utf-8") for path in sorted(pkg.rglob("*.py"))
+        }
+
+        second = enforcer.enforce(apply=True)
+
+        tm.that(second.projects[0].relocation_findings, eq=0)
+        for path, source in enforced_sources.items():
+            tm.that(path.read_text(encoding="utf-8"), eq=source)
+
+    @staticmethod
+    def test_namespace_enforcer_publishes_the_report_receipt(
+        tmp_path: Path,
+    ) -> None:
+        """The command payload publishes the structured receipt under ``.reports``."""
+        workspace, _project, _pkg = u.Tests.namespace_workspace(tmp_path)
+        u.Tests.provision_checkout(workspace)
+
+        result = FlextInfraNamespaceEnforcer.execute_command(
+            m.Infra.RefactorNamespaceEnforceInput(repository_root=workspace),
+        )
+
+        tm.that(result.failure, eq=False)
+        receipt = (workspace / c.Infra.NAMESPACE_ENFORCE_REPORT_RELATIVE_PATH).resolve()
+        tm.that(receipt.exists(), eq=True)
+        published = json.loads(receipt.read_text(encoding="utf-8"))
+        tm.that(published["workspace"], eq=str(workspace))
+        tm.that(published["projects"], empty=False)

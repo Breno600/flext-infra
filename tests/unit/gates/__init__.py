@@ -8,14 +8,23 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from types import MappingProxyType
+from typing import TYPE_CHECKING
 
 from flext_core import install_lazy_exports
 
-__all__: tuple[str, ...] = ()
+if TYPE_CHECKING:
+    from tests.unit.gates.test_lint_informative_rules import (
+        TestsFlextInfraLintInformativeRules,
+    )
+
+
+__all__: tuple[str, ...] = ("TestsFlextInfraLintInformativeRules",)
 
 install_lazy_exports(
     __name__,
     globals(),
-    MappingProxyType({}),
+    MappingProxyType({
+        "TestsFlextInfraLintInformativeRules": ".test_lint_informative_rules",
+    }),
     public_exports=__all__,
 )

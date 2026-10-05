@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Annotated, Self
 
 from flext_cli import m
@@ -34,6 +35,13 @@ class FlextInfraModelsTestmon:
             str,
             m.Field(min_length=1, description="Decisive cache-state reason."),
         ]
+
+    class TestmonCachePublication(m.Value):
+        """Fresh checkpoint receipt from one completed runner invocation."""
+
+        database: Annotated[Path, m.Field(description="Integrity-checked project database")]
+        digest: Annotated[str, m.Field(pattern=r"^[a-f0-9]{64}$", description="Checkpoint digest")]
+        saveable: Annotated[bool, m.Field(description="Completed run may publish this generation")]
 
     class TestmonRunAccounting(m.Value):
         """Typed proof for an executed suite or an integrity-checked cache hit."""

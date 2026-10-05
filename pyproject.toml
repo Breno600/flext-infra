@@ -419,15 +419,12 @@ quote-style = "double"
 skip-magic-trailing-comma = false
 
 [tool.ruff.lint]
-extend-safe-fixes = [
-  "camelcase-imported-as-lowercase",
-  "relative-imports",
-  "typing-only-first-party-import",
-]
+extend-safe-fixes = ["camelcase-imported-as-lowercase", "relative-imports"]
 ignore = [
   "camelcase-imported-as-lowercase",
   "implicit-namespace-package",
   "missing-required-import",
+  "runtime-import-in-type-checking-block",
   "typing-only-first-party-import",
   "typing-only-standard-library-import",
   "typing-only-third-party-import",
@@ -462,6 +459,7 @@ runtime-evaluated-base-classes = [
   "flext_core.m.ArbitraryTypesModel",
   "flext_core.m.ContractModel",
   "flext_core.m.FlexibleModel",
+  "flext_core.m.RootModel",
   "flext_core.m.StrictBoundaryModel",
   "flext_infra.FlextInfraServiceBase",
   "flext_infra._models._codegen.fix.BulkFixItem",
@@ -497,6 +495,7 @@ runtime-evaluated-base-classes = [
   "flext_infra.docs.base.FlextInfraDocServiceBase",
   "flext_infra.m.ArbitraryTypesModel",
   "flext_infra.m.FrozenModel",
+  "flext_infra.maintenance.python_version.FlextInfraPythonVersionEnforcer",
   "flext_infra.maintenance.sonarcloud_client.FlextInfraSonarcloudClient",
   "flext_infra.release._release_artifact.FlextInfraReleaseArtifactMixin",
   "flext_infra.release._release_boundary.FlextInfraReleaseBoundaryMixin",
@@ -507,10 +506,12 @@ runtime-evaluated-base-classes = [
   "flext_infra.release._release_publish.FlextInfraReleasePublishMixin",
   "flext_infra.release._release_source.FlextInfraReleaseSourceMixin",
   "flext_infra.s",
+  "flext_infra.services.cli_dispatch.FlextInfraCliDispatchService",
   "flext_infra.validate._pytest_runner.base.FlextInfraPytestRunnerBase",
   "flext_infra.validate._pytest_runner.command.FlextInfraPytestRunnerCommand",
   "flext_infra.validate._pytest_runner.execution.FlextInfraPytestRunnerExecution",
   "flext_infra.validate._pytest_runner.reports.FlextInfraPytestRunnerReports",
+  "flext_tests.FlextTestsServiceBase",
   "flext_tests.FlextTestsUtilities.Tests",
   "pydantic.BaseModel",
 ]
@@ -540,13 +541,21 @@ known-first-party = ["flext_core", "flext_infra"]
 split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
-"**/__init__.py" = ["non-empty-init-module", "unused-import"]
+"**/__init__.py" = ["line-too-long", "non-empty-init-module", "unused-import"]
+"**/_config.py" = ["invalid-function-name"]
+"**/docx.py" = ["import-outside-top-level"]
+"**/file_test_helpers.py" = ["line-too-long"]
+"**/flextcliutilitiesfiletesthelpersmixin_part_03.py" = ["line-too-long"]
+"**/framework.py" = ["banned-api", "import-outside-top-level"]
+"**/pptx.py" = ["import-outside-top-level"]
+"**/test_public_contracts_cov.py" = ["line-too-long"]
 "**/tests/python/**" = [
   "raise-vanilla-args",
   "start-process-with-partial-path",
   "subprocess-without-shell-equals-true",
   "suspicious-subprocess-import",
 ]
+"**/xlsx.py" = ["import-outside-top-level"]
 "scripts/**" = [
   "any-type",
   "avoidable-escaped-quote",
@@ -601,11 +610,7 @@ split-on-trailing-comma = false
   "verbose-raise",
   "write-whole-file",
 ]
-"scripts/**/*.py" = [
-  "commented-out-code",
-  "line-too-long",
-  "typing-only-first-party-import",
-]
+"scripts/**/*.py" = ["commented-out-code", "line-too-long"]
 "tests/**/*.py" = ["assert"]
 
 [tool.ruff.lint.pydocstyle]

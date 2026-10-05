@@ -312,21 +312,36 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         if not isinstance(report, list):
             msg = f"Ruff JSON report is not a list: {type(report).__name__}"
             raise TypeError(msg)
+        advisory = frozenset(config.Infra.tooling.tools.ruff.informative_rules)
         issues: t.MutableSequenceOf[m.Infra.Issue] = []
         for entry in report:
             if not isinstance(entry, Mapping):
                 msg = f"Ruff JSON finding is not an object: {type(entry).__name__}"
                 raise TypeError(msg)
+            code = u.Cli.json_pick_str(entry, "name")
             issues.append(
                 m.Infra.Issue(
                     file=u.Cli.json_pick_str(entry, "filename", "?"),
                     line=u.Cli.json_nested_int(entry, "location", "row"),
                     column=u.Cli.json_nested_int(entry, "location", "column"),
-                    code=u.Cli.json_pick_str(entry, "name"),
+                    code=code,
                     message=u.Cli.json_pick_str(entry, "message"),
+                    severity=u.Infra.ruff_finding_severity(code, advisory),
                 ),
             )
-        return self._finalize_parse_result(result, project_dir, issues, c.Infra.RUFF)
+        passed, parsed = self._finalize_parse_result(
+            result,
+            project_dir,
+            issues,
+            c.Infra.RUFF,
+        )
+        # A declared findings status reports violations, not a tool failure:
+        # the verdict below is issue-driven, so the parse must not treat the
+        # findings exit code as a crash (errors still exit with another code).
+        return (
+            passed or result.outcome.raw_return_code in self._findings_exit_codes(),
+            parsed,
+        )
 
     @staticmethod
     @override

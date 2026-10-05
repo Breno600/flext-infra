@@ -12,6 +12,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import main, u
+from tests import u as test_u
 
 
 @pytest.mark.slow
@@ -25,7 +26,7 @@ class TestsFlextInfraModRuleExpectedReceipt:
     @staticmethod
     def _declare(workspace: Path, *, expected: str) -> None:
         """Point the workspace at one local rule carrying the receipt clause."""
-        u.Tests.declare_codemod_rules(
+        test_u.Tests.declare_codemod_rules(
             workspace,
             {
                 "receipt-probe": (

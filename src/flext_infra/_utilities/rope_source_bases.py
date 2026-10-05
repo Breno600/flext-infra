@@ -409,13 +409,33 @@ class FlextInfraUtilitiesRopeSourceBases:
                     return provider_reference(
                         imported, (binding.imported_name, *remaining), visiting | {target},
                     )
-                return resolve(
-                    m.Infra.SourceClassReference(
-                        target=imported.get_name(),
-                        attributes=(binding.imported_name, *remaining),
-                        qualified_base=target,
-                    ),
-                    visiting | {target},
+                    try:
+                        value = pymodule.get_attribute(parts[index]).get_object()
+                        for attribute in parts[index + 1 :]:
+                            value = value.get_attribute(attribute).get_object()
+                    except exceptions.AttributeNotFoundError as error:
+                        # PEP 562 lazy namespaces resolve their exports only
+                        # at runtime; rope's static attribute lookup cannot
+                        # see them, so the base is unresolved for this
+                        # derivation (bases() skips it).
+                        raise ValueError(
+                            f"Unresolved external base: {target}",
+                        ) from error
+                    if not FlextInfraUtilitiesRopeRuntime.abstract_class(value):
+                        # A cross-package facade rebind (flext_cli.FlextCliConfig)
+                        # resolves through a TYPE_CHECKING import aimed at a
+                        # data package, so rope lands on the unknown-object
+                        # placeholder instead of a class: the base cannot
+                        # contribute to the derivation (bases() skips it).
+                        raise ValueError(
+                            f"Unresolved external base: {target}",
+                        )
+                    return external_identity(value)
+            # Builtin classes have no Python source resource. Rope owns that
+            # native namespace, not an ambient import of a planned package.
+            if parts[0] == "builtins" and len(parts) == 2:
+                value = (
+                    project.get_module("builtins").get_attribute(parts[1]).get_object()
                 )
             if isinstance(binding, p.Infra.RopeImportedModule):
                 imported = provider_module(binding)
@@ -590,8 +610,22 @@ class FlextInfraUtilitiesRopeSourceBases:
 
         root_ids = frozenset(resolve(root_reference(root)) for root in roots)
         derived = set(roots)
-        for definition in owned_definitions:
-            linearize(definition.identity)
+        for definition in definitions.values():
+            try:
+                linearize(definition.identity)
+            except ValueError as error:
+                # Same contract as the reference loop below: a lineage that
+                # crosses an unresolved external base (a PEP 562 lazy
+                # namespace, or a third-party module such as libcst that no
+                # project source module backs) cannot be derived; the class
+                # simply does not qualify as runtime-evaluated.
+                if str(error).startswith(
+                    "Unresolved external base:",
+                ) or str(error).startswith(
+                    "No source module for required base:",
+                ):
+                    continue
+                raise
             for reference in definition.bases:
                 lineage = linearize(resolve(reference))
                 if root_ids.intersection(lineage):
