@@ -51,13 +51,15 @@ class FlextInfraWorkspaceCheckReportsMixin:
         lines.extend(["", "## Details", ""])
         for project in results:
             lines.append(f"### {project.project}")
+            informational = frozenset(project.informational_gates)
             for gate in gates:
                 execution = project.gates.get(gate)
                 if execution is None:
                     continue
                 gate_status = "PASS" if execution.result.passed else "FAIL"
+                posture = " (informational)" if gate in informational else ""
                 lines.append(
-                    f"- {gate}: {gate_status} ({len(execution.issues)} issues)",
+                    f"- {gate}: {gate_status}{posture} ({len(execution.issues)} issues)",
                 )
                 lines.extend(f"  - {issue.formatted}" for issue in execution.issues)
             lines.append("")
