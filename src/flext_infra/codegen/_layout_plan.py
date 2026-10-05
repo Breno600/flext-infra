@@ -92,7 +92,10 @@ class FlextInfraCodegenLayoutPlanMixin:
             findings.extend(self._override_move_findings(override, project_dir))
             findings.extend(
                 self._override_empty_dir_findings(
-                    spec, override, project_dir, project_name,
+                    spec,
+                    override,
+                    project_dir,
+                    project_name,
                 ),
             )
         findings.extend(self._gitignore_findings(spec, override, project_dir))
