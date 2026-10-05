@@ -426,6 +426,15 @@ class FlextInfraPytestRunnerExecution(
                 == accounting.inventory_count
             )
         )
+        markdown_complete = (
+            True
+            if context.execution_mode == c.Infra.PytestExecutionMode.COVERAGE
+            else self._reconcile_markdown(
+                report_dir,
+                diagnostics,
+                cache_hit=cache_hit,
+            )
+        )
         rejected = any((
             diagnostics.failed_count,
             diagnostics.error_count,
@@ -434,6 +443,7 @@ class FlextInfraPytestRunnerExecution(
             diagnostics.collection_failed_count,
             diagnostics.collection_skipped_count,
             not accounting_complete,
+            not markdown_complete,
         ))
         accepted_cache_hit = cache_hit and not rejected
         # The zero-test receipt exits green: the suite owns nothing to execute
