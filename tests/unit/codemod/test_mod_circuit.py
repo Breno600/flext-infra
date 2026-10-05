@@ -182,19 +182,10 @@ class TestsFlextInfraModCliRoute:
         mod_workspace: Path,
     ) -> None:
         """Carry findings exposed by one rewrite into the next apply iteration."""
-        config_path = mod_workspace / c.Infra.CODEMOD_CONFIG_RELPATH
-        rules_root = config_path.parent / c.Cli.RULES_DIR_NAME
-        tm.ok(u.Cli.ensure_dir(rules_root))
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                config_path,
-                f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n",
-            ),
-        )
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                rules_root / "first.yml",
-                (
+        u.Tests.declare_codemod_rules(
+            mod_workspace,
+            {
+                "first": (
                     "id: first\n"
                     "language: Python\n"
                     "rule:\n"
@@ -202,12 +193,7 @@ class TestsFlextInfraModCliRoute:
                     "fix: value = list()\n"
                     "severity: warning\n"
                 ),
-            ),
-        )
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                rules_root / "second.yml",
-                (
+                "second": (
                     "id: second\n"
                     "language: Python\n"
                     "rule:\n"
@@ -215,7 +201,7 @@ class TestsFlextInfraModCliRoute:
                     "fix: value = tuple()\n"
                     "severity: warning\n"
                 ),
-            ),
+            },
         )
         sample_path = mod_workspace / "sample.py"
         tm.ok(u.Cli.atomic_write_text_file(sample_path, "value = dict()\n"))

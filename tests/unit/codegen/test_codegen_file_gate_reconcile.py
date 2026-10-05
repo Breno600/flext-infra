@@ -1,4 +1,4 @@
-"""Rendered contract for the fleet-wide file-gate verb and the setup reconcile.
+"""Rendered contract for the fleet-wide file-gate verb and the setup lock law.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -19,12 +19,13 @@ pytestmark = [pytest.mark.slow]
 
 
 class TestsFlextInfraFileGateAndReconcileMakefile:
-    """`file-gate` reaches every profile; the reconcile step is workspace-only.
+    """`file-gate` reaches every profile; setup never writes the lock.
 
     The fast per-file pre-gate (operator P0, val2026100417xx) is a fleet
-    surface declared once in the codegen SSOT. The mise.lock drift branch of
-    `make setup` repairs the lock through the bootstrap reconcile owner in
-    workspace checkouts only, and never fails the setup that carries it.
+    surface declared once in the codegen SSOT. The `make setup` lifecycle
+    never rebuilds `mise.lock`: locks update only through `make upg`
+    (operator P0, flext-k538b), and the drift branch warns and installs
+    unlocked instead.
     """
 
     @staticmethod
@@ -137,7 +138,7 @@ class TestsFlextInfraFileGateAndReconcileMakefile:
             )
             tm.that(body, has="$(RUNTIME_PYTHON)")
 
-    def test_workspace_render_wires_reconcile_into_setup_drift(
+    def test_setup_lifecycle_never_wires_a_reconcile_call(
         self,
         tmp_path: Path,
     ) -> None:

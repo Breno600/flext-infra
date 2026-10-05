@@ -14,8 +14,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m, p
-from flext_infra.codegen.conform import FlextInfraCodegenConform
+from flext_infra import c, config, p
 from tests import t, u
 
 pytestmark = pytest.mark.slow
@@ -59,24 +58,11 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
             project=u.Tests.project_spec("flext"),
             subprojects=(member,),
         )
-
-        root = tmp_path / "render-root"
-        request = m.Infra.CodegenConformRequest(
-            root=root,
-            what=c.Infra.CodegenConformSurface.MAKEFILE,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.CHECK,
+        rendered: str = test_u.Tests.conform_makefile_text(
+            tmp_path / "render-root",
+            workspace,
         )
-        planned = FlextInfraCodegenConform(
-            repository_root=root,
-            request=request,
-            initial_workspace=workspace,
-        ).plan(request)
-        plan = tm.ok(planned)
-        makefile: m.Infra.CodegenFilePlan = next(
-            file for file in plan.files if file.path.name == c.Infra.MAKEFILE_FILENAME
-        )
-        return tm.not_none(makefile.desired_content).decode("utf-8")
+        return rendered
 
     @staticmethod
     def _create_member_origin(tmp_path: Path) -> Path:

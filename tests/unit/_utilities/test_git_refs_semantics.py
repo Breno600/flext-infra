@@ -141,8 +141,8 @@ class TestsFlextInfraGitRefsSemantics:
         assert result.failure
         assert result.error is not None
 
+    @staticmethod
     def test_show_toplevel_reports_the_current_worktree_root(
-        self,
         tmp_path: Path,
     ) -> None:
         """The toplevel owner reports the worktree it was asked about, not the primary."""
@@ -159,8 +159,8 @@ class TestsFlextInfraGitRefsSemantics:
         tm.that(primary_root.repository_root, eq=repository.resolve())
         tm.that(lane_root.repository_root, eq=lane.resolve())
 
+    @staticmethod
     def test_list_worktrees_reports_the_primary_and_the_linked_lane(
-        self,
         tmp_path: Path,
     ) -> None:
         """The worktree-list owner reports every registered checkout of the repo."""
