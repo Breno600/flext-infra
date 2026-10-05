@@ -11,8 +11,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import main as infra_main
-from tests import u
+from flext_infra import main, u
 
 
 @pytest.mark.slow
@@ -65,7 +64,7 @@ class TestsFlextInfraModRuleExpectedReceipt:
             RuntimeError,
             match=r"receipt-probe declares 2 finding\(s\), scan produced 1",
         ):
-            infra_main(["refactor", "mod", "--repository-root", str(mod_workspace)])
+            main(["refactor", "mod", "--repository-root", str(mod_workspace)])
 
     def test_a_matching_receipt_does_not_block_the_scan(
         self,
@@ -75,7 +74,7 @@ class TestsFlextInfraModRuleExpectedReceipt:
         """A receipt that matches the occurrence count raises no receipt failure."""
         self._declare(mod_workspace, expected="metadata:\n  expected: 1\n")
 
-        infra_main(["refactor", "mod", "--repository-root", str(mod_workspace)])
+        main(["refactor", "mod", "--repository-root", str(mod_workspace)])
         capture = capsys.readouterr()
 
         tm.that(capture.out + capture.err, lacks="receipt-probe declares")
