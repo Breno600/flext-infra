@@ -606,7 +606,21 @@ class FlextInfraUtilitiesRopeSourceBases:
 
         root_ids = frozenset(resolve(root_reference(root)) for root in roots)
         derived = set(roots)
-        for definition in definitions.values():
+        # A resolved namespace parent inserts its own definition mid-loop;
+        # iterate a worklist snapshot so the derivation covers definitions
+        # the loop itself adds without mutating the dict during iteration.
+        pending_definitions = list(definitions.values())
+        seen_identities = {definition.identity for definition in pending_definitions}
+        while pending_definitions:
+            definition = pending_definitions.pop(0)
+            queued = [
+                item
+                for item in definitions.values()
+                if item.identity not in seen_identities
+            ]
+            for item in queued:
+                seen_identities.add(item.identity)
+                pending_definitions.append(item)
             try:
                 linearize(definition.identity)
             except ValueError as error:
