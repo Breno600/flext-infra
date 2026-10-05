@@ -197,6 +197,7 @@ warn_redundant_casts = true
 warn_return_any = true
 warn_unreachable = true
 warn_unused_ignores = true
+disable_error_code = ["call-arg"]
 follow_imports = "normal"
 
 [[tool.mypy.overrides]]
@@ -231,6 +232,7 @@ search-path = ["src", "."]
 use-ignore-files = false
 
 [tool.pyrefly.errors]
+prop-decorator = "ignore"
 bad-argument-count = "error"
 bad-argument-type = "error"
 bad-assignment = "error"

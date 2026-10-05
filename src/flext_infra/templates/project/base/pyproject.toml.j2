@@ -236,6 +236,13 @@ python_version = {{ python_version | tojson }}
 {% for key, value in tooling.tools.mypy.boolean_settings | dictsort %}
 {{ key }} = {{ value | lower }}
 {% endfor %}
+{% if tooling.tools.mypy.disable_error_code %}
+disable_error_code = [
+{% for item in tooling.tools.mypy.disable_error_code %}
+  {{ item | tojson }},
+{% endfor %}
+]
+{% endif %}
 {% for key, value in tooling.tools.mypy.string_settings | dictsort %}
 {{ key }} = {{ value | tojson }}
 {% endfor %}
@@ -286,6 +293,9 @@ search-path = [{% for item in tooling_runtime.pyrefly_search_path %}{{ item | to
 use-ignore-files = {{ tooling.tools.pyrefly.use_ignore_files | lower }}
 
 [tool.pyrefly.errors]
+{% for item in tooling.tools.pyrefly.ignored_errors | sort %}
+{{ item }} = "ignore"
+{% endfor %}
 {% for item in tooling.tools.pyrefly.strict_errors | sort %}
 {{ item }} = "error"
 {% endfor %}
