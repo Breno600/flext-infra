@@ -392,6 +392,17 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 ),
             ),
         ]
+        disable_error_code: Annotated[
+            t.StrSequence,
+            m.Field(
+                alias="disable-error-code",
+                description=(
+                    "Mypy error codes an operator ruling suspends project-wide; "
+                    "rendered as [tool.mypy] disable_error_code. The pydantic "
+                    "mypy plugin stays mandatory (Pydantic 2 is the contract)."
+                ),
+            ),
+        ] = m.Field(default_factory=tuple)
         boolean_settings: Annotated[
             t.BoolMapping,
             m.Field(
