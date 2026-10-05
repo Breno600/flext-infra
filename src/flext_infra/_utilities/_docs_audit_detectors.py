@@ -134,7 +134,13 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
     def docs_scope_boundary_issues(
         scope: m.Infra.DocScope,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Collect mentions of excluded non-FLEXT roots in root docs.
+        """Collect references to excluded non-FLEXT roots in root docs.
+
+        A mention counts only when the excluded root appears as a path
+        reference: the token followed by a path separator. Bare prose uses
+        of the token (an English word, a brand name, an identifier suffix
+        like ``datacosmos-br``) are not directory references and never
+        were.
 
         Returns:
             The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
@@ -144,6 +150,10 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
             return []
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         excluded = sorted(FlextInfraUtilitiesDocsScope.excluded_roots(scope.path))
+        patterns = [
+            re.compile(rf"(^|[^A-Za-z0-9_]){re.escape(token)}[/\\]", re.IGNORECASE)
+            for token in excluded
+        ]
         for md_file in [
             scope.path / "README.md",
             *FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope),
@@ -151,8 +161,8 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
             if not md_file.exists():
                 continue
             text = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-            for token in excluded:
-                if token in text:
+            for token, pattern in zip(excluded, patterns, strict=True):
+                if pattern.search(text):
                     issues.append(
                         m.Infra.AuditIssue(
                             file=md_file.relative_to(scope.path).as_posix(),
