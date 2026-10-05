@@ -89,8 +89,6 @@ class TestsFlextInfraPytestWorkerCeiling:
     @staticmethod
     def test_declared_overrides_come_from_the_typed_ssot() -> None:
         """The tooling SSOT carries validated ceilings of either form."""
-        from flext_infra import config
-
         overrides = config.Infra.tooling.tools.pytest.parallel_worker_overrides
         tm.that(len(overrides) > 0, eq=True)
         for declared in overrides.values():

@@ -7,12 +7,15 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m, main as infra_main
-from tests import t, u
+from flext_infra import c, m, u
+
+if TYPE_CHECKING:
+    from tests import t
 
 
 @pytest.mark.slow
@@ -40,7 +43,7 @@ class TestsFlextInfraModCliRoute:
         tm.ok(u.Cli.ensure_dir(generated_hook.parent))
         tm.ok(u.Cli.atomic_write_text_file(generated_hook, "value = 1\n"))
 
-        first_exit = infra_main([
+        first_exit = main([
             "refactor",
             "mod",
             "--repository-root",
@@ -100,7 +103,7 @@ class TestsFlextInfraModCliRoute:
                 '    """Fixture namespace."""\n',
             ),
         )
-        second_exit = infra_main([
+        second_exit = main([
             "refactor",
             "mod",
             "--repository-root",
@@ -154,7 +157,7 @@ class TestsFlextInfraModCliRoute:
         )
         tm.ok(u.Cli.atomic_write_text_file(generated_path, generated_source))
 
-        exit_code = infra_main([
+        exit_code = main([
             "refactor",
             "mod",
             "--repository-root",
@@ -182,7 +185,7 @@ class TestsFlextInfraModCliRoute:
         mod_workspace: Path,
     ) -> None:
         """Carry findings exposed by one rewrite into the next apply iteration."""
-        u.Tests.declare_codemod_rules(
+        test_u.Tests.declare_codemod_rules(
             mod_workspace,
             {
                 "first": (
@@ -206,7 +209,7 @@ class TestsFlextInfraModCliRoute:
         sample_path = mod_workspace / "sample.py"
         tm.ok(u.Cli.atomic_write_text_file(sample_path, "value = dict()\n"))
 
-        exit_code = infra_main([
+        exit_code = main([
             "refactor",
             "mod",
             "--repository-root",
@@ -291,7 +294,7 @@ class TestsFlextInfraModCliRoute:
             ),
         )
 
-        exit_code = infra_main([
+        exit_code = main([
             "refactor",
             "mod",
             "--repository-root",
@@ -362,7 +365,7 @@ class TestsFlextInfraModCliRoute:
             ),
         )
 
-        exit_code = infra_main([
+        exit_code = main([
             "refactor",
             "mod",
             "--repository-root",
@@ -426,7 +429,7 @@ class TestsFlextInfraModCliRoute:
             u.Cli.atomic_write_text_file(mod_workspace / "sample.py", f"{statement}\n"),
         )
 
-        exit_code = infra_main([
+        exit_code = main([
             "refactor",
             "mod",
             "--repository-root",
@@ -479,7 +482,7 @@ class TestsFlextInfraModCliRoute:
                 ),
             )
 
-        _ = infra_main([
+        _ = main([
             "refactor",
             "mod",
             "--repository-root",

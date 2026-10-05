@@ -126,8 +126,9 @@ class TestsFlextInfraPrivateImportCutover:
         for level in range(depth):
             module_name = f"bridge_{level}"
             class_name = f"FlextSampleConstantsBridge{level}"
+            previous_leaf = previous_module.rsplit(".", maxsplit=1)[-1]
             dependency_sources[package / f"_constants/{module_name}.py"] = (
-                f"from .{previous_module.rsplit('.', maxsplit=1)[-1]} import {previous_class}\n"
+                f"from .{previous_leaf} import {previous_class}\n"
                 f"class {class_name}({previous_class}):\n    pass\n"
             )
             previous_module = f"flext_sample._constants.{module_name}"
@@ -319,11 +320,13 @@ class TestsFlextInfraPrivateImportCutover:
             package / "_private/client.py": "class Client:\n    pass\n",
             package / "_private/__init__.py": (
                 "from typing import TYPE_CHECKING\n"
-                "from flext_core.lazy import build_lazy_import_map, install_lazy_exports\n"
+                "from flext_core.lazy import "
+                "build_lazy_import_map, install_lazy_exports\n"
                 "if TYPE_CHECKING:\n    from .client import Client\n"
                 "__all__ = ('Client',)\n"
                 "_LAZY_IMPORTS = build_lazy_import_map({'.client': ('Client',)})\n"
-                "install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)\n"
+                "install_lazy_exports("
+                "__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)\n"
             ),
             package / "api.py": (
                 f"from ._private.client import Client as {public_name}\n"
@@ -637,7 +640,8 @@ class TestsFlextInfraPrivateImportCutover:
             root_bases="(FlextSampleUtilitiesManagers)",
         )
         sources[consumer_path] = (
-            f"{private_import}\n\nmanager = FlextSampleUtilitiesManagers.ServiceManagers\n"
+            f"{private_import}\n\n"
+            "manager = FlextSampleUtilitiesManagers.ServiceManagers\n"
         )
 
         updated = self._updated_source(tmp_path, sources, consumer_path, private_import)
