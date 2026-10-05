@@ -41,6 +41,25 @@ case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon data
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
 {%- endmacro -%}
+{#- Every pytest-running verb owns its children's scratch the way the Mise
+    bootstrap owns its own: ONE transient sandbox beside the checkout per
+    recipe shell, declared through the standard temp triplet and deleted when
+    the shell exits. The verb DECLARES the project scratch root for the suite
+    it starts instead of inheriting the caller's ambient /tmp (fleet repos
+    reject a test scratch under /tmp; cosmos-charts CI run 37235165752 died in
+    pytest_configure on exactly that). One definition feeds every verb, so no
+    pytest verb can drift back to an undeclared scratch. -#}
+{%- macro pytest_scratch_root() -%}
+project_root="$(PROJECT_ROOT)"; \
+project_parent="$${project_root%/*}"; \
+if [ -z "$$project_parent" ]; then project_parent=/; fi; \
+scratch="$$(mktemp -d "$$project_parent/.$${project_root##*/}.pytest-scratch.XXXXXX")"; \
+trap 'find "$$scratch" -depth -delete' EXIT; \
+mkdir -p "$$scratch/tmp"; \
+scratch_tmp="$$(cd "$$scratch/tmp" && pwd -P)"; \
+TMPDIR="$$scratch_tmp"; TMP="$$scratch_tmp"; TEMP="$$scratch_tmp"; \
+export TMPDIR TMP TEMP; \
+{%- endmacro -%}
 {#- Each phase is its own bounded runner process with its own entrypoint clock:
     the budgeted phase never carries slow-marked items, which run afterwards in
     their own phase, each within the per-item slow bound (gate-budget rule). -#}
@@ -48,6 +67,7 @@ mkdir -p "$$(dirname "$$database")"; \
     verb's tools resolve from, so a test observes the runtime's tool versions. -#}
 {%- macro pytest_test_runner(operations=("",)) -%}
 {{ pytest_testmon_guard() }}
+{{ pytest_scratch_root() }}
 {%- for operation in operations %}
 {{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry{% if operation %} {{ operation }}{% endif %}{% if not loop.last %}; \{% endif %}
 {%- endfor %}
@@ -62,6 +82,7 @@ if [ -z "$(strip $(FILE))" ]; then printf 'ERROR: test-file requires FILE=<repos
 case "$(FILE)" in /*|*..*) printf 'ERROR: FILE must stay a repository-relative path: %s\n' "$(FILE)" >&2; exit 2 ;; esac; \
 if [ ! -f "$(PROJECT_ROOT)/$(FILE)" ]; then printf 'ERROR: FILE is not an existing repository file: %s\n' "$(FILE)" >&2; exit 2; fi; \
 {{ pytest_testmon_guard() }}
+{{ pytest_scratch_root() }}
 {%- for operation in ("file", "file-slow") %}
 export FLEXT_PYTEST_TARGET_FILE="$(FILE)"; {{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry {{ operation }}{% if not loop.last %}; \{% endif %}
 {%- endfor %}
@@ -899,6 +920,7 @@ profile-gen-report: _builtin_require_environment
 _builtin-profile-test: _builtin_require_environment
 	@mkdir -p "$(PROFILE_REPORTS_DIR)"
 	@{{ pytest_testmon_guard() }}
+{{ pytest_scratch_root() }}
 	{{ make.testmon_cache.database_environment_variable }}="$$database" $(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -m flext_infra._pytest_entry profile \
 		"$(PROFILE_REPORTS_DIR)/{{ pytest.profile_suite_filename }}"
 
