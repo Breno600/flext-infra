@@ -674,6 +674,11 @@ Infra:
       custom_handler_profile_overrides: {}
       standalone_check_gates:
         smells: smells
+      # Operator law 2026-10-05: the named gates stay INFORMATIONAL — their
+      # findings are reported in the check report and SARIF, but they never
+      # fail `make check` or CI. Declared here once; the check runner reads
+      # this typed SSOT, never a per-gate or per-repository override.
+      informational_check_gates: [codemod, mypy, pyright]
       custom_handler_policy:
         filename: custom.mk
         # Custom behavior is one private whole-verb replacement or one lifecycle
