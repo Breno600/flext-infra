@@ -72,6 +72,20 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
         ) -> t.SequenceOf[FlextInfraProtocolsRopeRuntime.RopePyObject]: ...
 
     @runtime_checkable
+    class NativeClassMetadata(Protocol):
+        """CPython class metadata published by Rope's builtin class object."""
+
+        __module__: str
+        __qualname__: str
+        __bases__: tuple[FlextInfraProtocolsRopeRuntime.NativeClassMetadata, ...]
+
+    @runtime_checkable
+    class RopeBuiltinClass(Protocol):
+        """Rope's exact native class identity, not an inferred instance type."""
+
+        builtin: FlextInfraProtocolsRopeRuntime.NativeClassMetadata
+
+    @runtime_checkable
     class RopeAstNode(Protocol):
         """Raw AST node shape from ``RopePyModule.get_ast()``.
 

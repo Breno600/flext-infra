@@ -10,7 +10,7 @@ import ast
 from collections.abc import MutableMapping
 from pathlib import Path
 
-from flext_infra import m, t
+from flext_infra import m, p, t
 from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
 from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
@@ -52,7 +52,8 @@ class FlextInfraUtilitiesRopeSourceBases:
                 raise ValueError(message)
         else:
             binding = m.Infra.SourceClassReference(
-                target=f"builtins.{name}",
+                target="builtins",
+                attributes=(name,),
                 qualified_base=f"{module}.{name}",
             )
         return m.Infra.SourceClassReference(
@@ -69,8 +70,13 @@ class FlextInfraUtilitiesRopeSourceBases:
         path: Path,
         source: str,
         definitions: MutableMapping[str, m.Infra.SourceClassDefinition],
+        *,
+        required_line: int | None = None,
     ) -> t.MappingKV[str, m.Infra.SourceClassReference | None]:
         """Index lexical bindings without installing a cross-module Rope overlay.
+
+        A provider class is indexed at its native declaration line. Unreferenced
+        provider classes remain qualified declarations, not fabricated lineages.
 
         Returns:
             The module's explicit lexical bindings, including value shadowing.
@@ -104,10 +110,24 @@ class FlextInfraUtilitiesRopeSourceBases:
         ) -> None:
             for node in statements:
                 if isinstance(node, ast.ClassDef):
+                    if required_line is not None and not (
+                        node.lineno <= required_line <= (node.end_lineno or node.lineno)
+                    ):
+                        bindings[node.name] = m.Infra.SourceClassReference(
+                            target=module,
+                            attributes=tuple(f"{scope}{node.name}".split(".")),
+                            qualified_base=f"{module}.{scope}{node.name}",
+                        )
+                        continue
                     visible = {**lexical, **bindings}
                     bases = tuple(
                         cls._reference(base, visible, module) for base in node.bases
                     )
+                    if node.type_params:
+                        bases = (*bases, m.Infra.SourceClassReference(
+                            target="typing", attributes=("Generic",),
+                            qualified_base="typing.Generic",
+                        ))
                     identity = f"{module}:{scope}{node.name}:{node.lineno}"
                     members: MutableMapping[
                         str,
@@ -145,7 +165,8 @@ class FlextInfraUtilitiesRopeSourceBases:
                             raise ValueError(message)
                         target = f"{imported}.{alias.name}"
                         binding = m.Infra.SourceClassReference(
-                            target=target,
+                            target=imported,
+                            attributes=(alias.name,),
                             qualified_base=target,
                         )
                         bindings[alias.asname or alias.name] = binding
@@ -165,26 +186,19 @@ class FlextInfraUtilitiesRopeSourceBases:
                     value = node.value
                     if value is None:
                         continue
+                    visible = {**lexical, **bindings}
+                    head = value
+                    while isinstance(head, (ast.Attribute, ast.Subscript)):
+                        head = head.value
+                    reference = (
+                        cls._reference(value, visible, module)
+                        if isinstance(head, ast.Name)
+                        and isinstance(value, (ast.Name, ast.Attribute, ast.Subscript))
+                        and not (head.id in visible and visible[head.id] is None)
+                        else None
+                    )
                     for target in targets:
                         if isinstance(target, ast.Name):
-                            visible = {**lexical, **bindings}
-                            head = value
-                            while isinstance(head, (ast.Attribute, ast.Subscript)):
-                                head = head.value
-                            reference = (
-                                cls._reference(value, visible, module)
-                                if isinstance(head, ast.Name)
-                                and isinstance(
-                                    value,
-                                    (ast.Name, ast.Attribute, ast.Subscript),
-                                )
-                                and not (
-                                    isinstance(head, ast.Name)
-                                    and head.id in visible
-                                    and visible[head.id] is None
-                                )
-                                else None
-                            )
                             bindings[target.id] = (
                                 reference.model_copy(
                                     update={"qualified_base": f"{module}.{target.id}"},
@@ -195,6 +209,14 @@ class FlextInfraUtilitiesRopeSourceBases:
                 elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     bindings[node.name] = None
                 elif isinstance(node, ast.If):
+                    if isinstance(node.test, ast.Constant) and isinstance(
+                        node.test.value, bool,
+                    ):
+                        collect(
+                            node.body if node.test.value else node.orelse,
+                            bindings, lexical, scope,
+                        )
+                        continue
                     if node.orelse and any(
                         isinstance(child, ast.ClassDef)
                         for statement in (*node.body, *node.orelse)
@@ -204,8 +226,18 @@ class FlextInfraUtilitiesRopeSourceBases:
                             f"Ambiguous conditional class declarations in {module}"
                         )
                         raise ValueError(message)
-                    collect(node.body, bindings, lexical, scope)
-                    collect(node.orelse, bindings, lexical, scope)
+                    left = dict(bindings)
+                    right = dict(bindings)
+                    collect(node.body, left, lexical, scope)
+                    collect(node.orelse, right, lexical, scope)
+                    for name in left.keys() | right.keys():
+                        bindings[name] = (
+                            left[name]
+                            if name in left
+                            and name in right
+                            and left[name] == right[name]
+                            else None
+                        )
                 elif isinstance(node, (ast.Try, ast.TryStar)):
                     message = f"Conditional exception-backed class bindings in {module}"
                     raise ValueError(message)
@@ -224,7 +256,9 @@ class FlextInfraUtilitiesRopeSourceBases:
 
         Only configured roots mark model evaluation boundaries. No first-party
         module is imported or resolved from disk when its planned source exists.
-        Unsupported references and inconsistent inheritance remain visible errors.
+        Provider reexports follow Rope's declared import provenance. Their source
+        declarations, not Rope's possibly incomplete superclass inference, supply
+        the ordered bases. Missing references and invalid inheritance fail loudly.
 
         Returns:
             Sorted configured roots and derived Ruff-qualified base expressions.
@@ -245,6 +279,7 @@ class FlextInfraUtilitiesRopeSourceBases:
             for parts in (module.split("."),)
             for index in range(1, len(parts) + 1)
         }
+        owned_definitions = tuple(definitions.values())
         external: MutableMapping[str, t.Infra.RopePyObject] = {}
         linearizations: MutableMapping[str, t.StrTuple] = {}
         active: set[str] = set()
@@ -253,6 +288,71 @@ class FlextInfraUtilitiesRopeSourceBases:
             if not FlextInfraUtilitiesRopeRuntime.abstract_class(value):
                 message = "Rope did not resolve a required base to a class"
                 raise TypeError(message)
+            if isinstance(
+                value,
+                FlextInfraUtilitiesRopeRuntime.runtime_type(
+                    "rope.base.pyobjectsdef", "PyClass",
+                ),
+            ):
+                module = value.get_module()
+                scope = value.get_scope()
+                resource = module.get_resource() if module is not None else None
+                if module is None or scope is None or resource is None:
+                    message = (
+                        f"External class has no source declaration: {value.get_name()}"
+                    )
+                    raise ValueError(message)
+                name = module.get_name()
+                line = scope.get_start()
+                if name in modules:
+                    tree = module.get_ast()
+                    if not isinstance(tree, ast.Module):
+                        message = f"External class has no module AST: {name}"
+                        raise TypeError(message)
+                    path = ".".join(
+                        node.name
+                        for node in ast.walk(tree)
+                        if isinstance(node, ast.ClassDef)
+                        and node.lineno <= line <= (node.end_lineno or node.lineno)
+                    )
+                    if not path or path.rsplit(".", 1)[-1] != value.get_name():
+                        message = f"Missing external class declaration: {name}:{line}"
+                        raise ValueError(message)
+                    return resolve(m.Infra.SourceClassReference(
+                        target=name, attributes=tuple(path.split(".")),
+                        qualified_base=f"{name}.{path}",
+                    ))
+                identity = next(
+                    (
+                        identity
+                        for identity in definitions
+                        if identity.startswith(f"{name}:")
+                        and identity.endswith(f":{line}")
+                    ),
+                    None,
+                )
+                if identity is None:
+                    cls._inventory(
+                        project,
+                        name,
+                        Path(resource.real_path),
+                        module.source_code,
+                        definitions,
+                        required_line=line,
+                    )
+                    identity = next(
+                        (
+                            identity
+                            for identity in definitions
+                            if identity.startswith(f"{name}:")
+                            and identity.endswith(f":{line}")
+                        ),
+                        None,
+                    )
+                if identity is None:
+                    message = f"Missing external class declaration: {name}:{line}"
+                    raise ValueError(message)
+                return identity
             for identity, known in external.items():
                 if known == value:
                     return identity
@@ -260,15 +360,54 @@ class FlextInfraUtilitiesRopeSourceBases:
             external[identity] = value
             return identity
 
-        def external_reference(target: str) -> str:
-            parts = target.split(".")
-            for index in range(len(parts) - 1, 0, -1):
-                module = ".".join(parts[:index])
-                resource = project.find_module(module)
-                if resource is not None:
-                    pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
-                        project,
-                        resource,
+        def provider_module(
+            imported: p.Infra.RopeImportedModule,
+        ) -> t.Infra.RopePyModule:
+            resource = imported.resource
+            if resource is not None:
+                return FlextInfraUtilitiesRopeCore.resolve_pymodule(project, resource)
+            declaring = imported.importing_module.get_module()
+            source = declaring.get_resource() if declaring is not None else None
+            if imported.module_name is None or declaring is None or source is None:
+                message = "Import has no declared module location"
+                raise ValueError(message)
+            name = imported.module_name
+            if imported.level:
+                package = declaring.get_name()
+                if Path(source.real_path).name != "__init__.py":
+                    package = package.rpartition(".")[0]
+                parts = package.split(".") if package else []
+                if imported.level > len(parts):
+                    message = f"Relative import escapes package: {package}.{name}"
+                    raise ValueError(message)
+                name = ".".join(filter(None, (
+                    ".".join(parts[: len(parts) - imported.level + 1]), name,
+                )))
+            module = project.get_module(name)
+            resource = project.find_module(name)
+            if resource is not None:
+                module = FlextInfraUtilitiesRopeCore.resolve_pymodule(project, resource)
+            return module
+
+        def provider_reference(
+            module: t.Infra.RopePyModule,
+            attributes: t.StrTuple,
+            visiting: frozenset[str] = frozenset(),
+        ) -> str:
+            if not attributes:
+                message = f"Module used as a class base: {module.get_name()}"
+                raise ValueError(message)
+            name, *remaining = attributes
+            target = f"{module.get_name()}.{name}"
+            if target in visiting:
+                message = f"Cyclic provider reexport: {target}"
+                raise ValueError(message)
+            binding = module.get_attribute(name)
+            if isinstance(binding, p.Infra.RopeImportedName):
+                imported = provider_module(binding.imported_module)
+                if imported.get_name() not in namespaces:
+                    return provider_reference(
+                        imported, (binding.imported_name, *remaining), visiting | {target},
                     )
                     try:
                         value = pymodule.get_attribute(parts[index]).get_object()
@@ -298,20 +437,46 @@ class FlextInfraUtilitiesRopeSourceBases:
                 value = (
                     project.get_module("builtins").get_attribute(parts[1]).get_object()
                 )
-                return external_identity(value)
-            message = f"No source module for required base: {target}"
-            raise ValueError(message)
+            if isinstance(binding, p.Infra.RopeImportedModule):
+                imported = provider_module(binding)
+                if imported.get_name() not in namespaces:
+                    return provider_reference(
+                        imported, tuple(remaining), visiting | {target},
+                    )
+                return resolve(
+                    m.Infra.SourceClassReference(
+                        target=imported.get_name(),
+                        attributes=tuple(remaining),
+                        qualified_base=target,
+                    ),
+                    visiting | {target},
+                )
+            identity = external_identity(binding.get_object())
+            for attribute in remaining:
+                identity = member(identity, attribute)
+            return identity
 
-        object_id = external_reference("builtins.object")
-        root_ids = frozenset(external_reference(root) for root in roots)
+        def external_reference(
+            target: str,
+            attributes: t.StrTuple,
+            visiting: frozenset[str] = frozenset(),
+        ) -> str:
+            module = project.get_module(target)
+            resource = project.find_module(target)
+            if resource is not None:
+                module = FlextInfraUtilitiesRopeCore.resolve_pymodule(project, resource)
+            return provider_reference(module, attributes, visiting)
+
+        object_id = external_reference("builtins", ("object",))
 
         def resolve(
             reference: m.Infra.SourceClassReference,
             visiting: frozenset[str] = frozenset(),
         ) -> str:
             target = reference.target
-            if target in visiting:
-                message = f"Cyclic class alias: {target}"
+            key = ".".join((target, *reference.attributes))
+            if key in visiting:
+                message = f"Cyclic class alias: {key}"
                 raise ValueError(message)
             attributes = list(reference.attributes)
             if target not in definitions and target not in external:
@@ -337,9 +502,12 @@ class FlextInfraUtilitiesRopeSourceBases:
                     if binding is None:
                         message = f"Unresolved planned base: {module}.{name}"
                         raise ValueError(message)
-                    target = resolve(binding, visiting | {reference.target})
+                    target = resolve(binding, visiting | {key})
                 else:
-                    target = external_reference(target)
+                    target = external_reference(
+                        target, tuple(attributes), visiting,
+                    )
+                    attributes.clear()
             for attribute in attributes:
                 target = member(target, attribute)
             return target
@@ -373,53 +541,17 @@ class FlextInfraUtilitiesRopeSourceBases:
                         raise
                 return tuple(parents) if parents else (object_id,)
             value = external[identity]
-            parents = tuple(value.get_superclasses())
-            if isinstance(
-                value,
-                FlextInfraUtilitiesRopeRuntime.runtime_type(
-                    "rope.base.pyobjectsdef",
-                    "PyClass",
-                ),
-            ):
-                try:
-                    module = value.get_module()
-                    scope = value.get_scope()
-                    if module is None or scope is None:
-                        message = f"External class has no source scope: {identity}"
-                        raise ValueError(message)
-                    tree = module.get_ast()
-                    if not isinstance(tree, ast.Module):
-                        message = f"External class has no module AST: {identity}"
-                        raise TypeError(message)
-                    declaration = next(
-                        node
-                        for node in ast.walk(tree)
-                        if isinstance(node, ast.ClassDef)
-                        and node.lineno == scope.get_start()
-                    )
-                    if len(parents) != len(declaration.bases):
-                        message = (
-                            "Rope omitted a required external class base: "
-                            f"{module.get_name()}.{value.get_name()}"
-                        )
-                        raise ValueError(message)
-                except (ValueError, TypeError, StopIteration):
-                    # An external class whose declaration rope cannot recover
-                    # (lazy namespace, omitted base, missing scope) has an
-                    # underivable lineage: it derives straight from object,
-                    # which keeps the derivation running without inventing
-                    # parents.
-                    return ()
-            resolved_parents: list[str] = []
-            for base in parents:
-                try:
-                    resolved_parents.append(external_identity(base))
-                except TypeError:
-                    # A concrete external base (no abstract root lineage) is
-                    # outside the derivation's tracking: it derives straight
-                    # from object instead of crashing the derivation.
-                    continue
-            return tuple(resolved_parents) if resolved_parents else (object_id,)
+            if not isinstance(value, p.Infra.RopeBuiltinClass):
+                message = f"External class has no declared source or native identity: {identity}"
+                raise ValueError(message)
+            return tuple(
+                resolve(m.Infra.SourceClassReference(
+                    target=base.__module__,
+                    attributes=tuple(base.__qualname__.split(".")),
+                    qualified_base=f"{base.__module__}.{base.__qualname__}",
+                ))
+                for base in value.builtin.__bases__
+            )
 
         def linearize(identity: str) -> t.StrTuple:
             if identity in linearizations:
@@ -470,27 +602,29 @@ class FlextInfraUtilitiesRopeSourceBases:
                         raise ValueError(message)
                     return resolve(reference)
                 value = external[ancestor]
-                if isinstance(
-                    value,
-                    FlextInfraUtilitiesRopeRuntime.runtime_type(
-                        "rope.base.pyobjectsdef",
-                        "PyClass",
-                    ),
-                ):
-                    scope = value.get_scope()
-                    if scope is None:
-                        message = (
-                            f"External source class has no lexical scope: {ancestor}"
-                        )
-                        raise ValueError(message)
-                    external_members = scope.get_defined_names()
-                else:
-                    external_members = value.get_attributes()
+                external_members = value.get_attributes()
                 if name in external_members:
                     return external_identity(external_members[name].get_object())
             message = f"Missing inherited class member: {identity}.{name}"
             raise ValueError(message)
 
+        def root_reference(root: str) -> m.Infra.SourceClassReference:
+            parts = root.split(".")
+            index = next(
+                (
+                    index
+                    for index in range(len(parts) - 1, 0, -1)
+                    if ".".join(parts[:index]) in modules
+                    or project.find_module(".".join(parts[:index])) is not None
+                ),
+                1,
+            )
+            return m.Infra.SourceClassReference(
+                target=".".join(parts[:index]), attributes=tuple(parts[index:]),
+                qualified_base=root,
+            )
+
+        root_ids = frozenset(resolve(root_reference(root)) for root in roots)
         derived = set(roots)
         for definition in definitions.values():
             try:
