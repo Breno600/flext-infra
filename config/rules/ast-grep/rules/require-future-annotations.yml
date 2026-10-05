@@ -165,3 +165,37 @@ message: >-
   The copyright notice must be the last lines of the module docstring; the
   notice-last phase of make mod moves the notice paragraph after the rest of
   the docstring text.
+---
+# Literal exports already infer their immutable string tuple. An annotation
+# must not be the only reason a facade depends on its own typing namespace.
+id: infer-literal-facade-exports
+language: python
+severity: error
+files:
+  - "src/flext/constants.py"
+  - "src/flext/models.py"
+  - "src/flext/protocols.py"
+  - "src/flext/utilities.py"
+rule:
+  pattern:
+    context: "__all__: t.VariadicTuple[str] = $VALUE"
+    selector: assignment
+  inside:
+    kind: expression_statement
+    inside:
+      kind: module
+constraints:
+  VALUE:
+    kind: tuple
+    not:
+      has:
+        not:
+          any:
+            - kind: comment
+            - all:
+                - kind: string
+                - regex: "^[\"']"
+fix: "__all__ = $VALUE"
+message: >-
+  Infer the literal export tuple instead of retaining a redundant type-only
+  facade dependency; preserve the original export values and order.
