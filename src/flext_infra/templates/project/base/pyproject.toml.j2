@@ -225,9 +225,11 @@ plugins = [
   {{ item | tojson }},
 {% endfor %}
 ]
-{% if tooling.tools.mypy.ruling_disable_error_codes %}
+{% set mypy_disable_error_codes = ((tooling.tools.mypy.ruling_disable_error_codes or [])
+  + (tooling.tools.mypy.disable_error_code or [])) | unique | list %}
+{% if mypy_disable_error_codes %}
 disable_error_code = [
-{% for item in tooling.tools.mypy.ruling_disable_error_codes %}
+{% for item in mypy_disable_error_codes %}
   {{ item | tojson }},
 {% endfor %}
 ]
@@ -236,13 +238,6 @@ python_version = {{ python_version | tojson }}
 {% for key, value in tooling.tools.mypy.boolean_settings | dictsort %}
 {{ key }} = {{ value | lower }}
 {% endfor %}
-{% if tooling.tools.mypy.disable_error_code %}
-disable_error_code = [
-{% for item in tooling.tools.mypy.disable_error_code %}
-  {{ item | tojson }},
-{% endfor %}
-]
-{% endif %}
 {% for key, value in tooling.tools.mypy.string_settings | dictsort %}
 {{ key }} = {{ value | tojson }}
 {% endfor %}
