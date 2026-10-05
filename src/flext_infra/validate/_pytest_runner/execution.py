@@ -542,6 +542,9 @@ class FlextInfraPytestRunnerExecution(
         Returns:
             The resulting ``p.Result[int]``.
 
+        Raises:
+            RuntimeError: If testmon database changed after the checkpoint receipt.
+            ValueError: If testmon publication path cannot contain output delimiters.
         """
         execution_mode = (
             c.Infra.PytestExecutionMode.FULL
@@ -595,7 +598,7 @@ class FlextInfraPytestRunnerExecution(
                 stream.write(
                     f"testmon_database={publication.database}\n"
                     f"testmon_digest={publication.digest}\n"
-                    f"testmon_saveable={str(publication.saveable).lower()}\n"
+                    f"testmon_saveable={str(publication.saveable).lower()}\n",
                 )
         return result
 

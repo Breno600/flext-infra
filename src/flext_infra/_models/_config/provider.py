@@ -153,7 +153,10 @@ class FlextInfraConfigModelsProvider:
         ]
         repositories: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
-            m.Field(min_length=1, description="Selected repositories granted contents-read only"),
+            m.Field(
+                min_length=1,
+                description="Selected repositories granted contents-read only",
+            ),
         ]
 
     class CiPrivateSubmodulesSpec(FlextInfraConfigModelsContract.ConfigContract):
