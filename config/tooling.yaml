@@ -343,8 +343,13 @@ Infra:
         # Operator law 2026-10-05: the pydantic plugin above is MANDATORY in
         # every projection (Pydantic 2 is the fleet contract) and these false
         # positives the canonical forms generate are suspended, never worked
-        # around in code: call-arg fires on @m.model_validator(mode="after").
-        disable-error-code: [call-arg]
+        # around in code: call-arg fires on @m.model_validator(mode="after");
+        # prop-decorator fires on @u.computed_field @property (operator ruling
+        # u3-field-computed-field-staticmethod-rebind: flext-core rebinds
+        # model_validator/computed_field/Field through staticmethod(...),
+        # collapsing the pydantic overloads mypy reads — consumers must not
+        # churn model code to please the checker). One key, one render.
+        disable-error-code: [prop-decorator, call-arg]
         # The canonical facade form imports the parent letter, subclasses it
         # and rebinds the letter (`from flext_core import u`,
         # `class FlextCliUtilities(u)`, `u = FlextCliUtilities`). Mypy 2.3.1
@@ -352,13 +357,6 @@ Infra:
         # allow_redefinition; codegen disables them only in the modules it
         # detects in that form (operator-ruling-2026-10-01-facade-rebind-mypy-scope).
         facade-rebind-error-codes: [misc, no-redef]
-        # Operator ruling 2026-10-05 (u3-field-computed-field-staticmethod-rebind):
-        # flext-core rebinds `model_validator`/`computed_field`/`Field` through
-        # `staticmethod(...)` in `_utilities/pydantic.py`, which collapses the
-        # pydantic overloads mypy reads for `prop-decorator` and `call-arg`.
-        # Consumers must not churn model code to please the checker; the codes
-        # are disabled project-wide and the pydantic mypy plugin stays mandatory.
-        ruling-disable-error-codes: [prop-decorator, call-arg]
         boolean-settings:
           allow_redefinition: true
           namespace_packages: true
