@@ -388,7 +388,6 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 	if [ -z "$$scratch" ] || [ ! -d "$$scratch" ]; then \
 		printf 'ERROR: mise bootstrap scratch creation failed (template: %s/.%s.mise-bootstrap.XXXXXX)\n' "$$project_parent" "$${project_root##*/}" >&2; exit 2; \
 	fi; \
-	readonly scratch; \
 	lock_stage=; \
 	trap 'bootstrap_status=$$?; trap - EXIT; \
 		lock_cleanup_status=0; scratch_cleanup_status=0; diagnostic_status=0; scratch_present=0; \
@@ -650,7 +649,6 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 	if [ -z "$$scratch" ] || [ ! -d "$$scratch" ]; then \
 		printf 'ERROR: mise bootstrap scratch creation failed (template: %s/.%s.mise-bootstrap.XXXXXX)\n' "$$project_parent" "$${project_root##*/}" >&2; exit 2; \
 	fi; \
-	readonly scratch; \
 	lock_stage=; \
 	trap 'bootstrap_status=$$?; trap - EXIT; \
 		lock_cleanup_status=0; scratch_cleanup_status=0; diagnostic_status=0; scratch_present=0; \
@@ -814,7 +812,10 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 			receipt_release=$${receipt_output%% *}; \
 		fi; \
 		if ! printf '%s\n' "$$receipt_release" | grep -Eq '^[0-9]+(\.[0-9]+){2}$$'; then \
-			printf 'ERROR: Mise receipt returned invalid version: %s\n' "$$receipt_output" >&2; return 2; \
+			printf 'ERROR: Mise receipt returned invalid version: %s\n' "$$receipt_output" >&2; \
+			printf 'ERROR: Mise receipt stderr: ' >&2; cat "$$mise_receipt_log.stderr" >&2 || true; \
+			printf 'ERROR: Mise receipt executable: %s; scratch: %s\n' "$$1" "$$scratch" >&2; \
+			return 2; \
 		fi; \
 	}; \
 	pinned_mise="$$mise"; \
