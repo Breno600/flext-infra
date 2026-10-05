@@ -107,7 +107,7 @@ class TestsFlextInfraCiIntegrationBranchTriggers:
             u.Cli.template_render(
                 root / ".github/workflows/ci.yml.j2",
                 spec,
-            )
+            ),
         )
         steps = u.CodegenTestSupport.Ci.ci_job_steps(rendered)
         approval = tuple(step for step in steps if step.get("id") == "approval")
@@ -130,7 +130,7 @@ class TestsFlextInfraCiIntegrationBranchTriggers:
             u.Cli.template_render(
                 root / ".pre-commit-config.yaml.j2",
                 m.Infra.MakeWorkflowRenderSpec(dist=spec.dist, make=codegen.make),
-            )
+            ),
         )
         tm.that(hook, has="make pre-commit")
         tm.that(hook, lacks=["make fmt", "make fix"])
@@ -156,7 +156,7 @@ class TestsFlextInfraCiIntegrationBranchTriggers:
             u.Cli.template_render(
                 TestsFlextInfraCiIntegrationBranchTriggers.ci_template,
                 spec,
-            )
+            ),
         )
         steps = u.CodegenTestSupport.Ci.ci_job_steps(rendered)
         saves = tuple(
@@ -184,10 +184,12 @@ class TestsFlextInfraCiIntegrationBranchTriggers:
                 step for step in steps if step.get("name") == "Restore testmon database"
             )
             tm.that(
-                cache_input["path"], eq="${{ steps.approval.outputs.testmon_database }}"
+                cache_input["path"],
+                eq="${{ steps.approval.outputs.testmon_database }}",
             )
             tm.that(
-                cache_input["key"], eq=u.Cli.json_as_mapping(restore["with"])["key"]
+                cache_input["key"],
+                eq=u.Cli.json_as_mapping(restore["with"])["key"],
             )
 
     @staticmethod

@@ -458,7 +458,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                     m.Infra.ManagedGitlinkSpec(
                         repository=repository,
                         branch=workspace.integration.branch,
-                    )
+                    ),
                 )
                 continue
             # A governed member follows its workspace's declared line unless

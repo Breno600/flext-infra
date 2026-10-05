@@ -64,7 +64,10 @@ def _phase_fixture(tmp_path: Path) -> tuple[Path, Path, Path, Path, Path]:
         "from __future__ import annotations\n"
         "from typing import Protocol\n\n"
         "class ServiceContract(Protocol):\n"
+        '    """Service contract under relocation."""\n'
+        "\n"
         "    def run(self) -> str:\n"
+        '        """Run the contract."""\n'
         "        ...\n",
         encoding="utf-8",
     )
