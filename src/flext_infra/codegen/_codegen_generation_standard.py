@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from collections.abc import MutableMapping
+from operator import itemgetter
 from sys import stdlib_module_names
 
 from flext_infra import c, config, m, t, u
@@ -130,7 +131,7 @@ class FlextInfraCodegenGenerationStandardMixin(
         ))
         lines: t.MutableSequenceOf[str] = []
         previous_section: str | None = None
-        for (section, _), statement in sorted(statements, key=lambda item: item[0]):
+        for (section, _), statement in sorted(statements, key=itemgetter(0)):
             if previous_section is not None and section != previous_section:
                 lines.append("")
             lines.extend(statement)

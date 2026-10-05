@@ -238,7 +238,7 @@ class TestsFlextInfraCodegenGeneration:
         owner: str,
         rendered_owner: str,
     ) -> None:
-        """The static import names the absolute owner the compact lazy key resolves to."""
+        """The static import names the compact lazy key's absolute owner."""
         package = "demo_pkg.servers._rfc"
         plan = self._plan(
             package,
