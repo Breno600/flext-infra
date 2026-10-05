@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Annotated, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 
 class FlextInfraModelsTestmon:
@@ -76,9 +76,9 @@ class FlextInfraModelsTestmon:
                     "collection roots: zero execution by declared design"
                 ),
             ),
-        ]
+        ] = False
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def require_execution_or_verified_deselection(self) -> Self:
             """Zero execution requires positive accounting against a valid cache.
 

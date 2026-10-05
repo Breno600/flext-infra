@@ -25,14 +25,14 @@ class FlextInfraModelsCodegenFixModels:
         violations_fixed: Annotated[
             t.MutableSequenceOf[FlextInfraModelsCodegenScaffoldModels.CensusViolation],
             m.Field(default_factory=list, description="Fixed violations"),
-        ]
+        ] = m.Field(default_factory=list)
         violations_skipped: Annotated[
             t.MutableSequenceOf[FlextInfraModelsCodegenScaffoldModels.CensusViolation],
             m.Field(
                 default_factory=list,
                 description="Skipped violations (not auto-fixable)",
             ),
-        ]
+        ] = m.Field(default_factory=list)
         files_modified: t.StrSequence = m.Field(
             default_factory=tuple,
             description="Modified file paths",
@@ -51,8 +51,8 @@ class FlextInfraModelsCodegenFixModels:
         ]
         changes: Annotated[
             t.StrSequence,
-            m.Field(default_factory=tuple, description="Applied replacements"),
-        ]
+            m.Field(description="Applied replacements"),
+        ] = ()
 
     class ConsolidatorReport(m.ContractModel):
         """JSON report emitted by the constants consolidator."""
@@ -71,8 +71,8 @@ class FlextInfraModelsCodegenFixModels:
         ] = 0
         files: Annotated[
             t.SequenceOf[FlextInfraModelsCodegenFixModels.ConsolidatorFileResult],
-            m.Field(default_factory=tuple, description="Per-file processing results"),
-        ]
+            m.Field(description="Per-file processing results"),
+        ] = ()
 
     class FacadeFamily(m.ContractModel):
         """One facade family the core package declares (c, t, p, m, u)."""
@@ -93,19 +93,31 @@ class FlextInfraModelsCodegenFixModels:
         @m.computed_field
         @property
         def directory(self) -> str:
-            """Private family package beside the facade module."""
+            """Private family package beside the facade module.
+
+            Returns:
+                The resulting ``str``.
+            """
             return f"_{self.module}"
 
         @m.computed_field
         @property
         def directories(self) -> frozenset[str]:
-            """Public and private family package directory names."""
+            """Public and private family package directory names.
+
+            Returns:
+                The resulting ``frozenset[str]``.
+            """
             return frozenset({self.module, f"_{self.module}"})
 
         @m.computed_field
         @property
         def file_names(self) -> frozenset[str]:
-            """Public and private facade module file names."""
+            """Public and private facade module file names.
+
+            Returns:
+                The resulting ``frozenset[str]``.
+            """
             return frozenset({f"{self.module}.py", f"_{self.module}.py"})
 
     class NamespaceModulePolicy(m.ArbitraryTypesModel):

@@ -31,18 +31,12 @@ class FlextInfraTextPatternScanner(s[bool]):
     pattern: Annotated[str, m.Field(description="Regex pattern")]
     include: Annotated[
         t.StrSequence,
-        m.Field(
-            default_factory=tuple,
-            description="Glob patterns included in the scan.",
-        ),
-    ] = m.Field(default_factory=tuple)
+        m.Field(description="Glob patterns included in the scan."),
+    ] = ()
     exclude: Annotated[
         t.StrSequence,
-        m.Field(
-            default_factory=tuple,
-            description="Glob patterns excluded from the scan.",
-        ),
-    ] = m.Field(default_factory=tuple)
+        m.Field(description="Glob patterns excluded from the scan."),
+    ] = ()
     match: Annotated[
         c.Infra.MatchMode,
         m.Field(description="Violation mode (present or absent)"),

@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, ClassVar, Self
 
-from flext_core import m, u
+from flext_core import m
 from flext_infra import c, t
 
 
@@ -266,7 +266,7 @@ class FlextInfraModelsDuplication:
             m.Field(description="Validated scan statistics"),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_complete_report(self) -> Self:
             format_summaries = tuple(self.statistics.formats.values())
             if not format_summaries or self.statistics.total.sources == 0:

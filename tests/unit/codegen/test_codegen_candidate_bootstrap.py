@@ -12,8 +12,8 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, infra, m, u
-from tests import u as tests_u
+from flext_infra import c, infra, m
+from tests import u
 
 
 class TestsFlextInfraCodegenCandidateBootstrap:
@@ -21,21 +21,21 @@ class TestsFlextInfraCodegenCandidateBootstrap:
 
     @staticmethod
     def _campaign(tmp_path: Path) -> tuple[Path, Path, Path]:
-        source, _ = tests_u.Tests.render_make_environment(
+        source, _ = u.Tests.render_make_environment(
             tmp_path / "source",
             c.Infra.MakeProfile.STANDALONE,
         )
-        first, _ = tests_u.Tests.render_make_environment(
+        first, _ = u.Tests.render_make_environment(
             tmp_path / "first",
             c.Infra.MakeProfile.STANDALONE,
         )
-        second, _ = tests_u.Tests.render_make_environment(
+        second, _ = u.Tests.render_make_environment(
             tmp_path / "second",
             c.Infra.MakeProfile.STANDALONE,
         )
         for root in (first, second):
-            tests_u.Tests.write_workspace_manifest(root, root.name)
-        manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
+            u.Tests.write_workspace_manifest(root, root.name)
+        manifest = u.Tests.write_workspace_manifest(source, source.name)
         declaration = "candidate_bootstrap_targets:\n" + "".join(
             f"  - path: {Path(os.path.relpath(root, source)).as_posix()}\n"
             "    what: makefile\n"
@@ -50,11 +50,11 @@ class TestsFlextInfraCodegenCandidateBootstrap:
     @staticmethod
     def test_empty_campaign_fails_loud(tmp_path: Path) -> None:
         """An empty typed list cannot produce a green no-op bootstrap."""
-        project_root, _ = tests_u.Tests.render_make_environment(
+        project_root, _ = u.Tests.render_make_environment(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,
         )
-        manifest = tests_u.Tests.write_workspace_manifest(
+        manifest = u.Tests.write_workspace_manifest(
             project_root,
             "fixture-project",
         )
@@ -98,7 +98,7 @@ class TestsFlextInfraCodegenCandidateBootstrap:
             tm.ok(u.Cli.atomic_read_binary_file_state(first_makefile, required=True)),
             eq=before,
         )
-        tests_u.Tests.write_workspace_manifest(second, second.name)
+        u.Tests.write_workspace_manifest(second, second.name)
         tm.ok(
             infra.bootstrap_candidate(
                 m.Infra.CandidateBootstrapCommand(repository_root=source),
@@ -167,16 +167,16 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         tmp_path: Path,
     ) -> None:
         """A conflicted docs projection is repaired before normal generation parses it."""
-        source, _ = tests_u.Tests.render_make_environment(
+        source, _ = u.Tests.render_make_environment(
             tmp_path / "source",
             c.Infra.MakeProfile.STANDALONE,
         )
-        candidate, _ = tests_u.Tests.render_make_environment(
+        candidate, _ = u.Tests.render_make_environment(
             tmp_path / "candidate",
             c.Infra.MakeProfile.STANDALONE,
         )
-        manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
-        tests_u.Tests.write_workspace_manifest(candidate, candidate.name)
+        manifest = u.Tests.write_workspace_manifest(source, source.name)
+        u.Tests.write_workspace_manifest(candidate, candidate.name)
         manifest.write_text(
             manifest.read_text(encoding="utf-8")
             + "\ncandidate_bootstrap_targets:\n"
@@ -204,16 +204,16 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         tmp_path: Path,
     ) -> None:
         """A healthy provider restores a candidate before its own Make can import."""
-        source, _ = tests_u.Tests.render_make_environment(
+        source, _ = u.Tests.render_make_environment(
             tmp_path / "source",
             c.Infra.MakeProfile.STANDALONE,
         )
-        candidate, _ = tests_u.Tests.render_make_environment(
+        candidate, _ = u.Tests.render_make_environment(
             tmp_path / "candidate",
             c.Infra.MakeProfile.STANDALONE,
         )
-        manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
-        tests_u.Tests.write_workspace_manifest(candidate, candidate.name)
+        manifest = u.Tests.write_workspace_manifest(source, source.name)
+        u.Tests.write_workspace_manifest(candidate, candidate.name)
         manifest.write_text(
             manifest.read_text(encoding="utf-8")
             + "\ncandidate_bootstrap_targets:\n"
@@ -249,16 +249,16 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         tmp_path: Path,
     ) -> None:
         """One declared recovery publishes all upg-owned launch artifacts."""
-        source, _ = tests_u.Tests.render_make_environment(
+        source, _ = u.Tests.render_make_environment(
             tmp_path / "source",
             c.Infra.MakeProfile.STANDALONE,
         )
-        candidate, _ = tests_u.Tests.render_make_environment(
+        candidate, _ = u.Tests.render_make_environment(
             tmp_path / "candidate",
             c.Infra.MakeProfile.STANDALONE,
         )
-        manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
-        tests_u.Tests.write_workspace_manifest(candidate, candidate.name)
+        manifest = u.Tests.write_workspace_manifest(source, source.name)
+        u.Tests.write_workspace_manifest(candidate, candidate.name)
         manifest.write_text(
             manifest.read_text(encoding="utf-8")
             + "\ncandidate_bootstrap_targets:\n"
@@ -286,16 +286,16 @@ class TestsFlextInfraCodegenCandidateBootstrap:
     @staticmethod
     def test_mise_triple_fails_before_partial_publication(tmp_path: Path) -> None:
         """An invalid destination prevents any member of the triple from writing."""
-        source, _ = tests_u.Tests.render_make_environment(
+        source, _ = u.Tests.render_make_environment(
             tmp_path / "source",
             c.Infra.MakeProfile.STANDALONE,
         )
-        candidate, _ = tests_u.Tests.render_make_environment(
+        candidate, _ = u.Tests.render_make_environment(
             tmp_path / "candidate",
             c.Infra.MakeProfile.STANDALONE,
         )
-        manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
-        tests_u.Tests.write_workspace_manifest(candidate, candidate.name)
+        manifest = u.Tests.write_workspace_manifest(source, source.name)
+        u.Tests.write_workspace_manifest(candidate, candidate.name)
         manifest.write_text(
             manifest.read_text(encoding="utf-8")
             + "\ncandidate_bootstrap_targets:\n"

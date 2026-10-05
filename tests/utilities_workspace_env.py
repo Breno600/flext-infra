@@ -13,6 +13,7 @@ from pathlib import Path
 from flext_tests import tm
 
 from flext_infra import config, u
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from tests import c, m, p, t
 
 
@@ -35,8 +36,6 @@ class TestsFlextInfraUtilitiesWorkspaceEnvMixin:
             The Make profile derived from the repository itself.
 
         """
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
         mode = tm.ok(FlextInfraWorkspaceDetector().detect(root))
         by_mode: t.MutableMappingKV[c.Infra.MakeProfile, c.Infra.MakeProfile] = {
             c.Infra.MakeProfile.WORKSPACE: c.Infra.MakeProfile.WORKSPACE,

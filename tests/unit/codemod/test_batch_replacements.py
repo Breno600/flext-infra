@@ -17,7 +17,7 @@ from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
 from tests import u
 
 
-class TestsBatchReplacements:
+class TestsFlextInfraBatchReplacements:
     """Only authenticated authored bytes may receive engine-proposed edits."""
 
     @staticmethod
