@@ -116,7 +116,7 @@ class FlextInfraMarkdownFormatGate(FlextInfraMarkdownGateBase):
             Path(c.PYPROJECT_FILENAME),
             (
                 f"{c.Infra.PRETTIER_BINARY} not found on PATH; `make setup` "
-                "provisions it from codegen.toolchain.prettier_version"
+                "provisions it from codegen.toolchain.tools entry 'prettier'"
             ),
             passed=False,
             started=started,

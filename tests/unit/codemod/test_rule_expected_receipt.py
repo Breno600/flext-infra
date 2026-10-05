@@ -11,7 +11,8 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, main as infra_main, u
+from flext_infra import main as infra_main
+from tests import u
 
 
 @pytest.mark.slow
@@ -25,19 +26,10 @@ class TestsFlextInfraModRuleExpectedReceipt:
     @staticmethod
     def _declare(workspace: Path, *, expected: str) -> None:
         """Point the workspace at one local rule carrying the receipt clause."""
-        config_path = workspace / c.Infra.CODEMOD_CONFIG_RELPATH
-        rules_root = config_path.parent / c.Cli.RULES_DIR_NAME
-        tm.ok(u.Cli.ensure_dir(rules_root))
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                config_path,
-                f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n",
-            ),
-        )
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                rules_root / "receipt-probe.yml",
-                (
+        u.Tests.declare_codemod_rules(
+            workspace,
+            {
+                "receipt-probe": (
                     "id: receipt-probe\n"
                     "language: Python\n"
                     "severity: warning\n"
@@ -47,7 +39,7 @@ class TestsFlextInfraModRuleExpectedReceipt:
                     "message: probe the declared receipt\n"
                     f"{expected}"
                 ),
-            ),
+            },
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
