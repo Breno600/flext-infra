@@ -25,6 +25,28 @@ from tests import u
 class TestsFlextInfraCodegenRepositoryRootScope:
     """Tests for ``FlextInfraCodegenRepositoryRootScope``."""
 
+    def test_normal_test_verbs_admit_only_incremental_execution(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Normal public recipes retain testmon without appending slow or full."""
+        root = self._render_root_makefile(tmp_path)
+        rendered = (root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding=c.Infra.ENCODING_DEFAULT,
+        )
+        cache = config.Infra.codegen.make.testmon_cache
+        for target in ("_builtin_test_all:", "_builtin_test_file_all:"):
+            recipe = rendered.split(target, 1)[1].split("\n\n", 1)[0]
+            tm.that(recipe.count("-m flext_infra._pytest_entry"), eq=1)
+            tm.that(
+                recipe,
+                lacks=["_pytest_entry slow", "file-slow", "_pytest_entry full"],
+            )
+            tm.that(
+                recipe,
+                has=f'{cache.database_environment_variable}="$$database"',
+            )
+
     @staticmethod
     def test_conform_owns_repository_root_makefile() -> None:
         """The single Makefile render entry includes the workspace profile."""
