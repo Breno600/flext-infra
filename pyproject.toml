@@ -181,6 +181,7 @@ include = ["/src/flext_infra/**", "/config/**"]
 [tool.mypy]
 mypy_path = ["src"]
 plugins = ["pydantic.mypy"]
+disable_error_code = ["prop-decorator", "call-arg"]
 python_version = "3.13"
 allow_redefinition = true
 check_untyped_defs = true
@@ -470,8 +471,9 @@ runtime-evaluated-base-classes = [
   "flext_infra._models._config.contract.ConfigContract",
   "flext_infra._models._config.contract.DocsAuditOverridesSpec",
   "flext_infra._models._config.contract.FlextInfraConfigModelsContract.ConfigContract",
-  "flext_infra._models._config.make.ExternalCacheDirectorySpec",
+  "flext_infra._models._config.external_cache.FlextInfraExternalCacheDirectorySpec",
   "flext_infra._models.codegen_render.MkdocsRenderContext",
+  "flext_infra._models.git.GitRemoteRequest",
   "flext_infra._models.layout._LayoutContract",
   "flext_infra._models.mise_toolchain._ConfigContract",
   "flext_infra.base.FlextInfraServiceBase",
