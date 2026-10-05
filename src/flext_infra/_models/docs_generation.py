@@ -84,23 +84,26 @@ class FlextInfraModelsDocsGeneration:
             return value
 
         @m.computed_field
-        @property
         def repository_root(self) -> Path:
-            """The physical repository root owning this scope's docs policy."""
+            """The physical repository root owning this scope's docs policy.
+
+            Returns:
+                The resulting ``Path``.
+            """
             return (
                 self.path
                 if self.repository_root_override is None
                 else self.repository_root_override
             )
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_report_owner(self) -> Self:
             if not self.report_dir.is_relative_to(self.path):
                 msg = f"docs report directory escapes its scope: {self.report_dir}"
                 raise ValueError(msg)
             return self
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_repository_root_owns_path(self) -> Self:
             if not self.path.is_relative_to(self.repository_root):
                 msg = f"docs scope path escapes its repository root: {self.path}"
@@ -142,7 +145,7 @@ class FlextInfraModelsDocsGeneration:
                 raise ValueError(msg)
             return value
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_desired_tuple(self) -> Self:
             if (self.desired_content is None) != (self.desired_mode is None):
                 msg = "docs artifact content and mode must be present together"
@@ -203,7 +206,7 @@ class FlextInfraModelsDocsGeneration:
                 raise ValueError(msg)
             return value
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_unique_complete_inputs(self) -> Self:
             scope_names = tuple(item.scope.name for item in self.scopes)
             if len(set(scope_names)) != len(scope_names):

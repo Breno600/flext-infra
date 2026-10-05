@@ -130,7 +130,7 @@ class FlextInfraPytestRunnerBase(s[int]):
             ),
         )
 
-    @u.model_validator(mode="after")
+    @m.model_validator(mode="after")
     def _validate_paths(self) -> Self:
         """Require repository-contained target and report paths.
 

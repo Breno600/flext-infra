@@ -40,7 +40,7 @@ class FlextInfraModelsCodegenJournalModels:
             m.Field(description="Exact staged state, or None for a planned deletion"),
         ] = None
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_publication(self) -> Self:
             """Bind a complete staged state to one physical project destination.
 
@@ -153,7 +153,7 @@ class FlextInfraModelsCodegenJournalModels:
                 raise ValueError(msg)
             return value
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_disposition(self) -> Self:
             """Bind lifecycle metadata to one physical leaf path.
 
@@ -300,7 +300,7 @@ class FlextInfraModelsCodegenJournalModels:
                 raise ValueError(msg)
             return value
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_source_physical_state(self) -> Self:
             """Reject a persisted source identity that represents a reparse point.
 
@@ -554,7 +554,7 @@ class FlextInfraModelsCodegenJournalModels:
                 raise ValueError(msg)
             return value
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_original_tuple(self) -> Self:
             """Require complete recovery identity exactly when original existed.
 

@@ -159,9 +159,12 @@ class FlextInfraModelsMixins:
             return tuple(normalized)
 
         @m.computed_field
-        @property
         def dry_run(self) -> bool:
-            """Whether writes are disabled (inverse of apply)."""
+            """Whether writes are disabled (inverse of apply).
+
+            Returns:
+                The resulting ``bool``.
+            """
             return not self.apply
 
     # ═══════════════════ RELEASE MIXINS ═══════════════════
