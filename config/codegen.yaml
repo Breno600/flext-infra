@@ -127,12 +127,13 @@ Infra:
       qlty_version: latest
       node_version: latest
       jscpd_selector: github:kucherenko/jscpd
-      # Held at 5.4.0 (operator resilience lane 2026-10-02): under the 7-day
-      # cooldown, `latest` resolves to 5.3.2, whose release lacks platform
-      # assets, so Mise aborts every lock pass ("refusing to replace") and no
-      # lock the pinned Mise accepts can exist. Hold the asset-covered 5.4.0
-      # until a newer release regains full platform coverage.
-      jscpd_version: "5.3.3"
+      # Back on `latest` (2026-10-04 re-measurement): the 2026-10-02 hold's
+      # premise is gone — every release v5.2.0 through v5.4.0 now ships the
+      # full 19-asset platform set (verified via the GitHub releases API),
+      # so the cooldown `latest` resolves to installs cleanly and `make upg`
+      # re-records the resolution in mise.lock. Re-pin only on a measured,
+      # dated failure again.
+      jscpd_version: latest
       # Prettier is the markdown formatter (markdown-format gate): provisioned
       # through npm so the fleet binary version is owned by this SSOT alone.
       prettier_selector: npm:prettier
