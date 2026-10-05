@@ -39,7 +39,10 @@ class TestsFlextInfraDepsModernizerToolTables:
         # A live package: the first-party owner derives importable packages.
         (package_dir / c.Infra.INIT_PY).write_text('"""Package."""\n', encoding="utf-8")
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
-            u.Tests.toml_payload(f'[project]\nname = "flext-sample"\n{source}'),
+            u.Tests.toml_payload(
+                '[project]\nname = "flext-sample"\n'
+                f'version = "{config.Infra.initial_project_version}"\n{source}',
+            ),
         )
         changes = FlextInfraToolTablesPhase(
             tool_config or config.Infra.tooling,
