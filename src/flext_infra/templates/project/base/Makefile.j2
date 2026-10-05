@@ -571,16 +571,6 @@ _setup_lifecycle:
 		*" pre-setup "*) $(SELF_MAKE) pre-setup ;; \
 	esac
 	@$(SELF_MAKE) _builtin_setup_environment
-{% if make_profile == "workspace" %}
-	@set -eu; \
-	if [ "$${SETUP_MISE_LOCK_DRIFT:-}" = "1" ]; then \
-		printf 'INFO: setup detected mise.lock drift; bootstrap reconcile rebuilds it in place\n'; \
-		mise_pin=$$(awk '{{ mise_bootstrap.version_pin_reader | replace('$', '$$') }}' "$(MISE_VERSION_PIN)"); \
-		if ! $(PROJECT_FLEXT_INFRA) bootstrap reconcile "$(PROJECT_ROOT)" "$$mise_pin"; then \
-			printf 'WARN: bootstrap reconcile could not rebuild mise.lock; setup continues; make upg rewrites it\n' >&2; \
-		fi; \
-	fi
-{% endif %}
 	+@XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
 		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" exec "$(PROJECT_ROOT)" $(SELF_MAKE) _setup_activated
 
