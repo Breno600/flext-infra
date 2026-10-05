@@ -178,9 +178,10 @@ class FlextInfraUtilitiesRopeSourceBases:
                                     value,
                                     (ast.Name, ast.Attribute, ast.Subscript),
                                 )
-                                and isinstance(head, ast.Name)
                                 and not (
-                                    head.id in visible and visible[head.id] is None
+                                    isinstance(head, ast.Name)
+                                    and head.id in visible
+                                    and visible[head.id] is None
                                 )
                                 else None
                             )
