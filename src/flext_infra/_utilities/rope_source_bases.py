@@ -223,17 +223,23 @@ class FlextInfraUtilitiesRopeSourceBases:
                             bindings, lexical, scope,
                         )
                         continue
-                    if node.orelse and any(
-                        isinstance(child, ast.ClassDef)
+                    # Non-constant conditions with class declarations
+                    # (pydantic's own version-dependent models, read from
+                    # the runtime environment) have no statically knowable
+                    # class-ness: the conditional names bind as None so the
+                    # base derivation degrades them exactly like any other
+                    # non-class binding.
+                    conditional = {
+                        child.name
                         for statement in (*node.body, *node.orelse)
                         for child in ast.walk(statement)
-                    ):
-                        message = (
-                            f"Ambiguous conditional class declarations in {module}"
-                        )
-                        raise ValueError(message)
+                        if isinstance(child, ast.ClassDef)
+                    }
                     left = dict(bindings)
                     right = dict(bindings)
+                    for name in conditional:
+                        left[name] = None
+                        right[name] = None
                     collect(node.body, left, lexical, scope)
                     collect(node.orelse, right, lexical, scope)
                     for name in left.keys() | right.keys():
