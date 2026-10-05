@@ -18,19 +18,6 @@ class TestsFlextInfraGitRefsSemantics:
     """Prove the single canonical ref owner per fact through the public facade."""
 
     @staticmethod
-    def _linked_lane(tmp_path: Path, repository: Path, branch: str) -> Path:
-        """Register ``branch`` as a linked worktree lane beside the primary.
-
-        Returns:
-            The resulting ``Path``.
-
-        """
-        lane = tmp_path / branch
-        _ = u.Tests.git_run(repository, "branch", branch)
-        _ = u.Tests.git_run(repository, "worktree", "add", str(lane), branch)
-        return lane
-
-    @staticmethod
     def test_current_branch_reports_the_checked_out_branch(
         tmp_path: Path,
     ) -> None:
@@ -147,7 +134,7 @@ class TestsFlextInfraGitRefsSemantics:
     ) -> None:
         """The toplevel owner reports the worktree it was asked about, not the primary."""
         repository = u.Tests.git_repository(tmp_path)
-        lane = self._linked_lane(tmp_path, repository, "toplevel-lane")
+        lane = u.Tests.git_linked_lane(tmp_path, repository, "toplevel-lane")
 
         primary_root = tm.ok(
             u.Infra.git_show_toplevel(m.Infra.GitRepoRequest(repo_root=repository)),
@@ -165,7 +152,7 @@ class TestsFlextInfraGitRefsSemantics:
     ) -> None:
         """The worktree-list owner reports every registered checkout of the repo."""
         repository = u.Tests.git_repository(tmp_path)
-        lane = self._linked_lane(tmp_path, repository, "list-lane")
+        lane = u.Tests.git_linked_lane(tmp_path, repository, "list-lane")
 
         listed = tm.ok(
             u.Infra.git_list_worktrees(m.Infra.GitRepoRequest(repo_root=repository)),

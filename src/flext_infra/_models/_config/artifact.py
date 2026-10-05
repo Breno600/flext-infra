@@ -11,7 +11,7 @@ from pathlib import Path, PureWindowsPath
 from types import MappingProxyType
 from typing import Annotated, Literal, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import t
 from flext_infra._constants import (
@@ -62,9 +62,7 @@ class FlextInfraConfigModelsArtifact:
         ] = False
 
     class CodegenVscodeSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Fully modeled content of the ``vscode`` section
-        of ``config/codegen.yaml``.
-        """
+        """Fully modeled content of the ``vscode`` section of ``config/codegen.yaml``."""
 
         scalar_settings: Annotated[
             Mapping[str, str | bool | int],
@@ -240,7 +238,11 @@ class FlextInfraConfigModelsArtifact:
         @m.computed_field
         @property
         def vscode_files_exclude_map(self) -> Mapping[str, bool]:
-            """Derived VS Code ``files.exclude`` entries from the artifact SSOT."""
+            """Derived VS Code ``files.exclude`` entries from the artifact SSOT.
+
+            Returns:
+                The resulting ``Mapping[str, bool]``.
+            """
             return {
                 f"**/{artifact.name}": True
                 for artifact in self.artifacts
@@ -250,7 +252,11 @@ class FlextInfraConfigModelsArtifact:
         @m.computed_field
         @property
         def vscode_watcher_exclude_map(self) -> Mapping[str, bool]:
-            """Derived VS Code ``files.watcherExclude`` entries from the SSOT."""
+            """Derived VS Code ``files.watcherExclude`` entries from the SSOT.
+
+            Returns:
+                The resulting ``Mapping[str, bool]``.
+            """
             return {
                 f"**/{artifact.name}/**": True
                 for artifact in self.artifacts
@@ -260,13 +266,21 @@ class FlextInfraConfigModelsArtifact:
         @m.computed_field
         @property
         def vscode_search_exclude_map(self) -> Mapping[str, bool]:
-            """Derived VS Code ``search.exclude`` entries from the artifact SSOT."""
+            """Derived VS Code ``search.exclude`` entries from the artifact SSOT.
+
+            Returns:
+                The resulting ``Mapping[str, bool]``.
+            """
             return dict(self.vscode_files_exclude_map)
 
         @m.computed_field
         @property
         def source_scan_ignored(self) -> t.VariadicTuple[str]:
-            """Derived ``source_scan.ignored_resources`` names from the SSOT."""
+            """Derived ``source_scan.ignored_resources`` names from the SSOT.
+
+            Returns:
+                The resulting ``t.VariadicTuple[str]``.
+            """
             return tuple(
                 artifact.name
                 for artifact in self.artifacts
@@ -294,6 +308,10 @@ class FlextInfraConfigModelsArtifact:
             are therefore emitted in their declared order, and derived artifact
             patterns are appended -- never prepended -- so a whitelist policy
             expressed in the SSOT survives the projection intact.
+
+            Returns:
+                The resulting
+                    ``t.VariadicTuple[FlextInfraConfigModelsScaffold.ScaffoldGitignoreSectionSpec]``.
             """
             scaffold_sections = self.scaffold.gitignore_sections
             # A declared section may already govern a derived artifact, in
@@ -356,7 +374,11 @@ class FlextInfraConfigModelsArtifact:
         @m.computed_field
         @property
         def gitignore_artifact_patterns(self) -> t.VariadicTuple[str]:
-            """Derived ``.gitignore`` artifact patterns from the SSOT (stable order)."""
+            """Derived ``.gitignore`` artifact patterns from the SSOT (stable order).
+
+            Returns:
+                The resulting ``t.VariadicTuple[str]``.
+            """
             return tuple(
                 f"{artifact.name}/" if artifact.is_dir else artifact.name
                 for artifact in self.artifacts
@@ -379,7 +401,7 @@ class FlextInfraConfigModelsArtifact:
         # of projects it serves is NOT its knowledge — each repository's own
         # .gitmodules is the read-only topology authority.
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_github_artifact_ownership(self) -> Self:
             """Require one full-managed conform owner for every GitHub template.
 
@@ -596,7 +618,7 @@ class FlextInfraConfigModelsArtifact:
             m.Field(description="Governed root artifact policy"),
         ] = None
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_publication_identity(self) -> Self:
             """Bind one complete desired state to its exact project and target.
 
@@ -744,7 +766,25 @@ class FlextInfraConfigModelsArtifact:
             ),
         ]
 
-        @u.model_validator(mode="after")
+        @staticmethod
+        def _is_escaping_path(value: str) -> bool:
+            """Whether one configured path escapes its declared relative owner.
+
+            Returns:
+                The resulting ``bool``.
+
+            """
+            path = Path(value)
+            return bool(
+                path.is_absolute()
+                or PureWindowsPath(value).root
+                or not path.parts
+                or ".." in path.parts
+                or "\\" in value
+                or PureWindowsPath(value).drive,
+            )
+
+        @m.model_validator(mode="after")
         def _validate_source_paths(self) -> Self:
             """Keep campaign drivers and scan roots inside their declared owners.
 
@@ -756,15 +796,7 @@ class FlextInfraConfigModelsArtifact:
 
             """
             for value in (self.csv, *self.roots):
-                path = Path(value)
-                if (
-                    path.is_absolute()
-                    or PureWindowsPath(value).root
-                    or not path.parts
-                    or ".." in path.parts
-                    or "\\" in value
-                    or PureWindowsPath(value).drive
-                ):
+                if self._is_escaping_path(value):
                     msg = (
                         f"CSV campaign path must be relative and non-escaping: {value}"
                     )

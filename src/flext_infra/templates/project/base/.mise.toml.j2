@@ -22,8 +22,13 @@ lockfile_platforms = [{% for platform in mise_lockfile_platforms %}"{{ platform 
 [settings.python]
 compile = {{ "true" if python_compile else "false" }}
 [settings.npm]
+{% if npm_package_manager == "bun" -%}
+# bun installs the npm CLIs with the --trust lifecycle approval the inline
+# tool below declares; the lock keeps the top-level pin only.
+{% else -%}
 # Aube replays the locked dependency graph. Only the configured ast-grep
 # package is approved below to run its native binary-selection lifecycle.
+{% endif -%}
 package_manager = "{{ npm_package_manager }}"
 [tool_config]
 locked = {{ "true" if mise_locked else "false" }}
@@ -43,7 +48,11 @@ version = "{{ tool_versions[entry.name] }}"
 version_prefix = "{{ entry.version_prefix }}"
 {%- endif %}
 {%- elif entry.form == "inline" %}
+{%- if npm_package_manager == "bun" %}
+"{{ entry.selector }}" = { version = "{{ tool_versions[entry.name] }}", bun_args = "--trust" }
+{%- else %}
 "{{ entry.selector }}" = { version = "{{ tool_versions[entry.name] }}", allow_builds = ["{{ entry.selector.removeprefix("npm:") }}"] }
+{%- endif %}
 {%- elif entry.selector %}
 "{{ entry.selector }}" = "{{ tool_versions[entry.name] }}"
 {%- else %}

@@ -348,7 +348,34 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 		esac; \
 	done; \
 	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
-	trap 'if [ -n "$${lock_stage:-}" ] && [ -d "$$lock_stage" ] && [ ! -f "$$lock_stage/transaction.json" ]; then find "$$lock_stage" -depth -delete; fi; find "$$scratch" -depth -delete' EXIT; \
+	readonly scratch; \
+	lock_stage=; \
+	trap 'bootstrap_status=$$?; trap - EXIT; \
+		lock_cleanup_status=0; scratch_cleanup_status=0; diagnostic_status=0; scratch_present=0; \
+		if [ -d "$$scratch" ]; then scratch_present=1; fi; \
+		if printf "mise scratch: cleanup path=%s present=%s entering_status=%s\n" "$$scratch" "$$scratch_present" "$$bootstrap_status" >&2; then :; \
+		else diagnostic_status=$$?; fi; \
+		if [ -n "$$lock_stage" ] && [ -d "$$lock_stage" ] && [ ! -f "$$lock_stage/transaction.json" ]; then \
+			if find "$$lock_stage" -depth -delete; then :; else \
+				lock_cleanup_status=$$?; \
+				if printf "ERROR: Mise lock stage cleanup failed: %s exit=%s\n" "$$lock_stage" "$$lock_cleanup_status" >&2; then :; \
+				else diagnostic_status=$$?; fi; \
+			fi; \
+		fi; \
+		if find "$$scratch" -depth -delete; then :; else \
+			scratch_cleanup_status=$$?; \
+			if printf "ERROR: Mise scratch cleanup failed: %s exit=%s\n" "$$scratch" "$$scratch_cleanup_status" >&2; then :; \
+			else diagnostic_status=$$?; fi; \
+		fi; \
+		if [ "$$bootstrap_status" -eq 0 ]; then \
+			if [ "$$lock_cleanup_status" -ne 0 ]; then bootstrap_status=$$lock_cleanup_status; \
+			elif [ "$$scratch_cleanup_status" -ne 0 ]; then bootstrap_status=$$scratch_cleanup_status; \
+			else bootstrap_status=$$diagnostic_status; fi; \
+		fi; \
+		if printf "mise scratch: cleaned path=%s lock_cleanup_status=%s scratch_cleanup_status=%s exit=%s\n" "$$scratch" "$$lock_cleanup_status" "$$scratch_cleanup_status" "$$bootstrap_status" >&2; then :; \
+		else diagnostic_status=$$?; if [ "$$bootstrap_status" -eq 0 ]; then bootstrap_status=$$diagnostic_status; fi; fi; \
+		exit "$$bootstrap_status"' EXIT; \
+	printf 'mise scratch: allocated path=%s\n' "$$scratch" >&2; \
 	mkdir -p "$$scratch/home" "$$scratch/home" "$$scratch/appdata" "$$scratch/appdata" "$$scratch/xdg-config" "$$scratch/xdg-data" "$$scratch/xdg-cache" "$$scratch/xdg-state" "$$scratch/config" "$$scratch/tmp" "$$scratch/." "$$scratch/system-config" "$$scratch/system-data" "$$scratch/system-installs" "$$scratch/system-shims" "$$scratch/tmp" "$$scratch/tmp" "$$scratch/tmp"; \
 : > "$$scratch/global-config.toml"; chmod 600 "$$scratch/global-config.toml"; \
 : > "$$scratch/system-config/config.toml"; chmod 600 "$$scratch/system-config/config.toml"; \
@@ -395,6 +422,7 @@ mise_exec() { \
 'MISE_LOCKFILE=true' \
 'MISE_LOCKED=true' \
 'MISE_MINIMUM_RELEASE_AGE=7d' \
+'MISE_NPM_PACKAGE_MANAGER=bun' \
 $${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
 			$${mise_lock_drift:+"MISE_LOCKFILE=false"} \
 			$${mise_lock_drift:+"MISE_LOCKED=false"} \
@@ -583,7 +611,34 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 		esac; \
 	done; \
 	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
-	trap 'if [ -n "$${lock_stage:-}" ] && [ -d "$$lock_stage" ] && [ ! -f "$$lock_stage/transaction.json" ]; then find "$$lock_stage" -depth -delete; fi; find "$$scratch" -depth -delete' EXIT; \
+	readonly scratch; \
+	lock_stage=; \
+	trap 'bootstrap_status=$$?; trap - EXIT; \
+		lock_cleanup_status=0; scratch_cleanup_status=0; diagnostic_status=0; scratch_present=0; \
+		if [ -d "$$scratch" ]; then scratch_present=1; fi; \
+		if printf "mise scratch: cleanup path=%s present=%s entering_status=%s\n" "$$scratch" "$$scratch_present" "$$bootstrap_status" >&2; then :; \
+		else diagnostic_status=$$?; fi; \
+		if [ -n "$$lock_stage" ] && [ -d "$$lock_stage" ] && [ ! -f "$$lock_stage/transaction.json" ]; then \
+			if find "$$lock_stage" -depth -delete; then :; else \
+				lock_cleanup_status=$$?; \
+				if printf "ERROR: Mise lock stage cleanup failed: %s exit=%s\n" "$$lock_stage" "$$lock_cleanup_status" >&2; then :; \
+				else diagnostic_status=$$?; fi; \
+			fi; \
+		fi; \
+		if find "$$scratch" -depth -delete; then :; else \
+			scratch_cleanup_status=$$?; \
+			if printf "ERROR: Mise scratch cleanup failed: %s exit=%s\n" "$$scratch" "$$scratch_cleanup_status" >&2; then :; \
+			else diagnostic_status=$$?; fi; \
+		fi; \
+		if [ "$$bootstrap_status" -eq 0 ]; then \
+			if [ "$$lock_cleanup_status" -ne 0 ]; then bootstrap_status=$$lock_cleanup_status; \
+			elif [ "$$scratch_cleanup_status" -ne 0 ]; then bootstrap_status=$$scratch_cleanup_status; \
+			else bootstrap_status=$$diagnostic_status; fi; \
+		fi; \
+		if printf "mise scratch: cleaned path=%s lock_cleanup_status=%s scratch_cleanup_status=%s exit=%s\n" "$$scratch" "$$lock_cleanup_status" "$$scratch_cleanup_status" "$$bootstrap_status" >&2; then :; \
+		else diagnostic_status=$$?; if [ "$$bootstrap_status" -eq 0 ]; then bootstrap_status=$$diagnostic_status; fi; fi; \
+		exit "$$bootstrap_status"' EXIT; \
+	printf 'mise scratch: allocated path=%s\n' "$$scratch" >&2; \
 	mkdir -p "$$scratch/home" "$$scratch/home" "$$scratch/appdata" "$$scratch/appdata" "$$scratch/xdg-config" "$$scratch/xdg-data" "$$scratch/xdg-cache" "$$scratch/xdg-state" "$$scratch/config" "$$scratch/tmp" "$$scratch/." "$$scratch/system-config" "$$scratch/system-data" "$$scratch/system-installs" "$$scratch/system-shims" "$$scratch/tmp" "$$scratch/tmp" "$$scratch/tmp"; \
 : > "$$scratch/global-config.toml"; chmod 600 "$$scratch/global-config.toml"; \
 : > "$$scratch/system-config/config.toml"; chmod 600 "$$scratch/system-config/config.toml"; \
@@ -630,6 +685,7 @@ mise_exec() { \
 'MISE_LOCKFILE=true' \
 'MISE_LOCKED=true' \
 'MISE_MINIMUM_RELEASE_AGE=7d' \
+'MISE_NPM_PACKAGE_MANAGER=bun' \
 $${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
 			$${mise_lock_drift:+"MISE_LOCKFILE=false"} \
 			$${mise_lock_drift:+"MISE_LOCKED=false"} \
@@ -873,9 +929,11 @@ shim_farm="$$mise_storage_root/shims"; \
 		printf '%s\n' "$$shim_farm" >> "$$GITHUB_PATH"; \
 fi; \
 	printf 'setup: entering lifecycle (submodules, environment, hooks) make=%s\n' "$(SELF_MAKE_EXECUTABLE)"; \
+	scratch_present=0; if [ -d "$$scratch" ]; then scratch_present=1; fi; \
+	printf 'mise scratch: before lifecycle path=%s present=%s\n' "$$scratch" "$$scratch_present" >&2; \
 	mise_runtime_path="$$mise_storage_root/bootstrap/mise-$${runtime_release}"; \
 	if [ "$(OS)" = "Windows_NT" ]; then mise_runtime_path="$$mise_runtime_path.exe"; fi; \
-	env \
+	if env \
 "MISE_DATA_DIR=$$mise_storage_root" \
 "MISE_CACHE_DIR=$$mise_storage_root/cache" \
 "MISE_STATE_DIR=$$mise_storage_root/state" \
@@ -893,7 +951,12 @@ fi; \
 		"SETUP_DIRENV=$$direnv_executable" \
 		"SETUP_PYTHON=$$python_executable" \
 		"SETUP_DIRENV_XDG_DATA_HOME=$$caller_xdg_data_home" \
-		"CI=$(CI)" $(SELF_MAKE) $(TOOL_BOOTSTRAP_LIFECYCLE)
+		"CI=$(CI)" $(SELF_MAKE) $(TOOL_BOOTSTRAP_LIFECYCLE); then lifecycle_status=0; \
+	else lifecycle_status=$$?; fi; \
+	scratch_present=0; if [ -d "$$scratch" ]; then scratch_present=1; fi; \
+	if printf 'mise scratch: after lifecycle path=%s present=%s status=%s\n' "$$scratch" "$$scratch_present" "$$lifecycle_status" >&2; then :; \
+	else lifecycle_diagnostic_status=$$?; if [ "$$lifecycle_status" -eq 0 ]; then lifecycle_status=$$lifecycle_diagnostic_status; fi; fi; \
+	exit "$$lifecycle_status"
 
 # Every repository evaluates only itself, locally exactly as in CI: a workspace
 # root consumes its members as installed libraries and never fans a verb out
@@ -1687,9 +1750,10 @@ _builtin-help:
 # Source: template (submodule_setup_recipe.j2)
 # Computed: workspace uses MANAGED_GITLINKS from config; standalone discovers
 #           submodules with flext-managed=true from .gitmodules at runtime.
-# Rule: setup PROVISIONS an absent governed gitlink and VERIFIES a present one.
-#       An absent checkout holds no work, so setup initializes it at the recorded
-#       gitlink. A present checkout is never destroyed: git checkout, git reset,
+# Rule: setup PROVISIONS an absent or proven unfinished initial clone and
+#       VERIFIES an established checkout. An initial clone has no physical index,
+#       no worktree content, and only its clone reflog entry. Established work
+#       is never destroyed: git checkout, git reset,
 #       fetch, and branch attachment are forbidden. Pin validity is HEAD contains
 #       gitlink. Declared branch is the named integration line;
 #       legacy branch=. still resolves to the superproject named branch if present.
@@ -1705,6 +1769,8 @@ _builtin-help:
 # init uses. Setup's contract is the recorded commit, and a full history
 # cannot finish inside submodule_timeout_seconds when the object database
 # is large.
+# Derive the physical index from its Git directory: --git-path resolves
+# a final symlink and cannot prove that the index entry itself is absent.
 _builtin_setup_submodules:
 	@set -eu; \
 	umask 022; \
@@ -1738,16 +1804,70 @@ _builtin_setup_submodules:
 	fi; \
 	managed=$$(printf '%s' "$$managed" | tr ' ' '\n' | sort -u | tr '\n' ' '); \
 	if [ -z "$$managed" ]; then exit 0; fi; \
+	if [ "$${GIT_INDEX_FILE+x}" = x ]; then \
+		printf 'ERROR: submodule setup cannot authenticate a relocated Git index\n' >&2; \
+		exit 2; \
+	fi; \
 	absent=""; \
 	for path in $$managed; do \
-		[ -e "$$root/$$path/.git" ] || absent="$$absent $$path"; \
+		child="$$root/$$path"; \
+		if [ ! -e "$$child/.git" ]; then \
+			absent="$$absent $$path"; \
+			continue; \
+		fi; \
+		owner=$$(git -C "$$child" rev-parse --show-superproject-working-tree); \
+		checkout_root=$$(git -C "$$child" rev-parse --show-toplevel); \
+		if [ "$$owner" != "$$root" ] || [ "$$checkout_root" != "$$child" ]; then \
+			printf 'ERROR: %s: checkout identity does not match the governed child\n' "$$path" >&2; \
+			exit 2; \
+		fi; \
+		git_dir=$$(git -C "$$child" rev-parse --absolute-git-dir); \
+		index="$$git_dir/index"; \
+		if [ -e "$$index" ] || [ -L "$$index" ]; then continue; fi; \
+		content=$$(git -C "$$child" ls-files --others --directory); \
+		reflog=$$(git -C "$$child" reflog show --format=%gs HEAD); \
+		initial=$$(git -C "$$child" reflog show --format=%gs -1 HEAD); \
+		if [ -n "$$content" ] || [ "$$reflog" != "$$initial" ]; then \
+			printf 'ERROR: %s: missing index with unproven initial-clone state; preserve and review\n' "$$path" >&2; \
+			exit 2; \
+		fi; \
+		case "$$initial" in \
+			'clone: from '*) ;; \
+			*) printf 'ERROR: %s: missing index without initial clone receipt\n' "$$path" >&2; exit 2 ;; \
+		esac; \
+		local_refs=$$(git -C "$$child" for-each-ref --format='%(refname)' refs/heads refs/stash); \
+		if active_ref=$$(git -C "$$child" symbolic-ref -q HEAD); then \
+			:; \
+		else \
+			ref_status=$$?; \
+			[ "$$ref_status" -eq 1 ] || exit "$$ref_status"; \
+		fi; \
+		if [ "$$local_refs" != "$$active_ref" ]; then \
+			printf 'ERROR: %s: missing index with local branch or stash work; preserve and review\n' "$$path" >&2; \
+			exit 2; \
+		fi; \
+		entry=$$(git -C "$$root" ls-files --stage -- "$$path"); \
+		set -- $$entry; \
+		if [ "$$#" -ne 4 ] || [ "$$1" != 160000 ] || [ "$$3" != 0 ] || [ "$$4" != "$$path" ]; then \
+			printf 'ERROR: governed path is not a gitlink: %s\n' "$$path" >&2; \
+			exit 2; \
+		fi; \
+		head=$$(git -C "$$child" rev-parse HEAD); \
+		if [ "$$head" = "$$2" ]; then \
+			printf 'setup: materializing unfinished initial clone at recorded pin: %s\n' "$$path"; \
+			GIT_TERMINAL_PROMPT=0 timeout --signal=TERM --kill-after=5s "120s" \
+				git -C "$$child" -c submodule.recurse=false checkout --detach --no-overwrite-ignore "$$head"; \
+			continue; \
+		fi; \
+		printf 'setup: resuming unfinished initial clone: %s\n' "$$path"; \
+		absent="$$absent $$path"; \
 	done; \
 	if [ -n "$$absent" ]; then \
 		credential_helper='!f() { if [ "$$1" = get ]; then printf "username=x-access-token\npassword=%s\n" "$$GITHUB_TOKEN"; fi; }; f'; \
 		GIT_TERMINAL_PROMPT=0 timeout --signal=TERM --kill-after=5s "120s" \
 			git -C "$$root" -c credential.helper= \
 			-c "credential.https://$${GH_HOST:-github.com}.helper=$$credential_helper" \
-			submodule update --init --depth 1 --jobs "$${FLEXT_SUBMODULE_JOBS:-8}" -- $$absent; \
+			submodule update --init --checkout --depth 1 --jobs "$${FLEXT_SUBMODULE_JOBS:-8}" -- $$absent; \
 	fi; \
 	validate_submodule() { \
 		superproject="$$1"; \
@@ -2019,6 +2139,15 @@ case "$$database" in /*) ;; *) printf 'ERROR: persistent testmon database requir
 case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon database must be outside the checkout: %s\n' "$$database" >&2; exit 2 ;; esac; \
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
+project_root="$(PROJECT_ROOT)"; \
+project_parent="$${project_root%/*}"; \
+if [ -z "$$project_parent" ]; then project_parent=/; fi; \
+scratch="$$(mktemp -d "$$project_parent/.$${project_root##*/}.pytest-scratch.XXXXXX")"; \
+trap 'find "$$scratch" -depth -delete' EXIT; \
+mkdir -p "$$scratch/tmp"; \
+scratch_tmp="$$(cd "$$scratch/tmp" && pwd -P)"; \
+TMPDIR="$$scratch_tmp"; TMP="$$scratch_tmp"; TEMP="$$scratch_tmp"; \
+export TMPDIR TMP TEMP; \
 TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry; \
 TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry slow
 
@@ -2029,6 +2158,15 @@ case "$$database" in /*) ;; *) printf 'ERROR: persistent testmon database requir
 case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon database must be outside the checkout: %s\n' "$$database" >&2; exit 2 ;; esac; \
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
+project_root="$(PROJECT_ROOT)"; \
+project_parent="$${project_root%/*}"; \
+if [ -z "$$project_parent" ]; then project_parent=/; fi; \
+scratch="$$(mktemp -d "$$project_parent/.$${project_root##*/}.pytest-scratch.XXXXXX")"; \
+trap 'find "$$scratch" -depth -delete' EXIT; \
+mkdir -p "$$scratch/tmp"; \
+scratch_tmp="$$(cd "$$scratch/tmp" && pwd -P)"; \
+TMPDIR="$$scratch_tmp"; TMP="$$scratch_tmp"; TEMP="$$scratch_tmp"; \
+export TMPDIR TMP TEMP; \
 TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry full; \
 TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry full-slow
 
@@ -2042,6 +2180,15 @@ case "$$database" in /*) ;; *) printf 'ERROR: persistent testmon database requir
 case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon database must be outside the checkout: %s\n' "$$database" >&2; exit 2 ;; esac; \
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
+project_root="$(PROJECT_ROOT)"; \
+project_parent="$${project_root%/*}"; \
+if [ -z "$$project_parent" ]; then project_parent=/; fi; \
+scratch="$$(mktemp -d "$$project_parent/.$${project_root##*/}.pytest-scratch.XXXXXX")"; \
+trap 'find "$$scratch" -depth -delete' EXIT; \
+mkdir -p "$$scratch/tmp"; \
+scratch_tmp="$$(cd "$$scratch/tmp" && pwd -P)"; \
+TMPDIR="$$scratch_tmp"; TMP="$$scratch_tmp"; TEMP="$$scratch_tmp"; \
+export TMPDIR TMP TEMP; \
 export FLEXT_PYTEST_TARGET_FILE="$(FILE)"; TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry file; \
 export FLEXT_PYTEST_TARGET_FILE="$(FILE)"; TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry file-slow
 
@@ -2165,6 +2312,15 @@ case "$$database" in /*) ;; *) printf 'ERROR: persistent testmon database requir
 case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon database must be outside the checkout: %s\n' "$$database" >&2; exit 2 ;; esac; \
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
+project_root="$(PROJECT_ROOT)"; \
+project_parent="$${project_root%/*}"; \
+if [ -z "$$project_parent" ]; then project_parent=/; fi; \
+scratch="$$(mktemp -d "$$project_parent/.$${project_root##*/}.pytest-scratch.XXXXXX")"; \
+trap 'find "$$scratch" -depth -delete' EXIT; \
+mkdir -p "$$scratch/tmp"; \
+scratch_tmp="$$(cd "$$scratch/tmp" && pwd -P)"; \
+TMPDIR="$$scratch_tmp"; TMP="$$scratch_tmp"; TEMP="$$scratch_tmp"; \
+export TMPDIR TMP TEMP; \
 	TESTMON_DATAFILE="$$database" $(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -m flext_infra._pytest_entry profile \
 		"$(PROFILE_REPORTS_DIR)/pytest.pstats"
 

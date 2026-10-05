@@ -12,7 +12,7 @@ import pytest
 from flext_tests import tm
 
 from tests import u
-from tests.unit.deps.extra_paths_support import ExtraPathsTestSupport
+from tests.unit.deps.extra_paths_support import TestsFlextInfraExtraPathsSupport
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -27,7 +27,7 @@ class TestsFlextInfraExtraPathsManager:
     def test_sync_one_missing_file(tmp_path: Path) -> None:
         """Verify sync one missing file."""
         tm.that(
-            not ExtraPathsTestSupport
+            not TestsFlextInfraExtraPathsSupport
             .manager()
             .sync_one(tmp_path / "nonexistent.toml")
             .success,
@@ -41,7 +41,7 @@ class TestsFlextInfraExtraPathsManager:
         doc = u.Cli.toml_document()
         doc["project"] = {"name": "test"}
         pyproject.write_text(doc.as_string(), encoding="utf-8")
-        result = ExtraPathsTestSupport.manager().sync_one(pyproject)
+        result = TestsFlextInfraExtraPathsSupport.manager().sync_one(pyproject)
         tm.that(result.success, eq=True)
         tm.that(result.value, eq=False)
 
@@ -54,7 +54,7 @@ class TestsFlextInfraExtraPathsManager:
         tool["other"] = u.Cli.toml_table()
         doc["tool"] = tool
         pyproject.write_text(doc.as_string(), encoding="utf-8")
-        result = ExtraPathsTestSupport.manager().sync_one(pyproject)
+        result = TestsFlextInfraExtraPathsSupport.manager().sync_one(pyproject)
         tm.that(result.success, eq=True)
         tm.that(result.value, eq=False)
 
@@ -76,7 +76,7 @@ class TestsFlextInfraExtraPathsManager:
         doc = u.Cli.toml_document()
         doc["tool"] = tool_doc
         pyproject.write_text(doc.as_string(), encoding="utf-8")
-        result = ExtraPathsTestSupport.manager().sync_one(
+        result = TestsFlextInfraExtraPathsSupport.manager().sync_one(
             pyproject,
             is_root="pyrefly" not in tool_doc,
         )
@@ -90,7 +90,7 @@ class TestsFlextInfraExtraPathsManager:
         doc["tool"] = {"pyright": {"extraPaths": ["old"]}}
         pyproject.write_text(doc.as_string(), encoding="utf-8")
         tm.ok(
-            ExtraPathsTestSupport.manager().sync_one(
+            TestsFlextInfraExtraPathsSupport.manager().sync_one(
                 pyproject,
                 dry_run=True,
                 is_root=True,
@@ -106,7 +106,10 @@ class TestsFlextInfraExtraPathsManager:
         pyproject.chmod(0o444)
 
         tm.fail(
-            ExtraPathsTestSupport.manager().sync_one(pyproject, is_root=True),
+            TestsFlextInfraExtraPathsSupport.manager().sync_one(
+                pyproject,
+                is_root=True,
+            ),
             has="TOML write",
         )
 
@@ -122,7 +125,9 @@ class TestsFlextInfraExtraPathsManager:
         (project / "tests" / "test_demo.py").write_text("", encoding="utf-8")
         (project / "examples").mkdir()
 
-        includes = ExtraPathsTestSupport.manager(project).pyrefly_project_includes(
+        includes = TestsFlextInfraExtraPathsSupport.manager(
+            project,
+        ).pyrefly_project_includes(
             project_dir=project,
             is_root=False,
         )
@@ -132,5 +137,5 @@ class TestsFlextInfraExtraPathsManager:
     @staticmethod
     def test_base_constants() -> None:
         """Verify base constants."""
-        manager = ExtraPathsTestSupport.manager()
+        manager = TestsFlextInfraExtraPathsSupport.manager()
         tm.that(manager.root.is_absolute(), eq=True)
