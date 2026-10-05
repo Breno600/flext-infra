@@ -473,11 +473,10 @@ Infra:
         disable-project-excludes-heuristics: true
         python-version: "3.13"
         use-ignore-files: false
-        # Operator law 2026-10-05: prop-decorator fires on the canonical
-        # @m.computed_field + @property form and is suspended, never worked
-        # around in code.
-        ignored-errors:
-          - prop-decorator
+        # prop-decorator suspension lives in the MYPY ruling surface above
+        # (ruling-disable-error-codes): the pyrefly release the non-producer
+        # repositories resolve does not know the code and rejects it as an
+        # unknown variant, so a pyrefly-side suspension cannot be fleet-wide.
         strict-errors:
           # --- type safety ---
           - bad-argument-count
