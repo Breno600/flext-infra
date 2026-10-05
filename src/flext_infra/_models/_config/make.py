@@ -11,7 +11,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Annotated, Literal, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import t
 from flext_infra._constants import (
@@ -80,7 +80,7 @@ class FlextInfraConfigModelsMake:
             ),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_local_check_gates(self) -> Self:
             """Every locally owned gate must be in the allowed check vocabulary.
 
@@ -151,7 +151,7 @@ class FlextInfraConfigModelsMake:
             ),
         ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_contexts(self) -> Self:
             """Require unique contexts and retain every step in the local workflow.
 
@@ -265,7 +265,7 @@ class FlextInfraConfigModelsMake:
             ),
         ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_actions(self) -> Self:
             """Reject unknown, duplicated, or out-of-lifecycle docs actions.
 
@@ -358,7 +358,7 @@ class FlextInfraConfigModelsMake:
             m.Field(description="Actions cache key namespace"),
         ] = "flext-testmon"
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def require_ascending_quota_ladder(self) -> Self:
             """Keep the quota ladder strictly ascending within the percent scale.
 
@@ -425,7 +425,7 @@ class FlextInfraConfigModelsMake:
             ),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def require_external_cache_contract(self) -> Self:
             """Keep the official cache variable and the external path policy exact.
 
@@ -551,7 +551,7 @@ class FlextInfraConfigModelsMake:
             ),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _reject_unsafe_fixes(self) -> Self:
             """Keep the lint repair information-preserving.
 
@@ -635,7 +635,7 @@ class FlextInfraConfigModelsMake:
                 m.Field(description="Actions cache key namespace"),
             ] = "flext-testmon"
 
-            @u.model_validator(mode="after")
+            @m.model_validator(mode="after")
             def require_ascending_quota_ladder(self) -> Self:
                 """Keep the quota ladder strictly ascending within the percent scale.
 
@@ -694,7 +694,7 @@ class FlextInfraConfigModelsMake:
                 m.Field(description="Repository-relative pytest reports root"),
             ]
 
-            @u.model_validator(mode="after")
+            @m.model_validator(mode="after")
             def require_external_database_contract(self) -> Self:
                 """Keep testmon's official path variable and external path policy exact.
 
@@ -790,7 +790,7 @@ class FlextInfraConfigModelsMake:
                 ),
             ]
 
-            @u.model_validator(mode="after")
+            @m.model_validator(mode="after")
             def require_external_cache_contract(self) -> Self:
                 """Keep the official cache variable and the external path policy exact.
 
@@ -951,7 +951,7 @@ class FlextInfraConfigModelsMake:
             ),
         ] = m.Field(default_factory=lambda: MappingProxyType({}))
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_project_check_gates(self) -> Self:
             """Project gates must be unique and must not shadow a built-in.
 
@@ -976,7 +976,7 @@ class FlextInfraConfigModelsMake:
                 raise ValueError(msg)
             return self
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_verbs(self) -> Self:
             """Validate declared public verbs against workflow and contract.
 
