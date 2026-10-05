@@ -18,11 +18,14 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
 from flext_infra import c, config
-from tests import t
+
+if TYPE_CHECKING:
+    from tests import t
 
 
 class TestsFlextInfraCustomSurfaceNeverShadowsPublicVerbs:

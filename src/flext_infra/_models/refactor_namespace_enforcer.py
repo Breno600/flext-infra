@@ -51,7 +51,11 @@ class FlextInfraModelsNamespaceEnforcer:
         @m.computed_field
         @property
         def has_violations(self) -> bool:
-            """Whether relocatable findings remain in this project."""
+            """Whether relocatable findings remain in this project.
+
+            Returns:
+                The resulting ``bool``.
+            """
             return self.relocation_findings > 0
 
     class WorkspaceEnforcementReport(m.ArbitraryTypesModel):
@@ -60,16 +64,17 @@ class FlextInfraModelsNamespaceEnforcer:
         workspace: Annotated[t.NonEmptyStr, m.Field(description="Repository root path")]
         projects: Annotated[
             t.SequenceOf[FlextInfraModelsNamespaceEnforcer.ProjectEnforcementReport],
-            m.Field(
-                default_factory=tuple,
-                description="Per-project enforcement reports for the workspace.",
-            ),
-        ]
+            m.Field(description="Per-project enforcement reports for the workspace."),
+        ] = ()
 
         @m.computed_field
         @property
         def has_violations(self) -> bool:
-            """Whether any project carries a violation."""
+            """Whether any project carries a violation.
+
+            Returns:
+                The resulting ``bool``.
+            """
             return any(project.has_violations for project in self.projects)
 
 

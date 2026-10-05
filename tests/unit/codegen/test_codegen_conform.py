@@ -27,7 +27,7 @@ from flext_infra.codegen import (
 from flext_infra.docs import FlextInfraDocGenerator
 from flext_infra.services.cli_routes_codegen import FlextInfraCodegenRoutes
 from flext_infra.workspace import FlextInfraWorkspaceDetector
-from tests import c, m, p, t, u
+from tests import c, m, p, u
 from tests.unit.codegen.conform_support import TestsFlextInfraConformSupport
 
 pytestmark = [pytest.mark.slow]
@@ -35,8 +35,10 @@ pytestmark = [pytest.mark.slow]
 _LIFECYCLE_EXCEPTION = OSError("conform operation raised after begin")
 
 
-class _FlextInfraCodegenConformLifecycleProbe(FlextInfraCodegenConform):
+class TestsFlextInfraCodegenConformLifecycleProbe(FlextInfraCodegenConform):
     """Inject one public planning outcome after the real transaction begins."""
+
+    __test__ = False
 
     @override
     def plan(
@@ -197,7 +199,7 @@ class TestsFlextInfraCodegenConform:
         execute = (
             FlextInfraCodegenConform.execute_request
             if scenario.endswith("-failure")
-            else _FlextInfraCodegenConformLifecycleProbe.execute_request
+            else TestsFlextInfraCodegenConformLifecycleProbe.execute_request
         )
         ports = infra.codegen_conform_collaborators()
 
@@ -263,7 +265,7 @@ class TestsFlextInfraCodegenConform:
         )
 
         with pytest.raises(OSError, match="raised after begin") as raised:
-            _FlextInfraCodegenConformLifecycleProbe.execute_request(
+            TestsFlextInfraCodegenConformLifecycleProbe.execute_request(
                 request,
                 workspace,
                 ports=infra.codegen_conform_collaborators(),
@@ -977,7 +979,13 @@ class TestsFlextInfraCodegenConform:
         root = tmp_path / "flext"
         # The governed tree above the workspace carries the committed Taplo pin.
         u.Tests.seed_locked_taplo(tmp_path)
-        environment = u.Tests.conform_plan(root, workspace).uv_environments[0]
+        service, request = TestsFlextInfraConformSupport.check_conform_service(
+            root,
+            workspace,
+        )
+        planned = service.plan(request)
+        tm.ok(planned)
+        environment = planned.value.uv_environments[0]
         tm.that(environment.environment_root, eq=root.resolve())
         tm.that(environment.groups, eq=("dev", "codegen", "workspace"))
         tm.that(
@@ -1182,6 +1190,3 @@ class TestsFlextInfraCodegenConform:
             "check",
         ])
         tm.that(exit_code, eq=0)
-
-    # Why (suite budget): full conform cycle plus subprocess make validation;
-    # the default case timeout only holds on an idle machine.

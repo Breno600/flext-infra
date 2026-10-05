@@ -7,14 +7,17 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
-from tests import t
+
+if TYPE_CHECKING:
+    from tests import t
 
 _TEST_REPOSITORY_ROOT = Path(__file__).resolve().parent
 
 
-class ExtraPathsTestSupport:
+class TestsFlextInfraExtraPathsSupport:
     """Factory helpers for validated extra-path manager instances."""
 
     @staticmethod
