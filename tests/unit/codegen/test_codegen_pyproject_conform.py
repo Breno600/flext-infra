@@ -91,7 +91,8 @@ class TestsFlextInfraCodegenPyprojectConform:
         branch = test_u.Tests.provider_branch()
         return tuple(
             (
-                f"{floor} @ git+{test_u.Tests.WorktreeFixture.governed_repository_url(name)}"
+                f"{floor} @ git+"
+                f"{test_u.Tests.WorktreeFixture.governed_repository_url(name)}"
                 f"@{branch}"
                 if (name := u.Infra.dep_name(floor))
                 and name.startswith("flext-")
