@@ -26,6 +26,19 @@ from flext_infra._models._config.external_cache import (
 )
 
 
+def _shared_testmon_cache_policy() -> FlextInfraConfigModelsMake.TestmonCachePolicySpec:
+    """Build the declared default shared testmon cache policy.
+
+    Declared at module scope so the annotated default resolves the owning
+    class lazily, exactly like the shared Mypy cache policy beside it.
+
+    Returns:
+        The resulting ``FlextInfraConfigModelsMake.TestmonCachePolicySpec``.
+
+    """
+    return FlextInfraConfigModelsMake.TestmonCachePolicySpec()
+
+
 def _shared_mypy_cache_spec() -> FlextInfraConfigModelsMake.MypyCacheSpec:
     """Build the declared default shared Mypy analysis cache policy.
 
@@ -887,9 +900,7 @@ class FlextInfraConfigModelsMake:
                     " testmon cache (#1001 delta)"
                 ),
             ),
-        ] = m.Field(
-            default_factory=lambda: FlextInfraConfigModelsMake.TestmonCachePolicySpec,
-        )
+        ] = m.Field(default_factory=_shared_testmon_cache_policy)
         codemod_rules_cache: Annotated[
             FlextInfraConfigModelsMake.MakeSpec.CodemodRulesCacheSpec,
             m.Field(description="Content-keyed parsed codemod rule catalog cache"),

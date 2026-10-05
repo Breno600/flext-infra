@@ -35,8 +35,10 @@ pytestmark = [pytest.mark.slow]
 _LIFECYCLE_EXCEPTION = OSError("conform operation raised after begin")
 
 
-class _FlextInfraCodegenConformLifecycleProbe(FlextInfraCodegenConform):
+class TestsFlextInfraCodegenConformLifecycleProbe(FlextInfraCodegenConform):
     """Inject one public planning outcome after the real transaction begins."""
+
+    __test__ = False
 
     @override
     def plan(
@@ -197,7 +199,7 @@ class TestsFlextInfraCodegenConform:
         execute = (
             FlextInfraCodegenConform.execute_request
             if scenario.endswith("-failure")
-            else _FlextInfraCodegenConformLifecycleProbe.execute_request
+            else TestsFlextInfraCodegenConformLifecycleProbe.execute_request
         )
         ports = infra.codegen_conform_collaborators()
 
@@ -263,7 +265,7 @@ class TestsFlextInfraCodegenConform:
         )
 
         with pytest.raises(OSError, match="raised after begin") as raised:
-            _FlextInfraCodegenConformLifecycleProbe.execute_request(
+            TestsFlextInfraCodegenConformLifecycleProbe.execute_request(
                 request,
                 workspace,
                 ports=infra.codegen_conform_collaborators(),
