@@ -10,7 +10,7 @@ import stat
 from pathlib import Path
 from typing import Annotated, ClassVar, Literal, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import t
 
@@ -83,7 +83,7 @@ class FlextInfraModelsCodegenJournalModels:
             m.Field(gt=0, strict=True, description="Project directory inode"),
         ]
 
-        @u.field_validator("selector")
+        @m.field_validator("selector")
         @classmethod
         def _validate_selector(cls, value: str) -> str:
             relative = Path(value)
@@ -130,7 +130,7 @@ class FlextInfraModelsCodegenJournalModels:
             m.Field(description="Last durable authorized temporary-tree manifest"),
         ] = None
 
-        @u.field_validator("path")
+        @m.field_validator("path")
         @classmethod
         def _validate_path(cls, value: str) -> str:
             """Keep the durable authority lexical and inside the workspace.
@@ -283,7 +283,7 @@ class FlextInfraModelsCodegenJournalModels:
             m.Field(ge=0, strict=True, description="Host reparse tag"),
         ] = None
 
-        @u.field_validator("path")
+        @m.field_validator("path")
         @classmethod
         def _validate_source_path(cls, value: Path) -> Path:
             """Reject relative or lexically escaping source identities.
@@ -533,7 +533,7 @@ class FlextInfraModelsCodegenJournalModels:
             m.Field(description="Workspace-relative durable rollback candidate path"),
         ] = None
 
-        @u.field_validator(
+        @m.field_validator(
             "path",
             "original_backup",
             "desired_staging",

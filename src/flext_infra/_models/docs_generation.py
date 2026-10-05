@@ -11,7 +11,7 @@ from typing import Annotated, ClassVar, Literal, Self
 
 from flext_cli import m as cli_m
 
-from flext_core import m, u
+from flext_core import m
 from flext_infra import t
 
 
@@ -59,7 +59,7 @@ class FlextInfraModelsDocsGeneration:
             ),
         ] = None
 
-        @u.field_validator("path", "report_dir")
+        @m.field_validator("path", "report_dir")
         @classmethod
         def _validate_absolute_lexical_path(cls, value: Path) -> Path:
             if not value.is_absolute() or ".." in value.parts:
@@ -67,7 +67,7 @@ class FlextInfraModelsDocsGeneration:
                 raise ValueError(msg)
             return value
 
-        @u.field_validator("repository_root_override")
+        @m.field_validator("repository_root_override")
         @classmethod
         def _validate_absolute_lexical_repository_root_override(
             cls,
@@ -133,7 +133,7 @@ class FlextInfraModelsDocsGeneration:
             m.Field(description="Exact desired mode, or absence"),
         ]
 
-        @u.field_validator("relative_path")
+        @m.field_validator("relative_path")
         @classmethod
         def _validate_relative_path(cls, value: Path) -> Path:
             if (
@@ -196,7 +196,7 @@ class FlextInfraModelsDocsGeneration:
             m.Field(description="Absolute lexical physical workspace root"),
         ]
 
-        @u.field_validator("repository_root")
+        @m.field_validator("repository_root")
         @classmethod
         def _validate_absolute_repository_root(cls, value: Path) -> Path:
             if not value.is_absolute() or ".." in value.parts:
