@@ -19,6 +19,7 @@ from tests import c, m, p, t
 from tests.utilities_fixture_project import TestsFlextInfraUtilitiesProjectFixtureMixin
 from tests.utilities_fixture_tooling import TestsFlextInfraUtilitiesToolingFixtureMixin
 from tests.utilities_git import TestsFlextInfraUtilitiesGitMixin
+from tests.utilities_toml import TestsFlextInfraUtilitiesTomlMixin
 
 
 class TestsFlextInfraUtilitiesCodegenMixin:
@@ -97,6 +98,8 @@ class TestsFlextInfraUtilitiesCodegenMixin:
     def conform_plan(
         root: Path,
         workspace: m.Infra.WorkspaceSpec,
+        *,
+        what: c.Infra.CodegenConformSurface = c.Infra.CodegenConformSurface.ALL,
     ) -> m.Infra.CodegenPlan:
         """Plan one fixture workspace through the public conform boundary.
 
@@ -104,7 +107,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
             The resulting ``m.Infra.CodegenPlan``.
 
         """
-        request = TestsFlextInfraUtilitiesCodegenMixin.conform_request(root)
+        request = TestsFlextInfraUtilitiesCodegenMixin.conform_request(root, what=what)
         return tm.ok(
             FlextInfraCodegenConform(
                 repository_root=root,
@@ -112,6 +115,24 @@ class TestsFlextInfraUtilitiesCodegenMixin:
                 initial_workspace=workspace,
             ).plan(request),
         )
+
+    @staticmethod
+    def conform_makefile_text(root: Path, workspace: m.Infra.WorkspaceSpec) -> str:
+        """Render the root Makefile conform plans for one fixture workspace.
+
+        Returns:
+            The resulting ``str``.
+
+        """
+        plan = TestsFlextInfraUtilitiesCodegenMixin.conform_plan(
+            root,
+            workspace,
+            what=c.Infra.CodegenConformSurface.MAKEFILE,
+        )
+        makefile = next(
+            file for file in plan.files if file.path.name == c.Infra.MAKEFILE_FILENAME
+        )
+        return TestsFlextInfraUtilitiesTomlMixin.codegen_file_text(makefile)
 
     @staticmethod
     def scaffold_plan(
@@ -400,7 +421,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
                 )
             if result.failure:
                 return r[bool].from_failure(result)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def create_lazy_init_service(repository_root: Path) -> FlextInfraCodegenLazyInit:

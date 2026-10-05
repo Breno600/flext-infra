@@ -14,7 +14,7 @@ from flext_infra import c, m
 from flext_infra.gates.markdown_code import FlextInfraMarkdownCodeGate
 from flext_infra.gates.markdown_code_sources import FlextInfraMarkdownCodeSources
 from flext_infra.gates.markdown_format import FlextInfraMarkdownFormatGate
-from tests import TestsFlextInfraUtilities as u
+from tests import u
 
 if TYPE_CHECKING:
     from pathlib import Path

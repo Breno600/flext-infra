@@ -195,6 +195,8 @@ class FlextInfraPytestRunnerExecution(
             detail = log_text.strip()
             msg = f"testmon selection failed ({outcome.raw_return_code}): {detail}"
             raise RuntimeError(msg)
+        if self.collection_command_prefix:
+            self._bind_child_profile(report_dir, manifest_path.with_suffix(".pstats"))
         if not owns_no_tests:
             self._collection_diagnostics(report_log)
         if (
@@ -426,6 +428,15 @@ class FlextInfraPytestRunnerExecution(
                 == accounting.inventory_count
             )
         )
+        markdown_complete = (
+            True
+            if context.execution_mode == c.Infra.PytestExecutionMode.COVERAGE
+            else self._reconcile_markdown(
+                report_dir,
+                diagnostics,
+                cache_hit=cache_hit,
+            )
+        )
         rejected = any((
             diagnostics.failed_count,
             diagnostics.error_count,
@@ -434,6 +445,7 @@ class FlextInfraPytestRunnerExecution(
             diagnostics.collection_failed_count,
             diagnostics.collection_skipped_count,
             not accounting_complete,
+            not markdown_complete,
         ))
         accepted_cache_hit = cache_hit and not rejected
         # The zero-test receipt exits green: the suite owns nothing to execute

@@ -15,11 +15,11 @@ import pytest
 from flext_tests import tm
 
 from flext_core import r
-from flext_infra import c, config, m, p, u
+from flext_infra import c, config, m, p
 from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
-from tests import u as test_u
+from tests import u
 
 if TYPE_CHECKING:
     from multiprocessing.synchronize import Event
@@ -40,7 +40,7 @@ class TestsFlextInfraTransactionLease:
         The public service and CLI preserve the exception and its traceback;
         the lease can then acquire the unchanged physical lock file.
         """
-        root = test_u.Tests.git_repository(tmp_path)
+        root = u.Tests.git_repository(tmp_path)
         script = (
             "import errno, sys\n"
             "from pathlib import Path\n"
@@ -48,7 +48,8 @@ class TestsFlextInfraTransactionLease:
             "from flext_infra.cli import main\n"
             "from flext_infra.codegen import FlextInfraMiseWorkspacePlanner\n"
             "root = Path(sys.argv[1])\n"
-            "identity = u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=root)).unwrap()\n"
+            "identity = u.Infra.git_identity("
+            "m.Infra.GitRepoRequest(repo_root=root)).unwrap()\n"
             "journal = FlextInfraMiseWorkspacePlanner.journal_path(identity)\n"
             "original = OSError(errno.EPERM, 'audit policy denies lease')\n"
             "allowed = False\n"
@@ -60,20 +61,23 @@ class TestsFlextInfraTransactionLease:
             "    if sys.argv[2] == 'service':\n"
             "        infra.codegen_conform(m.Infra.CodegenConformRequest(root=root))\n"
             "    else:\n"
-            "        main(['codegen', 'conform', '--root', str(root), '--scope', 'self', '--mode', 'apply'])\n"
+            "        main(['codegen', 'conform', '--root', str(root), "
+            "'--scope', 'self', '--mode', 'apply'])\n"
             "except OSError as failure:\n"
             "    assert failure is original\n"
             "    assert failure.errno == errno.EPERM\n"
             "    assert failure.__traceback__ is not None\n"
             "else:\n"
-            "    raise AssertionError('denied lease did not escape the public boundary')\n"
+            "    raise AssertionError("
+            "'denied lease did not escape the public boundary')\n"
             "assert not journal.exists()\n"
             "lock = journal.with_name(journal.name + '.lock')\n"
             "before = lock.stat()\n"
             "allowed = True\n"
             "with u.Infra.codegen_transaction_lease(journal):\n"
             "    after = lock.stat()\n"
-            "    assert (before.st_dev, before.st_ino) == (after.st_dev, after.st_ino)\n"
+            "    assert (before.st_dev, before.st_ino) == "
+            "(after.st_dev, after.st_ino)\n"
         )
         outcome = tm.ok(
             u.Cli.run_raw(
@@ -133,7 +137,7 @@ class TestsFlextInfraTransactionLease:
                     lambda: owner.validate_artifacts(root, scope_root),
                 ),
             )
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
 
         tm.ok(transaction.run_locked(prepare=True, operation=publish))
 
@@ -156,13 +160,13 @@ class TestsFlextInfraTransactionLease:
         tmp_path: Path,
     ) -> None:
         """A same-scope contender waits for a live holder; another scope is independent."""
-        root = test_u.Tests.git_repository(tmp_path, "workspace")
+        root = u.Tests.git_repository(tmp_path, "workspace")
         # The workspace is the member's runtime root: it carries the triple.
-        test_u.Tests.copy_tracked_mise_seeds(root)
-        seed = test_u.Tests.git_repository(tmp_path, "member-source")
-        test_u.Tests.copy_tracked_mise_seeds(seed)
-        test_u.Tests.commit_git_changes(seed, "Seed declared Mise artifacts")
-        test_u.Tests.git_bootstrap(
+        u.Tests.copy_tracked_mise_seeds(root)
+        seed = u.Tests.git_repository(tmp_path, "member-source")
+        u.Tests.copy_tracked_mise_seeds(seed)
+        u.Tests.commit_git_changes(seed, "Seed declared Mise artifacts")
+        u.Tests.git_bootstrap(
             root,
             (
                 "-c",
@@ -174,8 +178,8 @@ class TestsFlextInfraTransactionLease:
             ),
         )
         member = root / "member"
-        independent = test_u.Tests.git_repository(tmp_path, "independent")
-        test_u.Tests.copy_tracked_mise_seeds(independent)
+        independent = u.Tests.git_repository(tmp_path, "independent")
+        u.Tests.copy_tracked_mise_seeds(independent)
         identity = tm.ok(u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=root)))
         journal_path = FlextInfraMiseWorkspacePlanner.journal_path(identity)
         lock_path = journal_path.with_name(f"{journal_path.name}.lock")
@@ -261,10 +265,10 @@ class TestsFlextInfraTransactionLease:
         tmp_path: Path,
     ) -> None:
         """Leasing a publication root adds no entry beside its tracked content."""
-        root = test_u.Tests.git_repository(tmp_path)
+        root = u.Tests.git_repository(tmp_path)
         participant_root = root / "docs"
         participant_root.mkdir()
-        test_u.Tests.copy_tracked_mise_seeds(root)
+        u.Tests.copy_tracked_mise_seeds(root)
         before = {path.name for path in participant_root.iterdir()}
         transaction = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root),
@@ -296,7 +300,7 @@ class TestsFlextInfraTransactionLease:
         tmp_path: Path,
     ) -> None:
         """Keep the original error object and allow ownership after an exception."""
-        root = test_u.Tests.git_repository(tmp_path)
+        root = u.Tests.git_repository(tmp_path)
         transaction = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root),
         )

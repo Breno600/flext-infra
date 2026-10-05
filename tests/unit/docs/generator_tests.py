@@ -577,7 +577,7 @@ class TestsFlextInfraDocsGenerator:
     def test_stale_generated_file_drift_converges_through_file_plans(
         tmp_path: Path,
     ) -> None:
-        """Plan stale removal, publish it through the transaction adapter, and converge."""
+        """Plan stale removal, publish it via the transaction adapter, and converge."""
         workspace, generator = u.Tests.docs_workspace_generator(
             tmp_path,
             project_names=("flext-a",),

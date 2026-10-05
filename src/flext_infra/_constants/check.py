@@ -26,6 +26,23 @@ class FlextInfraConstantsCheck:
     PYTEST_SELECTED_COLLECTION_OPTION: ClassVar[str] = "--flext-selected-collection"
     PYTEST_SUITE_STOP_OPTION: ClassVar[str] = "--flext-suite-stop-monotonic"
     PYTEST_COLLECTION_MANIFEST_OPTION: ClassVar[str] = "--flext-collection-manifest"
+    PYTEST_PROFILE_LAUNCHER: ClassVar[str] = (
+        "import cProfile, runpy, sys\n"
+        "output = sys.argv.pop(1)\n"
+        "profile = cProfile.Profile()\n"
+        "try:\n"
+        "    profile.runcall(\n"
+        "        runpy.run_module, 'pytest', run_name='__main__', alter_sys=True\n"
+        "    )\n"
+        "finally:\n"
+        "    profile.dump_stats(output)\n"
+    )
+    """``python -c`` profiled pytest child: ``<output.pstats> <pytest args...>``.
+
+    Stdlib only, so pytest installs assertion rewriting before any plugin
+    package (``flext_infra`` included) is imported; pytest's ``SystemExit``
+    still sets the exit status, unlike ``python -m cProfile``.
+    """
 
     @unique
     class SarifSchema(StrEnum):
@@ -262,7 +279,7 @@ class FlextInfraConstantsCheck:
     # rendered from this typed SSOT at scan time, never a hand-maintained file).
     JSCPD_BINARY: ClassVar[str] = "jscpd"
     (
-        "Provisioned by mise from codegen.toolchain.jscpd_version; "
+        "Provisioned by mise from codegen.toolchain.tools entry 'jscpd'; "
         "never a runner or a version here."
     )
 
@@ -271,7 +288,7 @@ class FlextInfraConstantsCheck:
     # `make fix`. The binary is mise-provisioned, never a runner or version).
     PRETTIER_BINARY: ClassVar[str] = "prettier"
     (
-        "Provisioned by mise from codegen.toolchain.prettier_version; "
+        "Provisioned by mise from codegen.toolchain.tools entry 'prettier'; "
         "never a runner or a version here."
     )
     JSCPD_MODE: ClassVar[str] = "strict"

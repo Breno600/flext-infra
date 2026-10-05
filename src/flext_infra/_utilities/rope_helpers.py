@@ -7,11 +7,14 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import ast
+from typing import TYPE_CHECKING
 
-from flext_infra import t
 from flext_infra._utilities._rope_method_order import (
     FlextInfraUtilitiesRopeMethodOrderMixin,
 )
+
+if TYPE_CHECKING:
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesRopeHelpers(FlextInfraUtilitiesRopeMethodOrderMixin):

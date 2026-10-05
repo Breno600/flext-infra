@@ -21,7 +21,8 @@ class TestsFlextInfraFacadeEnvironmentSync:
     def _write_pyproject(root: Path) -> None:
         root.mkdir(parents=True, exist_ok=True)
         _ = (root / "pyproject.toml").write_text(
-            '[project]\nname = "workspace"\nversion = "0.1.0"\nrequires-python = ">=3.13"\n',
+            '[project]\nname = "workspace"\nversion = "0.1.0"\n'
+            'requires-python = ">=3.13"\n',
             encoding="utf-8",
         )
 

@@ -273,7 +273,8 @@ class TestsFlextInfraAuditorScope:
         (plans / "new-plan.md").write_text("run at /home/someone/flext\n")
         (tmp_path / "docs" / "live.md").write_text("see /home/someone/flext\n")
         (tmp_path / "docs" / "docs_config.json").write_text(
-            '{"audit": {"historical_evidence_files": ["docs/plans/2026-01-01-run.md"]}}',
+            '{"audit": {"historical_evidence_files": '
+            '["docs/plans/2026-01-01-run.md"]}}',
         )
         scope = m.Infra.DocScope(
             name="root",
