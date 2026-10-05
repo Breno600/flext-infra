@@ -157,10 +157,7 @@ class TestsFlextInfraUtilitiesDocsFixtureMixin:
                 ),
                 encoding="utf-8",
             )
-            src_dir = project / "src" / name.replace("-", "_")
-            src_dir.mkdir(parents=True, exist_ok=True)
-            (src_dir / "__init__.py").write_text("", encoding="utf-8")
-            TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
+            TestsFlextInfraUtilitiesProjectFixtureMixin.write_member_package(
                 project,
                 name,
             )

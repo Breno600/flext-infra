@@ -64,7 +64,8 @@ class TestsFlextInfraWorktreeAddContract(u.Tests.WorktreeFixture):
         branch = "feature/clean-setup-failure"
         lane = self._lane(repository, repository, branch)
         (repository / "Makefile").write_text(
-            ".PHONY: setup\nsetup:\n\t@printf 'visible setup progress\\n'\n\t@exit 17\n",
+            ".PHONY: setup\nsetup:\n"
+            "\t@printf 'visible setup progress\\n'\n\t@exit 17\n",
             encoding="utf-8",
         )
         self._commit_fixture(repository, "test: clean setup failure")

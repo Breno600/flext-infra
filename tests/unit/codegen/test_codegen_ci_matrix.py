@@ -432,7 +432,8 @@ class TestsFlextInfraCodegenCiMatrix:
             workflow,
             lacks=(
                 'rm -f "$key_path"\n\n\n'
-                "      # Why: GitHub runners expose umask 002, so git checkout materializes"
+                "      # Why: GitHub runners expose umask 002, "
+                "so git checkout materializes"
             ),
         )
         # Included fragments start on their own line: a rationale comment is
@@ -801,13 +802,7 @@ class TestsFlextInfraCodegenCiMatrix:
     def test_docs_failure_upload_keeps_audit_failure_and_scopes_hidden_reports(
         rendered_project: Path,
     ) -> None:
-        """A generated Docs job fails on audit findings and retains safe reports.
-
-        Raises:
-            TypeError: If Docs workflow steps must be a sequence; or if Docs report
-                paths must be text.
-
-        """
+        """A generated Docs job fails on audit findings and retains safe reports."""
         workflow = u.Cli.yaml_load_mapping(
             rendered_project / ".github" / "workflows" / "docs.yml",
         )
@@ -1013,7 +1008,7 @@ class TestsFlextInfraCodegenCiMatrix:
 
     @staticmethod
     def test_root_dockerignore_reincludes_bootstrap_surface() -> None:
-        """Root hand-maintained .dockerignore lets clean-machine bootstrap files into the context."""
+        """Hand-maintained root .dockerignore admits clean-machine bootstrap files."""
         root = Path(__file__).resolve().parents[3]
         dockerignore = root / ".dockerignore"
         tm.that(dockerignore.is_file(), eq=True)

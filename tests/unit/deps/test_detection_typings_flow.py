@@ -58,7 +58,7 @@ class TestsFlextInfraDepsDetectionTypingsFlow:
         return limits
 
     def test_governed_policy_decides_stub_findings(self, tmp_path: Path) -> None:
-        """Followed untyped imports make stub packages neither required nor removable."""
+        """Followed untyped imports make stubs neither required nor removable."""
         followed = self._governed_follow()
         limits = self._typed_reader(tmp_path, follow=followed)
         report = tm.ok(

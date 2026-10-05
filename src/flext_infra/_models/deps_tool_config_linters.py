@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
 from flext_cli import m
 
@@ -115,6 +115,22 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             ),
         ]
 
+    class RuffTypeCheckingConfig(m.ArbitraryTypesModel):
+        """Ruff flake8-type-checking settings loaded from YAML."""
+
+        runtime_evaluated_roots: Annotated[
+            t.SequenceOf[t.NonEmptyStr],
+            m.Field(
+                alias="runtime-evaluated-roots",
+                min_length=1,
+                description=(
+                    "Qualified base classes whose subclasses evaluate their "
+                    "annotations at runtime; codegen derives every project "
+                    "base inheriting one into runtime-evaluated-base-classes."
+                ),
+            ),
+        ]
+
     class RuffAuthorizedException(m.ArbitraryTypesModel):
         """One operator-authorized Ruff exception, recorded with its authority.
 
@@ -205,6 +221,13 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         pydocstyle: FlextInfraModelsDepsToolConfigLinters.RuffPydocstyleConfig = (
             m.Field(description="Ruff pydocstyle configuration")
         )
+        flake8_type_checking: Annotated[
+            FlextInfraModelsDepsToolConfigLinters.RuffTypeCheckingConfig,
+            m.Field(
+                alias="flake8-type-checking",
+                description="Ruff flake8-type-checking configuration",
+            ),
+        ]
         authorized_exceptions: Annotated[
             tuple[FlextInfraModelsDepsToolConfigLinters.RuffAuthorizedException, ...],
             m.Field(
@@ -219,7 +242,11 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         @m.computed_field
         @property
         def ignore(self) -> t.StrSequence:
-            """Rules excepted for every file, rendered as Ruff ``ignore``."""
+            """Rules excepted for every file, rendered as Ruff ``ignore``.
+
+            Returns:
+                The resulting ``t.StrSequence``.
+            """
             return tuple(
                 sorted({
                     rule
@@ -232,7 +259,11 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         @m.computed_field
         @property
         def per_file_ignores(self) -> t.Infra.PerFileIgnores:
-            """Scoped exceptions, rendered as Ruff ``per-file-ignores``."""
+            """Scoped exceptions, rendered as Ruff ``per-file-ignores``.
+
+            Returns:
+                The resulting ``t.Infra.PerFileIgnores``.
+            """
             return {
                 pattern: tuple(
                     sorted({
@@ -374,6 +405,16 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         plugins: Annotated[t.StrSequence, m.Field(description="Mypy plugins list.")] = (
             m.Field(default_factory=tuple)
         )
+        disable_error_code: Annotated[
+            t.StrSequence,
+            m.Field(
+                alias="disable-error-code",
+                description=(
+                    "Mypy error codes suspended fleet-side at this gate-owner"
+                    " config for a dated, proven toolchain limitation."
+                ),
+            ),
+        ] = m.Field(default_factory=tuple)
         facade_rebind_error_codes: Annotated[
             t.StrSequence,
             m.Field(
@@ -384,6 +425,20 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 ),
             ),
         ]
+        disable_error_code: Annotated[
+            t.StrSequence,
+            m.Field(
+                alias="disable-error-code",
+                description=(
+                    "Mypy error codes an operator ruling suspends project-wide; "
+                    "rendered as [tool.mypy] disable_error_code. The pydantic "
+                    "mypy plugin stays mandatory (Pydantic 2 is the contract)."
+                    " The default carries the 2026-10-05 ruling fleet-wide:"
+                    " prop-decorator and call-arg are suspended everywhere and"
+                    " code edited to quiet them is a regression."
+                ),
+            ),
+        ] = m.Field(default_factory=lambda: ("prop-decorator", "call-arg"))
         boolean_settings: Annotated[
             t.BoolMapping,
             m.Field(
@@ -416,6 +471,35 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 "auto-generated files and PEP 695 generics."
             ),
         )
+
+        @m.model_validator(mode="after")
+        def _require_pydantic_plugin(self) -> Self:
+            """Keep the pydantic mypy plugin structural in every projection.
+
+            Operator order 2026-10-05 (bead gc-eqvqx5): the pydantic mypy
+            plugin is MANDATORY, ALWAYS. An empty declaration defaults to
+            the plugin; no projection may emit ``[tool.mypy]`` without it,
+            so no codegen path can omit it.
+
+            Returns:
+                The validated configuration.
+
+            Raises:
+                ValueError: If a declared plugins list omits the pydantic
+                    mypy plugin.
+
+            """
+            if not self.plugins:
+                self.plugins = ("pydantic.mypy",)
+                return self
+            if "pydantic.mypy" not in self.plugins:
+                msg = (
+                    "tools.mypy.plugins must include the pydantic mypy plugin"
+                    " (operator order 2026-10-05, bead gc-eqvqx5); got"
+                    f" {self.plugins!r}"
+                )
+                raise ValueError(msg)
+            return self
 
     class PydanticMypyConfig(m.ArbitraryTypesModel):
         """Pydantic mypy plugin settings loaded from YAML."""
