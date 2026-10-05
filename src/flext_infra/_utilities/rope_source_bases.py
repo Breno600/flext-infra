@@ -606,47 +606,58 @@ class FlextInfraUtilitiesRopeSourceBases:
 
         root_ids = frozenset(resolve(root_reference(root)) for root in roots)
         derived = set(roots)
-        for definition in definitions.values():
-            try:
-                linearize(definition.identity)
-            except ValueError as error:
-                # A definition whose own lineage cannot be derived — an
-                # unresolved external attribute (PEP 562 lazy namespace: a
-                # facade class inheriting flext_infra.m), a required base
-                # with no source module, or a member missing because an
-                # ancestor's lineage was degraded — does not qualify as
-                # runtime-evaluated, and its declared bases are skipped with
-                # it. Structural defects (cycles, duplicates, inconsistent
-                # MRO, shadowing) keep raising.
-                message = str(error)
-                if message.startswith(
-                    "Unresolved external base:",
-                ) or message.startswith("No source module for required base:"):
+        processed: set[str] = set()
+        # linearize() populates ``definitions`` lazily (installed-distribution
+        # and inherited classes join the inventory while deriving), so the
+        # sweep runs to a fixed point over identity snapshots instead of
+        # iterating the mapping while it mutates.
+        while processed < definitions.keys():
+            for identity in tuple(definitions):
+                if identity in processed:
                     continue
-                if message.startswith("Unresolved planned base:"):
-                    continue
-                if message.startswith("Missing inherited class member:"):
-                    continue
-                raise
-            for reference in definition.bases:
+                processed.add(identity)
+                definition = definitions[identity]
                 try:
-                    lineage = linearize(resolve(reference))
+                    linearize(definition.identity)
                 except ValueError as error:
-                    # A base whose lineage crosses an unresolved external
-                    # attribute (PEP 562 lazy namespace) or a planned module
-                    # binding that is not a class cannot be derived; the
-                    # class simply does not qualify as runtime-evaluated.
-                    if str(error).startswith(
+                    # A definition whose own lineage cannot be derived — an
+                    # unresolved external attribute (PEP 562 lazy namespace: a
+                    # facade class inheriting flext_infra.m), a required base
+                    # with no source module, or a member missing because an
+                    # ancestor's lineage was degraded — does not qualify as
+                    # runtime-evaluated, and its declared bases are skipped
+                    # with it. Structural defects (cycles, duplicates,
+                    # inconsistent MRO, shadowing) keep raising.
+                    message = str(error)
+                    if message.startswith(
                         "Unresolved external base:",
-                    ) or str(error).startswith(
-                        "No source module for required base:",
-                    ):
+                    ) or message.startswith("No source module for required base:"):
                         continue
-                    if str(error).startswith("Unresolved planned base:"):
+                    if message.startswith("Unresolved planned base:"):
+                        continue
+                    if message.startswith("Missing inherited class member:"):
                         continue
                     raise
-                if root_ids.intersection(lineage):
-                    derived.add(reference.qualified_base)
+                for reference in definition.bases:
+                    try:
+                        lineage = linearize(resolve(reference))
+                    except ValueError as error:
+                        # A base whose lineage crosses an unresolved external
+                        # attribute (PEP 562 lazy namespace) or a planned
+                        # module binding that is not a class cannot be
+                        # derived; the class simply does not qualify as
+                        # runtime-evaluated.
+                        if str(error).startswith(
+                            "Unresolved external base:",
+                        ) or str(error).startswith(
+                            "No source module for required base:",
+                        ):
+                            continue
+                        if str(error).startswith("Unresolved planned base:"):
+                            continue
+                        raise
+                    if root_ids.intersection(lineage):
+                        derived.add(reference.qualified_base)
         return tuple(sorted(derived))
 
 
