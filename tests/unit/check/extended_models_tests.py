@@ -6,13 +6,78 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import pytest
 from flext_tests import tm
 
-from tests import m, t
+from tests import m, t, u
 
 
 class TestsFlextInfraModels:
     """Tests for ``FlextInfraModels``."""
+
+    @staticmethod
+    @pytest.mark.parametrize("end", [None, (12, 0)])
+    def test_sarif_locations_round_trip_optional_spans(
+        end: t.Pair[int, int] | None,
+    ) -> None:
+        """SARIF protocol coordinates and related-location order survive JSON."""
+        primary = m.Infra.SarifLocation(
+            uri="src/first.py",
+            start_line=3,
+            start_column=0,
+            end_line=end[0] if end else None,
+            end_column=end[1] if end else None,
+        )
+        related = m.Infra.SarifLocation(
+            uri="other-project/src/second.py",
+            start_line=7,
+            start_column=2,
+        )
+        result = m.Infra.SarifResult.model_validate({
+            "rule_id": "similar-code",
+            "level": "error",
+            "message": "Native comparison",
+            "locations": [primary],
+            "related_locations": (related, primary),
+        })
+        published = result.model_dump_json()
+        restored = m.Infra.SarifResult.model_validate_json(published)
+        tm.that(restored, eq=result)
+        tm.that("endLine" in primary.model_dump_json(), eq=end is not None)
+        tm.that("endColumn" in primary.model_dump_json(), eq=end is not None)
+        tm.that(published, has="relatedLocations")
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        "region",
+        [None, {}, {"startLine": 7}, {"startLine": 0, "startColumn": 0}],
+    )
+    def test_native_partial_sarif_spans_preserve_missing_coordinates(
+        region: t.JsonMapping | None,
+    ) -> None:
+        """Partial primary and related SARIF spans retain absence and zero."""
+        physical: t.JsonDict = {"artifactLocation": {"uri": "src/partial.py"}}
+        if region is not None:
+            physical["region"] = dict(region)
+        native: t.JsonDict = {
+            "ruleId": "similar-code",
+            "level": "error",
+            "message": {"text": "Partial native comparison"},
+            "locations": [{"physicalLocation": physical}],
+            "relatedLocations": [{"physicalLocation": physical}],
+        }
+        payload = tm.ok(u.Cli.json_dumps(native))
+        result = m.Infra.SarifResult.model_validate_json(payload)
+        emitted = u.Cli.json_as_mapping(
+            tm.ok(u.Cli.json_parse(result.model_dump_json())),
+        )
+        for key in ("locations", "relatedLocations"):
+            location = u.Cli.json_deep_mapping_list(emitted, key)[0]
+            published_region = u.Cli.json_deep_mapping(
+                u.Cli.json_deep_mapping(location, "physicalLocation"),
+                "region",
+            )
+            tm.that(published_region, eq=region or {})
 
     @staticmethod
     def _sample_issues() -> t.Triple[m.Infra.Issue, m.Infra.Issue, m.Infra.Issue]:
@@ -149,6 +214,80 @@ class TestsFlextInfraModels:
 
         tm.that(execution.finding_count, eq=1)
         tm.that(project.total_findings, eq=1)
+        tm.that(project.passed, eq=False)
+
+    @staticmethod
+    def test_informational_gate_findings_keep_reported_but_pass_project() -> None:
+        """Informational findings stay in the report but never fail the project.
+
+        The config-owned posture names gate ids; the project verdict ignores
+        exactly those gates while their findings still count as findings.
+        """
+        gate = m.Infra.GateResult(
+            gate="pyright",
+            project="p",
+            passed=False,
+            errors=["a.py:1:1 reportPrivateUsage warning"],
+            duration=0.0,
+        )
+        execution = m.Infra.GateExecution(
+            result=gate,
+            issues=(
+                m.Infra.Issue(
+                    file="a.py",
+                    line=1,
+                    column=1,
+                    code="reportPrivateUsage",
+                    message="warning",
+                    severity="warning",
+                ),
+            ),
+            raw_output="",
+        )
+        project = m.Infra.ProjectResult(
+            project="p",
+            gates={"pyright": execution},
+            informational_gates=("pyright",),
+        )
+
+        tm.that(project.total_findings, eq=1)
+        tm.that(project.passed, eq=True)
+
+    @staticmethod
+    def test_informational_posture_covers_only_declared_gates() -> None:
+        """A blocking gate outside the informational set still fails the project.
+
+        One informational failure and one blocking failure together keep the
+        project red: the posture excuses only the gate ids it declares.
+        """
+        informational = m.Infra.GateExecution(
+            result=m.Infra.GateResult(
+                gate="pyright",
+                project="p",
+                passed=False,
+                errors=["a.py:1:1 reportPrivateUsage warning"],
+                duration=0.0,
+            ),
+            issues=(),
+            raw_output="",
+        )
+        blocking = m.Infra.GateExecution(
+            result=m.Infra.GateResult(
+                gate="lint",
+                project="p",
+                passed=False,
+                errors=["b.py:2:1 E501 line too long"],
+                duration=0.0,
+            ),
+            issues=(),
+            raw_output="",
+        )
+        project = m.Infra.ProjectResult(
+            project="p",
+            gates={"pyright": informational, "lint": blocking},
+            informational_gates=("pyright",),
+        )
+
         tm.that(project.passed, eq=False)
 
     @staticmethod

@@ -17,7 +17,7 @@ from flext_infra import config, infra, settings
 from tests import c, m, u
 
 
-class TestsDynamicEnvironmentCutover:
+class TestsFlextInfraDynamicEnvironmentCutover:
     """Preserve unset, empty, and populated values without default normalization."""
 
     @pytest.mark.parametrize("value", [None, "", "literal value"])

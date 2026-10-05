@@ -34,7 +34,7 @@ class TestsFlextInfraNestingCutoverOutput:
 
         """
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
-        alias = sorted(u.Infra.facade_families())[0]
+        alias = min(u.Infra.facade_families())
         module_name = u.Tests.family_public_module(alias)
         owner_name = (
             f"{u.derive_class_stem(repository_root.name)}"
@@ -65,7 +65,7 @@ class TestsFlextInfraNestingCutoverOutput:
         emitted = self._planned_source(tmp_path)
 
         indented_blanks = [
-            line for line in emitted.splitlines() if line.strip() == "" and line != ""
+            line for line in emitted.splitlines() if not line.strip() and line
         ]
 
         tm.that(indented_blanks, empty=True)

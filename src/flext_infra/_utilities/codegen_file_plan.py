@@ -26,6 +26,11 @@ else:
     import fcntl
 
 if TYPE_CHECKING:
+    # Both lock backends are declared for the checker: typeshed publishes
+    # msvcrt only for the win32 platform, so the nt branch stays verifiable
+    # while the checker runs on POSIX.
+    import fcntl
+    import msvcrt
     from pathlib import Path
 
 
@@ -90,10 +95,7 @@ class FlextInfraUtilitiesCodegenFilePlan:
                     }:
                         raise
                     if time.monotonic() >= deadline:
-                        timeout_error = (
-                            FlextInfraUtilitiesCodegenFilePlan.JournalLeaseTimeoutError
-                        )
-                        raise timeout_error(
+                        raise FlextInfraUtilitiesCodegenFilePlan.JournalLeaseTimeoutError(
                             lock_path,
                         ) from error
                     time.sleep(c.Infra.JOURNAL_LEASE_POLL_SECONDS)

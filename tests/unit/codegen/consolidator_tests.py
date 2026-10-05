@@ -50,8 +50,9 @@ class TestsFlextInfraCodegenConsolidator:
                 ``TestsFlextInfraCodegenConsolidator._ConsolidatorJsonPayload``.
 
         """
-        payload: TestsFlextInfraCodegenConsolidator._ConsolidatorJsonPayload = TestsFlextInfraCodegenConsolidator._ConsolidatorJsonPayload.model_validate_json(
-            value,
+        payload_model = TestsFlextInfraCodegenConsolidator._ConsolidatorJsonPayload
+        payload: TestsFlextInfraCodegenConsolidator._ConsolidatorJsonPayload = (
+            payload_model.model_validate_json(value)
         )
         return payload
 
