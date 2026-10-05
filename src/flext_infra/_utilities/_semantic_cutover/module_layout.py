@@ -10,7 +10,6 @@ import ast
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
-from flext_infra import m, t
 from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
 )
@@ -21,7 +20,7 @@ if TYPE_CHECKING:
     from collections.abc import MutableMapping
     from pathlib import Path
 
-    from flext_infra import p
+    from flext_infra import m, p, t
 
 
 class FlextInfraUtilitiesSemanticCutoverModuleLayout(

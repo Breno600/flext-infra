@@ -8,12 +8,14 @@ from __future__ import annotations
 
 import ast
 from collections.abc import MutableMapping
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra import t
 from flext_infra._utilities._rope_analysis.asthelpers import (
     FlextInfraUtilitiesRopeAnalysisAstHelpers,
 )
+
+if TYPE_CHECKING:
+    from flext_infra import t
 
 
 def _is_sequence_constructor_wrap(value: ast.expr) -> bool:

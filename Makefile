@@ -395,6 +395,7 @@ mise_exec() { \
 'MISE_LOCKFILE=true' \
 'MISE_LOCKED=true' \
 'MISE_MINIMUM_RELEASE_AGE=7d' \
+'MISE_NPM_PACKAGE_MANAGER=bun' \
 $${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
 			$${mise_lock_drift:+"MISE_LOCKFILE=false"} \
 			$${mise_lock_drift:+"MISE_LOCKED=false"} \
@@ -630,6 +631,7 @@ mise_exec() { \
 'MISE_LOCKFILE=true' \
 'MISE_LOCKED=true' \
 'MISE_MINIMUM_RELEASE_AGE=7d' \
+'MISE_NPM_PACKAGE_MANAGER=bun' \
 $${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
 			$${mise_lock_drift:+"MISE_LOCKFILE=false"} \
 			$${mise_lock_drift:+"MISE_LOCKED=false"} \
