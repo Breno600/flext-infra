@@ -2076,6 +2076,15 @@ case "$$database" in /*) ;; *) printf 'ERROR: persistent testmon database requir
 case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon database must be outside the checkout: %s\n' "$$database" >&2; exit 2 ;; esac; \
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
+project_root="$(PROJECT_ROOT)"; \
+project_parent="$${project_root%/*}"; \
+if [ -z "$$project_parent" ]; then project_parent=/; fi; \
+scratch="$$(mktemp -d "$$project_parent/.$${project_root##*/}.pytest-scratch.XXXXXX")"; \
+trap 'find "$$scratch" -depth -delete' EXIT; \
+mkdir -p "$$scratch/tmp"; \
+scratch_tmp="$$(cd "$$scratch/tmp" && pwd -P)"; \
+TMPDIR="$$scratch_tmp"; TMP="$$scratch_tmp"; TEMP="$$scratch_tmp"; \
+export TMPDIR TMP TEMP; \
 TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry; \
 TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry slow
 
@@ -2086,6 +2095,15 @@ case "$$database" in /*) ;; *) printf 'ERROR: persistent testmon database requir
 case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon database must be outside the checkout: %s\n' "$$database" >&2; exit 2 ;; esac; \
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
+project_root="$(PROJECT_ROOT)"; \
+project_parent="$${project_root%/*}"; \
+if [ -z "$$project_parent" ]; then project_parent=/; fi; \
+scratch="$$(mktemp -d "$$project_parent/.$${project_root##*/}.pytest-scratch.XXXXXX")"; \
+trap 'find "$$scratch" -depth -delete' EXIT; \
+mkdir -p "$$scratch/tmp"; \
+scratch_tmp="$$(cd "$$scratch/tmp" && pwd -P)"; \
+TMPDIR="$$scratch_tmp"; TMP="$$scratch_tmp"; TEMP="$$scratch_tmp"; \
+export TMPDIR TMP TEMP; \
 TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry full; \
 TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry full-slow
 
@@ -2099,6 +2117,15 @@ case "$$database" in /*) ;; *) printf 'ERROR: persistent testmon database requir
 case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon database must be outside the checkout: %s\n' "$$database" >&2; exit 2 ;; esac; \
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
+project_root="$(PROJECT_ROOT)"; \
+project_parent="$${project_root%/*}"; \
+if [ -z "$$project_parent" ]; then project_parent=/; fi; \
+scratch="$$(mktemp -d "$$project_parent/.$${project_root##*/}.pytest-scratch.XXXXXX")"; \
+trap 'find "$$scratch" -depth -delete' EXIT; \
+mkdir -p "$$scratch/tmp"; \
+scratch_tmp="$$(cd "$$scratch/tmp" && pwd -P)"; \
+TMPDIR="$$scratch_tmp"; TMP="$$scratch_tmp"; TEMP="$$scratch_tmp"; \
+export TMPDIR TMP TEMP; \
 export FLEXT_PYTEST_TARGET_FILE="$(FILE)"; TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry file; \
 export FLEXT_PYTEST_TARGET_FILE="$(FILE)"; TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry file-slow
 
@@ -2222,6 +2249,15 @@ case "$$database" in /*) ;; *) printf 'ERROR: persistent testmon database requir
 case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon database must be outside the checkout: %s\n' "$$database" >&2; exit 2 ;; esac; \
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
+project_root="$(PROJECT_ROOT)"; \
+project_parent="$${project_root%/*}"; \
+if [ -z "$$project_parent" ]; then project_parent=/; fi; \
+scratch="$$(mktemp -d "$$project_parent/.$${project_root##*/}.pytest-scratch.XXXXXX")"; \
+trap 'find "$$scratch" -depth -delete' EXIT; \
+mkdir -p "$$scratch/tmp"; \
+scratch_tmp="$$(cd "$$scratch/tmp" && pwd -P)"; \
+TMPDIR="$$scratch_tmp"; TMP="$$scratch_tmp"; TEMP="$$scratch_tmp"; \
+export TMPDIR TMP TEMP; \
 	TESTMON_DATAFILE="$$database" $(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -m flext_infra._pytest_entry profile \
 		"$(PROFILE_REPORTS_DIR)/pytest.pstats"
 
