@@ -73,13 +73,20 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
 
     @staticmethod
     @pytest.mark.parametrize(
-        ("operational_status", "remove_scratch", "fail_preparation_diagnostic"),
+        (
+            "operational_status",
+            "remove_scratch",
+            "fail_preparation_diagnostic",
+            "fail_exit_diagnostic",
+        ),
         [
-            (0, False, False),
-            (37, False, False),
-            (0, True, False),
-            (37, True, False),
-            (0, False, True),
+            (0, False, False, False),
+            (37, False, False, False),
+            (0, True, False, False),
+            (37, True, False, False),
+            (0, False, True, False),
+            (0, False, False, True),
+            (37, False, False, True),
         ],
     )
     def test_nested_runtime_preserves_failure_and_cleans_owned_resources(
@@ -87,6 +94,7 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
         operational_status: int,
         remove_scratch: bool,
         fail_preparation_diagnostic: bool,
+        fail_exit_diagnostic: bool,
     ) -> None:
         """Nested runtime cleans failed preparation and preserves executed exits."""
         root, _ = u.Tests.render_make_environment(
@@ -111,7 +119,17 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
                 '$(notdir $(PROJECT_ROOT)).mise-bootstrap."*; do '
                 'find "$$path" -depth -delete; done; '
             )
-        command += f"exit {operational_status}"
+        if fail_exit_diagnostic:
+            command += (
+                f"if (exit {operational_status}); then leaf_operation_status=0; "
+                "else leaf_operation_status=$$?; fi; "
+                'printf "%s\\n" "$$leaf_operation_status" '
+                '>"$(PROJECT_ROOT)/leaf-operation-status"; '
+                'exec 2>&-; exit "$$leaf_operation_status"'
+            )
+        else:
+            command += f"exit {operational_status}"
+        caller = "eval" if fail_exit_diagnostic else "$(SHELL) -c"
         # Closing stderr here fails preparation, before the selected command runs.
         diagnostic_redirect = " 2>&-" if fail_preparation_diagnostic else ""
         (root / config.Infra.codegen.make.custom_handler_policy.filename).write_text(
@@ -122,7 +140,7 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
             "printf '%s\\n' \"$$status\" >\"$(PROJECT_ROOT)/nested-status\"; "
             "exit \"$$status\"\n"
             "post-status:\n"
-            f"\t@if $(PROJECT_TOOL_EXEC) $(SHELL) -c '{command}'"
+            f"\t@if $(PROJECT_TOOL_EXEC) {caller} '{command}'"
             f"{diagnostic_redirect}; "
             "then status=0; else status=$$?; fi; "
             "printf '%s\\n' \"$$status\" >\"$(PROJECT_ROOT)/leaf-status\"; "
@@ -142,8 +160,16 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
             (root / "leaf-ran").exists(),
             eq=not fail_preparation_diagnostic,
         )
+        if fail_exit_diagnostic:
+            tm.that(
+                int((root / "leaf-operation-status").read_text(encoding="utf-8")),
+                eq=operational_status,
+            )
         failed = (
-            operational_status != 0 or remove_scratch or fail_preparation_diagnostic
+            operational_status != 0
+            or remove_scratch
+            or fail_preparation_diagnostic
+            or fail_exit_diagnostic
         )
         if operational_status != 0:
             tm.that(leaf_status, eq=operational_status)
