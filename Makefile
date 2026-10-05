@@ -149,8 +149,8 @@ endif
 # === SECTION: verb dispatch (managed) ===
 # Source: config:make.verbs and the canonical gate vocabulary. A verb exists
 # only in the profiles it declares (make.verbs[].profiles).
-PUBLIC_VERBS := help setup upg build check smells test test-full test-file profile-test profile-test-report fmt fix fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-text mod-text-candidate mod-snapshots waza duplication sonarcloud-sync sonarcloud-issues
-BUILTIN_VERBS := help setup upg build check smells test test-full test-file profile-test profile-test-report fmt fix fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-text mod-text-candidate mod-snapshots waza duplication sonarcloud-sync sonarcloud-issues
+PUBLIC_VERBS := help setup upg build check smells test test-full test-file file-gate profile-test profile-test-report fmt fix fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-text mod-text-candidate mod-snapshots waza duplication sonarcloud-sync sonarcloud-issues
+BUILTIN_VERBS := help setup upg build check smells test test-full test-file file-gate profile-test profile-test-report fmt fix fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-text mod-text-candidate mod-snapshots waza duplication sonarcloud-sync sonarcloud-issues
 SCRIPT_VERBS :=
 
 CUSTOM_MAKEFILE := $(MAKEFILE_ROOT)/custom.mk
@@ -1096,6 +1096,17 @@ _activated-test-file: _builtin_require_environment
 
 
 
+file-gate: _builtin_require_workspace
+	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-file-gate
+
+.PHONY: _activated-file-gate
+_activated-file-gate: _builtin_require_environment
+
+	$(call RUN_PUBLIC,file-gate)
+
+
+
+
 profile-test: _builtin_require_workspace
 	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-profile-test
 
@@ -1446,6 +1457,10 @@ test-file:
 	@printf '  %-16s %s\n' 'test-file' 'Run one declared test file through the budgeted and slow phases with the same persistent testmon cache (FILE=<repository-relative path>).'
 	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make test-file to execute it.'
 
+file-gate:
+	@printf '  %-16s %s\n' 'file-gate' 'Run the fast per-file gates (ruff check, ruff format --check, pyrefly, pyright, ast-grep scan, typos) on FILE=<repository-relative path>; empty FILE fails loud.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make file-gate to execute it.'
+
 profile-test:
 	@printf '  %-16s %s\n' 'profile-test' 'Profile the canonical pytest entry and its collection children on the same persistent testmon database, without the outer bounded-gate wrapper.'
 	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make profile-test to execute it.'
@@ -1574,6 +1589,7 @@ _setup_lifecycle:
 		*" pre-setup "*) $(SELF_MAKE) pre-setup ;; \
 	esac
 	@$(SELF_MAKE) _builtin_setup_environment
+
 	+@XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
 		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" exec "$(PROJECT_ROOT)" $(SELF_MAKE) _setup_activated
 
@@ -1604,6 +1620,8 @@ _builtin-help:
 	@printf '  %-16s %s\n' 'test-full' 'Run incremental then all tests, including external and CI-excluded markers, through the same persistent testmon cache.';
 
 	@printf '  %-16s %s\n' 'test-file' 'Run one declared test file through the budgeted and slow phases with the same persistent testmon cache (FILE=<repository-relative path>).';
+
+	@printf '  %-16s %s\n' 'file-gate' 'Run the fast per-file gates (ruff check, ruff format --check, pyrefly, pyright, ast-grep scan, typos) on FILE=<repository-relative path>; empty FILE fails loud.';
 
 	@printf '  %-16s %s\n' 'profile-test' 'Profile the canonical pytest entry and its collection children on the same persistent testmon database, without the outer bounded-gate wrapper.';
 
@@ -2028,6 +2046,34 @@ mkdir -p "$$(dirname "$$database")"; \
 export FLEXT_PYTEST_TARGET_FILE="$(FILE)"; TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry file; \
 export FLEXT_PYTEST_TARGET_FILE="$(FILE)"; TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(PROJECT_TOOL_EXEC) $(UV_RUN) python -m flext_infra._pytest_entry file-slow
 
+# The fast per-file pre-gate (operator P0, val2026100417xx): `make file-gate
+# FILE=<repository-relative path>` gates exactly one file with the fast gates
+# (ruff lint, ruff format, pyrefly, pyright, ast-grep, typos) before the file
+# ever reaches the tree-wide `make mod`/`make check` pipeline. Ruff lint and
+# format are the hard gates; the type and spelling scanners report advisories.
+# Empty or non-relative FILE fails loud. This pre-gate never substitutes the
+# tree-wide verbs: code is accepted only after `make mod`, with fmt/fix/check/
+# mod/spells green (ADR-004 §3, ADR-018).
+_builtin_file_gate_all: _builtin_require_environment
+	@set -eu; \
+	if [ -z "$(strip $(FILE))" ]; then printf 'ERROR: file-gate requires FILE=<repository-relative path>\n' >&2; exit 2; fi; \
+	case "$(FILE)" in /*|*..*) printf 'ERROR: FILE must stay a repository-relative path: %s\n' "$(FILE)" >&2; exit 2 ;; esac; \
+	if [ ! -f "$(PROJECT_ROOT)/$(FILE)" ]; then printf 'ERROR: FILE is not an existing repository file: %s\n' "$(FILE)" >&2; exit 2; fi; \
+	file="$(PROJECT_ROOT)/$(FILE)"; \
+	echo "file-gate: ruff check $(FILE)"; \
+	$(RUNTIME_PYTHON) -m ruff check "$$file"; \
+	echo "file-gate: ruff format --check $(FILE)"; \
+	$(RUNTIME_PYTHON) -m ruff format --check "$$file"; \
+	echo "file-gate: pyrefly $(FILE)"; \
+	$(RUNTIME_PYTHON) -m pyrefly check "$$file" || true; \
+	echo "file-gate: pyright $(FILE)"; \
+	$(RUNTIME_PYTHON) -m pyright "$$file" || true; \
+	echo "file-gate: ast-grep scan $(FILE)"; \
+	ast-grep scan "$$file" || true; \
+	echo "file-gate: typos $(FILE)"; \
+	typos "$$file" || true; \
+	echo "file-gate: OK (pre-gate only; tree-wide make mod/check remain the acceptance gates)"
+
 _builtin_tests_all: _builtin_require_environment
 	+@$(SELF_MAKE) test
 	@$(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full
@@ -2242,6 +2288,7 @@ _builtin-check: _builtin_check_all
 _builtin-test: _builtin_test_all
 _builtin-test-full: _builtin_test_full_all
 _builtin-test-file: _builtin_test_file_all
+_builtin-file-gate: _builtin_file_gate_all
 _builtin-fmt: _builtin_fmt_all
 _builtin-fix: _builtin_fix_all
 _builtin-fix-namespace: _builtin_fix_namespace
