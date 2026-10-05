@@ -219,7 +219,11 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         @m.computed_field
         @property
         def ignore(self) -> t.StrSequence:
-            """Rules excepted for every file, rendered as Ruff ``ignore``."""
+            """Rules excepted for every file, rendered as Ruff ``ignore``.
+
+            Returns:
+                The resulting ``t.StrSequence``.
+            """
             return tuple(
                 sorted({
                     rule
@@ -232,7 +236,11 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         @m.computed_field
         @property
         def per_file_ignores(self) -> t.Infra.PerFileIgnores:
-            """Scoped exceptions, rendered as Ruff ``per-file-ignores``."""
+            """Scoped exceptions, rendered as Ruff ``per-file-ignores``.
+
+            Returns:
+                The resulting ``t.Infra.PerFileIgnores``.
+            """
             return {
                 pattern: tuple(
                     sorted({
@@ -374,6 +382,18 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         plugins: Annotated[t.StrSequence, m.Field(description="Mypy plugins list.")] = (
             m.Field(default_factory=tuple)
         )
+        disable_error_code: Annotated[
+            t.StrSequence,
+            m.Field(
+                alias="disable-error-code",
+                description=(
+                    "Mypy error codes suspended fleet-wide (operator law "
+                    "2026-10-05): false positives the pydantic-2 canonical "
+                    "forms generate (call-arg on validators). The pydantic "
+                    "plugin stays mandatory"
+                ),
+            ),
+        ] = ()
         facade_rebind_error_codes: Annotated[
             t.StrSequence,
             m.Field(
@@ -384,6 +404,17 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 ),
             ),
         ]
+        ruling_disable_error_codes: Annotated[
+            t.StrSequence,
+            m.Field(
+                alias="ruling-disable-error-codes",
+                description=(
+                    "Mypy error codes an operator ruling disables project-wide; "
+                    "codegen renders them as [tool.mypy] disable_error_code. "
+                    "Carries the citation in the config comment."
+                ),
+            ),
+        ] = m.Field(default_factory=tuple)
         boolean_settings: Annotated[
             t.BoolMapping,
             m.Field(

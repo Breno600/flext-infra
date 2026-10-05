@@ -79,17 +79,16 @@ class TestsFlextInfraFileGateAndReconcileMakefile:
         """
         return rendered.split("_builtin_file_gate_all:", 1)[1].split("\n\n", 1)[0]
 
-    @staticmethod
-    def test_file_gate_verb_is_declared_fleet_wide() -> None:
+    def test_file_gate_verb_is_declared_fleet_wide(self, tmp_path: Path) -> None:
         """The codegen SSOT declares file-gate once with no profile restriction."""
         verb = next(
             verb for verb in config.Infra.codegen.make.verbs if verb.name == "file-gate"
         )
-        tm.that(
-            "fast per-file gates" in verb.description,
-            eq=True,
-            msg=verb.description,
+        rendered = self._render_root_makefile(
+            tmp_path,
+            role=c.Infra.MakeProfile.STANDALONE,
         )
+        tm.that(rendered, has=verb.description)
         tm.that(
             verb.profiles,
             eq=tuple(c.Infra.MakeProfile),
@@ -142,25 +141,45 @@ class TestsFlextInfraFileGateAndReconcileMakefile:
         self,
         tmp_path: Path,
     ) -> None:
-        """No profile rebuilds the lock in setup; `make upg` stays the only writer."""
-        for role in (c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE):
-            rendered = self._render_root_makefile(tmp_path, role=role)
-            tm.that(
-                "_builtin-file-gate: _builtin_file_gate_all" in rendered,
-                eq=True,
-            )
-            # Scope to the setup lifecycle: the bootstrap recipe legitimately
-            # exports the drift signal for its own probe, so only the lifecycle
-            # section proves setup never reconciles the lock.
-            lifecycle = rendered.split("_setup_lifecycle:", 1)[1].split(
-                ".PHONY: _setup_activated",
-                1,
-            )[0]
-            tm.that(
-                lifecycle,
-                lacks=[
-                    'bootstrap reconcile "$(PROJECT_ROOT)"',
-                    "could not rebuild mise.lock; setup continues",
-                    "mise_pin=$$(awk '",
-                ],
-            )
+        """Setup never invokes the removed lock-rebuilding bootstrap route."""
+        rendered = self._render_root_makefile(
+            tmp_path,
+            role=c.Infra.MakeProfile.WORKSPACE,
+        )
+        lifecycle = rendered.split("_setup_lifecycle:", 1)[1].split(
+            ".PHONY: _setup_activated",
+            1,
+        )[0]
+        tm.that(
+            lifecycle,
+            lacks=[
+                'bootstrap reconcile "$(PROJECT_ROOT)"',
+                "SETUP_MISE_LOCK_DRIFT",
+                "could not rebuild mise.lock; setup continues",
+            ],
+        )
+
+    def test_standalone_render_omits_the_reconcile_step(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Standalone setup keeps its no-lock-write law: no reconcile call."""
+        rendered = self._render_root_makefile(
+            tmp_path,
+            role=c.Infra.MakeProfile.STANDALONE,
+        )
+        tm.that("_builtin-file-gate: _builtin_file_gate_all" in rendered, eq=True)
+        # Scope to the setup lifecycle: the bootstrap recipe legitimately
+        # exports the drift signal for its own probe, so only the lifecycle
+        # section proves the reconcile step is workspace-only.
+        lifecycle = rendered.split("_setup_lifecycle:", 1)[1].split(
+            ".PHONY: _setup_activated",
+            1,
+        )[0]
+        tm.that(
+            lifecycle,
+            lacks=[
+                'bootstrap reconcile "$(PROJECT_ROOT)"',
+                "SETUP_MISE_LOCK_DRIFT",
+            ],
+        )

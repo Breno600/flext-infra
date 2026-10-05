@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra._models._config.contract import FlextInfraConfigModelsContract
 
@@ -28,7 +28,7 @@ class FlextInfraExternalCacheDirectorySpec(
         m.Field(description="FLEXT-owned directory below the cache home"),
     ]
 
-    @u.model_validator(mode="after")
+    @m.model_validator(mode="after")
     def require_relative_cache_directories(self) -> Self:
         """Keep both cache directories normalized and repository-relative.
 

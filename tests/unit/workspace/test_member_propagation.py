@@ -24,7 +24,7 @@ from flext_tests import tm
 
 from flext_infra import infra, main
 from flext_infra.codegen import FlextInfraCodegenConform
-from tests import TestsFlextInfraUtilities as u, c, t
+from tests import c, t, u
 
 if TYPE_CHECKING:
     from collections.abc import Generator
