@@ -268,9 +268,18 @@ class FlextInfraUtilitiesRopeSourceBases:
                     pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
                         project, resource,
                     )
-                    value = pymodule.get_attribute(parts[index]).get_object()
-                    for attribute in parts[index + 1 :]:
-                        value = value.get_attribute(attribute).get_object()
+                    try:
+                        value = pymodule.get_attribute(parts[index]).get_object()
+                        for attribute in parts[index + 1 :]:
+                            value = value.get_attribute(attribute).get_object()
+                    except exceptions.AttributeNotFoundError as error:
+                        # PEP 562 lazy namespaces resolve their exports only
+                        # at runtime; rope's static attribute lookup cannot
+                        # see them, so the base is unresolved for this
+                        # derivation (bases() skips it).
+                        raise ValueError(
+                            f"Unresolved external base: {target}",
+                        ) from error
                     return external_identity(value)
             # Builtin classes have no Python source resource. Rope owns that
             # native namespace, not an ambient import of a planned package.
@@ -332,10 +341,20 @@ class FlextInfraUtilitiesRopeSourceBases:
                 return ()
             if identity in definitions:
                 declared = definitions[identity].bases
-                return (
-                    tuple(resolve(base) for base in declared)
-                    if declared else (object_id,)
-                )
+                parents: list[str] = []
+                for base in declared:
+                    try:
+                        parents.append(resolve(base))
+                    except ValueError as error:
+                        # A cross-package facade attribute the lazy namespace
+                        # machinery exposes only at runtime (PEP 562) is
+                        # invisible to rope's static lookup: the base cannot
+                        # contribute to the derivation, and the remaining
+                        # bases still describe the lineage.
+                        if str(error).startswith("Unresolved external base:"):
+                            continue
+                        raise
+                return tuple(parents) if parents else (object_id,)
             value = external[identity]
             parents = tuple(value.get_superclasses())
             if isinstance(
