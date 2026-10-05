@@ -269,9 +269,7 @@ class FlextInfraConfigModelsContexts:
                 default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
                 description="Repository-owned documentation audit declarations",
             ),
-        ] = m.Field(
-            default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
-        )
+        ]
         namespace_scan_dirs: Annotated[
             t.StrSequence,
             m.Field(
@@ -970,7 +968,7 @@ class FlextInfraConfigModelsContexts:
                 default=(),
                 description="Directories holding rule fixtures and snapshots",
             ),
-        ] = ()
+        ]
 
     class ScriptDispatchSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Opt-in routing of non-builtin verbs to a script command framework."""
