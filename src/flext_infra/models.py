@@ -55,6 +55,8 @@ class FlextInfraModels(FlextCliModels):
         FlextInfraModelsCensus,
         FlextInfraModelsCheck,
         FlextInfraConfigModels,
+        FlextInfraModelsCodegenRender,
+        FlextInfraModelsCodegenToolchain,
         FlextInfraCodegen,
         FlextInfraModelsCodemod,
         FlextInfraModelsDeps,
@@ -76,8 +78,6 @@ class FlextInfraModels(FlextCliModels):
         FlextInfraModelsTestmon,
         FlextInfraModelsCore,
         FlextInfraModelsBase,
-        FlextInfraModelsCodegenToolchain,
-        FlextInfraModelsCodegenRender,
         FlextInfraModelsMiseToolchain,
     ):
         """Infrastructure-domain models - all classes exposed directly."""
