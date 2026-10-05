@@ -163,8 +163,7 @@ class FlextInfraUtilitiesSemanticTestHelpers(
             ):
                 continue
             find_offset = (
-                FlextInfraUtilitiesRopeCorePyModuleMixin
-                .find_identifier_offset_in_lines
+                FlextInfraUtilitiesRopeCorePyModuleMixin.find_identifier_offset_in_lines
             )
             offset = find_offset(
                 sources[path].splitlines(keepends=True),

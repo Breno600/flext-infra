@@ -53,8 +53,7 @@ class FlextInfraUtilitiesRopeCore(
         project_roots = tuple(
             project_root
             for project_root in (
-                FlextInfraUtilitiesProjectDiscovery
-                .discover_rope_project_roots
+                FlextInfraUtilitiesProjectDiscovery.discover_rope_project_roots
             )(
                 resolved_root,
             )

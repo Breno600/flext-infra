@@ -318,7 +318,7 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
                 exception=exc,
             )
         return r[m.Infra.GitOidListReport].ok(
-            m.Infra.GitOidListReport(oids=tuple(text.split()))
+            m.Infra.GitOidListReport(oids=tuple(text.split())),
         )
 
     @classmethod
@@ -338,7 +338,9 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
         try:
             repo = cls._repo(request.repo_root)
             text = repo.git.ls_remote(
-                "--heads", request.remote, f"refs/heads/{request.branch}"
+                "--heads",
+                request.remote,
+                f"refs/heads/{request.branch}",
             )
         except GitCommandError as exc:
             return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
@@ -348,7 +350,7 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
                 exception=exc,
             )
         return r[m.Infra.GitTextReport].ok(
-            m.Infra.GitTextReport(text=text.partition("\t")[0].strip())
+            m.Infra.GitTextReport(text=text.partition("\t")[0].strip()),
         )
 
     @classmethod
@@ -369,7 +371,9 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
         try:
             repo = cls._repo(request.repo_root)
             merged = repo.git.merge_tree(
-                "--write-tree", request.base, request.commitish
+                "--write-tree",
+                request.base,
+                request.commitish,
             ).splitlines()[0]
             base_tree = repo.git.rev_parse(f"{request.base}^{{tree}}").strip()
         except GitCommandError as exc:
@@ -382,7 +386,7 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
                 exception=exc,
             )
         return r[m.Infra.GitBoolReport].ok(
-            m.Infra.GitBoolReport(value=merged.strip() == base_tree)
+            m.Infra.GitBoolReport(value=merged.strip() == base_tree),
         )
 
     @classmethod
@@ -403,7 +407,11 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             repo = cls._repo(request.repo_root)
             committed = int(repo.git.log("-1", "--format=%ct", "HEAD").strip())
             moved = repo.git.log(
-                "--walk-reflogs", "-1", "--date=unix", "--format=%gd", "HEAD"
+                "--walk-reflogs",
+                "-1",
+                "--date=unix",
+                "--format=%gd",
+                "HEAD",
             ).strip()
         except GitCommandError as exc:
             return r[m.Infra.GitTimestampReport].fail(str(exc), exception=exc)
@@ -415,7 +423,7 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
         stamp = moved.partition("@{")[2].rstrip("}")
         latest = max(committed, int(stamp)) if stamp.isdigit() else committed
         return r[m.Infra.GitTimestampReport].ok(
-            m.Infra.GitTimestampReport(epoch_seconds=latest)
+            m.Infra.GitTimestampReport(epoch_seconds=latest),
         )
 
 

@@ -293,7 +293,8 @@ class FlextInfraModelsGit(
         repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
         branch: Annotated[t.NonEmptyStr, m.Field(description="New branch name")]
         start: Annotated[
-            t.NonEmptyStr, m.Field(description="Commit-ish the branch starts at")
+            t.NonEmptyStr,
+            m.Field(description="Commit-ish the branch starts at"),
         ] = "HEAD"
         switch: Annotated[
             bool,
@@ -323,7 +324,8 @@ class FlextInfraModelsGit(
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
         epoch_seconds: Annotated[
-            t.NonNegativeInt, m.Field(description="Seconds since the Unix epoch")
+            t.NonNegativeInt,
+            m.Field(description="Seconds since the Unix epoch"),
         ]
 
     class GitWorktreeAddRequest(m.ContractModel):

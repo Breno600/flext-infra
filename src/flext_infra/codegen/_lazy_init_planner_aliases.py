@@ -41,7 +41,11 @@ class FlextInfraCodegenLazyInitPlannerAliasesMixin:
         ) -> t.StrSequence: ...
 
         def _resolve_inherited_alias_source(
-            self, package_names: t.StrSequence, alias_name: str, *, current_pkg: str,
+            self,
+            package_names: t.StrSequence,
+            alias_name: str,
+            *,
+            current_pkg: str,
         ) -> str: ...
 
     def _resolve_aliases(
