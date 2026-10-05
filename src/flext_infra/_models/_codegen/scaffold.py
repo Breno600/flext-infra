@@ -35,8 +35,8 @@ class FlextInfraModelsCodegenScaffoldModels:
 
         violations: Annotated[
             Sequence[FlextInfraModelsCodegenScaffoldModels.CensusViolation],
-            m.Field(description="Detected violations"),
-        ] = ()
+            m.Field(default_factory=list, description="Detected violations"),
+        ]
         total: Annotated[t.NonNegativeInt, m.Field(description="Total violation count")]
         fixable: Annotated[
             t.NonNegativeInt,

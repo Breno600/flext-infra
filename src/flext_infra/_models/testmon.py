@@ -76,7 +76,7 @@ class FlextInfraModelsTestmon:
                     "collection roots: zero execution by declared design"
                 ),
             ),
-        ] = False
+        ]
 
         @m.model_validator(mode="after")
         def require_execution_or_verified_deselection(self) -> Self:

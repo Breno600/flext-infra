@@ -15,6 +15,7 @@ from flext_tests import tm
 from flext_core import r
 from flext_infra import c, m, p
 from flext_infra.codegen import codegen_transaction as transaction
+from flext_infra.codegen._mise_artifacts_journal import FlextInfraMiseArtifactsJournal
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
 from tests import t, u
@@ -44,7 +45,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
             u.Cli.atomic_read_binary_file_state(installed_source, required=True),
         )
 
-        journal = transaction.journal_io.begin(
+        journal = FlextInfraMiseArtifactsJournal.begin(
             plan,
             transaction_id=self._TRANSACTION_ID,
             sources=(("lazy-init", source),),
@@ -618,7 +619,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
             transaction.verify.register_transaction_manifests(layout, journal),
         )
         recorded: m.Infra.CodegenTransactionJournal = tm.ok(
-            transaction.journal_io.record_directories(journal, registered),
+            FlextInfraMiseArtifactsJournal.record_directories(journal, registered),
         )
         return recorded
 

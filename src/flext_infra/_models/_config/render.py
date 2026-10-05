@@ -79,7 +79,7 @@ class FlextInfraConfigModelsRender:
                     "workflow templates (docs paths, dependabot directories)"
                 ),
             ),
-        ] = ()
+        ]
         ci_trigger_branches: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
