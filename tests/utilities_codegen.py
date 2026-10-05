@@ -421,7 +421,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
                 )
             if result.failure:
                 return r[bool].from_failure(result)
-        return r[bool].ok(True)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def create_lazy_init_service(repository_root: Path) -> FlextInfraCodegenLazyInit:

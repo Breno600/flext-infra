@@ -288,6 +288,17 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
                 description="Pyrefly errors enabled as strict defaults.",
             ),
         ]
+        ignored_errors: Annotated[
+            t.StrSequence,
+            m.Field(
+                alias="ignored-errors",
+                description=(
+                    "Pyrefly errors suspended fleet-wide (operator law "
+                    "2026-10-05): false positives the pydantic-2 canonical "
+                    "forms generate (prop-decorator on computed_field)"
+                ),
+            ),
+        ] = ()
         project_exclude_globs: Annotated[
             t.StrSequence,
             m.Field(

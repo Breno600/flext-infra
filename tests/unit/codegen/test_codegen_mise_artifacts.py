@@ -14,9 +14,7 @@ from flext_tests import tm
 
 from flext_infra import c, config
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
-from flext_infra.codegen.mise_artifacts_workspace import (
-    FlextInfraMiseWorkspacePlanner,
-)
+from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
 from tests import u
 
 

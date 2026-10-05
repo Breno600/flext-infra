@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from flext_tests import tm
 
 from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
-from tests.unit.deps.extra_paths_support import ExtraPathsTestSupport
+from tests.unit.deps.extra_paths_support import TestsFlextInfraExtraPathsSupport
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -71,7 +71,7 @@ class TestsFlextInfraExtraPathsSearchPaths:
             )
             (dep_src / "__init__.py").write_text("", encoding="utf-8")
 
-        manager = ExtraPathsTestSupport.manager(tmp_path)
+        manager = TestsFlextInfraExtraPathsSupport.manager(tmp_path)
         result = manager.pyrefly_search_paths(project_dir=consumer, is_root=False)
 
         tm.that(result, eq=("src", "."))
@@ -93,7 +93,7 @@ class TestsFlextInfraExtraPathsSearchPaths:
         )
         (consumer / "tests" / "__init__.py").write_text("", encoding="utf-8")
 
-        manager = ExtraPathsTestSupport.manager(tmp_path)
+        manager = TestsFlextInfraExtraPathsSupport.manager(tmp_path)
         result = manager.pyrefly_search_paths(project_dir=consumer, is_root=False)
 
         tm.that(result, eq=("src", "."))
@@ -103,12 +103,12 @@ class TestsFlextInfraExtraPathsSearchPaths:
         tmp_path: Path,
     ) -> None:
         """Ignore undeclared local roots for ordinary dependencies."""
-        _ = ExtraPathsTestSupport.workspace_with_dependency(
+        _ = TestsFlextInfraExtraPathsSupport.workspace_with_dependency(
             tmp_path,
             uv_workspace=False,
         )
 
-        manager = ExtraPathsTestSupport.manager(tmp_path)
+        manager = TestsFlextInfraExtraPathsSupport.manager(tmp_path)
         result = manager.pyrefly_search_paths(project_dir=tmp_path, is_root=True)
 
         tm.that(result, eq=("src", "."))
@@ -148,7 +148,7 @@ class TestsFlextInfraExtraPathsSearchPaths:
             dep_src.mkdir(parents=True)
             (dep_src / "__init__.py").write_text("", encoding="utf-8")
 
-        manager = ExtraPathsTestSupport.manager(tmp_path)
+        manager = TestsFlextInfraExtraPathsSupport.manager(tmp_path)
         result = manager.pyrefly_search_paths(project_dir=tmp_path, is_root=True)
 
         tm.that(result, eq=("src", "."))
@@ -158,12 +158,14 @@ class TestsFlextInfraExtraPathsSearchPaths:
         tmp_path: Path,
     ) -> None:
         """Exclude every dependency directory, environments included."""
-        _, dep_root = ExtraPathsTestSupport.workspace_with_dependency(tmp_path)
+        _, dep_root = TestsFlextInfraExtraPathsSupport.workspace_with_dependency(
+            tmp_path,
+        )
         dep_venv = dep_root / "venv" / "bin"
         dep_venv.mkdir(parents=True)
         (dep_venv / "python").write_text("", encoding="utf-8")
 
-        manager = ExtraPathsTestSupport.manager(tmp_path)
+        manager = TestsFlextInfraExtraPathsSupport.manager(tmp_path)
         result = manager.pyrefly_search_paths(project_dir=tmp_path, is_root=True)
 
         tm.that(result, eq=("src", "."))

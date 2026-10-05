@@ -287,8 +287,10 @@ class FlextInfraUtilitiesDocsAudit(
             "# Docs Audit Report",
             "",
             f"Scope: {scope.name}",
-            f"Files scanned: "
-            f"{len(FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope))}",
+            (
+                f"Files scanned: "
+                f"{len(FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope))}"
+            ),
             f"Issues: {len(issues)}",
             *metric_lines,
             "",

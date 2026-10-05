@@ -450,6 +450,39 @@ rule:
                   has:
                     field: alias
                     pattern: $SHADOWED
+        # ENFORCE-046 Pattern-A consumer admission: a consumer's canonical
+        # facade imports the letter and rebinds it to the consumer-named
+        # class the module defines (flext-core forbids the bare-class import
+        # a peer uses). The consumer-name gate is an inline regex on the
+        # rebind target — the complement of the facade naming law's
+        # ^(?:Tests)?Flext[A-Z] peer pattern, enumerated for Rust regex (no
+        # lookaround) — because constraints are not enforced on metavariables
+        # bound inside a not sub-rule. A peer target or a target this module
+        # does not define stays a finding.
+        - not:
+            all:
+              - has:
+                  kind: assignment
+                  has:
+                    field: right
+                    pattern: $CONSUMER
+                    regex: "^(?:[^FT].*|F|F[^l].*|Fl|Fl[^e].*|Fle|Fle[^x].*|Flex|Flex[^t].*|Flext|Flext[^A-Z].*|T|T[^e].*|Te|Te[^s].*|Tes|Tes[^t].*|Test|Test[^s].*|Tests|Tests[^F].*|TestsF|TestsF[^l].*|TestsFl|TestsFl[^e].*|TestsFle|TestsFle[^x].*|TestsFlex|TestsFlex[^t].*|TestsFlext|TestsFlext[^A-Z].*)$"
+              - inside:
+                  kind: module
+                  any:
+                    - has:
+                        kind: class_definition
+                        has:
+                          field: name
+                          pattern: $CONSUMER
+                    - has:
+                        kind: decorated_definition
+                        has:
+                          field: definition
+                          kind: class_definition
+                          has:
+                            field: name
+                            pattern: $CONSUMER
     # Bound by a module that does not declare it.
     - all:
         - kind: expression_statement
