@@ -40,7 +40,7 @@ def _converge_module() -> ModuleType:
     return module
 
 
-class TestsMiseLockTransaction:
+class TestsFlextInfraMiseLockTransaction:
     """Exercise the consumer script through its generated CLI boundary."""
 
     @staticmethod

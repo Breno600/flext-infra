@@ -241,7 +241,7 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
                     "Declared analysis exclusions; None derives workspace globs"
                 ),
             ),
-        ]
+        ] = None
         generated_python_roots: Annotated[
             t.StrSequence,
             m.Field(description="Generated python roots to exclude"),

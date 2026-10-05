@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, Self
 
-from flext_core import m, u
+from flext_core import m
 from flext_infra import t
 from flext_infra._constants import FlextInfraConstantsRelease
 from flext_infra._models import FlextInfraModelsMixins
@@ -66,7 +66,7 @@ class FlextInfraModelsRelease:
             m.Field(description="Artifact SHA-256 digest"),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def validate_kind_filename(self) -> Self:
             """Require the declared artifact kind to match its immutable filename.
 
@@ -122,7 +122,7 @@ class FlextInfraModelsRelease:
         artifacts: Annotated[
             t.VariadicTuple[FlextInfraModelsRelease.BuildArtifact],
             m.Field(default=(), description="Validated wheel and sdist artifacts"),
-        ]
+        ] = ()
         commit_oid: Annotated[
             t.Infra.ReleaseCommitOid | None,
             m.Field(default=None, description="Source commit object ID"),
@@ -136,7 +136,7 @@ class FlextInfraModelsRelease:
             m.Field(default=None, description="Committed source LICENSE SHA-256"),
         ] = None
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def validate_provenance(self) -> Self:
             """Require source provenance to be complete whenever it is available.
 
@@ -160,9 +160,7 @@ class FlextInfraModelsRelease:
             return self
 
     class ReleasePlan(m.StrictBoundaryModel):
-        """The protocol's decision for one repository,
-        derived and never typed by hand.
-        """
+        """The protocol's decision for one repository, derived and never typed by hand."""
 
         current: Annotated[
             t.NonEmptyStr,
@@ -196,13 +194,21 @@ class FlextInfraModelsRelease:
         @m.computed_field
         @property
         def tag(self) -> str:
-            """Tag that will identify ``next``."""
+            """Tag that will identify ``next``.
+
+            Returns:
+                The resulting ``str``.
+            """
             return FlextInfraConstantsRelease.TAG_FORMAT.format(version=self.next)
 
         @m.computed_field
         @property
         def releasable(self) -> bool:
-            """Whether a release commit is due: a declared release, or a real bump."""
+            """Whether a release commit is due: a declared release, or a real bump.
+
+            Returns:
+                The resulting ``bool``.
+            """
             return self.declared or self.next != self.current
 
     class BuildReport(m.StrictBoundaryModel):
@@ -220,7 +226,7 @@ class FlextInfraModelsRelease:
         records: Annotated[
             t.VariadicTuple[FlextInfraModelsRelease.BuildRecord],
             m.Field(default=(), description="Per-project build records"),
-        ]
+        ] = ()
         dry_run: Annotated[bool, m.Field(description="Metadata-only build report")]
         build_constraints_sha256: Annotated[
             t.Infra.ReleaseArtifactSha256,
@@ -231,7 +237,7 @@ class FlextInfraModelsRelease:
             m.Field(description="Trusted Gitleaks policy SHA-256"),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def validate_manifest(self) -> Self:
             """Require totals, project identity, outcomes, and artifacts to agree.
 
@@ -292,9 +298,7 @@ class FlextInfraModelsRelease:
         FlextInfraModelsMixins.VersionTagMixin,
         m.ArbitraryTypesModel,
     ):
-        """Resolved input of one release phase: the repository,
-        its declared version and its tag.
-        """
+        """Resolved input of one release phase: the repository, its declared version and its tag."""
 
         dry_run: Annotated[bool, m.Field(description="Dry run flag")] = False
         phase: Annotated[
