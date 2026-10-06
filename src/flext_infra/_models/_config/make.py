@@ -392,7 +392,7 @@ class FlextInfraConfigModelsMake:
             return self
 
     class MypyCacheSpec(
-        ExternalCacheDirectorySpec,
+        FlextInfraExternalCacheDirectorySpec,
         FlextInfraConfigModelsContract.ConfigContract,
     ):
         """Project-keyed shared Mypy cache, one analysis reused across relocks."""
