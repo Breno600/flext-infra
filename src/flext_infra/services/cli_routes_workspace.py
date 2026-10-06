@@ -19,8 +19,8 @@ from flext_infra.workspace.environment import FlextInfraWorkspaceEnvironmentMixi
 from flext_infra.workspace.environment_provenance import (
     FlextInfraWorkspaceEnvironmentProvenance,
 )
-from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
 from flext_infra.workspace.fleet_gaps import FlextInfraWorkspaceFleetGaps
+from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
 from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
 
 

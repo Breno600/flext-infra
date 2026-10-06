@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, override
+from typing import TYPE_CHECKING, override
 
 from flext_core import r
 from flext_infra import c, config, m, p, s, t, u
@@ -125,18 +125,14 @@ class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
             dirty_paths=self._dirty_paths(repo_root) if present else (),
             open_pull_requests=self._open_pull_requests(repo_root) if present else (),
             unmerged_branches=(
-                self._unmerged_branches(repo_root, declared=declared)
-                if present
-                else 0
+                self._unmerged_branches(repo_root, declared=declared) if present else 0
             ),
             lint_findings=self._lint_findings(repo_root),
             pyrefly_findings=self._pyrefly_findings(repo_root),
             codemod_findings=self._codemod_findings(repo_root),
             agents_doc_present=(repo_root / c.Infra.AGENTS_DOC_FILENAME).is_file(),
             skills_stamp_present=stamp is not None,
-            skills_stamp_distribution_version=(
-                self._stamp_distribution_version(stamp)
-            ),
+            skills_stamp_distribution_version=(self._stamp_distribution_version(stamp)),
             beads_config_present=(
                 (repo_root / c.Infra.BEADS_RUNTIME_CONFIG_RELPATH).is_file()
             ),
@@ -154,15 +150,15 @@ class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
         if status.failure:
             return ()
         return tuple(
-            line[c.Infra.GIT_PORCELAIN_PATH_OFFSET :]
-            .split("-> ", 1)[-1]
-            .strip()
+            line[c.Infra.GIT_PORCELAIN_PATH_OFFSET :].split("-> ", 1)[-1].strip()
             for line in status.value.porcelain.splitlines()
             if line.strip()
         )
 
     @staticmethod
-    def _open_pull_requests(repo_root: Path) -> t.VariadicTuple[m.Infra.FleetPullRequest]:
+    def _open_pull_requests(
+        repo_root: Path,
+    ) -> t.VariadicTuple[m.Infra.FleetPullRequest]:
         """List the checkout's open pull requests; a provider failure is empty.
 
         Returns:
@@ -224,9 +220,7 @@ class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
         )
         if listed.failure or listed.value.outcome.raw_return_code != 0:
             return 0
-        return sum(
-            1 for line in listed.value.stdout.splitlines() if line.strip()
-        )
+        return sum(1 for line in listed.value.stdout.splitlines() if line.strip())
 
     @staticmethod
     def _stamp_distribution_version(stamp: t.JsonMapping | None) -> str:
