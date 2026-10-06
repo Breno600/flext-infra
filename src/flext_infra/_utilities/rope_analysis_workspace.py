@@ -229,8 +229,24 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
                     f"{init_module}.{alias}",
                     absolute,
                 )
-        parse_root = next(path for path in (root, *root.parents) if path.is_dir())
-        with FlextInfraUtilitiesRopeCore.open_project(parse_root) as project:
+        # The analysis root opens with the whole declared workspace's member
+        # source roots on the resolution path: member sources legitimately
+        # import sibling fleet packages (tests fixtures import flext_tests,
+        # src modules import flext_core), and a member-only rope path raises
+        # ModuleNotFoundError for every cross-member base resolution.
+        workspace_root = next(
+            (parent for parent in (root, *root.parents) if (parent / "src").is_dir() and (parent / "flext-core").is_dir()),
+            root,
+        )
+        project_roots = [
+            member
+            for member in (root, *sorted(workspace_root.iterdir()))
+            if member.is_dir() and (member / "src").is_dir()
+        ]
+        with FlextInfraUtilitiesRopeCore.open_project(
+            workspace_root,
+            project_roots=project_roots,
+        ) as project:
             return FlextInfraUtilitiesRopeSourceBases.runtime_bases(
                 project,
                 sources,

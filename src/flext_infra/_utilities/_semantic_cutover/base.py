@@ -71,6 +71,20 @@ class FlextInfraUtilitiesSemanticCutoverBase(
             The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
 
         """
+        try:
+            return cls._plan_dispatch(rope_workspace, sources, findings)
+        except Exception:
+            import traceback
+            traceback.print_exc()
+            raise
+
+    @classmethod
+    def _plan_dispatch(
+        cls,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        sources: t.MappingKV[Path, str],
+        findings: t.SequenceOf[m.Infra.ModScanFinding] = (),
+    ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
         root = rope_workspace.repository_root
         rule_id = c.Infra.SEMANTIC_CUTOVER_RULE_IDS.get(phase)
         selected = tuple(finding for finding in findings if finding.rule_id == rule_id)
