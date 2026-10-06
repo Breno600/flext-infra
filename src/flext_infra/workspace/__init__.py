@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from flext_infra.workspace.environment_provenance import (
         FlextInfraWorkspaceEnvironmentProvenance,
     )
+    from flext_infra.workspace.fleet_gaps import FlextInfraWorkspaceFleetGaps
     from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
     from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
     from flext_infra.workspace.rope import FlextInfraRopeWorkspace
@@ -34,6 +35,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraWorkspaceEnvironmentContracts",
     "FlextInfraWorkspaceEnvironmentMixin",
     "FlextInfraWorkspaceEnvironmentProvenance",
+    "FlextInfraWorkspaceFleetGaps",
     "FlextInfraWorkspaceGovernanceMixin",
     "FlextInfraWorkspacePropagation",
 )
@@ -48,6 +50,7 @@ install_lazy_exports(
         "FlextInfraWorkspaceEnvironmentContracts": ".environment_contracts",
         "FlextInfraWorkspaceEnvironmentMixin": ".environment",
         "FlextInfraWorkspaceEnvironmentProvenance": ".environment_provenance",
+        "FlextInfraWorkspaceFleetGaps": ".fleet_gaps",
         "FlextInfraWorkspaceGovernanceMixin": "._governance",
         "FlextInfraWorkspacePropagation": ".propagation",
     }),

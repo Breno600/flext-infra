@@ -567,8 +567,12 @@ class FlextInfraWorkspaceDetector(
                 return result_type.fail(
                     f"CI requires a root-owned member identity: {path.as_posix()}",
                 )
-            if u.Infra.git_remote_identity(declared_member.url) != u.Infra.git_remote_identity(declared_url):
-                return result_type.fail(f"CI member URL differs from root topology: {path.as_posix()}")
+            if u.Infra.git_remote_identity(
+                declared_member.url,
+            ) != u.Infra.git_remote_identity(declared_url):
+                return result_type.fail(
+                    f"CI member URL differs from root topology: {path.as_posix()}",
+                )
             return result_type.ok(declared_member)
         subproject_root = (repository_root / path).resolve()
         if not subproject_root.is_relative_to(repository_root):

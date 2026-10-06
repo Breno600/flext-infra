@@ -220,10 +220,7 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
         tmp_path: Path,
     ) -> None:
         """The original real-consumer base has a complete installed source identity."""
-        source = (
-            "import libcst as cst\n"
-            "class Transformer(cst.CSTTransformer): pass\n"
-        )
+        source = "import libcst as cst\nclass Transformer(cst.CSTTransformer): pass\n"
         tm.that(
             u.Infra.runtime_evaluated_base_classes(
                 tmp_path,
@@ -241,18 +238,22 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
         """Static provider provenance supplies lazy exports without importing them."""
         provider = installed_dependency_path / "declared_provider"
         provider.mkdir()
-        tm.ok(u.Cli.atomic_write_text_file(
-            provider / "__init__.py",
-            "from .models import Facade as exports\n"
-            "raise RuntimeError('provider must not be imported during planning')\n",
-        ))
-        tm.ok(u.Cli.atomic_write_text_file(
-            provider / "models.py",
-            self._root_import()
-            + "class Contracts:\n    class Payload(RuntimeRoot): pass\n"
-            "class Parent(Contracts): pass\n"
-            "class Facade(Parent): Alias = Parent.Payload\n",
-        ))
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                provider / "__init__.py",
+                "from .models import Facade as exports\n"
+                "raise RuntimeError('provider must not be imported during planning')\n",
+            ),
+        )
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                provider / "models.py",
+                self._root_import()
+                + "class Contracts:\n    class Payload(RuntimeRoot): pass\n"
+                "class Parent(Contracts): pass\n"
+                "class Facade(Parent): Alias = Parent.Payload\n",
+            ),
+        )
         source = (
             "from declared_provider import exports as schemas\n"
             "class Consumer(schemas.Alias): pass\n"
@@ -275,18 +276,26 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
         """A same-name installed distribution cannot override the captured plan."""
         provider = installed_dependency_path / "planned_provider"
         provider.mkdir()
-        tm.ok(u.Cli.atomic_write_text_file(
-            provider / "__init__.py", "from .models import Contract\n",
-        ))
-        tm.ok(u.Cli.atomic_write_text_file(
-            provider / "models.py", "class Contract: pass\n",
-        ))
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                provider / "__init__.py",
+                "from .models import Contract\n",
+            ),
+        )
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                provider / "models.py",
+                "class Contract: pass\n",
+            ),
+        )
         bridge = installed_dependency_path / "declared_bridge"
         bridge.mkdir()
-        tm.ok(u.Cli.atomic_write_text_file(
-            bridge / "__init__.py",
-            "from planned_provider.models import Contract\nFacade = Contract\n",
-        ))
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                bridge / "__init__.py",
+                "from planned_provider.models import Contract\nFacade = Contract\n",
+            ),
+        )
         package = tmp_path / "src" / "planned_provider"
         planned = {
             package / "__init__.py": "from .models import Contract\n",
@@ -301,9 +310,13 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
         }
         tm.that(
             u.Infra.runtime_evaluated_base_classes(tmp_path, planned, self._roots()),
-            eq=tuple(sorted((
-                *self._roots(), "planned_provider.Contract", "declared_bridge.Facade",
-            ))),
+            eq=tuple(
+                sorted((
+                    *self._roots(),
+                    "planned_provider.Contract",
+                    "declared_bridge.Facade",
+                )),
+            ),
         )
 
     def test_configured_root_can_be_an_unpublished_planned_class(

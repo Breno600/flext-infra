@@ -63,6 +63,7 @@ if TYPE_CHECKING:
         FlextInfraNamespaceRelocationCascade,
     )
     from flext_infra.refactor.project_classifier import FlextInfraProjectClassifier
+    from flext_infra.refactor.violations_sweep import FlextInfraRefactorViolationsSweep
     from flext_infra.refactor.wrapper_root_namespace import (
         FlextInfraWrapperRootNamespaceRefactor,
     )
@@ -88,6 +89,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraRefactorCensusProjectMixin",
     "FlextInfraRefactorCensusRemovalMixin",
     "FlextInfraRefactorCensusRenderMixin",
+    "FlextInfraRefactorViolationsSweep",
     "FlextInfraWrapperRootNamespaceRefactor",
     "FlextInfraWrapperRootNamespaceRewriteMixin",
 )
@@ -115,6 +117,7 @@ install_lazy_exports(
         "FlextInfraRefactorCensusProjectMixin": "._census_project",
         "FlextInfraRefactorCensusRemovalMixin": "._census_removal",
         "FlextInfraRefactorCensusRenderMixin": "._census_render",
+        "FlextInfraRefactorViolationsSweep": ".violations_sweep",
         "FlextInfraWrapperRootNamespaceRefactor": ".wrapper_root_namespace",
         "FlextInfraWrapperRootNamespaceRewriteMixin": "._wrapper_rewrite",
     }),

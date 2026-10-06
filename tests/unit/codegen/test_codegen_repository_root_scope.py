@@ -25,6 +25,35 @@ from tests import u
 class TestsFlextInfraCodegenRepositoryRootScope:
     """Tests for ``FlextInfraCodegenRepositoryRootScope``."""
 
+    def test_approval_recipe_keeps_one_fail_closed_shell(self, tmp_path: Path) -> None:
+        """Configured approval stages share their error policy and cleanup trap."""
+        root = self._render_root_makefile(tmp_path)
+        rendered = (root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding=c.Infra.ENCODING_DEFAULT,
+        )
+        section = rendered.split("\npre-commit:", 1)[1].split(
+            "\n_builtin-pre-commit:",
+            1,
+        )[0]
+        lines = section.splitlines()
+        indices = tuple(
+            index for index, line in enumerate(lines) if line.startswith("\t")
+        )
+        recipe = lines[indices[0] : indices[-1] + 1]
+        tm.that(
+            all(line.startswith("\t") for line in recipe),
+            eq=True,
+            msg="\n".join(recipe),
+        )
+        tm.that(all(line.endswith("\\") for line in recipe[:-1]), eq=True)
+        tm.that(recipe[-1].endswith("\\"), eq=False)
+        tm.that(section.count("set -eu;"), eq=1)
+        tm.that(section.count("' EXIT;"), eq=1)
+        for verb in config.Infra.codegen.make.approval_verbs:
+            tm.that(section.count(f"approval: {verb} START"), eq=1)
+            tm.that(section.count(f"approval: {verb} COMPLETE"), eq=1)
+        tm.that(rendered, lacks=["DEBUG1 scratch=", "DEBUG2 scratch="])
+
     def test_normal_test_verbs_admit_only_incremental_execution(
         self,
         tmp_path: Path,

@@ -84,6 +84,9 @@ Infra:
           - GEMINI.md
           - .kilo/**
           - .omo/**
+          # ZCode session artifacts (plan files) are machine-local scratch,
+          # never a live docs or markdown-gate surface.
+          - .zcode/**
           - .tmp/**
           - .claude/**
           - .vscode/**
@@ -191,20 +194,16 @@ Infra:
             - pytest-duplicate-parametrize-test-cases
             - redefined-while-unused
             - unused-variable
-          # The only channel that promotes an unsafe Ruff fix into make fix:
-          # a rule enters here with evidence that its fix preserves code,
-          # comments and diagnostics. Evidence declared per entry:
-          # - relative-imports (relative-imports): the fleet contract is absolute-only
-          #   (ban-relative-imports: all, and make mod rewrites relative
-          #   imports) — the fix enforces the declared contract, no semantics.
-          # - camelcase-imported-as-lowercase (N813): pure alias rename, the
-          #   bound object is unchanged.
-          # - typing-only-first-party-import (TC001): the fix moves an import
-          #   used only in annotations into TYPE_CHECKING; every module runs
-          #   under `from __future__ import annotations`, the runtime-evaluated
-          #   model bases are derived below (flake8-type-checking), and the
-          #   eager-by-law lazy roots never see the rule (scoped __init__.py
-          #   exception), so no runtime-read annotation loses its import.
+          # OPERATOR LAW 2026-10-05 (direct order, OBLIGATORY, NEVER DISABLED
+          # AGAIN): `make fix` ALWAYS applies Ruff's unsafe fixes — the
+          # mandatory lint_fix surface carries --unsafe-fix in codegen.yaml
+          # and MakeRuffSpec fails validation without it. This list keeps its
+          # historical evidence records for the rules whose fixes were proven
+          # semantics-preserving while the channel was opt-in; it no longer
+          # gates the channel (nothing needs promotion into a channel that is
+          # always on). Rules whose fixes would destroy information remain in
+          # `unfixable` above — that is rule selection, never disabling the
+          # mandatory unsafe channel.
           extend-safe-fixes:
             - relative-imports
             - typing-only-first-party-import
@@ -266,12 +265,14 @@ Infra:
           # Each exception exists only with the operator ruling that authorized
           # it and its reason; Ruff receives the unscoped entries as `ignore`
           # and the scoped ones as `per-file-ignores`. Repositories declare no
-          # exception of their own. Operator order 2026-10-05 (latest, direct):
-          # TC001-TC004 are ALL BLOCKED — enforced by rule name on every file
-          # (the four names live in the select surface, never in an ignore
-          # table), and the scoped lazy-root dunder-init exception below stays
-          # the only relief. The earlier same-day "tc-family-off-global"
-          # attribution is superseded and revoked: never re-introduce it.
+          # exception of their own. Operator order 2026-10-05 (latest, direct,
+          # merge-admin mandate): TC001-TC004 are ALL BLOCKED — enforced by
+          # rule name on every file (the four names live in the select
+          # surface, never in an ignore table; the same-day
+          # tc001-tc004-off-pydantic disable is superseded), and the scoped
+          # lazy-root dunder-init exception below stays the only relief.
+          # Pydantic runtime-evaluation is protected by the
+          # runtime-evaluated-roots projection, not by disabling the rules.
           authorized-exceptions:
             - files: "**/xlsx.py"
               rules: [import-outside-top-level]
@@ -353,19 +354,14 @@ Infra:
                 module that exists to bind those libraries directly, so its
                 imports are the licensed surface. Every other module stays
                 blocked by the same rule.
-            # Operator DIRECT order 2026-10-05 (stated in-session, in
-            # response to the revoke below): "para ruff, tc001-tc004 essas
-            # rules tem que estar desligadas por quebrar as classes
-            # pydantic" — the whole flake8-type-checking family
-            # TC001-TC004 (typing-only-first-party-import,
-            # typing-only-third-party-import,
-            # typing-only-standard-library-import and
-            # runtime-import-in-type-checking-block) is DISABLED for every
-            # file, declared by name: moving annotation-only imports into
-            # TYPE_CHECKING breaks runtime-evaluated pydantic model bases.
-            # This supersedes the same-day ENFORCED restoration (#1675) and
-            # the 2026-10-01/03 scoped rulings; the attribution is now
-            # verifiable in the session transcript and beads.
+            # runtime-import-in-type-checking-block — is DISABLED for every
+            # file: Ruff must not execute these rules anywhere. Declared by
+            # rule name (the fleet's canonical naming format). This supersedes
+            # the TC arms of the 2026-10-01 rulings (TC002/TC003 pydantic,
+            # TC004/TC001 lazy-root scoped forms) and of the 2026-10-03 ruling
+            # (TC001 global): the pydantic hazard those older rulings worked
+            # around is moot because the rules never run. One unscoped entry
+            # carries all four rules exactly once, without a scoped substitute.
             - rules: [
                 typing-only-first-party-import,
                 typing-only-third-party-import,
@@ -374,13 +370,25 @@ Infra:
               ]
               authority: operator-direct-order-2026-10-05-tc001-tc004-off-pydantic
               reason: >-
-                Operator direct order 2026-10-05: TC001-TC004 are disabled in
-                Ruff so the rules never execute on any file — they break
-                Pydantic classes (field annotations are runtime-evaluated, so
-                moving their imports into TYPE_CHECKING leaves models "not
-                fully defined"), and model_rebuild stays forbidden. The rule
-                names remain declared here in the SSOT and are never removed;
-                canonical tracking beads flext-p7bxt and flext-4536i.
+                Operator ruling 2026-10-05: TC001-TC004 are blocked from
+                executing on every file; Ruff receives them as global ignores
+                declared by rule name in this single unscoped exception.
+                Pydantic evaluates model annotations at runtime; moving their
+                required imports into TYPE_CHECKING can break model declaration.
+                No model or import workaround substitutes for this prohibition.
+                No file may surface a flake8-type-checking find
+            # Operator DIRECT order 2026-10-05, merge-admin mandate (same
+            # day, NEWEST, supersedes the same-day tc001-tc004-off-pydantic
+            # disable and the 2026-10-01/03 scoped rulings): "Block TC001,
+            # TC002, TC003, and TC004 using the new name-based format" — the
+            # whole flake8-type-checking family executes BLOCKING again
+            # (select: [ALL] keeps them enabled; no ignore entry carries
+            # them). Pydantic safety is owned by the runtime-evaluated
+            # roots/base-classes projection (flake8-type-checking
+            # runtime-evaluated-roots), which keeps pydantic field
+            # annotations runtime-evaluated so the rules never move their
+            # imports into TYPE_CHECKING. Tracking beads flext-p7bxt and
+            # flext-4536i stay canonical for the family
             - rules: [missing-required-import, implicit-namespace-package]
               authority: operator-ruling-2026-10-03-import-banners-off-global
               reason: >-
