@@ -38,6 +38,21 @@ class FlextInfraConstantsRefactor:
         Path(cb.REPORTS_DIR_NAME) / "refactor" / "namespace-enforce.json"
     )
     "Canonical single-file evidence snapshot for the latest namespace enforcement."
+    VIOLATIONS_SWEEP_ROUTE_NAME: ClassVar[str] = "violations-sweep"
+    "Canonical refactor CLI verb that repairs and proves the always-reducing law."
+    VIOLATIONS_SWEEP_REPORT_RELATIVE_PATH: ClassVar[Path] = (
+        Path(cb.REPORTS_DIR_NAME) / "refactor" / "violations-sweep.json"
+    )
+    "Canonical single-file receipt for the latest violations sweep."
+    VIOLATIONS_SWEEP_REPORT_SCHEMA_VERSION: ClassVar[Literal[1]] = 1
+    "Exact structured violations-sweep report schema version."
+    VIOLATIONS_SWEEP_REPAIR_VERBS: ClassVar[t.StrSequence] = ("fix", "fmt", "mod")
+    "Canonical repair sequence the sweep runs between its two mod scans."
+    LINT_REPORT_COUNT_LINE: ClassVar[t.RegexPattern] = re.compile(
+        r"^- lint: (?:PASS|FAIL) \((\d+) issues\)$",
+        re.MULTILINE,
+    )
+    """The check report's generated lint line; its count is the repo's lint column."""
     AST_GREP_ERROR_FINDING_RECEIPT: ClassVar[str] = (
         "Error: {count} error(s) found in code."
     )

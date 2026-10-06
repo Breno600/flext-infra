@@ -20,6 +20,7 @@ from flext_infra.workspace.environment_provenance import (
     FlextInfraWorkspaceEnvironmentProvenance,
 )
 from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
+from flext_infra.workspace.fleet_gaps import FlextInfraWorkspaceFleetGaps
 from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
 
 
@@ -136,6 +137,19 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
                         "Sync generated direnv/mise environment files",
                         m.Infra.WorkspaceEnvironmentCliRequest,
                         _sync_environment,
+                    ),
+                    (
+                        c.Infra.FLEET_GAPS_ROUTE_NAME,
+                        (
+                            "Report every declared repository's hygiene gaps "
+                            "(dirty paths, open PRs, unmerged branches, "
+                            "violation counts, standards presence) and publish "
+                            "the receipt"
+                        ),
+                        FlextInfraWorkspaceFleetGaps,
+                        FlextInfraCliRouteBase.result_handler(
+                            FlextInfraWorkspaceFleetGaps.execute_command,
+                        ),
                     ),
                 )
             ),
