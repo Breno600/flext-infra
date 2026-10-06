@@ -971,8 +971,7 @@ class FlextInfraConfigModelsMake:
 
             Raises:
                 ValueError: If make project_check_gates must be unique; or if make
-                    project_check_gates shadow built-in gates; or if make
-                    opt_in_check_gates name unknown gates.
+                    project_check_gates shadow built-in gates.
 
             """
             if len(set(self.project_check_gates)) != len(self.project_check_gates):
@@ -984,12 +983,6 @@ class FlextInfraConfigModelsMake:
                 msg = (
                     "make project_check_gates shadow built-in gates: "
                     f"{', '.join(shadowed)}"
-                )
-                raise ValueError(msg)
-            unknown = sorted(set(self.opt_in_check_gates) - builtin)
-            if unknown:
-                msg = (
-                    f"make opt_in_check_gates name unknown gates: {', '.join(unknown)}"
                 )
                 raise ValueError(msg)
             return self
@@ -1168,10 +1161,7 @@ class FlextInfraConfigModelsMake:
         @property
         def check_gates_default(self) -> t.VariadicTuple[str]:
             """Active default gates, shared by local, CI, hooks, and project gates."""
-            excluded = frozenset((
-                *self.standalone_check_gates.values(),
-                *self.opt_in_check_gates,
-            ))
+            excluded = frozenset((*self.standalone_check_gates.values(),))
             declared = (
                 *FlextInfraConstantsMake.CANONICAL_GATE_IDS,
                 *self.project_check_gates,
