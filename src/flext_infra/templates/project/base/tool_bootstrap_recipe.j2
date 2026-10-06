@@ -11,10 +11,10 @@
 	caller_path="$$PATH"; \
 	mise_trusted_config_paths="$$project_root"; \
 {% for name, value in bootstrap.fixed_environment if name == "MISE_LOCKFILE_PLATFORMS" -%}
-	mise_lockfile_platforms="{{ value }}"; \
+{{ "	" }}	mise_lockfile_platforms="{{ value }}"; \
 {% endfor -%}
 {% for name in bootstrap.passthrough_environment if name != "PATH" -%}
-	caller_{{ name | lower }}="{{ '$${' ~ name ~ ':-}' }}"; \
+{{ "	" }}	caller_{{ name | lower }}="{{ '$${' ~ name ~ ':-}' }}"; \
 {% endfor -%}
 {{ "			" }}$${caller_flext_setup_credential_store:+GIT_CONFIG_COUNT=2} \
 {{ "			" }}$${caller_flext_setup_credential_store:+GIT_CONFIG_KEY_0=credential.https://github.com.helper} \
@@ -125,7 +125,7 @@
 	printf 'mise scratch: allocated path=%s\n' "$$scratch" >&2; \
 	mkdir -p{% for _name, relative in bootstrap.transient_environment if relative not in bootstrap.empty_files %} "$$scratch/{{ relative }}"{% endfor %}; \
 {% for relative in bootstrap.empty_files -%}
-	: > "$$scratch/{{ relative }}"; chmod 600 "$$scratch/{{ relative }}"; \
+{{ "	" }}	: > "$$scratch/{{ relative }}"; chmod 600 "$$scratch/{{ relative }}"; \
 {% endfor -%}
 {{ "	" }}	mise_exec() { \
 		mise_config_mode="$$1"; shift; \
@@ -141,20 +141,20 @@
 		fi; \
 		env -i \
 {% for name, value in bootstrap.fixed_environment if name != "MISE_LOCKFILE_PLATFORMS" -%}
-			'{{ name }}={{ value }}' \
+{{ "	" }}			'{{ name }}={{ value }}' \
 {% endfor -%}
 {{ "	" }}			$${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
 {% for name, relative in bootstrap.transient_environment -%}
-			"{{ name }}=$$scratch/{{ relative }}" \
+{{ "	" }}			"{{ name }}=$$scratch/{{ relative }}" \
 {% endfor -%}
 {% for name, relative in bootstrap.persistent_environment -%}
-			"{{ name }}=$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}" \
+{{ "	" }}			"{{ name }}=$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}" \
 {% endfor -%}
 {{ "	" }}			"GIT_CEILING_DIRECTORIES=$$project_parent" \
 			"MISE_CEILING_PATHS=$$project_parent" \
 			"MISE_TRUSTED_CONFIG_PATHS=$$mise_trusted_config_paths" \
 {% for name in bootstrap.passthrough_environment -%}
-			$${caller_{{ name | lower }}:+"{{ name }}=$$caller_{{ name | lower }}"} \
+{{ "	" }}			$${caller_{{ name | lower }}:+"{{ name }}=$$caller_{{ name | lower }}"} \
 {% endfor -%}
 {{ "	" }}			$${mise_config_argument:+"$$mise_config_argument"} \
 			$${mise_runtime_path:+"MISE_INSTALL_PATH=$$mise_runtime_path"} \
@@ -377,7 +377,7 @@
 			mkdir -p "$$lock_stage/artifacts/bin"; \
 			mise_checked "$$scratch/install-script.log" mise_exec no-config "$$pinned_mise" generate install-script --version "$$runtime_release" --write "$$lock_stage/artifacts/{{ bootstrap.artifact_specs[0][0] }}" --windows; \
 {% for relative, mode in bootstrap.artifact_specs[:2] -%}
-			chmod {{ '%o' | format(mode) }} "$$lock_stage/artifacts/{{ relative }}"; \
+{{ "	" }}			chmod {{ '%o' | format(mode) }} "$$lock_stage/artifacts/{{ relative }}"; \
 {% endfor -%}
 {{ "	" }}			mise_receipt launcher-version "$$lock_stage/artifacts/{{ bootstrap.artifact_specs[0][0] }}"; \
 			if [ "$$receipt_release" != "$$runtime_release" ]; then \
@@ -434,7 +434,7 @@
 	# the farm from the pinned release before publishing it. \
 	if [ -n "$${GITHUB_PATH:-}" ]; then \
 {% for name, relative in bootstrap.persistent_environment if name == "MISE_SHIMS_DIR" -%}
-		shim_farm="$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}"; \
+{{ "	" }}		shim_farm="$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}"; \
 		rm -rf "$$shim_farm"; \
 		mise_checked "$$scratch/reshim.log" mise_offline project "$$pinned_mise" -C "$$project_root" reshim; \
 		printf '%s\n' "$$shim_farm" >> "$$GITHUB_PATH"; \
@@ -447,7 +447,7 @@
 	if [ "$(OS)" = "Windows_NT" ]; then mise_runtime_path="$$mise_runtime_path.exe"; fi; \
 	if env \
 {% for name, relative in bootstrap.persistent_environment -%}
-		"{{ name }}=$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}" \
+{{ "	" }}		"{{ name }}=$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}" \
 {% endfor -%}
 {{ "	" }}		"GIT_CEILING_DIRECTORIES=$$project_parent" \
 		"MISE_CEILING_PATHS=$$project_parent" \
