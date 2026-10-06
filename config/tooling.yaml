@@ -351,6 +351,29 @@ Infra:
                 module that exists to bind those libraries directly, so its
                 imports are the licensed surface. Every other module stays
                 blocked by the same rule.
+            # runtime-import-in-type-checking-block — is DISABLED for every
+            # file: Ruff must not execute these rules anywhere. Declared by
+            # rule name (the fleet's canonical naming format). This supersedes
+            # the TC arms of the 2026-10-01 rulings (TC002/TC003 pydantic,
+            # TC004/TC001 lazy-root scoped forms) and of the 2026-10-03 ruling
+            # (TC001 global): the pydantic hazard those older rulings worked
+            # around is moot because the rules never run. One unscoped entry
+            # carries all four rules exactly once, without a scoped substitute.
+            - rules: [
+                typing-only-first-party-import,
+                typing-only-third-party-import,
+                typing-only-standard-library-import,
+                runtime-import-in-type-checking-block,
+              ]
+              authority: operator-direct-order-2026-10-05-tc001-tc004-off-pydantic
+              reason: >-
+                Operator ruling 2026-10-05: TC001-TC004 are blocked from
+                executing on every file; Ruff receives them as global ignores
+                declared by rule name in this single unscoped exception.
+                Pydantic evaluates model annotations at runtime; moving their
+                required imports into TYPE_CHECKING can break model declaration.
+                No model or import workaround substitutes for this prohibition.
+                No file may surface a flake8-type-checking find
             # Operator DIRECT order 2026-10-05, merge-admin mandate (same
             # day, NEWEST, supersedes the same-day tc001-tc004-off-pydantic
             # disable and the 2026-10-01/03 scoped rulings): "Block TC001,
@@ -362,7 +385,7 @@ Infra:
             # runtime-evaluated-roots), which keeps pydantic field
             # annotations runtime-evaluated so the rules never move their
             # imports into TYPE_CHECKING. Tracking beads flext-p7bxt and
-            # flext-4536i stay canonical for the family.
+            # flext-4536i stay canonical for the family
             - rules: [missing-required-import, implicit-namespace-package]
               authority: operator-ruling-2026-10-03-import-banners-off-global
               reason: >-
