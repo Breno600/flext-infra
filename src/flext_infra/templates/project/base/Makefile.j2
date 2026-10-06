@@ -1112,7 +1112,7 @@ _builtin-bootstrap-candidate: _builtin_require_environment
 # independently when malformed Python prevents the Rope phases from loading.
 # The current directory defines scope; callers never address tools directly.
 _builtin_mod_apply: _builtin_require_environment
-	@$(PROJECT_FLEXT_INFRA) refactor mod --apply
+	@$(PROJECT_FLEXT_INFRA) refactor mod --repository-root "$(PROJECT_ROOT)" --apply
 
 _builtin_mod_text: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) refactor mod-text --apply

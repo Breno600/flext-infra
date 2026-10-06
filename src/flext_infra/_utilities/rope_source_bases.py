@@ -10,9 +10,13 @@ import ast
 import importlib.util
 import sys
 from collections.abc import MutableMapping
+from importlib.util import resolve_name
 from pathlib import Path
 
 from flext_infra import c, m, p, t
+from flext_infra._utilities._rope_analysis.sourcescan import (
+    FlextInfraUtilitiesRopeAnalysisSourceScan,
+)
 from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
 from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
@@ -204,7 +208,8 @@ class FlextInfraUtilitiesRopeSourceBases:
         """Index lexical bindings without installing a cross-module Rope overlay.
 
         A provider class is indexed at its native declaration line. Unreferenced
-        provider classes remain qualified declarations, not fabricated lineages.
+        module-level provider classes remain qualified declarations, not fabricated
+        lineages. A captured class owns its nested declaration identities.
 
         Returns:
             The module's explicit lexical bindings, including value shadowing.
@@ -237,6 +242,12 @@ class FlextInfraUtilitiesRopeSourceBases:
             scope: str,
         ) -> None:
             for node in statements:
+                if (
+                    required_line is not None
+                    and not scope
+                    and node.lineno > required_line
+                ):
+                    break
                 if isinstance(node, ast.ClassDef):
                     if (
                         required_line is not None
@@ -327,11 +338,20 @@ class FlextInfraUtilitiesRopeSourceBases:
                         node.targets if isinstance(node, ast.Assign) else [node.target]
                     )
                     if any(not isinstance(target, ast.Name) for target in targets):
-                        # Attribute and subscript targets mutate an existing
-                        # object; they never declare a lexical class binding,
-                        # so the scan records nothing and resolution keeps its
-                        # own failure for a binding that is actually required.
-                        continue
+                        if allow_conditional and all(
+                            isinstance(target, ast.Attribute)
+                            and isinstance(target.value, ast.Name)
+                            and target.value.id in bindings
+                            and bindings[target.value.id] is None
+                            for target in targets
+                        ):
+                            # Provider function metadata does not rebind a class.
+                            continue
+                        message = (
+                            f"Unsupported class binding mutation in {module}: "
+                            f"{ast.unparse(node)}"
+                        )
+                        raise ValueError(message)
                     value = node.value
                     if value is None:
                         continue
@@ -355,6 +375,20 @@ class FlextInfraUtilitiesRopeSourceBases:
                                 if reference is not None
                                 else None
                             )
+                elif (
+                    isinstance(node, ast.AugAssign)
+                    and allow_conditional
+                    and isinstance(node.target, ast.Name)
+                ):
+                    bindings[node.target.id] = None
+                elif (
+                    isinstance(node, ast.Delete)
+                    and allow_conditional
+                    and all(isinstance(target, ast.Name) for target in node.targets)
+                ):
+                    for target in node.targets:
+                        if isinstance(target, ast.Name):
+                            bindings.pop(target.id, None)
                 elif isinstance(node, (ast.Delete, ast.AugAssign)):
                     # An augmented assignment or deletion mutates an existing
                     # object and never declares a class binding; a Name target
@@ -368,6 +402,19 @@ class FlextInfraUtilitiesRopeSourceBases:
                 elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     bindings[node.name] = None
                 elif isinstance(node, ast.If):
+                    match node.test:
+                        case ast.Compare(
+                            left=ast.Name(id="__name__"),
+                            ops=[ast.Eq()],
+                            comparators=[ast.Constant(value="__main__")],
+                        ):
+                            collect(
+                                node.body if module == "__main__" else node.orelse,
+                                bindings,
+                                lexical,
+                                scope,
+                            )
+                            continue
                     if isinstance(node.test, ast.Constant) and isinstance(
                         node.test.value,
                         bool,
@@ -434,6 +481,24 @@ class FlextInfraUtilitiesRopeSourceBases:
                         bindings[name] = None
 
         collect(parsed.body, globals_, globals_, "")
+        targets, references = (
+            FlextInfraUtilitiesRopeAnalysisSourceScan.lazy_import_mapping_source(source)
+        )
+        if references:
+            message = (
+                f"Unresolved declared lazy import mapping in {module}: {references}"
+            )
+            raise ValueError(message)
+        for target, exports in targets:
+            destination = (
+                resolve_name(target, package) if target.startswith(".") else target
+            )
+            for name in exports:
+                globals_[name] = m.Infra.SourceClassReference(
+                    target=destination,
+                    attributes=(name,),
+                    qualified_base=f"{module}.{name}",
+                )
         return globals_
 
     @classmethod
@@ -490,6 +555,10 @@ class FlextInfraUtilitiesRopeSourceBases:
         external: MutableMapping[str, t.Infra.RopePyObject] = {}
         linearizations: MutableMapping[str, t.StrTuple] = {}
         active: set[str] = set()
+        native_module_type = FlextInfraUtilitiesRopeRuntime.runtime_type(
+            "rope.base.builtins",
+            "BuiltinModule",
+        )
 
         def external_identity(value: t.Infra.RopePyObject) -> str:
             # TypedDict builds its class through a function call, so Rope
@@ -639,13 +708,10 @@ class FlextInfraUtilitiesRopeSourceBases:
         def provider_module(
             imported: p.Infra.RopeImportedModule,
         ) -> t.Infra.RopePyModule:
-            resource = imported.resource
-            if resource is not None:
-                return FlextInfraUtilitiesRopeCore.resolve_pymodule(project, resource)
             name = provider_module_name(imported)
             module = project.get_module(name)
-            resource = project.find_module(name)
-            if resource is not None:
+            resource = imported.resource or project.find_module(name)
+            if resource is not None and not isinstance(module, native_module_type):
                 module = FlextInfraUtilitiesRopeCore.resolve_pymodule(project, resource)
             return module
 
@@ -743,7 +809,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                     raise
                 module = project.get_module(real)
             resource = project.find_module(target)
-            if resource is not None:
+            if resource is not None and not isinstance(module, native_module_type):
                 module = FlextInfraUtilitiesRopeCore.resolve_pymodule(project, resource)
             return provider_reference(module, attributes, visiting, depth)
 

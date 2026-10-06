@@ -343,12 +343,21 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
                 # The declared empty suite ran no collection subprocess, so no
                 # per-phase receipt exists: only the suite diagnostics.
                 return (("suite", suite),)
+            # A phase receipt exists only for a subprocess that ran, and
+            # ``inventory_collected`` is that contract. ``whole_target`` alone
+            # cannot imply one: the cold-cache selection-only plan also
+            # returns whole_target=True (its single selection collection spans
+            # the whole target) without ever running an inventory subprocess,
+            # and demanding the inventory receipt then crashed the report
+            # phase of every fresh-environment CI run after an all-green
+            # suite.
             names = (
                 ("inventory",)
                 # A whole-target run (the declared single file) collects its
                 # inventory directly and never runs a separate selection
                 # collection, so only the inventory receipt exists.
                 if selection_plan.whole_target
+                and selection_plan.inventory_collected
                 else (
                     (
                         ("selection", "inventory")

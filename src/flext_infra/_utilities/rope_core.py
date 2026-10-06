@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
@@ -89,6 +90,14 @@ class FlextInfraUtilitiesRopeCore(
             save_objectdb=False,
             ignored_resources=sorted(config.Infra.codegen.source_scan_ignored),
             source_folders=source_folders,
+            extension_modules=sorted(
+                name
+                for name, module in tuple(sys.modules.items())
+                if name.partition(".")[0] in sys.stdlib_module_names
+                and module is not None
+                and module.__spec__ is not None
+                and module.__spec__.origin == "frozen"
+            ),
         )
 
     @staticmethod
