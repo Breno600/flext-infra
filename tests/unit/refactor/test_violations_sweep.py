@@ -14,19 +14,16 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import pytest
 from flext_tests import tm
 
-from flext_infra import c, main, m, u
+from flext_infra import c, m, main, u
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
 
 RECORDING_MAKEFILE = (
-    ".PHONY: fix fmt mod\n"
-    "fix fmt mod:\n"
-    "\t@printf '%s\\n' '$@' >> ran.txt\n"
+    ".PHONY: fix fmt mod\nfix fmt mod:\n\t@printf '%s\\n' '$@' >> ran.txt\n"
 )
 
 MOD_GROWS_MAKEFILE = (
@@ -36,11 +33,7 @@ MOD_GROWS_MAKEFILE = (
     "\t@printf 'marker = dict()\\n' > violating.py\n"
 )
 
-LOCAL_RULE_CATALOG = (
-    "ruleDirs:\n"
-    "  - rules\n"
-    "testConfigs: []\n"
-)
+LOCAL_RULE_CATALOG = "ruleDirs:\n  - rules\ntestConfigs: []\n"
 
 LOCAL_GROWTH_RULE = (
     "id: sweep-growth\n"
@@ -52,7 +45,6 @@ LOCAL_GROWTH_RULE = (
 )
 
 
-@pytest.mark.slow
 class TestsFlextInfraRefactorViolationsSweep:
     """Behavior contract for the ``refactor violations-sweep`` verb."""
 
@@ -163,15 +155,23 @@ class TestsFlextInfraRefactorViolationsSweep:
         self,
         mod_workspace: Path,
     ) -> None:
-        """A repair verb that adds a violation fails the command."""
+        """A repair verb that adds a violation fails the command.
+
+        The planted ``violating.py`` trips the local growth rule and the
+        catalog's own detection rules, so the exact class mix is the
+        catalog's; the law under test is that every total only moves down.
+        """
         root = mod_workspace
         self._prepare(root, makefile=MOD_GROWS_MAKEFILE, local_rule=True)
 
         tm.that(self._sweep(root), ne=0)
 
         report = self._receipt(root)
-        tm.that(report.increased_totals, eq=("findings",))
         tm.that(
-            report.after.findings,
-            eq=report.before.findings + 1,
+            "findings" in report.increased_totals,
+            eq=True,
+        )
+        tm.that(
+            report.after.findings > report.before.findings,
+            eq=True,
         )

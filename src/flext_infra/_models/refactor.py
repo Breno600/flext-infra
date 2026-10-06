@@ -39,14 +39,6 @@ class FlextInfraModelsRefactor(
     class ModTextCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
         """Repository-scoped request for authenticated Sed rule replay."""
 
-    class ViolationsSweepCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
-        """Repository-scoped request for the canonical repair-and-prove sweep.
-
-        The sweep always mutates: its effect is the repository's own canonical
-        repair verbs (``make fix``, ``make fmt``, ``make mod``) run between two
-        mod scans, and the command fails when any scan total increased.
-        """
-
     class ViolationsTotals(m.ContractModel):
         """One mod scan's violation totals as the sweep compares them."""
 
