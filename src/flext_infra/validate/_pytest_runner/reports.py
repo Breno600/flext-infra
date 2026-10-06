@@ -217,7 +217,14 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
                 m.Infra.PytestCollectionManifest.model_validate_json(
                     selection_plan.manifest_path.read_text(encoding="utf-8"),
                 )
-                if context.execution_mode == c.Infra.PytestExecutionMode.FULL
+                if (
+                    context.execution_mode == c.Infra.PytestExecutionMode.FULL
+                    # A whole-target run (the declared single file) executes
+                    # under --testmon-noselect with the collection manifest
+                    # enforced, so testmon writes no selection receipt: the
+                    # enforced manifest IS the executed selection.
+                    or selection_plan.whole_target
+                )
                 else m.Infra.PytestCollectionManifest.model_validate_json(
                     (log.parent / "testmon-selection.json").read_text(encoding="utf-8"),
                 )
@@ -324,13 +331,20 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
                 # per-phase receipt exists: only the suite diagnostics.
                 return (("suite", suite),)
             names = (
-                (
-                    ("selection", "inventory")
-                    if selection_plan.inventory_collected
-                    else ("selection",)
+                ("inventory",)
+                # A whole-target run (the declared single file) collects its
+                # inventory directly and never runs a separate selection
+                # collection, so only the inventory receipt exists.
+                if selection_plan.whole_target
+                else (
+                    (
+                        ("selection", "inventory")
+                        if selection_plan.inventory_collected
+                        else ("selection",)
+                    )
+                    if context.execution_mode == c.Infra.PytestExecutionMode.INCREMENTAL
+                    else ("inventory",)
                 )
-                if context.execution_mode == c.Infra.PytestExecutionMode.INCREMENTAL
-                else ("inventory",)
             )
             for phase in names:
                 receipt = report_dir / f"testmon-{phase}.events.diagnostics.json"
