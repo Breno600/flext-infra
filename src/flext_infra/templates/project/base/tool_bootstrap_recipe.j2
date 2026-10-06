@@ -127,7 +127,7 @@
 {% for relative in bootstrap.empty_files -%}
 	: > "$$scratch/{{ relative }}"; chmod 600 "$$scratch/{{ relative }}"; \
 {% endfor -%}
-	mise_exec() { \
+{{ "	" }}	mise_exec() { \
 		mise_config_mode="$$1"; shift; \
 		case "$$mise_config_mode" in \
 			no-config) mise_config_argument='MISE_NO_CONFIG=1' ;; \
@@ -143,20 +143,20 @@
 {% for name, value in bootstrap.fixed_environment if name != "MISE_LOCKFILE_PLATFORMS" -%}
 			'{{ name }}={{ value }}' \
 {% endfor -%}
-			$${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
+{{ "	" }}			$${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
 {% for name, relative in bootstrap.transient_environment -%}
 			"{{ name }}=$$scratch/{{ relative }}" \
 {% endfor -%}
 {% for name, relative in bootstrap.persistent_environment -%}
 			"{{ name }}=$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}" \
 {% endfor -%}
-			"GIT_CEILING_DIRECTORIES=$$project_parent" \
+{{ "	" }}			"GIT_CEILING_DIRECTORIES=$$project_parent" \
 			"MISE_CEILING_PATHS=$$project_parent" \
 			"MISE_TRUSTED_CONFIG_PATHS=$$mise_trusted_config_paths" \
 {% for name in bootstrap.passthrough_environment -%}
 			$${caller_{{ name | lower }}:+"{{ name }}=$$caller_{{ name | lower }}"} \
 {% endfor -%}
-			$${mise_config_argument:+"$$mise_config_argument"} \
+{{ "	" }}			$${mise_config_argument:+"$$mise_config_argument"} \
 			$${mise_runtime_path:+"MISE_INSTALL_PATH=$$mise_runtime_path"} \
 			"$$@"; \
 	}; \
@@ -379,7 +379,7 @@
 {% for relative, mode in bootstrap.artifact_specs[:2] -%}
 			chmod {{ '%o' | format(mode) }} "$$lock_stage/artifacts/{{ relative }}"; \
 {% endfor -%}
-			mise_receipt launcher-version "$$lock_stage/artifacts/{{ bootstrap.artifact_specs[0][0] }}"; \
+{{ "	" }}			mise_receipt launcher-version "$$lock_stage/artifacts/{{ bootstrap.artifact_specs[0][0] }}"; \
 			if [ "$$receipt_release" != "$$runtime_release" ]; then \
 				printf 'ERROR: staged Mise launcher runs %s, not %s\n' "$$receipt_release" "$$runtime_release" >&2; exit 2; \
 			fi; \
@@ -439,7 +439,7 @@
 		mise_checked "$$scratch/reshim.log" mise_offline project "$$pinned_mise" -C "$$project_root" reshim; \
 		printf '%s\n' "$$shim_farm" >> "$$GITHUB_PATH"; \
 {% endfor -%}
-	fi; \
+{{ "	" }}	fi; \
 	printf 'setup: entering lifecycle (submodules, environment, hooks) make=%s\n' "$(SELF_MAKE_EXECUTABLE)"; \
 	scratch_present=0; if [ -d "$$scratch" ]; then scratch_present=1; fi; \
 	printf 'mise scratch: before lifecycle path=%s present=%s\n' "$$scratch" "$$scratch_present" >&2; \
@@ -449,7 +449,7 @@
 {% for name, relative in bootstrap.persistent_environment -%}
 		"{{ name }}=$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}" \
 {% endfor -%}
-		"GIT_CEILING_DIRECTORIES=$$project_parent" \
+{{ "	" }}		"GIT_CEILING_DIRECTORIES=$$project_parent" \
 		"MISE_CEILING_PATHS=$$project_parent" \
 		"MISE_TRUSTED_CONFIG_PATHS=$$project_root" \
 		"MISE_VERSION=$$runtime_release" \
