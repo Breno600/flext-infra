@@ -376,19 +376,7 @@ Infra:
                 Pydantic evaluates model annotations at runtime; moving their
                 required imports into TYPE_CHECKING can break model declaration.
                 No model or import workaround substitutes for this prohibition.
-                No file may surface a flake8-type-checking find
-            # Operator DIRECT order 2026-10-05, merge-admin mandate (same
-            # day, NEWEST, supersedes the same-day tc001-tc004-off-pydantic
-            # disable and the 2026-10-01/03 scoped rulings): "Block TC001,
-            # TC002, TC003, and TC004 using the new name-based format" — the
-            # whole flake8-type-checking family executes BLOCKING again
-            # (select: [ALL] keeps them enabled; no ignore entry carries
-            # them). Pydantic safety is owned by the runtime-evaluated
-            # roots/base-classes projection (flake8-type-checking
-            # runtime-evaluated-roots), which keeps pydantic field
-            # annotations runtime-evaluated so the rules never move their
-            # imports into TYPE_CHECKING. Tracking beads flext-p7bxt and
-            # flext-4536i stay canonical for the family
+                Canonical tracking remains flext-p7bxt and flext-4536i.
             - rules: [missing-required-import, implicit-namespace-package]
               authority: operator-ruling-2026-10-03-import-banners-off-global
               reason: >-
