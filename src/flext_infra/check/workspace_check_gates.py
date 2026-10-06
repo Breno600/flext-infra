@@ -151,6 +151,7 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 ),
                 issues=(),
                 raw_output=f"{gate_id} gate not registered",
+                outcome=c.Infra.ToolOutcome.ERROR,
             )
         return gate.check(project_dir, ctx or self._gate_ctx(reports_dir))
 

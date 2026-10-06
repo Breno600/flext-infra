@@ -156,7 +156,7 @@ class FlextInfraModelsWorkspace:
             FlextInfraModelsWorkspace.DirectUrlDirectoryInfo | None,
             m.Field(description="Directory metadata of a local install"),
         ] = None
-        url: str = m.Field(default="", description="PEP 610 origin URL")
+        url: Annotated[t.NonEmptyStr, m.Field(description="Required PEP 610 origin URL")]
         vcs_info: FlextInfraModelsWorkspace.DirectUrlVcsInfo | None = m.Field(
             default=None,
             description="Installed immutable VCS identity",
