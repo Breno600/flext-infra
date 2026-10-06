@@ -531,6 +531,12 @@ class FlextInfraUtilitiesRopeSourceBases:
             module: cls._inventory(project, module, path, source, definitions)
             for module, (path, source) in sources.items()
         }
+        namespaces = {
+            ".".join(parts[:index])
+            for module in modules
+            for parts in (module.split("."),)
+            for index in range(1, len(parts) + 1)
+        }
         module_aliases: dict[str, str] = {}
         for alias_module, (alias_path, alias_source) in sources.items():
             for alias, absolute in cls.lazy_module_aliases(
@@ -538,15 +544,21 @@ class FlextInfraUtilitiesRopeSourceBases:
                 alias_path,
                 alias_source,
             ).items():
+                # A lazy re-export alias is a module-local binding, never a
+                # global rename. When its name collides with a real analyzed
+                # module (or namespace), the real module wins: an absolute
+                # import elsewhere in the tree refers to the real module —
+                # a facade re-exporting a subpackage named like the project
+                # package must not shadow it (cosmos-docgen tests/unit
+                # re-exports a `dcdoc` subpackage; class bases declared as
+                # `from dcdoc import DcdocServiceBase` mean the project one).
+                if alias in modules or alias in namespaces:
+                    continue
                 module_aliases.setdefault(alias, absolute)
         for alias, absolute in (extra_module_aliases or {}).items():
+            if alias in modules or alias in namespaces:
+                continue
             module_aliases.setdefault(alias, absolute)
-        namespaces = {
-            ".".join(parts[:index])
-            for module in modules
-            for parts in (module.split("."),)
-            for index in range(1, len(parts) + 1)
-        }
         owned_definitions = tuple(definitions.values())
         definition_keys: dict[str, str] = {}
         for definition_identity, definition in definitions.items():
@@ -561,9 +573,10 @@ class FlextInfraUtilitiesRopeSourceBases:
         )
 
         def external_identity(value: t.Infra.RopePyObject) -> str:
-            # TypedDict builds its class through a function call, so Rope
-            # resolves the declared base to a PyFunction; the base identity
-            # is still the class that call constructs at runtime.
+            # TypedDict and NamedTuple build their classes through function
+            # calls, so Rope resolves the declared base to a PyFunction; the
+            # base identity is still the class that call constructs at
+            # runtime.
             if (
                 isinstance(
                     value,
@@ -572,11 +585,12 @@ class FlextInfraUtilitiesRopeSourceBases:
                         "PyFunction",
                     ),
                 )
-                and value.get_name() == "TypedDict"
+                and value.get_name() in ("TypedDict", "NamedTuple")
             ):
                 module = value.get_module()
                 module_name = module.get_name() if module is not None else ""
-                return f"{module_name}.TypedDict" if module_name else "TypedDict"
+                name = value.get_name()
+                return f"{module_name}.{name}" if module_name else name
             if not FlextInfraUtilitiesRopeRuntime.abstract_class(value):
                 message = "Rope did not resolve a required base to a class"
                 raise TypeError(message)
