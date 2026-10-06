@@ -12,9 +12,6 @@ from flext_cli import cli
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
-from flext_infra._models.flext_infra_codegen_lazy_init_planner import (
-    FlextInfraCodegenLazyInitPlanner,
-)
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
 from flext_infra.codegen._lazy_init_generation import (
     FlextInfraCodegenLazyInitGenerationMixin,
@@ -179,7 +176,7 @@ class FlextInfraCodegenPipeline(
 
 __all__: list[str] = [
     "FlextInfraCodegenLazyInitGenerationMixin",
-    "FlextInfraCodegenLazyInitPlanner",
+    # FlextInfraCodegenLazyInitPlanner: owned by codegen.lazy_init_planner (single-export-owner rule)
     "FlextInfraCodegenPipeline",
     "FlextInfraCodegenPipelineStagesMixin",
     "FlextInfraMiseArtifactsFiles",

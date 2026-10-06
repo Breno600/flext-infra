@@ -236,7 +236,7 @@ class FlextInfraConfigModelsRender:
                     "Directory name for external runtime state. Sibling of the "
                     "checkout so generated state never lives inside a versioned "
                     "tree (storage law). Default: '.flext-runtime'."
-                )
+                ),
             ),
         ] = ".flext-runtime"
         # Scratch namespace for TMPDIR, test basetemp, Mise bootstrap staging.
@@ -248,7 +248,7 @@ class FlextInfraConfigModelsRender:
                     "Namespace component for scratch directories. Combined with "
                     "scratch_home_relative and state_directory_name to form the "
                     "full scratch path. Default: 'scratch'."
-                )
+                ),
             ),
         ] = "scratch"
         # Scratch home-relative path: platform home plus this path mirrors the
@@ -260,7 +260,7 @@ class FlextInfraConfigModelsRender:
                     "Home-relative path for scratch root. Combined with "
                     "state_directory_name and checkout identity to form the "
                     "PROJECT_SCRATCH_ROOT. Default: 'tmp'."
-                )
+                ),
             ),
         ] = "tmp"
         # Bytecode cache namespace under PROJECT_STATE_ROOT.
@@ -270,7 +270,7 @@ class FlextInfraConfigModelsRender:
                 description=(
                     "Namespace component for Python bytecode cache directory "
                     "under PROJECT_STATE_ROOT. Default: 'pycache'."
-                )
+                ),
             ),
         ] = "pycache"
         environment_path_prepends: Annotated[

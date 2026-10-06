@@ -13,7 +13,6 @@ from flext_core import FlextService, r
 from flext_infra import c, m, p, u
 from flext_infra._base_payload import FlextInfraCommandPayloadMixin
 from flext_infra._settings import settings
-from flext_infra._typings.base import CliResultValue
 from flext_infra.typings import t
 
 

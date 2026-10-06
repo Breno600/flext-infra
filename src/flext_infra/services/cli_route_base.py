@@ -9,7 +9,6 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from flext_infra import p, t
-from flext_infra._typings.base import CliResultValue
 
 
 class FlextInfraCliRouteBase:
