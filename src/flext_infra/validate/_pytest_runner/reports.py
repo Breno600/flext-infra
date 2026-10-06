@@ -356,8 +356,7 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
                 # A whole-target run (the declared single file) collects its
                 # inventory directly and never runs a separate selection
                 # collection, so only the inventory receipt exists.
-                if selection_plan.whole_target
-                and selection_plan.inventory_collected
+                if selection_plan.whole_target and selection_plan.inventory_collected
                 else (
                     (
                         ("selection", "inventory")

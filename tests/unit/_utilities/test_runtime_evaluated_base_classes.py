@@ -195,7 +195,7 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                     *self._roots(),
                     "generated_contract.models.Contract",
                     "generated_contract.m",
-                ))
+                )),
             ),
         )
         tm.that("generated_contract" in sys.modules, eq=False)
@@ -209,14 +209,14 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
         direct = u.Infra.runtime_evaluated_base_classes(
             tmp_path,
             {
-                path: "from collections.abc import Mapping\nclass Consumer(Mapping): pass\n"
+                path: "from collections.abc import Mapping\nclass Consumer(Mapping): pass\n",
             },
             self._roots(),
         )
         aliased = u.Infra.runtime_evaluated_base_classes(
             tmp_path,
             {
-                path: "import collections.abc as provider\nclass Consumer(provider.Mapping): pass\n"
+                path: "import collections.abc as provider\nclass Consumer(provider.Mapping): pass\n",
             },
             self._roots(),
         )

@@ -282,7 +282,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
             if not newly_bound:
                 break
             bound.update(newly_bound)
-        return frozenset(bound)
+        return bound
 
     @staticmethod
     def _body_load_names(node: ast.stmt) -> frozenset[str]:
