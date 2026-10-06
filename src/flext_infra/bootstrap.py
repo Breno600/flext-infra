@@ -24,8 +24,10 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
+import msvcrt
 import os
 import shutil
 import stat
@@ -86,12 +88,8 @@ class FlextInfraBootstrap:
                 os.fsync(descriptor)
             os.lseek(descriptor, 0, os.SEEK_SET)
             if os.name == "nt":
-                import msvcrt
-
                 msvcrt.locking(descriptor, msvcrt.LK_LOCK, 1)
             else:
-                import fcntl
-
                 deadline = time.monotonic() + FlextInfraBootstrap.MUTEX_TIMEOUT_SECONDS
                 while True:
                     try:

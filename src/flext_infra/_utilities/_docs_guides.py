@@ -13,6 +13,9 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, config, m, t
+from flext_infra._utilities._docs_command_contract import (
+    FlextInfraUtilitiesDocsCommandContractMixin,
+)
 from flext_infra._utilities._docs_generate_plan import (
     FlextInfraUtilitiesDocsGeneratePlanMixin,
 )
