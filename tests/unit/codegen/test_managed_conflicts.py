@@ -145,3 +145,56 @@ class TestsFlextInfraManagedConflictRecovery:
         )
 
         tm.that(recovered, eq=content)
+
+    @staticmethod
+    def test_recovers_identical_managed_multiline_assignments() -> None:
+        """Regeneration can read identical duplicated projection assignments."""
+        assignment = 'value = [\n  "first",\n  "second",\n]\n'
+        content = "[tool.fixture]\n" + assignment + assignment
+        recovered = tm.ok(
+            u.Infra.recover_managed_toml(
+                content,
+                conflict_sections=("tool.fixture",),
+            ),
+        )
+        tm.that(recovered, eq="[tool.fixture]\n" + assignment)
+        tm.that(u.Cli.toml_mapping_from_text(recovered), none=False)
+
+    @staticmethod
+    def test_rejects_divergent_managed_assignments() -> None:
+        """A duplicate with unique content requires adjudication, not a choice."""
+        result = u.Infra.recover_managed_toml(
+            '[tool.fixture]\nvalue = "first"\nvalue = "second"\n',
+            conflict_sections=("tool.fixture",),
+        )
+        tm.fail(result, has="divergent managed TOML assignment")
+
+    @staticmethod
+    def test_preserves_unmanaged_duplicate_assignments() -> None:
+        """An undeclared table stays untouched and remains invalid for its owner."""
+        content = '[tool.custom]\nvalue = "first"\nvalue = "first"\n'
+        recovered = tm.ok(
+            u.Infra.recover_managed_toml(
+                content,
+                conflict_sections=("tool.fixture",),
+            ),
+        )
+        tm.that(recovered, eq=content)
+        tm.that(u.Cli.toml_mapping_from_text(recovered), none=True)
+
+    @staticmethod
+    def test_preserves_distinct_array_table_assignments() -> None:
+        """Repeated array tables own distinct assignments, not duplicate keys."""
+        content = (
+            '[tool.fixture]\nvalue = "parent"\n'
+            '[[tool.fixture.items]]\nvalue = "first"\n'
+            '[[tool.fixture.items]]\nvalue = "second"\n'
+        )
+        recovered = tm.ok(
+            u.Infra.recover_managed_toml(
+                content,
+                conflict_sections=("tool.fixture",),
+            ),
+        )
+        tm.that(recovered, eq=content)
+        tm.that(u.Cli.toml_mapping_from_text(recovered), none=False)
