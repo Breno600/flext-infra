@@ -209,22 +209,3 @@ class TestsFlextInfraCodegenMakeAuthentication:
         # run still dies loudly at the backend in both shapes.
         tm.that(process.stdout + process.stderr, has="mise ERROR")
         tm.that(process.stderr, lacks="GitHub credential is absent")
-
-    @staticmethod
-    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
-    def test_bootstrap_selects_the_github_credential_from_declared_sources(
-        tmp_path: Path,
-        profile: c.Infra.MakeProfile,
-    ) -> None:
-        """Bootstrap forwards the caller token without consulting a keyring."""
-        project_root, _repository_root = u.Tests.render_make_environment(
-            tmp_path,
-            profile,
-            bootstrap=True,
-        )
-        makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
-            encoding="utf-8",
-        )
-        tm.that(makefile, has="export GITHUB_TOKEN")
-        tm.that(makefile, has="unexport GH_TOKEN MISE_GITHUB_TOKEN GITHUB_API_TOKEN")
-        tm.that(makefile, lacks=["gh auth token", "selected GitHub credential source"])

@@ -63,7 +63,8 @@ class MiseLockConverge:
         if os.name == "nt":
             runtime = runtime.with_name(f"{runtime.name}.exe")
         if not (runtime.is_file() and os.access(runtime, os.X_OK)):
-            raise ValueError(f"missing pinned Mise runtime {runtime}; run make upg")
+            message = f"missing pinned Mise runtime {runtime}; run make upg"
+            raise ValueError(message)
         return runtime
 
     @classmethod
@@ -106,12 +107,14 @@ class MiseLockConverge:
         diagnostics = completed.stdout + completed.stderr
         if completed.returncode != 0:
             sys.stderr.write(diagnostics)
-            raise ValueError(
-                f"Mise exited {completed.returncode}: {' '.join(arguments)}\n{diagnostics.strip()}",
+            message = (
+                f"Mise exited {completed.returncode}: {' '.join(arguments)}\n{diagnostics.strip()}"
             )
+            raise ValueError(message)
         if "mise WARN" in diagnostics:
             sys.stderr.write(diagnostics)
-            raise ValueError(f"Mise warned during {' '.join(arguments)}; converge stopped")
+            message = f"Mise warned during {' '.join(arguments)}; converge stopped"
+            raise ValueError(message)
         if completed.stderr:
             sys.stderr.write(completed.stderr)
         return completed.stdout.strip()
@@ -142,9 +145,8 @@ class MiseLockConverge:
                 if selector and version and version[0].isdigit():
                     tools.append((selector, version))
         if not tools:
-            raise ValueError(
-                f"staged install failed but named no failing tool: {probe_output.strip()[:400]}",
-            )
+            message = f"staged install failed but named no failing tool: {probe_output.strip()[:400]}"
+            raise ValueError(message)
         return tools
 
     @classmethod
@@ -182,7 +184,8 @@ class MiseLockConverge:
                 lines[index] = f'version = "{version}"\n'
                 manifest.write_text("".join(lines), encoding="utf-8")
                 return
-        raise ValueError(f"Mise manifest has no declared version to hold: {selector}")
+        message = f"Mise manifest has no declared version to hold: {selector}"
+        raise ValueError(message)
 
     @staticmethod
     def staged_manifest(stage: Path) -> Path:
@@ -195,7 +198,8 @@ class MiseLockConverge:
         """
         manifest = (stage / ".mise.toml").resolve()
         if not manifest.is_relative_to(stage.resolve()):
-            raise ValueError(f"staged manifest escapes the stage: {manifest}")
+            message = f"staged manifest escapes the stage: {manifest}"
+            raise ValueError(message)
         return manifest
 
     @classmethod
@@ -220,16 +224,18 @@ class MiseLockConverge:
                 raise
             if cls._probe(runtime, stage, environment)[0]:
                 return candidate
-        raise ValueError(
+        message = (
             f"no installable release found below {failed_version} for {selector};"
-            " upgrade needs an operator decision",
+            " upgrade needs an operator decision"
         )
+        raise ValueError(message)
 
     @classmethod
     def converge(cls, storage: Path, stage: Path, release: str) -> None:
         """Hold failing tools of the staged lock, then re-prove the whole stage."""
         if not (stage / ".mise.toml").is_file():
-            raise ValueError(f"missing staged Mise manifest: {stage / '.mise.toml'}")
+            message = f"missing staged Mise manifest: {stage / '.mise.toml'}"
+            raise ValueError(message)
         runtime = cls._runtime(storage, release)
         scratch = Path(tempfile.mkdtemp(prefix="mise-converge."))
         try:
@@ -246,7 +252,8 @@ class MiseLockConverge:
                     " failed install; the next upg retries the newest release",
                 )
             if not cls._probe(runtime, stage, environment)[0]:
-                raise ValueError(f"converge: held lock still fails install: {sorted(holds)}")
+                message = f"converge: held lock still fails install: {sorted(holds)}"
+                raise ValueError(message)
             print(f"converge: staged lock installs with holds {sorted(holds)}")
         finally:
             shutil.rmtree(scratch, ignore_errors=True)
@@ -254,7 +261,8 @@ class MiseLockConverge:
     @classmethod
     def main(cls, arguments: list[str]) -> int:
         if len(arguments) != 3:
-            raise ValueError("usage: mise-lock-converge.py STORAGE STAGE RELEASE")
+            message = "usage: mise-lock-converge.py STORAGE STAGE RELEASE"
+            raise ValueError(message)
         cls.converge(Path(arguments[0]).absolute(), Path(arguments[1]).absolute(), arguments[2])
         return 0
 
