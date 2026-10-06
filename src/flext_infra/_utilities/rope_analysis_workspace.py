@@ -8,20 +8,17 @@ from __future__ import annotations
 
 import ast
 import operator
+import pkgutil
 from collections.abc import MutableMapping
 from functools import lru_cache
 from pathlib import Path
 
-from flext_infra._config import config
+from flext_infra import c, config, m, t
 from flext_infra._utilities.iteration_workspace import (
     FlextInfraUtilitiesIterationWorkspace,
 )
 from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
 from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities.rope_source_bases import FlextInfraUtilitiesRopeSourceBases
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
 
 
 class FlextInfraUtilitiesRopeAnalysisWorkspace:
@@ -191,75 +188,116 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
     ) -> t.StrTuple:
         """Return the class bases whose subclasses evaluate annotations at runtime.
 
-        Captured source supplies declaration identities, while import bindings
-        supply Ruff's qualified expressions. Planned bytes override disk and
-        providers before aliases, members and ordered C3 parents are resolved.
-        No project package is imported during generation.
+        Ruff qualifies a class base by its import, or a class defined in the
+        same module as ``<module>.<name>`` whatever class it is nested in, and
+        follows module-level classes only. A model built on an imported model
+        base (``m.ContractModel``, a contract nested in another module) or on a
+        sibling nested model therefore looks typing-only to it. Each base a
+        project class names is qualified the way Ruff qualifies it; an imported
+        one is resolved to its object, a local one through the bases of its own
+        definition, and the bases that subclass a declared root (Pydantic's
+        ``BaseModel``, whose field annotations it evaluates) are returned.
+        ``planned_sources`` overrides the tree as in
+        :meth:`facade_rebind_modules`.
 
         Returns:
             The declared roots and the derived bases, by qualified name.
 
         """
         root = project_root.resolve()
-        sources = {
-            cls.module_name_for_file(path, project_root=root): (path, source)
-            for path, source in cls._project_sources(root, planned_sources).items()
-            if cls.module_name_for_file(path, project_root=root)
-        }
-        # Generated package inits are projections excluded from the class
-        # inventory, yet their install_lazy_exports maps own the namespace
-        # aliases (m, p, t and siblings) that facade-qualified bases resolve
-        # through. Read those maps from disk so resolution can rewrite
-        # ``<pkg>.<alias>`` targets to their provider modules.
-        extra_module_aliases: dict[str, str] = {}
-        owned = {path for path, _ in sources.values()}
-        for init_path in sorted(root.rglob("__init__.py")):
-            resolved = init_path.resolve()
-            if resolved in owned or not init_path.is_file():
-                continue
-            init_module = cls.module_name_for_file(init_path, project_root=root)
-            if not init_module:
-                continue
-            for (
-                alias,
-                absolute,
-            ) in FlextInfraUtilitiesRopeSourceBases.lazy_module_aliases(
-                init_module,
-                init_path,
-                init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT),
-            ).items():
-                extra_module_aliases.setdefault(
-                    f"{init_module}.{alias}",
-                    absolute,
+        root_types = tuple(pkgutil.resolve_name(name) for name in roots)
+        verdicts: MutableMapping[str, bool] = {}
+        derived: set[str] = set(roots)
+        for file_path, source in cls._project_sources(root, planned_sources).items():
+            imported, local = cls._class_bases(source)
+            for base in imported:
+                if base not in verdicts:
+                    resolved = pkgutil.resolve_name(base)
+                    verdicts[base] = isinstance(resolved, type) and issubclass(
+                        resolved,
+                        root_types,
+                    )
+                if verdicts[base]:
+                    derived.add(base)
+            module = cls.module_name_for_file(file_path, project_root=root)
+            if module:
+                derived.update(
+                    f"{module}.{name}"
+                    for name in {base for bases in local.values() for base in bases}
+                    if cls._local_model(name, local, verdicts, set())
                 )
-        # The analysis root opens with the whole declared workspace's member
-        # source roots on the resolution path: member sources legitimately
-        # import sibling fleet packages (tests fixtures import flext_tests,
-        # src modules import flext_core), and a member-only rope path raises
-        # ModuleNotFoundError for every cross-member base resolution.
-        workspace_root = next(
-            (
-                parent
-                for parent in (root, *root.parents)
-                if (parent / "src").is_dir() and (parent / "flext-core").is_dir()
-            ),
-            root,
+        return tuple(sorted(derived))
+
+    @classmethod
+    def _local_model(
+        cls,
+        name: str,
+        local: t.MappingKV[str, t.StrSequence],
+        verdicts: t.MappingKV[str, bool],
+        visited: set[str],
+    ) -> bool:
+        """Decide whether a class of the module subclasses a runtime root.
+
+        Returns:
+            Whether any definition of ``name`` reaches a runtime-evaluated root.
+
+        """
+        if name not in local or name in visited:
+            return False
+        visited.add(name)
+        return any(
+            verdicts[base[1:]]
+            if base.startswith(".")
+            else cls._local_model(base, local, verdicts, visited)
+            for base in local[name]
         )
-        project_roots = [
-            member
-            for member in (root, *sorted(workspace_root.iterdir()))
-            if member.is_dir() and (member / "src").is_dir()
-        ]
-        with FlextInfraUtilitiesRopeCore.open_project(
-            workspace_root,
-            project_roots=project_roots,
-        ) as project:
-            return FlextInfraUtilitiesRopeSourceBases.runtime_bases(
-                project,
-                sources,
-                roots,
-                extra_module_aliases=extra_module_aliases,
-            )
+
+    @staticmethod
+    def _class_bases(
+        source: str,
+    ) -> t.Pair[t.StrSequence, t.MappingKV[str, t.StrSequence]]:
+        """Qualify the bases of every class a module defines, at any depth.
+
+        Returns:
+            The qualified imported bases, and each class name with its bases:
+            an imported base qualified behind a leading dot, a class of the
+            same module by its bare name.
+
+        """
+        tree = ast.parse(source)
+        imports: MutableMapping[str, str] = {}
+        for node in tree.body:
+            if isinstance(node, ast.ImportFrom) and node.module and not node.level:
+                for alias in node.names:
+                    imports[alias.asname or alias.name] = f"{node.module}.{alias.name}"
+            elif isinstance(node, ast.Import):
+                for alias in node.names:
+                    imports[alias.asname or alias.name.partition(".")[0]] = (
+                        alias.name if alias.asname else alias.name.partition(".")[0]
+                    )
+        imported: t.MutableSequenceOf[str] = []
+        local: MutableMapping[str, t.MutableSequenceOf[str]] = {}
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ClassDef):
+                continue
+            bases = local.setdefault(node.name, [])
+            for base in node.bases:
+                expression = base
+                while isinstance(expression, ast.Subscript):
+                    expression = expression.value
+                attributes: t.MutableSequenceOf[str] = []
+                while isinstance(expression, ast.Attribute):
+                    attributes.insert(0, expression.attr)
+                    expression = expression.value
+                if not isinstance(expression, ast.Name):
+                    continue
+                if expression.id in imports:
+                    qualified = ".".join((imports[expression.id], *attributes))
+                    imported.append(qualified)
+                    bases.append(f".{qualified}")
+                elif not attributes:
+                    bases.append(expression.id)
+        return imported, local
 
     @staticmethod
     def _project_sources(
@@ -278,10 +316,9 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
                 m.Infra.SourceScanRequest(project_roots=(root,)),
             ).unwrap()
             for file_path in files:
-                source = file_path.read_text(
+                sources[file_path.resolve()] = file_path.read_text(
                     encoding=c.Cli.ENCODING_DEFAULT,
                 )
-                sources[file_path.resolve()] = source
         for file_path, source in planned_sources.items():
             sources[file_path.resolve()] = source
         return sources
@@ -394,10 +431,6 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             )
             or bool(
                 set(directory.relative_to(resolved_root).parts) & cls._excluded_parts(),
-            )
-            or any(
-                c.Infra.TRANSIENT_PYTEST_SCRATCH_PART.match(part)
-                for part in directory.relative_to(resolved_root).parts
             )
         )
 

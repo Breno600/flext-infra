@@ -13,8 +13,8 @@ from flext_infra.models import m
 from flext_infra.utilities import u
 
 if TYPE_CHECKING:
-    from flext_infra._promoted.protocols import p
-    from flext_infra._promoted.typings import t
+    from flext_infra import protocols as p
+    from flext_infra import typings as t
 
 
 class FlextInfraPromotedRegistry:
