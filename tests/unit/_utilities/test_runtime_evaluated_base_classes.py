@@ -243,7 +243,7 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                 provider / "__init__.py",
                 "from .models import Facade as exports\n"
                 "raise RuntimeError('provider must not be imported during planning')\n",
-            ),
+            )
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
@@ -252,7 +252,7 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                 + "class Contracts:\n    class Payload(RuntimeRoot): pass\n"
                 "class Parent(Contracts): pass\n"
                 "class Facade(Parent): Alias = Parent.Payload\n",
-            ),
+            )
         )
         source = (
             "from declared_provider import exports as schemas\n"
@@ -280,13 +280,13 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
             u.Cli.atomic_write_text_file(
                 provider / "__init__.py",
                 "from .models import Contract\n",
-            ),
+            )
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
                 provider / "models.py",
                 "class Contract: pass\n",
-            ),
+            )
         )
         bridge = installed_dependency_path / "declared_bridge"
         bridge.mkdir()
@@ -294,7 +294,7 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
             u.Cli.atomic_write_text_file(
                 bridge / "__init__.py",
                 "from planned_provider.models import Contract\nFacade = Contract\n",
-            ),
+            )
         )
         package = tmp_path / "src" / "planned_provider"
         planned = {
@@ -315,7 +315,7 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                     *self._roots(),
                     "planned_provider.Contract",
                     "declared_bridge.Facade",
-                )),
+                ))
             ),
         )
 
@@ -410,5 +410,89 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
             u.Infra.runtime_evaluated_base_classes(
                 tmp_path,
                 {tmp_path / "src" / "conditional_contract" / "models.py": source},
+                self._roots(),
+            )
+
+    @pytest.mark.parametrize(
+        "mutation",
+        [
+            "del Contract",
+            "Contract, other = (0, 1)",
+            "[Contract] = [0]",
+            "Namespace.Contract = Plain",
+            "Namespace.Contract += Plain",
+        ],
+    )
+    def test_unsupported_mutation_never_preserves_a_previous_class(
+        self,
+        tmp_path: Path,
+        mutation: str,
+    ) -> None:
+        source = self._root_import() + (
+            "class Contract(RuntimeRoot): pass\nclass Plain: pass\n"
+            "class Namespace:\n    Contract = Contract\n"
+            f"{mutation}\nclass Consumer(Contract): pass\n"
+        )
+        with pytest.raises(ValueError, match="Unsupported class binding mutation"):
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {tmp_path / "src" / "mutation_contract" / "models.py": source},
+                self._roots(),
+            )
+
+    def test_provider_reexport_enters_a_planned_class_once(
+        self,
+        tmp_path: Path,
+        installed_dependency_path: Path,
+    ) -> None:
+        provider = installed_dependency_path / "planned_bridge"
+        provider.mkdir()
+        tm.ok(u.Cli.atomic_write_text_file(
+            provider / "__init__.py",
+            "from planned_destination.models import Contract\n"
+            "raise RuntimeError('provider must not be imported')\n",
+        ))
+        package = tmp_path / "src" / "planned_destination"
+        planned = {
+            package / "__init__.py": "",
+            package / "models.py": self._root_import()
+            + "class Contract(RuntimeRoot): pass\n",
+            package / "consumer.py": (
+                "from planned_bridge import Contract\n"
+                "class Consumer(Contract): pass\n"
+            ),
+        }
+        tm.that(
+            u.Infra.runtime_evaluated_base_classes(tmp_path, planned, self._roots()),
+            eq=tuple(sorted((*self._roots(), "planned_bridge.Contract"))),
+        )
+        tm.that(package.exists(), eq=False)
+        tm.that("planned_bridge" in sys.modules, eq=False)
+
+    def test_true_planned_reexport_cycle_fails_at_its_binding(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        package = tmp_path / "src" / "cycle_contract"
+        planned = {
+            package / "__init__.py": "",
+            package / "left.py": "from .right import Contract\n",
+            package / "right.py": "from .left import Contract\n",
+            package / "consumer.py": (
+                "from .left import Contract\nclass Consumer(Contract): pass\n"
+            ),
+        }
+        with pytest.raises(ValueError, match="Cyclic class alias"):
+            u.Infra.runtime_evaluated_base_classes(tmp_path, planned, self._roots())
+
+    def test_missing_inherited_member_cannot_be_deselected(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        source = "class Namespace: pass\nclass Invalid(Namespace.Missing): pass\n"
+        with pytest.raises(ValueError, match="Missing inherited class member"):
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {tmp_path / "src" / "member_contract" / "models.py": source},
                 self._roots(),
             )

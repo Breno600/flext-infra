@@ -17,6 +17,7 @@ from types import ModuleType
 import pytest
 from flext_tests import tm
 
+from flext_infra.bootstrap import FlextInfraBootstrap
 from tests import c, u
 
 
@@ -353,8 +354,8 @@ class TestsMiseHoldConvergence:
 
     @staticmethod
     def test_failing_install_tools_parses_mise_diagnostics() -> None:
-        """The probe parser names every failing selector at its failed version."""
-        parsed = _converge_module().MiseLockConverge.failing_install_tools(
+        """Test failing install tools parses mise diagnostics."""
+        parsed = FlextInfraBootstrap._failing_install_tools(
             "mise ERROR Failed to install tools:"
             " github:kucherenko/jscpd@5.3.3, github:qltysh/qlty@0.645.0\n",
         )
@@ -368,7 +369,7 @@ class TestsMiseHoldConvergence:
 
     @staticmethod
     def test_failing_install_tools_refuses_unparsable_diagnostics() -> None:
-        """A staged failure that names no tool stops converge with a loud error."""
+        """Test failing install tools refuses unparsable diagnostics."""
         with pytest.raises(ValueError, match="named no failing tool"):
             _converge_module().MiseLockConverge.failing_install_tools("boom")
 
@@ -376,7 +377,7 @@ class TestsMiseHoldConvergence:
     def test_hold_manifest_version_rewrites_only_the_named_section(
         tmp_path: Path,
     ) -> None:
-        """Holding rewrites only the named tool's version inside the staged manifest."""
+        """Test hold manifest version rewrites only the named section."""
         manifest = tmp_path / ".mise.toml"
         manifest.write_text(
             '[tools]\npython = "3.13"\n'
@@ -399,11 +400,15 @@ class TestsMiseHoldConvergence:
     def test_staged_manifest_resolves_inside_the_declared_stage(
         tmp_path: Path,
     ) -> None:
-        """The guarded manifest path stays the staged ``.mise.toml`` itself."""
-        stage = tmp_path / "stage"
-        stage.mkdir()
-        manifest = stage / ".mise.toml"
-        manifest.write_text("[tools]\n", encoding="utf-8")
+        """Test remote release candidates walk below the failed release."""
+
+        def fake_ls_remote(
+            runtime: Path,
+            arguments: list[str],
+            environment: dict[str, str],
+        ) -> str:
+            tm.that(arguments[:1] == ["ls-remote"])
+            return "v5.4.0\n5.3.3\nv5.3.2\n5.2.0\nnot-a-version\n"
 
         resolved = _converge_module().MiseLockConverge.staged_manifest(stage)
 

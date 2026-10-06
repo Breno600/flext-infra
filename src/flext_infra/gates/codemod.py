@@ -208,8 +208,10 @@ class FlextInfraCodemodGate(FlextInfraGate):
             ),
             issues=issues,
             outcome=(
-                c.Infra.ToolOutcome.ERROR if failures
-                else c.Infra.ToolOutcome.FINDINGS if findings
+                c.Infra.ToolOutcome.ERROR
+                if failures
+                else c.Infra.ToolOutcome.FINDINGS
+                if findings
                 else c.Infra.ToolOutcome.CLEAN
             ),
             raw_output="\n".join((

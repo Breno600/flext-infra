@@ -200,8 +200,7 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
         findings_exit_codes: Annotated[
             t.VariadicTuple[int],
             m.Field(
-                alias="findings-exit-codes",
-                description="Native diagnostic statuses",
+                alias="findings-exit-codes", description="Native diagnostic statuses"
             ),
         ] = ()
 

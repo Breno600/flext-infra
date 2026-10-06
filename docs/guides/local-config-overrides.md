@@ -37,6 +37,35 @@ config/codegen-overrides.local.yaml
 - **Never track it**: `.gitignore` blocks `/config/codegen-overrides.local.yaml` by SSOT
   rule; the guard gate rejects any diff reintroducing private values.
 
+## Mandatory Mypy policy
+
+`config/tooling.yaml` owns the declared Mypy policy and both projection paths consume
+that same typed configuration. The project's Pydantic 2 contract requires the
+`pydantic.mypy` plugin; missing, empty, or v1 resolved plugin declarations fail validation
+rather than receiving a silent default.
+
+The operator contract globally suspends only `prop-decorator` and `call-arg`. A complete
+policy payload must declare both and cannot add another global suspension. The model
+does not supply configuration-owned values through declaration defaults. Empty local
+lists retain the tracked policy because the YAML loader concatenates lists. Pyright
+call diagnostics and other unsuspended diagnostics remain active.
+
+Generic Mypy options cannot replace `plugins`, `disable_error_code`, `python_version`,
+`overrides`, or generated `mypy_path`. Reserved aliases and duplicate declarations
+within or between the boolean and string maps fail validation. A string-valued
+`enable_error_code` may enable unrelated diagnostics, but cannot re-enable any
+suspended code, including within a comma-separated list. Boolean enabling is invalid.
+Generic keys must be plain option identifiers, not quoted TOML keys or statements.
+Global `ignore_errors = true` is forbidden; an explicit false boolean remains valid.
+Dependency profiles in `config/codegen.yaml` restrict Pydantic to major version 2;
+dependency locks and project manifests are regenerated through `make upg` and
+`make gen`, respectively.
+
+Regenerate consumers through canonical `make gen` after changing the source owner;
+never patch generated pyprojects. Validate the public consumer with the plugin active
+and an unsuspended negative diagnostic, then run the applicable native gates. A source
+inspection, generation receipt, or merged PR alone is not proof of green delivery.
+
 ## List-typed registries
 
 `providers` and `make.docs.github_repos` concatenate. A provider name must resolve

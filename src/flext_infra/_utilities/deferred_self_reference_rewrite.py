@@ -137,7 +137,7 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
         edits: MutableMapping[t.Pair[int, int], str] = {}
         for sibling in siblings:
             for expression in cls._annotation_expressions(sibling):
-                for node in ast.walk(expression):
+                for node in cls._deferred_type_nodes(expression):
                     if (
                         isinstance(node, ast.Attribute)
                         and isinstance(node.value, ast.Name)
@@ -159,6 +159,32 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
                     span = cls._node_span(offsets, node)
                     edits[span] = f"{outer.name}.{node.id}"
         return tuple((*span, replacement) for span, replacement in edits.items())
+
+    @staticmethod
+    def _deferred_type_nodes(expression: ast.expr) -> t.SequenceOf[ast.expr]:
+        """Walk one deferred annotation without descending into call arguments.
+
+        Names inside nested calls (``u.Field(default_factory=...)``,
+        ``m.BeforeValidator(...)``) are runtime value positions, not type
+        positions: pydantic resolves them through the parent frame locals at
+        deferred-evaluation time, and static checkers evaluate them in the
+        class-body scope where the owner class is not yet bound. Qualifying
+        those through the owner produced ``reportUndefinedVariable`` and
+        unknown-member findings on every consumer.
+
+        Returns:
+            The resulting type-position nodes of the annotation.
+
+        """
+        stack = [expression]
+        nodes: list[ast.expr] = []
+        while stack:
+            node = stack.pop()
+            nodes.append(node)
+            if isinstance(node, ast.Call):
+                continue
+            stack.extend(ast.iter_child_nodes(node))
+        return tuple(nodes)
 
     @classmethod
     def _annotation_expressions(cls, node: ast.ClassDef) -> t.SequenceOf[ast.expr]:

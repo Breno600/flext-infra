@@ -156,7 +156,10 @@ class FlextInfraModelsWorkspace:
             FlextInfraModelsWorkspace.DirectUrlDirectoryInfo | None,
             m.Field(description="Directory metadata of a local install"),
         ] = None
-        url: Annotated[t.NonEmptyStr, m.Field(description="Required PEP 610 origin URL")]
+        url: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Required PEP 610 origin URL"),
+        ]
         vcs_info: FlextInfraModelsWorkspace.DirectUrlVcsInfo | None = m.Field(
             default=None,
             description="Installed immutable VCS identity",
@@ -168,13 +171,11 @@ class FlextInfraModelsWorkspace:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore", frozen=True)
         git: str | None = m.Field(default=None, description="Locked VCS URL and SHA")
         registry: str | None = m.Field(
-            default=None,
-            description="Locked registry artifact",
+            default=None, description="Locked registry artifact"
         )
         editable: str | None = m.Field(default=None, description="Local root source")
         directory: str | None = m.Field(
-            default=None,
-            description="Noneditable directory",
+            default=None, description="Noneditable directory"
         )
 
     class LockedPackage(m.ContractModel):
