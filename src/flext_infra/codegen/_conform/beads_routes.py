@@ -12,10 +12,7 @@ from flext_core import r
 from flext_infra.codegen._conform.docs_ownership import (
     FlextInfraCodegenConformDocsOwnership,
 )
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.workspace import FlextInfraWorkspaceDetector
+from flext_infra import c, p, m
 
 
 class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership):
@@ -41,6 +38,7 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra.workspace import FlextInfraWorkspaceDetector
         root = request.root.expanduser().resolve()
         workspace_result = FlextInfraWorkspaceDetector.load_workspace_spec(root)
         if workspace_result.failure:

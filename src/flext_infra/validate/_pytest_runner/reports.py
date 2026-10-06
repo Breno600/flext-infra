@@ -12,14 +12,11 @@ from typing import TYPE_CHECKING
 from defusedxml import ElementTree as DefusedET
 
 from flext_core import r
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.utilities import u
+from flext_infra import c, m, u
 from flext_infra.validate._pytest_runner.base import FlextInfraPytestRunnerBase
-from flext_infra.validate.pytest_diag import FlextInfraPytestDiagExtractor
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from flext_infra import t, p
 
 
 class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
@@ -274,6 +271,7 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
             The resulting ``p.Result[m.Infra.PytestDiagnostics]``.
 
         """
+        from flext_infra.validate.pytest_diag import FlextInfraPytestDiagExtractor
         extractor = FlextInfraPytestDiagExtractor(
             repository_root=self.root,
             junit=report_dir / "junit.xml",
@@ -294,6 +292,7 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
             RuntimeError: If pytest collection contains blocking findings.
 
         """
+        from flext_infra.validate.pytest_diag import FlextInfraPytestDiagExtractor
         diagnostics = FlextInfraPytestDiagExtractor.extract_report_log(
             report_log,
         ).unwrap()

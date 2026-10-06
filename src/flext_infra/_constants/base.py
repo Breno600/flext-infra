@@ -9,12 +9,12 @@ from __future__ import annotations
 from enum import StrEnum, unique
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra._constants.make import FlextInfraConstantsMake
-from flext_infra._constants.source_code import FlextInfraConstantsSourceCode
-from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
+from flext_infra._constants import FlextInfraConstantsMake
+from flext_infra._constants import FlextInfraConstantsSourceCode
+from flext_infra._constants import FlextInfraConstantsSharedInfra
 
 if TYPE_CHECKING:
-    from flext_infra._constants.typings import t
+    from flext_infra import t
 
 
 class FlextInfraConstantsBase(

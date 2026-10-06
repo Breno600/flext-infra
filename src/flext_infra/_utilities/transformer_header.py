@@ -9,11 +9,8 @@ from __future__ import annotations
 import ast
 from collections.abc import MutableMapping
 
-from flext_infra._utilities.transformer_header_parser import (
-    FlextInfraUtilitiesTransformerHeaderParser,
-)
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra._utilities import FlextInfraUtilitiesTransformerHeaderParser
+from flext_infra import c, t
 
 
 class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderParser):

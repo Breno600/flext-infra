@@ -19,7 +19,7 @@ from typing import Self, override
 
 from rope.base.project import Project
 
-from flext_infra.typings import t
+from flext_infra import t
 
 
 class FlextInfraRopeProject(Project):

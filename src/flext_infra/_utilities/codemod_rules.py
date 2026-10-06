@@ -14,17 +14,12 @@ from importlib.metadata import Distribution
 from importlib.util import find_spec
 from pathlib import Path
 
-from flext_cli import r, u
+from flext_cli import r
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
 from flext_infra._config import config
-from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
-from flext_infra._utilities.resource_limits import FlextInfraUtilitiesResourceLimits
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra import c, t, p, m
 
 
 class FlextInfraUtilitiesCodemodRules:
@@ -97,6 +92,7 @@ class FlextInfraUtilitiesCodemodRules:
     def codemod_project_requirements(
         root: Path,
     ) -> p.Result[t.Pair[str, t.StrSequence]]:
+        from flext_cli import u
         pyproject = root / c.PYPROJECT_FILENAME
         document = u.Cli.toml_read_document(pyproject)
         if document.failure:
@@ -141,6 +137,7 @@ class FlextInfraUtilitiesCodemodRules:
 
     @staticmethod
     def codemod_distributions() -> MutableMapping[str, Distribution]:
+        from flext_cli import u
         indexed: MutableMapping[str, Distribution] = {}
         # Import search paths may repeat the same physical directory. Query each
         # directory once; distinct installations with the same name still fail.
@@ -224,6 +221,7 @@ class FlextInfraUtilitiesCodemodRules:
         providers: t.MappingKV[str, Path],
         indexed: t.MappingKV[str, Distribution],
     ) -> p.Result[t.StrSequence]:
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies
         selected = frozenset(providers)
         edges = {
             name: tuple(
@@ -278,6 +276,7 @@ class FlextInfraUtilitiesCodemodRules:
 
     @staticmethod
     def _config_scope(config: Path) -> p.Result[str]:
+        from flext_cli import u
         parsed = u.Cli.yaml_parse(config.read_text(encoding=c.Cli.ENCODING_DEFAULT))
         if parsed.failure:
             return r[str].from_failure(parsed)
@@ -378,6 +377,7 @@ class FlextInfraUtilitiesCodemodRules:
         provider: str,
         config: Path,
     ) -> p.Result[t.SequenceOf[m.Infra.CodemodRule]]:
+        from flext_cli import u
         parsed_config = u.Cli.yaml_parse(
             config.read_text(encoding=c.Cli.ENCODING_DEFAULT),
         )
@@ -431,6 +431,8 @@ class FlextInfraUtilitiesCodemodRules:
             The provider's validated rules, in resource and document order.
 
         """
+        from flext_cli import u
+        from flext_infra._utilities import FlextInfraUtilitiesResourceLimits
         identity = u.Cli.json_dumps([
             provider,
             Path(__file__).read_text(encoding=c.Cli.ENCODING_DEFAULT),
@@ -487,6 +489,7 @@ class FlextInfraUtilitiesCodemodRules:
             The provider's validated rules, in resource and document order.
 
         """
+        from flext_cli import u
         rules: list[m.Infra.CodemodRule] = []
         for resource, text in sources:
             documents = c.Infra.CODEMOD_DOCUMENT_SEPARATOR_RE.split(text)

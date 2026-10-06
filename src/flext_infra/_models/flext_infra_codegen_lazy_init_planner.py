@@ -32,11 +32,7 @@ from flext_infra.codegen._lazy_init_planner_parents import (
 from flext_infra.codegen._lazy_init_planner_public_root import (
     FlextInfraCodegenLazyInitPlannerPublicRootMixin,
 )
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra import c, t, p, m, u
 
 
 class FlextInfraCodegenLazyInitPlanner(

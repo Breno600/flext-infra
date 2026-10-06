@@ -13,9 +13,9 @@ from typing import TYPE_CHECKING
 from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
-    from flext_infra._models._git.identity import FlextInfraModelsGitIdentity
-    from flext_infra._models._git.worktree_facts import FlextInfraModelsGitWorktreeFacts
-    from flext_infra._models._git.worktree_state import FlextInfraModelsGitWorktreeState
+    from flext_infra._models import FlextInfraModelsGitIdentity
+    from flext_infra._models import FlextInfraModelsGitWorktreeFacts
+    from flext_infra._models import FlextInfraModelsGitWorktreeState
 
 
 __all__: tuple[str, ...] = (

@@ -10,17 +10,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
-from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
-from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
-from flext_infra.constants import c
+from flext_infra import c, t, m, u
 from flext_infra.docs._generator_bundle import FlextInfraDocGeneratorBundleMixin
 from flext_infra.docs.base import FlextInfraDocServiceBase
-from flext_infra.models import m
-from flext_infra.typings import t
-from flext_infra.utilities import u
 
 if TYPE_CHECKING:
-    from flext_infra.docs.protocols import p
+    from flext_infra import p
 
 type _DocsScopePlan = t.Pair[m.Infra.DocScope, t.VariadicTuple[m.Infra.CodegenFilePlan]]
 
@@ -64,6 +59,8 @@ class FlextInfraDocGenerator(
             The resulting ``p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]``.
 
         """
+        from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
+        from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
         prepared = self._prepare_request(request)
         if prepared.failure:
             return r[t.SequenceOf[m.Infra.DocsPhaseReport]].from_failure(prepared)

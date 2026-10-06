@@ -14,12 +14,9 @@ from typing import Annotated, ClassVar, Literal
 
 from flext_cli import m
 
-from flext_infra._models.mixins import FlextInfraModelsMixins
-from flext_infra._models.refactor_namespace_enforcer import (
-    FlextInfraModelsNamespaceEnforcer,
-)
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra._models import FlextInfraModelsMixins
+from flext_infra._models import FlextInfraModelsNamespaceEnforcer
+from flext_infra import c, t
 
 
 class FlextInfraModelsScan:

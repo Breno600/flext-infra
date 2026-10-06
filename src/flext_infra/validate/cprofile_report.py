@@ -13,12 +13,10 @@ from typing import TYPE_CHECKING, Annotated, Literal, Self, override
 
 from flext_core import r
 from flext_infra.base import s
-from flext_infra.models import m
-from flext_infra.utilities import u
+from flext_infra import m, u
 
 if TYPE_CHECKING:
-    from flext_infra.validate.protocols import p
-    from flext_infra.validate.typings import t
+    from flext_infra import t, p
 
 
 class FlextInfraCProfileReport(s[bool]):

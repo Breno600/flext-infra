@@ -8,38 +8,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, assert_never
 
-from flext_infra._utilities._semantic_cutover.aliases import (
-    FlextInfraUtilitiesSemanticCutoverAliases,
-)
-from flext_infra._utilities._semantic_cutover.dynamic_environment import (
-    FlextInfraUtilitiesSemanticCutoverDynamicEnvironment,
-)
-from flext_infra._utilities._semantic_cutover.facade_bases import (
-    FlextInfraUtilitiesSemanticCutoverFacadeBases,
-)
-from flext_infra._utilities._semantic_cutover.model_fields import (
-    FlextInfraUtilitiesSemanticCutoverModelFields,
-)
-from flext_infra._utilities._semantic_cutover.module_layout import (
-    FlextInfraUtilitiesSemanticCutoverModuleLayout,
-)
-from flext_infra._utilities._semantic_cutover.nesting import (
-    FlextInfraUtilitiesSemanticCutoverNesting,
-)
-from flext_infra._utilities._semantic_cutover.private_imports import (
-    FlextInfraUtilitiesSemanticCutoverPrivateImports,
-)
-from flext_infra._utilities._semantic_cutover.self_facade import (
-    FlextInfraUtilitiesSemanticCutoverSelfFacade,
-)
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverAliases
+from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverDynamicEnvironment
+from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverFacadeBases
+from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverModelFields
+from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverModuleLayout
+from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverNesting
+from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverPrivateImports
+from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverSelfFacade
+from flext_infra import c, t, m
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import protocols as p
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesSemanticCutoverBase(

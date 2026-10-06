@@ -12,13 +12,9 @@ from pathlib import Path
 from typing import ClassVar
 from urllib.parse import urlsplit
 
-from flext_cli import u
 
 from flext_infra._config import config
-from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra import c, t, m
 
 
 class FlextInfraUtilitiesDocsRender:
@@ -215,6 +211,7 @@ class FlextInfraUtilitiesDocsRender:
             ValueError: If documentation repository owner must resolve exactly once.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocs
         if FlextInfraUtilitiesDocs.docs_is_secure_web_url(prefix):
             kind = "tree" if is_dir else "blob"
             branches = tuple(
@@ -716,6 +713,7 @@ class FlextInfraUtilitiesDocsRender:
             The managed mkdocs.yml for a project scope.
 
         """
+        from flext_cli import u
         _ = modules
         data = contract
 
@@ -872,6 +870,7 @@ class FlextInfraUtilitiesDocsRender:
             The managed mkdocs.yml for the repository root.
 
         """
+        from flext_cli import u
         data = contract
 
         # Preserve one typed context across the sole public template-rendering boundary.

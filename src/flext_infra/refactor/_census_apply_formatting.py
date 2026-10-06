@@ -9,9 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_infra._config import config
-from flext_infra.constants import c
-from flext_infra.protocols import p
-from flext_infra.utilities import u
+from flext_infra import c, p, u
 
 if TYPE_CHECKING:
     from collections.abc import Iterable

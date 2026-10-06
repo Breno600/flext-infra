@@ -12,11 +12,7 @@ from typing import Annotated, ClassVar, Self, override
 from flext_core import FlextService, r
 from flext_infra._base_payload import FlextInfraCommandPayloadMixin
 from flext_infra._settings import settings
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra import c, t, p, m, u
 
 
 class FlextInfraServiceBase[TDomainResult](

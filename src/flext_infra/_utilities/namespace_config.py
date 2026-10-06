@@ -9,14 +9,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_infra._config import config
-from flext_infra._utilities.git import FlextInfraUtilitiesGit
-from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
-from flext_infra.constants import c
+from flext_infra import c
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import typings as t
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesNamespaceConfig:
@@ -33,6 +31,7 @@ class FlextInfraUtilitiesNamespaceConfig:
             TypeError: If [tool.flext.namespace] must be a table in.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesPyproject
         flext_meta = FlextInfraUtilitiesPyproject.tool_flext_meta(project_root)
         if "namespace" not in flext_meta:
             return {}
@@ -95,6 +94,7 @@ class FlextInfraUtilitiesNamespaceConfig:
                 ``declared.failure``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesGit
         meta = FlextInfraUtilitiesNamespaceConfig.namespace_meta(project_root)
         if "scan_dirs" in meta:
             configured = meta["scan_dirs"]

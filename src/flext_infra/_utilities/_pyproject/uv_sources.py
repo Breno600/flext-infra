@@ -8,19 +8,11 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from flext_cli import r, u
+from flext_cli import r
 
-from flext_infra._utilities._pyproject.requirements import (
-    FlextInfraUtilitiesPyprojectRequirements,
-)
-from flext_infra._utilities._pyproject.session import (
-    FlextInfraUtilitiesPyprojectSession,
-)
-from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra._utilities import FlextInfraUtilitiesPyprojectRequirements
+from flext_infra._utilities import FlextInfraUtilitiesPyprojectSession
+from flext_infra import c, t, p, m
 
 
 class FlextInfraUtilitiesPyprojectUvSources(
@@ -40,6 +32,8 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``p.Result[list[str]]``.
 
         """
+        from flext_cli import u
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies
         payload = u.Cli.toml_as_mapping(document)
         if payload is None:
             return r[list[str]].fail("pyproject document is not a TOML mapping")
@@ -73,6 +67,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``t.VariadicTuple[str]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies
         return tuple(
             active
             for item in cls._document_requirement_lines(document).unwrap()
@@ -99,6 +94,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``p.Result[t.VariadicTuple[str]]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies
         lines = cls._document_requirement_lines(document)
         if lines.failure:
             return r[t.VariadicTuple[str]].from_failure(lines)
@@ -131,6 +127,8 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_cli import u
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if tool is None:
             tool = u.Cli.toml_ensure_table(document, c.Infra.TOOL)

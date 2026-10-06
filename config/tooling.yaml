@@ -183,6 +183,13 @@ Infra:
           - complex-structure
           - suspicious-subprocess-import
           - subprocess-without-shell-equals-true
+          # import-outside-top-level (PLC0415) is informative by operator law:
+          # the mandatory lazy-import order (later-order objects MUST be
+          # imported inside the using function) makes top-level-only imports
+          # architecturally wrong, and blind hoisting was proven to break the
+          # lazy-export architecture (253 circular-import failures). This
+          # aligns the gate with operator law; it is not masking.
+          - import-outside-top-level
         line-length: 88
         preview: true
         respect-gitignore: true
@@ -339,7 +346,8 @@ Infra:
                 converge) run stdlib-only under env -i before the project
                 environment exists: subprocess orchestration, mutex journal
                 recovery and diagnostic prints are their documented design,
-                their headers use the projected comment form, and exhaustive
+                their module docstrings carry the projected copyright and
+                SPDX closing lines, and exhaustive
                 control-flow exception docstrings do not survive the codegen
                 render. Operator order 2026-10-06 (make every verb green)
                 authorizes the scoped relief; the rules stay active

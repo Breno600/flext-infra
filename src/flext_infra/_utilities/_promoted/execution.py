@@ -12,13 +12,11 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra._utilities._promoted.invocation import (
-    FlextInfraUtilitiesPromotedInvocation,
-)
-from flext_infra.constants import c
+from flext_infra._utilities import FlextInfraUtilitiesPromotedInvocation
+from flext_infra import c
 
 if TYPE_CHECKING:
-    from flext_infra import protocols as p, typings as t
+    from flext_infra import t, p
 
 
 class FlextInfraUtilitiesPromotedExecution(FlextInfraUtilitiesPromotedInvocation):
@@ -39,7 +37,6 @@ class FlextInfraUtilitiesPromotedExecution(FlextInfraUtilitiesPromotedInvocation
             PromotedRegistryError: If ``result.failure``.
 
         """
-        from flext_infra import u
         from flext_infra._settings import settings
 
         message, env_name = c.Infra.PromotedMessage, c.Infra.PromotedEnv
@@ -81,6 +78,8 @@ class FlextInfraUtilitiesPromotedExecution(FlextInfraUtilitiesPromotedInvocation
             if bash is None:
                 cls.promoted_fail(message.BASH_MISSING)
             interpreter = (bash,)
+        from flext_infra import u
+
         result = u.Cli.run_raw(
             (*interpreter, str(command.path)),
             cwd=project_root,

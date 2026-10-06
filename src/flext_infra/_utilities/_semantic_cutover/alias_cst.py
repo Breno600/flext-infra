@@ -8,12 +8,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
-from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
 
 if TYPE_CHECKING:
     import libcst as cst
 
-    from flext_infra import models as m
+    from flext_infra import m
 
 
 class FlextInfraUtilitiesSemanticCutoverAliasCst:
@@ -31,6 +30,7 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
             The structurally rewritten source without changing its layout.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
         import libcst as cst
         from libcst.metadata import (
             MetadataWrapper,

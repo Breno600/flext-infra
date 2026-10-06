@@ -9,13 +9,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_infra._config import config
-from flext_infra._utilities._git.scope import FlextInfraUtilitiesGitScopeMixin
-from flext_infra.constants import c
+from flext_infra._utilities import FlextInfraUtilitiesGitScopeMixin
+from flext_infra import c
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import typings as t
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesIterationDirectory(FlextInfraUtilitiesGitScopeMixin):

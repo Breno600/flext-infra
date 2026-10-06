@@ -6,19 +6,11 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_infra._utilities._rope_analysis.asthelpers import (
-    FlextInfraUtilitiesRopeAnalysisAstHelpers,
-)
-from flext_infra._utilities._rope_analysis.exports import (
-    FlextInfraUtilitiesRopeAnalysisExports,
-)
-from flext_infra._utilities._rope_analysis.importstate import (
-    FlextInfraUtilitiesRopeAnalysisImportState,
-)
-from flext_infra._utilities._rope_analysis.sourcescan import (
-    FlextInfraUtilitiesRopeAnalysisSourceScan,
-)
-from flext_infra.typings import t
+from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
+from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisExports
+from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisImportState
+from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisSourceScan
+from flext_infra import t
 
 
 class FlextInfraUtilitiesRopeAnalysisBase(

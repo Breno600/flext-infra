@@ -10,11 +10,8 @@ import operator
 from collections.abc import Callable, MutableMapping
 from pathlib import Path
 
-from flext_infra._utilities.protected_edit_linting import (
-    FlextInfraUtilitiesProtectedEditLinting,
-)
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra._utilities import FlextInfraUtilitiesProtectedEditLinting
+from flext_infra import c, t
 
 
 class FlextInfraUtilitiesProtectedEditPreview(FlextInfraUtilitiesProtectedEditLinting):

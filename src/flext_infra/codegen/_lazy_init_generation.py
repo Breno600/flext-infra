@@ -14,18 +14,14 @@ from flext_infra.codegen._lazy_init_generation_files import (
 from flext_infra.codegen._lazy_init_generation_registry import (
     FlextInfraCodegenLazyInitGenerationRegistryMixin,
 )
-from flext_infra.constants import c
-from flext_infra.utilities import u
+from flext_infra import c, u
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
     from pathlib import Path
 
-    from flext_infra._models.flext_infra_codegen_lazy_init_planner import (
-        FlextInfraCodegenLazyInitPlanner,
-    )
-    from flext_infra.codegen.models import m
-    from flext_infra.codegen.typings import t
+    from flext_infra import t, m
+    from flext_infra._models import FlextInfraCodegenLazyInitPlanner
 
 
 # Root manifests and initializers are synchronized as one artifact set.

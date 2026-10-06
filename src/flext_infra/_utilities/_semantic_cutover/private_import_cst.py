@@ -9,12 +9,11 @@ from __future__ import annotations
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, override
 
-from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
 
 if TYPE_CHECKING:
     import libcst as cst
 
-    from flext_infra import models as m, typings as t
+    from flext_infra import t, m
 
 
 class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
@@ -36,6 +35,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
             The resulting ``str``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
         import libcst as cst
 
         class _DeclaredExports(cst.CSTTransformer):
@@ -111,6 +111,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
                 if ambiguous private import binding.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
         import libcst as cst
         from libcst.codemod import CodemodContext
         from libcst.codemod.visitors import AddImportsVisitor

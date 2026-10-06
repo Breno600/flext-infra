@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Annotated, override
 
 from flext_infra.base import FlextInfraServiceBase
-from flext_infra.models import m
+from flext_infra import m
 
 
 class FlextInfraCodegenExecutionBase[TResult](

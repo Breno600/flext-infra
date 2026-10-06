@@ -12,9 +12,9 @@ from typing import Annotated, ClassVar, Literal
 from flext_cli import m, t
 
 from flext_infra._constants import FlextInfraConstantsCodegenProject
-from flext_infra._models._config.beads import FlextInfraConfigModelsBeads
-from flext_infra._models._config.contract import FlextInfraConfigModelsContract
-from flext_infra._models._config.make import FlextInfraConfigModelsMake
+from flext_infra._models import FlextInfraConfigModelsBeads
+from flext_infra._models import FlextInfraConfigModelsContract
+from flext_infra._models import FlextInfraConfigModelsMake
 
 
 class FlextInfraConfigModelsRepository:

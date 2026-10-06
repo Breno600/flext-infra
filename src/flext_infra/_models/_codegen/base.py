@@ -6,16 +6,14 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_infra._models._codegen.fix import FlextInfraModelsCodegenFixModels
-from flext_infra._models._codegen.journal import FlextInfraModelsCodegenJournalModels
-from flext_infra._models._codegen.lazy_init import FlextInfraModelsCodegenLazyInitModels
-from flext_infra._models._codegen.pipeline import FlextInfraModelsCodegenPipelineModels
-from flext_infra._models._codegen.scaffold import FlextInfraModelsCodegenScaffoldModels
-from flext_infra._models._codegen.transaction import (
-    FlextInfraModelsCodegenTransactionModels,
-)
-from flext_infra._models.codegen_render import FlextInfraModelsCodegenRender
-from flext_infra._models.codegen_toolchain import FlextInfraModelsCodegenToolchain
+from flext_infra._models import FlextInfraModelsCodegenFixModels
+from flext_infra._models import FlextInfraModelsCodegenJournalModels
+from flext_infra._models import FlextInfraModelsCodegenLazyInitModels
+from flext_infra._models import FlextInfraModelsCodegenPipelineModels
+from flext_infra._models import FlextInfraModelsCodegenScaffoldModels
+from flext_infra._models import FlextInfraModelsCodegenTransactionModels
+from flext_infra._models import FlextInfraModelsCodegenRender
+from flext_infra._models import FlextInfraModelsCodegenToolchain
 
 
 class FlextInfraCodegen(

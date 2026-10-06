@@ -6,15 +6,10 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_cli import u
 
 from flext_core import r
 from flext_infra._config import config
-from flext_infra._utilities.base import FlextInfraUtilitiesBase
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra import c, t, p, m
 
 
 class FlextInfraUtilitiesManagedConflicts:
@@ -31,6 +26,7 @@ class FlextInfraUtilitiesManagedConflicts:
         Returns:
             The resulting ``p.Result[str]``.
         """
+        from flext_cli import u
         if u.Cli.toml_mapping_from_text(content) is not None:
             return r[str].ok(content)
         recovered: list[str] = []
@@ -153,6 +149,7 @@ class FlextInfraUtilitiesManagedConflicts:
             The resulting ``p.Result[str]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesBase
         if FlextInfraUtilitiesBase.first_merge_conflict_marker(content) is None:
             return FlextInfraUtilitiesManagedConflicts.recover_managed_assignments(
                 content,

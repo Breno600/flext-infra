@@ -12,12 +12,8 @@ from typing import override
 
 from flext_core import r
 from flext_infra.base import FlextInfraServiceBase
-from flext_infra.constants import c
+from flext_infra import c, t, p, m, u
 from flext_infra.deps._pyrefly_fix_steps import FlextInfraConfigFixerSteps
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
-from flext_infra.utilities import u
 
 
 class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bool]):

@@ -6,17 +6,8 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_infra._utilities._semantic_cutover.family_type_references import (
-    FlextInfraUtilitiesSemanticFamilyTypeReferences,
-)
-from flext_infra._utilities.rope_runtime_refactors import (
-    FlextInfraUtilitiesRopeRuntimeRefactors,
-)
-from flext_infra._utilities.rope_structure import FlextInfraUtilitiesRopeStructure
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra._utilities import FlextInfraUtilitiesSemanticFamilyTypeReferences
+from flext_infra import c, t, p, m
 
 
 class FlextInfraUtilitiesSemanticFamilyReferences(
@@ -32,6 +23,7 @@ class FlextInfraUtilitiesSemanticFamilyReferences(
         *,
         flatten: m.Infra.FamilyWrapperFlatten,
     ) -> t.Pair[bool, t.VariadicTuple[m.Infra.SourceRewrite]]:
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors, FlextInfraUtilitiesRopeStructure
         runtime = FlextInfraUtilitiesRopeRuntimeRefactors
         project, wrapper, names = flatten.project, flatten.wrapper, flatten.names
         wrapper_name = flatten.wrapper_name

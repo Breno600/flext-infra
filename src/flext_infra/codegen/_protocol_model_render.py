@@ -14,9 +14,7 @@ from flext_infra._config import config
 from flext_infra.codegen._protocol_model_annotations import (
     FlextInfraCodegenProtocolModelAnnotations,
 )
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra import c, t, m
 
 
 class FlextInfraCodegenProtocolModelRender:

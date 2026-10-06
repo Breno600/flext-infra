@@ -17,14 +17,8 @@ from git import (
 )
 
 from flext_core import r
-from flext_infra._utilities._git.remote import FlextInfraUtilitiesGitRemote
-from flext_infra._utilities._git.repo import FlextInfraUtilitiesGitRepo
-from flext_infra._utilities._git.semantic_lane import (
-    FlextInfraUtilitiesGitSemanticLaneMixin,
-)
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
+from flext_infra._utilities import FlextInfraUtilitiesGitSemanticLaneMixin
+from flext_infra import c, p, m
 
 
 class FlextInfraUtilitiesGitSemanticIdentityMixin(
@@ -157,6 +151,7 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
             Whether ``repo_root`` sits inside a Git work tree.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesGitRepo
         refreshed = FlextInfraUtilitiesGitRepo.refresh_binary()
         if refreshed.failure:
             return r[m.Infra.GitBoolReport].from_failure(refreshed)
@@ -198,6 +193,7 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
             The resulting ``m.Infra.GitIdentityReport``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesGitRemote
         head_oid = repo.head.commit.hexsha
         working_tree = Path(repo.working_tree_dir or str(repo.working_dir)).resolve()
         git_dir = Path(repo.git_dir).resolve()

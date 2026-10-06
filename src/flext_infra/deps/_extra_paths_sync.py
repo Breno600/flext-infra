@@ -9,15 +9,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra.constants import c
-from flext_infra.utilities import u
+from flext_infra import c, u
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-    from flext_infra.deps.protocols import p
-    from flext_infra.deps.typings import t
+    from flext_infra import t, p
 
 
 class FlextInfraExtraPathsSyncMixin:

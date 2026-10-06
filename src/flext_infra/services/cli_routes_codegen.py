@@ -20,17 +20,16 @@ from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
 from flext_infra.codegen.py_typed import FlextInfraCodegenPyTyped
 from flext_infra.codegen.scaffolder import FlextInfraCodegenScaffolder
 from flext_infra.codegen.version_file import FlextInfraCodegenVersionFile
-from flext_infra.constants import c
+from flext_infra import c, m
 from flext_infra.deps.detector import FlextInfraRuntimeDevDependencyDetector
 from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
 from flext_infra.deps.fix_pyrefly_config import FlextInfraConfigFixer
 from flext_infra.deps.lock_integrity import FlextInfraLockIntegrityVerifier
 from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
-from flext_infra.models import m
 from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
 
 if TYPE_CHECKING:
-    from flext_infra.services.typings import t
+    from flext_infra import t
 
 
 class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):

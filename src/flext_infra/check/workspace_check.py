@@ -18,11 +18,7 @@ from flext_infra.check._workspace_check_reports import (
 )
 from flext_infra.check.gate_registry import FlextInfraGateRegistry
 from flext_infra.check.workspace_check_gates import FlextInfraWorkspaceCheckGatesMixin
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra import c, t, p, m, u
 
 
 class FlextInfraWorkspaceChecker(

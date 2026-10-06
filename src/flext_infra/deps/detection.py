@@ -10,12 +10,8 @@ from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 
 from flext_core import c as core_c, r
-from flext_infra.constants import c
+from flext_infra import c, t, p, m, u
 from flext_infra.deps.detection_analysis import FlextInfraDependencyDetectionAnalysis
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
-from flext_infra.utilities import u
 
 
 class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis):

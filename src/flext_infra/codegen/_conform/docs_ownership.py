@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 from flext_infra.codegen._conform.gitignore import FlextInfraCodegenConformGitignore
 
 if TYPE_CHECKING:
-    from flext_infra import m, t
+    from flext_infra import t, m
 
 
 class FlextInfraCodegenConformDocsOwnership(FlextInfraCodegenConformGitignore):

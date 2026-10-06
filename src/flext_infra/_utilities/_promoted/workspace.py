@@ -10,12 +10,12 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
-from flext_infra.constants import c
+from flext_infra import c, m
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from flext_infra import protocols as p, typings as t
+    from flext_infra import t, p
 
 
 class FlextInfraUtilitiesPromotedWorkspace:
@@ -58,8 +58,8 @@ class FlextInfraUtilitiesPromotedWorkspace:
             The resulting ``p.Infra.PromotedWorkspaceSpec``.
 
         """
-        from flext_infra import m, u
 
+        from flext_infra import u
         return m.Infra.PromotedWorkspaceSpec(
             root=root,
             scripts=root / c.Infra.DIR_SCRIPTS,

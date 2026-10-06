@@ -9,17 +9,11 @@ from __future__ import annotations
 from pathlib import Path
 from stat import S_IMODE
 
-from flext_cli import u
 from git import GitCommandError
 
 from flext_core import r
-from flext_infra._utilities._git.worktree_discovery import (
-    FlextInfraUtilitiesGitWorktreeDiscoveryMixin,
-)
-from flext_infra._utilities._git.worktree_io import FlextInfraUtilitiesGitWorktreeIO
-from flext_infra.constants import c
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeDiscoveryMixin
+from flext_infra import c, t, p
 
 
 class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
@@ -39,6 +33,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
             The resulting ``p.Result[str]``.
 
         """
+        from flext_cli import u
         ensure_parent = u.Cli.ensure_dir(worktree_root.parent)
         if ensure_parent.failure:
             return r[str].from_failure(ensure_parent)
@@ -98,6 +93,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_cli import u
         try:
             repo = cls._repo(source_root)
             untracked = repo.git.ls_files("--others", "--exclude-standard", "-z")
@@ -178,6 +174,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
         excluded: t.SequenceOf[Path],
         pathspecs: t.VariadicTuple[str],
     ) -> p.Result[bool]:
+        from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
         repo = cls._repo(source_root)
         worktree_repo = cls._repo(worktree_root)
         if source_root.resolve() == worktree_root.resolve():

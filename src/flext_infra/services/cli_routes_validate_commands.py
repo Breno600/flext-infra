@@ -10,10 +10,8 @@ from typing import ClassVar
 
 from flext_core import r
 from flext_infra.api import infra
-from flext_infra.models import m
-from flext_infra.protocols import p
+from flext_infra import t, p, m
 from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
-from flext_infra.typings import t
 from flext_infra.validate.cprofile_report import FlextInfraCProfileReport
 from flext_infra.validate.fresh_import import FlextInfraValidateFreshImport
 from flext_infra.validate.inventory import FlextInfraInventoryService

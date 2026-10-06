@@ -18,11 +18,7 @@ from flext_infra.codegen._lazy_init_generation import (
 from flext_infra.codegen._mise_artifacts_files import FlextInfraMiseArtifactsFiles
 from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
 from flext_infra.codegen._pipeline_stages import FlextInfraCodegenPipelineStagesMixin
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra import c, t, p, m, u
 
 if TYPE_CHECKING:
     from collections.abc import Callable

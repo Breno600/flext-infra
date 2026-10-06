@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, override
 if TYPE_CHECKING:
     import libcst as cst
 
-    from flext_infra import protocols as p, typings as t
+    from flext_infra import t, p
 
 
 class FlextInfraUtilitiesQualifiedNames:

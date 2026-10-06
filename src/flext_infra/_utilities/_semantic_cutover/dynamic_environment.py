@@ -20,17 +20,13 @@ from libcst.metadata import (
     QualifiedNameSource,
 )
 
-from flext_infra._utilities._semantic_cutover.bindings import (
-    FlextInfraUtilitiesSemanticCutoverBindings,
-)
-from flext_infra._utilities._semantic_cutover.edits import (
-    FlextInfraUtilitiesSemanticCutoverEdits,
-)
+from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverBindings
+from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverEdits
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import models as m, protocols as p, typings as t
+    from flext_infra import t, p, m
 
 
 class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(

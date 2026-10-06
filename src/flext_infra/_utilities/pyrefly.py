@@ -8,14 +8,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_cli import u
 
-from flext_infra.constants import c
+from flext_infra import c
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import typings as t
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesPyrefly:
@@ -32,6 +31,7 @@ class FlextInfraUtilitiesPyrefly:
             The resulting ``t.StrSequence``.
 
         """
+        from flext_cli import u
         if any((project_dir / target).is_file() for target in discovered_dirs):
             return discovered_dirs
         document = u.Cli.toml_read(project_dir / c.PYPROJECT_FILENAME)

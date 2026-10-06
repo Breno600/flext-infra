@@ -9,19 +9,14 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
-from flext_cli import u
 
 from flext_core import r
-from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
-from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
-from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra import c, t
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import models as m, protocols as p
+    from flext_infra import p, m
 
 
 class FlextInfraUtilitiesDocsValidate:
@@ -87,6 +82,7 @@ class FlextInfraUtilitiesDocsValidate:
             The resulting ``p.Result[t.StrSequence]``.
 
         """
+        from flext_cli import u
         settings = repository_root / "docs/architecture/architecture_config.json"
         if not settings.exists():
             return r[t.StrSequence].ok([])
@@ -131,6 +127,7 @@ class FlextInfraUtilitiesDocsValidate:
             Required docs paths that are still missing from one scope.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocsScope
         if scope.name == c.Infra.RK_ROOT:
             required = [
                 "README.md",
@@ -164,6 +161,7 @@ class FlextInfraUtilitiesDocsValidate:
             Public API contract problems for one governed project scope.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocsApi
         if scope.name == c.Infra.RK_ROOT or not scope.package_name:
             return []
         messages: t.MutableSequenceOf[str] = []
@@ -216,6 +214,8 @@ class FlextInfraUtilitiesDocsValidate:
         report: m.Infra.DocsPhaseReport,
     ) -> None:
         """Persist the standard validate summary and markdown report."""
+        from flext_cli import u
+        from flext_infra._utilities import FlextInfraUtilitiesDocs
         _ = u.Cli.json_write(
             scope.report_dir / c.Infra.DOCS_VALIDATE_SUMMARY_FILENAME,
             {c.Infra.RK_SUMMARY: report.model_dump(mode="json")},

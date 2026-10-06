@@ -11,8 +11,8 @@ from typing import Annotated, Self
 
 from flext_core import m
 from flext_infra._constants import FlextInfraConstantsRelease
-from flext_infra._models.mixins import FlextInfraModelsMixins
-from flext_infra.typings import t
+from flext_infra._models import FlextInfraModelsMixins
+from flext_infra import t
 
 
 class FlextInfraModelsRelease:

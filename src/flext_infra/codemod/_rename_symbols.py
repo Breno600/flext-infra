@@ -10,10 +10,7 @@ import ast
 from difflib import SequenceMatcher
 from pathlib import Path
 
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra import t, p, m, u
 
 
 class FlextInfraRenameSymbols:
@@ -235,7 +232,7 @@ class FlextInfraRenameSymbols:
     @classmethod
     def _record_campaign_change(
         cls,
-        change: p.Infra.RopeChange,
+        change: p.Infra.RopeChangeContents,
         *,
         project: t.Infra.RopeProject,
         sources: t.MappingKV[Path, str],

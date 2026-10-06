@@ -10,21 +10,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra.codegen._mise_artifacts_derivation import (
-    FlextInfraMiseArtifactsDerivation,
-)
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
-from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
-from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra import c, t, m, u
 
 if TYPE_CHECKING:
-    from flext_infra.codegen.protocols import p
+    from flext_infra import p
 
 
 class FlextInfraMiseColdStart:
@@ -46,6 +38,7 @@ class FlextInfraMiseColdStart:
             The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
 
         """
+        from flext_infra.codegen._mise_artifacts_derivation import FlextInfraMiseArtifactsDerivation
         result_type = r[t.SequenceOf[m.Infra.CodegenFilePlan]]
         source_root = files.cold_start_directory()
         validated = FlextInfraMiseArtifactsDerivation.validate_packaged(source_root)
@@ -90,6 +83,8 @@ class FlextInfraMiseColdStart:
             The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]``.
 
         """
+        from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+        from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
         result_type = r[tuple[m.Infra.CodegenFilePlan, ...]]
         project = root.expanduser().resolve()
         package = files.package_directory()

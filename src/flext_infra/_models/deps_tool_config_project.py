@@ -10,9 +10,7 @@ from typing import Annotated
 
 from flext_cli import m
 
-from flext_infra._models.deps_tool_config_project_artifacts import (
-    FlextInfraModelsDepsToolConfigProjectArtifacts,
-)
+from flext_infra._models import FlextInfraModelsDepsToolConfigProjectArtifacts
 
 
 class FlextInfraModelsDepsToolConfigProject(

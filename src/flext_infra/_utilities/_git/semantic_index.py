@@ -17,17 +17,13 @@ from git import (
 )
 
 from flext_core import r
-from flext_infra._utilities._git.semantic_paths import (
-    FlextInfraUtilitiesGitSemanticPathsMixin,
-)
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra._utilities import FlextInfraUtilitiesGitSemanticPathsMixin
+from flext_infra import c, t, m
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import protocols as p
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesGitSemanticIndexMixin(

@@ -11,18 +11,17 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra.constants import c
-from flext_infra.models import m
+from flext_infra import c, m
 
 if TYPE_CHECKING:
-    from flext_infra import protocols as p
+    from flext_infra import p
 
 
 class FlextInfraWorktreeProvisioning:
     @staticmethod
     def _ensure_gitlink_checkout(lane: Path, member_path: Path) -> p.Result[bool]:
-        from flext_infra import u
 
+        from flext_infra import u
         reference = member_path.as_posix()
         git_marker = lane / member_path / ".git"
         if git_marker.is_symlink() or (
@@ -47,8 +46,8 @@ class FlextInfraWorktreeProvisioning:
         declared_url: str,
         recorded_oid: str,
     ) -> p.Result[bool]:
-        from flext_infra import u
 
+        from flext_infra import u
         reference = member_path.as_posix()
         identity = u.Infra.git_identity(
             m.Infra.GitRepoRequest(repo_root=lane / member_path),
@@ -74,8 +73,8 @@ class FlextInfraWorktreeProvisioning:
         lane: Path,
         member_path: Path,
     ) -> p.Result[bool]:
-        from flext_infra import u
 
+        from flext_infra import u
         reference = member_path.as_posix()
         contract = u.Infra.gitmodule_contract(
             m.Infra.GitSubmoduleContractRequest(repo_root=lane, member_path=reference),
@@ -99,8 +98,8 @@ class FlextInfraWorktreeProvisioning:
 
     @classmethod
     def _prepare_governed_gitlinks(cls, lane: Path) -> p.Result[bool]:
-        from flext_infra import u
 
+        from flext_infra import u
         declared = u.Infra.git_declared_submodule_paths(lane)
         if declared.failure:
             return r[bool].from_failure(declared)
@@ -133,8 +132,8 @@ class FlextInfraWorktreeProvisioning:
 
     @classmethod
     def setup_lane(cls, lane: Path) -> p.Result[bool]:
-        from flext_infra import u
 
+        from flext_infra import u
         gitlinks = cls._prepare_governed_gitlinks(lane)
         if gitlinks.failure:
             return gitlinks

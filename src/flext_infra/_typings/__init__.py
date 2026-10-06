@@ -13,9 +13,9 @@ from typing import TYPE_CHECKING
 from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
-    from flext_infra._typings.adapters import FlextInfraTypesAdapters
-    from flext_infra._typings.base import CliResultValue, FlextInfraTypesBase
-    from flext_infra._typings.rope import FlextInfraTypesRope
+    from flext_infra._typings import FlextInfraTypesAdapters
+    from flext_infra._typings import CliResultValue, FlextInfraTypesBase
+    from flext_infra._typings import FlextInfraTypesRope
 
 
 __all__: tuple[str, ...] = (

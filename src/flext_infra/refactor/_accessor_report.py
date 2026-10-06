@@ -9,13 +9,12 @@ from __future__ import annotations
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
-from flext_infra.models import m
-from flext_infra.utilities import u
+from flext_infra import m, u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra.refactor.typings import t
+    from flext_infra import t
 
 
 class FlextInfraAccessorMigrationReportMixin:

@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
-    from flext_infra._utilities._rope.project import FlextInfraRopeProject
+    from flext_infra._utilities import FlextInfraRopeProject
 
 
 __all__: tuple[str, ...] = ("FlextInfraRopeProject",)

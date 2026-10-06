@@ -8,14 +8,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_cli import u
 
-from flext_infra._utilities.discovery import FlextInfraUtilitiesDiscovery
-from flext_infra._utilities.namespace_common import (
-    FlextInfraUtilitiesRefactorNamespaceCommon,
-)
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra._utilities import FlextInfraUtilitiesRefactorNamespaceCommon
+from flext_infra import c, t
 
 
 class FlextInfraUtilitiesRefactorNamespaceFlext(
@@ -32,6 +27,8 @@ class FlextInfraUtilitiesRefactorNamespaceFlext(
             ValueError: If refusing future-annotations rewrite outside project.
 
         """
+        from flext_cli import u
+        from flext_infra._utilities import FlextInfraUtilitiesDiscovery
         for file_path in py_files:
             project_root = FlextInfraUtilitiesDiscovery.project_root(file_path)
             resolved_file = file_path.resolve()

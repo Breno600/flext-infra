@@ -9,11 +9,8 @@ from __future__ import annotations
 from git import GitCommandError, HookExecutionError, InvalidGitRepositoryError, Repo
 
 from flext_core import r
-from flext_infra._utilities._git.semantic_publish import (
-    FlextInfraUtilitiesGitSemanticPublishMixin,
-)
-from flext_infra.models import m
-from flext_infra.protocols import p
+from flext_infra._utilities import FlextInfraUtilitiesGitSemanticPublishMixin
+from flext_infra import p, m
 
 
 class FlextInfraUtilitiesGitSemanticPathsMixin(

@@ -11,28 +11,14 @@ from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra._utilities._semantic_cutover.edits import (
-    FlextInfraUtilitiesSemanticCutoverEdits,
-)
-from flext_infra._utilities._semantic_cutover.private_import_cst import (
-    FlextInfraUtilitiesSemanticCutoverPrivateImportCst,
-)
-from flext_infra._utilities.private_import_ancestry import (
-    FlextInfraUtilitiesPrivateImportAncestry,
-)
-from flext_infra._utilities.private_import_facades import (
-    FlextInfraUtilitiesPrivateImportFacades,
-)
-from flext_infra._utilities.private_import_validation import (
-    FlextInfraUtilitiesPrivateImportValidation,
-)
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverEdits
+from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverPrivateImportCst
+from flext_infra import t, m
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import protocols as p
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesSemanticCutoverPrivateImports(
@@ -116,6 +102,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
                 exposes cross-owner private import.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesPrivateImportAncestry, FlextInfraUtilitiesPrivateImportFacades
         live_findings = tuple(
             finding
             for finding in findings
@@ -309,6 +296,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
             ValueError: If ambiguous facade alias; or if ambiguous public reference for.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesPrivateImportFacades, FlextInfraUtilitiesPrivateImportValidation
         tree = ast.parse(source, filename=str(file_path))
         removals: MutableMapping[str, set[str]] = {}
         obsolete_imports: MutableMapping[str, set[str]] = {}

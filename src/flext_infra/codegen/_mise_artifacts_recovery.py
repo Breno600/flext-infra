@@ -26,12 +26,10 @@ from flext_infra.codegen._mise_artifacts_state import (
 from flext_infra.codegen._mise_artifacts_verification import (
     FlextInfraMiseArtifactsVerification as verify,
 )
-from flext_infra.constants import c
-from flext_infra.models import m
+from flext_infra import c, m
 
 if TYPE_CHECKING:
-    from flext_infra.codegen.protocols import p
-    from flext_infra.codegen.typings import t
+    from flext_infra import t, p
 
 type _FileIdentity = tuple[
     int | None,

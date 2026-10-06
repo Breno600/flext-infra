@@ -9,7 +9,7 @@ from __future__ import annotations
 import ast
 from importlib.util import resolve_name
 
-from flext_infra.typings import t
+from flext_infra import t
 
 
 class FlextInfraUtilitiesPrivateImportAncestry:
