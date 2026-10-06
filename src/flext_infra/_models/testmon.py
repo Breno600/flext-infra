@@ -40,16 +40,13 @@ class FlextInfraModelsTestmon:
         """Fresh checkpoint receipt from one completed runner invocation."""
 
         database: Annotated[
-            Path,
-            m.Field(description="Integrity-checked project database"),
+            Path, m.Field(description="Integrity-checked project database")
         ]
         digest: Annotated[
-            str,
-            m.Field(pattern=r"^[a-f0-9]{64}$", description="Checkpoint digest"),
+            str, m.Field(pattern=r"^[a-f0-9]{64}$", description="Checkpoint digest")
         ]
         saveable: Annotated[
-            bool,
-            m.Field(description="Completed run may publish this generation"),
+            bool, m.Field(description="Completed run may publish this generation")
         ]
 
     class TestmonRunAccounting(m.Value):

@@ -82,7 +82,7 @@ class FlextInfraConfigModelsMake:
         informative_check_gates: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                description="CI check findings are informative; execution errors block",
+                description="CI check findings are informative; execution errors block"
             ),
         ] = ()
 

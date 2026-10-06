@@ -130,14 +130,10 @@ class FlextInfraUtilitiesRopeSourceBases:
                         cls._reference(base, visible, module) for base in node.bases
                     )
                     if node.type_params:
-                        bases = (
-                            *bases,
-                            m.Infra.SourceClassReference(
-                                target="typing",
-                                attributes=("Generic",),
-                                qualified_base="typing.Generic",
-                            ),
-                        )
+                        bases = (*bases, m.Infra.SourceClassReference(
+                            target="typing", attributes=("Generic",),
+                            qualified_base="typing.Generic",
+                        ))
                     identity = f"{module}:{scope}{node.name}:{node.lineno}"
                     members: MutableMapping[
                         str,
@@ -220,14 +216,11 @@ class FlextInfraUtilitiesRopeSourceBases:
                     bindings[node.name] = None
                 elif isinstance(node, ast.If):
                     if isinstance(node.test, ast.Constant) and isinstance(
-                        node.test.value,
-                        bool,
+                        node.test.value, bool,
                     ):
                         collect(
                             node.body if node.test.value else node.orelse,
-                            bindings,
-                            lexical,
-                            scope,
+                            bindings, lexical, scope,
                         )
                         continue
                     # Non-constant conditions with class declarations
@@ -330,8 +323,7 @@ class FlextInfraUtilitiesRopeSourceBases:
             if isinstance(
                 value,
                 FlextInfraUtilitiesRopeRuntime.runtime_type(
-                    "rope.base.pyobjectsdef",
-                    "PyClass",
+                    "rope.base.pyobjectsdef", "PyClass",
                 ),
             ):
                 module = value.get_module()
@@ -358,13 +350,10 @@ class FlextInfraUtilitiesRopeSourceBases:
                     if not path or path.rsplit(".", 1)[-1] != value.get_name():
                         message = f"Missing external class declaration: {name}:{line}"
                         raise ValueError(message)
-                    return resolve(
-                        m.Infra.SourceClassReference(
-                            target=name,
-                            attributes=tuple(path.split(".")),
-                            qualified_base=f"{name}.{path}",
-                        ),
-                    )
+                    return resolve(m.Infra.SourceClassReference(
+                        target=name, attributes=tuple(path.split(".")),
+                        qualified_base=f"{name}.{path}",
+                    ))
                 identity = next(
                     (
                         identity
@@ -424,15 +413,9 @@ class FlextInfraUtilitiesRopeSourceBases:
                 if imported.level > len(parts):
                     message = f"Relative import escapes package: {package}.{name}"
                     raise ValueError(message)
-                name = ".".join(
-                    filter(
-                        None,
-                        (
-                            ".".join(parts[: len(parts) - imported.level + 1]),
-                            name,
-                        ),
-                    ),
-                )
+                name = ".".join(filter(None, (
+                    ".".join(parts[: len(parts) - imported.level + 1]), name,
+                )))
             module = project.get_module(name)
             resource = project.find_module(name)
             if resource is not None:
@@ -624,13 +607,11 @@ class FlextInfraUtilitiesRopeSourceBases:
                 message = f"External class has no declared source or native identity: {identity}"
                 raise ValueError(message)
             return tuple(
-                resolve(
-                    m.Infra.SourceClassReference(
-                        target=base.__module__,
-                        attributes=tuple(base.__qualname__.split(".")),
-                        qualified_base=f"{base.__module__}.{base.__qualname__}",
-                    ),
-                )
+                resolve(m.Infra.SourceClassReference(
+                    target=base.__module__,
+                    attributes=tuple(base.__qualname__.split(".")),
+                    qualified_base=f"{base.__module__}.{base.__qualname__}",
+                ))
                 for base in value.builtin.__bases__
             )
 
@@ -701,8 +682,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                 1,
             )
             return m.Infra.SourceClassReference(
-                target=".".join(parts[:index]),
-                attributes=tuple(parts[index:]),
+                target=".".join(parts[:index]), attributes=tuple(parts[index:]),
                 qualified_base=root,
             )
 
