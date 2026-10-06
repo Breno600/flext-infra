@@ -198,3 +198,19 @@ class TestsFlextInfraManagedConflictRecovery:
         )
         tm.that(recovered, eq=content)
         tm.that(u.Cli.toml_mapping_from_text(recovered), none=False)
+
+    @staticmethod
+    def test_preserves_valid_commented_table_headers() -> None:
+        """Valid external TOML syntax is never rewritten by managed recovery."""
+        content = (
+            '[tool.fixture]\nvalue = "parent"\n'
+            '[[tool.fixture.items]] # first item\nvalue = "first"\n'
+            '[[tool.fixture.items]] # second item\nvalue = "second"\n'
+        )
+        recovered = tm.ok(
+            u.Infra.recover_managed_toml(
+                content,
+                conflict_sections=("tool.fixture",),
+            ),
+        )
+        tm.that(recovered, eq=content)

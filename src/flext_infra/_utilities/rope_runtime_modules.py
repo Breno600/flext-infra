@@ -306,6 +306,7 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         save_objectdb: bool,
         ignored_resources: t.SequenceOf[str],
         source_folders: t.SequenceOf[str],
+        extension_modules: t.SequenceOf[str],
     ) -> t.Infra.RopeProject:
         project_factory = cls._runtime_callable(
             "flext_infra._utilities._rope.project",
@@ -324,6 +325,7 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
             save_history=False,
             ignored_resources=list(ignored_resources),
             source_folders=list(source_folders),
+            extension_modules=list(extension_modules),
         )
         if not isinstance(project, p.Infra.RopeProject):
             msg = "rope Project does not satisfy p.Infra.RopeProject"

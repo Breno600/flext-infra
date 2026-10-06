@@ -304,12 +304,6 @@
 		exit 2; \
 	fi; \
 	{{ mise_runtime_bootstrap(project_root, mise, bootstrap) }}; \
-	project_parent=$${project_root%/*}; \
-	if [ -z "$$project_parent" ]; then project_parent=/; fi; \
-	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
-	if [ -z "$$scratch" ] || [ ! -d "$$scratch" ]; then \
-		printf 'ERROR: mise bootstrap scratch creation failed (template: %s/.%s.mise-bootstrap.XXXXXX)\n' "$$project_parent" "$${project_root##*/}" >&2; exit 2; \
-	fi; \
 	# Only ``upg`` locks, once per manifest it provisions from. Lock every \
 	# configured tool in one pass so removed selectors cannot survive beside \
 	# their replacement in mise.lock. The relock half of ``upg`` (lock without \
