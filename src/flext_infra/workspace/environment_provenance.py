@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import re
+from json import dumps
 from pathlib import Path
 from sys import prefix
 from typing import TYPE_CHECKING
@@ -122,7 +123,8 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         document = u.Cli.toml_read_json(repository_root / "uv.lock")
         if document.failure:
             return r[int].from_failure(document)
-        locked = m.Infra.LockedEnvironment.model_validate(document.value)
+        # TOML arrays are wire arrays; JSON mode preserves the strict tuple contract.
+        locked = m.Infra.LockedEnvironment.model_validate_json(dumps(document.value))
         workspace = FlextInfraWorkspaceDetector.load_workspace_spec(
             repository_root,
         ).unwrap()

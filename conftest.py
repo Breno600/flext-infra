@@ -19,12 +19,14 @@ if package_dir.is_dir() and (package_dir / "__init__.py").is_file():
     ):
         for module_name in list(sys.modules):
             if module_name == package_name or module_name.startswith(
-                f"{package_name}."
+                f"{package_name}.",
             ):
                 sys.modules.pop(module_name, None)
 
         package_spec = importlib.util.spec_from_file_location(
-            package_name, init_file, submodule_search_locations=[str(package_dir)]
+            package_name,
+            init_file,
+            submodule_search_locations=[str(package_dir)],
         )
         if package_spec is None or package_spec.loader is None:
             msg = f"Unable to load local package from {init_file}"
