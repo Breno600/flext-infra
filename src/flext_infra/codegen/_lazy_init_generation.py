@@ -16,7 +16,6 @@ from flext_infra.codegen._lazy_init_generation_files import (
 from flext_infra.codegen._lazy_init_generation_registry import (
     FlextInfraCodegenLazyInitGenerationRegistryMixin,
 )
-import flext_infra._models.flext_infra_codegen_lazy_init_planner
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
