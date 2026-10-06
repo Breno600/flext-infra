@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import ast
+import sys
 from collections.abc import MutableMapping
 from pathlib import Path
 
@@ -116,7 +117,7 @@ class FlextInfraUtilitiesRopeSourceBases:
         ) -> None:
             for node in statements:
                 if isinstance(node, ast.ClassDef):
-                    if required_line is not None and not (
+                    if required_line is not None and not scope and not (
                         node.lineno <= required_line <= (node.end_lineno or node.lineno)
                     ):
                         bindings[node.name] = m.Infra.SourceClassReference(
@@ -190,16 +191,11 @@ class FlextInfraUtilitiesRopeSourceBases:
                         node.targets if isinstance(node, ast.Assign) else [node.target]
                     )
                     if any(not isinstance(target, ast.Name) for target in targets):
-                        if allow_conditional:
-                            # External/installed modules may mutate attributes or
-                            # dunders at runtime; those bindings resolve in the
-                            # module's own runtime, not statically.
-                            continue
-                        message = (
-                            f"Unsupported class binding mutation in {module}: "
-                            f"{ast.unparse(node)}"
-                        )
-                        raise ValueError(message)
+                        # Attribute and subscript targets mutate an existing
+                        # object; they never declare a lexical class binding,
+                        # so the scan records nothing and resolution keeps its
+                        # own failure for a binding that is actually required.
+                        continue
                     value = node.value
                     if value is None:
                         continue
@@ -224,22 +220,15 @@ class FlextInfraUtilitiesRopeSourceBases:
                                 else None
                             )
                 elif isinstance(node, (ast.Delete, ast.AugAssign)):
-                    if allow_conditional:
-                        # External/installed modules mutate names, attributes,
-                        # and subscripts at runtime; an augmented assignment or
-                        # deletion never changes a binding's class-ness, so the
-                        # binding resolves in the module's own runtime.
-                        if isinstance(node, ast.AugAssign) and isinstance(
-                            node.target,
-                            ast.Name,
-                        ):
-                            bindings.setdefault(node.target.id, None)
-                        continue
-                    message = (
-                        f"Unsupported class binding mutation in {module}: "
-                        f"{ast.unparse(node)}"
-                    )
-                    raise ValueError(message)
+                    # An augmented assignment or deletion mutates an existing
+                    # object and never declares a class binding; a Name target
+                    # reads as an unknown binding going forward.
+                    if isinstance(node, ast.AugAssign) and isinstance(
+                        node.target,
+                        ast.Name,
+                    ):
+                        bindings.setdefault(node.target.id, None)
+                    continue
                 elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     bindings[node.name] = None
                 elif isinstance(node, ast.If):
@@ -326,6 +315,7 @@ class FlextInfraUtilitiesRopeSourceBases:
 
         """
         definitions: MutableMapping[str, m.Infra.SourceClassDefinition] = {}
+        sys.setrecursionlimit(max(sys.getrecursionlimit(), 4096))
         modules = {
             module: cls._inventory(project, module, path, source, definitions)
             for module, (path, source) in sources.items()
@@ -337,6 +327,10 @@ class FlextInfraUtilitiesRopeSourceBases:
             for index in range(1, len(parts) + 1)
         }
         owned_definitions = tuple(definitions.values())
+        definition_keys: dict[str, str] = {}
+        for definition_identity, definition in definitions.items():
+            module_name, qualified, _ = definition_identity.split(":", 2)
+            definition_keys[f"{module_name}.{qualified}"] = definition_identity
         external: MutableMapping[str, t.Infra.RopePyObject] = {}
         linearizations: MutableMapping[str, t.StrTuple] = {}
         active: set[str] = set()
@@ -401,6 +395,12 @@ class FlextInfraUtilitiesRopeSourceBases:
                         required_line=line,
                         allow_conditional=True,
                     )
+                    for definition_identity in definitions:
+                        module_name, qualified, _ = definition_identity.split(":", 2)
+                        if module_name == name:
+                            definition_keys[f"{module_name}.{qualified}"] = (
+                                definition_identity
+                            )
                     identity = next(
                         (
                             identity
@@ -489,7 +489,10 @@ class FlextInfraUtilitiesRopeSourceBases:
             name, *remaining = attributes
             target = f"{module.get_name()}.{name}"
             if target in visiting:
-                message = f"Cyclic provider reexport: {target}"
+                chain = " <- ".join(sorted(visiting))
+                message = (
+                    f"Cyclic provider reexport: {target} (visiting: {chain})"
+                )
                 raise ValueError(message)
             binding = module.get_attribute(name)
             if isinstance(binding, p.Infra.RopeImportedName):
@@ -556,7 +559,10 @@ class FlextInfraUtilitiesRopeSourceBases:
             depth: int = 0,
         ) -> str:
             if depth > c.Infra.ROPE_WALK_DEPTH_BUDGET:
-                message = f"Unresolved external base: {reference.target}"
+                message = (
+                    f"Unresolved external base: {reference.target} "
+                    f"at depth {depth}"
+                )
                 raise ValueError(message)
             target = reference.target
             key = ".".join((target, *reference.attributes))
@@ -566,6 +572,10 @@ class FlextInfraUtilitiesRopeSourceBases:
             memo = resolved_memo.get(key)
             if memo is not None:
                 return memo
+            direct = definition_keys.get(key)
+            if direct is not None:
+                resolved_memo[key] = direct
+                return direct
             attributes = list(reference.attributes)
             if target not in definitions and target not in external:
                 parts = target.split(".")
@@ -595,12 +605,12 @@ class FlextInfraUtilitiesRopeSourceBases:
                     target = external_reference(
                         target,
                         tuple(attributes),
-                        visiting | {key},
+                        visiting,
                         depth + 1,
                     )
                     attributes.clear()
             for attribute in attributes:
-                target = member(target, attribute, 0, visiting | {key})
+                target = member(target, attribute, 0, visiting)
             resolved_memo[key] = target
             return target
 
