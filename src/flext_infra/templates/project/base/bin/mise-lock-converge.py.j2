@@ -92,6 +92,7 @@ class MiseLockConverge:
         environment["GIT_CEILING_DIRECTORIES"] = str(stage.parent)
         environment["MISE_CEILING_PATHS"] = str(stage.parent)
         environment["MISE_TRUSTED_CONFIG_PATHS"] = str(stage)
+        environment["MISE_LOCKED"] = "false"
         return environment
 
     @staticmethod
@@ -180,21 +181,40 @@ class MiseLockConverge:
             if parsed is None or (failed is not None and parsed >= failed):
                 continue
             candidates.append(version)
+        candidates.sort(key=release_key, reverse=True)
         return candidates[: cls.CANDIDATE_LIMIT]
 
     @staticmethod
     def hold_manifest_version(manifest: Path, selector: str, version: str) -> None:
         """Rewrite one tool's declared version inside the staged manifest copy."""
+        manifest_selector = selector.removeprefix("core:")
         lines = manifest.read_text(encoding="utf-8").splitlines(keepends=True)
-        headers = (f'[tools."{selector}"]', f"[tools.{selector}]")
+        headers = (
+            f'[tools."{manifest_selector}"]',
+            f"[tools.{manifest_selector}]",
+        )
+        inline_keys = (
+            f'"{manifest_selector}" = ',
+            f"{manifest_selector} = ",
+        )
         in_section = False
+        in_tools = False
         for index, line in enumerate(lines):
             stripped = line.strip()
-            if stripped.startswith("[tools."):
+            if stripped.startswith("["):
                 in_section = stripped in headers
+                in_tools = stripped == "[tools]"
                 continue
             if in_section and stripped.startswith("version") and "=" in stripped:
                 lines[index] = f'version = "{version}"\n'
+                manifest.write_text("".join(lines), encoding="utf-8")
+                return
+            if in_tools and any(stripped.startswith(key) for key in inline_keys):
+                {#- Preserve the manifest's own key quoting: dotted selectors
+                   like npm:prettier are only valid as quoted TOML keys. #}
+                quoted = stripped.startswith(f'"{manifest_selector}" = ')
+                key = f'"{manifest_selector}"' if quoted else manifest_selector
+                lines[index] = f'{key} = "{version}"\n'
                 manifest.write_text("".join(lines), encoding="utf-8")
                 return
         message = f"Mise manifest has no declared version to hold: {selector}"
