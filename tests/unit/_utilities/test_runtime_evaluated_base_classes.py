@@ -447,19 +447,20 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
     ) -> None:
         provider = installed_dependency_path / "planned_bridge"
         provider.mkdir()
-        tm.ok(u.Cli.atomic_write_text_file(
-            provider / "__init__.py",
-            "from planned_destination.models import Contract\n"
-            "raise RuntimeError('provider must not be imported')\n",
-        ))
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                provider / "__init__.py",
+                "from planned_destination.models import Contract\n"
+                "raise RuntimeError('provider must not be imported')\n",
+            ),
+        )
         package = tmp_path / "src" / "planned_destination"
         planned = {
             package / "__init__.py": "",
             package / "models.py": self._root_import()
             + "class Contract(RuntimeRoot): pass\n",
             package / "consumer.py": (
-                "from planned_bridge import Contract\n"
-                "class Consumer(Contract): pass\n"
+                "from planned_bridge import Contract\nclass Consumer(Contract): pass\n"
             ),
         }
         tm.that(

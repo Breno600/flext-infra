@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_cli import u
+
 from flext_core import r
 from flext_infra import c, config, m, t
 from flext_infra._utilities.base import FlextInfraUtilitiesBase
@@ -26,7 +27,11 @@ class FlextInfraUtilitiesManagedConflicts:
         *,
         conflict_sections: t.StrSequence,
     ) -> p.Result[str]:
-        """Recover identical generated assignments without choosing between values."""
+        """Recover identical generated assignments without choosing between values.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+        """
         if u.Cli.toml_mapping_from_text(content) is not None:
             return r[str].ok(content)
         recovered: list[str] = []
@@ -37,7 +42,7 @@ class FlextInfraUtilitiesManagedConflicts:
             header = c.Infra.TOML_SECTION_HEADER_RE.fullmatch(line.rstrip("\r\n"))
             array_header = line.strip()
             is_array_header = array_header.startswith("[[") and array_header.endswith(
-                "]]"
+                "]]",
             )
             if not pending and (header is not None or is_array_header):
                 section = header.group(1) if header is not None else array_header[2:-2]
@@ -61,7 +66,7 @@ class FlextInfraUtilitiesManagedConflicts:
             previous = assignments.get(key)
             if previous is not None and previous != assignment:
                 return r[str].fail(
-                    f"divergent managed TOML assignment: {section}.{key}"
+                    f"divergent managed TOML assignment: {section}.{key}",
                 )
             if previous is None:
                 assignments[key] = assignment
