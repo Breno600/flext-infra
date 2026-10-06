@@ -774,8 +774,7 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 		mise_offline_mode="$$1"; shift; \
 		mise_exec "$$mise_offline_mode" env 'MISE_OFFLINE=true' "$$@"; \
 	}; \
-
-	# The only tolerated Mise warning: ephemeral CI runners ship pre-seeded \
+# The only tolerated Mise warning: ephemeral CI runners ship pre-seeded \
 	# shims (python3, make) and `mise install` always announces it declines to \
 	# replace them while every real install still succeeds (cosmos-main PR 346 \
 	# CI run 37348896444, bead on cosmos-l2wc2). Every OTHER mise WARN stays \
