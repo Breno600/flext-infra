@@ -577,16 +577,13 @@ class FlextInfraUtilitiesRopeSourceBases:
             # calls, so Rope resolves the declared base to a PyFunction; the
             # base identity is still the class that call constructs at
             # runtime.
-            if (
-                isinstance(
-                    value,
-                    FlextInfraUtilitiesRopeRuntime.runtime_type(
-                        "rope.base.pyobjectsdef",
-                        "PyFunction",
-                    ),
-                )
-                and value.get_name() in ("TypedDict", "NamedTuple")
-            ):
+            if isinstance(
+                value,
+                FlextInfraUtilitiesRopeRuntime.runtime_type(
+                    "rope.base.pyobjectsdef",
+                    "PyFunction",
+                ),
+            ) and value.get_name() in {"TypedDict", "NamedTuple"}:
                 module = value.get_module()
                 module_name = module.get_name() if module is not None else ""
                 name = value.get_name()
