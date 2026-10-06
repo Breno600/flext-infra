@@ -528,6 +528,13 @@ class FlextInfraUtilitiesRopeSourceBases:
             return provider_reference(module, attributes, visiting, depth)
 
         object_id = external_reference("builtins", ("object",))
+        # Resolved-reference memo: deep facade attribute chains (the root
+        # workspace test models re-export the full fleet facade depth) resolve
+        # the same keys thousands of times and recursed past the interpreter
+        # stack (RecursionError inside rope's path join). The memo is keyed by
+        # the reference key alone; a key being visited cycles through the
+        # visiting guard below, never through the memo. flext-qwvb5 2026-10-05.
+        resolved_memo: dict[str, str] = {}
 
         def resolve(
             reference: m.Infra.SourceClassReference,
@@ -542,6 +549,9 @@ class FlextInfraUtilitiesRopeSourceBases:
             if key in visiting:
                 message = f"Cyclic class alias: {key}"
                 raise ValueError(message)
+            memo = resolved_memo.get(key)
+            if memo is not None:
+                return memo
             attributes = list(reference.attributes)
             if target not in definitions and target not in external:
                 parts = target.split(".")
@@ -576,7 +586,8 @@ class FlextInfraUtilitiesRopeSourceBases:
                     )
                     attributes.clear()
             for attribute in attributes:
-                target = member(target, attribute, depth + 1)
+                target = member(target, attribute)
+            resolved_memo[key] = target
             return target
 
         def bases(identity: str) -> t.StrTuple:
