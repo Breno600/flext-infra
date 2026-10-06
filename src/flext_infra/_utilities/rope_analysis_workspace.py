@@ -392,6 +392,10 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             or bool(
                 set(directory.relative_to(resolved_root).parts) & cls._excluded_parts(),
             )
+            or any(
+                c.Infra.TRANSIENT_PYTEST_SCRATCH_PART.match(part)
+                for part in directory.relative_to(resolved_root).parts
+            )
         )
 
     @classmethod
