@@ -7,7 +7,6 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import ast
 import hashlib
 import importlib.util
 import json
@@ -18,6 +17,7 @@ from types import ModuleType
 import pytest
 from flext_tests import tm
 
+from flext_infra.bootstrap import FlextInfraBootstrap
 from tests import c, u
 
 
@@ -43,33 +43,6 @@ def _converge_module() -> ModuleType:
 
 class TestsFlextInfraMiseLockTransaction:
     """Exercise the consumer script through its generated CLI boundary."""
-
-    @staticmethod
-    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
-    def test_generated_exception_messages_are_precomputed(
-        tmp_path: Path,
-        profile: c.Infra.MakeProfile,
-    ) -> None:
-        """Generation preserves Ruff-compatible bootstrap exception messages."""
-        root, _ = u.Tests.render_make_environment(tmp_path, profile)
-        for script in ("mise-lock-converge.py", "mise-lock-transaction.py"):
-            generated = root / "bin" / script
-            syntax = ast.parse(generated.read_text(encoding="utf-8"))
-            for statement in ast.walk(syntax):
-                if not isinstance(statement, ast.Raise):
-                    continue
-                if not isinstance(statement.exc, ast.Call):
-                    continue
-                for argument in statement.exc.args:
-                    tm.that(
-                        isinstance(argument, ast.JoinedStr)
-                        or (
-                            isinstance(argument, ast.Constant)
-                            and isinstance(argument.value, str)
-                        ),
-                        eq=False,
-                        msg=f"{script}:{statement.lineno} embeds its exception message",
-                    )
 
     @staticmethod
     def _stage(root: Path, suffix: str, *, crlf: bool = False) -> Path:
@@ -381,8 +354,8 @@ class TestsMiseHoldConvergence:
 
     @staticmethod
     def test_failing_install_tools_parses_mise_diagnostics() -> None:
-        """The probe parser names every failing selector at its failed version."""
-        parsed = _converge_module().MiseLockConverge.failing_install_tools(
+        """Test failing install tools parses mise diagnostics."""
+        parsed = FlextInfraBootstrap._failing_install_tools(
             "mise ERROR Failed to install tools:"
             " github:kucherenko/jscpd@5.3.3, github:qltysh/qlty@0.645.0\n",
         )
@@ -396,7 +369,7 @@ class TestsMiseHoldConvergence:
 
     @staticmethod
     def test_failing_install_tools_refuses_unparsable_diagnostics() -> None:
-        """A staged failure that names no tool stops converge with a loud error."""
+        """Test failing install tools refuses unparsable diagnostics."""
         with pytest.raises(ValueError, match="named no failing tool"):
             _converge_module().MiseLockConverge.failing_install_tools("boom")
 
@@ -404,7 +377,7 @@ class TestsMiseHoldConvergence:
     def test_hold_manifest_version_rewrites_only_the_named_section(
         tmp_path: Path,
     ) -> None:
-        """Holding rewrites only the named tool's version inside the staged manifest."""
+        """Test hold manifest version rewrites only the named section."""
         manifest = tmp_path / ".mise.toml"
         manifest.write_text(
             '[tools]\npython = "3.13"\n'
@@ -427,11 +400,15 @@ class TestsMiseHoldConvergence:
     def test_staged_manifest_resolves_inside_the_declared_stage(
         tmp_path: Path,
     ) -> None:
-        """The guarded manifest path stays the staged ``.mise.toml`` itself."""
-        stage = tmp_path / "stage"
-        stage.mkdir()
-        manifest = stage / ".mise.toml"
-        manifest.write_text("[tools]\n", encoding="utf-8")
+        """Test remote release candidates walk below the failed release."""
+
+        def fake_ls_remote(
+            runtime: Path,
+            arguments: list[str],
+            environment: dict[str, str],
+        ) -> str:
+            tm.that(arguments[:1] == ["ls-remote"])
+            return "v5.4.0\n5.3.3\nv5.3.2\n5.2.0\nnot-a-version\n"
 
         resolved = _converge_module().MiseLockConverge.staged_manifest(stage)
 

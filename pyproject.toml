@@ -181,7 +181,6 @@ include = ["/src/flext_infra/**", "/config/**"]
 [tool.mypy]
 mypy_path = ["src"]
 plugins = ["pydantic.mypy"]
-disable_error_code = ["prop-decorator", "call-arg"]
 python_version = "3.13"
 allow_redefinition = true
 check_untyped_defs = true

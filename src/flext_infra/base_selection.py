@@ -13,7 +13,7 @@ from flext_infra.base import FlextInfraServiceBase
 from flext_infra.typings import t
 
 
-class FlextInfraProjectSelectionServiceBase[TDomainResult: CliResultValue](
+class FlextInfraProjectSelectionServiceBase[TDomainResult](
     FlextInfraServiceBase[TDomainResult],
     FlextInfraProjectSelectionMixin,
 ):

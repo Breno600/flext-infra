@@ -55,8 +55,7 @@ class TestsFlextInfraGitSweepSemantics:
         local = tm.ok(
             u.Infra.git_ref_heads(
                 m.Infra.GitRefHeadsRequest(
-                    repo_root=repository,
-                    namespace="refs/heads",
+                    repo_root=repository, namespace="refs/heads",
                 ),
             ),
         )

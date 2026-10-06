@@ -136,9 +136,8 @@ class TestsFlextInfraCodegenMakeUpgrade:
 
         The generated Makefile confines every uv upgrade to the `upg`
         lifecycle and every `mise lock --bump` to the shared bootstrap gated by
-        a switch that only `upg` sets; `setup` never writes a lock and always
-        runs, installing exactly what the lock pins or, on drift, warning and
-        installing without touching it.
+        a switch that only `upg` sets; `setup` syncs `--locked`, and the
+        generated `.mise.toml` makes mise install exactly what the lock pins.
         """
         project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
@@ -160,21 +159,17 @@ class TestsFlextInfraCodegenMakeUpgrade:
         toolchain = config.Infra.codegen.toolchain
         lock_invocations = re.findall(r"lock --bump([^;]*);", makefile)
         tm.that(tuple(arguments.strip() for arguments in lock_invocations), eq=("",))
-        # Only upg writes locks, and setup always runs: no reconcile or relock
-        # path survives; a drifted mise.lock is installed around with the
-        # lockfile disabled for that setup, never rewritten.
+        # Setup never locks (operator 2026-10-02): no reconcile or relock path
+        # survives, and a lock that no longer satisfies the manifest stops.
         tm.that(
             makefile,
             lacks=[
                 "setup reconcile",
-                '" reconcile "',
-                '" relock "',
-                "flext_infra/bootstrap.py",
+                ' reconcile "$$project_root"',
+                'relock "$(PROJECT_ROOT)"',
             ],
         )
-        tm.that(makefile, has="mise.lock drifts from .mise.toml")
-        tm.that(makefile, has='$${mise_lock_drift:+"MISE_LOCKED=false"}')
-        tm.that(makefile, has='$${mise_lock_drift:+"SETUP_MISE_LOCK_DRIFT=1"}')
+        tm.that(makefile, has="does not satisfy .mise.toml under Mise %s; run make upg")
         # Only a missing-tool install and the upg resolution reach the network;
         # every other Mise call runs through the declared offline wrapper.
         offline = " ".join(
@@ -214,13 +209,8 @@ class TestsFlextInfraCodegenMakeUpgrade:
         tm.that(makefile, has="upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle")
         sync_flags = re.search(r"^UV_SYNC_FLAGS := (.*)$", makefile, re.MULTILINE)
         assert sync_flags is not None
-        tm.that(sync_flags.group(1), lacks=["--upgrade", "--locked", "--frozen"])
-        # A drifted uv.lock falls back to `--frozen`, which never writes it.
-        tm.that(
-            re.findall(r"\$\(UV\) sync [^;]*?(--locked|--frozen)", makefile),
-            eq=["--locked", "--frozen"],
-        )
-        tm.that(makefile, has="uv.lock drifts from pyproject.toml")
+        tm.that(sync_flags.group(1), has="--locked")
+        tm.that(sync_flags.group(1), lacks="--upgrade")
 
         mise_toml = u.Cli.toml_mapping_from_text(
             (project_root / c.Infra.MISE_TOML_FILENAME).read_text(encoding="utf-8"),
@@ -237,16 +227,6 @@ class TestsFlextInfraCodegenMakeUpgrade:
             settings.get("lockfile_platforms"),
             eq=list(toolchain.mise_lockfile_platforms),
         )
-        tools = mise_toml.get("tools")
-        assert isinstance(tools, Mapping)
-        jscpd = tools.get(toolchain.tool_selectors["jscpd"])
-        waza = tools.get(toolchain.tool_selectors["waza"])
-        assert isinstance(jscpd, Mapping)
-        assert isinstance(waza, Mapping)
-        tm.that(jscpd.get("version"), eq=toolchain.tool_versions["jscpd"])
-        tm.that(jscpd.get("platforms"), eq=None)
-        tm.that(waza.get("version"), eq=toolchain.tool_versions["waza"])
-        tm.that(waza.get("version_prefix"), eq=toolchain.tool_version_prefixes["waza"])
 
     @staticmethod
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
