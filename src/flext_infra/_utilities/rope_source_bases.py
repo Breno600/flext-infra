@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import ast
+import contextlib
 import importlib.util
 import sys
 from collections.abc import MutableMapping
@@ -57,7 +58,7 @@ class FlextInfraUtilitiesRopeSourceBases:
             The bound identity, attributes, and Ruff-qualified spelling.
 
         Raises:
-            ValueError: If the expression or its lexical binding is not a class.
+            TypeError: If the expression or its lexical binding is not a class.
 
         """
         # Unwrap Subscript and Attribute in ONE loop: a chained form like
@@ -75,13 +76,13 @@ class FlextInfraUtilitiesRopeSourceBases:
             message = (
                 f"Unsupported class reference in {module}: {ast.unparse(expression)}"
             )
-            raise ValueError(message)
+            raise TypeError(message)
         name = expression.id
         if name in bindings:
             binding = bindings[name]
             if binding is None:
                 message = f"Non-class binding used as a base in {module}: {name}"
-                raise ValueError(message)
+                raise TypeError(message)
         else:
             binding = m.Infra.SourceClassReference(
                 target="builtins",
@@ -109,10 +110,9 @@ class FlextInfraUtilitiesRopeSourceBases:
         if cached:
             return cached or None
         backing: str | None = None
-        try:
+        runtime: str | None = None
+        with contextlib.suppress(Exception):
             runtime = importlib.import_module(target)
-        except Exception:
-            runtime = None
         file = getattr(runtime, "__file__", None)
         if file:
             stem = Path(file).stem
@@ -517,9 +517,9 @@ class FlextInfraUtilitiesRopeSourceBases:
         Returns:
             Sorted configured roots and derived Ruff-qualified base expressions.
 
-        Raises:
-            TypeError: If Rope resolves a required base to a non-class.
-            ValueError: If a source binding or inheritance order is invalid.
+        The ``TypeError`` (Rope resolved a required base to a non-class) and
+        the ``ValueError`` (invalid source binding or inheritance order) of
+        the resolution helpers propagate unchanged.
 
         """
         definitions: MutableMapping[str, m.Infra.SourceClassDefinition] = {}
@@ -558,7 +558,7 @@ class FlextInfraUtilitiesRopeSourceBases:
             module_aliases.setdefault(alias, absolute)
         owned_definitions = tuple(definitions.values())
         definition_keys: dict[str, str] = {}
-        for definition_identity, definition in definitions.items():
+        for definition_identity in definitions:
             module_name, qualified, _ = definition_identity.split(":", 2)
             definition_keys[f"{module_name}.{qualified}"] = definition_identity
         external: MutableMapping[str, t.Infra.RopePyObject] = {}
@@ -743,13 +743,14 @@ class FlextInfraUtilitiesRopeSourceBases:
                 chain = " <- ".join(sorted(visiting))
                 message = f"Cyclic provider reexport: {target} (visiting: {chain})"
                 raise ValueError(message)
-            try:
+            binding: p.Infra.RopeImportedName | object | None = None
+            # The provider cannot resolve the attribute statically (a star
+            # re-export, a runtime-injected name): the base degrades to its
+            # qualified name as a synthetic terminal identity instead of
+            # failing the whole walk.
+            with contextlib.suppress(Exception):
                 binding = module.get_attribute(name)
-            except Exception:
-                # The provider cannot resolve the attribute statically (a
-                # star re-export, a runtime-injected name): the base
-                # degrades to its qualified name as a synthetic terminal
-                # identity instead of failing the whole walk.
+            if binding is None:
                 return target
             if isinstance(binding, p.Infra.RopeImportedName):
                 imported_name = provider_module_name(binding.imported_module)
@@ -918,7 +919,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                     "External class has no declared source or native identity:"
                     f" {identity}"
                 )
-                raise ValueError(message)
+                raise TypeError(message)
             builtin_class = FlextInfraUtilitiesRopeRuntime.runtime_type(
                 "rope.base.builtins",
                 "BuiltinClass",

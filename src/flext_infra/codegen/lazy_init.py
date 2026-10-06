@@ -13,7 +13,6 @@ from pathlib import Path
 from time import perf_counter
 from typing import TYPE_CHECKING, Annotated, override
 
-import flext_infra._models.flext_infra_codegen_lazy_init_planner
 from flext_core import r
 from flext_infra._config import config
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase

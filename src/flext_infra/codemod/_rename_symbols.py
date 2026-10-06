@@ -161,7 +161,6 @@ class FlextInfraRenameSymbols:
             The resulting ``t.MappingKV[Path, t.VariadicTuple[m.Infra.SourceRewrite]]``.
 
         Raises:
-            TypeError: If CSV Rope campaign produced a non-content effect.
             ValueError: If Rope input changed after authentication; or if CSV
                 destination has no declared current public owner; or if symbol campaign
                 requires identifier paths; or if CSV Rope campaign escaped authenticated
@@ -221,56 +220,82 @@ class FlextInfraRenameSymbols:
                         resources=elected,
                     )
                     for change in changes.changes:
-                        if not isinstance(change, p.Infra.RopeChangeContents):
-                            msg = "CSV Rope campaign produced a non-content effect"
-                            raise TypeError(msg)
-                        path = Path(change.resource.real_path)
-                        if path not in sources:
-                            msg = f"CSV Rope campaign escaped known inventory: {path}"
-                            raise ValueError(msg)
-                        original = sources[path]
-                        matcher = SequenceMatcher(
-                            a=original,
-                            b=change.new_contents,
-                            autojunk=False,
-                        ).get_opcodes()
-                        rewrites = tuple(
-                            m.Infra.SourceRewrite(
-                                start=start,
-                                end=end,
-                                text=change.new_contents[updated_start:updated_end],
-                            )
-                            for kind, start, end, updated_start, updated_end in matcher
-                            if kind != "equal"
-                        )
-                        spans = cls._eligible_spans(
-                            project,
+                        cls._record_campaign_change(
                             change,
-                            original,
-                            (owner, old_suffix, new_suffix),
-                            rewrites,
+                            project=project,
+                            sources=sources,
+                            identity=(owner, old_suffix, new_suffix),
+                            planned=planned,
                         )
-                        for edit in rewrites:
-                            containing = tuple(
-                                allowed
-                                for begin, finish, allowed in spans
-                                if begin <= edit.start and edit.end <= finish
-                            )
-                            if not containing:
-                                msg = (
-                                    f"Rope CSV edit has no single authenticated "
-                                    f"member span: {path}"
-                                )
-                                raise ValueError(msg)
-                            if not all(containing):
-                                continue
-                            edits = planned.setdefault(path, [])
-                            if edit not in edits:
-                                edits.append(edit)
             if bindings and not accepted:
                 msg = f"CSV destination has no declared current public owner: {new}"
                 raise ValueError(msg)
         return {path: tuple(edits) for path, edits in planned.items()}
+
+    @classmethod
+    def _record_campaign_change(
+        cls,
+        change: p.Infra.RopeChange,
+        *,
+        project: t.Infra.RopeProject,
+        sources: t.MappingKV[Path, str],
+        identity: t.StrSequence,
+        planned: t.MutableMappingKV[Path, t.MutableSequenceOf[m.Infra.SourceRewrite]],
+    ) -> None:
+        """Validate and record one Rope content change from a CSV campaign.
+
+        Raises:
+            TypeError: If the campaign produced a non-content effect.
+            ValueError: If an edit has no single authenticated span or escapes
+                the known inventory.
+        """
+        if not isinstance(change, p.Infra.RopeChangeContents):
+            msg = "CSV Rope campaign produced a non-content effect"
+            raise TypeError(msg)
+        path = Path(change.resource.real_path)
+        if path not in sources:
+            msg = f"CSV Rope campaign escaped known inventory: {path}"
+            raise ValueError(msg)
+        original = sources[path]
+        matcher = SequenceMatcher(
+            a=original,
+            b=change.new_contents,
+            autojunk=False,
+        ).get_opcodes()
+        rewrites = tuple(
+            m.Infra.SourceRewrite(
+                start=start,
+                end=end,
+                text=change.new_contents[updated_start:updated_end],
+            )
+            for kind, start, end, updated_start, updated_end in matcher
+            if kind != "equal"
+        )
+        owner, old_suffix, new_suffix = identity
+        spans = cls._eligible_spans(
+            project,
+            change,
+            original,
+            (owner, old_suffix, new_suffix),
+            rewrites,
+        )
+        for edit in rewrites:
+            containing = tuple(
+                allowed
+                for begin, finish, allowed in spans
+                if begin <= edit.start and edit.end <= finish
+            )
+            if not containing:
+                msg = (
+                    f"Rope CSV edit has no single authenticated "
+                    f"member span: {path}"
+                )
+                raise ValueError(msg)
+            if not all(containing):
+                continue
+            edits = planned.setdefault(path, [])
+            if edit not in edits:
+                edits.append(edit)
 
 
 __all__: list[str] = ["FlextInfraRenameSymbols"]
