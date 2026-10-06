@@ -194,6 +194,11 @@ class FlextInfraUtilitiesRopeSourceBases:
                         node.targets if isinstance(node, ast.Assign) else [node.target]
                     )
                     if any(not isinstance(target, ast.Name) for target in targets):
+                        if allow_conditional:
+                            # External/installed modules may mutate attributes or
+                            # dunders at runtime; those bindings resolve in the
+                            # module's own runtime, not statically.
+                            continue
                         message = (
                             f"Unsupported class binding mutation in {module}: "
                             f"{ast.unparse(node)}"
@@ -223,6 +228,17 @@ class FlextInfraUtilitiesRopeSourceBases:
                                 else None
                             )
                 elif isinstance(node, (ast.Delete, ast.AugAssign)):
+                    if allow_conditional:
+                        # External/installed modules mutate names, attributes,
+                        # and subscripts at runtime; an augmented assignment or
+                        # deletion never changes a binding's class-ness, so the
+                        # binding resolves in the module's own runtime.
+                        if isinstance(node, ast.AugAssign) and isinstance(
+                            node.target,
+                            ast.Name,
+                        ):
+                            bindings.setdefault(node.target.id, None)
+                        continue
                     message = (
                         f"Unsupported class binding mutation in {module}: "
                         f"{ast.unparse(node)}"
@@ -470,7 +486,10 @@ class FlextInfraUtilitiesRopeSourceBases:
             depth: int = 0,
         ) -> str:
             if depth > c.Infra.ROPE_WALK_DEPTH_BUDGET:
-                message = f"Unresolved external base: {module.get_name()}"
+                message = (
+                    f"Unresolved external base: {module.get_name()} "
+                    f"at depth {depth}"
+                )
                 raise ValueError(message)
             if not attributes:
                 message = f"Module used as a class base: {module.get_name()}"
@@ -515,7 +534,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                 )
             identity = external_identity(binding.get_object())
             for attribute in remaining:
-                identity = member(identity, attribute, depth + 1)
+                identity = member(identity, attribute, depth + 1, visiting)
             return identity
 
         def external_reference(
@@ -584,12 +603,12 @@ class FlextInfraUtilitiesRopeSourceBases:
                     target = external_reference(
                         target,
                         tuple(attributes),
-                        visiting,
+                        visiting | {key},
                         depth + 1,
                     )
                     attributes.clear()
             for attribute in attributes:
-                target = member(target, attribute)
+                target = member(target, attribute, 0, visiting | {key})
             resolved_memo[key] = target
             return target
 
@@ -653,7 +672,12 @@ class FlextInfraUtilitiesRopeSourceBases:
             linearizations[identity] = tuple(result)
             return linearizations[identity]
 
-        def member(identity: str, name: str, depth: int = 0) -> str:
+        def member(
+            identity: str,
+            name: str,
+            depth: int = 0,
+            visiting: frozenset[str] = frozenset(),
+        ) -> str:
             for ancestor in linearize(identity):
                 if ancestor in definitions:
                     members = definitions[ancestor].members
@@ -665,7 +689,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                             f"Non-class member shadows required base: {ancestor}.{name}"
                         )
                         raise ValueError(message)
-                    return resolve(reference, frozenset(), depth + 1)
+                    return resolve(reference, visiting, depth + 1)
                 value = external[ancestor]
                 external_members = value.get_attributes()
                 if name in external_members:
