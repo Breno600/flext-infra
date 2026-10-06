@@ -29,7 +29,11 @@ class FlextInfraRuntimeDevDependencyDetector(
         None
     )
     quiet: Annotated[
+<<<<<<< HEAD
         bool, m.Field(default=False, description="Reduce command output"),
+=======
+        bool, m.Field(default=False, description="Reduce command output")
+>>>>>>> origin/wip/preserved-1656-noselfuse-v2
     ] = False
     no_fail: Annotated[
         bool,

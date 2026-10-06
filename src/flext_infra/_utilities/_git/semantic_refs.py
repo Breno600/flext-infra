@@ -351,7 +351,11 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             )
         output = text if isinstance(text, str) else str(text)
         return r[m.Infra.GitTextReport].ok(
+<<<<<<< HEAD
             m.Infra.GitTextReport(text=output.partition("\t")[0].strip()),
+=======
+            m.Infra.GitTextReport(text=text.partition("\t")[0].strip()),
+>>>>>>> origin/wip/preserved-1656-noselfuse-v2
         )
 
     @classmethod
