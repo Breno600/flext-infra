@@ -493,7 +493,7 @@ mise_exec() { \
 'MISE_GITHUB_OAUTH_OPEN_BROWSER=false' \
 'MISE_LOCKFILE=true' \
 'MISE_LOCKED=true' \
-'MISE_MINIMUM_RELEASE_AGE=7d' \
+'MISE_MINIMUM_RELEASE_AGE=10d' \
 'MISE_NPM_PACKAGE_MANAGER=bun' \
 $${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
 "HOME=$$scratch/home" \
@@ -754,7 +754,7 @@ mise_exec() { \
 'MISE_GITHUB_OAUTH_OPEN_BROWSER=false' \
 'MISE_LOCKFILE=true' \
 'MISE_LOCKED=true' \
-'MISE_MINIMUM_RELEASE_AGE=7d' \
+'MISE_MINIMUM_RELEASE_AGE=10d' \
 'MISE_NPM_PACKAGE_MANAGER=bun' \
 $${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
 "HOME=$$scratch/home" \
@@ -809,7 +809,7 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 		mise_exec "$$mise_offline_mode" env 'MISE_OFFLINE=true' "$$@"; \
 	}; \
 mise_has_blocking_warning() { \
-		grep -F 'mise WARN' "$$1" | grep -Fv 'not replacing unmanaged file in shims directory' | grep -q .; \
+		grep -Fq 'mise WARN' "$$1"; \
 	}; \
 	mise_checked() { \
 		mise_log="$$1"; shift; \
@@ -880,12 +880,6 @@ mise_has_blocking_warning() { \
 	fi; \
 	caller_mise_version="$$runtime_release"; \
 	printf 'mise setup receipt=%s storage=%s\n' "$$runtime_release" "$$mise_storage_root"; \
-	project_parent=$${project_root%/*}; \
-	if [ -z "$$project_parent" ]; then project_parent=/; fi; \
-	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
-	if [ -z "$$scratch" ] || [ ! -d "$$scratch" ]; then \
-		printf 'ERROR: mise bootstrap scratch creation failed (template: %s/.%s.mise-bootstrap.XXXXXX)\n' "$$project_parent" "$${project_root##*/}" >&2; exit 2; \
-	fi; \
 	# Only ``upg`` locks, once per manifest it provisions from. Lock every \
 	# configured tool in one pass so removed selectors cannot survive beside \
 	# their replacement in mise.lock. The relock half of ``upg`` (lock without \
@@ -918,29 +912,8 @@ mise_has_blocking_warning() { \
 			if [ -d "$$project_root/.mise/locks" ]; then mkdir -p "$$lock_stage/.mise"; cp -R "$$project_root/.mise/locks" "$$lock_stage/.mise/locks"; fi; \
 		fi; \
 		mise_trusted_config_paths="$$lock_stage"; \
-		if mise_checked "$$scratch/lock.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" lock --bump; then \
-			:; \
-		elif grep -q "refusing to replace locked version" "$$scratch/lock.log"; then \
-			printf 'INFO: kept the current mise.lock: the newest release was refused for missing platform assets; retry the bump when the release regains full platform coverage\n' >&2; \
-		else \
-			cat "$$scratch/lock.log" >&2; \
-			exit 2; \
-		fi; \
-		# A broken upstream release fails the staged install. The generated \
-		# converge script holds every failing tool at its newest installable release \
-		# inside the stage (loud INFO per hold; the committed manifest never \
-		# changes, so the next upg retries the newest release), then the \
-		# install is retried against the held stage before publication. \
-		if mise_exec project "$$pinned_mise" -C "$$lock_stage" install --yes >"$$scratch/install.log" 2>&1; then :; \
-		else install_status=$$?; cat "$$scratch/install.log" >&2; \
-			printf 'upg relock: staged install failed (exit %s); holding failing tools at their newest installable releases\n' "$$install_status" >&2; \
-			converge_python=$$(command -v python3 || true); \
-			if [ -z "$$converge_python" ]; then \
-				printf 'ERROR: converge needs a host python3 (stdlib only); provision one and retry\n' >&2; exit 2; \
-			fi; \
-			mise_checked "$$scratch/converge.log" "$$converge_python" "$$project_root/bin/mise-lock-converge.py" "$$mise_storage_root" "$$lock_stage" "$$runtime_release"; \
-			mise_checked "$$scratch/install-retry.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" install --yes; \
-		fi; \
+		mise_checked "$$scratch/lock.log" mise_exec project 'MISE_LOCKED=false' "$$pinned_mise" -C "$$lock_stage" lock --bump; \
+		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" install --locked --yes; \
 		mise_checked "$$scratch/staged-python.log" mise_offline project "$$pinned_mise" -C "$$lock_stage" which python; \
 		staged_python=$$(cat "$$scratch/staged-python.log"); \
 		if [ ! -x "$$staged_python" ]; then printf 'ERROR: staged Mise Python is not executable: %s\n' "$$staged_python" >&2; exit 2; fi; \
@@ -965,7 +938,7 @@ mise_receipt launcher-version "$$lock_stage/artifacts/bin/mise"; \
 	else \
 		# Setup consumes the declared lock policy in one install. An invalid \
 		# lock stops here with its original cause; only make upg repairs it. \
-		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$project_root" install --yes; \
+		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$project_root" install --locked --yes; \
 	fi; \
 	mise_checked_stdout "$$scratch/ast-grep-version.stdout" "$$scratch/ast-grep-version.stderr" mise_offline project "$$pinned_mise" -C "$$project_root" exec -- ast-grep --version; \
 	if [ -s "$$scratch/ast-grep-version.stderr" ]; then \
@@ -989,6 +962,15 @@ mise_receipt launcher-version "$$lock_stage/artifacts/bin/mise"; \
 	direnv_executable=$$(cat "$$scratch/direnv-path.log"); \
 	if [ ! -x "$$direnv_executable" ]; then \
 		printf 'ERROR: Mise resolved a non-executable direnv path: %s\n' "$$direnv_executable" >&2; exit 2; \
+	fi; \
+	# The .envrc is a managed projection artifact: approve its hash so the \
+	# activation contract holds on fresh machines (a CI runner never runs an \
+	# interactive allow, and every downstream direnv activation — including \
+	# the check gate's — refuses a blocked .envrc). direnv re-blocks on any \
+	# later content change through its own hash check, so this approves only \
+	# the projected form, never arbitrary edits. \
+	if [ -f "$$project_root/.envrc" ]; then \
+		"$$direnv_executable" allow "$$project_root"; \
 	fi; \
 	mise_checked "$$scratch/python-path.log" mise_offline project "$$pinned_mise" -C "$$project_root" which python; \
 	python_executable=$$(cat "$$scratch/python-path.log"); \
@@ -2545,7 +2527,7 @@ _builtin-bootstrap-candidate: _builtin_require_environment
 # independently when malformed Python prevents the Rope phases from loading.
 # The current directory defines scope; callers never address tools directly.
 _builtin_mod_apply: _builtin_require_environment
-	@$(PROJECT_FLEXT_INFRA) refactor mod --apply
+	@$(PROJECT_FLEXT_INFRA) refactor mod --repository-root "$(PROJECT_ROOT)" --apply
 
 _builtin_mod_text: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) refactor mod-text --apply

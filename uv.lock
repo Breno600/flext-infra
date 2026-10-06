@@ -406,7 +406,7 @@ wheels = [
 [[package]]
 name = "flext-cli"
 version = "0.12.1"
-source = { git = "https://github.com/flext-sh/flext-cli.git?rev=0.12.0-dev#0ce1dfb9e1581dfb8d6bff12bd484837db63ccad" }
+source = { git = "https://github.com/flext-sh/flext-cli.git?rev=0.12.0-dev#c2a26b513ab44d67ea0f07adf8eec69b3170b8b7" }
 dependencies = [
     { name = "annotated-types" },
     { name = "beartype" },
@@ -433,7 +433,7 @@ dependencies = [
 [[package]]
 name = "flext-core"
 version = "0.12.0"
-source = { git = "https://github.com/flext-sh/flext-core.git?rev=0.12.0-dev#829480665f11e87da88d785394b733482bd14651" }
+source = { git = "https://github.com/flext-sh/flext-core.git?rev=0.12.0-dev#682db237265f790a6fddebde43ca6fbba231e0cf" }
 dependencies = [
     { name = "annotated-types" },
     { name = "beartype" },
@@ -626,7 +626,7 @@ dev = [
 [[package]]
 name = "flext-tests"
 version = "0.12.0"
-source = { git = "https://github.com/flext-sh/flext-tests.git?rev=0.12.0-dev#9c35cb8de1c9def33247e2bffc42bf10891d33a6" }
+source = { git = "https://github.com/flext-sh/flext-tests.git?rev=0.12.0-dev#2e002834fa20ac24832beabff165ce58787e9465" }
 dependencies = [
     { name = "annotated-types" },
     { name = "beartype" },
@@ -1738,7 +1738,7 @@ wheels = [
 [[package]]
 name = "rope"
 version = "1.14.0+dc.3"
-source = { git = "https://github.com/marlon-costa-dc/rope.git?rev=datacosmos#64134bf54db1c02ca19602f320d26e1a570e7786" }
+source = { git = "https://github.com/marlon-costa-dc/rope.git?rev=datacosmos#7a6494e897c22630035e6288ddd1571d93b77fd1" }
 dependencies = [
     { name = "pytoolconfig", extra = ["global"] },
 ]
@@ -1919,16 +1919,16 @@ wheels = [
 
 [[package]]
 name = "typer"
-version = "0.27.2"
+version = "0.27.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-doc" },
     { name = "rich" },
     { name = "shellingham" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/16/f7/57713ba479fd405eb76de31404b2c744c289e336b2d999511ebf51e496f7/typer-0.27.2.tar.gz", hash = "sha256:269b7eb9d3c202ca84b4bc9618cb04ebb43d3d4d1e567e4c768607232c05f945", size = 204045, upload-time = "2026-08-28T10:26:55.046Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/03/51/d33db42cc72ffd8c30777547b42d01f0cbf9d95a770457698d0174b3ed71/typer-0.27.3.tar.gz", hash = "sha256:d0396f770a560ab1b0a8504e13b5f254b728cedb05c61cf0359e944e50ce8901", size = 205303, upload-time = "2026-10-06T17:24:16.61Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/dc/bf/205d0004930ede8f542fb58f601526fccf4ae7626075ca1e6c4de5d3d652/typer-0.27.2-py3-none-any.whl", hash = "sha256:b3a5fc4342d5fc8fda8fc3010b1cf117e9249aab7fae800c2eff62fd3842d97d", size = 123130, upload-time = "2026-08-28T10:26:53.752Z" },
+    { url = "https://files.pythonhosted.org/packages/07/ea/2e31b67051e91a133189e9c000c222502ddc6969856416de0d095de4c0b0/typer-0.27.3-py3-none-any.whl", hash = "sha256:e50022f28b82a86313e54501317a1db64bf8f8d036ff8cfe5ca7e47675454aff", size = 123312, upload-time = "2026-10-06T17:24:15.054Z" },
 ]
 
 [[package]]
