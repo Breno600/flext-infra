@@ -172,7 +172,8 @@ class FlextInfraModelsLayout:
             m.Field(description="Per-project layout deltas keyed by project name"),
         ] = m.Field(
             default_factory=lambda: MappingProxyType[
-                str, FlextInfraModelsLayout.LayoutProjectOverrideSpec,
+                str,
+                FlextInfraModelsLayout.LayoutProjectOverrideSpec,
             ]({}),
         )
 
