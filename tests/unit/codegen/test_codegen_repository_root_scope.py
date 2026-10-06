@@ -40,7 +40,11 @@ class TestsFlextInfraCodegenRepositoryRootScope:
             index for index, line in enumerate(lines) if line.startswith("\t")
         )
         recipe = lines[indices[0] : indices[-1] + 1]
-        tm.that(all(line.startswith("\t") for line in recipe), eq=True)
+        tm.that(
+            all(line.startswith("\t") for line in recipe),
+            eq=True,
+            msg="\n".join(recipe),
+        )
         tm.that(all(line.endswith("\\") for line in recipe[:-1]), eq=True)
         tm.that(recipe[-1].endswith("\\"), eq=False)
         tm.that(section.count("set -eu;"), eq=1)

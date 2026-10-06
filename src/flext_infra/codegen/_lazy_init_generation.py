@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import flext_infra._models.flext_infra_codegen_lazy_init_planner
 from flext_infra import c, u
 from flext_infra.codegen._lazy_init_generation_files import (
     FlextInfraCodegenLazyInitGenerationFilePlanMixin,
@@ -21,7 +22,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from flext_infra import m, t
-    from flext_infra.codegen.lazy_init_planner import FlextInfraCodegenLazyInitPlanner
 
 
 # Root manifests and initializers are synchronized as one artifact set.
@@ -38,7 +38,7 @@ class FlextInfraCodegenLazyInitGenerationMixin(
         self,
         pkg_dirs: t.SequenceOf[Path],
         *,
-        planner: FlextInfraCodegenLazyInitPlanner,
+        planner: flext_infra._models.flext_infra_codegen_lazy_init_planner.FlextInfraCodegenLazyInitPlanner,
         target_package_dir: Path | None = None,
     ) -> t.VariadicTuple[m.Infra.LazyInitPlan]:
         """Resolve every selected package plan bottom-up without effects.

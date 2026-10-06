@@ -813,7 +813,9 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 		fi; \
 		if ! printf '%s\n' "$$receipt_release" | grep -Eq '^[0-9]+(\.[0-9]+){2}$$'; then \
 			printf 'ERROR: Mise receipt returned invalid version: %s\n' "$$receipt_output" >&2; \
-			printf 'ERROR: Mise receipt stderr: ' >&2; cat "$$mise_receipt_log.stderr" >&2 || true; \
+			printf 'ERROR: Mise receipt stderr: ' >&2; \
+			if cat "$$mise_receipt_log.stderr" >&2; then :; \
+			else printf 'ERROR: cannot read Mise receipt diagnostics: %s\n' "$$mise_receipt_log.stderr" >&2; return 2; fi; \
 			printf 'ERROR: Mise receipt executable: %s; scratch: %s\n' "$$1" "$$scratch" >&2; \
 			return 2; \
 		fi; \
@@ -1521,30 +1523,20 @@ setup: _bootstrap_setup_tools
 pre-commit: _builtin_require_workspace
 	+@set -eu; \
 		trap 'if [ -n "$${FLEXT_SETUP_CREDENTIAL_STORE:-}" ]; then rm -f "$$FLEXT_SETUP_CREDENTIAL_STORE"; fi' EXIT; \
-
 		printf 'approval: setup START\n'; \
 		$(SELF_MAKE) MAKEOVERRIDES= MAKEFLAGS= MFLAGS= CI=Y setup; \
-
 		if [ -n "$${FLEXT_SETUP_CREDENTIAL_STORE:-}" ]; then rm -f "$$FLEXT_SETUP_CREDENTIAL_STORE"; fi; \
 		unset FLEXT_SETUP_CREDENTIAL_STORE GITHUB_TOKEN GH_TOKEN MISE_GITHUB_TOKEN GIT_CONFIG_COUNT; \
-
 		printf 'approval: setup COMPLETE\n'; \
-
 		printf 'approval: audit START\n'; \
 		$(SELF_MAKE) MAKEOVERRIDES= MAKEFLAGS= MFLAGS= CI=Y audit; \
-
 		printf 'approval: audit COMPLETE\n'; \
-
 		printf 'approval: check START\n'; \
 		$(SELF_MAKE) MAKEOVERRIDES= MAKEFLAGS= MFLAGS= CI=Y check; \
-
 		printf 'approval: check COMPLETE\n'; \
-
 		printf 'approval: test START\n'; \
 		$(SELF_MAKE) MAKEOVERRIDES= MAKEFLAGS= MFLAGS= CI=Y test; \
-
 		printf 'approval: test COMPLETE\n'; \
-
 		printf 'approval: COMPLETE\n'
 
 _builtin-pre-commit:
