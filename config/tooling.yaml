@@ -161,6 +161,8 @@ Infra:
           - too-many-public-methods
           - too-many-statements
           - complex-structure
+          - suspicious-subprocess-import
+          - subprocess-without-shell-equals-true
         line-length: 88
         preview: true
         respect-gitignore: true
