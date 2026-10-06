@@ -132,22 +132,47 @@ namespace-enforce` / `refactor accessor-migrate` without `--apply` reports
   without writing) and publish their structured receipts under
   `.reports/refactor/`; a second run over a converged tree writes nothing.
 
-## Information-preserving repair
+## Fleet automation verbs
 
-`make fix` repairs code; it never deletes information. The lint repair runs
-`ruff check --fix` with the `make.ruff.lint_fix` flags of `config/codegen.yaml`, which
-apply Ruff's safe fixes only: the typed Make contract rejects `--unsafe-fixes`. Ruff's
-unsafe T201 fix once deleted `print(..., file=sys.stderr)` from a consumer script and
-turned its failures silent.
+Two surfaces compose the per-repository verbs into fleet-scale loops. Both are
+`flext-infra` CLI subcommands and publish one structured receipt per run.
+
+- `flext-infra workspace fleet-gaps` walks the invoking workspace's declared
+  members and external consumers and publishes `.reports/fleet-gaps.json`:
+  per repository, its porcelain dirty paths, its open pull requests (a
+  failing `gh` degrades to an empty list), its local branches not merged into
+  the integration line, the lint, pyrefly and codemod counts its own
+  `.reports` carry (an absent artifact counts zero), and the standards
+  presence columns (`AGENTS.md`, `.agents/skills/.flext-stamp.json` with its
+  `distribution_version`, `.beads/config.yaml`). The report carries no
+  timestamp: an unchanged tree re-publishes a byte-identical receipt.
+- `flext-infra refactor violations-sweep` measures the repository's mod scan
+  totals, runs the canonical repair sequence (`make fix`, `make fmt`,
+  `make mod`) in order, measures again, and publishes
+  `.reports/refactor/violations-sweep.json`. The command FAILS the moment any
+  total increased: automation may reduce a tree's violations, never grow
+  them. A sweep over a tree the repair sequence cannot improve is a
+  zero-delta success.
+
+## Mandatory unsafe repair channel (operator law 2026-10-05)
+
+**`make fix` ALWAYS runs `ruff check --fix --unsafe-fixes --preview`. This is a direct
+operator order: the unsafe-fix channel is OBLIGATORY in every project and subproject,
+forever, and must never be disabled again.** The typed Make contract enforces it:
+`MakeRuffSpec` fails validation when `make.ruff.lint_fix` lacks `--unsafe-fixes`, so a
+configuration that disables the channel cannot even generate. Removing the flag is a
+regression against an explicit operator order and is reverted on sight.
 
 The fix-safety policy lives in `config/tooling.yaml` (`Infra.tooling.tools.ruff.lint`)
 and `make gen` renders it into every generated `pyproject.toml`:
 
 - `unfixable` names the rules whose fixes delete a diagnostic print, an assignment, a
   redefinition, a duplicated key, value or test case, or a version block. Ruff keeps
-  reporting them and never rewrites them, including a direct or IDE Ruff run.
-- `extend-safe-fixes` is the only channel that promotes an unsafe fix into `make fix`. A
-  rule enters it with evidence that its fix preserves code, comments and diagnostics.
+  reporting them and never rewrites them, including a direct or IDE Ruff run. This is
+  rule selection — it protects specific destructive fixes and never disables the
+  mandatory unsafe channel.
+- `extend-safe-fixes` keeps its historical evidence records from the opt-in era; the
+  channel itself no longer needs promotion because it is always on.
 
 `make mod` rewires `print` diagnostics instead of deleting them. In `src/`, `tests/` and
 `scripts/`, a module that binds the `flext_cli` facade has `print(x)`,
