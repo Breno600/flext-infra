@@ -84,6 +84,9 @@ Infra:
           - GEMINI.md
           - .kilo/**
           - .omo/**
+          # ZCode session artifacts (plan files) are machine-local scratch,
+          # never a live docs or markdown-gate surface.
+          - .zcode/**
           - .tmp/**
           - .claude/**
           - .vscode/**
