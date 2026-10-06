@@ -528,6 +528,13 @@ class FlextInfraUtilitiesRopeSourceBases:
             return provider_reference(module, attributes, visiting, depth)
 
         object_id = external_reference("builtins", ("object",))
+        # Resolved-reference memo: deep facade attribute chains (the root
+        # workspace test models re-export the full fleet facade depth) resolve
+        # the same keys thousands of times and recursed past the interpreter
+        # stack (RecursionError inside rope's path join). The memo is keyed by
+        # the reference key alone; a key being visited cycles through the
+        # visiting guard below, never through the memo. flext-qwvb5 2026-10-05.
+        resolved_memo: dict[str, str] = {}
 
         def resolve(
             reference: m.Infra.SourceClassReference,
@@ -542,6 +549,9 @@ class FlextInfraUtilitiesRopeSourceBases:
             if key in visiting:
                 message = f"Cyclic class alias: {key}"
                 raise ValueError(message)
+            memo = resolved_memo.get(key)
+            if memo is not None:
+                return memo
             attributes = list(reference.attributes)
             if target not in definitions and target not in external:
                 parts = target.split(".")
@@ -576,7 +586,8 @@ class FlextInfraUtilitiesRopeSourceBases:
                     )
                     attributes.clear()
             for attribute in attributes:
-                target = member(target, attribute, depth + 1)
+                target = member(target, attribute)
+            resolved_memo[key] = target
             return target
 
         def bases(identity: str) -> t.StrTuple:
@@ -742,7 +753,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                 raise
             for reference in definition.bases:
                 try:
-                    lineage = linearize(resolve(reference))
+                    linearize(definition.identity)
                 except ValueError as error:
                     # A base whose lineage crosses an unresolved external
                     # attribute (PEP 562 lazy namespace), a planned module
@@ -752,17 +763,35 @@ class FlextInfraUtilitiesRopeSourceBases:
                     # qualify as runtime-evaluated.
                     if str(error).startswith(
                         "Unresolved external base:",
-                    ) or str(error).startswith(
-                        "No source module for required base:",
-                    ):
+                    ) or message.startswith("No source module for required base:"):
                         continue
-                    if str(error).startswith("Unresolved planned base:"):
+                    if message.startswith("Unresolved planned base:"):
+                        continue
+                    if message.startswith("Missing inherited class member:"):
                         continue
                     if str(error).startswith("Cyclic class inheritance:"):
                         continue
                     raise
-                if root_ids.intersection(lineage):
-                    derived.add(reference.qualified_base)
+                for reference in definition.bases:
+                    try:
+                        lineage = linearize(resolve(reference))
+                    except ValueError as error:
+                        # A base whose lineage crosses an unresolved external
+                        # attribute (PEP 562 lazy namespace) or a planned
+                        # module binding that is not a class cannot be
+                        # derived; the class simply does not qualify as
+                        # runtime-evaluated.
+                        if str(error).startswith(
+                            "Unresolved external base:",
+                        ) or str(error).startswith(
+                            "No source module for required base:",
+                        ):
+                            continue
+                        if str(error).startswith("Unresolved planned base:"):
+                            continue
+                        raise
+                    if root_ids.intersection(lineage):
+                        derived.add(reference.qualified_base)
         return tuple(sorted(derived))
 
 
