@@ -212,6 +212,44 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
             )
             if name is not None and name in selected:
                 nodes_by_member[name] = node
+        bound = cls._creation_bound(tree, nodes_by_member, selected, owner)
+        for node in tree.body:
+            name = (
+                node.name
+                if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+                else cls._loose_value_name(node)
+            )
+            if name is None or name not in selected or name in bound:
+                continue
+            if owner in cls._definition_time_names(node):
+                bound.add(name)
+                continue
+            if any(isinstance(inner, ast.Global) for inner in ast.walk(node)):
+                return checked.fail(
+                    f"class-nesting cannot move {module_name}.{name} under "
+                    f"{owner}: it rebinds module state through global",
+                )
+        return checked.ok(tuple(name for name in members if name not in bound))
+
+    @classmethod
+    def _creation_bound(
+        cls,
+        tree: ast.Module,
+        nodes_by_member: t.StrMapping[ast.stmt],
+        selected: frozenset[str],
+        owner: str,
+    ) -> frozenset[str]:
+        """Members the owner creation expressions and their closure read.
+
+        The seed binds every selected member the owner reads while being
+        created (a base, or a ``metaclass=`` factory call); the closure keeps
+        every member such a bound member loads, so the bound member's
+        bare-name resolution keeps resolving at module scope.
+
+        Returns:
+            The members that must stay at module level.
+
+        """
         owner_node = next(
             (
                 node
@@ -244,23 +282,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
             if not newly_bound:
                 break
             bound.update(newly_bound)
-        for node in tree.body:
-            name = (
-                node.name
-                if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
-                else cls._loose_value_name(node)
-            )
-            if name is None or name not in selected or name in bound:
-                continue
-            if owner in cls._definition_time_names(node):
-                bound.add(name)
-                continue
-            if any(isinstance(inner, ast.Global) for inner in ast.walk(node)):
-                return checked.fail(
-                    f"class-nesting cannot move {module_name}.{name} under "
-                    f"{owner}: it rebinds module state through global",
-                )
-        return checked.ok(tuple(name for name in members if name not in bound))
+        return frozenset(bound)
 
     @staticmethod
     def _body_load_names(node: ast.stmt) -> frozenset[str]:

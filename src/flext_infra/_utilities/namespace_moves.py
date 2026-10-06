@@ -505,8 +505,11 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             ),
         )
         if not ok:
-            msg = "typing alias move failed validation: " + "; ".join(reports)
-            raise RuntimeError(msg)
+            # The gates reverted the write atomically (for example a
+            # reverse-layer reference the typings module cannot legally
+            # import); the rewrite is unmovable this pass, so mod skips it
+            # like any other abandoned move instead of failing the verb.
+            return
 
     @staticmethod
     def _typing_alias_source_imports(
