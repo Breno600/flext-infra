@@ -27,6 +27,8 @@ class FlextInfraUtilitiesManagedConflicts:
         conflict_sections: t.StrSequence,
     ) -> p.Result[str]:
         """Recover identical generated assignments without choosing between values."""
+        if u.Cli.toml_mapping_from_text(content) is not None:
+            return r[str].ok(content)
         recovered: list[str] = []
         pending: list[str] = []
         assignments: t.MutableMappingKV[str, str] = {}

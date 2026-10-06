@@ -203,10 +203,39 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             for path, source in cls._project_sources(root, planned_sources).items()
             if cls.module_name_for_file(path, project_root=root)
         }
+        # Generated package inits are projections excluded from the class
+        # inventory, yet their install_lazy_exports maps own the namespace
+        # aliases (m, p, t and siblings) that facade-qualified bases resolve
+        # through. Read those maps from disk so resolution can rewrite
+        # ``<pkg>.<alias>`` targets to their provider modules.
+        extra_module_aliases: dict[str, str] = {}
+        owned = {path for path, _ in sources.values()}
+        for init_path in sorted(root.rglob("__init__.py")):
+            resolved = init_path.resolve()
+            if resolved in owned or not init_path.is_file():
+                continue
+            init_module = cls.module_name_for_file(init_path, project_root=root)
+            if not init_module:
+                continue
+            for (
+                alias,
+                absolute,
+            ) in FlextInfraUtilitiesRopeSourceBases.lazy_module_aliases(
+                init_module,
+                init_path,
+                init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT),
+            ).items():
+                extra_module_aliases.setdefault(
+                    f"{init_module}.{alias}",
+                    absolute,
+                )
         parse_root = next(path for path in (root, *root.parents) if path.is_dir())
         with FlextInfraUtilitiesRopeCore.open_project(parse_root) as project:
             return FlextInfraUtilitiesRopeSourceBases.runtime_bases(
-                project, sources, roots,
+                project,
+                sources,
+                roots,
+                extra_module_aliases=extra_module_aliases,
             )
 
     @staticmethod
@@ -229,11 +258,6 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
                 source = file_path.read_text(
                     encoding=c.Cli.ENCODING_DEFAULT,
                 )
-                # Generated exports are projections, not class declarations.
-                if file_path.name == c.Infra.INIT_PY and source.startswith(
-                    c.Infra.AUTOGEN_HEADERS,
-                ):
-                    continue
                 sources[file_path.resolve()] = source
         for file_path, source in planned_sources.items():
             sources[file_path.resolve()] = source

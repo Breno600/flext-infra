@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import ast
+import importlib.util
 import sys
 from collections.abc import MutableMapping
 from pathlib import Path
@@ -18,6 +19,24 @@ from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 class FlextInfraUtilitiesRopeSourceBases:
     """Keep source declaration identities separate from Ruff's qualified bases."""
+
+    @staticmethod
+    def _is_type_checking_test(test: ast.expr) -> bool:
+        """Return whether one condition gate is the TYPE_CHECKING constant.
+
+        Returns:
+            True for the bare name and for the ``typing`` /
+            ``typing_extensions`` attribute forms.
+
+        """
+        if isinstance(test, ast.Name):
+            return test.id == "TYPE_CHECKING"
+        return (
+            isinstance(test, ast.Attribute)
+            and test.attr == "TYPE_CHECKING"
+            and isinstance(test.value, ast.Name)
+            and test.value.id in {"typing", "typing_extensions"}
+        )
 
     @staticmethod
     def _reference(
@@ -69,6 +88,108 @@ class FlextInfraUtilitiesRopeSourceBases:
         )
 
     @classmethod
+    def _stdlib_backing_module(cls, target: str) -> str | None:
+        """Return the importable real module backing one virtual stdlib module.
+
+        Returns:
+            The backing module name when the target imports at runtime and its
+            declaration file is importable under its own stem; otherwise None.
+
+        """
+        if cls._stdlib_backing_cache is None:
+            cls._stdlib_backing_cache = {}
+        cached = cls._stdlib_backing_cache.get(target, "")
+        if cached:
+            return cached or None
+        backing: str | None = None
+        try:
+            runtime = importlib.import_module(target)
+        except Exception:
+            runtime = None
+        file = getattr(runtime, "__file__", None)
+        if file:
+            stem = Path(file).stem
+            if stem != target.rpartition(".")[-1] and importlib.util.find_spec(stem):
+                backing = stem
+        cls._stdlib_backing_cache[target] = backing or ""
+        return backing
+
+    _stdlib_backing_cache: dict[str, str] | None = None
+
+    @classmethod
+    def lazy_module_aliases(
+        cls,
+        module: str,
+        path: Path,
+        source: str,
+    ) -> dict[str, str]:
+        """Read the ``install_lazy_exports`` namespace alias map of one module.
+
+        The canonical package facade binds its public namespace names (``m``,
+        ``p``, ``t`` and siblings) to provider modules through a lazy-exports
+        call whose final argument is the alias mapping. Those names are module
+        reexports, not lexical imports, so the lexical inventory cannot see
+        them; base references qualified through the facade (``m.BaseModel``
+        with ``from <pkg> import m``) must rewrite to the provider module
+        before namespace resolution.
+
+        Returns:
+            Alias name to absolute provider module path.
+
+        """
+        try:
+            parsed = ast.parse(source, filename=str(path))
+        except SyntaxError:
+            return {}
+        package = module if path.name == "__init__.py" else module.rpartition(".")[0]
+        aliases: dict[str, str] = {}
+        for node in ast.walk(parsed):
+            if not (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == "install_lazy_exports"
+            ):
+                continue
+            mapping = next(
+                (
+                    arg
+                    for arg in (*node.args, *node.keywords)
+                    if isinstance(arg, ast.Dict)
+                    or (
+                        isinstance(arg, ast.Call)
+                        and isinstance(arg.func, ast.Name)
+                        and arg.func.id == "MappingProxyType"
+                    )
+                ),
+                None,
+            )
+            if isinstance(mapping, ast.Call):
+                mapping = mapping.args[0] if mapping.args else None
+            if not isinstance(mapping, ast.Dict):
+                continue
+            for key_node, value_node in zip(mapping.keys, mapping.values, strict=False):
+                if not (
+                    isinstance(key_node, ast.Constant)
+                    and isinstance(key_node.value, str)
+                    and isinstance(value_node, ast.Constant)
+                    and isinstance(value_node.value, str)
+                ):
+                    continue
+                value = value_node.value
+                if value.startswith("."):
+                    parts = package.split(".") if package else []
+                    depth = len(value) - len(value.lstrip("."))
+                    remainder = value.lstrip(".")
+                    if depth > len(parts):
+                        continue
+                    base = (
+                        ".".join(parts[: len(parts) - depth + 1]) if depth else package
+                    )
+                    value = ".".join(part for part in (base, remainder) if part)
+                aliases[key_node.value] = value
+        return aliases
+
+    @classmethod
     def _inventory(
         cls,
         project: t.Infra.RopeProject,
@@ -117,8 +238,14 @@ class FlextInfraUtilitiesRopeSourceBases:
         ) -> None:
             for node in statements:
                 if isinstance(node, ast.ClassDef):
-                    if required_line is not None and not scope and not (
-                        node.lineno <= required_line <= (node.end_lineno or node.lineno)
+                    if (
+                        required_line is not None
+                        and not scope
+                        and not (
+                            node.lineno
+                            <= required_line
+                            <= (node.end_lineno or node.lineno)
+                        )
                     ):
                         bindings[node.name] = m.Infra.SourceClassReference(
                             target=module,
@@ -131,10 +258,14 @@ class FlextInfraUtilitiesRopeSourceBases:
                         cls._reference(base, visible, module) for base in node.bases
                     )
                     if node.type_params:
-                        bases = (*bases, m.Infra.SourceClassReference(
-                            target="typing", attributes=("Generic",),
-                            qualified_base="typing.Generic",
-                        ))
+                        bases = (
+                            *bases,
+                            m.Infra.SourceClassReference(
+                                target="typing",
+                                attributes=("Generic",),
+                                qualified_base="typing.Generic",
+                            ),
+                        )
                     identity = f"{module}:{scope}{node.name}:{node.lineno}"
                     members: MutableMapping[
                         str,
@@ -233,12 +364,21 @@ class FlextInfraUtilitiesRopeSourceBases:
                     bindings[node.name] = None
                 elif isinstance(node, ast.If):
                     if isinstance(node.test, ast.Constant) and isinstance(
-                        node.test.value, bool,
+                        node.test.value,
+                        bool,
                     ):
                         collect(
                             node.body if node.test.value else node.orelse,
-                            bindings, lexical, scope,
+                            bindings,
+                            lexical,
+                            scope,
                         )
+                        continue
+                    if cls._is_type_checking_test(node.test):
+                        # A TYPE_CHECKING gate never executes at runtime; its
+                        # imports and assignments are the module's declared
+                        # static binding surface, so they index directly.
+                        collect(node.body, bindings, lexical, scope)
                         continue
                     # Non-constant conditions with class declarations
                     # (pydantic's own version-dependent models, read from
@@ -297,6 +437,7 @@ class FlextInfraUtilitiesRopeSourceBases:
         project: t.Infra.RopeProject,
         sources: t.MappingKV[str, t.Pair[Path, str]],
         roots: t.StrSequence,
+        extra_module_aliases: t.MappingKV[str, str] | None = None,
     ) -> t.StrTuple:
         """Resolve owned classes in C3 order and external classes through Rope.
 
@@ -320,6 +461,16 @@ class FlextInfraUtilitiesRopeSourceBases:
             module: cls._inventory(project, module, path, source, definitions)
             for module, (path, source) in sources.items()
         }
+        module_aliases: dict[str, str] = {}
+        for alias_module, (alias_path, alias_source) in sources.items():
+            for alias, absolute in cls.lazy_module_aliases(
+                alias_module,
+                alias_path,
+                alias_source,
+            ).items():
+                module_aliases.setdefault(alias, absolute)
+        for alias, absolute in (extra_module_aliases or {}).items():
+            module_aliases.setdefault(alias, absolute)
         namespaces = {
             ".".join(parts[:index])
             for module in modules
@@ -342,7 +493,8 @@ class FlextInfraUtilitiesRopeSourceBases:
             if isinstance(
                 value,
                 FlextInfraUtilitiesRopeRuntime.runtime_type(
-                    "rope.base.pyobjectsdef", "PyClass",
+                    "rope.base.pyobjectsdef",
+                    "PyClass",
                 ),
             ):
                 module = value.get_module()
@@ -415,7 +567,11 @@ class FlextInfraUtilitiesRopeSourceBases:
                     raise ValueError(message)
                 return identity
             for identity, known in external.items():
-                if known == value:
+                if known == value or (
+                    isinstance(known, p.Infra.RopeBuiltinClass)
+                    and isinstance(value, p.Infra.RopeBuiltinClass)
+                    and known.builtin is value.builtin
+                ):
                     return identity
             identity = f"external:{len(external)}"
             external[identity] = value
@@ -429,7 +585,8 @@ class FlextInfraUtilitiesRopeSourceBases:
                     message = "Import has no declared module location"
                     raise ValueError(message)
                 return FlextInfraUtilitiesRopeCore.resolve_pymodule(
-                    project, imported.resource,
+                    project,
+                    imported.resource,
                 ).get_name()
             if not imported.level:
                 return imported.module_name
@@ -479,8 +636,7 @@ class FlextInfraUtilitiesRopeSourceBases:
         ) -> str:
             if depth > c.Infra.ROPE_WALK_DEPTH_BUDGET:
                 message = (
-                    f"Unresolved external base: {module.get_name()} "
-                    f"at depth {depth}"
+                    f"Unresolved external base: {module.get_name()} at depth {depth}"
                 )
                 raise ValueError(message)
             if not attributes:
@@ -490,9 +646,7 @@ class FlextInfraUtilitiesRopeSourceBases:
             target = f"{module.get_name()}.{name}"
             if target in visiting:
                 chain = " <- ".join(sorted(visiting))
-                message = (
-                    f"Cyclic provider reexport: {target} (visiting: {chain})"
-                )
+                message = f"Cyclic provider reexport: {target} (visiting: {chain})"
                 raise ValueError(message)
             binding = module.get_attribute(name)
             if isinstance(binding, p.Infra.RopeImportedName):
@@ -504,13 +658,15 @@ class FlextInfraUtilitiesRopeSourceBases:
                             attributes=(binding.imported_name, *remaining),
                             qualified_base=target,
                         ),
-                        visiting | {target}, depth + 1,
+                        visiting | {target},
+                        depth + 1,
                     )
                 imported = provider_module(binding.imported_module)
                 return provider_reference(
                     imported,
                     (binding.imported_name, *remaining),
-                    visiting | {target}, depth + 1,
+                    visiting | {target},
+                    depth + 1,
                 )
             if isinstance(binding, p.Infra.RopeImportedModule):
                 imported_name = provider_module_name(binding)
@@ -521,11 +677,15 @@ class FlextInfraUtilitiesRopeSourceBases:
                             attributes=tuple(remaining),
                             qualified_base=target,
                         ),
-                        visiting | {target}, depth + 1,
+                        visiting | {target},
+                        depth + 1,
                     )
                 imported = provider_module(binding)
                 return provider_reference(
-                    imported, tuple(remaining), visiting | {target}, depth + 1,
+                    imported,
+                    tuple(remaining),
+                    visiting | {target},
+                    depth + 1,
                 )
             identity = external_identity(binding.get_object())
             for attribute in remaining:
@@ -538,7 +698,22 @@ class FlextInfraUtilitiesRopeSourceBases:
             visiting: frozenset[str] = frozenset(),
             depth: int = 0,
         ) -> str:
-            module = project.get_module(target)
+            try:
+                module = project.get_module(target)
+            except (
+                *FlextInfraUtilitiesRopeRuntime.rope_runtime_errors(),
+                ModuleNotFoundError,
+            ):
+                # Rope raises its own ModuleNotFoundError (not the builtin).
+                # Virtual stdlib submodules (collections.abc since 3.13, and
+                # aliases like os.path) exist only through runtime module
+                # aliasing, so static file lookup cannot see them. Their
+                # declarations live in the backing real module, which rope
+                # resolves normally.
+                real = cls._stdlib_backing_module(target)
+                if real is None:
+                    raise
+                module = project.get_module(real)
             resource = project.find_module(target)
             if resource is not None:
                 module = FlextInfraUtilitiesRopeCore.resolve_pymodule(project, resource)
@@ -560,12 +735,18 @@ class FlextInfraUtilitiesRopeSourceBases:
         ) -> str:
             if depth > c.Infra.ROPE_WALK_DEPTH_BUDGET:
                 message = (
-                    f"Unresolved external base: {reference.target} "
-                    f"at depth {depth}"
+                    f"Unresolved external base: {reference.target} at depth {depth}"
                 )
                 raise ValueError(message)
-            target = reference.target
-            key = ".".join((target, *reference.attributes))
+            rewrite_target = reference.target
+            rewrite_attributes = reference.attributes
+            if rewrite_attributes:
+                qualified_head = f"{rewrite_target}.{rewrite_attributes[0]}"
+                if qualified_head in module_aliases:
+                    rewrite_target = module_aliases[qualified_head]
+                    rewrite_attributes = rewrite_attributes[1:]
+            target = module_aliases.get(rewrite_target, rewrite_target)
+            key = ".".join((target, *rewrite_attributes))
             if key in visiting:
                 message = f"Cyclic class alias: {key}"
                 raise ValueError(message)
@@ -576,7 +757,7 @@ class FlextInfraUtilitiesRopeSourceBases:
             if direct is not None:
                 resolved_memo[key] = direct
                 return direct
-            attributes = list(reference.attributes)
+            attributes = list(rewrite_attributes)
             if target not in definitions and target not in external:
                 parts = target.split(".")
                 if parts[0] in namespaces:
@@ -628,14 +809,12 @@ class FlextInfraUtilitiesRopeSourceBases:
             if not isinstance(value, p.Infra.RopeBuiltinClass):
                 message = f"External class has no declared source or native identity: {identity}"
                 raise ValueError(message)
+            builtin_class = FlextInfraUtilitiesRopeRuntime.runtime_type(
+                "rope.base.builtins",
+                "BuiltinClass",
+            )
             return tuple(
-                resolve(
-                    m.Infra.SourceClassReference(
-                        target=base.__module__,
-                        attributes=tuple(base.__qualname__.split(".")),
-                        qualified_base=f"{base.__module__}.{base.__qualname__}",
-                    ),
-                )
+                external_identity(builtin_class(base, {}))
                 for base in value.builtin.__bases__
             )
 
@@ -711,7 +890,8 @@ class FlextInfraUtilitiesRopeSourceBases:
                 1,
             )
             return m.Infra.SourceClassReference(
-                target=".".join(parts[:index]), attributes=tuple(parts[index:]),
+                target=".".join(parts[:index]),
+                attributes=tuple(parts[index:]),
                 qualified_base=root,
             )
 
