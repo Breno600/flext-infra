@@ -17,16 +17,14 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, main, m, u
+from flext_infra import c, m, main, u
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
 
 RECORDING_MAKEFILE = (
-    ".PHONY: fix fmt mod\n"
-    "fix fmt mod:\n"
-    "\t@printf '%s\\n' '$@' >> ran.txt\n"
+    ".PHONY: fix fmt mod\nfix fmt mod:\n\t@printf '%s\\n' '$@' >> ran.txt\n"
 )
 
 MOD_GROWS_MAKEFILE = (
@@ -36,11 +34,7 @@ MOD_GROWS_MAKEFILE = (
     "\t@printf 'marker = dict()\\n' > violating.py\n"
 )
 
-LOCAL_RULE_CATALOG = (
-    "ruleDirs:\n"
-    "  - rules\n"
-    "testConfigs: []\n"
-)
+LOCAL_RULE_CATALOG = "ruleDirs:\n  - rules\ntestConfigs: []\n"
 
 LOCAL_GROWTH_RULE = (
     "id: sweep-growth\n"

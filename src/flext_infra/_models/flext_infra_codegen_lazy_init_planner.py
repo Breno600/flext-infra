@@ -1,3 +1,10 @@
+"""Flext infra codegen lazy init planner module.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+src/flext_infra/_models/flext_infra_codegen_lazy_init_planner
+SPDX-License-Identifier: MIT
+"""
+
 from __future__ import annotations
 
 from collections.abc import MutableMapping

@@ -156,7 +156,10 @@ class FlextInfraModelsWorkspace:
             FlextInfraModelsWorkspace.DirectUrlDirectoryInfo | None,
             m.Field(description="Directory metadata of a local install"),
         ] = None
-        url: Annotated[t.NonEmptyStr, m.Field(description="Required PEP 610 origin URL")]
+        url: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Required PEP 610 origin URL"),
+        ]
         vcs_info: FlextInfraModelsWorkspace.DirectUrlVcsInfo | None = m.Field(
             default=None,
             description="Installed immutable VCS identity",
@@ -255,7 +258,7 @@ class FlextInfraModelsWorkspace:
         lint_findings: Annotated[
             int,
             m.Field(
-                description="Lint count from the checkout's check report; 0 absent"
+                description="Lint count from the checkout's check report; 0 absent",
             ),
         ]
         pyrefly_findings: Annotated[
