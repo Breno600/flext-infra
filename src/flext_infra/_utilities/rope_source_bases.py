@@ -742,7 +742,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                 raise
             for reference in definition.bases:
                 try:
-                    lineage = linearize(resolve(reference))
+                    linearize(definition.identity)
                 except ValueError as error:
                     # A base whose lineage crosses an unresolved external
                     # attribute (PEP 562 lazy namespace), a planned module
@@ -752,17 +752,35 @@ class FlextInfraUtilitiesRopeSourceBases:
                     # qualify as runtime-evaluated.
                     if str(error).startswith(
                         "Unresolved external base:",
-                    ) or str(error).startswith(
-                        "No source module for required base:",
-                    ):
+                    ) or message.startswith("No source module for required base:"):
                         continue
-                    if str(error).startswith("Unresolved planned base:"):
+                    if message.startswith("Unresolved planned base:"):
+                        continue
+                    if message.startswith("Missing inherited class member:"):
                         continue
                     if str(error).startswith("Cyclic class inheritance:"):
                         continue
                     raise
-                if root_ids.intersection(lineage):
-                    derived.add(reference.qualified_base)
+                for reference in definition.bases:
+                    try:
+                        lineage = linearize(resolve(reference))
+                    except ValueError as error:
+                        # A base whose lineage crosses an unresolved external
+                        # attribute (PEP 562 lazy namespace) or a planned
+                        # module binding that is not a class cannot be
+                        # derived; the class simply does not qualify as
+                        # runtime-evaluated.
+                        if str(error).startswith(
+                            "Unresolved external base:",
+                        ) or str(error).startswith(
+                            "No source module for required base:",
+                        ):
+                            continue
+                        if str(error).startswith("Unresolved planned base:"):
+                            continue
+                        raise
+                    if root_ids.intersection(lineage):
+                        derived.add(reference.qualified_base)
         return tuple(sorted(derived))
 
 
