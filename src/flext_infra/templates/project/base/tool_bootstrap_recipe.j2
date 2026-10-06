@@ -233,7 +233,10 @@
 			receipt_release=$${receipt_output%% *}; \
 		fi; \
 		if ! printf '%s\n' "$$receipt_release" | grep -Eq '^{{ bootstrap.resolved_release_pattern }}$$'; then \
-			printf 'ERROR: Mise receipt returned invalid version: %s\n' "$$receipt_output" >&2; return 2; \
+			printf 'ERROR: Mise receipt returned invalid version: %s\n' "$$receipt_output" >&2; \
+			printf 'ERROR: Mise receipt stderr: ' >&2; cat "$$mise_receipt_log.stderr" >&2 || true; \
+			printf 'ERROR: Mise receipt executable: %s; scratch: %s\n' "$$1" "$$scratch" >&2; \
+			return 2; \
 		fi; \
 	}; \
 	pinned_mise="$$mise"; \
@@ -413,6 +416,7 @@
 		"SETUP_DIRENV=$$direnv_executable" \
 		"SETUP_PYTHON=$$python_executable" \
 		"SETUP_DIRENV_XDG_DATA_HOME=$$caller_xdg_data_home" \
+		"HOME=$$caller_home" \
 		"{{ make.ci.variable }}=$({{ make.ci.variable }})" {{ lifecycle }}; then lifecycle_status=0; \
 	else lifecycle_status=$$?; fi; \
 	scratch_present=0; if [ -d "$$scratch" ]; then scratch_present=1; fi; \

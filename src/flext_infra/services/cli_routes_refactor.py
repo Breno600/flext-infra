@@ -182,7 +182,7 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
                 "make mod) between two mod scans; the command fails the "
                 "moment any violation total increased"
             ),
-            model_cls=m.Infra.ViolationsSweepCommand,
+            model_cls=FlextInfraRefactorViolationsSweep,
             handler=FlextInfraCliRouteBase.result_handler(
                 FlextInfraRefactorViolationsSweep.execute_command,
             ),

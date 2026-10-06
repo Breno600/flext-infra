@@ -114,14 +114,10 @@ class TestsFlextInfraRopeAnalysis:
         tm.that(bases, eq=())
 
     @staticmethod
-    def test_non_class_planned_module_binding_skips_the_base(tmp_path: Path) -> None:
-        """A planned module binding that is not a class yields no base lineage.
-
-        A consumer class inheriting through a helper module
-        (``data_module.Helper`` where the planned module binds no such
-        class) must not abort the derivation: the base is unresolved, the
-        class simply does not qualify as runtime-evaluated.
-        """
+    def test_missing_planned_class_binding_fails_at_the_required_base(
+        tmp_path: Path,
+    ) -> None:
+        """An explicit missing base fails instead of silently losing its lineage."""
         project, package = u.Tests.demo_project(tmp_path)
         helper = package / "data_module.py"
         helper.write_text(
@@ -137,12 +133,12 @@ class TestsFlextInfraRopeAnalysis:
             "    pass\n",
             encoding="utf-8",
         )
-        bases = u.Infra.runtime_evaluated_base_classes(
-            project,
-            {
-                source: source.read_text(encoding="utf-8")
-                for source in (helper, consumer)
-            },
-            (),
-        )
-        tm.that(bases, eq=())
+        with pytest.raises(ValueError, match="Unresolved planned base"):
+            u.Infra.runtime_evaluated_base_classes(
+                project,
+                {
+                    source: source.read_text(encoding="utf-8")
+                    for source in (helper, consumer)
+                },
+                (),
+            )

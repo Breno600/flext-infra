@@ -1008,6 +1008,7 @@ fi; \
 		"SETUP_DIRENV=$$direnv_executable" \
 		"SETUP_PYTHON=$$python_executable" \
 		"SETUP_DIRENV_XDG_DATA_HOME=$$caller_xdg_data_home" \
+		"HOME=$$caller_home" \
 		"CI=$(CI)" $(SELF_MAKE) $(TOOL_BOOTSTRAP_LIFECYCLE); then lifecycle_status=0; \
 	else lifecycle_status=$$?; fi; \
 	scratch_present=0; if [ -d "$$scratch" ]; then scratch_present=1; fi; \
