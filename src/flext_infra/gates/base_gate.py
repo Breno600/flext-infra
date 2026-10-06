@@ -975,6 +975,7 @@ class FlextInfraGate:
                 started=started,
             ),
             raw_output=message,
+            outcome=c.Infra.ToolOutcome.ERROR,
         )
 
 

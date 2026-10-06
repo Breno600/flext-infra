@@ -266,12 +266,11 @@ Infra:
           # Each exception exists only with the operator ruling that authorized
           # it and its reason; Ruff receives the unscoped entries as `ignore`
           # and the scoped ones as `per-file-ignores`. Repositories declare no
-          # exception of their own. Operator order 2026-10-05 (latest, direct):
-          # TC001-TC004 are ALL BLOCKED — enforced by rule name on every file
-          # (the four names live in the select surface, never in an ignore
-          # table), and the scoped lazy-root dunder-init exception below stays
-          # the only relief. The earlier same-day "tc-family-off-global"
-          # attribution is superseded and revoked: never re-introduce it.
+          # exception of their own. Direct operator order 2026-10-05:
+          # TC001-TC004 NEVER EXECUTE on any file. Their four rule names stay
+          # in the canonical tooling owner as one unscoped global exception;
+          # select ALL does not reactivate them. Scoped exceptions are not
+          # substitutes for this global execution prohibition.
           authorized-exceptions:
             - files: "**/xlsx.py"
               rules: [import-outside-top-level]
@@ -360,12 +359,23 @@ Infra:
             # TC001-TC004 (typing-only-first-party-import,
             # typing-only-third-party-import,
             # typing-only-standard-library-import and
+<<<<<<< HEAD
             # runtime-import-in-type-checking-block) is DISABLED for every
             # file, declared by name: moving annotation-only imports into
             # TYPE_CHECKING breaks runtime-evaluated pydantic model bases.
             # This supersedes the same-day ENFORCED restoration (#1675) and
             # the 2026-10-01/03 scoped rulings; the attribution is now
             # verifiable in the session transcript and beads.
+=======
+            # runtime-import-in-type-checking-block — is DISABLED for every
+            # file: Ruff must not execute these rules anywhere. Declared by
+            # rule name (the fleet's canonical naming format). This supersedes
+            # the TC arms of the 2026-10-01 rulings (TC002/TC003 pydantic,
+            # TC004/TC001 lazy-root scoped forms) and of the 2026-10-03 ruling
+            # (TC001 global): the pydantic hazard those older rulings worked
+            # around is moot because the rules never run. One unscoped entry
+            # carries all four rules exactly once, without a scoped substitute.
+>>>>>>> a3be7ca8014363275a8f3f8a3c3fe5b32d45c74e
             - rules: [
                 typing-only-first-party-import,
                 typing-only-third-party-import,
@@ -374,6 +384,7 @@ Infra:
               ]
               authority: operator-direct-order-2026-10-05-tc001-tc004-off-pydantic
               reason: >-
+<<<<<<< HEAD
                 Operator direct order 2026-10-05: TC001-TC004 are disabled in
                 Ruff so the rules never execute on any file — they break
                 Pydantic classes (field annotations are runtime-evaluated, so
@@ -381,6 +392,15 @@ Infra:
                 fully defined"), and model_rebuild stays forbidden. The rule
                 names remain declared here in the SSOT and are never removed;
                 canonical tracking beads flext-p7bxt and flext-4536i.
+=======
+                Operator ruling 2026-10-05: TC001-TC004 are blocked from
+                executing on every file; Ruff receives them as global ignores
+                declared by rule name in this single unscoped exception.
+                Pydantic evaluates model annotations at runtime; moving their
+                required imports into TYPE_CHECKING can break model declaration.
+                No model or import workaround substitutes for this prohibition.
+                No file may surface a flake8-type-checking finding.
+>>>>>>> a3be7ca8014363275a8f3f8a3c3fe5b32d45c74e
             - rules: [missing-required-import, implicit-namespace-package]
               authority: operator-ruling-2026-10-03-import-banners-off-global
               reason: >-
