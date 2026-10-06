@@ -737,6 +737,16 @@ class FlextInfraModelsDepsToolConfig(
         ruff: FlextInfraModelsDepsToolConfig.RuffConfig = m.Field(
             description="Ruff settings",
         )
+        ruff_extend_exclude: Annotated[
+            t.StrTuple,
+            m.Field(
+                validation_alias=m.AliasPath("ruff", "extend-exclude"),
+                description=(
+                    "Workspace exclusions added to Ruff's defaults, read "
+                    "flattened for the tooling runtime projection."
+                ),
+            ),
+        ] = ()
         mypy: FlextInfraModelsDepsToolConfig.MypyConfig = m.Field(
             description="Mypy settings",
         )

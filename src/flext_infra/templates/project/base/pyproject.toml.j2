@@ -381,7 +381,7 @@ testpaths = [
 
 [tool.ruff]
 extend-exclude = [
-{% for item in tooling_runtime.ruff_extend_exclude %}
+{% for item in ruff_extend_exclude %}
   {{ item | tojson }},
 {% endfor %}
 ]

@@ -212,7 +212,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
             )
             if name is not None and name in selected:
                 nodes_by_member[name] = node
-        bound = cls._creation_bound(tree, nodes_by_member, selected, owner)
+        bound: set[str] = cls._creation_bound(tree, nodes_by_member, selected, owner)
         for node in tree.body:
             name = (
                 node.name
@@ -238,7 +238,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
         nodes_by_member: t.StrMapping[ast.stmt],
         selected: frozenset[str],
         owner: str,
-    ) -> frozenset[str]:
+    ) -> set[str]:
         """Members the owner creation expressions and their closure read.
 
         The seed binds every selected member the owner reads while being

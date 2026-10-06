@@ -311,6 +311,17 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
     class RuffConfig(m.ArbitraryTypesModel):
         """Ruff top-level settings loaded from YAML."""
 
+        extend_exclude: Annotated[
+            t.StrSequence,
+            m.Field(
+                alias="extend-exclude",
+                description=(
+                    "Workspace exclusions added to Ruff's defaults: "
+                    "provider-owned tool-home projections stay outside the "
+                    "member lint scope."
+                ),
+            ),
+        ] = m.Field(default_factory=tuple)
         namespace_packages: Annotated[
             t.StrSequence,
             m.Field(

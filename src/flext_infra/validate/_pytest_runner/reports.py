@@ -300,10 +300,23 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
             receipt,
             diagnostics.model_dump_json(indent=2) + "\n",
         ).unwrap()
+        expected_warnings = (
+            # The runner imports flext_infra in-process to build the pytest
+            # invocation, so pytest's assertion-rewrite hook finds the module
+            # already imported and emits this notice once. It reports the
+            # runner's own module state, not a defect of the code under test;
+            # the diagnostics receipt keeps it visible.
+            "Module already imported so cannot be rewritten; flext_infra",
+        )
+        unexpected_warnings = [
+            line
+            for line in diagnostics.warning_lines
+            if not any(expected in line for expected in expected_warnings)
+        ]
         if any((
             diagnostics.collection_failed_count,
             diagnostics.collection_skipped_count,
-            diagnostics.warning_count,
+            len(unexpected_warnings),
         )):
             msg = f"pytest collection contains blocking findings: {receipt}"
             raise RuntimeError(msg)

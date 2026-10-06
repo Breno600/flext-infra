@@ -75,11 +75,28 @@ class FlextInfraUtilitiesSemanticCutoverBase(
             return cls._plan_dispatch(phase, rope_workspace, sources, findings)
         except Exception:
             import traceback
+
             traceback.print_exc()
             raise
 
     @classmethod
     def _plan_dispatch(
+        cls,
+        phase: c.Infra.SemanticCutoverPhase,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        sources: t.MappingKV[Path, str],
+        findings: t.SequenceOf[m.Infra.ModScanFinding] = (),
+    ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
+        try:
+            return cls._plan_phases(phase, rope_workspace, sources, findings)
+        except Exception:
+            import traceback
+
+            traceback.print_exc()
+            raise
+
+    @classmethod
+    def _plan_phases(
         cls,
         phase: c.Infra.SemanticCutoverPhase,
         rope_workspace: p.Infra.RopeWorkspaceDsl,

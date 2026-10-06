@@ -235,7 +235,11 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
         # src modules import flext_core), and a member-only rope path raises
         # ModuleNotFoundError for every cross-member base resolution.
         workspace_root = next(
-            (parent for parent in (root, *root.parents) if (parent / "src").is_dir() and (parent / "flext-core").is_dir()),
+            (
+                parent
+                for parent in (root, *root.parents)
+                if (parent / "src").is_dir() and (parent / "flext-core").is_dir()
+            ),
             root,
         )
         project_roots = [

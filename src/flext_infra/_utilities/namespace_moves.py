@@ -490,7 +490,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             else kept_lines
         )
 
-        ok, reports = FlextInfraUtilitiesProtectedEdit.protected_source_writes(
+        ok, _reports = FlextInfraUtilitiesProtectedEdit.protected_source_writes(
             {
                 target_file: updated_target + "\n",
                 source_file: "\n".join(updated_source_lines).rstrip() + "\n",

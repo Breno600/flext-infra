@@ -186,6 +186,16 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
                 ),
             ),
         ]
+        ruff_extend_exclude: Annotated[
+            t.StrSequence,
+            m.Field(
+                description=(
+                    "Workspace exclusions added to Ruff's defaults: the "
+                    "provider-owned tool-home projections stay outside the "
+                    "member lint scope"
+                ),
+            ),
+        ]
         make_profile: Annotated[
             FlextInfraConstantsCodegenProject.MakeProfile,
             m.Field(description="Generated Make execution profile"),

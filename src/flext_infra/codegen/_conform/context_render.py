@@ -156,6 +156,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 # Pass the neutral value explicitly so Pydantic never deep-copies
                 # the MappingProxyType model default while building the base.
                 ruff_per_file_ignores={},
+                ruff_extend_exclude=(),
                 make_profile=profile,
                 workspace_cli_group=c.Infra.CLI_GROUP_WORKSPACE,
                 repository_root_rel=self._repository_root_rel(workspace),
@@ -353,7 +354,11 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 docs_audit=workspace.docs_audit,
                 **make_context.value.model_dump(
                     by_alias=True,
-                    exclude={"mise_bootstrap", "ruff_per_file_ignores"},
+                    exclude={
+                        "mise_bootstrap",
+                        "ruff_per_file_ignores",
+                        "ruff_extend_exclude",
+                    },
                     exclude_computed_fields=True,
                 ),
                 mise_bootstrap=u.Infra.mise_bootstrap_environment(),
@@ -375,6 +380,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 ruff_per_file_ignores=(
                     config.Infra.tooling.tools.ruff.lint.per_file_ignores
                 ),
+                ruff_extend_exclude=(config.Infra.tooling.tools.ruff_extend_exclude),
                 environment_path_prepends=(codegen.toolchain.environment_path_prepends),
                 beads=workspace.beads,
                 canonical_project_name=target.canonical_project_name,

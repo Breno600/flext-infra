@@ -317,7 +317,13 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         owned = tuple(item for item in editable if item[0] in modules)
 
         def definitions_for(item: t.Pair[Path, str]) -> p.Result[t.StrMapping]:
-            return cls._class_nesting_definitions(rope_workspace, *item)
+            try:
+                return cls._class_nesting_definitions(rope_workspace, *item)
+            except Exception:
+                import traceback
+
+                traceback.print_exc()
+                raise
 
         planned = r[t.StrMapping].traverse(owned, definitions_for, fail_fast=False)
         if planned.failure:
