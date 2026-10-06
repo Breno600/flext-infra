@@ -26,6 +26,7 @@ class FlextInfraPyreflyGate(FlextInfraGate):
     can_fix: ClassVar[bool] = False
     checker_info_prefixes: ClassVar[t.StrSequence] = ("INFO",)
     requires_python_targets: ClassVar[bool] = True
+
     # Native JSON report replaced before every run: ``{project}-pyrefly.json``.
     check_report_filename: ClassVar[str] = "pyrefly.json"
     check_remove_env_keys: ClassVar[t.StrSequence] = (

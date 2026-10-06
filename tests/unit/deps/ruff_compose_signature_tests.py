@@ -39,7 +39,13 @@ class TestsFlextInfraRuffProjectExemptions:
             payload,
             (c.Infra.TOOL, c.Infra.RUFF, c.Infra.LINT_SECTION, "per-file-ignores"),
         )
+        projected_rules: dict[str, tuple[str, ...]] = {}
+        for pattern, rules in dict(projected or {}).items():
+            entries = rules if isinstance(rules, list) else ()
+            projected_rules[pattern] = tuple(
+                rule for rule in entries if isinstance(rule, str)
+            )
         tm.that(
-            {pattern: tuple(rules) for pattern, rules in dict(projected or {}).items()},
+            projected_rules,
             eq={pattern: tuple(sorted(rules)) for pattern, rules in fleet.items()},
         )

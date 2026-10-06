@@ -87,7 +87,10 @@
 		esac; \
 	done; \
 	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
-	readonly scratch; \
+	printf 'DEBUG1 scratch=[%s] proot=[%s] pparent=[%s]\n' "$$scratch" "$$project_root" "$$project_parent" >&2; \
+	if [ -z "$$scratch" ] || [ ! -d "$$scratch" ]; then \
+		printf 'ERROR: mise bootstrap scratch creation failed (template: %s/.%s.mise-bootstrap.XXXXXX)\n' "$$project_parent" "$${project_root##*/}" >&2; exit 2; \
+	fi; \
 	lock_stage=; \
 	trap 'bootstrap_status=$$?; trap - EXIT; \
 		lock_cleanup_status=0; scratch_cleanup_status=0; diagnostic_status=0; scratch_present=0; \
@@ -189,12 +192,12 @@
 {# Only the bootstrap reaches GitHub: `install --yes` for a tool missing from
    the persistent cache, and `make upg` (release resolution, lock, launcher).
    Every other Mise call runs through mise_offline. The Makefile preamble owns
-   the credential selection; the passthrough carries it into env -i. -#}
-	# The only tolerated Mise warning: ephemeral CI runners ship pre-seeded
-	# shims (python3, make) and `mise install` always announces it declines to
-	# replace them while every real install still succeeds (cosmos-main PR 346
-	# CI run 37348896444, bead on cosmos-l2wc2). Every OTHER mise WARN stays
-	# fatal: red-means-red is untouched.
+   the credential selection; the passthrough carries it into env -i. #}
+	# The only tolerated Mise warning: ephemeral CI runners ship pre-seeded \
+	# shims (python3, make) and `mise install` always announces it declines to \
+	# replace them while every real install still succeeds (cosmos-main PR 346 \
+	# CI run 37348896444, bead on cosmos-l2wc2). Every OTHER mise WARN stays \
+	# fatal: red-means-red is untouched. \
 	mise_has_blocking_warning() { \
 		grep -F 'mise WARN' "$$1" | grep -Fv 'not replacing unmanaged file in shims directory' | grep -q .; \
 	}; \
@@ -227,7 +230,10 @@
 			receipt_release=$${receipt_output%% *}; \
 		fi; \
 		if ! printf '%s\n' "$$receipt_release" | grep -Eq '^{{ bootstrap.resolved_release_pattern }}$$'; then \
-			printf 'ERROR: Mise receipt returned invalid version: %s\n' "$$receipt_output" >&2; return 2; \
+			printf 'ERROR: Mise receipt returned invalid version: %s\n' "$$receipt_output" >&2; \
+			printf 'ERROR: Mise receipt stderr: ' >&2; cat "$$mise_receipt_log.stderr" >&2 || true; \
+			printf 'ERROR: Mise receipt executable: %s; scratch: %s\n' "$$1" "$$scratch" >&2; \
+			return 2; \
 		fi; \
 	}; \
 	pinned_mise="$$mise"; \
@@ -354,6 +360,7 @@
 	if [ -s "$$scratch/ast-grep-version.stderr" ]; then \
 		printf 'ERROR: ast-grep emitted diagnostics after installation\n' >&2; exit 2; \
 	fi; \
+	printf 'DEBUG2 scratch=[%s] proot=[%s]\n' "$$scratch" "$$project_root" >&2; \
 	mise_checked "$$scratch/uv-version.log" mise_offline project "$$pinned_mise" -C "$$project_root" exec -- uv --version; \
 	uv_output=$$(cat "$$scratch/uv-version.log"); \
 	case "$$uv_output" in \

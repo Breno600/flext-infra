@@ -97,18 +97,25 @@ class FlextInfraUtilitiesNamespaceConfig:
         meta = FlextInfraUtilitiesNamespaceConfig.namespace_meta(project_root)
         if "scan_dirs" in meta:
             configured = meta["scan_dirs"]
-            if not isinstance(configured, list) or not all(
-                isinstance(item, str) and item.strip() for item in configured
-            ):
+            scan_dirs: list[str] = []
+            if not isinstance(configured, list):
                 msg = (
                     "[tool.flext.namespace] scan_dirs must be a list of "
                     f"non-empty strings in {project_root}"
                 )
                 raise TypeError(msg)
-            if not configured:
+            for item in configured:
+                if not isinstance(item, str) or not item.strip():
+                    msg = (
+                        "[tool.flext.namespace] scan_dirs must be a list of "
+                        f"non-empty strings in {project_root}"
+                    )
+                    raise TypeError(msg)
+                scan_dirs.append(item)
+            if not scan_dirs:
                 msg = f"[tool.flext.namespace] scan_dirs is empty in {project_root}"
                 raise ValueError(msg)
-            return frozenset(item.strip() for item in configured)
+            return frozenset(item.strip() for item in scan_dirs)
         tracked = FlextInfraUtilitiesGit.git_tracked_top_level_dir_names(project_root)
         if tracked is not None:
             declared = FlextInfraUtilitiesGit.git_declared_submodule_paths(project_root)

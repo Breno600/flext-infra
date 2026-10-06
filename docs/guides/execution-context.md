@@ -224,20 +224,41 @@ the batch. Structural refactors go through `make mod`.
 
 ## Check gate partitions
 
-No check gate is suspendable: every finding of every selected gate blocks. The
-namespace laws are rule data of the codemod catalog and block through the codemod
-gate. `make check` fails when the selection
+Selected functional gates remain blocking. `make check` fails when the selection
 contains no projects or when a selected project has no `pyproject.toml`; no project is
 skipped silently.
 
 Local runs, CI, and hooks derive their gates from the same active set: `CI=N make check`
 runs the intersection with `make.ci.local_check_gates`, `CI=Y make check` runs the
-complement, and `make check` without `CI` runs the union. The declared local set is
-empty, so the CI workflow's single `CI=Y make check` runs every active gate, including
-the Mypy, Pyright, and Pyrefly type checkers, and `CI=N make check` fails because no
-gate remains. The `check` pre-push hook drops the inherited `CI` to run every active
-gate; the hook's other verbs keep the local token. Validators keep their severity, and
-active functional gates still require execution without warnings or residual findings.
+complement, and `make check` without `CI` runs the union. The configuration excludes
+Mypy, Pyright, codemod and smells from CI, including advisory execution. Lint and
+remaining type findings follow `make.ci.informative_check_gates`: native `FINDINGS`
+remain reported without stopping tests; native `ERROR`, malformed reports, runtime
+failures and functional findings remain blocking. The `check` pre-push hook drops
+the inherited `CI` to run every active gate.
+
+Every workspace and standalone projection exposes `make pre-commit`. CI and the
+generated pre-commit hook invoke that same approval owner. Its typed workflow is
+`setup -> audit -> check -> test`, with the configured CI token enforced before
+topology or activation, even when the caller supplied a local token. Help, dry-run,
+question, touch and custom approval replacements cannot yield an approval receipt.
+Audit is read-only conformance and installed-lock provenance, not generation or a
+dirty-tree check; legitimate staged changes are not rejected simply for being staged.
+
+CI setup always reconciles the owned physical environment through locked,
+noneditable installation, including an existing venv. It does not initialize,
+activate or operate on members, and uses root-declared topology rather than reading
+sibling manifests. Local setup without the CI token retains local source routing.
+Only local upgrade resolves or writes locks; setup preserves the first install error
+without retrying under a different lock mode.
+
+Normal test verbs remain incremental testmon only and omit the configured slow
+markers. The filesystem cache lives at the typed XDG/HOME-derived project path.
+Actions restores only that project database and saves only on an allowed integration
+push with a fresh completed-run path/digest/saveability receipt. The SQLite owner
+checkpoints and checks integrity before the runner releases its lease and exports
+the receipt. PRs, forks, cancelled or incomplete runs cannot publish cache state;
+a completed failing test run may save without changing its failing status.
 
 `smells` is not part of the `make check` partitions. The selector-free `make smells`
 verb runs only the qlty smell scan and fails when it finds defects. The

@@ -403,6 +403,13 @@ class FlextInfraModelsDepsToolConfig(
                 description="Declared markers deselected in CI and pre-commit only.",
             ),
         ]
+        ci_excluded_fixtures: Annotated[
+            t.StrTuple,
+            m.Field(
+                alias="ci-excluded-fixtures",
+                description="Fixtures that need local-only provisioning",
+            ),
+        ] = ()
 
         @property
         def process_timeout_seconds(self) -> int:

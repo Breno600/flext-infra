@@ -76,6 +76,7 @@ class FlextInfraPytestRunnerExecution(
             overrides.update(dict.fromkeys(testmon_keys, str(self.testmon_db)))
         remove_keys = (
             *c.Infra.PYTEST_INHERITED_ENV_REMOVE_KEYS,
+            "GITHUB_OUTPUT",
             *(testmon_keys if coverage else ()),
         )
         return u.Cli.process_env(remove_keys=remove_keys, overrides=overrides)
@@ -541,6 +542,9 @@ class FlextInfraPytestRunnerExecution(
         Returns:
             The resulting ``p.Result[int]``.
 
+        Raises:
+            RuntimeError: If testmon database changed after the checkpoint receipt.
+            ValueError: If testmon publication path cannot contain output delimiters.
         """
         execution_mode = (
             c.Infra.PytestExecutionMode.FULL
@@ -568,14 +572,35 @@ class FlextInfraPytestRunnerExecution(
             - deadline.termination_grace_seconds
             - time.monotonic(),
         )
+        self._cache_publication = None
         with u.Infra.codegen_transaction_lease(
             self.testmon_db,
             wait_seconds=wait_seconds,
         ):
-            return self._execute_testmon_leased(
+            result = self._execute_testmon_leased(
                 complete=complete,
                 execution_mode=execution_mode,
             )
+        # Only the parent publishes, after SQLite closure and lease release.
+        publication = self._cache_publication
+        output = self._optional_environment_path("GITHUB_OUTPUT")
+        if publication is not None and output is not None:
+            if (
+                FlextInfraTestmonDbInspector.digest_file(publication.database)
+                != publication.digest
+            ):
+                msg = "testmon database changed after the checkpoint receipt"
+                raise RuntimeError(msg)
+            if any(char in str(publication.database) for char in "\r\n"):
+                msg = "testmon publication path cannot contain output delimiters"
+                raise ValueError(msg)
+            with output.open("a", encoding=c.Cli.ENCODING_DEFAULT) as stream:
+                stream.write(
+                    f"testmon_database={publication.database}\n"
+                    f"testmon_digest={publication.digest}\n"
+                    f"testmon_saveable={str(publication.saveable).lower()}\n",
+                )
+        return result
 
     def _execute_testmon_leased(
         self,
@@ -691,12 +716,32 @@ class FlextInfraPytestRunnerExecution(
         if not state.restored_accepted and not state.saveable:
             msg = f"testmon cache is unusable: {state.reason}"
             raise RuntimeError(msg)
-        return self._finalize(
+        result = self._finalize(
             report_dir,
             cache_restored=cache_restored,
             raw_return_code=outcome.raw_return_code,
             cache_hit=cache_hit,
         )
+        if result.success:
+            accounting = m.Infra.TestmonRunAccounting.model_validate_json(
+                (report_dir / "run-accounting.json").read_text(encoding="utf-8"),
+            )
+            completed = (
+                accounting.executed_count == accounting.reported_count
+                and accounting.inventory_count is not None
+                and accounting.executed_count + accounting.deselected_count
+                == accounting.inventory_count
+            )
+            digest = FlextInfraTestmonDbInspector.digest_file(self.testmon_db)
+            if digest is None:
+                msg = "completed testmon run has no checkpointed database"
+                raise RuntimeError(msg)
+            self._cache_publication = m.Infra.TestmonCachePublication(
+                database=self.testmon_db,
+                digest=digest,
+                saveable=policy.save_enabled and state.saveable and completed,
+            )
+        return result
 
     def execute_coverage(self) -> p.Result[int]:
         """Execute the whole suite under the coverage plugin (never testmon).
