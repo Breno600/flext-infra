@@ -209,7 +209,8 @@ class TestsFlextInfraManagedConflictRecovery:
         )
         recovered = tm.ok(
             u.Infra.recover_managed_toml(
-                content, conflict_sections=("tool.fixture",),
+                content,
+                conflict_sections=("tool.fixture",),
             ),
         )
         tm.that(recovered, eq=content)

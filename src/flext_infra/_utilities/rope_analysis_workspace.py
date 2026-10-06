@@ -206,7 +206,9 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
         parse_root = next(path for path in (root, *root.parents) if path.is_dir())
         with FlextInfraUtilitiesRopeCore.open_project(parse_root) as project:
             return FlextInfraUtilitiesRopeSourceBases.runtime_bases(
-                project, sources, roots,
+                project,
+                sources,
+                roots,
             )
 
     @staticmethod
@@ -229,11 +231,6 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
                 source = file_path.read_text(
                     encoding=c.Cli.ENCODING_DEFAULT,
                 )
-                # Generated exports are projections, not class declarations.
-                if file_path.name == c.Infra.INIT_PY and source.startswith(
-                    c.Infra.AUTOGEN_HEADERS,
-                ):
-                    continue
                 sources[file_path.resolve()] = source
         for file_path, source in planned_sources.items():
             sources[file_path.resolve()] = source
