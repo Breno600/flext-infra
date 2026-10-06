@@ -34,7 +34,10 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             "from __future__ import annotations\n"
             "from typing import Protocol\n\n"
             "class ServiceContract(Protocol):\n"
+            '    """Service contract under relocation."""\n'
+            "\n"
             "    def run(self) -> str:\n"
+            '        """Run the contract."""\n'
             "        ...\n\n"
             "class ServiceImpl:\n"
             "    def run(self) -> str:\n"
@@ -70,7 +73,10 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             "from typing import Protocol\n\n"
             "logger = logging.getLogger(__name__)\n\n"
             "class ServiceContract(Protocol):\n"
+            '    """Service contract under relocation."""\n'
+            "\n"
             "    def run(self) -> str:\n"
+            '        """Run the contract."""\n'
             "        ...\n",
             encoding="utf-8",
         )
@@ -134,6 +140,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             "from typing import Protocol\n\n"
             "class HiddenContract(Protocol):\n"
             "    def run(self) -> str:\n"
+            '        """Run the contract."""\n'
             "        ...\n",
             encoding="utf-8",
         )
@@ -282,7 +289,10 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             "from __future__ import annotations\n"
             "from typing import Protocol\n\n"
             "class ServiceContract(Protocol):\n"
+            '    """Service contract under relocation."""\n'
+            "\n"
             "    def run(self) -> str:\n"
+            '        """Run the contract."""\n'
             "        ...\n",
             encoding="utf-8",
         )

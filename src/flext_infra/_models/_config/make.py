@@ -81,7 +81,9 @@ class FlextInfraConfigModelsMake:
         ]
         informative_check_gates: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="CI check findings are informative; execution errors block"),
+            m.Field(
+                description="CI check findings are informative; execution errors block",
+            ),
         ] = ()
 
         @m.model_validator(mode="after")
@@ -96,7 +98,7 @@ class FlextInfraConfigModelsMake:
             """
             allowed = set(FlextInfraConstantsMake.CANONICAL_GATE_IDS)
             unknown = sorted(
-                set((*self.local_check_gates, *self.informative_check_gates)) - allowed
+                {*self.local_check_gates, *self.informative_check_gates} - allowed,
             )
             if unknown:
                 msg = (
@@ -529,10 +531,15 @@ class FlextInfraConfigModelsMake:
         there is deliberately no ``lint_apply`` key, because a lint pass
         inside fmt would repeat the lint gate's fix.
 
-        ``make fix`` never deletes information (flext-itpd1.5): the lint repair
-        applies Ruff's safe fixes only, so ``lint_fix`` rejects the unsafe-fix
-        flag. Rules whose fixes delete code stay reported through the
-        ``unfixable`` list rendered from ``tooling.yaml``.
+        *** Operator law 2026-10-05 (direct order, OBLIGATORY and NEVER to be
+        disabled again): ``make fix`` ALWAYS applies Ruff's unsafe fixes —
+        ``lint_fix`` MUST carry the unsafe-fix flag in every project and
+        subproject, forever. A configuration without it fails validation;
+        re-adding it after a removal is a mandated repair, and removing it is
+        a regression against an explicit operator order. Rules whose fixes
+        would destroy information stay declared ``unfixable`` in
+        ``tooling.yaml`` — that is rule selection, never disabling the
+        mandatory unsafe channel. ***
         """
 
         format_check: Annotated[
@@ -551,28 +558,30 @@ class FlextInfraConfigModelsMake:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 description=(
-                    "Flags for ruff check --fix applying safe fixes only; the "
-                    "lint gate's apply mode (make fix), which reports leftovers"
+                    "Flags for ruff check --fix; MANDATORY unsafe-fix channel"
+                    " (operator law 2026-10-05): the lint gate's apply mode"
+                    " (make fix) always applies safe and unsafe fixes"
                 ),
             ),
         ]
 
         @m.model_validator(mode="after")
-        def _reject_unsafe_fixes(self) -> Self:
-            """Keep the lint repair information-preserving.
+        def _require_unsafe_fixes(self) -> Self:
+            """Keep the mandatory unsafe lint-repair channel enabled.
 
             Returns:
                 The resulting ``Self``.
 
             Raises:
-                ValueError: If make.ruff.lint_fix must not enable.
+                ValueError: If make.ruff.lint_fix lacks the mandatory flag.
 
             """
-            if FlextInfraConstantsMake.RUFF_UNSAFE_FIXES_FLAG in self.lint_fix:
+            if FlextInfraConstantsMake.RUFF_UNSAFE_FIXES_FLAG not in self.lint_fix:
                 msg = (
-                    "make.ruff.lint_fix must not enable "
-                    f"{FlextInfraConstantsMake.RUFF_UNSAFE_FIXES_FLAG}: unsafe "
-                    "Ruff fixes delete code, comments and diagnostics"
+                    "make.ruff.lint_fix must carry "
+                    f"{FlextInfraConstantsMake.RUFF_UNSAFE_FIXES_FLAG} (operator"
+                    " law 2026-10-05: the unsafe repair channel is mandatory"
+                    " and never disabled again)"
                 )
                 raise ValueError(msg)
             return self
@@ -1103,12 +1112,16 @@ class FlextInfraConfigModelsMake:
                     f"{', '.join(partial_workflow)}"
                 )
                 raise ValueError(msg)
-            approval = tuple(step.verb for step in self.workflow if "ci" in step.contexts)
+            approval = tuple(
+                step.verb for step in self.workflow if "ci" in step.contexts
+            )
             hook = tuple(
                 step.verb for step in self.workflow if "pre_commit" in step.contexts
             )
             if approval != hook or approval != ("setup", "audit", "check", "test"):
-                msg = "CI and pre-commit require the same setup/audit/check/test workflow"
+                msg = (
+                    "CI and pre-commit require the same setup/audit/check/test workflow"
+                )
                 raise ValueError(msg)
             if "pre-commit" not in declared:
                 msg = "make pre-commit must be declared in every profile"

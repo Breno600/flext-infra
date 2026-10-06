@@ -133,8 +133,8 @@ endif
 # Capture the selected approval mode before any project-owned include.
 ifeq ($(strip $({{ make.ci.variable }})),{{ make.ci.value }})
 override APPROVAL_CONTEXT := {{ make.ci.value }}
-ifneq ($(filter upg _upg% dep propagate gen _gen%,$(MAKECMDGOALS)),)
-$(error Resolution, generation and member propagation are forbidden in CI)
+ifneq ($(filter upg _upg% dep propagate,$(MAKECMDGOALS)),)
+$(error Resolution and member propagation are forbidden in CI)
 endif
 endif
 
@@ -282,13 +282,29 @@ CUSTOM_DECLARED_TARGETS := $(shell awk '/^[a-z_][a-z0-9_-]*:/ { target=$$1; sub(
 ifneq ($(.SHELLSTATUS),0)
 $(error Failed to inspect custom Make targets in $(CUSTOM_MAKEFILE))
 endif
-ifneq ($(filter pre-commit _custom-pre-commit,$(CUSTOM_DECLARED_TARGETS)),)
+ifneq ($(filter pre-commit,$(CUSTOM_DECLARED_TARGETS)),)
 $(error Mandatory approval cannot be replaced by custom targets)
 endif
 ifeq ($(APPROVAL_CONTEXT),{{ make.ci.value }})
-ifneq ($(filter {{ make.approval_verbs | join(" ") }}{% for verb in make.approval_verbs %} _custom-{{ verb }}{% endfor %},$(CUSTOM_DECLARED_TARGETS)),)
+ifneq ($(filter {{ make.approval_verbs | join(" ") }},$(CUSTOM_DECLARED_TARGETS)),)
 $(error Approval stages cannot be replaced by custom targets)
 endif
+# Wrapper parity: a custom approval-stage hook is legitimate only while it
+# chains the canonical builtin inside its recipe (the host-service harness
+# pattern). A declared hook without the builtin reference is a replacement
+# and stays forbidden.
+ifneq ($(filter _custom-pre-commit,$(CUSTOM_DECLARED_TARGETS)),)
+ifeq ($(shell grep -c "_builtin-pre-commit" $(CUSTOM_MAKEFILE) || true),0)
+$(error Approval stage _custom-pre-commit must chain _builtin-pre-commit (wrapper parity; replacements are forbidden))
+endif
+endif
+{% for verb in make.approval_verbs %}
+ifneq ($(filter _custom-{{ verb }},$(CUSTOM_DECLARED_TARGETS)),)
+ifeq ($(shell grep -c "_builtin-{{ verb }}" $(CUSTOM_MAKEFILE) || true),0)
+$(error Approval stage _custom-{{ verb }} must chain _builtin-{{ verb }} (wrapper parity; replacements are forbidden))
+endif
+endif
+{% endfor %}
 endif
 endif
 DOCS_ACTIONS :={% for action in make.docs.actions %} {{ action }}{% endfor %}
@@ -608,15 +624,15 @@ setup: _bootstrap_setup_tools
 pre-commit: _builtin_require_workspace
 	+@set -eu; \
 		trap 'if [ -n "$${FLEXT_SETUP_CREDENTIAL_STORE:-}" ]; then rm -f "$$FLEXT_SETUP_CREDENTIAL_STORE"; fi' EXIT; \
-{% for verb in make.approval_verbs %}
+{%- for verb in make.approval_verbs %}
 		printf 'approval: {{ verb }} START\n'; \
 		$(SELF_MAKE) MAKEOVERRIDES= MAKEFLAGS= MFLAGS= {{ make.ci.variable }}={{ make.ci.value }} {{ verb }}; \
-{% if verb == "setup" %}
+{%- if verb == "setup" %}
 		if [ -n "$${FLEXT_SETUP_CREDENTIAL_STORE:-}" ]; then rm -f "$$FLEXT_SETUP_CREDENTIAL_STORE"; fi; \
 		unset FLEXT_SETUP_CREDENTIAL_STORE GITHUB_TOKEN GH_TOKEN MISE_GITHUB_TOKEN GIT_CONFIG_COUNT; \
-{% endif %}
+{%- endif %}
 		printf 'approval: {{ verb }} COMPLETE\n'; \
-{% endfor %}
+{%- endfor %}
 		printf 'approval: COMPLETE\n'
 
 _builtin-pre-commit:

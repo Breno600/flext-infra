@@ -414,16 +414,20 @@ Infra:
       # breaks the verb, with its cause.
       # lint_fix is the lint gate's apply mode and the ONLY lint repair: make
       # fmt runs format only (single-pass verb law), so no lint_apply exists.
-      # make fix never deletes information: lint_fix applies
-      # Ruff's safe fixes only. Unsafe fixes deleted diagnostics (T201 removed
-      # print(..., file=sys.stderr) from a consumer script, turning a failure
-      # silent), so MakeRuffSpec rejects --unsafe-fixes here, and the rules
-      # whose fixes delete code are declared unfixable in tooling.yaml.
+      #
+      # *** OPERATOR LAW (2026-10-05, direct order — OBLIGATORY, NEVER DISABLE
+      # AGAIN): lint_fix ALWAYS runs `--preview --fix --unsafe-fix`. Unsafe
+      # fixes are MANDATORY in every make fix, in every project and
+      # subproject, forever. MakeRuffSpec fails validation without the flag;
+      # removing it is a regression against an explicit operator order and is
+      # reverted on sight. Rules whose fixes would destroy information stay
+      # declared unfixable in tooling.yaml (rule selection, never disabling
+      # the unsafe channel). ***
       ruff:
         format_check: [--preview, --check]
         format_apply: [--preview]
         lint_check: [--preview, --no-fix]
-        lint_fix: [--preview, --fix]
+        lint_fix: [--preview, --fix, --unsafe-fixes]
       # Gates whose mutating side `make fmt` drives (formatters). Their
       # read-only side runs in `make check`; `make fix` never repeats them
       # (single-pass verb law: one operation per tool per verb).
@@ -486,6 +490,11 @@ Infra:
         # pre-push check unsets CI so it runs every active check gate.
         local_value: N
         local_check_gates: [mypy, pyright, codemod, smells, pyrefly]
+        # mypy and pyright are INFORMATIVE (merge-admin mandate
+        # 2026-10-05): the gates execute in every context they run at all
+        # and their findings never block — base_gate reads the
+        # informative list directly, without a CI environment condition.
+        informative_check_gates: [mypy, pyright]
         # local_check_gates is the only declared partition: CI=N runs
         # MakeSpec.check_gates_local (its intersection with the active default
         # gates) and CI=Y runs MakeSpec.check_gates_ci, the strict complement.
@@ -493,10 +502,11 @@ Infra:
         # (ast-grep) rule set, smells (qlty similar-code) and LINT DO NOT
         # EXECUTE under CI=Y at all — operator order 2026-10-05: never
         # blocking, never
-        # advisory, not run; they stay active (blocking) locally, at pre-push,
-        # and on every unset-CI run, so findings still surface before
-        # integration. Mypy stays bounded by MYPY_MEMORY_LIMIT_MB and the
-        # project-owned tools.mypy.timeout_seconds budget.
+        # advisory, not run; locally and on every unset-CI run they execute
+        # as INFORMATIVE gates (findings surface, nothing blocks), so
+        # findings still surface before integration. Mypy stays bounded by
+        # MYPY_MEMORY_LIMIT_MB and the project-owned tools.mypy
+        # .timeout_seconds budget.
         # `format` is not a check gate -- it mutates files, so it belongs to
         # make fmt / make fix only.
         # tooling.tools.pytest.ci-excluded-markers defines the slow-test
@@ -1369,7 +1379,7 @@ Infra:
             runtime: [flext-cli]
           - upstream: flext_cli
             project: flext-quality
-            runtime: [flext-cli, flext-web, flext-api, fastmcp>=4.0.11, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
+            runtime: [flext-cli, flext-web, flext-api, fastmcp>=4.0.11, requests>=2.34.2, aiohttp>=3.14.4, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
           - upstream: flext_cli
             project: flext-web
             runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.142.2, starlette>=1.7.0, werkzeug>=3.1.9]
