@@ -12,7 +12,7 @@ from collections.abc import MutableMapping
 from functools import cache
 from importlib import import_module
 from inspect import getfile
-from os.path import commonprefix
+from os.path import commonpath
 from pathlib import Path
 from types import MappingProxyType
 from typing import ClassVar
@@ -67,7 +67,7 @@ class FlextInfraUtilitiesCodegenNamespace:
         if not bound:
             msg = f"{c.Infra.PKG_CORE_UNDERSCORE} binds no facade family"
             raise ValueError(msg)
-        stem = commonprefix([name for _, name in bound.values()])
+        stem = commonpath([name for _, name in bound.values()])
         return MappingProxyType({
             letter: m.Infra.FacadeFamily(
                 letter=letter,

@@ -191,20 +191,16 @@ Infra:
             - pytest-duplicate-parametrize-test-cases
             - redefined-while-unused
             - unused-variable
-          # The only channel that promotes an unsafe Ruff fix into make fix:
-          # a rule enters here with evidence that its fix preserves code,
-          # comments and diagnostics. Evidence declared per entry:
-          # - relative-imports (relative-imports): the fleet contract is absolute-only
-          #   (ban-relative-imports: all, and make mod rewrites relative
-          #   imports) — the fix enforces the declared contract, no semantics.
-          # - camelcase-imported-as-lowercase (N813): pure alias rename, the
-          #   bound object is unchanged.
-          # - typing-only-first-party-import (TC001): the fix moves an import
-          #   used only in annotations into TYPE_CHECKING; every module runs
-          #   under `from __future__ import annotations`, the runtime-evaluated
-          #   model bases are derived below (flake8-type-checking), and the
-          #   eager-by-law lazy roots never see the rule (scoped __init__.py
-          #   exception), so no runtime-read annotation loses its import.
+          # OPERATOR LAW 2026-10-05 (direct order, OBLIGATORY, NEVER DISABLED
+          # AGAIN): `make fix` ALWAYS applies Ruff's unsafe fixes — the
+          # mandatory lint_fix surface carries --unsafe-fix in codegen.yaml
+          # and MakeRuffSpec fails validation without it. This list keeps its
+          # historical evidence records for the rules whose fixes were proven
+          # semantics-preserving while the channel was opt-in; it no longer
+          # gates the channel (nothing needs promotion into a channel that is
+          # always on). Rules whose fixes would destroy information remain in
+          # `unfixable` above — that is rule selection, never disabling the
+          # mandatory unsafe channel.
           extend-safe-fixes:
             - relative-imports
             - typing-only-first-party-import

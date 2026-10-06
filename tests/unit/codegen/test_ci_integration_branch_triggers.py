@@ -193,7 +193,7 @@ class TestsFlextInfraCiIntegrationBranchTriggers:
             )
 
     @staticmethod
-    @pytest.mark.parametrize("missing", ("setup", "audit", "check", "test"))
+    @pytest.mark.parametrize("missing", ["setup", "audit", "check", "test"])
     def test_typed_approval_rejects_missing_stages(missing: str) -> None:
         """A truncated workflow cannot become an approval contract."""
         owner = config.Infra.codegen.make
