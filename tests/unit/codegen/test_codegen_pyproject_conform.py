@@ -543,6 +543,29 @@ dependencies = []
             ],
         )
 
+    @staticmethod
+    def test_scaffold_mypy_policy_matches_ssot_and_converges(tmp_path: Path) -> None:
+        """The actual Jinja scaffold preserves typed policy on repeated rendering."""
+        root = tmp_path / "fixture-project"
+        first = u.Tests.scaffold_text(root, c.PYPROJECT_FILENAME)
+        mypy = u.Tests.toml_table_at(first, "tool", "mypy")
+        policy = config.Infra.tooling.tools.mypy
+        tm.that(
+            tuple(u.Tests.toml_strings(mypy["plugins"])),
+            eq=tuple(policy.plugins),
+        )
+        tm.that(
+            tuple(u.Tests.toml_strings(mypy["disable_error_code"])),
+            eq=tuple(policy.disable_error_code),
+        )
+        for key, value in {**policy.boolean_settings, **policy.string_settings}.items():
+            tm.that(mypy[key], eq=value)
+        tm.that(
+            u.Tests.toml_table_at(first, "tool", "pydantic-mypy"),
+            eq=config.Infra.tooling.tools.pydantic_mypy.model_dump(),
+        )
+        tm.that(u.Tests.scaffold_text(root, c.PYPROJECT_FILENAME), eq=first)
+
     def test_overlay_preserves_custom_scripts_and_unmanaged_tools(self) -> None:
         """Package requirements survive without restoring stale profile pins."""
         rendered = """[project]

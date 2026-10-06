@@ -1337,7 +1337,7 @@ Infra:
               - beartype>=0.22.9
               - dependency-injector>=4.49.1
               - packaging>=26.3
-              - pydantic>=2.13.5
+              - pydantic>=2.13.5,<3
               - pydantic-settings>=2.15.0
               - pyyaml>=6.0.3
               - structlog>=26.1.0
@@ -1347,7 +1347,7 @@ Infra:
             runtime:
               - flext-cli
               - flext-core
-              - pydantic>=2.13.5
+              - pydantic>=2.13.5,<3
               - pydantic-settings>=2.15.0
             codegen: [flext-infra]
         # Project-scoped requirements extend the shared profile without
