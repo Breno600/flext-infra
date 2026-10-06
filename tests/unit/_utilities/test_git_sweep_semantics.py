@@ -55,11 +55,7 @@ class TestsFlextInfraGitSweepSemantics:
         local = tm.ok(
             u.Infra.git_ref_heads(
                 m.Infra.GitRefHeadsRequest(
-<<<<<<< HEAD
                     repo_root=repository, namespace="refs/heads",
-=======
-                    repo_root=repository, namespace="refs/heads"
->>>>>>> origin/wip/preserved-1656-noselfuse-v2
                 ),
             ),
         )
@@ -256,11 +252,7 @@ class TestsFlextInfraGitSweepSemantics:
         """Last activity covers at least the HEAD commit time."""
         repository = u.Tests.git_repository(tmp_path)
         committed = int(
-<<<<<<< HEAD
             u.Tests.git_capture(repository, "log", "-1", "--format=%ct"),
-=======
-            test_u.Tests.git_capture(repository, "log", "-1", "--format=%ct"),
->>>>>>> origin/wip/preserved-1656-noselfuse-v2
         )
 
         activity = tm.ok(
