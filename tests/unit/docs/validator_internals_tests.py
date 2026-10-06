@@ -35,7 +35,8 @@ class TestsFlextInfraDocsValidatorInternals:
         settings = tmp_path / "docs/architecture/architecture_config.json"
         settings.parent.mkdir(parents=True, exist_ok=True)
         settings.write_text(
-            '{"docs_validation": {"required_skills": ["rules-docs", "readme-standardization"]}}',
+            '{"docs_validation": {"required_skills": '
+            '["rules-docs", "readme-standardization"]}}',
             encoding="utf-8",
         )
 

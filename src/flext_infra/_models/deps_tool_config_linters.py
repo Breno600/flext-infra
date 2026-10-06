@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
 from flext_cli import m
 
@@ -319,6 +319,19 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             ),
         ] = m.Field(default_factory=tuple)
         fix: Annotated[bool, m.Field(description="Enable automatic ruff fixes")]
+        informative_rules: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                alias="informative-rules",
+                description=(
+                    "Ruff rule names reported as warnings: their findings "
+                    "stay visible in the gate log, the summary, and the SARIF "
+                    "reports, but never fail the lint gate (operator ruling "
+                    "2026-10-05: rules the operator never authorized as "
+                    "blocking are informative only)."
+                ),
+            ),
+        ] = ()
         findings_exit_codes: Annotated[
             t.VariadicTuple[int],
             m.Field(
@@ -402,30 +415,9 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 ),
             ),
         ]
-        plugins: Annotated[
-            t.StrSequence,
-            m.Field(
-                description="Mypy plugins, including mandatory Pydantic 2 support.",
-            ),
-        ]
-
-        @m.field_validator("plugins")
-        @classmethod
-        def require_pydantic_plugin(cls, plugins: t.StrSequence) -> t.StrSequence:
-            """Reject configurations without the mandatory Pydantic 2 plugin.
-
-            Returns:
-                The validated plugin declarations.
-
-            Raises:
-                ValueError: If Pydantic 2 support is missing or replaced by v1.
-
-            """
-            if "pydantic.mypy" not in plugins or "pydantic.v1.mypy" in plugins:
-                msg = "Mypy requires pydantic.mypy and forbids pydantic.v1.mypy"
-                raise ValueError(msg)
-            return plugins
-
+        plugins: Annotated[t.StrSequence, m.Field(description="Mypy plugins list.")] = (
+            m.Field(default_factory=tuple)
+        )
         facade_rebind_error_codes: Annotated[
             t.StrSequence,
             m.Field(
@@ -482,6 +474,35 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 "auto-generated files and PEP 695 generics."
             ),
         )
+
+        @m.model_validator(mode="after")
+        def _require_pydantic_plugin(self) -> Self:
+            """Keep the pydantic mypy plugin structural in every projection.
+
+            Operator order 2026-10-05 (bead gc-eqvqx5): the pydantic mypy
+            plugin is MANDATORY, ALWAYS. An empty declaration defaults to
+            the plugin; no projection may emit ``[tool.mypy]`` without it,
+            so no codegen path can omit it.
+
+            Returns:
+                The validated configuration.
+
+            Raises:
+                ValueError: If a declared plugins list omits the pydantic
+                    mypy plugin.
+
+            """
+            if not self.plugins:
+                self.plugins = ("pydantic.mypy",)
+                return self
+            if "pydantic.mypy" not in self.plugins:
+                msg = (
+                    "tools.mypy.plugins must include the pydantic mypy plugin"
+                    " (operator order 2026-10-05, bead gc-eqvqx5); got"
+                    f" {self.plugins!r}"
+                )
+                raise ValueError(msg)
+            return self
 
     class PydanticMypyConfig(m.ArbitraryTypesModel):
         """Pydantic mypy plugin settings loaded from YAML."""

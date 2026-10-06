@@ -96,7 +96,7 @@ class FlextInfraModelsCodemod:
                     "for a match that captures none"
                 ),
             ),
-        ] = m.Field(default_factory=lambda: MappingProxyType[str, t.JsonValue]({}))
+        ]
         transformed: Annotated[
             t.JsonMapping,
             m.Field(
@@ -104,7 +104,7 @@ class FlextInfraModelsCodemod:
                 default_factory=lambda: MappingProxyType[str, t.JsonValue]({}),
                 description="Metavariables the rule derived through transform",
             ),
-        ] = m.Field(default_factory=lambda: MappingProxyType[str, t.JsonValue]({}))
+        ]
 
     class AstGrepReport(m.RootModel[tuple[AstGrepDiagnostic, ...]]):
         """Complete ``ast-grep scan --json=compact`` array; malformed input raises."""

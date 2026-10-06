@@ -450,6 +450,14 @@ class FlextInfraUtilitiesDocsApi:
         source = module_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         if cls._has_symbol_docstring(source, symbol_name):
             return True
+        # A module-export (the export binds the module itself, e.g. a facade
+        # module re-exported under its own name) is documented when the
+        # module carries its own docstring: the export surface and the
+        # documented surface are the same object.
+        if module_name.endswith(f".{symbol_name}") and source.lstrip().startswith(
+            '"""',
+        ):
+            return True
         if cls._has_flext_docstring(
             project_root,
             module_name=module_name,
@@ -457,6 +465,16 @@ class FlextInfraUtilitiesDocsApi:
             symbol_name=symbol_name,
             visited=visited | frozenset({key}),
         ):
+            return True
+        # Lazy-facade idiom: a package re-exports a sibling submodule under
+        # the submodule's own name ("{symbol}": ".{symbol}" in the lazy
+        # map). Static import resolution cannot follow that indirection, so
+        # probe the sibling module file directly: a documented module
+        # satisfies the export contract.
+        sibling = module_file.parent / f"{symbol_name}.py"
+        if sibling.exists() and sibling.read_text(
+            encoding=c.Cli.ENCODING_DEFAULT,
+        ).lstrip().startswith('"""'):
             return True
         imported_module, imported_symbol = cls._imported_symbol_binding(
             source,

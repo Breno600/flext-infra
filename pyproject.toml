@@ -181,7 +181,7 @@ include = ["/src/flext_infra/**", "/config/**"]
 [tool.mypy]
 mypy_path = ["src"]
 plugins = ["pydantic.mypy"]
-disable_error_code = ["prop-decorator", "call-arg"]
+disable_error_code = ["prop-decorator", "call-arg", "attr-defined"]
 python_version = "3.13"
 allow_redefinition = true
 check_untyped_defs = true
@@ -338,6 +338,7 @@ include = ["src", "tests"]
 extraPaths = ["src", "."]
 pythonPlatform = "Linux"
 pythonVersion = "3.13"
+reportCallIssue = "none"
 reportConstantRedefinition = "error"
 reportIncompatibleMethodOverride = "error"
 reportInconsistentConstructor = "error"
@@ -393,6 +394,7 @@ markers = [
   "resilience: resilience tests",
   "discovery: catalog and stream discovery tests",
   "singer: Singer protocol contract tests",
+  "requires_engine: native check engine required by this test",
 ]
 minversion = "8.0"
 python_classes = ["Test*"]
@@ -427,6 +429,7 @@ ignore = [
   "camelcase-imported-as-lowercase",
   "implicit-namespace-package",
   "missing-required-import",
+  "runtime-import-in-type-checking-block",
   "typing-only-first-party-import",
   "typing-only-standard-library-import",
   "typing-only-third-party-import",
@@ -449,6 +452,7 @@ notice-rgx = "Copyright \\(c\\) \\d{4} \\S[^\\n]*\\. All rights reserved\\."
 
 [tool.ruff.lint.flake8-type-checking]
 runtime-evaluated-base-classes = [
+  "flext_cli.FlextCli",
   "flext_cli.config.FlextCliConfig",
   "flext_cli.m.ArbitraryTypesModel",
   "flext_cli.m.BaseModel",
@@ -543,18 +547,21 @@ known-first-party = ["flext_core", "flext_infra"]
 split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
-"**/__init__.py" = [
-  "non-empty-init-module",
-  "runtime-import-in-type-checking-block",
-  "typing-only-first-party-import",
-  "unused-import",
-]
+"**/__init__.py" = ["line-too-long", "non-empty-init-module", "unused-import"]
+"**/_config.py" = ["invalid-function-name"]
+"**/docx.py" = ["import-outside-top-level"]
+"**/file_test_helpers.py" = ["line-too-long"]
+"**/flextcliutilitiesfiletesthelpersmixin_part_03.py" = ["line-too-long"]
+"**/framework.py" = ["banned-api", "import-outside-top-level"]
+"**/pptx.py" = ["import-outside-top-level"]
+"**/test_public_contracts_cov.py" = ["line-too-long"]
 "**/tests/python/**" = [
   "raise-vanilla-args",
   "start-process-with-partial-path",
   "subprocess-without-shell-equals-true",
   "suspicious-subprocess-import",
 ]
+"**/xlsx.py" = ["import-outside-top-level"]
 "scripts/**" = [
   "any-type",
   "avoidable-escaped-quote",

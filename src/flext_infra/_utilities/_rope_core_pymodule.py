@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
@@ -62,7 +63,10 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
         rope_project: t.Infra.RopeProject,
         resource: t.Infra.RopeResource,
     ) -> t.Infra.RopePyModule:
-        """Resolve one concrete rope PyModule through the validated API boundary.
+        """Resolve modules and packages with Python's namespace precedence.
+
+        A sibling source module takes precedence over an uninitialized data
+        directory; an initialized package retains precedence over that module.
 
         Returns:
             The resulting ``t.Infra.RopePyModule``.
@@ -71,6 +75,13 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
             TypeError: If rope project returned non-PyModule.
 
         """
+        if not FlextInfraUtilitiesRopeRuntime.file_resource(resource):
+            path = Path(resource.real_path)
+            if (
+                not (path / "__init__.py").is_file()
+                and path.with_suffix(".py").is_file()
+            ):
+                resource = resource.parent.get_child(f"{path.name}.py")
         pymodule = rope_project.get_pymodule(resource)
         if not FlextInfraUtilitiesRopeRuntime.pymodule(pymodule):
             msg = "rope project returned non-PyModule"

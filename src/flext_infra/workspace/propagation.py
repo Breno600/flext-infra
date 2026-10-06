@@ -37,7 +37,7 @@ class FlextInfraWorkspacePropagation(s[bool]):
                 "conform fails before any effect without it"
             ),
         ),
-    ] = None
+    ]
 
     @override
     def execute(self) -> p.Result[bool]:
@@ -72,7 +72,127 @@ class FlextInfraWorkspacePropagation(s[bool]):
             )
             if propagated.failure:
                 return propagated
+        for consumer in workspace.external_consumers:
+            propagated = self._propagate_external_consumer(
+                workspace,
+                consumer,
+                revision.value.strip(),
+            )
+            if propagated.failure:
+                return propagated
         return r[bool].ok(value=True)
+
+    def _propagate_external_consumer(
+        self,
+        workspace: m.Infra.WorkspaceSpec,
+        consumer: m.Infra.ExternalConsumerSpec,
+        revision: str,
+    ) -> p.Result[bool]:
+        """Advance one external consumer's lane through its own make verbs.
+
+        The consumer's checkout keeps its governance: propagation only runs
+        the consumer's declared canonical verbs inside its own lane branch and
+        publishes nothing when the run changes nothing.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        consumer_root = consumer.root
+        if not consumer_root.is_dir():
+            return r[bool].fail(
+                f"external consumer root does not exist: {consumer_root}",
+            )
+        base = u.Infra.resolve_integration_branch(
+            consumer_root,
+            preference=config.Infra.codegen.branch_policy.integration_branch_preference,
+            declared=consumer.integration_branch,
+        )
+        if base.failure:
+            return r[bool].from_failure(base)
+        body = self._write_external_body(workspace, consumer, revision)
+        if body.failure:
+            return r[bool].from_failure(body)
+        published = u.Infra.git_publish_lane(
+            m.Infra.GitLaneRequest(
+                repo_root=consumer_root,
+                branch=c.Infra.PROPAGATION_BRANCH,
+                base=base.value,
+                subject=c.Infra.PROPAGATION_COMMIT_SUBJECT,
+                body_file=body.value,
+            ),
+            lambda: self._settle_external_consumer(consumer),
+        )
+        if published.failure:
+            return published
+        self.logger.info(
+            "propagation_external_consumer",
+            consumer=consumer.name,
+            published=published.value,
+        )
+        if not published.value:
+            return published
+        return u.Cli.run_checked([c.Infra.GIT, "switch", base.value], cwd=consumer_root)
+
+    @staticmethod
+    def _settle_external_consumer(
+        consumer: m.Infra.ExternalConsumerSpec,
+    ) -> p.Result[bool]:
+        """Run the consumer's declared canonical verbs once, in order.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        verbs: list[str] = []
+        if consumer.advance_locks:
+            verbs.append("upg")
+        verbs.append("gen")
+        if consumer.fix_namespace:
+            verbs.append("fix-namespace")
+        if consumer.fix_accessors:
+            verbs.append("fix-accessors")
+        verbs.extend(("fix", "fmt"))
+        for verb in verbs:
+            settled = u.Cli.run_checked(
+                [c.Infra.MAKE, verb],
+                cwd=consumer.root,
+            )
+            if settled.failure:
+                return r[bool].from_failure(settled)
+        return r[bool].ok(value=True)
+
+    def _write_external_body(
+        self,
+        workspace: m.Infra.WorkspaceSpec,
+        consumer: m.Infra.ExternalConsumerSpec,
+        revision: str,
+    ) -> p.Result[Path]:
+        """Write the external consumer's pull-request body under the reports.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
+        """
+        directory = u.Cli.ensure_dir(
+            u.Cli.resolve_report_dir(
+                self.root,
+                c.Infra.PROJECT,
+                c.Infra.PROPAGATION_REPORT_KEY,
+            ),
+        )
+        if directory.failure:
+            return r[Path].from_failure(directory)
+        body = directory.value / f"external-{consumer.name}.md"
+        written = u.Cli.files_write_text(
+            body,
+            f"# Propagate the workspace flext-infra to {consumer.name}\n\n"
+            f"`make propagate` at `{workspace.repository.name}` {revision} "
+            "advanced this consumer's lane through its own canonical verbs "
+            "(upg, gen, fix-namespace, fix-accessors, fix, fmt). Nothing else"
+            " changed.\n",
+        )
+        return written.map(lambda _written: body)
 
     def _propagate_member(
         self,

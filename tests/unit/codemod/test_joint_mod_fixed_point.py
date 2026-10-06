@@ -152,7 +152,8 @@ class TestsFlextInfraJointModFixedPoint:
         sample = mod_workspace / "sample.py"
         u.Cli.atomic_write_text_file(
             sample,
-            '"""Cross-phase source."""\nfrom __future__ import annotations\n\nmarker = list()\n',
+            '"""Cross-phase source."""\nfrom __future__ import annotations\n\n'
+            "marker = list()\n",
         ).unwrap()
 
         tm.that(self._run(mod_workspace), eq=0)
@@ -176,7 +177,8 @@ class TestsFlextInfraJointModFixedPoint:
         sample = mod_workspace / "sample.py"
         u.Cli.atomic_write_text_file(
             sample,
-            '"""Cyclic source."""\nfrom __future__ import annotations\n\nmarker = dict()\n',
+            '"""Cyclic source."""\nfrom __future__ import annotations\n\n'
+            "marker = dict()\n",
         ).unwrap()
 
         tm.that(self._run(mod_workspace), ne=0)

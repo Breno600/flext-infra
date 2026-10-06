@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
+    from flext_infra.refactor._accessor_origin import FlextInfraAccessorOriginResolver
     from flext_infra.refactor._accessor_report import (
         FlextInfraAccessorMigrationReportMixin,
     )
@@ -58,7 +59,11 @@ if TYPE_CHECKING:
     )
     from flext_infra.refactor.census import FlextInfraRefactorCensus
     from flext_infra.refactor.namespace_enforcer import FlextInfraNamespaceEnforcer
+    from flext_infra.refactor.namespace_relocations import (
+        FlextInfraNamespaceRelocationCascade,
+    )
     from flext_infra.refactor.project_classifier import FlextInfraProjectClassifier
+    from flext_infra.refactor.violations_sweep import FlextInfraRefactorViolationsSweep
     from flext_infra.refactor.wrapper_root_namespace import (
         FlextInfraWrapperRootNamespaceRefactor,
     )
@@ -68,8 +73,10 @@ __all__: tuple[str, ...] = (
     "FlextInfraAccessorMigrationOrchestrator",
     "FlextInfraAccessorMigrationReportMixin",
     "FlextInfraAccessorMigrationRewriteMixin",
+    "FlextInfraAccessorOriginResolver",
     "FlextInfraNamespaceEnforcer",
     "FlextInfraNamespaceEnforcerProjectMixin",
+    "FlextInfraNamespaceRelocationCascade",
     "FlextInfraProjectClassifier",
     "FlextInfraProjectClassifierDepsMixin",
     "FlextInfraProjectClassifierFamilyMixin",
@@ -82,6 +89,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraRefactorCensusProjectMixin",
     "FlextInfraRefactorCensusRemovalMixin",
     "FlextInfraRefactorCensusRenderMixin",
+    "FlextInfraRefactorViolationsSweep",
     "FlextInfraWrapperRootNamespaceRefactor",
     "FlextInfraWrapperRootNamespaceRewriteMixin",
 )
@@ -93,8 +101,10 @@ install_lazy_exports(
         "FlextInfraAccessorMigrationOrchestrator": ".accessor_migration",
         "FlextInfraAccessorMigrationReportMixin": "._accessor_report",
         "FlextInfraAccessorMigrationRewriteMixin": "._accessor_rewrite",
+        "FlextInfraAccessorOriginResolver": "._accessor_origin",
         "FlextInfraNamespaceEnforcer": ".namespace_enforcer",
         "FlextInfraNamespaceEnforcerProjectMixin": "._namespace_enforcer_project",
+        "FlextInfraNamespaceRelocationCascade": ".namespace_relocations",
         "FlextInfraProjectClassifier": ".project_classifier",
         "FlextInfraProjectClassifierDepsMixin": "._project_classifier_deps",
         "FlextInfraProjectClassifierFamilyMixin": "._project_classifier_family",
@@ -107,6 +117,7 @@ install_lazy_exports(
         "FlextInfraRefactorCensusProjectMixin": "._census_project",
         "FlextInfraRefactorCensusRemovalMixin": "._census_removal",
         "FlextInfraRefactorCensusRenderMixin": "._census_render",
+        "FlextInfraRefactorViolationsSweep": ".violations_sweep",
         "FlextInfraWrapperRootNamespaceRefactor": ".wrapper_root_namespace",
         "FlextInfraWrapperRootNamespaceRewriteMixin": "._wrapper_rewrite",
     }),

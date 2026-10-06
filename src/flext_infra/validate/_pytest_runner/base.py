@@ -20,6 +20,10 @@ type PytestPolicy = m.Infra.PytestConfig
 class FlextInfraPytestRunnerBase(s[int]):
     """Own immutable inputs shared by all pytest runner phases."""
 
+    _cache_publication: m.Infra.TestmonCachePublication | None = m.PrivateAttr(
+        default=None,
+    )
+
     started_at_monotonic: Annotated[
         float,
         m.Field(gt=0, description="Clock captured before FLEXT imports."),
@@ -52,10 +56,7 @@ class FlextInfraPytestRunnerBase(s[int]):
     profile_enabled: Annotated[
         bool,
         m.Field(
-            description=(
-                "Run the suite under the profiling entrypoint bound to this "
-                "invocation's run receipt."
-            ),
+            description="Profile the real suite child and preserve its native exit",
         ),
     ] = False
     slow_phase: Annotated[

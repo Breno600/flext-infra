@@ -152,8 +152,11 @@ class FlextInfraConfigModelsWorkspace:
         ]
         file_extensions: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="Allowed file extensions (empty = all by pattern)"),
-        ] = ()
+            m.Field(
+                default_factory=tuple,
+                description="Allowed file extensions (empty = all by pattern)",
+            ),
+        ]
 
     class WorkspaceManifestSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Complete versioned input contract for ``config/workspace.yaml``."""
@@ -173,9 +176,7 @@ class FlextInfraConfigModelsWorkspace:
                 default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
                 description="Repository-owned documentation audit declarations",
             ),
-        ] = m.Field(
-            default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
-        )
+        ]
         namespace_scan_dirs: Annotated[
             t.StrSequence,
             m.Field(
@@ -241,6 +242,15 @@ class FlextInfraConfigModelsWorkspace:
                 FlextInfraConfigModelsWorkspace.RepositoryPolicyOverlaySpec
             ],
             m.Field(description="Repository-local policy overlays"),
+        ] = ()
+        external_consumers: Annotated[
+            t.VariadicTuple[FlextInfraConfigModelsWorkspace.ExternalConsumerSpec],
+            m.Field(
+                description=(
+                    "Out-of-workspace repositories propagation adjusts as"
+                    " guests through their own make verbs"
+                ),
+            ),
         ] = ()
         refactor: Annotated[
             FlextInfraConfigModelsWorkspace.RefactorConfigSpec | None,
@@ -312,6 +322,48 @@ class FlextInfraConfigModelsWorkspace:
         url: Annotated[t.NonEmptyStr, m.Field(description="Infrastructure Git URL")]
         ref: Annotated[t.NonEmptyStr, m.Field(description="Infrastructure Git ref")]
 
+    class ExternalConsumerSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """One out-of-workspace repository propagation adjusts as a guest.
+
+        The consumer keeps its own governance: propagation only advances its
+        declared lane through the consumer's own canonical ``make`` verbs, so
+        FLEXT architecture is never imposed on a non-member repository.
+        """
+
+        name: Annotated[t.NonEmptyStr, m.Field(description="Consumer display name")]
+        root: Annotated[
+            Path,
+            m.Field(
+                description=(
+                    "Absolute checkout root of the consumer repository outside"
+                    " this workspace"
+                ),
+            ),
+        ]
+        integration_branch: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(
+                description=(
+                    "Consumer integration branch; absent defers to the"
+                    " resolver's provider fallback"
+                ),
+            ),
+        ] = None
+        advance_locks: Annotated[
+            bool,
+            m.Field(
+                description="Run the consumer's make upg so flext pins advance",
+            ),
+        ] = True
+        fix_namespace: Annotated[
+            bool,
+            m.Field(description="Run the consumer's make fix-namespace verb"),
+        ] = True
+        fix_accessors: Annotated[
+            bool,
+            m.Field(description="Run the consumer's make fix-accessors verb"),
+        ] = True
+
     class WorkspaceSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Local identity plus topology read from this repository's Git inputs."""
 
@@ -322,9 +374,7 @@ class FlextInfraConfigModelsWorkspace:
                 default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
                 description="Validated local documentation audit declarations",
             ),
-        ] = m.Field(
-            default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
-        )
+        ]
         beads: Annotated[
             FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
             m.Field(description="Repository-local Beads identity when enabled"),
@@ -393,6 +443,15 @@ class FlextInfraConfigModelsWorkspace:
             t.VariadicTuple[Path],
             m.Field(description="Observed external or fork Git submodule paths"),
         ] = ()
+        external_consumers: Annotated[
+            t.VariadicTuple[FlextInfraConfigModelsWorkspace.ExternalConsumerSpec],
+            m.Field(
+                description=(
+                    "Out-of-workspace repositories propagation adjusts as"
+                    " guests through their own make verbs"
+                ),
+            ),
+        ] = ()
 
         @m.model_validator(mode="after")
         def _validate_topology_paths(self) -> Self:
@@ -405,7 +464,8 @@ class FlextInfraConfigModelsWorkspace:
                 ValueError: If external dependency paths must be workspace-relative; or
                     if external dependency paths must be unique; or if subproject paths
                     must be unique; or if external dependencies cannot also be governed
-                    subprojects.
+                    subprojects; or if external consumers must declare unique names
+                    with absolute roots.
 
             """
             invalid_external_paths = tuple(
@@ -433,6 +493,21 @@ class FlextInfraConfigModelsWorkspace:
                 msg = (
                     "external dependencies cannot also be governed subprojects: "
                     f"{', '.join(sorted(path.as_posix() for path in overlap))}"
+                )
+                raise ValueError(msg)
+            consumer_names = [item.name for item in self.external_consumers]
+            if len(set(consumer_names)) != len(consumer_names):
+                msg = "external consumer names must be unique"
+                raise ValueError(msg)
+            relative_roots = tuple(
+                item.root
+                for item in self.external_consumers
+                if not item.root.is_absolute()
+            )
+            if relative_roots:
+                msg = (
+                    "external consumer roots must be absolute: "
+                    f"{', '.join(path.as_posix() for path in relative_roots)}"
                 )
                 raise ValueError(msg)
             return self

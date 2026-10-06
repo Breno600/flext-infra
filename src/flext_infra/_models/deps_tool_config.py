@@ -403,6 +403,13 @@ class FlextInfraModelsDepsToolConfig(
                 description="Declared markers deselected in CI and pre-commit only.",
             ),
         ]
+        ci_excluded_fixtures: Annotated[
+            t.StrTuple,
+            m.Field(
+                alias="ci-excluded-fixtures",
+                description="Fixtures that need local-only provisioning",
+            ),
+        ] = ()
 
         @property
         def process_timeout_seconds(self) -> int:
@@ -626,15 +633,19 @@ class FlextInfraModelsDepsToolConfig(
             t.StrSequence,
             m.Field(
                 alias="exclude-also",
+                default_factory=tuple,
                 description=(
                     "Coverage report line patterns excluded from runtime coverage."
                 ),
             ),
-        ] = ()
+        ]
         omit: Annotated[
             t.StrSequence,
-            m.Field(description="Glob patterns excluded from coverage collection."),
-        ] = ()
+            m.Field(
+                default_factory=tuple,
+                description="Glob patterns excluded from coverage collection.",
+            ),
+        ]
 
     class VultureConfig(m.ArbitraryTypesModel):
         """Vulture production-reachability policy loaded from YAML."""

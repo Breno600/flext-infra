@@ -453,13 +453,19 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         *,
         profile: str | None = None,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
-        """Validate the handwritten Make surface against its profile contract.
+        """Validate custom Make content and plan utility, protocol and model facades.
+
+        Existing handwritten Make content is validated against the selected
+        profile policy. A discovered package layout also contributes ``u``,
+        ``p`` and ``m`` facade plans from consumer-driven owner projection.
+        This method returns file plans; it does not publish their contents.
 
         Returns:
-            The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
+            The custom Make and facade plans, or a typed validation failure.
 
         Raises:
-            ValueError: If rendered.
+            ValueError: If facade rendering fails or a rendered facade has no
+                declaring package module.
 
         """
         policy = config.make.custom_handler_policies.get(

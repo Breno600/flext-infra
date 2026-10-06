@@ -252,15 +252,17 @@ class TestsFlextInfraCodegenMain:
             tm.that(" ".join(result.value.stdout.split()), contains=route.help_text)
 
         @staticmethod
-        @pytest.mark.slow
-        def test_managed_conflict_is_planned_and_published_atomically(
-            infra_git_repo: Path,
-        ) -> None:
-            """Keep live bytes unchanged until the public transaction commits."""
-            root = infra_git_repo
+        def _seed_managed_conflict(root: Path) -> Path:
+            """Seed a governed checkout whose pyproject drifts from its contract.
+
+            Returns:
+                The drifting ``pyproject.toml`` path.
+
+            """
             TestsFlextInfraCodegenMain._seed_public_conform_checkout(root)
             distribution = u.Tests.repository_ref(config.Infra.name).distribution
-            (root / "pyproject.toml").write_text(
+            pyproject = root / "pyproject.toml"
+            pyproject.write_text(
                 f'[project]\nname = "{distribution}"\nversion = "0.12.0.dev0"\n'
                 f'description = "{distribution} governed fixture"\n'
                 'requires-python = "'
@@ -274,19 +276,41 @@ class TestsFlextInfraCodegenMain:
                 "]\n",
                 encoding="utf-8",
             )
-            pyproject = root / "pyproject.toml"
+            return pyproject
+
+        # Each public conform run spawns the real CLI; one behaviour per test keeps
+        # every item inside the config-owned slow bound.
+        @staticmethod
+        def test_managed_conflict_check_leaves_live_bytes_unchanged(
+            infra_git_repo: Path,
+        ) -> None:
+            """Report a managed conflict without touching live bytes or journals."""
+            pyproject = TestsFlextInfraCodegenMain._seed_managed_conflict(
+                infra_git_repo,
+            )
             before = pyproject.read_bytes()
             journal, transaction = TestsFlextInfraCodegenMain._mise_transaction_state(
-                root,
+                infra_git_repo,
             )
-            command = TestsFlextInfraCodegenMain._public_conform_command(root)
-            checked = u.Cli.run_raw([*command, "check"], cwd=root)
+            command = TestsFlextInfraCodegenMain._public_conform_command(infra_git_repo)
+            checked = u.Cli.run_raw([*command, "check"], cwd=infra_git_repo)
             tm.ok(checked)
             tm.that(checked.value.outcome.raw_return_code, eq=1)
             tm.that(pyproject.read_bytes(), eq=before)
             tm.that(journal.exists(), eq=False)
             tm.that(transaction.exists(), eq=False)
 
+        @staticmethod
+        def test_managed_conflict_is_published_atomically_to_a_fixed_point(
+            infra_git_repo: Path,
+        ) -> None:
+            """Publish the conformed bytes through the transaction, then hold still."""
+            root = infra_git_repo
+            pyproject = TestsFlextInfraCodegenMain._seed_managed_conflict(root)
+            journal, transaction = TestsFlextInfraCodegenMain._mise_transaction_state(
+                root,
+            )
+            command = TestsFlextInfraCodegenMain._public_conform_command(root)
             applied = u.Cli.run_raw([*command, "apply"], cwd=root)
             tm.ok(applied)
             tm.that(

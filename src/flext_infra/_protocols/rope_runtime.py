@@ -25,6 +25,11 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
 
         real_path: str
 
+        def get_child(
+            self,
+            name: str,
+        ) -> FlextInfraProtocolsRopeRuntime.RopeResource: ...
+
     @runtime_checkable
     class RopeResource(Protocol):
         """Rope file resource shape."""
@@ -65,6 +70,20 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
         def get_superclasses(
             self,
         ) -> t.SequenceOf[FlextInfraProtocolsRopeRuntime.RopePyObject]: ...
+
+    @runtime_checkable
+    class NativeClassMetadata(Protocol):
+        """CPython class metadata published by Rope's builtin class object."""
+
+        __module__: str
+        __qualname__: str
+        __bases__: tuple[FlextInfraProtocolsRopeRuntime.NativeClassMetadata, ...]
+
+    @runtime_checkable
+    class RopeBuiltinClass(Protocol):
+        """Rope's exact native class identity, not an inferred instance type."""
+
+        builtin: FlextInfraProtocolsRopeRuntime.NativeClassMetadata
 
     @runtime_checkable
     class RopeAstNode(Protocol):

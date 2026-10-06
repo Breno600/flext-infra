@@ -84,3 +84,65 @@ class TestsFlextInfraRopeAnalysis:
         # The rejection names the offending runtime type; its prose is not a contract.
         with pytest.raises(TypeError, match=r"\bobject\b"):
             u.Infra.ensure_ast_node(object())
+
+    @staticmethod
+    def test_call_headed_assignment_binds_as_non_class(tmp_path: Path) -> None:
+        """A call-headed value is a non-class binding, never a base reference.
+
+        Generated package-data modules assign validated payloads
+        (``Payload.model_validate_json(resource).section``); the inventory
+        records that binding as ``None`` instead of feeding the call to the
+        class-reference resolver.
+        """
+        project, package = u.Tests.demo_project(tmp_path)
+        source = package / "data_module.py"
+        source.write_text(
+            "class Owner:\n"
+            "    pass\n"
+            "\n"
+            "\n"
+            "PAYLOAD_SECTION: dict[str, Owner] = Owner.factory(\n"
+            "    resource_text('values.json'),\n"
+            ").items\n",
+            encoding="utf-8",
+        )
+        bases = u.Infra.runtime_evaluated_base_classes(
+            project,
+            {source: source.read_text(encoding="utf-8")},
+            (),
+        )
+        tm.that(bases, eq=())
+
+    @staticmethod
+    def test_non_class_planned_module_binding_skips_the_base(tmp_path: Path) -> None:
+        """A planned module binding that is not a class yields no base lineage.
+
+        A consumer class inheriting through a helper module
+        (``data_module.Helper`` where the planned module binds no such
+        class) must not abort the derivation: the base is unresolved, the
+        class simply does not qualify as runtime-evaluated.
+        """
+        project, package = u.Tests.demo_project(tmp_path)
+        helper = package / "data_module.py"
+        helper.write_text(
+            "def build() -> int:\n    return 0\n",
+            encoding="utf-8",
+        )
+        consumer = package / "consumer.py"
+        consumer.write_text(
+            "from . import data_module\n"
+            "\n"
+            "\n"
+            "class Consumer(data_module.Helper):\n"
+            "    pass\n",
+            encoding="utf-8",
+        )
+        bases = u.Infra.runtime_evaluated_base_classes(
+            project,
+            {
+                source: source.read_text(encoding="utf-8")
+                for source in (helper, consumer)
+            },
+            (),
+        )
+        tm.that(bases, eq=())

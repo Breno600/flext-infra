@@ -21,6 +21,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
     """Behavior tests for the canonical Mypy resource-limit command."""
 
     @staticmethod
+    @pytest.mark.requires_engine("mypy")
     def test_mypy_command_checks_source_with_memory_and_time_limits(
         tmp_path: Path,
     ) -> None:
@@ -39,6 +40,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         tm.that(u.Cli.process_succeeded(result.value.outcome), eq=True)
 
     @staticmethod
+    @pytest.mark.requires_engine("mypy")
     def test_mypy_profile_records_the_real_checker(tmp_path: Path) -> None:
         """Keep the public profiling contract while removing executable selection."""
         project = u.Tests.mypy_workload(tmp_path)
@@ -67,7 +69,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
         budget = config.Infra.tooling.tools.mypy.timeout_seconds // 2
         (tmp_path / "config").mkdir()
         (tmp_path / "config" / "tooling.yaml").write_text(
-            f"Infra:\n  tooling:\n    tools:\n      mypy:\n        timeout_seconds: {budget}\n",
+            "Infra:\n  tooling:\n    tools:\n      mypy:\n"
+            f"        timeout_seconds: {budget}\n",
             encoding="utf-8",
         )
         expected_limit = m.Infra.MypyResourceLimit(
@@ -88,7 +91,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
         above = config.Infra.tooling.tools.mypy.timeout_seconds + 1
         (tmp_path / "config").mkdir()
         (tmp_path / "config" / "tooling.yaml").write_text(
-            f"Infra:\n  tooling:\n    tools:\n      mypy:\n        timeout_seconds: {above}\n",
+            "Infra:\n  tooling:\n    tools:\n      mypy:\n"
+            f"        timeout_seconds: {above}\n",
             encoding="utf-8",
         )
 
@@ -224,7 +228,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
                 policy.termination_grace_seconds,
             ),
         )
-        sleep = f"time.sleep({u.Infra.mypy_runner_timeout(limit) + policy.slow_timeout_seconds})"
+        bound = u.Infra.mypy_runner_timeout(limit) + policy.slow_timeout_seconds
+        sleep = f"time.sleep({bound})"
         tail = f"sys.exit({expected})" if leader_exits else sleep
         descendant = (
             "import signal,time; signal.signal(signal.SIGTERM, signal.SIG_IGN); "
@@ -304,8 +309,9 @@ class TestsFlextInfraUtilitiesResourceLimits:
     @staticmethod
     def test_mypy_resource_contract_rejects_non_positive_limits() -> None:
         """Reject invalid external configuration before spawning a process."""
+        invalid: int = 0
         with pytest.raises(ValueError, match="greater than 0"):
-            m.Infra.MypyResourceLimit(memory_limit_mb=0, timeout_seconds=0)
+            m.Infra.MypyResourceLimit(memory_limit_mb=invalid, timeout_seconds=invalid)
 
     @staticmethod
     def test_mypy_resource_limit_parses_environment_at_boundary() -> None:

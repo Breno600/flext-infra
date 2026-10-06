@@ -1,4 +1,4 @@
-"""Discovery-driven projection of utility owners onto the public facade.
+"""Consumer-driven projection of utility, protocol and model facade owners.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesCodegenFacades:
-    """Project utility owners required by real public-facade consumers."""
+    """Project local ``u``, ``p`` and ``m`` owners selected by package consumers."""
 
     @staticmethod
     def facade_module_path(pkg_dir: Path, family: str) -> Path | None:
@@ -36,10 +36,10 @@ class FlextInfraUtilitiesCodegenFacades:
         from a letter-to-filename table. ``None`` means no module declares it.
 
         Returns:
-            The package module that declares facade letter ``family``.
+            The declaring package module, or ``None`` when none declares it.
 
         Raises:
-            ValueError: If facade letter.
+            ValueError: If multiple package modules declare the same facade letter.
 
         """
         owners = tuple(
@@ -68,16 +68,25 @@ class FlextInfraUtilitiesCodegenFacades:
     ) -> str | None:
         """Render uniquely discovered utility, protocol or model owners.
 
-        Real ``u.<Namespace>.<method>()`` consumers select methods. Definitions
-        Protocol and model references select nested declarations.
-        The corresponding private family selects unique owners. Existing
-        facade content remains unchanged except for missing imports and bases.
+        Package consumers select called utility methods or referenced protocol
+        and model members through imports resolved to this package's facade.
+        Discovery scans Python modules recursively in the configured private
+        family and follows owner base chains. Existing namespace runtime bindings,
+        including simple assignment aliases, are retained rather than replaced.
+        Missing owners contribute imports and bases only; a namespace without
+        bases is updated through its unique concrete-syntax class span.
+        Rendering returns source without publishing it.
 
         Returns:
-            The resulting ``str | None``.
+            Rendered source, including unchanged source when no owner is added,
+            or ``None`` when there is no private family to project or an empty
+            owner directory has no declaring facade.
 
         Raises:
-            ValueError: If utility owners in; or if ambiguous.
+            ValueError: If facade declarations or required owners are ambiguous,
+                a nonempty private family has no facade, the facade class shape
+                or base expression is unsupported, import resolution fails, or
+                base insertion cannot identify a valid source span.
 
         """
         facade_path = cls.facade_module_path(pkg_dir, family)
@@ -118,7 +127,8 @@ class FlextInfraUtilitiesCodegenFacades:
         declared.update(
             target.id
             for member in namespace.body
-            if isinstance(member, ast.Assign | ast.AnnAssign | ast.TypeAlias)
+            if isinstance(member, ast.Assign | ast.TypeAlias)
+            or (isinstance(member, ast.AnnAssign) and member.value is not None)
             for target in (
                 member.targets
                 if isinstance(member, ast.Assign)

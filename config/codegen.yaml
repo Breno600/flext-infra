@@ -235,11 +235,8 @@ Infra:
     # really exercise their subprojects in CI opt in through
     # config/codegen-overrides.yaml.
     checkout_submodules: "false"
-    # The root workspace checkout exercises its flext-infra subproject in CI:
-    # the bootstrap library (post-#1361) is read from the submodule src, so
-    # the root's generated workflows must materialize it before make setup.
-    checkout_submodules_overrides:
-      flext: "true"
+    # CI consumes installed locked providers, never member checkouts.
+    checkout_submodules_overrides: {}
 
     # Runner packages a distribution's own tests need (Ubuntu apt names),
     # installed by the generated CI before the gates run. A test that drives
@@ -417,16 +414,20 @@ Infra:
       # breaks the verb, with its cause.
       # lint_fix is the lint gate's apply mode and the ONLY lint repair: make
       # fmt runs format only (single-pass verb law), so no lint_apply exists.
-      # make fix never deletes information: lint_fix applies
-      # Ruff's safe fixes only. Unsafe fixes deleted diagnostics (T201 removed
-      # print(..., file=sys.stderr) from a consumer script, turning a failure
-      # silent), so MakeRuffSpec rejects --unsafe-fixes here, and the rules
-      # whose fixes delete code are declared unfixable in tooling.yaml.
+      #
+      # *** OPERATOR LAW (2026-10-05, direct order — OBLIGATORY, NEVER DISABLE
+      # AGAIN): lint_fix ALWAYS runs `--preview --fix --unsafe-fix`. Unsafe
+      # fixes are MANDATORY in every make fix, in every project and
+      # subproject, forever. MakeRuffSpec fails validation without the flag;
+      # removing it is a regression against an explicit operator order and is
+      # reverted on sight. Rules whose fixes would destroy information stay
+      # declared unfixable in tooling.yaml (rule selection, never disabling
+      # the unsafe channel). ***
       ruff:
         format_check: [--preview, --check]
         format_apply: [--preview]
         lint_check: [--preview, --no-fix]
-        lint_fix: [--preview, --fix]
+        lint_fix: [--preview, --fix, --unsafe-fixes]
       # Gates whose mutating side `make fmt` drives (formatters). Their
       # read-only side runs in `make check`; `make fix` never repeats them
       # (single-pass verb law: one operation per tool per verb).
@@ -451,14 +452,14 @@ Infra:
       # ladder, and the refs allowed to publish (never pull requests).
       testmon_cache_policy:
         mode: stable
-        save_enabled: false
+        save_enabled: true
         max_bootstrap_generations: 3
         max_stable_generations: 3
         per_repo_budget_bytes: 52428800
         warning_threshold_percent: 80
         maintenance_threshold_percent: 90
         block_threshold_percent: 95
-        allowed_save_refs: [main, 0.12.0-dev]
+        allowed_save_refs: [main, 0.12.0-dev, develop]
         key_prefix: flext-testmon
       # The Mypy gate shares one analysis per project name across checkouts
       # (u.Infra.mypy_cache_directory). Relocks retain the directory; Mypy
@@ -488,39 +489,44 @@ Infra:
         # Other pre-push verbs use this token to preserve local test behavior;
         # pre-push check unsets CI so it runs every active check gate.
         local_value: N
-        local_check_gates: []
+        local_check_gates: [mypy, pyright, codemod, smells, pyrefly]
+        # mypy and pyright are INFORMATIVE (merge-admin mandate
+        # 2026-10-05): the gates execute in every context they run at all
+        # and their findings never block — base_gate reads the
+        # informative list directly, without a CI environment condition.
+        informative_check_gates: [mypy, pyright]
         # local_check_gates is the only declared partition: CI=N runs
         # MakeSpec.check_gates_local (its intersection with the active default
         # gates) and CI=Y runs MakeSpec.check_gates_ci, the strict complement.
-        # An unset CI runs all active gates. The set is empty, so CI=Y runs
-        # every active gate, including the mypy, pyright and pyrefly type
-        # checkers, and no type regression can merge unseen. Mypy stays
-        # bounded by MYPY_MEMORY_LIMIT_MB and the project-owned
-        # tools.mypy.timeout_seconds budget.
+        # An unset CI runs all active gates. Mypy, pyright, the codemod
+        # (ast-grep) rule set, smells (qlty similar-code) and LINT DO NOT
+        # EXECUTE under CI=Y at all — operator order 2026-10-05: never
+        # blocking, never
+        # advisory, not run; locally and on every unset-CI run they execute
+        # as INFORMATIVE gates (findings surface, nothing blocks), so
+        # findings still surface before integration. Mypy stays bounded by
+        # MYPY_MEMORY_LIMIT_MB and the project-owned tools.mypy
+        # .timeout_seconds budget.
         # `format` is not a check gate -- it mutates files, so it belongs to
         # make fmt / make fix only.
         # tooling.tools.pytest.ci-excluded-markers defines the slow-test
         # exclusion for CI and pre-commit, not local/pre-push runs.
         # An absent CI uses testmon for incremental developer runs.
-      # Git-hook stages are disabled by default;
-      # the workflow below still declares stage membership so re-enabling is a
-      # one-key change, case by case. CI owns read-only setup, generation drift,
-      # and checks; it never renders an apply/fmt/fix invocation.
-      pre_commit: false
+      # CI and pre-commit consume the same ordered read-only approval.
+      # Hook installation belongs to the host runtime, not project setup.
+      pre_commit: true
       pre_push: false
       workflow:
-      # Pre-commit runs fmt+fix, then the fast check partition. Pre-push
-      # runs check with CI unset to cover the complete active gate universe,
-      # and adds gen+test with the declared local token.
-        - {verb: setup, contexts: [local, ci]}
+        - {verb: setup, contexts: [local, ci, pre_commit]}
+        - {verb: audit, contexts: [local, ci, pre_commit]}
         - {verb: gen, contexts: [local, pre_push]}
-        - {verb: fmt, contexts: [local, pre_commit]}
-        - {verb: fix, contexts: [local, pre_commit]}
+        - {verb: fmt, contexts: [local]}
+        - {verb: fix, contexts: [local]}
         - {verb: check, contexts: [local, ci, pre_push, pre_commit]}
       # CI also runs the incremental suite with the persistent testmon cache.
       # The full suite remains a separate local verb that first runs this
       # incremental phase and then exercises the complete inventory.
-        - {verb: test, contexts: [local, ci, pre_push]}
+        - {verb: test, contexts: [local, ci, pre_push, pre_commit]}
       # Artifacts `make clean` removes. Read by Makefile.j2 for the cache
       # sweep and the root-level directory/file lists.
       clean:
@@ -588,6 +594,8 @@ Infra:
           description: Show the complete selector-free public interface.
         - name: setup
           description: Provision the declared environment and hooks.
+        - name: pre-commit
+          description: Approve this project through locked setup, audit, check, and incremental tests with the enforced CI contract.
         - name: upg
           description: Resolve the newest declared releases, write the uv and mise locks, then prove the upgraded tree still converges and passes every active check gate.
         # Workspace-only (topology owns applicability): a standalone Makefile
@@ -621,9 +629,9 @@ Infra:
         - name: fix
           description: Apply the safe fixes of ruff check --fix --preview plus every other configured safe correction; never deletes information. Ruff is the rule; change code, never ruff.
         - name: fix-namespace
-          description: Apply the canonical namespace enforcer to the selected workspace.
+          description: Apply the canonical namespace enforcer to the selected workspace; the same relocation cascade runs as a callback phase of make mod.
         - name: fix-accessors
-          description: Migrate forbidden accessor names and every resolved consumer.
+          description: Migrate accessor names owned by the rename catalog's origin package and every resolved consumer; homonyms are skipped with a warning; the same origin-aware rewrite runs as a callback phase of make mod.
         - name: audit
           description: Inspect ownership, dependency, and generated-state health.
         - name: status
@@ -672,6 +680,11 @@ Infra:
       custom_handler_profile_overrides: {}
       standalone_check_gates:
         smells: smells
+      # Operator ruling flext-uz0dt (2026-09-18, reaffirmed 2026-10-04 in
+      # flext-qtmy2): markdown-code runs only when requested explicitly; make
+      # fix still repairs it.
+      opt_in_check_gates:
+        - markdown-code
       custom_handler_policy:
         filename: custom.mk
         # Custom behavior is one private whole-verb replacement or one lifecycle
@@ -1366,7 +1379,7 @@ Infra:
             runtime: [flext-cli]
           - upstream: flext_cli
             project: flext-quality
-            runtime: [flext-cli, flext-web, flext-api, fastmcp>=4.0.11, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
+            runtime: [flext-cli, flext-web, flext-api, fastmcp>=4.0.11, requests>=2.34.2, aiohttp>=3.14.4, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
           - upstream: flext_cli
             project: flext-web
             runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.142.2, starlette>=1.7.0, werkzeug>=3.1.9]

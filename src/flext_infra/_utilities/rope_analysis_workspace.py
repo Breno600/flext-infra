@@ -105,8 +105,27 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             if isinstance(node, ast.ImportFrom)
             for alias in node.names
         }
+
+        def _base_names(node: ast.ClassDef) -> set[str]:
+            """Resolve direct base names, seeing through ``Generic[T]`` subscripts.
+
+            The canonical facade-rebind form subclasses the imported letter
+            through a PEP 695 generic class, so the base reaches the AST as
+            ``ast.Subscript(value=Name(letter))`` and a plain ``ast.Name``
+            walk misses it.
+
+            Returns:
+                The resulting ``set[str]``.
+            """
+            names = set[str]()
+            for base in node.bases:
+                candidate = base.value if isinstance(base, ast.Subscript) else base
+                if isinstance(candidate, ast.Name):
+                    names.add(candidate.id)
+            return names
+
         bases_by_class = {
-            node.name: {base.id for base in node.bases if isinstance(base, ast.Name)}
+            node.name: _base_names(node)
             for node in tree.body
             if isinstance(node, ast.ClassDef)
         }
