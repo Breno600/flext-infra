@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from collections.abc import MutableMapping
     from pathlib import Path
 
-    from flext_infra import m, p, t
+    from flext_infra import models as m, protocols as p, typings as t
 
 
 class FlextInfraUtilitiesSemanticCutoverModuleLayout(

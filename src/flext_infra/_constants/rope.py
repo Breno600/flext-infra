@@ -10,14 +10,18 @@ from enum import StrEnum, unique
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
-    from flext_infra import t
+    from flext_infra._constants.typings import t
 
 
 class FlextInfraConstantsRope:
     """Rope Project configuration constants — accessed via c.Infra.*."""
 
     ROPE_WALK_DEPTH_BUDGET: ClassVar[int] = 128
-    "Bound for the external-base walk's provider/reexport hops; the workspace facade chain (examples -> flext -> flext_infra -> flext_core pydantic) is a finite multi-layer walk, cycles terminate through the preserved visiting stack, and self-referential definition references short-circuit through the direct identity map."
+    "Bound for the external-base walk's provider/reexport hops; the workspace"
+    " facade chain (examples -> flext -> flext_infra -> flext_core pydantic) is"
+    " a finite multi-layer walk, cycles terminate through the preserved"
+    " visiting stack, and self-referential definition references short-circuit"
+    " through the direct identity map."
 
     @unique
     class RopeScopeKind(StrEnum):

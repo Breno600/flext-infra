@@ -9,17 +9,16 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from flext_cli import u
 
-from flext_infra import c, config, m
+from flext_infra._config import config
 from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
 from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
 from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
-
-if TYPE_CHECKING:
-    from flext_infra import t
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.typings import t
 
 
 class FlextInfraUtilitiesDocsAuditDetectorsMixin:

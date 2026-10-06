@@ -11,7 +11,6 @@ from importlib.metadata import requires
 from importlib.resources import files
 from pathlib import Path
 from types import MappingProxyType
-from typing import TYPE_CHECKING
 
 from flext_cli import u
 from packaging.requirements import InvalidRequirement, Requirement
@@ -19,19 +18,37 @@ from packaging.utils import canonicalize_name
 from packaging.version import InvalidVersion, Version
 
 from flext_core import r
-from flext_infra import c, m, t
 from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.protocols import p
+from flext_infra.typings import t
 
 # Why: dependency_waves subscripts r[t.SequenceOf[t.StrSequence]] at runtime, so
 # the typings facade cannot be TYPE_CHECKING-only here. c -> t is a forward
 # facade import and stays cycle-free.
 
-if TYPE_CHECKING:
-    from flext_infra import p
-
 
 class FlextInfraUtilitiesDependencies:
     """Static helpers for inspecting dependency declarations in pyproject payloads."""
+
+    @staticmethod
+    def raw_requirement_values(raw: p.AttributeProbe) -> list[str]:
+        """Collect requirement strings from dependency arrays or group tables.
+
+        Returns:
+            Requirement strings retained from the declared arrays.
+        """
+        if isinstance(raw, Mapping):
+            values: list[str] = []
+            for group in raw.values():
+                values.extend(
+                    FlextInfraUtilitiesDependencies.raw_requirement_values(group),
+                )
+            return values
+        if isinstance(raw, (list, tuple)):
+            return [item for item in raw if isinstance(item, str)]
+        return []
 
     @staticmethod
     def active_requirement(

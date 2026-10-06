@@ -12,12 +12,15 @@ from typing import TYPE_CHECKING
 from defusedxml import ElementTree as DefusedET
 
 from flext_core import r
-from flext_infra import c, m, u
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.utilities import u
 from flext_infra.validate._pytest_runner.base import FlextInfraPytestRunnerBase
 from flext_infra.validate.pytest_diag import FlextInfraPytestDiagExtractor
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from flext_infra.validate._pytest_runner.protocols import p
+    from flext_infra.validate._pytest_runner.typings import t
 
 
 class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):

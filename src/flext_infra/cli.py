@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import sys
 
-from flext_infra import c, t
+from flext_infra.constants import c
 from flext_infra.services.cli_dispatch import FlextInfraCliDispatchService
+from flext_infra.typings import t
 
 
 class FlextInfraCli(FlextInfraCliDispatchService):

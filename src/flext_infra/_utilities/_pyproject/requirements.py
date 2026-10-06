@@ -11,14 +11,15 @@ from typing import TYPE_CHECKING
 
 from flext_cli import r, u
 
-from flext_infra import c, t
 from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
 from flext_infra._utilities.repository import FlextInfraUtilitiesRepository
+from flext_infra.constants import c
+from flext_infra.typings import t
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from flext_infra import p
+    from flext_infra import protocols as p
 
 
 class FlextInfraUtilitiesPyprojectRequirements:

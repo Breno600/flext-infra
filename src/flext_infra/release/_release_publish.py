@@ -9,8 +9,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_core import r
-from flext_infra import c, config, m, p, u
+from flext_infra._config import config
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.protocols import p
 from flext_infra.release._release_build import FlextInfraReleaseBuildMixin
+from flext_infra.utilities import u
 
 
 class FlextInfraReleasePublishMixin(FlextInfraReleaseBuildMixin):

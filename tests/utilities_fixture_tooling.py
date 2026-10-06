@@ -279,7 +279,7 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
 
     @staticmethod
     def cli_shim(bin_dir: Path, name: str) -> Path:
-        """Provide an executable that records its arguments instead of reaching a service.
+        """Provide an executable that records its arguments, not a service.
 
         ``gh`` and ``uv publish`` talk to GitHub and to a package index; a
         unit test proves the protocol's command contract against a recorded

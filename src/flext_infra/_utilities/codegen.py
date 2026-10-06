@@ -15,10 +15,14 @@ from typing import TYPE_CHECKING
 from flext_cli import u
 
 from flext_core import r
-from flext_infra import c, config, m, p, t
+from flext_infra._config import config
 from flext_infra._utilities.codegen_facades import FlextInfraUtilitiesCodegenFacades
 from flext_infra._utilities.codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
 from flext_infra._utilities.gitignore import FlextInfraUtilitiesGitignore
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.protocols import p
+from flext_infra.typings import t
 
 
 class FlextInfraUtilitiesCodegen(

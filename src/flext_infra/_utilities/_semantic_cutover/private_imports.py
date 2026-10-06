@@ -11,7 +11,6 @@ from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import m, t
 from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
 )
@@ -27,11 +26,13 @@ from flext_infra._utilities.private_import_facades import (
 from flext_infra._utilities.private_import_validation import (
     FlextInfraUtilitiesPrivateImportValidation,
 )
+from flext_infra.models import m
+from flext_infra.typings import t
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
+    from flext_infra import protocols as p
 
 
 class FlextInfraUtilitiesSemanticCutoverPrivateImports(

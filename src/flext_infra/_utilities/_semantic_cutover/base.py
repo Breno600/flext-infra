@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, assert_never
 
-from flext_infra import c, m, t
 from flext_infra._utilities._semantic_cutover.aliases import (
     FlextInfraUtilitiesSemanticCutoverAliases,
 )
@@ -33,11 +32,14 @@ from flext_infra._utilities._semantic_cutover.private_imports import (
 from flext_infra._utilities._semantic_cutover.self_facade import (
     FlextInfraUtilitiesSemanticCutoverSelfFacade,
 )
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.typings import t
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
+    from flext_infra import protocols as p
 
 
 class FlextInfraUtilitiesSemanticCutoverBase(

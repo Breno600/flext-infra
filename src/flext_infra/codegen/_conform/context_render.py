@@ -10,11 +10,16 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from flext_core import r
-from flext_infra import c, config, m, p, t, u
+from flext_infra._config import config
 from flext_infra.codegen._conform.pyproject_policy import (
     FlextInfraCodegenConformPyprojectPolicy,
 )
+from flext_infra.constants import c
 from flext_infra.deps import FlextInfraEnsurePackagingPhase
+from flext_infra.models import m
+from flext_infra.protocols import p
+from flext_infra.typings import t
+from flext_infra.utilities import u
 
 
 class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPolicy):

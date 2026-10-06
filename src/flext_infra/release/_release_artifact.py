@@ -17,8 +17,12 @@ from packaging.utils import canonicalize_name
 from packaging.version import InvalidVersion, Version
 
 from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.protocols import p
 from flext_infra.release._release_boundary import FlextInfraReleaseBoundaryMixin
+from flext_infra.typings import t
+from flext_infra.utilities import u
 
 
 class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):

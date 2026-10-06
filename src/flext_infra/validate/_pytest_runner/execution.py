@@ -16,13 +16,17 @@ from typing import TYPE_CHECKING, override
 import pytest
 
 from flext_core import r
-from flext_infra import c, config, m, t, u
+from flext_infra._config import config
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.typings import t
+from flext_infra.utilities import u
 from flext_infra.validate._pytest_runner.command import FlextInfraPytestRunnerCommand
 from flext_infra.validate._pytest_runner.reports import FlextInfraPytestRunnerReports
 from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra.validate._pytest_runner.protocols import p
 
 
 class FlextInfraPytestRunnerExecution(

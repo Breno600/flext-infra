@@ -13,13 +13,14 @@ from typing import TYPE_CHECKING, cast
 
 from flext_cli import u
 
-from flext_infra import c, m
 from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
+from flext_infra.constants import c
+from flext_infra.models import m
 
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from flext_infra import p, t
+    from flext_infra import protocols as p, typings as t
 
 
 class FlextInfraUtilitiesDocsBuild:

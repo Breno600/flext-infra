@@ -14,8 +14,11 @@ from tempfile import TemporaryDirectory
 
 from flext_cli import r, u
 
-from flext_infra import c, m, p, t
 from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.protocols import p
+from flext_infra.typings import t
 
 
 class FlextInfraUtilitiesRelease:

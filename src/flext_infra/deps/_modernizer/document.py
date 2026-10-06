@@ -9,7 +9,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, config, m, t, u
+from flext_infra._config import config
+from flext_infra.constants import c
 from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
 from flext_infra.deps.phases.consolidate_groups import FlextInfraConsolidateGroupsPhase
 from flext_infra.deps.phases.ensure_packaging import FlextInfraEnsurePackagingPhase
@@ -18,12 +19,15 @@ from flext_infra.deps.phases.ensure_pyright import FlextInfraEnsurePyrightConfig
 from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
 from flext_infra.deps.phases.inject_comments import FlextInfraInjectCommentsPhase
 from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
+from flext_infra.models import m
 from flext_infra.refactor.project_classifier import FlextInfraProjectClassifier
+from flext_infra.typings import t
+from flext_infra.utilities import u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
+    from flext_infra.deps._modernizer.protocols import p
 
 
 class FlextInfraPyprojectModernizerDocument:

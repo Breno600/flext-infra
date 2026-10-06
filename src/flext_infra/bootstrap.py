@@ -39,7 +39,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
 
-from flext_infra import config
+from flext_infra._config import config
 
 if os.name == "nt":
     # Windows file locking; POSIX uses fcntl below. The import stays
@@ -165,7 +165,7 @@ class FlextInfraBootstrap:
         if (
             selector.is_absolute()
             or selector.as_posix() != relative
-            or len(selector.parts) < cls.MIN_SIDECAR_DEPTH
+            or len(selector.parts) < FlextInfraBootstrap.MIN_SIDECAR_DEPTH
             or selector.parts[:2] != (".mise", "locks")
             or ".." in selector.parts
         ):
@@ -471,8 +471,8 @@ class FlextInfraBootstrap:
     def _publish_or_park(cls, project: Path, stage: Path) -> None:
         """Publish the staged lock; park an unreadable prior state and retry.
 
-        Raises:
-            ValueError: If the staged publication fails again after parking.
+        The retried publication propagates the ``ValueError`` that ``publish``
+        raises when it fails again after the prior state is parked.
         """
         try:
             cls.publish(project, stage)
@@ -505,8 +505,8 @@ class FlextInfraBootstrap:
         Returns:
             The resulting ``bool``: whether the seed was published.
 
-        Raises:
-            ValueError: If Mise exits or warns during the seed lock.
+        The seed lock propagates the ``ValueError`` that ``_run`` raises when
+        Mise exits or warns during the seed lock.
         """
         stage = Path(
             tempfile.mkdtemp(
@@ -551,8 +551,7 @@ class FlextInfraBootstrap:
                 return False
             cls._publish_or_park(project, stage)
             sys.stdout.write(
-                f"reconcile: published the {name} mise.lock "
-                f"Mise {release} satisfies\n",
+                f"reconcile: published the {name} mise.lock Mise {release} satisfies\n",
             )
             return True
         finally:
@@ -905,8 +904,8 @@ class FlextInfraBootstrap:
             The resulting ``tuple[str, str]``.
 
         Raises:
-            ValueError: If Mise manifest has no settings table; or if Mise manifest
-                lacks cooldown or lockfile platforms.
+            FlextInfraBootstrapPayloadError: If Mise manifest has no settings table; or
+                if Mise manifest lacks cooldown or lockfile platforms.
         """
         payload = tomllib.loads(manifest.read_text(encoding="utf-8"))
         settings = payload.get("settings")
@@ -1314,9 +1313,10 @@ class FlextInfraBootstrap:
                 platforms,
                 release,
             )
-            return
         except ValueError as held_error:
             failures.append(f"held: {held_error}")
+        else:
+            return
         raise ValueError(
             "reconcile: no seed produced a lock the pinned Mise satisfies ("
             + "; ".join(failures)
@@ -1511,17 +1511,11 @@ class FlextInfraBootstrap:
         Raises:
             ValueError: If usage.
         """
-        if (
-            len(arguments) == cls.RELOCK_ARITY
-            and arguments[0] == "relock"
-        ):
+        if len(arguments) == cls.RELOCK_ARITY and arguments[0] == "relock":
             with cls._serialized(Path(arguments[1]).absolute()):
                 cls.relock(Path(arguments[1]).absolute())
             return 0
-        if (
-            len(arguments) == cls.CONVERGE_ARITY
-            and arguments[0] == "converge"
-        ):
+        if len(arguments) == cls.CONVERGE_ARITY and arguments[0] == "converge":
             project = Path(arguments[1]).absolute()
             with cls._serialized(project):
                 cls.converge(Path(arguments[2]).absolute(), arguments[3])

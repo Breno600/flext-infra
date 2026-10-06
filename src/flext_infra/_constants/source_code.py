@@ -10,7 +10,7 @@ import re
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
-    from flext_infra import t
+    from flext_infra._constants.typings import t
 
 
 class FlextInfraConstantsSourceCode:
@@ -116,7 +116,8 @@ class FlextInfraConstantsSourceCode:
     TRANSIENT_PYTEST_SCRATCH_PART: ClassVar[t.RegexPattern] = re.compile(
         r"^\.flext-.+\.pytest-scratch\.",
     )
-    "Transient per-run pytest basetemp directories the runners create inside the repository; analyzers must never descend into them."
+    "Transient per-run pytest basetemp directories the runners create inside"
+    " the repository; analyzers must never descend into them."
     VALIDATION_CLONE_EXCLUDES: ClassVar[frozenset[str]] = COMMON_EXCLUDED_DIRS | {
         ".archive",
         ".ropeproject",

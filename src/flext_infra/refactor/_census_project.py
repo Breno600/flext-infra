@@ -9,10 +9,10 @@ from __future__ import annotations
 from collections import Counter
 from typing import TYPE_CHECKING
 
-from flext_infra import m
+from flext_infra.models import m
 
 if TYPE_CHECKING:
-    from flext_infra import t
+    from flext_infra.refactor.typings import t
 
 
 class FlextInfraRefactorCensusProjectMixin:

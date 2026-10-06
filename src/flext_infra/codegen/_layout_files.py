@@ -14,8 +14,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_core import r
-from flext_infra import config, m, p, t, u
+from flext_infra._config import config
 from flext_infra.codegen._layout_plan import FlextInfraCodegenLayoutPlanMixin
+from flext_infra.models import m
+from flext_infra.protocols import p
+from flext_infra.typings import t
+from flext_infra.utilities import u
 
 
 class FlextInfraCodegenLayoutFilesMixin:

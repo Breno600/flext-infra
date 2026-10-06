@@ -15,13 +15,15 @@ from markdown import Markdown
 from markdown.extensions.toc import slugify
 
 from flext_core import r
-from flext_infra import c, m, t
 from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.typings import t
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
+    from flext_infra import protocols as p
 
 
 class FlextInfraUtilitiesDocsContract:

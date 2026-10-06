@@ -9,7 +9,7 @@ from __future__ import annotations
 import ast
 import builtins
 
-from flext_infra import t
+from flext_infra.typings import t
 
 
 class FlextInfraUtilitiesSemanticCutoverClassScope:

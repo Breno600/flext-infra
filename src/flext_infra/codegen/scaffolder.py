@@ -12,12 +12,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
-from flext_infra import c, m, u
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
 from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.utilities import u
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from flext_infra.codegen.protocols import p
+    from flext_infra.codegen.typings import t
 
 
 class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):

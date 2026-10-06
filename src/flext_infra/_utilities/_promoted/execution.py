@@ -12,13 +12,13 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import c
 from flext_infra._utilities._promoted.invocation import (
     FlextInfraUtilitiesPromotedInvocation,
 )
+from flext_infra.constants import c
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from flext_infra import protocols as p, typings as t
 
 
 class FlextInfraUtilitiesPromotedExecution(FlextInfraUtilitiesPromotedInvocation):
@@ -39,7 +39,8 @@ class FlextInfraUtilitiesPromotedExecution(FlextInfraUtilitiesPromotedInvocation
             PromotedRegistryError: If ``result.failure``.
 
         """
-        from flext_infra import settings, u
+        from flext_infra._settings import settings
+        from flext_infra._utilities._promoted.utilities import u
 
         message, env_name = c.Infra.PromotedMessage, c.Infra.PromotedEnv
         project_root = cls.promoted_find_owner_root(command.path)

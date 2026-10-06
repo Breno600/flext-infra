@@ -85,7 +85,7 @@ class TestsFlextInfraCodegenMiseArtifacts:
         self,
         tmp_path: Path,
     ) -> None:
-        """A scope root still carrying the bootstrap seed starts from the packaged triple."""
+        """A scope root with the bootstrap seed starts from the packaged triple."""
         root = tmp_path / "seed-project"
         for relative, _mode in c.Infra.ARTIFACT_SPECS:
             path = root / relative

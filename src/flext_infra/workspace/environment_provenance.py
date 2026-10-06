@@ -15,11 +15,14 @@ from urllib.parse import unquote, urlparse
 from urllib.request import url2pathname
 
 from flext_core import r
-from flext_infra import config, m, u
+from flext_infra._config import config
+from flext_infra.models import m
+from flext_infra.utilities import u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from flext_infra.workspace.protocols import p
+    from flext_infra.workspace.typings import t
 
 
 class FlextInfraWorkspaceEnvironmentProvenance:
@@ -189,7 +192,8 @@ class FlextInfraWorkspaceEnvironmentProvenance:
                     != u.Infra.git_remote_identity(expected.geturl())
                 ):
                     return r[int].fail(
-                        f"installed dependency origin differs from committed lock: {name}",
+                        "installed dependency origin differs from committed"
+                        f" lock: {name}",
                     )
             files = distribution.files
             if files is None:

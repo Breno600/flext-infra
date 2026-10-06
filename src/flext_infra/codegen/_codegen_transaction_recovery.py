@@ -11,16 +11,17 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import m, t
 from flext_infra.codegen._mise_artifacts_journal import FlextInfraMiseArtifactsJournal
 from flext_infra.codegen._mise_artifacts_recovery import FlextInfraMiseRecovery
 from flext_infra.codegen._mise_artifacts_state import FlextInfraMiseArtifactsState
 from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
 from flext_infra.codegen.file_leases import FlextInfraCodegenFileLeases
 from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
+from flext_infra.models import m
+from flext_infra.typings import t
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra.codegen.protocols import p
 
 
 class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):

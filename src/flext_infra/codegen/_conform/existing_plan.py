@@ -12,13 +12,17 @@ from pathlib import Path
 from typing import Literal
 
 from flext_core import r
-from flext_infra import c, m, p, t, u
 from flext_infra.codegen._conform.artifact_render import (
     FlextInfraCodegenConformArtifactRender,
 )
 from flext_infra.codegen._mise_artifacts_cold_start import FlextInfraMiseColdStart
+from flext_infra.constants import c
 from flext_infra.deps import FlextInfraPyprojectModernizer
+from flext_infra.models import m
+from flext_infra.protocols import p
 from flext_infra.services.codegen import FlextInfraCodegen
+from flext_infra.typings import t
+from flext_infra.utilities import u
 from flext_infra.workspace.environment_contracts import (
     FlextInfraWorkspaceEnvironmentContracts,
 )

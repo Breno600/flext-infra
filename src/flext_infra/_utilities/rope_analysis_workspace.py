@@ -12,13 +12,16 @@ from collections.abc import MutableMapping
 from functools import lru_cache
 from pathlib import Path
 
-from flext_infra import c, config, m, t
+from flext_infra._config import config
 from flext_infra._utilities.iteration_workspace import (
     FlextInfraUtilitiesIterationWorkspace,
 )
 from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
 from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
 from flext_infra._utilities.rope_source_bases import FlextInfraUtilitiesRopeSourceBases
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.typings import t
 
 
 class FlextInfraUtilitiesRopeAnalysisWorkspace:

@@ -10,10 +10,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import m
+from flext_infra.models import m
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra import protocols as p
 
 
 class FlextInfraWorktreeLifecycle:
@@ -25,7 +25,7 @@ class FlextInfraWorktreeLifecycle:
         created_branch_oid: str | None,
         setup_error: str,
     ) -> p.Result[str]:
-        from flext_infra import u
+        from flext_infra._utilities.utilities import u
 
         status = u.Infra.git_status(m.Infra.GitStatusRequest(repo_root=lane))
         if status.failure:
@@ -54,7 +54,7 @@ class FlextInfraWorktreeLifecycle:
 
     @staticmethod
     def update_lane(lane: Path, branch: str, base: str) -> p.Result[str]:
-        from flext_infra import u
+        from flext_infra._utilities.utilities import u
 
         if not lane.is_dir():
             return r[str].fail(f"worktree lane does not exist: {lane}")

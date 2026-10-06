@@ -11,9 +11,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
-from flext_infra import c, m, u
+from flext_infra.constants import c
 from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
+from flext_infra.models import m
 from flext_infra.transformers import FlextInfraSemanticPublication
+from flext_infra.utilities import u
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -169,7 +171,6 @@ class FlextInfraModReplacements:
         Import normalization drops the last real reference inside a type-only
         block and a statement fix leaves ``pass`` behind; the scaffold then
         carries no information. The block is removed and the ``TYPE_CHECKING``
-        import goes with it once nothing references it anymore. Unparsable
         subjects are left untouched; the following format gate stays the owner
         of any syntax verdict.
 

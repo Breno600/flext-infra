@@ -18,8 +18,11 @@ from typing import override
 from flext_cli import cli
 
 from flext_core import r
-from flext_infra import FlextInfraServiceBase, p, t, u
+from flext_infra.base import FlextInfraServiceBase
 from flext_infra.codemod import FlextInfraModGateEngine, FlextInfraModTextGateEngine
+from flext_infra.protocols import p
+from flext_infra.typings import t
+from flext_infra.utilities import u
 
 
 class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):

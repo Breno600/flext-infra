@@ -977,10 +977,11 @@ class TestsFlextInfraRepositoryLocalTopology:
             ),
         )
         _ = u.Tests.WorktreeFixture.attach_member_child(root)
+        child_url = u.Tests.WorktreeFixture.governed_repository_url("fixture-child")
         (root / c.Infra.GITMODULES).write_text(
             '[submodule "fixture-child"]\n'
             "\tpath = fixture-child\n"
-            f"\turl = {u.Tests.WorktreeFixture.governed_repository_url('fixture-child')}\n"
+            f"\turl = {child_url}\n"
             "\tbranch = develop\n",
             encoding="utf-8",
         )
