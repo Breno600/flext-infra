@@ -316,9 +316,15 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
                 m.Infra.SourceScanRequest(project_roots=(root,)),
             ).unwrap()
             for file_path in files:
-                sources[file_path.resolve()] = file_path.read_text(
+                source = file_path.read_text(
                     encoding=c.Cli.ENCODING_DEFAULT,
                 )
+                # Generated exports are projections, not class declarations.
+                if file_path.name == c.Infra.INIT_PY and source.startswith(
+                    c.Infra.AUTOGEN_HEADERS,
+                ):
+                    continue
+                sources[file_path.resolve()] = source
         for file_path, source in planned_sources.items():
             sources[file_path.resolve()] = source
         return sources
