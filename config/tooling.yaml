@@ -276,6 +276,26 @@ Infra:
           # Pydantic runtime-evaluation is protected by the
           # runtime-evaluated-roots projection, not by disabling the rules.
           authorized-exceptions:
+            - files: "**/tests/**"
+              rules:
+                [
+                  magic-value-comparison,
+                  private-member-access,
+                  compare-to-empty-string,
+                  too-many-public-methods,
+                  boolean-positional-value-in-call,
+                  pytest-fixture-autouse,
+                  mutable-class-default,
+                  no-self-use,
+                ]
+              authority: operator-order-2026-10-06-make-verbs-green
+              reason: >-
+                Test idioms: assertions compare against literal expected
+                values (the magic values ARE the expectations), the tests
+                exercise private members of the unit under test, and test
+                classes group many public test methods by design. Actionable
+                quality rules (complexity, naming, documentation) stay
+                active on the tests tree.
             - files: "**/bin/**"
               rules:
                 [
