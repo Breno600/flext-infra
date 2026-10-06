@@ -573,9 +573,10 @@ class FlextInfraUtilitiesRopeSourceBases:
         )
 
         def external_identity(value: t.Infra.RopePyObject) -> str:
-            # TypedDict builds its class through a function call, so Rope
-            # resolves the declared base to a PyFunction; the base identity
-            # is still the class that call constructs at runtime.
+            # TypedDict and NamedTuple build their classes through function
+            # calls, so Rope resolves the declared base to a PyFunction; the
+            # base identity is still the class that call constructs at
+            # runtime.
             if (
                 isinstance(
                     value,
@@ -584,11 +585,12 @@ class FlextInfraUtilitiesRopeSourceBases:
                         "PyFunction",
                     ),
                 )
-                and value.get_name() == "TypedDict"
+                and value.get_name() in ("TypedDict", "NamedTuple")
             ):
                 module = value.get_module()
                 module_name = module.get_name() if module is not None else ""
-                return f"{module_name}.TypedDict" if module_name else "TypedDict"
+                name = value.get_name()
+                return f"{module_name}.{name}" if module_name else name
             if not FlextInfraUtilitiesRopeRuntime.abstract_class(value):
                 message = "Rope did not resolve a required base to a class"
                 raise TypeError(message)
