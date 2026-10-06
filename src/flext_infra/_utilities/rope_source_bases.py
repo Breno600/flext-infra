@@ -193,6 +193,12 @@ class FlextInfraUtilitiesRopeSourceBases:
                     targets = (
                         node.targets if isinstance(node, ast.Assign) else [node.target]
                     )
+                    if any(not isinstance(target, ast.Name) for target in targets):
+                        message = (
+                            f"Unsupported class binding mutation in {module}: "
+                            f"{ast.unparse(node)}"
+                        )
+                        raise ValueError(message)
                     value = node.value
                     if value is None:
                         continue
@@ -216,6 +222,12 @@ class FlextInfraUtilitiesRopeSourceBases:
                                 if reference is not None
                                 else None
                             )
+                elif isinstance(node, (ast.Delete, ast.AugAssign)):
+                    message = (
+                        f"Unsupported class binding mutation in {module}: "
+                        f"{ast.unparse(node)}"
+                    )
+                    raise ValueError(message)
                 elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     bindings[node.name] = None
                 elif isinstance(node, ast.If):
@@ -322,11 +334,8 @@ class FlextInfraUtilitiesRopeSourceBases:
 
         def external_identity(value: t.Infra.RopePyObject) -> str:
             if not FlextInfraUtilitiesRopeRuntime.abstract_class(value):
-                # Rope lands on the unknown-object placeholder for bases it
-                # cannot type through re-exports and runtime-only namespaces:
-                # the recognized verdict degrades the base in every caller.
-                message = "Unresolved external base: non-class rope object"
-                raise ValueError(message)
+                message = "Rope did not resolve a required base to a class"
+                raise TypeError(message)
             if isinstance(
                 value,
                 FlextInfraUtilitiesRopeRuntime.runtime_type(
@@ -404,12 +413,18 @@ class FlextInfraUtilitiesRopeSourceBases:
             external[identity] = value
             return identity
 
-        def provider_module(
+        def provider_module_name(
             imported: p.Infra.RopeImportedModule,
-        ) -> t.Infra.RopePyModule:
-            resource = imported.resource
-            if resource is not None:
-                return FlextInfraUtilitiesRopeCore.resolve_pymodule(project, resource)
+        ) -> str:
+            if imported.module_name is None:
+                if imported.resource is None:
+                    message = "Import has no declared module location"
+                    raise ValueError(message)
+                return FlextInfraUtilitiesRopeCore.resolve_pymodule(
+                    project, imported.resource,
+                ).get_name()
+            if not imported.level:
+                return imported.module_name
             declaring = imported.importing_module.get_module()
             source = declaring.get_resource() if declaring is not None else None
             if imported.module_name is None or declaring is None or source is None:
@@ -433,6 +448,15 @@ class FlextInfraUtilitiesRopeSourceBases:
                         ),
                     ),
                 )
+            return name
+
+        def provider_module(
+            imported: p.Infra.RopeImportedModule,
+        ) -> t.Infra.RopePyModule:
+            resource = imported.resource
+            if resource is not None:
+                return FlextInfraUtilitiesRopeCore.resolve_pymodule(project, resource)
+            name = provider_module_name(imported)
             module = project.get_module(name)
             resource = project.find_module(name)
             if resource is not None:
@@ -458,46 +482,36 @@ class FlextInfraUtilitiesRopeSourceBases:
                 raise ValueError(message)
             binding = module.get_attribute(name)
             if isinstance(binding, p.Infra.RopeImportedName):
-                imported = provider_module(binding.imported_module)
-                if imported.get_name() not in namespaces:
-                    return provider_reference(
-                        imported,
-                        (binding.imported_name, *remaining),
-                        visiting | {target},
-                        depth + 1,
+                imported_name = provider_module_name(binding.imported_module)
+                if imported_name in namespaces:
+                    return resolve(
+                        m.Infra.SourceClassReference(
+                            target=imported_name,
+                            attributes=(binding.imported_name, *remaining),
+                            qualified_base=target,
+                        ),
+                        visiting | {target}, depth + 1,
                     )
-                destination = f"{imported.get_name()}.{binding.imported_name}"
-                if destination in visiting:
-                    # The reexport destination is already being resolved on
-                    # this walk: statically it cannot terminate, so the base
-                    # is unresolved for this derivation (bases() skips it).
-                    raise ValueError(f"Unresolved external base: {target}")
-                return resolve(
-                    m.Infra.SourceClassReference(
-                        target=destination,
-                        attributes=tuple(remaining),
-                        qualified_base=target,
-                    ),
-                    visiting | {target, destination},
-                    depth + 1,
+                imported = provider_module(binding.imported_module)
+                return provider_reference(
+                    imported,
+                    (binding.imported_name, *remaining),
+                    visiting | {target}, depth + 1,
                 )
             if isinstance(binding, p.Infra.RopeImportedModule):
-                imported = provider_module(binding)
-                if imported.get_name() not in namespaces:
-                    return provider_reference(
-                        imported,
-                        tuple(remaining),
-                        visiting | {target},
-                        depth + 1,
+                imported_name = provider_module_name(binding)
+                if imported_name in namespaces:
+                    return resolve(
+                        m.Infra.SourceClassReference(
+                            target=imported_name,
+                            attributes=tuple(remaining),
+                            qualified_base=target,
+                        ),
+                        visiting | {target}, depth + 1,
                     )
-                return resolve(
-                    m.Infra.SourceClassReference(
-                        target=imported.get_name(),
-                        attributes=tuple(remaining),
-                        qualified_base=target,
-                    ),
-                    visiting | {target},
-                    depth + 1,
+                imported = provider_module(binding)
+                return provider_reference(
+                    imported, tuple(remaining), visiting | {target}, depth + 1,
                 )
             identity = external_identity(binding.get_object())
             for attribute in remaining:
@@ -510,17 +524,8 @@ class FlextInfraUtilitiesRopeSourceBases:
             visiting: frozenset[str] = frozenset(),
             depth: int = 0,
         ) -> str:
-            try:
-                module = project.get_module(target)
-                resource = project.find_module(target)
-            except Exception as error:
-                # Rope's project does not carry the member's runtime
-                # environment: stdlib submodules (collections.abc) and
-                # non-importable namespaces have no source resource here.
-                # The recognized verdict degrades the base in every caller.
-                raise ValueError(
-                    f"No source module for required base: {target}",
-                ) from error
+            module = project.get_module(target)
+            resource = project.find_module(target)
             if resource is not None:
                 module = FlextInfraUtilitiesRopeCore.resolve_pymodule(project, resource)
             return provider_reference(module, attributes, visiting, depth)
@@ -582,29 +587,11 @@ class FlextInfraUtilitiesRopeSourceBases:
                 return ()
             if identity in definitions:
                 declared = definitions[identity].bases
-                parents: list[str] = []
-                for base in declared:
-                    try:
-                        parents.append(resolve(base))
-                    except ValueError as error:
-                        # A cross-package facade attribute the lazy namespace
-                        # machinery exposes only at runtime (PEP 562) is
-                        # invisible to rope's static lookup, third-party
-                        # bases (libcst) have no source module resource, and
-                        # a planned module binding that is not a class
-                        # (helper modules re-exported through test support
-                        # trees) has no class identity to contribute: the
-                        # base cannot participate in the derivation, and the
-                        # remaining bases still describe the lineage.
-                        message = str(error)
-                        if message.startswith(
-                            "Unresolved external base:",
-                        ) or message.startswith("No source module for required base:"):
-                            continue
-                        if message.startswith("Unresolved planned base:"):
-                            continue
-                        raise
-                return tuple(parents) if parents else (object_id,)
+                return (
+                    tuple(resolve(base) for base in declared)
+                    if declared
+                    else (object_id,)
+                )
             value = external[identity]
             if not isinstance(value, p.Infra.RopeBuiltinClass):
                 message = f"External class has no declared source or native identity: {identity}"
@@ -694,69 +681,12 @@ class FlextInfraUtilitiesRopeSourceBases:
 
         root_ids = frozenset(resolve(root_reference(root)) for root in roots)
         derived = set(roots)
-        # A resolved namespace parent inserts its own definition mid-loop;
-        # iterate a worklist snapshot so the derivation covers definitions
-        # the loop itself adds without mutating the dict during iteration.
-        pending_definitions = list(definitions.values())
-        seen_identities = {definition.identity for definition in pending_definitions}
-        while pending_definitions:
-            definition = pending_definitions.pop(0)
-            queued = [
-                item
-                for item in definitions.values()
-                if item.identity not in seen_identities
-            ]
-            for item in queued:
-                seen_identities.add(item.identity)
-                pending_definitions.append(item)
-            try:
-                linearize(definition.identity)
-            except ValueError as error:
-                # A definition whose own lineage cannot be derived — an
-                # unresolved external attribute (PEP 562 lazy namespace: a
-                # facade class inheriting flext_infra.m), a required base
-                # with no source module, or a member missing because an
-                # ancestor's lineage was degraded — does not qualify as
-                # runtime-evaluated, and its declared bases are skipped with
-                # it. A lineage cycle across split-file class shapes is an
-                # artifact of the line-qualified identity model (the runtime
-                # joins them outside rope's view); a real inheritance cycle
-                # self-destructs at class creation, so degrading is safe.
-                # Structural defects (duplicates, inconsistent MRO, shadowing)
-                # keep raising.
-                message = str(error)
-                if message.startswith(
-                    "Unresolved external base:",
-                ) or message.startswith("No source module for required base:"):
-                    continue
-                if message.startswith("Unresolved planned base:"):
-                    continue
-                if message.startswith("Missing inherited class member:"):
-                    continue
-                if message.startswith("Cyclic class inheritance:"):
-                    continue
-                raise
+        # Required provider parents participate in C3, but only captured project
+        # expressions belong to the project's generated Ruff configuration.
+        for definition in owned_definitions:
+            linearize(definition.identity)
             for reference in definition.bases:
-                try:
-                    lineage = linearize(resolve(reference))
-                except ValueError as error:
-                    # A base whose lineage crosses an unresolved external
-                    # attribute (PEP 562 lazy namespace), a planned module
-                    # binding that is not a class, or a lineage cycle from
-                    # the line-qualified identity model of split-file class
-                    # shapes cannot be derived; the class simply does not
-                    # qualify as runtime-evaluated.
-                    if str(error).startswith(
-                        "Unresolved external base:",
-                    ) or str(error).startswith(
-                        "No source module for required base:",
-                    ):
-                        continue
-                    if str(error).startswith("Unresolved planned base:"):
-                        continue
-                    if str(error).startswith("Cyclic class inheritance:"):
-                        continue
-                    raise
+                lineage = linearize(resolve(reference))
                 if root_ids.intersection(lineage):
                     derived.add(reference.qualified_base)
         return tuple(sorted(derived))
