@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import importlib.util
 import json
@@ -42,6 +43,33 @@ def _converge_module() -> ModuleType:
 
 class TestsFlextInfraMiseLockTransaction:
     """Exercise the consumer script through its generated CLI boundary."""
+
+    @staticmethod
+    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
+    def test_generated_exception_messages_are_precomputed(
+        tmp_path: Path,
+        profile: c.Infra.MakeProfile,
+    ) -> None:
+        """Generation preserves Ruff-compatible bootstrap exception messages."""
+        root, _ = u.Tests.render_make_environment(tmp_path, profile)
+        for script in ("mise-lock-converge.py", "mise-lock-transaction.py"):
+            generated = root / "bin" / script
+            syntax = ast.parse(generated.read_text(encoding="utf-8"))
+            for statement in ast.walk(syntax):
+                if not isinstance(statement, ast.Raise):
+                    continue
+                if not isinstance(statement.exc, ast.Call):
+                    continue
+                for argument in statement.exc.args:
+                    tm.that(
+                        isinstance(argument, ast.JoinedStr)
+                        or (
+                            isinstance(argument, ast.Constant)
+                            and isinstance(argument.value, str)
+                        ),
+                        eq=False,
+                        msg=f"{script}:{statement.lineno} embeds its exception message",
+                    )
 
     @staticmethod
     def _stage(root: Path, suffix: str, *, crlf: bool = False) -> Path:
