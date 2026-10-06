@@ -189,7 +189,11 @@
 		tool_paths="$${tool_paths:+$$tool_paths:}$$tool_path"; \
 	done < "$$scratch/paths"; \
 	if [ -z "$$tool_paths" ]; then printf 'ERROR: Mise returned no installed tool paths; run make setup\n' >&2; exit 2; fi; \
-	PATH="$(RUNTIME_BIN):$$tool_paths:$$caller_path" "$$@"
+	if [ -n "$$caller_flext_setup_credential_store" ]; then \
+		GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=credential.https://github.com.helper GIT_CONFIG_VALUE_0="store --file=$$caller_flext_setup_credential_store" GIT_CONFIG_KEY_1=credential.https://github.com.username GIT_CONFIG_VALUE_1=x-access-token PATH="$(RUNTIME_BIN):$$tool_paths:$$caller_path" "$$@"; \
+	else \
+		PATH="$(RUNTIME_BIN):$$tool_paths:$$caller_path" "$$@"; \
+	fi
 {%- endmacro %}
 
 {% macro mise_runtime_bootstrap(project_root, mise, bootstrap) -%}

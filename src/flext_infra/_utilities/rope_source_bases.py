@@ -347,6 +347,31 @@ class FlextInfraUtilitiesRopeSourceBases:
                         ):
                             # Provider function metadata does not rebind a class.
                             continue
+                        if (
+                            len(targets) == 1
+                            and isinstance(targets[0], ast.Attribute)
+                            and isinstance(targets[0].value, ast.Name)
+                            and targets[0].value.id in bindings
+                            and bindings[targets[0].value.id] is not None
+                            and isinstance(node.value, ast.Name)
+                        ):
+                            # Class-namespace completion rebind (``base.t = final``):
+                            # a module completes a deferred base namespace and
+                            # publishes the RHS class under the attribute name in
+                            # its own exported namespace, so the binding map
+                            # registers it exactly like a module-level alias.
+                            visible = {**lexical, **bindings}
+                            if node.value.id in visible and visible[node.value.id] is not None:
+                                reference = cls._reference(node.value, visible, module)
+                                if reference is not None:
+                                    bindings[targets[0].attr] = reference.model_copy(
+                                        update={
+                                            "qualified_base": (
+                                                f"{module}.{targets[0].attr}"
+                                            ),
+                                        },
+                                    )
+                            continue
                         message = (
                             f"Unsupported class binding mutation in {module}: "
                             f"{ast.unparse(node)}"
