@@ -51,7 +51,8 @@ class FlextInfraCodegenLayoutPlanMixin:
             or member.value.as_posix() != project_name
             or "\x00" in project_name
         ):
-            raise ValueError(f"unsafe layout project identity: {project_name}")
+            msg = f"unsafe layout project identity: {project_name}"
+            raise ValueError(msg)
         return project_name
 
     def plan_project(self, project_dir: Path) -> m.Infra.LayoutProjectReport:

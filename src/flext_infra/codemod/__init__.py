@@ -20,6 +20,10 @@ if TYPE_CHECKING:
     from flext_infra.codemod.batch_apply import FlextInfraCodemodBatchApply
     from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
     from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
+    from flext_infra.codemod.loop_phases import (
+        FlextInfraAccessorRenamePhase,
+        FlextInfraNamespaceRelocationPhase,
+    )
     from flext_infra.codemod.semantic_apply import FlextInfraCodemodSemanticApply
     from flext_infra.codemod.snapshot_reconciler import (
         FlextInfraCodemodSnapshotReconciler,
@@ -29,6 +33,7 @@ if TYPE_CHECKING:
 
 
 __all__: tuple[str, ...] = (
+    "FlextInfraAccessorRenamePhase",
     "FlextInfraApplyRenames",
     "FlextInfraCodemodAstScan",
     "FlextInfraCodemodBatchApply",
@@ -38,6 +43,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraModGateEngine",
     "FlextInfraModReplacements",
     "FlextInfraModTextGateEngine",
+    "FlextInfraNamespaceRelocationPhase",
     "FlextInfraRenameSources",
     "FlextInfraRenameSymbols",
 )
@@ -46,6 +52,7 @@ install_lazy_exports(
     __name__,
     globals(),
     MappingProxyType({
+        "FlextInfraAccessorRenamePhase": ".loop_phases",
         "FlextInfraApplyRenames": ".apply_renames",
         "FlextInfraCodemodAstScan": ".ast_scan",
         "FlextInfraCodemodBatchApply": ".batch_apply",
@@ -55,6 +62,7 @@ install_lazy_exports(
         "FlextInfraModGateEngine": ".batch_gates",
         "FlextInfraModReplacements": ".batch_replacements",
         "FlextInfraModTextGateEngine": ".text_gates",
+        "FlextInfraNamespaceRelocationPhase": ".loop_phases",
         "FlextInfraRenameSources": "._rename_sources",
         "FlextInfraRenameSymbols": "._rename_symbols",
     }),

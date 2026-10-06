@@ -387,7 +387,8 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                 existing = target_bindings.get(bound)
                 if existing is not None and existing != import_line:
                     return
-        fallback_runtime_imports = cls._collect_missing_runtime_alias_imports(
+        collect_missing = FlextInfraUtilitiesRefactorNamespaceMoves._collect_missing_runtime_alias_imports
+        fallback_runtime_imports = collect_missing(
             target_source=target_source,
             blocks=moved_lines,
         )

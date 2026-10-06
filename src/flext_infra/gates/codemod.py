@@ -207,6 +207,13 @@ class FlextInfraCodemodGate(FlextInfraGate):
                 started=started,
             ),
             issues=issues,
+            outcome=(
+                c.Infra.ToolOutcome.ERROR
+                if failures
+                else c.Infra.ToolOutcome.FINDINGS
+                if findings
+                else c.Infra.ToolOutcome.CLEAN
+            ),
             raw_output="\n".join((
                 (f"{len(findings)} policy findings; {len(failures)} native failures"),
                 *raw_output,

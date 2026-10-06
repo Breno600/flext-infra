@@ -77,7 +77,10 @@ class FlextInfraPyprojectModernizerDocument:
             if read.failure:
                 return result_type.from_failure(read)
             source = read.value
-        payload_source = u.Cli.toml_mapping_from_text(source)
+        recovered = u.Infra.recover_live_pyproject_text(source)
+        if recovered.failure:
+            return result_type.from_failure(recovered)
+        payload_source = u.Cli.toml_mapping_from_text(recovered.value)
         if payload_source is None:
             return result_type.fail(f"invalid TOML: {path}")
         validated: p.Result[t.MutableJsonMapping] = u.validate_value(

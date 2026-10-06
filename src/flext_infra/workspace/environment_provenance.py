@@ -7,13 +7,15 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import re
+from json import dumps
 from pathlib import Path
+from sys import prefix
 from typing import TYPE_CHECKING
 from urllib.parse import unquote, urlparse
 from urllib.request import url2pathname
 
 from flext_core import r
-from flext_infra import m, u
+from flext_infra import config, m, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
@@ -55,6 +57,9 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         )
         if workspace_result.failure:
             return r[int].from_failure(workspace_result)
+        ci = config.Infra.codegen.make.ci
+        if u.Infra.env_value(ci.variable).strip() == ci.value:
+            return cls.validate_locked(resolved_root)
         repositories = tuple(
             repository
             for repository in workspace_result.value.subprojects
@@ -105,6 +110,102 @@ class FlextInfraWorkspaceEnvironmentProvenance:
             )
             if pth_result.failure:
                 return pth_result
+            validated += 1
+        return r[int].ok(validated)
+
+    @staticmethod
+    def validate_locked(repository_root: Path) -> p.Result[int]:
+        """Prove normal installed artifacts match the root's committed lock.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+        """
+        document = u.Cli.toml_read_json(repository_root / "uv.lock")
+        if document.failure:
+            return r[int].from_failure(document)
+        # TOML arrays are wire arrays; JSON mode preserves the strict tuple contract.
+        locked = m.Infra.LockedEnvironment.model_validate_json(dumps(document.value))
+        workspace = FlextInfraWorkspaceDetector.load_workspace_spec(
+            repository_root,
+        ).unwrap()
+        required = {
+            repository.distribution
+            for repository in workspace.subprojects
+            if repository.package
+        }
+        # Every locked VCS dependency participates, including standalone providers.
+        required.update(
+            item.name for item in locked.package if item.source.git is not None
+        )
+        validated = 0
+        for name in sorted(required):
+            distributions = u.installed_distributions(name=name)
+            if len(distributions) != 1:
+                return r[int].fail(
+                    f"locked provenance needs one installed distribution: {name}"
+                )
+            distribution = distributions[0]
+            location = Path(str(distribution.locate_file(""))).resolve()
+            if not location.is_relative_to(Path(prefix).resolve()):
+                return r[int].fail(
+                    f"locked dependency is outside the owned environment: {name}"
+                )
+            matches = tuple(
+                item
+                for item in locked.package
+                if item.name == name and item.version == distribution.version
+            )
+            if len(matches) != 1:
+                return r[int].fail(
+                    f"installed version differs from committed lock: {name}"
+                )
+            item = matches[0]
+            raw = distribution.read_text("direct_url.json")
+            if raw is None and item.source.git is not None:
+                return r[int].fail(
+                    f"locked dependency lacks PEP 610 provenance: {name}"
+                )
+            receipt = (
+                m.Infra.DirectUrlReceipt.model_validate_json(raw)
+                if raw is not None
+                else None
+            )
+            if (
+                receipt is not None
+                and receipt.dir_info is not None
+                and receipt.dir_info.editable
+            ):
+                return r[int].fail(f"CI dependency is editable: {name}")
+            if item.source.git is None and item.source.registry is None:
+                return r[int].fail(f"CI member needs a locked artifact source: {name}")
+            if item.source.git is not None:
+                expected = urlparse(item.source.git.removeprefix("git+"))
+                if (
+                    receipt is None
+                    or receipt.vcs_info is None
+                    or receipt.vcs_info.vcs != "git"
+                    or receipt.vcs_info.commit_id != expected.fragment
+                    or u.Infra.git_remote_identity(receipt.url)
+                    != u.Infra.git_remote_identity(expected.geturl())
+                ):
+                    return r[int].fail(
+                        f"installed dependency origin differs from committed lock: {name}"
+                    )
+            files = distribution.files
+            if files is None:
+                return r[int].fail(f"installed artifact has no file inventory: {name}")
+            for file in files:
+                if str(file).endswith(".pth"):
+                    path = Path(str(distribution.locate_file(file)))
+                    for line in path.read_text(encoding="utf-8").splitlines():
+                        if Path(line).is_absolute() and not Path(
+                            line
+                        ).resolve().is_relative_to(
+                            Path(prefix).resolve(),
+                        ):
+                            return r[int].fail(
+                                f"CI artifact exposes an external source path: {name}"
+                            )
             validated += 1
         return r[int].ok(validated)
 

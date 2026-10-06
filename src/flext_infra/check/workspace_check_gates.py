@@ -151,6 +151,7 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 ),
                 issues=(),
                 raw_output=f"{gate_id} gate not registered",
+                outcome=c.Infra.ToolOutcome.ERROR,
             )
         return gate.check(project_dir, ctx or self._gate_ctx(reports_dir))
 
@@ -220,7 +221,7 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 passed=execution.result.passed,
                 elapsed=execution.result.duration,
             )
-            if not execution.result.passed:
+            if execution.issues or not execution.result.passed:
                 for finding in execution.result.errors:
                     u.Cli.info(finding)
                 # Missing or malformed findings must retain the producer's failure.
@@ -232,7 +233,7 @@ class FlextInfraWorkspaceCheckGatesMixin:
                     )
                 ):
                     u.Cli.info(execution.raw_output)
-                if ctx.fail_fast or mutating:
+                if not execution.result.passed and (ctx.fail_fast or mutating):
                     break
         return result
 

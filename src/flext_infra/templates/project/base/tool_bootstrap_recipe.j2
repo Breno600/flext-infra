@@ -87,6 +87,9 @@
 		esac; \
 	done; \
 	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
+	if [ -z "$$scratch" ] || [ ! -d "$$scratch" ]; then \
+		printf 'ERROR: mise bootstrap scratch creation failed (template: %s/.%s.mise-bootstrap.XXXXXX)\n' "$$project_parent" "$${project_root##*/}" >&2; exit 2; \
+	fi; \
 	readonly scratch; \
 	lock_stage=; \
 	trap 'bootstrap_status=$$?; trap - EXIT; \
@@ -189,17 +192,20 @@
 {# Only the bootstrap reaches GitHub: `install --yes` for a tool missing from
    the persistent cache, and `make upg` (release resolution, lock, launcher).
    Every other Mise call runs through mise_offline. The Makefile preamble owns
-   the credential selection; the passthrough carries it into env -i. -#}
-	# The only tolerated Mise warning: ephemeral CI runners ship pre-seeded
-	# shims (python3, make) and `mise install` always announces it declines to
-	# replace them while every real install still succeeds (cosmos-main PR 346
-	# CI run 37348896444, bead on cosmos-l2wc2). Every OTHER mise WARN stays
-	# fatal: red-means-red is untouched.
+   the credential selection; the passthrough carries it into env -i.
+   The only tolerated Mise warning: ephemeral CI runners ship pre-seeded
+   shims (python3, make) and `mise install` always announces it declines to
+   replace them while every real install still succeeds (cosmos-main PR 346
+   CI run 37348896444, bead on cosmos-l2wc2). Every OTHER mise WARN stays
+   fatal: red-means-red is untouched. This documentation lives in a Jinja
+   comment: a sh comment inside the recipe would end the single-shell
+   logical line at the `#` and orphan every later stage. #}
 	mise_has_blocking_warning() { \
 		grep -F 'mise WARN' "$$1" | grep -Fv 'not replacing unmanaged file in shims directory' | grep -q .; \
 	}; \
 	mise_checked() { \
 		mise_log="$$1"; shift; \
+		case "$$mise_log" in ""|"/"*) mise_log="$${TMPDIR:-/tmp}/$${mise_log##*/}" ;; esac; \
 		printf 'setup probe: begin stage=%s log=%s\n' "$${mise_log##*/}" "$$mise_log" >&2; \
 		if "$$@" >"$$mise_log" 2>&1; then :; \
 		else mise_status=$$?; cat "$$mise_log"; printf 'setup probe: failed stage=%s exit=%s\n' "$${mise_log##*/}" "$$mise_status" >&2; return "$$mise_status"; fi; \
@@ -211,6 +217,8 @@
 	}; \
 	mise_checked_stdout() { \
 		mise_stdout_log="$$1"; mise_stderr_log="$$2"; shift 2; \
+		case "$$mise_stdout_log" in ""|"/"*) mise_stdout_log="$${TMPDIR:-/tmp}/$${mise_stdout_log##*/}" ;; esac; \
+		case "$$mise_stderr_log" in ""|"/"*) mise_stderr_log="$${TMPDIR:-/tmp}/$${mise_stderr_log##*/}" ;; esac; \
 		if "$$@" >"$$mise_stdout_log" 2>"$$mise_stderr_log"; then :; \
 		else mise_status=$$?; cat "$$mise_stderr_log" >&2; cat "$$mise_stdout_log"; return "$$mise_status"; fi; \
 		cat "$$mise_stderr_log" >&2; cat "$$mise_stdout_log"; \
@@ -219,7 +227,13 @@
 		fi; \
 	}; \
 	mise_receipt() { \
-		mise_receipt_log="$$scratch/$$1"; shift; \
+		probe_log_dir="$$scratch"; \
+		case "$$probe_log_dir" in ""|"/") \
+			probe_log_dir=$$(mktemp -d "$${TMPDIR:-/tmp}/flext-setup-probe.XXXXXX"); \
+			trap 'rm -rf "$$probe_log_dir"' EXIT; \
+		 ;; \
+		esac; \
+		mise_receipt_log="$$probe_log_dir/$$1"; shift; \
 		mise_checked_stdout "$$mise_receipt_log.stdout" "$$mise_receipt_log.stderr" mise_offline no-config "$$1" --version; \
 		receipt_output=$$(cat "$$mise_receipt_log.stdout"); \
 		receipt_release=$$(printf '%s\n' "$$receipt_output" | grep -E '^(mise )?[0-9]+\.[0-9]+\.[0-9]+$$' | tail -1 | sed 's/^mise //'); \
@@ -227,7 +241,10 @@
 			receipt_release=$${receipt_output%% *}; \
 		fi; \
 		if ! printf '%s\n' "$$receipt_release" | grep -Eq '^{{ bootstrap.resolved_release_pattern }}$$'; then \
-			printf 'ERROR: Mise receipt returned invalid version: %s\n' "$$receipt_output" >&2; return 2; \
+			printf 'ERROR: Mise receipt returned invalid version: %s\n' "$$receipt_output" >&2; \
+			printf 'ERROR: Mise receipt stderr: ' >&2; cat "$$mise_receipt_log.stderr" >&2 || true; \
+			printf 'ERROR: Mise receipt executable: %s; scratch: %s\n' "$$1" "$$scratch" >&2; \
+			return 2; \
 		fi; \
 	}; \
 	pinned_mise="$$mise"; \
@@ -269,6 +286,12 @@
 		exit 2; \
 	fi; \
 	{{ mise_runtime_bootstrap(project_root, mise, bootstrap) }}; \
+	project_parent=$${project_root%/*}; \
+	if [ -z "$$project_parent" ]; then project_parent=/; fi; \
+	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
+	if [ -z "$$scratch" ] || [ ! -d "$$scratch" ]; then \
+		printf 'ERROR: mise bootstrap scratch creation failed (template: %s/.%s.mise-bootstrap.XXXXXX)\n' "$$project_parent" "$${project_root##*/}" >&2; exit 2; \
+	fi; \
 	# Only ``upg`` locks, once per manifest it provisions from. Lock every \
 	# configured tool in one pass so removed selectors cannot survive beside \
 	# their replacement in mise.lock. The relock half of ``upg`` (lock without \
@@ -407,6 +430,7 @@
 		"SETUP_DIRENV=$$direnv_executable" \
 		"SETUP_PYTHON=$$python_executable" \
 		"SETUP_DIRENV_XDG_DATA_HOME=$$caller_xdg_data_home" \
+		"HOME=$$caller_home" \
 		"{{ make.ci.variable }}=$({{ make.ci.variable }})" {{ lifecycle }}; then lifecycle_status=0; \
 	else lifecycle_status=$$?; fi; \
 	scratch_present=0; if [ -d "$$scratch" ]; then scratch_present=1; fi; \

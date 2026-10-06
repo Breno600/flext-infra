@@ -9,22 +9,48 @@
 # Free: no
 # End SECTION: header
 
-SHELL := /bin/sh
+override SHELL := /bin/sh
 # GNU MAKE_COMMAND may be a bare name. Resolve it before changing PATH so
 # recursive lifecycle calls keep this invoker instead of selecting a Mise shim.
 ifneq ($(filter /%,$(MAKE_COMMAND)),)
-SELF_MAKE_EXECUTABLE := $(MAKE_COMMAND)
+override SELF_MAKE_EXECUTABLE := $(MAKE_COMMAND)
 else
-SELF_MAKE_EXECUTABLE := $(shell command -v "$(MAKE_COMMAND)")
+override SELF_MAKE_EXECUTABLE := $(shell command -v "$(MAKE_COMMAND)")
 ifneq ($(.SHELLSTATUS),0)
 $(error Cannot resolve current Make executable: $(MAKE_COMMAND))
 endif
 endif
-SELF_MAKE_EXECUTABLE := $(realpath $(SELF_MAKE_EXECUTABLE))
+override SELF_MAKE_EXECUTABLE := $(realpath $(SELF_MAKE_EXECUTABLE))
 ifeq ($(strip $(SELF_MAKE_EXECUTABLE)),)
 $(error Current Make executable has no physical path: $(MAKE_COMMAND))
 endif
 .DEFAULT_GOAL := help
+
+# Approval fixes its context before any topology, activation or credential read.
+ifneq ($(filter pre-commit,$(MAKECMDGOALS)),)
+override CI := Y
+export CI
+ifneq ($(strip $(HELP) $(OPTIONS)),)
+$(error Approval cannot run with HELP or OPTIONS)
+endif
+ifneq ($(strip $(foreach flag,n q t,$(findstring $(flag),$(firstword $(MAKEFLAGS))))),)
+$(error Approval requires execution; dry-run, question and touch are forbidden)
+endif
+ifneq ($(strip $(MAKEFILES)),)
+$(error Approval cannot load caller-supplied Makefiles)
+endif
+ifneq ($(filter command line override,$(origin MAKE_COMMAND)),)
+$(error Approval cannot replace the native Make invoker)
+endif
+endif
+
+# Capture the selected approval mode before any project-owned include.
+ifeq ($(strip $(CI)),Y)
+override APPROVAL_CONTEXT := Y
+ifneq ($(filter upg _upg% dep propagate gen _gen%,$(MAKECMDGOALS)),)
+$(error Resolution, generation and member propagation are forbidden in CI)
+endif
+endif
 
 ifeq ($(filter command line override,$(origin SETUP_BOOTSTRAP_ONLY)),)
 ifneq ($(filter setup,$(MAKECMDGOALS)),)
@@ -46,7 +72,11 @@ endif
 # stays in the environment and is never printed.
 GITHUB_TOKEN := $(firstword $(GITHUB_TOKEN) $(GH_TOKEN) $(MISE_GITHUB_TOKEN))
 ifeq ($(GITHUB_TOKEN),)
+ifeq ($(strip $(CI)),N)
 GITHUB_TOKEN := $(shell command -v gh >/dev/null 2>&1 && gh auth token 2>/dev/null)
+else ifeq ($(strip $(CI)),)
+GITHUB_TOKEN := $(shell command -v gh >/dev/null 2>&1 && gh auth token 2>/dev/null)
+endif
 endif
 ifneq ($(GITHUB_TOKEN),)
 GH_TOKEN := $(GITHUB_TOKEN)
@@ -80,7 +110,7 @@ PYTEST_REPORT_ARGS := -ra --durations=25 --durations-min=0.001 --tb=short
 PYTEST_PROCESS_TIMEOUT_SECONDS := 1204
 # The pytest process inherits a hard wall-clock boundary, so a hung
 # run is terminated even if the runner itself stalls.
-PYTEST_BOUNDED = timeout --signal=TERM --kill-after=5s "$(PYTEST_PROCESS_TIMEOUT_SECONDS)s"
+override PYTEST_BOUNDED = timeout --signal=TERM --kill-after=5s "$(PYTEST_PROCESS_TIMEOUT_SECONDS)s"
 PYTEST_REPORTS_DIR := .reports/tests
 PYTEST_CACHE_HOME = $(if $(strip $(XDG_CACHE_HOME)),$(XDG_CACHE_HOME),$(if $(strip $(HOME)),$(HOME)/.cache,))
 # One persistent testmon database per project, shared by every checkout and
@@ -149,16 +179,24 @@ endif
 # === SECTION: verb dispatch (managed) ===
 # Source: config:make.verbs and the canonical gate vocabulary. A verb exists
 # only in the profiles it declares (make.verbs[].profiles).
-PUBLIC_VERBS := help setup upg build check smells test test-full test-file file-gate profile-test profile-test-report fmt fix fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-text mod-text-candidate mod-snapshots waza duplication sonarcloud-sync sonarcloud-issues
-BUILTIN_VERBS := help setup upg build check smells test test-full test-file file-gate profile-test profile-test-report fmt fix fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-text mod-text-candidate mod-snapshots waza duplication sonarcloud-sync sonarcloud-issues
+PUBLIC_VERBS := help setup pre-commit upg build check smells test test-full test-file file-gate profile-test profile-test-report fmt fix fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-text mod-text-candidate mod-snapshots waza duplication sonarcloud-sync sonarcloud-issues
+BUILTIN_VERBS := help setup pre-commit upg build check smells test test-full test-file file-gate profile-test profile-test-report fmt fix fix-namespace fix-accessors audit status verify-clean docs clean bootstrap-candidate release-plan release-version release-tag release-build publication gen initialize mod mod-text mod-text-candidate mod-snapshots waza duplication sonarcloud-sync sonarcloud-issues
 SCRIPT_VERBS :=
 
 CUSTOM_MAKEFILE := $(MAKEFILE_ROOT)/custom.mk
 CUSTOM_DECLARED_TARGETS :=
 ifneq ($(wildcard $(CUSTOM_MAKEFILE)),)
-CUSTOM_DECLARED_TARGETS := $(shell awk '/^(_custom-[a-z][a-z0-9-]*|(pre|post)-[a-z][a-z0-9-]*):/ { target=$$1; sub(/:.*/, "", target); if (!seen[target]++) printf "%s ", target }' "$(CUSTOM_MAKEFILE)")
+CUSTOM_DECLARED_TARGETS := $(shell awk '/^[a-z_][a-z0-9_-]*:/ { target=$$1; sub(/:.*/, "", target); if (!seen[target]++) printf "%s ", target }' "$(CUSTOM_MAKEFILE)")
 ifneq ($(.SHELLSTATUS),0)
 $(error Failed to inspect custom Make targets in $(CUSTOM_MAKEFILE))
+endif
+ifneq ($(filter pre-commit _custom-pre-commit,$(CUSTOM_DECLARED_TARGETS)),)
+$(error Mandatory approval cannot be replaced by custom targets)
+endif
+ifeq ($(APPROVAL_CONTEXT),Y)
+ifneq ($(filter setup audit check test _custom-setup _custom-audit _custom-check _custom-test,$(CUSTOM_DECLARED_TARGETS)),)
+$(error Approval stages cannot be replaced by custom targets)
+endif
 endif
 endif
 DOCS_ACTIONS := generate fix fmt validate audit
@@ -347,6 +385,9 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 		esac; \
 	done; \
 	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
+	if [ -z "$$scratch" ] || [ ! -d "$$scratch" ]; then \
+		printf 'ERROR: mise bootstrap scratch creation failed (template: %s/.%s.mise-bootstrap.XXXXXX)\n' "$$project_parent" "$${project_root##*/}" >&2; exit 2; \
+	fi; \
 	readonly scratch; \
 	lock_stage=; \
 	trap 'bootstrap_status=$$?; trap - EXIT; \
@@ -495,7 +536,7 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 	if [ -z "$$tool_paths" ]; then printf 'ERROR: Mise returned no installed tool paths; run make setup\n' >&2; exit 2; fi; \
 	PATH="$(RUNTIME_BIN):$$tool_paths:$$caller_path" "$$@"
 endef
-PROJECT_TOOL_EXEC = $(SHELL) -c '$(subst ','"'"',$(PROJECT_TOOL_RUNTIME))' --
+override PROJECT_TOOL_EXEC = $(SHELL) -c '$(subst ','"'"',$(PROJECT_TOOL_RUNTIME))' --
 
 # One bootstrap serves `setup` (frozen) and `upg` (resolving); the public verb
 # selects its lifecycle, Mise release resolution and tool locking through
@@ -606,6 +647,9 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 		esac; \
 	done; \
 	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
+	if [ -z "$$scratch" ] || [ ! -d "$$scratch" ]; then \
+		printf 'ERROR: mise bootstrap scratch creation failed (template: %s/.%s.mise-bootstrap.XXXXXX)\n' "$$project_parent" "$${project_root##*/}" >&2; exit 2; \
+	fi; \
 	readonly scratch; \
 	lock_stage=; \
 	trap 'bootstrap_status=$$?; trap - EXIT; \
@@ -732,145 +776,12 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 		mise_offline_mode="$$1"; shift; \
 		mise_exec "$$mise_offline_mode" env 'MISE_OFFLINE=true' "$$@"; \
 	}; \
-	bootstrap_state="$(PROJECT_ROOT)/../.$(notdir $(PROJECT_ROOT)).mise-bootstrap-state"; { \
-		printf "scratch=%s\n" "$${scratch:-}"; \
-		printf "project_root=%s\n" "$${project_root:-}"; \
-		printf "project_parent=%s\n" "$${project_parent:-}"; \
-		printf "mise_storage_root=%s\n" "$${mise_storage_root:-}"; \
-		printf "pinned_mise=%s\n" "$${pinned_mise:-}"; \
-		printf "mise=%s\n" "$${mise:-}"; \
-		printf "mise_pin=%s\n" "$${mise_pin:-}"; \
-		printf "caller_xdg_data_home=%s\n" "$${caller_xdg_data_home:-}"; \
-		printf "caller_home=%s\n" "$${caller_home:-}"; \
-		printf "caller_path=%s\n" "$${caller_path:-}"; \
-		printf "caller_mise_version=%s\n" "$${caller_mise_version:-}"; \
-		printf "caller_github_token=%s\n" "$${caller_github_token:-}"; \
-		printf "caller_gh_token=%s\n" "$${caller_gh_token:-}"; \
-		printf "caller_mise_github_token=%s\n" "$${caller_mise_github_token:-}"; \
-		printf "caller_mise_http_timeout=%s\n" "$${caller_mise_http_timeout:-}"; \
-		printf "caller_flext_mypy_profile_output=%s\n" "$${caller_flext_mypy_profile_output:-}"; \
-		printf "caller_comspec=%s\n" "$${caller_comspec:-}"; \
-		printf "caller_pathext=%s\n" "$${caller_pathext:-}"; \
-		printf "caller_systemroot=%s\n" "$${caller_systemroot:-}"; \
-		printf "caller_windir=%s\n" "$${caller_windir:-}"; \
-		printf "mise_lockfile_platforms=%s\n" "$${mise_lockfile_platforms:-}"; \
-		printf "SETUP_DIRENV=%s\n" "$${SETUP_DIRENV:-}"; \
-		printf "SETUP_DIRENV_XDG_DATA_HOME=%s\n" "$${SETUP_DIRENV_XDG_DATA_HOME:-}"; \
-		printf "UPG_LOCKED_MISE_MANIFEST=%s\n" "$${UPG_LOCKED_MISE_MANIFEST:-}"; \
-		printf "GITHUB_PATH=%s\n" "$${GITHUB_PATH:-}"; \
-		printf "GITHUB_TOKEN=%s\n" "$${GITHUB_TOKEN:-}"; \
-	} > "$$bootstrap_state"
-# The only tolerated Mise warning: ephemeral CI runners ship pre-seeded
-	# shims (python3, make) and `mise install` always announces it declines to
-	# replace them while every real install still succeeds (cosmos-main PR 346
-	# CI run 37348896444, bead on cosmos-l2wc2). Every OTHER mise WARN stays
-	# fatal: red-means-red is untouched.
-	bootstrap_state="$(PROJECT_ROOT)/../.$(notdir $(PROJECT_ROOT)).mise-bootstrap-state"; \
-	. "$$bootstrap_state"; \
-	rm -f "$$bootstrap_state"; \
-	pinned_mise="$$mise"; \
-	mise_pin_file="$$project_root/mise.version"; \
-	mise_pin=; if [ -f "$$mise_pin_file" ]; then mise_pin=$$(awk '!/^[[:space:]]*(#|$$)/ { lines++; release = $$0 } END { if (lines == 1) print release }' "$$mise_pin_file"); fi; \
-	scratch=$$(mktemp -d "$${TMPDIR:-/tmp}/flext-setup-probe.XXXXXX"); \
-mise_exec() { \
-		mise_config_mode="$$1"; shift; \
-		case "$$mise_config_mode" in \
-			no-config) mise_config_argument='MISE_NO_CONFIG=1' ;; \
-			project) mise_config_argument= ;; \
-			*) printf 'ERROR: invalid Mise config mode: %s\n' "$$mise_config_mode" >&2; return 2 ;; \
-		esac; \
-		mise_runtime_path=; \
-		if [ -n "$$caller_mise_version" ]; then \
-			mise_runtime_path="$$mise_storage_root/bootstrap/mise-$${caller_mise_version#v}"; \
-			if [ "$(OS)" = "Windows_NT" ]; then mise_runtime_path="$$mise_runtime_path.exe"; fi; \
-		fi; \
-		env -i \
-'GIT_CONFIG_NOSYSTEM=1' \
-'GIT_TERMINAL_PROMPT=0' \
-'LANG=C' \
-'LC_ALL=C' \
-'MISE_SAFE=1' \
-'MISE_PARANOID=true' \
-'MISE_NO_ENV=1' \
-'MISE_NO_HOOKS=1' \
-'MISE_AUTO_ENV=false' \
-'MISE_AUTO_INSTALL=false' \
-'MISE_EXEC_AUTO_INSTALL=false' \
-'MISE_TASK_RUN_AUTO_INSTALL=false' \
-'MISE_AUTO_UPDATE=false' \
-'MISE_HTTP_RETRIES=0' \
-'MISE_NETRC=false' \
-'MISE_NOT_FOUND_AUTO_INSTALL=false' \
-'MISE_NOT_FOUND_SYSTEM_FALLBACK=false' \
-'MISE_OVERRIDE_CONFIG_FILENAMES=.mise.toml' \
-'MISE_OVERRIDE_TOOL_VERSIONS_FILENAMES=none' \
-'MISE_GITHUB_GH_CLI_TOKENS=false' \
-'MISE_GITHUB_USE_GIT_CREDENTIALS=false' \
-'MISE_GITHUB_OAUTH_CLIENT_ID=' \
-'MISE_GITHUB_OAUTH_EXPORT_ENV=' \
-'MISE_GITHUB_OAUTH_OPEN_BROWSER=false' \
-'MISE_LOCKFILE=true' \
-'MISE_LOCKED=true' \
-'MISE_MINIMUM_RELEASE_AGE=7d' \
-'MISE_NPM_PACKAGE_MANAGER=bun' \
-$${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
-"HOME=$$scratch/home" \
-"USERPROFILE=$$scratch/home" \
-"APPDATA=$$scratch/appdata" \
-"LOCALAPPDATA=$$scratch/appdata" \
-"XDG_CONFIG_HOME=$$scratch/xdg-config" \
-"XDG_DATA_HOME=$$scratch/xdg-data" \
-"XDG_CACHE_HOME=$$scratch/xdg-cache" \
-"XDG_STATE_HOME=$$scratch/xdg-state" \
-"NETRC=$$scratch/netrc" \
-"GIT_CONFIG_GLOBAL=$$scratch/gitconfig" \
-"MISE_NETRC_FILE=$$scratch/netrc" \
-"MISE_GLOBAL_CONFIG_FILE=$$scratch/global-config.toml" \
-"MISE_CONFIG_DIR=$$scratch/config" \
-"MISE_TMP_DIR=$$scratch/tmp" \
-"MISE_GLOBAL_CONFIG_ROOT=$$scratch/." \
-"MISE_SYSTEM_CONFIG_DIR=$$scratch/system-config" \
-"MISE_SYSTEM_CONFIG_FILE=$$scratch/system-config/config.toml" \
-"MISE_SYSTEM_DATA_DIR=$$scratch/system-data" \
-"MISE_SYSTEM_INSTALLS_DIR=$$scratch/system-installs" \
-"MISE_SYSTEM_SHIMS_DIR=$$scratch/system-shims" \
-"TMPDIR=$$scratch/tmp" \
-"TMP=$$scratch/tmp" \
-"TEMP=$$scratch/tmp" \
-"MISE_DATA_DIR=$$mise_storage_root" \
-"MISE_CACHE_DIR=$$mise_storage_root/cache" \
-"MISE_STATE_DIR=$$mise_storage_root/state" \
-"MISE_INSTALLS_DIR=$$mise_storage_root/installs" \
-"MISE_SHIMS_DIR=$$mise_storage_root/shims" \
-"UV_CACHE_DIR=$$mise_storage_root/uv-cache" \
-"GIT_CEILING_DIRECTORIES=$$project_parent" \
-			"MISE_CEILING_PATHS=$$project_parent" \
-			"MISE_TRUSTED_CONFIG_PATHS=$$mise_trusted_config_paths" \
-$${caller_path:+"PATH=$$caller_path"} \
-$${caller_comspec:+"COMSPEC=$$caller_comspec"} \
-$${caller_pathext:+"PATHEXT=$$caller_pathext"} \
-$${caller_systemroot:+"SYSTEMROOT=$$caller_systemroot"} \
-$${caller_windir:+"WINDIR=$$caller_windir"} \
-$${caller_github_token:+"GITHUB_TOKEN=$$caller_github_token"} \
-$${caller_gh_token:+"GH_TOKEN=$$caller_gh_token"} \
-$${caller_mise_github_token:+"MISE_GITHUB_TOKEN=$$caller_mise_github_token"} \
-$${caller_mise_http_timeout:+"MISE_HTTP_TIMEOUT=$$caller_mise_http_timeout"} \
-$${caller_flext_mypy_profile_output:+"FLEXT_MYPY_PROFILE_OUTPUT=$$caller_flext_mypy_profile_output"} \
-$${caller_mise_version:+"MISE_VERSION=$$caller_mise_version"} \
-$${mise_config_argument:+"$$mise_config_argument"} \
-			$${mise_runtime_path:+"MISE_INSTALL_PATH=$$mise_runtime_path"} \
-			"$$@"; \
-	}; \
-	mise_offline() { \
-		mise_offline_mode="$$1"; shift; \
-		mise_exec "$$mise_offline_mode" env 'MISE_OFFLINE=true' "$$@"; \
-	}; \
+
 	mise_has_blocking_warning() { \
 		grep -F 'mise WARN' "$$1" | grep -Fv 'not replacing unmanaged file in shims directory' | grep -q .; \
 	}; \
 	mise_checked() { \
 		mise_log="$$1"; shift; \
-		case "$$mise_log" in */*) ;; /*) mise_log="$${TMPDIR:-/tmp}/$${mise_log##*/}" ;; esac; \
 		printf 'setup probe: begin stage=%s log=%s\n' "$${mise_log##*/}" "$$mise_log" >&2; \
 		if "$$@" >"$$mise_log" 2>&1; then :; \
 		else mise_status=$$?; cat "$$mise_log"; printf 'setup probe: failed stage=%s exit=%s\n' "$${mise_log##*/}" "$$mise_status" >&2; return "$$mise_status"; fi; \
@@ -882,8 +793,6 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 	}; \
 	mise_checked_stdout() { \
 		mise_stdout_log="$$1"; mise_stderr_log="$$2"; shift 2; \
-		case "$$mise_stdout_log" in */*) ;; /*) mise_stdout_log="$${TMPDIR:-/tmp}/$${mise_stdout_log##*/}" ;; esac; \
-		case "$$mise_stderr_log" in */*) ;; /*) mise_stderr_log="$${TMPDIR:-/tmp}/$${mise_stderr_log##*/}" ;; esac; \
 		if "$$@" >"$$mise_stdout_log" 2>"$$mise_stderr_log"; then :; \
 		else mise_status=$$?; cat "$$mise_stderr_log" >&2; cat "$$mise_stdout_log"; return "$$mise_status"; fi; \
 		cat "$$mise_stderr_log" >&2; cat "$$mise_stdout_log"; \
@@ -892,13 +801,7 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 		fi; \
 	}; \
 	mise_receipt() { \
-		probe_log_dir="$$scratch"; \
-		case "$$probe_log_dir" in ""|"/") \
-			probe_log_dir=$$(mktemp -d "$${TMPDIR:-/tmp}/flext-setup-probe.XXXXXX"); \
-			trap 'rm -rf "$$probe_log_dir"' EXIT; \
-		 ;; \
-		esac; \
-		mise_receipt_log="$$probe_log_dir/$$1"; shift; \
+		mise_receipt_log="$$scratch/$$1"; shift; \
 		mise_checked_stdout "$$mise_receipt_log.stdout" "$$mise_receipt_log.stderr" mise_offline no-config "$$1" --version; \
 		receipt_output=$$(cat "$$mise_receipt_log.stdout"); \
 		receipt_release=$$(printf '%s\n' "$$receipt_output" | grep -E '^(mise )?[0-9]+\.[0-9]+\.[0-9]+$$' | tail -1 | sed 's/^mise //'); \
@@ -1039,12 +942,6 @@ mise_receipt launcher-version "$$lock_stage/artifacts/bin/mise"; \
 	fi; \
 	mise_checked "$$scratch/python-path.log" mise_offline project "$$pinned_mise" -C "$$project_root" which python; \
 	python_executable=$$(cat "$$scratch/python-path.log"); \
-	setup_environment_state="$(PROJECT_ROOT)/../.$(notdir $(PROJECT_ROOT)).mise-setup-environment-state"; \
-	{ \
-		printf "SETUP_DIRENV='%s'\n" "$$direnv_executable"; \
-		printf "SETUP_DIRENV_XDG_DATA_HOME='%s'\n" "$$caller_xdg_data_home"; \
-		printf "SETUP_PYTHON='%s'\n" "$$python_executable"; \
-	} > "$$setup_environment_state"; \
 	# CI receives only the shim farm: a project bin/ on PATH would bind every \
 	# shim to that repository launcher (mise resolves shims through PATH). \
 	# A restored tool cache keeps the shims bound to the Mise release that built \
@@ -1092,8 +989,8 @@ fi; \
 # exact base interpreter used to create it, so setup replaces it when Mise moves
 # the configured Python minor line to a newer patch.
 SETUP_ENVIRONMENT_RECIPE = set -eu; \
+	trap 'if [ -n "$${FLEXT_SETUP_CREDENTIAL_STORE:-}" ]; then rm -f "$$FLEXT_SETUP_CREDENTIAL_STORE"; fi' EXIT; \
 	$(REQUIRE_WORKSPACE_ENVIRONMENT); \
-	. "$(PROJECT_ROOT)/../.$(notdir $(PROJECT_ROOT)).mise-setup-environment-state"; \
 	desired_python="$${SETUP_PYTHON:?missing Mise-resolved Python executable}"; \
 	if [ ! -x "$(RUNTIME_PYTHON)" ]; then \
 		$(UV) venv --python "$$desired_python" "$(RUNTIME_VENV)"; \
@@ -1105,18 +1002,20 @@ SETUP_ENVIRONMENT_RECIPE = set -eu; \
 			$(UV) venv --clear --python "$$desired_python" "$(RUNTIME_VENV)"; \
 		fi; \
 	fi; \
-	if $(UV) sync --project "$(UV_PROJECT)" $(UV_SYNC_FLAGS) --locked --link-mode "$(UV_LINK_MODE)"; then :; \
+	if [ -n "$${FLEXT_SETUP_CREDENTIAL_STORE:-}" ]; then \
+		env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=credential.helper GIT_CONFIG_VALUE_0="store --file=$$FLEXT_SETUP_CREDENTIAL_STORE" $(UV) sync --project "$(UV_PROJECT)" $(UV_SYNC_FLAGS) --locked --link-mode "$(UV_LINK_MODE)"; \
 	else \
-		printf 'WARN: uv.lock drifts from pyproject.toml; setup installs the committed uv.lock without touching it; make upg rewrites it\n' >&2; \
-		$(UV) sync --project "$(UV_PROJECT)" $(UV_SYNC_FLAGS) --frozen --link-mode "$(UV_LINK_MODE)"; \
+		$(UV) sync --project "$(UV_PROJECT)" $(UV_SYNC_FLAGS) --locked --link-mode "$(UV_LINK_MODE)"; \
 	fi; \
+	if [ "$(strip $(CI))" != "Y" ]; then \
 	XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
 		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" allow "$(PROJECT_ROOT)"; \
 	for member in $(WORKSPACE_SUBPROJECTS); do \
 		if [ -f "$(PROJECT_ROOT)/$$member/.envrc" ]; then \
 			XDG_DATA_HOME="$$SETUP_DIRENV_XDG_DATA_HOME" "$$SETUP_DIRENV" allow "$(PROJECT_ROOT)/$$member"; \
 		fi; \
-	done
+	done; \
+	fi
 
 # Reject borrowed environments before bootstrap, activation or custom hooks.
 # Members may use their containing workspace, never an unrelated checkout.
@@ -1124,6 +1023,9 @@ REQUIRE_WORKSPACE_ENVIRONMENT = case "$(PROJECT_ROOT)/" in \
 	"$(RUNTIME_ROOT)/"*) ;; \
 	*) printf 'ERROR: runtime workspace does not contain this project: %s\n' "$(RUNTIME_ROOT)" >&2; exit 2 ;; \
 	esac; \
+	if [ "$(strip $(CI))" = "Y" ] && [ "$(PROJECT_ROOT)" != "$(RUNTIME_ROOT)" ]; then \
+		printf 'ERROR: CI approval is root-only; attached member execution is forbidden\n' >&2; exit 2; \
+	fi; \
 	for environment_path in "$(patsubst %/,%,$(dir $(RUNTIME_VENV)))" "$(RUNTIME_VENV)" "$(RUNTIME_BIN)" "$(PROJECT_ROOT)/.venv" "$(PROJECT_ROOT)/.venv/bin"; do \
 		if [ -L "$$environment_path" ]; then \
 			printf 'ERROR: workspace environment must be physical, not a symlink: %s\n' "$$environment_path" >&2; exit 2; \
@@ -1138,25 +1040,39 @@ _bootstrap_setup_tools: _builtin_require_workspace
 
 # Execute the interpreter provisioned by setup without discovering a project
 # workspace or creating a dependency-resolution file during a runtime command.
-UV_RUN := env -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u PROJECT_ROOT PYTHONPATH="$(PROJECT_ROOT)/src" $(UV) run --no-project --python "$(RUNTIME_PYTHON)"
+override UV_RUN := env -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u PROJECT_ROOT PYTHONPATH="$(PROJECT_ROOT)/src" $(UV) run --no-project --python "$(RUNTIME_PYTHON)"
 # The checked-out flext-infra lane owns every lifecycle verb: a workspace
 # runs the generator it carries (the submodule src), so a broken published
 # dependency tip can never block the local recovery cycle. A checkout without
 # the submodule (standalone member) keeps its own installed copy.
 FLEXT_INFRA_SUBMODULE_SRC := $(RUNTIME_ROOT)/flext-infra/src
+ifeq ($(strip $(CI)),Y)
+# Only this candidate's own sources are visible; dependencies stay installed.
+override PROJECT_INFRA_PYTHONPATH := $(MAKEFILE_ROOT)/src
+else
 override PROJECT_INFRA_PYTHONPATH := $(if $(wildcard $(FLEXT_INFRA_SUBMODULE_SRC)/flext_infra/.),$(FLEXT_INFRA_SUBMODULE_SRC),$(MAKEFILE_ROOT)/src)
-PROJECT_INFRA_RUN = if [ ! -x "$(FLEXT_INFRA_PYTHON)" ]; then printf 'ERROR: FLEXT_INFRA_PYTHON must name an executable managed Python\n' >&2; exit 2; fi; $(PROJECT_TOOL_EXEC) env -u PYTHONPATH -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u UV_PROJECT_ENVIRONMENT PYTHONPATH="$(PROJECT_INFRA_PYTHONPATH)" $(FLEXT_INFRA_PYTHON)
-PROJECT_FLEXT_INFRA := $(PROJECT_INFRA_RUN) -m flext_infra
+endif
+override PROJECT_INFRA_RUN = if [ ! -x "$(FLEXT_INFRA_PYTHON)" ]; then printf 'ERROR: FLEXT_INFRA_PYTHON must name an executable managed Python\n' >&2; exit 2; fi; $(PROJECT_TOOL_EXEC) env -u PYTHONPATH -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u UV_PROJECT_ENVIRONMENT PYTHONPATH="$(PROJECT_INFRA_PYTHONPATH)" $(FLEXT_INFRA_PYTHON)
+override PROJECT_FLEXT_INFRA := $(PROJECT_INFRA_RUN) -m flext_infra
 # Scaffold dev tools live in the validated optional dev
 # Only `make upg` resolves and rewrites uv.lock. Setup always runs: it syncs
-# `--locked`, and when uv.lock drifts from pyproject.toml it warns and installs
-# the committed lock `--frozen`, which never writes it.
+# `--locked`; drift and the original install error fail without retry/resolution.
 UV_SYNC_FLAGS := --all-extras --all-groups
+ifeq ($(strip $(CI)),Y)
+override UV_SYNC_FLAGS := --all-extras --all-groups --no-editable
+endif
 
 ifeq ($(GEN_INIT_ONLY),)
+ifneq ($(strip $(CI)),Y)
 -include custom.mk
 endif
-SELF_MAKE := "$(SELF_MAKE_EXECUTABLE)" --no-print-directory -f "$(SELF_MAKEFILE)"
+endif
+ifeq ($(APPROVAL_CONTEXT),Y)
+override CI := Y
+export CI
+override TOOL_BOOTSTRAP_LIFECYCLE := _setup_lifecycle
+endif
+override SELF_MAKE := "$(SELF_MAKE_EXECUTABLE)" --no-print-directory -f "$(SELF_MAKEFILE)"
 
 define RUN_PUBLIC_POST
 	$(if $(filter post-$(1),$(CUSTOM_DECLARED_TARGETS)),+@$(SELF_MAKE) post-$(1))
@@ -1216,267 +1132,267 @@ $(filter-out help clean upg,$(BUILTIN_VERBS)): _builtin_require_mise_pin
 
 help:
 
-	$(call RUN_PUBLIC,help)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-help,$(call RUN_PUBLIC,help))
 
 
 
 
 build: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-build
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-build,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-build)
 
 .PHONY: _activated-build
 _activated-build: _builtin_require_environment
 
-	$(call RUN_PUBLIC,build)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-build,$(call RUN_PUBLIC,build))
 
 
 
 
 check: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-check
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-check,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-check)
 
 .PHONY: _activated-check
 _activated-check: _builtin_require_environment
 
-	$(call RUN_PUBLIC,check)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-check,$(call RUN_PUBLIC,check))
 
 
 
 
 smells: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-smells
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-smells,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-smells)
 
 .PHONY: _activated-smells
 _activated-smells: _builtin_require_environment
 
-	$(call RUN_PUBLIC,smells)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-smells,$(call RUN_PUBLIC,smells))
 
 
 
 
 test: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-test
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-test,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-test)
 
 .PHONY: _activated-test
 _activated-test: _builtin_require_environment
 
-	$(call RUN_PUBLIC,test)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-test,$(call RUN_PUBLIC,test))
 
 
 
 
 test-full: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-test-full
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-test-full,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-test-full)
 
 .PHONY: _activated-test-full
 _activated-test-full: _builtin_require_environment
 
-	$(call RUN_PUBLIC,test-full)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-test-full,$(call RUN_PUBLIC,test-full))
 
 
 
 
 test-file: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-test-file
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-test-file,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-test-file)
 
 .PHONY: _activated-test-file
 _activated-test-file: _builtin_require_environment
 
-	$(call RUN_PUBLIC,test-file)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-test-file,$(call RUN_PUBLIC,test-file))
 
 
 
 
 file-gate: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-file-gate
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-file-gate,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-file-gate)
 
 .PHONY: _activated-file-gate
 _activated-file-gate: _builtin_require_environment
 
-	$(call RUN_PUBLIC,file-gate)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-file-gate,$(call RUN_PUBLIC,file-gate))
 
 
 
 
 profile-test: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-profile-test
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-profile-test,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-profile-test)
 
 .PHONY: _activated-profile-test
 _activated-profile-test: _builtin_require_environment
 
-	$(call RUN_PUBLIC,profile-test)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-profile-test,$(call RUN_PUBLIC,profile-test))
 
 
 
 
 profile-test-report: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-profile-test-report
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-profile-test-report,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-profile-test-report)
 
 .PHONY: _activated-profile-test-report
 _activated-profile-test-report: _builtin_require_environment
 
-	$(call RUN_PUBLIC,profile-test-report)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-profile-test-report,$(call RUN_PUBLIC,profile-test-report))
 
 
 
 
 fmt: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-fmt
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-fmt,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-fmt)
 
 .PHONY: _activated-fmt
 _activated-fmt: _builtin_require_environment
 
-	$(call RUN_PUBLIC,fmt)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-fmt,$(call RUN_PUBLIC,fmt))
 
 
 
 
 fix: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-fix
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-fix,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-fix)
 
 .PHONY: _activated-fix
 _activated-fix: _builtin_require_environment
 
-	$(call RUN_PUBLIC,fix)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-fix,$(call RUN_PUBLIC,fix))
 
 
 
 
 fix-namespace: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-fix-namespace
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-fix-namespace,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-fix-namespace)
 
 .PHONY: _activated-fix-namespace
 _activated-fix-namespace: _builtin_require_environment
 
-	$(call RUN_PUBLIC,fix-namespace)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-fix-namespace,$(call RUN_PUBLIC,fix-namespace))
 
 
 
 
 fix-accessors: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-fix-accessors
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-fix-accessors,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-fix-accessors)
 
 .PHONY: _activated-fix-accessors
 _activated-fix-accessors: _builtin_require_environment
 
-	$(call RUN_PUBLIC,fix-accessors)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-fix-accessors,$(call RUN_PUBLIC,fix-accessors))
 
 
 
 
 audit: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-audit
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-audit,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-audit)
 
 .PHONY: _activated-audit
 _activated-audit: _builtin_require_environment
 
-	$(call RUN_PUBLIC,audit)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-audit,$(call RUN_PUBLIC,audit))
 
 
 
 
 status: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-status
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-status,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-status)
 
 .PHONY: _activated-status
 _activated-status: _builtin_require_environment
 
-	$(call RUN_PUBLIC,status)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-status,$(call RUN_PUBLIC,status))
 
 
 
 
 verify-clean: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-verify-clean
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-verify-clean,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-verify-clean)
 
 .PHONY: _activated-verify-clean
 _activated-verify-clean: _builtin_require_environment
 
-	$(call RUN_PUBLIC,verify-clean)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-verify-clean,$(call RUN_PUBLIC,verify-clean))
 
 
 
 
 docs: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-docs
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-docs,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-docs)
 
 .PHONY: _activated-docs
 _activated-docs: _builtin_require_environment
 
-	$(call RUN_PUBLIC,docs)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-docs,$(call RUN_PUBLIC,docs))
 
 
 
 
 clean:
 
-	$(call RUN_PUBLIC,clean)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-clean,$(call RUN_PUBLIC,clean))
 
 
 
 
 bootstrap-candidate: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-bootstrap-candidate
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-bootstrap-candidate,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-bootstrap-candidate)
 
 .PHONY: _activated-bootstrap-candidate
 _activated-bootstrap-candidate: _builtin_require_environment
 
-	$(call RUN_PUBLIC,bootstrap-candidate)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-bootstrap-candidate,$(call RUN_PUBLIC,bootstrap-candidate))
 
 
 
 
 release-plan: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-release-plan
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-release-plan,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-release-plan)
 
 .PHONY: _activated-release-plan
 _activated-release-plan: _builtin_require_environment
 
-	$(call RUN_PUBLIC,release-plan)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-release-plan,$(call RUN_PUBLIC,release-plan))
 
 
 
 
 release-version: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-release-version
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-release-version,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-release-version)
 
 .PHONY: _activated-release-version
 _activated-release-version: _builtin_require_environment
 
-	$(call RUN_PUBLIC,release-version)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-release-version,$(call RUN_PUBLIC,release-version))
 
 
 
 
 release-tag: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-release-tag
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-release-tag,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-release-tag)
 
 .PHONY: _activated-release-tag
 _activated-release-tag: _builtin_require_environment
 
-	$(call RUN_PUBLIC,release-tag)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-release-tag,$(call RUN_PUBLIC,release-tag))
 
 
 
 
 release-build: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-release-build
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-release-build,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-release-build)
 
 .PHONY: _activated-release-build
 _activated-release-build: _builtin_require_environment
 
-	$(call RUN_PUBLIC,release-build)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-release-build,$(call RUN_PUBLIC,release-build))
 
 
 
 
 publication: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-publication
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-publication,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-publication)
 
 .PHONY: _activated-publication
 _activated-publication: _builtin_require_environment
 
-	$(call RUN_PUBLIC,publication)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-publication,$(call RUN_PUBLIC,publication))
 
 
 
@@ -1493,100 +1409,100 @@ _activated-gen: _builtin_require_environment
 
 
 initialize: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-initialize
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-initialize,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-initialize)
 
 .PHONY: _activated-initialize
 _activated-initialize: _builtin_require_environment
 
-	$(call RUN_PUBLIC,initialize)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-initialize,$(call RUN_PUBLIC,initialize))
 
 
 
 
 mod: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-mod
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-mod,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-mod)
 
 .PHONY: _activated-mod
 _activated-mod: _builtin_require_environment
 
-	$(call RUN_PUBLIC,mod)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-mod,$(call RUN_PUBLIC,mod))
 
 
 
 
 mod-text: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-mod-text
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-mod-text,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-mod-text)
 
 .PHONY: _activated-mod-text
 _activated-mod-text: _builtin_require_environment
 
-	$(call RUN_PUBLIC,mod-text)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-mod-text,$(call RUN_PUBLIC,mod-text))
 
 
 
 
 mod-text-candidate: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-mod-text-candidate
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-mod-text-candidate,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-mod-text-candidate)
 
 .PHONY: _activated-mod-text-candidate
 _activated-mod-text-candidate: _builtin_require_environment
 
-	$(call RUN_PUBLIC,mod-text-candidate)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-mod-text-candidate,$(call RUN_PUBLIC,mod-text-candidate))
 
 
 
 
 mod-snapshots: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-mod-snapshots
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-mod-snapshots,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-mod-snapshots)
 
 .PHONY: _activated-mod-snapshots
 _activated-mod-snapshots: _builtin_require_environment
 
-	$(call RUN_PUBLIC,mod-snapshots)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-mod-snapshots,$(call RUN_PUBLIC,mod-snapshots))
 
 
 
 
 waza: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-waza
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-waza,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-waza)
 
 .PHONY: _activated-waza
 _activated-waza: _builtin_require_environment
 
-	$(call RUN_PUBLIC,waza)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-waza,$(call RUN_PUBLIC,waza))
 
 
 
 
 duplication: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-duplication
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-duplication,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-duplication)
 
 .PHONY: _activated-duplication
 _activated-duplication: _builtin_require_environment
 
-	$(call RUN_PUBLIC,duplication)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-duplication,$(call RUN_PUBLIC,duplication))
 
 
 
 
 sonarcloud-sync: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-sonarcloud-sync
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-sonarcloud-sync,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-sonarcloud-sync)
 
 .PHONY: _activated-sonarcloud-sync
 _activated-sonarcloud-sync: _builtin_require_environment
 
-	$(call RUN_PUBLIC,sonarcloud-sync)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-sonarcloud-sync,$(call RUN_PUBLIC,sonarcloud-sync))
 
 
 
 
 sonarcloud-issues: _builtin_require_workspace
-	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-sonarcloud-issues
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _activated-sonarcloud-issues,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-sonarcloud-issues)
 
 .PHONY: _activated-sonarcloud-issues
 _activated-sonarcloud-issues: _builtin_require_environment
 
-	$(call RUN_PUBLIC,sonarcloud-issues)
+	$(if $(filter Y,$(CI)),+@$(SELF_MAKE) _builtin-sonarcloud-issues,$(call RUN_PUBLIC,sonarcloud-issues))
 
 
 
@@ -1594,6 +1510,39 @@ _activated-sonarcloud-issues: _builtin_require_environment
 # to build), but it still runs the pre-/post-setup lifecycle hooks so a project
 # declaring them in the custom handler surface is actually honoured.
 setup: _bootstrap_setup_tools
+
+# Provisioning-safe approval: never activate before setup creates the venv.
+pre-commit: _builtin_require_workspace
+	+@set -eu; \
+		trap 'if [ -n "$${FLEXT_SETUP_CREDENTIAL_STORE:-}" ]; then rm -f "$$FLEXT_SETUP_CREDENTIAL_STORE"; fi' EXIT; \
+
+		printf 'approval: setup START\n'; \
+		$(SELF_MAKE) MAKEOVERRIDES= MAKEFLAGS= MFLAGS= CI=Y setup; \
+
+		if [ -n "$${FLEXT_SETUP_CREDENTIAL_STORE:-}" ]; then rm -f "$$FLEXT_SETUP_CREDENTIAL_STORE"; fi; \
+		unset FLEXT_SETUP_CREDENTIAL_STORE GITHUB_TOKEN GH_TOKEN MISE_GITHUB_TOKEN GIT_CONFIG_COUNT; \
+
+		printf 'approval: setup COMPLETE\n'; \
+
+		printf 'approval: audit START\n'; \
+		$(SELF_MAKE) MAKEOVERRIDES= MAKEFLAGS= MFLAGS= CI=Y audit; \
+
+		printf 'approval: audit COMPLETE\n'; \
+
+		printf 'approval: check START\n'; \
+		$(SELF_MAKE) MAKEOVERRIDES= MAKEFLAGS= MFLAGS= CI=Y check; \
+
+		printf 'approval: check COMPLETE\n'; \
+
+		printf 'approval: test START\n'; \
+		$(SELF_MAKE) MAKEOVERRIDES= MAKEFLAGS= MFLAGS= CI=Y test; \
+
+		printf 'approval: test COMPLETE\n'; \
+
+		printf 'approval: COMPLETE\n'
+
+_builtin-pre-commit:
+	+@$(SELF_MAKE) pre-commit
 
 # `upg` builds the environment from the locks it writes, so like `setup` it
 # must not require an existing environment, and as the only resolver it must
@@ -1619,6 +1568,10 @@ help:
 setup:
 	@printf '  %-16s %s\n' 'setup' 'Provision the declared environment and hooks.'
 	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make setup to execute it.'
+
+pre-commit:
+	@printf '  %-16s %s\n' 'pre-commit' 'Approve this project through locked setup, audit, check, and incremental tests with the enforced CI contract.'
+	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make pre-commit to execute it.'
 
 upg:
 	@printf '  %-16s %s\n' 'upg' 'Resolve the newest declared releases, write the uv and mise locks, then prove the upgraded tree still converges and passes every active check gate.'
@@ -1669,11 +1622,11 @@ fix:
 	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make fix to execute it.'
 
 fix-namespace:
-	@printf '  %-16s %s\n' 'fix-namespace' 'Apply the canonical namespace enforcer to the selected workspace.'
+	@printf '  %-16s %s\n' 'fix-namespace' 'Apply the canonical namespace enforcer to the selected workspace; the same relocation cascade runs as a callback phase of make mod.'
 	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make fix-namespace to execute it.'
 
 fix-accessors:
-	@printf '  %-16s %s\n' 'fix-accessors' 'Migrate forbidden accessor names and every resolved consumer.'
+	@printf '  %-16s %s\n' 'fix-accessors' 'Migrate accessor names owned by the rename catalog'"'"'s origin package and every resolved consumer; homonyms are skipped with a warning; the same origin-aware rewrite runs as a callback phase of make mod.'
 	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make fix-accessors to execute it.'
 
 audit:
@@ -1776,18 +1729,18 @@ _builtin_require_runtime_root:
 .PHONY: _setup_lifecycle
 _setup_lifecycle:
 	@set -eu; \
-	case " $(CUSTOM_DECLARED_TARGETS) " in \
+	case "$(strip $(CI)): $(CUSTOM_DECLARED_TARGETS) " in \
+		Y:*) ;; \
 		*" pre-setup "*) $(SELF_MAKE) pre-setup ;; \
 	esac
 	@$(SELF_MAKE) _builtin_setup_environment
-	+@. "$(PROJECT_ROOT)/../.$(notdir $(PROJECT_ROOT)).mise-setup-environment-state"; \
-		XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
-		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" exec "$(PROJECT_ROOT)" $(SELF_MAKE) _setup_activated
+	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _setup_activated,XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" "$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" exec "$(PROJECT_ROOT)" $(SELF_MAKE) _setup_activated)
 
 .PHONY: _setup_activated
 _setup_activated:
 	@set -eu; \
-	case " $(CUSTOM_DECLARED_TARGETS) " in \
+	case "$(strip $(CI)): $(CUSTOM_DECLARED_TARGETS) " in \
+		Y:*) ;; \
 		*" post-setup "*) $(SELF_MAKE) post-setup ;; \
 	esac
 
@@ -1797,6 +1750,8 @@ _builtin-help:
 	@printf '  %-16s %s\n' 'help' 'Show the complete selector-free public interface.';
 
 	@printf '  %-16s %s\n' 'setup' 'Provision the declared environment and hooks.';
+
+	@printf '  %-16s %s\n' 'pre-commit' 'Approve this project through locked setup, audit, check, and incremental tests with the enforced CI contract.';
 
 	@printf '  %-16s %s\n' 'upg' 'Resolve the newest declared releases, write the uv and mise locks, then prove the upgraded tree still converges and passes every active check gate.';
 
@@ -1822,9 +1777,9 @@ _builtin-help:
 
 	@printf '  %-16s %s\n' 'fix' 'Apply the safe fixes of ruff check --fix --preview plus every other configured safe correction; never deletes information. Ruff is the rule; change code, never ruff.';
 
-	@printf '  %-16s %s\n' 'fix-namespace' 'Apply the canonical namespace enforcer to the selected workspace.';
+	@printf '  %-16s %s\n' 'fix-namespace' 'Apply the canonical namespace enforcer to the selected workspace; the same relocation cascade runs as a callback phase of make mod.';
 
-	@printf '  %-16s %s\n' 'fix-accessors' 'Migrate forbidden accessor names and every resolved consumer.';
+	@printf '  %-16s %s\n' 'fix-accessors' 'Migrate accessor names owned by the rename catalog'"'"'s origin package and every resolved consumer; homonyms are skipped with a warning; the same origin-aware rewrite runs as a callback phase of make mod.';
 
 	@printf '  %-16s %s\n' 'audit' 'Inspect ownership, dependency, and generated-state health.';
 
@@ -2147,7 +2102,7 @@ endif
 # derive from the member checkouts, so a member-less CI checkout would render a
 # different workspace and break the gen fixed point. Provisioned
 # members are read as libraries; no verb gates them from here.
-_builtin_setup_environment: _builtin_setup_submodules
+_builtin_setup_environment: $(if $(filter Y,$(CI)),,_builtin_setup_submodules)
 ifeq ($(MAKE_PROFILE),workspace)
 	@$(SETUP_ENVIRONMENT_RECIPE)
 	@$(UV) pip check --python "$(RUNTIME_VENV)"
@@ -2219,8 +2174,7 @@ _upg_converge:
 		exit 2; \
 	fi
 	@$(PROJECT_FLEXT_INFRA) deps verify-locks --repository-root "$(PROJECT_ROOT)"
-	+@. "$(PROJECT_ROOT)/../.$(notdir $(PROJECT_ROOT)).mise-setup-environment-state"; \
-		XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
+	+@XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
 		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" exec "$(PROJECT_ROOT)" $(SELF_MAKE) _upg_activated
 	@$(SELF_MAKE) check
 
@@ -2248,11 +2202,11 @@ _builtin_check_all: _builtin_require_environment
 	@set -eu; \
 		gates="lint,security,markdown,markdown-format,duplication,pyrefly,mypy,pyright,loc-cap,runtime-census,fresh-import,index-declarations,codemod,layout,direnv"; \
 		if [ "$(strip $(CI))" = "Y" ]; then \
-			gates="security,markdown,markdown-format,duplication,pyrefly,loc-cap,runtime-census,fresh-import,index-declarations,layout,direnv"; \
-			printf 'INFO: CI=Y runs check gates: security markdown markdown-format duplication pyrefly loc-cap runtime-census fresh-import index-declarations layout direnv\n'; \
+			gates="lint,security,markdown,markdown-format,duplication,loc-cap,runtime-census,fresh-import,index-declarations,layout,direnv"; \
+			printf 'INFO: CI=Y runs check gates: lint security markdown markdown-format duplication loc-cap runtime-census fresh-import index-declarations layout direnv\n'; \
 		elif [ "$(strip $(CI))" = "N" ]; then \
-			gates="lint,mypy,pyright,codemod"; \
-			printf 'INFO: CI=N runs check gates: lint mypy pyright codemod\n'; \
+			gates="pyrefly,mypy,pyright,codemod"; \
+			printf 'INFO: CI=N runs check gates: pyrefly mypy pyright codemod\n'; \
 		else \
 			printf 'INFO: default context runs check gates: lint security markdown markdown-format duplication pyrefly mypy pyright loc-cap runtime-census fresh-import index-declarations codemod layout direnv\n'; \
 		fi; \
@@ -2579,7 +2533,8 @@ _builtin-fix-namespace: _builtin_fix_namespace
 _builtin-fix-accessors: _builtin_fix_accessors
 _builtin-audit:
 	@$(UV) pip check --python "$(RUNTIME_VENV)"
-	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode check
+	@$(if $(filter Y,$(CI)),$(PROJECT_FLEXT_INFRA) workspace verify-environment --repository-root "$(PROJECT_ROOT)",:)
+	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --scope self --mode check
 _builtin-status: _builtin_status_diagnostics
 _builtin-verify-clean: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode check

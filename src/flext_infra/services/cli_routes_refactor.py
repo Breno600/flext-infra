@@ -11,7 +11,7 @@ from typing import ClassVar
 from flext_cli import cli
 
 from flext_core import r
-from flext_infra import infra, m, p, t
+from flext_infra import c, infra, m, p, t
 from flext_infra.codegen.protocol_models import FlextInfraCodegenProtocolModels
 from flext_infra.codemod.ast_scan import FlextInfraCodemodAstScan
 from flext_infra.codemod.snapshot_refresh import FlextInfraCodemodSnapshotRefresh
@@ -20,6 +20,7 @@ from flext_infra.refactor.accessor_migration import (
 )
 from flext_infra.refactor.census import FlextInfraRefactorCensus
 from flext_infra.refactor.namespace_enforcer import FlextInfraNamespaceEnforcer
+from flext_infra.refactor.violations_sweep import FlextInfraRefactorViolationsSweep
 from flext_infra.refactor.wrapper_root_namespace import (
     FlextInfraWrapperRootNamespaceRefactor,
 )
@@ -173,6 +174,19 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
             ),
             model_cls=FlextInfraCodemodAstScan,
             handler=FlextInfraCodemodAstScan.execute_command,
+        ),
+        m.Cli.ResultCommandRoute(
+            name=c.Infra.VIOLATIONS_SWEEP_ROUTE_NAME,
+            help_text=(
+                "Run the canonical repair sequence (make fix, make fmt, "
+                "make mod) between two mod scans; the command fails the "
+                "moment any violation total increased"
+            ),
+            model_cls=FlextInfraRefactorViolationsSweep,
+            handler=FlextInfraCliRouteBase.result_handler(
+                FlextInfraRefactorViolationsSweep.execute_command,
+            ),
+            success_message="violations sweep reduced or held every total",
         ),
     )
 

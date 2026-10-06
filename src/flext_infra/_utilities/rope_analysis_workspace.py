@@ -188,12 +188,10 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
     ) -> t.StrTuple:
         """Return the class bases whose subclasses evaluate annotations at runtime.
 
-        Ruff qualifies imported bases by their import and local bases as
-        ``<module>.<expression>``, not by the declaration's lexical identity.
-        The source inventory keeps those spellings separate from identities,
-        resolves aliases and inherited nested members in C3 order, and treats
-        planned bytes as authoritative before publication. External names use
-        Rope's source resolver, never Python imports of the project being planned.
+        Captured source supplies declaration identities, while import bindings
+        supply Ruff's qualified expressions. Planned bytes override disk and
+        providers before aliases, members and ordered C3 parents are resolved.
+        No project package is imported during generation.
 
         Returns:
             The declared roots and the derived bases, by qualified name.
@@ -205,15 +203,10 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             for path, source in cls._project_sources(root, planned_sources).items()
             if cls.module_name_for_file(path, project_root=root)
         }
-        # An unpublished project may have no directory yet. Parsing uses its
-        # existing filesystem ancestor; only the captured inventory resolves
-        # owned modules, so this neither creates a tree nor invents an overlay.
         parse_root = next(path for path in (root, *root.parents) if path.is_dir())
         with FlextInfraUtilitiesRopeCore.open_project(parse_root) as project:
             return FlextInfraUtilitiesRopeSourceBases.runtime_bases(
-                project,
-                sources,
-                roots,
+                project, sources, roots,
             )
 
     @staticmethod
@@ -233,9 +226,15 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
                 m.Infra.SourceScanRequest(project_roots=(root,)),
             ).unwrap()
             for file_path in files:
-                sources[file_path.resolve()] = file_path.read_text(
+                source = file_path.read_text(
                     encoding=c.Cli.ENCODING_DEFAULT,
                 )
+                # Generated exports are projections, not class declarations.
+                if file_path.name == c.Infra.INIT_PY and source.startswith(
+                    c.Infra.AUTOGEN_HEADERS,
+                ):
+                    continue
+                sources[file_path.resolve()] = source
         for file_path, source in planned_sources.items():
             sources[file_path.resolve()] = source
         return sources

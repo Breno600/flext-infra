@@ -33,7 +33,7 @@ dependencies = [
   "Markdown>=3.11",
   "mkdocs>=1.6.1",
   "packaging>=26.3",
-  "pydantic>=2.13.5",
+  "pydantic>=2.13.5,<3",
   "pydantic-settings>=2.15.0",
   "pymdown-extensions>=11.0.1",
   "pytest>=9.1.1",
@@ -181,7 +181,6 @@ include = ["/src/flext_infra/**", "/config/**"]
 [tool.mypy]
 mypy_path = ["src"]
 plugins = ["pydantic.mypy"]
-disable_error_code = ["prop-decorator", "call-arg", "attr-defined"]
 python_version = "3.13"
 allow_redefinition = true
 check_untyped_defs = true
@@ -338,7 +337,7 @@ include = ["src", "tests"]
 extraPaths = ["src", "."]
 pythonPlatform = "Linux"
 pythonVersion = "3.13"
-reportCallIssue = "none"
+reportCallIssue = "error"
 reportConstantRedefinition = "error"
 reportIncompatibleMethodOverride = "error"
 reportInconsistentConstructor = "error"
@@ -394,6 +393,7 @@ markers = [
   "resilience: resilience tests",
   "discovery: catalog and stream discovery tests",
   "singer: Singer protocol contract tests",
+  "requires_engine: native check engine required by this test",
 ]
 minversion = "8.0"
 python_classes = ["Test*"]
@@ -419,7 +419,11 @@ quote-style = "double"
 skip-magic-trailing-comma = false
 
 [tool.ruff.lint]
-extend-safe-fixes = ["camelcase-imported-as-lowercase", "relative-imports"]
+extend-safe-fixes = [
+  "camelcase-imported-as-lowercase",
+  "relative-imports",
+  "typing-only-first-party-import",
+]
 ignore = [
   "camelcase-imported-as-lowercase",
   "implicit-namespace-package",
@@ -447,6 +451,7 @@ notice-rgx = "Copyright \\(c\\) \\d{4} \\S[^\\n]*\\. All rights reserved\\."
 
 [tool.ruff.lint.flake8-type-checking]
 runtime-evaluated-base-classes = [
+  "flext_cli.FlextCli",
   "flext_cli.config.FlextCliConfig",
   "flext_cli.m.ArbitraryTypesModel",
   "flext_cli.m.BaseModel",
@@ -610,7 +615,11 @@ split-on-trailing-comma = false
   "verbose-raise",
   "write-whole-file",
 ]
-"scripts/**/*.py" = ["commented-out-code", "line-too-long"]
+"scripts/**/*.py" = [
+  "commented-out-code",
+  "line-too-long",
+  "typing-only-first-party-import",
+]
 "tests/**/*.py" = ["assert"]
 
 [tool.ruff.lint.pydocstyle]

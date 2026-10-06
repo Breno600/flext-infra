@@ -39,6 +39,25 @@ class FlextInfraProtocolsBase(Protocol):
         def emit_rename(self, report: m.Infra.ApplyRenamesReport) -> None: ...
 
     @runtime_checkable
+    class ModLoopPhase(Protocol):
+        """One repair phase the mod loop invokes as a callback.
+
+        A phase receives the loop's current scan state and the shared Rope
+        workspace, applies its own repairs, and returns whether it changed
+        sources — the loop then refreshes Rope, rescans, and continues toward
+        the joint fixed point.
+        """
+
+        name: str
+
+        def apply(
+            self,
+            root: Path,
+            preflight: m.Infra.ModScanReport,
+            rope_workspace: p.Infra.RopeWorkspaceDsl,
+        ) -> p.Result[bool]: ...
+
+    @runtime_checkable
     class OutputStream(Protocol):
         """Minimal text stream contract used by infrastructure output backends."""
 

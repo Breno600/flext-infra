@@ -21,6 +21,10 @@ from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 from flext_infra.codegen.pipeline import FlextInfraCodegenPipeline
 from flext_infra.codemod.apply_renames import FlextInfraApplyRenames
 from flext_infra.codemod.batch_apply import FlextInfraCodemodBatchApply
+from flext_infra.codemod.loop_phases import (
+    FlextInfraAccessorRenamePhase,
+    FlextInfraNamespaceRelocationPhase,
+)
 from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
 from flext_infra.docs.generator import FlextInfraDocGenerator
 from flext_infra.gates.markdown_format import FlextInfraMarkdownFormatGate
@@ -329,6 +333,10 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
                 progress=progress,
                 rope=rope,
                 rename_inputs=tuple(campaigns),
+                phase_callbacks=(
+                    FlextInfraNamespaceRelocationPhase(),
+                    FlextInfraAccessorRenamePhase(),
+                ),
             ).execute()
 
     @staticmethod

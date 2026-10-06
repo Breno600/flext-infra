@@ -112,3 +112,33 @@ class TestsFlextInfraRopeAnalysis:
             (),
         )
         tm.that(bases, eq=())
+
+    @staticmethod
+    def test_missing_planned_class_binding_fails_at_the_required_base(
+        tmp_path: Path,
+    ) -> None:
+        """An explicit missing base fails instead of silently losing its lineage."""
+        project, package = u.Tests.demo_project(tmp_path)
+        helper = package / "data_module.py"
+        helper.write_text(
+            "def build() -> int:\n    return 0\n",
+            encoding="utf-8",
+        )
+        consumer = package / "consumer.py"
+        consumer.write_text(
+            "from . import data_module\n"
+            "\n"
+            "\n"
+            "class Consumer(data_module.Helper):\n"
+            "    pass\n",
+            encoding="utf-8",
+        )
+        with pytest.raises(ValueError, match="Unresolved planned base"):
+            u.Infra.runtime_evaluated_base_classes(
+                project,
+                {
+                    source: source.read_text(encoding="utf-8")
+                    for source in (helper, consumer)
+                },
+                (),
+            )

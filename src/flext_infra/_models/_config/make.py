@@ -79,6 +79,12 @@ class FlextInfraConfigModelsMake:
                 ),
             ),
         ]
+        informative_check_gates: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                description="CI check findings are informative; execution errors block"
+            ),
+        ] = ()
 
         @m.model_validator(mode="after")
         def _validate_local_check_gates(self) -> Self:
@@ -91,7 +97,9 @@ class FlextInfraConfigModelsMake:
                 ValueError: If make.ci.local_check_gates contains unknown gates.
             """
             allowed = set(FlextInfraConstantsMake.CANONICAL_GATE_IDS)
-            unknown = sorted(set(self.local_check_gates) - allowed)
+            unknown = sorted(
+                {*self.local_check_gates, *self.informative_check_gates} - allowed,
+            )
             if unknown:
                 msg = (
                     "make.ci.local_check_gates contains unknown gates: "
@@ -523,10 +531,15 @@ class FlextInfraConfigModelsMake:
         there is deliberately no ``lint_apply`` key, because a lint pass
         inside fmt would repeat the lint gate's fix.
 
-        ``make fix`` never deletes information (flext-itpd1.5): the lint repair
-        applies Ruff's safe fixes only, so ``lint_fix`` rejects the unsafe-fix
-        flag. Rules whose fixes delete code stay reported through the
-        ``unfixable`` list rendered from ``tooling.yaml``.
+        *** Operator law 2026-10-05 (direct order, OBLIGATORY and NEVER to be
+        disabled again): ``make fix`` ALWAYS applies Ruff's unsafe fixes —
+        ``lint_fix`` MUST carry the unsafe-fix flag in every project and
+        subproject, forever. A configuration without it fails validation;
+        re-adding it after a removal is a mandated repair, and removing it is
+        a regression against an explicit operator order. Rules whose fixes
+        would destroy information stay declared ``unfixable`` in
+        ``tooling.yaml`` — that is rule selection, never disabling the
+        mandatory unsafe channel. ***
         """
 
         format_check: Annotated[
@@ -545,28 +558,30 @@ class FlextInfraConfigModelsMake:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 description=(
-                    "Flags for ruff check --fix applying safe fixes only; the "
-                    "lint gate's apply mode (make fix), which reports leftovers"
+                    "Flags for ruff check --fix; MANDATORY unsafe-fix channel"
+                    " (operator law 2026-10-05): the lint gate's apply mode"
+                    " (make fix) always applies safe and unsafe fixes"
                 ),
             ),
         ]
 
         @m.model_validator(mode="after")
-        def _reject_unsafe_fixes(self) -> Self:
-            """Keep the lint repair information-preserving.
+        def _require_unsafe_fixes(self) -> Self:
+            """Keep the mandatory unsafe lint-repair channel enabled.
 
             Returns:
                 The resulting ``Self``.
 
             Raises:
-                ValueError: If make.ruff.lint_fix must not enable.
+                ValueError: If make.ruff.lint_fix lacks the mandatory flag.
 
             """
-            if FlextInfraConstantsMake.RUFF_UNSAFE_FIXES_FLAG in self.lint_fix:
+            if FlextInfraConstantsMake.RUFF_UNSAFE_FIXES_FLAG not in self.lint_fix:
                 msg = (
-                    "make.ruff.lint_fix must not enable "
-                    f"{FlextInfraConstantsMake.RUFF_UNSAFE_FIXES_FLAG}: unsafe "
-                    "Ruff fixes delete code, comments and diagnostics"
+                    "make.ruff.lint_fix must carry "
+                    f"{FlextInfraConstantsMake.RUFF_UNSAFE_FIXES_FLAG} (operator"
+                    " law 2026-10-05: the unsafe repair channel is mandatory"
+                    " and never disabled again)"
                 )
                 raise ValueError(msg)
             return self
@@ -848,17 +863,13 @@ class FlextInfraConfigModelsMake:
             FlextInfraConfigModelsMake.MakeWorkInProgressSpec,
             m.Field(description="WIP branch and draft PR gate predicate"),
         ]
-        # Why (operator law 2026-08-24): git-hook stages are OFF by default and
-        # re-enabled case by case via these config gates. The workflow keeps
-        # owning WHICH steps belong to each stage; the booleans only govern
-        # whether the stage is generated and installed at all.
         pre_commit: Annotated[
-            bool,
+            Literal[True],
             m.Field(
-                default=False,
-                description="Generate and install the pre-commit git-hook stage",
+                default=True,
+                description="Mandatory projected approval hook; host owns installation",
             ),
-        ] = False
+        ] = True
         pre_push: Annotated[
             bool,
             m.Field(
@@ -947,16 +958,9 @@ class FlextInfraConfigModelsMake:
                     "Public Make verb to checker gate mapping outside make check"
                 ),
             ),
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
-        opt_in_check_gates: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                description=(
-                    "Built-in gates that stay allowed and explicitly invocable "
-                    "but never join the default check, CI, or hook gate sets"
-                ),
-            ),
-        ] = ()
+        ] = m.Field(
+            default_factory=lambda: MappingProxyType[t.NonEmptyStr, t.NonEmptyStr]({}),
+        )
 
         @m.model_validator(mode="after")
         def _validate_project_check_gates(self) -> Self:
@@ -967,8 +971,7 @@ class FlextInfraConfigModelsMake:
 
             Raises:
                 ValueError: If make project_check_gates must be unique; or if make
-                    project_check_gates shadow built-in gates; or if make
-                    opt_in_check_gates name unknown gates.
+                    project_check_gates shadow built-in gates.
 
             """
             if len(set(self.project_check_gates)) != len(self.project_check_gates):
@@ -980,12 +983,6 @@ class FlextInfraConfigModelsMake:
                 msg = (
                     "make project_check_gates shadow built-in gates: "
                     f"{', '.join(shadowed)}"
-                )
-                raise ValueError(msg)
-            unknown = sorted(set(self.opt_in_check_gates) - builtin)
-            if unknown:
-                msg = (
-                    f"make opt_in_check_gates name unknown gates: {', '.join(unknown)}"
                 )
                 raise ValueError(msg)
             return self
@@ -1091,7 +1088,7 @@ class FlextInfraConfigModelsMake:
             partial_workflow = sorted(
                 verb.name
                 for verb in self.verbs
-                if verb.name in workflow_verbs
+                if verb.name in {*workflow_verbs, "pre-commit"}
                 and set(verb.profiles)
                 != set(FlextInfraConstantsCodegenProject.MakeProfile)
             )
@@ -1100,6 +1097,20 @@ class FlextInfraConfigModelsMake:
                     "make workflow verbs must exist in every profile: "
                     f"{', '.join(partial_workflow)}"
                 )
+                raise ValueError(msg)
+            approval = tuple(
+                step.verb for step in self.workflow if "ci" in step.contexts
+            )
+            hook = tuple(
+                step.verb for step in self.workflow if "pre_commit" in step.contexts
+            )
+            if approval != hook or approval != ("setup", "audit", "check", "test"):
+                msg = (
+                    "CI and pre-commit require the same setup/audit/check/test workflow"
+                )
+                raise ValueError(msg)
+            if "pre-commit" not in declared:
+                msg = "make pre-commit must be declared in every profile"
                 raise ValueError(msg)
             unknown_fmt_gates = set(self.fmt_gates) - set(
                 FlextInfraConstantsCheck.SARIF_TOOL_INFO,
@@ -1120,6 +1131,12 @@ class FlextInfraConfigModelsMake:
                 msg = "make docs reports_dir must be repository-relative"
                 raise ValueError(msg)
             return self
+
+        @m.computed_field
+        @property
+        def approval_verbs(self) -> t.VariadicTuple[str]:
+            """Ordered approval derived once from the validated workflow."""
+            return tuple(step.verb for step in self.workflow if "ci" in step.contexts)
 
         @m.computed_field
         @property
@@ -1144,10 +1161,7 @@ class FlextInfraConfigModelsMake:
         @property
         def check_gates_default(self) -> t.VariadicTuple[str]:
             """Active default gates, shared by local, CI, hooks, and project gates."""
-            excluded = frozenset((
-                *self.standalone_check_gates.values(),
-                *self.opt_in_check_gates,
-            ))
+            excluded = frozenset((*self.standalone_check_gates.values(),))
             declared = (
                 *FlextInfraConstantsMake.CANONICAL_GATE_IDS,
                 *self.project_check_gates,

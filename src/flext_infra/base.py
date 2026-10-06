@@ -17,7 +17,7 @@ from flext_infra._typings.base import CliResultValue
 from flext_infra.typings import t
 
 
-class FlextInfraServiceBase[TDomainResult: CliResultValue](
+class FlextInfraServiceBase[TDomainResult](
     FlextService[TDomainResult],
     FlextInfraCommandPayloadMixin,
 ):

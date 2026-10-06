@@ -1,0 +1,10 @@
+[tools]
+
+[tools.bun]
+version = "1.4.3-canary.1+6f414a645"
+url = "file:///home/marlonsc/worktrees/evidence/o2pjp-native-6f414a645/bun"
+checksum = "sha256:61998196efed1b5b48ca166e73099bbf1ec155023cf6b6ec4c07218bb73d9ef9"
+bin = "bun"
+
+[tool_alias]
+bun = "http:bun"

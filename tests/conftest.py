@@ -48,9 +48,22 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     """Isolate the suite's FLEXT caches and snapshot the tracked codegen config.
 
     Gates resolve their persistent caches (codemod rule catalogs, Mypy) below
-    ``XDG_CACHE_HOME``; a unit test writes only inside session-owned storage,
-    so the session scopes that home to one temporary directory per worker and
-    restores the environment on exit.
+    ``XDG_CACHE_HOME``; a unit test writes only inside fixture-owned storage,
+    so the session scopes that home to one directory per worker and restores
+    the environment on exit.
+    """
+    spec = config.Infra.codegen.make.codemod_rules_cache
+    with u.Tests.env_vars_context({
+        spec.data_home_environment_variable: str(
+            tmp_path_factory.mktemp("xdg-cache"),
+        ),
+    }):
+        yield
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _guard_tracked_codegen_config_untouched() -> Iterator[None]:
+    """Fail loud if the suite writes to the real, tracked ``config/codegen.yaml``.
 
     Root cause (flext-eles2): dependency-floor rewrite tests exercised the
     public ``--rewrite-constraints`` entry point through workspaces that never
@@ -93,6 +106,43 @@ def pytest_sessionfinish(session: pytest.Session) -> None:
             "checkout (flext-eles2)",
             returncode=pytest.ExitCode.TESTS_FAILED,
         )
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Resolve native-engine and provisioning applicability before fixtures execute.
+
+    Raises:
+        ValueError: If requires_engine arguments must be canonical engine names.
+    """
+    policy = config.Infra.codegen.make.ci
+    if u.Infra.env_value(policy.variable).strip() != policy.value:
+        return
+    excluded_fixtures = frozenset(
+        config.Infra.tooling.tools.pytest.ci_excluded_fixtures
+    )
+    excluded_engines = frozenset(policy.local_check_gates)
+    selected: list[pytest.Item] = []
+    deselected: list[pytest.Item] = []
+    for item in items:
+        engines = tuple(
+            engine
+            for marker in item.iter_markers("requires_engine")
+            for engine in marker.args
+        )
+        if any(not isinstance(engine, str) for engine in engines):
+            msg = "requires_engine arguments must be canonical engine names"
+            raise ValueError(msg)
+        fixtures = tuple(item.fixturenames) if isinstance(item, pytest.Function) else ()
+        target = (
+            deselected
+            if excluded_engines.intersection(engines)
+            or excluded_fixtures.intersection(fixtures)
+            else selected
+        )
+        target.append(item)
+    if deselected:
+        deselected[0].config.hook.pytest_deselected(items=deselected)
+    items[:] = selected
 
 
 @pytest.fixture
