@@ -531,6 +531,12 @@ class FlextInfraUtilitiesRopeSourceBases:
             module: cls._inventory(project, module, path, source, definitions)
             for module, (path, source) in sources.items()
         }
+        namespaces = {
+            ".".join(parts[:index])
+            for module in modules
+            for parts in (module.split("."),)
+            for index in range(1, len(parts) + 1)
+        }
         module_aliases: dict[str, str] = {}
         for alias_module, (alias_path, alias_source) in sources.items():
             for alias, absolute in cls.lazy_module_aliases(
@@ -538,15 +544,21 @@ class FlextInfraUtilitiesRopeSourceBases:
                 alias_path,
                 alias_source,
             ).items():
+                # A lazy re-export alias is a module-local binding, never a
+                # global rename. When its name collides with a real analyzed
+                # module (or namespace), the real module wins: an absolute
+                # import elsewhere in the tree refers to the real module —
+                # a facade re-exporting a subpackage named like the project
+                # package must not shadow it (cosmos-docgen tests/unit
+                # re-exports a `dcdoc` subpackage; class bases declared as
+                # `from dcdoc import DcdocServiceBase` mean the project one).
+                if alias in modules or alias in namespaces:
+                    continue
                 module_aliases.setdefault(alias, absolute)
         for alias, absolute in (extra_module_aliases or {}).items():
+            if alias in modules or alias in namespaces:
+                continue
             module_aliases.setdefault(alias, absolute)
-        namespaces = {
-            ".".join(parts[:index])
-            for module in modules
-            for parts in (module.split("."),)
-            for index in range(1, len(parts) + 1)
-        }
         owned_definitions = tuple(definitions.values())
         definition_keys: dict[str, str] = {}
         for definition_identity, definition in definitions.items():
