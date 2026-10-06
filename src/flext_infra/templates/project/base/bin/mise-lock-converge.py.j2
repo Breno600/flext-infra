@@ -164,7 +164,9 @@ class MiseLockConverge:
         return tools
 
     @classmethod
-    def release_candidates(cls, listing: str, failed_version: str) -> list[str]:
+    def release_candidates(
+        cls, listing: str, failed_version: str, selector: str
+    ) -> list[str]:
         """List releases of an ``ls-remote`` listing strictly older than the failed one."""
 
         def release_key(version: str) -> tuple[int, ...] | None:
@@ -247,7 +249,9 @@ class MiseLockConverge:
         """Hold one failing tool at its newest release that installs in the stage."""
         listing = cls._run(runtime, ["ls-remote", selector], environment)
         manifest = cls.staged_manifest(stage)
-        for candidate in cls.release_candidates(listing, failed_version):
+        for candidate in cls.release_candidates(
+            listing, failed_version, selector
+        ):
             cls.hold_manifest_version(manifest, selector, candidate)
             try:
                 cls._run(runtime, ["-C", str(stage), "lock"], environment)
