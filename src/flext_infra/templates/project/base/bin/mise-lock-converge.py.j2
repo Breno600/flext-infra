@@ -126,10 +126,11 @@ class MiseLockConverge:
             "failed to resolve",
         )
         warned = [line for line in diagnostics.splitlines() if "mise WARN" in line]
+        expected_folded = [expected.lower() for expected in expected_warnings]
         unexpected = [
             line
             for line in warned
-            if not any(expected in line for expected in expected_warnings)
+            if not any(expected in line.lower() for expected in expected_folded)
         ]
         if unexpected:
             sys.stderr.write(diagnostics)
@@ -289,6 +290,13 @@ class MiseLockConverge:
                 return
             holds: dict[str, str] = {}
             for selector, failed_version in cls.failing_install_tools(probe_output):
+                if selector == "core:python":
+                    message = (
+                        f"core:python {failed_version} failed install; the fleet "
+                        "pins the 3.13 line by law, so holding it below 3.13 is "
+                        "not permitted — the lock needs an operator decision"
+                    )
+                    raise ValueError(message)
                 holds[selector] = cls._hold(runtime, stage, environment, selector, failed_version)
                 print(
                     f"hold: {selector} held at {holds[selector]}: release {failed_version}"
