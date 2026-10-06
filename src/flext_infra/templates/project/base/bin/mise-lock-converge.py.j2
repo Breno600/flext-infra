@@ -290,6 +290,13 @@ class MiseLockConverge:
                 return
             holds: dict[str, str] = {}
             for selector, failed_version in cls.failing_install_tools(probe_output):
+                if selector == "core:python":
+                    message = (
+                        f"core:python {failed_version} failed install; the fleet "
+                        "pins the 3.13 line by law, so holding it below 3.13 is "
+                        "not permitted — the lock needs an operator decision"
+                    )
+                    raise ValueError(message)
                 holds[selector] = cls._hold(runtime, stage, environment, selector, failed_version)
                 print(
                     f"hold: {selector} held at {holds[selector]}: release {failed_version}"
