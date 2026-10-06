@@ -14,7 +14,7 @@ from flext_infra._typings.base import CliResultValue
 from flext_infra.base import FlextInfraServiceBase
 
 
-class FlextInfraCodegenExecutionBase[TResult: CliResultValue](
+class FlextInfraCodegenExecutionBase[TResult](
     FlextInfraServiceBase[TResult],
 ):
     """Own explicit repository execution state shared by codegen services."""

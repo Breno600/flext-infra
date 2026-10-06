@@ -128,7 +128,8 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         if cached is not None:
             return cached
         pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
-        state = cls._module_semantic_state_from_pymodule(
+        state_from = FlextInfraUtilitiesRopeAnalysisImportState._module_semantic_state_from_pymodule
+        state = state_from(
             rope_project=rope_project,
             resource=resource,
             pymodule=pymodule,

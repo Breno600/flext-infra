@@ -200,7 +200,18 @@ class FlextInfraUtilitiesLintRecipes:
                 cls._with_sections(raw, " " * docstring.col_offset, wanted),
             ))
         for definition, text in summaries.items():
-            edits.append(cls._summary_edit(lines, definition, text))
+            first = definition.body[0]
+            decorators: list[ast.expr] = (
+                first.decorator_list
+                if isinstance(
+                    first,
+                    ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+                )
+                else []
+            )
+            first_line = min((first.lineno, *(item.lineno for item in decorators)))
+            offset = cls._offset(lines, first_line, 0)
+            edits.append((offset, offset, f'{" " * first.col_offset}"""{text}"""\n'))
         if wants_notice:
             notice = cls.copyright_notice(path.parent, module=path)
             module_docstring = cls._docstring_expr(tree)

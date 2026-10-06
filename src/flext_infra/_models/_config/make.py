@@ -392,7 +392,7 @@ class FlextInfraConfigModelsMake:
             return self
 
     class MypyCacheSpec(
-        FlextInfraExternalCacheDirectorySpec,
+        ExternalCacheDirectorySpec,
         FlextInfraConfigModelsContract.ConfigContract,
     ):
         """Project-keyed shared Mypy cache, one analysis reused across relocks."""
@@ -958,16 +958,9 @@ class FlextInfraConfigModelsMake:
                     "Public Make verb to checker gate mapping outside make check"
                 ),
             ),
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
-        opt_in_check_gates: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                description=(
-                    "Built-in gates that stay allowed and explicitly invocable "
-                    "but never join the default check, CI, or hook gate sets"
-                ),
-            ),
-        ] = ()
+        ] = m.Field(
+            default_factory=lambda: MappingProxyType[t.NonEmptyStr, t.NonEmptyStr]({}),
+        )
 
         @m.model_validator(mode="after")
         def _validate_project_check_gates(self) -> Self:

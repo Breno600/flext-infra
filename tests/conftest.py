@@ -48,9 +48,22 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     """Isolate the suite's FLEXT caches and snapshot the tracked codegen config.
 
     Gates resolve their persistent caches (codemod rule catalogs, Mypy) below
-    ``XDG_CACHE_HOME``; a unit test writes only inside session-owned storage,
-    so the session scopes that home to one temporary directory per worker and
-    restores the environment on exit.
+    ``XDG_CACHE_HOME``; a unit test writes only inside fixture-owned storage,
+    so the session scopes that home to one directory per worker and restores
+    the environment on exit.
+    """
+    spec = config.Infra.codegen.make.codemod_rules_cache
+    with u.Tests.env_vars_context({
+        spec.data_home_environment_variable: str(
+            tmp_path_factory.mktemp("xdg-cache"),
+        ),
+    }):
+        yield
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _guard_tracked_codegen_config_untouched() -> Iterator[None]:
+    """Fail loud if the suite writes to the real, tracked ``config/codegen.yaml``.
 
     Root cause (flext-eles2): dependency-floor rewrite tests exercised the
     public ``--rewrite-constraints`` entry point through workspaces that never

@@ -23,6 +23,172 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraCodegenMakeEnvironment:
     """Prove generated operations ignore the caller shell environment."""
 
+    def test_make_authenticates_real_mise_without_external_token_setup(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A generated public verb supplies gh's credential to the real Mise child."""
+        project_root, _ = self._render_makefile(
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
+        )
+        tm.ok(
+            u.Cli.run_checked(
+                ["uv", "venv", "--python", sys.executable, str(project_root / ".venv")],
+                cwd=project_root,
+            ),
+        )
+        (project_root / "auth_probe.py").write_text(
+            "import os, subprocess\n"
+            "credential = subprocess.run(['gh', 'auth', 'token'], "
+            "check=True, capture_output=True, text=True).stdout.rstrip('\\n')\n"
+            "assert credential\n"
+            "assert all(os.environ[name] == credential for name in "
+            "('GITHUB_TOKEN', 'GH_TOKEN', 'MISE_GITHUB_TOKEN'))\n"
+            "print('mise-authenticated')\n",
+            encoding="utf-8",
+        )
+        (project_root / "custom.mk").write_text(
+            "_custom-status:\n"
+            '\t@"$(SETUP_MISE)" -C "$(PROJECT_ROOT)" exec -- '
+            '"$(RUNTIME_PYTHON)" "$(PROJECT_ROOT)/auth_probe.py"\n',
+            encoding="utf-8",
+        )
+        process = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "status"],
+                cwd=project_root,
+                env={"MISE_GITHUB_TOKEN": "stale-token-must-not-reach-mise"},
+            ),
+        )
+        tm.that(
+            u.Cli.process_succeeded(process.outcome),
+            eq=True,
+            msg=process.stdout + process.stderr,
+        )
+        tm.that(process.stdout, has="mise-authenticated")
+
+    @pytest.mark.parametrize("verb", ["setup", "status", "help"])
+    @pytest.mark.parametrize("credential", ["", "invalid-test-credential"])
+    def test_make_handles_missing_gh_auth_at_the_declared_boundary(
+        self,
+        tmp_path: Path,
+        verb: str,
+        credential: str,
+    ) -> None:
+        """Setup proceeds to its launcher preflight; other verbs require gh auth."""
+        project_root, _ = self._render_makefile(
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
+        )
+        empty_config = tmp_path / "empty-gh-config"
+        empty_config.mkdir()
+        (project_root / "bin" / "mise").unlink()
+        process = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", verb],
+                cwd=project_root,
+                env={
+                    "GH_CONFIG_DIR": str(empty_config),
+                    "GH_TOKEN": credential,
+                    "GITHUB_TOKEN": credential,
+                    "GH_ENTERPRISE_TOKEN": "",
+                    "GITHUB_ENTERPRISE_TOKEN": "",
+                    "GH_HOST": "github.com",
+                    "MISE_GITHUB_TOKEN": "must-not-be-a-fallback",
+                    "SETUP_BOOTSTRAP_ONLY": "Y",
+                },
+            ),
+        )
+        if verb == "setup":
+            tm.that(process.outcome.raw_return_code, ne=0)
+            tm.that(process.stderr, has="missing generated mise launcher")
+            tm.that(process.stderr, lacks="authentication is required")
+        elif verb == "help":
+            tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
+        else:
+            tm.that(process.outcome.raw_return_code, ne=0)
+            tm.that(process.stderr, has="authentication is required")
+        tm.that((project_root / ".venv").exists(), eq=False)
+
+    @staticmethod
+    @pytest.mark.remote
+    def test_upg_replaces_newer_lock_revision_before_older_mise_reads_it(
+        tmp_path: Path,
+        resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
+    ) -> None:
+        """The public upgrade recovers a v3 lock with a v2 Mise release."""
+        profile = c.Infra.MakeProfile.STANDALONE
+        project_root = u.Tests.resolved_make_checkout(
+            resolved_make_templates[profile],
+            tmp_path / "lock-revision",
+            profile,
+        )
+        lock = project_root / c.Infra.MISE_LOCK_FILENAME
+        previous = lock.read_text(encoding="utf-8")
+        tm.that(previous, has="lockfile_version = 2")
+        lock.write_text(
+            previous.replace("lockfile_version = 2", "lockfile_version = 3", 1),
+            encoding="utf-8",
+        )
+
+        upgraded = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "upg"],
+                cwd=project_root,
+            ),
+        )
+
+        tm.that(
+            u.Cli.process_succeeded(upgraded.outcome),
+            eq=True,
+            msg=upgraded.stdout + upgraded.stderr,
+        )
+        tm.that(lock.read_text(encoding="utf-8"), has="lockfile_version = 2")
+        tm.that(upgraded.stdout, has="setup probe: end stage=publish-lock.log exit=0")
+
+    @staticmethod
+    @pytest.mark.remote
+    def test_failed_upg_lock_preserves_runtime_and_retires_own_stage(
+        tmp_path: Path,
+        resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
+    ) -> None:
+        """A failed real Mise lock cannot strand a downgraded launcher/pin."""
+        profile = c.Infra.MakeProfile.STANDALONE
+        project_root = u.Tests.resolved_make_checkout(
+            resolved_make_templates[profile],
+            tmp_path / "lock-failure",
+            profile,
+        )
+        bootstrap = u.Infra.mise_bootstrap_environment()
+        artifacts = {
+            relative: (project_root / relative).read_bytes()
+            for relative, _mode in bootstrap.artifact_specs
+        }
+        lock = project_root / c.Infra.MISE_LOCK_FILENAME
+        previous_lock = lock.read_bytes()
+        (project_root / c.Infra.MISE_TOML_FILENAME).write_text(
+            "[tools\n",
+            encoding="utf-8",
+        )
+
+        upgraded = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "upg"],
+                cwd=project_root,
+            ),
+        )
+
+        tm.that(u.Cli.process_succeeded(upgraded.outcome), eq=False)
+        tm.that(upgraded.stderr, has="setup probe: failed stage=lock.log")
+        tm.that(lock.read_bytes(), eq=previous_lock)
+        for relative, _mode in bootstrap.artifact_specs:
+            tm.that((project_root / relative).read_bytes(), eq=artifacts[relative])
+        tm.that(
+            list(project_root.parent.glob(f".{project_root.name}.mise-lock-stage.*")),
+            eq=[],
+        )
+
     @staticmethod
     @pytest.mark.parametrize("failure_return", [None, 37])
     def test_public_dispatch_activates_once_before_hooks(
