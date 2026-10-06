@@ -13,8 +13,16 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
+<<<<<<< HEAD
 from flext_infra import config
 from tests import c, m, u
+=======
+from flext_infra import config, u
+from tests import c, m
+from tests.utilities_fixture_tooling import (
+    TestsFlextInfraUtilitiesToolingFixtureMixin as tfiutf,
+)
+>>>>>>> origin/wip/preserve-sweep5-193236
 
 
 class TestsFlextInfraUtilitiesResourceLimits:
@@ -31,7 +39,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
             timeout_seconds=config.Infra.tooling.tools.mypy.timeout_seconds,
         )
         command = u.Infra.mypy_limited_command(
-            u.Tests.mypy_workload(tmp_path),
+            tfiutf.mypy_workload(tmp_path),
             limit,
         )
         result = u.Cli.run_raw(command, timeout=u.Infra.mypy_runner_timeout(limit))
