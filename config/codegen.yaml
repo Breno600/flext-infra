@@ -188,7 +188,7 @@ Infra:
       # 2026.9.17 artifact fails the receipt check ("Mise receipt returned
       # invalid version") — keep it out.
       mise_selector: github:jdx/mise
-      mise_version: "2026.9.16"
+      mise_version: "2026.10.3"
       beads:
         # Beads ledger projection (.beads/config.yaml, .beads/metadata.yaml).
         # The bd and gc binaries are host tools; no project .mise.toml

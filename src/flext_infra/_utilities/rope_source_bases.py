@@ -487,6 +487,22 @@ class FlextInfraUtilitiesRopeSourceBases:
         active: set[str] = set()
 
         def external_identity(value: t.Infra.RopePyObject) -> str:
+            # TypedDict builds its class through a function call, so Rope
+            # resolves the declared base to a PyFunction; the base identity
+            # is still the class that call constructs at runtime.
+            if (
+                isinstance(
+                    value,
+                    FlextInfraUtilitiesRopeRuntime.runtime_type(
+                        "rope.base.pyobjectsdef",
+                        "PyFunction",
+                    ),
+                )
+                and value.get_name() == "TypedDict"
+            ):
+                module = value.get_module()
+                module_name = module.get_name() if module is not None else ""
+                return f"{module_name}.TypedDict" if module_name else "TypedDict"
             if not FlextInfraUtilitiesRopeRuntime.abstract_class(value):
                 message = "Rope did not resolve a required base to a class"
                 raise TypeError(message)
