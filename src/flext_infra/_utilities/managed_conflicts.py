@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from flext_cli import u
 from flext_core import r
 from flext_infra import c, config, m, t
 from flext_infra._utilities.base import FlextInfraUtilitiesBase
@@ -18,6 +19,55 @@ if TYPE_CHECKING:
 
 class FlextInfraUtilitiesManagedConflicts:
     """Recover only merge blocks authorized by the document owner."""
+
+    @staticmethod
+    def recover_managed_assignments(
+        content: str,
+        *,
+        conflict_sections: t.StrSequence,
+    ) -> p.Result[str]:
+        """Recover identical generated assignments without choosing between values."""
+        recovered: list[str] = []
+        pending: list[str] = []
+        assignments: t.MutableMappingKV[str, str] = {}
+        section = ""
+        for line in content.splitlines(keepends=True):
+            header = c.Infra.TOML_SECTION_HEADER_RE.fullmatch(line.rstrip("\r\n"))
+            array_header = line.strip()
+            is_array_header = array_header.startswith("[[") and array_header.endswith(
+                "]]"
+            )
+            if not pending and (header is not None or is_array_header):
+                section = header.group(1) if header is not None else array_header[2:-2]
+                assignments.clear()
+                recovered.append(line)
+                continue
+            if not FlextInfraUtilitiesManagedConflicts.toml_section_is_owned(
+                section,
+                conflict_sections,
+            ) or (not pending and (not line.strip() or line.lstrip().startswith("#"))):
+                recovered.append(line)
+                continue
+            pending.append(line)
+            assignment = "".join(pending)
+            parsed = u.Cli.toml_mapping_from_text(assignment)
+            if parsed is None:
+                continue
+            if len(parsed) != 1:
+                return r[str].fail(f"invalid managed TOML assignment in {section}")
+            key = next(iter(parsed))
+            previous = assignments.get(key)
+            if previous is not None and previous != assignment:
+                return r[str].fail(
+                    f"divergent managed TOML assignment: {section}.{key}"
+                )
+            if previous is None:
+                assignments[key] = assignment
+                recovered.extend(pending)
+            pending.clear()
+        if pending:
+            return r[str].fail(f"incomplete managed TOML assignment in {section}")
+        return r[str].ok("".join(recovered))
 
     @staticmethod
     def toml_section_is_owned(section: str, owned: t.StrSequence) -> bool:
@@ -98,7 +148,10 @@ class FlextInfraUtilitiesManagedConflicts:
 
         """
         if FlextInfraUtilitiesBase.first_merge_conflict_marker(content) is None:
-            return r[str].ok(content)
+            return FlextInfraUtilitiesManagedConflicts.recover_managed_assignments(
+                content,
+                conflict_sections=conflict_sections,
+            )
         lines = content.splitlines(keepends=True)
         recovered: list[str] = []
         section = ""
@@ -168,7 +221,10 @@ class FlextInfraUtilitiesManagedConflicts:
                     section = section_match.group(1)
             recovered.extend(current)
             index += 1
-        return r[str].ok("".join(recovered))
+        return FlextInfraUtilitiesManagedConflicts.recover_managed_assignments(
+            "".join(recovered),
+            conflict_sections=conflict_sections,
+        )
 
 
 __all__: t.VariadicTuple[str] = ("FlextInfraUtilitiesManagedConflicts",)
