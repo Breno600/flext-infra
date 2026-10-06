@@ -338,20 +338,11 @@ class FlextInfraUtilitiesRopeSourceBases:
                         node.targets if isinstance(node, ast.Assign) else [node.target]
                     )
                     if any(not isinstance(target, ast.Name) for target in targets):
-                        if allow_conditional and all(
-                            isinstance(target, ast.Attribute)
-                            and isinstance(target.value, ast.Name)
-                            and target.value.id in bindings
-                            and bindings[target.value.id] is None
-                            for target in targets
-                        ):
-                            # Provider function metadata does not rebind a class.
-                            continue
-                        message = (
-                            f"Unsupported class binding mutation in {module}: "
-                            f"{ast.unparse(node)}"
-                        )
-                        raise ValueError(message)
+                        # Attribute and subscript targets mutate an existing
+                        # object; they never declare a lexical class binding,
+                        # so the scan records nothing and resolution keeps its
+                        # own failure for a binding that is actually required.
+                        continue
                     value = node.value
                     if value is None:
                         continue
