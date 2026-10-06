@@ -150,7 +150,7 @@ class FlextInfraPyprojectModernizerTooling:
             )
             if group_dev.failure:
                 return result_type.fail_op(
-                    "validate live dev dependencies", group_dev.error
+                    "validate live dev dependencies", group_dev.error,
                 )
             live_dev = (
                 *group_dev.value,
