@@ -118,6 +118,11 @@ print(json.dumps({
 """
     "Standard-library probe for complete PEP 508 marker facts and environment identity."
 
+    SCRATCH_IDENTITY_SEGMENT_ALIASES: ClassVar[t.VariadicTuple[t.StrPair]] = (
+        (FlextInfraConstantsSharedInfra.GIT_DIR, "_git"),
+    )
+    "Checkout path segments renamed when mirrored into the scratch identity."
+
     PROPAGATION_BRANCH: ClassVar[str] = "propagation/flext-infra"
     "One lane per member carries the workspace's flext-infra projections."
     PROPAGATION_COMMIT_SUBJECT: ClassVar[str] = (
