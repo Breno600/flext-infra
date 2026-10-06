@@ -47,8 +47,8 @@ endif
 # Capture the selected approval mode before any project-owned include.
 ifeq ($(strip $(CI)),Y)
 override APPROVAL_CONTEXT := Y
-ifneq ($(filter upg _upg% dep propagate gen _gen%,$(MAKECMDGOALS)),)
-$(error Resolution, generation and member propagation are forbidden in CI)
+ifneq ($(filter upg _upg% dep propagate,$(MAKECMDGOALS)),)
+$(error Resolution and member propagation are forbidden in CI)
 endif
 endif
 
@@ -385,7 +385,6 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 		esac; \
 	done; \
 	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
-	printf 'DEBUG1 scratch=[%s] proot=[%s] pparent=[%s]\n' "$$scratch" "$$project_root" "$$project_parent" >&2; \
 	if [ -z "$$scratch" ] || [ ! -d "$$scratch" ]; then \
 		printf 'ERROR: mise bootstrap scratch creation failed (template: %s/.%s.mise-bootstrap.XXXXXX)\n' "$$project_parent" "$${project_root##*/}" >&2; exit 2; \
 	fi; \
@@ -647,7 +646,6 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 		esac; \
 	done; \
 	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
-	printf 'DEBUG1 scratch=[%s] proot=[%s] pparent=[%s]\n' "$$scratch" "$$project_root" "$$project_parent" >&2; \
 	if [ -z "$$scratch" ] || [ ! -d "$$scratch" ]; then \
 		printf 'ERROR: mise bootstrap scratch creation failed (template: %s/.%s.mise-bootstrap.XXXXXX)\n' "$$project_parent" "$${project_root##*/}" >&2; exit 2; \
 	fi; \
@@ -815,7 +813,9 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 		fi; \
 		if ! printf '%s\n' "$$receipt_release" | grep -Eq '^[0-9]+(\.[0-9]+){2}$$'; then \
 			printf 'ERROR: Mise receipt returned invalid version: %s\n' "$$receipt_output" >&2; \
-			printf 'ERROR: Mise receipt stderr: ' >&2; cat "$$mise_receipt_log.stderr" >&2 || true; \
+			printf 'ERROR: Mise receipt stderr: ' >&2; \
+			if cat "$$mise_receipt_log.stderr" >&2; then :; \
+			else printf 'ERROR: cannot read Mise receipt diagnostics: %s\n' "$$mise_receipt_log.stderr" >&2; return 2; fi; \
 			printf 'ERROR: Mise receipt executable: %s; scratch: %s\n' "$$1" "$$scratch" >&2; \
 			return 2; \
 		fi; \
@@ -929,7 +929,6 @@ mise_receipt launcher-version "$$lock_stage/artifacts/bin/mise"; \
 	if [ -s "$$scratch/ast-grep-version.stderr" ]; then \
 		printf 'ERROR: ast-grep emitted diagnostics after installation\n' >&2; exit 2; \
 	fi; \
-	printf 'DEBUG2 scratch=[%s] proot=[%s]\n' "$$scratch" "$$project_root" >&2; \
 	mise_checked "$$scratch/uv-version.log" mise_offline project "$$pinned_mise" -C "$$project_root" exec -- uv --version; \
 	uv_output=$$(cat "$$scratch/uv-version.log"); \
 	case "$$uv_output" in \
@@ -1524,30 +1523,20 @@ setup: _bootstrap_setup_tools
 pre-commit: _builtin_require_workspace
 	+@set -eu; \
 		trap 'if [ -n "$${FLEXT_SETUP_CREDENTIAL_STORE:-}" ]; then rm -f "$$FLEXT_SETUP_CREDENTIAL_STORE"; fi' EXIT; \
-
 		printf 'approval: setup START\n'; \
 		$(SELF_MAKE) MAKEOVERRIDES= MAKEFLAGS= MFLAGS= CI=Y setup; \
-
 		if [ -n "$${FLEXT_SETUP_CREDENTIAL_STORE:-}" ]; then rm -f "$$FLEXT_SETUP_CREDENTIAL_STORE"; fi; \
 		unset FLEXT_SETUP_CREDENTIAL_STORE GITHUB_TOKEN GH_TOKEN MISE_GITHUB_TOKEN GIT_CONFIG_COUNT; \
-
 		printf 'approval: setup COMPLETE\n'; \
-
 		printf 'approval: audit START\n'; \
 		$(SELF_MAKE) MAKEOVERRIDES= MAKEFLAGS= MFLAGS= CI=Y audit; \
-
 		printf 'approval: audit COMPLETE\n'; \
-
 		printf 'approval: check START\n'; \
 		$(SELF_MAKE) MAKEOVERRIDES= MAKEFLAGS= MFLAGS= CI=Y check; \
-
 		printf 'approval: check COMPLETE\n'; \
-
 		printf 'approval: test START\n'; \
 		$(SELF_MAKE) MAKEOVERRIDES= MAKEFLAGS= MFLAGS= CI=Y test; \
-
 		printf 'approval: test COMPLETE\n'; \
-
 		printf 'approval: COMPLETE\n'
 
 _builtin-pre-commit:
