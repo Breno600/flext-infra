@@ -32,10 +32,13 @@ class TestsFlextInfraCodegenRepositoryRootScope:
             encoding=c.Infra.ENCODING_DEFAULT,
         )
         section = rendered.split("\npre-commit:", 1)[1].split(
-            "\n_builtin-pre-commit:", 1,
+            "\n_builtin-pre-commit:",
+            1,
         )[0]
         lines = section.splitlines()
-        indices = tuple(index for index, line in enumerate(lines) if line.startswith("\t"))
+        indices = tuple(
+            index for index, line in enumerate(lines) if line.startswith("\t")
+        )
         recipe = lines[indices[0] : indices[-1] + 1]
         tm.that(all(line.startswith("\t") for line in recipe), eq=True)
         tm.that(all(line.endswith("\\") for line in recipe[:-1]), eq=True)
