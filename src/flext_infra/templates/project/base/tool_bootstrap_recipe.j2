@@ -410,6 +410,15 @@
 	if [ ! -x "$$direnv_executable" ]; then \
 		printf 'ERROR: Mise resolved a non-executable direnv path: %s\n' "$$direnv_executable" >&2; exit 2; \
 	fi; \
+	# The .envrc is a managed projection artifact: approve its hash so the \
+	# activation contract holds on fresh machines (a CI runner never runs an \
+	# interactive allow, and every downstream direnv activation — including \
+	# the check gate's — refuses a blocked .envrc). direnv re-blocks on any \
+	# later content change through its own hash check, so this approves only \
+	# the projected form, never arbitrary edits. \
+	if [ -f "$$project_root/.envrc" ]; then \
+		"$$direnv_executable" allow "$$project_root"; \
+	fi; \
 	mise_checked "$$scratch/python-path.log" mise_offline project "$$pinned_mise" -C "$$project_root" which python; \
 	python_executable=$$(cat "$$scratch/python-path.log"); \
 	# CI receives only the shim farm: a project bin/ on PATH would bind every \
