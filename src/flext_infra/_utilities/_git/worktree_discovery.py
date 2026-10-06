@@ -43,7 +43,7 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
             The resulting ``str``.
 
         """
-        value = url.strip().removesuffix(".git")
+        value = url.strip()
         remote_path = ""
         if value.startswith("git@"):
             host_path = value.removeprefix("git@")
@@ -55,6 +55,7 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
                 remote_path = parsed.path.lstrip("/")
             else:
                 remote_path = value
+        remote_path = remote_path.rstrip("/").removesuffix(".git")
         parts = [part for part in remote_path.split("/") if part]
         match parts:
             case [*_, owner, repo]:
