@@ -414,16 +414,20 @@ Infra:
       # breaks the verb, with its cause.
       # lint_fix is the lint gate's apply mode and the ONLY lint repair: make
       # fmt runs format only (single-pass verb law), so no lint_apply exists.
-      # make fix never deletes information: lint_fix applies
-      # Ruff's safe fixes only. Unsafe fixes deleted diagnostics (T201 removed
-      # print(..., file=sys.stderr) from a consumer script, turning a failure
-      # silent), so MakeRuffSpec rejects --unsafe-fixes here, and the rules
-      # whose fixes delete code are declared unfixable in tooling.yaml.
+      #
+      # *** OPERATOR LAW (2026-10-05, direct order — OBLIGATORY, NEVER DISABLE
+      # AGAIN): lint_fix ALWAYS runs `--preview --fix --unsafe-fix`. Unsafe
+      # fixes are MANDATORY in every make fix, in every project and
+      # subproject, forever. MakeRuffSpec fails validation without the flag;
+      # removing it is a regression against an explicit operator order and is
+      # reverted on sight. Rules whose fixes would destroy information stay
+      # declared unfixable in tooling.yaml (rule selection, never disabling
+      # the unsafe channel). ***
       ruff:
         format_check: [--preview, --check]
         format_apply: [--preview]
         lint_check: [--preview, --no-fix]
-        lint_fix: [--preview, --fix]
+        lint_fix: [--preview, --fix, --unsafe-fixes]
       # Gates whose mutating side `make fmt` drives (formatters). Their
       # read-only side runs in `make check`; `make fix` never repeats them
       # (single-pass verb law: one operation per tool per verb).
