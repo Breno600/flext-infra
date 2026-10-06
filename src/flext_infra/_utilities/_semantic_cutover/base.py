@@ -72,7 +72,7 @@ class FlextInfraUtilitiesSemanticCutoverBase(
 
         """
         try:
-            return cls._plan_dispatch(rope_workspace, sources, findings)
+            return cls._plan_dispatch(phase, rope_workspace, sources, findings)
         except Exception:
             import traceback
             traceback.print_exc()
@@ -81,6 +81,7 @@ class FlextInfraUtilitiesSemanticCutoverBase(
     @classmethod
     def _plan_dispatch(
         cls,
+        phase: c.Infra.SemanticCutoverPhase,
         rope_workspace: p.Infra.RopeWorkspaceDsl,
         sources: t.MappingKV[Path, str],
         findings: t.SequenceOf[m.Infra.ModScanFinding] = (),
