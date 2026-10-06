@@ -38,7 +38,7 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         workspace: p.Infra.RopeWorkspaceDsl,
         sources: t.MappingKV[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
-        from flext_infra._utilities._semantic_cutover.utilities import u
+        from flext_infra import u
 
         candidates = tuple(
             path

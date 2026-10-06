@@ -18,8 +18,6 @@ from flext_infra.models import m
 from flext_infra.typings import t
 from flext_infra.utilities import u
 
-type PytestPolicy = m.Infra.PytestConfig
-
 
 class FlextInfraPytestRunnerBase(s[int]):
     """Own immutable inputs shared by all pytest runner phases."""
@@ -244,7 +242,7 @@ class FlextInfraPytestRunnerBase(s[int]):
             return None
         return u.Infra.project_name_from_payload(pyproject_path, payload)
 
-    def run_timeout_seconds(self, policy: PytestPolicy) -> int:
+    def run_timeout_seconds(self, policy: m.Infra.PytestConfig) -> int:
         """Resolve the declared project's measured wall over the fleet default.
 
         Returns:
@@ -258,7 +256,7 @@ class FlextInfraPytestRunnerBase(s[int]):
 
     def _declared_worker_ceiling(
         self,
-        policy: PytestPolicy,
+        policy: m.Infra.PytestConfig,
     ) -> int | m.Infra.PytestWorkerCeiling:
         """Resolve the declared project's ceiling over the fleet default.
 
@@ -296,7 +294,7 @@ class FlextInfraPytestRunnerBase(s[int]):
         numerator_text, denominator_text = (ceiling.cpu_fraction or "1/1").split("/")
         return max(1, cpu_count * int(numerator_text) // int(denominator_text))
 
-    def parallel_worker_budget(self, policy: PytestPolicy) -> int:
+    def parallel_worker_budget(self, policy: m.Infra.PytestConfig) -> int:
         """Bound xdist by configuration, CPU, and physical memory.
 
         The per-project override map (``[project].name`` → absolute workers or

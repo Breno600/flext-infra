@@ -28,7 +28,7 @@ class FlextInfraMypyProfiler:
             ValueError: If Mypy profiling requires an output destination.
 
         """
-        from flext_infra._utilities.utilities import u
+        from flext_infra import u
 
         destination = invocation.profile_output
         if destination is None:

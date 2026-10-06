@@ -27,7 +27,7 @@ from flext_infra.utilities import u
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra.deps._modernizer.protocols import p
+    from flext_infra import p
 
 
 class FlextInfraPyprojectModernizerDocument:

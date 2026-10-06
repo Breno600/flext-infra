@@ -26,7 +26,7 @@ from flext_infra.validate._pytest_runner.reports import FlextInfraPytestRunnerRe
 from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
 
 if TYPE_CHECKING:
-    from flext_infra.validate._pytest_runner.protocols import p
+    from flext_infra import p
 
 
 class FlextInfraPytestRunnerExecution(

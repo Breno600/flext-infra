@@ -72,7 +72,7 @@ class FlextInfraUtilitiesGitignore:
             The resulting ``p.Result[str]``.
 
         """
-        from flext_infra._utilities.utilities import u
+        from flext_infra import u
 
         entry = next(
             (
@@ -131,7 +131,7 @@ class FlextInfraUtilitiesGitignore:
         """
         if not blocks:
             return r[str].ok(rendered)
-        from flext_infra._utilities.utilities import u
+        from flext_infra import u
 
         destination = project_dir / c.Infra.GITIGNORE
         markers = frozenset(

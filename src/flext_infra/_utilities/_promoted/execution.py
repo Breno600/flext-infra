@@ -39,8 +39,8 @@ class FlextInfraUtilitiesPromotedExecution(FlextInfraUtilitiesPromotedInvocation
             PromotedRegistryError: If ``result.failure``.
 
         """
+        from flext_infra import u
         from flext_infra._settings import settings
-        from flext_infra._utilities._promoted.utilities import u
 
         message, env_name = c.Infra.PromotedMessage, c.Infra.PromotedEnv
         project_root = cls.promoted_find_owner_root(command.path)

@@ -50,12 +50,7 @@ class TestsFlextInfraRefactorViolationsSweep:
 
     @staticmethod
     def _prepare(root: Path, *, makefile: str, local_rule: bool) -> None:
-        """Install the recording repair surface and the optional growth rule.
-
-        Returns:
-            Nothing.
-
-        """
+        """Install the recording repair surface and the optional growth rule."""
         tm.ok(
             u.Cli.atomic_write_text_file(
                 root / c.Infra.MAKEFILE_FILENAME,

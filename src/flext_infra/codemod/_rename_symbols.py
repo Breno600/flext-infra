@@ -286,10 +286,7 @@ class FlextInfraRenameSymbols:
                 if begin <= edit.start and edit.end <= finish
             )
             if not containing:
-                msg = (
-                    f"Rope CSV edit has no single authenticated "
-                    f"member span: {path}"
-                )
+                msg = f"Rope CSV edit has no single authenticated member span: {path}"
                 raise ValueError(msg)
             if not all(containing):
                 continue

@@ -153,7 +153,7 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
             ValueError: If ``loaded.failure``.
 
         """
-        from flext_infra._utilities.utilities import u
+        from flext_infra import u
 
         loaded = u.Infra.load_workspace_manifest(scope.path)
         if loaded.failure:

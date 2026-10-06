@@ -25,7 +25,7 @@ class FlextInfraWorktreeLifecycle:
         created_branch_oid: str | None,
         setup_error: str,
     ) -> p.Result[str]:
-        from flext_infra._utilities.utilities import u
+        from flext_infra import u
 
         status = u.Infra.git_status(m.Infra.GitStatusRequest(repo_root=lane))
         if status.failure:
@@ -54,7 +54,7 @@ class FlextInfraWorktreeLifecycle:
 
     @staticmethod
     def update_lane(lane: Path, branch: str, base: str) -> p.Result[str]:
-        from flext_infra._utilities.utilities import u
+        from flext_infra import u
 
         if not lane.is_dir():
             return r[str].fail(f"worktree lane does not exist: {lane}")

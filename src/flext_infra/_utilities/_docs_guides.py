@@ -102,7 +102,7 @@ class FlextInfraUtilitiesDocsGuidesMixin:
             ValueError: If ``issues``.
 
         """
-        from flext_infra._utilities.utilities import u
+        from flext_infra import u
 
         source_root = repository_root / c.Infra.DIR_DOCS / "guides"
         destination_root = scope.path / c.Infra.DIR_DOCS / "guides"
@@ -197,7 +197,8 @@ class FlextInfraUtilitiesDocsGuidesMixin:
                     f"{destination}",
                 )
             relative_path = source_path.relative_to(repository_root).as_posix()
-            contract_issues = FlextInfraUtilitiesDocsCommandContractMixin.docs_command_contract_content_issues
+            contract_mixin = FlextInfraUtilitiesDocsCommandContractMixin
+            contract_issues = contract_mixin.docs_command_contract_content_issues
             issues = contract_issues(
                 source,
                 relative_path=relative_path,

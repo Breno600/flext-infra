@@ -416,7 +416,8 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                 existing = target_bindings.get(bound)
                 if existing is not None and existing != import_line:
                     return
-        collect_missing = FlextInfraUtilitiesRefactorNamespaceMoves._collect_missing_runtime_alias_imports
+        namespace_moves = FlextInfraUtilitiesRefactorNamespaceMoves
+        collect_missing = namespace_moves.collect_missing_runtime_alias_imports
         fallback_runtime_imports = collect_missing(
             target_source=target_source,
             blocks=moved_lines,
@@ -575,7 +576,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             The resulting ``str``.
 
         """
-        from flext_infra._utilities.utilities import u
+        from flext_infra import u
 
         prefix, separator, names_part = import_line.partition(" import ")
         if not separator:
@@ -592,7 +593,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         return f"{prefix} import {', '.join(kept)}"
 
     @staticmethod
-    def _collect_missing_runtime_alias_imports(
+    def collect_missing_runtime_alias_imports(
         *,
         target_source: str,
         blocks: t.StrSequence,
@@ -603,7 +604,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             The resulting ``t.StrSequence``.
 
         """
-        from flext_infra._utilities.utilities import u
+        from flext_infra import u
 
         moved_source = "\n".join(blocks)
         moved_pymodule = FlextInfraUtilitiesRopeAnalysis.parse_string_module(

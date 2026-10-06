@@ -19,8 +19,7 @@ from flext_infra.validate._pytest_runner.base import FlextInfraPytestRunnerBase
 from flext_infra.validate.pytest_diag import FlextInfraPytestDiagExtractor
 
 if TYPE_CHECKING:
-    from flext_infra.validate._pytest_runner.protocols import p
-    from flext_infra.validate._pytest_runner.typings import t
+    from flext_infra import p, t
 
 
 class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):

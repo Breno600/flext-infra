@@ -58,8 +58,7 @@ class FlextInfraUtilitiesPromotedWorkspace:
             The resulting ``p.Infra.PromotedWorkspaceSpec``.
 
         """
-        from flext_infra._utilities._promoted.models import m
-        from flext_infra._utilities._promoted.utilities import u
+        from flext_infra import m, u
 
         return m.Infra.PromotedWorkspaceSpec(
             root=root,

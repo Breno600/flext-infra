@@ -271,7 +271,8 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
             return ("if TYPE_CHECKING:", "    from flext_core import FlextTypes")
         normalized_groups: MutableMapping[str, t.StrPairSequence] = {}
         for mod, items in groups.items():
-            normalize_path = FlextInfraCodegenGenerationTypeCheckingMixin._normalize_type_checking_module_path
+            generation_mixin = FlextInfraCodegenGenerationTypeCheckingMixin
+            normalize_path = generation_mixin.normalize_type_checking_module_path
             resolved = normalize_path(
                 mod,
                 local_package_root,

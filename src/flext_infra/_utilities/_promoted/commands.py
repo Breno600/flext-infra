@@ -33,7 +33,7 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
                 c.Infra.PromotedRegistryError]``.
 
         """
-        from flext_infra._utilities._promoted.utilities import u
+        from flext_infra import u
 
         header = c.Infra.PromotedHeader
         headers: t.MutableMappingKV[

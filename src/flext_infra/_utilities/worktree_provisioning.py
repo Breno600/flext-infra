@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 class FlextInfraWorktreeProvisioning:
     @staticmethod
     def _ensure_gitlink_checkout(lane: Path, member_path: Path) -> p.Result[bool]:
-        from flext_infra._utilities.utilities import u
+        from flext_infra import u
 
         reference = member_path.as_posix()
         git_marker = lane / member_path / ".git"
@@ -47,7 +47,7 @@ class FlextInfraWorktreeProvisioning:
         declared_url: str,
         recorded_oid: str,
     ) -> p.Result[bool]:
-        from flext_infra._utilities.utilities import u
+        from flext_infra import u
 
         reference = member_path.as_posix()
         identity = u.Infra.git_identity(
@@ -74,7 +74,7 @@ class FlextInfraWorktreeProvisioning:
         lane: Path,
         member_path: Path,
     ) -> p.Result[bool]:
-        from flext_infra._utilities.utilities import u
+        from flext_infra import u
 
         reference = member_path.as_posix()
         contract = u.Infra.gitmodule_contract(
@@ -99,7 +99,7 @@ class FlextInfraWorktreeProvisioning:
 
     @classmethod
     def _prepare_governed_gitlinks(cls, lane: Path) -> p.Result[bool]:
-        from flext_infra._utilities.utilities import u
+        from flext_infra import u
 
         declared = u.Infra.git_declared_submodule_paths(lane)
         if declared.failure:
@@ -133,7 +133,7 @@ class FlextInfraWorktreeProvisioning:
 
     @classmethod
     def setup_lane(cls, lane: Path) -> p.Result[bool]:
-        from flext_infra._utilities.utilities import u
+        from flext_infra import u
 
         gitlinks = cls._prepare_governed_gitlinks(lane)
         if gitlinks.failure:

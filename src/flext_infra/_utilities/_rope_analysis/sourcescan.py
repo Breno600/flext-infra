@@ -273,7 +273,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             for alias in node.names:
                 if (alias.asname or alias.name) != symbol_name:
                     continue
-                relative_module_name = FlextInfraUtilitiesRopeAnalysisSourceScan.relative_import_module_name
+                relative_module_name = cls.relative_import_module_name
                 module_name = relative_module_name(
                     current_module=current_module,
                     imported_module=node.module or "",

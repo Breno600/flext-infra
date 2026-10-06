@@ -38,10 +38,6 @@ class TestsFlextInfraWorkspaceFleetGaps:
         committed first, so the checkout's only uncommitted change is the one
         stray file the porcelain column must name. An unmerged lane branch
         leaves the integration line.
-
-        Returns:
-            Nothing.
-
         """
         tm.ok(
             u.Cli.atomic_write_text_file(
@@ -96,12 +92,7 @@ class TestsFlextInfraWorkspaceFleetGaps:
 
     @staticmethod
     def _declare_absent_consumer(root: Path, consumer_root: Path) -> None:
-        """Declare one external consumer whose checkout does not exist.
-
-        Returns:
-            Nothing.
-
-        """
+        """Declare one external consumer whose checkout does not exist."""
         manifest = root / "config" / c.Infra.WORKSPACE_MANIFEST_FILENAME
         loaded = tm.ok(u.Cli.config_load(manifest, expand_env=False))
         tm.ok(

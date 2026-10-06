@@ -45,7 +45,7 @@ class FlextInfraUtilitiesDocsContract:
         return 0
 
     @staticmethod
-    def _docs_contract_strip_invented_toc_before_frontmatter(content: str) -> str:
+    def docs_contract_strip_invented_toc_before_frontmatter(content: str) -> str:
         """Undo H1+TOC wrongly prepended ahead of YAML frontmatter.
 
         Returns:
@@ -73,7 +73,8 @@ class FlextInfraUtilitiesDocsContract:
 
         """
         original = content
-        strip_toc = FlextInfraUtilitiesDocsContract._docs_contract_strip_invented_toc_before_frontmatter
+        docs_contract = FlextInfraUtilitiesDocsContract
+        strip_toc = docs_contract.docs_contract_strip_invented_toc_before_frontmatter
         content = strip_toc(
             content,
         )
