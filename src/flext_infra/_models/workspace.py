@@ -254,7 +254,9 @@ class FlextInfraModelsWorkspace:
         ]
         lint_findings: Annotated[
             int,
-            m.Field(description="Lint count from the checkout's check report; 0 absent"),
+            m.Field(
+                description="Lint count from the checkout's check report; 0 absent"
+            ),
         ]
         pyrefly_findings: Annotated[
             int,

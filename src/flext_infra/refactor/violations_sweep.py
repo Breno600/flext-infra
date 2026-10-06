@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import Annotated, override
+from typing import override
 
 from flext_core import r
 from flext_infra import c, m, p, s, u
