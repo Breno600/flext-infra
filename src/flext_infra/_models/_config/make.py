@@ -98,7 +98,7 @@ class FlextInfraConfigModelsMake:
             """
             allowed = set(FlextInfraConstantsMake.CANONICAL_GATE_IDS)
             unknown = sorted(
-                set((*self.local_check_gates, *self.informative_check_gates)) - allowed,
+                {*self.local_check_gates, *self.informative_check_gates} - allowed,
             )
             if unknown:
                 msg = (

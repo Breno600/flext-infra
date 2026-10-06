@@ -103,6 +103,7 @@ class FlextInfraPytestRunnerExecution(
                 inventory.
 
         """
+        complete = complete or self.target_file is not None
         selection = self._collect_selection(
             report_dir,
             complete=complete,
