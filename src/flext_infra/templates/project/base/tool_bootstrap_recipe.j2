@@ -7,6 +7,7 @@
 	if [ -z "$$caller_xdg_data_home" ] && [ -n "$$caller_home" ]; then \
 		caller_xdg_data_home="$$caller_home/.local/share"; \
 	fi; \
+	caller_flext_setup_credential_store="$${FLEXT_SETUP_CREDENTIAL_STORE:-}"; \
 	caller_path="$$PATH"; \
 	mise_trusted_config_paths="$$project_root"; \
 {% for name, value in bootstrap.fixed_environment if name == "MISE_LOCKFILE_PLATFORMS" -%}
@@ -15,6 +16,11 @@
 {% for name in bootstrap.passthrough_environment if name != "PATH" -%}
 	caller_{{ name | lower }}="{{ '$${' ~ name ~ ':-}' }}"; \
 {% endfor -%}
+			$${caller_flext_setup_credential_store:+GIT_CONFIG_COUNT=2} \
+			$${caller_flext_setup_credential_store:+GIT_CONFIG_KEY_0=credential.https://github.com.helper} \
+			$${caller_flext_setup_credential_store:+GIT_CONFIG_VALUE_0="store --file=$$caller_flext_setup_credential_store"} \
+			$${caller_flext_setup_credential_store:+GIT_CONFIG_KEY_1=credential.https://github.com.username} \
+			$${caller_flext_setup_credential_store:+GIT_CONFIG_VALUE_1=x-access-token} \
 	mise_pin_file="$(MISE_VERSION_PIN)"; \
 	mise_pin=; \
 	if [ -f "$$mise_pin_file" ]; then \
