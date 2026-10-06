@@ -141,7 +141,7 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
                 continue
             if not isinstance(value, str):
                 msg = "Markdown evidence must contain typed JSON text"
-                raise ValueError(msg)
+                raise TypeError(msg)
             if name == "flext_markdown_origin":
                 item = m.Infra.PytestMarkdownItem.model_validate_json(value)
                 if item.node_id != event.nodeid:
