@@ -730,6 +730,14 @@ Infra:
           # the namespace lifecycle overhead before the measured
           # parallel-worker ceiling lands.
           algar-oud-mig: 300
+          # cosmos-docgen slow phase measured on 2026-10-06: the full-slow
+          # selection (~44 real-work cases: isolated-workspace builds, deck
+          # and document renders, subprocess resolvers) reaches ~150s wall on
+          # a cold testmon database, so the 120s entry clock SIGTERM'd the
+          # phase with 43 cases green. This measurement ceiling permits a
+          # complete cold slow phase; the budgeted phase completes inside the
+          # fleet default.
+          cosmos-docgen: 600
         termination-grace-seconds: 2
         # One failure stops the invocation. The next run starts from the
         # corrected owner instead of accumulating a backlog of unrelated
