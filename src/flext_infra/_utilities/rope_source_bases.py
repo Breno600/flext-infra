@@ -708,68 +708,36 @@ class FlextInfraUtilitiesRopeSourceBases:
 
         root_ids = frozenset(resolve(root_reference(root)) for root in roots)
         derived = set(roots)
-        # A resolved namespace parent inserts its own definition mid-loop;
-        # iterate a worklist snapshot so the derivation covers definitions
-        # the loop itself adds without mutating the dict during iteration.
-        pending_definitions = list(definitions.values())
-        seen_identities = {definition.identity for definition in pending_definitions}
-        while pending_definitions:
-            definition = pending_definitions.pop(0)
-            queued = [
-                item
-                for item in definitions.values()
-                if item.identity not in seen_identities
-            ]
-            for item in queued:
-                seen_identities.add(item.identity)
-                pending_definitions.append(item)
-            try:
-                linearize(definition.identity)
-            except ValueError as error:
-                # A definition whose own lineage cannot be derived — an
-                # unresolved external attribute (PEP 562 lazy namespace: a
-                # facade class inheriting flext_infra.m), a required base
-                # with no source module, or a member missing because an
-                # ancestor's lineage was degraded — does not qualify as
-                # runtime-evaluated, and its declared bases are skipped with
-                # it. A lineage cycle across split-file class shapes is an
-                # artifact of the line-qualified identity model (the runtime
-                # joins them outside rope's view); a real inheritance cycle
-                # self-destructs at class creation, so degrading is safe.
-                # Structural defects (duplicates, inconsistent MRO, shadowing)
-                # keep raising.
-                message = str(error)
-                if message.startswith((
-                    "Unresolved external base:",
-                    "No source module for required base:",
-                )):
+        processed: set[str] = set()
+        # linearize() populates ``definitions`` lazily (installed-distribution
+        # and inherited classes join the inventory while deriving), so the
+        # sweep runs to a fixed point over identity snapshots instead of
+        # iterating the mapping while it mutates.
+        while processed < definitions.keys():
+            for identity in tuple(definitions):
+                if identity in processed:
                     continue
-                if message.startswith("Unresolved planned base:"):
-                    continue
-                if message.startswith("Missing inherited class member:"):
-                    continue
-                if message.startswith("Cyclic class inheritance:"):
-                    continue
-                raise
-            for reference in definition.bases:
+                processed.add(identity)
+                definition = definitions[identity]
                 try:
                     linearize(definition.identity)
                 except ValueError as error:
-                    # A base whose lineage crosses an unresolved external
-                    # attribute (PEP 562 lazy namespace), a planned module
-                    # binding that is not a class, or a lineage cycle from
-                    # the line-qualified identity model of split-file class
-                    # shapes cannot be derived; the class simply does not
-                    # qualify as runtime-evaluated.
-                    if str(error).startswith(
+                    # A definition whose own lineage cannot be derived — an
+                    # unresolved external attribute (PEP 562 lazy namespace: a
+                    # facade class inheriting flext_infra.m), a required base
+                    # with no source module, or a member missing because an
+                    # ancestor's lineage was degraded — does not qualify as
+                    # runtime-evaluated, and its declared bases are skipped
+                    # with it. Structural defects (cycles, duplicates,
+                    # inconsistent MRO, shadowing) keep raising.
+                    message = str(error)
+                    if message.startswith(
                         "Unresolved external base:",
                     ) or message.startswith("No source module for required base:"):
                         continue
                     if message.startswith("Unresolved planned base:"):
                         continue
                     if message.startswith("Missing inherited class member:"):
-                        continue
-                    if str(error).startswith("Cyclic class inheritance:"):
                         continue
                     raise
                 for reference in definition.bases:
