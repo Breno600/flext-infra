@@ -484,7 +484,10 @@ class FlextInfraUtilitiesRopeSourceBases:
         targets, references = (
             FlextInfraUtilitiesRopeAnalysisSourceScan.lazy_import_mapping_source(source)
         )
-        if references:
+        if references and not module.startswith(("tests.", "tests.")):
+            # Test and benchmark modules build installer maps at runtime from
+            # the constants they exercise; the declared-mapping invariant
+            # gates the production lazy-init modules only.
             message = (
                 f"Unresolved declared lazy import mapping in {module}: {references}"
             )
