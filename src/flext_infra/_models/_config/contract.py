@@ -89,9 +89,16 @@ class FlextInfraConfigModelsContract:
                 re.compile(pattern)
             return self
 
-    type BeadsEndpointSpec = FlextInfraModelsMiseToolchain.BeadsEndpointSpec
-    type BeadsToolSpec = FlextInfraModelsMiseToolchain.BeadsToolSpec
-    type MiseBootstrapEnvironmentSpec = (
+    # These four names are runtime re-exports, never PEP 695 aliases: the
+    # ``m.Infra`` flattening composes this class beside
+    # ``FlextInfraModelsMiseToolchain``, so a ``type`` statement here would
+    # bind a ``TypeAliasType`` attribute that shadows the owner's real model
+    # class and breaks every constructor and ``model_fields`` read that goes
+    # through ``m.Infra.*`` (the ``make gen`` render context does exactly
+    # that). A bare assignment keeps the attribute as the class itself.
+    BeadsEndpointSpec = FlextInfraModelsMiseToolchain.BeadsEndpointSpec
+    BeadsToolSpec = FlextInfraModelsMiseToolchain.BeadsToolSpec
+    MiseBootstrapEnvironmentSpec = (
         FlextInfraModelsMiseToolchain.MiseBootstrapEnvironmentSpec
     )
-    type ToolchainSpec = FlextInfraModelsMiseToolchain.ToolchainSpec
+    ToolchainSpec = FlextInfraModelsMiseToolchain.ToolchainSpec

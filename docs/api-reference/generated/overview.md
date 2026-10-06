@@ -23,12 +23,12 @@
 - Main facades: `FlextInfra`, `FlextInfraAccessorMigrationOrchestrator`,
   `FlextInfraAccessorRenamePhase`, `FlextInfraApplyRenames`, `FlextInfraBanditGate`,
   `FlextInfraCProfileReport`, `FlextInfraCandidateBootstrapService`,
-  `FlextInfraCleanService` (+136 more)
+  `FlextInfraCleanService` (+137 more)
 - Alias exports: `c`, `d`, `e`, `h`, `m`, `p`, `r`, `s`, `t`, `u`, `x`
 - Public symbol exports: `FlextInfra`, `FlextInfraAccessorMigrationOrchestrator`,
   `FlextInfraAccessorRenamePhase`, `FlextInfraApplyRenames`, `FlextInfraBanditGate`,
   `FlextInfraCProfileReport`, `FlextInfraCandidateBootstrapService`,
-  `FlextInfraCleanService`, `FlextInfraCli`, `FlextInfraCliDispatchService` (+138 more)
+  `FlextInfraCleanService`, `FlextInfraCli`, `FlextInfraCliDispatchService` (+139 more)
 - Exported module shortcuts: `check`, `codegen`, `codemod`, `deps`, `docs`, `gates`,
   `maintenance`, `refactor` (+5 more)
 - Generated module pages: `12`

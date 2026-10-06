@@ -94,6 +94,3 @@ class TestsFlextInfraLintInformativeRules:
         )
         assert len(mixed) == 1
         assert mixed[0].code == "undefined-name"
-
-
-__all__: list[str] = ["TestsFlextInfraLintInformativeRules"]
