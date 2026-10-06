@@ -82,6 +82,7 @@ class TestsFlextInfraWorkspaceFleetGaps:
             ),
         )
         u.Tests.commit_git_changes(member, "commit published facts")
+        u.Tests.checkout_integration(member)
         tm.ok(
             u.Cli.run_checked(
                 [c.Infra.GIT, "switch", "--create", "lane/unmerged"],
@@ -102,14 +103,17 @@ class TestsFlextInfraWorkspaceFleetGaps:
 
         """
         manifest = root / "config" / c.Infra.WORKSPACE_MANIFEST_FILENAME
-        manifest.write_text(
-            manifest.read_text(encoding="utf-8")
-            + (
-                "external_consumers:\n"
-                "  - name: consumer-x\n"
-                f"    root: {consumer_root}\n"
+        loaded = tm.ok(u.Cli.config_load(manifest, expand_env=False))
+        tm.ok(
+            u.Cli.yaml_dump(
+                manifest,
+                loaded.data
+                | {
+                    "external_consumers": [
+                        {"name": "consumer-x", "root": str(consumer_root)},
+                    ],
+                },
             ),
-            encoding="utf-8",
         )
 
     @staticmethod
@@ -123,7 +127,7 @@ class TestsFlextInfraWorkspaceFleetGaps:
         bin_dir.mkdir(parents=True, exist_ok=True)
         log = bin_dir / f"{c.Infra.GH}.log"
         shim = bin_dir / c.Infra.GH
-        shim.write_text(script.format(log=log), encoding="utf-8")
+        shim.write_text(f"#!/bin/sh\n{script.format(log=log)}", encoding="utf-8")
         shim.chmod(0o755)
         return log
 
