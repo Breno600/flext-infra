@@ -718,6 +718,13 @@ _builtin_recover_mise:
 	for prior in "$$project_parent/.$${project_root##*/}.mise-lock-stage."*; do \
 		if [ ! -d "$$prior" ]; then continue; fi; \
 		if [ ! -f "$$prior/transaction.json" ]; then \
+{# Preserve the owning process's stage without splitting the recipe shell. #}			if [ -f "$$prior/owner.pid" ]; then \
+				IFS= read -r stage_owner < "$$prior/owner.pid"; \
+				if [ -n "$$stage_owner" ] && kill -0 "$$stage_owner" 2>/dev/null; then \
+					printf 'INFO: keeping the live Mise stage (owner pid %s is running): %s\n' "$$stage_owner" "$$prior" >&2; \
+					continue; \
+				fi; \
+			fi; \
 			printf 'INFO: removing the dead Mise stage (crashed before its lock commit point; nothing was published): %s\n' "$$prior" >&2; \
 			find "$$prior" -depth -delete; \
 			continue; \

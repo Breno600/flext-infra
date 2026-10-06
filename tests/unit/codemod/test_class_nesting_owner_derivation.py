@@ -280,6 +280,60 @@ __all__: list[str] = ["LIMIT", "write"]
         tm.fail(planned, has="requires exactly one declared module owner")
         tm.fail(planned, has="rival_owners")
 
+    def test_owner_creation_reads_stay_module_level(self, tmp_path: Path) -> None:
+        """A metaclass factory, its builder and their sentinel never nest."""
+        root, module = self._family_module(tmp_path, "lazy_helpers", "")
+        owner = self._derived_owner(root, "lazy_helpers")
+        source = (
+            '"""Lazy assembly of one family facade."""\n\n'
+            "from __future__ import annotations\n\n"
+            "from typing import Any\n\n\n"
+            "_SENTINEL: type | None = None\n\n\n"
+            "def _build_tree() -> type:\n"
+            '    """Assemble the tree on first access."""\n'
+            "    global _SENTINEL\n"
+            "    if _SENTINEL is not None:\n"
+            "        return _SENTINEL\n\n"
+            "    class Tree:\n"
+            '        """Assembled tree."""\n\n'
+            "    _SENTINEL = Tree\n"
+            "    return _SENTINEL\n\n\n"
+            "def _lazy_meta() -> type:\n"
+            '    """Build the lazy metaclass."""\n\n'
+            "    class _Meta(type):\n"
+            '        """Assemble the tree on first class-level access."""\n\n'
+            "        def __getattr__(cls, name: str) -> Any:\n"
+            '            if name == "Tree":\n'
+            "                tree = _build_tree()\n"
+            "                cls.Tree = tree\n"
+            "                return tree\n"
+            '            msg = f"no attribute {name!r}"\n'
+            "            raise AttributeError(msg)\n\n"
+            "    return _Meta\n\n\n"
+            f"class {owner}(metaclass=_lazy_meta()):\n"
+            '    """The facade owner."""\n\n'
+            f'__all__: list[str] = ["{owner}"]\n'
+        )
+        tm.ok(u.Cli.atomic_write_text_file(module, source))
+
+        updated, residue = self._plan(root, {module: source})
+
+        kept = updated[module.resolve()]
+        tm.that(
+            self._top_level(kept),
+            eq=(
+                "_SENTINEL",
+                "_build_tree",
+                "_lazy_meta",
+                owner,
+                "__all__",
+            ),
+        )
+        tm.that(kept, has="def _lazy_meta() -> type:")
+        tm.that(kept, has="tree = _build_tree()")
+        tm.that(residue, eq={})
+        compile(kept, str(module), "exec")
+
     def test_nested_class_annotations_keep_a_resolvable_name(
         self,
         tmp_path: Path,

@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, ClassVar, Literal
 
 from flext_infra._constants.base import FlextInfraConstantsBase as cb
 from flext_infra._constants.codegen_project import FlextInfraConstantsCodegenProject
+from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -19,6 +20,16 @@ if TYPE_CHECKING:
 
 class FlextInfraConstantsWorkspace:
     """Workspace infrastructure constants."""
+
+    @unique
+    class BeadIssueStatus(StrEnum):
+        """Beads issue status values."""
+
+        OPEN = "open"
+        IN_PROGRESS = "in_progress"
+        BLOCKED = "blocked"
+        DEFERRED = "deferred"
+        CLOSED = "closed"
 
     @unique
     class WorktreeOperation(StrEnum):
@@ -117,6 +128,11 @@ print(json.dumps({
 }))
 """
     "Standard-library probe for complete PEP 508 marker facts and environment identity."
+
+    SCRATCH_IDENTITY_SEGMENT_ALIASES: ClassVar[t.VariadicTuple[t.StrPair]] = (
+        (FlextInfraConstantsSharedInfra.GIT_DIR, "_git"),
+    )
+    "Checkout path segments renamed when mirrored into the scratch identity."
 
     PROPAGATION_BRANCH: ClassVar[str] = "propagation/flext-infra"
     "One lane per member carries the workspace's flext-infra projections."

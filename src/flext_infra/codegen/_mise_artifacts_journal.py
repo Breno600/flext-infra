@@ -476,17 +476,10 @@ class FlextInfraMiseArtifactsJournal:
             return result_type.fail("codegen transaction journal is absent")
         if journal_snapshot.mode != c.Infra.JOURNAL_MODE:
             return result_type.fail("codegen transaction journal mode is not 0600")
-        validated: p.Result[m.Infra.CodegenTransactionJournal] = u.validate_value(
-            m.Infra.CodegenTransactionJournal,
+        validated = m.Infra.CodegenTransactionJournal.model_validate_json(
             journal_snapshot.content,
-            from_json=True,
         )
-        if validated.failure:
-            return result_type.fail_op(
-                "validate codegen transaction journal",
-                validated.error,
-            )
-        relocated = cls._relocate_journal(layout, validated.value)
+        relocated = cls._relocate_journal(layout, validated)
         if relocated.failure:
             return result_type.from_failure(relocated)
         return result_type.ok((relocated.value, journal_snapshot))

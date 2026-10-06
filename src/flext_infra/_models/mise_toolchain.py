@@ -254,6 +254,29 @@ class FlextInfraModelsMiseToolchain:
                 ),
             ),
         ] = True
+        mise_provenance_api_failures_fatal: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Rendered as [settings] provenance_api_failures_fatal. "
+                    "Keep false: third-party manifest releases (jscpd, qlty) "
+                    "publish no SLSA attestations, so treating provenance API "
+                    "and attestation-absence failures as fatal would block "
+                    "every lock; release checksums still enforce integrity."
+                ),
+            ),
+        ] = False
+        mise_locked_verify_provenance: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Rendered as [settings] locked_verify_provenance. "
+                    "Keep false while manifest releases lack attestations; "
+                    "flip true once every pinned release publishes SLSA "
+                    "attestations."
+                ),
+            ),
+        ] = False
         mise_transaction_lock_file: Annotated[
             t.NonEmptyStr,
             m.Field(

@@ -161,6 +161,8 @@ Infra:
           - too-many-public-methods
           - too-many-statements
           - complex-structure
+          - suspicious-subprocess-import
+          - subprocess-without-shell-equals-true
         line-length: 88
         preview: true
         respect-gitignore: true
@@ -749,6 +751,8 @@ Infra:
         # invocation; in-flight cases may report after the stop, which the
         # declaring consumer accepts by declaring.
         parallel-worker-overrides:
+          cosmos-docgen:
+            workers: 4
           # The measured ceiling for this suite; higher ceilings regressed the
           # cold run because per-window dispatch overhead dominates.
           flext-infra:

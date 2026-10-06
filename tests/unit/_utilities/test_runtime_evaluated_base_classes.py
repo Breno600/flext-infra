@@ -512,7 +512,7 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                 provider / "__init__.py",
                 "from planned_destination.models import Contract\n"
                 "raise RuntimeError('provider must not be imported')\n",
-            )
+            ),
         )
         package = tmp_path / "src" / "planned_destination"
         planned = {

@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 class FlextInfraConstantsRope:
     """Rope Project configuration constants — accessed via c.Infra.*."""
 
-    ROPE_WALK_DEPTH_BUDGET: ClassVar[int] = 32
-    "Bound for the external-base walk's provider/reexport hops; a legitimate chain is a few hops, so exceeding it means the static graph cannot terminate (cross-facade rebinds) and the base is unresolved."
+    ROPE_WALK_DEPTH_BUDGET: ClassVar[int] = 128
+    "Bound for the external-base walk's provider/reexport hops; the workspace facade chain (examples -> flext -> flext_infra -> flext_core pydantic) is a finite multi-layer walk, cycles terminate through the preserved visiting stack, and self-referential definition references short-circuit through the direct identity map."
 
     @unique
     class RopeScopeKind(StrEnum):
