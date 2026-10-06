@@ -1,16 +1,38 @@
+"""Flext infra codegen lazy init planner module.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+src/flext_infra/_models/flext_infra_codegen_lazy_init_planner
+SPDX-License-Identifier: MIT
+"""
+
 from __future__ import annotations
+
 from collections.abc import MutableMapping
 from pathlib import Path
 from typing import Annotated, override
+
 from flext_infra import c, m, p, t, u
-from flext_infra.codegen._lazy_init_planner_aliases import FlextInfraCodegenLazyInitPlannerAliasesMixin
-from flext_infra.codegen._lazy_init_planner_cache import FlextInfraCodegenLazyInitPlannerCacheMixin
-from flext_infra.codegen._lazy_init_planner_children import FlextInfraCodegenLazyInitPlannerChildrenMixin
-from flext_infra.codegen._lazy_init_planner_collision import FlextInfraCodegenLazyInitPlannerCollisionMixin
-from flext_infra.codegen._lazy_init_planner_exports import FlextInfraCodegenLazyInitPlannerExportsMixin
-from flext_infra.codegen._lazy_init_planner_parents import FlextInfraCodegenLazyInitPlannerParentsMixin
-from flext_infra.codegen._lazy_init_planner_public_root import FlextInfraCodegenLazyInitPlannerPublicRootMixin
-from flext_infra.codegen.lazy_init_planner import __all__
+from flext_infra.codegen._lazy_init_planner_aliases import (
+    FlextInfraCodegenLazyInitPlannerAliasesMixin,
+)
+from flext_infra.codegen._lazy_init_planner_cache import (
+    FlextInfraCodegenLazyInitPlannerCacheMixin,
+)
+from flext_infra.codegen._lazy_init_planner_children import (
+    FlextInfraCodegenLazyInitPlannerChildrenMixin,
+)
+from flext_infra.codegen._lazy_init_planner_collision import (
+    FlextInfraCodegenLazyInitPlannerCollisionMixin,
+)
+from flext_infra.codegen._lazy_init_planner_exports import (
+    FlextInfraCodegenLazyInitPlannerExportsMixin,
+)
+from flext_infra.codegen._lazy_init_planner_parents import (
+    FlextInfraCodegenLazyInitPlannerParentsMixin,
+)
+from flext_infra.codegen._lazy_init_planner_public_root import (
+    FlextInfraCodegenLazyInitPlannerPublicRootMixin,
+)
 
 
 class FlextInfraCodegenLazyInitPlanner(

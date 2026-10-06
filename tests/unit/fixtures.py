@@ -588,11 +588,15 @@ def cached_runner_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
         "def answer() -> int:\n    return 42\n",
         encoding="utf-8",
     )
+    # The runner contract is proven through process evidence (exit codes,
+    # manifests, accounting), not through the child's assertion library. The
+    # consumer's suite stays on plain asserts: every nested runner lifecycle
+    # imports the child suite, and the shared assertion facade drags the full
+    # infrastructure model materialization into each of those interpreters.
     (tests_root / "test_runtime.py").write_text(
-        "from flext_tests import tm\n"
         "from runner_sample import answer\n\n"
         "def test_runtime() -> None:\n"
-        "    tm.that(answer(), eq=42)\n",
+        "    assert answer() == 42\n",
         encoding="utf-8",
     )
     return project_root

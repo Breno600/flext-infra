@@ -90,7 +90,6 @@
 	if [ -z "$$scratch" ] || [ ! -d "$$scratch" ]; then \
 		printf 'ERROR: mise bootstrap scratch creation failed (template: %s/.%s.mise-bootstrap.XXXXXX)\n' "$$project_parent" "$${project_root##*/}" >&2; exit 2; \
 	fi; \
-	readonly scratch; \
 	lock_stage=; \
 	trap 'bootstrap_status=$$?; trap - EXIT; \
 		lock_cleanup_status=0; scratch_cleanup_status=0; diagnostic_status=0; scratch_present=0; \
@@ -192,20 +191,21 @@
 {# Only the bootstrap reaches GitHub: `install --yes` for a tool missing from
    the persistent cache, and `make upg` (release resolution, lock, launcher).
    Every other Mise call runs through mise_offline. The Makefile preamble owns
-   the credential selection; the passthrough carries it into env -i.
-   The only tolerated Mise warning: ephemeral CI runners ship pre-seeded
+   the credential selection; the passthrough carries it into env -i. -#}
+{# The only tolerated Mise warning: ephemeral CI runners ship pre-seeded
    shims (python3, make) and `mise install` always announces it declines to
-   replace them while every real install still succeeds (cosmos-main PR 346
+   replace them while every real install still succeeds (cosmos-main PR 346,
    CI run 37348896444, bead on cosmos-l2wc2). Every OTHER mise WARN stays
-   fatal: red-means-red is untouched. This documentation lives in a Jinja
-   comment: a sh comment inside the recipe would end the single-shell
-   logical line at the `#` and orphan every later stage. #}
+   fatal: red-means-red is untouched. Shell '#' comment lines are forbidden
+   inside this one-line recipe: a physical line without a trailing backslash
+   splits it into a second shell that loses scratch/storage (flext-u8eij,
+    flext-1k3ca). -#}
 	mise_has_blocking_warning() { \
 		grep -F 'mise WARN' "$$1" | grep -Fv 'not replacing unmanaged file in shims directory' | grep -q .; \
 	}; \
 	mise_checked() { \
 		mise_log="$$1"; shift; \
-		case "$$mise_log" in ""|"/"*) mise_log="$${TMPDIR:-/tmp}/$${mise_log##*/}" ;; esac; \
+		case "$$mise_log" in ""|*/*) ;; *) mise_log="$${TMPDIR:-/tmp}/$$mise_log" ;; esac; \
 		printf 'setup probe: begin stage=%s log=%s\n' "$${mise_log##*/}" "$$mise_log" >&2; \
 		if "$$@" >"$$mise_log" 2>&1; then :; \
 		else mise_status=$$?; cat "$$mise_log"; printf 'setup probe: failed stage=%s exit=%s\n' "$${mise_log##*/}" "$$mise_status" >&2; return "$$mise_status"; fi; \
@@ -217,8 +217,8 @@
 	}; \
 	mise_checked_stdout() { \
 		mise_stdout_log="$$1"; mise_stderr_log="$$2"; shift 2; \
-		case "$$mise_stdout_log" in ""|"/"*) mise_stdout_log="$${TMPDIR:-/tmp}/$${mise_stdout_log##*/}" ;; esac; \
-		case "$$mise_stderr_log" in ""|"/"*) mise_stderr_log="$${TMPDIR:-/tmp}/$${mise_stderr_log##*/}" ;; esac; \
+		case "$$mise_stdout_log" in ""|*/*) ;; *) mise_stdout_log="$${TMPDIR:-/tmp}/$$mise_stdout_log" ;; esac; \
+		case "$$mise_stderr_log" in ""|*/*) ;; *) mise_stderr_log="$${TMPDIR:-/tmp}/$$mise_stderr_log" ;; esac; \
 		if "$$@" >"$$mise_stdout_log" 2>"$$mise_stderr_log"; then :; \
 		else mise_status=$$?; cat "$$mise_stderr_log" >&2; cat "$$mise_stdout_log"; return "$$mise_status"; fi; \
 		cat "$$mise_stderr_log" >&2; cat "$$mise_stdout_log"; \
@@ -313,6 +313,7 @@
 		# both succeed. A failed or killed run leaves mise.lock untouched; no \
 		# backup copy exists. \
 		lock_stage="$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-lock-stage.XXXXXX")"; \
+{# Make emits two dollars so the shell expands its actual PID. #}		printf '%s\n' "$$$$" > "$$lock_stage/owner.pid"; \
 		cp "$$project_root/.mise.toml" "$$lock_stage/.mise.toml"; \
 		cp "$$project_root/.mise.toml" "$$scratch/locked-manifest.toml"; \
 		# The resolver (TOOL_BOOTSTRAP_RESOLVE, the first half of upg) locks \

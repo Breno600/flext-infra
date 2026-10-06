@@ -82,7 +82,7 @@ class FlextInfraConfigModelsMake:
         informative_check_gates: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                description="CI check findings are informative; execution errors block"
+                description="CI check findings are informative; execution errors block",
             ),
         ] = ()
 
@@ -590,7 +590,7 @@ class FlextInfraConfigModelsMake:
         """Complete generated Makefile public and extension contract."""
 
         check_gate_suspensions: Annotated[
-            t.VariadicTuple[FlextInfraConfigModelsMake.MakeGateSuspensionSpec],
+            t.VariadicTuple[MakeGateSuspensionSpec],
             m.Field(
                 description=(
                     "Gates temporarily suspended for this project (the gate "
@@ -958,9 +958,16 @@ class FlextInfraConfigModelsMake:
                     "Public Make verb to checker gate mapping outside make check"
                 ),
             ),
-        ] = m.Field(
-            default_factory=lambda: MappingProxyType[t.NonEmptyStr, t.NonEmptyStr]({}),
-        )
+        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        opt_in_check_gates: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                description=(
+                    "Built-in gates that stay allowed and explicitly invocable "
+                    "but never join the default check, CI, or hook gate sets"
+                ),
+            ),
+        ] = ()
 
         @m.model_validator(mode="after")
         def _validate_project_check_gates(self) -> Self:
@@ -971,7 +978,8 @@ class FlextInfraConfigModelsMake:
 
             Raises:
                 ValueError: If make project_check_gates must be unique; or if make
-                    project_check_gates shadow built-in gates.
+                    project_check_gates shadow built-in gates; or if make
+                    opt_in_check_gates name unknown gates.
 
             """
             if len(set(self.project_check_gates)) != len(self.project_check_gates):
@@ -983,6 +991,12 @@ class FlextInfraConfigModelsMake:
                 msg = (
                     "make project_check_gates shadow built-in gates: "
                     f"{', '.join(shadowed)}"
+                )
+                raise ValueError(msg)
+            unknown = sorted(set(self.opt_in_check_gates) - builtin)
+            if unknown:
+                msg = (
+                    f"make opt_in_check_gates name unknown gates: {', '.join(unknown)}"
                 )
                 raise ValueError(msg)
             return self
@@ -1161,7 +1175,10 @@ class FlextInfraConfigModelsMake:
         @property
         def check_gates_default(self) -> t.VariadicTuple[str]:
             """Active default gates, shared by local, CI, hooks, and project gates."""
-            excluded = frozenset((*self.standalone_check_gates.values(),))
+            excluded = frozenset((
+                *self.standalone_check_gates.values(),
+                *self.opt_in_check_gates,
+            ))
             declared = (
                 *FlextInfraConstantsMake.CANONICAL_GATE_IDS,
                 *self.project_check_gates,

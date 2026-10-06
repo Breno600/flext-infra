@@ -243,7 +243,7 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                 provider / "__init__.py",
                 "from .models import Facade as exports\n"
                 "raise RuntimeError('provider must not be imported during planning')\n",
-            )
+            ),
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
@@ -252,7 +252,7 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                 + "class Contracts:\n    class Payload(RuntimeRoot): pass\n"
                 "class Parent(Contracts): pass\n"
                 "class Facade(Parent): Alias = Parent.Payload\n",
-            )
+            ),
         )
         source = (
             "from declared_provider import exports as schemas\n"
@@ -280,13 +280,13 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
             u.Cli.atomic_write_text_file(
                 provider / "__init__.py",
                 "from .models import Contract\n",
-            )
+            ),
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
                 provider / "models.py",
                 "class Contract: pass\n",
-            )
+            ),
         )
         bridge = installed_dependency_path / "declared_bridge"
         bridge.mkdir()
@@ -294,7 +294,7 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
             u.Cli.atomic_write_text_file(
                 bridge / "__init__.py",
                 "from planned_provider.models import Contract\nFacade = Contract\n",
-            )
+            ),
         )
         package = tmp_path / "src" / "planned_provider"
         planned = {
@@ -315,7 +315,7 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                     *self._roots(),
                     "planned_provider.Contract",
                     "declared_bridge.Facade",
-                ))
+                )),
             ),
         )
 

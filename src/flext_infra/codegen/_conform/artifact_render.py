@@ -89,7 +89,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     return r[m.Infra.CodegenArtifactComposition].from_failure(resolved)
                 artifacts = resolved.value.artifacts
             else:
-                blocks = render_inputs.managed_artifacts.resolution.artifacts.Gitignore.preserved_blocks
+                artifacts = render_inputs.managed_artifacts.resolution.artifacts
             composed = u.Infra.preserve_project_gitignore_blocks(
                 rendered,
                 repository_root,
