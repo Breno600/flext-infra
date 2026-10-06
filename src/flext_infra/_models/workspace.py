@@ -245,7 +245,7 @@ class FlextInfraModelsWorkspace:
             m.Field(description="Porcelain status paths of the checkout"),
         ]
         open_pull_requests: Annotated[
-            t.VariadicTuple[FleetPullRequest],
+            t.VariadicTuple[FlextInfraModelsWorkspace.FleetPullRequest],
             m.Field(description="Open pull requests; empty when the query fails"),
         ]
         unmerged_branches: Annotated[
@@ -254,7 +254,9 @@ class FlextInfraModelsWorkspace:
         ]
         lint_findings: Annotated[
             int,
-            m.Field(description="Lint count from the checkout's check report; 0 absent"),
+            m.Field(
+                description="Lint count from the checkout's check report; 0 absent"
+            ),
         ]
         pyrefly_findings: Annotated[
             int,
@@ -308,7 +310,7 @@ class FlextInfraModelsWorkspace:
         ]
         workspace_name: Annotated[str, m.Field(description="Workspace identity name")]
         repos: Annotated[
-            t.VariadicTuple[FleetRepoGaps],
+            t.VariadicTuple[FlextInfraModelsWorkspace.FleetRepoGaps],
             m.Field(description="One row per declared member and external consumer"),
         ]
 

@@ -132,6 +132,28 @@ namespace-enforce` / `refactor accessor-migrate` without `--apply` reports
   without writing) and publish their structured receipts under
   `.reports/refactor/`; a second run over a converged tree writes nothing.
 
+## Fleet automation verbs
+
+Two surfaces compose the per-repository verbs into fleet-scale loops. Both are
+`flext-infra` CLI subcommands and publish one structured receipt per run.
+
+- `flext-infra workspace fleet-gaps` walks the invoking workspace's declared
+  members and external consumers and publishes `.reports/fleet-gaps.json`:
+  per repository, its porcelain dirty paths, its open pull requests (a
+  failing `gh` degrades to an empty list), its local branches not merged into
+  the integration line, the lint, pyrefly and codemod counts its own
+  `.reports` carry (an absent artifact counts zero), and the standards
+  presence columns (`AGENTS.md`, `.agents/skills/.flext-stamp.json` with its
+  `distribution_version`, `.beads/config.yaml`). The report carries no
+  timestamp: an unchanged tree re-publishes a byte-identical receipt.
+- `flext-infra refactor violations-sweep` measures the repository's mod scan
+  totals, runs the canonical repair sequence (`make fix`, `make fmt`,
+  `make mod`) in order, measures again, and publishes
+  `.reports/refactor/violations-sweep.json`. The command FAILS the moment any
+  total increased: automation may reduce a tree's violations, never grow
+  them. A sweep over a tree the repair sequence cannot improve is a
+  zero-delta success.
+
 ## Mandatory unsafe repair channel (operator law 2026-10-05)
 
 **`make fix` ALWAYS runs `ruff check --fix --unsafe-fixes --preview`. This is a direct
