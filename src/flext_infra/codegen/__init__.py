@@ -126,7 +126,6 @@ if TYPE_CHECKING:
     from flext_infra.codegen.fixer import FlextInfraCodegenFixer
     from flext_infra.codegen.layout import FlextInfraCodegenLayout
     from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
-    from flext_infra.codegen.lazy_init_planner import FlextInfraCodegenLazyInitPlanner
     from flext_infra.codegen.make_bootstrap import FlextInfraCodegenMakeBootstrap
     from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
     from flext_infra.codegen.mise_artifacts_workspace import (
@@ -134,6 +133,7 @@ if TYPE_CHECKING:
     )
     from flext_infra.codegen.pipeline import (
         FlextInfraCodegenLazyInitGenerationMixin,
+        FlextInfraCodegenLazyInitPlanner,
         FlextInfraCodegenPipeline,
         FlextInfraCodegenPipelineStagesMixin,
         FlextInfraMiseArtifactsFiles,
@@ -269,7 +269,7 @@ install_lazy_exports(
         "FlextInfraCodegenLazyInitGenerationRegistryMixin": (
             "._lazy_init_generation_registry"
         ),
-        "FlextInfraCodegenLazyInitPlanner": ".lazy_init_planner",
+        "FlextInfraCodegenLazyInitPlanner": ".pipeline",
         "FlextInfraCodegenLazyInitPlannerPublicRootMixin": (
             "._lazy_init_planner_public_root"
         ),

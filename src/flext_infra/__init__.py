@@ -61,7 +61,6 @@ if TYPE_CHECKING:
     from flext_infra.codegen.fixer import FlextInfraCodegenFixer
     from flext_infra.codegen.layout import FlextInfraCodegenLayout
     from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
-    from flext_infra.codegen.lazy_init_planner import FlextInfraCodegenLazyInitPlanner
     from flext_infra.codegen.make_bootstrap import FlextInfraCodegenMakeBootstrap
     from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
     from flext_infra.codegen.mise_artifacts_workspace import (
@@ -69,6 +68,7 @@ if TYPE_CHECKING:
     )
     from flext_infra.codegen.pipeline import (
         FlextInfraCodegenLazyInitGenerationMixin,
+        FlextInfraCodegenLazyInitPlanner,
         FlextInfraCodegenPipeline,
         FlextInfraCodegenPipelineStagesMixin,
         FlextInfraMiseArtifactsFiles,
@@ -167,7 +167,6 @@ if TYPE_CHECKING:
         FlextInfraNamespaceRelocationCascade,
     )
     from flext_infra.refactor.project_classifier import FlextInfraProjectClassifier
-    from flext_infra.refactor.violations_sweep import FlextInfraRefactorViolationsSweep
     from flext_infra.refactor.wrapper_root_namespace import (
         FlextInfraWrapperRootNamespaceRefactor,
     )
@@ -214,7 +213,6 @@ if TYPE_CHECKING:
     from flext_infra.workspace.environment_provenance import (
         FlextInfraWorkspaceEnvironmentProvenance,
     )
-    from flext_infra.workspace.fleet_gaps import FlextInfraWorkspaceFleetGaps
     from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
     from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
     from flext_infra.workspace.rope import FlextInfraRopeWorkspace
@@ -330,7 +328,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraPythonVersionEnforcer",
     "FlextInfraRefactorCensus",
     "FlextInfraRefactorRoutes",
-    "FlextInfraRefactorViolationsSweep",
     "FlextInfraReleaseOrchestrator",
     "FlextInfraRopeTransformer",
     "FlextInfraRopeWorkspace",
@@ -363,7 +360,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraWorkspaceEnvironmentContracts",
     "FlextInfraWorkspaceEnvironmentMixin",
     "FlextInfraWorkspaceEnvironmentProvenance",
-    "FlextInfraWorkspaceFleetGaps",
     "FlextInfraWorkspacePropagation",
     "FlextInfraWorkspaceRoutes",
     "FlextInfraWorktreeService",
@@ -433,7 +429,7 @@ install_lazy_exports(
         "FlextInfraCodegenLayout": ".codegen.layout",
         "FlextInfraCodegenLazyInit": ".codegen.lazy_init",
         "FlextInfraCodegenLazyInitGenerationMixin": ".codegen.pipeline",
-        "FlextInfraCodegenLazyInitPlanner": ".codegen.lazy_init_planner",
+        "FlextInfraCodegenLazyInitPlanner": ".codegen.pipeline",
         "FlextInfraCodegenMakeBootstrap": ".codegen.make_bootstrap",
         "FlextInfraCodegenMiseArtifacts": ".codegen.mise_artifacts",
         "FlextInfraCodegenPipeline": ".codegen.pipeline",
@@ -518,7 +514,6 @@ install_lazy_exports(
         "FlextInfraPythonVersionEnforcer": ".maintenance.python_version",
         "FlextInfraRefactorCensus": ".refactor.census",
         "FlextInfraRefactorRoutes": ".services.cli_routes_refactor",
-        "FlextInfraRefactorViolationsSweep": ".refactor.violations_sweep",
         "FlextInfraReleaseOrchestrator": ".release.orchestrator",
         "FlextInfraRopeTransformer": ".transformers.rope_transformer",
         "FlextInfraRopeWorkspace": ".workspace.rope",
@@ -551,7 +546,6 @@ install_lazy_exports(
         "FlextInfraWorkspaceEnvironmentContracts": ".workspace.environment_contracts",
         "FlextInfraWorkspaceEnvironmentMixin": ".workspace.environment",
         "FlextInfraWorkspaceEnvironmentProvenance": ".workspace.environment_provenance",
-        "FlextInfraWorkspaceFleetGaps": ".workspace.fleet_gaps",
         "FlextInfraWorkspacePropagation": ".workspace.propagation",
         "FlextInfraWorkspaceRoutes": ".services.cli_routes_workspace",
         "FlextInfraWorktreeService": ".worktree",
