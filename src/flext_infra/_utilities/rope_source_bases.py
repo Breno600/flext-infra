@@ -297,6 +297,11 @@ class FlextInfraUtilitiesRopeSourceBases:
                         imported = node.module or ""
                     for alias in node.names:
                         if alias.name == "*":
+                            if allow_conditional:
+                                # External/installed modules re-export through
+                                # star imports; the re-exported names resolve
+                                # in the module's own runtime, not statically.
+                                continue
                             message = (
                                 f"Star import has no explicit class binding in {module}"
                             )
@@ -664,7 +669,14 @@ class FlextInfraUtilitiesRopeSourceBases:
                 chain = " <- ".join(sorted(visiting))
                 message = f"Cyclic provider reexport: {target} (visiting: {chain})"
                 raise ValueError(message)
-            binding = module.get_attribute(name)
+            try:
+                binding = module.get_attribute(name)
+            except Exception:
+                # The provider cannot resolve the attribute statically (a
+                # star re-export, a runtime-injected name): the base
+                # degrades to its qualified name as a synthetic terminal
+                # identity instead of failing the whole walk.
+                return target
             if isinstance(binding, p.Infra.RopeImportedName):
                 imported_name = provider_module_name(binding.imported_module)
                 if imported_name in namespaces:
@@ -814,6 +826,11 @@ class FlextInfraUtilitiesRopeSourceBases:
         def bases(identity: str) -> t.StrTuple:
             if identity == object_id:
                 return ()
+            if identity not in definitions and identity not in external:
+                # Synthetic terminal identities (runtime-constructed bases
+                # such as TypedDict) carry no ancestry of their own; they
+                # linearize as direct object children.
+                return (object_id,)
             if identity in definitions:
                 declared = definitions[identity].bases
                 return (

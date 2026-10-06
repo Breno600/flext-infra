@@ -126,10 +126,11 @@ class MiseLockConverge:
             "failed to resolve",
         )
         warned = [line for line in diagnostics.splitlines() if "mise WARN" in line]
+        expected_folded = [expected.lower() for expected in expected_warnings]
         unexpected = [
             line
             for line in warned
-            if not any(expected in line for expected in expected_warnings)
+            if not any(expected in line.lower() for expected in expected_folded)
         ]
         if unexpected:
             sys.stderr.write(diagnostics)

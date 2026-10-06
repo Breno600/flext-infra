@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import ast
 from collections.abc import MutableMapping
 from pathlib import Path
 
@@ -308,8 +309,27 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         moved_lines: t.MutableSequenceOf[str] = []
         moved_line_numbers: t.MutableSequenceOf[int] = []
         kept_lines: t.MutableSequenceOf[str] = []
+        open_brackets = 0
         for line_number, line in enumerate(lines, start=1):
             stripped = line.strip()
+            if open_brackets > 0:
+                # The moved statement opened brackets it has not closed yet:
+                # this line is a continuation of the same statement and must
+                # move with it, or the kept source keeps orphan fragments that
+                # no longer parse. The continuation joins its statement entry
+                # so every downstream consumer parses whole statements.
+                if moved_lines:
+                    moved_lines[-1] = f"{moved_lines[-1]}\n{line}"
+                moved_line_numbers.append(line_number)
+                open_brackets += (
+                    line.count("(")
+                    - line.count(")")
+                    + line.count("[")
+                    - line.count("]")
+                    + line.count("{")
+                    - line.count("}")
+                )
+                continue
             typing_match = c.Infra.TYPING_FACTORY_ASSIGN_RE.match(stripped)
             typing_name = typing_match.group(1) if typing_match is not None else ""
             legacy_alias_match = c.Infra.LEGACY_TYPEALIAS_RE.match(stripped)
@@ -328,6 +348,14 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                     else line,
                 )
                 moved_line_numbers.append(line_number)
+                open_brackets = (
+                    line.count("(")
+                    - line.count(")")
+                    + line.count("[")
+                    - line.count("]")
+                    + line.count("{")
+                    - line.count("}")
+                )
             else:
                 kept_lines.append(line)
         if not moved_lines:
@@ -435,6 +463,16 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         for moved_line in moved_lines:
             if moved_line not in target_lines:
                 updated_target += f"\n\n{moved_line}"
+        # The line-based move cannot see string literals and comments that
+        # contain bracket characters, so a carried multi-line statement can
+        # still assemble invalid text. A move that does not parse is
+        # abandoned, exactly like the conflicting-binding cases above: mod
+        # skips this one rewrite instead of crashing the whole verb.
+        try:
+            ast.parse(updated_target)
+            ast.parse("\n".join(kept_lines))
+        except SyntaxError:
+            return
         source_imports = cls._typing_alias_source_imports(
             project_root=project_root,
             target_file=target_file,
