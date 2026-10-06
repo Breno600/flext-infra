@@ -12,7 +12,8 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m, main, u
+from flext_infra import main
+from tests import c, m, u
 
 if TYPE_CHECKING:
     from tests import t
@@ -185,7 +186,7 @@ class TestsFlextInfraModCliRoute:
         mod_workspace: Path,
     ) -> None:
         """Carry findings exposed by one rewrite into the next apply iteration."""
-        test_u.Tests.declare_codemod_rules(
+        u.Tests.declare_codemod_rules(
             mod_workspace,
             {
                 "first": (

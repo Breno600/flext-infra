@@ -590,7 +590,7 @@ class FlextInfraConfigModelsMake:
         """Complete generated Makefile public and extension contract."""
 
         check_gate_suspensions: Annotated[
-            t.VariadicTuple[MakeGateSuspensionSpec],
+            t.VariadicTuple[FlextInfraConfigModelsMake.MakeGateSuspensionSpec],
             m.Field(
                 description=(
                     "Gates temporarily suspended for this project (the gate "

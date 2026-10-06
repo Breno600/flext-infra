@@ -9,4 +9,8 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from flext_infra._models.flext_infra_codegen_lazy_init_planner import (
+    FlextInfraCodegenLazyInitPlanner,
+)
+
 __all__: list[str] = ["FlextInfraCodegenLazyInitPlanner"]

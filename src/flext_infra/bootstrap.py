@@ -27,7 +27,6 @@ from __future__ import annotations
 import fcntl
 import hashlib
 import json
-import msvcrt
 import os
 import shutil
 import stat
@@ -42,8 +41,26 @@ from pathlib import Path, PurePosixPath
 
 from flext_infra import config
 
+if os.name == "nt":
+    # Windows file locking; POSIX uses fcntl below. The import stays
+    # platform-conditional so the module stays importable on every platform.
+    import msvcrt
+
 STORAGE_DIRECTORIES = ("cache", "state", "installs", "shims", "uv-cache", "bootstrap")
 """Persistent Mise storage layout (mirrors the bootstrap recipe contract)."""
+
+_GIT_BINARY = shutil.which("git") or "git"
+"""Resolved Git executable; an absolute path whenever Git is on ``PATH``."""
+
+
+class FlextInfraBootstrapPayloadError(TypeError, ValueError):
+    """A mise.lock payload structure violates the transaction contract.
+
+    The payload carries a value of the wrong Python type: the error is
+    therefore a ``TypeError``, while the ``ValueError`` base keeps the
+    historical transaction exception surface that every caller — including the
+    projected ``bin`` shims that mirror these messages — already catches.
+    """
 
 
 class FlextInfraBootstrap:
@@ -61,6 +78,10 @@ class FlextInfraBootstrap:
     )
     MUTEX = ".mise-lock-transaction.lock"
     MUTEX_TIMEOUT_SECONDS = 600.0
+    MIN_SIDECAR_DEPTH = 4
+    RELOCK_ARITY = 2
+    CONVERGE_ARITY = 4
+    PROJECT_STAGE_ARITY = 3
 
     @staticmethod
     @contextmanager
@@ -144,7 +165,7 @@ class FlextInfraBootstrap:
         if (
             selector.is_absolute()
             or selector.as_posix() != relative
-            or len(selector.parts) < 4
+            or len(selector.parts) < cls.MIN_SIDECAR_DEPTH
             or selector.parts[:2] != (".mise", "locks")
             or ".." in selector.parts
         ):
@@ -160,25 +181,25 @@ class FlextInfraBootstrap:
         tools = payload.get("tools")
         if not isinstance(tools, dict):
             msg = "mise.lock has no tools table"
-            raise ValueError(msg)
+            raise FlextInfraBootstrapPayloadError(msg)
         result: dict[str, str] = {}
         for entries in tools.values():
             for entry in entries if isinstance(entries, list) else (entries,):
                 if not isinstance(entry, dict):
                     msg = "mise.lock tool entry is not a table"
-                    raise ValueError(msg)
+                    raise FlextInfraBootstrapPayloadError(msg)
                 for graph, filename in (("aube", "aube-lock.yaml"), ("uv", "uv.lock")):
                     annotation = entry.get(graph)
                     if annotation is None:
                         continue
                     if not isinstance(annotation, dict):
                         msg = f"mise.lock {graph} annotation is not a table"
-                        raise ValueError(msg)
+                        raise FlextInfraBootstrapPayloadError(msg)
                     relative = annotation.get("path")
                     digest = annotation.get("digest")
                     if not isinstance(relative, str) or not isinstance(digest, str):
                         msg = f"mise.lock {graph} annotation is incomplete"
-                        raise ValueError(msg)
+                        raise FlextInfraBootstrapPayloadError(msg)
                     selector = cls._sidecar_selector(relative)
                     if not digest.startswith("sha256:"):
                         msg = f"invalid mise.lock sidecar digest: {relative}"
@@ -216,7 +237,7 @@ class FlextInfraBootstrap:
         if content is None or b"<<<<<<< " not in content:
             return cls._sidecars(content, project)
         index = subprocess.run(
-            ["git", "-C", str(project), "ls-files", "-u", "--", "mise.lock"],
+            [_GIT_BINARY, "-C", str(project), "ls-files", "-u", "--", "mise.lock"],
             check=True,
             capture_output=True,
         ).stdout
@@ -226,7 +247,7 @@ class FlextInfraBootstrap:
             msg = "conflicted mise.lock has no Git stage-2 source"
             raise ValueError(msg)
         prior = subprocess.run(
-            ["git", "-C", str(project), "show", ":2:mise.lock"],
+            [_GIT_BINARY, "-C", str(project), "show", ":2:mise.lock"],
             check=True,
             capture_output=True,
         ).stdout
@@ -445,6 +466,173 @@ class FlextInfraBootstrap:
         Path(stage).rename(retired)
         cls._sync_directory(stage.parent)
         shutil.rmtree(retired)
+
+    @classmethod
+    def _publish_or_park(cls, project: Path, stage: Path) -> None:
+        """Publish the staged lock; park an unreadable prior state and retry.
+
+        Raises:
+            ValueError: If the staged publication fails again after parking.
+        """
+        try:
+            cls.publish(project, stage)
+        except ValueError:
+            parked = stage / "reconcile-parked"
+            parked.mkdir()
+            if (project / "mise.lock").exists():
+                Path(project / "mise.lock").replace(parked / "mise.lock")
+            locks = project / ".mise" / "locks"
+            if locks.exists():
+                Path(locks).replace(parked / "locks")
+            cls.publish(project, stage)
+
+    @classmethod
+    def _attempt_seed(
+        cls,
+        project: Path,
+        manifest: Path,
+        name: str,
+        payload: bytes | None,
+        storage: Path,
+        runtime: Path,
+        cooldown: str,
+        platforms: str,
+        release: str,
+        failures: list[str],
+    ) -> bool:
+        """Resolve one reconcile seed into the stage and publish it if it proves.
+
+        Returns:
+            The resulting ``bool``: whether the seed was published.
+
+        Raises:
+            ValueError: If Mise exits or warns during the seed lock.
+        """
+        stage = Path(
+            tempfile.mkdtemp(
+                prefix=f".{project.name}.mise-lock-stage.",
+                dir=project.parent,
+            ),
+        )
+        scratch = Path(tempfile.mkdtemp(prefix="mise-reconcile."))
+        try:
+            shutil.copyfile(manifest, stage / ".mise.toml")
+            if payload is not None:
+                (stage / "mise.lock").write_bytes(payload)
+            environment = cls._mise_environment(
+                storage,
+                stage,
+                scratch,
+                cooldown,
+                platforms,
+            )
+            try:
+                cls._run(runtime, ["-C", str(stage), "lock"], environment)
+            except ValueError as error:
+                if "refusing to replace locked version" not in str(error):
+                    failures.append(f"{name}: lock failed: {error}")
+                    return False
+                # Mise refused a cooldown-admissible version whose release
+                # lacks platform coverage and kept the locked version; the
+                # staged dry-run below remains the publication gate (the
+                # same tolerance the upg lock stage ships).
+            if not cls._staged_lock_satisfies(runtime, stage, environment):
+                failures.append(
+                    f"{name}: staged lock does not satisfy the manifest",
+                )
+                return False
+            staged_python = cls._run(
+                runtime,
+                ["-C", str(stage), "which", "python"],
+                environment,
+            )
+            if not staged_python or not os.access(staged_python, os.X_OK):
+                failures.append(f"{name}: staged Mise Python is not executable")
+                return False
+            cls._publish_or_park(project, stage)
+            sys.stdout.write(
+                f"reconcile: published the {name} mise.lock "
+                f"Mise {release} satisfies\n",
+            )
+            return True
+        finally:
+            shutil.rmtree(scratch, ignore_errors=True)
+            if stage.exists() and not (stage / cls.JOURNAL).exists():
+                shutil.rmtree(stage, ignore_errors=True)
+
+    @classmethod
+    def _attempt_held_lock(
+        cls,
+        project: Path,
+        manifest: Path,
+        storage: Path,
+        runtime: Path,
+        cooldown: str,
+        platforms: str,
+        release: str,
+    ) -> None:
+        """Resolve a fresh held lock (broken releases held) and publish it.
+
+        Raises:
+            ValueError: If the held lock cannot be produced or still fails its
+                staged install probe, or if Mise exits or warns during.
+        """
+        held_stage = Path(
+            tempfile.mkdtemp(
+                prefix=f".{project.name}.mise-lock-stage.",
+                dir=project.parent,
+            ),
+        )
+        try:
+            scratch = Path(tempfile.mkdtemp(prefix="mise-reconcile."))
+            try:
+                shutil.copyfile(manifest, held_stage / ".mise.toml")
+                environment = cls._mise_environment(
+                    storage,
+                    held_stage,
+                    scratch,
+                    cooldown,
+                    platforms,
+                )
+                try:
+                    cls._run(runtime, ["-C", str(held_stage), "lock"], environment)
+                except ValueError as error:
+                    if "refusing to replace locked version" not in str(error):
+                        raise
+                satisfied, probe_output = cls._probe_stage(
+                    runtime,
+                    held_stage,
+                    environment,
+                )
+                if not satisfied:
+                    holds = cls._hold_stage_tools(
+                        runtime,
+                        storage,
+                        held_stage,
+                        cooldown,
+                        platforms,
+                        cls._failing_install_tools(probe_output),
+                    )
+                    satisfied, _ = cls._probe_stage(
+                        runtime,
+                        held_stage,
+                        environment,
+                    )
+                    if not satisfied:
+                        msg = f"held lock still fails install: {sorted(holds)}"
+                        raise ValueError(
+                            msg,
+                        )
+                cls._publish_or_park(project, held_stage)
+                sys.stdout.write(
+                    "reconcile: published the held mise.lock "
+                    f"Mise {release} satisfies\n",
+                )
+            finally:
+                shutil.rmtree(scratch, ignore_errors=True)
+        finally:
+            if held_stage.exists() and not (held_stage / cls.JOURNAL).exists():
+                shutil.rmtree(held_stage, ignore_errors=True)
 
     @classmethod
     def recover(cls, project: Path, stage: Path) -> None:
@@ -724,12 +912,12 @@ class FlextInfraBootstrap:
         settings = payload.get("settings")
         if not isinstance(settings, dict):
             msg = f"Mise manifest has no settings table: {manifest}"
-            raise ValueError(msg)
+            raise FlextInfraBootstrapPayloadError(msg)
         cooldown = settings.get("minimum_release_age")
         platforms = settings.get("lockfile_platforms")
         if not isinstance(cooldown, str) or not isinstance(platforms, list):
             msg = f"Mise manifest lacks cooldown or lockfile platforms: {manifest}"
-            raise ValueError(
+            raise FlextInfraBootstrapPayloadError(
                 msg,
             )
         return cooldown, ",".join(str(platform) for platform in platforms)
@@ -849,7 +1037,7 @@ class FlextInfraBootstrap:
         """
         try:
             completed = subprocess.run(
-                ["git", "-C", str(project), "show", "HEAD:mise.lock"],
+                [_GIT_BINARY, "-C", str(project), "show", "HEAD:mise.lock"],
                 capture_output=True,
                 check=False,
             )
@@ -942,8 +1130,8 @@ class FlextInfraBootstrap:
             The resulting ``list[str]`` of semantic releases, newest first,
             capped at ``limit``.
 
-        Raises:
-            ValueError: If Mise exited or warned during the listing.
+        Fails with the ``ValueError`` that ``_run`` raises when Mise exits or
+        warns during the listing.
         """
 
         def release_key(version: str) -> tuple[int, ...] | None:
@@ -1058,9 +1246,9 @@ class FlextInfraBootstrap:
                         msg,
                     )
                 holds[selector] = held
-                print(
+                sys.stdout.write(
                     f"hold: {selector} held at {held}: release {failed_version}"
-                    " failed install; the next upg retries the newest release",
+                    " failed install; the next upg retries the newest release\n",
                 )
         finally:
             shutil.rmtree(scratch, ignore_errors=True)
@@ -1103,135 +1291,32 @@ class FlextInfraBootstrap:
         seeds.append(("fresh", None))
         failures: list[str] = []
         for name, payload in seeds:
-            stage = Path(
-                tempfile.mkdtemp(
-                    prefix=f".{project.name}.mise-lock-stage.",
-                    dir=project.parent,
-                ),
-            )
-            scratch = Path(tempfile.mkdtemp(prefix="mise-reconcile."))
-            try:
-                shutil.copyfile(manifest, stage / ".mise.toml")
-                if payload is not None:
-                    (stage / "mise.lock").write_bytes(payload)
-                environment = cls._mise_environment(
-                    storage,
-                    stage,
-                    scratch,
-                    cooldown,
-                    platforms,
-                )
-                try:
-                    cls._run(runtime, ["-C", str(stage), "lock"], environment)
-                except ValueError as error:
-                    if "refusing to replace locked version" not in str(error):
-                        failures.append(f"{name}: lock failed: {error}")
-                        continue
-                    # Mise refused a cooldown-admissible version whose release
-                    # lacks platform coverage and kept the locked version; the
-                    # staged dry-run below remains the publication gate (the
-                    # same tolerance the upg lock stage ships).
-                if not cls._staged_lock_satisfies(runtime, stage, environment):
-                    failures.append(
-                        f"{name}: staged lock does not satisfy the manifest",
-                    )
-                    continue
-                staged_python = cls._run(
-                    runtime,
-                    ["-C", str(stage), "which", "python"],
-                    environment,
-                )
-                if not staged_python or not os.access(staged_python, os.X_OK):
-                    failures.append(f"{name}: staged Mise Python is not executable")
-                    continue
-                try:
-                    cls.publish(project, stage)
-                except ValueError:
-                    parked = stage / "reconcile-parked"
-                    parked.mkdir()
-                    if (project / "mise.lock").exists():
-                        Path(project / "mise.lock").replace(parked / "mise.lock")
-                    locks = project / ".mise" / "locks"
-                    if locks.exists():
-                        Path(locks).replace(parked / "locks")
-                    cls.publish(project, stage)
-                print(
-                    f"reconcile: published the {name} mise.lock "
-                    f"Mise {release} satisfies",
-                )
+            if cls._attempt_seed(
+                project,
+                manifest,
+                name,
+                payload,
+                storage,
+                runtime,
+                cooldown,
+                platforms,
+                release,
+                failures,
+            ):
                 return
-            finally:
-                shutil.rmtree(scratch, ignore_errors=True)
-                if stage.exists() and not (stage / cls.JOURNAL).exists():
-                    shutil.rmtree(stage, ignore_errors=True)
-        held_stage = Path(
-            tempfile.mkdtemp(
-                prefix=f".{project.name}.mise-lock-stage.",
-                dir=project.parent,
-            ),
-        )
         try:
-            scratch = Path(tempfile.mkdtemp(prefix="mise-reconcile."))
-            try:
-                shutil.copyfile(manifest, held_stage / ".mise.toml")
-                environment = cls._mise_environment(
-                    storage,
-                    held_stage,
-                    scratch,
-                    cooldown,
-                    platforms,
-                )
-                try:
-                    cls._run(runtime, ["-C", str(held_stage), "lock"], environment)
-                except ValueError as error:
-                    if "refusing to replace locked version" not in str(error):
-                        raise
-                satisfied, probe_output = cls._probe_stage(
-                    runtime,
-                    held_stage,
-                    environment,
-                )
-                if not satisfied:
-                    holds = cls._hold_stage_tools(
-                        runtime,
-                        storage,
-                        held_stage,
-                        cooldown,
-                        platforms,
-                        cls._failing_install_tools(probe_output),
-                    )
-                    satisfied, _ = cls._probe_stage(
-                        runtime,
-                        held_stage,
-                        environment,
-                    )
-                    if not satisfied:
-                        msg = f"held lock still fails install: {sorted(holds)}"
-                        raise ValueError(
-                            msg,
-                        )
-                try:
-                    cls.publish(project, held_stage)
-                except ValueError:
-                    parked = held_stage / "reconcile-parked"
-                    parked.mkdir()
-                    if (project / "mise.lock").exists():
-                        Path(project / "mise.lock").replace(parked / "mise.lock")
-                    locks = project / ".mise" / "locks"
-                    if locks.exists():
-                        Path(locks).replace(parked / "locks")
-                    cls.publish(project, held_stage)
-                print(
-                    f"reconcile: published the held mise.lock Mise {release} satisfies",
-                )
-                return
-            finally:
-                shutil.rmtree(scratch, ignore_errors=True)
+            cls._attempt_held_lock(
+                project,
+                manifest,
+                storage,
+                runtime,
+                cooldown,
+                platforms,
+                release,
+            )
+            return
         except ValueError as held_error:
             failures.append(f"held: {held_error}")
-        finally:
-            if held_stage.exists() and not (held_stage / cls.JOURNAL).exists():
-                shutil.rmtree(held_stage, ignore_errors=True)
         raise ValueError(
             "reconcile: no seed produced a lock the pinned Mise satisfies ("
             + "; ".join(failures)
@@ -1239,7 +1324,7 @@ class FlextInfraBootstrap:
         )
 
     @classmethod
-    def converge(cls, project: Path, stage: Path, release: str) -> None:
+    def converge(cls, stage: Path, release: str) -> None:
         """Hold failing tools in an ``upg`` lock stage at installable releases.
 
         The ``upg`` lock stage already carries the bumped lock; a broken
@@ -1262,24 +1347,15 @@ class FlextInfraBootstrap:
         storage = cls._mise_storage_root()
         runtime = cls._pinned_runtime(storage, release)
         cooldown, platforms = cls._manifest_settings(manifest)
-        scratch = Path(tempfile.mkdtemp(prefix="mise-converge."))
-        try:
-            environment = cls._mise_environment(
-                storage,
-                stage,
-                scratch,
-                cooldown,
-                platforms,
-            )
-            satisfied, probe_output = cls._probe_stage(
-                runtime,
-                stage,
-                environment,
-            )
-        finally:
-            shutil.rmtree(scratch, ignore_errors=True)
+        satisfied, probe_output = cls._probe_with_scratch(
+            runtime,
+            stage,
+            storage,
+            cooldown,
+            platforms,
+        )
         if satisfied:
-            print("converge: staged lock installs; nothing to hold")
+            sys.stdout.write("converge: staged lock installs; nothing to hold\n")
             return
         holds = cls._hold_stage_tools(
             runtime,
@@ -1289,6 +1365,35 @@ class FlextInfraBootstrap:
             platforms,
             cls._failing_install_tools(probe_output),
         )
+        satisfied, _ = cls._probe_with_scratch(
+            runtime,
+            stage,
+            storage,
+            cooldown,
+            platforms,
+        )
+        if not satisfied:
+            msg = f"converge: held lock still fails install: {sorted(holds)}"
+            raise ValueError(
+                msg,
+            )
+        sys.stdout.write(f"converge: staged lock installs with holds {sorted(holds)}\n")
+
+    @classmethod
+    def _probe_with_scratch(
+        cls,
+        runtime: Path,
+        stage: Path,
+        storage: Path,
+        cooldown: str,
+        platforms: str,
+    ) -> tuple[bool, str]:
+        """Probe a stage inside a throwaway isolated Mise environment.
+
+        Returns:
+            The resulting ``tuple[bool, str]``: satisfaction and the raw probe
+            diagnostics.
+        """
         scratch = Path(tempfile.mkdtemp(prefix="mise-converge."))
         try:
             environment = cls._mise_environment(
@@ -1298,15 +1403,9 @@ class FlextInfraBootstrap:
                 cooldown,
                 platforms,
             )
-            satisfied, _ = cls._probe_stage(runtime, stage, environment)
+            return cls._probe_stage(runtime, stage, environment)
         finally:
             shutil.rmtree(scratch, ignore_errors=True)
-        if not satisfied:
-            msg = f"converge: held lock still fails install: {sorted(holds)}"
-            raise ValueError(
-                msg,
-            )
-        print(f"converge: staged lock installs with holds {sorted(holds)}")
 
     @staticmethod
     def _uv_binary() -> str:
@@ -1378,12 +1477,12 @@ class FlextInfraBootstrap:
                 ["workspace", "list", "--paths", "--project", str(workspace)],
             ).splitlines()
             for member in members:
-                member = member.strip()
-                if not member:
+                member_root = member.strip()
+                if not member_root:
                     continue
-                mirror = stage / "mirror" / member[len(str(workspace)) + 1 :]
+                mirror = stage / "mirror" / member_root[len(str(workspace)) + 1 :]
                 mirror.mkdir(parents=True, exist_ok=True)
-                manifest = Path(member) / "pyproject.toml"
+                manifest = Path(member_root) / "pyproject.toml"
                 if manifest.is_file():
                     shutil.copyfile(manifest, mirror / "pyproject.toml")
             lock = workspace / "uv.lock"
@@ -1396,7 +1495,7 @@ class FlextInfraBootstrap:
                 raise ValueError(msg)
             shutil.copyfile(stage / "mirror" / "uv.lock", candidate)
             Path(candidate).replace(lock)
-            print("relock: published uv.lock")
+            sys.stdout.write("relock: published uv.lock\n")
         finally:
             shutil.rmtree(stage, ignore_errors=True)
             if candidate.exists():
@@ -1412,16 +1511,22 @@ class FlextInfraBootstrap:
         Raises:
             ValueError: If usage.
         """
-        if len(arguments) == 2 and arguments[0] == "relock":
+        if (
+            len(arguments) == cls.RELOCK_ARITY
+            and arguments[0] == "relock"
+        ):
             with cls._serialized(Path(arguments[1]).absolute()):
                 cls.relock(Path(arguments[1]).absolute())
             return 0
-        if len(arguments) == 4 and arguments[0] == "converge":
+        if (
+            len(arguments) == cls.CONVERGE_ARITY
+            and arguments[0] == "converge"
+        ):
             project = Path(arguments[1]).absolute()
             with cls._serialized(project):
-                cls.converge(project, Path(arguments[2]).absolute(), arguments[3])
+                cls.converge(Path(arguments[2]).absolute(), arguments[3])
             return 0
-        if len(arguments) != 3 or arguments[0] not in {
+        if len(arguments) != cls.PROJECT_STAGE_ARITY or arguments[0] not in {
             "publish",
             "recover",
             "reconcile",
