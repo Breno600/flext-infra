@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
-from flext_infra import c, main, m
+from flext_infra import c, m, main
 from tests import u
 
 if TYPE_CHECKING:
