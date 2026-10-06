@@ -24,6 +24,7 @@ from flext_infra.codegen._lazy_init_projection_manifest import (
     FlextInfraCodegenLazyInitProjectionManifest,
 )
 from flext_infra.workspace.rope import FlextInfraRopeWorkspace
+import flext_infra._models.flext_infra_codegen_lazy_init_planner
 
 if TYPE_CHECKING:
     from flext_infra import p
