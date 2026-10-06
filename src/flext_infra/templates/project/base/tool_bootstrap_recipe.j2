@@ -314,6 +314,7 @@
 		# both succeed. A failed or killed run leaves mise.lock untouched; no \
 		# backup copy exists. \
 		lock_stage="$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-lock-stage.XXXXXX")"; \
+{# Make emits two dollars so the shell expands its actual PID. #}		printf '%s\n' "$$$$" > "$$lock_stage/owner.pid"; \
 		cp "$$project_root/.mise.toml" "$$lock_stage/.mise.toml"; \
 		cp "$$project_root/.mise.toml" "$$scratch/locked-manifest.toml"; \
 		# The resolver (TOOL_BOOTSTRAP_RESOLVE, the first half of upg) locks \
