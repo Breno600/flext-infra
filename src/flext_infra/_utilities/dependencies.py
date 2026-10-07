@@ -18,6 +18,7 @@ from packaging.version import InvalidVersion, Version
 
 from flext_core import r
 from flext_infra import c, m, p, t
+from flext_infra._utilities import FlextInfraUtilitiesPyproject
 
 
 class FlextInfraUtilitiesDependenciesFamily:
@@ -120,8 +121,6 @@ class FlextInfraUtilitiesDependenciesFamily:
                 The resulting ``t.StrSequence``.
 
             """
-            from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
             normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
             if not normalized:
                 return ()
@@ -152,66 +151,61 @@ class FlextInfraUtilitiesDependenciesFamily:
                 ),
             )
 
-        @staticmethod
-        def dependency_profile_upstreams(
-            profiles: t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec],
-            *,
-            distribution: str,
-            runtime_names: t.Infra.StrSet,
-        ) -> t.StrSequence:
-            """Return the most specific shared profile upstreams one project selects.
+    @staticmethod
+    def dependency_profile_upstreams(
+        profiles: t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec],
+        *,
+        distribution: str,
+        runtime_names: t.StrSet,
+    ) -> t.StrSequence:
+        """Return the most specific shared profile upstreams one project selects.
 
-            The root of the dependency tree declares no upstream distribution: a
-            distribution that IS a profile's upstream owns that profile. Otherwise
-            every shared profile whose upstream is a runtime dependency is a
-            candidate, and a candidate implied by another candidate's runtime is
-            dropped. One entry is the governed selection; none means no declared
-            profile governs the project; several are an ambiguous declaration.
+        The root of the dependency tree declares no upstream distribution: a
+        distribution that IS a profile's upstream owns that profile. Otherwise
+        every shared profile whose upstream is a runtime dependency is a
+        candidate, and a candidate implied by another candidate's runtime is
+        dropped. One entry is the governed selection; none means no declared
+        profile governs the project; several are an ambiguous declaration.
 
-            Returns:
-                The most specific shared profile upstreams one project selects.
+        Returns:
+            The most specific shared profile upstreams one project selects.
 
-            """
-            shared = tuple(item for item in profiles if item.project is None)
-            own = next(
-                (
-                    item
-                    for item in shared
-                    if item.upstream.replace("_", "-") == distribution
-                ),
-                None,
+        """
+        shared = tuple(item for item in profiles if item.project is None)
+        own = next(
+            (
+                item
+                for item in shared
+                if item.upstream.replace("_", "-") == distribution
+            ),
+            None,
+        )
+        candidates = (
+            (own,)
+            if own is not None
+            else tuple(
+                item
+                for item in shared
+                if item.upstream.replace("_", "-") in runtime_names
             )
-            candidates = (
-                (own,)
-                if own is not None
-                else tuple(
-                    item
-                    for item in shared
-                    if item.upstream.replace("_", "-") in runtime_names
-                )
-            )
-            runtime_of = {
-                item.upstream: {
-                    name
-                    for dependency in item.runtime
-                    if (
-                        name
-                        := FlextInfraUtilitiesDependencies.dep_name(
-                            dependency,
-                        )
-                    )
-                }
-                for item in candidates
+        )
+        runtime_of = {
+            item.upstream: {
+                name
+                for dependency in item.runtime
+                if (name := FlextInfraUtilitiesDependencies.dep_name(dependency))
             }
-            return tuple(
-                item.upstream
-                for item in candidates
-                if not any(
-                    item.upstream.replace("_", "-") in runtime_of[other.upstream]
-                    for other in candidates
-                    if other is not item
-                )
+            for item in candidates
+        }
+        return tuple(
+            item.upstream
+            for item in candidates
+            if not any(
+                item.upstream.replace("_", "-") in runtime_of[other.upstream]
+                for other in candidates
+                if other is not item
             )
+        )
 
         @staticmethod
         def dependency_profile_rows(
@@ -222,10 +216,10 @@ class FlextInfraUtilitiesDependenciesFamily:
         ) -> t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec]:
             """Return the shared upstream profile followed by the project's additions.
 
-            Empty when the upstream declares no shared profile.
+                Empty when the upstream declares no shared profile.
 
             Returns:
-                The shared upstream profile followed by the project's additions.
+                The resulting ``t.SequenceOf``.
 
             """
             base = next(
@@ -289,28 +283,25 @@ class FlextInfraUtilitiesDependenciesFamily:
                 },
             )
 
-    class FlextInfraUtilitiesDependencies(FlextInfraUtilitiesDependenciesProfiles):
-        """Static helpers for inspecting dependency declarations in pyproject payloads."""
+        return None
 
-        @staticmethod
-        def raw_requirement_values(raw: p.AttributeProbe) -> list[str]:
-            """Collect requirement strings from dependency arrays or group tables.
+    @staticmethod
+    def raw_requirement_values(raw: p.AttributeProbe) -> list[str]:
+        """Collect requirement strings from dependency arrays or group tables.
 
-            Returns:
-                Requirement strings retained from the declared arrays.
-            """
-            if isinstance(raw, Mapping):
-                values: list[str] = []
-                for group in raw.values():
-                    values.extend(
-                        FlextInfraUtilitiesDependencies.raw_requirement_values(
-                            group,
-                        ),
-                    )
-                return values
-            if isinstance(raw, (list, tuple)):
-                return [item for item in raw if isinstance(item, str)]
-            return []
+        Returns:
+            Requirement strings retained from the declared arrays.
+        """
+        if isinstance(raw, Mapping):
+            values: list[str] = []
+            for group in raw.values():
+                values.extend(
+                    FlextInfraUtilitiesDependencies.raw_requirement_values(group),
+                )
+            return values
+        if isinstance(raw, (list, tuple)):
+            return [item for item in raw if isinstance(item, str)]
+        return []
 
         @staticmethod
         def active_requirement(
@@ -790,18 +781,17 @@ class FlextInfraUtilitiesDependenciesFamily:
                 Deterministic unique dependency specs keyed by normalized name.
 
             """
-            selected_by_name: MutableMapping[str, str] = {}
-            for raw in specs:
-                item = raw.strip()
-                if not item:
-                    continue
-                dependency_name = FlextInfraUtilitiesDependencies.dep_name(
-                    item,
-                )
-                if dependency_name is None or dependency_name in selected_by_name:
-                    continue
-                selected_by_name[dependency_name] = item
-            return tuple(selected_by_name[name] for name in sorted(selected_by_name))
+
+        selected_by_name: MutableMapping[str, str] = {}
+        for raw in specs:
+            item = raw.strip()
+            if not item:
+                continue
+            dependency_name = FlextInfraUtilitiesDependencies.dep_name(item)
+            if dependency_name is None or dependency_name in selected_by_name:
+                continue
+            selected_by_name[dependency_name] = item
+        return tuple(selected_by_name[name] for name in sorted(selected_by_name))
 
         @classmethod
         def declared_dependency_names(
@@ -958,6 +948,8 @@ class FlextInfraUtilitiesDependenciesFamily:
                 return ()
             workspace_names = set(workspace_project_names)
             return tuple(sorted(name for name in declared if name in workspace_names))
+
+        return None
 
 
 # The flat module-level re-export: the package lazy map and the internal
