@@ -9,14 +9,11 @@ Infra:
       deptry:
         known-first-party: [flext_core]
         pep621-dev-dependency-groups: [dev]
-        known-first-party: [flext_core]
-        pep621-dev-dependency-groups: [dev]
       hatch:
         allow-direct-references: true
       markdown:
         # rumdl exits 1 on any violation and 2 on an error: a repair verb
         # completes with findings under this status; any other fails it.
-        findings-exit-codes: [1]
         findings-exit-codes: [1]
         rules:
           default: true
@@ -43,7 +40,6 @@ Infra:
           MD024: { siblings_only: true }
           MD025: false
           MD031: false
-          MD033: { allowed_elements: [br, details, summary, kbd] }
           MD033: { allowed_elements: [br, details, summary, kbd] }
           MD036: false
           MD040: false
@@ -245,6 +241,9 @@ Infra:
           - docs/standards/consumption-law.md
           - docs/projects/generated/**
       ruff:
+        # Ruff exits 1 on findings; a repair verb completing with remaining
+        # findings continues under this status while any other failure stops it.
+        findings-exit-codes: [1]
         extend-exclude:
           # Historical evidence trees (.archive/**) hold archived session
           # artifacts, never live source: they are evidence-only material
@@ -291,12 +290,9 @@ Infra:
         # loaded by path (e.g. the scripts/<verb>/<what> dispatch pattern), so
         # ruff must not demand an __init__.py (INP001) there.
         namespace-packages: [tests, examples, scripts]
-        namespace-packages: [tests, examples, scripts]
         fix: false
         # Ruff exits 1 when it reports violations (2 on an error): a repair
         # verb completes with findings under this status; any other fails it.
-        findings-exit-codes: [1]
-        findings-exit-codes: [1]
         # Operator ruling 2026-10-05: rules the operator never authorized as
         # blocking are informative only. The lint gate keeps reporting these
         # in the gate log, the summary, and the SARIF reports, but their
@@ -329,7 +325,6 @@ Infra:
         respect-gitignore: true
         show-fixes: true
         src: [src, tests, examples, scripts]
-        src: [src, tests, examples, scripts]
         target-version: py313
         format:
           docstring-code-format: true
@@ -339,7 +334,6 @@ Infra:
           skip-magic-trailing-comma: false
         lint:
           select:
-            - ALL
             - ALL
           # make fix never deletes information. The lint
           # repair applies safe fixes only (make.ruff.lint_fix rejects
@@ -419,13 +413,9 @@ Infra:
           flake8-type-checking:
             runtime-evaluated-roots:
               - pydantic.BaseModel
-              - pydantic.BaseModel
           # Banned API messages are policy data, never template literals.
           banned-api:
             argparse: "Use cli.register_result_command + Pydantic model from flext_cli."
-            click:
-              "Use flext_cli.cli application, registration, execution, and invocation\
-              \ methods."
             click:
               "Use flext_cli.cli application, registration, execution, and invocation\
               \ methods."
@@ -576,13 +566,13 @@ Infra:
                 PartNN naming scheme; the rule stays active everywhere else.
             - files: "**/flextcliutilitiesfiletesthelpersmixin_part_03.py"
               rules: [line-too-long]
-              authority: operator-ruling-2026-10-05-partnn-module-paths
+              authority: operator-ruling-partnn-module-path-length
               reason: >-
                 See file_test_helpers.py: the same PartNN module-path length
                 defect, one ruling.
             - files: "**/test_public_contracts_cov.py"
               rules: [line-too-long]
-              authority: operator-ruling-2026-10-05-partnn-module-paths
+              authority: operator-ruling-partnn-module-path-length
               reason: >-
                 See file_test_helpers.py: the same PartNN module-path length
                 defect over the tests/_cases layout, one ruling.
@@ -704,11 +694,9 @@ Infra:
         # Missing, empty, and v1 plugin declarations fail validation rather
         # than being silently repaired by schema defaults.
         plugins: [pydantic.mypy]
-        plugins: [pydantic.mypy]
         # Operator 2026-10-05, flext-8i57m: suspend only these two codes
         # globally, not additional diagnostics. Proven code workarounds for
         # these codes are repaired at their runtime owners, not accommodated.
-        disable-error-code: [prop-decorator, call-arg]
         disable-error-code: [prop-decorator, call-arg]
         # The canonical facade form imports the parent letter, subclasses it
         # and rebinds the letter (`from flext_core import u`,
@@ -719,7 +707,6 @@ Infra:
         # (type[FlextService] vs type[FlextApiServiceBase]); codegen disables
         # them only in the modules it detects in that form
         # (operator-ruling-2026-10-01-facade-rebind-mypy-scope).
-        facade-rebind-error-codes: [misc, no-redef, assignment]
         facade-rebind-error-codes: [misc, no-redef, assignment]
         boolean-settings:
           allow_redefinition: true
@@ -785,8 +772,6 @@ Infra:
           project-root: .
           env-dirs: [src, tests, examples, scripts]
           test-like-dirs: [tests, examples, scripts]
-          env-dirs: [src, tests, examples, scripts]
-          test-like-dirs: [tests, examples, scripts]
           default-excludes:
             - "**/node_modules"
             - "**/__pycache__"
@@ -835,7 +820,6 @@ Infra:
           other-report-private-usage: error
       coverage:
         source: [src]
-        source: [src]
         show-missing: true
         skip-covered: false
         precision: 2
@@ -856,8 +840,6 @@ Infra:
           - "*/protocols.py"
           - "*/_protocols/*"
       pyrefly:
-        findings-exit-codes: [1]
-        findings-exit-codes: [1]
         disable-project-excludes-heuristics: true
         python-version: "3.13"
         use-ignore-files: false
@@ -1056,10 +1038,9 @@ Infra:
           - "typings/**"
           - "vendor/**"
         path-rules:
-          env-dirs: [src, tests, examples, scripts]
-          env-dirs: [src, tests, examples, scripts]
           source-dir: src
           project-root: .
+          env-dirs: [src, tests, examples, scripts]
           root-typings-paths: []
           project-typings-paths: []
           workspace-include-children: false
@@ -1129,9 +1110,6 @@ Infra:
         progress-args: [--verbose]
         report-args: [-ra, --durations=25, --durations-min=0.001, --tb=short]
         diagnostic-args: [-rA, --durations=0, --tb=long, --showlocals]
-        progress-args: [--verbose]
-        report-args: [-ra, --durations=25, --durations-min=0.001, --tb=short]
-        diagnostic-args: [-rA, --durations=0, --tb=long, --showlocals]
         # One worker makes maxfail exact: no second in-flight case can fail
         # after the first failure has stopped the invocation.
         parallel-workers: 1
@@ -1155,7 +1133,7 @@ Infra:
           # facade stack, so the serial phase reached the 120s entry clock at
           # its 33rd item. The cases are host-lock and namespace isolated.
           flext-tests:
-            workers: 4
+            workers: 1
           # CPU-fraction ceilings (cpu_fraction: "n/d") resolve at runtime
           # against the process CPU count.
         # Reserve physical memory for each xdist worker and its child process
@@ -1177,14 +1155,11 @@ Infra:
         min-version: "8.0"
         python-classes: ["Test*"]
         python-files: ["*_test.py", "*_tests.py", "test_*.py"]
-        python-classes: ["Test*"]
-        python-files: ["*_test.py", "*_tests.py", "test_*.py"]
         # Collect once from the canonical test root. The former list ended in
         # `.` and therefore traversed tests, source, docs, examples, scripts,
         # generated reports, and local runtime state a second time. Executable
         # documentation and auxiliary surfaces remain covered by explicit tests
         # and their lint/Markdown gates rather than duplicate pytest discovery.
-        test-paths: [tests]
         test-paths: [tests]
         # pytest applies filterwarnings last-entry-wins; the conform phase +
         # tomlsort alpha-sort filterwarnings, so any override MUST sort AFTER
@@ -1197,12 +1172,6 @@ Infra:
         # both VISIBLE-but-non-fatal, matching the non-strict enforcement policy
         # (flext-tests registers default::{category}); all other warnings stay
         # fatal. See flext-core test_enforcement_warning_visibility.
-        filter-warnings:
-          [
-            error,
-            "module::flext_core._constants.enforcement.FlextMroViolation",
-            "once::pytest.PytestAssertRewriteWarning",
-          ]
         filter-warnings:
           [
             error,
@@ -1248,15 +1217,11 @@ Infra:
         # every marker under the same database and deadline. Existing external
         # tests retain their declared environment and authentication requirements.
         external-gate-markers: [remote, docker]
-        external-gate-markers: [remote, docker]
         # CI and pre-commit share make.ci.value;
         # local and pre-push execution retain slow tests. The full phase of
         # `make test-full` includes these markers in every context.
         ci-excluded-markers: [slow]
-        ci-excluded-markers: [slow]
         # Fixtures declaring local engines or resolution cannot execute in approval.
-        ci-excluded-fixtures:
-          [resolved_make_templates, detector_project, mod_workspace, smells_project, _clear_make_ci_token]
         ci-excluded-fixtures:
           [resolved_make_templates, detector_project, mod_workspace, smells_project, _clear_make_ci_token]
         standard-addopts:
@@ -1277,16 +1242,13 @@ Infra:
         in_place: true
         process-timeout-seconds: 60
         sort_first: [project, build-system, tool, dependency-groups]
-        sort_first: [project, build-system, tool, dependency-groups]
       vulture:
         # Vulture reports keyword-bearing Protocol signature parameters as
         # unused variables at full confidence,
         # even with --ignore-decorators @runtime_checkable. The declaration-only
         # protocol facet is excluded; production models and runtime code remain scanned.
         exclude: ["*/_protocols/*"]
-        exclude: ["*/_protocols/*"]
         min-confidence: 100
-        paths: [src]
         paths: [src]
         verbose: false
       yamlfix:

@@ -33,6 +33,32 @@ class FlextInfraConfigModelsRender:
         """Typed input consumed by generated GitHub workflow templates."""
 
         dist: Annotated[t.NonEmptyStr, m.Field(description="Distribution name")]
+        owns_workspace_manifest: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Whether this repository owns the fleet workspace manifest; "
+                    "standalone members materialize the fleet root in CI"
+                ),
+            ),
+        ] = False
+        fleet_root_repository: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Fleet superproject slug the standalone member CI "
+                    "materializes as the enclosing uv workspace"
+                ),
+            ),
+        ] = "flext-sh/flext"
+        fleet_root_branch: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Fleet integration branch the materialized root checks out"
+                ),
+            ),
+        ] = "0.12.0-dev"
         docs_report_filenames: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(description="Structured docs reports CI dumps and uploads"),

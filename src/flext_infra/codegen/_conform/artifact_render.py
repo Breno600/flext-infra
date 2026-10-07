@@ -525,6 +525,9 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         return r[p.Model].ok(
             m.Infra.GithubWorkflowRenderSpec(
                 dist=dist,
+                owns_workspace_manifest=(
+                    repository_root / "config/workspace.yaml"
+                ).is_file(),
                 make_profile=target.make_profile,
                 gascity_enabled=target.gascity_enabled,
                 repository_branch=branch,
