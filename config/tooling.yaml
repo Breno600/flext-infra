@@ -318,6 +318,18 @@ Infra:
           # Pydantic runtime-evaluation is protected by the
           # runtime-evaluated-roots projection, not by disabling the rules.
           authorized-exceptions:
+            - files: "**/bootstrap.py"
+              rules: [suspicious-subprocess-import, subprocess-without-shell-equals-true]
+              authority: operator-ruling-2026-10-07-stdlib-only-recovery-bootstrap
+              reason: >-
+                The repository bootstrap is the stdlib-only recovery owner: it
+                runs BEFORE the project environment exists, so it cannot import
+                the fleet's process owner (flext_cli) and must spawn its
+                recovery subprocesses by file-path contract directly. Moving
+                the calls is impossible (this is the point of use) and
+                suppressing at the call sites would mask the contract; the
+                exemption is bounded to this module family and documents the
+                irreducible boundary.
             - files: "tests/test_snapshot_drill.py"
               rules: [import-private-name]
               authority: operator-relocation-mandate-2026-10-06-snapshot-stems
