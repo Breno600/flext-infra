@@ -321,9 +321,7 @@ if TYPE_CHECKING:
     from flext_infra._utilities.deferred_self_reference_rewrite import (
         FlextInfraUtilitiesDeferredSelfReferenceRewrite,
     )
-    from flext_infra._utilities.dependencies import (
-        FlextInfraUtilitiesDependenciesProfiles,
-    )
+    from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
     from flext_infra._utilities.discovery import FlextInfraUtilitiesDiscovery
     from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
     from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
@@ -482,7 +480,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesCodemodRules",
     "FlextInfraUtilitiesCompatibilityAliasValidation",
     "FlextInfraUtilitiesDeferredSelfReferenceRewrite",
-    "FlextInfraUtilitiesDependenciesProfiles",
+    "FlextInfraUtilitiesDependencies",
     "FlextInfraUtilitiesDiscovery",
     "FlextInfraUtilitiesDocs",
     "FlextInfraUtilitiesDocsApi",
@@ -683,7 +681,7 @@ install_lazy_exports(
         "FlextInfraUtilitiesDeferredSelfReferenceRewrite": (
             ".deferred_self_reference_rewrite"
         ),
-        "FlextInfraUtilitiesDependenciesProfiles": ".dependencies",
+        "FlextInfraUtilitiesDependencies": ".dependencies",
         "FlextInfraUtilitiesDiscovery": ".discovery",
         "FlextInfraUtilitiesDocs": ".docs",
         "FlextInfraUtilitiesDocsApi": ".docs_api",

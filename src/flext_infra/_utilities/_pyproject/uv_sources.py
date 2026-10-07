@@ -13,7 +13,7 @@ from flext_cli import r, u
 
 from flext_infra import c, m, p, t
 from flext_infra._utilities import (
-    FlextInfraUtilitiesDependenciesProfiles,
+    FlextInfraUtilitiesDependencies,
     FlextInfraUtilitiesPyprojectRequirements,
     FlextInfraUtilitiesPyprojectSession,
 )
@@ -47,7 +47,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
         if isinstance(project, Mapping):
             for key in (c.Infra.DEPENDENCIES, c.Infra.OPTIONAL_DEPENDENCIES):
                 requirements.extend(
-                    FlextInfraUtilitiesDependenciesProfiles.raw_requirement_values(
+                    FlextInfraUtilitiesDependencies.raw_requirement_values(
                         project.get(key),
                     ),
                 )
@@ -55,7 +55,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
         if isinstance(groups, Mapping):
             for group in groups.values():
                 requirements.extend(
-                    FlextInfraUtilitiesDependenciesProfiles.raw_requirement_values(
+                    FlextInfraUtilitiesDependencies.raw_requirement_values(
                         group,
                     ),
                 )
@@ -78,7 +78,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
             active
             for item in cls._document_requirement_lines(document).unwrap()
             if (
-                active := FlextInfraUtilitiesDependenciesProfiles.active_requirement(
+                active := FlextInfraUtilitiesDependencies.active_requirement(
                     item,
                     environment=environment,
                 )
@@ -109,7 +109,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
                     name
                     for item in lines.value
                     if cls._declares_direct_source(item)
-                    and (name := FlextInfraUtilitiesDependenciesProfiles.dep_name(item))
+                    and (name := FlextInfraUtilitiesDependencies.dep_name(item))
                     is not None
                 }),
             ),
@@ -172,7 +172,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
         retained_constraints = tuple(
             requirement
             for requirement in resolution.constraint_dependencies
-            if FlextInfraUtilitiesDependenciesProfiles.dep_name(requirement) != "uv"
+            if FlextInfraUtilitiesDependencies.dep_name(requirement) != "uv"
         )
         if retained_constraints:
             u.Cli.toml_sync_string_list(
@@ -263,7 +263,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
         retained_constraints = tuple(
             requirement
             for requirement in resolution.constraint_dependencies
-            if FlextInfraUtilitiesDependenciesProfiles.dep_name(requirement) != "uv"
+            if FlextInfraUtilitiesDependencies.dep_name(requirement) != "uv"
         )
         if retained_constraints:
             u.Cli.toml_sync_string_list(
@@ -338,7 +338,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
         required_names = {
             name
             for line in cls._document_requirement_lines(document).unwrap()
-            if (name := FlextInfraUtilitiesDependenciesProfiles.dep_name(line))
+            if (name := FlextInfraUtilitiesDependencies.dep_name(line))
             is not None
         }
         return tuple(sorted(set(workspace_members) & required_names))
