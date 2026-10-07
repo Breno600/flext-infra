@@ -23,12 +23,13 @@ from flext_infra._utilities import FlextInfraUtilitiesPyproject
 
 
 class FlextInfraUtilitiesDependencies:
-    """Canonical dependency namespace owner (one class per module).
+    """Canonical namespace owner."""
 
-    Dev-group collection, dependency-profile composition, and PEP 621
-    requirement parsing surfaces exposed flat through the ``u.Infra``
-    facade.
-    """
+# Why: dependency_waves subscripts r[t.SequenceOf[t.StrSequence]] at runtime, so
+# the typings facade cannot be TYPE_CHECKING-only here. c -> t is a forward
+# facade import and stays cycle-free.
+class FlextInfraUtilitiesDependenciesProfiles:
+    """Dev-group and dependency-profile surfaces of the dependency facade."""
 
     @staticmethod
     def project_dev_groups_from_payload(
@@ -930,4 +931,15 @@ class FlextInfraUtilitiesDependencies:
         return tuple(sorted(name for name in declared if name in workspace_names))
 
 
+# The flat module-level re-export: the package lazy map and the internal
+# importers (`from flext_infra._utilities import FlextInfraUtilitiesDependencies`)
+# resolve this name at module scope; the S6 namespace nesting moved the class
+# inside the family facade and the from-import contract requires the flat
+# binding to survive.
+FlextInfraUtilitiesDependencies = (
+)
+
+__all__: list[str] = [
+    "FlextInfraUtilitiesDependencies",
+]
 __all__: list[str] = ["FlextInfraUtilitiesDependencies"]
