@@ -221,7 +221,7 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             for (
                 alias,
                 absolute,
-            ) in FlextInfraUtilitiesRopeSourceBases.FlextInfraUtilitiesRopeSourceBases.lazy_module_aliases(
+            ) in FlextInfraUtilitiesRopeSourceBases.lazy_module_aliases(
                 init_module,
                 init_path,
                 init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT),
@@ -252,7 +252,7 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             workspace_root,
             project_roots=project_roots,
         ) as project:
-            return FlextInfraUtilitiesRopeSourceBases.FlextInfraUtilitiesRopeSourceBases.runtime_bases(
+            return FlextInfraUtilitiesRopeSourceBases.runtime_bases(
                 project,
                 sources,
                 roots,

@@ -19,7 +19,7 @@ from flext_infra import c, m, p, t
 from flext_infra._utilities._rope_source_bases_inventory import _SourceBindingCollector
 
 
-class FlextInfraUtilitiesRopeSourceBases:
+class FlextInfraUtilitiesRopeSourceBasesFamily:
     """Canonical namespace owner."""
 
 
@@ -121,7 +121,9 @@ class FlextInfraUtilitiesRopeSourceBases:
             for alias_module, captured in self._sources.items():
                 alias_path, alias_source = captured
                 for alias, absolute in (
-                    FlextInfraUtilitiesRopeSourceBases.FlextInfraUtilitiesRopeSourceBases.lazy_module_aliases(
+                    FlextInfraUtilitiesRopeSourceBasesFamily
+                    .FlextInfraUtilitiesRopeSourceBases
+                    .lazy_module_aliases(
                         alias_module,
                         alias_path,
                         alias_source,
@@ -216,12 +218,14 @@ class FlextInfraUtilitiesRopeSourceBases:
                 module if path.name == "__init__.py" else module.rpartition(".")[0]
             )
             globals_: MutableMapping[str, m.Infra.SourceClassReference | None] = {}
-            collector = _SourceBindingCollector(
-                module=module,
-                package=package,
-                definitions=self._definitions,
-                required_line=required_line,
-                allow_conditional=allow_conditional,
+            collector = (
+                FlextInfraUtilitiesRopeSourceBasesFamily._SourceBindingCollector(
+                    module=module,
+                    package=package,
+                    definitions=self._definitions,
+                    required_line=required_line,
+                    allow_conditional=allow_conditional,
+                )
             )
             collector.collect(parsed.body, globals_, globals_, "")
             targets, references = (
@@ -1137,7 +1141,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                 Sorted configured roots and derived Ruff-qualified base expressions.
 
             """
-            return FlextInfraUtilitiesRopeSourceBases._RuntimeBaseResolver(
+            return FlextInfraUtilitiesRopeSourceBasesFamily._RuntimeBaseResolver(
                 project,
                 sources,
                 roots,
@@ -1145,10 +1149,11 @@ class FlextInfraUtilitiesRopeSourceBases:
             ).run()
 
 
-
-
 # The flat module-level re-export: the package lazy map and the
 # internal from-import contract resolve this name at module scope
 # (the S6 nesting moved the class inside the family facade).
+FlextInfraUtilitiesRopeSourceBases = (
+    FlextInfraUtilitiesRopeSourceBasesFamily.FlextInfraUtilitiesRopeSourceBases
+)
 
 __all__: list[str] = ["FlextInfraUtilitiesRopeSourceBases"]

@@ -20,7 +20,7 @@ from flext_core import r
 from flext_infra import c, m, p, t
 
 
-class FlextInfraUtilitiesDependencies:
+class FlextInfraUtilitiesDependenciesFamily:
     """Canonical namespace owner."""
 
     # Why: dependency_waves subscripts r[t.SequenceOf[t.StrSequence]] at runtime, so
@@ -964,15 +964,9 @@ class FlextInfraUtilitiesDependencies:
 # importers (`from flext_infra._utilities import FlextInfraUtilitiesDependencies`)
 # resolve this name at module scope; the S6 namespace nesting moved the class
 # inside the family facade and the from-import contract requires the flat
-# binding to survive. The propagation wave rendered this re-export as an
-# empty tuple, rebinding the class name to a non-class and breaking every
-# consumer (metaclass conflict at the utilities facade assembly). The flat
-# binding is the nested implementation class itself, so every Profiles-level
-# surface stays inherited and the staticmethods above resolve through this
-# same module-level name.
-FlextInfraUtilitiesDependencies = FlextInfraUtilitiesDependencies.FlextInfraUtilitiesDependencies
+# binding to survive.
+FlextInfraUtilitiesDependencies = (
+    FlextInfraUtilitiesDependenciesFamily.FlextInfraUtilitiesDependencies
+)
 
-__all__: list[str] = [
-    "FlextInfraUtilitiesDependencies",
-]
 __all__: list[str] = ["FlextInfraUtilitiesDependencies"]
