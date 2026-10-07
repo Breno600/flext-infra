@@ -401,6 +401,7 @@ class FlextInfraCodegenLazyInit(
         )
         if file_plans.failure:
             return result_type.from_failure(file_plans)
+        all_plans = file_plans.value
         stable = self._verify_snapshots(snapshots)
         if stable.failure:
             return result_type.from_failure(stable)
@@ -408,7 +409,7 @@ class FlextInfraCodegenLazyInit(
             m.Infra.CodegenPhaseAnalysis(
                 phase=c.Infra.CodegenStagedFilePhase.LAZY_INIT,
                 files=all_plans,
-                inputs=tuple(snapshots.value[path] for path in sorted(snapshots.value)),
+                inputs=tuple(snapshots[path] for path in sorted(snapshots)),
                 publications=tuple(package_plans),
             ),
         )

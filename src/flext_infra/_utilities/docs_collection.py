@@ -12,6 +12,7 @@ from hashlib import sha256
 from pathlib import Path
 
 from flext_infra import m, t
+from flext_infra._config import config
 from flext_infra._utilities import (
     FlextInfraUtilitiesDocsCollectionVerify,
     FlextInfraUtilitiesDocsContract,
@@ -248,9 +249,6 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                 collection projection association.
 
         """
-        from flext_infra._config import config
-        from flext_infra._utilities import FlextInfraUtilitiesDocsContract
-
         root = repository_root.absolute()
         relative = configuration.canonical_dir
         if relative.is_absolute() or not relative.parts or ".." in relative.parts:

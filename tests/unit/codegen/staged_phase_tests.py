@@ -16,13 +16,13 @@ from pydantic import ValidationError
 from flext_infra import c, m
 
 
-def _staged_file_payload(phase: str) -> dict[str, Any]:
+def _staged_file_payload(phase: str, root: Path) -> dict[str, Any]:
     """Build one staged-publication payload with the given wire phase.
 
     Returns:
         The resulting ``dict[str, Any]``.
     """
-    project = Path("/tmp/codegen-staged-phase-contract")
+    project = root / "codegen-staged-phase-contract"
     path = project / "generated" / "artifact.txt"
     return {
         "phase": phase,
@@ -66,20 +66,20 @@ class TestsFlextInfraCodegenStagedFilePhase:
         )
 
     @staticmethod
-    def test_journal_coerces_every_declared_phase() -> None:
+    def test_journal_coerces_every_declared_phase(tmp_path: Path) -> None:
         """Each wire phase value validates into the closed enum contract."""
         accepted = [
             m.Infra.CodegenStagedFile.model_validate(
-                _staged_file_payload(phase.value),
+                _staged_file_payload(phase.value, tmp_path),
             ).phase
             for phase in c.Infra.CodegenStagedFilePhase
         ]
         tm.that(frozenset(accepted), eq=frozenset(c.Infra.CodegenStagedFilePhase))
 
     @staticmethod
-    def test_journal_rejects_phase_outside_the_contract() -> None:
+    def test_journal_rejects_phase_outside_the_contract(tmp_path: Path) -> None:
         """A literal outside the enum fails loud instead of freezing a string."""
         with pytest.raises(ValidationError, match="input_value='bogus-phase'"):
             _ = m.Infra.CodegenStagedFile.model_validate(
-                _staged_file_payload("bogus-phase"),
+                _staged_file_payload("bogus-phase", tmp_path),
             )

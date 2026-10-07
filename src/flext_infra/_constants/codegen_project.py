@@ -70,6 +70,26 @@ class FlextInfraConstantsCodegenProject:
         APPLY = "apply"
 
     @unique
+    class CodegenStagedFilePhase(StrEnum):
+        """Generation phase that owns one codegen staged publication.
+
+        The closed vocabulary the journal models accept in ``phase``; every
+        publication site names its owner through this enum instead of a
+        string literal, so the journal's phase contract is code-owned.
+        """
+
+        CONFORM_BOOTSTRAP = "conform-bootstrap"
+        DOCS = "docs"
+        LAZY_INIT = "lazy-init"
+        LAYOUT = "layout"
+        MISE = "mise"
+        RECOVERY = "recovery"
+        SCAFFOLD = "scaffold"
+        SEMANTIC = "semantic"
+        TRANSACTION = "transaction"
+        VERSION_FILE = "version-file"
+
+    @unique
     class MiseResolutionMode(StrEnum):
         """How an apply-mode ``codegen conform`` resolves the Mise toolchain.
 

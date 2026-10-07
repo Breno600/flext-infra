@@ -12,7 +12,6 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import re
-from collections.abc import MutableMapping
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -405,61 +404,81 @@ class FlextInfraUtilitiesRepository:
         return r[str].ok(candidate)
 
     @classmethod
-    def _declared_dependency_source(
+    def _declared_dependency_payload(
         cls,
-        *,
         pyproject_path: Path,
-        distribution: str,
-        prefix: str,
-        preference: t.StrSequence,
-    ) -> p.Result[t.Pair[str, str]]:
-        """Return the family line the pyproject declares, as a source for one member.
-
-        Internal dependencies name one provider base URL and one integration
-        line; uv.lock alone records the commit each line resolves to, so a
-        commit ref left in the projection declares no line. A plain
-        (source-less) requirement names a workspace dependency whose URL the
-        workspace manifest owns. The line supplies the source of
-        ``distribution``.
+    ) -> p.Result[t.JsonMapping]:
+        """Read and parse the owner-recovered pyproject declaration.
 
         Returns:
-            The family line the pyproject declares, as a source for one member.
+            The parsed pyproject mapping as one result payload.
 
         """
         # Identity detection consumes the same owner-recovered declaration as
         # metadata and template composition. Raw projection bytes may still
         # carry managed merge blocks while the transaction is only planning.
-
         text = FlextInfraUtilitiesPyproject.live_pyproject_text(pyproject_path)
         if text.failure:
-            return r[t.Pair[str, str]].from_failure(text)
+            return r[t.JsonMapping].from_failure(text)
         payload = u.Cli.toml_mapping_from_text(text.value)
         if payload is None:
-            return r[t.Pair[str, str]].fail(
+            return r[t.JsonMapping].fail(
                 f"pyproject is not valid TOML: {pyproject_path}",
             )
-        lines: MutableMapping[t.Pair[str, str], str] = {}
+        return r[t.JsonMapping].ok(payload)
+
+    @classmethod
+    def _declared_dependency_lines(
+        cls,
+        payload: t.JsonMapping,
+        *,
+        pyproject_path: Path,
+        prefix: str,
+    ) -> p.Result[dict[t.Pair[str, str], str]]:
+        """Collect the declared ``<prefix>*`` line sources of one pyproject.
+
+        Returns:
+            The declared base-url/ref lines mapped to one witness requirement.
+
+        """
+        lines: dict[t.Pair[str, str], str] = {}
         for requirement in cls._dependency_requirements(payload):
             parsed = cls._declared_requirement_line(requirement, prefix)
             if parsed.failure:
-                return r[t.Pair[str, str]].from_failure(parsed)
+                return r[dict[t.Pair[str, str], str]].from_failure(parsed)
             if parsed.value[0]:
                 lines.setdefault(parsed.value, requirement)
         if len(lines) > 1:
             declared = "; ".join(sorted(lines.values()))
-            return r[t.Pair[str, str]].fail(
+            return r[dict[t.Pair[str, str], str]].fail(
                 f"{pyproject_path.name} declares conflicting {prefix}* line sources "
                 f"(one family, one provider and ref): {declared}",
             )
-        if lines:
-            (base_url, ref), _ = next(iter(lines.items()))
-            return r[t.Pair[str, str]].ok((f"{base_url}/{distribution}.git", ref))
-        # uv workspace membership IS a declaration: a bare-name requirement of
-        # the distribution backed by `[tool.uv.sources.<name>] workspace = true`
-        # resolves through the workspace root's manifest, and the member's
-        # checkout IS the provider. The superproject integration line (already
-        # recovered from the workspace root's own manifest by the caller's
-        # manifest pass) names the published source.
+        return r[dict[t.Pair[str, str], str]].ok(lines)
+
+    @classmethod
+    def _declared_workspace_source(
+        cls,
+        payload: t.JsonMapping,
+        *,
+        pyproject_path: Path,
+        distribution: str,
+        preference: t.StrSequence,
+    ) -> p.Result[t.Pair[str, str]]:
+        """Resolve the workspace-membership source, or an empty payload.
+
+        uv workspace membership IS a declaration: a bare-name requirement of
+        the distribution backed by `[tool.uv.sources.<name>] workspace = true`
+        resolves through the workspace root's manifest, and the member's
+        checkout IS the provider. The superproject integration line (already
+        recovered from the workspace root's own manifest by the caller's
+        manifest pass) names the published source.
+
+        Returns:
+            The published source for one workspace member, or an EMPTY payload
+            (never None) when no declared source exists.
+
+        """
         sources = (
             payload.get("tool", {}).get("uv", {}).get("sources", {})
             if isinstance(payload.get("tool"), dict)
@@ -481,6 +500,48 @@ class FlextInfraUtilitiesRepository:
                     )
         # No declared source: absence is an EMPTY payload, never None.
         return r[t.Pair[str, str]].ok(("", ""))
+
+    @classmethod
+    def _declared_dependency_source(
+        cls,
+        *,
+        pyproject_path: Path,
+        distribution: str,
+        prefix: str,
+        preference: t.StrSequence,
+    ) -> p.Result[t.Pair[str, str]]:
+        """Return the family line the pyproject declares, as a source for one member.
+
+        Internal dependencies name one provider base URL and one integration
+        line; uv.lock alone records the commit each line resolves to, so a
+        commit ref left in the projection declares no line. A plain
+        (source-less) requirement names a workspace dependency whose URL the
+        workspace manifest owns. The line supplies the source of
+        ``distribution``.
+
+        Returns:
+            The family line the pyproject declares, as a source for one member.
+
+        """
+        payload = cls._declared_dependency_payload(pyproject_path)
+        if payload.failure:
+            return r[t.Pair[str, str]].from_failure(payload)
+        lines = cls._declared_dependency_lines(
+            payload.value,
+            pyproject_path=pyproject_path,
+            prefix=prefix,
+        )
+        if lines.failure:
+            return r[t.Pair[str, str]].from_failure(lines)
+        if lines.value:
+            (base_url, ref), _ = next(iter(lines.value.items()))
+            return r[t.Pair[str, str]].ok((f"{base_url}/{distribution}.git", ref))
+        return cls._declared_workspace_source(
+            payload.value,
+            pyproject_path=pyproject_path,
+            distribution=distribution,
+            preference=preference,
+        )
 
     @staticmethod
     def _dependency_requirements(payload: t.JsonMapping) -> list[str]:

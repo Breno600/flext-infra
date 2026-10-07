@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING, Literal
 
 from flext_core import r
 from flext_infra import c, m, t, u
-from flext_infra._config import config
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
