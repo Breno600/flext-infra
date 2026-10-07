@@ -1,0 +1,39 @@
+{#- Native mise bootstrap (F0): mise self-manages through the [tools] entry the
+   committed mise.lock pins. One host mise (the mise.run installer or the CI
+   action) runs `mise install`; the pinned github:jdx/mise release is
+   provisioned from that lock, and every later `mise` resolved through the
+   mise-managed shims runs exactly that release. The version guard replaces
+   the retired mise.version pin file: the running mise must match the lock
+   pin, or the environment is stale and only `make setup` repairs it. -#}
+{% macro mise_lock_pin_reader(project_root, mise_selector) -%}
+awk 'index($$0, "[[tools.\"{{ mise_selector }}\"]]") == 1 { inside = 1; next } inside && substr($$0, 1, 1) == "[" { exit } inside && $$1 == "version" { gsub(/[",]/, "", $$3); print $$3; exit }' "{{ project_root }}/mise.lock"
+{%- endmacro %}
+
+{% macro tool_bootstrap_recipe(target, project_root, mise_selector, lifecycle, make) -%}
+.PHONY: {{ target }}
+
+{{ target }}:
+	# The lifecycle invokes recursive make through mise, so preserve jobserver FDs.
+	+@set -eu; \
+	if ! command -v mise >/dev/null 2>&1; then \
+		printf 'ERROR: mise is not installed; install it (https://mise.run) and retry\n' >&2; \
+		exit 2; \
+	fi; \
+	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
+		mise -C "$(PROJECT_ROOT)" lock --bump; \
+	fi; \
+	mise -C "$(PROJECT_ROOT)" install --yes; \
+	mise_pin="$$( {{ mise_lock_pin_reader(project_root, mise_selector) }} )"; \
+	if [ -z "$$mise_pin" ]; then \
+		printf 'ERROR: mise.lock pins no {{ mise_selector }} release; run make upg\n' >&2; \
+		exit 2; \
+	fi; \
+	mise_receipt="$$(mise -C "{{ project_root }}" exec -- mise --version | cut -d ' ' -f1)"; \
+	if [ "$$mise_receipt" != "$$mise_pin" ]; then \
+		printf 'ERROR: provisioned Mise %s differs from the mise.lock pin %s; run make setup\n' "$$mise_receipt" "$$mise_pin" >&2; \
+		exit 2; \
+	fi; \
+	printf 'setup: mise %s provisioned from mise.lock\n' "$$mise_receipt"; \
+	printf 'setup: entering lifecycle (submodules, environment, hooks) make=%s\n' "$(SELF_MAKE_EXECUTABLE)"; \
+	mise -C "$(PROJECT_ROOT)" exec -- env "{{ make.ci.variable }}=$({{ make.ci.variable }})" {{ lifecycle }}
+{%- endmacro %}

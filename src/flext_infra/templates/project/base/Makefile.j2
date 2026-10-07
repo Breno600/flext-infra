@@ -1,5 +1,6 @@
 {% from "base_test_report_recipe.j2" import test_report_recipe -%}
 {% from "submodule_setup_recipe.j2" import submodule_setup_recipe -%}
+{% from "tool_bootstrap_recipe.j2" import tool_bootstrap_recipe, mise_lock_pin_reader -%}
 {# ---- Shared command bases --------------------------------------------------
    Every verb states only its delta (which gate list, which mode); the checker
    invocation, the CI gate filter, the empty-gates guard, and the fmt/fix
@@ -386,30 +387,12 @@ override PATH := $(RUNTIME_BIN):$(SANITIZED_CALLER_PATH)
 unexport UV
 export FLEXT_INFRA_PYTHON UV_PROJECT UV_PROJECT_ENVIRONMENT VIRTUAL_ENV PATH RUNTIME_ROOT
 
-# The bootstrap is the NATIVE mise/uv surface: `mise install` (locked from the
-# committed mise.lock) provisions every tool including mise itself; `make upg`
-# alone advances versions (`mise lock --bump`, `uv lock --upgrade --refresh`).
-# The lifecycle receives the resolved tool identities as environment.
+# One bootstrap serves `setup` (frozen install) and `upg` (resolve + install);
+# the public verb selects its lifecycle and resolution through target-specific
+# variables.
 TOOL_BOOTSTRAP_LIFECYCLE := _setup_lifecycle
-
-# Pin reader: the github:jdx/mise release line of the committed mise.lock —
-# presentation logic over the one lock source; no separate pin file exists.
-{% macro mise_lock_pin_reader(root, selector) -%}
-awk 'index($$0, "[[tools.\"{{ selector }}\"]]") == 1 { inside = 1; next } inside && substr($$0, 1, 1) == "[" { exit } inside && $$1 == "version" { gsub(/[",]/, "", $$3); print $$3; exit }' "{{ root }}/mise.lock"
-{%- endmacro %}
-
-.PHONY: _bootstrap_setup_tools
-_bootstrap_setup_tools: _builtin_require_mise
-	@set -eu; \
-	mise_actual="$$(mise --version 2>/dev/null | cut -d ' ' -f1)"; \
-	if [ "$$mise_actual" != "{{ mise_version }}" ]; then \
-		printf 'ERROR: mise %s differs from the declared release %s; run: mise use -g github:jdx/mise@{{ mise_version }}\n' "$$mise_actual" "{{ mise_version }}" >&2; \
-		exit 2; \
-	fi; \
-	export MISE_VERSION="$$mise_pin"; \
-	export SETUP_PYTHON="$$(mise which python)"; \
-	export SETUP_DIRENV="$$(mise which direnv)"; \
-	$(SELF_MAKE) $(TOOL_BOOTSTRAP_LIFECYCLE)
+TOOL_BOOTSTRAP_RESOLVE :=
+{{ tool_bootstrap_recipe("_bootstrap_setup_tools", "$(PROJECT_ROOT)", mise_selector, "$(SELF_MAKE) $(TOOL_BOOTSTRAP_LIFECYCLE)", make) }}
 
 # Every repository evaluates only itself, locally exactly as in CI: a workspace
 # root consumes its members as installed libraries and never fans a verb out
@@ -616,6 +599,7 @@ _builtin-pre-commit:
 # then installs from the fresh lock. Native mise locks are workspace-local, so
 # an attached member relocks its own mise.lock exactly like the runtime root.
 upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle
+upg: TOOL_BOOTSTRAP_RESOLVE := 1
 upg: _bootstrap_setup_tools
 else
 {% for verb in profile.verbs %}
@@ -673,9 +657,14 @@ _builtin_require_mise:
 		printf 'ERROR: missing %s/mise.lock; run make upg\n' "$(RUNTIME_ROOT)" >&2; \
 		exit 2; \
 	fi; \
+	mise_pin="$$( {{ mise_lock_pin_reader("$(RUNTIME_ROOT)", mise_selector) }} )"; \
+	if [ -z "$$mise_pin" ]; then \
+		printf 'ERROR: mise.lock pins no {{ mise_selector }} release; run make upg\n' "$(RUNTIME_ROOT)" >&2; \
+		exit 2; \
+	fi; \
 	mise_actual="$$(mise --version 2>/dev/null | cut -d ' ' -f1)"; \
-	if [ "$$mise_actual" != "{{ mise_version }}" ]; then \
-		printf 'ERROR: mise %s differs from the declared release %s; run: mise use -g github:jdx/mise@{{ mise_version }}\n' "$$mise_actual" "{{ mise_version }}" >&2; \
+	if [ "$$mise_actual" != "$$mise_pin" ]; then \
+		printf 'ERROR: mise %s differs from the mise.lock pin %s; run make setup\n' "$$mise_actual" "$$mise_pin" >&2; \
 		exit 2; \
 	fi
 
@@ -733,7 +722,6 @@ _upg_lifecycle: _builtin_setup_submodules
 	case " $(CUSTOM_DECLARED_TARGETS) " in \
 		*" pre-upg "*) $(SELF_MAKE) pre-upg ;; \
 	esac
-	@mise lock --bump
 	@$(UV) lock --project "$(PROJECT_ROOT)" --upgrade --refresh
 	@$(UV) lock --check --project "$(PROJECT_ROOT)"
 	@$(SELF_MAKE) _builtin_setup_environment
