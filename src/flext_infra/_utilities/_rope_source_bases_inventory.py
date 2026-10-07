@@ -121,9 +121,7 @@ class _SourceBindingCollector:
             self._required_line is not None
             and not scope
             and not (
-                node.lineno
-                <= self._required_line
-                <= (node.end_lineno or node.lineno)
+                node.lineno <= self._required_line <= (node.end_lineno or node.lineno)
             )
         ):
             bindings[node.name] = m.Infra.SourceClassReference(
@@ -186,9 +184,7 @@ class _SourceBindingCollector:
                     # imports; the re-exported names resolve in the module's
                     # own runtime, not statically.
                     continue
-                message = (
-                    f"Star import has no explicit class binding in {self._module}"
-                )
+                message = f"Star import has no explicit class binding in {self._module}"
                 raise ValueError(message)
             target = f"{imported}.{alias.name}"
             bindings[alias.asname or alias.name] = m.Infra.SourceClassReference(
@@ -262,8 +258,8 @@ class _SourceBindingCollector:
             for target in targets
         )
 
+    @staticmethod
     def _module_table_mutation(
-        self,
         targets: t.SequenceOf[ast.expr],
         bindings: t.MappingKV[str, m.Infra.SourceClassReference | None] | None = None,
     ) -> bool:
@@ -505,9 +501,7 @@ class _SourceBindingCollector:
 
         """
         if not self._allow_conditional:
-            message = (
-                f"Conditional exception-backed class bindings in {self._module}"
-            )
+            message = f"Conditional exception-backed class bindings in {self._module}"
             raise ValueError(message)
         conditional: MutableMapping[str, m.Infra.SourceClassReference | None] = {}
         self.collect(node.body, conditional, lexical, scope)
@@ -571,7 +565,9 @@ class _SourceBindingCollector:
                 attributes.insert(0, expression.attr)
             expression = expression.value
         if not isinstance(expression, ast.Name):
-            message = f"Unsupported class reference in {module}: {ast.unparse(expression)}"
+            message = (
+                f"Unsupported class reference in {module}: {ast.unparse(expression)}"
+            )
             raise TypeError(message)
         name = expression.id
         if name in bindings:

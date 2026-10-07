@@ -78,11 +78,15 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         if parsed.failure:
             return r[str].from_failure(parsed)
         source, project_name = parsed.value
-        # Workspace roots own their declared subprojects; a member that lives
-        # inside a superproject uv workspace (the detector's single
-        # superproject-manifest read) renders its sibling references through
-        # [tool.uv.sources] workspace = true instead of git+ URLs. True
-        # standalones keep the git+ form.
+        # Only the workspace root's render owns the workspace identity: it
+        # redirects its declared member requirements through [tool.uv.sources]
+        # workspace = true, which resolves solely inside the root's own
+        # manifest. Every other render — a superproject-attached member (the
+        # detector's single superproject-manifest read) or a true standalone —
+        # carries no member identity at all: its internal requirements render
+        # as inline PEP 508 git pins, the only shape a published manifest
+        # resolves from alone (a bare name plus a workspace source dies in
+        # every standalone consumer's uv).
         workspace_members = (
             tuple(
                 member.distribution
@@ -90,7 +94,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
                 if member.package
             )
             if workspace.repository.role is c.Infra.MakeProfile.WORKSPACE
-            else tuple(workspace.superproject_members)
+            else ()
         )
         cls._sync_dependency_groups(
             source,

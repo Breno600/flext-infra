@@ -195,8 +195,7 @@ class FlextInfraUtilitiesDependenciesFamily:
                     name
                     for dependency in item.runtime
                     if (
-                        name
-                        := FlextInfraUtilitiesDependencies.dep_name(
+                        name := FlextInfraUtilitiesDependencies.dep_name(
                             dependency,
                         )
                     )
