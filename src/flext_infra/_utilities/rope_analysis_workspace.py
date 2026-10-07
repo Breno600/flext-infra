@@ -22,6 +22,51 @@ from flext_infra._utilities import (
 )
 
 
+def _module_import_aliases(tree: ast.Module) -> MutableMapping[str, str]:
+    """Map one module's top-level imported names to their qualified sources.
+
+    Returns:
+        The local alias to fully qualified imported name mapping.
+
+    """
+    imports: MutableMapping[str, str] = {}
+    for node in tree.body:
+        if isinstance(node, ast.ImportFrom) and node.module and not node.level:
+            for alias in node.names:
+                imports[alias.asname or alias.name] = f"{node.module}.{alias.name}"
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                head = alias.name.partition(".")[0]
+                imports[alias.asname or head] = alias.asname or head
+    return imports
+
+
+def _classify_class_bases(
+    node: ast.ClassDef,
+    imports: t.MappingKV[str, str],
+    imported: t.MutableSequenceOf[str],
+    local: MutableMapping[str, t.MutableSequenceOf[str]],
+) -> None:
+    """Qualify one class declaration's bases into the imported/local buckets."""
+    bases = local.setdefault(node.name, [])
+    for base in node.bases:
+        expression = base
+        while isinstance(expression, ast.Subscript):
+            expression = expression.value
+        attributes: t.MutableSequenceOf[str] = []
+        while isinstance(expression, ast.Attribute):
+            attributes.insert(0, expression.attr)
+            expression = expression.value
+        if not isinstance(expression, ast.Name):
+            continue
+        if expression.id in imports:
+            qualified = ".".join((imports[expression.id], *attributes))
+            imported.append(qualified)
+            bases.append(f".{qualified}")
+        elif not attributes:
+            bases.append(expression.id)
+
+
 class FlextInfraUtilitiesRopeAnalysisWorkspace:
     """Rope-backed workspace indexing helpers."""
 
@@ -266,38 +311,12 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
 
         """
         tree = ast.parse(source)
-        imports: MutableMapping[str, str] = {}
-        for node in tree.body:
-            if isinstance(node, ast.ImportFrom) and node.module and not node.level:
-                for alias in node.names:
-                    imports[alias.asname or alias.name] = f"{node.module}.{alias.name}"
-            elif isinstance(node, ast.Import):
-                for alias in node.names:
-                    imports[alias.asname or alias.name.partition(".")[0]] = (
-                        alias.name if alias.asname else alias.name.partition(".")[0]
-                    )
+        imports = _module_import_aliases(tree)
         imported: t.MutableSequenceOf[str] = []
         local: MutableMapping[str, t.MutableSequenceOf[str]] = {}
         for node in ast.walk(tree):
-            if not isinstance(node, ast.ClassDef):
-                continue
-            bases = local.setdefault(node.name, [])
-            for base in node.bases:
-                expression = base
-                while isinstance(expression, ast.Subscript):
-                    expression = expression.value
-                attributes: t.MutableSequenceOf[str] = []
-                while isinstance(expression, ast.Attribute):
-                    attributes.insert(0, expression.attr)
-                    expression = expression.value
-                if not isinstance(expression, ast.Name):
-                    continue
-                if expression.id in imports:
-                    qualified = ".".join((imports[expression.id], *attributes))
-                    imported.append(qualified)
-                    bases.append(f".{qualified}")
-                elif not attributes:
-                    bases.append(expression.id)
+            if isinstance(node, ast.ClassDef):
+                _classify_class_bases(node, imports, imported, local)
         return imported, local
 
     @staticmethod

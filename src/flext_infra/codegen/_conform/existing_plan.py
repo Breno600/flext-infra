@@ -17,6 +17,10 @@ from flext_infra.codegen._conform.artifact_render import (
     FlextInfraCodegenConformArtifactRender,
 )
 from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
+from flext_infra.services.codegen import FlextInfraCodegen
+from flext_infra.workspace.environment_contracts import (
+    FlextInfraWorkspaceEnvironmentContracts,
+)
 
 
 class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRender):
@@ -1022,8 +1026,6 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             flag.
 
         """
-        from flext_infra.services.codegen import FlextInfraCodegen
-
         result_type = r[t.Pair[m.Infra.CodegenFilePlan | None, bool]]
         merged = FlextInfraCodegen.render_vscode_settings(root)
         if merged.failure:
@@ -1064,10 +1066,6 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             flag.
 
         """
-        from flext_infra.workspace.environment_contracts import (
-            FlextInfraWorkspaceEnvironmentContracts,
-        )
-
         result_type = r[t.Pair[m.Infra.CodegenFilePlan | None, bool]]
         normalized = FlextInfraWorkspaceEnvironmentContracts.envrc_local_normalized(
             current,

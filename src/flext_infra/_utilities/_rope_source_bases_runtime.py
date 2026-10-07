@@ -14,7 +14,12 @@ from pathlib import Path
 from typing import ClassVar
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities._rope_source_bases_inventory import _SourceBindingCollector
+from flext_infra._utilities import (
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeRuntime,
+    FlextInfraUtilitiesRopeSourceBasesAliases,
+    FlextInfraUtilitiesRopeSourceBasesInventory,
+)
 
 
 class FlextInfraUtilitiesRopeSourceBasesRuntime:
@@ -86,7 +91,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
             """Index every captured module and its declared namespaces."""
             sys.setrecursionlimit(max(sys.getrecursionlimit(), 4096))
             self._modules = {
-                module: self._inventory(module, captured)
+                module: self.inventory(module, captured)
                 for module, captured in self._sources.items()
             }
             self._namespaces = {
@@ -153,7 +158,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                         derived.add(reference.qualified_base)
             return tuple(sorted(derived))
 
-        def _inventory(
+        def inventory(
             self,
             module: str,
             captured: t.Pair[Path, str],
@@ -178,11 +183,6 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 The module's explicit lexical bindings, including value
                 shadowing.
 
-            Raises:
-                TypeError: If Rope does not return a module AST.
-                ValueError: If a required binding has unsupported source
-                    semantics.
-
             """
             request = m.Infra.SourceBindingInventoryRequest(
                 project=self._project,
@@ -192,7 +192,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 required_line=required_line,
                 allow_conditional=allow_conditional,
             )
-            return FlextInfraUtilitiesRopeSourceBasesInventory._inventory(
+            return FlextInfraUtilitiesRopeSourceBasesInventory.inventory(
                 request,
                 self._definitions,
             )
@@ -329,7 +329,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
             identity = self._declared_identity_at_line(name, line)
             if identity is None:
                 resource = module.get_resource()
-                self._inventory(
+                self.inventory(
                     name,
                     (Path(resource.real_path), module.source_code),
                     required_line=line,
@@ -792,7 +792,10 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
             """
             value = self._external[identity]
             if not isinstance(value, p.Infra.RopeBuiltinClass):
-                message = f"External class has no declared source or native identity: {identity}"
+                message = (
+                    f"External class has no declared source or native identity: "
+                    f"{identity}"
+                )
                 raise TypeError(message)
             builtin_class = FlextInfraUtilitiesRopeRuntime.runtime_type(
                 "rope.base.builtins",

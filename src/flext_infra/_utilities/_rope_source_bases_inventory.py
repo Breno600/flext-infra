@@ -24,7 +24,7 @@ class FlextInfraUtilitiesRopeSourceBasesInventory:
     """Captured-source inventory part of the source-bases composite."""
 
     @classmethod
-    def _inventory(
+    def inventory(
         cls,
         request: m.Infra.SourceBindingInventoryRequest,
         definitions: MutableMapping[str, m.Infra.SourceClassDefinition],
