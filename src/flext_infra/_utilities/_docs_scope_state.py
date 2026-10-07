@@ -14,7 +14,7 @@ from flext_cli import u
 from flext_infra import c, t
 from flext_infra._models import FlextInfraModelsWorkspace
 from flext_infra._utilities import (
-    FlextInfraUtilitiesDependenciesProfiles,
+    FlextInfraUtilitiesDependencies,
     FlextInfraUtilitiesDocsScopePathsMixin,
     FlextInfraUtilitiesPyproject,
 )
@@ -95,7 +95,7 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
             payload,
         )
         dependency_names = tuple(
-            FlextInfraUtilitiesDependenciesProfiles.declared_dependency_names_from_payload(
+            FlextInfraUtilitiesDependencies.declared_dependency_names_from_payload(
                 payload,
             ),
         )

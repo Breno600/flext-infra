@@ -1,4 +1,4 @@
-"""Source-bases composite facade over the inventory and runtime parts.
+"""Qualified runtime-base discovery over captured, unpublished source.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT.
@@ -10,14 +10,19 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_infra import m, t
-from flext_infra._utilities import (
+from flext_infra._utilities._rope_source_bases_aliases import (
+    FlextInfraUtilitiesRopeSourceBasesAliases,
+)
+from flext_infra._utilities._rope_source_bases_inventory import (
     FlextInfraUtilitiesRopeSourceBasesInventory,
+)
+from flext_infra._utilities._rope_source_bases_runtime import (
     FlextInfraUtilitiesRopeSourceBasesRuntime,
 )
 
 
 class FlextInfraUtilitiesRopeSourceBases:
-    """Source-bases composite facade over the inventory and runtime parts."""
+    """Source-bases composite facade over the inventory, aliases, and runtime parts."""
 
     @classmethod
     def inventory(
@@ -34,6 +39,25 @@ class FlextInfraUtilitiesRopeSourceBases:
         return FlextInfraUtilitiesRopeSourceBasesInventory.inventory(
             request,
             definitions,
+        )
+
+    @classmethod
+    def lazy_module_aliases(
+        cls,
+        module: str,
+        path: Path,
+        source: str,
+    ) -> dict[str, str]:
+        """Read the ``install_lazy_exports`` namespace alias map of one module.
+
+        Returns:
+            The module's facade alias names routed to their lazy module paths.
+
+        """
+        return FlextInfraUtilitiesRopeSourceBasesAliases.lazy_module_aliases(
+            module,
+            path,
+            source,
         )
 
     @classmethod
@@ -64,9 +88,5 @@ class FlextInfraUtilitiesRopeSourceBases:
             extra_module_aliases,
         )
 
-
-# The flat module-level re-export: the package lazy map and the
-# internal from-import contract resolve this name at module scope
-# (the S6 nesting moved the class inside the family facade).
 
 __all__: list[str] = ["FlextInfraUtilitiesRopeSourceBases"]

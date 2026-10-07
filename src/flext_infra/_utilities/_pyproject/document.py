@@ -12,7 +12,7 @@ from flext_cli import r, u
 
 from flext_infra import c, m, p, t
 from flext_infra._utilities import (
-    FlextInfraUtilitiesDependenciesProfiles,
+    FlextInfraUtilitiesDependencies,
     FlextInfraUtilitiesPyprojectUvSources,
 )
 
@@ -113,7 +113,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         unused_candidates = sorted(
             candidate_sources.keys()
             - set(
-                FlextInfraUtilitiesDependenciesProfiles.declared_dependency_names(
+                FlextInfraUtilitiesDependencies.declared_dependency_names(
                     source,
                 ),
             ),
