@@ -149,3 +149,9 @@ class FlextInfraFlextUtilitiesPrivateImportAncestry:
 
 
 __all__: list[str] = ["FlextInfraFlextUtilitiesPrivateImportAncestry"]
+
+
+# The flat module-level re-export: the package lazy map and the internal
+# from-import contract resolve this name at module scope (the S6 nesting
+# moved the class inside the family facade).
+FlextInfraUtilitiesPrivateImportAncestry = FlextInfraFlextUtilitiesPrivateImportAncestry.FlextInfraUtilitiesPrivateImportAncestry
