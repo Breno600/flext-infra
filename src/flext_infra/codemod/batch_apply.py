@@ -12,12 +12,12 @@ from typing import override
 
 from flext_core import r
 from flext_infra import m, p, t, u
-from flext_infra._utilities import FlextInfraUtilitiesCodemodProject
 from flext_infra.base import FlextInfraServiceBase
 from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
 from flext_infra.codemod.semantic_apply import FlextInfraCodemodSemanticApply
 from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
+from flext_infra.utilities import FlextInfraUtilitiesCodemodProject
 
 
 class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
