@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_cli import r
+from flext_cli import r, u
 from packaging.version import InvalidVersion, Version
 
 from flext_infra import c, p, t
@@ -286,8 +286,6 @@ class FlextInfraUtilitiesVersioning:
             r[bool] with True on success.
 
         """
-        from flext_cli import u
-
         pyproject = project_path / c.PYPROJECT_FILENAME
         try:
             content = pyproject.read_text(encoding=c.Cli.ENCODING_DEFAULT)

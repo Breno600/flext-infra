@@ -6,9 +6,14 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_cli import r
+from flext_cli import r, u
 
 from flext_infra import c, p, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDependenciesProfiles,
+    FlextInfraUtilitiesManagedConflicts,
+    FlextInfraUtilitiesPyprojectRequirements,
+)
 
 
 class FlextInfraUtilitiesPyprojectOverlay:
@@ -26,8 +31,6 @@ class FlextInfraUtilitiesPyprojectOverlay:
             The resulting ``(required, custom)`` requirement lists.
 
         """
-        from flext_cli import u
-
         validated_required: p.Result[t.StrSequence] = u.validate_value(
             t.Infra.STR_SEQ_ADAPTER,
             project.get(key, []),
@@ -68,11 +71,6 @@ class FlextInfraUtilitiesPyprojectOverlay:
             The resulting ``list[t.JsonValue]``.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesDependenciesProfiles,
-            FlextInfraUtilitiesPyprojectRequirements,
-        )
-
         owned_names = {
             FlextInfraUtilitiesDependenciesProfiles.dep_name(item) for item in required
         }
@@ -104,8 +102,6 @@ class FlextInfraUtilitiesPyprojectOverlay:
             The resulting ``p.Result[t.JsonMapping]``.
 
         """
-        from flext_cli import u
-
         project = dict(u.Cli.toml_mapping_child(merged, c.Infra.PROJECT) or {})
         live_project = u.Cli.toml_mapping_child(live_payload, c.Infra.PROJECT) or {}
         for key in project_keys:
@@ -131,8 +127,6 @@ class FlextInfraUtilitiesPyprojectOverlay:
         live_payload: t.JsonMapping,
     ) -> None:
         """Preserve the live project dev additions before conformance floors."""
-        from flext_cli import u
-
         groups = dict(u.Cli.toml_mapping_child(merged, c.Infra.DEPENDENCY_GROUPS) or {})
         live_groups = (
             u.Cli.toml_mapping_child(live_payload, c.Infra.DEPENDENCY_GROUPS) or {}
@@ -148,8 +142,6 @@ class FlextInfraUtilitiesPyprojectOverlay:
         tool_tables: t.StrSequence,
     ) -> None:
         """Copy every live tool table the fleet does not manage."""
-        from flext_cli import u
-
         tool = dict(u.Cli.toml_mapping_child(merged, c.Infra.TOOL) or {})
         live_tool = u.Cli.toml_mapping_child(live_payload, c.Infra.TOOL) or {}
         managed = frozenset(tool_tables)
@@ -173,10 +165,6 @@ class FlextInfraUtilitiesPyprojectOverlay:
             The resulting ``p.Result[str]``.
 
         """
-        from flext_cli import u
-
-        from flext_infra._utilities import FlextInfraUtilitiesManagedConflicts
-
         spec = FlextInfraUtilitiesManagedConflicts.pyproject_managed_file()
         if spec.failure:
             return r[str].from_failure(spec)

@@ -16,10 +16,12 @@ from flext_infra.release.orchestrator import FlextInfraReleaseOrchestrator
 from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
 from flext_infra.services.cli_routes_refactor import FlextInfraRefactorRoutes
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+from flext_infra.workspace.environment import FlextInfraWorkspaceEnvironmentMixin
 from flext_infra.workspace.environment_provenance import (
     FlextInfraWorkspaceEnvironmentProvenance,
 )
 from flext_infra.workspace.fleet_gaps import FlextInfraWorkspaceFleetGaps
+from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
 from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
 
 
@@ -36,8 +38,6 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-        from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
-
         return FlextInfraFlextBindingService.apply(
             consumer_root=params.repository_root,
             flext_root=params.flext_root,
@@ -54,10 +54,6 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-        from flext_infra.workspace.environment import (
-            FlextInfraWorkspaceEnvironmentMixin,
-        )
-
         request = m.Infra.WorkspaceEnvironmentSyncRequest.model_validate(
             params.model_dump(),
         )
