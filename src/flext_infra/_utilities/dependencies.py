@@ -196,7 +196,7 @@ class FlextInfraUtilitiesDependencies:
                     for dependency in item.runtime
                     if (
                         name
-                        := FlextInfraUtilitiesDependencies.FlextInfraUtilitiesDependencies.dep_name(
+                        := FlextInfraUtilitiesDependencies.dep_name(
                             dependency,
                         )
                     )
@@ -303,7 +303,7 @@ class FlextInfraUtilitiesDependencies:
                 values: list[str] = []
                 for group in raw.values():
                     values.extend(
-                        FlextInfraUtilitiesDependencies.FlextInfraUtilitiesDependencies.raw_requirement_values(
+                        FlextInfraUtilitiesDependencies.raw_requirement_values(
                             group,
                         ),
                     )
@@ -795,7 +795,7 @@ class FlextInfraUtilitiesDependencies:
                 item = raw.strip()
                 if not item:
                     continue
-                dependency_name = FlextInfraUtilitiesDependencies.FlextInfraUtilitiesDependencies.dep_name(
+                dependency_name = FlextInfraUtilitiesDependencies.dep_name(
                     item,
                 )
                 if dependency_name is None or dependency_name in selected_by_name:
@@ -964,9 +964,13 @@ class FlextInfraUtilitiesDependencies:
 # importers (`from flext_infra._utilities import FlextInfraUtilitiesDependencies`)
 # resolve this name at module scope; the S6 namespace nesting moved the class
 # inside the family facade and the from-import contract requires the flat
-# binding to survive.
-FlextInfraUtilitiesDependencies = (
-)
+# binding to survive. The propagation wave rendered this re-export as an
+# empty tuple, rebinding the class name to a non-class and breaking every
+# consumer (metaclass conflict at the utilities facade assembly). The flat
+# binding is the nested implementation class itself, so every Profiles-level
+# surface stays inherited and the staticmethods above resolve through this
+# same module-level name.
+FlextInfraUtilitiesDependencies = FlextInfraUtilitiesDependencies.FlextInfraUtilitiesDependencies
 
 __all__: list[str] = [
     "FlextInfraUtilitiesDependencies",
