@@ -42,6 +42,7 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
         """
         from flext_infra.api import infra
         from flext_infra.services.cli_mod_progress import FlextInfraCliModProgress
+
         result = infra.apply_renames(request)
         if result.failure:
             return r[t.Cli.ResultValue].from_failure(result)
@@ -63,6 +64,7 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
         """
         from flext_infra.api import infra
         from flext_infra.services.cli_mod_progress import FlextInfraCliModProgress
+
         return infra.mod(request, FlextInfraCliModProgress())
 
     @staticmethod
@@ -76,6 +78,7 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
 
         """
         from flext_infra.api import infra
+
         return infra.mod_text(request)
 
     @staticmethod
@@ -89,6 +92,7 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
 
         """
         from flext_infra.api import infra
+
         return infra.mod_text_candidate(request)
 
     refactor_routes: ClassVar[t.VariadicTuple[m.Cli.ResultCommandRoute]] = (

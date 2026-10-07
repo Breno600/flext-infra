@@ -9,7 +9,6 @@ from __future__ import annotations
 from flext_cli import cli
 
 
-
 class FlextInfraMain:
     """Facade for the flext-infra CLI process entrypoint."""
 
@@ -17,6 +16,7 @@ class FlextInfraMain:
     def run() -> None:
         """Load and execute the sole facade-backed CLI."""
         from flext_infra.cli import main
+
         cli.exit(main())
 
 

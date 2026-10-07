@@ -112,6 +112,7 @@ class FlextInfraUtilitiesPromotedInvocation(FlextInfraUtilitiesPromotedWorkspace
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesBase
+
         if param.name == c.Infra.PromotedSelector.WHAT:
             return command.what
         return FlextInfraUtilitiesBase.env_value(param.name, param.default)

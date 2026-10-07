@@ -129,6 +129,7 @@ class FlextInfraUtilitiesCodegenFilePlan:
 
         """
         from flext_cli import u
+
         states: list[cli_m.Cli.AtomicFileState] = []
         for path in sorted(set(paths)):
             state = u.Cli.atomic_read_binary_file_state(path, required=True)

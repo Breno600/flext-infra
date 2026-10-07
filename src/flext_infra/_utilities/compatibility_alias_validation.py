@@ -82,6 +82,7 @@ class FlextInfraUtilitiesCompatibilityAliasValidation:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
         tree = ast.parse(source, filename=str(file_path))
         for node in tree.body:
             value = FlextInfraUtilitiesCompatibilityAliasValidation._dunder_all_value(

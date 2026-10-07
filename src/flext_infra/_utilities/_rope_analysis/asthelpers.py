@@ -57,6 +57,7 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+
         file_path = FlextInfraUtilitiesRopeCore.resource_file_path(
             rope_project,
             resource,
@@ -124,6 +125,7 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         rope_project = FlextInfraUtilitiesRopeAnalysisAstHelpers._shared_parse_project()
         result: t.Infra.RopePyModule = (
             FlextInfraUtilitiesRopeRuntime.build_string_module(rope_project, source)
@@ -140,6 +142,7 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
         """
         from flext_infra._settings import settings
         from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+
         cached = FlextInfraUtilitiesRopeAnalysisAstHelpers._parse_project
         if cached is None:
             # Root-cause fix: the anchor was a hardcoded

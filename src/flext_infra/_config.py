@@ -55,6 +55,7 @@ class FlextInfraConfig(FlextCliConfig):
 
         """
         from flext_infra._constants import FlextInfraConstantsCodegenProject
+
         files = [
             item
             for item in super()._config_files()

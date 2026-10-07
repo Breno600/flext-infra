@@ -289,6 +289,7 @@ class FlextInfraEnsurePyrightConfigPhase:
 
         """
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
         rules = self._tool_config.tools.pyright.path_rules
         workspace_excludes: t.StrSequence = ()
         if analysis_exclusions is None and project_root is not None:
@@ -365,6 +366,7 @@ class FlextInfraEnsurePyrightConfigPhase:
 
         """
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
         generated_roots = (
             paths_manager.generated_python_roots if paths_manager is not None else ()
         )

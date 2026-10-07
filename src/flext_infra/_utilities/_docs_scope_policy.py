@@ -9,7 +9,6 @@ from __future__ import annotations
 from fnmatch import fnmatch
 from pathlib import Path
 
-
 from flext_infra import c, t
 from flext_infra._utilities import FlextInfraUtilitiesDocsScopeStateMixin
 
@@ -42,6 +41,7 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
 
         """
         from flext_cli import u
+
         path = FlextInfraUtilitiesDocsScopePolicyMixin.config_path(repository_root)
         # An absent optional config has no parent identity to authenticate. A
         # present parent is delegated to the atomic owner, which still rejects
@@ -90,7 +90,9 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
 
         """
         from flext_cli import u
+
         from flext_infra._utilities import FlextInfraUtilitiesWorkspaceManifest
+
         manifest_path = FlextInfraUtilitiesWorkspaceManifest.workspace_manifest_path(
             repository_root,
         )

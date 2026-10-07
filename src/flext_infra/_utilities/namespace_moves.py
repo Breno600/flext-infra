@@ -31,6 +31,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeImports
+
         cleanup_result = FlextInfraUtilitiesRopeImports.normalize_imports(
             rope_project,
             file_paths=(file_path,),
@@ -100,6 +101,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRefactorNamespaceCommon
+
         blocks: t.MutableSequenceOf[str] = []
         ranges: t.MutableSequenceOf[t.IntPair] = []
         moved: t.MutableSequenceOf[str] = []
@@ -129,6 +131,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRefactorNamespaceCommon
+
         expected_target_source = (
             target_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             if target_file.is_file()
@@ -188,7 +191,11 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             RuntimeError: If ``not ok``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesProtectedEdit, FlextInfraUtilitiesRefactorNamespaceCommon
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesProtectedEdit,
+            FlextInfraUtilitiesRefactorNamespaceCommon,
+        )
+
         source = source_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         blocks, ranges, moved = (
             FlextInfraUtilitiesRefactorNamespaceMoves._moved_block_facts(
@@ -245,6 +252,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
         pymodule = FlextInfraUtilitiesRopeAnalysis.parse_string_module(source)
         lines = source.splitlines()
         bindings: MutableMapping[str, str] = {}
@@ -280,6 +288,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
         import_map = FlextInfraUtilitiesRefactorNamespaceMoves._import_bindings(source)
         required_imports: t.MutableSequenceOf[str] = []
         seen_imports: t.Infra.StrSet = set()
@@ -306,7 +315,11 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             The resulting ``str``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis, FlextInfraUtilitiesRopeAnalysisAstHelpers
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeAnalysis,
+            FlextInfraUtilitiesRopeAnalysisAstHelpers,
+        )
+
         pymodule = FlextInfraUtilitiesRopeAnalysis.parse_string_module(source)
         lines = source.splitlines()
         module_ast = pymodule.get_ast()
@@ -433,6 +446,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeSource
+
         return {
             bound
             for _name, bound in FlextInfraUtilitiesRopeSource.parse_import_names(
@@ -464,6 +478,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeSource
+
         later_layers = {"p", "m", "u"}
         for import_line in required_imports:
             for _name, bound in FlextInfraUtilitiesRopeSource.parse_import_names(
@@ -541,6 +556,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRefactorNamespaceCommon
+
         lines = FlextInfraUtilitiesRefactorNamespaceCommon.insert_import_lines(
             lines=target_lines,
             imports=missing_imports,
@@ -591,6 +607,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         instead of failing the verb.
         """
         from flext_infra._utilities import FlextInfraUtilitiesProtectedEdit
+
         FlextInfraUtilitiesProtectedEdit.protected_source_writes(
             dict(writes),
             request=m.Infra.ProtectedSourceWritesRequest(
@@ -622,6 +639,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRefactorNamespaceCommon
+
         public_alias_names = {name for name in alias_names if not name.startswith("_")}
         if not public_alias_names:
             return
@@ -729,6 +747,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
         source_pymodule = FlextInfraUtilitiesRopeAnalysis.parse_string_module(
             kept_source,
         )
@@ -773,7 +792,11 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             The resulting ``str``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeSource, FlextInfraUtilitiesTransformerHeader
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeSource,
+            FlextInfraUtilitiesTransformerHeader,
+        )
+
         prefix, separator, names_part = import_line.partition(" import ")
         if not separator:
             return import_line
@@ -803,7 +826,12 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             The resulting ``t.StrSequence``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis, FlextInfraUtilitiesRopeAnalysisAstHelpers, FlextInfraUtilitiesRopeSource
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeAnalysis,
+            FlextInfraUtilitiesRopeAnalysisAstHelpers,
+            FlextInfraUtilitiesRopeSource,
+        )
+
         moved_source = "\n".join(blocks)
         moved_pymodule = FlextInfraUtilitiesRopeAnalysis.parse_string_module(
             moved_source,
@@ -860,6 +888,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
         source_pymodule = FlextInfraUtilitiesRopeAnalysis.parse_string_module(source)
         source_ast = FlextInfraUtilitiesRopeAnalysis.ensure_ast_node(
             source_pymodule.get_ast(),
@@ -912,7 +941,12 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             ValueError: If refusing moved-import rewrite outside project.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeCore, FlextInfraUtilitiesRopeImports, FlextInfraUtilitiesRopeRuntime
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeCore,
+            FlextInfraUtilitiesRopeImports,
+            FlextInfraUtilitiesRopeRuntime,
+        )
+
         with FlextInfraUtilitiesRopeCore.open_project(project_root) as rope_project:
             mappings: t.MutableSequenceOf[t.Triple[str, str, t.VariadicTuple[str]]] = []
             for source, target, names in moves:

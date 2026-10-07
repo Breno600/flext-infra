@@ -77,6 +77,7 @@ class FlextInfraCodegenFixerWorkspaceMixin(FlextInfraCodegenFixerPassesMixin):
 
         """
         from flext_infra.refactor.namespace_enforcer import FlextInfraNamespaceEnforcer
+
         if projects is not None:
             selected_projects = tuple(projects)
         else:

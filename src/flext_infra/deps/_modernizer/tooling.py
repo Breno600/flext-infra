@@ -115,7 +115,10 @@ class FlextInfraPyprojectModernizerTooling:
             The resulting ``p.Result[m.Infra.ToolingRuntimeContext]``.
 
         """
-        from flext_infra.deps.phases.ensure_pyright import FlextInfraEnsurePyrightConfigPhase
+        from flext_infra.deps.phases.ensure_pyright import (
+            FlextInfraEnsurePyrightConfigPhase,
+        )
+
         result_type = r[m.Infra.ToolingRuntimeContext]
         conformed = self._conformed_seed_tools(
             request.path,

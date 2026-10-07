@@ -308,7 +308,10 @@ class FlextInfraPyprojectModernizerRun:
             The resulting ``int``.
 
         """
-        from flext_infra.deps._floor_profile_writer import FlextInfraDepsFloorProfileWriter
+        from flext_infra.deps._floor_profile_writer import (
+            FlextInfraDepsFloorProfileWriter,
+        )
+
         try:
             root_project_name = u.Infra.project_name_from_payload(
                 root_state.pyproject_path,

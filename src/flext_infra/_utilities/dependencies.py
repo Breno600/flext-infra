@@ -40,6 +40,7 @@ class FlextInfraFlextUtilitiesDependencies:
 
             """
             from flext_cli import u
+
             project = u.Cli.json_as_mapping(payload.get(c.Infra.PROJECT, None))
             optional = u.Cli.json_as_mapping(
                 project.get(c.Infra.OPTIONAL_DEPENDENCIES, None),
@@ -65,6 +66,7 @@ class FlextInfraFlextUtilitiesDependencies:
 
             """
             from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
             normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
             if not normalized:
                 # Keep the empty mapping immutable and fully typed.
@@ -73,7 +75,8 @@ class FlextInfraFlextUtilitiesDependencies:
 
         @classmethod
         def canonical_dev_dependencies(
-            cls, document: t.Cli.TomlDocument
+            cls,
+            document: t.Cli.TomlDocument,
         ) -> t.StrSequence:
             """Merge all canonical dev dependency groups from one TOML document.
 
@@ -82,6 +85,7 @@ class FlextInfraFlextUtilitiesDependencies:
 
             """
             from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
             normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
             if not normalized:
                 return ()
@@ -107,7 +111,8 @@ class FlextInfraFlextUtilitiesDependencies:
 
         @classmethod
         def flext_dependency_namespaces(
-            cls, document: t.Cli.TomlDocument
+            cls,
+            document: t.Cli.TomlDocument,
         ) -> t.StrSequence:
             """Extract declared FLEXT dependency namespaces from one TOML document.
 
@@ -116,6 +121,7 @@ class FlextInfraFlextUtilitiesDependencies:
 
             """
             from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
             normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
             if not normalized:
                 return ()
@@ -136,6 +142,7 @@ class FlextInfraFlextUtilitiesDependencies:
             # when their uv source declaration is owned by an enclosing workspace.
 
             from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
             normalized = FlextInfraUtilitiesPyproject.validate_infra_payload(payload)
             return tuple(
                 sorted(
@@ -190,7 +197,7 @@ class FlextInfraFlextUtilitiesDependencies:
                     if (
                         name
                         := FlextInfraFlextUtilitiesDependencies.FlextInfraUtilitiesDependencies.dep_name(
-                            dependency
+                            dependency,
                         )
                     )
                 }
@@ -297,7 +304,7 @@ class FlextInfraFlextUtilitiesDependencies:
                 for group in raw.values():
                     values.extend(
                         FlextInfraFlextUtilitiesDependencies.FlextInfraUtilitiesDependencies.raw_requirement_values(
-                            group
+                            group,
                         ),
                     )
                 return values
@@ -550,7 +557,9 @@ class FlextInfraFlextUtilitiesDependencies:
 
             """
             from flext_cli import u
+
             from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
             pyproject = project_root / c.PYPROJECT_FILENAME
             payload = u.Cli.toml_read_json(pyproject).unwrap()
             project_name = canonicalize_name(
@@ -649,6 +658,7 @@ class FlextInfraFlextUtilitiesDependencies:
 
             """
             from flext_cli import u
+
             versions: MutableMapping[str, str] = {}
             for distribution in u.installed_distributions():
                 if distribution.read_text("direct_url.json") is not None:
@@ -768,7 +778,7 @@ class FlextInfraFlextUtilitiesDependencies:
 
             """
             head_match = c.Infra.PEP621_REQUIREMENT_HEAD_RE.match(
-                requirement_part.strip()
+                requirement_part.strip(),
             )
             return head_match.group("head").strip() if head_match is not None else ""
 
@@ -786,7 +796,7 @@ class FlextInfraFlextUtilitiesDependencies:
                 if not item:
                     continue
                 dependency_name = FlextInfraFlextUtilitiesDependencies.FlextInfraUtilitiesDependencies.dep_name(
-                    item
+                    item,
                 )
                 if dependency_name is None or dependency_name in selected_by_name:
                     continue
@@ -795,7 +805,8 @@ class FlextInfraFlextUtilitiesDependencies:
 
         @classmethod
         def declared_dependency_names(
-            cls, document: t.Cli.TomlDocument
+            cls,
+            document: t.Cli.TomlDocument,
         ) -> t.StrSequence:
             """Return normalized dependency names from one TOML document.
 
@@ -804,6 +815,7 @@ class FlextInfraFlextUtilitiesDependencies:
 
             """
             from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
             normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
             if not normalized:
                 return ()

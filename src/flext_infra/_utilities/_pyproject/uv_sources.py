@@ -12,7 +12,10 @@ from typing import TYPE_CHECKING
 from flext_cli import r
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities import FlextInfraUtilitiesPyprojectRequirements, FlextInfraUtilitiesPyprojectSession
+from flext_infra._utilities import (
+    FlextInfraUtilitiesPyprojectRequirements,
+    FlextInfraUtilitiesPyprojectSession,
+)
 
 if TYPE_CHECKING:
     from tomlkit.items import Table
@@ -36,7 +39,9 @@ class FlextInfraUtilitiesPyprojectUvSources(
 
         """
         from flext_cli import u
+
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         payload = u.Cli.toml_as_mapping(document)
         if payload is None:
             return r[list[str]].fail("pyproject document is not a TOML mapping")
@@ -71,6 +76,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         return tuple(
             active
             for item in cls._document_requirement_lines(document).unwrap()
@@ -98,6 +104,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         lines = cls._document_requirement_lines(document)
         if lines.failure:
             return r[t.VariadicTuple[str]].from_failure(lines)
@@ -122,6 +129,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
 
         """
         from flext_cli import u
+
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if tool is None:
             tool = u.Cli.toml_ensure_table(document, c.Infra.TOOL)
@@ -141,6 +149,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
         resolutions when no candidate is declared (flext-oe420).
         """
         from flext_cli import u
+
         if candidate_sources:
             u.Cli.toml_sync_string_list(
                 uv,
@@ -170,7 +179,9 @@ class FlextInfraUtilitiesPyprojectUvSources(
         the keys everywhere so no orphan cap survives (flext-gzfd2 class).
         """
         from flext_cli import u
+
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         retained_constraints = tuple(
             requirement
             for requirement in resolution.constraint_dependencies
@@ -199,6 +210,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
         unsatisfiable).
         """
         from flext_cli import u
+
         if resolution.environments:
             # Declared as list[JsonValue], not list[str]: `list` is invariant,
             # so the narrower element type is not assignable to the writer's
@@ -218,6 +230,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
         do not gate on owns_uv_root_policy (that stripped member excludes).
         """
         from flext_cli import u
+
         exclude_payload = list(
             t.Cli.JSON_LIST_ADAPTER.validate_python([
                 {
@@ -256,7 +269,9 @@ class FlextInfraUtilitiesPyprojectUvSources(
 
         """
         from flext_cli import u
+
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         uv = cls._resolved_uv_table(document)
         cls._sync_uv_candidates(uv, candidate_sources)
         u.Cli.toml_remove_key_if_present(uv, "required-version")
@@ -342,6 +357,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         required_names = {
             name
             for line in cls._document_requirement_lines(document).unwrap()
@@ -357,6 +373,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
     ) -> None:
         """Prune stale member sources and redirect every wanted member."""
         from flext_cli import u
+
         sources = u.Cli.toml_table_child(uv, "sources")
         if sources is None:
             sources = u.Cli.toml_ensure_table(uv, "sources")
@@ -370,6 +387,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
     def _prune_member_sources(uv: Table) -> None:
         """Drop fleet member sources left over from a workspace render."""
         from flext_cli import u
+
         sources = u.Cli.toml_table_child(uv, "sources")
         if sources is None:
             return
@@ -401,6 +419,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
         member sources.
         """
         from flext_cli import u
+
         if not owns_workspace_table:
             u.Cli.toml_remove_key_if_present(uv, "workspace")
         if workspace_members:

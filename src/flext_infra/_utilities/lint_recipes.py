@@ -85,6 +85,7 @@ class FlextInfraUtilitiesLintRecipes:
         """
         from flext_infra._config import config
         from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
         for candidate in (pkg_dir, *pkg_dir.parents):
             if not (candidate / c.PYPROJECT_FILENAME).is_file():
                 continue
@@ -1018,6 +1019,7 @@ class FlextInfraUtilitiesLintRecipes:
 
         """
         from flext_infra._config import config
+
         width = config.Infra.tooling.tools.ruff.line_length
         prefix, inner = cls._split_literal(raw)
         inner = inner.rstrip()
@@ -1073,6 +1075,7 @@ class FlextInfraUtilitiesLintRecipes:
 
         """
         from flext_infra._config import config
+
         found = re.search(
             config.Infra.tooling.tools.ruff.lint.copyright_notice_rgx,
             inner,

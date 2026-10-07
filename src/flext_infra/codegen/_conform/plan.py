@@ -85,6 +85,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
 
         """
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
         result_type = r[
             t.Triple[
                 m.Infra.WorkspaceSpec,
@@ -234,6 +235,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
 
         """
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
         result_type = r[
             t.Triple[
                 Path,
@@ -323,6 +325,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
 
         """
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
         if repository.path != Path():
             declared_member = FlextInfraWorkspaceDetector.load_workspace_spec(
                 repository_root,

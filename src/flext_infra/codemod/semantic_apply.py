@@ -51,6 +51,7 @@ class FlextInfraCodemodSemanticApply:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesCodegenPathCutover
+
         original = cls._source_inventory(root, preflight)
 
         return FlextInfraUtilitiesCodegenPathCutover.plan_transaction_path_cutover(
@@ -536,8 +537,11 @@ class FlextInfraCodemodSemanticApply:
             ValueError: If source changed after semantic preflight.
 
         """
-        from flext_infra.refactor._census_apply_formatting import FlextInfraRefactorCensusApplyFormattingMixin
+        from flext_infra.refactor._census_apply_formatting import (
+            FlextInfraRefactorCensusApplyFormattingMixin,
+        )
         from flext_infra.transformers import FlextInfraSemanticPublication
+
         semantic_plans: list[m.Infra.SemanticFilePlan] = []
         consumer_first = sorted(changed, key=cls._path_key)
         for path in consumer_first:

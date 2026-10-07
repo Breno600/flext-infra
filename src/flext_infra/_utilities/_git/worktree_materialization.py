@@ -38,6 +38,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
 
         """
         from flext_cli import u
+
         ensure_parent = u.Cli.ensure_dir(worktree_root.parent)
         if ensure_parent.failure:
             return r[str].from_failure(ensure_parent)
@@ -98,6 +99,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
 
         """
         from flext_cli import u
+
         source_path = source_root / relative_path
         if source_path.is_dir() and not source_path.is_symlink():
             return r[bool].fail(
@@ -354,6 +356,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
     ) -> None:
         """Verify then apply both layer patches through one stdin stream each."""
         from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
+
         for check in (True, False):
             for patch_bytes, layer in zip(patches, ((), ("--cached",)), strict=True):
                 if not patch_bytes:

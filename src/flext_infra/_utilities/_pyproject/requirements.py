@@ -49,6 +49,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         from flext_cli import u
+
         for section_name in (c.Infra.OPTIONAL_DEPENDENCIES, c.Infra.DEPENDENCY_GROUPS):
             parent = (
                 project if section_name == c.Infra.OPTIONAL_DEPENDENCIES else document
@@ -76,6 +77,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         from flext_cli import u
+
         provenance = _RequirementProvenance(
             declared_sources=declared_sources,
             candidate_sources=candidate_sources,
@@ -115,6 +117,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         from flext_cli import u
+
         raw_value = u.Cli.toml_value(container, key)
         if raw_value is None:
             return r[bool].ok(value=True)
@@ -154,6 +157,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         name = FlextInfraUtilitiesDependencies.dep_name(requirement)
         if name is None:
             message = "dependency ordering requires a named requirement"
@@ -240,6 +244,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         bare_requirement = requirement.strip().strip('"').strip()
         if FlextInfraUtilitiesDependencies.dep_name(bare_requirement) not in (
             workspace_members
@@ -309,6 +314,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRepository
+
         return candidate_sources.get(dependency_name) is None and (
             FlextInfraUtilitiesRepository.ref_is_commit(declared_ref)
         )
@@ -327,6 +333,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         dependency_name = FlextInfraUtilitiesDependencies.dep_name(requirement)
         if dependency_name is None:
             return None
@@ -351,6 +358,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRepository
+
         requirement_part, separator, marker = requirement.partition(";")
         head_match = c.Infra.PEP621_REQUIREMENT_HEAD_RE.match(requirement_part.strip())
         if head_match is None:
@@ -375,6 +383,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRepository
+
         source_line = f"{head} @ {declared}"
         parsed = FlextInfraUtilitiesRepository.declared_git_source(source_line)
         if parsed.failure:
@@ -395,6 +404,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRepository
+
         if not url:
             return r[str].fail(
                 "candidate dependency has no declared Git provenance: "
@@ -461,7 +471,9 @@ class FlextInfraUtilitiesPyprojectRequirements:
     ) -> None:
         """Migrate optional dev dependencies and normalize declared groups."""
         from flext_cli import u
+
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         project = u.Cli.toml_ensure_table(document, c.Infra.PROJECT)
         groups = u.Cli.toml_ensure_table(document, c.Infra.DEPENDENCY_GROUPS)
         optional = u.Cli.toml_table_child(project, c.Infra.OPTIONAL_DEPENDENCIES)
@@ -541,6 +553,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         name = FlextInfraUtilitiesDependencies.dep_name(requirement)
         return (
             name is not None
@@ -563,6 +576,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
         a uv conflict).
         """
         from flext_cli import u
+
         groups = u.Cli.toml_table_child(document, c.Infra.DEPENDENCY_GROUPS)
         if groups is not None:
             u.Cli.toml_remove_key_if_present(groups, "workspace")
@@ -580,7 +594,9 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         from flext_cli import u
+
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         payload = u.Cli.toml_as_mapping(document)
         if payload is None:
             return r[bool].fail("pyproject document is not a TOML mapping")
@@ -615,6 +631,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         from flext_cli import u
+
         raw_values: list[str] = []
         project = payload.get(c.Infra.PROJECT)
         if isinstance(project, Mapping):
@@ -647,6 +664,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRepository
+
         member = next(
             (
                 item

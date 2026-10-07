@@ -279,6 +279,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
 
         """
         from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+
         request = self.request or m.Infra.CodegenConformRequest(
             root=self.repository_root,
         )
@@ -311,6 +312,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
 
         """
         from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+
         u.Cli.header("Codegen Conform")
         u.Cli.info(
             f"stage=plan mode={request.mode} scope={request.scope} "
@@ -477,6 +479,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
 
         """
         from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+
         ports = self.ports
         if ports is None:
             return r[m.Infra.CodegenResult].fail(
@@ -553,6 +556,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
 
         """
         from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
+
         files: list[m.Infra.CodegenFilePlan] = []
         inputs: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
         publications: list[m.Infra.LazyInitPlan] = []
@@ -972,6 +976,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
 
         """
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
         result_type = r[
             t.Pair[t.Pair[m.Infra.WorkspaceSpec, m.Infra.ProjectSpec], bool]
         ]
@@ -1149,6 +1154,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
 
         """
         from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+
         u.Cli.info("stage=verify-fixed-point")
         verified = self.plan(request)
         if verified.failure:

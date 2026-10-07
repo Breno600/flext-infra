@@ -54,6 +54,7 @@ class FlextInfraWorkspaceEnvironmentProvenance:
 
         """
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
         resolved_root = repository_root.resolve()
         workspace_result = FlextInfraWorkspaceDetector.load_workspace_spec(
             resolved_root,
@@ -147,6 +148,7 @@ class FlextInfraWorkspaceEnvironmentProvenance:
             The resulting ``p.Result[int]``.
         """
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
         document = u.Cli.toml_read_json(repository_root / "uv.lock")
         if document.failure:
             return r[int].from_failure(document)

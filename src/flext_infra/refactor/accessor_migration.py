@@ -90,7 +90,10 @@ class FlextInfraAccessorMigrationOrchestrator(
             The resulting ``p.Result[m.Infra.AccessorMigrationReport]``.
 
         """
-        from flext_infra.refactor._import_enforcement import FlextInfraImportNormalization
+        from flext_infra.refactor._import_enforcement import (
+            FlextInfraImportNormalization,
+        )
+
         selected_projects: t.StrSequence = (
             self.project_names if self.project_names is not None else ()
         )

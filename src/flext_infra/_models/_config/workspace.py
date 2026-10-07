@@ -65,6 +65,7 @@ class FlextInfraConfigModelsWorkspace:
         @m.model_validator(mode="after")
         def _validate_source(self) -> Self:
             from flext_infra._constants import FlextInfraConstantsDeps
+
             if not self.url.startswith("https://") or not self.url.endswith(".git"):
                 msg = "candidate dependency URL must be canonical HTTPS Git"
                 raise ValueError(msg)

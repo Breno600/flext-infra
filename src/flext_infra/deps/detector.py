@@ -77,7 +77,10 @@ class FlextInfraRuntimeDevDependencyDetector(
 
         """
         from flext_infra.deps.detection import FlextInfraDependencyDetectionService
-        from flext_infra.deps.detector_runtime import FlextInfraDependencyDetectorRuntime
+        from flext_infra.deps.detector_runtime import (
+            FlextInfraDependencyDetectorRuntime,
+        )
+
         payload: MutableMapping[str, t.JsonValue] = {
             "repository_root": str(self.root),
             "apply": self.apply_changes,

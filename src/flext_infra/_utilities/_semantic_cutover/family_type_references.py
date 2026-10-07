@@ -38,6 +38,7 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
     ) -> t.Pair[bool, t.VariadicTuple[m.Infra.SourceRewrite]]:
 
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         module = flatten.project.get_pymodule(resource)
         edits: list[m.Infra.SourceRewrite] = []
@@ -75,7 +76,11 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
         flatten: m.Infra.FamilyWrapperFlatten,
     ) -> t.Pair[bool, str]:
 
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules, FlextInfraUtilitiesRopeRuntimeRefactors
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeRuntimeModules,
+            FlextInfraUtilitiesRopeRuntimeRefactors,
+        )
+
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         nodes = tuple(
             cls._type_nodes(
@@ -130,6 +135,7 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         names = flatten.names
         start, end = cls._expression_range(source, node)
@@ -257,6 +263,7 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
     ) -> Iterator[ast.expr]:
 
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
         yield node
         if isinstance(node, ast.Subscript):
             yield from cls._type_nodes(node.value, project, scope)

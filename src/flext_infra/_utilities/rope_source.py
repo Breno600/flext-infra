@@ -26,6 +26,7 @@ class FlextInfraUtilitiesRopeSource:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDiscovery
+
         src_dir = project_dir / c.Infra.DEFAULT_SRC_DIR
         return [
             name

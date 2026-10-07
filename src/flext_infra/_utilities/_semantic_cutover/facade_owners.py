@@ -41,7 +41,11 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
             ValueError: If facade package is not importable for derivation.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesPrivateImportFacades, FlextInfraUtilitiesRopeAnalysis
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesPrivateImportFacades,
+            FlextInfraUtilitiesRopeAnalysis,
+        )
+
         modules = FlextInfraUtilitiesPrivateImportFacades.source_modules(
             {},
             (f"from {package} import *",),
@@ -102,6 +106,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
         resolved = cls._facade_declared_class(modules, module, letter, frozenset())
         if resolved is None:
             return None

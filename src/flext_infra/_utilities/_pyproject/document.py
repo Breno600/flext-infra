@@ -29,6 +29,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
 
         """
         from flext_cli import u
+
         source = u.Cli.toml_parse_text(pyproject_content)
         if source is None:
             return r[t.Pair[t.Cli.TomlDocument, str]].fail(
@@ -70,7 +71,9 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
 
         """
         from flext_cli import u
+
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         parsed = cls._parsed_pyproject(pyproject_content)
         if parsed.failure:
             return r[str].from_failure(parsed)
@@ -193,6 +196,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         tooling policy unrelated to repository topology.
         """
         from flext_cli import u
+
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if tool is None:
             return
@@ -214,6 +218,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
 
         """
         from flext_cli import u
+
         if not namespace_scan_dirs:
             return r[bool].ok(value=True)
         namespace = u.Cli.toml_ensure_path(document, c.Infra.CONFORM_NAMESPACE_TABLE)
@@ -233,6 +238,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
 
         """
         from flext_cli import u
+
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if tool is None:
             return r[bool].ok(value=True)

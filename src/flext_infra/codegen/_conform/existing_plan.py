@@ -209,6 +209,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
 
         """
         from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
+
         root = target.root
         repository = target.repository
         modernizer = FlextInfraPyprojectModernizer(
@@ -1010,6 +1011,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
 
         """
         from flext_infra.services.codegen import FlextInfraCodegen
+
         result_type = r[t.Pair[m.Infra.CodegenFilePlan, bool]]
         merged = FlextInfraCodegen.render_vscode_settings(root)
         if merged.failure:
@@ -1049,7 +1051,10 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             with its presence flag.
 
         """
-        from flext_infra.workspace.environment_contracts import FlextInfraWorkspaceEnvironmentContracts
+        from flext_infra.workspace.environment_contracts import (
+            FlextInfraWorkspaceEnvironmentContracts,
+        )
+
         result_type = r[t.Pair[m.Infra.CodegenFilePlan, bool]]
         normalized = FlextInfraWorkspaceEnvironmentContracts.envrc_local_normalized(
             current,

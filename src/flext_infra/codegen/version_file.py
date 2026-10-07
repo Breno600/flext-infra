@@ -77,6 +77,7 @@ class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
             The resulting ``p.Result[str]``.
         """
         from flext_core.__version__ import FlextVersion
+
         metadata_result = u.Infra.read_project_metadata_result(project)
         if metadata_result.failure:
             return r[str].from_failure(metadata_result)
@@ -106,7 +107,10 @@ class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
         Returns:
             The resulting ``p.Result[str]``.
         """
-        from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
+        from flext_infra.codegen._mise_artifacts_publication import (
+            FlextInfraMisePublication,
+        )
+
         if target.is_file():
             current = u.Cli.files_read_text(target)
             if current.failure:

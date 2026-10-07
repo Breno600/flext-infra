@@ -68,6 +68,7 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         if FlextInfraUtilitiesRopeRuntime.file_resource(resource):
             return True
         path = Path(resource.real_path)
@@ -91,6 +92,7 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         if not FlextInfraUtilitiesRopeRuntime.file_resource(resource):
             path = Path(resource.real_path)
             if (
@@ -120,6 +122,7 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         try:
             module_imports = FlextInfraUtilitiesRopeRuntime.module_imports_for_pymodule(
                 rope_project,

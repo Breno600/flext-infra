@@ -139,7 +139,8 @@ class FlextInfraFlextUtilitiesPrivateImportAncestry:
                 package = module if is_package else module.rpartition(".")[0]
                 collector = (
                     FlextInfraFlextUtilitiesPrivateImportAncestry._ClassBaseCollector(
-                        module=module, package=package
+                        module=module,
+                        package=package,
                     )
                 )
                 collector.collect_root(tree.body)

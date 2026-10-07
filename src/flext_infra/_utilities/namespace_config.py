@@ -31,6 +31,7 @@ class FlextInfraUtilitiesNamespaceConfig:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
         flext_meta = FlextInfraUtilitiesPyproject.tool_flext_meta(project_root)
         if "namespace" not in flext_meta:
             return {}
@@ -95,6 +96,7 @@ class FlextInfraUtilitiesNamespaceConfig:
         """
         from flext_infra._config import config
         from flext_infra._utilities import FlextInfraUtilitiesGit
+
         meta = FlextInfraUtilitiesNamespaceConfig.namespace_meta(project_root)
         if "scan_dirs" in meta:
             configured = meta["scan_dirs"]

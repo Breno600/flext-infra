@@ -10,7 +10,6 @@ import ast
 from pathlib import Path
 from typing import ClassVar
 
-
 from flext_core import r
 from flext_infra import c, m, p, t
 from flext_infra._utilities import FlextInfraUtilitiesProtectedEditPreview
@@ -153,6 +152,7 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
 
         """
         from flext_cli import u
+
         if "tests" not in py_file.parts and not py_file.name.startswith("test_"):
             return r[bool].ok(value=True)
         if not cls._file_contains_tests(py_file):

@@ -43,6 +43,7 @@ class FlextInfraPytestRunnerExecution(
 
         """
         from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
+
         return FlextInfraTestmonDbInspector(
             repository_root=self.root,
             db_path=self.testmon_db,
@@ -581,6 +582,7 @@ class FlextInfraPytestRunnerExecution(
             ValueError: If testmon publication path cannot contain output delimiters.
         """
         from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
+
         execution_mode = (
             c.Infra.PytestExecutionMode.FULL
             if complete
@@ -655,6 +657,7 @@ class FlextInfraPytestRunnerExecution(
 
         """
         from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
+
         report_dir = self._report_directory()
         self._write_run_context(
             report_dir,
@@ -775,6 +778,7 @@ class FlextInfraPytestRunnerExecution(
 
         """
         from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
+
         accounting = m.Infra.TestmonRunAccounting.model_validate_json(
             (report_dir / "run-accounting.json").read_text(encoding="utf-8"),
         )

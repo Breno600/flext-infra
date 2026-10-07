@@ -210,7 +210,11 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
 
         """
         from flext_infra._config import config
-        from flext_infra._utilities import FlextInfraUtilitiesDocs, FlextInfraUtilitiesWorkspaceManifest
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesDocs,
+            FlextInfraUtilitiesWorkspaceManifest,
+        )
+
         loaded = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
             scope.path,
         )

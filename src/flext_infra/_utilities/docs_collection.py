@@ -293,6 +293,7 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDocsContract
+
         canonical = state.canonical
         owned_outputs = {
             canonical / "collection-manifest.json",
@@ -420,6 +421,7 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDocsContract
+
         lines = [
             "# Collected plans",
             "",
@@ -460,6 +462,7 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDocsContract
+
         canonical = state.canonical
         projection = state.projection
         state.record_manifest()

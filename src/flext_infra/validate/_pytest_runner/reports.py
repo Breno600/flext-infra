@@ -295,6 +295,7 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
 
         """
         from flext_infra.validate.pytest_diag import FlextInfraPytestDiagExtractor
+
         extractor = FlextInfraPytestDiagExtractor(
             repository_root=self.root,
             junit=report_dir / "junit.xml",
@@ -316,6 +317,7 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
 
         """
         from flext_infra.validate.pytest_diag import FlextInfraPytestDiagExtractor
+
         diagnostics = FlextInfraPytestDiagExtractor.extract_report_log(
             report_log,
         ).unwrap()

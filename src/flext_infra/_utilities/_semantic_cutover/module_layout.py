@@ -41,6 +41,7 @@ class FlextInfraUtilitiesSemanticCutoverModuleLayout(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeSource
+
         selected: MutableMapping[Path, set[str]] = defaultdict(set)
         for finding in findings:
             selected[(root / finding.file).resolve()].add(finding.text)
@@ -82,6 +83,7 @@ class FlextInfraUtilitiesSemanticCutoverModuleLayout(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesLintRecipes
+
         selected = {(root / finding.file).resolve() for finding in findings}
 
         def rewrite(path: Path, source: str) -> t.Infra.TransformResult:

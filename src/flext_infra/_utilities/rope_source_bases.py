@@ -416,7 +416,8 @@ class FlextInfraFlextUtilitiesRopeSourceBases:
                     )
                     return
             if isinstance(node.test, ast.Constant) and isinstance(
-                node.test.value, bool
+                node.test.value,
+                bool,
             ):
                 self.collect(
                     node.body if node.test.value else node.orelse,
@@ -600,6 +601,7 @@ class FlextInfraFlextUtilitiesRopeSourceBases:
 
             """
             from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
             self._project = project
             self._sources = sources
             self._roots = roots
@@ -737,11 +739,17 @@ class FlextInfraFlextUtilitiesRopeSourceBases:
                     semantics.
 
             """
-            from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisSourceScan, FlextInfraUtilitiesRopeCore, FlextInfraUtilitiesRopeRuntime
+            from flext_infra._utilities import (
+                FlextInfraUtilitiesRopeAnalysisSourceScan,
+                FlextInfraUtilitiesRopeCore,
+                FlextInfraUtilitiesRopeRuntime,
+            )
+
             path, source = captured
             resource = (
                 FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
-                    self._project, path
+                    self._project,
+                    path,
                 )
                 if path.is_file()
                 else None
@@ -799,6 +807,7 @@ class FlextInfraFlextUtilitiesRopeSourceBases:
 
             """
             from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
             function_identity = self._function_object_identity(value)
             if function_identity is not None:
                 return function_identity
@@ -830,6 +839,7 @@ class FlextInfraFlextUtilitiesRopeSourceBases:
 
             """
             from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
             if not isinstance(
                 value,
                 FlextInfraUtilitiesRopeRuntime.runtime_type(
@@ -987,6 +997,7 @@ class FlextInfraFlextUtilitiesRopeSourceBases:
 
             """
             from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+
             if imported.module_name is None:
                 if imported.resource is None:
                     message = "Import has no declared module location"
@@ -1033,6 +1044,7 @@ class FlextInfraFlextUtilitiesRopeSourceBases:
 
             """
             from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+
             name = self._provider_module_name(imported)
             module = self._project.get_module(name)
             resource = imported.resource or self._project.find_module(name)
@@ -1064,6 +1076,7 @@ class FlextInfraFlextUtilitiesRopeSourceBases:
 
             """
             from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
             if depth > c.Infra.ROPE_WALK_DEPTH_BUDGET:
                 message = (
                     f"Unresolved external base: {module.get_name()} at depth {depth}"
@@ -1197,7 +1210,11 @@ class FlextInfraFlextUtilitiesRopeSourceBases:
                 ModuleNotFoundError: If the target has no virtual stdlib backing.
 
             """
-            from flext_infra._utilities import FlextInfraUtilitiesRopeCore, FlextInfraUtilitiesRopeRuntime
+            from flext_infra._utilities import (
+                FlextInfraUtilitiesRopeCore,
+                FlextInfraUtilitiesRopeRuntime,
+            )
+
             try:
                 module = self._project.get_module(target)
             except (
@@ -1210,7 +1227,8 @@ class FlextInfraFlextUtilitiesRopeSourceBases:
                 module = self._project.get_module(real)
             resource = self._project.find_module(target)
             if resource is not None and not isinstance(
-                module, self._native_module_type
+                module,
+                self._native_module_type,
             ):
                 module = FlextInfraUtilitiesRopeCore.resolve_pymodule(
                     self._project,
@@ -1390,6 +1408,7 @@ class FlextInfraFlextUtilitiesRopeSourceBases:
 
             """
             from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
             value = self._external[identity]
             if not isinstance(value, p.Infra.RopeBuiltinClass):
                 message = f"External class has no declared source or native identity: {identity}"
@@ -1542,7 +1561,7 @@ class FlextInfraFlextUtilitiesRopeSourceBases:
             if file:
                 stem = Path(file).stem
                 if stem != target.rpartition(".")[-1] and importlib.util.find_spec(
-                    stem
+                    stem,
                 ):
                     backing = stem
             self._stdlib_backing_cache[target] = backing or ""
@@ -1612,7 +1631,9 @@ class FlextInfraFlextUtilitiesRopeSourceBases:
                 if not isinstance(mapping, ast.Dict):
                     continue
                 for key_node, value_node in zip(
-                    mapping.keys, mapping.values, strict=False
+                    mapping.keys,
+                    mapping.values,
+                    strict=False,
                 ):
                     if not (
                         isinstance(key_node, ast.Constant)
@@ -1667,7 +1688,10 @@ class FlextInfraFlextUtilitiesRopeSourceBases:
 
             """
             return FlextInfraFlextUtilitiesRopeSourceBases._RuntimeBaseResolver(
-                project, sources, roots, extra_module_aliases
+                project,
+                sources,
+                roots,
+                extra_module_aliases,
             ).run()
 
 

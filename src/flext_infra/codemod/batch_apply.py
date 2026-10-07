@@ -55,6 +55,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         """
         from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
         from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
+
         planned = u.Infra.codemod_rule_plan(self.repository_root)
         if planned.failure:
             return r[t.Cli.ResultValue].from_failure(planned)
@@ -98,6 +99,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
 
         """
         from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
+
         self.progress.emit("mod: validate ast-grep rule fixtures")
         FlextInfraModGateEngine.validate_rule_fixtures(
             self.repository_root,
@@ -118,6 +120,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
 
         """
         from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
+
         current_text = FlextInfraModTextGateEngine.scan(
             root,
             fix=False,
@@ -169,6 +172,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         """
         from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
         from flext_infra.codemod.semantic_apply import FlextInfraCodemodSemanticApply
+
         outcome = r[
             t.Pair[
                 m.Infra.ModScanReport,
@@ -249,6 +253,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
 
         """
         from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
+
         generated = FlextInfraModReplacements.generator_owned(current.entries)
         if generated:
             self.progress.emit(
@@ -329,6 +334,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
         from flext_infra.codemod.semantic_apply import FlextInfraCodemodSemanticApply
         from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
+
         root = self.repository_root
         rope_workspace = self.rope
         baseline_cycles = self._import_cycles(root)
@@ -394,6 +400,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesCodemodProject
+
         cycles: set[frozenset[str]] = set()
         for project_root in u.Infra.governed_project_roots(root):
             if not u.Infra.namespace_enabled(project_root):
@@ -430,6 +437,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         """
         from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
         from flext_infra.codemod.semantic_apply import FlextInfraCodemodSemanticApply
+
         fingerprint = FlextInfraCodemodSemanticApply.source_fingerprint
         outcome = r[
             t.Pair[

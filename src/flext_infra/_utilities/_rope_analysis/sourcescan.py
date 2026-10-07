@@ -31,6 +31,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
+
         if node is None:
             return ()
         if FlextInfraUtilitiesRopeAnalysisAstHelpers.node_kind(node) not in {
@@ -146,6 +147,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
+
         if node is None:
             return ((), ())
         kind = FlextInfraUtilitiesRopeAnalysisAstHelpers.node_kind(node)
@@ -170,6 +172,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
+
         func = getattr(node, "func", None)
         function_name = (
             FlextInfraUtilitiesRopeAnalysisAstHelpers.name_of(func)
@@ -209,6 +212,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
+
         keys = getattr(node, "keys", ()) or ()
         values = getattr(node, "values", ()) or ()
         entries: list[t.Pair[str, t.StrSequence]] = []
@@ -319,6 +323,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
+
         node = FlextInfraUtilitiesRopeAnalysisSourceScan._top_level_class(
             source,
             class_name,
@@ -402,6 +407,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
+
         calls = sorted(
             (
                 node
@@ -435,6 +441,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
+
         public_exports = cls._keyword_value(
             cls._first_call(source, "install_lazy_exports"),
             "public_exports",
@@ -512,6 +519,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
+
         export_names = {name for name in exports if name}
         target_map: MutableMapping[str, str] = dict.fromkeys(export_names, package_name)
         pymodule = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(source)

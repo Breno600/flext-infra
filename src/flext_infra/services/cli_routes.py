@@ -31,6 +31,7 @@ class FlextInfraCliRouteService:
         from flext_infra.services.cli_routes_codegen import FlextInfraCodegenRoutes
         from flext_infra.services.cli_routes_validate import FlextInfraValidationRoutes
         from flext_infra.services.cli_routes_workspace import FlextInfraWorkspaceRoutes
+
         if group in {
             c.Infra.CLI_GROUP_CHECK,
             c.Infra.CLI_GROUP_CODEGEN,

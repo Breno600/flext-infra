@@ -82,6 +82,7 @@ class FlextInfraUtilitiesDocsScopeProjectsMixin(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesGit
+
         root = FlextInfraUtilitiesDocsScopeProjectsMixin.absolute_lexical(
             repository_root,
         )
@@ -168,6 +169,7 @@ class FlextInfraUtilitiesDocsScopeProjectsMixin(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
+
         owner = FlextInfraUtilitiesDocsScopeProjectsMixin
         roots = owner.docs_repository_roots(repository_root)
         if roots.failure:

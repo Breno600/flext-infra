@@ -35,6 +35,7 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesBase
+
         _ = repository_root
         return list(FlextInfraUtilitiesBase.normalize_sequence_values(projects) or ())
 
@@ -82,7 +83,12 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
             The resulting ``t.SequenceOf[m.Infra.DocScope]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDocsScope, FlextInfraUtilitiesPyproject, FlextInfraUtilitiesWorkspaceManifest
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesDocsScope,
+            FlextInfraUtilitiesPyproject,
+            FlextInfraUtilitiesWorkspaceManifest,
+        )
+
         resolved_root = repository_root.resolve()
         project_state = FlextInfraUtilitiesDocsScope.project_state(resolved_root)
         is_enabled = FlextInfraUtilitiesDocsScope.docs_scope_enabled(
@@ -200,6 +206,7 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDocsScope
+
         discovered_result = FlextInfraUtilitiesDocsScope.resolve_projects(
             repository_root,
             (),

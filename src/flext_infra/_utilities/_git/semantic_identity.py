@@ -152,6 +152,7 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesGitRepo
+
         refreshed = FlextInfraUtilitiesGitRepo.refresh_binary()
         if refreshed.failure:
             return r[m.Infra.GitBoolReport].from_failure(refreshed)
@@ -188,6 +189,7 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesGitRemote
+
         remotes = {remote.name: remote.url for remote in repo.remotes}
         origin = remotes.get("origin")
         upstream = remotes.get("upstream")

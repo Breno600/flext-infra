@@ -48,6 +48,7 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDocsRender
+
         module_names = FlextInfraUtilitiesDocsGenerateProjectMixin._module_names(scope)
         api_root = scope.path / "docs/api-reference/generated"
         rendered = [
@@ -91,7 +92,13 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
                 ``p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDocsApi, FlextInfraUtilitiesDocsContract, FlextInfraUtilitiesDocsGuidesMixin, FlextInfraUtilitiesDocsRender
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesDocsApi,
+            FlextInfraUtilitiesDocsContract,
+            FlextInfraUtilitiesDocsGuidesMixin,
+            FlextInfraUtilitiesDocsRender,
+        )
+
         guides = FlextInfraUtilitiesDocsGuidesMixin.docs_project_guides_artifacts(
             scope,
             repository_root=repository_root,

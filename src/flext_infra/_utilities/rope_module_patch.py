@@ -54,6 +54,7 @@ class FlextInfraUtilitiesRopeModulePatch:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisExports
+
         tree = ast.parse(source)
         class_names = {
             node.name for node in tree.body if isinstance(node, ast.ClassDef)
@@ -111,6 +112,7 @@ class FlextInfraUtilitiesRopeModulePatch:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisExports
+
         exports = FlextInfraUtilitiesRopeAnalysisExports.public_export_names_source(
             source,
         )

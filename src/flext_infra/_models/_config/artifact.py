@@ -330,6 +330,7 @@ class FlextInfraConfigModelsArtifact:
                     ``t.VariadicTuple[FlextInfraConfigModelsScaffold.ScaffoldGitignoreSectionSpec]``.
             """
             from flext_infra._constants import FlextInfraConstantsSharedInfra
+
             scaffold_sections = self.scaffold.gitignore_sections
             # A declared section may already govern a derived artifact, in
             # either direction: a whitelist re-allows `.agents/` with `!`, so
@@ -432,6 +433,7 @@ class FlextInfraConfigModelsArtifact:
 
             """
             from flext_infra._constants import FlextInfraConstantsSharedInfra
+
             github_templates = tuple(
                 Path(entry.destination)
                 for entry in self.templates.entries

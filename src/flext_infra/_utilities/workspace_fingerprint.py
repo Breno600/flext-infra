@@ -193,6 +193,7 @@ class FlextInfraUtilitiesWorkspaceFingerprint:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesGit
+
         root = checkout.resolve()
         inputs = FlextInfraUtilitiesGit.git_fingerprint_inputs(
             m.Infra.GitRepoRequest(repo_root=root),

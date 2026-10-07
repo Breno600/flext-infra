@@ -34,6 +34,7 @@ class FlextInfraUtilitiesProjectDiscoveryCandidatesMixin(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesGit
+
         roots: t.MutableSequenceOf[Path] = []
         effective_scan_dirs = scan_dirs or frozenset()
         declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(

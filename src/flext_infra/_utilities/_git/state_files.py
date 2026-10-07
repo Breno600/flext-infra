@@ -10,7 +10,6 @@ import os
 import stat
 from pathlib import Path
 
-
 from flext_infra import m, t
 from flext_infra._utilities import FlextInfraUtilitiesGitStatePublicationMixin
 
@@ -50,6 +49,7 @@ class FlextInfraUtilitiesGitStateFilesMixin(
     ) -> None:
 
         from flext_cli import u
+
         manifest = u.Cli.atomic_inventory_physical_tree(root / path).unwrap()
         for entry in manifest.entries:
             relative = entry.path.relative_to(root)
@@ -66,6 +66,7 @@ class FlextInfraUtilitiesGitStateFilesMixin(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
+
         with FlextInfraUtilitiesGitWorktreeIO.git_stdin(content) as stream:
             return cls._repo(root).git.hash_object("--stdin", istream=stream)
 
@@ -119,6 +120,7 @@ class FlextInfraUtilitiesGitStateFilesMixin(
     ) -> None:
 
         from flext_cli import u
+
         destination = root / path
         if destination.is_symlink():
             try:
@@ -186,6 +188,7 @@ class FlextInfraUtilitiesGitStateFilesMixin(
     def _state_remove_empty_tree(path: Path) -> None:
 
         from flext_cli import u
+
         manifest = u.Cli.atomic_inventory_physical_tree(path).unwrap()
         if any(entry.kind != "directory" for entry in manifest.entries):
             msg = f"directory gained content before file replacement: {path}"

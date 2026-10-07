@@ -81,6 +81,7 @@ class FlextInfraGateRegistry:
         from flext_infra.gates.ruff_lint import FlextInfraRuffLintGate
         from flext_infra.gates.runtime_census import FlextInfraRuntimeCensusGate
         from flext_infra.gates.smells import FlextInfraSmellsGate
+
         return (
             FlextInfraRuffLintGate,
             FlextInfraRuffFormatGate,

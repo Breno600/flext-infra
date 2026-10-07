@@ -42,6 +42,7 @@ class FlextInfraUtilitiesGitStateCheckpointMixin(FlextInfraUtilitiesGitStateTree
     ) -> m.Infra.GitWorktreeStateCheckpoint:
 
         from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
+
         cls._state_require_original(snapshot)
         repo = cls._repo(snapshot.repo_root)
         if not checkpoint_ref.startswith("refs/") or checkpoint_ref.startswith((

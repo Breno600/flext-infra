@@ -36,6 +36,7 @@ class FlextInfraUtilitiesCodegenFacades:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeModulePatch
+
         owners = tuple(
             module
             for module in sorted(pkg_dir.glob(c.Infra.EXT_PYTHON_GLOB))
@@ -84,6 +85,7 @@ class FlextInfraUtilitiesCodegenFacades:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+
         facade_path = cls.facade_module_path(pkg_dir, family)
         owners_dir = (
             pkg_dir
@@ -187,7 +189,11 @@ class FlextInfraUtilitiesCodegenFacades:
         family: Literal["u", "p", "m"],
     ) -> frozenset[str]:
 
-        from flext_infra._utilities import FlextInfraUtilitiesRopeCore, FlextInfraUtilitiesRopeRuntime
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeCore,
+            FlextInfraUtilitiesRopeRuntime,
+        )
+
         methods: set[str] = set()
         with FlextInfraUtilitiesRopeCore.open_project(pkg_dir.parent) as project:
             for path in (
@@ -362,6 +368,7 @@ class FlextInfraUtilitiesCodegenFacades:
         # a module that does not exist in the consumer's own distribution.
 
         from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+
         lines = source.splitlines(keepends=True)
         directory = FlextInfraUtilitiesCodegenNamespace.facade_families()[
             family

@@ -60,6 +60,7 @@ class FlextInfraUtilitiesIterationWorkspace(FlextInfraUtilitiesIterationDirector
         """
         from flext_infra._config import config
         from flext_infra._utilities import FlextInfraUtilitiesGitScopeMixin
+
         source_roots = tuple(
             path
             for directory_name in config.Infra.source_scan.roots
