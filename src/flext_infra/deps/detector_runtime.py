@@ -77,6 +77,30 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
         if pip_check_result.failure:
             return r[bool].from_failure(pip_check_result)
         pip_ok = pip_check_result.value
+        return self._finalize_run(
+            (params, root),
+            report_model,
+            projects_report,
+            projects,
+            pip_ok=pip_ok,
+        )
+
+    def _finalize_run(
+        self,
+        scope: t.Pair[m.Infra.DetectCommand, Path],
+        report_model: p.Infra.WorkspaceReport,
+        projects_report: Mapping[str, Mapping[str, t.JsonValue]],
+        projects: t.SequenceOf[Path],
+        *,
+        pip_ok: bool,
+    ) -> p.Result[bool]:
+        """Persist and summarize the workspace report unless JSON-silent.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        params, root = scope
         if params.output_format == c.Cli.OutputFormats.JSON:
             return r[bool].ok(value=True)
         write_result = self._write_workspace_report(

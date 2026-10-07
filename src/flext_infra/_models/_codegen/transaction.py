@@ -105,6 +105,20 @@ class FlextInfraModelsCodegenTransactionModels:
             if len(set(selectors)) != len(selectors):
                 msg = "Mise journal project selectors must be unique"
                 raise ValueError(msg)
+            self._validate_staging_authority()
+            self._validate_participant_coverage(selectors)
+            self._validate_recovery_state()
+            return self
+
+        def _validate_staging_authority(self) -> None:
+            """Reject live transitions a staging journal may never authorize.
+
+            Raises:
+                ValueError: If staging codegen journal must not authorize live
+                    transitions; or if staging codegen journal cannot generate a
+                    transaction root.
+
+            """
             if self.state == "staging" and self.entries:
                 msg = "staging codegen journal must not authorize live transitions"
                 raise ValueError(msg)
@@ -123,6 +137,17 @@ class FlextInfraModelsCodegenTransactionModels:
                 # transaction's own roots stay restricted to `temporary`.
                 msg = "staging codegen journal cannot generate a transaction root"
                 raise ValueError(msg)
+
+        def _validate_participant_coverage(self, selectors: t.StrSequence) -> None:
+            """Require unique destination paths covered by declared participants.
+
+            Raises:
+                ValueError: If codegen journal destination paths must be unique; or
+                    if codegen journal entry has no project participant; or if codegen
+                    journal directory paths must be unique; or if codegen journal
+                    directory has no project participant.
+
+            """
             entry_paths = tuple(entry.path for entry in self.entries)
             if len(set(entry_paths)) != len(entry_paths):
                 msg = "codegen journal destination paths must be unique"
@@ -139,6 +164,15 @@ class FlextInfraModelsCodegenTransactionModels:
             ):
                 msg = "codegen journal directory has no project participant"
                 raise ValueError(msg)
+
+        def _validate_recovery_state(self) -> None:
+            """Bind rollback identities to the journal's recovery state.
+
+            Raises:
+                ValueError: If recovering codegen journal lacks rollback identities; or
+                    if non-recovering codegen journal contains rollback identities.
+
+            """
             recovery_declared = tuple(
                 entry.rollback_exists is not None for entry in self.entries
             )
@@ -148,7 +182,6 @@ class FlextInfraModelsCodegenTransactionModels:
             if self.state != "recovering" and any(recovery_declared):
                 msg = "non-recovering codegen journal contains rollback identities"
                 raise ValueError(msg)
-            return self
 
     class CodegenFileSessionPlan(m.ArbitraryTypesModel):
         """File-only transaction topology; contains no Mise artifact snapshot."""

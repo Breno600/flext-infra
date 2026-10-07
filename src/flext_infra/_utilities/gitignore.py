@@ -10,8 +10,11 @@ from itertools import pairwise
 from operator import itemgetter
 from pathlib import Path
 
+from flext_cli import u
+
 from flext_core import r
 from flext_infra import c, m, p, t
+from flext_infra._utilities import FlextInfraUtilitiesProjectManagedArtifacts
 
 
 class FlextInfraUtilitiesGitignore:
@@ -69,10 +72,6 @@ class FlextInfraUtilitiesGitignore:
             The resulting ``p.Result[str]``.
 
         """
-        from flext_cli import u
-
-        from flext_infra._utilities import FlextInfraUtilitiesProjectManagedArtifacts
-
         entry = next(
             (
                 item
@@ -93,9 +92,8 @@ class FlextInfraUtilitiesGitignore:
         project_patterns: t.StrSequence = ()
         preserved_blocks: t.VariadicTuple[m.Infra.ProjectGitignorePreservedBlock] = ()
         if project_dir is not None:
-            resolved = FlextInfraUtilitiesProjectManagedArtifacts.load_project_managed_artifacts(
-                project_dir,
-            )
+            managed = FlextInfraUtilitiesProjectManagedArtifacts
+            resolved = managed.load_project_managed_artifacts(project_dir)
             if resolved.failure:
                 return r[str].from_failure(resolved)
             project_patterns = resolved.value.artifacts.Gitignore.patterns
@@ -130,8 +128,6 @@ class FlextInfraUtilitiesGitignore:
             The resulting ``p.Result[str]``.
 
         """
-        from flext_cli import u
-
         if not blocks:
             return r[str].ok(rendered)
 
@@ -149,25 +145,58 @@ class FlextInfraUtilitiesGitignore:
         content = snapshot.value.content
         if content is None:
             return r[str].ok(rendered)
-        current = content.decode(c.Cli.ENCODING_DEFAULT)
-        lines = current.splitlines(keepends=True)
+        return FlextInfraUtilitiesGitignore._compose_preserved_blocks(
+            rendered,
+            content,
+            blocks,
+            markers,
+            destination,
+        )
+
+    @staticmethod
+    def _locate_block_markers(
+        lines: t.SequenceOf[str],
+        markers: frozenset[str],
+        destination: Path,
+    ) -> p.Result[t.MutableMappingKV[str, list[int]]]:
+        """Index the exact marker lines, rejecting malformed marker prefixes.
+
+        Returns:
+            The resulting ``p.Result[t.MutableMappingKV[str, list[int]]]``.
+
+        """
         found: t.MutableMappingKV[str, list[int]] = {marker: [] for marker in markers}
         for index, line in enumerate(lines):
             text = line.rstrip("\r\n")
             if text in found:
                 found[text].append(index)
             elif any(text.startswith(marker) for marker in markers):
-                return r[str].fail(
+                return r[t.MutableMappingKV[str, list[int]]].fail(
                     f"malformed gitignore preserved marker: {destination}: {text!r}",
                 )
-        sections: list[tuple[int, int, str]] = []
+        return r[t.MutableMappingKV[str, list[int]]].ok(found)
+
+    @staticmethod
+    def _block_sections(
+        blocks: t.VariadicTuple[m.Infra.ProjectGitignorePreservedBlock],
+        found: t.MappingKV[str, list[int]],
+        lines: t.SequenceOf[str],
+        destination: Path,
+    ) -> p.Result[t.VariadicTuple[t.Triple[int, int, str]]]:
+        """Slice one ordered, non-overlapping external section per declared block.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[t.Triple[int, int, str]]]``.
+
+        """
+        sections: list[t.Triple[int, int, str]] = []
         for block in blocks:
             begins = found[block.begin]
             ends = found[block.end]
             if not begins and not ends:
                 continue
             if len(begins) != 1 or len(ends) != 1 or begins[0] >= ends[0]:
-                return r[str].fail(
+                return r[t.VariadicTuple[t.Triple[int, int, str]]].fail(
                     f"ambiguous gitignore preserved block {block.begin!r}: "
                     f"{destination}",
                 )
@@ -178,9 +207,43 @@ class FlextInfraUtilitiesGitignore:
             ))
         sections.sort(key=itemgetter(0))
         if any(previous[1] >= current[0] for previous, current in pairwise(sections)):
-            return r[str].fail(f"overlapping gitignore preserved blocks: {destination}")
+            return r[t.VariadicTuple[t.Triple[int, int, str]]].fail(
+                f"overlapping gitignore preserved blocks: {destination}",
+            )
+        return r[t.VariadicTuple[t.Triple[int, int, str]]].ok(tuple(sections))
+
+    @staticmethod
+    def _compose_preserved_blocks(
+        rendered: str,
+        content: bytes,
+        blocks: t.VariadicTuple[m.Infra.ProjectGitignorePreservedBlock],
+        markers: frozenset[str],
+        destination: Path,
+    ) -> p.Result[str]:
+        """Append every located external block to the freshly rendered content.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
+        lines = content.decode(c.Cli.ENCODING_DEFAULT).splitlines(keepends=True)
+        located = FlextInfraUtilitiesGitignore._locate_block_markers(
+            lines,
+            markers,
+            destination,
+        )
+        if located.failure:
+            return r[str].from_failure(located)
+        sections = FlextInfraUtilitiesGitignore._block_sections(
+            blocks,
+            located.value,
+            lines,
+            destination,
+        )
+        if sections.failure:
+            return r[str].from_failure(sections)
         composed = rendered
-        for _, _, external in sections:
+        for _, _, external in sections.value:
             if composed and not composed.endswith("\n"):
                 composed += "\n"
             if composed and not composed.endswith("\n\n"):

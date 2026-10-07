@@ -11,12 +11,130 @@ import stat
 from collections.abc import MutableMapping
 from pathlib import Path
 
+from flext_cli import u
+
 from flext_core import r
 from flext_infra import c, m, p, t
+from flext_infra._utilities import FlextInfraUtilitiesGit
 
 
 class FlextInfraUtilitiesProjectManagedArtifacts:
     """Single owner for ``ManagedArtifacts`` across ``config/*.yaml`` files."""
+
+    @classmethod
+    def _validated_config_roots(
+        cls,
+        project_dir: Path,
+    ) -> p.Result[
+        t.Quad[Path, t.VariadicTuple[int], t.VariadicTuple[int], t.VariadicTuple[Path]]
+    ]:
+        """Validate the physical project and config directories, list yaml paths.
+
+        An absent ``config/`` directory keeps the validated identity empty; the
+        caller renders that as a project with no config sources.
+
+        Returns:
+            The resulting
+                ``(config dir, project identity, config identity, yaml paths)``
+                quadruple.
+
+        """
+        quad = r[
+            t.Quad[
+                Path,
+                t.VariadicTuple[int],
+                t.VariadicTuple[int],
+                t.VariadicTuple[Path],
+            ]
+        ]
+        project_identity = cls._required_directory_identity(
+            project_dir,
+            purpose="project root",
+        )
+        if project_identity.failure:
+            return quad.from_failure(project_identity)
+        config_dir = project_dir / c.CONFIG_DIR_NAME
+        identity = cls._config_directory_identity(config_dir)
+        if identity.failure:
+            return quad.from_failure(identity)
+        paths = cls._config_yaml_paths(config_dir, identity.value)
+        if paths.failure:
+            return quad.from_failure(paths)
+        return quad.ok((
+            config_dir,
+            project_identity.value,
+            identity.value,
+            paths.value,
+        ))
+
+    @classmethod
+    def _stable_snapshot_identity(
+        cls,
+        project_dir: Path,
+        config_dir: Path,
+        identity_value: t.VariadicTuple[int],
+        paths_value: t.VariadicTuple[Path],
+        project_identity_value: t.VariadicTuple[int],
+    ) -> p.Result[t.VariadicTuple[int]]:
+        """Re-read both identities and require the snapshot topology to hold.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[int]]``.
+
+        """
+        stable_paths = cls._config_yaml_paths(config_dir, identity_value)
+        if stable_paths.failure:
+            return r[t.VariadicTuple[int]].from_failure(stable_paths)
+        if stable_paths.value != paths_value:
+            return r[t.VariadicTuple[int]].fail(
+                f"{c.Infra.CONFIG_SNAPSHOT_TOPOLOGY_RACE_MARKER}: {config_dir}",
+            )
+        stable_project = cls._required_directory_identity(
+            project_dir,
+            purpose="project root",
+        )
+        if stable_project.failure:
+            return r[t.VariadicTuple[int]].from_failure(stable_project)
+        if stable_project.value != project_identity_value:
+            return r[t.VariadicTuple[int]].fail(
+                f"{c.Infra.CONFIG_SNAPSHOT_ROOT_RACE_MARKER}: {project_dir}",
+            )
+        return stable_project
+
+    @classmethod
+    def _snapshot_sources(
+        cls,
+        project_dir: Path,
+        config_dir: Path,
+        identity_value: t.VariadicTuple[int],
+        paths_value: t.VariadicTuple[Path],
+        project_identity_value: t.VariadicTuple[int],
+    ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
+        """Read every config source, then require the topology to stay stable.
+
+        Returns:
+            The resulting
+                ``p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]``.
+
+        """
+        sources: list[m.Cli.AtomicFileState] = []
+        for path in paths_value:
+            source = u.Cli.atomic_read_binary_file_state(path, required=True)
+            if source.failure:
+                return r[t.VariadicTuple[m.Cli.AtomicFileState]].from_failure(source)
+            sources.append(source.value)
+        stable_project = cls._stable_snapshot_identity(
+            project_dir,
+            config_dir,
+            identity_value,
+            paths_value,
+            project_identity_value,
+        )
+        if stable_project.failure:
+            return r[t.VariadicTuple[m.Cli.AtomicFileState]].from_failure(
+                stable_project,
+            )
+        return r[t.VariadicTuple[m.Cli.AtomicFileState]].ok(tuple(sources))
 
     @classmethod
     def snapshot_config_sources(
@@ -32,49 +150,21 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
             The resulting ``p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]``.
 
         """
-        from flext_cli import u
-
         if not project_dir.exists() and not project_dir.is_symlink():
             return r[tuple[m.Cli.AtomicFileState, ...]].ok(())
-        project_identity = cls._required_directory_identity(
-            project_dir,
-            purpose="project root",
-        )
-        if project_identity.failure:
-            return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(project_identity)
-        config_dir = project_dir / c.CONFIG_DIR_NAME
-        identity = cls._config_directory_identity(config_dir)
-        if identity.failure:
-            return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(identity)
-        if not identity.value:
+        roots = cls._validated_config_roots(project_dir)
+        if roots.failure:
+            return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(roots)
+        config_dir, project_identity, identity, paths = roots.value
+        if not identity:
             return r[tuple[m.Cli.AtomicFileState, ...]].ok(())
-        paths = cls._config_yaml_paths(config_dir, identity.value)
-        if paths.failure:
-            return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(paths)
-        sources: list[m.Cli.AtomicFileState] = []
-        for path in paths.value:
-            source = u.Cli.atomic_read_binary_file_state(path, required=True)
-            if source.failure:
-                return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(source)
-            sources.append(source.value)
-        stable_paths = cls._config_yaml_paths(config_dir, identity.value)
-        if stable_paths.failure:
-            return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(stable_paths)
-        if stable_paths.value != paths.value:
-            return r[tuple[m.Cli.AtomicFileState, ...]].fail(
-                f"{c.Infra.CONFIG_SNAPSHOT_TOPOLOGY_RACE_MARKER}: {config_dir}",
-            )
-        stable_project = cls._required_directory_identity(
+        return cls._snapshot_sources(
             project_dir,
-            purpose="project root",
+            config_dir,
+            identity,
+            paths,
+            project_identity,
         )
-        if stable_project.failure:
-            return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(stable_project)
-        if stable_project.value != project_identity.value:
-            return r[tuple[m.Cli.AtomicFileState, ...]].fail(
-                f"{c.Infra.CONFIG_SNAPSHOT_ROOT_RACE_MARKER}: {project_dir}",
-            )
-        return r[tuple[m.Cli.AtomicFileState, ...]].ok(tuple(sources))
 
     @classmethod
     def _required_directory_identity(
@@ -258,8 +348,6 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
             The resulting ``p.Result[m.Infra.ProjectManagedArtifactsSnapshot]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGit
-
         resolved = project_dir.expanduser().resolve()
         blobs = FlextInfraUtilitiesGit.git_committed_directory_blobs(
             resolved,
@@ -341,8 +429,6 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
             The fragment, empty when the source declares no ``ManagedArtifacts``.
 
         """
-        from flext_cli import u
-
         try:
             source_text = content.decode(c.Cli.ENCODING_DEFAULT)
         except UnicodeDecodeError as exc:
@@ -516,8 +602,6 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
             The resulting ``p.Result[str]``.
 
         """
-        from flext_cli import u
-
         local_tools = resolution.artifacts.Mise.tools
         if not local_tools:
             return r[str].ok(rendered)

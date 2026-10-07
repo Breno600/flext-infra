@@ -34,9 +34,11 @@ class TestsFlextInfraProviderResolutionAcceptsSshRemotes:
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             name,
-            workspace=f"{name}-workspace",
-            database=f"{name}-database",
-            issue_prefix=f"{name}-prefix",
+            beads=u.Tests.BeadsIdentity(
+                workspace=f"{name}-workspace",
+                database=f"{name}-database",
+                issue_prefix=f"{name}-prefix",
+            ),
         )
         return root
 

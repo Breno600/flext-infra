@@ -125,7 +125,7 @@ class FlextInfraProtocolsBase(Protocol):
             project_root: Path,
             runtime_root: Path,
         ) -> p.Result[bool]:
-            """Validate one project's Mise declaration, pin, and launchers."""
+            """Validate one project's generated Mise declaration."""
             ...
 
     @runtime_checkable

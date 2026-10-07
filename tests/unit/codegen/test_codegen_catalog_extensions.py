@@ -346,9 +346,11 @@ class TestsFlextInfraCodegenCatalogExtensions:
         u.Tests.WorktreeFixture.initialize_governed_project(
             member_source,
             member.distribution,
-            workspace=member.name,
-            database=member.name,
-            issue_prefix=member.name,
+            beads=u.Tests.BeadsIdentity(
+                workspace=member.name,
+                database=member.name,
+                issue_prefix=member.name,
+            ),
         )
         member_head = tm.ok(
             u.Cli.capture([c.Infra.GIT, "rev-parse", "HEAD"], cwd=member_source),
@@ -378,9 +380,11 @@ class TestsFlextInfraCodegenCatalogExtensions:
         u.Tests.WorktreeFixture.initialize_governed_project(
             repository_root,
             root.distribution,
-            workspace=root.name,
-            database=root.name,
-            issue_prefix=root.name,
+            beads=u.Tests.BeadsIdentity(
+                workspace=root.name,
+                database=root.name,
+                issue_prefix=root.name,
+            ),
         )
         tm.ok(
             u.Cli.run_checked(

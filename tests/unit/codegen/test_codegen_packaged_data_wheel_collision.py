@@ -85,10 +85,12 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         _ = u.Tests.write_standalone_workspace_manifest(
             root,
             FIXTURE_DISTRIBUTION,
-            cli_module=False,
-            packaged_data_paths=packaged_data_paths,
-            packaged_data_excludes=packaged_data_excludes,
-            repository_namespace_packages=repository_namespace_packages,
+            declaration=u.Tests.StandaloneManifestDeclaration(
+                cli_module=False,
+                packaged_data_paths=packaged_data_paths,
+                packaged_data_excludes=packaged_data_excludes,
+                repository_namespace_packages=repository_namespace_packages,
+            ),
         )
         u.Tests.git_bootstrap(
             root,

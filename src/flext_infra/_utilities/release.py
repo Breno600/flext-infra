@@ -12,9 +12,10 @@ from collections.abc import Mapping, MutableMapping, Sequence
 from pathlib import Path, PurePosixPath
 from tempfile import TemporaryDirectory
 
-from flext_cli import r
+from flext_cli import r, u
 
 from flext_infra import c, m, p, t
+from flext_infra._utilities import FlextInfraUtilitiesDependencies
 
 
 class FlextInfraUtilitiesRelease:
@@ -51,24 +52,10 @@ class FlextInfraUtilitiesRelease:
             The resulting ``p.Result[bool]``.
 
         """
-        try:
-            members = tuple(archive.getmembers())
-        except tarfile.TarError as exc:
-            return r[bool].fail_op("read release archive members", exc)
-        validated_members: list[t.Pair[tarfile.TarInfo, Path]] = []
-        for member in members:
-            path_result = FlextInfraUtilitiesRelease.archive_member_path(member.name)
-            if path_result.failure:
-                return r[bool].from_failure(path_result)
-            if member.issym() or member.islnk():
-                return r[bool].fail(
-                    f"release archive contains symbolic or hard link: {member.name}",
-                )
-            if not member.isdir() and not member.isfile():
-                return r[bool].fail(
-                    f"release archive contains unsupported member: {member.name}",
-                )
-            validated_members.append((member, path_result.value))
+        members = FlextInfraUtilitiesRelease._validated_tar_members(archive)
+        if members.failure:
+            return r[bool].from_failure(members)
+        validated_members = members.value
         if destination.exists():
             return r[bool].fail(
                 f"release stage directory already exists: {destination}",
@@ -100,6 +87,36 @@ class FlextInfraUtilitiesRelease:
                 exc,
             )
         return r[bool].ok(value=True)
+
+    @staticmethod
+    def _validated_tar_members(
+        archive: tarfile.TarFile,
+    ) -> p.Result[t.VariadicTuple[t.Pair[tarfile.TarInfo, Path]]]:
+        """Validate every archive member name and kind for safe materialization.
+
+        Returns:
+            The resulting ``p.Result`` of member and relative path pairs.
+
+        """
+        try:
+            members = tuple(archive.getmembers())
+        except tarfile.TarError as exc:
+            return r[bool].fail_op("read release archive members", exc)
+        validated_members: list[t.Pair[tarfile.TarInfo, Path]] = []
+        for member in members:
+            path_result = FlextInfraUtilitiesRelease.archive_member_path(member.name)
+            if path_result.failure:
+                return r[bool].from_failure(path_result)
+            if member.issym() or member.islnk():
+                return r[bool].fail(
+                    f"release archive contains symbolic or hard link: {member.name}",
+                )
+            if not member.isdir() and not member.isfile():
+                return r[bool].fail(
+                    f"release archive contains unsupported member: {member.name}",
+                )
+            validated_members.append((member, path_result.value))
+        return r[bool].ok(tuple(validated_members))
 
     @staticmethod
     def _write_validated_tar_tree(
@@ -213,8 +230,6 @@ class FlextInfraUtilitiesRelease:
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_cli import u
-
         lines: t.MutableSequenceOf[str] = [
             f"# Release {tag}",
             "",
@@ -322,8 +337,6 @@ class FlextInfraUtilitiesRelease:
         notes_path: Path,
     ) -> None:
         """Write the docs changelog plus the latest and tagged release notes."""
-        from flext_cli import u
-
         docs = repository_root / c.Infra.DIR_DOCS
         changelog_path = docs / "CHANGELOG.md"
         latest_path = docs / "releases" / "latest.md"
@@ -361,8 +374,6 @@ class FlextInfraUtilitiesRelease:
             Changelog text with a release section for the version.
 
         """
-        from flext_cli import u
-
         date = u.now().date().isoformat()
         heading = f"## {version} - "
         section = (
@@ -399,8 +410,6 @@ class FlextInfraUtilitiesRelease:
             The resulting ``p.Result[t.SequenceOf[t.StrSequence]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
-
         selected = {name for name, _ in targets}
         edges: MutableMapping[str, t.StrSequence] = {}
         for name, path in targets:
@@ -432,10 +441,6 @@ class FlextInfraUtilitiesRelease:
             The runtime dependency names declared by one project.
 
         """
-        from flext_cli import u
-
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
-
         pyproject = path / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
             return r[t.StrSequence].fail(

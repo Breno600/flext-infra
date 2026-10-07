@@ -12,13 +12,61 @@ from pathlib import Path
 from typing import override
 
 from flext_infra import m, p, t
-from flext_infra._utilities import FlextInfraUtilitiesSemanticFamilyTypeReferences
+from flext_infra._utilities import (
+    FlextInfraUtilitiesRopeRuntimeModules,
+    FlextInfraUtilitiesRopeRuntimeRefactors,
+    FlextInfraUtilitiesSemanticFamilyTypeReferences,
+)
 
 
 class FlextInfraUtilitiesSemanticNestingTypes(
     FlextInfraUtilitiesSemanticFamilyTypeReferences,
 ):
     """Share the canonical type-position selector and original Rope scope."""
+
+    class _CapturedNamesVisitor(ast.NodeVisitor):
+        """Collect identifiers bound inside any nested scope."""
+
+        def __init__(self) -> None:
+            self.depth = 0
+            self.captured: set[str] = set()
+
+        def bind(self, name: str) -> None:
+            if self.depth:
+                self.captured.add(name)
+
+        @override
+        def visit_Name(self, node: ast.Name) -> None:
+            if isinstance(node.ctx, (ast.Store, ast.Del)):
+                self.bind(node.id)
+
+        def _visit_scoped(
+            self,
+            node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
+        ) -> None:
+            self.bind(node.name)
+            self.depth += 1
+            for stmt in node.body:
+                self.visit(stmt)
+            self.depth -= 1
+
+        @override
+        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+            self._visit_scoped(node)
+
+        @override
+        def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+            self._visit_scoped(node)
+
+        @override
+        def visit_ClassDef(self, node: ast.ClassDef) -> None:
+            self._visit_scoped(node)
+
+        @override
+        def visit_Lambda(self, node: ast.Lambda) -> None:
+            self.depth += 1
+            self.visit(node.body)
+            self.depth -= 1
 
     @classmethod
     def _rewrite_quoted_types(
@@ -30,10 +78,6 @@ class FlextInfraUtilitiesSemanticNestingTypes(
         *,
         protected: t.Pair[int, int] | None = None,
     ) -> str:
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesRopeRuntimeModules,
-            FlextInfraUtilitiesRopeRuntimeRefactors,
-        )
 
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         module = project.get_pymodule(resource)
@@ -79,7 +123,6 @@ class FlextInfraUtilitiesSemanticNestingTypes(
         source: str,
         replacement: Callable[[p.Infra.RopeScope, ast.expr], str | None],
     ) -> str:
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors
 
         edits: list[m.Infra.SourceRewrite] = []
         for node in cls._type_nodes(
@@ -116,7 +159,6 @@ class FlextInfraUtilitiesSemanticNestingTypes(
         sources: t.MappingKV[Path, str],
         definitions: t.MappingKV[Path, t.StrMapping],
     ) -> t.MappingKV[Path, str]:
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
 
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         root = Path(project.root.real_path)
@@ -175,50 +217,9 @@ class FlextInfraUtilitiesSemanticNestingTypes(
             The resulting ``frozenset[str]``.
 
         """
-        captured: set[str] = set()
-
-        class Visitor(ast.NodeVisitor):
-            depth = 0
-
-            def bind(self, name: str) -> None:
-                if self.depth:
-                    captured.add(name)
-
-            @override
-            def visit_Name(self, node: ast.Name) -> None:
-                if isinstance(node.ctx, (ast.Store, ast.Del)):
-                    self.bind(node.id)
-
-            def _visit_scoped(
-                self,
-                node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
-            ) -> None:
-                self.bind(node.name)
-                self.depth += 1
-                for stmt in node.body:
-                    self.visit(stmt)
-                self.depth -= 1
-
-            @override
-            def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-                self._visit_scoped(node)
-
-            @override
-            def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
-                self._visit_scoped(node)
-
-            @override
-            def visit_ClassDef(self, node: ast.ClassDef) -> None:
-                self._visit_scoped(node)
-
-            @override
-            def visit_Lambda(self, node: ast.Lambda) -> None:
-                self.depth += 1
-                self.visit(node.body)
-                self.depth -= 1
-
-        Visitor().visit(ast.parse(cls._module_source(module)))
-        return frozenset(captured)
+        visitor = cls._CapturedNamesVisitor()
+        visitor.visit(ast.parse(cls._module_source(module)))
+        return frozenset(visitor.captured)
 
     @staticmethod
     def _module_source(module: p.Infra.RopePyModule) -> str:
@@ -256,8 +257,6 @@ class FlextInfraUtilitiesSemanticNestingTypes(
                 quoted type destination.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
-
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         node = ast.parse(expression, mode="eval").body
         while isinstance(node, ast.Attribute):

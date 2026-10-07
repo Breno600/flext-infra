@@ -14,7 +14,7 @@ from flext_tests import tm
 from flext_infra import c, config, m
 from flext_infra.codegen import FlextInfraCodegenConform
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-from tests import u
+from tests import t, u
 
 
 class TestsFlextInfraCodegenRuntimeProfiles:
@@ -30,29 +30,43 @@ class TestsFlextInfraCodegenRuntimeProfiles:
         ),
     )
     @pytest.mark.parametrize("composed", [False, True])
-    def test_declared_profile_restores_runtime_and_preserves_custom_specs(
+    @staticmethod
+    def _seed_member_workspace(
         tmp_path: Path,
         upstream: str,
         *,
         composed: bool,
-    ) -> None:
-        """Real standalone and parent plans consume the same member-owned profile."""
+    ) -> tuple[Path, Path, Path]:
+        """Initialize the governed member (and parent when composed).
+
+        The member manifest carries the one profile under test; a member
+        cannot introduce another parent target through its manifest.
+
+        Returns:
+            The request root, the member checkout, and the member pyproject.
+
+        """
+        fixture = u.Tests.WorktreeFixture
         root = tmp_path / "workspace"
         member = root / "sample-member" if composed else tmp_path / "sample-member"
         if composed:
-            u.Tests.WorktreeFixture.initialize_governed_project(
+            fixture.initialize_governed_project(
                 root,
                 "sample-workspace",
+                beads=u.Tests.BeadsIdentity(
+                    workspace="sample-workspace",
+                    database="sample_workspace",
+                    issue_prefix="sample",
+                ),
+            )
+        pyproject = fixture.initialize_governed_project(
+            member,
+            "sample-member",
+            beads=u.Tests.BeadsIdentity(
                 workspace="sample-workspace",
                 database="sample_workspace",
                 issue_prefix="sample",
-            )
-        pyproject = u.Tests.WorktreeFixture.initialize_governed_project(
-            member,
-            "sample-member",
-            workspace="sample-workspace",
-            database="sample_workspace",
-            issue_prefix="sample",
+            ),
         )
         observed = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(member))
         project = u.Tests.project_spec(observed.repository.name).model_copy(
@@ -63,7 +77,6 @@ class TestsFlextInfraCodegenRuntimeProfiles:
             name=observed.repository.name,
             repository=observed.repository,
             project=project,
-            # A member cannot introduce another parent target through its manifest.
             members=(
                 u.Tests.repository_ref(
                     "unselected-project",
@@ -73,6 +86,29 @@ class TestsFlextInfraCodegenRuntimeProfiles:
         )
         manifest_path = member / "config" / c.Infra.WORKSPACE_MANIFEST_FILENAME
         tm.ok(u.Cli.yaml_dump(manifest_path, manifest.model_dump(mode="json")))
+        if composed:
+            fixture.attach_submodule(
+                root,
+                member,
+                distribution="sample-member",
+                relative_path="sample-member",
+            )
+        return root, member, pyproject
+
+    @staticmethod
+    def _declare_custom_dependencies(
+        pyproject: Path,
+        upstream: str,
+    ) -> tuple[m.Infra.ScaffoldDependencyProfileSpec, t.VariadicTuple[str]]:
+        """Replace the governed dependencies with the custom requirements.
+
+        The governed fixture already declares `dependencies`; that
+        declaration is replaced instead of adding a second (invalid) key.
+
+        Returns:
+            The declared profile under test and the custom requirements.
+
+        """
         profile = next(
             item
             for item in config.Infra.codegen.scaffold.project.dependency_profiles
@@ -93,8 +129,6 @@ class TestsFlextInfraCodegenRuntimeProfiles:
                 *custom,
             ]),
         )
-        # The governed fixture already declares `dependencies`; replace that
-        # declaration instead of adding a second (invalid) key.
         pyproject.write_text(
             "".join(
                 f"dependencies = {declared}\n"
@@ -106,38 +140,46 @@ class TestsFlextInfraCodegenRuntimeProfiles:
             ),
             encoding="utf-8",
         )
-        if composed:
-            u.Tests.WorktreeFixture.attach_submodule(
-                root,
-                member,
-                distribution="sample-member",
-                relative_path="sample-member",
-            )
-        request_root = root if composed else member
+        return profile, custom
+
+    @staticmethod
+    def _protected_state(
+        request_root: Path,
+        member: Path,
+        *,
+        composed: bool,
+    ) -> tuple[m.Infra.WorkspaceSpec, dict[Path, bytes]]:
+        """Snapshot the baseline workspace and the bytes conform must preserve.
+
+        Returns:
+            The observed workspace and the protected path-to-bytes mapping.
+
+        """
         before = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(request_root))
         protected = {
             path: path.read_bytes()
             for path in (
-                manifest_path,
+                member / "config" / c.Infra.WORKSPACE_MANIFEST_FILENAME,
                 member / "config" / c.Infra.BEADS_CONFIG_FILENAME,
-                *((root / c.Infra.GITMODULES,) if composed else ()),
+                *((request_root / c.Infra.GITMODULES,) if composed else ()),
             )
         }
-        request = u.Tests.conform_request(
-            request_root,
-            what=c.Infra.CodegenConformSurface.PYPROJECT,
-            scope=(
-                c.Infra.CodegenConformScope.DECLARED
-                if composed
-                else c.Infra.CodegenConformScope.SELF
-            ),
-            mode=c.Infra.CodegenConformMode.CHECK,
-        )
-        service = FlextInfraCodegenConform(
-            repository_root=request_root,
-            request=request,
-        )
-        first = tm.ok(service.plan(request))
+        return before, protected
+
+    def _assert_plan_restores_profile(
+        self,
+        first: m.Infra.CodegenConformPlan,
+        pyproject: Path,
+        member: Path,
+        profile: m.Infra.ScaffoldDependencyProfileSpec,
+        custom: t.VariadicTuple[str],
+    ) -> str:
+        """The CHECK plan renders one profile-owned conform fixed point.
+
+        Returns:
+            The rendered pyproject text the second plan must reproduce.
+
+        """
         rendered = u.Tests.codegen_file_text(
             next(item for item in first.files if item.path == pyproject),
         )
@@ -174,6 +216,50 @@ class TestsFlextInfraCodegenRuntimeProfiles:
         tm.that(
             set(u.Tests.toml_strings_at(expected, "project", "dependencies")),
             eq=owned,
+        )
+        return rendered
+
+    def test_declared_profile_restores_runtime_and_preserves_custom_specs(
+        self,
+        tmp_path: Path,
+        upstream: str,
+        *,
+        composed: bool,
+    ) -> None:
+        """Real standalone and parent plans consume the same member-owned profile."""
+        root, member, pyproject = self._seed_member_workspace(
+            tmp_path,
+            upstream,
+            composed=composed,
+        )
+        profile, custom = self._declare_custom_dependencies(pyproject, upstream)
+        request_root = root if composed else member
+        before, protected = self._protected_state(
+            request_root,
+            member,
+            composed=composed,
+        )
+        request = u.Tests.conform_request(
+            request_root,
+            what=c.Infra.CodegenConformSurface.PYPROJECT,
+            scope=(
+                c.Infra.CodegenConformScope.DECLARED
+                if composed
+                else c.Infra.CodegenConformScope.SELF
+            ),
+            mode=c.Infra.CodegenConformMode.CHECK,
+        )
+        service = FlextInfraCodegenConform(
+            repository_root=request_root,
+            request=request,
+        )
+        first = tm.ok(service.plan(request))
+        rendered = self._assert_plan_restores_profile(
+            first,
+            pyproject,
+            member,
+            profile,
+            custom,
         )
         tm.that(first.workspace.repository, eq=before.repository)
         tm.that(first.workspace.subprojects, eq=before.subprojects)

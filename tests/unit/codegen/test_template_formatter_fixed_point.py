@@ -57,8 +57,10 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="develop",
             ci_trigger_branches=u.CodegenTestSupport.Ci.ci_trigger_branches("develop"),
-            workspace_repositories=workspace_repositories,
-            has_devcontainer=has_devcontainer,
+            overrides=u.CodegenTestSupport.Ci.WorkflowRenderOverrides(
+                workspace_repositories=workspace_repositories,
+                has_devcontainer=has_devcontainer,
+            ),
         )
 
     @staticmethod

@@ -24,6 +24,8 @@ from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, m, u
 from flext_infra.gates.base_gate import FlextInfraGate
+from flext_infra.gates.markdown_code_sources import FlextInfraMarkdownCodeSources
+from flext_infra.gates.markdown_support import FlextInfraMarkdownGateBase
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -54,8 +56,6 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             The resulting ``t.SequenceOf[Path]``.
 
         """
-        from flext_infra.gates.markdown_support import FlextInfraMarkdownGateBase
-
         patterns = FlextInfraMarkdownGateBase.read_ignore_patterns(
             project_dir,
             c.Infra.MARKDOWNLINT_IGNORE_FILENAME,
@@ -186,11 +186,6 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             The resulting ``t.MappingKV[str, t.Pair[str, t.Pair[str, int]]]``.
 
         """
-        from flext_infra.gates.markdown_code_sources import (
-            FlextInfraMarkdownCodeSources,
-        )
-        from flext_infra.gates.markdown_support import FlextInfraMarkdownGateBase
-
         markdown_files = self._ignore_filtered(
             project_dir,
             FlextInfraMarkdownGateBase.collect_markdown_files(project_dir),
@@ -292,77 +287,108 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             The resulting ``t.SequenceOf[Path]``.
 
         """
-        from flext_infra.gates.markdown_code_sources import (
-            FlextInfraMarkdownCodeSources,
-        )
-        from flext_infra.gates.markdown_support import FlextInfraMarkdownGateBase
-
         rewritten: t.MutableSequenceOf[Path] = []
         for md_path in self._ignore_filtered(
             project_dir,
             FlextInfraMarkdownGateBase.collect_markdown_files(project_dir),
         ):
-            content = md_path.read_text(c.Cli.ENCODING_DEFAULT)
-            relative_posix = md_path.relative_to(project_dir).as_posix()
-            # Preserve indexes across fragments the formatter does not own.
-            staged: t.MutableSequenceOf[t.Pair[int, str]] = []
-            for index, match in enumerate(
-                match
-                for match in c.Infra.MARKDOWN_PY_FENCE_RE.finditer(content)
-                if c.Infra.MARKDOWN_CODE_SKIP_MARKER not in match.group("info")
-            ):
-                code = match.group("code")
-                if FlextInfraMarkdownCodeSources.syntax_broken(code, md_path):
-                    continue
-                staged.append((index, code))
-            if not staged:
-                continue
-            blocks: t.MutableSequenceOf[str] = []
-            round_trips = True
-            for index, _original in staged:
-                source = sources_dir / FlextInfraMarkdownCodeSources.source_name(
-                    relative_posix,
-                    index,
-                )
-                if not source.is_file():
-                    round_trips = False
-                    break
-                formatted = source.read_text(c.Cli.ENCODING_DEFAULT)
-                if FlextInfraMarkdownCodeSources.syntax_broken(formatted, md_path):
-                    round_trips = False
-                    break
-                blocks.append(formatted)
-            if not round_trips:
-                continue
-            blocks_iter = iter(blocks)
-
-            def _resubstitute(
-                match: re.Match[str],
-                *,
-                origin_path: Path = md_path,
-                replacements: Iterator[str] = blocks_iter,
-            ) -> str:
-                """Splice formatted code; prose fragments stay byte-identical.
-
-                Returns:
-                    The resulting ``str``.
-
-                """
-                keep = c.Infra.MARKDOWN_CODE_SKIP_MARKER in match.group(
-                    "info",
-                ) or FlextInfraMarkdownCodeSources.syntax_broken(
-                    match.group("code"),
-                    origin_path,
-                )
-                if keep:
-                    return match.group(0)
-                return match.group(0).replace(match.group("code"), next(replacements))
-
-            updated = c.Infra.MARKDOWN_PY_FENCE_RE.sub(_resubstitute, content)
-            if updated != content:
-                md_path.write_text(updated, c.Cli.ENCODING_DEFAULT)
-                rewritten.append(md_path)
+            spliced = self._splice_document(md_path, project_dir, sources_dir)
+            if spliced is not None:
+                rewritten.append(spliced)
         return rewritten
+
+    def _splice_document(
+        self,
+        md_path: Path,
+        project_dir: Path,
+        sources_dir: Path,
+    ) -> Path | None:
+        """Write one document's formatted blocks back when its round-trip holds.
+
+        Returns:
+            The rewritten path, or ``None`` when the document stayed identical.
+
+        """
+        content = md_path.read_text(c.Cli.ENCODING_DEFAULT)
+        relative_posix = md_path.relative_to(project_dir).as_posix()
+        # Preserve indexes across fragments the formatter does not own.
+        staged: t.MutableSequenceOf[t.Pair[int, str]] = []
+        for index, match in enumerate(
+            match
+            for match in c.Infra.MARKDOWN_PY_FENCE_RE.finditer(content)
+            if c.Infra.MARKDOWN_CODE_SKIP_MARKER not in match.group("info")
+        ):
+            code = match.group("code")
+            if FlextInfraMarkdownCodeSources.syntax_broken(code, md_path):
+                continue
+            staged.append((index, code))
+        if not staged:
+            return None
+        blocks, round_trips = self._formatted_blocks(
+            staged,
+            relative_posix,
+            sources_dir,
+            md_path,
+        )
+        if not round_trips:
+            return None
+        blocks_iter = iter(blocks)
+
+        def _resubstitute(
+            match: re.Match[str],
+            *,
+            origin_path: Path = md_path,
+            replacements: Iterator[str] = blocks_iter,
+        ) -> str:
+            """Splice formatted code; prose fragments stay byte-identical.
+
+            Returns:
+                The resulting ``str``.
+
+            """
+            keep = c.Infra.MARKDOWN_CODE_SKIP_MARKER in match.group(
+                "info",
+            ) or FlextInfraMarkdownCodeSources.syntax_broken(
+                match.group("code"),
+                origin_path,
+            )
+            if keep:
+                return match.group(0)
+            return match.group(0).replace(match.group("code"), next(replacements))
+
+        updated = c.Infra.MARKDOWN_PY_FENCE_RE.sub(_resubstitute, content)
+        if updated == content:
+            return None
+        md_path.write_text(updated, c.Cli.ENCODING_DEFAULT)
+        return md_path
+
+    @staticmethod
+    def _formatted_blocks(
+        staged: t.SequenceOf[t.Pair[int, str]],
+        relative_posix: str,
+        sources_dir: Path,
+        md_path: Path,
+    ) -> t.Pair[list[str], bool]:
+        """Read the formatted sources of one document's parseable blocks.
+
+        Returns:
+            The ``(blocks, round_trips)`` pair; a missing or non-recompilable
+            staged source ends the round trip.
+
+        """
+        blocks: t.MutableSequenceOf[str] = []
+        for index, _original in staged:
+            source = sources_dir / FlextInfraMarkdownCodeSources.source_name(
+                relative_posix,
+                index,
+            )
+            if not source.is_file():
+                return (list(blocks), False)
+            formatted = source.read_text(c.Cli.ENCODING_DEFAULT)
+            if FlextInfraMarkdownCodeSources.syntax_broken(formatted, md_path):
+                return (list(blocks), False)
+            blocks.append(formatted)
+        return (list(blocks), True)
 
     @override
     def check(

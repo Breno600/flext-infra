@@ -181,5 +181,17 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
         """
         return (cls._exception_type("rope.base.exceptions", "ModuleNotFoundError"),)
 
+    @classmethod
+    def rope_attribute_not_found_error_types(
+        cls,
+    ) -> t.VariadicTuple[type[BaseException]]:
+        """Return Rope exceptions for statically unresolved attributes.
+
+        Returns:
+            Rope exceptions for statically unresolved attributes.
+
+        """
+        return (cls._exception_type("rope.base.exceptions", "AttributeNotFoundError"),)
+
 
 __all__: list[str] = ["FlextInfraUtilitiesRopeRuntimeTypes"]

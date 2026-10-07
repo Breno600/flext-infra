@@ -97,6 +97,65 @@ class TestsFlextInfraPytestProfile:
         assert c.Infra.PYTEST_PROFILE_LAUNCHER not in profiled.build_command(report)
 
     @staticmethod
+    def _assert_parent_profile_evidence(
+        project: Path,
+        reports_root: Path,
+        latest_name: str,
+    ) -> None:
+        """Prove the parent profiler captured the public runner import.
+
+        The profiled run's parent profile names pytest internals and the
+        runner class, its report pairs only this run, and every tampered
+        receipt input fails the report loudly.
+
+        """
+        parent_profile = project / ".reports" / "profiles" / "pytest.pstats"
+        profile = reports_root / latest_name / "testmon-selection.pstats"
+        stats = pstats.Stats(str(profile))
+        assert any(
+            "_pytest" in function.file_name
+            for function in stats.get_stats_profile().func_profiles.values()
+        )
+        parent_stats = pstats.Stats(str(parent_profile)).get_stats_profile()
+        # The class body runs on import, unlike its methods: this proves the
+        # public runner was first imported while the parent profiler was active.
+        assert FlextInfraPytestRunner.__name__ in parent_stats.func_profiles
+        policy = config.Infra.tooling.tools.pytest
+        report = FlextInfraCProfileReport(
+            repository_root=project,
+            profile=parent_profile,
+            output=parent_profile.with_suffix(".txt"),
+            run_receipt=parent_profile.with_suffix(".pstats.json"),
+            sort=policy.profile_sort,
+            limit=policy.profile_limit,
+        )
+        # An unrelated latest pointer must never pair this parent with another run.
+        latest = reports_root / "latest.txt"
+        latest.write_text("unrelated-run\n", encoding="utf-8")
+        tm.ok(report.execute())
+        latest.write_text(latest_name + "\n", encoding="utf-8")
+        text = report.output.read_text(encoding="utf-8")
+        assert str(parent_profile) in text
+        assert str(profile) in text
+        receipt_path = profile.with_suffix(".pstats.json")
+        original = receipt_path.read_text(encoding="utf-8")
+        receipt = m.Infra.PytestRunContext.model_validate_json(original)
+        receipt_path.write_text(
+            receipt.model_copy(
+                update={"deadline_monotonic": receipt.deadline_monotonic + 1},
+            ).model_dump_json(),
+            encoding="utf-8",
+        )
+        assert report.execute().failure
+        receipt_path.write_text("{", encoding="utf-8")
+        assert report.execute().failure
+        receipt_path.unlink()
+        assert report.execute().failure
+        receipt_path.write_text(original, encoding="utf-8")
+        parent_profile.write_bytes(parent_profile.read_bytes() + b"stale")
+        assert report.execute().failure
+
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("profile_collection", [False, True])
     def test_complete_suite_persists_cache_and_zero_diagnostic_evidence(
@@ -141,49 +200,11 @@ class TestsFlextInfraPytestProfile:
         profile = reports_root / latest_name / "testmon-selection.pstats"
         assert profile.is_file() == profile_collection
         if profile_collection:
-            stats = pstats.Stats(str(profile))
-            assert any(
-                "_pytest" in function.file_name
-                for function in stats.get_stats_profile().func_profiles.values()
+            TestsFlextInfraPytestProfile._assert_parent_profile_evidence(
+                cached_runner_project,
+                reports_root,
+                latest_name,
             )
-            parent_stats = pstats.Stats(str(parent_profile)).get_stats_profile()
-            # The class body runs on import, unlike its methods: this proves the
-            # public runner was first imported while the parent profiler was active.
-            assert FlextInfraPytestRunner.__name__ in parent_stats.func_profiles
-            policy = config.Infra.tooling.tools.pytest
-            report = FlextInfraCProfileReport(
-                repository_root=cached_runner_project,
-                profile=parent_profile,
-                output=parent_profile.with_suffix(".txt"),
-                run_receipt=parent_profile.with_suffix(".pstats.json"),
-                sort=policy.profile_sort,
-                limit=policy.profile_limit,
-            )
-            # An unrelated latest pointer must never pair this parent with another run.
-            latest = reports_root / "latest.txt"
-            latest.write_text("unrelated-run\n", encoding="utf-8")
-            tm.ok(report.execute())
-            latest.write_text(latest_name + "\n", encoding="utf-8")
-            text = report.output.read_text(encoding="utf-8")
-            assert str(parent_profile) in text
-            assert str(profile) in text
-            receipt_path = profile.with_suffix(".pstats.json")
-            original = receipt_path.read_text(encoding="utf-8")
-            receipt = m.Infra.PytestRunContext.model_validate_json(original)
-            receipt_path.write_text(
-                receipt.model_copy(
-                    update={"deadline_monotonic": receipt.deadline_monotonic + 1},
-                ).model_dump_json(),
-                encoding="utf-8",
-            )
-            assert report.execute().failure
-            receipt_path.write_text("{", encoding="utf-8")
-            assert report.execute().failure
-            receipt_path.unlink()
-            assert report.execute().failure
-            receipt_path.write_text(original, encoding="utf-8")
-            parent_profile.write_bytes(parent_profile.read_bytes() + b"stale")
-            assert report.execute().failure
         assert not (reports_root / latest_name / "testmon-inventory.pstats").exists()
         summary = tm.ok(
             u.Cli.files_read_text(reports_root / latest_name / "summary.txt"),

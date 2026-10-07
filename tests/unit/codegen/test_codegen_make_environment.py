@@ -15,7 +15,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import config
-from tests import c, t, u
+from tests import c, m, t, u
 
 pytestmark = pytest.mark.slow
 
@@ -362,6 +362,27 @@ class TestsFlextInfraCodegenMakeEnvironment:
             )
 
     @staticmethod
+    def _hostile_interpreter_probe(tmp_path: Path) -> tuple[Path, Path, t.StrMapping]:
+        """Build a foreign venv whose interpreter selectors must lose.
+
+        Returns:
+            The hostile python, its bin directory, and the environment that
+            selects them.
+
+        """
+        hostile_venv = tmp_path / "hostile" / ".venv"
+        hostile_bin = hostile_venv / "bin"
+        hostile_bin.mkdir(parents=True)
+        hostile_python = hostile_bin / "python"
+        active_env = {
+            "FLEXT_INFRA_PYTHON": str(hostile_python),
+            "UV_PROJECT_ENVIRONMENT": str(hostile_venv),
+            "VIRTUAL_ENV": str(hostile_venv),
+            "PATH": f"{hostile_bin}:{os.environ['PATH']}",
+        }
+        return hostile_python, hostile_bin, active_env
+
+    @staticmethod
     @pytest.mark.parametrize(
         "profile",
         [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE],
@@ -384,10 +405,9 @@ class TestsFlextInfraCodegenMakeEnvironment:
             tmp_path,
             profile,
         )
-        runtime_root = project_root
         runtime_environment = u.Infra.runtime_environment_dir(
             project_root,
-            runtime_root=runtime_root,
+            runtime_root=project_root,
         )
         source_marker = project_root / "source-marker"
         source_marker.write_text("preserve project source", encoding="utf-8")
@@ -444,16 +464,9 @@ class TestsFlextInfraCodegenMakeEnvironment:
         runtime_bin = runtime_environment / "bin"
         runtime_python = runtime_bin / "python"
         tm.that(runtime_python.is_file(), eq=True)
-        hostile_venv = tmp_path / "hostile" / ".venv"
-        hostile_bin = hostile_venv / "bin"
-        hostile_bin.mkdir(parents=True)
-        hostile_python = hostile_bin / "python"
-        active_env = {
-            "FLEXT_INFRA_PYTHON": str(hostile_python),
-            "UV_PROJECT_ENVIRONMENT": str(hostile_venv),
-            "VIRTUAL_ENV": str(hostile_venv),
-            "PATH": f"{hostile_bin}:{os.environ['PATH']}",
-        }
+        hostile_python, hostile_bin, active_env = (
+            TestsFlextInfraCodegenMakeEnvironment._hostile_interpreter_probe(tmp_path)
+        )
         process = tm.ok(
             u.Tests.run_isolated_make(
                 ["--no-print-directory", "status"],
@@ -494,31 +507,12 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(hostile_python.exists(), eq=False)
         tm.that((project_root.parent / ".venv").exists(), eq=False)
 
-    @pytest.mark.parametrize(
-        "profile",
-        [c.Infra.MakeProfile.STANDALONE, c.Infra.MakeProfile.WORKSPACE],
-    )
-    # Why: `make setup` provisions a real environment from the remote
-    # index and GitHub sources (an external gate); it never runs inside
-    # the offline unit gate; make test-full includes this remote boundary.
-    @pytest.mark.remote
-    def test_setup_provisions_environment_before_project_runtime(
+    def _assert_unlocked_setup_fails(
         self,
-        tmp_path: Path,
-        resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
-        profile: c.Infra.MakeProfile,
+        project_root: Path,
+        active_env: t.StrMapping,
     ) -> None:
-        """Setup creates the venv and syncs dependencies before any runtime use."""
-        project_root, _repository_root = u.Tests.render_make_environment(
-            tmp_path,
-            profile,
-            bootstrap=True,
-        )
-        hostile_venv = tmp_path / c.Tests.MAKE_TEMPLATE_HOSTILE_VENV
-        (hostile_venv / "bin").mkdir(parents=True)
-        active_env = u.Tests.hostile_uv_environment(hostile_venv)
-        tm.that(u.Infra.runtime_environment_dir(project_root).exists(), eq=False)
-        # Without a committed lock, setup never resolves: uv refuses loudly.
+        """Without a committed lock, setup never resolves: uv refuses loudly."""
         unlocked = tm.ok(
             u.Tests.run_isolated_make(
                 ["--no-print-directory", "setup"],
@@ -529,12 +523,14 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(u.Cli.process_succeeded(unlocked.outcome), eq=False)
         tm.that((project_root / c.Infra.UV_LOCK_FILENAME).exists(), eq=False)
 
-        # `upg` is the only resolver: the run's template was upgraded under the
-        # same foreign environment with a declared post-upg hook. It wrote both
-        # locks, provisioned the environment frozen from them, and ran the
-        # hook inside the activated environment, exactly as setup runs post-setup.
-        template = resolved_make_templates[profile]
-        receipts = template.parent.parent
+    @staticmethod
+    def _assert_upg_receipts(template: Path, receipts: Path) -> None:
+        """The run's template was upgraded under the same foreign environment.
+
+        Its declared post-upg hook wrote both locks, provisioned the
+        environment frozen from them, and ran the hook inside the activated
+        environment, exactly as setup runs post-setup.
+        """
         upgraded = u.Tests.command_receipt(receipts / c.Tests.MAKE_TEMPLATE_UPG_RECEIPT)
         tm.that(upgraded.stdout, has="upg-hook-ran")
         # One upg resolves the toolchain once: gen re-renders the manifest the
@@ -563,8 +559,21 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that((template_hostile / "pyvenv.cfg").exists(), eq=False)
         tm.that((template_hostile.parent / c.Infra.UV_LOCK_FILENAME).exists(), eq=False)
 
-        # A cold CI storage must install every tool without auto-locking. A warm
-        # storage would skip installation and conceal an absent locked-mode guard.
+    @staticmethod
+    def _assert_cold_storage_ci(
+        template: Path,
+        profile: c.Infra.MakeProfile,
+    ) -> t.MappingKV[str, bytes]:
+        """A cold CI storage installed every tool without auto-locking.
+
+        A warm storage would skip installation and conceal an absent
+        locked-mode guard; the CI receipt proves the real cold path.
+
+        Returns:
+            Every lock artifact ``make upg`` owns, keyed by relative path.
+
+        """
+        receipts = template.parent.parent
         bootstrap = u.Infra.mise_bootstrap_environment()
         cold_storage = receipts / c.Tests.COLD_MISE_STORAGE
         locked = u.Tests.command_receipt(receipts / c.Tests.MAKE_TEMPLATE_CI_RECEIPT)
@@ -581,17 +590,31 @@ class TestsFlextInfraCodegenMakeEnvironment:
             if name == "MISE_INSTALLS_DIR"
         )
         tm.that(any(install_root.iterdir()), eq=True)
-        resolved_locks = self._locks(template)
+        resolved_locks = TestsFlextInfraCodegenMakeEnvironment._locks(template)
         ci_checkout = (
             receipts / c.Tests.MAKE_TEMPLATE_CI_CHECKOUT / profile.value / template.name
         )
-        tm.that(self._locks(ci_checkout), eq=resolved_locks)
+        tm.that(
+            TestsFlextInfraCodegenMakeEnvironment._locks(ci_checkout),
+            eq=resolved_locks,
+        )
+        return resolved_locks
 
-        # Only upg writes locks, and setup always runs. A new dependency
-        # declaration drifts uv.lock: setup warns, installs the committed lock
-        # frozen, and leaves every lock untouched.
-        checkout = u.Tests.resolved_make_checkout(template, tmp_path / "stale", profile)
-        dependency_root = tmp_path / "external-runtime"
+    def _assert_stale_dependency_setup(
+        self,
+        template: Path,
+        parent: Path,
+        profile: c.Infra.MakeProfile,
+        active_env: t.StrMapping,
+        resolved_locks: t.MappingKV[str, bytes],
+    ) -> None:
+        """A drifted dependency declaration never rewrites a committed lock.
+
+        Only upg writes locks, and setup always runs: setup warns, installs
+        the committed lock frozen, and leaves every lock untouched.
+        """
+        checkout = u.Tests.resolved_make_checkout(template, parent / "stale", profile)
+        dependency_root = parent / "external-runtime"
         u.Tests.WorktreeFixture.write_python_project(
             dependency_root,
             "external-runtime",
@@ -604,17 +627,10 @@ class TestsFlextInfraCodegenMakeEnvironment:
             f"external-runtime @ {dependency_root.as_uri()}",
         ]
         tm.ok(u.Cli.atomic_write_text_file(pyproject_path, u.Cli.toml_dumps(document)))
-        make = config.Infra.codegen.make
-        stale = tm.ok(
-            u.Tests.run_isolated_make(
-                ["--no-print-directory", "setup"],
-                cwd=checkout,
-                env={
-                    **active_env,
-                    make.ci.variable: make.ci.value,
-                    bootstrap.storage_root_variable: str(cold_storage),
-                },
-            ),
+        stale = self._setup_with_cold_storage(
+            checkout,
+            active_env=active_env,
+            receipts=template.parent.parent,
         )
         tm.that(
             u.Cli.process_succeeded(stale.outcome),
@@ -624,11 +640,22 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(stale.stderr, has="uv.lock drifts from pyproject.toml")
         tm.that(self._locks(checkout), eq=resolved_locks)
 
-        # Missing a declared tool must stop the locked install before lifecycle
-        # execution, even when the tool is already present in warm storage.
+    def _assert_drifted_lock_install(
+        self,
+        template: Path,
+        parent: Path,
+        profile: c.Infra.MakeProfile,
+        active_env: t.StrMapping,
+        resolved_locks: t.MappingKV[str, bytes],
+    ) -> None:
+        """A missing declared tool stops the locked install before lifecycle.
+
+        The tool is already present in warm storage, so only the locked-mode
+        guard can refuse it.
+        """
         drifted = u.Tests.resolved_make_checkout(
             template,
-            tmp_path / "drifted",
+            parent / "drifted",
             profile,
         )
         mise_lock = drifted / c.Infra.MISE_LOCK_FILENAME
@@ -640,16 +667,10 @@ class TestsFlextInfraCodegenMakeEnvironment:
             **resolved_locks,
             c.Infra.MISE_LOCK_FILENAME: mise_lock.read_bytes(),
         }
-        unsatisfied = tm.ok(
-            u.Tests.run_isolated_make(
-                ["--no-print-directory", "setup"],
-                cwd=drifted,
-                env={
-                    **active_env,
-                    make.ci.variable: make.ci.value,
-                    bootstrap.storage_root_variable: str(cold_storage),
-                },
-            ),
+        unsatisfied = self._setup_with_cold_storage(
+            drifted,
+            active_env=active_env,
+            receipts=template.parent.parent,
         )
         tm.that(
             u.Cli.process_succeeded(unsatisfied.outcome),
@@ -670,6 +691,81 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(unsatisfied.stdout, lacks="setup: entering lifecycle")
         tm.that(u.Infra.runtime_environment_dir(drifted).exists(), eq=False)
         tm.that(self._locks(drifted), eq=drifted_locks)
+
+    def _setup_with_cold_storage(
+        self,
+        checkout: Path,
+        *,
+        active_env: t.StrMapping,
+        receipts: Path,
+    ) -> m.Cli.CommandOutput:
+        """Run ``make setup`` once against the run's cold Mise storage.
+
+        Returns:
+            The recorded provisioning command outcome.
+
+        """
+        bootstrap = u.Infra.mise_bootstrap_environment()
+        cold_storage = receipts / c.Tests.COLD_MISE_STORAGE
+        make = config.Infra.codegen.make
+        return tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "setup"],
+                cwd=checkout,
+                env={
+                    **active_env,
+                    make.ci.variable: make.ci.value,
+                    bootstrap.storage_root_variable: str(cold_storage),
+                },
+            ),
+        )
+
+    @pytest.mark.parametrize(
+        "profile",
+        [c.Infra.MakeProfile.STANDALONE, c.Infra.MakeProfile.WORKSPACE],
+    )
+    # Why: `make setup` provisions a real environment from the remote
+    # index and GitHub sources (an external gate); it never runs inside
+    # the offline unit gate; make test-full includes this remote boundary.
+    @pytest.mark.remote
+    def test_setup_provisions_environment_before_project_runtime(
+        self,
+        tmp_path: Path,
+        resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
+        profile: c.Infra.MakeProfile,
+    ) -> None:
+        """Setup creates the venv and syncs dependencies before any runtime use."""
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path,
+            profile,
+            bootstrap=True,
+        )
+        hostile_venv = tmp_path / c.Tests.MAKE_TEMPLATE_HOSTILE_VENV
+        (hostile_venv / "bin").mkdir(parents=True)
+        active_env = u.Tests.hostile_uv_environment(hostile_venv)
+        tm.that(u.Infra.runtime_environment_dir(project_root).exists(), eq=False)
+        self._assert_unlocked_setup_fails(project_root, active_env)
+
+        template = resolved_make_templates[profile]
+        receipts = template.parent.parent
+        self._assert_upg_receipts(template, receipts)
+        resolved_locks = self._assert_cold_storage_ci(template, profile)
+        self._assert_stale_dependency_setup(
+            template,
+            tmp_path,
+            profile,
+            active_env,
+            receipts,
+            resolved_locks,
+        )
+        self._assert_drifted_lock_install(
+            template,
+            tmp_path,
+            profile,
+            active_env,
+            receipts,
+            resolved_locks,
+        )
 
     @staticmethod
     def _locks(root: Path) -> t.MappingKV[str, bytes]:

@@ -11,8 +11,14 @@ from collections.abc import Mapping, Sequence
 from functools import cache, lru_cache
 from pathlib import Path
 
+from flext_cli import u
+
 from flext_core import r
 from flext_infra import c, m, p, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesGit,
+    FlextInfraUtilitiesManagedConflicts,
+)
 
 
 class FlextInfraUtilitiesPyproject:
@@ -33,8 +39,6 @@ class FlextInfraUtilitiesPyproject:
             Live pyproject text with merge-control lines resolved.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesManagedConflicts
-
         spec_result = FlextInfraUtilitiesManagedConflicts.pyproject_managed_file()
         if spec_result.failure:
             return r[str].from_failure(spec_result)
@@ -51,8 +55,6 @@ class FlextInfraUtilitiesPyproject:
             The resulting ``p.Result[str]``.
 
         """
-        from flext_cli import u
-
         raw = u.Cli.atomic_read_binary_file_state(pyproject_path, required=True)
         if raw.failure:
             return r[str].from_failure(raw)
@@ -81,8 +83,6 @@ class FlextInfraUtilitiesPyproject:
             The resulting ``p.Result[p.ProjectMetadata]``.
 
         """
-        from flext_cli import u
-
         live = FlextInfraUtilitiesPyproject.live_pyproject_text(
             project_root / c.PYPROJECT_FILENAME,
         )
@@ -143,8 +143,6 @@ class FlextInfraUtilitiesPyproject:
             The resulting ``p.Result[str]``.
 
         """
-        from flext_cli import u
-
         config_path = toolchain_root / c.Infra.TAPLO_CONFIG_FILENAME
         config_content = config_path.read_bytes() if config_path.is_file() else b""
         resolved_path = path.resolve()
@@ -162,11 +160,11 @@ class FlextInfraUtilitiesPyproject:
         return cls._format_toml_source_cached(
             source,
             relative_path=relative_path,
-            config_path=config_path.resolve() if config_content else None,
-            config_digest=u.Cli.sha256_bytes(config_content),
-            execution_root=execution_root,
-            taplo_version=taplo_version,
-            process_timeout_seconds=process_timeout_seconds,
+            config=(
+                config_path.resolve() if config_content else None,
+                u.Cli.sha256_bytes(config_content),
+            ),
+            taplo=(taplo_version, process_timeout_seconds, execution_root),
         )
 
     @staticmethod
@@ -197,8 +195,6 @@ class FlextInfraUtilitiesPyproject:
             One tool's pinned version from ``mise.lock`` at the root.
 
         """
-        from flext_cli import u
-
         lock_path = toolchain_root / c.Infra.MISE_LOCK_FILENAME
         source = u.Cli.files_read_text(lock_path)
         if source.failure:
@@ -224,23 +220,22 @@ class FlextInfraUtilitiesPyproject:
         source: str,
         *,
         relative_path: str,
-        config_path: Path | None,
-        config_digest: str,
-        execution_root: Path,
-        taplo_version: str,
-        process_timeout_seconds: int,
+        config: t.Pair[Path | None, str],
+        taplo: t.Triple[str, int, Path],
     ) -> p.Result[str]:
-        from flext_cli import u
 
-        del config_digest
-        taplo = FlextInfraUtilitiesPyproject._taplo_binary(
-            taplo_version,
-            process_timeout_seconds,
-            execution_root,
-        )
-        if taplo.failure:
-            return r[str].from_failure(taplo)
-        command = [str(taplo.value), "format", "-", "--stdin-filepath", relative_path]
+        taplo_result = FlextInfraUtilitiesPyproject._taplo_binary(*taplo)
+        if taplo_result.failure:
+            return r[str].from_failure(taplo_result)
+        config_path, _config_digest = config
+        _taplo_version, process_timeout_seconds, execution_root = taplo
+        command = [
+            str(taplo_result.value),
+            "format",
+            "-",
+            "--stdin-filepath",
+            relative_path,
+        ]
         if config_path is not None:
             command.extend(("--config", str(config_path)))
         # Generated content must not pass through normalized text model fields.
@@ -271,8 +266,9 @@ class FlextInfraUtilitiesPyproject:
             )
         return r[str].ok(formatted)
 
-    @staticmethod
+    @classmethod
     def _locked_mise_version(
+        cls,
         execution_root: Path,
         tool: str,
         selector: str,
@@ -288,9 +284,23 @@ class FlextInfraUtilitiesPyproject:
             The resulting ``p.Result[str]``.
 
         """
-        from flext_cli import u
+        lock_path = cls._mise_lock_path(execution_root)
+        if lock_path is None:
+            return r[str].fail(
+                f"no {c.Infra.MISE_LOCK_FILENAME} above {execution_root} pins "
+                f"{tool}; run make upg so generation stays offline",
+            )
+        return cls._pinned_mise_lock_version(lock_path, tool=tool, selector=selector)
 
-        lock_path = next(
+    @staticmethod
+    def _mise_lock_path(execution_root: Path) -> Path | None:
+        """Return the nearest committed mise.lock above the execution root.
+
+        Returns:
+            The resulting ``Path | None``.
+
+        """
+        return next(
             (
                 candidate / c.Infra.MISE_LOCK_FILENAME
                 for candidate in (execution_root, *execution_root.parents)
@@ -298,11 +308,49 @@ class FlextInfraUtilitiesPyproject:
             ),
             None,
         )
-        if lock_path is None:
-            return r[str].fail(
-                f"no {c.Infra.MISE_LOCK_FILENAME} above {execution_root} pins "
-                f"{tool}; run make upg so generation stays offline",
-            )
+
+    @classmethod
+    def _pinned_mise_lock_version(
+        cls,
+        lock_path: Path,
+        *,
+        tool: str,
+        selector: str,
+    ) -> p.Result[str]:
+        """Authenticate the committed mise.lock version one selector pins.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
+        entries_result = cls._mise_lock_tool_entries(lock_path, tool=tool)
+        if entries_result.failure:
+            return r[str].from_failure(entries_result)
+        for entry in entries_result.value:
+            locked = cls._locked_entry_version(entry)
+            if locked is None:
+                return r[str].fail(
+                    f"{lock_path} has a malformed [[tools.{tool}]] entry: {entry!r}",
+                )
+            pinned, specifiers = locked
+            if selector in specifiers or selector == pinned:
+                return r[str].ok(pinned)
+        return r[str].fail(
+            f"{lock_path} pins no {tool} for selector {selector!r}; run make upg",
+        )
+
+    @staticmethod
+    def _mise_lock_tool_entries(
+        lock_path: Path,
+        *,
+        tool: str,
+    ) -> p.Result[t.SequenceOf[object]]:
+        """Read one tool's lock entries from the committed mise.lock.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[object]]``.
+
+        """
         document = u.Cli.toml_parse_text(
             lock_path.read_text(encoding=c.Cli.ENCODING_DEFAULT),
         )
@@ -317,22 +365,25 @@ class FlextInfraUtilitiesPyproject:
         entries = tools.get(tool)
         if not isinstance(entries, list):
             return r[str].fail(f"{lock_path} pins no [[tools.{tool}]] entry")
-        for entry in entries:
-            if not isinstance(entry, Mapping):
-                return r[str].fail(
-                    f"{lock_path} has a malformed [[tools.{tool}]] entry: {entry!r}",
-                )
-            pinned = entry.get("version")
-            specifiers = entry.get("specifiers", ())
-            if not isinstance(pinned, str) or not isinstance(specifiers, (list, tuple)):
-                return r[str].fail(
-                    f"{lock_path} has a malformed [[tools.{tool}]] entry: {entry!r}",
-                )
-            if selector in specifiers or selector == pinned:
-                return r[str].ok(pinned)
-        return r[str].fail(
-            f"{lock_path} pins no {tool} for selector {selector!r}; run make upg",
-        )
+        return r[str].ok(entries)
+
+    @staticmethod
+    def _locked_entry_version(
+        entry: object,
+    ) -> t.Pair[str, t.SequenceOf[object]] | None:
+        """Return one lock entry's pinned version and specifiers when wellformed.
+
+        Returns:
+            The resulting ``t.Pair | None``.
+
+        """
+        if not isinstance(entry, Mapping):
+            return None
+        pinned = entry.get("version")
+        specifiers = entry.get("specifiers", ())
+        if not isinstance(pinned, str) or not isinstance(specifiers, (list, tuple)):
+            return None
+        return pinned, specifiers
 
     @staticmethod
     @cache
@@ -351,8 +402,6 @@ class FlextInfraUtilitiesPyproject:
             The resulting ``p.Result[Path]``.
 
         """
-        from flext_cli import u
-
         pinned = FlextInfraUtilitiesPyproject._locked_mise_version(
             execution_root,
             c.Infra.TAPLO_MISE_TOOL_NAME,
@@ -445,8 +494,6 @@ class FlextInfraUtilitiesPyproject:
             RuntimeError: If ``text`` is not valid TOML.
 
         """
-        from flext_cli import u
-
         payload = u.Cli.toml_mapping_from_text(text)
         if payload is None:
             msg = f"pyproject payload at {pyproject_path} is not valid TOML"
@@ -461,8 +508,6 @@ class FlextInfraUtilitiesPyproject:
             One TOML document normalized through the infra adapter.
 
         """
-        from flext_cli import u
-
         payload = u.Cli.toml_as_mapping(document)
         if not payload:
             return {}
@@ -525,6 +570,45 @@ class FlextInfraUtilitiesPyproject:
         return raw_name.strip()
 
     @staticmethod
+    def _hatch_wheel_package(payload: t.JsonMapping) -> str | None:
+        """Return the package name the hatch wheel targets declare.
+
+        Returns:
+            The resulting ``str | None``.
+
+        """
+        current: t.JsonMapping | None = payload
+        for key in (c.Infra.TOOL, "hatch", "build", "targets", "wheel"):
+            if current is None:
+                break
+            candidate = current.get(key)
+            current = candidate if isinstance(candidate, dict) else None
+        packages = current.get("packages") if current is not None else None
+        if not isinstance(packages, list):
+            return None
+        for item in packages:
+            package_path = Path(str(item).strip())
+            if package_path.parts:
+                return package_path.parts[-1]
+        return None
+
+    @staticmethod
+    def _src_dir_package(project_root: Path) -> str | None:
+        """Return the first ``src`` child package carrying an initializer.
+
+        Returns:
+            The resulting ``str | None``.
+
+        """
+        src_dir = project_root / c.Infra.DEFAULT_SRC_DIR
+        if not src_dir.is_dir():
+            return None
+        for child in sorted(src_dir.iterdir()):
+            if child.is_dir() and (child / c.Infra.INIT_PY).is_file():
+                return child.name
+        return None
+
+    @staticmethod
     def package_name_from_payload(
         project_root: Path,
         payload: t.JsonMapping,
@@ -542,25 +626,12 @@ class FlextInfraUtilitiesPyproject:
         configured = docs_meta.get("package_name")
         if isinstance(configured, str) and configured.strip():
             return configured.strip()
-        current: t.JsonMapping | None = payload
-        for key in (c.Infra.TOOL, "hatch", "build", "targets", "wheel"):
-            if current is None:
-                break
-            candidate = current.get(key)
-            current = candidate if isinstance(candidate, dict) else None
-        packages = current.get("packages") if current is not None else None
-        if isinstance(packages, list):
-            for item in packages:
-                package_path = Path(str(item).strip())
-                if package_path.parts:
-                    package_parts: t.VariadicTuple[str] = package_path.parts
-                    return package_parts[-1]
-        src_dir = project_root / c.Infra.DEFAULT_SRC_DIR
-        if src_dir.is_dir():
-            for child in sorted(src_dir.iterdir()):
-                if child.is_dir() and (child / c.Infra.INIT_PY).is_file():
-                    child_path: Path = child
-                    return child_path.name
+        wheel_package = FlextInfraUtilitiesPyproject._hatch_wheel_package(payload)
+        if wheel_package is not None:
+            return wheel_package
+        source_package = FlextInfraUtilitiesPyproject._src_dir_package(project_root)
+        if source_package is not None:
+            return source_package
         project_name = FlextInfraUtilitiesPyproject.project_name_from_payload(
             project_root,
             payload,
@@ -612,8 +683,6 @@ class FlextInfraUtilitiesPyproject:
             ValueError: If ``declared.failure``; or if ``unmanaged.failure``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGit
-
         declared = FlextInfraUtilitiesGit.git_declared_submodule_paths(repository_root)
         if declared.failure:
             msg = declared.error or f"invalid workspace topology: {repository_root}"

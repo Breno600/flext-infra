@@ -62,11 +62,6 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
     class MakefileRenderSpec(MakeCommandContext):
         """Field-only render input for an existing repository Makefile."""
 
-        mise_bootstrap: Annotated[
-            FlextInfraConfigModelsContract.MiseBootstrapEnvironmentSpec,
-            m.Field(description="Generated strict Mise bootstrap environment"),
-        ]
-
         dist: Annotated[t.NonEmptyStr, m.Field(description="PEP 621 project name")]
         make_profile: Annotated[
             FlextInfraConstantsCodegenProject.MakeProfile,
@@ -84,10 +79,6 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
             t.VariadicTuple[str],
             m.Field(description="Declared workspace subproject paths"),
         ] = ()
-        workspace_repositories: Annotated[
-            t.VariadicTuple[FlextInfraConfigModelsContexts.RepositoryRef],
-            m.Field(description="Repositories editable from the selected workspace"),
-        ] = ()
         workspace_gitlinks: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsContexts.ManagedGitlinkSpec],
             m.Field(description="Provider-resolved governed Git submodules"),
@@ -96,13 +87,19 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
             t.NonEmptyStr,
             m.Field(description="Configured uv installation link mode"),
         ]
-        uv_version: Annotated[
+        mise_selector: Annotated[
             t.NonEmptyStr,
-            m.Field(description="mise-owned uv version used by bootstrap validation"),
+            m.Field(description="Mise backend selector the mise.lock pin is read from"),
         ]
-        mise_lockfile_platforms: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="Platforms carried by artifact-tool lock entries"),
+        mise_version: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description="Declared mise release the running binary must match",
+            ),
+        ]
+        python_version: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Python minor line the environment syncs against"),
         ]
         make: Annotated[
             FlextInfraConfigModelsMake.MakeSpec,
@@ -144,11 +141,6 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
 
     class MakeRenderContext(MakeCommandContext):
         """Typed input consumed by the generated Make surface."""
-
-        mise_bootstrap: Annotated[
-            FlextInfraConfigModelsContract.MiseBootstrapEnvironmentSpec,
-            m.Field(description="Generated strict Mise bootstrap environment"),
-        ]
 
         make: Annotated[
             FlextInfraConfigModelsMake.MakeSpec,

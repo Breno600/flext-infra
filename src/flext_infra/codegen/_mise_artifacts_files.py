@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m, t, u
+from flext_infra import m, t, u
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -113,21 +113,6 @@ class FlextInfraMiseArtifactsFiles:
 
         """
         return Path(__file__).resolve().parents[1]
-
-    @classmethod
-    def cold_start_directory(cls) -> Path:
-        """Return the packaged copy of flext-infra's own upg-written triple.
-
-        Its only writer is flext-infra's own generation, which projects its
-        runtime-root ``bin/mise``, ``bin/mise.cmd`` and ``mise.version`` here;
-        a repository that has never carried a triple, or carries the pre-bake
-        projection whose launchers resolve the latest release, starts from it.
-
-        Returns:
-            The packaged copy of flext-infra's own upg-written triple.
-
-        """
-        return cls.package_directory() / c.Infra.MISE_COLD_START_DIRECTORY
 
     @classmethod
     def read_state(

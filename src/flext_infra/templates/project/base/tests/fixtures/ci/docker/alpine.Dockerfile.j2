@@ -1,4 +1,4 @@
-{% from "docker_mise_bootstrap.j2" import docker_header, docker_bootstrap_proof with context -%}
+{% from "docker_proof_macros.j2" import docker_header, docker_bootstrap_proof with context -%}
 {{ docker_header("alpine.Dockerfile.j2", "Alpine", " (musl, POSIX /bin/sh at runtime; bash installed for the project scripts).") }}
 FROM alpine:3.21
 

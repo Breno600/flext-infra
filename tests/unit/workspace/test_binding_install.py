@@ -21,37 +21,29 @@ class TestsFlextInfraBindingInstall:
     """Exercise the public binding CLI with real consumer and supplier packages."""
 
     @staticmethod
-    @pytest.mark.slow
-    @pytest.mark.parametrize(
-        "scenario",
-        [
-            "extras",
-            "constraint",
-            "inactive",
-            "borrowed",
-            "borrowed-member",
-            "override",
-            "override-constraint",
-            "inactive-override",
-        ],
-    )
-    def test_binding_uses_consumer_contract(
-        tmp_path: Path,
+    def _seed_candidate_projects(
+        supplier: Path,
+        consumer: Path,
+        extra: Path,
+        workspace: Path,
+        *,
         scenario: str,
     ) -> None:
-        """Install extras or reject incompatible, inactive, and borrowed candidates."""
-        supplier, consumer, extra, workspace = (
-            tmp_path / name for name in ("supplier", "consumer", "extra", "workspace")
-        )
+        """Initialize the governed consumer, supplier, and extra roots.
+
+        The composed-member scenario makes the consumer a workspace member:
+        its runtime environment is the workspace's, so its own environment
+        path must not borrow it.
+        """
         if scenario == "borrowed-member":
-            # The consumer is a composed member: its runtime environment is the
-            # workspace's, so its own environment path must not borrow it.
             u.Tests.WorktreeFixture.initialize_governed_project(
                 workspace,
                 "binding-workspace",
-                workspace="binding-workspace",
-                database="binding-workspace",
-                issue_prefix="binding-workspace",
+                beads=u.Tests.BeadsIdentity(
+                    workspace="binding-workspace",
+                    database="binding-workspace",
+                    issue_prefix="binding-workspace",
+                ),
             )
             consumer = workspace / consumer.name
         for root, name in (
@@ -61,9 +53,11 @@ class TestsFlextInfraBindingInstall:
             u.Tests.WorktreeFixture.initialize_governed_project(
                 root,
                 name,
-                workspace=name,
-                database=name,
-                issue_prefix=name,
+                beads=u.Tests.BeadsIdentity(
+                    workspace=name,
+                    database=name,
+                    issue_prefix=name,
+                ),
             )
         extra.mkdir()
         for root, name, optional in (
@@ -88,6 +82,15 @@ class TestsFlextInfraBindingInstall:
                 'VALUE = "installed"\n',
                 encoding=c.Cli.ENCODING_DEFAULT,
             )
+
+    @staticmethod
+    def _declare_consumer_dependency(scenario: str, consumer: Path) -> bytes:
+        """Write the consumer's declared dependency contract for one scenario.
+
+        Returns:
+            The declaration bytes the binding run must leave untouched.
+
+        """
         inactive = "; python_version < '0'"
         marker = inactive if scenario == "inactive" else ""
         policy = []
@@ -110,7 +113,26 @@ class TestsFlextInfraBindingInstall:
             f"{constraints}",
             encoding=c.Cli.ENCODING_DEFAULT,
         )
-        original = declaration.read_bytes()
+        return declaration.read_bytes()
+
+    @staticmethod
+    def _compose_consumer_environment(
+        tmp_path: Path,
+        consumer: Path,
+        workspace: Path,
+        *,
+        scenario: str,
+    ) -> Path:
+        """Materialize the consumer runtime environment for one scenario.
+
+        The composed member borrows the workspace environment through its own
+        symlink; the borrowed scenario swaps the physical directory for a
+        foreign symlinked environment.
+
+        Returns:
+            The consumer's resolved runtime environment directory.
+
+        """
         if scenario == "borrowed-member":
             u.Tests.WorktreeFixture.attach_submodule(
                 workspace,
@@ -130,6 +152,49 @@ class TestsFlextInfraBindingInstall:
             foreign = tmp_path / "foreign-environment"
             environment.rename(foreign)
             environment.symlink_to(foreign, target_is_directory=True)
+        return environment
+
+    @staticmethod
+    @pytest.mark.slow
+    @pytest.mark.parametrize(
+        "scenario",
+        [
+            "extras",
+            "constraint",
+            "inactive",
+            "borrowed",
+            "borrowed-member",
+            "override",
+            "override-constraint",
+            "inactive-override",
+        ],
+    )
+    def test_binding_uses_consumer_contract(
+        tmp_path: Path,
+        scenario: str,
+    ) -> None:
+        """Install extras or reject incompatible, inactive, and borrowed candidates."""
+        supplier, consumer, extra, workspace = (
+            tmp_path / name for name in ("supplier", "consumer", "extra", "workspace")
+        )
+        TestsFlextInfraBindingInstall._seed_candidate_projects(
+            supplier,
+            consumer,
+            extra,
+            workspace,
+            scenario=scenario,
+        )
+        declaration = consumer / c.PYPROJECT_FILENAME
+        original = TestsFlextInfraBindingInstall._declare_consumer_dependency(
+            scenario,
+            consumer,
+        )
+        environment = TestsFlextInfraBindingInstall._compose_consumer_environment(
+            tmp_path,
+            consumer,
+            workspace,
+            scenario=scenario,
+        )
         python = (
             Path(
                 sysconfig.get_path(

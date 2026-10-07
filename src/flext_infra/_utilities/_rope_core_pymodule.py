@@ -71,9 +71,7 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
         if FlextInfraUtilitiesRopeRuntime.file_resource(resource):
             return True
         path = Path(resource.real_path)
-        return (
-            (path / "__init__.py").is_file() or path.with_suffix(".py").is_file()
-        )
+        return (path / "__init__.py").is_file() or path.with_suffix(".py").is_file()
 
     @staticmethod
     def resolve_pymodule(

@@ -10,8 +10,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m, u
+from flext_infra import m, u
 from flext_infra._config import config
+from flext_infra.codegen._mise_artifacts_candidates import (
+    FlextInfraMiseArtifactsCandidates,
+)
 from flext_infra.codegen._mise_artifacts_process import (
     FlextInfraMiseArtifactsProcess as process,
 )
@@ -21,12 +24,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraMiseStaging:
-    """Build every replacement before the journal permits live publication.
-
-    Generation never produces a launcher: every selected project receives the
-    exact bytes of the runtime root's `make upg` triple (the runtime root
-    itself receives its own bytes, a no-op publication).
-    """
+    """Build every replacement before the journal permits live publication."""
 
     def stage(
         self,
@@ -37,17 +35,13 @@ class FlextInfraMiseStaging:
             t.VariadicTuple[m.Cli.AtomicDirectoryState],
         ]
     ]:
-        """Stage the runtime-root triple alongside each project's declaration.
+        """Stage each selected project's generated declaration.
 
         Returns:
             The resulting ``p.Result[t.Pair[t.VariadicTuple[m.Infra.CodegenStagedFile],
                 t.VariadicTuple[m.Cli.AtomicDirectoryState]]]``.
 
         """
-        from flext_infra.codegen._mise_artifacts_candidates import (
-            FlextInfraMiseArtifactsCandidates,
-        )
-
         result_type = r[
             tuple[
                 tuple[m.Infra.CodegenStagedFile, ...],
@@ -56,16 +50,6 @@ class FlextInfraMiseStaging:
         ]
         if not plan.projects:
             return result_type.fail("Mise plan declares no projects")
-        projected = tuple(
-            state.content
-            for state in plan.runtime_artifacts.states
-            if state.content is not None
-        )
-        if len(projected) != len(c.Infra.ARTIFACT_SPECS):
-            return result_type.fail(
-                "runtime Mise artifacts are incomplete; run make upg in "
-                f"{plan.layout.scope_root}",
-            )
         publications: list[m.Infra.CodegenStagedFile] = []
         directories: list[m.Cli.AtomicDirectoryState] = []
         for project in plan.projects:
@@ -77,7 +61,6 @@ class FlextInfraMiseStaging:
             staged = self._stage_project(
                 project,
                 stage_root=stage_root,
-                projected=projected,
             )
             if staged.failure:
                 return result_type.from_failure(staged)
@@ -96,19 +79,18 @@ class FlextInfraMiseStaging:
         project: m.Infra.MiseToolchainProjectState,
         *,
         stage_root: Path,
-        projected: t.VariadicTuple[bytes],
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicDirectoryState]]:
-        """Build one project and retain its guarded directory creation receipts.
+        """Stage one project's declaration and retain directory creation receipts.
 
         Returns:
             The resulting ``p.Result[t.VariadicTuple[m.Cli.AtomicDirectoryState]]``.
 
         """
         result_type = r[tuple[m.Cli.AtomicDirectoryState, ...]]
-        stage_plan = u.Cli.atomic_plan_directory_chain(stage_root / "bin")
+        stage_plan = u.Cli.atomic_plan_directory_chain(stage_root)
         if stage_plan.failure:
             return result_type.from_failure(stage_plan)
-        if tuple(stage_plan.value.directories) != (stage_root, stage_root / "bin"):
+        if tuple(stage_plan.value.directories) != (stage_root,):
             return result_type.fail(
                 f"Mise stage already exists for {project.layout.selector}",
             )
@@ -119,20 +101,12 @@ class FlextInfraMiseStaging:
         if created.failure:
             return result_type.from_failure(created)
         config_write = process.write_new(
-            stage_root / c.Infra.CONFIG_SPEC[0],
+            stage_root / project.layout.config.name,
             project.config.replacement_content,
             project.config.replacement_mode,
         )
         if config_write.failure:
             return result_type.from_failure(config_write)
-        for content, (name, mode) in zip(
-            projected,
-            c.Infra.ARTIFACT_SPECS,
-            strict=True,
-        ):
-            copied = process.write_new(stage_root / name, content, mode)
-            if copied.failure:
-                return result_type.from_failure(copied)
         return result_type.ok(tuple(created.value))
 
 

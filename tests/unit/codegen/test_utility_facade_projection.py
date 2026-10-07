@@ -330,9 +330,7 @@ class TestsFlextInfraUtilityFacadeProjection:
         tm.that(u.Infra.render_utility_facade(package, family="p"), eq=updated)
 
     @staticmethod
-    def test_codegen_models_are_usable_through_the_composed_facade(
-        tmp_path: Path,
-    ) -> None:
+    def test_codegen_models_are_usable_through_the_composed_facade() -> None:
         """Consume both codegen families through the actual generated namespace."""
         context = m.Infra.ModuleSkeletonRenderContext(
             class_name="GeneratedPayload",
@@ -343,16 +341,6 @@ class TestsFlextInfraUtilityFacadeProjection:
         tm.that(
             m.Infra.ModuleSkeletonRenderContext.model_validate(context.model_dump()),
             eq=context,
-        )
-        paths = m.Infra.MiseToolchainArtifactPaths(
-            config=tmp_path / "toolchain.toml",
-            unix_launcher=tmp_path / "launcher.sh",
-            windows_launcher=tmp_path / "launcher.cmd",
-            version_pin=tmp_path / "version",
-        )
-        tm.that(
-            m.Infra.MiseToolchainArtifactPaths.model_validate(paths.model_dump()),
-            eq=paths,
         )
 
     def test_model_projection_preserves_inherited_family_order_at_runtime(

@@ -33,6 +33,33 @@ class TestsFlextInfraModCliRoute:
     """
 
     @staticmethod
+    def _run_mod_scan(
+        mod_workspace: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> tuple[int, m.Infra.ModScanEvidence, str, str]:
+        """Run one ``refactor mod`` scan and capture its receipt artifacts.
+
+        Returns:
+            The exit code, the parsed evidence, the receipt digest, and the
+            captured console text.
+
+        """
+        report_path = mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH
+        exit_code = main([
+            "refactor",
+            "mod",
+            "--repository-root",
+            str(mod_workspace),
+        ])
+        capture = capsys.readouterr()
+        state = tm.ok(u.Cli.atomic_read_binary_file_state(report_path, required=True))
+        evidence_bytes = tm.not_none(state.content)
+        evidence = m.Infra.ModScanEvidence.model_validate_json(evidence_bytes)
+        digest = u.Cli.sha256_bytes(evidence_bytes)
+        console = capture.out + capture.err
+        return exit_code, evidence, digest, console
+
+    @staticmethod
     def test_receipt_is_complete_and_replaced_by_zero_scan(
         mod_workspace: Path,
         capsys: pytest.CaptureFixture[str],
@@ -44,20 +71,9 @@ class TestsFlextInfraModCliRoute:
         tm.ok(u.Cli.ensure_dir(generated_hook.parent))
         tm.ok(u.Cli.atomic_write_text_file(generated_hook, "value = 1\n"))
 
-        first_exit = main([
-            "refactor",
-            "mod",
-            "--repository-root",
-            str(mod_workspace),
-        ])
-        first_console_capture = capsys.readouterr()
-        first_state = tm.ok(
-            u.Cli.atomic_read_binary_file_state(report_path, required=True),
+        first_exit, first_evidence, first_digest, first_console = (
+            TestsFlextInfraModCliRoute._run_mod_scan(mod_workspace, capsys)
         )
-        first_bytes = tm.not_none(first_state.content)
-        first_evidence = m.Infra.ModScanEvidence.model_validate_json(first_bytes)
-        first_digest = u.Cli.sha256_bytes(first_bytes)
-        first_console = first_console_capture.out + first_console_capture.err
 
         tm.that(first_exit, ne=0)
         tm.that(
@@ -104,20 +120,9 @@ class TestsFlextInfraModCliRoute:
                 '    """Fixture namespace."""\n',
             ),
         )
-        second_exit = main([
-            "refactor",
-            "mod",
-            "--repository-root",
-            str(mod_workspace),
-        ])
-        second_console_capture = capsys.readouterr()
-        second_state = tm.ok(
-            u.Cli.atomic_read_binary_file_state(report_path, required=True),
+        second_exit, second_evidence, second_digest, second_console = (
+            TestsFlextInfraModCliRoute._run_mod_scan(mod_workspace, capsys)
         )
-        second_bytes = tm.not_none(second_state.content)
-        second_evidence = m.Infra.ModScanEvidence.model_validate_json(second_bytes)
-        second_digest = u.Cli.sha256_bytes(second_bytes)
-        second_console = second_console_capture.out + second_console_capture.err
 
         tm.that(second_exit, eq=0)
         tm.that(second_evidence.findings, eq=0)

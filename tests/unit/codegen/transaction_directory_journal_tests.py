@@ -13,7 +13,7 @@ import pytest
 from flext_tests import tm
 
 from flext_core import r
-from flext_infra import c, m, p
+from flext_infra import m, p
 from flext_infra.codegen import (
     FlextInfraMiseArtifactsJournal,
     codegen_transaction as transaction,
@@ -75,7 +75,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
                 (".",),
             ),
         )
-        artifacts = layout.projects[0].artifacts
+        config_path = layout.projects[0].config
 
         def publish(
             scope_root: Path,
@@ -83,14 +83,14 @@ class TestsFlextInfraTransactionDirectoryJournal:
             change: bool = False,
         ) -> p.Result[t.VariadicTuple[Path]]:
             before = tm.ok(
-                u.Cli.atomic_read_binary_file_state(artifacts.config, required=True),
+                u.Cli.atomic_read_binary_file_state(config_path, required=True),
             )
             content = tm.not_none(before.content)
             if change:
                 content += b"\n# transaction fixture update\n"
             plan = m.Infra.CodegenFilePlan(
                 project=root,
-                path=artifacts.config,
+                path=config_path,
                 before=before,
                 desired_content=content,
                 desired_mode=before.mode,
@@ -103,13 +103,8 @@ class TestsFlextInfraTransactionDirectoryJournal:
             )
 
         tm.ok(owner.run_locked(prepare=True, operation=publish))
-        before_states = tuple(
-            tm.ok(u.Cli.atomic_read_binary_file_state(path, required=True))
-            for path in (
-                artifacts.config,
-                artifacts.unix_launcher,
-                artifacts.windows_launcher,
-            )
+        before_state = tm.ok(
+            u.Cli.atomic_read_binary_file_state(config_path, required=True),
         )
 
         written = tm.ok(
@@ -119,31 +114,29 @@ class TestsFlextInfraTransactionDirectoryJournal:
             ),
         )
 
-        tm.that(written, eq=(artifacts.config,) if change_config else ())
+        tm.that(written, eq=(config_path,) if change_config else ())
         if change_config:
             tm.that(
-                artifacts.config.read_bytes(),
-                eq=tm.not_none(before_states[0].content)
-                + b"\n# transaction fixture update\n",
+                config_path.read_bytes(),
+                eq=(
+                    tm.not_none(before_state.content)
+                    + b"\n# transaction fixture update\n"
+                ),
             )
-        for before in before_states:
-            if change_config and before.path == artifacts.config:
-                continue
+        else:
             tm.that(
-                tm.ok(u.Cli.atomic_read_binary_file_state(before.path, required=True)),
-                eq=before,
+                tm.ok(u.Cli.atomic_read_binary_file_state(config_path, required=True)),
+                eq=before_state,
             )
         tm.that(layout.journal_path.exists(), eq=False)
         tm.that(layout.state_root.exists(), eq=False)
 
     @staticmethod
     @pytest.mark.parametrize("foreign_change", [False, True])
-    @pytest.mark.parametrize("missing_launcher_parent", [False, True])
     def test_duplicate_phase_recovers_only_its_new_generated_files(
         tmp_path: Path,
         *,
         foreign_change: bool,
-        missing_launcher_parent: bool,
     ) -> None:
         """Undo exact new publications, never a foreign replacement at their path."""
         root = u.Tests.git_repository(tmp_path)
@@ -151,19 +144,6 @@ class TestsFlextInfraTransactionDirectoryJournal:
         owner = transaction.FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
-        layout = tm.ok(
-            FlextInfraMiseWorkspacePlanner(
-                FlextInfraCodegenMiseArtifacts(repository_root=root),
-            ).layout_from_selectors(root.resolve(), (".",)),
-        )
-        artifacts = layout.projects[0].artifacts
-        if missing_launcher_parent:
-            # A cold runtime root lacks the whole triple; a partial one is a
-            # loud failure that names make upg, never a transaction to repair.
-            artifacts.unix_launcher.unlink()
-            artifacts.windows_launcher.unlink()
-            artifacts.unix_launcher.parent.rmdir()
-            (root / c.Infra.MISE_VERSION_PIN_FILENAME).unlink()
         target = root / "docs/generated/readme.md"
 
         def conflict(scope_root: Path) -> p.Result[m.Infra.CodegenTransactionSession]:
@@ -182,8 +162,6 @@ class TestsFlextInfraTransactionDirectoryJournal:
             session = tm.ok(
                 owner.begin_locked(scope_root, (config_plan,), (config_plan,)),
             )
-            tm.that(artifacts.unix_launcher.is_file(), eq=True)
-            tm.that(artifacts.windows_launcher.is_file(), eq=True)
             session = tm.ok(
                 owner.append_directories_locked(session, "docs", (target.parent,)),
             )
@@ -230,7 +208,6 @@ class TestsFlextInfraTransactionDirectoryJournal:
             tm.that((root / "docs").exists(), eq=False)
         tm.that((root / ".state").exists(), eq=False)
         tm.that(journal.with_name(f"{journal.name}.lock").is_file(), eq=True)
-        tm.that(artifacts.unix_launcher.parent.exists(), eq=not missing_launcher_parent)
 
     @staticmethod
     @pytest.mark.slow

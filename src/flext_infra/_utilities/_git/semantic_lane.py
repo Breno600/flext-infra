@@ -8,12 +8,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from flext_cli import u
+
 from flext_core import r
 from flext_infra import c, m
 from flext_infra._utilities import FlextInfraUtilitiesGitSemanticWorktreeMixin
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
     from flext_infra import p
 
@@ -22,6 +25,61 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
     FlextInfraUtilitiesGitSemanticWorktreeMixin,
 ):
     """Own the lane every repository publication shares (release, propagation)."""
+
+    @classmethod
+    def _verified_lane_base(cls, request: m.Infra.GitLaneRequest) -> p.Result[Path]:
+        """Require a clean checkout on the lane base and return the repo root.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
+        """
+        root = request.repo_root
+        status = cls.git_status(m.Infra.GitStatusRequest(repo_root=root))
+        if status.failure:
+            return r[Path].from_failure(status)
+        if status.value.dirty:
+            return r[Path].fail(
+                f"lane {request.branch} requires a clean checkout: {root}\n"
+                f"{status.value.porcelain}",
+            )
+        current = cls.git_current_branch(m.Infra.GitRepoRequest(repo_root=root))
+        if current.failure:
+            return r[Path].from_failure(current)
+        if current.value.text != request.base:
+            return r[Path].fail(
+                f"lane {request.branch} starts from {request.base}, "
+                f"not {current.value.text}",
+            )
+        return r[Path].ok(root)
+
+    @classmethod
+    def _git_produce_lane(
+        cls,
+        request: m.Infra.GitLaneRequest,
+        produce: Callable[[], p.Result[bool]],
+    ) -> p.Result[bool]:
+        """Enter the lane, produce, and commit; restore base when a step fails.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        entered = False
+        for step in (
+            lambda: cls._git_enter_lane(request),
+            produce,
+            lambda: cls._git_commit_produced(request),
+        ):
+            outcome = step()
+            if outcome.failure:
+                if entered:
+                    restore = cls._git_restore_base(request)
+                    if restore.failure:
+                        return restore
+                return outcome
+            entered = True
+        return r[bool].ok(value=True)
 
     @classmethod
     def git_publish_lane(
@@ -44,39 +102,13 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_cli import u
-
         root = request.repo_root
-        status = cls.git_status(m.Infra.GitStatusRequest(repo_root=root))
-        if status.failure:
-            return r[bool].from_failure(status)
-        if status.value.dirty:
-            return r[bool].fail(
-                f"lane {request.branch} requires a clean checkout: {root}\n"
-                f"{status.value.porcelain}",
-            )
-        current = cls.git_current_branch(m.Infra.GitRepoRequest(repo_root=root))
-        if current.failure:
-            return r[bool].from_failure(current)
-        if current.value.text != request.base:
-            return r[bool].fail(
-                f"lane {request.branch} starts from {request.base}, "
-                f"not {current.value.text}",
-            )
-        entered = False
-        for step in (
-            lambda: cls._git_enter_lane(request),
-            produce,
-            lambda: cls._git_commit_produced(request),
-        ):
-            outcome = step()
-            if outcome.failure:
-                if entered:
-                    restore = cls._git_restore_base(request)
-                    if restore.failure:
-                        return restore
-                return outcome
-            entered = True
+        base = cls._verified_lane_base(request)
+        if base.failure:
+            return r[bool].from_failure(base)
+        produced = cls._git_produce_lane(request, produce)
+        if produced.failure:
+            return produced
         ahead = u.Cli.capture(
             [c.Infra.GIT, "rev-list", "--count", f"{request.base}..{request.branch}"],
             cwd=root,
@@ -100,8 +132,6 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_cli import u
-
         root = request.repo_root
         for command in (
             [c.Infra.GIT, "reset", "--hard"],
@@ -121,8 +151,6 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
             To ``base`` and remove the lane branch that carries nothing.
 
         """
-        from flext_cli import u
-
         root = request.repo_root
         for command in (
             [c.Infra.GIT, "switch", request.base],
@@ -141,8 +169,6 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_cli import u
-
         root, branch = request.repo_root, request.branch
         local = u.Cli.capture(
             [c.Infra.GIT, "rev-parse", "--verify", "--quiet", f"refs/heads/{branch}"],
@@ -214,8 +240,6 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_cli import u
-
         root, branch = request.repo_root, request.branch
         pushed = cls.git_push_upstream(
             m.Infra.GitPushRequest(repo_root=root, branch=branch),

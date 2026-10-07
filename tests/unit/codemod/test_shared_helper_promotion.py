@@ -103,6 +103,31 @@ class TestsFlextInfraSharedHelperPromotion:
         outcome = tm.ok(u.Cli.run([sys.executable, "-c", probe], cwd=root, env=env))
         return outcome.stdout.strip()
 
+    @staticmethod
+    def _seed_quoted_collision(root: Path, helper: str) -> None:
+        """Append a colliding quoted annotation binding to the quoted module."""
+        quoted = root / c.Infra.DIR_TESTS / "unit" / "quoted.py"
+        with infra.rope_workspace(root) as rope:
+            resource = rope.resource(quoted)
+            assert resource is not None
+            _, binding = u.Infra.import_binding(
+                rope.rope_project,
+                rope.rope_project.get_pymodule(resource),
+                rope.convention(
+                    root / c.Infra.DIR_TESTS / c.Infra.UTILITIES_PY,
+                ).module_name,
+                helper,
+            )
+        primary = ast.parse(binding, mode="eval").body
+        while isinstance(primary, ast.Attribute):
+            primary = primary.value
+        assert isinstance(primary, ast.Name)
+        quoted.write_text(
+            quoted.read_text(encoding="utf-8")
+            + f"\nclass Local:\n    {primary.id} = str\n    value: 'Shared'\n",
+            encoding="utf-8",
+        )
+
     @pytest.mark.parametrize("reexport", [False, True])
     @pytest.mark.parametrize("quoted_only", [False, True])
     @pytest.mark.parametrize("lexical_collision", [False, True])
@@ -119,27 +144,7 @@ class TestsFlextInfraSharedHelperPromotion:
         if quoted_only:
             (root / c.Infra.DIR_TESTS / "unit" / "consumer.py").unlink()
         if lexical_collision:
-            quoted = root / c.Infra.DIR_TESTS / "unit" / "quoted.py"
-            with infra.rope_workspace(root) as rope:
-                resource = rope.resource(quoted)
-                assert resource is not None
-                _, binding = u.Infra.import_binding(
-                    rope.rope_project,
-                    rope.rope_project.get_pymodule(resource),
-                    rope.convention(
-                        root / c.Infra.DIR_TESTS / c.Infra.UTILITIES_PY,
-                    ).module_name,
-                    helper,
-                )
-            primary = ast.parse(binding, mode="eval").body
-            while isinstance(primary, ast.Attribute):
-                primary = primary.value
-            assert isinstance(primary, ast.Name)
-            quoted.write_text(
-                quoted.read_text(encoding="utf-8")
-                + f"\nclass Local:\n    {primary.id} = str\n    value: 'Shared'\n",
-                encoding="utf-8",
-            )
+            self._seed_quoted_collision(root, helper)
         probe = (
             "from typing import get_args, get_type_hints\n"
             "from tests.unit.quoted import ORDINARY, annotated, echo\n"

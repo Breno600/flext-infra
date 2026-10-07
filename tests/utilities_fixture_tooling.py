@@ -181,10 +181,10 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
     def copy_tracked_mise_seeds(root: Path, *, source_root: Path | None = None) -> None:
         """Copy declared Mise inputs from this checkout or a native upgrade seed.
 
-        A governed repository carries the declaration, launchers, runtime pin,
-        and dependency lock together. Native dependency graphs referenced by
-        the lock must travel with it so frozen setup never resolves replacements.
-        Conform renders declarations; only ``make upg`` resolves new versions.
+        A governed repository carries the declaration and the dependency lock
+        together. Native dependency graphs referenced by the lock must travel
+        with it so frozen setup never resolves replacements. Conform renders
+        declarations; only ``make upg`` resolves new versions.
         """
         source_root = (
             Path(__file__).resolve().parents[1] if source_root is None else source_root
@@ -192,20 +192,11 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         for relative in (
             c.Infra.MISE_TOML_FILENAME,
             c.Infra.MISE_LOCK_FILENAME,
-            *c.Infra.ARTIFACT_NAMES,
         ):
             source = source_root / relative
             destination = root / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             _ = shutil.copy2(source, destination)
-        sidecars = Path(".mise/locks")
-        if (source_root / sidecars).is_dir():
-            _ = shutil.copytree(
-                source_root / sidecars,
-                root / sidecars,
-                dirs_exist_ok=True,
-                ignore=shutil.ignore_patterns("mise*.local"),
-            )
 
     @staticmethod
     def write_executable(path: Path, body: str) -> None:

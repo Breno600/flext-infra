@@ -1,0 +1,13 @@
+{#- Native mise installation for one CI job. mise self-manages: this step only
+    provides the host binary and its shims on PATH; `make setup` provisions
+    the pinned github:jdx/mise release plus every declared tool from the
+    committed mise.lock. The host bin is appended before the shims directory
+    so a post-setup shim (the pinned release) always wins resolution. bash is
+    pinned explicitly so the same fragment runs on Windows runners. -#}
+      - name: Install mise
+        shell: bash
+        run: |
+          set -eu
+          curl -fsSL https://mise.run | sh
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+          echo "${HOME}/.local/share/mise/shims" >> "${GITHUB_PATH}"

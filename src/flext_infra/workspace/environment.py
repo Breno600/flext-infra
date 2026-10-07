@@ -105,7 +105,6 @@ class FlextInfraWorkspaceEnvironmentMixin:
             environment_path_prepends=(
                 config.Infra.codegen.toolchain.environment_path_prepends
             ),
-            mise_bootstrap=u.Infra.mise_bootstrap_environment(),
         )
         return u.Cli.template_render(template_path, render_context)
 

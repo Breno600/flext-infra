@@ -12,7 +12,10 @@ from flext_cli import u as cli_u
 
 from flext_core import r
 from flext_infra import m, p, t
-from flext_infra._utilities import FlextInfraUtilitiesDocsGenerateSourcesMixin
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDocsContract,
+    FlextInfraUtilitiesDocsGenerateSourcesMixin,
+)
 
 
 class FlextInfraUtilitiesDocsGeneratePlanMixin(
@@ -107,7 +110,6 @@ class FlextInfraUtilitiesDocsGeneratePlanMixin(
         """
         # The physical repository root is carried by the bundle: the first output
         # scope is a member when the root is excluded from the render.
-        from flext_infra._utilities import FlextInfraUtilitiesDocsContract
 
         repository_root = bundle.repository_root
         scope_roots = tuple(scoped.scope.path for scoped in bundle.scopes)

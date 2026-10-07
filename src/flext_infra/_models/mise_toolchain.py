@@ -277,15 +277,6 @@ class FlextInfraModelsMiseToolchain:
                 ),
             ),
         ] = False
-        mise_transaction_lock_file: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                pattern=r"^\.[A-Za-z0-9._-]+\.lock$",
-                description=(
-                    "Ignored project-root mutex for Mise lock publication/recovery"
-                ),
-            ),
-        ]
         mise_lockfile_platforms: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
@@ -347,7 +338,8 @@ class FlextInfraModelsMiseToolchain:
             t.NonEmptyStr,
             m.Field(
                 description=(
-                    "Selector `make upg` resolves for the Mise release itself. "
+                    "Mise backend selector rendered as the self-managed [tools] "
+                    "entry: mise installs and pins itself through mise.lock. "
                     "Override toolchain.mise_selector."
                 ),
             ),
@@ -356,8 +348,8 @@ class FlextInfraModelsMiseToolchain:
             t.NonEmptyStr,
             m.Field(
                 description=(
-                    "Mise release `make upg` writes to mise.version and the "
-                    "launchers: 'latest', or a held release while upstream's "
+                    "Mise release rendered as the self-managed [tools] entry "
+                    "version: 'latest', or a held release while upstream's "
                     "newest one is broken"
                 ),
             ),
@@ -519,277 +511,6 @@ class FlextInfraModelsMiseToolchain:
                 description="Beads server TCP port declared by deployment",
             ),
         ]
-
-    class MiseBootstrapEnvironmentSpec(_ConfigContract):
-        """Validated environment contract rendered into generated Mise setup."""
-
-        storage_root_variable: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Required caller variable naming persistent storage"),
-        ]
-        fixed_environment: Annotated[
-            t.VariadicTuple[t.Pair[str, str]],
-            m.Field(min_length=1, description="Literal fail-closed Mise settings"),
-        ]
-        offline_environment: Annotated[
-            t.VariadicTuple[t.Pair[t.NonEmptyStr, t.NonEmptyStr]],
-            m.Field(
-                min_length=1,
-                description=(
-                    "Settings that keep a non-install Mise call off the network"
-                ),
-            ),
-        ]
-        transient_environment: Annotated[
-            t.VariadicTuple[t.Pair[t.NonEmptyStr, t.NonEmptyStr]],
-            m.Field(min_length=1, description="Scratch-relative environment paths"),
-        ]
-        persistent_environment: Annotated[
-            t.VariadicTuple[t.Pair[t.NonEmptyStr, t.NonEmptyStr]],
-            m.Field(min_length=1, description="Storage-relative environment paths"),
-        ]
-        empty_files: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(min_length=1, description="Scratch-relative empty policy files"),
-        ]
-        passthrough_environment: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(min_length=1, description="Explicitly reinjected host variables"),
-        ]
-        version_pin_file: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                pattern=r"^[A-Za-z0-9._-]+$",
-                description=(
-                    "Project-root file holding the Mise release `make upg` "
-                    "resolved; setup launches exactly that release."
-                ),
-            ),
-        ]
-        version_pin_header: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                min_length=1,
-                description=(
-                    "Generated-marker comments `make upg` writes above the release"
-                ),
-            ),
-        ]
-        version_pin_reader: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="POSIX awk program selecting the first release line"),
-        ]
-        release_selector: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                # "@version" suffix pins the selector to a known-good
-                # release when upstream ships a broken one.
-                pattern=r"^[a-z]+:[A-Za-z0-9._/@-]+$",
-                description="Tool selector `make upg` resolves for the Mise release",
-            ),
-        ]
-        artifact_specs: Annotated[
-            t.VariadicTuple[t.Pair[t.NonEmptyStr, int]],
-            m.Field(
-                min_length=3,
-                max_length=3,
-                description="Unix launcher, Windows launcher, and pin with modes",
-            ),
-        ]
-        lock_file: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                pattern=r"^[A-Za-z0-9._-]+$",
-                description="Committed native graph watched by runtime activation",
-            ),
-        ]
-        lock_transaction_script: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                pattern=r"^[A-Za-z0-9._/-]+\.py$",
-                description=(
-                    "Project-relative generated publisher of a staged mise.lock"
-                ),
-            ),
-        ]
-        lock_converge_script: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                pattern=r"^[A-Za-z0-9._/-]+\.py$",
-                description=(
-                    "Project-relative generated script `make upg` runs to hold "
-                    "broken releases inside a lock stage"
-                ),
-            ),
-        ]
-        credential_commands: Annotated[
-            t.VariadicTuple[t.VariadicTuple[t.NonEmptyStr]],
-            m.Field(
-                description=(
-                    "Candidate commands (in probe order) that print a GitHub "
-                    "token for private tool downloads; the bootstrap probes "
-                    "each in turn and takes the first non-empty output."
-                ),
-            ),
-        ] = ()
-        transaction_lock_file: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                pattern=r"^\.[A-Za-z0-9._-]+\.lock$",
-                description="Project-root physical mutex declared by toolchain config",
-            ),
-        ]
-        runtime_install_relative_template: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                pattern=r"^[A-Za-z0-9_-]+/[A-Za-z0-9_-]+\{release\}$",
-                description="Storage-relative address of an installed Mise release",
-            ),
-        ]
-        resolved_release_pattern: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Shared Python and shell resolved-release grammar"),
-        ]
-
-        @staticmethod
-        def _ensure_unique_environment_names(
-            fixed_environment: t.VariadicTuple[tuple[str, str]],
-            transient_environment: t.VariadicTuple[tuple[str, str]],
-            persistent_environment: t.VariadicTuple[tuple[str, str]],
-            passthrough_environment: t.StrSequence,
-        ) -> None:
-            """Reject duplicated Mise bootstrap environment variable names.
-
-            Raises:
-                ValueError: If a Mise bootstrap environment variable name is
-                    duplicated or shell-unsafe.
-
-            """
-            names = [
-                name
-                for group in (
-                    fixed_environment,
-                    transient_environment,
-                    persistent_environment,
-                )
-                for name, _ in group
-            ]
-            names.extend(passthrough_environment)
-            if len(names) != len(set(names)):
-                msg = "Mise bootstrap environment variables must be globally unique"
-                raise ValueError(msg)
-            for name in names:
-                normalized = name.replace("_", "A")
-                if not normalized.isalnum() or name != name.upper():
-                    msg = f"invalid Mise bootstrap environment variable: {name}"
-                    raise ValueError(msg)
-
-        @staticmethod
-        def _ensure_persistent_and_fixed_values(
-            storage_root_variable: str,
-            fixed_environment: t.VariadicTuple[tuple[str, str]],
-            persistent_environment: t.VariadicTuple[tuple[str, str]],
-        ) -> None:
-            """Reject a foreign persistent root and shell-unsafe fixed values.
-
-            Raises:
-                ValueError: If the persistent root is foreign or a fixed
-                    environment value is shell-unsafe.
-
-            """
-            persistent = dict(persistent_environment)
-            if persistent.get(storage_root_variable) != ".":
-                msg = "Mise storage variable must own the persistent root"
-                raise ValueError(msg)
-            for _name, value in fixed_environment:
-                if any(character in value for character in ("'", "\n", "\r", "\0")):
-                    msg = "Mise fixed environment values must be literal-shell safe"
-                    raise ValueError(msg)
-
-        @staticmethod
-        def _ensure_relative_paths(
-            transient_environment: t.VariadicTuple[tuple[str, str]],
-            persistent_environment: t.VariadicTuple[tuple[str, str]],
-            empty_files: t.StrSequence,
-        ) -> None:
-            """Reject absolute or escaping generated relative paths.
-
-            Raises:
-                ValueError: If a generated relative path is absolute or escapes.
-
-            """
-            relative_paths = (
-                *(value for _, value in transient_environment),
-                *(value for _, value in persistent_environment),
-                *empty_files,
-            )
-            for path in relative_paths:
-                if path.startswith("/") or ".." in path:
-                    msg = f"relative path must not be absolute or escape: {path}"
-                    raise ValueError(msg)
-
-        @m.model_validator(mode="after")
-        def _validate_environment_contract(self) -> Self:
-            """Reject shell-unsafe, ambiguous, or escaping generated values.
-
-            Returns:
-                The resulting ``Self``.
-
-            Raises:
-                ValueError: If Mise bootstrap environment variables must be globally
-                    unique; or if invalid Mise bootstrap environment variable; or if
-                    Mise storage variable must own the persistent root; or if Mise
-                    fixed environment values must be literal-shell safe; or if
-                    relative path must not be absolute or escape; or if Mise pin
-                    header and reader must be literal-shell safe; or if Mise pin
-                    header lines must be comments.
-
-            """
-            literal_environment = (*self.fixed_environment, *self.offline_environment)
-            self._ensure_unique_environment_names(
-                literal_environment,
-                self.transient_environment,
-                self.persistent_environment,
-                self.passthrough_environment,
-            )
-            names = [
-                name
-                for group in (
-                    literal_environment,
-                    self.transient_environment,
-                    self.persistent_environment,
-                )
-                for name, _ in group
-            ]
-            names.extend(self.passthrough_environment)
-            # The member/persistent/fixed-path checks run inside the names
-            # loop, exactly as this contract always executed: a toolchain
-            # declaring no bootstrap names skips them (renders without a
-            # bootstrap environment are valid).
-            for name in names:
-                normalized = name.replace("_", "A")
-                if not normalized.isalnum() or name != name.upper():
-                    msg = f"invalid Mise bootstrap environment variable: {name}"
-                    raise ValueError(msg)
-                self._ensure_persistent_and_fixed_values(
-                    self.storage_root_variable,
-                    literal_environment,
-                    self.persistent_environment,
-                )
-                self._ensure_relative_paths(
-                    self.transient_environment,
-                    self.persistent_environment,
-                    self.empty_files,
-                )
-            unsafe = ("'", "\n", "\r", "\0")
-            for line in (*self.version_pin_header, self.version_pin_reader):
-                if any(character in line for character in unsafe):
-                    msg = "Mise pin header and reader must be literal-shell safe"
-                    raise ValueError(msg)
-            if not all(line.startswith("#") for line in self.version_pin_header):
-                msg = "Mise pin header lines must be comments"
-                raise ValueError(msg)
-            return self
 
 
 __all__: list[str] = ["FlextInfraModelsMiseToolchain"]

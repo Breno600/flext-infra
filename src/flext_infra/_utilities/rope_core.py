@@ -12,9 +12,12 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from flext_infra import t
+from flext_infra._config import config
 from flext_infra._utilities import (
+    FlextInfraUtilitiesProjectDiscovery,
     FlextInfraUtilitiesRopeCorePyModuleMixin,
     FlextInfraUtilitiesRopeCoreResourcesMixin,
+    FlextInfraUtilitiesRopeRuntime,
 )
 
 
@@ -46,8 +49,6 @@ class FlextInfraUtilitiesRopeCore(
             The resulting ``t.Infra.RopeProject``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
-
         resolved_root = repository_root.resolve()
         project_roots = tuple(
             project_root
@@ -75,9 +76,6 @@ class FlextInfraUtilitiesRopeCore(
             The resulting ``t.Infra.RopeProject``.
 
         """
-        from flext_infra._config import config
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
-
         source_folders = sorted({
             str(scan_path.relative_to(resolved_root))
             for project_root in project_roots
@@ -89,15 +87,17 @@ class FlextInfraUtilitiesRopeCore(
             str(resolved_root),
             ropefolder="",
             save_objectdb=False,
-            ignored_resources=sorted(config.Infra.codegen.source_scan_ignored),
-            source_folders=source_folders,
-            extension_modules=sorted(
-                name
-                for name, module in tuple(sys.modules.items())
-                if name.partition(".")[0] in sys.stdlib_module_names
-                and module is not None
-                and module.__spec__ is not None
-                and module.__spec__.origin == "frozen"
+            filter_lists=(
+                sorted(config.Infra.codegen.source_scan_ignored),
+                source_folders,
+                sorted(
+                    name
+                    for name, module in tuple(sys.modules.items())
+                    if name.partition(".")[0] in sys.stdlib_module_names
+                    and module is not None
+                    and module.__spec__ is not None
+                    and module.__spec__.origin == "frozen"
+                ),
             ),
         )
 

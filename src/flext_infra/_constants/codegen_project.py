@@ -60,7 +60,6 @@ class FlextInfraConstantsCodegenProject:
         DEPENDENCIES = "dependencies"
         DOCS_CONFIG = "docs-config"
         MAKEFILE = "makefile"
-        MISE_TRIPLE = "mise-triple"
         PYPROJECT = "pyproject"
 
     @unique
@@ -74,20 +73,16 @@ class FlextInfraConstantsCodegenProject:
     class CodegenStagedFilePhase(StrEnum):
         """Generation phase that owns one codegen staged publication.
 
-        The closed vocabulary the journal models and the stager accept in
-        ``phase``: every publication and staging site names its owner
-        through this enum instead of a string literal, so the phase
-        contract is code-owned in one declaration.
+        The closed vocabulary the journal models accept in ``phase``; every
+        publication site names its owner through this enum instead of a
+        string literal, so the journal's phase contract is code-owned.
         """
 
-        CANDIDATE_BOOTSTRAP = "candidate-bootstrap"
-        CONFORM = "conform"
         CONFORM_BOOTSTRAP = "conform-bootstrap"
         DOCS = "docs"
         LAZY_INIT = "lazy-init"
         LAYOUT = "layout"
         MISE = "mise"
-        MOD_TEXT = "mod-text"
         RECOVERY = "recovery"
         SCAFFOLD = "scaffold"
         SEMANTIC = "semantic"
@@ -249,20 +244,10 @@ class FlextInfraConstantsCodegenProject:
     "Staged replacement lock published only after its sidecars match."
     MISE_LOCK_OLD_FILENAME: ClassVar[str] = "old.lock"
     "Previous lock retained until the staged replacement is published."
-    MISE_LOCK_MUTEX_FILENAME: ClassVar[str] = ".mise-lock-transaction.lock"
-    "Physical mutex that serializes every publisher on one project."
-    MISE_LOCK_MUTEX_TIMEOUT_SECONDS: ClassVar[float] = 600.0
-    "How long a publisher waits for the project mutex before failing."
-    MISE_LOCK_TRANSACTION_SCRIPT: ClassVar[str] = "bin/mise-lock-transaction.py"
-    "Generated publisher the Makefile bootstrap runs to commit a staged mise.lock."
-    MISE_LOCK_CONVERGE_SCRIPT: ClassVar[str] = "bin/mise-lock-converge.py"
-    "Generated script ``make upg`` runs to hold broken releases inside a lock stage."
     MAKEFILE_BOOTSTRAP_DESTINATIONS: ClassVar[frozenset[str]] = frozenset({
         FlextInfraConstantsSharedInfra.MAKEFILE_FILENAME,
-        MISE_LOCK_TRANSACTION_SCRIPT,
-        MISE_LOCK_CONVERGE_SCRIPT,
     })
-    "The Makefile surface: the Makefile and the lock scripts its bootstrap runs."
+    "The Makefile surface: the generated Makefile alone."
     MISE_LOCK_ANNOTATION: ClassVar[str] = "~"
     "Lockfile cache-key fragment (``<version>~<hash>``); never a selector."
     MISE_MOVING_SELECTOR: ClassVar[str] = "latest"

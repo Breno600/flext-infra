@@ -15,10 +15,11 @@ from contextlib import contextmanager
 from itertools import islice
 from typing import TYPE_CHECKING
 
-from flext_cli import m as cli_m
+from flext_cli import m as cli_m, u
 
 from flext_core import r
 from flext_infra import c, m, p, t
+from flext_infra._config import config
 
 if os.name == "nt":
     import msvcrt
@@ -74,8 +75,6 @@ class FlextInfraUtilitiesCodegenFilePlan:
             JournalLeaseTimeoutError: If ``time.monotonic() >= deadline``.
 
         """
-        from flext_infra._config import config
-
         lock_path = journal_path.with_name(f"{journal_path.name}.lock")
         lock_path.parent.mkdir(parents=True, exist_ok=True)
         descriptor = os.open(
@@ -130,8 +129,6 @@ class FlextInfraUtilitiesCodegenFilePlan:
             The resulting ``p.Result[t.VariadicTuple[cli_m.Cli.AtomicFileState]]``.
 
         """
-        from flext_cli import u
-
         states: list[cli_m.Cli.AtomicFileState] = []
         for path in sorted(set(paths)):
             state = u.Cli.atomic_read_binary_file_state(path, required=True)
