@@ -20,7 +20,7 @@ from flext_infra._utilities._rope_core_resources import (
 )
 from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
 from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
-from flext_infra.typings import t
+from flext_infra.typings
 
 
 class FlextInfraUtilitiesRopeCore(

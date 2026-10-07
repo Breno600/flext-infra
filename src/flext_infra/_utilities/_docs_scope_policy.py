@@ -17,8 +17,8 @@ from flext_infra._utilities._docs_scope_state import (
 from flext_infra._utilities.workspace_manifest import (
     FlextInfraUtilitiesWorkspaceManifest,
 )
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra.constants
+from flext_infra.typings
 
 
 class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateMixin):

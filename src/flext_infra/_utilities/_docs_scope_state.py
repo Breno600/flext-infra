@@ -17,8 +17,8 @@ from flext_infra._utilities._docs_scope_paths import (
 )
 from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
 from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra.constants
+from flext_infra.typings
 
 
 class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMixin):

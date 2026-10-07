@@ -18,8 +18,8 @@ from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
 from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
 from flext_infra._utilities.rope_module_patch import FlextInfraUtilitiesRopeModulePatch
 from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra.constants
+from flext_infra.typings
 
 
 class FlextInfraUtilitiesCodegenFacades:

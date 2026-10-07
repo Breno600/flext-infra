@@ -23,7 +23,7 @@ from flext_infra._utilities.private_import_facades import (
     FlextInfraUtilitiesPrivateImportFacades,
 )
 from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
-from flext_infra.constants import c
+from flext_infra.constants
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

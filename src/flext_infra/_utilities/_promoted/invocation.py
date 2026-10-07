@@ -12,11 +12,11 @@ from flext_infra._utilities._promoted.workspace import (
     FlextInfraUtilitiesPromotedWorkspace,
 )
 from flext_infra._utilities.base import FlextInfraUtilitiesBase
-from flext_infra.constants import c
+from flext_infra.constants
 
 if TYPE_CHECKING:
-    from flext_infra.protocols import p
-    from flext_infra.typings import t
+    from flext_infra.protocols
+    from flext_infra.typings
 
 
 class FlextInfraUtilitiesPromotedInvocation(FlextInfraUtilitiesPromotedWorkspace):

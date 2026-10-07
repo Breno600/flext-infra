@@ -19,7 +19,7 @@ from flext_infra._models.refactor_ast_grep import FlextInfraModelsRefactorGrep
 from flext_infra._models.refactor_namespace_enforcer import (
     FlextInfraModelsNamespaceEnforcer,
 )
-from flext_infra.typings import t
+from flext_infra.typings
 
 if TYPE_CHECKING:
     from flext_infra._models.scan import FlextInfraModelsScan

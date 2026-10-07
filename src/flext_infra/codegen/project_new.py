@@ -12,16 +12,16 @@ from typing import TYPE_CHECKING, Annotated, override
 from flext_core import r
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
 from flext_infra.codegen.conform import FlextInfraCodegenConform
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.utilities import u
+from flext_infra.constants
+from flext_infra.models
+from flext_infra.utilities
 
 # New file per operator live
 # order (ULW). ctx via u.derive_class_stem (no parallel detection, ADR-005 §9);
 # accessor typing/config+settings symmetry fixed in templates in the same lane.
 
 if TYPE_CHECKING:
-    from flext_infra.protocols import p
+    from flext_infra.protocols
 
 
 class FlextInfraCodegenProjectNew(

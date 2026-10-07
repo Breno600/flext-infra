@@ -13,15 +13,15 @@ from flext_cli import cli
 
 from flext_core import r
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
+from flext_infra.constants
+from flext_infra.models
+from flext_infra.protocols
 from flext_infra.refactor._accessor_report import FlextInfraAccessorMigrationReportMixin
 from flext_infra.refactor._accessor_rewrite import (
     FlextInfraAccessorMigrationRewriteMixin,
 )
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra.typings
+from flext_infra.utilities
 
 if TYPE_CHECKING:
     from pathlib import Path

@@ -12,11 +12,11 @@ from pathlib import Path
 
 from flext_core import r
 from flext_infra.__version__ import FlextInfraVersion
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra.constants
+from flext_infra.models
+from flext_infra.protocols
+from flext_infra.typings
+from flext_infra.utilities
 
 
 class FlextInfraWorkspaceCheckReportsMixin:

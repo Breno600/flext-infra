@@ -16,8 +16,8 @@ from flext_infra._utilities.namespace_config import FlextInfraUtilitiesNamespace
 from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
 from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
 from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra.constants
+from flext_infra.typings
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

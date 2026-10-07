@@ -17,11 +17,11 @@ from doctest import DocTestParser
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra.constants import c
-from flext_infra.utilities import u
+from flext_infra.constants
+from flext_infra.utilities
 
 if TYPE_CHECKING:
-    from flext_infra.gates.typings import t
+    from flext_infra.typings
 
 
 class FlextInfraMarkdownCodeSources:

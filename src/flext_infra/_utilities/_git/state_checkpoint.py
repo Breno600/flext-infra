@@ -15,9 +15,9 @@ from flext_infra._utilities._git.state_trees import (
     FlextInfraUtilitiesGitStateTreesMixin,
 )
 from flext_infra._utilities._git.worktree_io import FlextInfraUtilitiesGitWorktreeIO
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
+from flext_infra.constants
+from flext_infra.models
+from flext_infra.protocols
 
 
 class FlextInfraUtilitiesGitStateCheckpointMixin(FlextInfraUtilitiesGitStateTreesMixin):

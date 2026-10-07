@@ -14,8 +14,8 @@ from flext_infra._utilities.discovery import FlextInfraUtilitiesDiscovery
 from flext_infra._utilities.namespace_common import (
     FlextInfraUtilitiesRefactorNamespaceCommon,
 )
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra.constants
+from flext_infra.typings
 
 
 class FlextInfraUtilitiesRefactorNamespaceFlext(

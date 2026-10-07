@@ -10,12 +10,12 @@ from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
 from flext_infra._config import config
-from flext_infra.base import s
+from flext_infra.
 from flext_infra.codegen.conform import FlextInfraCodegenConform
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.utilities import u
+from flext_infra.constants
+from flext_infra.models
+from flext_infra.protocols
+from flext_infra.utilities
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:

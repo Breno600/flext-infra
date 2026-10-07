@@ -12,7 +12,7 @@ from pathlib import Path
 from flext_infra._constants.namespace import FlextInfraConstantsNamespace
 from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
 from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
-from flext_infra.typings import t
+from flext_infra.typings
 
 
 class FlextInfraUtilitiesRopeCoreResourcesMixin:

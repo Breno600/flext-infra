@@ -13,12 +13,12 @@ from pathlib import Path
 from flext_core import r
 from flext_infra.codemod._rename_sources import FlextInfraRenameSources
 from flext_infra.codemod._rename_symbols import FlextInfraRenameSymbols
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
+from flext_infra.constants
+from flext_infra.models
+from flext_infra.protocols
 from flext_infra.transformers import FlextInfraSemanticPublication
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra.typings
+from flext_infra.utilities
 
 
 class FlextInfraApplyRenames:

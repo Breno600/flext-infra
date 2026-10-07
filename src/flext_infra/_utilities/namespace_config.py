@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from flext_infra._config import config
 from flext_infra._utilities.git import FlextInfraUtilitiesGit
 from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
-from flext_infra.constants import c
+from flext_infra.constants
 
 if TYPE_CHECKING:
     from pathlib import Path

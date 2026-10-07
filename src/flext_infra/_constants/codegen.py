@@ -23,7 +23,7 @@ from flext_infra._constants.codegen_render_names import (
 from flext_infra._constants.workspace import FlextInfraConstantsWorkspace
 
 if TYPE_CHECKING:
-    from flext_infra._constants.typings import t
+    from flext_infra.typings
 
 
 class FlextInfraConstantsCodegen(

@@ -22,10 +22,10 @@ from flext_infra.codegen._protocol_model_annotations import (
 from flext_infra.codegen._protocol_model_render import (
     FlextInfraCodegenProtocolModelRender,
 )
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra.models
+from flext_infra.protocols
+from flext_infra.typings
+from flext_infra.utilities
 
 
 class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):

@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 from flext_infra._utilities._promoted.invocation import (
     FlextInfraUtilitiesPromotedInvocation,
 )
-from flext_infra.constants import c
+from flext_infra.constants
 
 if TYPE_CHECKING:
     from flext_infra import protocols as p, typings as t

@@ -13,8 +13,8 @@ import libcst as cst
 from libcst.metadata import MetadataWrapper, ParentNodeProvider
 
 from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra.models
+from flext_infra.typings
 
 
 class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:

@@ -10,15 +10,15 @@ from collections.abc import MutableMapping
 from typing import ClassVar
 
 from flext_infra.api import infra
-from flext_infra.constants import c
+from flext_infra.constants
 from flext_infra.git import FlextInfraGitService
-from flext_infra.models import m
-from flext_infra.protocols import p
+from flext_infra.models
+from flext_infra.protocols
 from flext_infra.release.orchestrator import FlextInfraReleaseOrchestrator
 from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
 from flext_infra.services.cli_routes_refactor import FlextInfraRefactorRoutes
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra.typings
+from flext_infra.utilities
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from flext_infra.workspace.environment import FlextInfraWorkspaceEnvironmentMixin
 from flext_infra.workspace.environment_provenance import (

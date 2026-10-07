@@ -13,8 +13,8 @@ from flext_cli import u as cli_u
 from flext_infra._utilities.docs_collection_sources import (
     FlextInfraUtilitiesDocsCollectionSources,
 )
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra.models
+from flext_infra.typings
 
 
 class FlextInfraUtilitiesDocsCollectionVerify(FlextInfraUtilitiesDocsCollectionSources):

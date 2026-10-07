@@ -11,7 +11,7 @@ import ast
 from flext_infra._utilities._rope_method_order import (
     FlextInfraUtilitiesRopeMethodOrderMixin,
 )
-from flext_infra.typings import t
+from flext_infra.typings
 
 
 class FlextInfraUtilitiesRopeHelpers(FlextInfraUtilitiesRopeMethodOrderMixin):

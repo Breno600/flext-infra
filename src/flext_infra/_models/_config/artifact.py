@@ -31,7 +31,7 @@ from flext_infra._models.deps_tool_config_project_artifacts import (
     FlextInfraModelsDepsToolConfigProjectArtifacts,
 )
 from flext_infra._models.layout import FlextInfraModelsLayout
-from flext_infra.typings import t
+from flext_infra.typings
 
 
 class FlextInfraConfigModelsArtifact:

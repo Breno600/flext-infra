@@ -14,10 +14,10 @@ from typing import ClassVar
 
 from flext_infra._config import config
 from flext_infra._pytest_collection import FlextInfraPytestCollection
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra.constants
+from flext_infra.models
+from flext_infra.typings
+from flext_infra.utilities
 from flext_infra.validate._pytest_runner.base import FlextInfraPytestRunnerBase
 
 

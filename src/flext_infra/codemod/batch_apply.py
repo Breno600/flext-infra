@@ -18,10 +18,10 @@ from flext_infra.codemod import (
     FlextInfraModTextGateEngine,
 )
 from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra.models
+from flext_infra.protocols
+from flext_infra.typings
+from flext_infra.utilities
 
 
 class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):

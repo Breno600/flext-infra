@@ -23,7 +23,7 @@ from flext_infra._models._config.contract import FlextInfraConfigModelsContract
 from flext_infra._models._config.external_cache import (
     FlextInfraExternalCacheDirectorySpec,
 )
-from flext_infra.typings import t
+from flext_infra.typings
 
 
 def _shared_mypy_cache_spec() -> FlextInfraConfigModelsMake.MypyCacheSpec:

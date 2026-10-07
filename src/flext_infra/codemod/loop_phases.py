@@ -9,15 +9,15 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra.models import m
-from flext_infra.protocols import p
+from flext_infra.models
+from flext_infra.protocols
 from flext_infra.refactor._accessor_rewrite import (
     FlextInfraAccessorMigrationRewriteMixin,
 )
 from flext_infra.refactor.namespace_relocations import (
     FlextInfraNamespaceRelocationCascade,
 )
-from flext_infra.utilities import u
+from flext_infra.utilities
 
 if TYPE_CHECKING:
     from pathlib import Path

@@ -15,8 +15,8 @@ from flext_infra._utilities.docs_collection_verify import (
     FlextInfraUtilitiesDocsCollectionVerify,
 )
 from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra.models
+from flext_infra.typings
 
 
 class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify):

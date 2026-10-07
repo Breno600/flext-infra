@@ -12,8 +12,8 @@ from flext_core import r
 from flext_infra._utilities._git.semantic_index import (
     FlextInfraUtilitiesGitSemanticIndexMixin,
 )
-from flext_infra.models import m
-from flext_infra.protocols import p
+from flext_infra.models
+from flext_infra.protocols
 
 
 class FlextInfraUtilitiesGitSemanticWorktreeMixin(

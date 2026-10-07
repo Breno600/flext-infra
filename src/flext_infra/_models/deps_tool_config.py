@@ -17,7 +17,7 @@ from flext_infra._models.deps_tool_config_linters import (
 from flext_infra._models.deps_tool_config_type_checkers import (
     FlextInfraModelsDepsToolConfigTypeCheckers,
 )
-from flext_infra.typings import t
+from flext_infra.typings
 
 
 class FlextInfraModelsDepsToolConfig(

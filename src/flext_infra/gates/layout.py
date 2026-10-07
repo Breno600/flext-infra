@@ -13,10 +13,10 @@ from pathlib import Path
 from typing import ClassVar, override
 
 from flext_infra.codegen.layout import FlextInfraCodegenLayout
-from flext_infra.constants import c
+from flext_infra.constants
 from flext_infra.gates.base_gate import FlextInfraGate
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra.models
+from flext_infra.typings
 
 
 class FlextInfraLayoutGate(FlextInfraGate):

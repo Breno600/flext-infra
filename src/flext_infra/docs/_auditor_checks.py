@@ -8,13 +8,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_infra.utilities import u
+from flext_infra.utilities
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from flext_infra.docs.models import m
-    from flext_infra.docs.typings import t
+    from flext_infra.models
+    from flext_infra.typings
 
 
 class FlextInfraDocAuditorChecksMixin:

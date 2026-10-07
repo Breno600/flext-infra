@@ -12,13 +12,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Literal, Self, override
 
 from flext_core import r
-from flext_infra.base import s
-from flext_infra.models import m
-from flext_infra.utilities import u
+from flext_infra.
+from flext_infra.models
+from flext_infra.utilities
 
 if TYPE_CHECKING:
-    from flext_infra.protocols import p
-    from flext_infra.validate.typings import t
+    from flext_infra.protocols
+    from flext_infra.typings
 
 
 class FlextInfraCProfileReport(s[bool]):

@@ -11,11 +11,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
-from flext_infra.constants import c
+from flext_infra.constants
 from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
-from flext_infra.models import m
+from flext_infra.models
 from flext_infra.transformers import FlextInfraSemanticPublication
-from flext_infra.utilities import u
+from flext_infra.utilities
 
 if TYPE_CHECKING:
     from flext_infra import p, t

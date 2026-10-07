@@ -14,8 +14,8 @@ from flext_cli import m
 from flext_infra._models._config import FlextInfraConfigModels
 from flext_infra._models.docs_collection import FlextInfraModelsDocsCollection
 from flext_infra._models.docs_generation import FlextInfraModelsDocsGeneration
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra.constants
+from flext_infra.typings
 
 
 # Docs transport

@@ -9,16 +9,16 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, override
 
-from flext_infra.constants import c
-from flext_infra.models import m
+from flext_infra.constants
+from flext_infra.models
 from flext_infra.refactor._project_classifier_deps import (
     FlextInfraProjectClassifierDepsMixin,
 )
 from flext_infra.refactor._project_classifier_family import (
     FlextInfraProjectClassifierFamilyMixin,
 )
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra.typings
+from flext_infra.utilities
 
 if TYPE_CHECKING:
     from pathlib import Path

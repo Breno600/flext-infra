@@ -12,14 +12,14 @@ from flext_infra.docs._auditor_checks import FlextInfraDocAuditorChecksMixin
 from flext_infra.docs._auditor_report import FlextInfraDocAuditorReportMixin
 from flext_infra.docs.auditor_mixin import FlextInfraDocAuditorMixin
 from flext_infra.docs.base import FlextInfraDocServiceBase
-from flext_infra.models import m
-from flext_infra.utilities import u
+from flext_infra.models
+from flext_infra.utilities
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra.protocols import p
-    from flext_infra.docs.typings import t
+    from flext_infra.protocols
+    from flext_infra.typings
 
 
 class FlextInfraDocAuditor(

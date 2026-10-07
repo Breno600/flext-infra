@@ -20,9 +20,9 @@ from typing import Literal
 from flext_infra._utilities._git.worktree_measure import (
     FlextInfraUtilitiesGitWorktreeMeasureMixin,
 )
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra.constants
+from flext_infra.models
+from flext_infra.typings
 
 
 class FlextInfraUtilitiesGitWorktreeFactsMixin(

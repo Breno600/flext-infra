@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import ClassVar
 
 from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
-from flext_infra.typings import t
+from flext_infra.typings
 
 
 class FlextInfraUtilitiesRopeCorePyModuleMixin:

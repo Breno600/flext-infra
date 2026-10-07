@@ -11,15 +11,15 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra._config import config
-from flext_infra.constants import c
+from flext_infra.constants
 from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra.typings
+from flext_infra.utilities
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra.protocols import p
+    from flext_infra.protocols
 
 
 class FlextInfraConfigFixerSteps:

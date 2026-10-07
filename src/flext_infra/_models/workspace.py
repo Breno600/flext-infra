@@ -15,8 +15,8 @@ from flext_infra._models._config.base import FlextInfraConfigModels
 from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
 from flext_infra._models._git import FlextInfraModelsGitIdentity
 from flext_infra._models.mixins import FlextInfraModelsMixins
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra.constants
+from flext_infra.typings
 
 
 class FlextInfraModelsWorkspace:

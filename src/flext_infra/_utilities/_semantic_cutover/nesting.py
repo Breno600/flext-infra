@@ -33,8 +33,8 @@ from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
 from flext_infra._utilities.rope_runtime_modules import (
     FlextInfraUtilitiesRopeRuntimeModules,
 )
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra.models
+from flext_infra.typings
 
 if TYPE_CHECKING:
     from pathlib import Path

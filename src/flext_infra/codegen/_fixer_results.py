@@ -8,15 +8,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra.models import m
-from flext_infra.utilities import u
+from flext_infra.models
+from flext_infra.utilities
 from flext_infra.validate.namespace_validator import FlextInfraNamespaceValidator
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra.protocols import p
-    from flext_infra.codegen.typings import t
+    from flext_infra.protocols
+    from flext_infra.typings
 
 
 class FlextInfraCodegenFixerResultsMixin:

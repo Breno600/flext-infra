@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from flext_cli import cli
 
-from flext_infra.models import m
+from flext_infra.models
 
 
 class FlextInfraCliModProgress:

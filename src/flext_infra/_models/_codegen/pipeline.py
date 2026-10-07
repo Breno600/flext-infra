@@ -16,8 +16,8 @@ from flext_infra._models._codegen.lazy_init import FlextInfraModelsCodegenLazyIn
 from flext_infra._models._codegen.scaffold import FlextInfraModelsCodegenScaffoldModels
 from flext_infra._models._config.base import FlextInfraConfigModels
 from flext_infra._models.mixins import FlextInfraModelsMixins
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra.protocols
+from flext_infra.typings
 
 
 class FlextInfraModelsCodegenPipelineModels:

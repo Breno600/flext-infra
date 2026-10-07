@@ -19,13 +19,13 @@ from flext_infra.codegen._mise_artifacts_files import (
 from flext_infra.codegen._mise_artifacts_verification import (
     FlextInfraMiseArtifactsVerification as verify,
 )
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.utilities import u
+from flext_infra.constants
+from flext_infra.models
+from flext_infra.utilities
 
 if TYPE_CHECKING:
-    from flext_infra.protocols import p
-    from flext_infra.codegen.typings import t
+    from flext_infra.protocols
+    from flext_infra.typings
 
 
 class FlextInfraMiseArtifactsState:

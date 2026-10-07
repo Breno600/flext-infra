@@ -9,15 +9,15 @@ from __future__ import annotations
 from operator import itemgetter
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.utilities import u
+from flext_infra.constants
+from flext_infra.models
+from flext_infra.utilities
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
 
-    from flext_infra.refactor.typings import t
+    from flext_infra.typings
 
 
 class FlextInfraWrapperRootNamespaceRewriteMixin:

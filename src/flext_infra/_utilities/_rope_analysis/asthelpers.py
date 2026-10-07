@@ -13,9 +13,9 @@ from typing import ClassVar, TypeGuard
 
 from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
 from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra.models
+from flext_infra.protocols
+from flext_infra.typings
 
 
 class FlextInfraUtilitiesRopeAnalysisAstHelpers:

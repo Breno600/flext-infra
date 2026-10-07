@@ -21,14 +21,14 @@ from typing import TYPE_CHECKING, override
 from flext_core import r
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
-from flext_infra.models import m
-from flext_infra.utilities import u
+from flext_infra.models
+from flext_infra.utilities
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra.protocols import p
-    from flext_infra.validate.typings import t
+    from flext_infra.protocols
+    from flext_infra.typings
 
 
 class FlextInfraValidateLazyMapFreshness(FlextInfraProjectSelectionServiceBase[bool]):

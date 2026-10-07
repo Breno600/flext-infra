@@ -13,9 +13,9 @@ from typing import ClassVar, override
 
 from flext_core import r
 from flext_infra.base import FlextInfraServiceBase
-from flext_infra.constants import c
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra.constants
+from flext_infra.protocols
+from flext_infra.typings
 
 
 class FlextInfraLockIntegrityVerifier(FlextInfraServiceBase[bool]):

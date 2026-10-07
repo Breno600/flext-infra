@@ -16,8 +16,8 @@ from flext_infra._utilities._git.state_publication import (
     FlextInfraUtilitiesGitStatePublicationMixin,
 )
 from flext_infra._utilities._git.worktree_io import FlextInfraUtilitiesGitWorktreeIO
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra.models
+from flext_infra.typings
 
 
 class FlextInfraUtilitiesGitStateFilesMixin(

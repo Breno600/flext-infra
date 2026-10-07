@@ -15,8 +15,8 @@ from flext_core import r
 from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
 from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
 from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra.constants
+from flext_infra.typings
 
 if TYPE_CHECKING:
     from pathlib import Path

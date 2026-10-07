@@ -13,9 +13,9 @@ import re
 from pathlib import Path
 
 from flext_infra._config import FlextInfraConfig, config
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra.constants
+from flext_infra.models
+from flext_infra.typings
 
 # Concrete-owner imports: this module resolves during the root's lazy ``u``
 # export, when the root namespace is still initializing — a root from-import

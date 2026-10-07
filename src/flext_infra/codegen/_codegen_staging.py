@@ -18,12 +18,12 @@ from flext_infra.codegen._mise_artifacts_files import (
 from flext_infra.codegen._mise_artifacts_process import (
     FlextInfraMiseArtifactsProcess as process,
 )
-from flext_infra.models import m
-from flext_infra.utilities import u
+from flext_infra.models
+from flext_infra.utilities
 
 if TYPE_CHECKING:
-    from flext_infra.protocols import p
-    from flext_infra.codegen.typings import t
+    from flext_infra.protocols
+    from flext_infra.typings
 
 
 class FlextInfraCodegenStaging:

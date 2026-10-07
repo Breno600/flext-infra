@@ -19,9 +19,9 @@ from flext_infra._utilities._git.remote import FlextInfraUtilitiesGitRemote
 from flext_infra._utilities._git.semantic_identity import (
     FlextInfraUtilitiesGitSemanticIdentityMixin,
 )
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra.models
+from flext_infra.protocols
+from flext_infra.typings
 
 
 class FlextInfraUtilitiesGitAttestationMixin(

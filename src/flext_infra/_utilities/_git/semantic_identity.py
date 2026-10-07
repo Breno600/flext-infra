@@ -22,9 +22,9 @@ from flext_infra._utilities._git.repo import FlextInfraUtilitiesGitRepo
 from flext_infra._utilities._git.semantic_lane import (
     FlextInfraUtilitiesGitSemanticLaneMixin,
 )
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
+from flext_infra.constants
+from flext_infra.models
+from flext_infra.protocols
 
 
 class FlextInfraUtilitiesGitSemanticIdentityMixin(

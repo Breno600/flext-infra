@@ -14,12 +14,12 @@ from flext_infra._config import config
 from flext_infra.codegen._conform.pyproject_policy import (
     FlextInfraCodegenConformPyprojectPolicy,
 )
-from flext_infra.constants import c
+from flext_infra.constants
 from flext_infra.deps import FlextInfraEnsurePackagingPhase
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra.models
+from flext_infra.protocols
+from flext_infra.typings
+from flext_infra.utilities
 
 
 class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPolicy):

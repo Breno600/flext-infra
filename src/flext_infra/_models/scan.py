@@ -18,8 +18,8 @@ from flext_infra._models.mixins import FlextInfraModelsMixins
 from flext_infra._models.refactor_namespace_enforcer import (
     FlextInfraModelsNamespaceEnforcer,
 )
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra.constants
+from flext_infra.typings
 
 
 class FlextInfraModelsScan:

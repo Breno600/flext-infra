@@ -11,8 +11,8 @@ from pathlib import Path
 
 from flext_infra.codegen._fixer_results import FlextInfraCodegenFixerResultsMixin
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
-from flext_infra.models import m
-from flext_infra.utilities import u
+from flext_infra.models
+from flext_infra.utilities
 
 
 class FlextInfraCodegenFixerPassesMixin(FlextInfraCodegenFixerResultsMixin):

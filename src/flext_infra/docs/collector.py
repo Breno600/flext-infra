@@ -12,11 +12,11 @@ from typing import TYPE_CHECKING
 from flext_core import r
 from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
-from flext_infra.models import m
-from flext_infra.utilities import u
+from flext_infra.models
+from flext_infra.utilities
 
 if TYPE_CHECKING:
-    from flext_infra.protocols import p
+    from flext_infra.protocols
 
 
 class FlextInfraDocCollector:

@@ -9,15 +9,15 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING
 
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.utilities import u
+from flext_infra.constants
+from flext_infra.models
+from flext_infra.utilities
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra.protocols import p
-    from flext_infra.codegen.typings import t
+    from flext_infra.protocols
+    from flext_infra.typings
 
 
 class FlextInfraCodegenLazyInitPlannerCollisionMixin:

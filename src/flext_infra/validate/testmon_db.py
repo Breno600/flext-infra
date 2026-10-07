@@ -12,12 +12,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Self, override
 
 from flext_core import r
-from flext_infra.base import s
-from flext_infra.models import m
-from flext_infra.utilities import u
+from flext_infra.
+from flext_infra.models
+from flext_infra.utilities
 
 if TYPE_CHECKING:
-    from flext_infra.protocols import p
+    from flext_infra.protocols
 
 
 class FlextInfraTestmonDbInspector(s[m.Infra.TestmonCacheState]):

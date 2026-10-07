@@ -26,8 +26,8 @@ from flext_infra._utilities.private_import_facades import (
 from flext_infra._utilities.private_import_validation import (
     FlextInfraUtilitiesPrivateImportValidation,
 )
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra.models
+from flext_infra.typings
 
 if TYPE_CHECKING:
     from pathlib import Path

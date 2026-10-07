@@ -10,7 +10,7 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from flext_infra.transformers.typings import t
+    from flext_infra.typings
 
 
 class FlextInfraRopeTransformer:

@@ -21,13 +21,13 @@ from flext_core import r
 from flext_core.__version__ import FlextVersion
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
 from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.utilities import u
+from flext_infra.constants
+from flext_infra.models
+from flext_infra.utilities
 
 if TYPE_CHECKING:
-    from flext_infra.protocols import p
-    from flext_infra.codegen.typings import t
+    from flext_infra.protocols
+    from flext_infra.typings
 
 
 class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):

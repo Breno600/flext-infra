@@ -14,7 +14,7 @@ from flext_cli import u
 
 from flext_core import r
 from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
-from flext_infra.typings import t
+from flext_infra.typings
 
 if TYPE_CHECKING:
     from pathlib import Path

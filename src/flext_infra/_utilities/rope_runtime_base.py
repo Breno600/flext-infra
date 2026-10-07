@@ -10,7 +10,7 @@ from collections.abc import Callable
 from importlib import import_module
 from types import ModuleType
 
-from flext_infra.protocols import p
+from flext_infra.protocols
 
 
 class FlextInfraUtilitiesRopeRuntimeBase:

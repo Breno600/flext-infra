@@ -11,15 +11,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
-from flext_infra.models import m
+from flext_infra.models
 from flext_infra.refactor._census_apply_formatting import (
     FlextInfraRefactorCensusApplyFormattingMixin,
 )
-from flext_infra.utilities import u
+from flext_infra.utilities
 
 if TYPE_CHECKING:
-    from flext_infra.protocols import p
-    from flext_infra.refactor.typings import t
+    from flext_infra.protocols
+    from flext_infra.typings
 
 
 class FlextInfraRefactorCensusRemovalMixin(

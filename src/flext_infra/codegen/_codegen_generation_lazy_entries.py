@@ -13,7 +13,7 @@ from flext_infra.codegen._codegen_generation_type_checking import (
 )
 
 if TYPE_CHECKING:
-    from flext_infra.codegen.typings import t
+    from flext_infra.typings
 
 type _LazyEntryContext = t.Triple[str, frozenset[str], bool]
 

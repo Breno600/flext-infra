@@ -17,11 +17,11 @@ from flext_infra.codegen._mise_artifacts_state import FlextInfraMiseArtifactsSta
 from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
 from flext_infra.codegen.file_leases import FlextInfraCodegenFileLeases
 from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra.models
+from flext_infra.typings
 
 if TYPE_CHECKING:
-    from flext_infra.protocols import p
+    from flext_infra.protocols
 
 
 class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):

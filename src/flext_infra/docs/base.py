@@ -17,14 +17,14 @@ from typing import TYPE_CHECKING, Annotated
 
 from flext_core import e, r
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
-from flext_infra.constants import c
-from flext_infra.models import m
+from flext_infra.constants
+from flext_infra.models
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from flext_infra.protocols import p
-    from flext_infra.docs.typings import t
+    from flext_infra.protocols
+    from flext_infra.typings
 
 
 class FlextInfraDocServiceBase(FlextInfraProjectSelectionServiceBase[bool], ABC):

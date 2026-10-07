@@ -17,10 +17,10 @@ from flext_infra._utilities._docs_generate_project import (
 from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
 from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
 from flext_infra._utilities.docs_render import FlextInfraUtilitiesDocsRender
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra.constants
+from flext_infra.models
+from flext_infra.protocols
+from flext_infra.typings
 
 
 class FlextInfraUtilitiesDocsGenerateRootMixin(

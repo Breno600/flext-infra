@@ -17,9 +17,9 @@ from flext_infra._utilities._git.worktree_discovery import (
     FlextInfraUtilitiesGitWorktreeDiscoveryMixin,
 )
 from flext_infra._utilities._git.worktree_io import FlextInfraUtilitiesGitWorktreeIO
-from flext_infra.constants import c
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra.constants
+from flext_infra.protocols
+from flext_infra.typings
 
 
 class FlextInfraUtilitiesGitWorktreeMaterializationMixin(

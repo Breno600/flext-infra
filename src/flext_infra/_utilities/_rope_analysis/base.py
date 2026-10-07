@@ -18,7 +18,7 @@ from flext_infra._utilities._rope_analysis.importstate import (
 from flext_infra._utilities._rope_analysis.sourcescan import (
     FlextInfraUtilitiesRopeAnalysisSourceScan,
 )
-from flext_infra.typings import t
+from flext_infra.typings
 
 
 class FlextInfraUtilitiesRopeAnalysisBase(

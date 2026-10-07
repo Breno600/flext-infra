@@ -15,7 +15,7 @@ from libcst.codemod.visitors import AddImportsVisitor
 from flext_infra._utilities._semantic_cutover.nesting_references import (
     FlextInfraUtilitiesSemanticCutoverNestingReferences,
 )
-from flext_infra.typings import t
+from flext_infra.typings
 
 
 class FlextInfraUtilitiesSemanticCutoverNestingCst(

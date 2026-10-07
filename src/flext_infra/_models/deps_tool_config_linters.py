@@ -13,8 +13,8 @@ from flext_cli import m
 from flext_infra._models.deps_tool_config_project import (
     FlextInfraModelsDepsToolConfigProject,
 )
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra.constants
+from flext_infra.typings
 
 
 class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProject):

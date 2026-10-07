@@ -16,10 +16,10 @@ from flext_infra._utilities._docs_scope_policy import (
 )
 from flext_infra._utilities.git import FlextInfraUtilitiesGit
 from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
-from flext_infra.constants import c
-from flext_infra.models import m
+from flext_infra.constants
+from flext_infra.models
 from flext_infra.protocols import FlextInfraProtocols as p
-from flext_infra.typings import t
+from flext_infra.typings
 
 
 class FlextInfraUtilitiesDocsScopeProjectsMixin(

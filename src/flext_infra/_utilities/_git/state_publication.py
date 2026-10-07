@@ -15,9 +15,9 @@ from flext_infra._utilities._git.remote import FlextInfraUtilitiesGitRemote
 from flext_infra._utilities._git.state_checkpoint import (
     FlextInfraUtilitiesGitStateCheckpointMixin,
 )
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
+from flext_infra.constants
+from flext_infra.models
+from flext_infra.protocols
 
 
 class FlextInfraUtilitiesGitStatePublicationMixin(

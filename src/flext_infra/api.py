@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_core import r
 from flext_infra._config import FlextInfraConfig
-from flext_infra.base import s
+from flext_infra.
 from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 from flext_infra.codegen.census import FlextInfraCodegenCensus
 from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
@@ -28,10 +28,10 @@ from flext_infra.codemod.loop_phases import (
 from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
 from flext_infra.docs.generator import FlextInfraDocGenerator
 from flext_infra.gates.markdown_format import FlextInfraMarkdownFormatGate
-from flext_infra.models import m
+from flext_infra.models
 from flext_infra.services.candidate_bootstrap import FlextInfraCandidateBootstrapService
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra.typings
+from flext_infra.utilities
 from flext_infra.validate.namespace_validator import FlextInfraNamespaceValidator
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from flext_infra.workspace.environment import FlextInfraWorkspaceEnvironmentMixin
@@ -40,7 +40,7 @@ from flext_infra.workspace.rope import FlextInfraRopeWorkspace
 if TYPE_CHECKING:
     from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
     from flext_infra.docs.formatter import FlextInfraDocFormatter
-    from flext_infra.protocols import p
+    from flext_infra.protocols
     from flext_infra.release.orchestrator import FlextInfraReleaseOrchestrator
     from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
 

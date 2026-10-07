@@ -18,13 +18,13 @@ from flext_infra.codegen._mise_artifacts_files import (
 )
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra.constants
+from flext_infra.models
+from flext_infra.typings
+from flext_infra.utilities
 
 if TYPE_CHECKING:
-    from flext_infra.protocols import p
+    from flext_infra.protocols
 
 
 class FlextInfraMiseColdStart:

@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, ClassVar, Literal
 from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
 
 if TYPE_CHECKING:
-    from flext_infra._constants.typings import t
+    from flext_infra.typings
 
 
 class FlextInfraConstantsCodegenProject:

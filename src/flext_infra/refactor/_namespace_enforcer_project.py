@@ -9,13 +9,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra.models import m
+from flext_infra.models
 from flext_infra.refactor.namespace_relocations import (
     FlextInfraNamespaceRelocationCascade,
 )
 
 if TYPE_CHECKING:
-    from flext_infra.refactor.typings import t
+    from flext_infra.typings
 
 
 class FlextInfraNamespaceEnforcerProjectMixin:

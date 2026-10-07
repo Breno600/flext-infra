@@ -19,9 +19,9 @@ from flext_infra._utilities.iteration_workspace import (
 from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
 from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
 from flext_infra._utilities.rope_source_bases import FlextInfraUtilitiesRopeSourceBases
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra.constants
+from flext_infra.models
+from flext_infra.typings
 
 
 class FlextInfraUtilitiesRopeAnalysisWorkspace:

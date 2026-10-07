@@ -12,10 +12,10 @@ from typing import TYPE_CHECKING
 from flext_infra.codegen._codegen_generation_lazy_entries import (
     FlextInfraCodegenGenerationLazyEntriesMixin,
 )
-from flext_infra.utilities import u
+from flext_infra.utilities
 
 if TYPE_CHECKING:
-    from flext_infra.protocols import p
+    from flext_infra.protocols
 
 
 # Lazy generation delegates
