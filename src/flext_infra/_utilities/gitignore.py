@@ -10,11 +10,9 @@ from itertools import pairwise
 from operator import itemgetter
 from pathlib import Path
 
-from flext_cli import u
 
 from flext_core import r
 from flext_infra import c, m, p, t
-from flext_infra._utilities import FlextInfraUtilitiesProjectManagedArtifacts
 
 
 class FlextInfraUtilitiesGitignore:
@@ -72,6 +70,8 @@ class FlextInfraUtilitiesGitignore:
             The resulting ``p.Result[str]``.
 
         """
+        from flext_cli import u
+        from flext_infra._utilities import FlextInfraUtilitiesProjectManagedArtifacts
         entry = next(
             (
                 item
@@ -128,6 +128,7 @@ class FlextInfraUtilitiesGitignore:
             The resulting ``p.Result[str]``.
 
         """
+        from flext_cli import u
         if not blocks:
             return r[str].ok(rendered)
 

@@ -20,7 +20,6 @@ from flext_infra import c, m, t, u
 from flext_infra._config import config
 from flext_infra.validate._pytest_runner.command import FlextInfraPytestRunnerCommand
 from flext_infra.validate._pytest_runner.reports import FlextInfraPytestRunnerReports
-from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -43,6 +42,7 @@ class FlextInfraPytestRunnerExecution(
             The resulting ``p.Result[m.Infra.TestmonCacheState]``.
 
         """
+        from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
         return FlextInfraTestmonDbInspector(
             repository_root=self.root,
             db_path=self.testmon_db,
@@ -523,8 +523,7 @@ class FlextInfraPytestRunnerExecution(
             else ",".join(config.Infra.tooling.tools.pytest.external_gate_markers)
         )
 
-    @staticmethod
-    def _ci_marker_list(context: m.Infra.PytestRunContext) -> str:
+    def _ci_marker_list(self, context: m.Infra.PytestRunContext) -> str:
         """Return the CI-excluded marker list of one run.
 
         Returns:
@@ -532,7 +531,7 @@ class FlextInfraPytestRunnerExecution(
 
         """
         return ",".join(
-            FlextInfraPytestRunnerExecution.ci_excluded_markers(
+            self.ci_excluded_markers(
                 execution_mode=context.execution_mode,
             ),
         )
@@ -581,6 +580,7 @@ class FlextInfraPytestRunnerExecution(
             RuntimeError: If testmon database changed after the checkpoint receipt.
             ValueError: If testmon publication path cannot contain output delimiters.
         """
+        from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
         execution_mode = (
             c.Infra.PytestExecutionMode.FULL
             if complete
@@ -654,6 +654,7 @@ class FlextInfraPytestRunnerExecution(
                 cache.
 
         """
+        from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
         report_dir = self._report_directory()
         self._write_run_context(
             report_dir,
@@ -773,6 +774,7 @@ class FlextInfraPytestRunnerExecution(
             RuntimeError: If completed testmon run has no checkpointed database.
 
         """
+        from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
         accounting = m.Infra.TestmonRunAccounting.model_validate_json(
             (report_dir / "run-accounting.json").read_text(encoding="utf-8"),
         )

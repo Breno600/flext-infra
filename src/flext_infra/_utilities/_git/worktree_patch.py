@@ -12,10 +12,7 @@ from git import GitCommandError
 
 from flext_core import r
 from flext_infra import c, m, p, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesGitWorktreeCheckpointMixin,
-    FlextInfraUtilitiesGitWorktreeIO,
-)
+from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeCheckpointMixin
 
 
 class FlextInfraUtilitiesGitWorktreePatchMixin(
@@ -37,6 +34,7 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
         if not patch:
             return r[bool].ok(value=True)
         direction: list[str] = ["--reverse"] if reverse else []
@@ -155,6 +153,7 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
         collisions = tuple(
             path
             for path in cls._git_patch_added_paths(delta.patch)
@@ -193,6 +192,7 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
         if not delta.patch:
             return r[bool].ok(value=True)
         check_result = cls.git_check_patch(delta)

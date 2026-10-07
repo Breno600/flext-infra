@@ -14,8 +14,6 @@ import libcst as cst
 
 from flext_core import r
 from flext_infra import c, m, t, u
-from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
-from flext_infra.transformers import FlextInfraSemanticPublication
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -131,6 +129,7 @@ class FlextInfraModReplacements:
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra.transformers import FlextInfraSemanticPublication
         allowed = cls.require_authored(
             tuple(finding for finding in report.entries if finding.actionable),
         )
@@ -274,6 +273,7 @@ class FlextInfraModReplacements:
 
         """
         # AST rewrites can also leave imports whose last reference was removed.
+        from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
         with u.Infra.open_project(root) as rope_project:
             normalized = u.Infra.normalize_imports(
                 rope_project,

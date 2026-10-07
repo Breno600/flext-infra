@@ -13,10 +13,6 @@ from typing import TYPE_CHECKING
 from flext_core import r
 from flext_infra import c, m, t, u
 from flext_infra._config import config
-from flext_infra.codegen import (
-    FlextInfraCodegenMiseArtifacts,
-    FlextInfraCodegenTransaction,
-)
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -43,6 +39,7 @@ class FlextInfraSemanticPublication:
             The resulting ``p.Result[t.VariadicTuple[Path]]``.
 
         """
+        from flext_infra.codegen import FlextInfraCodegenMiseArtifacts, FlextInfraCodegenTransaction
         files = cls._concrete_file_plans(plans, codegen)
         if files.failure:
             return r[tuple[Path, ...]].from_failure(files)
@@ -50,7 +47,7 @@ class FlextInfraSemanticPublication:
             return r[tuple[Path, ...]].ok(())
         analysis = m.Infra.CodegenPhaseAnalysis(
             phase=c.Infra.CodegenStagedFilePhase.SEMANTIC,
-            files=tuple(files),
+            files=tuple(files.value),
             inputs=tuple(plan.before for plan in plans),
         )
         roots = {

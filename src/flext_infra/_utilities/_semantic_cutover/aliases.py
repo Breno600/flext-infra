@@ -12,11 +12,7 @@ from pathlib import Path
 
 from flext_core import r
 from flext_infra import c, m, p, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesCompatibilityAliasValidation,
-    FlextInfraUtilitiesSemanticCutoverAliasCst,
-    FlextInfraUtilitiesSemanticCutoverEdits,
-)
+from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverAliasCst, FlextInfraUtilitiesSemanticCutoverEdits
 
 
 class FlextInfraUtilitiesSemanticCutoverAliases(
@@ -82,6 +78,7 @@ class FlextInfraUtilitiesSemanticCutoverAliases(
             The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesCompatibilityAliasValidation
         specs = cls._api_alias_specs(
             root,
             tuple(
