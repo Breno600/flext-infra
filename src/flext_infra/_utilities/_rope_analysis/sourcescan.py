@@ -344,6 +344,52 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         )
 
     @staticmethod
+    def _module_mapping_binding(source: str, reference: str) -> ast.Dict | None:
+        """Resolve one module-level mapping binding to its literal dict node.
+
+        Members declare the lazy-import map as a named, annotated assignment
+        (``_EXPORT_MODULES: MappingProxyType[str, str] = MappingProxyType(
+        {...})``) and hand the installer the name. The binding lives in the
+        same module body, so the reference resolves statically; only a name
+        with no module-level ``MappingProxyType``/dict assignment stays
+        unresolved.
+
+        Returns:
+            The mapping dict node, or None when the name has no resolvable
+            module-level assignment.
+
+        """
+        try:
+            tree = ast.parse(source)
+        except SyntaxError:
+            return None
+        for node in tree.body:
+            if isinstance(node, ast.Assign):
+                targets: list[ast.expr] = list(node.targets)
+                value: ast.expr | None = node.value
+            elif isinstance(node, ast.AnnAssign):
+                targets = [node.target]
+                value = node.value
+            else:
+                continue
+            if not any(
+                isinstance(target, ast.Name) and target.id == reference
+                for target in targets
+            ):
+                continue
+            if value is None:
+                return None
+            if (
+                isinstance(value, ast.Call)
+                and isinstance(value.func, ast.Name)
+                and value.func.id == "MappingProxyType"
+                and value.args
+            ):
+                value = value.args[0]
+            return value if isinstance(value, ast.Dict) else None
+        return None
+
+    @staticmethod
     def _first_call(source: str, function_name: str) -> ast.Call | None:
         """Return the first call, in source order, whose callee is ``function_name``.
 
@@ -415,7 +461,9 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         )
         match value:
             case ast.Name(id=reference):
-                return ((), (reference,))
+                value = cls._module_mapping_binding(source, reference)
+                if value is None:
+                    return ((), (reference,))
             case ast.Call(func=ast.Name(id="MappingProxyType"), args=[mapping]):
                 value = mapping
             case _:
