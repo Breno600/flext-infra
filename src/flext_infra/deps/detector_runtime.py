@@ -22,7 +22,7 @@ from flext_infra.utilities import u
 if TYPE_CHECKING:
     from collections.abc import Mapping, MutableMapping
 
-    from flext_infra.deps.typings import t
+    from flext_infra.typings import t
 
 
 class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSteps):

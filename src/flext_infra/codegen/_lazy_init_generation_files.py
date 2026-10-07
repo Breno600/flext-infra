@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from collections.abc import Set as AbstractSet
 
     from flext_infra.protocols import p
-    from flext_infra.codegen.typings import t
+    from flext_infra.typings import t
 
 
 class FlextInfraCodegenLazyInitGenerationFilePlanMixin:

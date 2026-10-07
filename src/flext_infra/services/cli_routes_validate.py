@@ -29,7 +29,7 @@ from flext_infra.services.cli_routes_validate_commands import (
 )
 
 if TYPE_CHECKING:
-    from flext_infra.services.typings import t
+    from flext_infra.typings import t
 
 
 class FlextInfraValidationRoutes(FlextInfraValidationCommandRoutes):

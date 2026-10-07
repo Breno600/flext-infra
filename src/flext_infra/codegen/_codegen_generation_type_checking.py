@@ -16,7 +16,7 @@ from flext_infra.codegen._codegen_generation_imports import (
 from flext_infra.constants import c
 
 if TYPE_CHECKING:
-    from flext_infra.codegen.typings import t
+    from flext_infra.typings import t
 
 
 class FlextInfraCodegenGenerationTypeCheckingMixin(

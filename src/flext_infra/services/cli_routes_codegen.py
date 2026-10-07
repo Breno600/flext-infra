@@ -30,7 +30,7 @@ from flext_infra.models import m
 from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
 
 if TYPE_CHECKING:
-    from flext_infra.services.typings import t
+    from flext_infra.typings import t
 
 
 class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):

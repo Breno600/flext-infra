@@ -24,8 +24,8 @@ if TYPE_CHECKING:
     from flext_infra._models.flext_infra_codegen_lazy_init_planner import (
         FlextInfraCodegenLazyInitPlanner,
     )
-    from flext_infra.codegen.models import m
-    from flext_infra.codegen.typings import t
+    from flext_infra.models import m
+    from flext_infra.typings import t
 
 
 # Root manifests and initializers are synchronized as one artifact set.

@@ -12,7 +12,7 @@ from flext_infra.constants import c
 from flext_infra.models import m
 
 if TYPE_CHECKING:
-    from flext_infra.docs.typings import t
+    from flext_infra.typings import t
 
 
 class FlextInfraDocAuditorReportMixin:
