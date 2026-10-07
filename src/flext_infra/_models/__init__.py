@@ -83,9 +83,6 @@ if TYPE_CHECKING:
     from flext_infra._models.docs_collection import FlextInfraModelsDocsCollection
     from flext_infra._models.docs_generation import FlextInfraModelsDocsGeneration
     from flext_infra._models.duplication import FlextInfraModelsDuplication
-    from flext_infra._models.flext_infra_codegen_lazy_init_planner import (
-        FlextInfraCodegenLazyInitPlanner,
-    )
     from flext_infra._models.gates import FlextInfraModelsGates
     from flext_infra._models.git import FlextInfraModelsGit
     from flext_infra._models.layout import FlextInfraModelsLayout
@@ -115,7 +112,6 @@ if TYPE_CHECKING:
 
 __all__: tuple[str, ...] = (
     "FlextInfraCodegen",
-    "FlextInfraCodegenLazyInitPlanner",
     "FlextInfraConfigModels",
     "FlextInfraConfigModelsArtifact",
     "FlextInfraConfigModelsBeads",
@@ -191,7 +187,6 @@ install_lazy_exports(
     globals(),
     MappingProxyType({
         "FlextInfraCodegen": "._codegen.base",
-        "FlextInfraCodegenLazyInitPlanner": ".flext_infra_codegen_lazy_init_planner",
         "FlextInfraConfigModels": "._config.base",
         "FlextInfraConfigModelsArtifact": "._config.artifact",
         "FlextInfraConfigModelsBeads": "._config.beads",

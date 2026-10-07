@@ -21,7 +21,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from flext_infra import m, t
-    from flext_infra._models import FlextInfraCodegenLazyInitPlanner
 
 
 # Root manifests and initializers are synchronized as one artifact set.

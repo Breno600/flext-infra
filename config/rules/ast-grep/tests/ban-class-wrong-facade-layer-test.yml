@@ -13,6 +13,13 @@ valid:
     def build():
         class Item(m.ContractModel):
             pass
+  - |
+    class FlextFooPlanner(
+        m.ArbitraryTypesModel,
+        FlextFooAliasesMixin,
+        FlextFooCacheMixin,
+    ):
+        pass
 invalid:
   - |
     class Item(m.ContractModel):

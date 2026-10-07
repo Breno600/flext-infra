@@ -583,8 +583,10 @@ message: >-
 # class extending a model preset in the models family, an enumeration in
 # the constants family, a utilities class in the utilities family. The
 # family letter is derived from the declaration and compared with the
-# family the module belongs to. Protocol classes are
-# ban-manual-protocol-outside-protocols's.
+# family the module belongs to. A class composing Mixin-suffixed
+# superclasses over a preset is the service-composite shape, not a
+# declaration-layer entity, so it is exempt wherever it lives. Protocol
+# classes are ban-manual-protocol-outside-protocols's.
 id: ban-class-wrong-facade-layer
 language: python
 severity: error
@@ -612,6 +614,12 @@ rule:
             kind: decorated_definition
             inside:
               kind: module
+  not:
+    has:
+      field: superclasses
+      has:
+        kind: identifier
+        regex: "Mixin$"
   any:
     - has:
         field: superclasses
