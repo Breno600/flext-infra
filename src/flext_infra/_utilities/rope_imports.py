@@ -906,6 +906,7 @@ class FlextInfraUtilitiesRopeImports:
         """
         from flext_cli import u
 
+        from flext_infra._config import config
         from flext_infra._utilities import (
             FlextInfraUtilitiesRopeCore,
             FlextInfraUtilitiesRopeRuntime,
@@ -972,7 +973,7 @@ class FlextInfraUtilitiesRopeImports:
                     path=file_path.resolve(),
                     before=before.value,
                     desired_content=updated_source.encode("utf-8"),
-                    desired_mode=0o644,
+                    desired_mode=config.Infra.codegen.modes.file_default,
                 ),
             )
         return r[t.VariadicTuple[m.Infra.CodegenFilePlan]].ok(tuple(file_plans))

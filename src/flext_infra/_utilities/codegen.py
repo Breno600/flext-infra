@@ -271,7 +271,7 @@ class FlextInfraUtilitiesCodegen(
             return r[bool].from_failure(planned)
         created = u.Cli.atomic_create_directory_chain_guarded(
             planned.value,
-            permission_mode=0o700,
+            permission_mode=config.Infra.codegen.modes.directory_private,
         )
         if created.failure:
             return r[bool].from_failure(created)

@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Literal
 
 from flext_core import r
 from flext_infra import c, m, u
+from flext_infra._config import config
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
@@ -406,7 +407,11 @@ class FlextInfraMiseArtifactsState:
             )
         created = u.Cli.atomic_create_empty_directory_guarded(
             before,
-            permission_mode=0o700 if entry.disposition == "temporary" else 0o755,
+            permission_mode=(
+                config.Infra.codegen.modes.directory_private
+                if entry.disposition == "temporary"
+                else config.Infra.codegen.modes.directory_generated
+            ),
         )
         if created.failure:
             return result_type.from_failure(created)

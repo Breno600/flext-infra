@@ -710,6 +710,17 @@ Infra:
         allow_public_targets: false
         allow_toolchain_declarations: false
 
+    # SINGLE SSOT for every filesystem mode the codegen pipeline emits. Call
+    # sites read these rows through config.Infra.codegen.modes; octal mode
+    # literals outside the constants and model bounds are defects (the
+    # ban-octal-mode-literal rule flags them). directory_modes keys are the
+    # staged-entry dispositions; the row, not a branch, chooses the mode.
+    modes:
+      file_default: 420 # 0o644
+      file_private: 384 # 0o600
+      directory_private: 448 # 0o700
+      directory_generated: 493 # 0o755
+
     # SINGLE SSOT for ephemeral/generated
     # resources. VS Code files.exclude/search.exclude (vscode_exclude),
     # files.watcherExclude (watch_exclude), and source_scan.ignored_resources

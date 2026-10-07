@@ -74,16 +74,20 @@ class FlextInfraConstantsCodegenProject:
     class CodegenStagedFilePhase(StrEnum):
         """Generation phase that owns one codegen staged publication.
 
-        The closed vocabulary the journal models accept in ``phase``; every
-        publication site names its owner through this enum instead of a
-        string literal, so the journal's phase contract is code-owned.
+        The closed vocabulary the journal models and the stager accept in
+        ``phase``: every publication and staging site names its owner
+        through this enum instead of a string literal, so the phase
+        contract is code-owned in one declaration.
         """
 
+        CANDIDATE_BOOTSTRAP = "candidate-bootstrap"
+        CONFORM = "conform"
         CONFORM_BOOTSTRAP = "conform-bootstrap"
         DOCS = "docs"
         LAZY_INIT = "lazy-init"
         LAYOUT = "layout"
         MISE = "mise"
+        MOD_TEXT = "mod-text"
         RECOVERY = "recovery"
         SCAFFOLD = "scaffold"
         SEMANTIC = "semantic"
@@ -249,12 +253,6 @@ class FlextInfraConstantsCodegenProject:
     "Physical mutex that serializes every publisher on one project."
     MISE_LOCK_MUTEX_TIMEOUT_SECONDS: ClassVar[float] = 600.0
     "How long a publisher waits for the project mutex before failing."
-    MISE_LOCK_ARTIFACTS: ClassVar[tuple[tuple[str, int], ...]] = (
-        ("bin/mise", 0o755),
-        ("bin/mise.cmd", 0o644),
-        ("mise.version", 0o644),
-    )
-    "Launcher and pin files the staged lock transaction publishes."
     MISE_LOCK_TRANSACTION_SCRIPT: ClassVar[str] = "bin/mise-lock-transaction.py"
     "Generated publisher the Makefile bootstrap runs to commit a staged mise.lock."
     MISE_LOCK_CONVERGE_SCRIPT: ClassVar[str] = "bin/mise-lock-converge.py"

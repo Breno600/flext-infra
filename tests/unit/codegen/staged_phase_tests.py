@@ -49,11 +49,14 @@ class TestsFlextInfraCodegenStagedFilePhase:
         tm.that(
             {phase.value for phase in c.Infra.CodegenStagedFilePhase},
             eq={
+                "candidate-bootstrap",
+                "conform",
                 "conform-bootstrap",
                 "docs",
                 "lazy-init",
                 "layout",
                 "mise",
+                "mod-text",
                 "recovery",
                 "scaffold",
                 "semantic",
