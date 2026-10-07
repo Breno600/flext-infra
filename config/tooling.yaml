@@ -318,6 +318,17 @@ Infra:
           # Pydantic runtime-evaluation is protected by the
           # runtime-evaluated-roots projection, not by disabling the rules.
           authorized-exceptions:
+            - files: "**/_utilities/credential.py"
+              rules: [suspicious-subprocess-import, subprocess-without-shell-equals-true]
+              authority: operator-relocation-mandate-2026-10-07-keyring-credential
+              reason: >-
+                The datacosmos-backup backup credential resolver is the point
+                of use for the Secret Service lookup: the user keyring is the
+                only secret source and resolving it requires spawning
+                secret-tool with the configured keyring attributes. Moving
+                the call is impossible (this is the point of use) and
+                suppressing at the call sites would mask the contract; the
+                exemption is bounded to this module family.
             - files: "**/__init__.py"
               rules: [ENFORCE-046]
               authority: operator-projection-law-2026-10-07-generated-lazy-init-imports
