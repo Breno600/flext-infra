@@ -10,13 +10,16 @@ import ast
 import importlib
 import importlib.util
 import sys
-from collections.abc import MutableMapping
-from importlib.util import resolve_name
 from pathlib import Path
 from typing import ClassVar
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities._rope_source_bases_inventory import _SourceBindingCollector
+from flext_infra._utilities import (
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeRuntime,
+    FlextInfraUtilitiesRopeSourceBasesAliases,
+    FlextInfraUtilitiesRopeSourceBasesInventory,
+)
 
 
 class FlextInfraUtilitiesRopeSourceBasesRuntime:
@@ -49,8 +52,6 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 extra_module_aliases: Facade alias maps read outside the sources.
 
             """
-            from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
-
             self._project = project
             self._sources = sources
             self._roots = roots
@@ -90,7 +91,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
             """Index every captured module and its declared namespaces."""
             sys.setrecursionlimit(max(sys.getrecursionlimit(), 4096))
             self._modules = {
-                module: self._inventory(module, captured)
+                module: self.inventory(module, captured)
                 for module, captured in self._sources.items()
             }
             self._namespaces = {
@@ -117,8 +118,6 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
             bases declared as `from dcdoc import DcdocServiceBase` mean the
             project one).
             """
-            from flext_infra._utilities import FlextInfraUtilitiesRopeSourceBasesAliases
-
             for alias_module, captured in self._sources.items():
                 alias_path, alias_source = captured
                 for alias, absolute in (
@@ -159,7 +158,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                         derived.add(reference.qualified_base)
             return tuple(sorted(derived))
 
-        def _inventory(
+        def inventory(
             self,
             module: str,
             captured: t.Pair[Path, str],
@@ -190,65 +189,18 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                     semantics.
 
             """
-            from flext_infra._utilities import (
-                FlextInfraUtilitiesRopeAnalysisSourceScan,
-                FlextInfraUtilitiesRopeCore,
-                FlextInfraUtilitiesRopeRuntime,
-            )
-
-            path, source = captured
-            resource = (
-                FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
-                    self._project,
-                    path,
-                )
-                if path.is_file()
-                else None
-            )
-            parsed = FlextInfraUtilitiesRopeRuntime.build_string_module(
-                self._project,
-                source,
-                resource=resource,
-            ).get_ast()
-            if not isinstance(parsed, ast.Module):
-                message = f"Rope returned a non-module AST for {path}"
-                raise TypeError(message)
-            package = (
-                module if path.name == "__init__.py" else module.rpartition(".")[0]
-            )
-            globals_: MutableMapping[str, m.Infra.SourceClassReference | None] = {}
-            collector = _SourceBindingCollector(
+            request = m.Infra.SourceBindingInventoryRequest(
+                project=self._project,
                 module=module,
-                package=package,
-                definitions=self._definitions,
+                path=captured[0],
+                source=captured[1],
                 required_line=required_line,
                 allow_conditional=allow_conditional,
             )
-            collector.collect(parsed.body, globals_, globals_, "")
-            targets, references = (
-                FlextInfraUtilitiesRopeAnalysisSourceScan.lazy_import_mapping_source(
-                    source,
-                )
+            return FlextInfraUtilitiesRopeSourceBasesInventory.inventory(
+                request,
+                self._definitions,
             )
-            if references and not module.startswith(("tests.", "tests.")):
-                # Test and benchmark modules build installer maps at runtime from
-                # the constants they exercise; the declared-mapping invariant
-                # gates the production lazy-init modules only.
-                message = (
-                    f"Unresolved declared lazy import mapping in {module}: {references}"
-                )
-                raise ValueError(message)
-            for target, exports in targets:
-                destination = (
-                    resolve_name(target, package) if target.startswith(".") else target
-                )
-                for name in exports:
-                    globals_[name] = m.Infra.SourceClassReference(
-                        target=destination,
-                        attributes=(name,),
-                        qualified_base=f"{module}.{name}",
-                    )
-            return globals_
 
         def _external_identity(self, value: t.Infra.RopePyObject) -> str:
             """Return the declaration identity of one external Rope object.
@@ -257,8 +209,6 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 TypeError: If Rope resolves a required base to a non-class.
 
             """
-            from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
-
             function_identity = self._function_object_identity(value)
             if function_identity is not None:
                 return function_identity
@@ -289,8 +239,6 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 The constructed class identity, or None for other objects.
 
             """
-            from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
-
             if not isinstance(
                 value,
                 FlextInfraUtilitiesRopeRuntime.runtime_type(
@@ -386,7 +334,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
             identity = self._declared_identity_at_line(name, line)
             if identity is None:
                 resource = module.get_resource()
-                self._inventory(
+                self.inventory(
                     name,
                     (Path(resource.real_path), module.source_code),
                     required_line=line,
@@ -447,8 +395,6 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                     relative import escapes the package.
 
             """
-            from flext_infra._utilities import FlextInfraUtilitiesRopeCore
-
             if imported.module_name is None:
                 if imported.resource is None:
                     message = "Import has no declared module location"
@@ -494,8 +440,6 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 The resolved Rope module object.
 
             """
-            from flext_infra._utilities import FlextInfraUtilitiesRopeCore
-
             name = self._provider_module_name(imported)
             module = self._project.get_module(name)
             resource = imported.resource or self._project.find_module(name)
@@ -526,8 +470,6 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                     as a class base, or cycles through provider reexports.
 
             """
-            from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
-
             if depth > c.Infra.ROPE_WALK_DEPTH_BUDGET:
                 message = (
                     f"Unresolved external base: {module.get_name()} at depth {depth}"
@@ -661,11 +603,6 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 ModuleNotFoundError: If the target has no virtual stdlib backing.
 
             """
-            from flext_infra._utilities import (
-                FlextInfraUtilitiesRopeCore,
-                FlextInfraUtilitiesRopeRuntime,
-            )
-
             try:
                 module = self._project.get_module(target)
             except (
@@ -858,8 +795,6 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 TypeError: If the external value is not a Rope builtin class.
 
             """
-            from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
-
             value = self._external[identity]
             if not isinstance(value, p.Infra.RopeBuiltinClass):
                 message = f"External class has no declared source or native identity: {identity}"
@@ -1020,37 +955,32 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
 
         _stdlib_backing_cache: ClassVar[dict[str, str] | None] = None
 
-    class FlextInfraUtilitiesRopeSourceBasesRuntime:
-        """Runtime-base resolution part of the source-bases composite."""
+    @classmethod
+    def runtime_bases(
+        cls,
+        project: t.Infra.RopeProject,
+        sources: t.MappingKV[str, t.Pair[Path, str]],
+        roots: t.StrSequence,
+        extra_module_aliases: t.MappingKV[str, str] | None = None,
+    ) -> t.StrTuple:
+        """Resolve owned classes in C3 order and external classes through Rope.
 
-        @classmethod
-        def runtime_bases(
-            cls,
-            project: t.Infra.RopeProject,
-            sources: t.MappingKV[str, t.Pair[Path, str]],
-            roots: t.StrSequence,
-            extra_module_aliases: t.MappingKV[str, str] | None = None,
-        ) -> t.StrTuple:
-            """Resolve owned classes in C3 order and external classes through Rope.
+        Only configured roots mark model evaluation boundaries. No first-party
+        module is imported or resolved from disk when its planned source exists.
+        Provider reexports follow Rope's declared import provenance. Their source
+        declarations, not Rope's possibly incomplete superclass inference, supply
+        the ordered bases. Missing references and invalid inheritance fail loudly.
 
-            Only configured roots mark model evaluation boundaries. No first-party
-            module is imported or resolved from disk when its planned source exists.
-            Provider reexports follow Rope's declared import provenance. Their source
-            declarations, not Rope's possibly incomplete superclass inference, supply
-            the ordered bases. Missing references and invalid inheritance fail loudly.
+        Returns:
+            Sorted configured roots and derived Ruff-qualified base expressions.
 
-            Returns:
-                Sorted configured roots and derived Ruff-qualified base expressions.
-
-            """
-            return FlextInfraUtilitiesRopeSourceBasesRuntime._RuntimeBaseResolver(
-                project,
-                sources,
-                roots,
-                extra_module_aliases,
-            ).run()
-
-
+        """
+        return FlextInfraUtilitiesRopeSourceBasesRuntime._RuntimeBaseResolver(
+            project,
+            sources,
+            roots,
+            extra_module_aliases,
+        ).run()
 
 
 # The flat module-level re-export: the package lazy map and the

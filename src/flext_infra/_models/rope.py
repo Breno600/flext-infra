@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import Annotated, ClassVar
 
@@ -113,6 +114,82 @@ class FlextInfraModelsRope:
             t.MappingKV[str, FlextInfraModelsRope.SourceClassReference | None],
             m.Field(description="Member name to shadowing reference mapping"),
         ]
+
+    class SourceBindingCollectorSpec(m.ContractModel):
+        """Execution context one lexical-binding collector pass consumes.
+
+        The scalar fields describe the module under inventory. The two
+        injected maps are shared execution state the caller owns: they
+        travel unvalidated by reference so every pass accumulates directly
+        into the caller's inventories instead of pydantic copies.
+        """
+
+        module: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Qualified module name under inventory"),
+        ]
+        package: Annotated[
+            str,
+            m.Field(description="Enclosing package name of the module"),
+        ]
+        required_line: Annotated[
+            int | None,
+            m.Field(
+                ge=1,
+                description="Index only bindings visible at this line when set",
+            ),
+        ] = None
+        allow_conditional: Annotated[
+            bool,
+            m.Field(
+                description="Whether conditional bindings may degrade to unknown",
+            ),
+        ] = False
+        definitions: Annotated[
+            MutableMapping[str, FlextInfraModelsRope.SourceClassDefinition],
+            m.SkipValidation,
+            m.Field(
+                description="Cross-module definition inventory the walk extends",
+            ),
+        ]
+        lexical: Annotated[
+            MutableMapping[str, FlextInfraModelsRope.SourceClassReference | None],
+            m.SkipValidation,
+            m.Field(
+                description="Module-scope bindings visible to every nested base",
+            ),
+        ]
+
+    class SourceBindingInventoryRequest(m.ContractModel):
+        """One captured module's request for a lexical-binding inventory."""
+
+        project: Annotated[
+            t.Infra.RopeProject,
+            m.SkipValidation,
+            m.Field(description="Open Rope project scoped to the analysis roots"),
+        ]
+        module: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Qualified module name under inventory"),
+        ]
+        path: Annotated[Path, m.Field(description="Captured module path")]
+        source: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Captured module source text"),
+        ]
+        required_line: Annotated[
+            int | None,
+            m.Field(
+                ge=1,
+                description="Index only bindings visible at this line when set",
+            ),
+        ] = None
+        allow_conditional: Annotated[
+            bool,
+            m.Field(
+                description="Whether conditional bindings may degrade to unknown",
+            ),
+        ] = False
 
     class ScopeDefinition(FlextInfraModelsMixins.PositiveLineMixin, m.ContractModel):
         """One semantic scope (def/class) discovered via rope's scope tree.
