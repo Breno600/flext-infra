@@ -445,18 +445,12 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             ):
                 # Profile- and capability-excluded workflows must not keep firing.
                 # Conform, rather than a user, retires the generated orphan.
-                orphan = self._retired_workflow_orphan(render_inputs, managed, path)
-                if orphan.failure:
+                retired = self._retired_orphan_plans(render_inputs, managed, path)
+                if retired.failure:
                     return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
-                        orphan,
+                        retired,
                     )
-                orphan_plan, orphan_present = orphan.value
-                if orphan_present and orphan_plan is not None:
-                    planned.append(
-                        orphan_plan.model_copy(
-                            update={"owner": managed.owner, "policy": managed.policy},
-                        ),
-                    )
+                planned.extend(retired.value)
                 continue
             rendered = self._rendered_managed_plan(render_inputs, managed, entry, path)
             if rendered.failure:
@@ -464,6 +458,31 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             render_inputs, planned_file = rendered.value
             planned.append(planned_file)
         return r[t.SequenceOf[m.Infra.CodegenFilePlan]].ok(tuple(planned))
+
+    def _retired_orphan_plans(
+        self,
+        render_inputs: m.Infra.CodegenRenderInputs,
+        managed: m.Infra.ManagedFileSpec,
+        path: Path,
+    ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
+        """Plan the retire-orphan record for one out-of-scope managed file.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``
+            with zero or one orphan plan.
+
+        """
+        orphan = self._retired_workflow_orphan(render_inputs, managed, path)
+        if orphan.failure:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(orphan)
+        orphan_plan, orphan_present = orphan.value
+        if not orphan_present or orphan_plan is None:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].ok(())
+        return r[t.SequenceOf[m.Infra.CodegenFilePlan]].ok((
+            orphan_plan.model_copy(
+                update={"owner": managed.owner, "policy": managed.policy},
+            ),
+        ))
 
     @staticmethod
     def _managed_file_skipped(
@@ -612,26 +631,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         """
         result_type = r[t.Pair[m.Infra.CodegenRenderInputs, m.Infra.CodegenFilePlan]]
         root = render_inputs.target.root
-        source = entry.source
-        if source is None:
-            return result_type.fail(
-                f"managed render entry has no template source: {managed.path}",
-            )
-        rendered = self._rendered_artifact_source(
-            render_inputs,
-            template_relpath=source,
-            destination=entry.destination,
-            failure_prefix="",
-            project_context=None,
-        )
-        if rendered.failure:
-            return result_type.from_failure(rendered)
-        composed = self.compose_project_artifact(
-            root,
-            entry.destination,
-            rendered.value,
-            render_inputs=render_inputs,
-        )
+        composed = self._composed_managed_render(render_inputs, managed, entry)
         if composed.failure:
             return result_type.from_failure(composed)
         rendered_content = composed.value.rendered
@@ -657,6 +657,38 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         if planned.failure:
             return result_type.from_failure(planned)
         return result_type.ok((render_inputs, planned.value))
+
+    def _composed_managed_render(
+        self,
+        render_inputs: m.Infra.CodegenRenderInputs,
+        managed: m.Infra.ManagedFileSpec,
+        entry: m.Infra.TemplateEntrySpec,
+    ) -> p.Result[m.Infra.CodegenArtifactComposition]:
+        """Render one managed template source and compose it for its root.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenArtifactComposition]``.
+
+        """
+        if entry.source is None:
+            return r[m.Infra.CodegenArtifactComposition].fail(
+                f"managed render entry has no template source: {managed.path}",
+            )
+        rendered = self._rendered_artifact_source(
+            render_inputs,
+            template_relpath=entry.source,
+            destination=entry.destination,
+            failure_prefix="",
+            project_context=None,
+        )
+        if rendered.failure:
+            return r[m.Infra.CodegenArtifactComposition].from_failure(rendered)
+        return self.compose_project_artifact(
+            render_inputs.target.root,
+            entry.destination,
+            rendered.value,
+            render_inputs=render_inputs,
+        )
 
     def _plan_existing_custom(
         self,
