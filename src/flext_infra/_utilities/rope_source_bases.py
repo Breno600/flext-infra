@@ -1712,10 +1712,11 @@ class FlextInfraUtilitiesRopeSourceBases:
             ).run()
 
 
-
-
 # The flat module-level re-export: the package lazy map and the
 # internal from-import contract resolve this name at module scope
 # (the S6 nesting moved the class inside the family facade).
+FlextInfraUtilitiesRopeSourceBases = (
+    FlextInfraUtilitiesRopeSourceBases.FlextInfraUtilitiesRopeSourceBases
+)
 
 __all__: list[str] = ["FlextInfraUtilitiesRopeSourceBases"]
