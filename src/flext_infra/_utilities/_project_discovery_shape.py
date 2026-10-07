@@ -31,7 +31,7 @@ class FlextInfraUtilitiesProjectDiscoveryShapeMixin:
 
         """
         from flext_infra._utilities import (
-            FlextInfraUtilitiesDependencies,
+            FlextInfraUtilitiesDependenciesProfiles,
             FlextInfraUtilitiesPyproject,
         )
 
@@ -47,7 +47,7 @@ class FlextInfraUtilitiesProjectDiscoveryShapeMixin:
         if not payload:
             return False
         dependency_names: set[str] = set(
-            FlextInfraUtilitiesDependencies.declared_dependency_names_from_payload(
+            FlextInfraUtilitiesDependenciesProfiles.declared_dependency_names_from_payload(
                 payload,
             ),
         )

@@ -30,7 +30,7 @@ class FlextInfraUtilitiesPyprojectSession:
         """
         from flext_cli import u
 
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
+        from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
 
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if (
@@ -49,7 +49,7 @@ class FlextInfraUtilitiesPyprojectSession:
             parsed
             for item in requirements
             if (
-                parsed := FlextInfraUtilitiesDependencies.active_requirement(
+                parsed := FlextInfraUtilitiesDependenciesProfiles.active_requirement(
                     item,
                     environment=environment,
                 )
@@ -65,7 +65,7 @@ class FlextInfraUtilitiesPyprojectSession:
             parsed
             for item in explicit
             if (
-                parsed := FlextInfraUtilitiesDependencies.active_requirement(
+                parsed := FlextInfraUtilitiesDependenciesProfiles.active_requirement(
                     item,
                     environment=environment,
                 )
@@ -75,10 +75,11 @@ class FlextInfraUtilitiesPyprojectSession:
         overrides = tuple(
             item
             for item in active_overrides
-            if FlextInfraUtilitiesDependencies.dep_name(item) not in selected
+            if FlextInfraUtilitiesDependenciesProfiles.dep_name(item) not in selected
         )
         override_names = frozenset(
-            FlextInfraUtilitiesDependencies.dep_name(item) for item in active_overrides
+            FlextInfraUtilitiesDependenciesProfiles.dep_name(item)
+            for item in active_overrides
         )
         declared_constraints = (
             u.Cli.toml_as_string_list(uv.get("constraint-dependencies"))
@@ -87,27 +88,31 @@ class FlextInfraUtilitiesPyprojectSession:
         )
         constraints = tuple(
             dict.fromkeys(
-                FlextInfraUtilitiesDependencies.dependency_constraint(
+                FlextInfraUtilitiesDependenciesProfiles.dependency_constraint(
                     parsed,
-                    replace_source=FlextInfraUtilitiesDependencies.dep_name(parsed)
+                    replace_source=FlextInfraUtilitiesDependenciesProfiles.dep_name(
+                        parsed,
+                    )
                     in selected,
                 )
                 for item in (
                     *(
                         item
                         for item in active
-                        if FlextInfraUtilitiesDependencies.dep_name(item)
+                        if FlextInfraUtilitiesDependenciesProfiles.dep_name(item)
                         not in override_names
                     ),
                     *(
                         item
                         for item in active_overrides
-                        if FlextInfraUtilitiesDependencies.dep_name(item) in selected
+                        if FlextInfraUtilitiesDependenciesProfiles.dep_name(item)
+                        in selected
                     ),
                     *declared_constraints,
                 )
                 if (
-                    parsed := FlextInfraUtilitiesDependencies.active_requirement(
+                    parsed
+                    := FlextInfraUtilitiesDependenciesProfiles.active_requirement(
                         item,
                         environment=environment,
                     )

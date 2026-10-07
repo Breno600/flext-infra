@@ -415,7 +415,7 @@ class FlextInfraUtilitiesRelease:
             The resulting ``p.Result[t.SequenceOf[t.StrSequence]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
+        from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
 
         selected = {name for name, _ in targets}
         edges: MutableMapping[str, t.StrSequence] = {}
@@ -433,7 +433,7 @@ class FlextInfraUtilitiesRelease:
                     if dependency in selected and dependency != name
                 ),
             )
-        return FlextInfraUtilitiesDependencies.dependency_waves(edges)
+        return FlextInfraUtilitiesDependenciesProfiles.dependency_waves(edges)
 
     @staticmethod
     def _release_runtime_dependencies(path: Path) -> p.Result[t.StrSequence]:
@@ -450,7 +450,7 @@ class FlextInfraUtilitiesRelease:
         """
         from flext_cli import u
 
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
+        from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
 
         pyproject = path / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
@@ -473,7 +473,11 @@ class FlextInfraUtilitiesRelease:
                     name
                     for requirement in requirements
                     if isinstance(requirement, str)
-                    and (name := FlextInfraUtilitiesDependencies.dep_name(requirement))
+                    and (
+                        name := FlextInfraUtilitiesDependenciesProfiles.dep_name(
+                            requirement,
+                        )
+                    )
                     is not None
                 }),
             ),

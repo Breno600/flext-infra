@@ -69,12 +69,12 @@ class FlextInfraUtilitiesPyprojectOverlay:
 
         """
         from flext_infra._utilities import (
-            FlextInfraUtilitiesDependencies,
+            FlextInfraUtilitiesDependenciesProfiles,
             FlextInfraUtilitiesPyprojectRequirements,
         )
 
         owned_names = {
-            FlextInfraUtilitiesDependencies.dep_name(item) for item in required
+            FlextInfraUtilitiesDependenciesProfiles.dep_name(item) for item in required
         }
         return list[t.JsonValue](
             sorted(
@@ -83,7 +83,7 @@ class FlextInfraUtilitiesPyprojectOverlay:
                     *(
                         item
                         for item in custom
-                        if FlextInfraUtilitiesDependencies.dep_name(item)
+                        if FlextInfraUtilitiesDependenciesProfiles.dep_name(item)
                         not in owned_names
                     ),
                 )),

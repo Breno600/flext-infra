@@ -40,7 +40,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
         """
         from flext_cli import u
 
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
+        from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
 
         payload = u.Cli.toml_as_mapping(document)
         if payload is None:
@@ -50,7 +50,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
         if isinstance(project, Mapping):
             for key in (c.Infra.DEPENDENCIES, c.Infra.OPTIONAL_DEPENDENCIES):
                 requirements.extend(
-                    FlextInfraUtilitiesDependencies.raw_requirement_values(
+                    FlextInfraUtilitiesDependenciesProfiles.raw_requirement_values(
                         project.get(key),
                     ),
                 )
@@ -58,7 +58,9 @@ class FlextInfraUtilitiesPyprojectUvSources(
         if isinstance(groups, Mapping):
             for group in groups.values():
                 requirements.extend(
-                    FlextInfraUtilitiesDependencies.raw_requirement_values(group),
+                    FlextInfraUtilitiesDependenciesProfiles.raw_requirement_values(
+                        group,
+                    ),
                 )
         return r[list[str]].ok(requirements)
 
@@ -75,13 +77,13 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``t.VariadicTuple[str]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
+        from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
 
         return tuple(
             active
             for item in cls._document_requirement_lines(document).unwrap()
             if (
-                active := FlextInfraUtilitiesDependencies.active_requirement(
+                active := FlextInfraUtilitiesDependenciesProfiles.active_requirement(
                     item,
                     environment=environment,
                 )
@@ -103,7 +105,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``p.Result[t.VariadicTuple[str]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
+        from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
 
         lines = cls._document_requirement_lines(document)
         if lines.failure:
@@ -114,7 +116,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
                     name
                     for item in lines.value
                     if cls._declares_direct_source(item)
-                    and (name := FlextInfraUtilitiesDependencies.dep_name(item))
+                    and (name := FlextInfraUtilitiesDependenciesProfiles.dep_name(item))
                     is not None
                 }),
             ),
@@ -180,12 +182,12 @@ class FlextInfraUtilitiesPyprojectUvSources(
         """
         from flext_cli import u
 
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
+        from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
 
         retained_constraints = tuple(
             requirement
             for requirement in resolution.constraint_dependencies
-            if FlextInfraUtilitiesDependencies.dep_name(requirement) != "uv"
+            if FlextInfraUtilitiesDependenciesProfiles.dep_name(requirement) != "uv"
         )
         if retained_constraints:
             u.Cli.toml_sync_string_list(
@@ -270,7 +272,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
         """
         from flext_cli import u
 
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
+        from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
 
         uv = cls._resolved_uv_table(document)
         cls._sync_uv_candidates(uv, candidate_sources)
@@ -284,7 +286,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
         retained_constraints = tuple(
             requirement
             for requirement in resolution.constraint_dependencies
-            if FlextInfraUtilitiesDependencies.dep_name(requirement) != "uv"
+            if FlextInfraUtilitiesDependenciesProfiles.dep_name(requirement) != "uv"
         )
         if retained_constraints:
             u.Cli.toml_sync_string_list(
@@ -356,12 +358,13 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``t.VariadicTuple[str]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
+        from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
 
         required_names = {
             name
             for line in cls._document_requirement_lines(document).unwrap()
-            if (name := FlextInfraUtilitiesDependencies.dep_name(line)) is not None
+            if (name := FlextInfraUtilitiesDependenciesProfiles.dep_name(line))
+            is not None
         }
         return tuple(sorted(set(workspace_members) & required_names))
 

@@ -72,7 +72,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         """
         from flext_cli import u
 
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
+        from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
 
         parsed = cls._parsed_pyproject(pyproject_content)
         if parsed.failure:
@@ -115,7 +115,11 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         }
         unused_candidates = sorted(
             candidate_sources.keys()
-            - set(FlextInfraUtilitiesDependencies.declared_dependency_names(source)),
+            - set(
+                FlextInfraUtilitiesDependenciesProfiles.declared_dependency_names(
+                    source,
+                ),
+            ),
         )
         if unused_candidates:
             return r[str].fail(

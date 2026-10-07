@@ -230,7 +230,7 @@ class FlextInfraUtilitiesCodemodRules:
         indexed: t.MappingKV[str, Distribution],
     ) -> p.Result[t.StrSequence]:
 
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
+        from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
 
         selected = frozenset(providers)
         edges = {
@@ -242,7 +242,7 @@ class FlextInfraUtilitiesCodemodRules:
             for name in selected
         }
         try:
-            ordered = FlextInfraUtilitiesDependencies.dependency_order(
+            ordered = FlextInfraUtilitiesDependenciesProfiles.dependency_order(
                 tuple(selected),
                 dependencies=lambda name: edges.get(name, ()),
             )

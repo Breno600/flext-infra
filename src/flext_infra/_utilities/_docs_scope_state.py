@@ -71,7 +71,7 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
         from flext_cli import u
 
         from flext_infra._utilities import (
-            FlextInfraUtilitiesDependencies,
+            FlextInfraUtilitiesDependenciesProfiles,
             FlextInfraUtilitiesPyproject,
         )
 
@@ -98,7 +98,7 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
             payload,
         )
         dependency_names = tuple(
-            FlextInfraUtilitiesDependencies.declared_dependency_names_from_payload(
+            FlextInfraUtilitiesDependenciesProfiles.declared_dependency_names_from_payload(
                 payload,
             ),
         )

@@ -156,9 +156,9 @@ class FlextInfraUtilitiesPyprojectRequirements:
             ValueError: If dependency ordering requires a named requirement.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
+        from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
 
-        name = FlextInfraUtilitiesDependencies.dep_name(requirement)
+        name = FlextInfraUtilitiesDependenciesProfiles.dep_name(requirement)
         if name is None:
             message = "dependency ordering requires a named requirement"
             raise ValueError(message)
@@ -245,14 +245,14 @@ class FlextInfraUtilitiesPyprojectRequirements:
             The resulting ``str | None``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
+        from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
 
         bare_requirement = requirement.strip().strip('"').strip()
-        if FlextInfraUtilitiesDependencies.dep_name(bare_requirement) not in (
+        if FlextInfraUtilitiesDependenciesProfiles.dep_name(bare_requirement) not in (
             workspace_members
         ):
             return None
-        member_name = FlextInfraUtilitiesDependencies.dep_name(bare_requirement)
+        member_name = FlextInfraUtilitiesDependenciesProfiles.dep_name(bare_requirement)
         marker = bare_requirement.partition(";")[2]
         if marker:
             return f"{member_name}; {marker.strip()}"
@@ -334,9 +334,9 @@ class FlextInfraUtilitiesPyprojectRequirements:
             The dependency name, or None for an external requirement.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
+        from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
 
-        dependency_name = FlextInfraUtilitiesDependencies.dep_name(requirement)
+        dependency_name = FlextInfraUtilitiesDependenciesProfiles.dep_name(requirement)
         if dependency_name is None:
             return None
         if (
@@ -474,7 +474,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
         """Migrate optional dev dependencies and normalize declared groups."""
         from flext_cli import u
 
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
+        from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
 
         project = u.Cli.toml_ensure_table(document, c.Infra.PROJECT)
         groups = u.Cli.toml_ensure_table(document, c.Infra.DEPENDENCY_GROUPS)
@@ -495,13 +495,14 @@ class FlextInfraUtilitiesPyprojectRequirements:
         sourced_live_names = {
             name
             for requirement in live_dev
-            if (name := FlextInfraUtilitiesDependencies.dep_name(requirement))
+            if (name := FlextInfraUtilitiesDependenciesProfiles.dep_name(requirement))
             and cls._declares_direct_source(requirement)
         }
         required_dev = tuple(
             requirement
             for requirement in required_dev_dependencies
-            if FlextInfraUtilitiesDependencies.dep_name(requirement) != project_name
+            if FlextInfraUtilitiesDependenciesProfiles.dep_name(requirement)
+            != project_name
             and not cls._floor_yields_to_declared_source(
                 requirement,
                 sourced_live_names,
@@ -512,7 +513,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             u.Cli.toml_sync_string_list(
                 groups,
                 str(c.Infra.DEV),
-                FlextInfraUtilitiesDependencies.dedupe_specs(tuple(dev)),
+                FlextInfraUtilitiesDependenciesProfiles.dedupe_specs(tuple(dev)),
             )
         else:
             u.Cli.toml_remove_key_if_present(groups, str(c.Infra.DEV))
@@ -522,7 +523,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             u.Cli.toml_sync_string_list(
                 groups,
                 "codegen",
-                FlextInfraUtilitiesDependencies.dedupe_specs(tuple(codegen)),
+                FlextInfraUtilitiesDependenciesProfiles.dedupe_specs(tuple(codegen)),
             )
         else:
             u.Cli.toml_remove_key_if_present(groups, "codegen")
@@ -554,9 +555,9 @@ class FlextInfraUtilitiesPyprojectRequirements:
             The resulting ``bool``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
+        from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
 
-        name = FlextInfraUtilitiesDependencies.dep_name(requirement)
+        name = FlextInfraUtilitiesDependenciesProfiles.dep_name(requirement)
         return (
             name is not None
             and name.startswith("flext-")
@@ -597,7 +598,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
         """
         from flext_cli import u
 
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
+        from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
 
         payload = u.Cli.toml_as_mapping(document)
         if payload is None:
@@ -612,7 +613,9 @@ class FlextInfraUtilitiesPyprojectRequirements:
             payload,
         )
         for requirement in raw_values:
-            dependency_name = FlextInfraUtilitiesDependencies.dep_name(requirement)
+            dependency_name = FlextInfraUtilitiesDependenciesProfiles.dep_name(
+                requirement,
+            )
             if dependency_name not in member_names:
                 continue
             provenance = FlextInfraUtilitiesPyprojectRequirements._member_provenance(
