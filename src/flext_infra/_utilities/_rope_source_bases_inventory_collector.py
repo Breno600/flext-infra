@@ -298,7 +298,7 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         )
 
     @staticmethod
-    def _subscript_rebind_target(
+    def subscript_rebind_target(
         target: ast.expr,
     ) -> m.Infra.SubscriptRebind | None:
         """Return the typed rebind rule for one subscript target, or None.
@@ -347,7 +347,7 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
             isinstance(target, ast.Subscript)
             and (
                 rebind
-                := collector._subscript_rebind_target(
+                := collector.subscript_rebind_target(
                     target,
                 )
             )
