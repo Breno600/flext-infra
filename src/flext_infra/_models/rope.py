@@ -31,6 +31,28 @@ class FlextInfraModelsRope:
             ),
         ]
 
+    class SubscriptRebind(m.ContractModel):
+        """Typed rule for one subscript-assignment rebind target.
+
+        External runtimes legitimately re-register aliases through the
+        interpreter's module table (CPython's ``collections`` publishes
+        ``sys.modules['collections.abc'] = _collections_abc``). The rule owns
+        the decision: such a rebind never redefines a class binding.
+        """
+
+        root_name: Annotated[
+            str,
+            m.Field(
+                description="Root name of the subscript's value expression.",
+            ),
+        ]
+
+        @m.computed_field
+        @property
+        def is_module_table_mutation(self) -> bool:
+            """Whether the rebind mutates ``sys`` (underscore alias included)."""
+            return self.root_name.lstrip("_") == "sys"
+
     class ExportOptions(m.ContractModel):
         """Canonical options for Rope module export discovery."""
 

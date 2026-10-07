@@ -193,6 +193,14 @@ class FlextInfraUtilitiesRopeSourceBases:
                 aliases[key_node.value] = value
         return aliases
 
+    @staticmethod
+    def _subscript_root_name(target: ast.Subscript) -> str:
+        """Return the root name of a subscript target's value expression."""
+        value = target.value
+        if isinstance(value, ast.Attribute):
+            value = value.value
+        return value.id if isinstance(value, ast.Name) else ""
+
     @classmethod
     def _inventory(
         cls,
@@ -346,6 +354,19 @@ class FlextInfraUtilitiesRopeSourceBases:
                             for target in targets
                         ):
                             # Provider function metadata does not rebind a class.
+                            continue
+                        if allow_conditional and all(
+                            isinstance(target, ast.Subscript)
+                            and m.Infra.SubscriptRebind(
+                                root_name=cls._subscript_root_name(target),
+                            ).is_module_table_mutation
+                            for target in targets
+                        ):
+                            # Standard-library alias re-registration (CPython's
+                            # ``collections`` publishes ``sys.modules[
+                            # 'collections.abc'] = _collections_abc``): an
+                            # external runtime table mutation, never a class
+                            # rebind — the touched names stay unknown.
                             continue
                         if (
                             len(targets) == 1
