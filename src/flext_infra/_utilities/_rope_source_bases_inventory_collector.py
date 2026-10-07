@@ -344,19 +344,34 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         """
         return all(
             isinstance(target, ast.Subscript)
-            and (
-                rebind
-                := FlextInfraUtilitiesRopeSourceBindingCollector._subscript_rebind_target(
-                    target,
-                )
-            )
-            is not None
-            and (
-                rebind.is_module_table_mutation
-                or bindings is None
-                or bindings.get(rebind.root_name) is None
+            and FlextInfraUtilitiesRopeSourceBindingCollector._is_module_table_target(
+                target,
+                bindings,
             )
             for target in targets
+        )
+
+    @staticmethod
+    def _is_module_table_target(
+        target: ast.expr,
+        bindings: t.MappingKV[str, m.Infra.SourceClassReference | None] | None,
+    ) -> bool:
+        """Return whether one subscript target only writes a runtime table.
+
+        Returns:
+            True when the typed rule classifies the rebind as a module-table
+            write or the store runs through a non-class table binding.
+
+        """
+        rebind = FlextInfraUtilitiesRopeSourceBindingCollector._subscript_rebind_target(
+            target,
+        )
+        if rebind is None:
+            return False
+        return (
+            rebind.is_module_table_mutation
+            or bindings is None
+            or bindings.get(rebind.root_name) is None
         )
 
     @staticmethod
