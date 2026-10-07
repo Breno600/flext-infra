@@ -12,7 +12,8 @@ if TYPE_CHECKING:
     # flext-j47u (codex): retained only until the remaining get_ast consumers are
     # converted atomically; this import never enters the runtime dependency graph.
 
-    from flext_infra import p, t
+    from flext_infra.protocols import p
+    from flext_infra.typings import t
 
 
 @runtime_checkable

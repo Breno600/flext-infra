@@ -10,15 +10,18 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
-from flext_infra import c, m, u
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
+from flext_infra.codegen.conform import FlextInfraCodegenConform
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.utilities import u
 
 # New file per operator live
 # order (ULW). ctx via u.derive_class_stem (no parallel detection, ADR-005 §9);
 # accessor typing/config+settings symmetry fixed in templates in the same lane.
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra.protocols import p
 
 
 class FlextInfraCodegenProjectNew(
@@ -145,8 +148,6 @@ class FlextInfraCodegenProjectNew(
             The resulting ``p.Result[m.Infra.CodegenResult]``.
 
         """
-        from flext_infra.codegen.conform import FlextInfraCodegenConform
-
         if self.effective_dry_run:
             return r[m.Infra.CodegenResult].fail("codegen new requires apply mode")
         # Every identity fact is an explicit caller declaration: for a

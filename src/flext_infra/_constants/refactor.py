@@ -13,10 +13,10 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, ClassVar, Literal
 
 from flext_core import c
-from flext_infra._constants import FlextInfraConstantsBase as cb
+from flext_infra._constants.base import FlextInfraConstantsBase as cb
 
 if TYPE_CHECKING:
-    from flext_infra import t
+    from flext_infra.typings import t
 
 
 class FlextInfraConstantsRefactor:
@@ -90,17 +90,12 @@ class FlextInfraConstantsRefactor:
         - ``future-annotations``: add the future import to the file;
         - ``module-import``: hoist the matched import statement to the
           module import block;
-        - ``package-root-import``: rebind ``$NAME`` from ``$MODULE`` to the
-          project's own package root (a ``$MODULE`` outside the own package
-          is not this project's finding and stays residue);
+        - ``package-root-import``: rebind ``$NAME`` from ``$MODULE`` to that
+          module's top-level package;
         - ``own-package-import``: rebind ``$NAME`` from ``$MODULE`` to the
           project's own package;
         - ``facade-class``: move class ``$NAME`` to the module of facade
-          family ``$FAMILY``;
-        - ``import-normalization``: run the canonical import-form engine over
-          the file (root-combined facade letters, flattened family paths,
-          lazy placement of concrete objects, ordered letter bindings,
-          ``try/except ImportError`` guard cleanup).
+          family ``$FAMILY``.
         """
 
         PROTOCOL = "protocol"
@@ -110,7 +105,6 @@ class FlextInfraConstantsRefactor:
         PACKAGE_ROOT_IMPORT = "package-root-import"
         OWN_PACKAGE_IMPORT = "own-package-import"
         FACADE_CLASS = "facade-class"
-        IMPORT_NORMALIZATION = "import-normalization"
 
     @unique
     class CodemodContextPredicate(StrEnum):

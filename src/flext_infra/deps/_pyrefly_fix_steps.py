@@ -10,13 +10,16 @@ from collections.abc import Mapping, MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, t, u
 from flext_infra._config import config
+from flext_infra.constants import c
+from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
+from flext_infra.typings import t
+from flext_infra.utilities import u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
+    from flext_infra.protocols import p
 
 
 class FlextInfraConfigFixerSteps:
@@ -37,8 +40,6 @@ class FlextInfraConfigFixerSteps:
             The resulting ``p.Result[t.StrSequence]``.
 
         """
-        from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
-
         search_raw = pyrefly.get(c.Infra.SEARCH_PATH)
         if not isinstance(search_raw, list):
             return r[t.StrSequence].ok(())
@@ -69,8 +70,6 @@ class FlextInfraConfigFixerSteps:
             The resulting ``p.Result[t.StrSequence]``.
 
         """
-        from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
-
         includes_raw = pyrefly.get(c.Infra.PROJECT_INCLUDES)
         if not isinstance(includes_raw, list):
             return r[t.StrSequence].ok(())

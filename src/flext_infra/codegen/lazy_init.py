@@ -14,16 +14,22 @@ from time import perf_counter
 from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
-from flext_infra import c, m, t, u
 from flext_infra._config import config
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
 from flext_infra.codegen._lazy_init_generation import (
     FlextInfraCodegenLazyInitGenerationMixin,
 )
+from flext_infra.codegen._lazy_init_projection_manifest import (
+    FlextInfraCodegenLazyInitProjectionManifest,
+)
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.typings import t
+from flext_infra.utilities import u
 from flext_infra.workspace.rope import FlextInfraRopeWorkspace
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra.protocols import p
 
 
 class FlextInfraCodegenLazyInit(
@@ -140,10 +146,6 @@ class FlextInfraCodegenLazyInit(
             The resulting ``p.Result[m.Infra.CodegenPhaseAnalysis]``.
 
         """
-        from flext_infra.codegen._lazy_init_projection_manifest import (
-            FlextInfraCodegenLazyInitProjectionManifest,
-        )
-
         roots = (
             (self.repository_root.resolve(),)
             if self.project_scope_roots is None
@@ -301,10 +303,7 @@ class FlextInfraCodegenLazyInit(
         snapshots = self._snapshot_planner_inputs(workspace_index, package_dirs)
         if snapshots.failure:
             return r[m.Infra.CodegenPhaseAnalysis].from_failure(snapshots)
-
-        from flext_infra.codegen.lazy_init_planner import (
-            FlextInfraCodegenLazyInitPlanner,
-        )
+        from flext_infra._models import FlextInfraCodegenLazyInitPlanner
 
         planner = FlextInfraCodegenLazyInitPlanner(
             rope_workspace=rope,

@@ -10,10 +10,10 @@ from collections import defaultdict
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra import m
+from flext_infra.models import m
 
 if TYPE_CHECKING:
-    from flext_infra import t
+    from flext_infra.typings import t
 
 
 class FlextInfraRefactorCensusFiltersMixin:

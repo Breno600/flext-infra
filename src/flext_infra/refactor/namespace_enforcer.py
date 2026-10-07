@@ -11,15 +11,18 @@ from typing import TYPE_CHECKING
 from flext_cli import cli
 
 from flext_core import r
-from flext_infra import c, m, u
+from flext_infra.constants import c
+from flext_infra.models import m
 from flext_infra.refactor._namespace_enforcer_project import (
     FlextInfraNamespaceEnforcerProjectMixin,
 )
+from flext_infra.utilities import u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p, t
+    from flext_infra.protocols import p
+    from flext_infra.typings import t
 
 
 class FlextInfraNamespaceEnforcer(FlextInfraNamespaceEnforcerProjectMixin):
@@ -54,26 +57,12 @@ class FlextInfraNamespaceEnforcer(FlextInfraNamespaceEnforcerProjectMixin):
         project_roots = self._resolve_project_roots(project_names=project_names)
         project_reports: list[m.Infra.ProjectEnforcementReport] = []
         for project_root in project_roots:
-            # One project's failure is that project's report entry, never the
-            # sweep's end: the remaining projects still run and the verdict
-            # ships once, with every failure visible in the aggregate. The
-            # enablement read joins the same isolation so one member's
-            # malformed namespace table cannot abort the fleet verb.
-            try:
-                if not u.Infra.namespace_enabled(project_root):
-                    continue
-                report = self._enforce_project(
-                    project_root=project_root,
-                    project_name=project_root.name,
-                    apply=apply,
-                    gates=gates,
-                )
-            except Exception as error:  # ruff: ignore[blind-except] — sweep isolation boundary
-                report = m.Infra.ProjectEnforcementReport(
-                    project=project_root.name,
-                    project_root=str(project_root),
-                    error=f"{type(error).__name__}: {error}",
-                )
+            report = self._enforce_project(
+                project_root=project_root,
+                project_name=project_root.name,
+                apply=apply,
+                gates=gates,
+            )
             project_reports.append(report)
         return m.Infra.WorkspaceEnforcementReport(
             workspace=str(self._repository_root),
@@ -85,12 +74,10 @@ class FlextInfraNamespaceEnforcer(FlextInfraNamespaceEnforcerProjectMixin):
         *,
         project_names: t.StrSequence | None = None,
     ) -> t.SequenceOf[Path]:
-        """Resolve the selected roots through the topology owner.
+        """Resolve the selected namespace-enabled roots through the topology owner.
 
         ``.`` names this repository itself; an unknown name is a caller error
-        and escapes loud instead of silently enforcing nothing. Namespace
-        enablement is read inside the isolated sweep loop, where one
-        member's malformed table becomes that member's report entry.
+        and escapes loud instead of silently enforcing nothing.
 
         Returns:
             The resulting ``t.SequenceOf[Path]``.
@@ -102,7 +89,11 @@ class FlextInfraNamespaceEnforcer(FlextInfraNamespaceEnforcerProjectMixin):
         resolved = u.Infra.resolve_projects(self._repository_root, project_names or ())
         if resolved.failure:
             raise ValueError(resolved.error or "project resolution failed")
-        return [project.path for project in resolved.value]
+        return [
+            project.path
+            for project in resolved.value
+            if u.Infra.namespace_enabled(project.path)
+        ]
 
     @staticmethod
     def render_text(report: m.Infra.WorkspaceEnforcementReport) -> str:
@@ -116,28 +107,14 @@ class FlextInfraNamespaceEnforcer(FlextInfraNamespaceEnforcerProjectMixin):
         lines = [
             "Namespace Enforcement Report",
             f"Workspace: {report.workspace}",
+            f"Projects: {len(report.projects)}",
+            f"Violations: {'YES' if report.has_violations else 'NO'}",
             (
-                f"Projects: {len(projects)}"
-                f" (failed passes: {sum(1 for p in projects if p.error)})"
+                f"Relocation findings: "
+                f"{sum(project.relocation_findings for project in projects)}"
             ),
-            (
-                f"Violations: {'YES' if report.has_violations else 'NO'}"
-                f" ({sum(p.relocation_findings for p in projects)} remaining)"
-            ),
-            f"Relocations applied: {sum(p.applied_relocations for p in projects)}",
-            (
-                f"Warnings: {sum(p.warnings for p in projects)}"
-                " (detection-only and non-actionable findings)"
-            ),
-            f"Files scanned: {sum(p.files_scanned for p in projects)}",
+            f"Files scanned: {sum(project.files_scanned for project in projects)}",
         ]
-        lines.extend(
-            f"  {project.project}: violations={project.relocation_findings}"
-            f" applied={project.applied_relocations}"
-            f" warnings={project.warnings} files={project.files_scanned}"
-            + (f" error={project.error}" if project.error else "")
-            for project in projects
-        )
         return "\n".join(lines)
 
     @classmethod
@@ -165,9 +142,11 @@ class FlextInfraNamespaceEnforcer(FlextInfraNamespaceEnforcerProjectMixin):
         )
         if published.failure:
             return r[m.Infra.WorkspaceEnforcementReport].from_failure(published)
-        # The fix verb reports and repairs; it never fails on findings. The
-        # red gate for namespace law stays with the check surfaces, so a
-        # violation count is data here, not an abort.
+        has_violations: bool = report.has_violations
+        if has_violations:
+            return r[m.Infra.WorkspaceEnforcementReport].fail(
+                "Namespace violations found",
+            )
         return r[m.Infra.WorkspaceEnforcementReport].ok(report)
 
 

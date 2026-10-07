@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from flext_core import r
-from flext_infra import c, m
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
@@ -27,9 +26,12 @@ from flext_infra.codegen._mise_artifacts_state import (
 from flext_infra.codegen._mise_artifacts_verification import (
     FlextInfraMiseArtifactsVerification as verify,
 )
+from flext_infra.constants import c
+from flext_infra.models import m
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from flext_infra.protocols import p
+    from flext_infra.typings import t
 
 type _FileIdentity = tuple[
     int | None,

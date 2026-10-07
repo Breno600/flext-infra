@@ -19,13 +19,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
-from flext_infra import m, u
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
+from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
+from flext_infra.models import m
+from flext_infra.utilities import u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p, t
+    from flext_infra.protocols import p
+    from flext_infra.typings import t
 
 
 class FlextInfraValidateLazyMapFreshness(FlextInfraProjectSelectionServiceBase[bool]):
@@ -42,8 +45,6 @@ class FlextInfraValidateLazyMapFreshness(FlextInfraProjectSelectionServiceBase[b
             r with ValidationReport listing each stale ``__init__.py`` as a violation.
 
         """
-        from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
-
         planned = FlextInfraCodegenLazyInit(
             repository_root=repository_root,
         ).plan_files()

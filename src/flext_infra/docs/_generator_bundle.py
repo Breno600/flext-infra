@@ -11,10 +11,13 @@ from time import perf_counter
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m, t, u
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.typings import t
+from flext_infra.utilities import u
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra.protocols import p
 
 type _DocsScopeArtifacts = t.Pair[
     m.Infra.DocScope,

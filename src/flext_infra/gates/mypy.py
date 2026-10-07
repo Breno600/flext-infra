@@ -11,12 +11,15 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, m, t, u
 from flext_infra._config import config
+from flext_infra.constants import c
 from flext_infra.gates.base_gate import FlextInfraGate
+from flext_infra.models import m
+from flext_infra.typings import t
+from flext_infra.utilities import u
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra.protocols import p
 
 
 class FlextInfraMypyGate(FlextInfraGate):
@@ -285,12 +288,6 @@ class FlextInfraMypyGate(FlextInfraGate):
                 # Mypy verbose progress channel (--verbose runs). LOG lines are
                 # the tool's own human stream, never diagnostics; the machine
                 # contract of this gate is one JSON object per line.
-                continue
-            if raw_line.startswith("Deferral trace") or raw_line[0].isspace():
-                # Mypy's deferred-node trace (--verbose runs) precedes the
-                # report: a "Deferral trace:" header plus indented continuation
-                # lines. The one-JSON-object-per-line contract emits nothing
-                # indented, so indented lines are always trace payload.
                 continue
             validated: p.Result[m.Infra.MypyDiagnostic] = u.validate_value(
                 m.Infra.MypyDiagnostic,

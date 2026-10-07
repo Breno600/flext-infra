@@ -19,10 +19,10 @@ from __future__ import annotations
 from enum import StrEnum, unique
 from typing import TYPE_CHECKING, ClassVar, Literal
 
-from flext_infra._constants import FlextInfraConstantsSharedInfra
+from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
 
 if TYPE_CHECKING:
-    from flext_infra import t
+    from flext_infra.typings import t
 
 
 class FlextInfraConstantsCodegenProject:

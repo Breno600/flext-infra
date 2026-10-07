@@ -8,12 +8,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra import m, u
+from flext_infra.models import m
+from flext_infra.utilities import u
+from flext_infra.validate.namespace_validator import FlextInfraNamespaceValidator
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p, t
+    from flext_infra.protocols import p
+    from flext_infra.typings import t
 
 
 class FlextInfraCodegenFixerResultsMixin:
@@ -65,10 +68,6 @@ class FlextInfraCodegenFixerResultsMixin:
             The resulting ``t.SequenceOf[m.Infra.CensusViolation]``.
 
         """
-        from flext_infra.validate.namespace_validator import (
-            FlextInfraNamespaceValidator,
-        )
-
         initial_violations_result = u.Infra.parse_namespace_validation(
             FlextInfraNamespaceValidator(repository_root=project_path).build_report(),
             project_path,
@@ -96,10 +95,6 @@ class FlextInfraCodegenFixerResultsMixin:
         initial_violations: t.SequenceOf[m.Infra.CensusViolation],
     ) -> None:
         """Re-run validation and split outstanding violations into fixed vs skipped."""
-        from flext_infra.validate.namespace_validator import (
-            FlextInfraNamespaceValidator,
-        )
-
         remaining_result = u.Infra.parse_namespace_validation(
             FlextInfraNamespaceValidator(repository_root=project_path).build_report(),
             project_path,

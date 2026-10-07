@@ -11,10 +11,13 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import c, u
+from flext_infra.constants import c
+from flext_infra.utilities import u
 
 if TYPE_CHECKING:
-    from flext_infra import m, p, t
+    from flext_infra.models import m
+    from flext_infra.protocols import p
+    from flext_infra.typings import t
 
 
 class FlextInfraSkillRuleRunnerMixin:
