@@ -75,15 +75,11 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         if parsed.failure:
             return r[str].from_failure(parsed)
         source, project_name = parsed.value
-        workspace_members = (
-            tuple(
-                member.distribution
-                for member in workspace.subprojects
-                if member.package
-            )
-            if workspace.repository.role is c.Infra.MakeProfile.WORKSPACE
-            else ()
-        )
+        workspace_members = tuple(
+            member.distribution
+            for member in workspace.subprojects
+            if member.package
+        ) if workspace.repository.role is c.Infra.MakeProfile.WORKSPACE else ()
         cls._sync_dependency_groups(
             source,
             project_name=project_name,

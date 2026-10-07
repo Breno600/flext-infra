@@ -225,7 +225,8 @@ class FlextInfraUtilitiesPyprojectUvSources(
             required_names = {
                 name
                 for line in cls._document_requirement_lines(document).unwrap()
-                if (name := FlextInfraUtilitiesDependencies.dep_name(line)) is not None
+                if (name := FlextInfraUtilitiesDependencies.dep_name(line))
+                is not None
             }
             wanted_members = sorted(set(workspace_members) & required_names)
         else:
