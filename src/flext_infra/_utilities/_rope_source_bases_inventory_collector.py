@@ -348,7 +348,7 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         )
 
     @staticmethod
-    def is_class_namespace_completion(
+    def completes_class_namespace(
         node: ast.Assign | ast.AnnAssign,
         targets: t.SequenceOf[ast.expr],
         bindings: t.MappingKV[str, m.Infra.SourceClassReference | None],
@@ -385,7 +385,7 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
 
         """
         collector = FlextInfraUtilitiesRopeSourceBindingCollector
-        if not collector.is_class_namespace_completion(
+        if not collector.completes_class_namespace(
             node,
             targets,
             bindings,
