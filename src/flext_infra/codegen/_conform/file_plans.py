@@ -130,6 +130,35 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
             ),
         )
 
+    @staticmethod
+    def _retired_destinations() -> p.Result[
+        t.Pair[t.SequenceOf[str], t.MappingKV[str, str]]
+    ]:
+        """Collect declared retired projections with their removal evidence.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[t.SequenceOf[str],
+                t.MappingKV[str, str]]]``.
+
+        """
+        result_type = r[t.Pair[t.SequenceOf[str], t.MappingKV[str, str]]]
+        extra: list[str] = []
+        evidence_by_path: dict[str, str] = {}
+        for retired in config.Infra.codegen.retired_projections:
+            declared = retired if isinstance(retired, str) else retired.path
+            relative = Path(declared)
+            if relative.is_absolute() or ".." in relative.parts:
+                return result_type.fail(
+                    "retired projection must be a normalized relative path: "
+                    f"{declared}",
+                )
+            if isinstance(retired, str):
+                extra.append(retired)
+                continue
+            evidence_by_path[retired.path] = retired.evidence
+            extra.append(retired.path)
+        return result_type.ok((extra, evidence_by_path))
+
     @classmethod
     def retired_projection_plans(
         cls,
@@ -153,24 +182,11 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
             for entry in config.Infra.codegen.templates.entries
             if profile not in entry.profiles and "{" not in entry.destination
         ]
-        evidence_by_path: dict[str, str] = {}
-        for retired in config.Infra.codegen.retired_projections:
-            if isinstance(retired, str):
-                relative = Path(retired)
-                if relative.is_absolute() or ".." in relative.parts:
-                    return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
-                        f"retired projection must be a normalized relative path: {retired}",
-                    )
-                destinations.append(retired)
-                continue
-            relative = Path(retired.path)
-            if relative.is_absolute() or ".." in relative.parts:
-                return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
-                    "retired projection must be a normalized relative path: "
-                    f"{retired.path}",
-                )
-            evidence_by_path[retired.path] = retired.evidence
-            destinations.append(retired.path)
+        collected = cls._retired_destinations()
+        if collected.failure:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(collected)
+        extra_destinations, evidence_by_path = collected.value
+        destinations.extend(extra_destinations)
         for destination in destinations:
             path = root / Path(destination)
             if not path.is_file():

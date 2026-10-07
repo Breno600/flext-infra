@@ -8,10 +8,13 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from flext_cli import r
+from flext_cli import r, u
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities import FlextInfraUtilitiesPyprojectUvSources
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDependencies,
+    FlextInfraUtilitiesPyprojectUvSources,
+)
 
 
 class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources):
@@ -28,8 +31,6 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             The resulting ``p.Result[t.Pair[t.Cli.TomlDocument, str]]``.
 
         """
-        from flext_cli import u
-
         source = u.Cli.toml_parse_text(pyproject_content)
         if source is None:
             return r[t.Pair[t.Cli.TomlDocument, str]].fail(
@@ -70,17 +71,24 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             Canonical TOML with autonomous dependencies and uv policy.
 
         """
-        from flext_cli import u
-
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
-
         parsed = cls._parsed_pyproject(pyproject_content)
         if parsed.failure:
             return r[str].from_failure(parsed)
         source, project_name = parsed.value
-        workspace_members = tuple(
-            member.distribution for member in workspace.subprojects if member.package
-        ) if workspace.repository.role is c.Infra.MakeProfile.WORKSPACE else ()
+        # Workspace roots own their declared subprojects; a member that lives
+        # inside a superproject uv workspace (the detector's single
+        # superproject-manifest read) renders its sibling references through
+        # [tool.uv.sources] workspace = true instead of git+ URLs. True
+        # standalones keep the git+ form.
+        workspace_members = (
+            tuple(
+                member.distribution
+                for member in workspace.subprojects
+                if member.package
+            )
+            if workspace.repository.role is c.Infra.MakeProfile.WORKSPACE
+            else tuple(workspace.superproject_members)
+        )
         cls._sync_dependency_groups(
             source,
             project_name=project_name,
@@ -112,13 +120,44 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             declared_sources=declared_sources,
             candidate_sources=candidate_sources,
             family_line=family_line,
+            workspace_members=workspace_members,
         )
         if normalized.failure:
             return r[str].from_failure(normalized)
         cls._remove_legacy_tooling(source)
+        synced = cls._synced_conform_tables(
+            source,
+            uv_resolution=uv_resolution,
+            candidate_sources=candidate_sources,
+            workspace_members=workspace_members,
+            workspace=workspace,
+        )
+        if synced.failure:
+            return r[str].from_failure(synced)
+        rendered = u.Cli.toml_dumps(source)
+        if u.Cli.toml_parse_text(rendered) is None:
+            return r[str].fail("canonical pyproject rendering produced invalid TOML")
+        return r[str].ok(rendered)
+
+    @classmethod
+    def _synced_conform_tables(
+        cls,
+        source: t.Cli.TomlDocument,
+        *,
+        uv_resolution: m.Infra.UvResolutionSpec,
+        candidate_sources: t.StrMapping,
+        workspace_members: t.StrSequence,
+        workspace: m.Infra.WorkspaceSpec,
+    ) -> p.Result[bool]:
+        """Sync the canonical typecheck, namespace, uv, and provenance tables.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         typecheck_paths = cls._sync_typecheck_paths(source)
         if typecheck_paths.failure:
-            return r[str].from_failure(typecheck_paths)
+            return r[bool].from_failure(typecheck_paths)
         namespace_scope = cls._sync_namespace_scope(
             source,
             workspace.project.namespace_scan_dirs
@@ -126,7 +165,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             else None,
         )
         if namespace_scope.failure:
-            return r[str].from_failure(namespace_scope)
+            return r[bool].from_failure(namespace_scope)
         sources_result = cls._sync_uv_sources(
             source,
             resolution=uv_resolution,
@@ -134,17 +173,14 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             workspace_members=workspace_members,
         )
         if sources_result.failure:
-            return r[str].from_failure(sources_result)
+            return r[bool].from_failure(sources_result)
         provenance_result = cls._validate_dependency_provenance(
             source,
             workspace=workspace,
         )
         if provenance_result.failure:
-            return r[str].from_failure(provenance_result)
-        rendered = u.Cli.toml_dumps(source)
-        if u.Cli.toml_parse_text(rendered) is None:
-            return r[str].fail("canonical pyproject rendering produced invalid TOML")
-        return r[str].ok(rendered)
+            return r[bool].from_failure(provenance_result)
+        return r[bool].ok(value=True)
 
     @staticmethod
     def _remove_legacy_tooling(document: t.Cli.TomlDocument) -> None:
@@ -153,8 +189,6 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         The ``[tool.flext]`` table is preserved because it carries project-local
         tooling policy unrelated to repository topology.
         """
-        from flext_cli import u
-
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if tool is None:
             return
@@ -175,8 +209,6 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_cli import u
-
         if not namespace_scan_dirs:
             return r[bool].ok(value=True)
         namespace = u.Cli.toml_ensure_path(document, c.Infra.CONFORM_NAMESPACE_TABLE)
@@ -195,8 +227,6 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_cli import u
-
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if tool is None:
             return r[bool].ok(value=True)
