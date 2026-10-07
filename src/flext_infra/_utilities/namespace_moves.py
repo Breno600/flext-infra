@@ -10,7 +10,6 @@ import ast
 from collections.abc import MutableMapping
 from pathlib import Path
 
-from flext_infra import c, m, t
 from flext_infra._utilities._rope_analysis.asthelpers import (
     FlextInfraUtilitiesRopeAnalysisAstHelpers,
 )
@@ -23,6 +22,9 @@ from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
 from flext_infra._utilities.rope_imports import FlextInfraUtilitiesRopeImports
 from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 from flext_infra._utilities.rope_source import FlextInfraUtilitiesRopeSource
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.typings import t
 
 
 class FlextInfraUtilitiesRefactorNamespaceMoves:
@@ -295,10 +297,9 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         published: pyright then rejects every consumer with
         ``reportPrivateUsage`` and ruff reports the alias as unused at its new
         home, so the whole move validates red and is reverted. Filtering here
-        rather than at each caller keeps one owner for the rule.
-
-        Raises:
-            RuntimeError: If ``not ok``.
+        rather than at each caller keeps one owner for the rule. The gate
+        check propagates the ``RuntimeError`` its verifier raises when the
+        move does not hold.
 
         """
         public_alias_names = {name for name in alias_names if not name.startswith("_")}
@@ -415,7 +416,8 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                 existing = target_bindings.get(bound)
                 if existing is not None and existing != import_line:
                     return
-        collect_missing = FlextInfraUtilitiesRefactorNamespaceMoves._collect_missing_runtime_alias_imports
+        namespace_moves = FlextInfraUtilitiesRefactorNamespaceMoves
+        collect_missing = namespace_moves.collect_missing_runtime_alias_imports
         fallback_runtime_imports = collect_missing(
             target_source=target_source,
             blocks=moved_lines,
@@ -591,7 +593,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         return f"{prefix} import {', '.join(kept)}"
 
     @staticmethod
-    def _collect_missing_runtime_alias_imports(
+    def collect_missing_runtime_alias_imports(
         *,
         target_source: str,
         blocks: t.StrSequence,

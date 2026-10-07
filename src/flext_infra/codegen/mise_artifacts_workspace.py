@@ -11,17 +11,20 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m, u
 from flext_infra.codegen._mise_artifacts_derivation import (
     FlextInfraMiseArtifactsDerivation,
 )
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.utilities import u
 from flext_infra.workspace import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from flext_infra.codegen.protocols import p
+    from flext_infra.codegen.typings import t
 
 
 class FlextInfraMiseWorkspacePlanner:

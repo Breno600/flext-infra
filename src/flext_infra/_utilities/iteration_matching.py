@@ -14,7 +14,7 @@ from flext_infra._utilities._git.scope import FlextInfraUtilitiesGitScopeMixin
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import t
+    from flext_infra import typings as t
 
 
 class FlextInfraUtilitiesIterationMatching(FlextInfraUtilitiesGitScopeMixin):

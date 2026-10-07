@@ -8,14 +8,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_infra import c, config
+from flext_infra._config import config
 from flext_infra._utilities.git import FlextInfraUtilitiesGit
 from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
+from flext_infra.constants import c
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import t
+    from flext_infra import typings as t
 
 
 class FlextInfraUtilitiesNamespaceConfig:

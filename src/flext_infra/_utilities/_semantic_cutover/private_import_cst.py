@@ -14,7 +14,7 @@ from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedN
 if TYPE_CHECKING:
     import libcst as cst
 
-    from flext_infra import m, t
+    from flext_infra import models as m, typings as t
 
 
 class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:

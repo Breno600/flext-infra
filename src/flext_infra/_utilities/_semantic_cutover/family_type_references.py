@@ -9,13 +9,16 @@ from __future__ import annotations
 import ast
 from collections.abc import Iterator
 
-from flext_infra import c, m, p, t
 from flext_infra._utilities.rope_runtime_modules import (
     FlextInfraUtilitiesRopeRuntimeModules,
 )
 from flext_infra._utilities.rope_runtime_refactors import (
     FlextInfraUtilitiesRopeRuntimeRefactors,
 )
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.protocols import p
+from flext_infra.typings import t
 
 
 class FlextInfraUtilitiesSemanticFamilyTypeReferences:

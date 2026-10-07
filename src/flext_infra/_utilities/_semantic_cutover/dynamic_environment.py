@@ -30,7 +30,7 @@ from flext_infra._utilities._semantic_cutover.edits import (
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import m, p, t
+    from flext_infra import models as m, protocols as p, typings as t
 
 
 class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(

@@ -10,8 +10,11 @@ import ast
 from collections.abc import Iterable
 from pathlib import Path
 
-from flext_infra import c, config, p, t
+from flext_infra._config import config
 from flext_infra._utilities.rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
+from flext_infra.constants import c
+from flext_infra.protocols import p
+from flext_infra.typings import t
 
 
 class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):

@@ -10,11 +10,15 @@ from collections.abc import MutableMapping
 from operator import itemgetter
 from sys import stdlib_module_names
 
-from flext_infra import c, config, m, t, u
+from flext_infra._config import config
 from flext_infra.codegen._codegen_generation_renderers import (
     FlextInfraCodegenGenerationRenderersMixin,
 )
+from flext_infra.constants import c
 from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
+from flext_infra.models import m
+from flext_infra.typings import t
+from flext_infra.utilities import u
 
 
 # Keep lazy loading only at the public package root and

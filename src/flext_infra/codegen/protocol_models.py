@@ -15,13 +15,17 @@ from typing import TypeAliasType, get_args, override
 from flext_cli import cli
 
 from flext_core import r
-from flext_infra import FlextInfraServiceBase, m, p, t, u
+from flext_infra.base import FlextInfraServiceBase
 from flext_infra.codegen._protocol_model_annotations import (
     FlextInfraCodegenProtocolModelAnnotations,
 )
 from flext_infra.codegen._protocol_model_render import (
     FlextInfraCodegenProtocolModelRender,
 )
+from flext_infra.models import m
+from flext_infra.protocols import p
+from flext_infra.typings import t
+from flext_infra.utilities import u
 
 
 class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):

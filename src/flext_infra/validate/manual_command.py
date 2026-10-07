@@ -21,8 +21,9 @@ from __future__ import annotations
 import shlex
 from pathlib import Path
 
-from flext_infra import c, t
 from flext_infra.base import s
+from flext_infra.constants import c
+from flext_infra.typings import t
 
 
 class FlextInfraManualCommandValidator(s[bool]):

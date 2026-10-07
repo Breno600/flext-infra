@@ -9,14 +9,16 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING
 
-from flext_infra import c, settings, u
 from flext_infra._promoted.discovery import FlextInfraPromotedDiscovery
+from flext_infra._settings import settings
+from flext_infra.constants import c
+from flext_infra.utilities import u
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from pathlib import Path
 
-    from flext_infra import p
+    from flext_infra._promoted.protocols import p
 
 
 class FlextInfraPromotedDispatch(FlextInfraPromotedDiscovery):

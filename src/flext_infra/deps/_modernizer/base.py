@@ -9,11 +9,14 @@ from __future__ import annotations
 from typing import Annotated, override
 
 from flext_core import r
-from flext_infra import config, m, p, t
+from flext_infra._config import config
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
 from flext_infra.deps._modernizer.document import FlextInfraPyprojectModernizerDocument
 from flext_infra.deps._modernizer.run import FlextInfraPyprojectModernizerRun
 from flext_infra.deps._modernizer.tooling import FlextInfraPyprojectModernizerTooling
+from flext_infra.models import m
+from flext_infra.protocols import p
+from flext_infra.typings import t
 
 
 class FlextInfraPyprojectModernizerBase(

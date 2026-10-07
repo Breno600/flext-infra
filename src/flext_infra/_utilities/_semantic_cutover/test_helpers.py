@@ -11,7 +11,6 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING, override
 
-from flext_infra import c, m, p, t
 from flext_infra._utilities._rope_core_pymodule import (
     FlextInfraUtilitiesRopeCorePyModuleMixin,
 )
@@ -22,6 +21,10 @@ from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedN
 from flext_infra._utilities.rope_runtime_modules import (
     FlextInfraUtilitiesRopeRuntimeModules,
 )
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.protocols import p
+from flext_infra.typings import t
 
 if TYPE_CHECKING:
     import libcst as cst

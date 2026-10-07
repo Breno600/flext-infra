@@ -18,7 +18,10 @@ from typing import TYPE_CHECKING
 from flext_cli import m as cli_m, u
 
 from flext_core import r
-from flext_infra import c, m, p, t
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.protocols import p
+from flext_infra.typings import t
 
 if os.name == "nt":
     import msvcrt
@@ -95,12 +98,9 @@ class FlextInfraUtilitiesCodegenFilePlan:
                     }:
                         raise
                     if time.monotonic() >= deadline:
-                        timeout_error = (
+                        raise (
                             FlextInfraUtilitiesCodegenFilePlan.JournalLeaseTimeoutError
-                        )
-                        raise timeout_error(
-                            lock_path,
-                        ) from error
+                        )(lock_path) from error
                     time.sleep(c.Infra.JOURNAL_LEASE_POLL_SECONDS)
                     continue
                 acquired = True

@@ -71,7 +71,7 @@ class TestsFlextInfraUtilitiesGitMixin:
 
     @staticmethod
     def merge_pull_request(repo_root: Path, subject: str) -> None:
-        """Land one pull request the way GitHub does: a merge commit titled ``subject``."""
+        """Land one pull request as GitHub does: a merge titled ``subject``."""
         branch = f"pr/{abs(hash(subject))}"
         current = tm.ok(
             u.Infra.git_current_branch(m.Infra.GitRepoRequest(repo_root=repo_root)),

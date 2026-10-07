@@ -11,7 +11,7 @@ import sys
 
 from mypy import api
 
-from flext_infra import m
+from flext_infra.models import m
 
 
 class FlextInfraMypyProfiler:

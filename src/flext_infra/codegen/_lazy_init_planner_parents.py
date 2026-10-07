@@ -8,13 +8,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_infra import c, u
+from flext_infra.constants import c
+from flext_infra.utilities import u
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
     from pathlib import Path
 
-    from flext_infra import p, t
+    from flext_infra.codegen.protocols import p
+    from flext_infra.codegen.typings import t
 
 
 class FlextInfraCodegenLazyInitPlannerParentsMixin:

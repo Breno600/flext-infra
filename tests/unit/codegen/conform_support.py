@@ -129,7 +129,8 @@ class TestsFlextInfraConformSupport:
                 root / "pyproject.toml",
                 f'[project]\nname = "{dist}"\nversion = "0.12.0.dev0"\n'
                 'description = "Existing repository fixture"\n'
-                f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
+                f"requires-python = "
+                f'"{config.Infra.codegen.toolchain.python_required_version}"\n'
                 'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
                 'dependencies = ["flext-cli"]\n',
             ),
@@ -144,27 +145,6 @@ class TestsFlextInfraConformSupport:
         # only the committed Taplo pin must precede it so TOML formatting
         # authenticates the locked release instead of resolving a selector.
         u.Tests.seed_locked_taplo(root)
-
-    @staticmethod
-    def check_conform_service(
-        root: Path,
-        workspace: m.Infra.WorkspaceSpec,
-        *,
-        what: c.Infra.CodegenConformSurface = c.Infra.CodegenConformSurface.ALL,
-    ) -> t.Pair[FlextInfraCodegenConform, m.Infra.CodegenConformRequest]:
-        """Build the CHECK-mode conform service of one fixture workspace.
-
-        Returns:
-            The conform service and the request it was built for.
-
-        """
-        request = u.Tests.conform_request(root, what=what)
-        service = FlextInfraCodegenConform(
-            repository_root=root,
-            request=request,
-            initial_workspace=workspace,
-        )
-        return service, request
 
     @staticmethod
     def self_check_conform_service(

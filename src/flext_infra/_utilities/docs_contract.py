@@ -15,13 +15,15 @@ from markdown import Markdown
 from markdown.extensions.toc import slugify
 
 from flext_core import r
-from flext_infra import c, m, t
 from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.typings import t
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
+    from flext_infra import protocols as p
 
 
 class FlextInfraUtilitiesDocsContract:
@@ -43,7 +45,7 @@ class FlextInfraUtilitiesDocsContract:
         return 0
 
     @staticmethod
-    def _docs_contract_strip_invented_toc_before_frontmatter(content: str) -> str:
+    def docs_contract_strip_invented_toc_before_frontmatter(content: str) -> str:
         """Undo H1+TOC wrongly prepended ahead of YAML frontmatter.
 
         Returns:
@@ -71,7 +73,8 @@ class FlextInfraUtilitiesDocsContract:
 
         """
         original = content
-        strip_toc = FlextInfraUtilitiesDocsContract._docs_contract_strip_invented_toc_before_frontmatter
+        docs_contract = FlextInfraUtilitiesDocsContract
+        strip_toc = docs_contract.docs_contract_strip_invented_toc_before_frontmatter
         content = strip_toc(
             content,
         )

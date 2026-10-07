@@ -91,7 +91,7 @@ class TestsFlextInfraCiIntegrationBranchTriggers:
     def test_ci_and_hook_share_the_mandatory_public_approval(
         profile: c.Infra.MakeProfile,
     ) -> None:
-        """Both projected profiles invoke the same typed approval, not separate lists."""
+        """Both projected profiles invoke the same typed approval."""
         codegen = config.Infra.codegen
         spec = u.CodegenTestSupport.Ci.workflow_spec(
             dist="approval-consumer",

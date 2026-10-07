@@ -11,13 +11,14 @@ from pathlib import Path
 
 from flext_cli import u
 
-from flext_infra import c, t
 from flext_infra._utilities._docs_scope_state import (
     FlextInfraUtilitiesDocsScopeStateMixin,
 )
 from flext_infra._utilities.workspace_manifest import (
     FlextInfraUtilitiesWorkspaceManifest,
 )
+from flext_infra.constants import c
+from flext_infra.typings import t
 
 
 class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateMixin):

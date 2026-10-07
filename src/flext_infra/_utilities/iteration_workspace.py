@@ -7,17 +7,16 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, config, t
+from flext_infra._config import config
 from flext_infra._utilities._git.scope import FlextInfraUtilitiesGitScopeMixin
 from flext_infra._utilities.iteration_directory import (
     FlextInfraUtilitiesIterationDirectory,
 )
-
-if TYPE_CHECKING:
-    from flext_infra import p
+from flext_infra.constants import c
+from flext_infra.protocols import p
+from flext_infra.typings import t
 
 
 class FlextInfraUtilitiesIterationWorkspace(FlextInfraUtilitiesIterationDirectory):

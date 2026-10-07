@@ -13,7 +13,7 @@ from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedN
 if TYPE_CHECKING:
     import libcst as cst
 
-    from flext_infra import m
+    from flext_infra import models as m
 
 
 class FlextInfraUtilitiesSemanticCutoverAliasCst:

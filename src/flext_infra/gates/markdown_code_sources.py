@@ -17,10 +17,11 @@ from doctest import DocTestParser
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import c, u
+from flext_infra.constants import c
+from flext_infra.utilities import u
 
 if TYPE_CHECKING:
-    from flext_infra import t
+    from flext_infra.gates.typings import t
 
 
 class FlextInfraMarkdownCodeSources:
@@ -108,6 +109,12 @@ class FlextInfraMarkdownCodeSources:
         for py_path in u.Infra.iter_matching_files(project_dir, includes=["*.py"]):
             relative_parts = py_path.relative_to(project_dir).parts
             if any(part in c.Infra.CHECK_EXCLUDED_DIRS for part in relative_parts):
+                continue
+            if ".github" in relative_parts and any(
+                part in c.Infra.GITHUB_AGENT_PROJECTION_DIRS for part in relative_parts
+            ):
+                # Agent-toolhome projections under .github are regenerated
+                # distributions, never governed source.
                 continue
             tree = ast.parse(py_path.read_text(c.Cli.ENCODING_DEFAULT))
             for node in ast.walk(tree):

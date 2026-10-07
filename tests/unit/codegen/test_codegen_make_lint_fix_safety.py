@@ -1,4 +1,4 @@
-"""make fix always applies the mandatory unsafe repair channel (operator law 2026-10-05).
+"""make fix always applies the mandatory unsafe repair channel (2026-10-05 law).
 
 The unsafe-fix flag is OBLIGATORY in every lint_fix configuration and must never
 be disabled again: a configuration without it is unrepresentable, the SSOT

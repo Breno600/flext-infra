@@ -11,8 +11,9 @@ from pathlib import Path
 from typing import Annotated, ClassVar
 
 from flext_core import m, u
-from flext_infra import c, t
 from flext_infra._models.mixins import FlextInfraModelsMixins
+from flext_infra.constants import c
+from flext_infra.typings import t
 
 
 class FlextInfraModelsCheck:
@@ -266,7 +267,9 @@ class FlextInfraModelsCheck:
         )
         issues: t.VariadicTuple[FlextInfraModelsCheck.Issue] = m.Field(
             default_factory=tuple,
-            description="Complete native gate diagnostics, including informative findings",
+            description=(
+                "Complete native gate diagnostics, including informative findings"
+            ),
         )
         raw_output: str = m.Field(
             "",

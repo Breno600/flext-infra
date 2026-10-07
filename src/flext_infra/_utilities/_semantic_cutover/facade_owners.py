@@ -19,16 +19,16 @@ from importlib.util import resolve_name
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_infra import c
 from flext_infra._utilities.private_import_facades import (
     FlextInfraUtilitiesPrivateImportFacades,
 )
 from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
+from flext_infra.constants import c
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from flext_infra import t
+    from flext_infra import typings as t
 
 
 class FlextInfraUtilitiesSemanticCutoverFacadeOwners:

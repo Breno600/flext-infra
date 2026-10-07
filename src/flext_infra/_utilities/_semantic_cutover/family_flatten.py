@@ -10,7 +10,7 @@ import ast
 from collections.abc import MutableMapping, Sequence
 from pathlib import Path
 
-from flext_infra import c, config, m, p, t
+from flext_infra._config import config
 from flext_infra._utilities._semantic_cutover.family_references import (
     FlextInfraUtilitiesSemanticFamilyReferences,
 )
@@ -21,6 +21,10 @@ from flext_infra._utilities.rope_runtime_refactors import (
     FlextInfraUtilitiesRopeRuntimeRefactors,
 )
 from flext_infra._utilities.rope_structure import FlextInfraUtilitiesRopeStructure
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.protocols import p
+from flext_infra.typings import t
 
 
 class FlextInfraUtilitiesSemanticFamilyFlatten(

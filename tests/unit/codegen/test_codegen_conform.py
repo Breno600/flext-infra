@@ -323,7 +323,8 @@ class TestsFlextInfraCodegenConform:
         (root / "pyproject.toml").write_text(
             f'[project]\nname = "{distribution}"\nversion = "0.12.0.dev0"\n'
             f'description = "{distribution} governed fixture"\n'
-            f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
+            f"requires-python = "
+            f'"{config.Infra.codegen.toolchain.python_required_version}"\n'
             'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
             'dependencies = ["flext-cli"]\n',
             encoding="utf-8",
@@ -387,7 +388,8 @@ class TestsFlextInfraCodegenConform:
         (root / "pyproject.toml").write_text(
             f'[project]\nname = "{distribution}"\nversion = "0.12.0.dev0"\n'
             f'description = "{distribution} governed fixture"\n'
-            f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
+            f"requires-python = "
+            f'"{config.Infra.codegen.toolchain.python_required_version}"\n'
             'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
             'dependencies = ["flext-cli"]\n'
             "\n"
@@ -501,7 +503,8 @@ class TestsFlextInfraCodegenConform:
         tm.that((root / "config" / "beads.yaml").is_file(), eq=True)
         tm.that((root / "pyproject.toml").is_file(), eq=True)
         tm.that((root / ".env.example").is_file(), eq=True)
-        runtime_roots = config.Infra.tooling.tools.ruff.lint.flake8_type_checking.runtime_evaluated_roots
+        ruff_lint = config.Infra.tooling.tools.ruff.lint
+        runtime_roots = ruff_lint.flake8_type_checking.runtime_evaluated_roots
         rendered_runtime_bases = u.Tests.toml_strings_at(
             (root / "pyproject.toml").read_text(encoding="utf-8"),
             "tool",

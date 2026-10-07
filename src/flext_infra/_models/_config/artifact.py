@@ -13,7 +13,6 @@ from typing import Annotated, Literal, Self
 
 from flext_cli import m
 
-from flext_infra import t
 from flext_infra._constants import (
     FlextInfraConstantsCodegenProject,
     FlextInfraConstantsSharedInfra,
@@ -32,6 +31,7 @@ from flext_infra._models.deps_tool_config_project_artifacts import (
     FlextInfraModelsDepsToolConfigProjectArtifacts,
 )
 from flext_infra._models.layout import FlextInfraModelsLayout
+from flext_infra.typings import t
 
 
 class FlextInfraConfigModelsArtifact:
@@ -62,7 +62,7 @@ class FlextInfraConfigModelsArtifact:
         ] = False
 
     class CodegenVscodeSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Fully modeled content of the ``vscode`` section of ``config/codegen.yaml``."""
+        """Fully modeled ``vscode`` section of ``config/codegen.yaml``."""
 
         scalar_settings: Annotated[
             Mapping[str, str | bool | int],

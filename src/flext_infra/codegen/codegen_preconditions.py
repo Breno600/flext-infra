@@ -11,14 +11,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import m
 from flext_infra.codegen._mise_artifacts_state import FlextInfraMiseArtifactsState
 from flext_infra.codegen._mise_artifacts_verification import (
     FlextInfraMiseArtifactsVerification,
 )
+from flext_infra.models import m
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from flext_infra.codegen.protocols import p
+    from flext_infra.codegen.typings import t
 
 
 class FlextInfraCodegenPreconditions:

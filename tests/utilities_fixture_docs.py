@@ -81,7 +81,8 @@ class TestsFlextInfraUtilitiesDocsFixtureMixin:
             _write(
                 project / f"src/{pkg_name}/__init__.py",
                 '"""Documentation fixture package."""\n\n'
-                'def hello() -> str:\n    """Return a greeting."""\n    return "hello"\n\n'
+                'def hello() -> str:\n    """Return a greeting."""\n'
+                '    return "hello"\n\n'
                 '__all__ = ["hello"]\n',
             )
             _write(project / "README.md", f"# {name}\n")
