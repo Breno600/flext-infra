@@ -11,8 +11,7 @@ from typing import Annotated, Literal, Self
 
 from flext_cli import m
 
-from flext_infra import t
-from flext_infra._constants import FlextInfraConstantsCodegenProject
+from flext_infra import c, t
 from flext_infra._models import (
     FlextInfraConfigModelsBeads,
     FlextInfraConfigModelsContexts,
@@ -28,7 +27,7 @@ class FlextInfraConfigModelsWorkspace:
 
         path: Annotated[Path, m.Field(description="Relative candidate worktree path")]
         what: Annotated[
-            FlextInfraConstantsCodegenProject.CodegenConformSurface,
+            c.Infra.CodegenConformSurface,
             m.Field(description="Canonical generator surface for this target"),
         ]
 
@@ -38,9 +37,9 @@ class FlextInfraConfigModelsWorkspace:
                 msg = "candidate bootstrap path must be relative"
                 raise ValueError(msg)
             if self.what not in {
-                FlextInfraConstantsCodegenProject.CodegenConformSurface.MAKEFILE,
-                FlextInfraConstantsCodegenProject.CodegenConformSurface.DOCS_CONFIG,
-                FlextInfraConstantsCodegenProject.CodegenConformSurface.PYPROJECT,
+                c.Infra.CodegenConformSurface.MAKEFILE,
+                c.Infra.CodegenConformSurface.DOCS_CONFIG,
+                c.Infra.CodegenConformSurface.PYPROJECT,
             }:
                 msg = "candidate bootstrap owns only declared recovery surfaces"
                 raise ValueError(msg)
@@ -64,12 +63,10 @@ class FlextInfraConfigModelsWorkspace:
 
         @m.model_validator(mode="after")
         def _validate_source(self) -> Self:
-            from flext_infra._constants import FlextInfraConstantsDeps
-
             if not self.url.startswith("https://") or not self.url.endswith(".git"):
                 msg = "candidate dependency URL must be canonical HTTPS Git"
                 raise ValueError(msg)
-            if FlextInfraConstantsDeps.GIT_COMMIT_OID_RE.fullmatch(self.commit) is None:
+            if c.Infra.GIT_COMMIT_OID_RE.fullmatch(self.commit) is None:
                 msg = "candidate dependency commit must be a full Git OID"
                 raise ValueError(msg)
             return self
@@ -166,8 +163,8 @@ class FlextInfraConfigModelsWorkspace:
         version: Annotated[
             int,
             m.Field(
-                ge=FlextInfraConstantsCodegenProject.WORKSPACE_MANIFEST_VERSION,
-                le=FlextInfraConstantsCodegenProject.WORKSPACE_MANIFEST_VERSION,
+                ge=c.Infra.WORKSPACE_MANIFEST_VERSION,
+                le=c.Infra.WORKSPACE_MANIFEST_VERSION,
                 description="Workspace manifest schema version",
             ),
         ]

@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 from flext_core import r
 from flext_infra import c, t, u
 from flext_infra._config import config
+from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -37,8 +38,6 @@ class FlextInfraConfigFixerSteps:
             The resulting ``p.Result[t.StrSequence]``.
 
         """
-        from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
-
         search_raw = pyrefly.get(c.Infra.SEARCH_PATH)
         if not isinstance(search_raw, list):
             return r[t.StrSequence].ok(())
@@ -69,8 +68,6 @@ class FlextInfraConfigFixerSteps:
             The resulting ``p.Result[t.StrSequence]``.
 
         """
-        from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
-
         includes_raw = pyrefly.get(c.Infra.PROJECT_INCLUDES)
         if not isinstance(includes_raw, list):
             return r[t.StrSequence].ok(())

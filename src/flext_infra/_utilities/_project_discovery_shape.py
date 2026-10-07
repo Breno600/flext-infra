@@ -9,6 +9,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_infra import c
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDependenciesProfiles,
+    FlextInfraUtilitiesPyproject,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -30,11 +34,6 @@ class FlextInfraUtilitiesProjectDiscoveryShapeMixin:
             Whether one path matches the canonical governed project shape.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesDependencies,
-            FlextInfraUtilitiesPyproject,
-        )
-
         if not path.is_dir():
             return False
         pyproject_path = path / c.PYPROJECT_FILENAME
@@ -47,7 +46,7 @@ class FlextInfraUtilitiesProjectDiscoveryShapeMixin:
         if not payload:
             return False
         dependency_names: set[str] = set(
-            FlextInfraUtilitiesDependencies.declared_dependency_names_from_payload(
+            FlextInfraUtilitiesDependenciesProfiles.declared_dependency_names_from_payload(
                 payload,
             ),
         )

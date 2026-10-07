@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_infra import m, p, t
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors
 
 
 class FlextInfraUtilitiesCodegenPathCutover:
@@ -135,8 +136,6 @@ class FlextInfraUtilitiesCodegenPathCutover:
             The resulting ``t.VariadicTuple[m.Infra.SemanticMigrationEdit]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors
-
         transformations = (
             (
                 (

@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING, override
 import libcst as cst
 from libcst.metadata import MetadataWrapper, ParentNodeProvider, QualifiedNameProvider
 
+from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
 if TYPE_CHECKING:
     from flext_infra import m
 
@@ -32,7 +34,6 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
             original_node: cst.Name,
             updated_node: cst.Name,
         ) -> cst.Name:
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
 
             targets = {
                 target
@@ -66,7 +67,6 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
             original_node: cst.Assign,
             updated_node: cst.Assign,
         ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
 
             if (
                 len(original_node.targets) == 1
@@ -89,7 +89,6 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
             original_node: cst.AnnAssign,
             updated_node: cst.AnnAssign,
         ) -> cst.BaseSmallStatement:
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
 
             return FlextInfraUtilitiesQualifiedNames.filter_exports(
                 updated_node,
@@ -102,7 +101,6 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
             original_node: cst.ImportFrom,
             updated_node: cst.ImportFrom,
         ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
 
             rewrites = self.plan.import_aliases.get(
                 FlextInfraUtilitiesQualifiedNames.dotted_name(original_node.module)
@@ -133,7 +131,6 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
             original_node: cst.Attribute,
             updated_node: cst.Attribute,
         ) -> cst.BaseExpression:
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
 
             owner = (
                 FlextInfraUtilitiesQualifiedNames.dotted_name(original_node.value) or ""
