@@ -75,17 +75,15 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         if parsed.failure:
             return r[str].from_failure(parsed)
         source, project_name = parsed.value
+        workspace_members = tuple(
+            member.distribution
+            for member in workspace.subprojects
+            if member.package
+        ) if workspace.repository.role is c.Infra.MakeProfile.WORKSPACE else ()
         cls._sync_dependency_groups(
             source,
             project_name=project_name,
             required_dev_dependencies=required_dev_dependencies,
-            workspace_members=tuple(
-                member.distribution
-                for member in workspace.subprojects
-                if member.package
-            )
-            if workspace.repository.role is c.Infra.MakeProfile.WORKSPACE
-            else (),
         )
         declared_sources = (
             {
@@ -132,6 +130,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             source,
             resolution=uv_resolution,
             candidate_sources=candidate_sources,
+            workspace_members=workspace_members,
         )
         if sources_result.failure:
             return r[str].from_failure(sources_result)

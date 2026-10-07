@@ -102,15 +102,7 @@ class FlextInfraMiseArtifactsState:
                     "Mise mutating layout has no transaction root",
                 )
             try:
-                destination_devices = {
-                    cls._hosting_device(artifact.parent)
-                    for artifact in (
-                        project.artifacts.config,
-                        project.artifacts.unix_launcher,
-                        project.artifacts.windows_launcher,
-                        project.artifacts.version_pin,
-                    )
-                }
+                destination_devices = {cls._hosting_device(project.config.parent)}
                 project_device = cls._hosting_device(project.root)
             except OSError as exc:
                 return r[tuple[m.Infra.CodegenJournalDirectory, ...]].fail_op(
@@ -135,15 +127,9 @@ class FlextInfraMiseArtifactsState:
             return temporary
         parents = tuple(
             dict.fromkeys(
-                artifact.parent
+                project.config.parent
                 for project in layout.projects
-                for artifact in (
-                    project.artifacts.config,
-                    project.artifacts.unix_launcher,
-                    project.artifacts.windows_launcher,
-                    project.artifacts.version_pin,
-                )
-                if artifact.parent != project.root
+                if project.config.parent != project.root
             ),
         )
         project_roots = {item.root for item in files.transaction_participants(layout)}

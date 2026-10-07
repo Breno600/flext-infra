@@ -744,7 +744,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             return r[t.VariadicTuple[m.Cli.AtomicDirectoryState]].ok(())
         profile = workspace.repository.role
         root = request.root.expanduser().resolve()
-        directories = {root, root / c.Infra.MISE_LAUNCHER_DIRECTORY}
+        directories = {root}
         for entry in config.Infra.codegen.templates.entries:
             if profile not in entry.profiles:
                 continue

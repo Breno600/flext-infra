@@ -96,16 +96,35 @@ class FlextInfraConfigModelsArtifact:
             m.Field(ge=1, description="Per-module code-LOC ceiling"),
         ]
 
+    class RetiredProjectionSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """One retired projection and the generated evidence that owns it."""
+
+        path: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Repository-relative retired projection path"),
+        ]
+        evidence: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Literal bytes the generated file carries; removal requires "
+                    "the match so conform never deletes a hand-written file"
+                ),
+            ),
+        ]
+
     class CodegenConfigSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Fully modeled content of ``config/codegen.yaml``."""
 
         version: Annotated[int, m.Field(ge=1, description="Config schema version")]
         retired_projections: Annotated[
-            t.VariadicTuple[str],
+            t.VariadicTuple[str | FlextInfraConfigModelsArtifact.RetiredProjectionSpec],
             m.Field(
                 description=(
                     "Repository-relative generated projections that no template "
-                    "renders any more; generation removes them from consumers"
+                    "renders any more; generation removes them from consumers. "
+                    "A plain string removes files carrying the generated marker; "
+                    "a mapping adds the exact evidence bytes required for removal"
                 ),
             ),
         ]

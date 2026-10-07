@@ -96,22 +96,16 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
             The resulting ``m.Infra.UvEnvironmentPlan``.
 
         """
-        workspace_environment = target.make_profile is c.Infra.MakeProfile.WORKSPACE
+        # The native uv workspace provisions the members (`uv sync
+        # --all-packages`); no extra dependency group and no editable overlay
+        # plan exist any more.
+        _ = workspace
         groups: t.VariadicTuple[str] = ("dev", "codegen")
-        editable_repositories: t.VariadicTuple[m.Infra.RepositoryRef] = ()
-        if workspace_environment:
-            groups = (*groups, "workspace")
-            editable_repositories = tuple(
-                item
-                for item in (workspace.repository, *workspace.subprojects)
-                if item.package and item.editable and not item.read_only
-            )
         return m.Infra.UvEnvironmentPlan(
             project_root=root,
             environment_root=target.root,
             python_version=config.toolchain.python_version,
             groups=groups,
-            editable_repositories=editable_repositories,
         )
 
     @staticmethod
@@ -159,13 +153,24 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
             for entry in config.Infra.codegen.templates.entries
             if profile not in entry.profiles and "{" not in entry.destination
         ]
+        evidence_by_path: dict[str, str] = {}
         for retired in config.Infra.codegen.retired_projections:
-            relative = Path(retired)
+            if isinstance(retired, str):
+                relative = Path(retired)
+                if relative.is_absolute() or ".." in relative.parts:
+                    return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
+                        f"retired projection must be a normalized relative path: {retired}",
+                    )
+                destinations.append(retired)
+                continue
+            relative = Path(retired.path)
             if relative.is_absolute() or ".." in relative.parts:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
-                    f"retired projection must be a normalized relative path: {retired}",
+                    "retired projection must be a normalized relative path: "
+                    f"{retired.path}",
                 )
-            destinations.append(retired)
+            evidence_by_path[retired.path] = retired.evidence
+            destinations.append(retired.path)
         for destination in destinations:
             path = root / Path(destination)
             if not path.is_file():
@@ -173,7 +178,11 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
             current = u.Cli.files_read_text(path)
             if current.failure:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(current)
-            if not any(
+            evidence = evidence_by_path.get(destination)
+            if evidence is not None:
+                if evidence not in current.value:
+                    continue
+            elif not any(
                 marker in current.value for marker in c.Infra.TEMPLATE_GENERATED_MARKERS
             ):
                 continue

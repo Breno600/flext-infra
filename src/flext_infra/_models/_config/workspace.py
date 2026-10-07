@@ -42,7 +42,6 @@ class FlextInfraConfigModelsWorkspace:
                 raise ValueError(msg)
             if self.what not in {
                 FlextInfraConstantsCodegenProject.CodegenConformSurface.MAKEFILE,
-                FlextInfraConstantsCodegenProject.CodegenConformSurface.MISE_TRIPLE,
                 FlextInfraConstantsCodegenProject.CodegenConformSurface.DOCS_CONFIG,
                 FlextInfraConstantsCodegenProject.CodegenConformSurface.PYPROJECT,
             }:

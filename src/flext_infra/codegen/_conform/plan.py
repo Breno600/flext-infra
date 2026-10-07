@@ -15,7 +15,6 @@ from flext_infra._config import config
 from flext_infra.codegen._conform.scaffold_plan import (
     FlextInfraCodegenConformScaffoldPlan,
 )
-from flext_infra.codegen._mise_artifacts_cold_start import FlextInfraMiseColdStart
 from flext_infra.workspace import FlextInfraWorkspaceDetector
 
 
@@ -43,7 +42,6 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                     request.what
                     in {
                         c.Infra.CodegenConformSurface.MAKEFILE,
-                        c.Infra.CodegenConformSurface.MISE_TRIPLE,
                         c.Infra.CodegenConformSurface.DOCS_CONFIG,
                         c.Infra.CodegenConformSurface.PYPROJECT,
                     }
@@ -214,10 +212,6 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                 files.extend(
                     item for item in retired.value if item.path not in governed_paths
                 )
-                cold_start = FlextInfraMiseColdStart.plans(repository_root)
-                if cold_start.failure:
-                    return r[m.Infra.CodegenPlan].from_failure(cold_start)
-                files.extend(cold_start.value)
             environments.append(
                 self.uv_environment_plan(
                     root=repository_root,

@@ -205,7 +205,3 @@ class FlextInfraConfigModelsRelease:
             t.VariadicTuple[str],
             m.Field(description="Ordered dependency groups synchronized by setup"),
         ]
-        editable_repositories: Annotated[
-            t.VariadicTuple[FlextInfraConfigModelsContexts.RepositoryRef],
-            m.Field(description="Local repositories installed by setup"),
-        ] = ()

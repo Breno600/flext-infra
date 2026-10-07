@@ -513,6 +513,20 @@ whitelines = {{ tooling.tools.yamlfix.whitelines }}
 # [MANAGED] tool.uv
 [tool.uv]
 link-mode = "{{ uv_link_mode }}"
+{% if make_profile == "workspace" %}
+
+# [MANAGED] tool.uv.workspace
+# Every declared member is a native uv workspace member: the root environment
+# provisions them as editables (`uv sync --all-packages`; CI installs the
+# frozen builds through --no-editable) and the workspace identity replaces the
+# retired git-pinned "workspace" dependency group.
+[tool.uv.workspace]
+members = [
+{% for item in workspace_subprojects %}
+  {{ item | tojson }},
+{% endfor %}
+]
+{% endif %}
 
 # [MANAGED] tool.flext.namespace
 {% if namespace_scan_dirs %}
