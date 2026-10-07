@@ -14,7 +14,7 @@ from flext_infra._constants.source_code import FlextInfraConstantsSourceCode
 from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
 
 if TYPE_CHECKING:
-    from flext_infra.typings import t
+    from flext_infra import t
 
 
 class FlextInfraConstantsBase(

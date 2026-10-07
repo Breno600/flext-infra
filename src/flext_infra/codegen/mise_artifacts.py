@@ -11,18 +11,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
+from flext_infra import c, m, t, u
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
-from flext_infra.codegen._mise_artifacts_derivation import (
-    FlextInfraMiseArtifactsDerivation,
-)
-from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
-from flext_infra.utilities import u
 
 if TYPE_CHECKING:
-    from flext_infra.protocols import p
+    from flext_infra import p
 
 
 class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
@@ -138,6 +131,10 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra.codegen._mise_artifacts_derivation import (
+            FlextInfraMiseArtifactsDerivation,
+        )
+
         declared = self._validate_config(project_root)
         if declared.failure:
             return declared
@@ -151,6 +148,13 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra.codegen._mise_artifacts_derivation import (
+            FlextInfraMiseArtifactsDerivation,
+        )
+        from flext_infra.codegen.mise_artifacts_workspace import (
+            FlextInfraMiseWorkspacePlanner,
+        )
+
         declared = self._validate_config(self.repository_root)
         if declared.failure or self.config_only:
             return declared

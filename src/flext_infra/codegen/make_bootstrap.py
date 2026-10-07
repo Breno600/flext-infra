@@ -9,16 +9,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
+from flext_infra import c, m, u
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
-from flext_infra.codegen.conform import FlextInfraCodegenConform
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.utilities import u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra.protocols import p
+    from flext_infra import p
 
 
 class FlextInfraCodegenMakeBootstrap(FlextInfraCodegenExecutionBase[bool]):
@@ -63,6 +60,8 @@ class FlextInfraCodegenMakeBootstrap(FlextInfraCodegenExecutionBase[bool]):
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra.codegen.conform import FlextInfraCodegenConform
+
         conformed = FlextInfraCodegenConform.execute_request(
             m.Infra.CodegenConformRequest(
                 root=root,
