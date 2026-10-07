@@ -6,10 +6,9 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from flext_infra import m, t
 from flext_infra._base_projects import FlextInfraProjectSelectionMixin
 from flext_infra.base import FlextInfraServiceBase
-from flext_infra.models import m
-from flext_infra.typings import t
 
 
 class FlextInfraProjectSelectionServiceBase[TDomainResult](

@@ -11,7 +11,7 @@ import sys
 
 from mypy import api
 
-from flext_infra.models import m
+from flext_infra import m
 
 
 class FlextInfraMypyProfiler:
@@ -28,7 +28,7 @@ class FlextInfraMypyProfiler:
             ValueError: If Mypy profiling requires an output destination.
 
         """
-        from flext_infra import u
+        from flext_infra._utilities import FlextInfraUtilitiesResourceLimits
 
         destination = invocation.profile_output
         if destination is None:
@@ -37,7 +37,7 @@ class FlextInfraMypyProfiler:
         profile = cProfile.Profile()
         stdout, stderr, status = profile.runcall(
             api.run,
-            list(u.Infra.mypy_arguments(invocation)),
+            list(FlextInfraUtilitiesResourceLimits.mypy_arguments(invocation)),
         )
         profile.dump_stats(str(destination.resolve()))
         sys.stdout.write(stdout)

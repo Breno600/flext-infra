@@ -9,12 +9,8 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from flext_infra._utilities._git.state_snapshot import (
-    FlextInfraUtilitiesGitStateSnapshotMixin,
-)
-from flext_infra._utilities._git.worktree_io import FlextInfraUtilitiesGitWorktreeIO
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra import m, t
+from flext_infra._utilities import FlextInfraUtilitiesGitStateSnapshotMixin
 
 
 class FlextInfraUtilitiesGitStateTreesMixin(FlextInfraUtilitiesGitStateSnapshotMixin):
@@ -55,6 +51,8 @@ class FlextInfraUtilitiesGitStateTreesMixin(FlextInfraUtilitiesGitStateSnapshotM
         *,
         index_file: Path | None = None,
     ) -> None:
+        from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
+
         repo = cls._repo(root)
         with repo.git.custom_environment(
             GIT_INDEX_FILE=str(index_file) if index_file else None,

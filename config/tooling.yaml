@@ -354,7 +354,8 @@ Infra:
                 converge) run stdlib-only under env -i before the project
                 environment exists: subprocess orchestration, mutex journal
                 recovery and diagnostic prints are their documented design,
-                their headers use the projected comment form, and exhaustive
+                their module docstrings carry the projected copyright and
+                SPDX closing lines, and exhaustive
                 control-flow exception docstrings do not survive the codegen
                 render. Operator order 2026-10-06 (make every verb green)
                 authorizes the scoped relief; the rules stay active

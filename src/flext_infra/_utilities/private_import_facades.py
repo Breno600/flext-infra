@@ -12,13 +12,12 @@ from importlib.util import find_spec, resolve_name
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
-from flext_infra.constants import c
+from flext_infra import c
 
 if TYPE_CHECKING:
     from collections.abc import Set as AbstractSet
 
-    from flext_infra import typings as t
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesPrivateImportFacades:
@@ -168,6 +167,8 @@ class FlextInfraUtilitiesPrivateImportFacades:
                 set[str]]]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
         bindings: MutableMapping[str, set[str]] = {}
         exports: MutableMapping[str, set[str]] = {}
         for module, (source, is_package) in sorted(sources.items()):

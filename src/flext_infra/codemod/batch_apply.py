@@ -11,17 +11,8 @@ from pathlib import Path
 from typing import override
 
 from flext_core import r
+from flext_infra import m, p, t, u
 from flext_infra.base import FlextInfraServiceBase
-from flext_infra.codemod import (
-    FlextInfraCodemodSemanticApply,
-    FlextInfraModGateEngine,
-    FlextInfraModTextGateEngine,
-)
-from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
-from flext_infra.utilities import u
 
 
 class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
@@ -62,6 +53,11 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
+        from flext_infra.codemod import (
+            FlextInfraModGateEngine,
+            FlextInfraModTextGateEngine,
+        )
+
         planned = u.Infra.codemod_rule_plan(self.repository_root)
         if planned.failure:
             return r[t.Cli.ResultValue].from_failure(planned)
@@ -104,6 +100,8 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
+        from flext_infra.codemod import FlextInfraModGateEngine
+
         self.progress.emit("mod: validate ast-grep rule fixtures")
         FlextInfraModGateEngine.validate_rule_fixtures(
             self.repository_root,
@@ -118,8 +116,16 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
+        from flext_infra.codemod import (
+            FlextInfraCodemodSemanticApply,
+            FlextInfraModGateEngine,
+            FlextInfraModTextGateEngine,
+        )
+        from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
+
         root = self.repository_root
         rope_workspace = self.rope
+        baseline_cycles = self._import_cycles(root)
         current = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
         fingerprint = FlextInfraCodemodSemanticApply.source_fingerprint
         seen: MutableMapping[t.VariadicTuple[t.Pair[str, str]], int] = {}
@@ -252,11 +258,54 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                     f"mod: {current_text.findings} detection-only sed-by-list "
                     f"finding(s) remain for owner repair: {', '.join(text_rules)}",
                 )
+            # Cyclic-import regression gate: a refactor phase that closed a
+            # new runtime import cycle fails the fixed point loud — zero new
+            # cycles is an acceptance condition, and cycles the tree already
+            # had stay check's existing verdict.
+            converged_cycles = self._import_cycles(root)
+            new_cycles = [
+                cycle for cycle in converged_cycles if cycle not in baseline_cycles
+            ]
+            if new_cycles:
+                return r[t.Cli.ResultValue].fail(
+                    "mod introduced new runtime import cycle(s): "
+                    + "; ".join(" -> ".join(sorted(cycle)) for cycle in new_cycles)
+                    + "; changes retained for mandatory owner repair",
+                )
             self.progress.emit(
                 "mod: joint AST, semantic, and text fixed point verified "
                 "with zero actionable findings",
             )
             return r[t.Cli.ResultValue].ok(value=True)
+
+    @staticmethod
+    def _import_cycles(root: Path) -> t.SequenceOf[frozenset[str]]:
+        """Collect every runtime import cycle over the governed projects.
+
+        The graph comes from the codemod project's Rope module-level import
+        table — only imports that run at module load can form a cycle, so a
+        lazy (function-local) import never registers as one.
+
+        Returns:
+            The resulting ``t.FrozenSet[t.FrozenSet[str]]``.
+
+        """
+        from flext_infra._utilities import FlextInfraUtilitiesCodemodProject
+
+        cycles: set[frozenset[str]] = set()
+        for project_root in u.Infra.governed_project_roots(root):
+            if not u.Infra.namespace_enabled(project_root):
+                continue
+            graph, _modules = FlextInfraUtilitiesCodemodProject.project_import_graph(
+                project_root,
+            )
+            cycles.update(
+                frozenset(members)
+                for members in FlextInfraUtilitiesCodemodProject.project_import_cycles(
+                    graph,
+                ).values()
+            )
+        return tuple(sorted(cycles, key=sorted))
 
     def _apply_phase_callbacks(
         self,
@@ -277,6 +326,11 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             states the cycle must observe for cross-phase cycle detection.
 
         """
+        from flext_infra.codemod import (
+            FlextInfraCodemodSemanticApply,
+            FlextInfraModGateEngine,
+        )
+
         fingerprint = FlextInfraCodemodSemanticApply.source_fingerprint
         outcome = r[
             t.Pair[

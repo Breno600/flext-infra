@@ -9,8 +9,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
-from flext_infra.typings import t
+from flext_infra import t
 
 
 class FlextInfraUtilitiesCompatibilityAliasValidation:
@@ -82,6 +81,8 @@ class FlextInfraUtilitiesCompatibilityAliasValidation:
             ValueError: If qualified alias residue; or if alias export residue in.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
         tree = ast.parse(source, filename=str(file_path))
         for node in tree.body:
             value = FlextInfraUtilitiesCompatibilityAliasValidation._dunder_all_value(

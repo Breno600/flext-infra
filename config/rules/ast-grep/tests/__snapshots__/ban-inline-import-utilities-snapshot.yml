@@ -2,13 +2,13 @@ id: ban-inline-import-utilities
 snapshots:
   ? |
     def resolve() -> object:
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-        return FlextInfraWorkspaceDetector
+        from flext_infra import workspace
+        return workspace
   : labels:
-    - source: from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+    - source: from flext_infra import workspace
       style: primary
       start: 29
-      end: 99
+      end: 62
   ? |
     def resolve() -> object:
         from pathlib import Path

@@ -21,16 +21,7 @@ from fnmatch import fnmatch
 from pathlib import Path
 
 from flext_core import r
-from flext_infra._config import FlextInfraConfig
-from flext_infra.codegen import (
-    FlextInfraCodegenMiseArtifacts,
-    FlextInfraCodegenTransaction,
-)
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra import c, m, p, t, u
 
 
 class FlextInfraModTextGateEngine:
@@ -122,6 +113,8 @@ class FlextInfraModTextGateEngine:
         """
         # The packaged rules live at the same sub-path of whichever SSOT
         # config directory is active, including a declared relocation.
+        from flext_infra._config import FlextInfraConfig
+
         provider = FlextInfraConfig.ssot_config_dir() / (
             c.Infra.CODEMOD_TEXT_RULES_RELPATH.relative_to(c.CONFIG_DIR_NAME)
         )
@@ -585,6 +578,11 @@ class FlextInfraModTextGateEngine:
             The resulting ``p.Result[t.VariadicTuple[Path]]``.
 
         """
+        from flext_infra.codegen import (
+            FlextInfraCodegenMiseArtifacts,
+            FlextInfraCodegenTransaction,
+        )
+
         transaction = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root),
         )

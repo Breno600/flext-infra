@@ -14,12 +14,7 @@ from typing import Literal
 from libcst import Arg, ClassDef, Module, Name, parse_module
 from libcst.metadata import MetadataWrapper, PositionProvider
 
-from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
-from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities.rope_module_patch import FlextInfraUtilitiesRopeModulePatch
-from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra import c, t
 
 
 class FlextInfraUtilitiesCodegenFacades:
@@ -40,6 +35,8 @@ class FlextInfraUtilitiesCodegenFacades:
             ValueError: If multiple package modules declare the same facade letter.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeModulePatch
+
         owners = tuple(
             module
             for module in sorted(pkg_dir.glob(c.Infra.EXT_PYTHON_GLOB))
@@ -87,6 +84,8 @@ class FlextInfraUtilitiesCodegenFacades:
                 base insertion cannot identify a valid source span.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+
         facade_path = cls.facade_module_path(pkg_dir, family)
         owners_dir = (
             pkg_dir
@@ -189,6 +188,11 @@ class FlextInfraUtilitiesCodegenFacades:
         namespace: str,
         family: Literal["u", "p", "m"],
     ) -> frozenset[str]:
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeCore,
+            FlextInfraUtilitiesRopeRuntime,
+        )
+
         methods: set[str] = set()
         with FlextInfraUtilitiesRopeCore.open_project(pkg_dir.parent) as project:
             for path in (
@@ -361,6 +365,8 @@ class FlextInfraUtilitiesCodegenFacades:
         # The owner lives in the package being rendered. Naming this project
         # instead made every generated consumer facade import from flext-infra,
         # a module that does not exist in the consumer's own distribution.
+        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+
         lines = source.splitlines(keepends=True)
         directory = FlextInfraUtilitiesCodegenNamespace.facade_families()[
             family

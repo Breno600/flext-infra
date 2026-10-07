@@ -10,27 +10,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra.constants import c
-from flext_infra.gates.bandit import FlextInfraBanditGate
-from flext_infra.gates.codemod import FlextInfraCodemodGate
-from flext_infra.gates.direnv import FlextInfraDirenvGate
-from flext_infra.gates.duplication import FlextInfraDuplicationGate
-from flext_infra.gates.fresh_import import FlextInfraFreshImportGate
-from flext_infra.gates.index_declarations import FlextInfraIndexDeclarationsGate
-from flext_infra.gates.layout import FlextInfraLayoutGate
-from flext_infra.gates.loc_cap import FlextInfraLocCapGate
-from flext_infra.gates.markdown import FlextInfraMarkdownGate
-from flext_infra.gates.markdown_code import FlextInfraMarkdownCodeGate
-from flext_infra.gates.markdown_format import FlextInfraMarkdownFormatGate
-from flext_infra.gates.mypy import FlextInfraMypyGate
-from flext_infra.gates.pyrefly import FlextInfraPyreflyGate
-from flext_infra.gates.pyright import FlextInfraPyrightGate
-from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
-from flext_infra.gates.ruff_lint import FlextInfraRuffLintGate
-from flext_infra.gates.runtime_census import FlextInfraRuntimeCensusGate
-from flext_infra.gates.smells import FlextInfraSmellsGate
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra import c, p, t
 
 if TYPE_CHECKING:
     from flext_infra.gates.base_gate import FlextInfraGate
@@ -83,6 +63,25 @@ class FlextInfraGateRegistry:
             The runtime gate classes registered for workspace checks.
 
         """
+        from flext_infra.gates.bandit import FlextInfraBanditGate
+        from flext_infra.gates.codemod import FlextInfraCodemodGate
+        from flext_infra.gates.direnv import FlextInfraDirenvGate
+        from flext_infra.gates.duplication import FlextInfraDuplicationGate
+        from flext_infra.gates.fresh_import import FlextInfraFreshImportGate
+        from flext_infra.gates.index_declarations import FlextInfraIndexDeclarationsGate
+        from flext_infra.gates.layout import FlextInfraLayoutGate
+        from flext_infra.gates.loc_cap import FlextInfraLocCapGate
+        from flext_infra.gates.markdown import FlextInfraMarkdownGate
+        from flext_infra.gates.markdown_code import FlextInfraMarkdownCodeGate
+        from flext_infra.gates.markdown_format import FlextInfraMarkdownFormatGate
+        from flext_infra.gates.mypy import FlextInfraMypyGate
+        from flext_infra.gates.pyrefly import FlextInfraPyreflyGate
+        from flext_infra.gates.pyright import FlextInfraPyrightGate
+        from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
+        from flext_infra.gates.ruff_lint import FlextInfraRuffLintGate
+        from flext_infra.gates.runtime_census import FlextInfraRuntimeCensusGate
+        from flext_infra.gates.smells import FlextInfraSmellsGate
+
         return (
             FlextInfraRuffLintGate,
             FlextInfraRuffFormatGate,

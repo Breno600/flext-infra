@@ -11,11 +11,8 @@ from typing import Annotated, ClassVar
 
 from flext_cli import m
 
-from flext_infra._models._codegen.base import FlextInfraCodegen
-from flext_infra._models.mixins import FlextInfraModelsMixins
-from flext_infra.constants import c
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra import c, p, t
+from flext_infra._models import FlextInfraCodegen, FlextInfraModelsMixins
 
 
 class FlextInfraModelsRope:
@@ -33,6 +30,28 @@ class FlextInfraModelsRope:
                 description="Non-empty ordered project roots to scan",
             ),
         ]
+
+    class SubscriptRebind(m.ContractModel):
+        """Typed rule for one subscript-assignment rebind target.
+
+        External runtimes legitimately re-register aliases through the
+        interpreter's module table (CPython's ``collections`` publishes
+        ``sys.modules['collections.abc'] = _collections_abc``). The rule owns
+        the decision: such a rebind never redefines a class binding.
+        """
+
+        root_name: Annotated[
+            str,
+            m.Field(
+                description="Root name of the subscript's value expression.",
+            ),
+        ]
+
+        @m.computed_field
+        @property
+        def is_module_table_mutation(self) -> bool:
+            """Whether the rebind mutates ``sys`` (underscore alias included)."""
+            return self.root_name.lstrip("_") == "sys"
 
     class ExportOptions(m.ContractModel):
         """Canonical options for Rope module export discovery."""

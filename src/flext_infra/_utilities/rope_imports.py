@@ -11,18 +11,8 @@ from collections import defaultdict
 from collections.abc import MutableMapping
 from pathlib import Path
 
-from flext_cli import u
-
 from flext_core import r
-from flext_infra._utilities import (
-    FlextInfraUtilitiesRopeCore,
-    FlextInfraUtilitiesRopeRuntime,
-)
-from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra import c, m, p, t
 
 
 class FlextInfraUtilitiesRopeImports:
@@ -50,6 +40,8 @@ class FlextInfraUtilitiesRopeImports:
             The declared module name, preserving relative import depth.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         import_info = import_statement.import_info
         if not FlextInfraUtilitiesRopeRuntime.from_import_info(import_info):
             return None
@@ -66,6 +58,8 @@ class FlextInfraUtilitiesRopeImports:
             Validated imported-name pairs from one Rope import statement.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         import_info = import_statement.import_info
         if not (
             FlextInfraUtilitiesRopeRuntime.from_import_info(import_info)
@@ -87,6 +81,8 @@ class FlextInfraUtilitiesRopeImports:
             Runtime import targets represented by a Rope module import set.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
         imported_paths: list[str] = []
         for import_statement in cls.import_statements(module_imports):
             declared_name = (
@@ -132,6 +128,8 @@ class FlextInfraUtilitiesRopeImports:
             RuntimeError: If rope find_occurrences failed for.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         try:
             return FlextInfraUtilitiesRopeRuntime.runtime_find_occurrences(
                 rope_project,
@@ -242,6 +240,8 @@ class FlextInfraUtilitiesRopeImports:
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         try:
             original_source = resource.read()
             organizer = FlextInfraUtilitiesRopeRuntime.import_organizer(rope_project)
@@ -291,6 +291,8 @@ class FlextInfraUtilitiesRopeImports:
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_cli import u
+
         existing_paths = tuple(path.resolve() for path in file_paths if path.is_file())
         if not existing_paths:
             return r[bool].ok(value=False)
@@ -347,6 +349,13 @@ class FlextInfraUtilitiesRopeImports:
             ValueError: If ``referenced_result.failure``.
 
         """
+        from flext_cli import u
+
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeCore,
+            FlextInfraUtilitiesRopeRuntime,
+        )
+
         runtime_aliases = u.runtime_alias_names(c.Infra.PKG_INFRA_UNDERSCORE)
         canonical_modules = frozenset({
             c.Infra.PKG_CORE_UNDERSCORE,
@@ -444,6 +453,11 @@ class FlextInfraUtilitiesRopeImports:
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeCore,
+            FlextInfraUtilitiesRopeRuntime,
+        )
+
         changed_any = False
         for file_path, entries in collected.items():
             resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
@@ -547,6 +561,8 @@ class FlextInfraUtilitiesRopeImports:
             The resulting ``str | None``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+
         aliases_to_move = frozenset(aliases)
         if not aliases_to_move:
             return None
@@ -603,6 +619,8 @@ class FlextInfraUtilitiesRopeImports:
                 t.Infra.StrSet]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         target_import_stmt: t.Infra.RopeImportStatement | None = None
         moved_aliases: t.Infra.StrSet = set()
         import_statements = module_imports.imports
@@ -651,6 +669,8 @@ class FlextInfraUtilitiesRopeImports:
             RuntimeError: If rope target import mismatch for.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         sorted_moved = sorted(moved_aliases)
         if target_import_stmt is None:
             module_imports.add_import(
@@ -763,6 +783,11 @@ class FlextInfraUtilitiesRopeImports:
             The resulting ``str | None``.
 
         """
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeCore,
+            FlextInfraUtilitiesRopeRuntime,
+        )
+
         module_imports = FlextInfraUtilitiesRopeCore.resolve_module_imports(
             rope_project,
             resource,
@@ -795,6 +820,11 @@ class FlextInfraUtilitiesRopeImports:
             The resulting ``str | None``.
 
         """
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeCore,
+            FlextInfraUtilitiesRopeRuntime,
+        )
+
         names_to_remove = frozenset(names)
         module_imports = FlextInfraUtilitiesRopeCore.resolve_module_imports(
             rope_project,
@@ -874,6 +904,13 @@ class FlextInfraUtilitiesRopeImports:
             ValueError: If relative import level.
 
         """
+        from flext_cli import u
+
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeCore,
+            FlextInfraUtilitiesRopeRuntime,
+        )
+
         file_plans: list[m.Infra.CodegenFilePlan] = []
         for entry in sorted(
             index.modules_by_path.values(),

@@ -11,17 +11,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import ClassVar
 
-from flext_infra._utilities._rope_analysis.asthelpers import (
-    FlextInfraUtilitiesRopeAnalysisAstHelpers,
-)
-from flext_infra._utilities._rope_analysis.exports import (
-    FlextInfraUtilitiesRopeAnalysisExports,
-)
-from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra import c, m, t
 
 
 class FlextInfraUtilitiesRopeAnalysisImportState:
@@ -120,6 +110,11 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
             Local classes plus declared and semantic imports in one pass.
 
         """
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeAnalysisAstHelpers,
+            FlextInfraUtilitiesRopeCore,
+        )
+
         cache_key = FlextInfraUtilitiesRopeAnalysisAstHelpers.resource_cache_key(
             rope_project,
             resource,
@@ -205,6 +200,11 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
             Local class infos for one resolved Rope module.
 
         """
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeAnalysisAstHelpers,
+            FlextInfraUtilitiesRopeRuntime,
+        )
+
         class_infos: t.MutableSequenceOf[m.Infra.ClassInfo] = []
         ast_bases_by_class = {
             class_info.name: class_info.bases
@@ -301,6 +301,8 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
             Declared and semantic import maps for one module.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+
         semantic_imports: MutableMapping[str, str] = {}
         declared_imports: MutableMapping[str, str] = {}
         module_imports = FlextInfraUtilitiesRopeCore.resolve_module_imports(
@@ -403,6 +405,8 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
             Offset of symbol's definition via semantic analysis.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+
         source = resource.read()
         pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
         return (
@@ -426,6 +430,8 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
             Identifier offset for one symbol from a resolved Rope module.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+
         attributes = pymodule.get_attributes()
         if symbol not in attributes:
             return None
@@ -474,6 +480,8 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
             {local_name: declared import path} without resolving re-exports.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+
         module = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
         imports, _ = FlextInfraUtilitiesRopeAnalysisImportState._module_import_maps(
             rope_project=rope_project,
@@ -556,6 +564,12 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
                 declaration in.
 
         """
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeAnalysisAstHelpers,
+            FlextInfraUtilitiesRopeAnalysisExports,
+            FlextInfraUtilitiesRopeCore,
+        )
+
         module = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
         exports = FlextInfraUtilitiesRopeAnalysisExports.public_export_names_source(
             resource.read(),
@@ -610,6 +624,11 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
             Explicitly exported names bound to this exact class object.
 
         """
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeAnalysisAstHelpers,
+            FlextInfraUtilitiesRopeAnalysisExports,
+        )
+
         module = target.get_module()
         if module is None or (resource := module.get_resource()) is None:
             return frozenset()
@@ -643,6 +662,11 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
             ValueError: If cyclic facade namespace inheritance at.
 
         """
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeCore,
+            FlextInfraUtilitiesRopeRuntime,
+        )
+
         module = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
         target = module.get_attribute(class_name).get_object()
         attributes = target.get_attributes()
@@ -691,6 +715,8 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
             ValueError: If cyclic facade inheritance at.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         identity = id(target)
         if identity in visited:
             message = f"cyclic facade inheritance at {target.get_name()}"
@@ -759,6 +785,8 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
             {method_name: kind} for methods of a class.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+
         pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
         return FlextInfraUtilitiesRopeAnalysisImportState._class_methods_from_pymodule(
             class_name=class_name,
@@ -779,6 +807,8 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
             Method symbols for a class from one resolved Rope module.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         result: t.MutableStrMapping = {}
         attributes = pymodule.get_attributes()
         if class_name not in attributes:
@@ -806,6 +836,8 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
             The resulting ``t.Pair[t.Infra.RopePyModule, t.Infra.RopeProject] | None``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+
         rope_project = FlextInfraUtilitiesRopeCore.init_rope_project(project_root)
         resource = FlextInfraUtilitiesRopeCore.fetch_python_resource(
             rope_project,

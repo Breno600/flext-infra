@@ -9,17 +9,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_core import r
-from flext_infra._utilities._docs_generate_plan import (
-    FlextInfraUtilitiesDocsGeneratePlanMixin,
-)
-from flext_infra._utilities._docs_guides import FlextInfraUtilitiesDocsGuidesMixin
-from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
-from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
-from flext_infra._utilities.docs_render import FlextInfraUtilitiesDocsRender
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra import c, m, p, t
+from flext_infra._utilities import FlextInfraUtilitiesDocsGeneratePlanMixin
 
 
 class FlextInfraUtilitiesDocsGenerateProjectMixin(
@@ -56,6 +47,8 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
             The resulting ``list[t.Pair[Path, str]]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocsRender
+
         module_names = FlextInfraUtilitiesDocsGenerateProjectMixin._module_names(scope)
         api_root = scope.path / "docs/api-reference/generated"
         rendered = [
@@ -99,6 +92,13 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
                 ``p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]``.
 
         """
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesDocsApi,
+            FlextInfraUtilitiesDocsContract,
+            FlextInfraUtilitiesDocsGuidesMixin,
+            FlextInfraUtilitiesDocsRender,
+        )
+
         guides = FlextInfraUtilitiesDocsGuidesMixin.docs_project_guides_artifacts(
             scope,
             repository_root=repository_root,

@@ -9,17 +9,13 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
+from flext_infra import c, m, u
 from flext_infra.codegen._fixer_passes import FlextInfraCodegenFixerPassesMixin
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.refactor.namespace_enforcer import FlextInfraNamespaceEnforcer
-from flext_infra.utilities import u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra.protocols import p
-    from flext_infra.typings import t
+    from flext_infra import p, t
 
 
 class FlextInfraCodegenFixerWorkspaceMixin(FlextInfraCodegenFixerPassesMixin):
@@ -80,6 +76,8 @@ class FlextInfraCodegenFixerWorkspaceMixin(FlextInfraCodegenFixerPassesMixin):
             The resulting ``t.SequenceOf[m.Infra.AutoFixResult]``.
 
         """
+        from flext_infra.refactor.namespace_enforcer import FlextInfraNamespaceEnforcer
+
         if projects is not None:
             selected_projects = tuple(projects)
         else:

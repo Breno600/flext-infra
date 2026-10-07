@@ -17,26 +17,18 @@ import ast
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra._utilities._semantic_cutover.edits import (
+from flext_infra import m, t
+from flext_infra._utilities import (
     FlextInfraUtilitiesSemanticCutoverEdits,
-)
-from flext_infra._utilities._semantic_cutover.facade_base_cst import (
     FlextInfraUtilitiesSemanticCutoverFacadeBaseCst,
-)
-from flext_infra._utilities._semantic_cutover.facade_owners import (
     FlextInfraUtilitiesSemanticCutoverFacadeOwners,
 )
-from flext_infra._utilities.private_import_facades import (
-    FlextInfraUtilitiesPrivateImportFacades,
-)
-from flext_infra.models import m
-from flext_infra.typings import t
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
     from pathlib import Path
 
-    from flext_infra import protocols as p
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesSemanticCutoverFacadeBases(
@@ -59,6 +51,8 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
             The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesPrivateImportFacades
+
         selected = frozenset((root / finding.file).resolve() for finding in findings)
         items = tuple(
             item for item in cls._editable_sources(sources) if item[0] in selected

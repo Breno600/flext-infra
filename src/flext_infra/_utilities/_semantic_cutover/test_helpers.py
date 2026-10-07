@@ -9,25 +9,12 @@ from __future__ import annotations
 import ast
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import TYPE_CHECKING, override
+from typing import override
 
-from flext_infra._utilities._rope_core_pymodule import (
-    FlextInfraUtilitiesRopeCorePyModuleMixin,
-)
-from flext_infra._utilities._semantic_cutover.helper_references import (
-    FlextInfraUtilitiesSemanticHelperReferences,
-)
-from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
-from flext_infra._utilities.rope_runtime_modules import (
-    FlextInfraUtilitiesRopeRuntimeModules,
-)
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
+import libcst as cst
 
-if TYPE_CHECKING:
-    import libcst as cst
+from flext_infra import c, m, p, t
+from flext_infra._utilities import FlextInfraUtilitiesSemanticHelperReferences
 
 
 class FlextInfraUtilitiesSemanticTestHelpers(
@@ -41,7 +28,11 @@ class FlextInfraUtilitiesSemanticTestHelpers(
         workspace: p.Infra.RopeWorkspaceDsl,
         sources: t.MappingKV[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
-        import libcst as cst
+
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesQualifiedNames,
+            FlextInfraUtilitiesRopeRuntimeModules,
+        )
 
         class _MovedExports(cst.CSTTransformer):
             """Retire only the original declaration's former module export."""
@@ -143,6 +134,11 @@ class FlextInfraUtilitiesSemanticTestHelpers(
         sources: t.MappingKV[Path, str],
         editable: frozenset[Path],
     ) -> m.Infra.ClassMoveRequest | None:
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeCorePyModuleMixin,
+            FlextInfraUtilitiesRopeRuntimeModules,
+        )
+
         root = Path(project.root.real_path)
         resource = project.get_resource(path.relative_to(root).as_posix())
         resources = tuple(
@@ -225,6 +221,8 @@ class FlextInfraUtilitiesSemanticTestHelpers(
             The resulting ``bool``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
         if (
             not isinstance(bound, p.Infra.RopeImportedName)
             or bound.imported_name != name

@@ -12,18 +12,20 @@ from typing import Annotated, Literal
 
 from flext_cli import m
 
+from flext_infra import t
 from flext_infra._constants import (
     FlextInfraConstantsCodegenProject,
     FlextInfraConstantsPromoted,
     FlextInfraConstantsWorkspace,
 )
-from flext_infra._models._config.beads import FlextInfraConfigModelsBeads
-from flext_infra._models._config.contract import FlextInfraConfigModelsContract
-from flext_infra._models._config.make import FlextInfraConfigModelsMake
-from flext_infra._models._config.repository import FlextInfraConfigModelsRepository
-from flext_infra._models._config.scaffold import FlextInfraConfigModelsScaffold
-from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
-from flext_infra.typings import t
+from flext_infra._models import (
+    FlextInfraConfigModelsBeads,
+    FlextInfraConfigModelsContract,
+    FlextInfraConfigModelsMake,
+    FlextInfraConfigModelsRepository,
+    FlextInfraConfigModelsScaffold,
+    FlextInfraModelsDepsToolConfig,
+)
 
 
 class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):

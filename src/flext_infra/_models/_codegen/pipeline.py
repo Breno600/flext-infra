@@ -11,13 +11,14 @@ from typing import Annotated, ClassVar, Literal, Self
 
 from flext_cli import m
 
-from flext_infra._models._codegen.fix import FlextInfraModelsCodegenFixModels
-from flext_infra._models._codegen.lazy_init import FlextInfraModelsCodegenLazyInitModels
-from flext_infra._models._codegen.scaffold import FlextInfraModelsCodegenScaffoldModels
-from flext_infra._models._config.base import FlextInfraConfigModels
-from flext_infra._models.mixins import FlextInfraModelsMixins
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra import p, t
+from flext_infra._models import (
+    FlextInfraConfigModels,
+    FlextInfraModelsCodegenFixModels,
+    FlextInfraModelsCodegenLazyInitModels,
+    FlextInfraModelsCodegenScaffoldModels,
+    FlextInfraModelsMixins,
+)
 
 
 class FlextInfraModelsCodegenPipelineModels:

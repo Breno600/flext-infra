@@ -11,12 +11,7 @@ from pathlib import Path
 from flext_cli import u as cli_u
 
 from flext_core import r
-from flext_infra._utilities.codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
-from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra import c, m, p, t
 
 
 class FlextInfraUtilitiesDocsGenerateSourcesMixin:
@@ -48,6 +43,7 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
         Returns:
             The resulting ``p.Result[t.VariadicTuple[Path]]``.
 
+        from flext_cli import u as cli_u
         """
         planned = cli_u.Cli.atomic_plan_directory_chain(root)
         if planned.failure:
@@ -78,7 +74,10 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
         Returns:
             The resulting ``p.Result[t.VariadicTuple[Path]]``.
 
+        from flext_cli import u as cli_u
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocsScope
+
         roots = FlextInfraUtilitiesDocsScope.docs_repository_roots(
             repository_root,
             extra_roots,
@@ -167,6 +166,8 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesCodegenFilePlan
+
         discovered = FlextInfraUtilitiesDocsGenerateSourcesMixin.docs_source_paths(
             repository_root,
             extra_roots,

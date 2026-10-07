@@ -9,23 +9,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra._utilities._docs_scope_selection import (
-    FlextInfraUtilitiesDocsScopeSelectionMixin,
-)
-from flext_infra._utilities.base import FlextInfraUtilitiesBase
-from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
-from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
-from flext_infra._utilities.workspace_manifest import (
-    FlextInfraUtilitiesWorkspaceManifest,
-)
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra import c, m, t
+from flext_infra._utilities import FlextInfraUtilitiesDocsScopeSelectionMixin
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import protocols as p
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesDocsScopeBuildMixin(
@@ -44,6 +34,8 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
             Normalized project filters for docs-scoped operations.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesBase
+
         _ = repository_root
         return list(FlextInfraUtilitiesBase.normalize_sequence_values(projects) or ())
 
@@ -91,6 +83,12 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
             The resulting ``t.SequenceOf[m.Infra.DocScope]``.
 
         """
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesDocsScope,
+            FlextInfraUtilitiesPyproject,
+            FlextInfraUtilitiesWorkspaceManifest,
+        )
+
         resolved_root = repository_root.resolve()
         project_state = FlextInfraUtilitiesDocsScope.project_state(resolved_root)
         is_enabled = FlextInfraUtilitiesDocsScope.docs_scope_enabled(
@@ -207,6 +205,8 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
             ValueError: If ``discovered_result.failure``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocsScope
+
         discovered_result = FlextInfraUtilitiesDocsScope.resolve_projects(
             repository_root,
             (),

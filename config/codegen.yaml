@@ -717,8 +717,11 @@ Infra:
       - {name: .agents, source_scan_ignore: true, vscode_exclude: false, watch_exclude: false}
       - {name: .beads, source_scan_ignore: true}
       - {name: .benchmarks}
+    # Historical evidence trees (operator law: archives are evidence only,
+    # never live authority) are not production input to any analyzer.
     # Archive-not-delete target for the layout engine; the generated
     # .gitignore projection must never track archived loose files.
+      - {name: .archive, source_scan_ignore: true}
       - {name: .bkp}
       - {name: .cache, source_scan_ignore: true}
     # Agent worktrees are duplicate repositories, never production input.
@@ -764,6 +767,9 @@ Infra:
       - {name: build, source_scan_ignore: true}
       - {name: dist, source_scan_ignore: true}
       - {name: node_modules, source_scan_ignore: true}
+    # protoc-generated wire-protocol modules ("DO NOT EDIT"): conditional
+    # imports are intrinsic to the generated surface, never first-party code.
+      - {name: protos, source_scan_ignore: true}
       - {name: site, watch_exclude: false}
       - {name: target}
       - {name: .pyrefly_cache, vscode_exclude: false, watch_exclude: false, source_scan_ignore: true}

@@ -16,14 +16,10 @@ from typing import TYPE_CHECKING, override
 import pytest
 
 from flext_core import r
+from flext_infra import c, m, t, u
 from flext_infra._config import config
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
-from flext_infra.utilities import u
 from flext_infra.validate._pytest_runner.command import FlextInfraPytestRunnerCommand
 from flext_infra.validate._pytest_runner.reports import FlextInfraPytestRunnerReports
-from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -46,6 +42,8 @@ class FlextInfraPytestRunnerExecution(
             The resulting ``p.Result[m.Infra.TestmonCacheState]``.
 
         """
+        from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
+
         return FlextInfraTestmonDbInspector(
             repository_root=self.root,
             db_path=self.testmon_db,
@@ -551,6 +549,8 @@ class FlextInfraPytestRunnerExecution(
             RuntimeError: If testmon database changed after the checkpoint receipt.
             ValueError: If testmon publication path cannot contain output delimiters.
         """
+        from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
+
         execution_mode = (
             c.Infra.PytestExecutionMode.FULL
             if complete
@@ -624,6 +624,8 @@ class FlextInfraPytestRunnerExecution(
                 cache.
 
         """
+        from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
+
         report_dir = self._report_directory()
         self._write_run_context(
             report_dir,

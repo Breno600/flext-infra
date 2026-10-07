@@ -12,11 +12,8 @@ import re
 import tokenize
 from pathlib import Path
 
-from flext_infra._config import FlextInfraConfig, config
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra import c, m, t, u
+from flext_infra._config import config
 
 
 class FlextInfraRenameSources:
@@ -59,6 +56,8 @@ class FlextInfraRenameSources:
         roots: t.SequenceOf[Path],
         params: m.Infra.ApplyRenamesInput,
     ) -> t.MappingKV[Path, m.Cli.AtomicFileState]:
+        from flext_infra._config import FlextInfraConfig
+
         files: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
         ignored = config.Infra.codegen.source_scan_ignored
         generated = {item.path for item in config.Infra.codegen.managed_files}

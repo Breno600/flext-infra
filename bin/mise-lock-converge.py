@@ -1,4 +1,3 @@
-# Copyright 2026 FLEXT
 """Hold broken tool releases inside a ``make upg`` Mise lock stage.
 
 The ``upg`` lock stage already carries the bumped lock; a broken upstream
@@ -10,6 +9,9 @@ install and publishes. The committed manifest never changes, so the next
 
 It runs with a host Python before the project's virtual environment exists,
 so it intentionally uses only stdlib.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

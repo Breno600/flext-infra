@@ -12,8 +12,7 @@ from pathlib import Path
 
 from flext_cli import u as cli_u
 
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra import m, t
 
 
 class FlextInfraUtilitiesDocsCollectionSources:
@@ -152,6 +151,7 @@ class FlextInfraUtilitiesDocsCollectionSources:
             The resulting ``t.VariadicTuple[m.Cli.AtomicFileState]``.
 
         Raises:
+            from flext_cli import u as cli_u
             ValueError: If plan companion is a symlink.
 
         """
@@ -183,6 +183,7 @@ class FlextInfraUtilitiesDocsCollectionSources:
             The resulting ``t.Pair[str | None, str | None]``.
 
         Raises:
+            from flext_cli import u as cli_u
             ValueError: If plan frontmatter has no closing delimiter.
 
         """

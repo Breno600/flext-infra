@@ -20,9 +20,7 @@ import sys
 import time
 from types import FrameType
 
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra import c, m, t
 
 
 class FlextInfraMypyDarwinSupervisor:
@@ -58,7 +56,7 @@ class FlextInfraMypyDarwinSupervisor:
 
     @staticmethod
     def _usage(pid: int) -> t.Pair[int, bool]:
-        from flext_infra import u
+        from flext_cli import u
 
         snapshot = u.Cli.run(
             ("/bin/ps", "-axo", "pgid=,rss=,stat="),
@@ -90,7 +88,9 @@ class FlextInfraMypyDarwinSupervisor:
             ValueError: If positive memory, timeout and kill-after are required.
 
         """
-        from flext_infra import u
+        from flext_cli import u
+
+        from flext_infra._utilities import FlextInfraUtilitiesResourceLimits
 
         if min(memory_bytes, timeout, kill_after) <= 0:
             msg = "positive memory, timeout and kill-after are required"
@@ -99,7 +99,7 @@ class FlextInfraMypyDarwinSupervisor:
         cls._usage(os.getpgrp())
         deadline = time.monotonic() + timeout
         child = u.Cli.process_start(
-            u.Infra.mypy_command(invocation),
+            FlextInfraUtilitiesResourceLimits.mypy_command(invocation),
             capture=False,
             start_new_session=True,
         ).unwrap()

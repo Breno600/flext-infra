@@ -1,4 +1,9 @@
-"""Public staged pin CLI preserves native lock inputs and selector quoting."""
+"""Public staged pin CLI preserves native lock inputs and selector quoting.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+tests/unit/codegen/test_mise_lock_pin
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

@@ -15,17 +15,11 @@ from typing import TypeAliasType, get_args, override
 from flext_cli import cli
 
 from flext_core import r
+from flext_infra import m, p, t, u
 from flext_infra.base import FlextInfraServiceBase
 from flext_infra.codegen._protocol_model_annotations import (
     FlextInfraCodegenProtocolModelAnnotations,
 )
-from flext_infra.codegen._protocol_model_render import (
-    FlextInfraCodegenProtocolModelRender,
-)
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
-from flext_infra.utilities import u
 
 
 class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
@@ -39,6 +33,10 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
+        from flext_infra.codegen._protocol_model_render import (
+            FlextInfraCodegenProtocolModelRender,
+        )
+
         targeted = self._resolve_target(self.repository_root)
         if targeted.failure:
             return r[t.Cli.ResultValue].from_failure(targeted)

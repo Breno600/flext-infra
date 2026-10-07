@@ -9,18 +9,53 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra.models import m
-from flext_infra.protocols import p
+from flext_infra import m, p, u
 from flext_infra.refactor._accessor_rewrite import (
     FlextInfraAccessorMigrationRewriteMixin,
 )
-from flext_infra.refactor.namespace_relocations import (
-    FlextInfraNamespaceRelocationCascade,
-)
-from flext_infra.utilities import u
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+class FlextInfraImportNormalizationPhase:
+    """Import-form callback: the canonical import law in the loop.
+
+    The engine self-scans every governed source file — leaf flattening,
+    lazy placement and guard cleanup are semantic judgments no ast-grep
+    capture owns — so this phase does not wait for a rule finding before
+    normalizing a file.
+    """
+
+    name: str = "import-normalization"
+
+    @staticmethod
+    def apply(
+        root: Path,
+        _preflight: m.Infra.ModScanReport,
+        _rope_workspace: p.Infra.RopeWorkspaceDsl,
+    ) -> p.Result[bool]:
+        """Normalize every governed project's source imports.
+
+        Returns:
+            The resulting ``p.Result[bool]`` — ``True`` marks changed sources.
+
+        """
+        from flext_infra.refactor._import_enforcement import (
+            FlextInfraImportNormalization,
+        )
+        from flext_infra.refactor.namespace_relocations import (
+            FlextInfraNamespaceRelocationCascade,
+        )
+
+        changed = False
+        for project_root in u.Infra.governed_project_roots(root):
+            if not u.Infra.namespace_enabled(project_root):
+                continue
+            scoped = FlextInfraNamespaceRelocationCascade.scoped_py_files(project_root)
+            if FlextInfraImportNormalization.apply_files(project_root, scoped):
+                changed = True
+        return r[bool].ok(value=changed)
 
 
 class FlextInfraNamespaceRelocationPhase:
@@ -40,6 +75,10 @@ class FlextInfraNamespaceRelocationPhase:
             The resulting ``p.Result[bool]`` — ``True`` marks changed sources.
 
         """
+        from flext_infra.refactor.namespace_relocations import (
+            FlextInfraNamespaceRelocationCascade,
+        )
+
         cascade = FlextInfraNamespaceRelocationCascade()
         changed = False
         for project_root in u.Infra.governed_project_roots(root):
@@ -121,5 +160,6 @@ class FlextInfraAccessorRenamePhase(FlextInfraAccessorMigrationRewriteMixin):
 
 __all__: list[str] = [
     "FlextInfraAccessorRenamePhase",
+    "FlextInfraImportNormalizationPhase",
     "FlextInfraNamespaceRelocationPhase",
 ]

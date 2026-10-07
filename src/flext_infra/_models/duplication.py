@@ -10,8 +10,7 @@ from pathlib import Path
 from typing import Annotated, ClassVar, Self
 
 from flext_core import m
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra import c, t
 
 
 class FlextInfraModelsDuplication:
