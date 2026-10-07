@@ -540,15 +540,15 @@ class FlextInfraMiseWorkspacePlanner:
             return result_type.fail(
                 f"runtime root lacks {missing}; run make upg in {scope_root}",
             )
-        packaged = tuple(
-            files.cold_start_directory() / Path(name).name
-            for name, _mode in c.Infra.ARTIFACT_SPECS
-        )
-        return FlextInfraMiseWorkspacePlanner._artifact_set(
-            packaged[0],
-            packaged[1],
-            packaged[2],
-            required=True,
+        # All absent: the NATIVE mise layout — mise resolves from the user
+        # layer (global config + global mise.lock pin the running release)
+        # and no repo launchers, pin file, or bootstrap triple exist. The
+        # packaged cold-start seeds were retired with the bootstrap
+        # machinery; an absent triple is the valid native state.
+        return result_type.ok(
+            m.Infra.MiseToolchainArtifactSet(
+                artifacts=(),
+            ),
         )
 
     def _project_layout(
