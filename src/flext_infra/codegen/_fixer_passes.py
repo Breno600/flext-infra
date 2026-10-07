@@ -9,10 +9,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
+from flext_infra import m, u
 from flext_infra.codegen._fixer_results import FlextInfraCodegenFixerResultsMixin
-from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
-from flext_infra.models import m
-from flext_infra.utilities import u
 
 
 class FlextInfraCodegenFixerPassesMixin(FlextInfraCodegenFixerResultsMixin):
@@ -50,8 +48,41 @@ class FlextInfraCodegenFixerPassesMixin(FlextInfraCodegenFixerResultsMixin):
         )
 
     @staticmethod
+    def _run_import_cycle_proof(ctx: m.Infra.FixContext, project_path: Path) -> None:
+        """Prove the post-fix tree is free of runtime import cycles.
+
+        The existing cyclic-import detector (the codemod project facts engine:
+        runtime import graph over Rope's module import table, then strongly
+        connected components) reads the tree as the fix left it. Every module
+        taking part in a cycle is recorded as an unfixable violation, so an
+        auto-fix run that introduced a cycle fails loud instead of
+        publishing it.
+
+        """
+        graph = u.Infra.project_import_graph(project_path)[0]
+        cycles = u.Infra.project_import_cycles(graph)
+        if not cycles:
+            return
+        FlextInfraCodegenFixerPassesMixin._fixer_log.error(
+            "import_cycle_detected",
+            project=project_path.name,
+            modules=",".join(sorted(cycles)),
+        )
+        ctx.violations_skipped.extend(
+            m.Infra.CensusViolation(
+                module=module,
+                rule="IMPORT-CYCLE",
+                line=0,
+                message="module takes part in a runtime import cycle",
+                fixable=False,
+            )
+            for module in sorted(cycles)
+        )
+
+    @staticmethod
     def _run_lazy_init_preflight(ctx: m.Infra.FixContext, project_path: Path) -> None:
         """Preflight lazy-init plans and leave publication to conform."""
+        from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
         plans = (
             FlextInfraCodegenLazyInit(repository_root=project_path)
             .plan_files()

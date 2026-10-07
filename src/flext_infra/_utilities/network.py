@@ -11,7 +11,7 @@ from http.client import HTTPConnection, HTTPException, HTTPSConnection
 from urllib.parse import urlencode, urlsplit
 
 from flext_core import p, r
-from flext_infra.typings import t
+from flext_infra import t
 
 
 class FlextInfraUtilitiesNetwork:

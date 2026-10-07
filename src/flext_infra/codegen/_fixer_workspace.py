@@ -9,17 +9,13 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
+from flext_infra import c, m, u
 from flext_infra.codegen._fixer_passes import FlextInfraCodegenFixerPassesMixin
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.refactor.namespace_enforcer import FlextInfraNamespaceEnforcer
-from flext_infra.utilities import u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra.codegen.protocols import p
-    from flext_infra.codegen.typings import t
+    from flext_infra import p, t
 
 
 class FlextInfraCodegenFixerWorkspaceMixin(FlextInfraCodegenFixerPassesMixin):
@@ -64,6 +60,7 @@ class FlextInfraCodegenFixerWorkspaceMixin(FlextInfraCodegenFixerPassesMixin):
             return self._build_result(project_path.name, ctx)
         u.Infra.normalize_canonical_facades(pkg_dir=pkg_dir, ctx=ctx)
         self._run_namespace_enforcement(ctx, project_path, enforce_namespace)
+        self._run_import_cycle_proof(ctx, project_path)
         self._run_lazy_init_preflight(ctx, project_path)
         # Each fixer owns Ruff-native output; no post-hoc mutation.
         self._classify_remaining_violations(ctx, project_path, initial_violations)
@@ -80,6 +77,7 @@ class FlextInfraCodegenFixerWorkspaceMixin(FlextInfraCodegenFixerPassesMixin):
             The resulting ``t.SequenceOf[m.Infra.AutoFixResult]``.
 
         """
+        from flext_infra.refactor.namespace_enforcer import FlextInfraNamespaceEnforcer
         if projects is not None:
             selected_projects = tuple(projects)
         else:

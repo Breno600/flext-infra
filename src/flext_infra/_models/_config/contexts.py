@@ -12,18 +12,20 @@ from typing import Annotated, Literal
 
 from flext_cli import m
 
+from flext_infra import t
 from flext_infra._constants import (
     FlextInfraConstantsCodegenProject,
     FlextInfraConstantsPromoted,
     FlextInfraConstantsWorkspace,
 )
-from flext_infra._models._config.beads import FlextInfraConfigModelsBeads
-from flext_infra._models._config.contract import FlextInfraConfigModelsContract
-from flext_infra._models._config.make import FlextInfraConfigModelsMake
-from flext_infra._models._config.repository import FlextInfraConfigModelsRepository
-from flext_infra._models._config.scaffold import FlextInfraConfigModelsScaffold
-from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
-from flext_infra.typings import t
+from flext_infra._models import (
+    FlextInfraConfigModelsBeads,
+    FlextInfraConfigModelsContract,
+    FlextInfraConfigModelsMake,
+    FlextInfraConfigModelsRepository,
+    FlextInfraConfigModelsScaffold,
+    FlextInfraModelsDepsToolConfig,
+)
 
 
 class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
@@ -60,11 +62,6 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
     class MakefileRenderSpec(MakeCommandContext):
         """Field-only render input for an existing repository Makefile."""
 
-        mise_bootstrap: Annotated[
-            FlextInfraConfigModelsContract.MiseBootstrapEnvironmentSpec,
-            m.Field(description="Generated strict Mise bootstrap environment"),
-        ]
-
         dist: Annotated[t.NonEmptyStr, m.Field(description="PEP 621 project name")]
         make_profile: Annotated[
             FlextInfraConstantsCodegenProject.MakeProfile,
@@ -82,10 +79,6 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
             t.VariadicTuple[str],
             m.Field(description="Declared workspace subproject paths"),
         ] = ()
-        workspace_repositories: Annotated[
-            t.VariadicTuple[FlextInfraConfigModelsContexts.RepositoryRef],
-            m.Field(description="Repositories editable from the selected workspace"),
-        ] = ()
         workspace_gitlinks: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsContexts.ManagedGitlinkSpec],
             m.Field(description="Provider-resolved governed Git submodules"),
@@ -94,13 +87,13 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
             t.NonEmptyStr,
             m.Field(description="Configured uv installation link mode"),
         ]
-        uv_version: Annotated[
+        mise_selector: Annotated[
             t.NonEmptyStr,
-            m.Field(description="mise-owned uv version used by bootstrap validation"),
+            m.Field(description="Mise backend selector the mise.lock pin is read from"),
         ]
-        mise_lockfile_platforms: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="Platforms carried by artifact-tool lock entries"),
+        python_version: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Python minor line the environment syncs against"),
         ]
         make: Annotated[
             FlextInfraConfigModelsMake.MakeSpec,
@@ -142,11 +135,6 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
 
     class MakeRenderContext(MakeCommandContext):
         """Typed input consumed by the generated Make surface."""
-
-        mise_bootstrap: Annotated[
-            FlextInfraConfigModelsContract.MiseBootstrapEnvironmentSpec,
-            m.Field(description="Generated strict Mise bootstrap environment"),
-        ]
 
         make: Annotated[
             FlextInfraConfigModelsMake.MakeSpec,

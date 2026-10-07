@@ -125,7 +125,13 @@ jobs:
           key: ${{ runner.os }}-3.13-flext-testmon-flext-infra-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml', 'config/**') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             ${{ runner.os }}-3.13-flext-testmon-flext-infra-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml', 'config/**') }}-
-
+- name: Install mise
+        shell: bash
+        run: |
+          set -eu
+          curl -fsSL https://mise.run | sh
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+          echo "${HOME}/.local/share/mise/shims" >> "${GITHUB_PATH}"
 
       - name: Approval (blocking)
         id: approval
@@ -218,7 +224,14 @@ jobs:
         with:
           fetch-depth: 0
           submodules: false
-          persist-credentials: false
+          persist-credentials: false- name: Install mise
+        shell: bash
+        run: |
+          set -eu
+          curl -fsSL https://mise.run | sh
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+          echo "${HOME}/.local/share/mise/shims" >> "${GITHUB_PATH}"
+
       - name: Boot
         run: CI=Y make setup
       - name: Release plan and guard

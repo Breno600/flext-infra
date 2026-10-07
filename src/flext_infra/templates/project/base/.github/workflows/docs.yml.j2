@@ -53,6 +53,7 @@ jobs:
       # removes the cold download of the pinned tarballs.
 {%- include "_fragments/toolchain_cache_restore.j2" %}
 
+{%- include "_fragments/mise_install.j2" %}
       - name: Sync workspace toolchain
         run: make setup
 
@@ -133,6 +134,7 @@ jobs:
       # Why: same cold-download protection as the docs-quality job.
 {%- include "_fragments/toolchain_cache_restore.j2" %}
 
+{%- include "_fragments/mise_install.j2" %}
       - name: Sync workspace toolchain
         run: make setup
 

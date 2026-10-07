@@ -8,15 +8,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_infra._utilities._promoted.workspace import (
-    FlextInfraUtilitiesPromotedWorkspace,
-)
-from flext_infra._utilities.base import FlextInfraUtilitiesBase
-from flext_infra.constants import c
+from flext_infra import c
+from flext_infra._utilities import FlextInfraUtilitiesPromotedWorkspace
 
 if TYPE_CHECKING:
-    from flext_infra.protocols import p
-    from flext_infra.typings import t
+    from flext_infra import p, t
 
 
 class FlextInfraUtilitiesPromotedInvocation(FlextInfraUtilitiesPromotedWorkspace):
@@ -115,6 +111,7 @@ class FlextInfraUtilitiesPromotedInvocation(FlextInfraUtilitiesPromotedWorkspace
             One parameter value: the command WHAT, the environment, or default.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesBase
         if param.name == c.Infra.PromotedSelector.WHAT:
             return command.what
         return FlextInfraUtilitiesBase.env_value(param.name, param.default)

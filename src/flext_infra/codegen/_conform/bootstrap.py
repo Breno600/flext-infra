@@ -10,10 +10,8 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import Annotated
 
+from flext_infra import c, m, t
 from flext_infra.base import s
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
 
 
 class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
@@ -162,13 +160,6 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
                 return m.Infra.CodegenConformSurfaceContract(
                     destinations=frozenset({destination}),
                     pyproject=False,
-                    custom=False,
-                )
-            case c.Infra.CodegenConformSurface.MISE_TRIPLE:
-                return m.Infra.CodegenConformSurfaceContract(
-                    destinations=frozenset(c.Infra.ARTIFACT_NAMES),
-                    pyproject=False,
-                    delegates=False,
                     custom=False,
                 )
             case _:

@@ -6,40 +6,25 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import traceback
 from typing import TYPE_CHECKING, assert_never
 
-from flext_infra._utilities._semantic_cutover.aliases import (
+from flext_infra import c, m, t
+from flext_infra._utilities import (
     FlextInfraUtilitiesSemanticCutoverAliases,
-)
-from flext_infra._utilities._semantic_cutover.dynamic_environment import (
     FlextInfraUtilitiesSemanticCutoverDynamicEnvironment,
-)
-from flext_infra._utilities._semantic_cutover.facade_bases import (
     FlextInfraUtilitiesSemanticCutoverFacadeBases,
-)
-from flext_infra._utilities._semantic_cutover.model_fields import (
     FlextInfraUtilitiesSemanticCutoverModelFields,
-)
-from flext_infra._utilities._semantic_cutover.module_layout import (
     FlextInfraUtilitiesSemanticCutoverModuleLayout,
-)
-from flext_infra._utilities._semantic_cutover.nesting import (
     FlextInfraUtilitiesSemanticCutoverNesting,
-)
-from flext_infra._utilities._semantic_cutover.private_imports import (
     FlextInfraUtilitiesSemanticCutoverPrivateImports,
-)
-from flext_infra._utilities._semantic_cutover.self_facade import (
     FlextInfraUtilitiesSemanticCutoverSelfFacade,
 )
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import protocols as p
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesSemanticCutoverBase(
@@ -76,8 +61,6 @@ class FlextInfraUtilitiesSemanticCutoverBase(
         try:
             return cls._plan_dispatch(phase, rope_workspace, sources, findings)
         except Exception:
-            import traceback
-
             traceback.print_exc()
             raise
 
@@ -92,8 +75,6 @@ class FlextInfraUtilitiesSemanticCutoverBase(
         try:
             return cls._plan_phases(phase, rope_workspace, sources, findings)
         except Exception:
-            import traceback
-
             traceback.print_exc()
             raise
 

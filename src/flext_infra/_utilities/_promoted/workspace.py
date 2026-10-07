@@ -10,12 +10,12 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn
 
-from flext_infra.constants import c
+from flext_infra import c, m
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from flext_infra import protocols as p, typings as t
+    from flext_infra import p, t
 
 
 class FlextInfraUtilitiesPromotedWorkspace:
@@ -58,12 +58,11 @@ class FlextInfraUtilitiesPromotedWorkspace:
             The resulting ``p.Infra.PromotedWorkspaceSpec``.
 
         """
-        from flext_infra import m, u
-
+        from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
         return m.Infra.PromotedWorkspaceSpec(
             root=root,
             scripts=root / c.Infra.DIR_SCRIPTS,
-            local_python=u.Infra.runtime_python(root),
+            local_python=FlextInfraUtilitiesProjectDiscovery.runtime_python(root),
         )
 
     @classmethod
@@ -83,7 +82,6 @@ class FlextInfraUtilitiesPromotedWorkspace:
     def promoted_ensure_local_python(cls, spec: p.Infra.PromotedWorkspaceSpec) -> None:
         """Fail unless make runs on a virtualenv or the expected local interpreter."""
         from flext_infra._settings import settings
-
         if sys.prefix != sys.base_prefix:
             return
         active = Path(sys.executable)
@@ -118,7 +116,6 @@ class FlextInfraUtilitiesPromotedWorkspace:
 
         """
         from flext_infra._settings import settings
-
         if (
             settings.Infra.flext_command_dispatched
             != c.Infra.PromotedSelector.DISPATCHED

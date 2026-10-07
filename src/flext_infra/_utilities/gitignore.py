@@ -10,11 +10,9 @@ from itertools import pairwise
 from operator import itemgetter
 from pathlib import Path
 
+
 from flext_core import r
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra import c, m, p, t
 
 
 class FlextInfraUtilitiesGitignore:
@@ -72,8 +70,8 @@ class FlextInfraUtilitiesGitignore:
             The resulting ``p.Result[str]``.
 
         """
-        from flext_infra import u
-
+        from flext_cli import u
+        from flext_infra._utilities import FlextInfraUtilitiesProjectManagedArtifacts
         entry = next(
             (
                 item
@@ -94,7 +92,9 @@ class FlextInfraUtilitiesGitignore:
         project_patterns: t.StrSequence = ()
         preserved_blocks: t.VariadicTuple[m.Infra.ProjectGitignorePreservedBlock] = ()
         if project_dir is not None:
-            resolved = u.Infra.load_project_managed_artifacts(project_dir)
+            resolved = FlextInfraUtilitiesProjectManagedArtifacts.load_project_managed_artifacts(
+                project_dir,
+            )
             if resolved.failure:
                 return r[str].from_failure(resolved)
             project_patterns = resolved.value.artifacts.Gitignore.patterns
@@ -129,9 +129,9 @@ class FlextInfraUtilitiesGitignore:
             The resulting ``p.Result[str]``.
 
         """
+        from flext_cli import u
         if not blocks:
             return r[str].ok(rendered)
-        from flext_infra import u
 
         destination = project_dir / c.Infra.GITIGNORE
         markers = frozenset(

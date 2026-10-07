@@ -8,11 +8,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from flext_infra import c, m, p, u
 from flext_infra.codegen._conform.bootstrap import FlextInfraCodegenConformBootstrap
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.utilities import u
 
 
 class FlextInfraCodegenConformGitignore(FlextInfraCodegenConformBootstrap):

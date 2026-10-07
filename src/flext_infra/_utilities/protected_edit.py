@@ -6,9 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_infra._utilities.protected_edit_writes import (
-    FlextInfraUtilitiesProtectedEditWrites,
-)
+from flext_infra._utilities import FlextInfraUtilitiesProtectedEditWrites
 
 
 class FlextInfraUtilitiesProtectedEdit(FlextInfraUtilitiesProtectedEditWrites):

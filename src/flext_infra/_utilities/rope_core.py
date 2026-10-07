@@ -11,16 +11,8 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 
-from flext_infra._config import config
-from flext_infra._utilities._rope_core_pymodule import (
-    FlextInfraUtilitiesRopeCorePyModuleMixin,
-)
-from flext_infra._utilities._rope_core_resources import (
-    FlextInfraUtilitiesRopeCoreResourcesMixin,
-)
-from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
-from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
-from flext_infra.typings import t
+from flext_infra import t
+from flext_infra._utilities import FlextInfraUtilitiesRopeCorePyModuleMixin, FlextInfraUtilitiesRopeCoreResourcesMixin
 
 
 class FlextInfraUtilitiesRopeCore(
@@ -51,6 +43,7 @@ class FlextInfraUtilitiesRopeCore(
             The resulting ``t.Infra.RopeProject``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
         resolved_root = repository_root.resolve()
         project_roots = tuple(
             project_root
@@ -78,6 +71,8 @@ class FlextInfraUtilitiesRopeCore(
             The resulting ``t.Infra.RopeProject``.
 
         """
+        from flext_infra._config import config
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
         source_folders = sorted({
             str(scan_path.relative_to(resolved_root))
             for project_root in project_roots

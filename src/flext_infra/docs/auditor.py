@@ -8,18 +8,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Annotated, override
 
+from flext_infra import m, u
 from flext_infra.docs._auditor_checks import FlextInfraDocAuditorChecksMixin
 from flext_infra.docs._auditor_report import FlextInfraDocAuditorReportMixin
 from flext_infra.docs.auditor_mixin import FlextInfraDocAuditorMixin
 from flext_infra.docs.base import FlextInfraDocServiceBase
-from flext_infra.models import m
-from flext_infra.utilities import u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra.docs.protocols import p
-    from flext_infra.docs.typings import t
+    from flext_infra import p, t
 
 
 class FlextInfraDocAuditor(

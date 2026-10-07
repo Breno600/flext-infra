@@ -11,16 +11,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from flext_core import r
+from flext_infra import c, m, u
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.utilities import u
 
 if TYPE_CHECKING:
-    from flext_infra.codegen.protocols import p
-    from flext_infra.codegen.typings import t
+    from flext_infra import p, t
 
 type _JournalFileRole = Literal["desired", "backup", "rollback"]
 
@@ -583,13 +580,7 @@ class FlextInfraMiseArtifactsVerification:
 
         """
         for project in plan.projects:
-            expected_states = (
-                project.config.before,
-                project.artifacts.unix_launcher,
-                project.artifacts.windows_launcher,
-                project.artifacts.version_pin,
-            )
-            current = cls.states_current(expected_states)
+            current = cls.states_current((project.config.before,))
             if current.failure:
                 return current
         return r[bool].ok(value=True)
@@ -995,25 +986,17 @@ class FlextInfraMiseArtifactsVerification:
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
         states: list[m.Cli.AtomicFileState] = []
         for project in plan.projects:
-            artifacts = (
-                project.config.before,
-                project.artifacts.unix_launcher,
-                project.artifacts.windows_launcher,
-                project.artifacts.version_pin,
-            )
-            for expected, (_name, required_mode) in zip(
+            artifacts = (project.config.before,)
+            for expected, required_mode in zip(
                 artifacts,
-                c.Infra.PUBLICATION_SPECS,
+                (c.Infra.CONFIG_SPEC[1],),
                 strict=True,
             ):
                 current = files.read_state(expected.path, required=False)
                 if current.failure or current.value.content is None:
-                    repair = (
-                        "make gen" if expected is project.config.before else "make upg"
-                    )
                     return r[tuple[m.Cli.AtomicFileState, ...]].fail(
                         f"published Mise artifact is absent: {expected.path}; "
-                        f"run {repair}",
+                        "run make gen",
                     )
                 if current.value.mode is None:
                     return r[tuple[m.Cli.AtomicFileState, ...]].fail(

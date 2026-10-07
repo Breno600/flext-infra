@@ -6,16 +6,9 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_cli import r, u
+from flext_cli import r
 
-from flext_infra._utilities._pyproject.requirements import (
-    FlextInfraUtilitiesPyprojectRequirements,
-)
-from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
-from flext_infra._utilities.managed_conflicts import FlextInfraUtilitiesManagedConflicts
-from flext_infra.constants import c
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra import c, p, t
 
 
 class FlextInfraUtilitiesPyprojectOverlay:
@@ -36,6 +29,8 @@ class FlextInfraUtilitiesPyprojectOverlay:
             The resulting ``p.Result[str]``.
 
         """
+        from flext_cli import u
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies, FlextInfraUtilitiesManagedConflicts, FlextInfraUtilitiesPyprojectRequirements
         spec = FlextInfraUtilitiesManagedConflicts.pyproject_managed_file()
         if spec.failure:
             return r[str].from_failure(spec)

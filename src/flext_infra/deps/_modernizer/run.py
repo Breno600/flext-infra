@@ -10,11 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra.constants import c
-from flext_infra.deps._floor_profile_writer import FlextInfraDepsFloorProfileWriter
-from flext_infra.models import m
-from flext_infra.typings import t
-from flext_infra.utilities import u
+from flext_infra import c, m, t, u
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
@@ -239,6 +235,7 @@ class FlextInfraPyprojectModernizerRun:
             The resulting ``int``.
 
         """
+        from flext_infra.deps._floor_profile_writer import FlextInfraDepsFloorProfileWriter
         try:
             root_project_name = u.Infra.project_name_from_payload(
                 root_state.pyproject_path,

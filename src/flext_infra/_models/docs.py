@@ -11,11 +11,12 @@ from typing import Annotated, ClassVar
 
 from flext_cli import m
 
-from flext_infra._models._config import FlextInfraConfigModels
-from flext_infra._models.docs_collection import FlextInfraModelsDocsCollection
-from flext_infra._models.docs_generation import FlextInfraModelsDocsGeneration
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra import c, t
+from flext_infra._models import (
+    FlextInfraConfigModels,
+    FlextInfraModelsDocsCollection,
+    FlextInfraModelsDocsGeneration,
+)
 
 
 # Docs transport

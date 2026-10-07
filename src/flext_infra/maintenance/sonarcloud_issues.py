@@ -9,15 +9,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
+from flext_infra import c, m, u
 from flext_infra._config import config
-from flext_infra.constants import c
 from flext_infra.maintenance.sonarcloud_client import FlextInfraSonarcloudClient
-from flext_infra.models import m
-from flext_infra.utilities import u
 
 if TYPE_CHECKING:
-    from flext_infra.maintenance.protocols import p
-    from flext_infra.maintenance.typings import t
+    from flext_infra import p, t
 
 
 class FlextInfraSonarcloudIssues(FlextInfraSonarcloudClient[bool]):

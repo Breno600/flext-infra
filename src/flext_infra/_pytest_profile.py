@@ -10,15 +10,9 @@ import cProfile
 import os
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
 
+from flext_infra import c, m, u
 from flext_infra._config import config
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.utilities import u
-
-if TYPE_CHECKING:
-    from flext_infra import m
 
 
 class FlextInfraPytestProfile:
@@ -60,7 +54,6 @@ class FlextInfraPytestProfile:
 
     def _run_parent(self, started_at_monotonic: float) -> int:
         from flext_infra.validate.pytest_runner import FlextInfraPytestRunner
-
         runner = FlextInfraPytestRunner.from_environment(
             started_at_monotonic=started_at_monotonic,
             collection_command_prefix=(

@@ -11,7 +11,7 @@ from types import MappingProxyType
 from typing import Annotated, ClassVar, Literal
 
 from flext_core import m
-from flext_infra.typings import t
+from flext_infra import t
 
 
 class FlextInfraModelsCodemod:

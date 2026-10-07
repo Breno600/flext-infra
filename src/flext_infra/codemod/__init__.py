@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
     from flext_infra.codemod.loop_phases import (
         FlextInfraAccessorRenamePhase,
+        FlextInfraImportNormalizationPhase,
         FlextInfraNamespaceRelocationPhase,
     )
     from flext_infra.codemod.semantic_apply import FlextInfraCodemodSemanticApply
@@ -40,6 +41,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodemodSemanticApply",
     "FlextInfraCodemodSnapshotReconciler",
     "FlextInfraCodemodSnapshotRefresh",
+    "FlextInfraImportNormalizationPhase",
     "FlextInfraModGateEngine",
     "FlextInfraModReplacements",
     "FlextInfraModTextGateEngine",
@@ -59,6 +61,7 @@ install_lazy_exports(
         "FlextInfraCodemodSemanticApply": ".semantic_apply",
         "FlextInfraCodemodSnapshotReconciler": ".snapshot_reconciler",
         "FlextInfraCodemodSnapshotRefresh": ".snapshot_refresh",
+        "FlextInfraImportNormalizationPhase": ".loop_phases",
         "FlextInfraModGateEngine": ".batch_gates",
         "FlextInfraModReplacements": ".batch_replacements",
         "FlextInfraModTextGateEngine": ".text_gates",

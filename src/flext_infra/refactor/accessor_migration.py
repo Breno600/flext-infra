@@ -12,16 +12,12 @@ from typing import TYPE_CHECKING, Annotated, override
 from flext_cli import cli
 
 from flext_core import r
+from flext_infra import c, m, p, t, u
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
 from flext_infra.refactor._accessor_report import FlextInfraAccessorMigrationReportMixin
 from flext_infra.refactor._accessor_rewrite import (
     FlextInfraAccessorMigrationRewriteMixin,
 )
-from flext_infra.typings import t
-from flext_infra.utilities import u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -94,6 +90,7 @@ class FlextInfraAccessorMigrationOrchestrator(
             The resulting ``p.Result[m.Infra.AccessorMigrationReport]``.
 
         """
+        from flext_infra.refactor._import_enforcement import FlextInfraImportNormalization
         selected_projects: t.StrSequence = (
             self.project_names if self.project_names is not None else ()
         )
@@ -108,6 +105,14 @@ class FlextInfraAccessorMigrationOrchestrator(
         if iter_result.failure:
             return r[m.Infra.AccessorMigrationReport].from_failure(iter_result)
         scoped_files = self._scope_selected(iter_result.value)
+        if not self.effective_dry_run:
+            # The same canonical import-form pass fix-namespace and the mod
+            # loop own: a migrated accessor lands in a file whose imports
+            # already hold the canonical forms.
+            FlextInfraImportNormalization.apply_files(
+                self.repository_root,
+                scoped_files,
+            )
         previews: t.MutableSequenceOf[m.Infra.AccessorMigrationFile] = []
         files_with_changes = 0
         automated_change_count = 0

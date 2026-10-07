@@ -13,7 +13,7 @@ from flext_infra.validate._pytest_runner.execution import (
 )
 
 if TYPE_CHECKING:
-    from flext_infra.validate.typings import t
+    from flext_infra import t
 
 
 class FlextInfraPytestRunner(FlextInfraPytestRunnerExecution):

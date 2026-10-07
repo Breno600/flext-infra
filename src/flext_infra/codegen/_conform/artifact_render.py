@@ -9,15 +9,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_core import r
+from flext_infra import c, m, p, t, u
 from flext_infra._config import config
 from flext_infra.codegen._conform.context_render import (
     FlextInfraCodegenConformContextRender,
 )
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
-from flext_infra.utilities import u
 
 
 class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRender):
@@ -295,7 +291,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     environment_path_prepends=(
                         codegen.toolchain.environment_path_prepends
                     ),
-                    mise_bootstrap=u.Infra.mise_bootstrap_environment(),
                 ),
             )
         if destination in {c.Infra.MISE_TOML_FILENAME, c.Infra.PYTHON_VERSION_FILENAME}:
@@ -418,7 +413,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     package_name=dist.replace("-", "_"),
                     python_version=codegen.toolchain.python_version,
                     make=codegen.make,
-                    mise_bootstrap=u.Infra.mise_bootstrap_environment(),
                 ),
             )
         if destination == c.Infra.RELEASE_GITLEAKS_CONFIG_PATH:
@@ -480,7 +474,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     codegen.toolchain.worktree_environment_directory
                 ),
                 pytest=pytest,
-                mise_bootstrap=u.Infra.mise_bootstrap_environment(),
                 dist=target.repository.distribution,
                 infra_cli=config.Infra.name,
                 make_profile=target.make_profile,
@@ -490,15 +483,10 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 workspace_subprojects=tuple(
                     item.path.as_posix() for item in workspace.subprojects
                 ),
-                workspace_repositories=(
-                    tuple(workspace.subprojects)
-                    if target.make_profile is c.Infra.MakeProfile.WORKSPACE
-                    else ()
-                ),
                 workspace_gitlinks=gitlinks.value,
                 uv_link_mode=self.link_mode(target.repository, codegen.toolchain),
-                uv_version=codegen.toolchain.tool_versions["uv"],
-                mise_lockfile_platforms=codegen.toolchain.mise_lockfile_platforms,
+                mise_selector=codegen.toolchain.mise_selector,
+                python_version=codegen.toolchain.python_version,
                 make=codegen.make,
                 extra_verbs=(
                     self._merge_extra_verbs(

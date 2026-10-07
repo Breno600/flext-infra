@@ -9,12 +9,8 @@ from __future__ import annotations
 from typing import override
 
 from flext_core import r
+from flext_infra import c, m, p, u
 from flext_infra.base import s
-from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.utilities import u
 
 
 class FlextInfraRefactorViolationsSweep(s[m.Infra.ViolationsSweepReport]):
@@ -36,6 +32,7 @@ class FlextInfraRefactorViolationsSweep(s[m.Infra.ViolationsSweepReport]):
             The resulting ``p.Result[m.Infra.ViolationsSweepReport]``.
 
         """
+        from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
         root = self.repository_root
         before_scan = FlextInfraModGateEngine.scan(root, fix=False)
         if before_scan.failure:

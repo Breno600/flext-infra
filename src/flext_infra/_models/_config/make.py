@@ -13,17 +13,12 @@ from typing import Annotated, Literal, Self
 
 from flext_cli import m
 
-from flext_infra._constants import (
-    FlextInfraConstantsCheck,
-    FlextInfraConstantsCodegenProject,
-    FlextInfraConstantsDocs,
-    FlextInfraConstantsMake,
-)
-from flext_infra._models._config.contract import FlextInfraConfigModelsContract
-from flext_infra._models._config.external_cache import (
+from flext_infra import t
+from flext_infra._constants import FlextInfraConstantsCodegenProject, FlextInfraConstantsMake
+from flext_infra._models import (
+    FlextInfraConfigModelsContract,
     FlextInfraExternalCacheDirectorySpec,
 )
-from flext_infra.typings import t
 
 
 def _shared_mypy_cache_spec() -> FlextInfraConfigModelsMake.MypyCacheSpec:
@@ -286,6 +281,7 @@ class FlextInfraConfigModelsMake:
                     the docs lifecycle.
 
             """
+            from flext_infra._constants import FlextInfraConstantsDocs
             if len(set(self.actions)) != len(self.actions):
                 msg = "docs actions must be unique"
                 raise ValueError(msg)
@@ -1036,6 +1032,7 @@ class FlextInfraConfigModelsMake:
                     be repository-relative.
 
             """
+            from flext_infra._constants import FlextInfraConstantsCheck
             declared = {verb.name for verb in self.verbs}
             if len(declared) != len(self.verbs):
                 msg = "make public verb names must be unique"

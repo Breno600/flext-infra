@@ -19,10 +19,10 @@ from __future__ import annotations
 from enum import StrEnum, unique
 from typing import TYPE_CHECKING, ClassVar, Literal
 
-from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
+from flext_infra._constants import FlextInfraConstantsSharedInfra
 
 if TYPE_CHECKING:
-    from flext_infra._constants.typings import t
+    from flext_infra import t
 
 
 class FlextInfraConstantsCodegenProject:
@@ -60,7 +60,6 @@ class FlextInfraConstantsCodegenProject:
         DEPENDENCIES = "dependencies"
         DOCS_CONFIG = "docs-config"
         MAKEFILE = "makefile"
-        MISE_TRIPLE = "mise-triple"
         PYPROJECT = "pyproject"
 
     @unique
@@ -225,26 +224,10 @@ class FlextInfraConstantsCodegenProject:
     "Staged replacement lock published only after its sidecars match."
     MISE_LOCK_OLD_FILENAME: ClassVar[str] = "old.lock"
     "Previous lock retained until the staged replacement is published."
-    MISE_LOCK_MUTEX_FILENAME: ClassVar[str] = ".mise-lock-transaction.lock"
-    "Physical mutex that serializes every publisher on one project."
-    MISE_LOCK_MUTEX_TIMEOUT_SECONDS: ClassVar[float] = 600.0
-    "How long a publisher waits for the project mutex before failing."
-    MISE_LOCK_ARTIFACTS: ClassVar[tuple[tuple[str, int], ...]] = (
-        ("bin/mise", 0o755),
-        ("bin/mise.cmd", 0o644),
-        ("mise.version", 0o644),
-    )
-    "Launcher and pin files the staged lock transaction publishes."
-    MISE_LOCK_TRANSACTION_SCRIPT: ClassVar[str] = "bin/mise-lock-transaction.py"
-    "Generated publisher the Makefile bootstrap runs to commit a staged mise.lock."
-    MISE_LOCK_CONVERGE_SCRIPT: ClassVar[str] = "bin/mise-lock-converge.py"
-    "Generated script ``make upg`` runs to hold broken releases inside a lock stage."
     MAKEFILE_BOOTSTRAP_DESTINATIONS: ClassVar[frozenset[str]] = frozenset({
         FlextInfraConstantsSharedInfra.MAKEFILE_FILENAME,
-        MISE_LOCK_TRANSACTION_SCRIPT,
-        MISE_LOCK_CONVERGE_SCRIPT,
     })
-    "The Makefile surface: the Makefile and the lock scripts its bootstrap runs."
+    "The Makefile surface: the generated Makefile alone."
     MISE_LOCK_ANNOTATION: ClassVar[str] = "~"
     "Lockfile cache-key fragment (``<version>~<hash>``); never a selector."
     MISE_MOVING_SELECTOR: ClassVar[str] = "latest"

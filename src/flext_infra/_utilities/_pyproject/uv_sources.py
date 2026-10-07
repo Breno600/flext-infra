@@ -8,19 +8,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from flext_cli import r, u
+from flext_cli import r
 
-from flext_infra._utilities._pyproject.requirements import (
-    FlextInfraUtilitiesPyprojectRequirements,
-)
-from flext_infra._utilities._pyproject.session import (
-    FlextInfraUtilitiesPyprojectSession,
-)
-from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra import c, m, p, t
+from flext_infra._utilities import FlextInfraUtilitiesPyprojectRequirements, FlextInfraUtilitiesPyprojectSession
 
 
 class FlextInfraUtilitiesPyprojectUvSources(
@@ -40,6 +31,8 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``p.Result[list[str]]``.
 
         """
+        from flext_cli import u
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies
         payload = u.Cli.toml_as_mapping(document)
         if payload is None:
             return r[list[str]].fail("pyproject document is not a TOML mapping")
@@ -73,6 +66,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``t.VariadicTuple[str]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies
         return tuple(
             active
             for item in cls._document_requirement_lines(document).unwrap()
@@ -99,6 +93,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``p.Result[t.VariadicTuple[str]]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies
         lines = cls._document_requirement_lines(document)
         if lines.failure:
             return r[t.VariadicTuple[str]].from_failure(lines)
@@ -121,8 +116,9 @@ class FlextInfraUtilitiesPyprojectUvSources(
         *,
         resolution: m.Infra.UvResolutionSpec,
         candidate_sources: t.StrMapping,
+        workspace_members: t.StrSequence = (),
     ) -> p.Result[bool]:
-        """Render the conform-owned ``[tool.uv]`` keys and drop workspace sources.
+        """Render the conform-owned ``[tool.uv]`` keys and workspace identity.
 
         The resolver keys are always declared, so the table always exists and
         never ends empty.
@@ -131,6 +127,8 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_cli import u
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if tool is None:
             tool = u.Cli.toml_ensure_table(document, c.Infra.TOOL)
@@ -211,17 +209,48 @@ class FlextInfraUtilitiesPyprojectUvSources(
             u.Cli.toml_sync_value(uv, "exclude-dependencies", exclude_payload)
         else:
             u.Cli.toml_remove_key_if_present(uv, "exclude-dependencies")
-        # Each repository owns its own frozen lock and external environment.
-        # A root uv workspace would require every gitlink in root-only CI.
-        u.Cli.toml_remove_key_if_present(uv, "workspace")
+        # The workspace root declares its attached members as a native uv
+        # workspace (the declared topology is the SSOT) and redirects every
+        # member requirement to that identity through a workspace source, so
+        # `uv sync --all-packages` provisions the live worktrees. Standalone
+        # repositories own their own frozen lock and external environment: no
+        # workspace table and no workspace sources survive there.
+        if workspace_members:
+            members = u.Cli.toml_ensure_table(uv, "workspace")
+            u.Cli.toml_sync_string_list(
+                members,
+                "members",
+                tuple(sorted(workspace_members)),
+            )
+            required_names = {
+                name
+                for line in cls._document_requirement_lines(document).unwrap()
+                if (name := FlextInfraUtilitiesDependencies.dep_name(line))
+                is not None
+            }
+            wanted_members = sorted(set(workspace_members) & required_names)
+        else:
+            u.Cli.toml_remove_key_if_present(uv, "workspace")
+            wanted_members = []
         sources = u.Cli.toml_table_child(uv, "sources")
-        if sources is None:
-            return r[bool].ok(value=True)
-        for source_name in tuple(sources):
-            if source_name.startswith("flext-"):
-                u.Cli.toml_remove_key_if_present(sources, source_name)
-        if not tuple(sources):
-            u.Cli.toml_remove_key_if_present(uv, "sources")
+        if wanted_members:
+            if sources is None:
+                sources = u.Cli.toml_ensure_table(uv, "sources")
+            for source_name in tuple(sources):
+                if source_name not in wanted_members:
+                    u.Cli.toml_remove_key_if_present(sources, source_name)
+            for member_name in wanted_members:
+                u.Cli.toml_sync_value(
+                    sources,
+                    member_name,
+                    {"workspace": True},
+                )
+        elif sources is not None:
+            for source_name in tuple(sources):
+                if source_name.startswith("flext-"):
+                    u.Cli.toml_remove_key_if_present(sources, source_name)
+            if not tuple(sources):
+                u.Cli.toml_remove_key_if_present(uv, "sources")
         return r[bool].ok(value=True)
 
 

@@ -5,10 +5,24 @@ Infra:
     # Projections no template renders any more; generation removes the
     # generated copy from every consumer (renamed: install-git-hooks.sh ->
     # validate-git-hook.sh; flext-law-loop.sh validated the whole workspace
-    # from its root and retired with the root fan-out).
+    # from its root and retired with the root fan-out; the mise bootstrap
+    # pair and its lock publisher/converger retired with mise self-management
+    # — the pinned release is the [tools] entry mise.lock provisions).
     retired_projections:
       - .github/scripts/install-git-hooks.sh
       - .github/scripts/flext-law-loop.sh
+      # The retired mise bootstrap pair and its lock publisher/converger predate
+      # the generated-marker contract (the old templates emitted no banner), so
+      # each declares the literal bytes that prove machine provenance.
+      - path: bin/mise
+        evidence: "__mise_bootstrap"
+      - path: bin/mise.cmd
+        evidence: "__mise_bootstrap"
+      - path: bin/mise-lock-transaction.py
+        evidence: "Publish a Mise lock with its native sidecars"
+      - path: bin/mise-lock-converge.py
+        evidence: "Hold broken tool releases inside a ``make upg`` Mise lock stage."
+      - mise.version
 
     # Fresh import probes are independent subprocesses within one validation.
     fresh_import_workers: 3
@@ -163,14 +177,11 @@ Infra:
       python_compile: false
       # Projection: .mise.toml [settings] lockfile / locked and [tool_config] locked.
       # true: the committed lock written by `make upg` pins every tool and setup
-      # installs frozen from it. The lock is read only by the pinned mise
-      # release `upg` recorded in mise.version, so an older ambient mise
-      # never parses a newer lockfile format.
+      # installs frozen from it. Native mise reads its own lock; the release is
+      # pinned by the self-managed [tools] entry below, so no older ambient
+      # release can silently parse a newer lockfile format.
       mise_lockfile: true
       mise_locked: true
-      # Stable, ignored runtime mutex for the generated Mise lock publisher.
-      # It survives a concurrent make gen replacing the publisher script.
-      mise_transaction_lock_file: .mise-lock-transaction.lock
       # Projection: .mise.toml [settings] lockfile_platforms. The platforms the
       # CI matrix runs on (ubuntu, macos, windows runners, x64 and arm64);
       # `make upg` resolves these plus the current host, which mise always adds.
@@ -183,16 +194,13 @@ Infra:
         - macos-x64
         - macos-arm64
         - windows-x64
-      # The Mise release `make upg` writes to every project's mise.version and
-      # bakes into bin/mise and bin/mise.cmd. make upg resolves the hold under
-      # the dependency cooldown, so a hold younger than the cooldown resolves
-      # nothing and stops upg. 2026.9.16 is the fleet floor the consumers
-      # already carry (ai-hub measured green 2026-10-03) and the oldest pin
-      # that reads the v3 mise.lock the upg lock pass writes; 2026.9.13
-      # refuses that lock ("mise.lock does not satisfy .mise.toml"), which
-      # broke setup, gen and CI on every fresh checkout of this tip. The
-      # 2026.9.17 artifact fails the receipt check ("Mise receipt returned
-      # invalid version") — keep it out.
+      # mise self-management (F0, operator plan 2026-10-06): mise provisions
+      # itself through the [tools] entry these two values render into every
+      # .mise.toml. `mise install` provisions the pinned release from mise.lock
+      # (single source: this mise_version; no separate pin file exists), and
+      # every later `mise` resolved through the mise-managed shims runs exactly
+      # that release. The host bootstrap mise only needs to read the committed
+      # lockfile format.
       mise_selector: github:jdx/mise
       mise_version: "2026.10.3"
       beads:
@@ -717,8 +725,11 @@ Infra:
       - {name: .agents, source_scan_ignore: true, vscode_exclude: false, watch_exclude: false}
       - {name: .beads, source_scan_ignore: true}
       - {name: .benchmarks}
+    # Historical evidence trees (operator law: archives are evidence only,
+    # never live authority) are not production input to any analyzer.
     # Archive-not-delete target for the layout engine; the generated
     # .gitignore projection must never track archived loose files.
+      - {name: .archive, source_scan_ignore: true}
       - {name: .bkp}
       - {name: .cache, source_scan_ignore: true}
     # Agent worktrees are duplicate repositories, never production input.
@@ -764,6 +775,9 @@ Infra:
       - {name: build, source_scan_ignore: true}
       - {name: dist, source_scan_ignore: true}
       - {name: node_modules, source_scan_ignore: true}
+    # protoc-generated wire-protocol modules ("DO NOT EDIT"): conditional
+    # imports are intrinsic to the generated surface, never first-party code.
+      - {name: protos, source_scan_ignore: true}
       - {name: site, watch_exclude: false}
       - {name: target}
       - {name: .pyrefly_cache, vscode_exclude: false, watch_exclude: false, source_scan_ignore: true}
@@ -889,7 +903,6 @@ Infra:
         - pyproject.toml
         - uv.lock
         - mise.lock
-        - mise.version
         - Makefile
         - base.mk
         - custom.mk
@@ -1185,12 +1198,6 @@ Infra:
         policy: full
       - path: Makefile
         owner: make
-        policy: full
-      - path: bin/mise-lock-transaction.py
-        owner: codegen
-        policy: full
-      - path: bin/mise-lock-converge.py
-        owner: codegen
         policy: full
     # CUSTOM vs MANAGED (humans read comments; this block is the owner):
     #   conflict_sections = MANAGED tables (template wins on make gen)
@@ -1561,7 +1568,6 @@ Infra:
           patterns:
             - "!.mise.toml"
             - "!mise.lock"
-            - "!mise.version"
             - "!.mise.lock"
             - "!.python-version"
         # Native graphs referenced by mise.lock are required by locked installs.
@@ -1569,7 +1575,6 @@ Infra:
         - name: "mise native dependency graphs"
           profiles: [workspace, standalone]
           patterns:
-            - "/.mise-lock-transaction.lock"
             - "!/.mise/"
             - "/.mise/*"
             - "!/.mise/locks/"
@@ -1593,10 +1598,6 @@ Infra:
         # The generated toolchain config and launcher must reach a clean
         # CI checkout, so the deny-first root cannot swallow them;
         # `make gen` owns their content.
-            - "!bin/mise"
-            - "!bin/mise.cmd"
-            - "!bin/mise-lock-transaction.py"
-            - "!bin/mise-lock-converge.py"
         - name: "Documentation"
           profiles: [workspace]
           patterns:
@@ -1989,19 +1990,12 @@ Infra:
             - ".venv"
             - ".venv/"
             - ".bin/"
-        # Repo-root bin/: only the mise bootstrap pair is tracked; every
-        # other entry (venv shims, local symlinks) is machine-local and
-        # gets rewritten by `make setup`, so tracking it makes the docs
-        # byte-identical verification fail on a clean runner.
-        # A deny-all allowlist (`/*/`) excludes the bin/ directory itself,
-        # and git never descends into an excluded directory, so the two
-        # negations below cannot re-include the pair without this line.
+        # Repo-root bin/: no generated entry is tracked any more (mise
+        # self-manages through its own [tools] entry); every bin/ entry is
+        # machine-local. A deny-all allowlist (`/*/`) excludes the bin/
+        # directory itself, and git never descends into an excluded directory.
             - "!/bin/"
             - "/bin/*"
-            - "!/bin/mise"
-            - "!/bin/mise.cmd"
-            - "!/bin/mise-lock-transaction.py"
-            - "!/bin/mise-lock-converge.py"
             - ".tools/"
             - "__pycache__/"
             - "base.mk"
@@ -2167,14 +2161,6 @@ Infra:
           delegate: render
         - source: base/tests/fixtures/ci/docker/arch.Dockerfile.j2
           destination: tests/fixtures/ci/docker/arch.Dockerfile
-          profiles: [workspace, standalone]
-          delegate: render
-        - source: base/bin/mise-lock-transaction.py.j2
-          destination: bin/mise-lock-transaction.py
-          profiles: [workspace, standalone]
-          delegate: render
-        - source: base/bin/mise-lock-converge.py.j2
-          destination: bin/mise-lock-converge.py
           profiles: [workspace, standalone]
           delegate: render
         - source: base/Makefile.j2

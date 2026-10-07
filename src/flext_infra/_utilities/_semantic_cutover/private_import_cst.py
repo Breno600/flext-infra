@@ -9,12 +9,14 @@ from __future__ import annotations
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, override
 
-from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
+import libcst as cst
+from libcst.codemod import CodemodContext
+from libcst.codemod.visitors import AddImportsVisitor
+from libcst.metadata import MetadataWrapper, ParentNodeProvider, QualifiedNameProvider
+
 
 if TYPE_CHECKING:
-    import libcst as cst
-
-    from flext_infra import models as m, typings as t
+    from flext_infra import m, t
 
 
 class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
@@ -36,8 +38,8 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
             The resulting ``str``.
 
         """
-        import libcst as cst
 
+        from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
         class _DeclaredExports(cst.CSTTransformer):
             """Relocate imports without renaming their consumer-side bindings."""
 
@@ -111,15 +113,8 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
                 if ambiguous private import binding.
 
         """
-        import libcst as cst
-        from libcst.codemod import CodemodContext
-        from libcst.codemod.visitors import AddImportsVisitor
-        from libcst.metadata import (
-            MetadataWrapper,
-            ParentNodeProvider,
-            QualifiedNameProvider,
-        )
 
+        from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
         class _PrivateImportTransformer(cst.CSTTransformer):
             METADATA_DEPENDENCIES = (ParentNodeProvider, QualifiedNameProvider)
 

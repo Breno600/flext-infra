@@ -9,16 +9,7 @@ from __future__ import annotations
 import ast
 from collections.abc import Iterator
 
-from flext_infra._utilities.rope_runtime_modules import (
-    FlextInfraUtilitiesRopeRuntimeModules,
-)
-from flext_infra._utilities.rope_runtime_refactors import (
-    FlextInfraUtilitiesRopeRuntimeRefactors,
-)
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra import c, m, p, t
 
 
 class FlextInfraUtilitiesSemanticFamilyTypeReferences:
@@ -45,6 +36,7 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
         *,
         flatten: m.Infra.FamilyWrapperFlatten,
     ) -> t.Pair[bool, t.VariadicTuple[m.Infra.SourceRewrite]]:
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         module = flatten.project.get_pymodule(resource)
         edits: list[m.Infra.SourceRewrite] = []
@@ -81,6 +73,7 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
         *,
         flatten: m.Infra.FamilyWrapperFlatten,
     ) -> t.Pair[bool, str]:
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules, FlextInfraUtilitiesRopeRuntimeRefactors
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         nodes = tuple(
             cls._type_nodes(
@@ -134,6 +127,7 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
             The resulting ``t.Pair[bool, m.Infra.SourceRewrite | None]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         names = flatten.names
         start, end = cls._expression_range(source, node)
@@ -259,6 +253,7 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
         project: p.Infra.RopeProject,
         scope: p.Infra.RopeScope,
     ) -> Iterator[ast.expr]:
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
         yield node
         if isinstance(node, ast.Subscript):
             yield from cls._type_nodes(node.value, project, scope)

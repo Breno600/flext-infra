@@ -64,7 +64,13 @@ jobs:
           key: ${{ runner.os }}-3.13-tools-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-3.13-tools-
-
+- name: Install mise
+        shell: bash
+        run: |
+          set -eu
+          curl -fsSL https://mise.run | sh
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+          echo "${HOME}/.local/share/mise/shims" >> "${GITHUB_PATH}"
 
       - name: Sync workspace toolchain
         run: make setup
@@ -149,6 +155,10 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
+      # The build job runs Configure Pages on main, and the Pages REST
+      # endpoint rejects a token without Pages write even for reads
+      # ("Resource not accessible by integration").
+      pages: write
     # Why: same authenticated toolchain and docs-source resolution as docs-quality.
     env:
       GITHUB_TOKEN: ${{ github.token }}
@@ -177,7 +187,13 @@ jobs:
           key: ${{ runner.os }}-3.13-tools-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-3.13-tools-
-
+- name: Install mise
+        shell: bash
+        run: |
+          set -eu
+          curl -fsSL https://mise.run | sh
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+          echo "${HOME}/.local/share/mise/shims" >> "${GITHUB_PATH}"
 
       - name: Sync workspace toolchain
         run: make setup

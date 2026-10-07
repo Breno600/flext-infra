@@ -14,11 +14,6 @@ from importlib.util import resolve_name
 from pathlib import Path
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities._rope_analysis.sourcescan import (
-    FlextInfraUtilitiesRopeAnalysisSourceScan,
-)
-from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeSourceBases:
@@ -193,6 +188,14 @@ class FlextInfraUtilitiesRopeSourceBases:
                 aliases[key_node.value] = value
         return aliases
 
+    @staticmethod
+    def _subscript_root_name(target: ast.Subscript) -> str:
+        """Return the root name of a subscript target's value expression."""
+        value = target.value
+        if isinstance(value, ast.Attribute):
+            value = value.value
+        return value.id if isinstance(value, ast.Name) else ""
+
     @classmethod
     def _inventory(
         cls,
@@ -219,6 +222,7 @@ class FlextInfraUtilitiesRopeSourceBases:
             ValueError: If a required binding has unsupported source semantics.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisSourceScan, FlextInfraUtilitiesRopeCore, FlextInfraUtilitiesRopeRuntime
         resource = (
             FlextInfraUtilitiesRopeCore.resolve_resource_from_path(project, path)
             if path.is_file()
@@ -347,6 +351,19 @@ class FlextInfraUtilitiesRopeSourceBases:
                         ):
                             # Provider function metadata does not rebind a class.
                             continue
+                        if allow_conditional and all(
+                            isinstance(target, ast.Subscript)
+                            and m.Infra.SubscriptRebind(
+                                root_name=cls._subscript_root_name(target),
+                            ).is_module_table_mutation
+                            for target in targets
+                        ):
+                            # Standard-library alias re-registration (CPython's
+                            # ``collections`` publishes ``sys.modules[
+                            # 'collections.abc'] = _collections_abc``): an
+                            # external runtime table mutation, never a class
+                            # rebind — the touched names stay unknown.
+                            continue
                         if (
                             len(targets) == 1
                             and isinstance(targets[0], ast.Attribute)
@@ -361,7 +378,10 @@ class FlextInfraUtilitiesRopeSourceBases:
                             # its own exported namespace, so the binding map
                             # registers it exactly like a module-level alias.
                             visible = {**lexical, **bindings}
-                            if node.value.id in visible and visible[node.value.id] is not None:
+                            if (
+                                node.value.id in visible
+                                and visible[node.value.id] is not None
+                            ):
                                 reference = cls._reference(node.value, visible, module)
                                 if reference is not None:
                                     bindings[targets[0].attr] = reference.model_copy(
@@ -553,6 +573,7 @@ class FlextInfraUtilitiesRopeSourceBases:
             ValueError: If a source binding or inheritance order is invalid.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeCore, FlextInfraUtilitiesRopeRuntime
         definitions: MutableMapping[str, m.Infra.SourceClassDefinition] = {}
         sys.setrecursionlimit(max(sys.getrecursionlimit(), 4096))
         modules = {

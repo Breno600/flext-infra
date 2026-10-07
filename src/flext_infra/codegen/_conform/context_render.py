@@ -10,16 +10,11 @@ from collections.abc import Mapping
 from pathlib import Path
 
 from flext_core import r
+from flext_infra import c, m, p, t, u
 from flext_infra._config import config
 from flext_infra.codegen._conform.pyproject_policy import (
     FlextInfraCodegenConformPyprojectPolicy,
 )
-from flext_infra.constants import c
-from flext_infra.deps import FlextInfraEnsurePackagingPhase
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
-from flext_infra.utilities import u
 
 
 class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPolicy):
@@ -144,7 +139,6 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         return r[m.Infra.MakeRenderContext].ok(
             m.Infra.MakeRenderContext(
                 pytest=config.Infra.tooling.tools.pytest,
-                mise_bootstrap=u.Infra.mise_bootstrap_environment(),
                 make=codegen.make,
                 mypy_timeout_exit_code=c.Infra.PROCESS_TIMEOUT_EXIT_CODE,
                 timeout_command=c.Infra.TIMEOUT_COMMAND,
@@ -259,6 +253,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             The resulting ``p.Result[m.Infra.ProjectRenderContext]``.
 
         """
+        from flext_infra.deps import FlextInfraEnsurePackagingPhase
         target = render_inputs.target
         workspace = render_inputs.workspace
         codegen = render_inputs.codegen
@@ -360,13 +355,11 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 **make_context.value.model_dump(
                     by_alias=True,
                     exclude={
-                        "mise_bootstrap",
                         "ruff_per_file_ignores",
                         "ruff_extend_exclude",
                     },
                     exclude_computed_fields=True,
                 ),
-                mise_bootstrap=u.Infra.mise_bootstrap_environment(),
                 scaffold=codegen.scaffold,
                 gitignore_sections=u.Infra.gitignore_sections(
                     codegen,

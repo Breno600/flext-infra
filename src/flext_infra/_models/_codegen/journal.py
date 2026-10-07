@@ -12,7 +12,7 @@ from typing import Annotated, ClassVar, Literal, Self
 
 from flext_cli import m
 
-from flext_infra.typings import t
+from flext_infra import t
 
 
 class FlextInfraModelsCodegenJournalModels:

@@ -8,15 +8,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_infra._utilities._promoted.workspace import (
-    FlextInfraUtilitiesPromotedWorkspace,
-)
-from flext_infra.constants import c
+
+from flext_infra import c, m
+from flext_infra._utilities import FlextInfraUtilitiesPromotedWorkspace
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import protocols as p, typings as t
+    from flext_infra import p, t
 
 
 class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
@@ -33,8 +32,7 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
                 c.Infra.PromotedRegistryError]``.
 
         """
-        from flext_infra import u
-
+        from flext_cli import u
         header = c.Infra.PromotedHeader
         headers: t.MutableMappingKV[
             Path,
@@ -88,8 +86,6 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
             The resulting ``p.Infra.PromotedCommand``.
 
         """
-        from flext_infra import models as m
-
         key = c.Infra.PromotedHeader
         message = c.Infra.PromotedMessage
         verb = cls._promoted_text(data, key.VERB, path)

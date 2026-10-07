@@ -8,17 +8,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_cli import u
 
-from flext_infra._utilities._rope_core_pymodule import (
-    FlextInfraUtilitiesRopeCorePyModuleMixin,
-)
-from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
-from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra import c, m, p, t
 
 
 class FlextInfraUtilitiesRopeClassMove:
@@ -32,6 +23,7 @@ class FlextInfraUtilitiesRopeClassMove:
             The resulting ``Path``.
 
         """
+        from flext_cli import u
         target_file, mover = cls._class_mover(request)
         root = Path(request.rope_project.root.real_path).resolve()
         if not request.apply:
@@ -126,11 +118,11 @@ class FlextInfraUtilitiesRopeClassMove:
             The resulting ``t.Pair[Path, p.Infra.RopeMoveGlobal]``.
 
         Raises:
-            FileNotFoundError: If ``not source_file.is_file()``; or if ``not
-                target_file.parent.is_dir()``.
+            FileNotFoundError: If ``not source_file.is_file()``.
             ValueError: If class move source and target are identical; or if class.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeCorePyModuleMixin, FlextInfraUtilitiesRopeRuntime
         root = Path(request.rope_project.root.real_path).resolve()
         source_file = cls._owned_path(root, request.source_file)
         target_file = cls._owned_path(root, request.target_file)
@@ -139,8 +131,10 @@ class FlextInfraUtilitiesRopeClassMove:
             raise ValueError(msg)
         if not source_file.is_file():
             raise FileNotFoundError(source_file)
-        if not target_file.parent.is_dir():
-            raise FileNotFoundError(target_file.parent)
+        # A relocation into a family establishes it: the move already
+        # bootstraps a missing target file, so a missing family directory is
+        # created the same way instead of failing the verb.
+        target_file.parent.mkdir(parents=True, exist_ok=True)
 
         source_resource = cls._resource(request.rope_project, root, source_file)
         source = source_resource.read()
@@ -186,6 +180,7 @@ class FlextInfraUtilitiesRopeClassMove:
             The resulting ``Path``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
         module_stem = cls.class_module_stem(class_name)
         if family:
             family_dir = FlextInfraUtilitiesCodegenNamespace.facade_families()[

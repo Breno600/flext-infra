@@ -10,15 +10,8 @@ import re
 import sys
 from pathlib import Path
 
-from flext_cli import u
 
-from flext_infra._config import config
-from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
-from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
-from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra import c, m, t
 
 
 class FlextInfraUtilitiesDocsAuditDetectorsMixin:
@@ -41,6 +34,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
             The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocs
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         if not tokens:
             return issues
@@ -71,6 +65,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
             The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocs
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         compiled = tuple(re.compile(pattern) for pattern in patterns)
         for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
@@ -105,6 +100,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
             The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocs
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         evidence = set(historical_evidence_files)
         for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
@@ -145,6 +141,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
             The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocs, FlextInfraUtilitiesDocsScope
         if scope.name != c.Infra.RK_ROOT:
             return []
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
@@ -182,6 +179,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
             The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocsScope
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         api_reference = scope.path / c.Infra.DIR_DOCS / "api-reference"
         candidates: t.MutableSequenceOf[Path] = (
@@ -218,6 +216,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
             The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocsApi
         if scope.name == c.Infra.RK_ROOT or not scope.package_name:
             return []
         contract = FlextInfraUtilitiesDocsApi.public_contract(
@@ -236,6 +235,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
             The resulting ``m.Infra.DocstringCoverage | None``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocsApi
         if scope.name == c.Infra.RK_ROOT or not scope.package_name:
             return None
         contract = FlextInfraUtilitiesDocsApi.public_contract(
@@ -259,6 +259,9 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
             The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
 
         """
+        from flext_cli import u
+        from flext_infra._config import config
+        from flext_infra._utilities import FlextInfraUtilitiesDocs
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
             rel = md_file.relative_to(scope.path).as_posix()

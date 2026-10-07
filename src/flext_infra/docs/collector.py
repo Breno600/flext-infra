@@ -10,13 +10,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
-from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
-from flext_infra.models import m
-from flext_infra.utilities import u
+from flext_infra import m, u
 
 if TYPE_CHECKING:
-    from flext_infra.docs.protocols import p
+    from flext_infra import p
 
 
 class FlextInfraDocCollector:
@@ -30,6 +27,8 @@ class FlextInfraDocCollector:
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
+        from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
         root = request.repository_root
         if not root.is_absolute() or ".." in root.parts or root.resolve() != root:
             return r[bool].fail(

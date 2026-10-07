@@ -12,11 +12,8 @@ from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
 
 from flext_core import r
-from flext_infra.constants import c
-from flext_infra.protocols import p
+from flext_infra import c, p, t, u
 from flext_infra.release._release_source import FlextInfraReleaseSourceMixin
-from flext_infra.typings import t
-from flext_infra.utilities import u
 
 
 class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
