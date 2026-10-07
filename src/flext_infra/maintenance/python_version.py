@@ -27,7 +27,7 @@ from flext_infra.utilities import u
 
 if TYPE_CHECKING:
     from flext_infra.protocols import p
-    from flext_infra.maintenance.typings import t
+    from flext_infra.typings import t
 
 
 class FlextInfraPythonVersionEnforcer(s[int]):

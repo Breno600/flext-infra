@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from flext_infra.protocols import p
-    from flext_infra.codegen.typings import t
+    from flext_infra.typings import t
 
 
 class FlextInfraCodegenLazyInitPlannerParentsMixin:

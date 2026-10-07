@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from flext_infra._protocols.typings import t
+    from flext_infra.typings import t
 
 
 @runtime_checkable

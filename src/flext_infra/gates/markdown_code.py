@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from flext_infra.protocols import p
-    from flext_infra.gates.typings import t
+    from flext_infra.typings import t
 
 
 class FlextInfraMarkdownCodeGate(FlextInfraGate):

@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     # converted atomically; this import never enters the runtime dependency graph.
 
     from flext_infra.protocols import p
-    from flext_infra._protocols.typings import t
+    from flext_infra.typings import t
 
 
 @runtime_checkable

@@ -20,7 +20,7 @@ from flext_infra.utilities import u
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
 
-    from flext_infra.refactor.typings import t
+    from flext_infra.typings import t
 
 
 class FlextInfraNamespaceRelocationCascade:

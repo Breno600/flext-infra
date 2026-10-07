@@ -15,7 +15,7 @@ from flext_infra.refactor.namespace_relocations import (
 )
 
 if TYPE_CHECKING:
-    from flext_infra.refactor.typings import t
+    from flext_infra.typings import t
 
 
 class FlextInfraNamespaceEnforcerProjectMixin:

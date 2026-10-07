@@ -10,7 +10,7 @@ import re
 from typing import TYPE_CHECKING, ClassVar, Literal
 
 if TYPE_CHECKING:
-    from flext_infra._constants.typings import t
+    from flext_infra.typings import t
 
 
 class FlextInfraConstantsDocs:

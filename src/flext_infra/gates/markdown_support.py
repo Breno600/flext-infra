@@ -18,8 +18,8 @@ from flext_infra.gates.base_gate import FlextInfraGate
 from flext_infra.utilities import u
 
 if TYPE_CHECKING:
-    from flext_infra.gates.models import m
-    from flext_infra.gates.typings import t
+    from flext_infra.models import m
+    from flext_infra.typings import t
 
 
 class FlextInfraMarkdownGateBase(FlextInfraGate):

@@ -20,7 +20,7 @@ from flext_infra.utilities import u
 
 if TYPE_CHECKING:
     from flext_infra.protocols import p
-    from flext_infra.codegen.typings import t
+    from flext_infra.typings import t
 
 type _JournalFileRole = Literal["desired", "backup", "rollback"]
 

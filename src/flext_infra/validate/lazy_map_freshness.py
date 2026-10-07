@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from flext_infra.protocols import p
-    from flext_infra.validate.typings import t
+    from flext_infra.typings import t
 
 
 class FlextInfraValidateLazyMapFreshness(FlextInfraProjectSelectionServiceBase[bool]):
