@@ -219,7 +219,7 @@ class FlextInfraUtilitiesRopeSourceBasesFamily:
             )
             globals_: MutableMapping[str, m.Infra.SourceClassReference | None] = {}
             collector = (
-                FlextInfraUtilitiesRopeSourceBasesFamily._SourceBindingCollector(
+                _SourceBindingCollector(
                     module=module,
                     package=package,
                     definitions=self._definitions,
