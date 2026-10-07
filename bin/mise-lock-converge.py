@@ -112,6 +112,7 @@ class MiseLockConverge:
         "MISE_GITHUB_TOKEN",
         "MISE_HTTP_TIMEOUT",
         "FLEXT_MYPY_PROFILE_OUTPUT",
+        "FLEXT_SETUP_CREDENTIAL_STORE",
         "MISE_VERSION",
     )
     RUNTIME_INSTALL_RELATIVE_TEMPLATE = "bootstrap/mise-{release}"

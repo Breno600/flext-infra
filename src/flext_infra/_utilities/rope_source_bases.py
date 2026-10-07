@@ -7,7 +7,6 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import ast
-import contextlib
 import importlib.util
 import sys
 from collections.abc import MutableMapping
@@ -55,7 +54,7 @@ class FlextInfraUtilitiesRopeSourceBases:
             The bound identity, attributes, and Ruff-qualified spelling.
 
         Raises:
-            TypeError: If the expression or its lexical binding is not a class.
+            ValueError: If the expression or its lexical binding is not a class.
 
         """
         # Unwrap Subscript and Attribute in ONE loop: a chained form like
@@ -73,13 +72,13 @@ class FlextInfraUtilitiesRopeSourceBases:
             message = (
                 f"Unsupported class reference in {module}: {ast.unparse(expression)}"
             )
-            raise TypeError(message)
+            raise ValueError(message)
         name = expression.id
         if name in bindings:
             binding = bindings[name]
             if binding is None:
                 message = f"Non-class binding used as a base in {module}: {name}"
-                raise TypeError(message)
+                raise ValueError(message)
         else:
             binding = m.Infra.SourceClassReference(
                 target="builtins",
@@ -107,9 +106,10 @@ class FlextInfraUtilitiesRopeSourceBases:
         if cached:
             return cached or None
         backing: str | None = None
-        runtime: str | None = None
-        with contextlib.suppress(Exception):
+        try:
             runtime = importlib.import_module(target)
+        except Exception:
+            runtime = None
         file = getattr(runtime, "__file__", None)
         if file:
             stem = Path(file).stem
@@ -338,11 +338,48 @@ class FlextInfraUtilitiesRopeSourceBases:
                         node.targets if isinstance(node, ast.Assign) else [node.target]
                     )
                     if any(not isinstance(target, ast.Name) for target in targets):
-                        # Attribute and subscript targets mutate an existing
-                        # object; they never declare a lexical class binding,
-                        # so the scan records nothing and resolution keeps its
-                        # own failure for a binding that is actually required.
-                        continue
+                        if allow_conditional and all(
+                            isinstance(target, ast.Attribute)
+                            and isinstance(target.value, ast.Name)
+                            and target.value.id in bindings
+                            and bindings[target.value.id] is None
+                            for target in targets
+                        ):
+                            # Provider function metadata does not rebind a class.
+                            continue
+                        if (
+                            len(targets) == 1
+                            and isinstance(targets[0], ast.Attribute)
+                            and isinstance(targets[0].value, ast.Name)
+                            and targets[0].value.id in bindings
+                            and bindings[targets[0].value.id] is not None
+                            and isinstance(node.value, ast.Name)
+                        ):
+                            # Class-namespace completion rebind (``base.t = final``):
+                            # a module completes a deferred base namespace and
+                            # publishes the RHS class under the attribute name in
+                            # its own exported namespace, so the binding map
+                            # registers it exactly like a module-level alias.
+                            visible = {**lexical, **bindings}
+                            if (
+                                node.value.id in visible
+                                and visible[node.value.id] is not None
+                            ):
+                                reference = cls._reference(node.value, visible, module)
+                                if reference is not None:
+                                    bindings[targets[0].attr] = reference.model_copy(
+                                        update={
+                                            "qualified_base": (
+                                                f"{module}.{targets[0].attr}"
+                                            ),
+                                        },
+                                    )
+                            continue
+                        message = (
+                            f"Unsupported class binding mutation in {module}: "
+                            f"{ast.unparse(node)}"
+                        )
+                        raise ValueError(message)
                     value = node.value
                     if value is None:
                         continue
@@ -514,9 +551,9 @@ class FlextInfraUtilitiesRopeSourceBases:
         Returns:
             Sorted configured roots and derived Ruff-qualified base expressions.
 
-        The ``TypeError`` (Rope resolved a required base to a non-class) and
-        the ``ValueError`` (invalid source binding or inheritance order) of
-        the resolution helpers propagate unchanged.
+        Raises:
+            TypeError: If Rope resolves a required base to a non-class.
+            ValueError: If a source binding or inheritance order is invalid.
 
         """
         definitions: MutableMapping[str, m.Infra.SourceClassDefinition] = {}
@@ -555,7 +592,7 @@ class FlextInfraUtilitiesRopeSourceBases:
             module_aliases.setdefault(alias, absolute)
         owned_definitions = tuple(definitions.values())
         definition_keys: dict[str, str] = {}
-        for definition_identity in definitions:
+        for definition_identity, definition in definitions.items():
             module_name, qualified, _ = definition_identity.split(":", 2)
             definition_keys[f"{module_name}.{qualified}"] = definition_identity
         external: MutableMapping[str, t.Infra.RopePyObject] = {}
@@ -740,14 +777,13 @@ class FlextInfraUtilitiesRopeSourceBases:
                 chain = " <- ".join(sorted(visiting))
                 message = f"Cyclic provider reexport: {target} (visiting: {chain})"
                 raise ValueError(message)
-            binding: p.Infra.RopeImportedName | object | None = None
-            # The provider cannot resolve the attribute statically (a star
-            # re-export, a runtime-injected name): the base degrades to its
-            # qualified name as a synthetic terminal identity instead of
-            # failing the whole walk.
-            with contextlib.suppress(Exception):
+            try:
                 binding = module.get_attribute(name)
-            if binding is None:
+            except Exception:
+                # The provider cannot resolve the attribute statically (a
+                # star re-export, a runtime-injected name): the base
+                # degrades to its qualified name as a synthetic terminal
+                # identity instead of failing the whole walk.
                 return target
             if isinstance(binding, p.Infra.RopeImportedName):
                 imported_name = provider_module_name(binding.imported_module)
@@ -912,11 +948,8 @@ class FlextInfraUtilitiesRopeSourceBases:
                 )
             value = external[identity]
             if not isinstance(value, p.Infra.RopeBuiltinClass):
-                message = (
-                    "External class has no declared source or native identity:"
-                    f" {identity}"
-                )
-                raise TypeError(message)
+                message = f"External class has no declared source or native identity: {identity}"
+                raise ValueError(message)
             builtin_class = FlextInfraUtilitiesRopeRuntime.runtime_type(
                 "rope.base.builtins",
                 "BuiltinClass",

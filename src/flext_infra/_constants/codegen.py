@@ -256,6 +256,11 @@ class FlextInfraConstantsCodegen(
         "MISE_GITHUB_TOKEN",
         "MISE_HTTP_TIMEOUT",
         "FLEXT_MYPY_PROFILE_OUTPUT",
+        # The docs-lifecycle CI mints a private-dependency installation token
+        # into this 0600 store (ci.yml FLEXT_SETUP_CREDENTIAL_STORE); the
+        # bootstrap carries it so git fetches inside uv/mise subprocesses
+        # authenticate the private sibling clones.
+        "FLEXT_SETUP_CREDENTIAL_STORE",
         # The generated launchers bake their release; the bootstrap passes the
         # committed pin, or the release `make upg` is installing, explicitly.
         "MISE_VERSION",
