@@ -20,7 +20,7 @@ from flext_core import r
 from flext_infra import c, m, p, t
 
 
-class FlextInfraUtilitiesDependencies:
+class FlextInfraUtilitiesDependenciesFamily:
     """Canonical namespace owner."""
 
     # Why: dependency_waves subscripts r[t.SequenceOf[t.StrSequence]] at runtime, so
@@ -196,7 +196,7 @@ class FlextInfraUtilitiesDependencies:
                     for dependency in item.runtime
                     if (
                         name
-                        := FlextInfraUtilitiesDependencies.FlextInfraUtilitiesDependencies.dep_name(
+                        := FlextInfraUtilitiesDependencies.dep_name(
                             dependency,
                         )
                     )
@@ -303,7 +303,7 @@ class FlextInfraUtilitiesDependencies:
                 values: list[str] = []
                 for group in raw.values():
                     values.extend(
-                        FlextInfraUtilitiesDependencies.FlextInfraUtilitiesDependencies.raw_requirement_values(
+                        FlextInfraUtilitiesDependencies.raw_requirement_values(
                             group,
                         ),
                     )
@@ -795,7 +795,7 @@ class FlextInfraUtilitiesDependencies:
                 item = raw.strip()
                 if not item:
                     continue
-                dependency_name = FlextInfraUtilitiesDependencies.FlextInfraUtilitiesDependencies.dep_name(
+                dependency_name = FlextInfraUtilitiesDependencies.dep_name(
                     item,
                 )
                 if dependency_name is None or dependency_name in selected_by_name:
@@ -966,7 +966,7 @@ class FlextInfraUtilitiesDependencies:
 # inside the family facade and the from-import contract requires the flat
 # binding to survive.
 FlextInfraUtilitiesDependencies = (
-    FlextInfraUtilitiesDependencies.FlextInfraUtilitiesDependencies
+    FlextInfraUtilitiesDependenciesFamily.FlextInfraUtilitiesDependencies
 )
 
 __all__: list[str] = ["FlextInfraUtilitiesDependencies"]

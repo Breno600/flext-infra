@@ -18,7 +18,7 @@ from typing import ClassVar
 from flext_infra import c, m, p, t
 
 
-class FlextInfraUtilitiesRopeSourceBases:
+class FlextInfraUtilitiesRopeSourceBasesFamily:
     """Canonical namespace owner."""
 
     class _SourceBindingCollector:
@@ -783,12 +783,14 @@ class FlextInfraUtilitiesRopeSourceBases:
                 module if path.name == "__init__.py" else module.rpartition(".")[0]
             )
             globals_: MutableMapping[str, m.Infra.SourceClassReference | None] = {}
-            collector = FlextInfraUtilitiesRopeSourceBases._SourceBindingCollector(
-                module=module,
-                package=package,
-                definitions=self._definitions,
-                required_line=required_line,
-                allow_conditional=allow_conditional,
+            collector = (
+                FlextInfraUtilitiesRopeSourceBasesFamily._SourceBindingCollector(
+                    module=module,
+                    package=package,
+                    definitions=self._definitions,
+                    required_line=required_line,
+                    allow_conditional=allow_conditional,
+                )
             )
             collector.collect(parsed.body, globals_, globals_, "")
             targets, references = (
@@ -1704,7 +1706,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                 Sorted configured roots and derived Ruff-qualified base expressions.
 
             """
-            return FlextInfraUtilitiesRopeSourceBases._RuntimeBaseResolver(
+            return FlextInfraUtilitiesRopeSourceBasesFamily._RuntimeBaseResolver(
                 project,
                 sources,
                 roots,
@@ -1716,7 +1718,7 @@ class FlextInfraUtilitiesRopeSourceBases:
 # internal from-import contract resolve this name at module scope
 # (the S6 nesting moved the class inside the family facade).
 FlextInfraUtilitiesRopeSourceBases = (
-    FlextInfraUtilitiesRopeSourceBases.FlextInfraUtilitiesRopeSourceBases
+    FlextInfraUtilitiesRopeSourceBasesFamily.FlextInfraUtilitiesRopeSourceBases
 )
 
 __all__: list[str] = ["FlextInfraUtilitiesRopeSourceBases"]
