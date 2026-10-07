@@ -13,8 +13,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m, u
-from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
-from flext_infra.refactor._import_enforcement import FlextInfraImportNormalization
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
@@ -117,6 +115,8 @@ class FlextInfraNamespaceRelocationCascade:
                 t.Pair[c.Infra.CodemodRelocation, m.Infra.ModScanFinding]]``.
 
         """
+        from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
+
         report = FlextInfraModGateEngine.scan(project_root, fix=False).unwrap()
         return FlextInfraNamespaceRelocationCascade.findings_from_report(
             project_root,
@@ -289,6 +289,10 @@ class FlextInfraNamespaceRelocationCascade:
             ValueError: If an unbatched relocation reaches the name pass.
 
         """
+        from flext_infra.refactor._import_enforcement import (
+            FlextInfraImportNormalization,
+        )
+
         match relocation:
             case c.Infra.CodemodRelocation.PROTOCOL:
                 u.Infra.rewrite_manual_protocol_violations(

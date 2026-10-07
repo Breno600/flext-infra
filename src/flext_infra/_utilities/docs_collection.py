@@ -12,10 +12,7 @@ from hashlib import sha256
 from pathlib import Path
 
 from flext_infra import m, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesDocsCollectionVerify,
-    FlextInfraUtilitiesDocsContract,
-)
+from flext_infra._utilities import FlextInfraUtilitiesDocsCollectionVerify
 
 
 class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify):
@@ -42,6 +39,8 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                 changed during read.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocsContract
+
         root = repository_root.absolute()
         relative = configuration.canonical_dir
         if relative.is_absolute() or not relative.parts or ".." in relative.parts:

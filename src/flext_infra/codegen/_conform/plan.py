@@ -15,8 +15,6 @@ from flext_infra._config import config
 from flext_infra.codegen._conform.scaffold_plan import (
     FlextInfraCodegenConformScaffoldPlan,
 )
-from flext_infra.codegen._mise_artifacts_cold_start import FlextInfraMiseColdStart
-from flext_infra.workspace import FlextInfraWorkspaceDetector
 
 
 class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
@@ -32,6 +30,11 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
             The resulting ``p.Result[m.Infra.CodegenPlan]``.
 
         """
+        from flext_infra.codegen._mise_artifacts_cold_start import (
+            FlextInfraMiseColdStart,
+        )
+        from flext_infra.workspace import FlextInfraWorkspaceDetector
+
         config_spec = config.Infra.codegen
         root = request.root.expanduser().resolve()
         repository_root = root

@@ -14,8 +14,6 @@ import libcst as cst
 
 from flext_core import r
 from flext_infra import c, m, u
-from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
-from flext_infra.transformers import FlextInfraSemanticPublication
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -72,6 +70,9 @@ class FlextInfraModReplacements:
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
+        from flext_infra.transformers import FlextInfraSemanticPublication
+
         allowed = cls.require_authored(
             tuple(finding for finding in report.entries if finding.actionable),
         )

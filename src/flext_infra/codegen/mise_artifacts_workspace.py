@@ -12,13 +12,9 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, u
-from flext_infra.codegen._mise_artifacts_derivation import (
-    FlextInfraMiseArtifactsDerivation,
-)
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
-from flext_infra.workspace import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -105,6 +101,8 @@ class FlextInfraMiseWorkspacePlanner:
             The resulting ``p.Result[m.Infra.MiseToolchainWorkspaceLayout]``.
 
         """
+        from flext_infra.workspace import FlextInfraWorkspaceDetector
+
         requested = self._owner.repository_root.expanduser().absolute()
         resolved_scope = (
             self.scope_root() if scope_root is None else r[Path].ok(scope_root)
@@ -514,6 +512,10 @@ class FlextInfraMiseWorkspacePlanner:
             The resulting ``p.Result[m.Infra.MiseToolchainArtifactSet]``.
 
         """
+        from flext_infra.codegen._mise_artifacts_derivation import (
+            FlextInfraMiseArtifactsDerivation,
+        )
+
         result_type = r[m.Infra.MiseToolchainArtifactSet]
         paths = tuple(scope_root / name for name, _mode in c.Infra.ARTIFACT_SPECS)
         runtime = FlextInfraMiseWorkspacePlanner._artifact_set(

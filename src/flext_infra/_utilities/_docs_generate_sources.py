@@ -12,10 +12,6 @@ from flext_cli import u as cli_u
 
 from flext_core import r
 from flext_infra import c, m, p, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesCodegenFilePlan,
-    FlextInfraUtilitiesDocsScope,
-)
 
 
 class FlextInfraUtilitiesDocsGenerateSourcesMixin:
@@ -80,6 +76,8 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
 
         from flext_cli import u as cli_u
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocsScope
+
         roots = FlextInfraUtilitiesDocsScope.docs_repository_roots(
             repository_root,
             extra_roots,
@@ -168,6 +166,8 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesCodegenFilePlan
+
         discovered = FlextInfraUtilitiesDocsGenerateSourcesMixin.docs_source_paths(
             repository_root,
             extra_roots,

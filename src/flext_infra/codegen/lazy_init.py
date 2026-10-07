@@ -16,13 +16,9 @@ from typing import TYPE_CHECKING, Annotated, override
 from flext_core import r
 from flext_infra import c, m, t, u
 from flext_infra._config import config
-from flext_infra._models import FlextInfraCodegenLazyInitPlanner
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
 from flext_infra.codegen._lazy_init_generation import (
     FlextInfraCodegenLazyInitGenerationMixin,
-)
-from flext_infra.codegen._lazy_init_projection_manifest import (
-    FlextInfraCodegenLazyInitProjectionManifest,
 )
 from flext_infra.workspace.rope import FlextInfraRopeWorkspace
 
@@ -144,6 +140,10 @@ class FlextInfraCodegenLazyInit(
             The resulting ``p.Result[m.Infra.CodegenPhaseAnalysis]``.
 
         """
+        from flext_infra.codegen._lazy_init_projection_manifest import (
+            FlextInfraCodegenLazyInitProjectionManifest,
+        )
+
         roots = (
             (self.repository_root.resolve(),)
             if self.project_scope_roots is None
@@ -242,6 +242,8 @@ class FlextInfraCodegenLazyInit(
             The resulting ``p.Result[m.Infra.CodegenPhaseAnalysis]``.
 
         """
+        from flext_infra._models import FlextInfraCodegenLazyInitPlanner
+
         workspace_index = rope.workspace_index
         resolved_repository_root = self.repository_root.resolve()
         candidate_entries = tuple(

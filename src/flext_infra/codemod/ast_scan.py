@@ -20,7 +20,6 @@ from flext_cli import cli
 from flext_core import r
 from flext_infra import p, t, u
 from flext_infra.base import FlextInfraServiceBase
-from flext_infra.codemod import FlextInfraModGateEngine, FlextInfraModTextGateEngine
 
 
 class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):
@@ -34,6 +33,11 @@ class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
+        from flext_infra.codemod import (
+            FlextInfraModGateEngine,
+            FlextInfraModTextGateEngine,
+        )
+
         planned = u.Infra.codemod_rule_plan(self.repository_root)
         if planned.failure:
             return r[t.Cli.ResultValue].from_failure(planned)
@@ -91,6 +95,11 @@ class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
+        from flext_infra.codemod import (
+            FlextInfraModGateEngine,
+            FlextInfraModTextGateEngine,
+        )
+
         cli.display_text("ast: validate ast-grep rule fixtures")
         FlextInfraModGateEngine.validate_rule_fixtures(root, rules).unwrap()
         current = FlextInfraModGateEngine.scan(root, fix=False).unwrap()

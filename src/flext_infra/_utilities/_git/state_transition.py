@@ -9,8 +9,6 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from flext_cli import u
-
 from flext_infra import c, m, t
 from flext_infra._utilities import FlextInfraUtilitiesGitStateFilesMixin
 
@@ -167,6 +165,8 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
         *,
         cleanup: bool,
     ) -> None:
+        from flext_cli import u
+
         expected = {file.path: file for file in snapshot.files}
         base = {
             entry.path: cls._state_baseline_at(
