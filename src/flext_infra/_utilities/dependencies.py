@@ -966,9 +966,7 @@ class FlextInfraUtilitiesDependencies:
 # inside the family facade and the from-import contract requires the flat
 # binding to survive.
 FlextInfraUtilitiesDependencies = (
+    FlextInfraUtilitiesDependencies.FlextInfraUtilitiesDependencies
 )
 
-__all__: list[str] = [
-    "FlextInfraUtilitiesDependencies",
-]
 __all__: list[str] = ["FlextInfraUtilitiesDependencies"]
