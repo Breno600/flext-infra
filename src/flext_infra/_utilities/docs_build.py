@@ -11,7 +11,6 @@ from importlib import import_module
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-
 from flext_infra import c, m
 
 if TYPE_CHECKING:
@@ -242,7 +241,9 @@ class FlextInfraUtilitiesDocsBuild:
     ) -> None:
         """Persist the standard build summary and markdown report."""
         from flext_cli import u
+
         from flext_infra._utilities import FlextInfraUtilitiesDocs
+
         _ = u.Cli.json_write(
             scope.report_dir / "build-summary.json",
             {c.Infra.RK_SUMMARY: report.model_dump()},

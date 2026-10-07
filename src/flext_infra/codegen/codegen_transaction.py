@@ -39,6 +39,7 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenTransactionRecovery):
     def __init__(self, owner: p.Infra.MiseArtifactsOwner) -> None:
         """Initialize the transaction with its configured Mise artifact owner."""
         from flext_infra.codegen._mise_artifacts_staging import FlextInfraMiseStaging
+
         super().__init__(owner)
         self._owner = owner
         self._mise_staging = FlextInfraMiseStaging()
@@ -349,8 +350,13 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenTransactionRecovery):
 
         """
         from flext_infra.codegen._codegen_staging import FlextInfraCodegenStaging
-        from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
-        from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
+        from flext_infra.codegen._mise_artifacts_publication import (
+            FlextInfraMisePublication,
+        )
+        from flext_infra.codegen.codegen_preconditions import (
+            FlextInfraCodegenPreconditions,
+        )
+
         result_type = r[m.Infra.CodegenTransactionSession]
         transaction_id = secrets.token_hex(16)
         layout_result = self._planner.layout_for_config_plans(
@@ -616,8 +622,13 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenTransactionRecovery):
 
         """
         from flext_infra.codegen._codegen_staging import FlextInfraCodegenStaging
-        from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
-        from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
+        from flext_infra.codegen._mise_artifacts_publication import (
+            FlextInfraMisePublication,
+        )
+        from flext_infra.codegen.codegen_preconditions import (
+            FlextInfraCodegenPreconditions,
+        )
+
         result_type = r[m.Infra.CodegenTransactionSession]
         changed = tuple(
             plan for plan in plans if u.Infra.codegen_file_requires_effect(plan)
@@ -774,7 +785,10 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenTransactionRecovery):
             The resulting ``p.Result[m.Infra.CodegenTransactionSession]``.
 
         """
-        from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
+        from flext_infra.codegen.codegen_preconditions import (
+            FlextInfraCodegenPreconditions,
+        )
+
         result_type = r[m.Infra.CodegenTransactionSession]
         planned = state.plan_directories(
             session.plan.layout,
@@ -846,7 +860,10 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenTransactionRecovery):
             The resulting ``p.Result[t.VariadicTuple[Path]]``.
 
         """
-        from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
+        from flext_infra.codegen.codegen_preconditions import (
+            FlextInfraCodegenPreconditions,
+        )
+
         exact = verify.journal_destinations_live(session.plan.layout, session.journal)
         if exact.failure:
             return r[t.VariadicTuple[Path]].from_failure(

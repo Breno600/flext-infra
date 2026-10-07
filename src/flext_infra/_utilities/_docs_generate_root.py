@@ -32,7 +32,12 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
                 ``p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDocsApi, FlextInfraUtilitiesDocsContract, FlextInfraUtilitiesDocsRender
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesDocsApi,
+            FlextInfraUtilitiesDocsContract,
+            FlextInfraUtilitiesDocsRender,
+        )
+
         workspace_contract = FlextInfraUtilitiesDocsContract.docs_workspace_contract(
             repository_root,
         )

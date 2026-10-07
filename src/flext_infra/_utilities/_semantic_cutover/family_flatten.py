@@ -10,7 +10,6 @@ import ast
 from collections.abc import MutableMapping, Sequence
 from pathlib import Path
 
-
 from flext_infra import c, m, p, t
 from flext_infra._utilities import FlextInfraUtilitiesSemanticFamilyReferences
 
@@ -28,8 +27,14 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
 
         from flext_cli import u
+
         from flext_infra._config import config
-        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace, FlextInfraUtilitiesRopeRuntimeModules, FlextInfraUtilitiesRopeRuntimeRefactors
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesCodegenNamespace,
+            FlextInfraUtilitiesRopeRuntimeModules,
+            FlextInfraUtilitiesRopeRuntimeRefactors,
+        )
+
         candidates = tuple(
             path
             for path in sources
@@ -97,7 +102,11 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         sources: t.MappingKV[Path, str],
         rewrites: MutableMapping[Path, list[m.Infra.SourceRewrite]],
     ) -> int:
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors, FlextInfraUtilitiesRopeStructure
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeRuntimeRefactors,
+            FlextInfraUtilitiesRopeStructure,
+        )
+
         root = Path(project.root.real_path)
         module = project.get_pymodule(
             project.get_resource(path.relative_to(root).as_posix()),
@@ -253,6 +262,7 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         root = Path(project.root.real_path)
         for path, source in sources.items():

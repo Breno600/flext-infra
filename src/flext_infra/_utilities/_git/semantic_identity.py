@@ -152,6 +152,7 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesGitRepo
+
         refreshed = FlextInfraUtilitiesGitRepo.refresh_binary()
         if refreshed.failure:
             return r[m.Infra.GitBoolReport].from_failure(refreshed)
@@ -194,6 +195,7 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesGitRemote
+
         head_oid = repo.head.commit.hexsha
         working_tree = Path(repo.working_tree_dir or str(repo.working_dir)).resolve()
         git_dir = Path(repo.git_dir).resolve()

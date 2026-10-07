@@ -29,7 +29,11 @@ class FlextInfraUtilitiesSemanticTestHelpers(
         sources: t.MappingKV[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
 
-        from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames, FlextInfraUtilitiesRopeRuntimeModules
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesQualifiedNames,
+            FlextInfraUtilitiesRopeRuntimeModules,
+        )
+
         class _MovedExports(cst.CSTTransformer):
             """Retire only the original declaration's former module export."""
 
@@ -130,7 +134,11 @@ class FlextInfraUtilitiesSemanticTestHelpers(
         sources: t.MappingKV[Path, str],
         editable: frozenset[Path],
     ) -> m.Infra.ClassMoveRequest | None:
-        from flext_infra._utilities import FlextInfraUtilitiesRopeCorePyModuleMixin, FlextInfraUtilitiesRopeRuntimeModules
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeCorePyModuleMixin,
+            FlextInfraUtilitiesRopeRuntimeModules,
+        )
+
         root = Path(project.root.real_path)
         resource = project.get_resource(path.relative_to(root).as_posix())
         resources = tuple(
@@ -214,6 +222,7 @@ class FlextInfraUtilitiesSemanticTestHelpers(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
         if (
             not isinstance(bound, p.Infra.RopeImportedName)
             or bound.imported_name != name

@@ -27,6 +27,7 @@ class FlextInfraUtilitiesDocsGithubLinks:
     def _config() -> FlextInfraConfig:
 
         from flext_infra._config import config
+
         return config
 
     @staticmethod
@@ -38,6 +39,7 @@ class FlextInfraUtilitiesDocsGithubLinks:
 
         """
         from flext_infra._config import config
+
         return config.Infra.codegen.make.docs.github_repos
 
     @staticmethod

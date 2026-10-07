@@ -61,6 +61,7 @@ class FlextInfraDocGenerator(
         """
         from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
         from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+
         prepared = self._prepare_request(request)
         if prepared.failure:
             return r[t.SequenceOf[m.Infra.DocsPhaseReport]].from_failure(prepared)

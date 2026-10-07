@@ -36,6 +36,7 @@ class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
 
         """
         from flext_infra.api import infra
+
         result = infra.validate_namespace(request)
         if result.failure:
             return r[m.Infra.ValidationReport].from_failure(result)

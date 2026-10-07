@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, override
 import libcst as cst
 from libcst.metadata import MetadataWrapper, ParentNodeProvider, QualifiedNameProvider
 
-
 if TYPE_CHECKING:
     from flext_infra import m
 
@@ -31,8 +30,8 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
             The structurally rewritten source without changing its layout.
 
         """
-
         from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
         class _AliasTransformer(cst.CSTTransformer):
             METADATA_DEPENDENCIES = (ParentNodeProvider, QualifiedNameProvider)
 

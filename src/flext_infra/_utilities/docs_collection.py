@@ -40,6 +40,7 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDocsContract
+
         root = repository_root.absolute()
         relative = configuration.canonical_dir
         if relative.is_absolute() or not relative.parts or ".." in relative.parts:

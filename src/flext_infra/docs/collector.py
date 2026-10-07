@@ -29,6 +29,7 @@ class FlextInfraDocCollector:
         """
         from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
         from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+
         root = request.repository_root
         if not root.is_absolute() or ".." in root.parts or root.resolve() != root:
             return r[bool].fail(

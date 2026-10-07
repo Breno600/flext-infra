@@ -30,7 +30,13 @@ class FlextInfraUtilitiesPyprojectOverlay:
 
         """
         from flext_cli import u
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies, FlextInfraUtilitiesManagedConflicts, FlextInfraUtilitiesPyprojectRequirements
+
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesDependencies,
+            FlextInfraUtilitiesManagedConflicts,
+            FlextInfraUtilitiesPyprojectRequirements,
+        )
+
         spec = FlextInfraUtilitiesManagedConflicts.pyproject_managed_file()
         if spec.failure:
             return r[str].from_failure(spec)

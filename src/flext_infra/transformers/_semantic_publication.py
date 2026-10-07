@@ -38,7 +38,11 @@ class FlextInfraSemanticPublication:
             The resulting ``p.Result[t.VariadicTuple[Path]]``.
 
         """
-        from flext_infra.codegen import FlextInfraCodegenMiseArtifacts, FlextInfraCodegenTransaction
+        from flext_infra.codegen import (
+            FlextInfraCodegenMiseArtifacts,
+            FlextInfraCodegenTransaction,
+        )
+
         files: list[m.Infra.CodegenFilePlan] = []
         template_sources = u.Infra.codegen_template_sources(
             config.Infra.codegen if codegen is None else codegen,

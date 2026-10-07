@@ -168,6 +168,7 @@ class FlextInfraUtilitiesPrivateImportFacades:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
         bindings: MutableMapping[str, set[str]] = {}
         exports: MutableMapping[str, set[str]] = {}
         for module, (source, is_package) in sorted(sources.items()):

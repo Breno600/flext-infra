@@ -42,6 +42,7 @@ class FlextInfraUtilitiesBase:
 
         """
         from flext_infra._settings import FlextInfraSettings
+
         return FlextInfraSettings.env_lookup(name)
 
     @staticmethod
@@ -56,6 +57,7 @@ class FlextInfraUtilitiesBase:
 
         """
         from flext_infra._settings import FlextInfraSettings
+
         value = FlextInfraSettings.env_lookup(name)
         return default.strip() if value is None else value.strip()
 

@@ -10,7 +10,6 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-
 from flext_core import r
 from flext_infra import c, m
 
@@ -22,6 +21,7 @@ class FlextInfraWorktreeProvisioning:
     @staticmethod
     def _ensure_gitlink_checkout(lane: Path, member_path: Path) -> p.Result[bool]:
         from flext_infra._utilities import FlextInfraUtilitiesGitSemanticSubmoduleMixin
+
         reference = member_path.as_posix()
         git_marker = lane / member_path / ".git"
         if git_marker.is_symlink() or (
@@ -46,7 +46,11 @@ class FlextInfraWorktreeProvisioning:
         declared_url: str,
         recorded_oid: str,
     ) -> p.Result[bool]:
-        from flext_infra._utilities import FlextInfraUtilitiesGitSemanticIdentityMixin, FlextInfraUtilitiesGitWorktreeDiscoveryMixin
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesGitSemanticIdentityMixin,
+            FlextInfraUtilitiesGitWorktreeDiscoveryMixin,
+        )
+
         reference = member_path.as_posix()
         identity = FlextInfraUtilitiesGitSemanticIdentityMixin.git_identity(
             m.Infra.GitRepoRequest(repo_root=lane / member_path),
@@ -73,7 +77,11 @@ class FlextInfraWorktreeProvisioning:
         lane: Path,
         member_path: Path,
     ) -> p.Result[bool]:
-        from flext_infra._utilities import FlextInfraUtilitiesGitSemanticIndexMixin, FlextInfraUtilitiesGitWorktreeDiscoveryMixin
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesGitSemanticIndexMixin,
+            FlextInfraUtilitiesGitWorktreeDiscoveryMixin,
+        )
+
         reference = member_path.as_posix()
         discovery = FlextInfraUtilitiesGitWorktreeDiscoveryMixin
         contract = discovery.gitmodule_contract(
@@ -98,7 +106,11 @@ class FlextInfraWorktreeProvisioning:
 
     @classmethod
     def _prepare_governed_gitlinks(cls, lane: Path) -> p.Result[bool]:
-        from flext_infra._utilities import FlextInfraUtilitiesGitSemanticSubmoduleMixin, FlextInfraUtilitiesGitWorktreeDiscoveryMixin
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesGitSemanticSubmoduleMixin,
+            FlextInfraUtilitiesGitWorktreeDiscoveryMixin,
+        )
+
         discovery = FlextInfraUtilitiesGitWorktreeDiscoveryMixin
         declared = discovery.git_declared_submodule_paths(lane)
         if declared.failure:
@@ -134,7 +146,9 @@ class FlextInfraWorktreeProvisioning:
     @classmethod
     def setup_lane(cls, lane: Path) -> p.Result[bool]:
         from flext_cli import u
+
         from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
+
         gitlinks = cls._prepare_governed_gitlinks(lane)
         if gitlinks.failure:
             return gitlinks

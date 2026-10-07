@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import ClassVar
 from urllib.parse import urlsplit
 
-
 from flext_infra import c, m, t
 
 
@@ -34,6 +33,7 @@ class FlextInfraUtilitiesDocsRender:
 
         """
         from flext_infra._config import config
+
         rule = config.Infra.tooling.tools.markdown.rules["MD013"]
         if not isinstance(rule, dict):
             msg = "MD013 must declare the generated prose line length"
@@ -213,6 +213,7 @@ class FlextInfraUtilitiesDocsRender:
         """
         from flext_infra._config import config
         from flext_infra._utilities import FlextInfraUtilitiesDocs
+
         if FlextInfraUtilitiesDocs.docs_is_secure_web_url(prefix):
             kind = "tree" if is_dir else "blob"
             branches = tuple(
@@ -715,6 +716,7 @@ class FlextInfraUtilitiesDocsRender:
 
         """
         from flext_cli import u
+
         _ = modules
         data = contract
 
@@ -763,6 +765,7 @@ class FlextInfraUtilitiesDocsRender:
 
         """
         from flext_infra._config import config
+
         data = contract
         limits = config.Infra.codegen.make.docs.overview_preview_limits.model_dump()
         aliases, exports, facades, module_exports, keywords = (
@@ -873,6 +876,7 @@ class FlextInfraUtilitiesDocsRender:
 
         """
         from flext_cli import u
+
         data = contract
 
         # Preserve one typed context across the sole public template-rendering boundary.

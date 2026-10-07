@@ -12,7 +12,10 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import m, t
-from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverEdits, FlextInfraUtilitiesSemanticCutoverPrivateImportCst
+from flext_infra._utilities import (
+    FlextInfraUtilitiesSemanticCutoverEdits,
+    FlextInfraUtilitiesSemanticCutoverPrivateImportCst,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -101,7 +104,11 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
                 exposes cross-owner private import.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesPrivateImportAncestry, FlextInfraUtilitiesPrivateImportFacades
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesPrivateImportAncestry,
+            FlextInfraUtilitiesPrivateImportFacades,
+        )
+
         live_findings = tuple(
             finding
             for finding in findings
@@ -295,7 +302,11 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
             ValueError: If ambiguous facade alias; or if ambiguous public reference for.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesPrivateImportFacades, FlextInfraUtilitiesPrivateImportValidation
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesPrivateImportFacades,
+            FlextInfraUtilitiesPrivateImportValidation,
+        )
+
         tree = ast.parse(source, filename=str(file_path))
         removals: MutableMapping[str, set[str]] = {}
         obsolete_imports: MutableMapping[str, set[str]] = {}

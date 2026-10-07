@@ -36,6 +36,7 @@ class FlextInfraLayoutGate(FlextInfraGate):
 
         """
         from flext_infra.codegen.layout import FlextInfraCodegenLayout
+
         started = time.monotonic()
         engine = FlextInfraCodegenLayout(repository_root=ctx.repository_root)
         report = engine.check_project(project_dir)

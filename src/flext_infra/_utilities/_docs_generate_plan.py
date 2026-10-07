@@ -108,6 +108,7 @@ class FlextInfraUtilitiesDocsGeneratePlanMixin(
         # The physical repository root is carried by the bundle: the first output
         # scope is a member when the root is excluded from the render.
         from flext_infra._utilities import FlextInfraUtilitiesDocsContract
+
         repository_root = bundle.repository_root
         scope_roots = tuple(scoped.scope.path for scoped in bundle.scopes)
         # The single race barrier of the docs cycle: every snapshotted source is

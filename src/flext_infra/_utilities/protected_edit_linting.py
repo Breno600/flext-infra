@@ -14,7 +14,6 @@ from itertools import islice
 from pathlib import Path
 from typing import ClassVar
 
-
 from flext_infra import c, m, t
 
 
@@ -69,6 +68,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
+
         environment = FlextInfraUtilitiesProjectDiscovery.runtime_environment_dir(
             workspace,
         )
@@ -116,6 +116,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
         """
         from flext_infra._config import config
+
         lint_tool_gates = {
             "lint" if entry[0] == "ruff" else entry[0] for entry in c.Infra.LINT_TOOLS
         }
@@ -187,6 +188,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
         """
         from flext_cli import u
+
         for py_file in paths:
             output = u.Cli.run_raw(
                 [
@@ -237,6 +239,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDiscovery
+
         resolved_workspace = workspace.resolve()
         project_root: Path | None = FlextInfraUtilitiesDiscovery.project_root(py_file)
         if project_root is None:
@@ -278,6 +281,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesResourceLimits
+
         if tool_name == c.Infra.MYPY:
             return FlextInfraUtilitiesResourceLimits.mypy_limited_command(
                 m.Infra.MypyInvocation(
@@ -371,6 +375,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
         """
         from flext_cli import u
+
         raw_bytes = py_file.read_bytes()
         return (str(py_file.resolve()), u.Cli.sha256_bytes(raw_bytes), gate_key)
 
@@ -451,6 +456,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesResourceLimits
+
         if tool_name == c.Infra.MYPY:
             return FlextInfraUtilitiesResourceLimits.mypy_runner_timeout()
         return max(5, min(15, c.Infra.TIMEOUT_SHORT))
@@ -472,7 +478,9 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
         """
         from flext_cli import u
+
         from flext_infra._utilities import FlextInfraUtilitiesResourceLimits
+
         cmd = cls._lint_command(
             py_file,
             workspace,

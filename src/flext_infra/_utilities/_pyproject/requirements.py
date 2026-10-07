@@ -38,6 +38,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         from flext_cli import u
+
         for section_name in (c.Infra.OPTIONAL_DEPENDENCIES, c.Infra.DEPENDENCY_GROUPS):
             parent = (
                 project if section_name == c.Infra.OPTIONAL_DEPENDENCIES else document
@@ -64,6 +65,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         from flext_cli import u
+
         project = u.Cli.toml_ensure_table(document, c.Infra.PROJECT)
         normalized = cls._normalize_requirement_field(
             project,
@@ -103,6 +105,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         from flext_cli import u
+
         raw_value = u.Cli.toml_value(container, key)
         if raw_value is None:
             return r[bool].ok(value=True)
@@ -147,6 +150,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         name = FlextInfraUtilitiesDependencies.dep_name(requirement)
         if name is None:
             message = "dependency ordering requires a named requirement"
@@ -179,7 +183,11 @@ class FlextInfraUtilitiesPyprojectRequirements:
             The resulting ``p.Result[str]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies, FlextInfraUtilitiesRepository
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesDependencies,
+            FlextInfraUtilitiesRepository,
+        )
+
         dependency_name = FlextInfraUtilitiesDependencies.dep_name(requirement)
         if dependency_name is None or not (
             dependency_name.startswith("flext-")
@@ -262,10 +270,13 @@ class FlextInfraUtilitiesPyprojectRequirements:
         *,
         project_name: str,
         required_dev_dependencies: t.StrSequence,
+        workspace_members: t.StrSequence,
     ) -> None:
         """Migrate optional dev dependencies and normalize declared groups."""
         from flext_cli import u
+
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         project = u.Cli.toml_ensure_table(document, c.Infra.PROJECT)
         groups = u.Cli.toml_ensure_table(document, c.Infra.DEPENDENCY_GROUPS)
         optional = u.Cli.toml_table_child(project, c.Infra.OPTIONAL_DEPENDENCIES)
@@ -316,7 +327,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             )
         else:
             u.Cli.toml_remove_key_if_present(groups, "codegen")
-        cls._remove_workspace_dependency_group(document)
+        cls._sync_workspace_dependency_group(document, workspace_members)
 
         if optional is not None:
             u.Cli.toml_remove_key_if_present(optional, str(c.Infra.DEV))
@@ -345,6 +356,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         name = FlextInfraUtilitiesDependencies.dep_name(requirement)
         return (
             name is not None
@@ -356,16 +368,29 @@ class FlextInfraUtilitiesPyprojectRequirements:
         )
 
     @staticmethod
-    def _remove_workspace_dependency_group(document: t.Cli.TomlDocument) -> None:
-        """Drop the retired git-pinned ``workspace`` dependency group.
+    def _sync_workspace_dependency_group(
+        document: t.Cli.TomlDocument,
+        workspace_members: t.StrSequence,
+    ) -> None:
+        """Declare the attached members in the workspace root's own group.
 
-        Native uv workspace membership (``[tool.uv.workspace]`` in the root's
-        managed pyproject projection) replaced the group as the member
-        identity: `uv sync --all-packages` provisions every member natively,
-        so a git-pinned duplicate would silently win the resolution away from
-        the live worktrees.
+        A workspace root environment serves every attached member, so its lock
+        must carry the member distributions: setup syncs every group, and an
+        absent group makes the exact sync uninstall the members. Each name is
+        canonicalized afterwards to its inline Git source like any other
+        internal requirement, so the root keeps its own independent lock and
+        no uv workspace. Every other repository carries no such group.
         """
         from flext_cli import u
+
+        if workspace_members:
+            groups = u.Cli.toml_ensure_table(document, c.Infra.DEPENDENCY_GROUPS)
+            u.Cli.toml_sync_string_list(
+                groups,
+                "workspace",
+                tuple(sorted(workspace_members)),
+            )
+            return
         groups = u.Cli.toml_table_child(document, c.Infra.DEPENDENCY_GROUPS)
         if groups is not None:
             u.Cli.toml_remove_key_if_present(groups, "workspace")
@@ -383,7 +408,12 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         from flext_cli import u
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies, FlextInfraUtilitiesRepository
+
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesDependencies,
+            FlextInfraUtilitiesRepository,
+        )
+
         payload = u.Cli.toml_as_mapping(document)
         if payload is None:
             return r[bool].fail("pyproject document is not a TOML mapping")

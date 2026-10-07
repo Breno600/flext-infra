@@ -16,6 +16,8 @@ GEMINI.md
 .benchmarks/**
 .hypothesis/**
 CHANGELOG.md
+docs/docs_config.json
+docs/architecture/architecture_config.json
 .mypy_cache/**
 .pytest_cache/**
 .ruff_cache/**

@@ -6,7 +6,6 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-
 from flext_core import r
 from flext_infra import c, m, p, t
 
@@ -26,6 +25,7 @@ class FlextInfraUtilitiesManagedConflicts:
             The resulting ``p.Result[str]``.
         """
         from flext_cli import u
+
         if u.Cli.toml_mapping_from_text(content) is not None:
             return r[str].ok(content)
         recovered: list[str] = []
@@ -89,6 +89,7 @@ class FlextInfraUtilitiesManagedConflicts:
 
         """
         from flext_infra._config import config
+
         for item in config.Infra.codegen.managed_files:
             if item.path.as_posix() == c.PYPROJECT_FILENAME:
                 return r[m.Infra.ManagedFileSpec].ok(item)
@@ -150,6 +151,7 @@ class FlextInfraUtilitiesManagedConflicts:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesBase
+
         if FlextInfraUtilitiesBase.first_merge_conflict_marker(content) is None:
             return FlextInfraUtilitiesManagedConflicts.recover_managed_assignments(
                 content,

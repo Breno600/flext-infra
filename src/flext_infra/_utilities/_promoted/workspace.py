@@ -59,6 +59,7 @@ class FlextInfraUtilitiesPromotedWorkspace:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
+
         return m.Infra.PromotedWorkspaceSpec(
             root=root,
             scripts=root / c.Infra.DIR_SCRIPTS,
@@ -82,6 +83,7 @@ class FlextInfraUtilitiesPromotedWorkspace:
     def promoted_ensure_local_python(cls, spec: p.Infra.PromotedWorkspaceSpec) -> None:
         """Fail unless make runs on a virtualenv or the expected local interpreter."""
         from flext_infra._settings import settings
+
         if sys.prefix != sys.base_prefix:
             return
         active = Path(sys.executable)
@@ -116,6 +118,7 @@ class FlextInfraUtilitiesPromotedWorkspace:
 
         """
         from flext_infra._settings import settings
+
         if (
             settings.Infra.flext_command_dispatched
             != c.Infra.PromotedSelector.DISPATCHED

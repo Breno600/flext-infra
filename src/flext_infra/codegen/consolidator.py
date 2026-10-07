@@ -34,6 +34,7 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
 
         """
         from flext_infra.workspace.rope import FlextInfraRopeWorkspace
+
         output_lines: t.MutableSequenceOf[str] = (
             ["[DRY-RUN] Scanning...\n"] if self.dry_run else []
         )

@@ -57,6 +57,7 @@ class FlextInfraRenameSources:
         params: m.Infra.ApplyRenamesInput,
     ) -> t.MappingKV[Path, m.Cli.AtomicFileState]:
         from flext_infra._config import FlextInfraConfig
+
         files: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
         ignored = config.Infra.codegen.source_scan_ignored
         generated = {item.path for item in config.Infra.codegen.managed_files}

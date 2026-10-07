@@ -77,6 +77,7 @@ class FlextInfraCodegenPipelineStagesMixin:
             The resulting ``p.Result[m.Cli.PipelineStageResult]``.
 
         """
+        from flext_infra.codegen import FlextInfraCodegenConform
 
         from flext_infra.codegen import FlextInfraCodegenConform
         def _action() -> m.Infra.CodegenResult:
@@ -125,6 +126,7 @@ class FlextInfraCodegenPipelineStagesMixin:
             The resulting ``p.Result[m.Cli.PipelineStageResult]``.
 
         """
+        from flext_infra.deps import FlextInfraRuntimeDevDependencyDetector
 
         from flext_infra.deps import FlextInfraRuntimeDevDependencyDetector
         def _action() -> bool:
@@ -161,6 +163,7 @@ class FlextInfraCodegenPipelineStagesMixin:
             The resulting ``p.Result[m.Cli.PipelineStageResult]``.
 
         """
+        from flext_infra.codegen import FlextInfraCodegenPyTyped
 
         from flext_infra.codegen import FlextInfraCodegenPyTyped
         def _action() -> int:
@@ -223,6 +226,7 @@ class FlextInfraCodegenPipelineStagesMixin:
             The resulting ``p.Result[m.Cli.PipelineStageResult]``.
 
         """
+        from flext_infra.codegen import FlextInfraCodegenScaffolder
 
         from flext_infra.codegen import FlextInfraCodegenScaffolder
         def _action() -> t.SequenceOf[m.Infra.ScaffoldResult]:
@@ -253,6 +257,7 @@ class FlextInfraCodegenPipelineStagesMixin:
             The resulting ``p.Result[m.Cli.PipelineStageResult]``.
 
         """
+        from flext_infra.codegen import FlextInfraCodegenFixer
 
         from flext_infra.codegen import FlextInfraCodegenFixer
         def _action() -> t.SequenceOf[m.Infra.AutoFixResult]:
@@ -283,6 +288,7 @@ class FlextInfraCodegenPipelineStagesMixin:
             The resulting ``p.Result[m.Cli.PipelineStageResult]``.
 
         """
+        from flext_infra.codegen import FlextInfraCodegenLazyInit
 
         from flext_infra.codegen import FlextInfraCodegenLazyInit
         def _action() -> int:

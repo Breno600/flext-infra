@@ -24,7 +24,10 @@ class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):
     def __init__(self, owner: p.Infra.MiseArtifactsOwner) -> None:
         """Initialize journal planning and recovery for one Mise artifact owner."""
         from flext_infra.codegen._mise_artifacts_recovery import FlextInfraMiseRecovery
-        from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
+        from flext_infra.codegen.mise_artifacts_workspace import (
+            FlextInfraMiseWorkspacePlanner,
+        )
+
         super().__init__()
         self._planner = FlextInfraMiseWorkspacePlanner(owner)
         self._recovery = FlextInfraMiseRecovery()
@@ -43,8 +46,13 @@ class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):
                 m.Cli.AtomicFileState]]``.
 
         """
-        from flext_infra.codegen._mise_artifacts_journal import FlextInfraMiseArtifactsJournal
-        from flext_infra.codegen._mise_artifacts_state import FlextInfraMiseArtifactsState
+        from flext_infra.codegen._mise_artifacts_journal import (
+            FlextInfraMiseArtifactsJournal,
+        )
+        from flext_infra.codegen._mise_artifacts_state import (
+            FlextInfraMiseArtifactsState,
+        )
+
         result_type = r[tuple[m.Infra.CodegenTransactionJournal, m.Cli.AtomicFileState]]
         current_journal = journal
         current_state = journal_state
@@ -137,7 +145,10 @@ class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra.codegen._mise_artifacts_state import FlextInfraMiseArtifactsState
+        from flext_infra.codegen._mise_artifacts_state import (
+            FlextInfraMiseArtifactsState,
+        )
+
         compensated = FlextInfraMiseArtifactsState.compensate_created_directory(created)
         if compensated.failure:
             return r[bool].fail(
@@ -158,7 +169,10 @@ class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra.codegen._mise_artifacts_state import FlextInfraMiseArtifactsState
+        from flext_infra.codegen._mise_artifacts_state import (
+            FlextInfraMiseArtifactsState,
+        )
+
         expected = self._journal_receipts.get(layout.journal_path)
         if expected is None:
             observed = FlextInfraMiseArtifactsState.journal_state(layout)
@@ -171,7 +185,10 @@ class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):
         return self._recover(layout, expected=expected)
 
     def _reconcile(self, identity: m.Infra.GitIdentityReport) -> p.Result[bool]:
-        from flext_infra.codegen._mise_artifacts_state import FlextInfraMiseArtifactsState
+        from flext_infra.codegen._mise_artifacts_state import (
+            FlextInfraMiseArtifactsState,
+        )
+
         layout = self._planner.journal_layout(identity)
         if layout.failure:
             return r[bool].from_failure(layout)
@@ -193,7 +210,10 @@ class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         failure: str,
     ) -> p.Result[bool]:
-        from flext_infra.codegen._mise_artifacts_state import FlextInfraMiseArtifactsState
+        from flext_infra.codegen._mise_artifacts_state import (
+            FlextInfraMiseArtifactsState,
+        )
+
         observed = FlextInfraMiseArtifactsState.journal_state(layout)
         if observed.failure:
             return r[bool].fail(
@@ -219,7 +239,10 @@ class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
+        from flext_infra.codegen.codegen_preconditions import (
+            FlextInfraCodegenPreconditions,
+        )
+
         barriers = FlextInfraCodegenPreconditions.prepublication_barriers(
             plan,
             tuple(source for _phase, source in all_sources),
@@ -258,7 +281,10 @@ class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):
             The resulting ``p.Result[m.Cli.AtomicFileState]``.
 
         """
-        from flext_infra.codegen._mise_artifacts_journal import FlextInfraMiseArtifactsJournal
+        from flext_infra.codegen._mise_artifacts_journal import (
+            FlextInfraMiseArtifactsJournal,
+        )
+
         written = FlextInfraMiseArtifactsJournal.write(
             layout,
             journal,
@@ -274,7 +300,10 @@ class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):
         *,
         expected: m.Cli.AtomicFileState | None = None,
     ) -> p.Result[bool]:
-        from flext_infra.codegen._mise_artifacts_journal import FlextInfraMiseArtifactsJournal
+        from flext_infra.codegen._mise_artifacts_journal import (
+            FlextInfraMiseArtifactsJournal,
+        )
+
         loaded = FlextInfraMiseArtifactsJournal.read(layout)
         if loaded.failure:
             return r[bool].from_failure(loaded)

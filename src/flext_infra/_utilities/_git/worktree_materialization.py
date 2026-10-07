@@ -34,6 +34,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
 
         """
         from flext_cli import u
+
         ensure_parent = u.Cli.ensure_dir(worktree_root.parent)
         if ensure_parent.failure:
             return r[str].from_failure(ensure_parent)
@@ -94,6 +95,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
 
         """
         from flext_cli import u
+
         try:
             repo = cls._repo(source_root)
             untracked = repo.git.ls_files("--others", "--exclude-standard", "-z")
@@ -175,6 +177,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
         pathspecs: t.VariadicTuple[str],
     ) -> p.Result[bool]:
         from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
+
         repo = cls._repo(source_root)
         worktree_repo = cls._repo(worktree_root)
         if source_root.resolve() == worktree_root.resolve():

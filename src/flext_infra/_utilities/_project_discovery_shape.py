@@ -30,7 +30,11 @@ class FlextInfraUtilitiesProjectDiscoveryShapeMixin:
             Whether one path matches the canonical governed project shape.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies, FlextInfraUtilitiesPyproject
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesDependencies,
+            FlextInfraUtilitiesPyproject,
+        )
+
         if not path.is_dir():
             return False
         pyproject_path = path / c.PYPROJECT_FILENAME

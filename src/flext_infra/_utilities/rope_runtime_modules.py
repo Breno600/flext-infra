@@ -61,6 +61,7 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
 
         """
         from flext_infra._config import config
+
         inventory = {
             Path(resource.real_path).resolve(): resource.read()
             for resource in project.get_python_files()

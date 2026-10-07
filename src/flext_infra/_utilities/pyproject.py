@@ -11,7 +11,6 @@ from collections.abc import Mapping, Sequence
 from functools import cache, lru_cache
 from pathlib import Path
 
-
 from flext_core import r
 from flext_infra import c, m, p, t
 
@@ -35,6 +34,7 @@ class FlextInfraUtilitiesPyproject:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesManagedConflicts
+
         spec_result = FlextInfraUtilitiesManagedConflicts.pyproject_managed_file()
         if spec_result.failure:
             return r[str].from_failure(spec_result)
@@ -52,6 +52,7 @@ class FlextInfraUtilitiesPyproject:
 
         """
         from flext_cli import u
+
         raw = u.Cli.atomic_read_binary_file_state(pyproject_path, required=True)
         if raw.failure:
             return r[str].from_failure(raw)
@@ -81,6 +82,7 @@ class FlextInfraUtilitiesPyproject:
 
         """
         from flext_cli import u
+
         live = FlextInfraUtilitiesPyproject.live_pyproject_text(
             project_root / c.PYPROJECT_FILENAME,
         )
@@ -142,6 +144,7 @@ class FlextInfraUtilitiesPyproject:
 
         """
         from flext_cli import u
+
         config_path = toolchain_root / c.Infra.TAPLO_CONFIG_FILENAME
         config_content = config_path.read_bytes() if config_path.is_file() else b""
         resolved_path = path.resolve()
@@ -195,6 +198,7 @@ class FlextInfraUtilitiesPyproject:
 
         """
         from flext_cli import u
+
         lock_path = toolchain_root / c.Infra.MISE_LOCK_FILENAME
         source = u.Cli.files_read_text(lock_path)
         if source.failure:
@@ -227,6 +231,7 @@ class FlextInfraUtilitiesPyproject:
         process_timeout_seconds: int,
     ) -> p.Result[str]:
         from flext_cli import u
+
         del config_digest
         taplo = FlextInfraUtilitiesPyproject._taplo_binary(
             taplo_version,
@@ -284,6 +289,7 @@ class FlextInfraUtilitiesPyproject:
 
         """
         from flext_cli import u
+
         lock_path = next(
             (
                 candidate / c.Infra.MISE_LOCK_FILENAME
@@ -346,6 +352,7 @@ class FlextInfraUtilitiesPyproject:
 
         """
         from flext_cli import u
+
         pinned = FlextInfraUtilitiesPyproject._locked_mise_version(
             execution_root,
             c.Infra.TAPLO_MISE_TOOL_NAME,
@@ -439,6 +446,7 @@ class FlextInfraUtilitiesPyproject:
 
         """
         from flext_cli import u
+
         payload = u.Cli.toml_mapping_from_text(text)
         if payload is None:
             msg = f"pyproject payload at {pyproject_path} is not valid TOML"
@@ -454,6 +462,7 @@ class FlextInfraUtilitiesPyproject:
 
         """
         from flext_cli import u
+
         payload = u.Cli.toml_as_mapping(document)
         if not payload:
             return {}
@@ -604,6 +613,7 @@ class FlextInfraUtilitiesPyproject:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesGit
+
         declared = FlextInfraUtilitiesGit.git_declared_submodule_paths(repository_root)
         if declared.failure:
             msg = declared.error or f"invalid workspace topology: {repository_root}"

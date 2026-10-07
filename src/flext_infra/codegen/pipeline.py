@@ -176,8 +176,6 @@ class FlextInfraCodegenPipeline(
 
 __all__: list[str] = [
     "FlextInfraCodegenLazyInitGenerationMixin",
-    # FlextInfraCodegenLazyInitPlanner: owned by codegen.lazy_init_planner
-    # (single-export-owner rule)
     "FlextInfraCodegenPipeline",
     "FlextInfraCodegenPipelineStagesMixin",
     "FlextInfraMiseArtifactsFiles",

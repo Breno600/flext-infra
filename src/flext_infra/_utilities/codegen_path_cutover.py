@@ -36,6 +36,7 @@ class FlextInfraUtilitiesCodegenPathCutover:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors
+
         project = rope_workspace.rope_project
         root = Path(project.root.real_path)
         owner_module = "flext_infra.codegen._mise_artifacts_files"

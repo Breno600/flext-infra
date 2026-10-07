@@ -77,6 +77,7 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
         from flext_cli import u as cli_u
         """
         from flext_infra._utilities import FlextInfraUtilitiesDocsScope
+
         roots = FlextInfraUtilitiesDocsScope.docs_repository_roots(
             repository_root,
             extra_roots,
@@ -166,6 +167,7 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesCodegenFilePlan
+
         discovered = FlextInfraUtilitiesDocsGenerateSourcesMixin.docs_source_paths(
             repository_root,
             extra_roots,

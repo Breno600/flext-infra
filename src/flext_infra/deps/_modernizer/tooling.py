@@ -123,7 +123,10 @@ class FlextInfraPyprojectModernizerTooling:
 
         """
         from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
-        from flext_infra.deps.phases.ensure_pyright import FlextInfraEnsurePyrightConfigPhase
+        from flext_infra.deps.phases.ensure_pyright import (
+            FlextInfraEnsurePyrightConfigPhase,
+        )
+
         result_type = r[m.Infra.ToolingRuntimeContext]
         profile = u.Infra.composed_dependency_profile(
             scaffold_project.dependency_profiles,

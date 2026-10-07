@@ -39,6 +39,7 @@ class FlextInfraUtilitiesRefactor:
 
         """
         from flext_cli import u
+
         if value is None:
             return []
         if isinstance(value, str):
@@ -81,6 +82,7 @@ class FlextInfraUtilitiesRefactor:
 
         """
         from flext_cli import u
+
         payload = {
             "files": [
                 {
@@ -116,6 +118,7 @@ class FlextInfraUtilitiesRefactor:
 
         """
         from flext_cli import u
+
         classified = (
             report.actionable + report.detection_only + report.non_actionable_with_fix
         )
@@ -216,6 +219,7 @@ class FlextInfraUtilitiesRefactor:
 
         """
         from flext_cli import u
+
         content = (report.model_dump_json(indent=2) + "\n").encode(
             c.Cli.ENCODING_DEFAULT,
         )

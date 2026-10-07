@@ -153,6 +153,7 @@ class FlextInfraFlextBindingService:
 
         """
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
         workspace = FlextInfraWorkspaceDetector.load_workspace_spec(flext_root)
         if workspace.failure:
             return r[t.MappingKV[str, Path]].fail(

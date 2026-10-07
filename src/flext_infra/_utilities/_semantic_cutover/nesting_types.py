@@ -30,7 +30,11 @@ class FlextInfraUtilitiesSemanticNestingTypes(
         *,
         protected: t.Pair[int, int] | None = None,
     ) -> str:
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules, FlextInfraUtilitiesRopeRuntimeRefactors
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeRuntimeModules,
+            FlextInfraUtilitiesRopeRuntimeRefactors,
+        )
+
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         module = project.get_pymodule(resource)
         edits: list[m.Infra.SourceRewrite] = []
@@ -76,6 +80,7 @@ class FlextInfraUtilitiesSemanticNestingTypes(
         replacement: Callable[[p.Infra.RopeScope, ast.expr], str | None],
     ) -> str:
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors
+
         edits: list[m.Infra.SourceRewrite] = []
         for node in cls._type_nodes(
             ast.parse(source, mode="eval").body,
@@ -112,6 +117,7 @@ class FlextInfraUtilitiesSemanticNestingTypes(
         definitions: t.MappingKV[Path, t.StrMapping],
     ) -> t.MappingKV[Path, str]:
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         root = Path(project.root.real_path)
         bindings = tuple(
@@ -251,6 +257,7 @@ class FlextInfraUtilitiesSemanticNestingTypes(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         node = ast.parse(expression, mode="eval").body
         while isinstance(node, ast.Attribute):

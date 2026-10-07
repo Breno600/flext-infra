@@ -181,7 +181,12 @@ class FlextInfraUtilitiesRefactorCensus:
             Same-file occurrence lines for local aliases of ``imported_name``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis, FlextInfraUtilitiesRopeCore, FlextInfraUtilitiesRopeImports
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeAnalysis,
+            FlextInfraUtilitiesRopeCore,
+            FlextInfraUtilitiesRopeImports,
+        )
+
         resource = rope.resource(file_path)
         if resource is None:
             return ()
@@ -367,7 +372,11 @@ class FlextInfraUtilitiesRefactorCensus:
             Simple alias names removed together with ``target_name``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeCore, FlextInfraUtilitiesRopeRuntime
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeCore,
+            FlextInfraUtilitiesRopeRuntime,
+        )
+
         if not removed_ranges:
             return ()
         resource = rope.resource(file_path)
@@ -452,7 +461,11 @@ class FlextInfraUtilitiesRefactorCensus:
             The resulting ``t.MappingKV[Path, str] | None``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis, FlextInfraUtilitiesRopeImports
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeAnalysis,
+            FlextInfraUtilitiesRopeImports,
+        )
+
         target_name = candidate.object_name
         definition_path = Path(candidate.file_path).resolve()
         updates: MutableMapping[Path, str] = {}
@@ -528,6 +541,7 @@ class FlextInfraUtilitiesRefactorCensus:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeHelpers
+
         rewritten_lines = source.splitlines(keepends=True)
         headers = sorted(
             (
@@ -698,6 +712,7 @@ class FlextInfraUtilitiesRefactorCensus:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeImports
+
         try:
             rope.rope_project.validate()
         except RecursionError as exc:
@@ -786,6 +801,7 @@ class FlextInfraUtilitiesRefactorCensus:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesProtectedEdit
+
         planned = FlextInfraUtilitiesRefactorCensus._planned_simple_removal(
             rope,
             candidate,
@@ -843,6 +859,7 @@ class FlextInfraUtilitiesRefactorCensus:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesProtectedEdit
+
         source_cache: MutableMapping[Path, str] = {}
         planned = FlextInfraUtilitiesRefactorCensus._planned_simple_removal(
             rope,
@@ -991,6 +1008,7 @@ class FlextInfraUtilitiesRefactorCensus:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeHelpers
+
         return FlextInfraUtilitiesRopeHelpers.top_level_definition_span(
             source,
             candidate.object_name,
@@ -1025,6 +1043,7 @@ class FlextInfraUtilitiesRefactorCensus:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeHelpers
+
         for statement in ast.parse(source).body:
             start, end = FlextInfraUtilitiesRopeHelpers.statement_line_span(statement)
             if start <= line <= end:

@@ -95,7 +95,10 @@ class FlextInfraCodegenCensus(s[str]):
             The resulting ``p.Result[t.VariadicTuple[m.Infra.CensusReport]]``.
 
         """
-        from flext_infra.validate.namespace_validator import FlextInfraNamespaceValidator
+        from flext_infra.validate.namespace_validator import (
+            FlextInfraNamespaceValidator,
+        )
+
         if projects is not None:
             selected_projects = tuple(projects)
         else:

@@ -139,6 +139,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
         suffix = FlextInfraUtilitiesQualifiedNames.dotted_name(node.module) or ""
         if not node.relative:
             return suffix
@@ -158,6 +159,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
         if imported.asname is not None and isinstance(imported.asname.name, cst.Name):
             return imported.asname.name.value
         return FlextInfraUtilitiesQualifiedNames.dotted_name(imported.name) or ""
@@ -179,6 +181,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
         if isinstance(node.names, cst.ImportStar):
             return {}, frozenset()
         base = cls._imported_module(
@@ -212,6 +215,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
         bound: t.MutableStrMapping = {}
         for imported in node.names:
             full = FlextInfraUtilitiesQualifiedNames.dotted_name(imported.name) or ""
@@ -234,6 +238,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
         if FlextInfraUtilitiesQualifiedNames.rebinds_name_in_place(
             parent,
             node,

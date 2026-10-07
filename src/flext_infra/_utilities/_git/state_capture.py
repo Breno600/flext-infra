@@ -26,7 +26,9 @@ class FlextInfraUtilitiesGitStateCaptureMixin(
     @contextmanager
     def _state_leases(cls, roots: t.SequenceOf[Path]) -> Generator[None]:
         from flext_cli import u
+
         from flext_infra._utilities import FlextInfraUtilitiesCodegenFilePlan
+
         journals = {
             Path(cls._repo(root).git_dir) / c.Infra.JOURNAL_NAME for root in roots
         }

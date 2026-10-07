@@ -72,6 +72,7 @@ class FlextInfraModReplacements:
         """
         from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
         from flext_infra.transformers import FlextInfraSemanticPublication
+
         allowed = cls.require_authored(
             tuple(finding for finding in report.entries if finding.actionable),
         )

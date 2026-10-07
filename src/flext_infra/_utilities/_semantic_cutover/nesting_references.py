@@ -13,7 +13,9 @@ import libcst as cst
 from libcst.metadata import MetadataWrapper, ParentNodeProvider, QualifiedNameProvider
 
 from flext_infra import m, t
-from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverNestingModuleAliases
+from flext_infra._utilities import (
+    FlextInfraUtilitiesSemanticCutoverNestingModuleAliases,
+)
 
 
 class FlextInfraUtilitiesSemanticCutoverNestingReferences(
@@ -119,6 +121,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
         @override
         def visit_ImportFrom(self, node: cst.ImportFrom) -> None:
             from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
             bindings = self.bindings_by_module.get(self._import_module(node), {})
             if not bindings or isinstance(node.names, cst.ImportStar):
                 return
@@ -244,6 +247,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
             updated_node: cst.Name,
         ) -> cst.BaseExpression:
             from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
             bound = self._single_binding(original_node, ambiguity="binding")
             if bound is None:
                 return updated_node
@@ -305,6 +309,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
             updated_node: cst.ImportFrom,
         ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
             from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
             if not isinstance(updated_node.names, cst.ImportStar):
                 kept = tuple(
                     imported
@@ -360,6 +365,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
 
             """
             from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
             local = (
                 self._alias_name(imported.asname)
                 if imported.asname
@@ -374,6 +380,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
             updated_node: cst.Import,
         ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
             from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
             kept = tuple(
                 imported
                 for imported in updated_node.names
@@ -401,6 +408,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
 
             """
             from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
             if not isinstance(statement, cst.Import | cst.ImportFrom):
                 return ()
             names = statement.names
@@ -458,6 +466,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
             updated_node: cst.Assign,
         ) -> cst.BaseSmallStatement:
             from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
             return FlextInfraUtilitiesQualifiedNames.filter_exports(
                 updated_node,
                 self.definitions,
@@ -470,6 +479,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
             updated_node: cst.AnnAssign,
         ) -> cst.BaseSmallStatement:
             from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
             return FlextInfraUtilitiesQualifiedNames.filter_exports(
                 updated_node,
                 self.definitions,

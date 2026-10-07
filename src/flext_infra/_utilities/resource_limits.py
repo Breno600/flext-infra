@@ -12,7 +12,6 @@ import sys
 from pathlib import Path
 from typing import ClassVar
 
-
 from flext_infra import c, m, p, t
 
 
@@ -74,7 +73,9 @@ class FlextInfraUtilitiesResourceLimits:
 
         """
         from flext_cli import u
+
         from flext_infra._config import config
+
         return m.Infra.MypyResourceLimit(
             memory_limit_mb=FlextInfraUtilitiesResourceLimits._environment_integer(
                 u.Cli.process_env(),
@@ -119,6 +120,7 @@ class FlextInfraUtilitiesResourceLimits:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
+
         interpreter = sys.executable
         if invocation.workspace is not None:
             managed_python = FlextInfraUtilitiesProjectDiscovery.runtime_python(
@@ -173,6 +175,7 @@ class FlextInfraUtilitiesResourceLimits:
         """
         from flext_infra._config import config
         from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
         metadata = FlextInfraUtilitiesPyproject.read_project_metadata_result(
             project_dir,
         )
@@ -198,6 +201,7 @@ class FlextInfraUtilitiesResourceLimits:
 
         """
         from flext_infra._settings import settings
+
         home = settings.env_lookup(str(spec.data_home_environment_variable)) or str(
             Path(settings.env_required(str(spec.user_home_environment_variable)))
             / spec.home_cache_directory,
@@ -313,6 +317,7 @@ class FlextInfraUtilitiesResourceLimits:
 
         """
         from flext_cli import u
+
         tooling = project_dir / "config" / "tooling.yaml"
         if not tooling.is_file():
             return None
@@ -385,6 +390,7 @@ class FlextInfraUtilitiesResourceLimits:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesProcess
+
         validated_limit = limit or cls.mypy_resource_limit()
         combined = f"{output.stdout}\n{output.stderr}".lower()
         classification = FlextInfraUtilitiesProcess.process_exit_classification(

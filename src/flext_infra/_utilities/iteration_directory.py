@@ -36,6 +36,7 @@ class FlextInfraUtilitiesIterationDirectory(FlextInfraUtilitiesGitScopeMixin):
 
         """
         from flext_infra._config import config
+
         resolved_directory = directory.resolve()
         if not resolved_directory.is_dir():
             return []
