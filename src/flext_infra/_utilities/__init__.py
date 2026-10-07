@@ -213,6 +213,15 @@ if TYPE_CHECKING:
     from flext_infra._utilities._rope_method_order import (
         FlextInfraUtilitiesRopeMethodOrderMixin,
     )
+    from flext_infra._utilities._rope_source_bases_aliases import (
+        FlextInfraUtilitiesRopeSourceBasesAliases,
+    )
+    from flext_infra._utilities._rope_source_bases_inventory import (
+        FlextInfraUtilitiesRopeSourceBasesInventory,
+    )
+    from flext_infra._utilities._rope_source_bases_runtime import (
+        FlextInfraUtilitiesRopeSourceBasesRuntime,
+    )
     from flext_infra._utilities._semantic_cutover.alias_cst import (
         FlextInfraUtilitiesSemanticCutoverAliasCst,
     )
@@ -601,6 +610,9 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesRopeRuntimeTypes",
     "FlextInfraUtilitiesRopeSource",
     "FlextInfraUtilitiesRopeSourceBases",
+    "FlextInfraUtilitiesRopeSourceBasesAliases",
+    "FlextInfraUtilitiesRopeSourceBasesInventory",
+    "FlextInfraUtilitiesRopeSourceBasesRuntime",
     "FlextInfraUtilitiesRopeStructure",
     "FlextInfraUtilitiesSemanticCutover",
     "FlextInfraUtilitiesSemanticCutoverAliasCst",
@@ -802,6 +814,9 @@ install_lazy_exports(
         "FlextInfraUtilitiesRopeRuntimeTypes": ".rope_runtime_types",
         "FlextInfraUtilitiesRopeSource": ".rope_source",
         "FlextInfraUtilitiesRopeSourceBases": ".rope_source_bases",
+        "FlextInfraUtilitiesRopeSourceBasesAliases": "._rope_source_bases_aliases",
+        "FlextInfraUtilitiesRopeSourceBasesInventory": "._rope_source_bases_inventory",
+        "FlextInfraUtilitiesRopeSourceBasesRuntime": "._rope_source_bases_runtime",
         "FlextInfraUtilitiesRopeStructure": ".rope_structure",
         "FlextInfraUtilitiesSemanticCutover": ".semantic_cutover",
         "FlextInfraUtilitiesSemanticCutoverAliasCst": "._semantic_cutover.alias_cst",
