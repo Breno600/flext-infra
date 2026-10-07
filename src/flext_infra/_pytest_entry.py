@@ -6,12 +6,10 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import importlib
 import sys
 import time
 from pathlib import Path
-
-from flext_infra._pytest_profile import FlextInfraPytestProfile
-from flext_infra.validate.pytest_runner import FlextInfraPytestRunner
 
 
 class FlextInfraPytestEntry:
@@ -38,14 +36,19 @@ class FlextInfraPytestEntry:
             ValueError: If unsupported pytest operation.
 
         """
+        # Deliberately deferred past the pre-import clock snapshot: the
+        # module contract keeps every FLEXT import inside the budgeted window.
+        profile_module = importlib.import_module("flext_infra._pytest_profile")
+        runner_module = importlib.import_module("flext_infra.validate.pytest_runner")
+
         mode = sys.argv[1] if len(sys.argv) > 1 else ""
         if mode == "profile":
-            return FlextInfraPytestProfile(Path(sys.argv[2])).run_parent(
+            return profile_module.FlextInfraPytestProfile(Path(sys.argv[2])).run_parent(
                 started_at_monotonic=cls._STARTED_AT_MONOTONIC,
             )
 
         slow_phase = mode in {"slow", "full-slow", "file-slow"}
-        runner = FlextInfraPytestRunner.from_environment(
+        runner = runner_module.FlextInfraPytestRunner.from_environment(
             started_at_monotonic=cls._STARTED_AT_MONOTONIC,
             slow_phase=slow_phase,
         )

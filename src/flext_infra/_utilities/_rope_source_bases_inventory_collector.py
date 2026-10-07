@@ -17,25 +17,6 @@ from collections.abc import MutableMapping
 from flext_infra import m, t
 
 
-def _is_main_guard(test: ast.expr) -> bool:
-    """Return whether one expression is the ``if __name__ == "__main__"`` guard.
-
-    Returns:
-        True when the comparison matches the canonical main guard shape.
-
-    """
-    return (
-        isinstance(test, ast.Compare)
-        and isinstance(test.left, ast.Name)
-        and test.left.id == "__name__"
-        and len(test.ops) == 1
-        and isinstance(test.ops[0], ast.Eq)
-        and len(test.comparators) == 1
-        and isinstance(test.comparators[0], ast.Constant)
-        and test.comparators[0].value == "__main__"
-    )
-
-
 class FlextInfraUtilitiesRopeSourceBindingCollector:
     """Index the lexical class bindings of one captured module body.
 
@@ -66,7 +47,7 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
                 and node.lineno > spec.required_line
             ):
                 break
-            FlextInfraUtilitiesRopeSourceBindingCollector._dispatch(
+            FlextInfraUtilitiesRopeSourceBindingCollector._index_node(
                 spec,
                 node,
                 bindings,
@@ -74,13 +55,13 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
             )
 
     @staticmethod
-    def _dispatch(
+    def _index_node(
         spec: m.Infra.SourceBindingCollectorSpec,
         node: ast.stmt,
         bindings: MutableMapping[str, m.Infra.SourceClassReference | None],
         scope: str,
     ) -> None:
-        """Route one statement to its handler; unlisted kinds are ignored."""
+        """Dispatch one statement to its shape-specific indexing handler."""
         if isinstance(node, ast.ClassDef):
             FlextInfraUtilitiesRopeSourceBindingCollector._class_def(
                 spec,
@@ -317,6 +298,33 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         )
 
     @staticmethod
+    def _subscript_rebind_target(
+        target: ast.expr,
+    ) -> m.Infra.SubscriptRebind | None:
+        """Return the typed rebind rule for one subscript target, or None.
+
+        The subscript's value expression is either a plain name
+        (``_control_char_table[...]``) or a rooted attribute chain
+        (``_sys.modules[...]``); any other shape is not a recognized
+        rebind target.
+
+        Returns:
+            The typed rule, or None when the shape is unsupported.
+
+        """
+        expression: ast.expr = target.value
+        attributes: list[str] = []
+        while isinstance(expression, ast.Attribute):
+            attributes.insert(0, expression.attr)
+            expression = expression.value
+        if not isinstance(expression, ast.Name):
+            return None
+        return m.Infra.SubscriptRebind(
+            root_name=expression.id,
+            attribute=".".join(attributes) if attributes else None,
+        )
+
+    @staticmethod
     def _module_table_mutation(
         targets: t.SequenceOf[ast.expr],
         bindings: t.MappingKV[str, m.Infra.SourceClassReference | None] | None = None,
@@ -336,19 +344,23 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         """
         return all(
             isinstance(target, ast.Subscript)
-            and isinstance(target.value, ast.Name)
             and (
-                m.Infra.SubscriptRebind(
-                    root_name=target.value.id,
-                ).is_module_table_mutation
+                rebind
+                := FlextInfraUtilitiesRopeSourceBindingCollector._subscript_rebind_target(
+                    target,
+                )
+            )
+            is not None
+            and (
+                rebind.is_module_table_mutation
                 or bindings is None
-                or bindings.get(target.value.id) is None
+                or bindings.get(rebind.root_name) is None
             )
             for target in targets
         )
 
     @staticmethod
-    def is_class_namespace_completion(
+    def _completes_class_namespace(
         node: ast.Assign | ast.AnnAssign,
         targets: t.SequenceOf[ast.expr],
         bindings: t.MappingKV[str, m.Infra.SourceClassReference | None],
@@ -384,8 +396,7 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
             True when the assignment completed a class namespace.
 
         """
-        collector = FlextInfraUtilitiesRopeSourceBindingCollector
-        if not collector.is_class_namespace_completion(
+        if not FlextInfraUtilitiesRopeSourceBindingCollector._completes_class_namespace(
             node,
             targets,
             bindings,
@@ -488,7 +499,8 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         scope: str,
     ) -> None:
         """Index one conditional statement's statically knowable branch."""
-        if _is_main_guard(node.test):
+        test = node.test
+        if FlextInfraUtilitiesRopeSourceBindingCollector._is_main_guard(test):
             FlextInfraUtilitiesRopeSourceBindingCollector.collect(
                 spec,
                 node.body if spec.module == "__main__" else node.orelse,
@@ -614,6 +626,18 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
             )
         for name in conditional:
             bindings[name] = None
+
+    @staticmethod
+    def _is_main_guard(test: ast.expr) -> bool:
+        """Return whether one condition is the ``__name__ == "__main__"`` guard."""
+        match test:
+            case ast.Compare(
+                left=ast.Name(id="__name__"),
+                ops=[ast.Eq()],
+                comparators=[ast.Constant(value="__main__")],
+            ):
+                return True
+        return False
 
     @staticmethod
     def _is_type_checking_test(test: ast.expr) -> bool:

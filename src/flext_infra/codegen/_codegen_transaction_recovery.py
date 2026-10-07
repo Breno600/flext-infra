@@ -194,7 +194,6 @@ class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):
         return self._recover(layout, expected=expected)
 
     def _reconcile(self, identity: m.Infra.GitIdentityReport) -> p.Result[bool]:
-
         layout = self._planner.journal_layout(identity)
         if layout.failure:
             return r[bool].from_failure(layout)
@@ -216,7 +215,6 @@ class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         failure: str,
     ) -> p.Result[bool]:
-
         observed = FlextInfraMiseArtifactsState.journal_state(layout)
         if observed.failure:
             return r[bool].fail(
@@ -295,7 +293,6 @@ class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):
         *,
         expected: m.Cli.AtomicFileState | None = None,
     ) -> p.Result[bool]:
-
         loaded = FlextInfraMiseArtifactsJournal.read(layout)
         if loaded.failure:
             return r[bool].from_failure(loaded)

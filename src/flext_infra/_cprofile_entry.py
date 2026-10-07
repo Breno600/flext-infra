@@ -9,9 +9,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from flext_infra import c
-from flext_infra._config import config
-from flext_infra.validate.cprofile_report import FlextInfraCProfileReport
+from flext_infra import c, config
+from flext_infra.validate import FlextInfraCProfileReport
 
 
 class FlextInfraCProfileEntry:

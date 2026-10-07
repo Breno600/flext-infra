@@ -13,13 +13,7 @@ from typing import Annotated, Literal, Self
 
 from flext_cli import m
 
-from flext_infra import t
-from flext_infra._constants import (
-    FlextInfraConstantsCheck,
-    FlextInfraConstantsCodegenProject,
-    FlextInfraConstantsDocs,
-    FlextInfraConstantsMake,
-)
+from flext_infra import c, t
 from flext_infra._models import (
     FlextInfraConfigModelsContract,
     FlextInfraExternalCacheDirectorySpec,
@@ -96,7 +90,7 @@ class FlextInfraConfigModelsMake:
             Raises:
                 ValueError: If make.ci.local_check_gates contains unknown gates.
             """
-            allowed = set(FlextInfraConstantsMake.CANONICAL_GATE_IDS)
+            allowed = set(c.Infra.CANONICAL_GATE_IDS)
             unknown = sorted(
                 {*self.local_check_gates, *self.informative_check_gates} - allowed,
             )
@@ -126,7 +120,7 @@ class FlextInfraConfigModelsMake:
             ),
         ] = False
         profiles: Annotated[
-            t.VariadicTuple[FlextInfraConstantsCodegenProject.MakeProfile],
+            t.VariadicTuple[c.Infra.MakeProfile],
             m.Field(
                 min_length=1,
                 description=(
@@ -134,7 +128,7 @@ class FlextInfraConfigModelsMake:
                     "a verb exists only where its operation applies"
                 ),
             ),
-        ] = tuple(FlextInfraConstantsCodegenProject.MakeProfile)
+        ] = tuple(c.Infra.MakeProfile)
 
     class MakeWorkflowStepSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One canonical workflow step."""
@@ -177,7 +171,7 @@ class FlextInfraConfigModelsMake:
             if "local" not in self.contexts:
                 msg = f"make workflow step {self.verb} must run locally"
                 raise ValueError(msg)
-            allowed = set(FlextInfraConstantsMake.CANONICAL_GATE_IDS)
+            allowed = set(c.Infra.CANONICAL_GATE_IDS)
             unknown = sorted(set(self.gates_skip) - allowed)
             if unknown:
                 msg = (
@@ -293,7 +287,7 @@ class FlextInfraConfigModelsMake:
                 (
                     action
                     for action in self.actions
-                    if action not in FlextInfraConstantsDocs.DOCS_ACTION_IDS
+                    if action not in c.Infra.DOCS_ACTION_IDS
                 ),
                 None,
             )
@@ -398,23 +392,23 @@ class FlextInfraConfigModelsMake:
         """Project-keyed shared Mypy cache, one analysis reused across relocks."""
 
         cache_environment_variable: Annotated[
-            FlextInfraConstantsMake.MypyCacheEnvironment,
+            c.Infra.MypyCacheEnvironment,
             m.Field(
-                default=FlextInfraConstantsMake.MypyCacheEnvironment.CACHE_DIR,
+                default=c.Infra.MypyCacheEnvironment.CACHE_DIR,
                 description="Mypy's cache-directory environment variable",
             ),
         ]
         data_home_environment_variable: Annotated[
-            FlextInfraConstantsMake.MypyCacheEnvironment,
+            c.Infra.MypyCacheEnvironment,
             m.Field(
-                default=FlextInfraConstantsMake.MypyCacheEnvironment.DATA_HOME,
+                default=c.Infra.MypyCacheEnvironment.DATA_HOME,
                 description="XDG persistent cache-home variable",
             ),
         ]
         user_home_environment_variable: Annotated[
-            FlextInfraConstantsMake.MypyCacheEnvironment,
+            c.Infra.MypyCacheEnvironment,
             m.Field(
-                default=FlextInfraConstantsMake.MypyCacheEnvironment.USER_HOME,
+                default=c.Infra.MypyCacheEnvironment.USER_HOME,
                 description="User home variable for the XDG default",
             ),
         ]
@@ -447,17 +441,17 @@ class FlextInfraConfigModelsMake:
                 (
                     "cache_environment_variable",
                     self.cache_environment_variable,
-                    FlextInfraConstantsMake.MypyCacheEnvironment.CACHE_DIR,
+                    c.Infra.MypyCacheEnvironment.CACHE_DIR,
                 ),
                 (
                     "data_home_environment_variable",
                     self.data_home_environment_variable,
-                    FlextInfraConstantsMake.MypyCacheEnvironment.DATA_HOME,
+                    c.Infra.MypyCacheEnvironment.DATA_HOME,
                 ),
                 (
                     "user_home_environment_variable",
                     self.user_home_environment_variable,
-                    FlextInfraConstantsMake.MypyCacheEnvironment.USER_HOME,
+                    c.Infra.MypyCacheEnvironment.USER_HOME,
                 ),
             ):
                 if actual != expected:
@@ -576,10 +570,10 @@ class FlextInfraConfigModelsMake:
                 ValueError: If make.ruff.lint_fix lacks the mandatory flag.
 
             """
-            if FlextInfraConstantsMake.RUFF_UNSAFE_FIXES_FLAG not in self.lint_fix:
+            if c.Infra.RUFF_UNSAFE_FIXES_FLAG not in self.lint_fix:
                 msg = (
                     "make.ruff.lint_fix must carry "
-                    f"{FlextInfraConstantsMake.RUFF_UNSAFE_FIXES_FLAG} (operator"
+                    f"{c.Infra.RUFF_UNSAFE_FIXES_FLAG} (operator"
                     " law 2026-10-05: the unsafe repair channel is mandatory"
                     " and never disabled again)"
                 )
@@ -687,17 +681,17 @@ class FlextInfraConfigModelsMake:
                 m.Field(description="pytest-testmon database filename"),
             ]
             database_environment_variable: Annotated[
-                FlextInfraConstantsMake.PytestCacheEnvironment,
+                c.Infra.PytestCacheEnvironment,
                 m.Field(
                     description="pytest-testmon's supported database-path variable",
                 ),
             ]
             data_home_environment_variable: Annotated[
-                FlextInfraConstantsMake.PytestCacheEnvironment,
+                c.Infra.PytestCacheEnvironment,
                 m.Field(description="XDG persistent cache-home variable"),
             ]
             user_home_environment_variable: Annotated[
-                FlextInfraConstantsMake.PytestCacheEnvironment,
+                c.Infra.PytestCacheEnvironment,
                 m.Field(description="User home variable for the XDG default"),
             ]
             target_directory: Annotated[
@@ -725,17 +719,17 @@ class FlextInfraConfigModelsMake:
                     (
                         "database_environment_variable",
                         self.database_environment_variable,
-                        FlextInfraConstantsMake.PytestCacheEnvironment.DATABASE_FILE,
+                        c.Infra.PytestCacheEnvironment.DATABASE_FILE,
                     ),
                     (
                         "data_home_environment_variable",
                         self.data_home_environment_variable,
-                        FlextInfraConstantsMake.PytestCacheEnvironment.DATA_HOME,
+                        c.Infra.PytestCacheEnvironment.DATA_HOME,
                     ),
                     (
                         "user_home_environment_variable",
                         self.user_home_environment_variable,
-                        FlextInfraConstantsMake.PytestCacheEnvironment.USER_HOME,
+                        c.Infra.PytestCacheEnvironment.USER_HOME,
                     ),
                 ):
                     if actual != expected:
@@ -768,23 +762,23 @@ class FlextInfraConfigModelsMake:
             """Project-keyed shared Mypy cache: one analysis per project."""
 
             cache_environment_variable: Annotated[
-                FlextInfraConstantsMake.MypyCacheEnvironment,
+                c.Infra.MypyCacheEnvironment,
                 m.Field(
-                    default=FlextInfraConstantsMake.MypyCacheEnvironment.CACHE_DIR,
+                    default=c.Infra.MypyCacheEnvironment.CACHE_DIR,
                     description="Mypy's cache-directory environment variable",
                 ),
             ]
             data_home_environment_variable: Annotated[
-                FlextInfraConstantsMake.MypyCacheEnvironment,
+                c.Infra.MypyCacheEnvironment,
                 m.Field(
-                    default=FlextInfraConstantsMake.MypyCacheEnvironment.DATA_HOME,
+                    default=c.Infra.MypyCacheEnvironment.DATA_HOME,
                     description="XDG persistent cache-home variable",
                 ),
             ]
             user_home_environment_variable: Annotated[
-                FlextInfraConstantsMake.MypyCacheEnvironment,
+                c.Infra.MypyCacheEnvironment,
                 m.Field(
-                    default=FlextInfraConstantsMake.MypyCacheEnvironment.USER_HOME,
+                    default=c.Infra.MypyCacheEnvironment.USER_HOME,
                     description="User home variable for the XDG default",
                 ),
             ]
@@ -818,17 +812,17 @@ class FlextInfraConfigModelsMake:
                     (
                         "cache_environment_variable",
                         self.cache_environment_variable,
-                        FlextInfraConstantsMake.MypyCacheEnvironment.CACHE_DIR,
+                        c.Infra.MypyCacheEnvironment.CACHE_DIR,
                     ),
                     (
                         "data_home_environment_variable",
                         self.data_home_environment_variable,
-                        FlextInfraConstantsMake.MypyCacheEnvironment.DATA_HOME,
+                        c.Infra.MypyCacheEnvironment.DATA_HOME,
                     ),
                     (
                         "user_home_environment_variable",
                         self.user_home_environment_variable,
-                        FlextInfraConstantsMake.MypyCacheEnvironment.USER_HOME,
+                        c.Infra.MypyCacheEnvironment.USER_HOME,
                     ),
                 ):
                     if actual != expected:
@@ -947,7 +941,7 @@ class FlextInfraConfigModelsMake:
                     "references, agents, census and waza ended up outside the "
                     "gate matrix in consuming repositories. Each id must have a "
                     "`_custom_check_<id>` handler in the project's "
-                    f"{FlextInfraConstantsCodegenProject.CUSTOM_MAKE_FILENAME}."
+                    f"{c.Infra.CUSTOM_MAKE_FILENAME}."
                 ),
             ),
         ] = ()
@@ -985,7 +979,7 @@ class FlextInfraConfigModelsMake:
             if len(set(self.project_check_gates)) != len(self.project_check_gates):
                 msg = "make project_check_gates must be unique"
                 raise ValueError(msg)
-            builtin = set(FlextInfraConstantsMake.CANONICAL_GATE_IDS)
+            builtin = set(c.Infra.CANONICAL_GATE_IDS)
             shadowed = sorted(set(self.project_check_gates) & builtin)
             if shadowed:
                 msg = (
@@ -1078,8 +1072,7 @@ class FlextInfraConfigModelsMake:
                 verb.name
                 for verb in self.verbs
                 if verb.name in self.standalone_check_gates
-                and set(verb.profiles)
-                != set(FlextInfraConstantsCodegenProject.MakeProfile)
+                and set(verb.profiles) != set(c.Infra.MakeProfile)
             )
             if partial_standalone:
                 msg = (
@@ -1141,8 +1134,7 @@ class FlextInfraConfigModelsMake:
                 verb.name
                 for verb in self.verbs
                 if verb.name in {*workflow_verbs, "pre-commit"}
-                and set(verb.profiles)
-                != set(FlextInfraConstantsCodegenProject.MakeProfile)
+                and set(verb.profiles) != set(c.Infra.MakeProfile)
             )
             if partial_workflow:
                 msg = (
@@ -1175,7 +1167,7 @@ class FlextInfraConfigModelsMake:
 
             """
             unknown_fmt_gates = set(self.fmt_gates) - set(
-                FlextInfraConstantsCheck.SARIF_TOOL_INFO,
+                c.Infra.SARIF_TOOL_INFO,
             )
             if unknown_fmt_gates:
                 msg = (
@@ -1214,7 +1206,7 @@ class FlextInfraConfigModelsMake:
                 The resulting ``t.VariadicTuple[str]``.
             """
             return (
-                *FlextInfraConstantsMake.CANONICAL_GATE_IDS,
+                *c.Infra.CANONICAL_GATE_IDS,
                 *self.project_check_gates,
             )
 
@@ -1227,7 +1219,7 @@ class FlextInfraConfigModelsMake:
                 *self.opt_in_check_gates,
             ))
             declared = (
-                *FlextInfraConstantsMake.CANONICAL_GATE_IDS,
+                *c.Infra.CANONICAL_GATE_IDS,
                 *self.project_check_gates,
             )
             return tuple(gate for gate in declared if gate not in excluded)
@@ -1266,7 +1258,7 @@ class FlextInfraConfigModelsMake:
             Returns:
                 The resulting ``t.VariadicTuple[str]``.
             """
-            return FlextInfraConstantsMake.CANONICAL_FIXABLE_GATE_IDS
+            return c.Infra.CANONICAL_FIXABLE_GATE_IDS
 
         @m.computed_field
         @property
@@ -1299,7 +1291,7 @@ class FlextInfraConfigModelsMake:
                 )
                 for profile in (
                     *overrides,
-                    *FlextInfraConstantsCodegenProject.MakeProfile,
+                    *c.Infra.MakeProfile,
                 )
             }
 

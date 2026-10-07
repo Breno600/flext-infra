@@ -1,10 +1,5 @@
 """Qualified runtime-base discovery over captured, unpublished source.
 
-The public composite facade: lexical inventory lives in
-``_rope_source_bases_inventory`` and runtime resolution in
-``_rope_source_bases_runtime``; this module only republishes their
-entries under the fleet-facing single alias.
-
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT.
 """
@@ -15,6 +10,9 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_infra import m, t
+from flext_infra._utilities._rope_source_bases_aliases import (
+    FlextInfraUtilitiesRopeSourceBasesAliases,
+)
 from flext_infra._utilities._rope_source_bases_inventory import (
     FlextInfraUtilitiesRopeSourceBasesInventory,
 )
@@ -24,10 +22,10 @@ from flext_infra._utilities._rope_source_bases_runtime import (
 
 
 class FlextInfraUtilitiesRopeSourceBases:
-    """Source-bases composite facade over the inventory and runtime parts."""
+    """Source-bases composite facade over the inventory, aliases, and runtime parts."""
 
     @classmethod
-    def _inventory(
+    def inventory(
         cls,
         request: m.Infra.SourceBindingInventoryRequest,
         definitions: MutableMapping[str, m.Infra.SourceClassDefinition],
@@ -41,6 +39,25 @@ class FlextInfraUtilitiesRopeSourceBases:
         return FlextInfraUtilitiesRopeSourceBasesInventory.inventory(
             request,
             definitions,
+        )
+
+    @classmethod
+    def lazy_module_aliases(
+        cls,
+        module: str,
+        path: Path,
+        source: str,
+    ) -> dict[str, str]:
+        """Read the ``install_lazy_exports`` namespace alias map of one module.
+
+        Returns:
+            The module's facade alias names routed to their lazy module paths.
+
+        """
+        return FlextInfraUtilitiesRopeSourceBasesAliases.lazy_module_aliases(
+            module,
+            path,
+            source,
         )
 
     @classmethod

@@ -793,7 +793,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
             value = self._external[identity]
             if not isinstance(value, p.Infra.RopeBuiltinClass):
                 message = (
-                    f"External class has no declared source or native identity: "
+                    "External class has no declared source or native identity: "
                     f"{identity}"
                 )
                 raise TypeError(message)

@@ -374,7 +374,6 @@ class FlextInfraPytestCollection:
             # Owner modules, never the root facades: this plugin loads in every
             # consumer test process, and ``m.Infra`` builds the whole model
             # family (seconds of class construction) to write one JSON line.
-
             self.report = report_log.with_suffix(
                 FlextInfraConstantsMake.PYTEST_WARNING_EVENTS_SUFFIX,
             )

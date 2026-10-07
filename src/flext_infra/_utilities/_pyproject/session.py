@@ -9,7 +9,7 @@ from __future__ import annotations
 from flext_cli import r, u
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
+from flext_infra._utilities import FlextInfraUtilitiesDependencies
 
 
 class FlextInfraUtilitiesPyprojectSession:
@@ -46,7 +46,7 @@ class FlextInfraUtilitiesPyprojectSession:
             parsed
             for item in requirements
             if (
-                parsed := FlextInfraUtilitiesDependenciesProfiles.active_requirement(
+                parsed := FlextInfraUtilitiesDependencies.active_requirement(
                     item,
                     environment=environment,
                 )
@@ -62,7 +62,7 @@ class FlextInfraUtilitiesPyprojectSession:
             parsed
             for item in explicit
             if (
-                parsed := FlextInfraUtilitiesDependenciesProfiles.active_requirement(
+                parsed := FlextInfraUtilitiesDependencies.active_requirement(
                     item,
                     environment=environment,
                 )
@@ -72,10 +72,10 @@ class FlextInfraUtilitiesPyprojectSession:
         overrides = tuple(
             item
             for item in active_overrides
-            if FlextInfraUtilitiesDependenciesProfiles.dep_name(item) not in selected
+            if FlextInfraUtilitiesDependencies.dep_name(item) not in selected
         )
         override_names = frozenset(
-            FlextInfraUtilitiesDependenciesProfiles.dep_name(item)
+            FlextInfraUtilitiesDependencies.dep_name(item)
             for item in active_overrides
         )
         declared_constraints = (
@@ -85,9 +85,9 @@ class FlextInfraUtilitiesPyprojectSession:
         )
         constraints = tuple(
             dict.fromkeys(
-                FlextInfraUtilitiesDependenciesProfiles.dependency_constraint(
+                FlextInfraUtilitiesDependencies.dependency_constraint(
                     parsed,
-                    replace_source=FlextInfraUtilitiesDependenciesProfiles.dep_name(
+                    replace_source=FlextInfraUtilitiesDependencies.dep_name(
                         parsed,
                     )
                     in selected,
@@ -96,20 +96,20 @@ class FlextInfraUtilitiesPyprojectSession:
                     *(
                         item
                         for item in active
-                        if FlextInfraUtilitiesDependenciesProfiles.dep_name(item)
+                        if FlextInfraUtilitiesDependencies.dep_name(item)
                         not in override_names
                     ),
                     *(
                         item
                         for item in active_overrides
-                        if FlextInfraUtilitiesDependenciesProfiles.dep_name(item)
+                        if FlextInfraUtilitiesDependencies.dep_name(item)
                         in selected
                     ),
                     *declared_constraints,
                 )
                 if (
                     parsed
-                    := FlextInfraUtilitiesDependenciesProfiles.active_requirement(
+                    := FlextInfraUtilitiesDependencies.active_requirement(
                         item,
                         environment=environment,
                     )

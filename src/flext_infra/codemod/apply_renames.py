@@ -27,7 +27,6 @@ class FlextInfraApplyRenames:
         roots: t.SequenceOf[Path],
         pairs: t.SequenceOf[t.Pair[str, str]],
     ) -> t.Pair[t.VariadicTuple[m.Infra.SemanticFilePlan], int]:
-
         inventory = FlextInfraRenameSources.inventory(roots, params)
         sources = {
             path: state.content.decode(c.Cli.ENCODING_DEFAULT)
