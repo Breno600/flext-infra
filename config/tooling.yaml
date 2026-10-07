@@ -548,24 +548,16 @@ Infra:
                 Generated lazy-init package initializers must execute the lazy
                 installation, which is not a re-export.
 
-
             - files: "scripts/**"
-              rules: [any-type, unused-function-argument, undocumented-public-class, undocumented-public-method, undocumented-public-function, undocumented-public-init, unnecessary-multiline-docstring, blank-line-after-function, missing-blank-line-after-summary, multi-line-summary-first-line, raw-string-in-exception, f-string-in-exception, commented-out-code, shebang-not-executable, boolean-type-hint-positional-argument, boolean-default-value-positional-argument, read-whole-file, write-whole-file, if-exp-instead-of-or-operator, repeated-append, logging-string-concat, non-lowercase-variable-in-function, invalid-module-name, manual-list-comprehension, manual-list-copy, multiple-starts-ends-with, missing-maxsplit-arg, import-private-name, magic-value-comparison, literal-membership, unspecified-encoding, os-path-abspath, os-path-exists, os-path-join, os-path-dirname, builtin-open, path-constructor-current-directory, avoidable-escaped-quote, unsorted-dunder-all, used-dummy-variable, unused-noqa, noqa-comments, suspicious-subprocess-import, subprocess-without-shell-equals-true, start-process-with-partial-path, print, runtime-cast-value, banned-api, relative-imports, raise-vanilla-args, error-instead-of-exception, verbose-raise]
+              rules: [ any-type, unused-function-argument, undocumented-public-class, undocumented-public-method, undocumented-public-function, undocumented-public-init, unnecessary-multiline-docstring, blank-line-after-function, missing-blank-line-after-summary, multi-line-summary-first-line, raw-string-in-exception, f-string-in-exception, commented-out-code, shebang-not-executable, boolean-type-hint-positional-argument, boolean-default-value-positional-argument, read-whole-file, write-whole-file, if-exp-instead-of-or-operator, repeated-append, logging-string-concat, non-lowercase-variable-in-function, invalid-module-name, manual-list-comprehension, manual-list-copy, multiple-starts-ends-with, missing-maxsplit-arg, import-private-name, magic-value-comparison, literal-membership, unspecified-encoding, os-path-abspath, os-path-exists, os-path-join, os-path-dirname, builtin-open, path-constructor-current-directory, avoidable-escaped-quote, unsorted-dunder-all, used-dummy-variable, unused-noqa, noqa-comments, suspicious-subprocess-import, subprocess-without-shell-equals-true, start-process-with-partial-path, print, runtime-cast-value, banned-api, relative-imports, raise-vanilla-args, error-instead-of-exception, verbose-raise ]
               authority: operator-ruling-2026-10-02-mcb-scripts-automation
               reason: >-
-                Repository automation helpers (mcb scripts/**, migrated from
-                mcb config/managed-artifacts.yaml when the project per-file
-                declaration surface retired): CLI entrypoints print to stdout,
-                drive subprocesses and use os.path; the sys.path bootstrap
-                forces module-level imports after executable code. Scoped to
-                scripts/** so shipped source keeps every rule.
+                Repository automation helpers (mcb scripts/**, migrated from mcb config/managed-artifacts.yaml when the project per-file declaration surface retired): CLI entrypoints print to stdout, drive subprocesses and use os.path; the sys.path bootstrap forces module-level imports after executable code. Scoped to scripts/** so shipped source keeps every rule.
             - files: "**/tests/python/**"
-              rules: [suspicious-subprocess-import, subprocess-without-shell-equals-true, start-process-with-partial-path, raise-vanilla-args]
+              rules: [ suspicious-subprocess-import, subprocess-without-shell-equals-true, start-process-with-partial-path, raise-vanilla-args ]
               authority: operator-ruling-2026-10-02-mcb-tests-python
               reason: >-
-                mcb tests/python exercises the scripts automation end to end and
-                legitimately drives subprocesses (migrated from the retired
-                project per-file surface: S404/S603/S607/TRY003).
+                mcb tests/python exercises the scripts automation end to end and legitimately drives subprocesses (migrated from the retired project per-file surface: S404/S603/S607/TRY003).
       mypy:
         # Wall-time bound for the bounded Mypy execution (SSOT). A project
         # config/tooling.yaml overlay may only lower it; no environment
