@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 from flext_core import r
@@ -75,15 +76,13 @@ class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
         """
         payload = u.Infra.pyproject_payload(root / c.PYPROJECT_FILENAME)
         project = payload.get("project")
-        if not isinstance(project, dict):
+        if not isinstance(project, Mapping):
             return ()
-        dependencies = project.get("dependencies")
-        if not isinstance(dependencies, list):
-            return ()
+        declared = m.Infra.CodegenPyprojectProjectDeps.model_validate(project)
         return tuple(
             spec.split(" @ ", 1)[0].strip()
-            for spec in dependencies
-            if isinstance(spec, str) and "git+" in spec and " @ " in spec
+            for spec in declared.dependencies
+            if "git+" in spec and " @ " in spec
         )
 
 

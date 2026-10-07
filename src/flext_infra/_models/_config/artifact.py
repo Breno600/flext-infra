@@ -541,6 +541,22 @@ class FlextInfraConfigModelsArtifact:
             m.Field(description="Read-only check or atomic apply"),
         ] = FlextInfraConstantsCodegenProject.CodegenConformMode.CHECK
 
+    class CodegenPyprojectProjectDeps(FlextInfraConfigModelsContract.ConfigContract):
+        """The ``[project]`` slice the conform's git-peer refresh reads.
+
+        Only the declared dependency strings are modeled; every other
+        ``[project]`` key is ignored so one typed contract answers exactly
+        the question ``settle_repository`` asks — which dependencies move
+        by git declaration.
+        """
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore")
+
+        dependencies: Annotated[
+            t.VariadicTuple[str],
+            m.Field(description="Declared [project] dependency requirements"),
+        ] = ()
+
     class CodegenArtifactComposition(FlextInfraConfigModelsContract.ConfigContract):
         """Rendered artifact plus the exact source states used to compose it."""
 
