@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m, u
-from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
@@ -116,6 +115,8 @@ class FlextInfraNamespaceRelocationCascade:
                 t.Pair[c.Infra.CodemodRelocation, m.Infra.ModScanFinding]]``.
 
         """
+        from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
+
         report = FlextInfraModGateEngine.scan(project_root, fix=False).unwrap()
         return FlextInfraNamespaceRelocationCascade.findings_from_report(
             project_root,

@@ -112,7 +112,7 @@ class FlextInfraAccessorMigrationRewriteMixin:
             start = cls._offset_from_position(source, line, column)
             end = start + len(rule.source_name)
             definition = resolver.occurrence_origin(file_path, start)
-            if definition is None or not resolver.path_in_origin(
+            if definition is None or not resolver.is_origin_path(
                 definition,
                 origin=rule.origin,
             ):

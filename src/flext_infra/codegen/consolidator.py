@@ -69,12 +69,12 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
         rope: p.Infra.RopeWorkspaceDsl,
         selected_projects: t.SequenceOf[p.Infra.ProjectInfo],
     ) -> p.Result[
-        t.Quint[int, int, int, t.SequenceOf[m.Infra.ConsolidatorFileResult], list[str]]
+        t.Tuple[int, int, int, t.SequenceOf[m.Infra.ConsolidatorFileResult], list[str]]
     ]:
         """Scan every selected project, applying when not in dry-run.
 
         Returns:
-            The resulting ``p.Result[t.Quint[int, int, int,
+            The resulting ``p.Result[t.Tuple[int, int, int,
                 t.SequenceOf[m.Infra.ConsolidatorFileResult], list[str]]]``
             with the found/applied/failed counters, the per-file results, and
             the rendered scan lines.
@@ -91,7 +91,7 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
             value_map_result = self._build_value_map_from_constants_file(constants_file)
             if value_map_result.failure:
                 return r[
-                    t.Quint[
+                    t.Tuple[
                         int,
                         int,
                         int,
@@ -105,7 +105,7 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
             project_files = self._project_python_files(rope, project.path)
             if project_files.failure:
                 return r[
-                    t.Quint[
+                    t.Tuple[
                         int,
                         int,
                         int,
@@ -148,7 +148,7 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
                 else:
                     failed += 1
         return r[
-            t.Quint[
+            t.Tuple[
                 int,
                 int,
                 int,

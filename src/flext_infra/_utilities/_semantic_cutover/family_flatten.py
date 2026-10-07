@@ -10,17 +10,8 @@ import ast
 from collections.abc import MutableMapping, Sequence
 from pathlib import Path
 
-from flext_cli import u
-
 from flext_infra import c, m, p, t
-from flext_infra._config import config
-from flext_infra._utilities import (
-    FlextInfraUtilitiesCodegenNamespace,
-    FlextInfraUtilitiesRopeRuntimeModules,
-    FlextInfraUtilitiesRopeRuntimeRefactors,
-    FlextInfraUtilitiesRopeStructure,
-    FlextInfraUtilitiesSemanticFamilyReferences,
-)
+from flext_infra._utilities import FlextInfraUtilitiesSemanticFamilyReferences
 
 
 class FlextInfraUtilitiesSemanticFamilyFlatten(
@@ -34,6 +25,15 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         workspace: p.Infra.RopeWorkspaceDsl,
         sources: t.MappingKV[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
+
+        from flext_cli import u
+
+        from flext_infra._config import config
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesCodegenNamespace,
+            FlextInfraUtilitiesRopeRuntimeModules,
+            FlextInfraUtilitiesRopeRuntimeRefactors,
+        )
 
         candidates = tuple(
             path
@@ -99,7 +99,7 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         workspace: p.Infra.RopeWorkspaceDsl,
         project: p.Infra.RopeProject,
         path: Path,
-    ) -> t.Pair[p.Infra.RopeScopeDsl, p.Infra.RopeScopeDsl] | None:
+    ) -> t.Pair[t.Infra.RopeScopeDsl, t.Infra.RopeScopeDsl] | None:
         """Resolve the family owner scope and its single wrapper child.
 
         Returns:
@@ -142,7 +142,7 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
     @classmethod
     def _wrapper_layout(
         cls,
-        child: p.Infra.RopeScopeDsl,
+        child: t.Infra.RopeScopeDsl,
         source: str,
         path: Path,
     ) -> (
@@ -163,6 +163,8 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
             ValueError: If inline namespace wrapper cannot be flattened safely.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeStructure
+
         facts = FlextInfraUtilitiesRopeStructure.logical_statements(source)
         header = next(item for item in facts if item.line == child.get_start())
         if header.category != c.Infra.StatementCategory.CLASS_DEF:
@@ -199,8 +201,8 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         project: p.Infra.RopeProject,
         source: str,
         path: Path,
-        owner_scope: p.Infra.RopeScopeDsl,
-        child: p.Infra.RopeScopeDsl,
+        owner_scope: t.Infra.RopeScopeDsl,
+        child: t.Infra.RopeScopeDsl,
     ) -> m.Infra.FamilyWrapperFlatten:
         """Build the flatten plan after proving the wrapper is safely removable.
 
@@ -212,6 +214,8 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
                 wrapper prefix collision is ambiguous.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeStructure
+
         wrapper_name = child.pyobject.get_name()
         owner_name = owner_scope.pyobject.get_name()
         facts = FlextInfraUtilitiesRopeStructure.logical_statements(source)
@@ -281,6 +285,7 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         sources: t.MappingKV[Path, str],
         rewrites: MutableMapping[Path, list[m.Infra.SourceRewrite]],
     ) -> int:
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors
 
         scopes = cls._wrapper_scopes(workspace, project, path)
         if scopes is None:
@@ -345,6 +350,8 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
             Whether a resolved wrapper member has no planned rewrite.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         root = Path(project.root.real_path)
         for path, source in sources.items():

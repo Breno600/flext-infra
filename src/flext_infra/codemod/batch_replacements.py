@@ -8,21 +8,75 @@ from __future__ import annotations
 
 from collections.abc import Mapping, MutableMapping
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 import libcst as cst
 
 from flext_core import r
 from flext_infra import c, m, t, u
-from flext_infra.codemod._batch_replacements_scaffolds import (
-    _DeadScaffold,
-    _OrphanImport,
-)
 from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
-from flext_infra.transformers import FlextInfraSemanticPublication
 
 if TYPE_CHECKING:
     from flext_infra import p
+
+
+class _DeadScaffold(cst.CSTTransformer):
+    """Remove ``if TYPE_CHECKING:`` blocks whose body is only ``pass``."""
+
+    @override
+    def leave_If(
+        self,
+        original_node: cst.If,
+        updated_node: cst.If,
+    ) -> cst.If | cst.RemovalSentinel:
+        test = updated_node.test
+        body = updated_node.body
+        if isinstance(test, cst.Name) and test.value == "TYPE_CHECKING":
+            statements = (
+                body.body
+                if isinstance(
+                    body,
+                    cst.SimpleStatementSuite | cst.IndentedBlock,
+                )
+                else ()
+            )
+            if len(statements) == 1 and isinstance(
+                statements[0],
+                cst.SimpleStatementLine,
+            ):
+                inner = statements[0].body
+                if len(inner) == 1 and isinstance(inner[0], cst.Pass):
+                    return cst.RemoveFromParent()
+        return updated_node
+
+
+class _OrphanImport(cst.CSTTransformer):
+    """Drop the ``TYPE_CHECKING`` name once its block is gone."""
+
+    @override
+    def leave_ImportFrom(
+        self,
+        original_node: cst.ImportFrom,
+        updated_node: cst.ImportFrom,
+    ) -> cst.ImportFrom | cst.RemovalSentinel:
+        module = updated_node.module
+        if not (isinstance(module, cst.Name) and module.value == "typing"):
+            return updated_node
+        names = updated_node.names
+        if isinstance(names, cst.ImportStar):
+            return updated_node
+        kept = tuple(
+            alias
+            for alias in names
+            if not (
+                isinstance(alias.name, cst.Name) and alias.name.value == "TYPE_CHECKING"
+            )
+        )
+        if len(kept) == len(names):
+            return updated_node
+        if not kept:
+            return cst.RemoveFromParent()
+        return updated_node.with_changes(names=kept)
 
 
 class FlextInfraModReplacements:
@@ -76,6 +130,8 @@ class FlextInfraModReplacements:
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra.transformers import FlextInfraSemanticPublication
+
         allowed = cls.require_authored(
             tuple(finding for finding in report.entries if finding.actionable),
         )

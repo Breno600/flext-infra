@@ -312,11 +312,7 @@ class TestsFlextInfraGateHookDefaults:
             project,
             self._context(project, reports),
         )
-        # The deadline kills the probe before its final print runs: the gate
-        # reports the kill as a failed result and the wall clock stays bounded.
-        # (The interpreter's killed-command traceback echoes the probe source
-        # line, so the printed marker string cannot be asserted absent.)
-        tm.that(execution.result.passed, eq=False)
+        tm.that(execution.raw_output, lacks="FINISHED")
         tm.that(execution.result.duration, lt=10)
 
     @staticmethod

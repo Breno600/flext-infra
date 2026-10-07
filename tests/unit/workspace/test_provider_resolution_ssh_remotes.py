@@ -31,7 +31,15 @@ class TestsFlextInfraProviderResolutionAcceptsSshRemotes:
             The resulting ``Path``.
 
         """
-        u.Tests.WorktreeFixture.initialize_governed_project(root, name)
+        u.Tests.WorktreeFixture.initialize_governed_project(
+            root,
+            name,
+            beads=u.Tests.BeadsIdentity(
+                workspace=f"{name}-workspace",
+                database=f"{name}-database",
+                issue_prefix=f"{name}-prefix",
+            ),
+        )
         return root
 
     @staticmethod

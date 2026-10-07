@@ -12,12 +12,7 @@ from pathlib import Path
 
 from flext_core import r
 from flext_infra import c, m, p, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesDocsApi,
-    FlextInfraUtilitiesDocsContract,
-    FlextInfraUtilitiesDocsGenerateProjectMixin,
-    FlextInfraUtilitiesDocsRender,
-)
+from flext_infra._utilities import FlextInfraUtilitiesDocsGenerateProjectMixin
 
 
 class FlextInfraUtilitiesDocsGenerateRootMixin(
@@ -28,7 +23,7 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
     @staticmethod
     def _aggregate_root_pages(
         repository_root: Path,
-        workspace_contract: t.JsonMapping,
+        workspace_contract: m.Infra.DocsWorkspaceContract,
         src_paths: t.SequenceOf[str],
         catalog_entries: t.SequenceOf[m.Infra.DocsCatalogEntry],
         exclude_docs: t.StrSequence,
@@ -39,6 +34,8 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
             The resulting ``list[t.Pair[Path, str]]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocsRender
+
         return [
             (
                 repository_root / "mkdocs.yml",
@@ -61,7 +58,7 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
         cls,
         repository_root: Path,
         scopes: t.SequenceOf[m.Infra.DocScope],
-        workspace_contract: t.JsonMapping,
+        workspace_contract: m.Infra.DocsWorkspaceContract,
         exclude_docs: t.StrSequence,
     ) -> p.Result[
         t.Triple[
@@ -76,6 +73,12 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
             The resulting ``(rendered, project scopes, scope modules)`` triple.
 
         """
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesDocsApi,
+            FlextInfraUtilitiesDocsContract,
+            FlextInfraUtilitiesDocsRender,
+        )
+
         project_scopes = [scope for scope in scopes if scope.path != repository_root]
         catalog_entries: t.MutableSequenceOf[m.Infra.DocsCatalogEntry] = []
         scope_modules: MutableMapping[str, list[str]] = {}
@@ -173,6 +176,8 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
             The resulting ``list[t.Pair[Path, str]]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocsRender
+
         projects_index_entries: t.MutableSequenceOf[m.Infra.DocsProjectIndexEntry] = []
         for scope in project_scopes:
             rendered.append((
@@ -284,6 +289,11 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
                 ``p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]``.
 
         """
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesDocsContract,
+            FlextInfraUtilitiesDocsRender,
+        )
+
         workspace_contract = FlextInfraUtilitiesDocsContract.docs_workspace_contract(
             repository_root,
         )

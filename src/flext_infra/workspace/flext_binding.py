@@ -34,13 +34,12 @@ from typing import TYPE_CHECKING
 from flext_core import r
 from flext_infra import c, m, t, u
 from flext_infra._config import config
-from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from flext_infra import p
 
 
-class FlextInfraBindingService:
+class FlextInfraFlextBindingService:
     """Resolve and apply one session binding onto a flext worktree."""
 
     @staticmethod
@@ -153,6 +152,8 @@ class FlextInfraBindingService:
             The distributions this worktree can supply to the consumer.
 
         """
+        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
         workspace = FlextInfraWorkspaceDetector.load_workspace_spec(flext_root)
         if workspace.failure:
             return r[t.MappingKV[str, Path]].fail(
@@ -300,4 +301,4 @@ class FlextInfraBindingService:
         return r[int].ok(0)
 
 
-__all__: list[str] = ["FlextInfraBindingService"]
+__all__: list[str] = ["FlextInfraFlextBindingService"]

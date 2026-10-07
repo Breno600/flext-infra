@@ -11,15 +11,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import ClassVar
 
-from flext_cli import u
 from git import GitCommandError
 
 from flext_core import r
 from flext_infra import m, p, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesGitRemote,
-    FlextInfraUtilitiesGitSemanticIdentityMixin,
-)
+from flext_infra._utilities import FlextInfraUtilitiesGitSemanticIdentityMixin
 
 
 class FlextInfraUtilitiesGitAttestationMixin(
@@ -39,6 +35,8 @@ class FlextInfraUtilitiesGitAttestationMixin(
         cls,
         request: m.Infra.GateAttestationCreateRequest,
     ) -> p.Result[m.Infra.GateAttestationPredicate]:
+
+        from flext_infra._utilities import FlextInfraUtilitiesGitRemote
 
         repo_root = Path(request.workspace).expanduser().resolve()
         identity = cls.git_identity(m.Infra.GitRepoRequest(repo_root=repo_root))
@@ -73,6 +71,8 @@ class FlextInfraUtilitiesGitAttestationMixin(
         gates: t.StrSequence,
     ) -> p.Result[t.VariadicTuple[m.Infra.GateCommandEvidence]]:
 
+        from flext_cli import u
+
         evidence: list[m.Infra.GateCommandEvidence] = []
         for gate in gates:
             command = f"make {gate}"
@@ -103,6 +103,8 @@ class FlextInfraUtilitiesGitAttestationMixin(
     @classmethod
     def _toolchain_digest(cls, repo_root: Path, commit_sha: str | None = None) -> str:
 
+        from flext_cli import u
+
         repo = cls._repo(repo_root)
         commit = repo.commit(commit_sha) if commit_sha is not None else repo.head.commit
         names = (".mise.toml", ".python-version", "pyproject.toml")
@@ -128,6 +130,8 @@ class FlextInfraUtilitiesGitAttestationMixin(
             The resulting ``p.Result[m.Infra.GateAttestationReport]``.
 
         """
+        from flext_cli import u
+
         repo_root = Path(request.workspace).expanduser().resolve()
         predicate_result = cls._attestation_predicate(request)
         if predicate_result.failure:
@@ -198,6 +202,8 @@ class FlextInfraUtilitiesGitAttestationMixin(
             The resulting ``p.Result[m.Infra.GateAttestationPredicate]``.
 
         """
+        from flext_cli import u
+
         commit_sha = request.commit_sha
         verification = u.Cli.run_raw(
             [
@@ -252,6 +258,8 @@ class FlextInfraUtilitiesGitAttestationMixin(
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_cli import u
+
         if request.output is None:
             return r[bool].ok(value=True)
         serialized = u.Cli.json_dumps(
@@ -273,6 +281,8 @@ class FlextInfraUtilitiesGitAttestationMixin(
         tag: str,
         commit_sha: str,
     ) -> p.Result[m.Infra.GateAttestationPredicate]:
+
+        from flext_cli import u
 
         try:
             tag_ref = next(
@@ -307,6 +317,8 @@ class FlextInfraUtilitiesGitAttestationMixin(
         predicate: m.Infra.GateAttestationPredicate,
         commit_sha: str,
     ) -> p.Result[bool]:
+
+        from flext_infra._utilities import FlextInfraUtilitiesGitRemote
 
         identity = cls.git_identity(m.Infra.GitRepoRequest(repo_root=repo_root))
         if identity.failure:

@@ -13,12 +13,6 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, t
-from flext_infra._config import config
-from flext_infra._utilities import (
-    FlextInfraUtilitiesDocsCommandContractMixin,
-    FlextInfraUtilitiesDocsGeneratePlanMixin,
-    FlextInfraUtilitiesWorkspaceManifest,
-)
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -201,6 +195,12 @@ class FlextInfraUtilitiesDocsGuidesMixin:
             ValueError: If issues.
 
         """
+        from flext_infra._config import config
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesDocsCommandContractMixin,
+            FlextInfraUtilitiesWorkspaceManifest,
+        )
+
         loaded = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
             repository_root,
         )
@@ -267,6 +267,8 @@ class FlextInfraUtilitiesDocsGuidesMixin:
                 ``p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocsGeneratePlanMixin
+
         source_root = repository_root / c.Infra.DIR_DOCS / "guides"
         destination_root = scope.path / c.Infra.DIR_DOCS / "guides"
         if source_root == destination_root:
