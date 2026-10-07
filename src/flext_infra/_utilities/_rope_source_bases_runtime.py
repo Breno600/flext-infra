@@ -183,11 +183,6 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 The module's explicit lexical bindings, including value
                 shadowing.
 
-            Raises:
-                TypeError: If Rope does not return a module AST.
-                ValueError: If a required binding has unsupported source
-                    semantics.
-
             """
             request = m.Infra.SourceBindingInventoryRequest(
                 project=self._project,
@@ -797,7 +792,10 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
             """
             value = self._external[identity]
             if not isinstance(value, p.Infra.RopeBuiltinClass):
-                message = f"External class has no declared source or native identity: {identity}"
+                message = (
+                    f"External class has no declared source or native identity: "
+                    f"{identity}"
+                )
                 raise TypeError(message)
             builtin_class = FlextInfraUtilitiesRopeRuntime.runtime_type(
                 "rope.base.builtins",

@@ -17,6 +17,25 @@ from collections.abc import MutableMapping
 from flext_infra import m, t
 
 
+def _is_main_guard(test: ast.expr) -> bool:
+    """Return whether one expression is the ``if __name__ == "__main__"`` guard.
+
+    Returns:
+        True when the comparison matches the canonical main guard shape.
+
+    """
+    return (
+        isinstance(test, ast.Compare)
+        and isinstance(test.left, ast.Name)
+        and test.left.id == "__name__"
+        and len(test.ops) == 1
+        and isinstance(test.ops[0], ast.Eq)
+        and len(test.comparators) == 1
+        and isinstance(test.comparators[0], ast.Constant)
+        and test.comparators[0].value == "__main__"
+    )
+
+
 class FlextInfraUtilitiesRopeSourceBindingCollector:
     """Index the lexical class bindings of one captured module body.
 
@@ -47,55 +66,70 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
                 and node.lineno > spec.required_line
             ):
                 break
-            if isinstance(node, ast.ClassDef):
-                FlextInfraUtilitiesRopeSourceBindingCollector._class_def(
-                    spec,
-                    node,
-                    bindings,
-                    scope,
-                )
-            elif isinstance(node, ast.ImportFrom):
-                FlextInfraUtilitiesRopeSourceBindingCollector._import_from(
-                    spec,
-                    node,
-                    bindings,
-                )
-            elif isinstance(node, ast.Import):
-                FlextInfraUtilitiesRopeSourceBindingCollector._import(node, bindings)
-            elif isinstance(node, ast.Assign | ast.AnnAssign):
-                FlextInfraUtilitiesRopeSourceBindingCollector._assign(
-                    spec,
-                    node,
-                    bindings,
-                )
-            elif isinstance(node, ast.AugAssign):
-                FlextInfraUtilitiesRopeSourceBindingCollector._aug_assign(
-                    spec,
-                    node,
-                    bindings,
-                )
-            elif isinstance(node, ast.Delete):
-                FlextInfraUtilitiesRopeSourceBindingCollector._delete(
-                    spec,
-                    node,
-                    bindings,
-                )
-            elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
-                bindings[node.name] = None
-            elif isinstance(node, ast.If):
-                FlextInfraUtilitiesRopeSourceBindingCollector._if(
-                    spec,
-                    node,
-                    bindings,
-                    scope,
-                )
-            elif isinstance(node, ast.Try | ast.TryStar):
-                FlextInfraUtilitiesRopeSourceBindingCollector._try(
-                    spec,
-                    node,
-                    bindings,
-                    scope,
-                )
+            FlextInfraUtilitiesRopeSourceBindingCollector._dispatch(
+                spec,
+                node,
+                bindings,
+                scope,
+            )
+
+    @staticmethod
+    def _dispatch(
+        spec: m.Infra.SourceBindingCollectorSpec,
+        node: ast.stmt,
+        bindings: MutableMapping[str, m.Infra.SourceClassReference | None],
+        scope: str,
+    ) -> None:
+        """Route one statement to its handler; unlisted kinds are ignored."""
+        if isinstance(node, ast.ClassDef):
+            FlextInfraUtilitiesRopeSourceBindingCollector._class_def(
+                spec,
+                node,
+                bindings,
+                scope,
+            )
+        elif isinstance(node, ast.ImportFrom):
+            FlextInfraUtilitiesRopeSourceBindingCollector._import_from(
+                spec,
+                node,
+                bindings,
+            )
+        elif isinstance(node, ast.Import):
+            FlextInfraUtilitiesRopeSourceBindingCollector._import(node, bindings)
+        elif isinstance(node, ast.Assign | ast.AnnAssign):
+            FlextInfraUtilitiesRopeSourceBindingCollector._assign(
+                spec,
+                node,
+                bindings,
+            )
+        elif isinstance(node, ast.AugAssign):
+            FlextInfraUtilitiesRopeSourceBindingCollector._aug_assign(
+                spec,
+                node,
+                bindings,
+            )
+        elif isinstance(node, ast.Delete):
+            FlextInfraUtilitiesRopeSourceBindingCollector._delete(
+                spec,
+                node,
+                bindings,
+            )
+        elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            bindings[node.name] = None
+        elif isinstance(node, ast.If):
+            FlextInfraUtilitiesRopeSourceBindingCollector._if(
+                spec,
+                node,
+                bindings,
+                scope,
+            )
+        elif isinstance(node, ast.Try | ast.TryStar):
+            FlextInfraUtilitiesRopeSourceBindingCollector._try(
+                spec,
+                node,
+                bindings,
+                scope,
+            )
 
     @staticmethod
     def _class_def(
@@ -314,7 +348,7 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         )
 
     @staticmethod
-    def _is_class_namespace_completion(
+    def is_class_namespace_completion(
         node: ast.Assign | ast.AnnAssign,
         targets: t.SequenceOf[ast.expr],
         bindings: t.MappingKV[str, m.Infra.SourceClassReference | None],
@@ -350,7 +384,8 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
             True when the assignment completed a class namespace.
 
         """
-        if not FlextInfraUtilitiesRopeSourceBindingCollector._is_class_namespace_completion(
+        collector = FlextInfraUtilitiesRopeSourceBindingCollector
+        if not collector.is_class_namespace_completion(
             node,
             targets,
             bindings,
@@ -453,17 +488,7 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         scope: str,
     ) -> None:
         """Index one conditional statement's statically knowable branch."""
-        test = node.test
-        if (
-            isinstance(test, ast.Compare)
-            and isinstance(test.left, ast.Name)
-            and test.left.id == "__name__"
-            and len(test.ops) == 1
-            and isinstance(test.ops[0], ast.Eq)
-            and len(test.comparators) == 1
-            and isinstance(test.comparators[0], ast.Constant)
-            and test.comparators[0].value == "__main__"
-        ):
+        if _is_main_guard(node.test):
             FlextInfraUtilitiesRopeSourceBindingCollector.collect(
                 spec,
                 node.body if spec.module == "__main__" else node.orelse,
