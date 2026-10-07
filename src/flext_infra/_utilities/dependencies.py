@@ -932,13 +932,8 @@ class FlextInfraUtilitiesDependenciesFamily:
         return tuple(sorted(name for name in declared if name in workspace_names))
 
 
-# The flat module-level re-export: the package lazy map and the internal
-# importers (`from flext_infra._utilities import FlextInfraUtilitiesDependencies`)
-# resolve this name at module scope; the S6 namespace nesting moved the class
-# inside the family facade and the from-import contract requires the flat
-# binding to survive.
-FlextInfraUtilitiesDependencies = (
-    FlextInfraUtilitiesDependenciesFamily.FlextInfraUtilitiesDependencies
-)
+class FlextInfraUtilitiesDependencies(FlextInfraUtilitiesDependenciesProfiles):
+    """Canonical dependencies namespace owner (flat facade over the profiles)."""
+
 
 __all__: list[str] = ["FlextInfraUtilitiesDependencies"]
