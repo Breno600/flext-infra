@@ -18,7 +18,7 @@ from typing import ClassVar
 from flext_infra import c, m, p, t
 
 
-class FlextInfraFlextUtilitiesRopeSourceBases:
+class FlextInfraUtilitiesRopeSourceBases:
     """Canonical namespace owner."""
 
     class _SourceBindingCollector:
@@ -245,6 +245,16 @@ class FlextInfraFlextUtilitiesRopeSourceBases:
                 f"Unsupported class binding mutation in {self._module}: {ast.unparse(node)}"
             )
             raise ValueError(message)
+        if self._provider_metadata_rebind(targets, bindings):
+            return
+        if self._module_table_mutation(targets, bindings):
+            return
+        if self._complete_class_namespace(node, targets, bindings, lexical):
+            return
+        message = (
+            f"Unsupported class binding mutation in {self._module}: {ast.unparse(node)}"
+        )
+        raise ValueError(message)
 
         def _provider_metadata_rebind(
             self,
@@ -687,7 +697,7 @@ class FlextInfraFlextUtilitiesRopeSourceBases:
             for alias_module, captured in self._sources.items():
                 alias_path, alias_source = captured
                 for alias, absolute in (
-                    FlextInfraFlextUtilitiesRopeSourceBases.FlextInfraUtilitiesRopeSourceBases.lazy_module_aliases(
+                    FlextInfraUtilitiesRopeSourceBases.FlextInfraUtilitiesRopeSourceBases.lazy_module_aliases(
                         alias_module,
                         alias_path,
                         alias_source,
@@ -782,7 +792,7 @@ class FlextInfraFlextUtilitiesRopeSourceBases:
                 module if path.name == "__init__.py" else module.rpartition(".")[0]
             )
             globals_: MutableMapping[str, m.Infra.SourceClassReference | None] = {}
-            collector = FlextInfraFlextUtilitiesRopeSourceBases._SourceBindingCollector(
+            collector = FlextInfraUtilitiesRopeSourceBases._SourceBindingCollector(
                 module=module,
                 package=package,
                 definitions=self._definitions,
@@ -1703,7 +1713,7 @@ class FlextInfraFlextUtilitiesRopeSourceBases:
                 Sorted configured roots and derived Ruff-qualified base expressions.
 
             """
-            return FlextInfraFlextUtilitiesRopeSourceBases._RuntimeBaseResolver(
+            return FlextInfraUtilitiesRopeSourceBases._RuntimeBaseResolver(
                 project,
                 sources,
                 roots,
@@ -1716,6 +1726,5 @@ class FlextInfraFlextUtilitiesRopeSourceBases:
 # The flat module-level re-export: the package lazy map and the
 # internal from-import contract resolve this name at module scope
 # (the S6 nesting moved the class inside the family facade).
-FlextInfraUtilitiesRopeSourceBases = FlextInfraFlextUtilitiesRopeSourceBases.FlextInfraUtilitiesRopeSourceBases
 
-__all__: list[str] = ["FlextInfraFlextUtilitiesRopeSourceBases", "FlextInfraUtilitiesRopeSourceBases"]
+__all__: list[str] = ["FlextInfraUtilitiesRopeSourceBases"]
