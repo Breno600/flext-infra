@@ -555,6 +555,25 @@ split-on-trailing-comma = false
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = ["line-too-long", "non-empty-init-module", "unused-import"]
 "**/_config.py" = ["invalid-function-name"]
+"**/_utilities/credential.py" = [
+  "subprocess-without-shell-equals-true",
+  "suspicious-subprocess-import",
+]
+"**/bin/**" = [
+  "docstring-missing-exception",
+  "docstring-missing-returns",
+  "import-outside-top-level",
+  "line-too-long",
+  "magic-value-comparison",
+  "missing-copyright-notice",
+  "print",
+  "start-process-with-partial-path",
+  "subprocess-without-shell-equals-true",
+  "suspicious-subprocess-import",
+  "type-check-without-type-error",
+  "undocumented-public-method",
+  "unused-class-method-argument",
+]
 "**/bootstrap.py" = [
   "subprocess-without-shell-equals-true",
   "suspicious-subprocess-import",
@@ -643,6 +662,7 @@ split-on-trailing-comma = false
   "typing-only-first-party-import",
 ]
 "tests/**/*.py" = ["assert"]
+"tests/test_snapshot_drill.py" = ["import-private-name"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -665,11 +685,6 @@ preserve_quotes = true
 section_whitelines = 1
 whitelines = 1
 
-[tool.uv.sources]
-flext-cli = { workspace = true }
-flext-core = { workspace = true }
-flext-tests = { workspace = true }
-
 [tool.uv]
 link-mode = "copy"
 constraint-dependencies = ["mypy<2.4.0"]
@@ -681,6 +696,14 @@ dependencies = ["flext-infra"]
 [tool.uv.exclude-dependencies.package]
 name = "flext-tests"
 
+[tool.uv.sources.flext-cli]
+workspace = true
+
+[tool.uv.sources.flext-core]
+workspace = true
+
+[tool.uv.sources.flext-tests]
+workspace = true
 [tool.interrogate]
 fail-under = 70
 ignore-init-method = true
@@ -696,4 +719,3 @@ FLEXT_INFRA_LINT_SNAPSHOT_GATES = "lint"
 [tool.radon]
 cc_min = "B"
 mi_min = "B"
-
