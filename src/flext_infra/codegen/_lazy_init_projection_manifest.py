@@ -23,7 +23,6 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, t, u
-from flext_infra._config import config
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -90,7 +89,7 @@ class FlextInfraCodegenLazyInitProjectionManifest:
                     path=manifest_path,
                     before=state.value,
                     desired_content=content,
-                    desired_mode=config.Infra.codegen.modes.file_default,
+                    desired_mode=0o644,
                 ),
             )
         return r[t.VariadicTuple[m.Infra.CodegenFilePlan]].ok(tuple(plans))

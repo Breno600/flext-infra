@@ -78,7 +78,7 @@ class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
         project = payload.get("project")
         if not isinstance(project, Mapping):
             return ()
-        declared = m.Infra.CodegenPyprojectProjectDeps.model_validate(project)
+        declared = project
         return tuple(
             spec.split(" @ ", 1)[0].strip()
             for spec in declared.dependencies

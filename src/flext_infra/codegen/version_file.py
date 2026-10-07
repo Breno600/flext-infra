@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING, override
 from flext_core import r
 from flext_core.__version__ import FlextVersion
 from flext_infra import c, m, u
-from flext_infra._config import config
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
 from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
 
@@ -126,7 +125,7 @@ class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
             path=target,
             before=before.value,
             desired_content=content.encode(c.Cli.ENCODING_DEFAULT),
-            desired_mode=config.Infra.codegen.modes.file_default,
+            desired_mode=0o644,
             owner="codegen",
             policy="full",
         )

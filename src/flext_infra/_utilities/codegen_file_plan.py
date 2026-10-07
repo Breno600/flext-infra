@@ -19,7 +19,6 @@ from flext_cli import m as cli_m, u
 
 from flext_core import r
 from flext_infra import c, m, p, t
-from flext_infra._config import config
 
 if os.name == "nt":
     import msvcrt
@@ -80,7 +79,7 @@ class FlextInfraUtilitiesCodegenFilePlan:
         descriptor = os.open(
             lock_path,
             os.O_RDWR | os.O_CREAT,
-            config.Infra.codegen.modes.file_private,
+            0o600,
         )
         acquired = False
         try:

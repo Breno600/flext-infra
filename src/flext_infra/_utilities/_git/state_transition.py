@@ -12,7 +12,6 @@ from pathlib import Path
 from flext_cli import u
 
 from flext_infra import c, m, t
-from flext_infra._config import config
 from flext_infra._utilities import FlextInfraUtilitiesGitStateFilesMixin
 
 
@@ -290,7 +289,7 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
             plan = u.Cli.atomic_plan_directory_chain(destination.parent).unwrap()
             u.Cli.atomic_create_directory_chain_guarded(
                 plan,
-                permission_mode=config.Infra.codegen.modes.directory_generated,
+                permission_mode=0o755,
             ).unwrap()
             cls._state_effect_file(root, path, entry, allowed)
         # An index change made by another writer remains visible before the

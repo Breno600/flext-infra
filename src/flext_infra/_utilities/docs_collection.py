@@ -11,8 +11,7 @@ from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
 
-from flext_infra import m, t
-from flext_infra._config import config
+from flext_infra import c, m, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesDocsCollectionVerify,
     FlextInfraUtilitiesDocsContract,
@@ -476,7 +475,7 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                 owner,
                 path,
                 content,
-                desired_mode=config.Infra.codegen.modes.file_default,
+                desired_mode=0o644,
                 source_states=inputs,
             ).unwrap()
             expected = state.states.get(path)
