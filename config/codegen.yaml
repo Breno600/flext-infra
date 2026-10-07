@@ -192,9 +192,16 @@ Infra:
       # refuses that lock ("mise.lock does not satisfy .mise.toml"), which
       # broke setup, gen and CI on every fresh checkout of this tip. The
       # 2026.9.17 artifact fails the receipt check ("Mise receipt returned
-      # invalid version") — keep it out.
+      # invalid version") — keep it out. 2026.10.3 reintroduces breakage at
+      # the same gates: its lock-time provenance verification fails for the
+      # github-release and conda tools (jscpd, qlty, make, python-tmp), which
+      # skips them at bootstrap — the npm:prettier the markdown-format gate
+      # executes is then missing and consumers' audits flag correctly
+      # formatted files (merge-admin 2026-10-07, root + infra evidence).
+      # Hold the fleet at 2026.9.16 until the upstream provenance bugs are
+      # fixed and measured.
       mise_selector: github:jdx/mise
-      mise_version: "2026.10.3"
+      mise_version: "2026.9.16"
       beads:
         # Beads ledger projection (.beads/config.yaml, .beads/metadata.yaml).
         # The bd and gc binaries are host tools; no project .mise.toml
