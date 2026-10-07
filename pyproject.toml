@@ -25,8 +25,8 @@ dependencies = [
   "beartype>=0.22.9",
   "defusedxml>=0.7.1",
   "dependency-injector>=4.49.1",
-  "flext-cli @ git+https://github.com/flext-sh/flext-cli.git@0.12.0-dev",
-  "flext-core @ git+https://github.com/flext-sh/flext-core.git@0.12.0-dev",
+  "flext-cli",
+  "flext-core",
   "GitPython>=3.2.0",
   "jinja2>=3.1.6",
   "libcst>=1.9.0",
@@ -76,7 +76,7 @@ dev = [
   "bandit>=1.9.4",
   "deptry",
   "editables>=0.6",
-  "flext-tests @ git+https://github.com/flext-sh/flext-tests.git@0.12.0-dev",
+  "flext-tests",
   "hypothesis",
   "mkdocs",
   "mkdocs-autorefs",
@@ -142,6 +142,9 @@ exclude_also = [
   "if _t.TYPE_CHECKING:",
   "if TYPE_CHECKING:",
   "if typing.TYPE_CHECKING:",
+  "if _t.TYPE_CHECKING:",
+  "if TYPE_CHECKING:",
+  "if typing.TYPE_CHECKING:",
 ]
 precision = 2
 show_missing = true
@@ -150,6 +153,9 @@ skip_covered = false
 [tool.coverage.run]
 source = ["src"]
 omit = [
+  "*/dependency_injector/providers.pyx",
+  "*/protocols.py",
+  "*/_protocols/*",
   "*/dependency_injector/providers.pyx",
   "*/protocols.py",
   "*/_protocols/*",
@@ -203,6 +209,10 @@ follow_imports = "normal"
 module = ["rope.*"]
 follow_untyped_imports = true
 
+[[tool.mypy.overrides]]
+module = ["rope.*"]
+follow_untyped_imports = true
+
 [tool.pydantic-mypy]
 init_forbid_extra = true
 init_typed = true
@@ -212,17 +222,30 @@ warn_required_dynamic_aliases = true
 disable-project-excludes-heuristics = true
 project-excludes = [
   "**/*_pb2*.py",
+  "**/*_pb2*.py",
+  "**/*_pb2_grpc*.py",
   "**/*_pb2_grpc*.py",
   "**/.venv/**",
+  "**/.venv/**",
+  "**/__pycache__",
   "**/__pycache__",
   "**/__pyrefly_virtual__/**",
+  "**/__pyrefly_virtual__/**",
+  "**/node_modules",
   "**/node_modules",
   "**/site-packages/**",
+  "**/site-packages/**",
+  "**/typings/**",
   "**/typings/**",
   "**/vendor/**",
+  "**/vendor/**",
+  "**/venv/**",
   "**/venv/**",
   ".venv/**",
+  ".venv/**",
   "typings/**",
+  "typings/**",
+  "vendor/**",
   "vendor/**",
 ]
 project-includes = ["scripts/**/*.py*", "src/**/*.py*", "tests/**/*.py*"]
@@ -370,6 +393,10 @@ addopts = [
   "--strict-markers",
   "--markdown-docs",
   "--durations=10",
+  "--benchmark-disable",
+  "--strict-markers",
+  "--markdown-docs",
+  "--durations=10",
   "--timeout=10",
 ]
 flext_slow_timeout_seconds = "30"
@@ -380,6 +407,22 @@ filterwarnings = [
   "once::pytest.PytestAssertRewriteWarning",
 ]
 markers = [
+  "smoke: public-interface smoke tests",
+  "unit: unit tests",
+  "integration: integration tests",
+  "functional: functional behavior tests",
+  "performance: performance and benchmark tests",
+  "slow: slow-running tests",
+  "docker: tests requiring Docker",
+  "oracle: tests requiring the shared Oracle database",
+  "remote: tests requiring remote/external network services",
+  "e2e: end-to-end integration tests",
+  "edge_cases: edge case tests",
+  "stress: stress tests",
+  "resilience: resilience tests",
+  "discovery: catalog and stream discovery tests",
+  "singer: Singer protocol contract tests",
+  "requires_engine: native check engine required by this test",
   "smoke: public-interface smoke tests",
   "unit: unit tests",
   "integration: integration tests",
@@ -411,6 +454,13 @@ extend-exclude = [
   "**/.codex/aihub-hooks/**",
   "**/.cursor/aihub-hooks/**",
   "**/.gemini/aihub-hooks/**",
+  "**/.archive/**",
+  "**/protos/**",
+  "**/.agents/aihub-hooks/**",
+  "**/.claude/aihub-hooks/**",
+  "**/.codex/aihub-hooks/**",
+  "**/.cursor/aihub-hooks/**",
+  "**/.gemini/aihub-hooks/**",
 ]
 fix = false
 line-length = 88
@@ -431,7 +481,10 @@ skip-magic-trailing-comma = false
 [tool.ruff.lint]
 extend-safe-fixes = [
   "camelcase-imported-as-lowercase",
+  "camelcase-imported-as-lowercase",
   "relative-imports",
+  "relative-imports",
+  "typing-only-first-party-import",
   "typing-only-first-party-import",
 ]
 ignore = [
@@ -446,13 +499,22 @@ ignore = [
 select = ["ALL"]
 unfixable = [
   "duplicate-value",
+  "duplicate-value",
+  "multi-value-repeated-key-literal",
   "multi-value-repeated-key-literal",
   "multi-value-repeated-key-variable",
+  "multi-value-repeated-key-variable",
+  "outdated-version-block",
   "outdated-version-block",
   "p-print",
+  "p-print",
+  "print",
   "print",
   "pytest-duplicate-parametrize-test-cases",
+  "pytest-duplicate-parametrize-test-cases",
   "redefined-while-unused",
+  "redefined-while-unused",
+  "unused-variable",
   "unused-variable",
 ]
 
@@ -697,6 +759,14 @@ dependencies = ["flext-infra"]
 [tool.uv.exclude-dependencies.package]
 name = "flext-tests"
 
+[tool.uv.sources.flext-cli]
+workspace = true
+
+[tool.uv.sources.flext-core]
+workspace = true
+
+[tool.uv.sources.flext-tests]
+workspace = true
 [tool.interrogate]
 fail-under = 70
 ignore-init-method = true

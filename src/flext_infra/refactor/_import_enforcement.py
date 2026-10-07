@@ -12,7 +12,6 @@ from collections import defaultdict
 from collections.abc import MutableMapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import ClassVar
 
 from flext_infra import c, t
 
@@ -107,7 +106,7 @@ class FlextInfraImportNormalization:
             return None
         package, module_name = located
         current = source
-        for _ in range(cls.MAX_PASSES):
+        for _ in range(c.Infra.MAX_PASSES):
             updated = cls._one_pass(
                 project_root=project_root,
                 file_path=file_path,
@@ -270,12 +269,12 @@ class FlextInfraImportNormalization:
                 for _node, aliases in entries
                 for name, bound in aliases
                 if (effective := bound if bound is not None else name)
-                in cls.LETTER_ORDER
+                in c.Infra.LETTER_ORDER
             }
             if not letters:
                 continue
             ordered = [
-                letter for letter in cls.LETTER_RENDER_ORDER if letter in letters
+                letter for letter in c.Infra.LETTER_RENDER_ORDER if letter in letters
             ]
             first = entries[0][0]
             indent = cls._line_indent(lines[first.lineno - 1])
@@ -308,9 +307,9 @@ class FlextInfraImportNormalization:
         if len(names) == 1 and names[0] == package:
             root_form = True
         elif (
-            len(names) == FlextInfraImportNormalization.FAMILY_PATH_DEPTH
+            len(names) == c.Infra.FAMILY_PATH_DEPTH
             and names[0] == package
-            and names[1].lstrip("_") in cls.FAMILY_LETTER
+            and names[1].lstrip("_") in c.Infra.FAMILY_LETTER
         ):
             root_form = False
         else:
@@ -319,14 +318,14 @@ class FlextInfraImportNormalization:
         for alias in node.names:
             if alias.asname is None:
                 # Root or facade-file form: the imported name IS the letter.
-                if alias.name in cls.LETTER_ORDER:
+                if alias.name in c.Infra.LETTER_ORDER:
                     aliases.append((alias.name, None))
                     continue
                 return None
             if (
                 root_form
-                and alias.name in cls.FAMILY_LETTER
-                and alias.asname in cls.LETTER_ORDER
+                and alias.name in c.Infra.FAMILY_LETTER
+                and alias.asname in c.Infra.LETTER_ORDER
             ):
                 aliases.append((alias.name, alias.asname))
                 continue
@@ -384,9 +383,9 @@ class FlextInfraImportNormalization:
         # load, so the flattened form closes a self-family import cycle
         # (its own deep imports are the publication form itself).
         is_family_leaf = (
-            len(names) >= cls.LEAF_PATH_DEPTH
+            len(names) >= c.Infra.LEAF_PATH_DEPTH
             and names[0] == package
-            and names[1].lstrip("_") in cls.FAMILY_LETTER
+            and names[1].lstrip("_") in c.Infra.FAMILY_LETTER
             and not cls._inside_family(file_path, names[1])
         )
         exported = family_exports.get(names[1].lstrip("_")) if is_family_leaf else None
@@ -452,7 +451,7 @@ class FlextInfraImportNormalization:
         pkg_dir = base / package
         if not pkg_dir.is_dir():
             return exports
-        for family in cls.FAMILY_LETTER:
+        for family in c.Infra.FAMILY_LETTER:
             for candidate in (pkg_dir / f"_{family}", pkg_dir / family):
                 init = candidate / "__init__.py"
                 if not init.is_file():
@@ -601,7 +600,11 @@ class FlextInfraImportNormalization:
 
         """
         family_dir = next(
-            (part for part in file_path.parts if part.lstrip("_") in cls.FAMILY_LETTER),
+            (
+                part
+                for part in file_path.parts
+                if part.lstrip("_") in c.Infra.FAMILY_LETTER
+            ),
             None,
         )
         if family_dir is None:
@@ -870,8 +873,8 @@ class FlextInfraImportNormalization:
         """
         return (
             alias.asname is None
-            and bound in FlextInfraImportNormalization.LETTER_ORDER
-            and FlextInfraImportNormalization.LETTER_ORDER[bound] >= module_rank
+            and bound in c.Infra.LETTER_ORDER
+            and c.Infra.LETTER_ORDER[bound] >= module_rank
         )
 
     @classmethod
@@ -896,7 +899,11 @@ class FlextInfraImportNormalization:
         if names[0] != package or len(names) == 1:
             return False
         importer_family = next(
-            (part for part in file_path.parts if part.lstrip("_") in cls.FAMILY_LETTER),
+            (
+                part
+                for part in file_path.parts
+                if part.lstrip("_") in c.Infra.FAMILY_LETTER
+            ),
             None,
         )
         if (
@@ -908,15 +915,15 @@ class FlextInfraImportNormalization:
             # same-layer edge, never a reverse one.
             return False
         tail = names[-1]
-        if len(names) == cls.FAMILY_PATH_DEPTH:
-            rank = cls.FAMILY_RANK.get(tail.lstrip("_"))
+        if len(names) == c.Infra.FAMILY_PATH_DEPTH:
+            rank = c.Infra.FAMILY_RANK.get(tail.lstrip("_"))
             if rank is not None:
                 return rank > module_rank
         if tail in {"api", "cli"}:
-            return cls.FACADE_RANK[tail] > module_rank
+            return c.Infra.FACADE_RANK[tail] > module_rank
         if "services" in names or tail == "base":
             return (9 if "services" in names else 8) > module_rank
-        return module_rank < cls.DEFAULT_LAYER_RANK
+        return module_rank < c.Infra.DEFAULT_LAYER_RANK
 
     @classmethod
     def _demotion_candidate(
@@ -1227,8 +1234,10 @@ class FlextInfraImportNormalization:
 
         """
         for part in file_path.parts:
-            rank = cls.FAMILY_RANK.get(part.lstrip("_"))
-            if rank is not None and (part.startswith("_") or part in cls.FAMILY_RANK):
+            rank = c.Infra.FAMILY_RANK.get(part.lstrip("_"))
+            if rank is not None and (
+                part.startswith("_") or part in c.Infra.FAMILY_RANK
+            ):
                 return rank
         return None
 
@@ -1256,7 +1265,7 @@ class FlextInfraImportNormalization:
         )
         return next(
             (rank for matched, rank in layers if matched),
-            cls.DEFAULT_LAYER_RANK,
+            c.Infra.DEFAULT_LAYER_RANK,
         )
 
     @classmethod
@@ -1274,10 +1283,10 @@ class FlextInfraImportNormalization:
 
         """
         names = module.split(".")
-        if len(names) < cls.LEAF_PATH_DEPTH or names[0] != package:
+        if len(names) < c.Infra.LEAF_PATH_DEPTH or names[0] != package:
             return module
         family = names[1].lstrip("_")
-        if family not in cls.FAMILY_LETTER:
+        if family not in c.Infra.FAMILY_LETTER:
             return module
         if bound in family_exports.get(family, set()):
             return f"{names[0]}.{names[1]}"
@@ -1324,12 +1333,12 @@ class FlextInfraImportNormalization:
             letters = [
                 alias.asname or alias.name
                 for alias in node.names
-                if alias.asname is None and alias.name in cls.LETTER_ORDER
+                if alias.asname is None and alias.name in c.Infra.LETTER_ORDER
             ]
             if not letters or len(letters) != len(node.names):
                 continue
             indent = cls._line_indent(lines[node.lineno - 1])
-            ordered = sorted(letters, key=lambda letter: cls.LETTER_ORDER[letter])
+            ordered = sorted(letters, key=lambda letter: c.Infra.LETTER_ORDER[letter])
             edits.append(
                 (
                     node.lineno,

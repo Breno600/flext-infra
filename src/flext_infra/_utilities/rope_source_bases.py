@@ -240,9 +240,10 @@ class FlextInfraUtilitiesRopeSourceBases:
                 return
             if self._complete_class_namespace(node, targets, bindings, lexical):
                 return
-            message = f"Unsupported class binding mutation in {self._module}: {ast.unparse(node)}"
+            message = (
+                f"Unsupported class binding mutation in {self._module}: {ast.unparse(node)}"
+            )
             raise ValueError(message)
-
         if self._provider_metadata_rebind(targets, bindings):
             return
         if self._module_table_mutation(targets, bindings):
@@ -597,8 +598,6 @@ class FlextInfraUtilitiesRopeSourceBases:
                 qualified_base=".".join((binding.qualified_base, *attributes)),
             )
 
-        return None
-
     class _RuntimeBaseResolver:
         """Resolve owned classes in C3 order and external classes through Rope.
 
@@ -755,9 +754,8 @@ class FlextInfraUtilitiesRopeSourceBases:
                 required_line: When set, index only bindings visible at the line.
                 allow_conditional: Whether conditional bindings may degrade.
 
-            Returns:
-                The module's explicit lexical bindings, including value
-                shadowing.
+        Returns:
+            The module's explicit lexical bindings, including value shadowing.
 
             Raises:
                 TypeError: If Rope does not return a module AST.
@@ -1595,22 +1593,94 @@ class FlextInfraUtilitiesRopeSourceBases:
 
         _stdlib_backing_cache: ClassVar[dict[str, str] | None] = None
 
-    @classmethod
-    def inventory(
-        cls,
-        request: m.Infra.SourceBindingInventoryRequest,
-        definitions: MutableMapping[str, m.Infra.SourceClassDefinition],
-    ) -> t.MappingKV[str, m.Infra.SourceClassReference | None]:
-        """Index lexical bindings without installing a cross-module Rope overlay.
+    class FlextInfraUtilitiesRopeSourceBases:
+        """Keep source declaration identities separate from Ruff's qualified bases."""
 
-        Returns:
-            The module's explicit lexical bindings, including value shadowing.
+        @classmethod
+        def lazy_module_aliases(
+            cls,
+            module: str,
+            path: Path,
+            source: str,
+        ) -> dict[str, str]:
+            """Read the ``install_lazy_exports`` namespace alias map of one module.
 
-        """
-        return FlextInfraUtilitiesRopeSourceBasesInventory.inventory(
-            request,
-            definitions,
-        )
+            The canonical package facade binds its public namespace names (``m``,
+            ``p``, ``t`` and siblings) to provider modules through a lazy-exports
+            call whose final argument is the alias mapping. Those names are module
+            reexports, not lexical imports, so the lexical inventory cannot see
+            them; base references qualified through the facade (``m.BaseModel``
+            with ``from <pkg> import m``) must rewrite to the provider module
+            before namespace resolution.
+
+            Parameters:
+                module: The qualified module name of the captured source.
+                path: The module's file path.
+                source: The captured source text.
+
+            Returns:
+                Alias name to absolute provider module path.
+
+            """
+            try:
+                parsed = ast.parse(source, filename=str(path))
+            except SyntaxError:
+                return {}
+            package = (
+                module if path.name == "__init__.py" else module.rpartition(".")[0]
+            )
+            aliases: dict[str, str] = {}
+            for node in ast.walk(parsed):
+                if not (
+                    isinstance(node, ast.Call)
+                    and isinstance(node.func, ast.Name)
+                    and node.func.id == "install_lazy_exports"
+                ):
+                    continue
+                mapping = next(
+                    (
+                        arg
+                        for arg in (*node.args, *node.keywords)
+                        if isinstance(arg, ast.Dict)
+                        or (
+                            isinstance(arg, ast.Call)
+                            and isinstance(arg.func, ast.Name)
+                            and arg.func.id == "MappingProxyType"
+                        )
+                    ),
+                    None,
+                )
+                if isinstance(mapping, ast.Call):
+                    mapping = mapping.args[0] if mapping.args else None
+                if not isinstance(mapping, ast.Dict):
+                    continue
+                for key_node, value_node in zip(
+                    mapping.keys,
+                    mapping.values,
+                    strict=False,
+                ):
+                    if not (
+                        isinstance(key_node, ast.Constant)
+                        and isinstance(key_node.value, str)
+                        and isinstance(value_node, ast.Constant)
+                        and isinstance(value_node.value, str)
+                    ):
+                        continue
+                    value = value_node.value
+                    if value.startswith("."):
+                        parts = package.split(".") if package else []
+                        depth = len(value) - len(value.lstrip("."))
+                        remainder = value.lstrip(".")
+                        if depth > len(parts):
+                            continue
+                        base = (
+                            ".".join(parts[: len(parts) - depth + 1])
+                            if depth
+                            else package
+                        )
+                        value = ".".join(part for part in (base, remainder) if part)
+                    aliases[key_node.value] = value
+            return aliases
 
     @classmethod
     def runtime_bases(
@@ -1632,13 +1702,15 @@ class FlextInfraUtilitiesRopeSourceBases:
         Returns:
             Sorted configured roots and derived Ruff-qualified base expressions.
 
-        """
-        return FlextInfraUtilitiesRopeSourceBases._RuntimeBaseResolver(
-            project,
-            sources,
-            roots,
-            extra_module_aliases,
-        ).run()
+            """
+            return FlextInfraUtilitiesRopeSourceBases._RuntimeBaseResolver(
+                project,
+                sources,
+                roots,
+                extra_module_aliases,
+            ).run()
+
+
 
 
 # The flat module-level re-export: the package lazy map and the
