@@ -11,15 +11,6 @@ from typing import TYPE_CHECKING
 from flext_core import r
 from flext_infra import c, m, t, u
 from flext_infra._config import config
-from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
-from flext_infra.deps.phases.consolidate_groups import FlextInfraConsolidateGroupsPhase
-from flext_infra.deps.phases.ensure_packaging import FlextInfraEnsurePackagingPhase
-from flext_infra.deps.phases.ensure_pyrefly import FlextInfraEnsurePyreflyConfigPhase
-from flext_infra.deps.phases.ensure_pyright import FlextInfraEnsurePyrightConfigPhase
-from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
-from flext_infra.deps.phases.inject_comments import FlextInfraInjectCommentsPhase
-from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
-from flext_infra.refactor.project_classifier import FlextInfraProjectClassifier
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -50,6 +41,8 @@ class FlextInfraPyprojectModernizerDocument:
             The declared kind, classifying member projects on demand.
 
         """
+        from flext_infra.refactor.project_classifier import FlextInfraProjectClassifier
+
         if project_kind is not None:
             return project_kind
         if path.parent.resolve() == self.root.resolve():
@@ -252,6 +245,22 @@ class FlextInfraPyprojectModernizerDocument:
             The resulting ``t.StrSequence``.
 
         """
+        from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
+        from flext_infra.deps.phases.consolidate_groups import (
+            FlextInfraConsolidateGroupsPhase,
+        )
+        from flext_infra.deps.phases.ensure_packaging import (
+            FlextInfraEnsurePackagingPhase,
+        )
+        from flext_infra.deps.phases.ensure_pyrefly import (
+            FlextInfraEnsurePyreflyConfigPhase,
+        )
+        from flext_infra.deps.phases.ensure_pyright import (
+            FlextInfraEnsurePyrightConfigPhase,
+        )
+        from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
+        from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
+
         path, payload = state.pyproject_path, state.payload
         is_root = path.parent.resolve() == self.root.resolve()
         # Scaffold (pre-write) contexts have no on-disk project root yet: derive
@@ -340,6 +349,10 @@ class FlextInfraPyprojectModernizerDocument:
             The resulting ``p.Result[t.StrSequence]``.
 
         """
+        from flext_infra.deps.phases.inject_comments import (
+            FlextInfraInjectCommentsPhase,
+        )
+
         path = state.pyproject_path
         doc = u.Cli.toml_document_from_mapping(state.payload)
         self._reorder_document(doc, preferred_first=self.tomlsort_sort_first)

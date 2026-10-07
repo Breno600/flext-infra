@@ -59,30 +59,11 @@ jobs:
     timeout-minutes: 60
     env:
       CI: Y
-    # The member manifest is the uv workspace contract (bare sibling
-    # requirements + `workspace = true` sources): it only parses inside the
-    # workspace root. Standalone member CI therefore checks out the fleet
-    # superproject at its integration branch with submodules, overlays this
-    # repository's head onto the member directory, and runs every step from
-    # that member directory — the member Makefile resolves the superproject
-    # runtime and provisions the REAL workspace environment at the root.
-    defaults:
-      run:
-        working-directory: fleet/flext-infra
     steps:
-      - name: Checkout fleet workspace
+      - name: Checkout
         uses: actions/checkout@v7
         with:
-          repository: flext-sh/flext
-          ref: 0.12.0-dev
-          submodules: recursive
-          path: fleet
-          persist-credentials: false
-          fetch-depth: 1
-      - name: Overlay member head
-        uses: actions/checkout@v7
-        with:
-          path: fleet/flext-infra
+          submodules: false
           persist-credentials: false
           fetch-depth: 0
       # Why: GitHub runners expose umask 002, so git checkout materializes
@@ -145,13 +126,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-3.13-flext-testmon-flext-infra-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml', 'config/**') }}-
 
-      - name: Install mise
+      - name: Install the mise release pinned by mise.lock
         shell: bash
         run: |
           set -eu
           curl -fsSL https://mise.run | sh
           echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
           echo "${HOME}/.local/share/mise/shims" >> "${GITHUB_PATH}"
+          mise_pin="$(awk 'index($0, "[[tools.\"github:jdx/mise\"]]") == 1 { inside = 1; next } inside && substr($0, 1, 1) == "[" { exit } inside && $1 == "version" { gsub(/[",]/, "", $3); print $3; exit }' mise.lock)"
+          "${HOME}/.local/bin/mise" install "github:jdx/mise@${mise_pin}"
+          "${HOME}/.local/bin/mise" use --global "github:jdx/mise@${mise_pin}"
 
       - name: Approval (blocking)
         id: approval
@@ -245,13 +229,16 @@ jobs:
           fetch-depth: 0
           submodules: false
           persist-credentials: false
-      - name: Install mise
+      - name: Install the mise release pinned by mise.lock
         shell: bash
         run: |
           set -eu
           curl -fsSL https://mise.run | sh
           echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
           echo "${HOME}/.local/share/mise/shims" >> "${GITHUB_PATH}"
+          mise_pin="$(awk 'index($0, "[[tools.\"github:jdx/mise\"]]") == 1 { inside = 1; next } inside && substr($0, 1, 1) == "[" { exit } inside && $1 == "version" { gsub(/[",]/, "", $3); print $3; exit }' mise.lock)"
+          "${HOME}/.local/bin/mise" install "github:jdx/mise@${mise_pin}"
+          "${HOME}/.local/bin/mise" use --global "github:jdx/mise@${mise_pin}"
 
       - name: Boot
         run: CI=Y make setup

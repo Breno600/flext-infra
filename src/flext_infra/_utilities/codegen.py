@@ -9,10 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_cli import u
-
 from flext_infra import c, m, p, t
-from flext_infra._config import config
 from flext_infra._utilities import (
     FlextInfraUtilitiesCodegenFacades,
     FlextInfraUtilitiesCodegenFilePlan,
@@ -40,6 +37,8 @@ class FlextInfraUtilitiesCodegen(
             The sole typed context every generated ``.envrc`` renders from.
 
         """
+        from flext_infra._config import config
+
         toolchain = config.Infra.codegen.toolchain
         return m.Infra.EnvrcRenderSpec(
             worktree_environment_directory=toolchain.worktree_environment_directory,
@@ -65,6 +64,8 @@ class FlextInfraUtilitiesCodegen(
             The resulting ``str``.
 
         """
+        from flext_cli import u
+
         template_path = (
             Path(__file__).resolve().parent.parent
             / "templates"
@@ -92,6 +93,8 @@ class FlextInfraUtilitiesCodegen(
             The resulting ``str``.
 
         """
+        from flext_cli import u
+
         template_path = (
             Path(__file__).resolve().parent.parent
             / "templates"

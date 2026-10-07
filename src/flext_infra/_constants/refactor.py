@@ -416,47 +416,6 @@ class FlextInfraConstantsRefactor:
     MIN_METHODS_FOR_REORDER: ClassVar[int] = 2
     "Minimum method count before class method reordering is attempted."
 
-    # --- Import-layer order (import normalization engine) ---
-    LETTER_ORDER: ClassVar[t.MappingKV[str, int]] = MappingProxyType({
-        "c": 2,
-        "t": 3,
-        "p": 4,
-        "m": 5,
-        "u": 6,
-    })
-    "Facade letters of the own package with their canonical layer ranks."
-    LETTER_RENDER_ORDER: ClassVar[t.StrSequence] = ("c", "m", "p", "t", "u")
-    "Facade letters in the render order of one root-combined letter binding."
-    FAMILY_LETTER: ClassVar[t.MappingKV[str, str]] = MappingProxyType({
-        "constants": "c",
-        "typings": "t",
-        "protocols": "p",
-        "models": "m",
-        "utilities": "u",
-    })
-    "Declaration family name -> facade letter."
-    FAMILY_RANK: ClassVar[t.MappingKV[str, int]] = MappingProxyType({
-        "constants": 2,
-        "typings": 3,
-        "protocols": 4,
-        "models": 5,
-        "utilities": 6,
-    })
-    "Declaration family name -> canonical layer rank."
-    FACADE_RANK: ClassVar[t.MappingKV[str, int]] = MappingProxyType({
-        "api": 10,
-        "cli": 11,
-    })
-    "Facade module name -> canonical layer rank."
-    MAX_PASSES: ClassVar[int] = 24
-    "Maximum convergence passes of one normalization run."
-    FAMILY_PATH_DEPTH: ClassVar[int] = 2
-    """Module-path depth of one family root (``<package>.<family>``)."""
-    LEAF_PATH_DEPTH: ClassVar[int] = 3
-    """Module-path depth of one family leaf (``<package>.<family>.<leaf>``)."""
-    DEFAULT_LAYER_RANK: ClassVar[int] = 7
-    """Layer rank of a module outside every declared layer."""
-
     # --- Method category StrEnum (was: plain class MethodCategory) ---
     @unique
     class MethodCategory(StrEnum):

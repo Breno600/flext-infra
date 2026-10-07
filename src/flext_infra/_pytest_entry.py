@@ -10,9 +10,6 @@ import sys
 import time
 from pathlib import Path
 
-from flext_infra._pytest_profile import FlextInfraPytestProfile
-from flext_infra.validate.pytest_runner import FlextInfraPytestRunner
-
 
 class FlextInfraPytestEntry:
     """Facade for the pytest entrypoint with pre-import clock."""
@@ -38,6 +35,9 @@ class FlextInfraPytestEntry:
             ValueError: If unsupported pytest operation.
 
         """
+        from flext_infra._pytest_profile import FlextInfraPytestProfile
+        from flext_infra.validate.pytest_runner import FlextInfraPytestRunner
+
         mode = sys.argv[1] if len(sys.argv) > 1 else ""
         if mode == "profile":
             return FlextInfraPytestProfile(Path(sys.argv[2])).run_parent(

@@ -1593,7 +1593,7 @@ class FlextInfraUtilitiesRopeSourceBases:
     """Source-bases composite facade over the inventory and runtime parts."""
 
     @classmethod
-    def _inventory(
+    def inventory(
         cls,
         request: m.Infra.SourceBindingInventoryRequest,
         definitions: MutableMapping[str, m.Infra.SourceClassDefinition],
@@ -1602,6 +1602,10 @@ class FlextInfraUtilitiesRopeSourceBases:
 
         Returns:
             The module's explicit lexical bindings, including value shadowing.
+
+        Raises:
+            TypeError: If Rope does not return a module AST.
+            ValueError: If a required binding has unsupported source semantics.
 
         """
         return FlextInfraUtilitiesRopeSourceBasesInventory.inventory(

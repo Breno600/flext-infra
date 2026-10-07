@@ -6,7 +6,6 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from collections.abc import Set as AbstractSet
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, override
 
@@ -152,7 +151,7 @@ class FlextInfraDocGenerator(
     @staticmethod
     def _verify_sources_unchanged(
         source_states: t.VariadicTuple[m.Cli.AtomicFileState],
-        outputs: AbstractSet[Path],
+        outputs: t.AbstractSet[Path],
     ) -> p.Result[bool]:
         """Require every authenticated source to be untouched by the publication.
 

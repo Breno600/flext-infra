@@ -8,8 +8,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_cli import u
-
 from flext_infra import c, m
 from flext_infra._utilities import FlextInfraUtilitiesPromotedWorkspace
 
@@ -33,6 +31,8 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
                 c.Infra.PromotedRegistryError]``.
 
         """
+        from flext_cli import u
+
         header = c.Infra.PromotedHeader
         headers: t.MutableMappingKV[
             Path,

@@ -11,12 +11,6 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import m
-from flext_infra._utilities import (
-    FlextInfraUtilitiesGitSemanticPublishMixin,
-    FlextInfraUtilitiesGitSemanticRefsMixin,
-    FlextInfraUtilitiesGitWorktreeRemovalMixin,
-    FlextInfraUtilitiesGitWorktreeStatusMixin,
-)
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -31,6 +25,12 @@ class FlextInfraWorktreeLifecycle:
         created_branch_oid: str | None,
         setup_error: str,
     ) -> p.Result[str]:
+
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesGitSemanticPublishMixin,
+            FlextInfraUtilitiesGitWorktreeRemovalMixin,
+            FlextInfraUtilitiesGitWorktreeStatusMixin,
+        )
 
         status = FlextInfraUtilitiesGitWorktreeStatusMixin.git_status(
             m.Infra.GitStatusRequest(repo_root=lane),
@@ -70,6 +70,8 @@ class FlextInfraWorktreeLifecycle:
             The resulting ``p.Result[str]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesGitSemanticRefsMixin
+
         preflight = FlextInfraWorktreeLifecycle._validated_lane(
             lane,
             branch,
@@ -94,6 +96,11 @@ class FlextInfraWorktreeLifecycle:
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesGitSemanticRefsMixin,
+            FlextInfraUtilitiesGitWorktreeStatusMixin,
+        )
+
         if not lane.is_dir():
             return r[bool].fail(f"worktree lane does not exist: {lane}")
         refs = FlextInfraUtilitiesGitSemanticRefsMixin
@@ -127,6 +134,11 @@ class FlextInfraWorktreeLifecycle:
             The resulting ``p.Result[str]``.
 
         """
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesGitSemanticPublishMixin,
+            FlextInfraUtilitiesGitSemanticRefsMixin,
+        )
+
         contains_base = FlextInfraUtilitiesGitSemanticRefsMixin.git_is_ancestor(
             m.Infra.GitAncestryRequest(repo_root=lane, ancestor=base_oid),
         )
