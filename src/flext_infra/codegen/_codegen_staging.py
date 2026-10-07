@@ -9,10 +9,11 @@ from __future__ import annotations
 import stat
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, get_args
+from typing import TYPE_CHECKING, ClassVar
 
 from flext_core import r
-from flext_infra import m, u
+from flext_infra import c, m, u
+from flext_infra._config import config
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
@@ -27,10 +28,7 @@ if TYPE_CHECKING:
 class FlextInfraCodegenStaging:
     """Stage generated-file plans beside their live destinations."""
 
-    _phases: ClassVar[frozenset[str]] = frozenset({
-        "conform",
-        *get_args(m.Infra.CodegenPhaseAnalysis.model_fields["phase"].annotation),
-    })
+    _phases: ClassVar[frozenset[str]] = frozenset(c.Infra.CodegenStagedFilePhase)
 
     @staticmethod
     def stage_file_plans(
@@ -157,7 +155,7 @@ class FlextInfraCodegenStaging:
         for phase_root_state in phase_roots.values():
             created = u.Cli.atomic_create_empty_directory_guarded(
                 phase_root_state,
-                permission_mode=0o700,
+                permission_mode=config.Infra.codegen.modes.directory_private,
             )
             if created.failure:
                 return result_type.from_failure(created)

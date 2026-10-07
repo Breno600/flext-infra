@@ -13,3 +13,7 @@ invalid:
     recover(phase="lazy-init")
   - |
     publish_publication(publication, phase="semantic")
+  - |
+    stage(layout, phase="conform")
+  - |
+    record(layout, phase="mod-text")

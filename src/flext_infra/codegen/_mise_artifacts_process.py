@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, t, u
+from flext_infra._config import config
 from flext_infra._settings import settings
 
 if TYPE_CHECKING:
@@ -63,12 +64,12 @@ class FlextInfraMiseArtifactsProcess:
                 return r[bool].from_failure(planned)
             created = u.Cli.atomic_create_directory_chain_guarded(
                 planned.value,
-                permission_mode=0o700,
+                permission_mode=config.Infra.codegen.modes.directory_private,
             )
             if created.failure:
                 return r[bool].from_failure(created)
         for path in empty_files:
-            written = cls.write_new(path, b"", 0o600)
+            written = cls.write_new(path, b"", config.Infra.codegen.modes.file_private)
             if written.failure:
                 return written
         return r[bool].ok(value=True)

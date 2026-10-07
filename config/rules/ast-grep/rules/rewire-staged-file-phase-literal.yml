@@ -10,7 +10,7 @@ ignores:
 rule:
   kind: string
   pattern: $VAL
-  regex: "^\"(conform-bootstrap|lazy-init|docs|layout|mise|recovery|scaffold|semantic|transaction|version-file)\"$"
+  regex: "^\"(candidate-bootstrap|conform|conform-bootstrap|lazy-init|docs|layout|mise|mod-text|recovery|scaffold|semantic|transaction|version-file)\"$"
   inside:
     kind: keyword_argument
     has:

@@ -39,6 +39,7 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                 changed during read.
 
         """
+        from flext_infra._config import config
         from flext_infra._utilities import FlextInfraUtilitiesDocsContract
 
         root = repository_root.absolute()
@@ -280,7 +281,7 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                 owner,
                 path,
                 content,
-                desired_mode=0o644,
+                desired_mode=config.Infra.codegen.modes.file_default,
                 source_states=inputs,
             ).unwrap()
             expected = states.get(path)

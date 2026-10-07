@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, u
+from flext_infra._config import config
 from flext_infra.codegen._mise_artifacts_process import (
     FlextInfraMiseArtifactsProcess as process,
 )
@@ -113,7 +114,7 @@ class FlextInfraMiseStaging:
             )
         created = u.Cli.atomic_create_directory_chain_guarded(
             stage_plan.value,
-            permission_mode=0o700,
+            permission_mode=config.Infra.codegen.modes.directory_private,
         )
         if created.failure:
             return result_type.from_failure(created)

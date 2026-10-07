@@ -35,6 +35,23 @@ snapshots:
       start: 33
       end: 49
   ? |
+    record(layout, phase="mod-text")
+  : fixed: |
+      record(layout, phase=c.Infra.CodegenStagedFilePhase.MOD_TEXT)
+    labels:
+    - source: '"mod-text"'
+      style: primary
+      start: 21
+      end: 31
+    - source: phase
+      style: secondary
+      start: 15
+      end: 20
+    - source: phase="mod-text"
+      style: secondary
+      start: 15
+      end: 31
+  ? |
     recover(phase="lazy-init")
   : fixed: |
       recover(phase=c.Infra.CodegenStagedFilePhase.LAZY_INIT)
@@ -51,6 +68,23 @@ snapshots:
       style: secondary
       start: 8
       end: 25
+  ? |
+    stage(layout, phase="conform")
+  : fixed: |
+      stage(layout, phase=c.Infra.CodegenStagedFilePhase.CONFORM)
+    labels:
+    - source: '"conform"'
+      style: primary
+      start: 20
+      end: 29
+    - source: phase
+      style: secondary
+      start: 14
+      end: 19
+    - source: phase="conform"
+      style: secondary
+      start: 14
+      end: 29
   ? |
     stage(phase="version-file")
   : fixed: |

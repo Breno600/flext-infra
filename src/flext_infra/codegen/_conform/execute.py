@@ -100,7 +100,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 return r[m.Infra.CodegenResult].from_failure(planned)
             created = u.Cli.atomic_create_directory_chain_guarded(
                 planned.value,
-                permission_mode=0o755,
+                permission_mode=config.Infra.codegen.modes.directory_generated,
             )
             if created.failure:
                 return r[m.Infra.CodegenResult].from_failure(created)
@@ -780,7 +780,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 )
             materialized = u.Cli.atomic_create_directory_chain_guarded(
                 planned.value,
-                permission_mode=0o755,
+                permission_mode=config.Infra.codegen.modes.directory_generated,
             )
             if materialized.failure:
                 rollback = self._rollback_scaffold_directories(tuple(created))

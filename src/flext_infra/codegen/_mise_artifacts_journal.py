@@ -10,6 +10,7 @@ from pathlib import Path
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
+from flext_infra._config import config
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
@@ -902,7 +903,7 @@ class FlextInfraMiseArtifactsJournal:
                         )
                     created = u.Cli.atomic_create_empty_directory_guarded(
                         directory_before.value,
-                        permission_mode=0o700,
+                        permission_mode=config.Infra.codegen.modes.directory_private,
                     )
                     if created.failure:
                         return r[m.Infra.CodegenJournalEntry].from_failure(created)
