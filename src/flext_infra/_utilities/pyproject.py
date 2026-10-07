@@ -11,8 +11,14 @@ from collections.abc import Mapping, Sequence
 from functools import cache, lru_cache
 from pathlib import Path
 
+from flext_cli import u
+
 from flext_core import r
 from flext_infra import c, m, p, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesGit,
+    FlextInfraUtilitiesManagedConflicts,
+)
 
 
 class FlextInfraUtilitiesPyproject:
@@ -33,8 +39,6 @@ class FlextInfraUtilitiesPyproject:
             Live pyproject text with merge-control lines resolved.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesManagedConflicts
-
         spec_result = FlextInfraUtilitiesManagedConflicts.pyproject_managed_file()
         if spec_result.failure:
             return r[str].from_failure(spec_result)
@@ -51,8 +55,6 @@ class FlextInfraUtilitiesPyproject:
             The resulting ``p.Result[str]``.
 
         """
-        from flext_cli import u
-
         raw = u.Cli.atomic_read_binary_file_state(pyproject_path, required=True)
         if raw.failure:
             return r[str].from_failure(raw)
@@ -81,8 +83,6 @@ class FlextInfraUtilitiesPyproject:
             The resulting ``p.Result[p.ProjectMetadata]``.
 
         """
-        from flext_cli import u
-
         live = FlextInfraUtilitiesPyproject.live_pyproject_text(
             project_root / c.PYPROJECT_FILENAME,
         )
@@ -143,8 +143,6 @@ class FlextInfraUtilitiesPyproject:
             The resulting ``p.Result[str]``.
 
         """
-        from flext_cli import u
-
         config_path = toolchain_root / c.Infra.TAPLO_CONFIG_FILENAME
         config_content = config_path.read_bytes() if config_path.is_file() else b""
         resolved_path = path.resolve()
@@ -197,8 +195,6 @@ class FlextInfraUtilitiesPyproject:
             One tool's pinned version from ``mise.lock`` at the root.
 
         """
-        from flext_cli import u
-
         lock_path = toolchain_root / c.Infra.MISE_LOCK_FILENAME
         source = u.Cli.files_read_text(lock_path)
         if source.failure:
@@ -227,8 +223,6 @@ class FlextInfraUtilitiesPyproject:
         config: t.Pair[Path | None, str],
         taplo: t.Triple[str, int, Path],
     ) -> p.Result[str]:
-
-        from flext_cli import u
 
         taplo_result = FlextInfraUtilitiesPyproject._taplo_binary(*taplo)
         if taplo_result.failure:
@@ -357,8 +351,6 @@ class FlextInfraUtilitiesPyproject:
             The resulting ``p.Result[t.SequenceOf[object]]``.
 
         """
-        from flext_cli import u
-
         document = u.Cli.toml_parse_text(
             lock_path.read_text(encoding=c.Cli.ENCODING_DEFAULT),
         )
@@ -410,8 +402,6 @@ class FlextInfraUtilitiesPyproject:
             The resulting ``p.Result[Path]``.
 
         """
-        from flext_cli import u
-
         pinned = FlextInfraUtilitiesPyproject._locked_mise_version(
             execution_root,
             c.Infra.TAPLO_MISE_TOOL_NAME,
@@ -504,8 +494,6 @@ class FlextInfraUtilitiesPyproject:
             RuntimeError: If ``text`` is not valid TOML.
 
         """
-        from flext_cli import u
-
         payload = u.Cli.toml_mapping_from_text(text)
         if payload is None:
             msg = f"pyproject payload at {pyproject_path} is not valid TOML"
@@ -520,8 +508,6 @@ class FlextInfraUtilitiesPyproject:
             One TOML document normalized through the infra adapter.
 
         """
-        from flext_cli import u
-
         payload = u.Cli.toml_as_mapping(document)
         if not payload:
             return {}
@@ -697,8 +683,6 @@ class FlextInfraUtilitiesPyproject:
             ValueError: If ``declared.failure``; or if ``unmanaged.failure``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGit
-
         declared = FlextInfraUtilitiesGit.git_declared_submodule_paths(repository_root)
         if declared.failure:
             msg = declared.error or f"invalid workspace topology: {repository_root}"

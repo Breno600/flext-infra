@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import cProfile
+import importlib
 import os
 import sys
 from pathlib import Path
@@ -53,9 +54,12 @@ class FlextInfraPytestProfile:
         self.context = context
 
     def _run_parent(self, started_at_monotonic: float) -> int:
-        from flext_infra.validate.pytest_runner import FlextInfraPytestRunner
-
-        runner = FlextInfraPytestRunner.from_environment(
+        # Deliberately deferred: this adapter profiles the runner import chain,
+        # so the module surface stays stdlib-only per its cold-start contract.
+        runner_cls = importlib.import_module(
+            "flext_infra.validate.pytest_runner",
+        ).FlextInfraPytestRunner
+        runner = runner_cls.from_environment(
             started_at_monotonic=started_at_monotonic,
             collection_command_prefix=(
                 sys.executable,

@@ -9,10 +9,11 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
-from flext_cli import r
+from flext_cli import r, u
 
 from flext_infra import c, m, p, t
 from flext_infra._utilities import (
+    FlextInfraUtilitiesDependenciesProfiles,
     FlextInfraUtilitiesPyprojectRequirements,
     FlextInfraUtilitiesPyprojectSession,
 )
@@ -38,10 +39,6 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``p.Result[list[str]]``.
 
         """
-        from flext_cli import u
-
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
-
         payload = u.Cli.toml_as_mapping(document)
         if payload is None:
             return r[list[str]].fail("pyproject document is not a TOML mapping")
@@ -50,7 +47,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
         if isinstance(project, Mapping):
             for key in (c.Infra.DEPENDENCIES, c.Infra.OPTIONAL_DEPENDENCIES):
                 requirements.extend(
-                    FlextInfraUtilitiesDependencies.raw_requirement_values(
+                    FlextInfraUtilitiesDependenciesProfiles.raw_requirement_values(
                         project.get(key),
                     ),
                 )
@@ -58,7 +55,9 @@ class FlextInfraUtilitiesPyprojectUvSources(
         if isinstance(groups, Mapping):
             for group in groups.values():
                 requirements.extend(
-                    FlextInfraUtilitiesDependencies.raw_requirement_values(group),
+                    FlextInfraUtilitiesDependenciesProfiles.raw_requirement_values(
+                        group,
+                    ),
                 )
         return r[list[str]].ok(requirements)
 
@@ -75,13 +74,11 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``t.VariadicTuple[str]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
-
         return tuple(
             active
             for item in cls._document_requirement_lines(document).unwrap()
             if (
-                active := FlextInfraUtilitiesDependencies.active_requirement(
+                active := FlextInfraUtilitiesDependenciesProfiles.active_requirement(
                     item,
                     environment=environment,
                 )
@@ -103,8 +100,6 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``p.Result[t.VariadicTuple[str]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
-
         lines = cls._document_requirement_lines(document)
         if lines.failure:
             return r[t.VariadicTuple[str]].from_failure(lines)
@@ -114,7 +109,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
                     name
                     for item in lines.value
                     if cls._declares_direct_source(item)
-                    and (name := FlextInfraUtilitiesDependencies.dep_name(item))
+                    and (name := FlextInfraUtilitiesDependenciesProfiles.dep_name(item))
                     is not None
                 }),
             ),
@@ -128,8 +123,6 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``Table``.
 
         """
-        from flext_cli import u
-
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if tool is None:
             tool = u.Cli.toml_ensure_table(document, c.Infra.TOOL)
@@ -148,8 +141,6 @@ class FlextInfraUtilitiesPyprojectUvSources(
         manifest owns this temporary pin; the committed lock owns normal
         resolutions when no candidate is declared (flext-oe420).
         """
-        from flext_cli import u
-
         if candidate_sources:
             u.Cli.toml_sync_string_list(
                 uv,
@@ -178,14 +169,10 @@ class FlextInfraUtilitiesPyprojectUvSources(
         dependabot (operator 2026-10-01). Removed declarations exterminate
         the keys everywhere so no orphan cap survives (flext-gzfd2 class).
         """
-        from flext_cli import u
-
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
-
         retained_constraints = tuple(
             requirement
             for requirement in resolution.constraint_dependencies
-            if FlextInfraUtilitiesDependencies.dep_name(requirement) != "uv"
+            if FlextInfraUtilitiesDependenciesProfiles.dep_name(requirement) != "uv"
         )
         if retained_constraints:
             u.Cli.toml_sync_string_list(
@@ -209,8 +196,6 @@ class FlextInfraUtilitiesPyprojectUvSources(
         meltano's structlog cap against flext-core's floor and is
         unsatisfiable).
         """
-        from flext_cli import u
-
         if resolution.environments:
             # Declared as list[JsonValue], not list[str]: `list` is invariant,
             # so the narrower element type is not assignable to the writer's
@@ -229,8 +214,6 @@ class FlextInfraUtilitiesPyprojectUvSources(
         Emit on every owning pyproject so standalone CI clones resolve;
         do not gate on owns_uv_root_policy (that stripped member excludes).
         """
-        from flext_cli import u
-
         exclude_payload = list(
             t.Cli.JSON_LIST_ADAPTER.validate_python([
                 {
@@ -268,10 +251,6 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_cli import u
-
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
-
         uv = cls._resolved_uv_table(document)
         cls._sync_uv_candidates(uv, candidate_sources)
         u.Cli.toml_remove_key_if_present(uv, "required-version")
@@ -284,7 +263,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
         retained_constraints = tuple(
             requirement
             for requirement in resolution.constraint_dependencies
-            if FlextInfraUtilitiesDependencies.dep_name(requirement) != "uv"
+            if FlextInfraUtilitiesDependenciesProfiles.dep_name(requirement) != "uv"
         )
         if retained_constraints:
             u.Cli.toml_sync_string_list(
@@ -356,12 +335,11 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``t.VariadicTuple[str]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
-
         required_names = {
             name
             for line in cls._document_requirement_lines(document).unwrap()
-            if (name := FlextInfraUtilitiesDependencies.dep_name(line)) is not None
+            if (name := FlextInfraUtilitiesDependenciesProfiles.dep_name(line))
+            is not None
         }
         return tuple(sorted(set(workspace_members) & required_names))
 
@@ -372,8 +350,6 @@ class FlextInfraUtilitiesPyprojectUvSources(
         wanted_members: t.VariadicTuple[str],
     ) -> None:
         """Prune stale member sources and redirect every wanted member."""
-        from flext_cli import u
-
         sources = u.Cli.toml_table_child(uv, "sources")
         if sources is None:
             sources = u.Cli.toml_ensure_table(uv, "sources")
@@ -386,8 +362,6 @@ class FlextInfraUtilitiesPyprojectUvSources(
     @staticmethod
     def _prune_member_sources(uv: Table) -> None:
         """Drop fleet member sources left over from a workspace render."""
-        from flext_cli import u
-
         sources = u.Cli.toml_table_child(uv, "sources")
         if sources is None:
             return
@@ -418,8 +392,6 @@ class FlextInfraUtilitiesPyprojectUvSources(
         (which publishes a manifest consumers resolve alone) keeps the inline
         git+ form and prunes fleet member sources.
         """
-        from flext_cli import u
-
         if not owns_workspace_table:
             u.Cli.toml_remove_key_if_present(uv, "workspace")
         if owns_workspace_table and workspace_members:

@@ -10,6 +10,11 @@ import operator
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import c, m
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDiscovery,
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeRuntime,
+)
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
@@ -60,11 +65,6 @@ class FlextInfraUtilitiesRopeAnalysisIntrospection:
             Nested class names from a resolved Rope class object.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesRopeCore,
-            FlextInfraUtilitiesRopeRuntime,
-        )
-
         result: list[str] = []
         pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
         attributes = pymodule.get_attributes()
@@ -90,8 +90,6 @@ class FlextInfraUtilitiesRopeAnalysisIntrospection:
             Top-level symbols defined in one module through Rope metadata.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeCore
-
         result: t.MutableSequenceOf[m.Infra.SymbolInfo] = []
         pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
         tree: p.AttributeProbe = pymodule.get_ast()
@@ -214,11 +212,6 @@ class FlextInfraUtilitiesRopeAnalysisIntrospection:
             The resulting ``t.MappingKV[str, t.SequenceOf[t.Triple[str, str, str]]]``.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesDiscovery,
-            FlextInfraUtilitiesRopeCore,
-        )
-
         result: MutableMapping[str, t.MutableSequenceOf[t.Triple[str, str, str]]] = {}
         project_root = FlextInfraUtilitiesDiscovery.project_root(package_dir / "foo.py")
         if project_root is None:

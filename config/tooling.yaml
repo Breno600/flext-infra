@@ -405,6 +405,18 @@ Infra:
                 suppressing at the call sites would mask the contract; the
                 exemption is bounded to this module family and documents the
                 irreducible boundary.
+            - files: "**/flext_core/_models/pydantic.py"
+              rules: [any-type, builtin-argument-shadowing, too-many-arguments]
+              authority: operator-ruling-2026-10-07-facade-signature-mirror
+              reason: >-
+                The flext-core pydantic facade's TYPE_CHECKING block mirrors
+                pydantic's public ``computed_field``/``model_serializer``
+                signatures one-to-one (including the ``repr`` keyword and the
+                12-kwarg surface) so consumers get pydantic's exact call
+                contract through the facade. Renaming keywords, de-typing with
+                object, or collapsing parameters would break the mirrored API
+                contract the stubs exist to carry; the admission is bounded to
+                this single signature-mirror module.
             - files: "**/framework.py"
               rules: [import-outside-top-level]
               authority: operator-ruling-2026-10-05-heavy-adapter-boundary

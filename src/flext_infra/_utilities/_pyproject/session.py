@@ -6,9 +6,10 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_cli import r
+from flext_cli import r, u
 
 from flext_infra import c, m, p, t
+from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
 
 
 class FlextInfraUtilitiesPyprojectSession:
@@ -28,10 +29,6 @@ class FlextInfraUtilitiesPyprojectSession:
             The resulting ``p.Result[m.Infra.BindingResolution]``.
 
         """
-        from flext_cli import u
-
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
-
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if (
             tool is not None
@@ -49,7 +46,7 @@ class FlextInfraUtilitiesPyprojectSession:
             parsed
             for item in requirements
             if (
-                parsed := FlextInfraUtilitiesDependencies.active_requirement(
+                parsed := FlextInfraUtilitiesDependenciesProfiles.active_requirement(
                     item,
                     environment=environment,
                 )
@@ -65,7 +62,7 @@ class FlextInfraUtilitiesPyprojectSession:
             parsed
             for item in explicit
             if (
-                parsed := FlextInfraUtilitiesDependencies.active_requirement(
+                parsed := FlextInfraUtilitiesDependenciesProfiles.active_requirement(
                     item,
                     environment=environment,
                 )
@@ -75,10 +72,11 @@ class FlextInfraUtilitiesPyprojectSession:
         overrides = tuple(
             item
             for item in active_overrides
-            if FlextInfraUtilitiesDependencies.dep_name(item) not in selected
+            if FlextInfraUtilitiesDependenciesProfiles.dep_name(item) not in selected
         )
         override_names = frozenset(
-            FlextInfraUtilitiesDependencies.dep_name(item) for item in active_overrides
+            FlextInfraUtilitiesDependenciesProfiles.dep_name(item)
+            for item in active_overrides
         )
         declared_constraints = (
             u.Cli.toml_as_string_list(uv.get("constraint-dependencies"))
@@ -87,27 +85,31 @@ class FlextInfraUtilitiesPyprojectSession:
         )
         constraints = tuple(
             dict.fromkeys(
-                FlextInfraUtilitiesDependencies.dependency_constraint(
+                FlextInfraUtilitiesDependenciesProfiles.dependency_constraint(
                     parsed,
-                    replace_source=FlextInfraUtilitiesDependencies.dep_name(parsed)
+                    replace_source=FlextInfraUtilitiesDependenciesProfiles.dep_name(
+                        parsed,
+                    )
                     in selected,
                 )
                 for item in (
                     *(
                         item
                         for item in active
-                        if FlextInfraUtilitiesDependencies.dep_name(item)
+                        if FlextInfraUtilitiesDependenciesProfiles.dep_name(item)
                         not in override_names
                     ),
                     *(
                         item
                         for item in active_overrides
-                        if FlextInfraUtilitiesDependencies.dep_name(item) in selected
+                        if FlextInfraUtilitiesDependenciesProfiles.dep_name(item)
+                        in selected
                     ),
                     *declared_constraints,
                 )
                 if (
-                    parsed := FlextInfraUtilitiesDependencies.active_requirement(
+                    parsed
+                    := FlextInfraUtilitiesDependenciesProfiles.active_requirement(
                         item,
                         environment=environment,
                     )

@@ -13,6 +13,8 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
+from flext_cli import u
+
 from flext_core import r
 from flext_infra import c, m, t
 
@@ -48,8 +50,6 @@ class FlextInfraUtilitiesWorkspaceManifest:
             The resulting ``p.Result[t.SequenceOf[m.Infra.WorkspaceManifestSpec]]``.
 
         """
-        from flext_cli import u
-
         manifest_path = cls.workspace_manifest_path(repository_root)
         if not manifest_path.is_file():
             return r[t.SequenceOf[m.Infra.WorkspaceManifestSpec]].ok(())
@@ -75,8 +75,6 @@ class FlextInfraUtilitiesWorkspaceManifest:
             The resulting ``p.Result[t.SequenceOf[m.Infra.WorkspaceManifestSpec]]``.
 
         """
-        from flext_cli import u
-
         loaded = u.Cli.yaml_parse(text)
         if loaded.failure:
             return r[t.SequenceOf[m.Infra.WorkspaceManifestSpec]].fail(

@@ -17,6 +17,7 @@ from urllib.request import url2pathname
 from flext_core import r
 from flext_infra import m, u
 from flext_infra._config import config
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from importlib.metadata import Distribution
@@ -53,8 +54,6 @@ class FlextInfraWorkspaceEnvironmentProvenance:
             The resulting ``p.Result[int]``.
 
         """
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
         resolved_root = repository_root.resolve()
         workspace_result = FlextInfraWorkspaceDetector.load_workspace_spec(
             resolved_root,
@@ -147,8 +146,6 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         Returns:
             The resulting ``p.Result[int]``.
         """
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
         document = u.Cli.toml_read_json(repository_root / "uv.lock")
         if document.failure:
             return r[int].from_failure(document)
