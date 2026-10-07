@@ -85,11 +85,11 @@ class FlextInfraToolTablesPhase:
                 discovered.error or "workspace project discovery is unavailable",
             )
         return sorted({
-            project.package_name
+            project.package_name.replace("-", "_")
             for project in discovered.value
             if (
                 project.package_name
-                and project.package_name.isidentifier()
+                and project.package_name.replace("-", "_").isidentifier()
                 and project.declared_subproject
             )
         })
