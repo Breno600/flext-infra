@@ -12,7 +12,6 @@ from flext_core import r
 from flext_infra import c, m, t, u
 from flext_infra._config import config
 from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
-from flext_infra.deps.phases.ensure_pyright import FlextInfraEnsurePyrightConfigPhase
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -116,6 +115,10 @@ class FlextInfraPyprojectModernizerTooling:
             The resulting ``p.Result[m.Infra.ToolingRuntimeContext]``.
 
         """
+        from flext_infra.deps.phases.ensure_pyright import (
+            FlextInfraEnsurePyrightConfigPhase,
+        )
+
         result_type = r[m.Infra.ToolingRuntimeContext]
         conformed = self._conformed_seed_tools(
             request.path,

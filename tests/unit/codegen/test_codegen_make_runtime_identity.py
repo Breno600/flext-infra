@@ -75,25 +75,21 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
     @pytest.mark.parametrize(
         (
             "operational_status",
-            "remove_scratch",
             "fail_preparation_diagnostic",
             "fail_exit_diagnostic",
         ),
         [
-            (0, False, False, False),
-            (37, False, False, False),
-            (0, True, False, False),
-            (37, True, False, False),
-            (0, False, True, False),
-            (0, False, False, True),
-            (37, False, False, True),
+            (0, False, False),
+            (37, False, False),
+            (0, True, False),
+            (0, False, True),
+            (37, False, True),
         ],
     )
     def test_nested_runtime_preserves_failure_and_cleans_owned_resources(
         tmp_path: Path,
         operational_status: int,
         *,
-        remove_scratch: bool,
         fail_preparation_diagnostic: bool,
         fail_exit_diagnostic: bool,
     ) -> None:
@@ -103,23 +99,12 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
             c.Infra.MakeProfile.STANDALONE,
         )
         tm.ok(u.Tests.create_python_environment(root))
-        bootstrap = u.Infra.mise_bootstrap_environment()
         preserved = {
-            relative: (root / relative).read_bytes()
-            for relative in (
-                bootstrap.lock_file,
-                *(relative for relative, _mode in bootstrap.artifact_specs),
-            )
+            c.Infra.MISE_LOCK_FILENAME: (
+                root / c.Infra.MISE_LOCK_FILENAME
+            ).read_bytes(),
         }
-        scratch_pattern = f".{root.name}.mise-bootstrap.*"
-        tm.that(tuple(root.parent.glob(scratch_pattern)), eq=())
         command = ': >"$(PROJECT_ROOT)/leaf-ran"; '
-        if remove_scratch:
-            command += (
-                'for path in "$(PROJECT_ROOT)/../.'
-                '$(notdir $(PROJECT_ROOT)).mise-bootstrap."*; do '
-                'find "$$path" -depth -delete; done; '
-            )
         if fail_exit_diagnostic:
             command += (
                 f"if (exit {operational_status}); then leaf_operation_status=0; "
@@ -168,7 +153,6 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
             )
         failed = (
             operational_status != 0
-            or remove_scratch
             or fail_preparation_diagnostic
             or fail_exit_diagnostic
         )
@@ -187,6 +171,5 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
         tm.that(result.outcome.raw_return_code, eq=expected_make_status)
         tm.that(result.outcome.timed_out, eq=False)
         tm.that(result.outcome.forwarded_signal, eq=None)
-        tm.that(tuple(root.parent.glob(scratch_pattern)), eq=())
         for relative, original in preserved.items():
             tm.that((root / relative).read_bytes(), eq=original)

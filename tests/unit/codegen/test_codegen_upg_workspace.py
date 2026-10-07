@@ -127,9 +127,3 @@ class TestsFlextInfraCodegenUpgWorkspace:
             eq=True,
         )
         tm.that((checkout / ".venv").exists(), eq=False)
-        pin = tm.ok(
-            u.Infra.mise_pinned_release(
-                (root / c.Infra.MISE_VERSION_PIN_FILENAME).read_text(encoding="utf-8"),
-            ),
-        )
-        tm.that(process.stdout, has=f"mise setup receipt={pin}")

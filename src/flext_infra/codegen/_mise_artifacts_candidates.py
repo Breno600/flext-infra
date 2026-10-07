@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import m
+from flext_infra import c, m
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
@@ -50,7 +50,7 @@ class FlextInfraMiseArtifactsCandidates:
                 )
             publications.append(
                 m.Infra.CodegenStagedFile(
-                    phase="mise",
+                    phase=c.Infra.CodegenStagedFilePhase.MISE,
                     project=project.layout.root,
                     before=before,
                     replacement=replacement.value,

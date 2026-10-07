@@ -11,12 +11,8 @@ from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
 
-from flext_infra import m, t
-from flext_infra._config import config
-from flext_infra._utilities import (
-    FlextInfraUtilitiesDocsCollectionVerify,
-    FlextInfraUtilitiesDocsContract,
-)
+from flext_infra import c, m, t
+from flext_infra._utilities import FlextInfraUtilitiesDocsCollectionVerify
 
 
 class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify):
@@ -296,6 +292,8 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
             The resulting ``m.Infra.PlanCollectionBundle``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocsContract
+
         canonical = state.canonical
         owned_outputs = {
             canonical / "collection-manifest.json",
@@ -422,6 +420,8 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
             The resulting ``str``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocsContract
+
         lines = [
             "# Collected plans",
             "",
@@ -461,6 +461,8 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                 target changed after source read.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocsContract
+
         canonical = state.canonical
         projection = state.projection
         state.record_manifest()
@@ -476,7 +478,7 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                 owner,
                 path,
                 content,
-                desired_mode=config.Infra.codegen.modes.file_default,
+                desired_mode=c.Infra.DOCS_ARTIFACT_MODE,
                 source_states=inputs,
             ).unwrap()
             expected = state.states.get(path)

@@ -1410,7 +1410,7 @@ Infra:
             runtime: [flext-ldif, ldap3>=2.10.2rc4]
           - upstream: flext_cli
             project: flext-meltano
-            runtime: [flext-cli, meltano>=4.4.0, singer-sdk>=0.54.7, sqlalchemy>=2.0.54, psycopg2-binary>=2.9.13, redis>=8.1.0]
+            runtime: [flext-cli, meltano>=4.4.1, singer-sdk>=0.54.7, sqlalchemy>=2.0.54, psycopg2-binary>=2.9.13, redis>=8.1.0]
           - upstream: flext_cli
             project: flext-oracle-oic
             runtime: [flext-cli, flext-auth, flext-api]

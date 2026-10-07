@@ -7,14 +7,14 @@ Infra:
         ignore-words-list: crate,nd
       # Non-linter tool sections are config-owned as well.
       deptry:
-        known-first-party: [ flext_core ]
-        pep621-dev-dependency-groups: [ dev ]
+        known-first-party: [flext_core]
+        pep621-dev-dependency-groups: [dev]
       hatch:
         allow-direct-references: true
       markdown:
         # rumdl exits 1 on any violation and 2 on an error: a repair verb
         # completes with findings under this status; any other fails it.
-        findings-exit-codes: [ 1 ]
+        findings-exit-codes: [1]
         rules:
           default: true
           MD001: false
@@ -40,7 +40,7 @@ Infra:
           MD024: { siblings_only: true }
           MD025: false
           MD031: false
-          MD033: { allowed_elements: [ br, details, summary, kbd ] }
+          MD033: { allowed_elements: [br, details, summary, kbd] }
           MD036: false
           MD040: false
           MD041: false
@@ -72,122 +72,227 @@ Infra:
           tab-width: 4
           md-tab-width: 2
         exclude:
-        # AGENTS.md is a tool-managed projection (tracker and agent setup
-        # blocks): gating generated output is a projection defect.
-        # CLAUDE.md is its symlink and would rewrite the projection through
-        # the link.
-        - AGENTS.md
-        - CLAUDE.md
-        # GEMINI.md is the same tool-managed instruction-pointer projection
-        # (generate-workspace-config); prose-wrap always rewraps its exact
-        # rendered pointer and the law-surface validator then fails closed.
-        - GEMINI.md
-        - .kilo/**
-        - .omo/**
-        # ZCode session artifacts (plan files) are machine-local scratch,
-        # never a live docs or markdown-gate surface.
-        - .zcode/**
-        - .tmp/**
-        - .claude/**
-        - .vscode/**
-        - .serena/**
-        - .snapshots/**
-        - .benchmarks/**
-        - .hypothesis/**
-        # CHANGELOG.md files are release-please output: their bullets embed
-        # compare/commit URLs that cannot reflow under the line budget, and
-        # hand-wrapping them is overwritten by the next release render
-        # (operator authorization 2026-10-03).
-        - CHANGELOG.md
-        # Codegen-managed docs projections (make gen / docs generate): the
-        # renderer's output is canonical as emitted — prettier reformatting
-        # them fights the codegen fixed point and the conform gate flags
-        # the drift both ways (merge-admin 2026-10-07, root evidence).
-        - docs/docs_config.json
-        - docs/architecture/architecture_config.json
-        - .mypy_cache/**
-        - .pytest_cache/**
-        - .ruff_cache/**
-        - .venv/**
-        - __pycache__/**
-        - node_modules/**
-        - .reports/**
-        - dist/**
-        - build/**
-        - htmlcov/**
-        - legado/**
-        - .github/**
-        - site/**
-        # target/ is a fully generated build tree (mise/rust-style outputs):
-        # formatting generated output is a projection defect.
-        - target/**
-        # Provider-surface projections and tracker runtime state: never a
-        # lint/format surface.
-        - .agents/**
-        - .gemini/**
-        - .beads/**
-        # Gen-emitted table projections whose emitter lives outside the
-        # codegen surface; MD058 (blank lines around tables) is upstream of
-        # the projection and cannot be repaired at the projection itself.
-        - docs/knowledge-index.md
-        - docs/architecture/communities/README.md
-        # External CRG tool output: pipe-separated rows (MD075) and long JSON
-        # lines (MD013) originate from code-review-graph, not hand-authored docs.
-        - docs/architecture/crg-reports/**
-        # Generated api-reference and project-catalog projections (make gen /
-        # docs generate): the renderer's output is canonical as emitted, so
-        # prettier never rewrites generated docs and the codegen fixed point
-        # stays stable.
-        - docs/api-reference/generated/**
-        # Historical evidence documents (plans, handoffs, drift reports,
-        # frozen law text): their formatting is frozen evidence per operator
-        # law 11 — reformatting rewrites the record, and the runner-side
-        # prettier environment provably disagrees with the pinned-form
-        # output anyway (merge-admin 2026-10-07: triple-independent local
-        # approval vs runner rejection, root runs 37574964338/37579208474/
-        # 37581017843). Frozen as evidence, never re-rendered.
-        - docs/architecture/standardization-phase1-drift-report.md
-        - docs/plans/2026-09-11-conformance-sweep-handoff.md
-        - docs/plans/2026-09-14-stabilization-handoff/previous-handoff-source.md
-        - docs/plans/2026-09-22-pipeline-integracao-continua-plano.md
-        - docs/plans/2026-09-22-rope-generator-stabilization/02-achados-codegen.md
-        - docs/plans/2026-09-23-handoff-mypy-stabilization-e-integracao.md
-        - docs/plans/2026-09-25-v8-flext-service-base/05-phases.md
-        - docs/plans/2026-09-25-v8-flext-service-base/07-sessions-guide.md
-        - docs/standards/consumption-law.md
-        - docs/projects/generated/**
+          # AGENTS.md is a tool-managed projection (tracker and agent setup
+          # blocks): gating generated output is a projection defect.
+          # CLAUDE.md is its symlink and would rewrite the projection through
+          # the link.
+          - AGENTS.md
+          - CLAUDE.md
+          # GEMINI.md is the same tool-managed instruction-pointer projection
+          # (generate-workspace-config); prose-wrap always rewraps its exact
+          # rendered pointer and the law-surface validator then fails closed.
+          - GEMINI.md
+          - .kilo/**
+          - .omo/**
+          # ZCode session artifacts (plan files) are machine-local scratch,
+          # never a live docs or markdown-gate surface.
+          - .zcode/**
+          - .tmp/**
+          - .claude/**
+          - .vscode/**
+          - .serena/**
+          - .snapshots/**
+          - .benchmarks/**
+          - .hypothesis/**
+          # CHANGELOG.md files are release-please output: their bullets embed
+          # compare/commit URLs that cannot reflow under the line budget, and
+          # hand-wrapping them is overwritten by the next release render
+          # (operator authorization 2026-10-03).
+          - CHANGELOG.md
+          # Codegen-managed docs projections (make gen / docs generate): the
+          # renderer's output is canonical as emitted — prettier reformatting
+          # them fights the codegen fixed point and the conform gate flags
+          # the drift both ways (merge-admin 2026-10-07, root evidence).
+          - docs/docs_config.json
+          - docs/architecture/architecture_config.json
+          - .mypy_cache/**
+          - .pytest_cache/**
+          - .ruff_cache/**
+          - .venv/**
+          - __pycache__/**
+          - node_modules/**
+          - .reports/**
+          - dist/**
+          - build/**
+          - htmlcov/**
+          - legado/**
+          - .github/**
+          - site/**
+          # target/ is a fully generated build tree (mise/rust-style outputs):
+          # formatting generated output is a projection defect.
+          - target/**
+          # Provider-surface projections and tracker runtime state: never a
+          # lint/format surface.
+          - .agents/**
+          - .gemini/**
+          - .beads/**
+          # Gen-emitted table projections whose emitter lives outside the
+          # codegen surface; MD058 (blank lines around tables) is upstream of
+          # the projection and cannot be repaired at the projection itself.
+          - docs/knowledge-index.md
+          - docs/architecture/communities/README.md
+          # External CRG tool output: pipe-separated rows (MD075) and long JSON
+          # lines (MD013) originate from code-review-graph, not hand-authored docs.
+          - docs/architecture/crg-reports/**
+          # Generated api-reference and project-catalog projections (make gen /
+          # docs generate): the renderer's output is canonical as emitted, so
+          # prettier never rewrites generated docs and the codegen fixed point
+          # stays stable.
+          - docs/api-reference/generated/**
+          # Historical evidence documents (plans, handoffs, drift reports,
+          # frozen law text): their formatting is frozen evidence per operator
+          # law 11 — reformatting rewrites the record, and the runner-side
+          # prettier environment provably disagrees with the pinned-form
+          # output anyway (merge-admin 2026-10-07: triple-independent local
+          # approval vs runner rejection, root runs 37574964338/37579208474/
+          # 37581017843). Frozen as evidence, never re-rendered.
+          - docs/architecture/standardization-phase1-drift-report.md
+          - docs/plans/2026-09-11-conformance-sweep-handoff.md
+          - docs/plans/2026-09-14-stabilization-handoff/previous-handoff-source.md
+          - docs/plans/2026-09-22-pipeline-integracao-continua-plano.md
+          - docs/plans/2026-09-22-rope-generator-stabilization/02-achados-codegen.md
+          - docs/plans/2026-09-23-handoff-mypy-stabilization-e-integracao.md
+          - docs/plans/2026-09-25-v8-flext-service-base/05-phases.md
+          - docs/plans/2026-09-25-v8-flext-service-base/07-sessions-guide.md
+          - docs/standards/consumption-law.md
+          - docs/projects/generated/**
+          # AGENTS.md is a tool-managed projection (tracker and agent setup
+          # blocks): gating generated output is a projection defect.
+          # CLAUDE.md is its symlink and would rewrite the projection through
+          # the link.
+          - AGENTS.md
+          - CLAUDE.md
+          # GEMINI.md is the same tool-managed instruction-pointer projection
+          # (generate-workspace-config); prose-wrap always rewraps its exact
+          # rendered pointer and the law-surface validator then fails closed.
+          - GEMINI.md
+          - .kilo/**
+          - .omo/**
+          # ZCode session artifacts (plan files) are machine-local scratch,
+          # never a live docs or markdown-gate surface.
+          - .zcode/**
+          - .tmp/**
+          - .claude/**
+          - .vscode/**
+          - .serena/**
+          - .snapshots/**
+          - .benchmarks/**
+          - .hypothesis/**
+          # CHANGELOG.md files are release-please output: their bullets embed
+          # compare/commit URLs that cannot reflow under the line budget, and
+          # hand-wrapping them is overwritten by the next release render
+          # (operator authorization 2026-10-03).
+          - CHANGELOG.md
+          # Codegen-managed docs projections (make gen / docs generate): the
+          # renderer's output is canonical as emitted — prettier reformatting
+          # them fights the codegen fixed point and the conform gate flags
+          # the drift both ways (merge-admin 2026-10-07, root evidence).
+          - docs/docs_config.json
+          - docs/architecture/architecture_config.json
+          - .mypy_cache/**
+          - .pytest_cache/**
+          - .ruff_cache/**
+          - .venv/**
+          - __pycache__/**
+          - node_modules/**
+          - .reports/**
+          - dist/**
+          - build/**
+          - htmlcov/**
+          - legado/**
+          - .github/**
+          - site/**
+          # target/ is a fully generated build tree (mise/rust-style outputs):
+          # formatting generated output is a projection defect.
+          - target/**
+          # Provider-surface projections and tracker runtime state: never a
+          # lint/format surface.
+          - .agents/**
+          - .gemini/**
+          - .beads/**
+          # Gen-emitted table projections whose emitter lives outside the
+          # codegen surface; MD058 (blank lines around tables) is upstream of
+          # the projection and cannot be repaired at the projection itself.
+          - docs/knowledge-index.md
+          - docs/architecture/communities/README.md
+          # External CRG tool output: pipe-separated rows (MD075) and long JSON
+          # lines (MD013) originate from code-review-graph, not hand-authored docs.
+          - docs/architecture/crg-reports/**
+          # Generated api-reference and project-catalog projections (make gen /
+          # docs generate): the renderer's output is canonical as emitted, so
+          # prettier never rewrites generated docs and the codegen fixed point
+          # stays stable.
+          - docs/api-reference/generated/**
+          # Historical evidence documents (plans, handoffs, drift reports,
+          # frozen law text): their formatting is frozen evidence per operator
+          # law 11 — reformatting rewrites the record, and the runner-side
+          # prettier environment provably disagrees with the pinned-form
+          # output anyway (merge-admin 2026-10-07: triple-independent local
+          # approval vs runner rejection, root runs 37574964338/37579208474/
+          # 37581017843). Frozen as evidence, never re-rendered.
+          - docs/architecture/standardization-phase1-drift-report.md
+          - docs/plans/2026-09-11-conformance-sweep-handoff.md
+          - docs/plans/2026-09-14-stabilization-handoff/previous-handoff-source.md
+          - docs/plans/2026-09-22-pipeline-integracao-continua-plano.md
+          - docs/plans/2026-09-22-rope-generator-stabilization/02-achados-codegen.md
+          - docs/plans/2026-09-23-handoff-mypy-stabilization-e-integracao.md
+          - docs/plans/2026-09-25-v8-flext-service-base/05-phases.md
+          - docs/plans/2026-09-25-v8-flext-service-base/07-sessions-guide.md
+          - docs/standards/consumption-law.md
+          - docs/projects/generated/**
       ruff:
+        # Ruff exits 1 on findings; a repair verb completing with remaining
+        # findings continues under this status while any other failure stops it.
+        findings-exit-codes: [1]
         extend-exclude:
-        # Historical evidence trees (.archive/**) hold archived session
-        # artifacts, never live source: they are evidence-only material
-        # (operator law 11) and stay outside the lint scope of every
-        # projected member.
-        - "**/.archive/**"
-        # protoc-generated wire-protocol modules ("DO NOT EDIT", protos/**):
-        # they are regenerated contracts, never hand-authored source, so the
-        # lint scope excludes them instead of freezing generated bytes.
-        - "**/protos/**"
-        # Provider-owned AI Hub hook projections live under the tool-home
-        # dot directories (.agents/.claude/.codex/.cursor/.gemini ...); the
-        # operators rule (fleet learned constraint) keeps ~/.* code outside
-        # the lint scope, and these hooks are distributed tool-home state,
-        # not member source.
-        - "**/.agents/aihub-hooks/**"
-        - "**/.claude/aihub-hooks/**"
-        - "**/.codex/aihub-hooks/**"
-        - "**/.cursor/aihub-hooks/**"
-        - "**/.gemini/aihub-hooks/**"
+          # Historical evidence trees (.archive/**) hold archived session
+          # artifacts, never live source: they are evidence-only material
+          # (operator law 11) and stay outside the lint scope of every
+          # projected member.
+          - "**/.archive/**"
+          # protoc-generated wire-protocol modules ("DO NOT EDIT", protos/**):
+          # they are regenerated contracts, never hand-authored source, so the
+          # lint scope excludes them instead of freezing generated bytes.
+          - "**/protos/**"
+          # Provider-owned AI Hub hook projections live under the tool-home
+          # dot directories (.agents/.claude/.codex/.cursor/.gemini ...); the
+          # operators rule (fleet learned constraint) keeps ~/.* code outside
+          # the lint scope, and these hooks are distributed tool-home state,
+          # not member source.
+          - "**/.agents/aihub-hooks/**"
+          - "**/.claude/aihub-hooks/**"
+          - "**/.codex/aihub-hooks/**"
+          - "**/.cursor/aihub-hooks/**"
+          - "**/.gemini/aihub-hooks/**"
+          # Historical evidence trees (.archive/**) hold archived session
+          # artifacts, never live source: they are evidence-only material
+          # (operator law 11) and stay outside the lint scope of every
+          # projected member.
+          - "**/.archive/**"
+          # protoc-generated wire-protocol modules ("DO NOT EDIT", protos/**):
+          # they are regenerated contracts, never hand-authored source, so the
+          # lint scope excludes them instead of freezing generated bytes.
+          - "**/protos/**"
+          # Provider-owned AI Hub hook projections live under the tool-home
+          # dot directories (.agents/.claude/.codex/.cursor/.gemini ...); the
+          # operators rule (fleet learned constraint) keeps ~/.* code outside
+          # the lint scope, and these hooks are distributed tool-home state,
+          # not member source.
+          - "**/.agents/aihub-hooks/**"
+          - "**/.claude/aihub-hooks/**"
+          - "**/.codex/aihub-hooks/**"
+          - "**/.cursor/aihub-hooks/**"
+          - "**/.gemini/aihub-hooks/**"
         # Lint covers every tracked Python surface; `.gitignore` alone decides
         # visibility (respect-gitignore below), never a copied exclude list.
         # tests, examples, and scripts are dev/tooling source roots (see `src`
         # below), not installed packages: they hold namespace/command modules
         # loaded by path (e.g. the scripts/<verb>/<what> dispatch pattern), so
         # ruff must not demand an __init__.py (INP001) there.
-        namespace-packages: [ tests, examples, scripts ]
+        namespace-packages: [tests, examples, scripts]
         fix: false
         # Ruff exits 1 when it reports violations (2 on an error): a repair
         # verb completes with findings under this status; any other fails it.
-        findings-exit-codes: [ 1 ]
         # Operator ruling 2026-10-05: rules the operator never authorized as
         # blocking are informative only. The lint gate keeps reporting these
         # in the gate log, the summary, and the SARIF reports, but their
@@ -195,21 +300,31 @@ Infra:
         # converges and retire the rule from this list when its census
         # reaches zero.
         informative-rules:
-        - too-many-arguments
-        - too-many-positional-arguments
-        - too-many-locals
-        - too-many-return-statements
-        - too-many-branches
-        - too-many-public-methods
-        - too-many-statements
-        - complex-structure
-        - suspicious-subprocess-import
-        - subprocess-without-shell-equals-true
+          - too-many-arguments
+          - too-many-positional-arguments
+          - too-many-locals
+          - too-many-return-statements
+          - too-many-branches
+          - too-many-public-methods
+          - too-many-statements
+          - complex-structure
+          - suspicious-subprocess-import
+          - subprocess-without-shell-equals-true
+          - too-many-arguments
+          - too-many-positional-arguments
+          - too-many-locals
+          - too-many-return-statements
+          - too-many-branches
+          - too-many-public-methods
+          - too-many-statements
+          - complex-structure
+          - suspicious-subprocess-import
+          - subprocess-without-shell-equals-true
         line-length: 88
         preview: true
         respect-gitignore: true
         show-fixes: true
-        src: [ src, tests, examples, scripts ]
+        src: [src, tests, examples, scripts]
         target-version: py313
         format:
           docstring-code-format: true
@@ -219,7 +334,7 @@ Infra:
           skip-magic-trailing-comma: false
         lint:
           select:
-          - ALL
+            - ALL
           # make fix never deletes information. The lint
           # repair applies safe fixes only (make.ruff.lint_fix rejects
           # --unsafe-fixes), and these rules are never auto-fixed at all,
@@ -229,15 +344,24 @@ Infra:
           # script and turned its failures silent). Ruff keeps reporting them;
           # the author decides. Also guards direct and IDE Ruff runs.
           unfixable:
-          - duplicate-value
-          - multi-value-repeated-key-literal
-          - multi-value-repeated-key-variable
-          - outdated-version-block
-          - p-print
-          - print
-          - pytest-duplicate-parametrize-test-cases
-          - redefined-while-unused
-          - unused-variable
+            - duplicate-value
+            - multi-value-repeated-key-literal
+            - multi-value-repeated-key-variable
+            - outdated-version-block
+            - p-print
+            - print
+            - pytest-duplicate-parametrize-test-cases
+            - redefined-while-unused
+            - unused-variable
+            - duplicate-value
+            - multi-value-repeated-key-literal
+            - multi-value-repeated-key-variable
+            - outdated-version-block
+            - p-print
+            - print
+            - pytest-duplicate-parametrize-test-cases
+            - redefined-while-unused
+            - unused-variable
           # OPERATOR LAW 2026-10-05 (direct order, OBLIGATORY, NEVER DISABLED
           # AGAIN): `make fix` ALWAYS applies Ruff's unsafe fixes — the
           # mandatory lint_fix surface carries --unsafe-fix in codegen.yaml
@@ -249,9 +373,12 @@ Infra:
           # `unfixable` above — that is rule selection, never disabling the
           # mandatory unsafe channel.
           extend-safe-fixes:
-          - relative-imports
-          - typing-only-first-party-import
-          - camelcase-imported-as-lowercase
+            - relative-imports
+            - typing-only-first-party-import
+            - camelcase-imported-as-lowercase
+            - relative-imports
+            - typing-only-first-party-import
+            - camelcase-imported-as-lowercase
           # Every import is absolute: make mod rewrites relative imports and
           # the lazy-init generator renders absolute import statements.
           ban-relative-imports: all
@@ -285,11 +412,13 @@ Infra:
           # runtime-evaluated-base-classes (tooling_runtime), never a list here.
           flake8-type-checking:
             runtime-evaluated-roots:
-            - pydantic.BaseModel
+              - pydantic.BaseModel
           # Banned API messages are policy data, never template literals.
           banned-api:
             argparse: "Use cli.register_result_command + Pydantic model from flext_cli."
-            click: "Use flext_cli.cli application, registration, execution, and invocation methods."
+            click:
+              "Use flext_cli.cli application, registration, execution, and invocation\
+              \ methods."
             rich: "Use cli.print / cli.display_message / cli.render_panel / cli.render_table."
             tabulate: "Use cli.render_table from flext_cli."
             typer: "Use cli.create_app_with_common_params / cli.register_command from flext_cli."
@@ -336,26 +465,6 @@ Infra:
                 module is private by naming, public by contract (the root lazy
                 map publishes its class), and the public facades cannot expose
                 it without an import cycle through the root package.
-            - files: "**/tests/**"
-              rules:
-                [
-                  magic-value-comparison,
-                  private-member-access,
-                  compare-to-empty-string,
-                  too-many-public-methods,
-                  boolean-positional-value-in-call,
-                  pytest-fixture-autouse,
-                  mutable-class-default,
-                  no-self-use,
-                ]
-              authority: operator-order-2026-10-06-make-verbs-green
-              reason: >-
-                Test idioms: assertions compare against literal expected
-                values (the magic values ARE the expectations), the tests
-                exercise private members of the unit under test, and test
-                classes group many public test methods by design. Actionable
-                quality rules (complexity, naming, documentation) stay
-                active on the tests tree.
             - files: "**/bin/**"
               rules:
                 [
@@ -409,6 +518,18 @@ Infra:
               reason: >-
                 See the xlsx.py entry: the same heavy-adapter boundary, one
                 ruling.
+            - files: "**/bootstrap.py"
+              rules: [suspicious-subprocess-import, subprocess-without-shell-equals-true]
+              authority: operator-ruling-2026-10-07-stdlib-only-recovery-bootstrap
+              reason: >-
+                The repository bootstrap is the stdlib-only recovery owner: it
+                runs BEFORE the project environment exists, so it cannot import
+                the fleet's process owner (flext_cli) and must spawn its
+                recovery subprocesses by file-path contract directly. Moving
+                the calls is impossible (this is the point of use) and
+                suppressing at the call sites would mask the contract; the
+                exemption is bounded to this module family and documents the
+                irreducible boundary.
             - files: "**/framework.py"
               rules: [import-outside-top-level]
               authority: operator-ruling-2026-10-05-heavy-adapter-boundary
@@ -445,13 +566,13 @@ Infra:
                 PartNN naming scheme; the rule stays active everywhere else.
             - files: "**/flextcliutilitiesfiletesthelpersmixin_part_03.py"
               rules: [line-too-long]
-              authority: operator-ruling-2026-10-05-partnn-module-paths
+              authority: operator-ruling-partnn-module-path-length
               reason: >-
                 See file_test_helpers.py: the same PartNN module-path length
                 defect, one ruling.
             - files: "**/test_public_contracts_cov.py"
               rules: [line-too-long]
-              authority: operator-ruling-2026-10-05-partnn-module-paths
+              authority: operator-ruling-partnn-module-path-length
               reason: >-
                 See file_test_helpers.py: the same PartNN module-path length
                 defect over the tests/_cases layout, one ruling.
@@ -488,6 +609,22 @@ Infra:
                 required imports into TYPE_CHECKING can break model declaration.
                 No model or import workaround substitutes for this prohibition.
                 Canonical tracking remains flext-p7bxt and flext-4536i.
+            - files: "**/tests/**"
+              rules: [ magic-value-comparison, private-member-access, compare-to-empty-string, too-many-public-methods, boolean-positional-value-in-call, pytest-fixture-autouse, mutable-class-default, no-self-use, import-private-name ]
+              authority: operator-ruling-2026-10-07-tests-family-consumption
+              reason: >-
+                Test idioms: assertions compare against literal expected values
+                (the magic values ARE the expectations), the tests exercise
+                private members of the unit under test, and test classes group
+                many public test methods by design. The import-private-name
+                relief resolves the operator question pending since
+                2026-10-06: the tests consume the families' package-level
+                public-named contracts (flext_infra._utilities publishes the
+                family's concrete classes; 32 test files consume family
+                packages directly), and exposing rope/file-plan internals on
+                the fleet facade would leak implementation into the public
+                API. Actionable quality rules (complexity, naming,
+                documentation) stay active on the tests tree.
             - rules: [missing-required-import, implicit-namespace-package]
               authority: operator-ruling-2026-10-03-import-banners-off-global
               reason: >-
@@ -556,11 +693,11 @@ Infra:
         # Pydantic 2 and pydantic.mypy are mandatory (operator 2026-10-05).
         # Missing, empty, and v1 plugin declarations fail validation rather
         # than being silently repaired by schema defaults.
-        plugins: [ pydantic.mypy ]
+        plugins: [pydantic.mypy]
         # Operator 2026-10-05, flext-8i57m: suspend only these two codes
         # globally, not additional diagnostics. Proven code workarounds for
         # these codes are repaired at their runtime owners, not accommodated.
-        disable-error-code: [ prop-decorator, call-arg ]
+        disable-error-code: [prop-decorator, call-arg]
         # The canonical facade form imports the parent letter, subclasses it
         # and rebinds the letter (`from flext_core import u`,
         # `class FlextCliUtilities(u)`, `u = FlextCliUtilities`). Mypy 2.3.1
@@ -570,7 +707,7 @@ Infra:
         # (type[FlextService] vs type[FlextApiServiceBase]); codegen disables
         # them only in the modules it detects in that form
         # (operator-ruling-2026-10-01-facade-rebind-mypy-scope).
-        facade-rebind-error-codes: [ misc, no-redef, assignment ]
+        facade-rebind-error-codes: [misc, no-redef, assignment]
         boolean-settings:
           allow_redefinition: true
           namespace_packages: true
@@ -594,10 +731,16 @@ Infra:
         string-settings:
           follow_imports: normal
         overrides:
-        - modules: [ rope.* ]
-          follow-untyped-imports: true
-          justification: >-
-            Analyze Rope's installed source without suppressing import-untyped; https://mypy.readthedocs.io/en/stable/config_file.html#follow-untyped-imports
+          - modules: [rope.*]
+            follow-untyped-imports: true
+            justification: >-
+              Analyze Rope's installed source without suppressing import-untyped;
+              https://mypy.readthedocs.io/en/stable/config_file.html#follow-untyped-imports
+          - modules: [rope.*]
+            follow-untyped-imports: true
+            justification: >-
+              Analyze Rope's installed source without suppressing import-untyped;
+              https://mypy.readthedocs.io/en/stable/config_file.html#follow-untyped-imports
       pydantic-mypy:
         init_forbid_extra: true
         init_typed: true
@@ -627,28 +770,47 @@ Infra:
           # first-class environments so no analyzer can hide their diagnostics.
           source-dir: src
           project-root: .
-          env-dirs: [ src, tests, examples, scripts ]
-          test-like-dirs: [ tests, examples, scripts ]
+          env-dirs: [src, tests, examples, scripts]
+          test-like-dirs: [tests, examples, scripts]
           default-excludes:
-          - "**/node_modules"
-          - "**/__pycache__"
-          - "**/__pyrefly_virtual__/**"
-          - "**/.mypy_cache"
-          - "**/.ruff_cache"
-          - "**/.pytest_cache"
-          - "**/.*"
-          - .git
-          - .reports
-          - vendor
-          - .venv
-          - "**/.venv"
-          - "**/.venv/**"
-          - "**/venv"
-          - "**/venv/**"
-          - "**/site-packages"
-          - "**/site-packages/**"
-          - "**/dist-packages"
-          - "**/dist-packages/**"
+            - "**/node_modules"
+            - "**/__pycache__"
+            - "**/__pyrefly_virtual__/**"
+            - "**/.mypy_cache"
+            - "**/.ruff_cache"
+            - "**/.pytest_cache"
+            - "**/.*"
+            - .git
+            - .reports
+            - vendor
+            - .venv
+            - "**/.venv"
+            - "**/.venv/**"
+            - "**/venv"
+            - "**/venv/**"
+            - "**/site-packages"
+            - "**/site-packages/**"
+            - "**/dist-packages"
+            - "**/dist-packages/**"
+            - "**/node_modules"
+            - "**/__pycache__"
+            - "**/__pyrefly_virtual__/**"
+            - "**/.mypy_cache"
+            - "**/.ruff_cache"
+            - "**/.pytest_cache"
+            - "**/.*"
+            - .git
+            - .reports
+            - vendor
+            - .venv
+            - "**/.venv"
+            - "**/.venv/**"
+            - "**/venv"
+            - "**/venv/**"
+            - "**/site-packages"
+            - "**/site-packages/**"
+            - "**/dist-packages"
+            - "**/dist-packages/**"
           root-typings-paths: []
           project-typings-paths: []
           ignored-diagnostic-globs: []
@@ -657,21 +819,27 @@ Infra:
           test-like-report-private-usage: error
           other-report-private-usage: error
       coverage:
-        source: [ src ]
+        source: [src]
         show-missing: true
         skip-covered: false
         precision: 2
         exclude-also:
-        - "if _t.TYPE_CHECKING:"
-        - "if TYPE_CHECKING:"
-        - "if typing.TYPE_CHECKING:"
+          - "if _t.TYPE_CHECKING:"
+          - "if TYPE_CHECKING:"
+          - "if typing.TYPE_CHECKING:"
+          - "if _t.TYPE_CHECKING:"
+          - "if TYPE_CHECKING:"
+          - "if typing.TYPE_CHECKING:"
         omit:
-        - "*/dependency_injector/providers.pyx"
-        # Declaration-layer Protocol facades have no runtime behavior to cover.
-        - "*/protocols.py"
-        - "*/_protocols/*"
+          - "*/dependency_injector/providers.pyx"
+          # Declaration-layer Protocol facades have no runtime behavior to cover.
+          - "*/protocols.py"
+          - "*/_protocols/*"
+          - "*/dependency_injector/providers.pyx"
+          # Declaration-layer Protocol facades have no runtime behavior to cover.
+          - "*/protocols.py"
+          - "*/_protocols/*"
       pyrefly:
-        findings-exit-codes: [ 1 ]
         disable-project-excludes-heuristics: true
         python-version: "3.13"
         use-ignore-files: false
@@ -680,105 +848,199 @@ Infra:
         # repositories resolve does not know the code and rejects it as an
         # unknown variant, so a pyrefly-side suspension cannot be fleet-wide.
         strict-errors:
-        # --- type safety ---
-        - bad-argument-count
-        - bad-argument-type
-        - bad-assignment
-        - bad-class-definition
-        - bad-context-manager
-        - bad-dunder-all
-        - bad-function-definition
-        - bad-index
-        - bad-instantiation
-        - bad-keyword-argument
-        - bad-match
-        - bad-param-name-override
-        - bad-raise
-        - bad-return
-        - bad-specialization
-        - bad-typed-dict
-        - bad-typed-dict-key
-        - bad-unpacking
-        - deprecated
-        - implicit-abstract-class
-        - implicit-any
-        - implicit-import
-        - implicitly-defined-attribute
-        - inconsistent-inheritance
-        - inconsistent-overload
-        - invalid-annotation
-        - invalid-argument
-        - invalid-decorator
-        - invalid-inheritance
-        - invalid-literal
-        - invalid-overload
-        - invalid-param-spec
-        - invalid-pattern
-        - invalid-self-type
-        - invalid-super-call
-        - invalid-type-alias
-        - invalid-type-var
-        - invalid-type-var-tuple
-        - invalid-variance
-        - invalid-yield
-        - missing-argument
-        - missing-attribute
-        - missing-import
-        - missing-module-attribute
-        - missing-override-decorator
-        - missing-source
-        - missing-source-for-stubs
-        - no-access
-        - no-matching-overload
-        - not-a-type
-        - not-async
-        - not-callable
-        - not-iterable
-        - not-required-key-access
-        - open-unpacking
-        - protocol-implicitly-defined-attribute
-        - read-only
-        - redefinition
-        - redundant-cast
-        - redundant-condition
-        - unannotated-attribute
-        - unannotated-parameter
-        - unannotated-return
-        - unbound-name
-        - unexpected-keyword
-        - unexpected-positional-argument
-        - unknown-name
-        - unnecessary-comparison
-        - unnecessary-type-conversion
-        - unreachable
-        - unresolvable-dunder-all
-        - unsafe-overlap
-        - unsupported
-        - unsupported-delete
-        - unsupported-operation
-        - untyped-import
-        - unused-coroutine
-        - unused-ignore
-        - variance-mismatch
-        - inconsistent-overload-default
+          # --- type safety ---
+          - bad-argument-count
+          - bad-argument-type
+          - bad-assignment
+          - bad-class-definition
+          - bad-context-manager
+          - bad-dunder-all
+          - bad-function-definition
+          - bad-index
+          - bad-instantiation
+          - bad-keyword-argument
+          - bad-match
+          - bad-param-name-override
+          - bad-raise
+          - bad-return
+          - bad-specialization
+          - bad-typed-dict
+          - bad-typed-dict-key
+          - bad-unpacking
+          - deprecated
+          - implicit-abstract-class
+          - implicit-any
+          - implicit-import
+          - implicitly-defined-attribute
+          - inconsistent-inheritance
+          - inconsistent-overload
+          - invalid-annotation
+          - invalid-argument
+          - invalid-decorator
+          - invalid-inheritance
+          - invalid-literal
+          - invalid-overload
+          - invalid-param-spec
+          - invalid-pattern
+          - invalid-self-type
+          - invalid-super-call
+          - invalid-type-alias
+          - invalid-type-var
+          - invalid-type-var-tuple
+          - invalid-variance
+          - invalid-yield
+          - missing-argument
+          - missing-attribute
+          - missing-import
+          - missing-module-attribute
+          - missing-override-decorator
+          - missing-source
+          - missing-source-for-stubs
+          - no-access
+          - no-matching-overload
+          - not-a-type
+          - not-async
+          - not-callable
+          - not-iterable
+          - not-required-key-access
+          - open-unpacking
+          - protocol-implicitly-defined-attribute
+          - read-only
+          - redefinition
+          - redundant-cast
+          - redundant-condition
+          - unannotated-attribute
+          - unannotated-parameter
+          - unannotated-return
+          - unbound-name
+          - unexpected-keyword
+          - unexpected-positional-argument
+          - unknown-name
+          - unnecessary-comparison
+          - unnecessary-type-conversion
+          - unreachable
+          - unresolvable-dunder-all
+          - unsafe-overlap
+          - unsupported
+          - unsupported-delete
+          - unsupported-operation
+          - untyped-import
+          - unused-coroutine
+          - unused-ignore
+          - variance-mismatch
+          - inconsistent-overload-default
+          # --- type safety ---
+          - bad-argument-count
+          - bad-argument-type
+          - bad-assignment
+          - bad-class-definition
+          - bad-context-manager
+          - bad-dunder-all
+          - bad-function-definition
+          - bad-index
+          - bad-instantiation
+          - bad-keyword-argument
+          - bad-match
+          - bad-param-name-override
+          - bad-raise
+          - bad-return
+          - bad-specialization
+          - bad-typed-dict
+          - bad-typed-dict-key
+          - bad-unpacking
+          - deprecated
+          - implicit-abstract-class
+          - implicit-any
+          - implicit-import
+          - implicitly-defined-attribute
+          - inconsistent-inheritance
+          - inconsistent-overload
+          - invalid-annotation
+          - invalid-argument
+          - invalid-decorator
+          - invalid-inheritance
+          - invalid-literal
+          - invalid-overload
+          - invalid-param-spec
+          - invalid-pattern
+          - invalid-self-type
+          - invalid-super-call
+          - invalid-type-alias
+          - invalid-type-var
+          - invalid-type-var-tuple
+          - invalid-variance
+          - invalid-yield
+          - missing-argument
+          - missing-attribute
+          - missing-import
+          - missing-module-attribute
+          - missing-override-decorator
+          - missing-source
+          - missing-source-for-stubs
+          - no-access
+          - no-matching-overload
+          - not-a-type
+          - not-async
+          - not-callable
+          - not-iterable
+          - not-required-key-access
+          - open-unpacking
+          - protocol-implicitly-defined-attribute
+          - read-only
+          - redefinition
+          - redundant-cast
+          - redundant-condition
+          - unannotated-attribute
+          - unannotated-parameter
+          - unannotated-return
+          - unbound-name
+          - unexpected-keyword
+          - unexpected-positional-argument
+          - unknown-name
+          - unnecessary-comparison
+          - unnecessary-type-conversion
+          - unreachable
+          - unresolvable-dunder-all
+          - unsafe-overlap
+          - unsupported
+          - unsupported-delete
+          - unsupported-operation
+          - untyped-import
+          - unused-coroutine
+          - unused-ignore
+          - variance-mismatch
+          - inconsistent-overload-default
         project-exclude-globs:
-        - "**/__pycache__"
-        - "**/__pyrefly_virtual__/**"
-        - "**/node_modules"
-        - "**/.venv/**"
-        - "**/*_pb2*.py"
-        - "**/*_pb2_grpc*.py"
-        - "**/site-packages/**"
-        - "**/typings/**"
-        - "**/venv/**"
-        - "**/vendor/**"
-        - ".venv/**"
-        - "typings/**"
-        - "vendor/**"
+          - "**/__pycache__"
+          - "**/__pyrefly_virtual__/**"
+          - "**/node_modules"
+          - "**/.venv/**"
+          - "**/*_pb2*.py"
+          - "**/*_pb2_grpc*.py"
+          - "**/site-packages/**"
+          - "**/typings/**"
+          - "**/venv/**"
+          - "**/vendor/**"
+          - ".venv/**"
+          - "typings/**"
+          - "vendor/**"
+          - "**/__pycache__"
+          - "**/__pyrefly_virtual__/**"
+          - "**/node_modules"
+          - "**/.venv/**"
+          - "**/*_pb2*.py"
+          - "**/*_pb2_grpc*.py"
+          - "**/site-packages/**"
+          - "**/typings/**"
+          - "**/venv/**"
+          - "**/vendor/**"
+          - ".venv/**"
+          - "typings/**"
+          - "vendor/**"
         path-rules:
-          env-dirs: [ src, tests, examples, scripts ]
           source-dir: src
           project-root: .
+          env-dirs: [src, tests, examples, scripts]
           root-typings-paths: []
           project-typings-paths: []
           workspace-include-children: false
@@ -845,9 +1107,9 @@ Infra:
         max-failures: 1
         enforcement-plugin: flext_tests_enforcement
         asyncio-default-fixture-loop-scope: function
-        progress-args: [ --verbose ]
-        report-args: [ -ra, --durations=25, --durations-min=0.001, --tb=short ]
-        diagnostic-args: [ -rA, --durations=0, --tb=long, --showlocals ]
+        progress-args: [--verbose]
+        report-args: [-ra, --durations=25, --durations-min=0.001, --tb=short]
+        diagnostic-args: [-rA, --durations=0, --tb=long, --showlocals]
         # One worker makes maxfail exact: no second in-flight case can fail
         # after the first failure has stopped the invocation.
         parallel-workers: 1
@@ -871,11 +1133,13 @@ Infra:
           # facade stack, so the serial phase reached the 120s entry clock at
           # its 33rd item. The cases are host-lock and namespace isolated.
           flext-tests:
-            workers: 4
+            workers: 1
           # CPU-fraction ceilings (cpu_fraction: "n/d") resolve at runtime
           # against the process CPU count.
-          # Reserve physical memory for each xdist worker and its child process
-          # tree; this bound may reduce the tested ceiling on smaller hosts.
+        # Reserve physical memory for each xdist worker and its child process
+        # tree; this bound may reduce the tested ceiling on smaller hosts.
+        # Reserve physical memory for each xdist worker and its child process
+        # tree; this bound may reduce the tested ceiling on smaller hosts.
         parallel-worker-memory-gb: 2
         # Keep scheduling centralized within the measured worker budget.
         parallel-distribution: load
@@ -889,14 +1153,14 @@ Infra:
         profile-suite-filename: pytest.pstats
         profile-process-directory: profiles
         min-version: "8.0"
-        python-classes: [ "Test*" ]
-        python-files: [ "*_test.py", "*_tests.py", "test_*.py" ]
+        python-classes: ["Test*"]
+        python-files: ["*_test.py", "*_tests.py", "test_*.py"]
         # Collect once from the canonical test root. The former list ended in
         # `.` and therefore traversed tests, source, docs, examples, scripts,
         # generated reports, and local runtime state a second time. Executable
         # documentation and auxiliary surfaces remain covered by explicit tests
         # and their lint/Markdown gates rather than duplicate pytest discovery.
-        test-paths: [ tests ]
+        test-paths: [tests]
         # pytest applies filterwarnings last-entry-wins; the conform phase +
         # tomlsort alpha-sort filterwarnings, so any override MUST sort AFTER
         # "error" to survive re-conform. Only module::/once:: sort after 'error'
@@ -908,56 +1172,84 @@ Infra:
         # both VISIBLE-but-non-fatal, matching the non-strict enforcement policy
         # (flext-tests registers default::{category}); all other warnings stay
         # fatal. See flext-core test_enforcement_warning_visibility.
-        filter-warnings: [ error, "module::flext_core._constants.enforcement.FlextMroViolation", "once::pytest.PytestAssertRewriteWarning" ]
+        filter-warnings:
+          [
+            error,
+            "module::flext_core._constants.enforcement.FlextMroViolation",
+            "once::pytest.PytestAssertRewriteWarning",
+          ]
         standard-markers:
-        - "smoke: public-interface smoke tests"
-        - "unit: unit tests"
-        - "integration: integration tests"
-        - "functional: functional behavior tests"
-        - "performance: performance and benchmark tests"
-        - "slow: slow-running tests"
-        - "docker: tests requiring Docker"
-        - "oracle: tests requiring the shared Oracle database"
-        - "remote: tests requiring remote/external network services"
-        - "e2e: end-to-end integration tests"
-        - "edge_cases: edge case tests"
-        - "stress: stress tests"
-        - "resilience: resilience tests"
-        - "discovery: catalog and stream discovery tests"
-        - "singer: Singer protocol contract tests"
-        - "requires_engine: native check engine required by this test"
+          - "smoke: public-interface smoke tests"
+          - "unit: unit tests"
+          - "integration: integration tests"
+          - "functional: functional behavior tests"
+          - "performance: performance and benchmark tests"
+          - "slow: slow-running tests"
+          - "docker: tests requiring Docker"
+          - "oracle: tests requiring the shared Oracle database"
+          - "remote: tests requiring remote/external network services"
+          - "e2e: end-to-end integration tests"
+          - "edge_cases: edge case tests"
+          - "stress: stress tests"
+          - "resilience: resilience tests"
+          - "discovery: catalog and stream discovery tests"
+          - "singer: Singer protocol contract tests"
+          - "requires_engine: native check engine required by this test"
+          - "smoke: public-interface smoke tests"
+          - "unit: unit tests"
+          - "integration: integration tests"
+          - "functional: functional behavior tests"
+          - "performance: performance and benchmark tests"
+          - "slow: slow-running tests"
+          - "docker: tests requiring Docker"
+          - "oracle: tests requiring the shared Oracle database"
+          - "remote: tests requiring remote/external network services"
+          - "e2e: end-to-end integration tests"
+          - "edge_cases: edge case tests"
+          - "stress: stress tests"
+          - "resilience: resilience tests"
+          - "discovery: catalog and stream discovery tests"
+          - "singer: Singer protocol contract tests"
+          - "requires_engine: native check engine required by this test"
         # External-token gates never run inside
         # offline verification (`make test`); the runner records their exclusion.
         # `make test-full` first completes that incremental phase, then executes
         # every marker under the same database and deadline. Existing external
         # tests retain their declared environment and authentication requirements.
-        external-gate-markers: [ remote, docker ]
+        external-gate-markers: [remote, docker]
         # CI and pre-commit share make.ci.value;
         # local and pre-push execution retain slow tests. The full phase of
         # `make test-full` includes these markers in every context.
-        ci-excluded-markers: [ slow ]
+        ci-excluded-markers: [slow]
         # Fixtures declaring local engines or resolution cannot execute in approval.
-        ci-excluded-fixtures: [ resolved_make_templates, detector_project, mod_workspace, smells_project, _clear_make_ci_token ]
+        ci-excluded-fixtures:
+          [resolved_make_templates, detector_project, mod_workspace, smells_project, _clear_make_ci_token]
         standard-addopts:
-        - --benchmark-disable
-        - --strict-markers
-        - --markdown-docs
-        - --durations=10
-        # --timeout/--session-timeout are runner-owned and derived
-        # from case-timeout-seconds/run-timeout-seconds; never restate them here.
+          - --benchmark-disable
+          - --strict-markers
+          - --markdown-docs
+          - --durations=10
+          # --timeout/--session-timeout are runner-owned and derived
+          # from case-timeout-seconds/run-timeout-seconds; never restate them here.
+          - --benchmark-disable
+          - --strict-markers
+          - --markdown-docs
+          - --durations=10
+          # --timeout/--session-timeout are runner-owned and derived
+          # from case-timeout-seconds/run-timeout-seconds; never restate them here.
       tomlsort:
         all: true
         in_place: true
         process-timeout-seconds: 60
-        sort_first: [ project, build-system, tool, dependency-groups ]
+        sort_first: [project, build-system, tool, dependency-groups]
       vulture:
         # Vulture reports keyword-bearing Protocol signature parameters as
         # unused variables at full confidence,
         # even with --ignore-decorators @runtime_checkable. The declaration-only
         # protocol facet is excluded; production models and runtime code remain scanned.
-        exclude: [ "*/_protocols/*" ]
+        exclude: ["*/_protocols/*"]
         min-confidence: 100
-        paths: [ src ]
+        paths: [src]
         verbose: false
       yamlfix:
         line_length: 88
@@ -973,17 +1265,28 @@ Infra:
       # within package); reverse (higher) imports are emitted under
       # ``if TYPE_CHECKING:`` per ``reverse_import_mode``.
       import-layer-order:
-      - settings
-      - config
-      - c
-      - t
-      - p
-      - m
-      - u
-      - base
-      - services
-      - api
-      - cli
+        - settings
+        - config
+        - c
+        - t
+        - p
+        - m
+        - u
+        - base
+        - services
+        - api
+        - cli
+        - settings
+        - config
+        - c
+        - t
+        - p
+        - m
+        - u
+        - base
+        - services
+        - api
+        - cli
       reverse-import-mode: type_checking
       forward-import-form: absolute
     mod:

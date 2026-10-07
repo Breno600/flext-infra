@@ -18,11 +18,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
-from flext_core.__version__ import FlextVersion
 from flext_infra import c, m, u
-from flext_infra._config import config
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
-from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -79,6 +76,8 @@ class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
         Returns:
             The resulting ``p.Result[str]``.
         """
+        from flext_core.__version__ import FlextVersion
+
         metadata_result = u.Infra.read_project_metadata_result(project)
         if metadata_result.failure:
             return r[str].from_failure(metadata_result)
@@ -108,6 +107,10 @@ class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
         Returns:
             The resulting ``p.Result[str]``.
         """
+        from flext_infra.codegen._mise_artifacts_publication import (
+            FlextInfraMisePublication,
+        )
+
         if target.is_file():
             current = u.Cli.files_read_text(target)
             if current.failure:
@@ -126,7 +129,7 @@ class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
             path=target,
             before=before.value,
             desired_content=content.encode(c.Cli.ENCODING_DEFAULT),
-            desired_mode=config.Infra.codegen.modes.file_default,
+            desired_mode=0o644,
             owner="codegen",
             policy="full",
         )

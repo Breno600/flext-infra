@@ -62,13 +62,43 @@ jobs:
     timeout-minutes: 60
     env:
       {{ make.ci.variable }}: {{ make.ci.value }}
+{%- if not owns_workspace_manifest %}
+    # The member manifest is the uv workspace contract (bare sibling
+    # requirements + `workspace = true` sources): it only parses inside the
+    # workspace root. Standalone member CI therefore checks out the fleet
+    # superproject at its integration branch with submodules, overlays this
+    # repository's head onto the member directory, and runs every step from
+    # that member directory — the member Makefile resolves the superproject
+    # runtime and provisions the REAL workspace environment at the root.
+    defaults:
+      run:
+        working-directory: fleet/{{ dist }}
+{%- endif %}
     steps:
+{%- if not owns_workspace_manifest %}
+      - name: Checkout fleet workspace
+        uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].version }}
+        with:
+          repository: {{ fleet_root_repository }}
+          ref: {{ fleet_root_branch }}
+          submodules: recursive
+          path: fleet
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Overlay member head
+        uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].version }}
+        with:
+          path: fleet/{{ dist }}
+          persist-credentials: false
+          fetch-depth: 0
+{%- else %}
       - name: Checkout
         uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].version }}
         with:
           submodules: false
           persist-credentials: false
           fetch-depth: 0
+{%- endif %}
 {%- include "_fragments/private_dependency_auth.j2" %}
       # Why: GitHub runners expose umask 002, so git checkout materializes
       # group-writable modes (0664) for tracked files. Canonical Mise

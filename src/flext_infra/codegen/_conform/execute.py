@@ -14,9 +14,6 @@ from flext_infra import c, m, p, t, u
 from flext_infra._config import config
 from flext_infra.codegen import FlextInfraCodegenTransaction
 from flext_infra.codegen._conform.plan import FlextInfraCodegenConformPlan
-from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
-from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
-from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 
 class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
@@ -281,6 +278,8 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             The resulting ``p.Result[m.Infra.CodegenResult]``.
 
         """
+        from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+
         request = self.request or m.Infra.CodegenConformRequest(
             root=self.repository_root,
         )
@@ -312,6 +311,8 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             The resulting ``p.Result[m.Infra.CodegenResult]``.
 
         """
+        from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+
         u.Cli.header("Codegen Conform")
         u.Cli.info(
             f"stage=plan mode={request.mode} scope={request.scope} "
@@ -435,7 +436,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             state.path: state for file in plan.files for state in file.source_states
         }
         analysis = m.Infra.CodegenPhaseAnalysis(
-            phase="conform-bootstrap",
+            phase=c.Infra.CodegenStagedFilePhase.CONFORM_BOOTSTRAP,
             files=plan.files,
             inputs=tuple(inputs.values()),
         )
@@ -477,6 +478,8 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             The resulting ``p.Result[m.Infra.CodegenResult]``.
 
         """
+        from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+
         ports = self.ports
         if ports is None:
             return r[m.Infra.CodegenResult].fail(
@@ -552,6 +555,8 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             The resulting ``p.Result[m.Infra.CodegenPhaseAnalysis]``.
 
         """
+        from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
+
         files: list[m.Infra.CodegenFilePlan] = []
         inputs: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
         publications: list[m.Infra.LazyInitPlan] = []
@@ -970,6 +975,8 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             presence (False means no scaffold chain applies).
 
         """
+        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
         result_type = r[
             t.Pair[t.Pair[m.Infra.WorkspaceSpec, m.Infra.ProjectSpec], bool]
         ]
@@ -1053,7 +1060,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 return result_type.from_failure(planned)
             materialized = u.Cli.atomic_create_directory_chain_guarded(
                 planned.value,
-                permission_mode=config.Infra.codegen.modes.directory_generated,
+                permission_mode=0o755,
             )
             if materialized.failure:
                 rollback = self._rollback_scaffold_directories(tuple(created))
@@ -1146,6 +1153,8 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+
         u.Cli.info("stage=verify-fixed-point")
         verified = self.plan(request)
         if verified.failure:

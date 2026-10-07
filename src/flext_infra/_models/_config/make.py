@@ -15,9 +15,7 @@ from flext_cli import m
 
 from flext_infra import t
 from flext_infra._constants import (
-    FlextInfraConstantsCheck,
     FlextInfraConstantsCodegenProject,
-    FlextInfraConstantsDocs,
     FlextInfraConstantsMake,
 )
 from flext_infra._models import (
@@ -286,6 +284,8 @@ class FlextInfraConfigModelsMake:
                     the docs lifecycle.
 
             """
+            from flext_infra._constants import FlextInfraConstantsDocs
+
             if len(set(self.actions)) != len(self.actions):
                 msg = "docs actions must be unique"
                 raise ValueError(msg)
@@ -1174,6 +1174,8 @@ class FlextInfraConfigModelsMake:
                     must be repository-relative.
 
             """
+            from flext_infra._constants import FlextInfraConstantsCheck
+
             unknown_fmt_gates = set(self.fmt_gates) - set(
                 FlextInfraConstantsCheck.SARIF_TOOL_INFO,
             )
