@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Annotated, ClassVar
 
 from flext_cli import m
-from pydantic import StringConstraints
 
 from flext_infra import c, p, t
 from flext_infra._models import FlextInfraCodegen, FlextInfraModelsMixins
@@ -197,7 +196,7 @@ class FlextInfraModelsRope:
         # byte-for-byte.
         source: Annotated[
             t.NonEmptyStr,
-            StringConstraints(strip_whitespace=False),
+            t.StringConstraints(strip_whitespace=False),
             m.Field(description="Captured module source text"),
         ]
         required_line: Annotated[
@@ -280,7 +279,7 @@ class FlextInfraModelsRope:
         # family whitespace strip would detach it from its declared offsets.
         text: Annotated[
             str,
-            StringConstraints(strip_whitespace=False),
+            t.StringConstraints(strip_whitespace=False),
             m.Field(description="Rope-owned source slice for the statement"),
         ] = ""
 

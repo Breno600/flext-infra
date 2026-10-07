@@ -15,11 +15,11 @@ from flext_cli import cli
 from flext_core import r
 from flext_infra import c, m, p, t, u
 from flext_infra._config import config
-from flext_infra._utilities import FlextInfraUtilitiesCodegenPathCutover
 from flext_infra.refactor._census_apply_formatting import (
     FlextInfraRefactorCensusApplyFormattingMixin,
 )
 from flext_infra.transformers import FlextInfraSemanticPublication
+from flext_infra.utilities import FlextInfraUtilitiesCodegenPathCutover
 
 
 class FlextInfraCodemodSemanticApply:
