@@ -16,9 +16,7 @@ from flext_infra._utilities import (
     FlextInfraUtilitiesRopeAnalysisSourceScan,
     FlextInfraUtilitiesRopeCore,
     FlextInfraUtilitiesRopeRuntime,
-)
-from flext_infra._utilities._rope_source_bases_inventory_collector import (
-    FlextInfraRopeUtilitiesSourceBindingCollector,
+    FlextInfraUtilitiesRopeSourceBindingCollector,
 )
 
 
@@ -75,7 +73,7 @@ class FlextInfraUtilitiesRopeSourceBasesInventory:
             definitions=definitions,
             lexical=globals_,
         )
-        FlextInfraRopeUtilitiesSourceBindingCollector.collect(
+        FlextInfraUtilitiesRopeSourceBindingCollector.collect(
             spec,
             parsed.body,
             globals_,

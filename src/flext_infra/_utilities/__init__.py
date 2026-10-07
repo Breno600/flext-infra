@@ -219,6 +219,9 @@ if TYPE_CHECKING:
     from flext_infra._utilities._rope_source_bases_inventory import (
         FlextInfraUtilitiesRopeSourceBasesInventory,
     )
+    from flext_infra._utilities._rope_source_bases_inventory_collector import (
+        FlextInfraUtilitiesRopeSourceBindingCollector,
+    )
     from flext_infra._utilities._rope_source_bases_runtime import (
         FlextInfraUtilitiesRopeSourceBasesRuntime,
     )
@@ -613,6 +616,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesRopeSourceBasesAliases",
     "FlextInfraUtilitiesRopeSourceBasesInventory",
     "FlextInfraUtilitiesRopeSourceBasesRuntime",
+    "FlextInfraUtilitiesRopeSourceBindingCollector",
     "FlextInfraUtilitiesRopeStructure",
     "FlextInfraUtilitiesSemanticCutover",
     "FlextInfraUtilitiesSemanticCutoverAliasCst",
@@ -817,6 +821,9 @@ install_lazy_exports(
         "FlextInfraUtilitiesRopeSourceBasesAliases": "._rope_source_bases_aliases",
         "FlextInfraUtilitiesRopeSourceBasesInventory": "._rope_source_bases_inventory",
         "FlextInfraUtilitiesRopeSourceBasesRuntime": "._rope_source_bases_runtime",
+        "FlextInfraUtilitiesRopeSourceBindingCollector": (
+            "._rope_source_bases_inventory_collector"
+        ),
         "FlextInfraUtilitiesRopeStructure": ".rope_structure",
         "FlextInfraUtilitiesSemanticCutover": ".semantic_cutover",
         "FlextInfraUtilitiesSemanticCutoverAliasCst": "._semantic_cutover.alias_cst",

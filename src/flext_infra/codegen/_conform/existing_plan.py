@@ -17,10 +17,6 @@ from flext_infra.codegen._conform.artifact_render import (
     FlextInfraCodegenConformArtifactRender,
 )
 from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
-from flext_infra.services.codegen import FlextInfraCodegen
-from flext_infra.workspace.environment_contracts import (
-    FlextInfraWorkspaceEnvironmentContracts,
-)
 
 
 class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRender):

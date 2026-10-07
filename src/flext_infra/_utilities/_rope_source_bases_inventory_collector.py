@@ -17,7 +17,7 @@ from collections.abc import MutableMapping
 from flext_infra import m, t
 
 
-class FlextInfraRopeUtilitiesSourceBindingCollector:
+class FlextInfraUtilitiesRopeSourceBindingCollector:
     """Index the lexical class bindings of one captured module body.
 
     Class locals are visible to a nested class's base expressions but are
@@ -48,39 +48,53 @@ class FlextInfraRopeUtilitiesSourceBindingCollector:
             ):
                 break
             if isinstance(node, ast.ClassDef):
-                FlextInfraRopeUtilitiesSourceBindingCollector._class_def(
+                FlextInfraUtilitiesRopeSourceBindingCollector._class_def(
                     spec,
                     node,
                     bindings,
                     scope,
                 )
             elif isinstance(node, ast.ImportFrom):
-                FlextInfraRopeUtilitiesSourceBindingCollector._import_from(
-                    spec, node, bindings,
+                FlextInfraUtilitiesRopeSourceBindingCollector._import_from(
+                    spec,
+                    node,
+                    bindings,
                 )
             elif isinstance(node, ast.Import):
-                FlextInfraRopeUtilitiesSourceBindingCollector._import(node, bindings)
+                FlextInfraUtilitiesRopeSourceBindingCollector._import(node, bindings)
             elif isinstance(node, ast.Assign | ast.AnnAssign):
-                FlextInfraRopeUtilitiesSourceBindingCollector._assign(
-                    spec, node, bindings,
+                FlextInfraUtilitiesRopeSourceBindingCollector._assign(
+                    spec,
+                    node,
+                    bindings,
                 )
             elif isinstance(node, ast.AugAssign):
-                FlextInfraRopeUtilitiesSourceBindingCollector._aug_assign(
-                    spec, node, bindings,
+                FlextInfraUtilitiesRopeSourceBindingCollector._aug_assign(
+                    spec,
+                    node,
+                    bindings,
                 )
             elif isinstance(node, ast.Delete):
-                FlextInfraRopeUtilitiesSourceBindingCollector._delete(
-                    spec, node, bindings,
+                FlextInfraUtilitiesRopeSourceBindingCollector._delete(
+                    spec,
+                    node,
+                    bindings,
                 )
             elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
                 bindings[node.name] = None
             elif isinstance(node, ast.If):
-                FlextInfraRopeUtilitiesSourceBindingCollector._if(
-                    spec, node, bindings, scope,
+                FlextInfraUtilitiesRopeSourceBindingCollector._if(
+                    spec,
+                    node,
+                    bindings,
+                    scope,
                 )
             elif isinstance(node, ast.Try | ast.TryStar):
-                FlextInfraRopeUtilitiesSourceBindingCollector._try(
-                    spec, node, bindings, scope,
+                FlextInfraUtilitiesRopeSourceBindingCollector._try(
+                    spec,
+                    node,
+                    bindings,
+                    scope,
                 )
 
     @staticmethod
@@ -106,8 +120,10 @@ class FlextInfraRopeUtilitiesSourceBindingCollector:
             return
         visible = {**spec.lexical, **bindings}
         bases = tuple(
-            FlextInfraRopeUtilitiesSourceBindingCollector._reference(
-                base, visible, spec.module,
+            FlextInfraUtilitiesRopeSourceBindingCollector._reference(
+                base,
+                visible,
+                spec.module,
             )
             for base in node.bases
         )
@@ -124,7 +140,7 @@ class FlextInfraRopeUtilitiesSourceBindingCollector:
         members: MutableMapping[str, m.Infra.SourceClassReference | None] = {}
         # Class locals are visible to a nested class's base expressions,
         # but are not a closure for that nested class's own body.
-        FlextInfraRopeUtilitiesSourceBindingCollector.collect(
+        FlextInfraUtilitiesRopeSourceBindingCollector.collect(
             spec,
             node.body,
             members,
@@ -200,14 +216,14 @@ class FlextInfraRopeUtilitiesSourceBindingCollector:
         """Index one assignment by its target shape."""
         targets = node.targets if isinstance(node, ast.Assign) else [node.target]
         if any(not isinstance(target, ast.Name) for target in targets):
-            FlextInfraRopeUtilitiesSourceBindingCollector._non_name_assignment(
+            FlextInfraUtilitiesRopeSourceBindingCollector._non_name_assignment(
                 spec,
                 node,
                 targets,
                 bindings,
             )
             return
-        FlextInfraRopeUtilitiesSourceBindingCollector._name_assignment(
+        FlextInfraUtilitiesRopeSourceBindingCollector._name_assignment(
             spec,
             node,
             targets,
@@ -228,18 +244,18 @@ class FlextInfraRopeUtilitiesSourceBindingCollector:
                 metadata, module table, or class namespace rebinding.
 
         """
-        if FlextInfraRopeUtilitiesSourceBindingCollector._provider_metadata_rebind(
+        if FlextInfraUtilitiesRopeSourceBindingCollector._provider_metadata_rebind(
             spec,
             targets,
             bindings,
         ):
             return
-        if FlextInfraRopeUtilitiesSourceBindingCollector._module_table_mutation(
+        if FlextInfraUtilitiesRopeSourceBindingCollector._module_table_mutation(
             targets,
             bindings,
         ):
             return
-        if FlextInfraRopeUtilitiesSourceBindingCollector._complete_class_namespace(
+        if FlextInfraUtilitiesRopeSourceBindingCollector._complete_class_namespace(
             spec,
             node,
             targets,
@@ -334,7 +350,7 @@ class FlextInfraRopeUtilitiesSourceBindingCollector:
             True when the assignment completed a class namespace.
 
         """
-        if not FlextInfraRopeUtilitiesSourceBindingCollector._is_class_namespace_completion(
+        if not FlextInfraUtilitiesRopeSourceBindingCollector._is_class_namespace_completion(
             node,
             targets,
             bindings,
@@ -348,17 +364,16 @@ class FlextInfraRopeUtilitiesSourceBindingCollector:
         if not isinstance(value, ast.Name):
             return False
         if value.id in visible and visible[value.id] is not None:
-            reference = FlextInfraRopeUtilitiesSourceBindingCollector._reference(
-                node.value,
+            reference = FlextInfraUtilitiesRopeSourceBindingCollector._reference(
+                value,
                 visible,
                 spec.module,
             )
-            if reference is not None:
-                bindings[attribute_target.attr] = reference.model_copy(
-                    update={
-                        "qualified_base": f"{spec.module}.{attribute_target.attr}",
-                    },
-                )
+            bindings[attribute_target.attr] = reference.model_copy(
+                update={
+                    "qualified_base": f"{spec.module}.{attribute_target.attr}",
+                },
+            )
         return True
 
     @staticmethod
@@ -377,8 +392,10 @@ class FlextInfraRopeUtilitiesSourceBindingCollector:
         while isinstance(head, (ast.Attribute, ast.Subscript)):
             head = head.value
         reference = (
-            FlextInfraRopeUtilitiesSourceBindingCollector._reference(
-                value, visible, spec.module,
+            FlextInfraUtilitiesRopeSourceBindingCollector._reference(
+                value,
+                visible,
+                spec.module,
             )
             if isinstance(head, ast.Name)
             and isinstance(value, (ast.Name, ast.Attribute, ast.Subscript))
@@ -436,38 +453,46 @@ class FlextInfraRopeUtilitiesSourceBindingCollector:
         scope: str,
     ) -> None:
         """Index one conditional statement's statically knowable branch."""
-        match node.test:
-            case ast.Compare(
-                left=ast.Name(id="__name__"),
-                ops=[ast.Eq()],
-                comparators=[ast.Constant(value="__main__")],
-            ):
-                FlextInfraRopeUtilitiesSourceBindingCollector.collect(
-                    spec,
-                    node.body if spec.module == "__main__" else node.orelse,
-                    bindings,
-                    scope,
-                )
-                return
+        test = node.test
+        if (
+            isinstance(test, ast.Compare)
+            and isinstance(test.left, ast.Name)
+            and test.left.id == "__name__"
+            and len(test.ops) == 1
+            and isinstance(test.ops[0], ast.Eq)
+            and len(test.comparators) == 1
+            and isinstance(test.comparators[0], ast.Constant)
+            and test.comparators[0].value == "__main__"
+        ):
+            FlextInfraUtilitiesRopeSourceBindingCollector.collect(
+                spec,
+                node.body if spec.module == "__main__" else node.orelse,
+                bindings,
+                scope,
+            )
+            return
         if isinstance(node.test, ast.Constant) and isinstance(
             node.test.value,
             bool,
         ):
-            FlextInfraRopeUtilitiesSourceBindingCollector.collect(
+            FlextInfraUtilitiesRopeSourceBindingCollector.collect(
                 spec,
                 node.body if node.test.value else node.orelse,
                 bindings,
                 scope,
             )
             return
-        if FlextInfraRopeUtilitiesSourceBindingCollector._is_type_checking_test(
+        if FlextInfraUtilitiesRopeSourceBindingCollector._is_type_checking_test(
             node.test,
         ):
             # A TYPE_CHECKING gate never executes at runtime; its imports and
             # assignments are the module's declared static binding surface,
             # so they index directly.
-            FlextInfraRopeUtilitiesSourceBindingCollector.collect(
-                spec, node.body, bindings, scope,
+            FlextInfraUtilitiesRopeSourceBindingCollector.collect(
+                spec,
+                node.body,
+                bindings,
+                scope,
             )
             return
         # Non-constant conditions with class declarations (pydantic's own
@@ -475,7 +500,7 @@ class FlextInfraRopeUtilitiesSourceBindingCollector:
         # no statically knowable class-ness: the conditional names bind as
         # None so the base derivation degrades them exactly like any other
         # non-class binding.
-        FlextInfraRopeUtilitiesSourceBindingCollector._bind_conditional_branches(
+        FlextInfraUtilitiesRopeSourceBindingCollector._bind_conditional_branches(
             spec,
             node,
             bindings,
@@ -501,11 +526,17 @@ class FlextInfraRopeUtilitiesSourceBindingCollector:
         for name in conditional:
             left[name] = None
             right[name] = None
-        FlextInfraRopeUtilitiesSourceBindingCollector.collect(
-            spec, node.body, left, scope,
+        FlextInfraUtilitiesRopeSourceBindingCollector.collect(
+            spec,
+            node.body,
+            left,
+            scope,
         )
-        FlextInfraRopeUtilitiesSourceBindingCollector.collect(
-            spec, node.orelse, right, scope,
+        FlextInfraUtilitiesRopeSourceBindingCollector.collect(
+            spec,
+            node.orelse,
+            right,
+            scope,
         )
         for name in left.keys() | right.keys():
             bindings[name] = (
@@ -537,17 +568,20 @@ class FlextInfraRopeUtilitiesSourceBindingCollector:
             message = f"Conditional exception-backed class bindings in {spec.module}"
             raise ValueError(message)
         conditional: MutableMapping[str, m.Infra.SourceClassReference | None] = {}
-        FlextInfraRopeUtilitiesSourceBindingCollector.collect(
-            spec, node.body, conditional, scope,
+        FlextInfraUtilitiesRopeSourceBindingCollector.collect(
+            spec,
+            node.body,
+            conditional,
+            scope,
         )
-        FlextInfraRopeUtilitiesSourceBindingCollector.collect(
+        FlextInfraUtilitiesRopeSourceBindingCollector.collect(
             spec,
             node.orelse,
             conditional,
             scope,
         )
         for handler in node.handlers:
-            FlextInfraRopeUtilitiesSourceBindingCollector.collect(
+            FlextInfraUtilitiesRopeSourceBindingCollector.collect(
                 spec,
                 handler.body,
                 conditional,

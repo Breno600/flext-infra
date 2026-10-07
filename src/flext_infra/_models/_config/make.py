@@ -1055,7 +1055,7 @@ class FlextInfraConfigModelsMake:
             self._validate_docs_verb(declared)
             return self
 
-        def _validate_standalone_gates(self, declared: t.StrSet) -> None:
+        def _validate_standalone_gates(self, declared: t.Infra.StrSet) -> None:
             """Validate the standalone check-gate routing against declared verbs.
 
             Raises:
@@ -1102,7 +1102,7 @@ class FlextInfraConfigModelsMake:
                 msg = "make standalone_check_gates must route each gate once"
                 raise ValueError(msg)
 
-        def _validate_workflow(self, declared: t.StrSet) -> None:
+        def _validate_workflow(self, declared: t.Infra.StrSet) -> None:
             """Validate the workflow verbs against the declared public verbs.
 
             Why (hq-36xk, flext-lq86m): the guard that lived here read
@@ -1165,7 +1165,7 @@ class FlextInfraConfigModelsMake:
                 msg = "make pre-commit must be declared in every profile"
                 raise ValueError(msg)
 
-        def _validate_docs_verb(self, declared: t.StrSet) -> None:
+        def _validate_docs_verb(self, declared: t.Infra.StrSet) -> None:
             """Validate the docs verb declaration and its report directory.
 
             Raises:
