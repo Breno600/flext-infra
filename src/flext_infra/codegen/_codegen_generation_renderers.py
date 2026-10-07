@@ -15,7 +15,7 @@ from flext_infra.codegen._codegen_generation_lazy_entries import (
 from flext_infra.utilities import u
 
 if TYPE_CHECKING:
-    from flext_infra.codegen.protocols import p
+    from flext_infra import p
 
 
 # Lazy generation delegates

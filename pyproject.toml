@@ -404,6 +404,8 @@ testpaths = ["tests"]
 
 [tool.ruff]
 extend-exclude = [
+  "**/.archive/**",
+  "**/protos/**",
   "**/.agents/aihub-hooks/**",
   "**/.claude/aihub-hooks/**",
   "**/.codex/aihub-hooks/**",
@@ -474,7 +476,6 @@ runtime-evaluated-base-classes = [
   "flext_core.m.FlexibleModel",
   "flext_core.m.RootModel",
   "flext_core.m.StrictBoundaryModel",
-  "flext_infra.FlextInfraServiceBase",
   "flext_infra._models._codegen.fix.BulkFixItem",
   "flext_infra._models._codegen.pipeline.CodegenCommand",
   "flext_infra._models._config.contexts.MakeCommandContext",
@@ -506,9 +507,9 @@ runtime-evaluated-base-classes = [
   "flext_infra.codegen._execution.FlextInfraCodegenExecutionBase",
   "flext_infra.deps._modernizer.base.FlextInfraPyprojectModernizerBase",
   "flext_infra.docs.base.FlextInfraDocServiceBase",
-  "flext_infra.m.ArbitraryTypesModel",
-  "flext_infra.m.FrozenModel",
   "flext_infra.maintenance.sonarcloud_client.FlextInfraSonarcloudClient",
+  "flext_infra.models.m.ArbitraryTypesModel",
+  "flext_infra.models.m.FrozenModel",
   "flext_infra.release._release_artifact.FlextInfraReleaseArtifactMixin",
   "flext_infra.release._release_boundary.FlextInfraReleaseBoundaryMixin",
   "flext_infra.release._release_build.FlextInfraReleaseBuildMixin",
@@ -517,7 +518,6 @@ runtime-evaluated-base-classes = [
   "flext_infra.release._release_project.FlextInfraReleaseProjectMixin",
   "flext_infra.release._release_publish.FlextInfraReleasePublishMixin",
   "flext_infra.release._release_source.FlextInfraReleaseSourceMixin",
-  "flext_infra.s",
   "flext_infra.services.cli_dispatch.FlextInfraCliDispatchService",
   "flext_infra.validate._pytest_runner.base.FlextInfraPytestRunnerBase",
   "flext_infra.validate._pytest_runner.command.FlextInfraPytestRunnerCommand",

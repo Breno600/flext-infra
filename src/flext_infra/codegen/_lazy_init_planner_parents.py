@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from collections.abc import MutableMapping
     from pathlib import Path
 
-    from flext_infra.codegen.protocols import p
+    from flext_infra import p
     from flext_infra.codegen.typings import t
 
 

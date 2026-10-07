@@ -40,7 +40,7 @@ from flext_infra.utilities import u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
-    from flext_infra.workspace.protocols import p
+    from flext_infra import p
 
 
 class FlextInfraFlextBindingService:

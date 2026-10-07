@@ -15,7 +15,7 @@ from flext_infra.validate.namespace_validator import FlextInfraNamespaceValidato
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra.codegen.protocols import p
+    from flext_infra import p
     from flext_infra.codegen.typings import t
 
 

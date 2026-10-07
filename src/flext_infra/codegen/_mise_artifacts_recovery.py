@@ -30,7 +30,7 @@ from flext_infra.constants import c
 from flext_infra.models import m
 
 if TYPE_CHECKING:
-    from flext_infra.codegen.protocols import p
+    from flext_infra import p
     from flext_infra.codegen.typings import t
 
 type _FileIdentity = tuple[

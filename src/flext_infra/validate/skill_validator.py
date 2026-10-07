@@ -21,7 +21,7 @@ from flext_infra.utilities import u
 from flext_infra.validate._skill_rule_runner import FlextInfraSkillRuleRunnerMixin
 
 if TYPE_CHECKING:
-    from flext_infra.validate.protocols import p
+    from flext_infra import p
 
 
 class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):

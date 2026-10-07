@@ -12,7 +12,7 @@ from flext_infra._config import config
 from flext_infra.models import m
 
 if TYPE_CHECKING:
-    from flext_infra.refactor.protocols import p
+    from flext_infra import p
     from flext_infra.refactor.typings import t
 
 

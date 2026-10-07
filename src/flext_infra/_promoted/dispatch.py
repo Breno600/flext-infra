@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from pathlib import Path
 
-    from flext_infra._promoted.protocols import p
+    from flext_infra import p
 
 
 class FlextInfraPromotedDispatch(FlextInfraPromotedDiscovery):

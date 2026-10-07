@@ -13,7 +13,7 @@ from flext_infra.models import m
 from flext_infra.utilities import u
 
 if TYPE_CHECKING:
-    from flext_infra._promoted.protocols import p
+    from flext_infra import p
     from flext_infra._promoted.typings import t
 
 

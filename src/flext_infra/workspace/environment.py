@@ -21,7 +21,7 @@ from flext_infra.typings import t
 from flext_infra.utilities import u
 
 if TYPE_CHECKING:
-    from flext_infra.workspace.protocols import p
+    from flext_infra import p
 
 
 class FlextInfraWorkspaceEnvironmentMixin:

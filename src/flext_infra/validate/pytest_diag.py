@@ -21,7 +21,7 @@ from flext_infra.utilities import u
 from flext_infra.validate._pytest_diag_xml import FlextInfraPytestDiagXmlMixin
 
 if TYPE_CHECKING:
-    from flext_infra.validate.protocols import p
+    from flext_infra import p
 
 
 class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):

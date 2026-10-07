@@ -22,7 +22,7 @@ from flext_infra.utilities import u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
-    from flext_infra.gates.protocols import p
+    from flext_infra import p
     from flext_infra.gates.typings import t
 
 

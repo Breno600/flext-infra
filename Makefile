@@ -233,7 +233,7 @@ endif
 
 endif
 endif
-DOCS_ACTIONS := generate fix fmt validate audit
+DOCS_ACTIONS := generate fix fmt build validate audit
  # End SECTION: verb dispatch
 
 # === SECTION: lint/type paths (managed) ===
@@ -334,19 +334,21 @@ set -eu; \
 	if [ -z "$$caller_xdg_data_home" ] && [ -n "$$caller_home" ]; then \
 		caller_xdg_data_home="$$caller_home/.local/share"; \
 	fi; \
+	caller_flext_setup_credential_store="$${FLEXT_SETUP_CREDENTIAL_STORE:-}"; \
 	caller_path="$$PATH"; \
 	mise_trusted_config_paths="$$project_root"; \
-mise_lockfile_platforms="linux-x64,linux-x64-musl,linux-arm64,macos-x64,macos-arm64,windows-x64"; \
-caller_comspec="$${COMSPEC:-}"; \
-caller_pathext="$${PATHEXT:-}"; \
-caller_systemroot="$${SYSTEMROOT:-}"; \
-caller_windir="$${WINDIR:-}"; \
-caller_github_token="$${GITHUB_TOKEN:-}"; \
-caller_gh_token="$${GH_TOKEN:-}"; \
-caller_mise_github_token="$${MISE_GITHUB_TOKEN:-}"; \
-caller_mise_http_timeout="$${MISE_HTTP_TIMEOUT:-}"; \
-caller_flext_mypy_profile_output="$${FLEXT_MYPY_PROFILE_OUTPUT:-}"; \
-caller_mise_version="$${MISE_VERSION:-}"; \
+		mise_lockfile_platforms="linux-x64,linux-x64-musl,linux-arm64,macos-x64,macos-arm64,windows-x64"; \
+		caller_comspec="$${COMSPEC:-}"; \
+		caller_pathext="$${PATHEXT:-}"; \
+		caller_systemroot="$${SYSTEMROOT:-}"; \
+		caller_windir="$${WINDIR:-}"; \
+		caller_github_token="$${GITHUB_TOKEN:-}"; \
+		caller_gh_token="$${GH_TOKEN:-}"; \
+		caller_mise_github_token="$${MISE_GITHUB_TOKEN:-}"; \
+		caller_mise_http_timeout="$${MISE_HTTP_TIMEOUT:-}"; \
+		caller_flext_mypy_profile_output="$${FLEXT_MYPY_PROFILE_OUTPUT:-}"; \
+		caller_flext_setup_credential_store="$${FLEXT_SETUP_CREDENTIAL_STORE:-}"; \
+		caller_mise_version="$${MISE_VERSION:-}"; \
 mise_pin_file="$(MISE_VERSION_PIN)"; \
 	mise_pin=; \
 	if [ -f "$$mise_pin_file" ]; then \
@@ -450,11 +452,11 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 		exit "$$bootstrap_status"' EXIT; \
 	printf 'mise scratch: allocated path=%s\n' "$$scratch" >&2; \
 	mkdir -p "$$scratch/home" "$$scratch/home" "$$scratch/appdata" "$$scratch/appdata" "$$scratch/xdg-config" "$$scratch/xdg-data" "$$scratch/xdg-cache" "$$scratch/xdg-state" "$$scratch/config" "$$scratch/tmp" "$$scratch/." "$$scratch/system-config" "$$scratch/system-data" "$$scratch/system-installs" "$$scratch/system-shims" "$$scratch/tmp" "$$scratch/tmp" "$$scratch/tmp"; \
-: > "$$scratch/global-config.toml"; chmod 600 "$$scratch/global-config.toml"; \
-: > "$$scratch/system-config/config.toml"; chmod 600 "$$scratch/system-config/config.toml"; \
-: > "$$scratch/gitconfig"; chmod 600 "$$scratch/gitconfig"; \
-: > "$$scratch/netrc"; chmod 600 "$$scratch/netrc"; \
-mise_exec() { \
+		: > "$$scratch/global-config.toml"; chmod 600 "$$scratch/global-config.toml"; \
+		: > "$$scratch/system-config/config.toml"; chmod 600 "$$scratch/system-config/config.toml"; \
+		: > "$$scratch/gitconfig"; chmod 600 "$$scratch/gitconfig"; \
+		: > "$$scratch/netrc"; chmod 600 "$$scratch/netrc"; \
+		mise_exec() { \
 		mise_config_mode="$$1"; shift; \
 		case "$$mise_config_mode" in \
 			no-config) mise_config_argument='MISE_NO_CONFIG=1' ;; \
@@ -467,80 +469,86 @@ mise_exec() { \
 			if [ "$(OS)" = "Windows_NT" ]; then mise_runtime_path="$$mise_runtime_path.exe"; fi; \
 		fi; \
 		env -i \
-'GIT_CONFIG_NOSYSTEM=1' \
-'GIT_TERMINAL_PROMPT=0' \
-'LANG=C' \
-'LC_ALL=C' \
-'MISE_SAFE=1' \
-'MISE_PARANOID=true' \
-'MISE_NO_ENV=1' \
-'MISE_NO_HOOKS=1' \
-'MISE_AUTO_ENV=false' \
-'MISE_AUTO_INSTALL=false' \
-'MISE_EXEC_AUTO_INSTALL=false' \
-'MISE_TASK_RUN_AUTO_INSTALL=false' \
-'MISE_AUTO_UPDATE=false' \
-'MISE_HTTP_RETRIES=0' \
-'MISE_NETRC=false' \
-'MISE_NOT_FOUND_AUTO_INSTALL=false' \
-'MISE_NOT_FOUND_SYSTEM_FALLBACK=false' \
-'MISE_OVERRIDE_CONFIG_FILENAMES=.mise.toml' \
-'MISE_OVERRIDE_TOOL_VERSIONS_FILENAMES=none' \
-'MISE_GITHUB_GH_CLI_TOKENS=false' \
-'MISE_GITHUB_USE_GIT_CREDENTIALS=false' \
-'MISE_GITHUB_OAUTH_CLIENT_ID=' \
-'MISE_GITHUB_OAUTH_EXPORT_ENV=' \
-'MISE_GITHUB_OAUTH_OPEN_BROWSER=false' \
-'MISE_LOCKFILE=true' \
-'MISE_LOCKED=true' \
-'MISE_MINIMUM_RELEASE_AGE=10d' \
-'MISE_NPM_PACKAGE_MANAGER=bun' \
-$${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
-"HOME=$$scratch/home" \
-"USERPROFILE=$$scratch/home" \
-"APPDATA=$$scratch/appdata" \
-"LOCALAPPDATA=$$scratch/appdata" \
-"XDG_CONFIG_HOME=$$scratch/xdg-config" \
-"XDG_DATA_HOME=$$scratch/xdg-data" \
-"XDG_CACHE_HOME=$$scratch/xdg-cache" \
-"XDG_STATE_HOME=$$scratch/xdg-state" \
-"NETRC=$$scratch/netrc" \
-"GIT_CONFIG_GLOBAL=$$scratch/gitconfig" \
-"MISE_NETRC_FILE=$$scratch/netrc" \
-"MISE_GLOBAL_CONFIG_FILE=$$scratch/global-config.toml" \
-"MISE_CONFIG_DIR=$$scratch/config" \
-"MISE_TMP_DIR=$$scratch/tmp" \
-"MISE_GLOBAL_CONFIG_ROOT=$$scratch/." \
-"MISE_SYSTEM_CONFIG_DIR=$$scratch/system-config" \
-"MISE_SYSTEM_CONFIG_FILE=$$scratch/system-config/config.toml" \
-"MISE_SYSTEM_DATA_DIR=$$scratch/system-data" \
-"MISE_SYSTEM_INSTALLS_DIR=$$scratch/system-installs" \
-"MISE_SYSTEM_SHIMS_DIR=$$scratch/system-shims" \
-"TMPDIR=$$scratch/tmp" \
-"TMP=$$scratch/tmp" \
-"TEMP=$$scratch/tmp" \
-"MISE_DATA_DIR=$$mise_storage_root" \
-"MISE_CACHE_DIR=$$mise_storage_root/cache" \
-"MISE_STATE_DIR=$$mise_storage_root/state" \
-"MISE_INSTALLS_DIR=$$mise_storage_root/installs" \
-"MISE_SHIMS_DIR=$$mise_storage_root/shims" \
-"UV_CACHE_DIR=$$mise_storage_root/uv-cache" \
-"GIT_CEILING_DIRECTORIES=$$project_parent" \
+				'GIT_CONFIG_NOSYSTEM=1' \
+				'GIT_TERMINAL_PROMPT=0' \
+				'LANG=C' \
+				'LC_ALL=C' \
+				'MISE_SAFE=1' \
+				'MISE_PARANOID=true' \
+				'MISE_NO_ENV=1' \
+				'MISE_NO_HOOKS=1' \
+				'MISE_AUTO_ENV=false' \
+				'MISE_AUTO_INSTALL=false' \
+				'MISE_EXEC_AUTO_INSTALL=false' \
+				'MISE_TASK_RUN_AUTO_INSTALL=false' \
+				'MISE_AUTO_UPDATE=false' \
+				'MISE_HTTP_RETRIES=0' \
+				'MISE_NETRC=false' \
+				'MISE_NOT_FOUND_AUTO_INSTALL=false' \
+				'MISE_NOT_FOUND_SYSTEM_FALLBACK=false' \
+				'MISE_OVERRIDE_CONFIG_FILENAMES=.mise.toml' \
+				'MISE_OVERRIDE_TOOL_VERSIONS_FILENAMES=none' \
+				'MISE_GITHUB_GH_CLI_TOKENS=false' \
+				'MISE_GITHUB_USE_GIT_CREDENTIALS=false' \
+				'MISE_GITHUB_OAUTH_CLIENT_ID=' \
+				'MISE_GITHUB_OAUTH_EXPORT_ENV=' \
+				'MISE_GITHUB_OAUTH_OPEN_BROWSER=false' \
+				'MISE_LOCKFILE=true' \
+				'MISE_LOCKED=true' \
+				'MISE_MINIMUM_RELEASE_AGE=10d' \
+				'MISE_NPM_PACKAGE_MANAGER=bun' \
+				$${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
+				"HOME=$$scratch/home" \
+				"USERPROFILE=$$scratch/home" \
+				"APPDATA=$$scratch/appdata" \
+				"LOCALAPPDATA=$$scratch/appdata" \
+				"XDG_CONFIG_HOME=$$scratch/xdg-config" \
+				"XDG_DATA_HOME=$$scratch/xdg-data" \
+				"XDG_CACHE_HOME=$$scratch/xdg-cache" \
+				"XDG_STATE_HOME=$$scratch/xdg-state" \
+				"NETRC=$$scratch/netrc" \
+				"GIT_CONFIG_GLOBAL=$$scratch/gitconfig" \
+				"MISE_NETRC_FILE=$$scratch/netrc" \
+				"MISE_GLOBAL_CONFIG_FILE=$$scratch/global-config.toml" \
+				"MISE_CONFIG_DIR=$$scratch/config" \
+				"MISE_TMP_DIR=$$scratch/tmp" \
+				"MISE_GLOBAL_CONFIG_ROOT=$$scratch/." \
+				"MISE_SYSTEM_CONFIG_DIR=$$scratch/system-config" \
+				"MISE_SYSTEM_CONFIG_FILE=$$scratch/system-config/config.toml" \
+				"MISE_SYSTEM_DATA_DIR=$$scratch/system-data" \
+				"MISE_SYSTEM_INSTALLS_DIR=$$scratch/system-installs" \
+				"MISE_SYSTEM_SHIMS_DIR=$$scratch/system-shims" \
+				"TMPDIR=$$scratch/tmp" \
+				"TMP=$$scratch/tmp" \
+				"TEMP=$$scratch/tmp" \
+				"MISE_DATA_DIR=$$mise_storage_root" \
+				"MISE_CACHE_DIR=$$mise_storage_root/cache" \
+				"MISE_STATE_DIR=$$mise_storage_root/state" \
+				"MISE_INSTALLS_DIR=$$mise_storage_root/installs" \
+				"MISE_SHIMS_DIR=$$mise_storage_root/shims" \
+				"UV_CACHE_DIR=$$mise_storage_root/uv-cache" \
+				"GIT_CEILING_DIRECTORIES=$$project_parent" \
 			"MISE_CEILING_PATHS=$$project_parent" \
 			"MISE_TRUSTED_CONFIG_PATHS=$$mise_trusted_config_paths" \
-$${caller_path:+"PATH=$$caller_path"} \
-$${caller_comspec:+"COMSPEC=$$caller_comspec"} \
-$${caller_pathext:+"PATHEXT=$$caller_pathext"} \
-$${caller_systemroot:+"SYSTEMROOT=$$caller_systemroot"} \
-$${caller_windir:+"WINDIR=$$caller_windir"} \
-$${caller_github_token:+"GITHUB_TOKEN=$$caller_github_token"} \
-$${caller_gh_token:+"GH_TOKEN=$$caller_gh_token"} \
-$${caller_mise_github_token:+"MISE_GITHUB_TOKEN=$$caller_mise_github_token"} \
-$${caller_mise_http_timeout:+"MISE_HTTP_TIMEOUT=$$caller_mise_http_timeout"} \
-$${caller_flext_mypy_profile_output:+"FLEXT_MYPY_PROFILE_OUTPUT=$$caller_flext_mypy_profile_output"} \
-$${caller_mise_version:+"MISE_VERSION=$$caller_mise_version"} \
-$${mise_config_argument:+"$$mise_config_argument"} \
+				$${caller_path:+"PATH=$$caller_path"} \
+				$${caller_comspec:+"COMSPEC=$$caller_comspec"} \
+				$${caller_pathext:+"PATHEXT=$$caller_pathext"} \
+				$${caller_systemroot:+"SYSTEMROOT=$$caller_systemroot"} \
+				$${caller_windir:+"WINDIR=$$caller_windir"} \
+				$${caller_github_token:+"GITHUB_TOKEN=$$caller_github_token"} \
+				$${caller_gh_token:+"GH_TOKEN=$$caller_gh_token"} \
+				$${caller_mise_github_token:+"MISE_GITHUB_TOKEN=$$caller_mise_github_token"} \
+				$${caller_mise_http_timeout:+"MISE_HTTP_TIMEOUT=$$caller_mise_http_timeout"} \
+				$${caller_flext_mypy_profile_output:+"FLEXT_MYPY_PROFILE_OUTPUT=$$caller_flext_mypy_profile_output"} \
+				$${caller_flext_setup_credential_store:+"FLEXT_SETUP_CREDENTIAL_STORE=$$caller_flext_setup_credential_store"} \
+				$${caller_mise_version:+"MISE_VERSION=$$caller_mise_version"} \
+				$${mise_config_argument:+"$$mise_config_argument"} \
 			$${mise_runtime_path:+"MISE_INSTALL_PATH=$$mise_runtime_path"} \
+				$${caller_flext_setup_credential_store:+GIT_CONFIG_COUNT=2} \
+				$${caller_flext_setup_credential_store:+GIT_CONFIG_KEY_0=credential.https://github.com.helper} \
+				$${caller_flext_setup_credential_store:+GIT_CONFIG_VALUE_0="store --file=$$caller_flext_setup_credential_store"} \
+				$${caller_flext_setup_credential_store:+GIT_CONFIG_KEY_1=credential.https://github.com.username} \
+				$${caller_flext_setup_credential_store:+GIT_CONFIG_VALUE_1=x-access-token} \
 			"$$@"; \
 	}; \
 	mise_offline() { \
@@ -567,7 +575,11 @@ $${mise_config_argument:+"$$mise_config_argument"} \
 		tool_paths="$${tool_paths:+$$tool_paths:}$$tool_path"; \
 	done < "$$scratch/paths"; \
 	if [ -z "$$tool_paths" ]; then printf 'ERROR: Mise returned no installed tool paths; run make setup\n' >&2; exit 2; fi; \
-	PATH="$(RUNTIME_BIN):$$tool_paths:$$caller_path" "$$@"
+	if [ -n "$$caller_flext_setup_credential_store" ]; then \
+		GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=credential.https://github.com.helper GIT_CONFIG_VALUE_0="store --file=$$caller_flext_setup_credential_store" GIT_CONFIG_KEY_1=credential.https://github.com.username GIT_CONFIG_VALUE_1=x-access-token PATH="$(RUNTIME_BIN):$$tool_paths:$$caller_path" "$$@"; \
+	else \
+		PATH="$(RUNTIME_BIN):$$tool_paths:$$caller_path" "$$@"; \
+	fi
 endef
 override PROJECT_TOOL_EXEC = $(SHELL) -c '$(subst ','"'"',$(PROJECT_TOOL_RUNTIME))' --
 
@@ -595,19 +607,21 @@ _bootstrap_setup_tools:
 	if [ -z "$$caller_xdg_data_home" ] && [ -n "$$caller_home" ]; then \
 		caller_xdg_data_home="$$caller_home/.local/share"; \
 	fi; \
+	caller_flext_setup_credential_store="$${FLEXT_SETUP_CREDENTIAL_STORE:-}"; \
 	caller_path="$$PATH"; \
 	mise_trusted_config_paths="$$project_root"; \
-mise_lockfile_platforms="linux-x64,linux-x64-musl,linux-arm64,macos-x64,macos-arm64,windows-x64"; \
-caller_comspec="$${COMSPEC:-}"; \
-caller_pathext="$${PATHEXT:-}"; \
-caller_systemroot="$${SYSTEMROOT:-}"; \
-caller_windir="$${WINDIR:-}"; \
-caller_github_token="$${GITHUB_TOKEN:-}"; \
-caller_gh_token="$${GH_TOKEN:-}"; \
-caller_mise_github_token="$${MISE_GITHUB_TOKEN:-}"; \
-caller_mise_http_timeout="$${MISE_HTTP_TIMEOUT:-}"; \
-caller_flext_mypy_profile_output="$${FLEXT_MYPY_PROFILE_OUTPUT:-}"; \
-caller_mise_version="$${MISE_VERSION:-}"; \
+		mise_lockfile_platforms="linux-x64,linux-x64-musl,linux-arm64,macos-x64,macos-arm64,windows-x64"; \
+		caller_comspec="$${COMSPEC:-}"; \
+		caller_pathext="$${PATHEXT:-}"; \
+		caller_systemroot="$${SYSTEMROOT:-}"; \
+		caller_windir="$${WINDIR:-}"; \
+		caller_github_token="$${GITHUB_TOKEN:-}"; \
+		caller_gh_token="$${GH_TOKEN:-}"; \
+		caller_mise_github_token="$${MISE_GITHUB_TOKEN:-}"; \
+		caller_mise_http_timeout="$${MISE_HTTP_TIMEOUT:-}"; \
+		caller_flext_mypy_profile_output="$${FLEXT_MYPY_PROFILE_OUTPUT:-}"; \
+		caller_flext_setup_credential_store="$${FLEXT_SETUP_CREDENTIAL_STORE:-}"; \
+		caller_mise_version="$${MISE_VERSION:-}"; \
 mise_pin_file="$(MISE_VERSION_PIN)"; \
 	mise_pin=; \
 	if [ -f "$$mise_pin_file" ]; then \
@@ -711,11 +725,11 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 		exit "$$bootstrap_status"' EXIT; \
 	printf 'mise scratch: allocated path=%s\n' "$$scratch" >&2; \
 	mkdir -p "$$scratch/home" "$$scratch/home" "$$scratch/appdata" "$$scratch/appdata" "$$scratch/xdg-config" "$$scratch/xdg-data" "$$scratch/xdg-cache" "$$scratch/xdg-state" "$$scratch/config" "$$scratch/tmp" "$$scratch/." "$$scratch/system-config" "$$scratch/system-data" "$$scratch/system-installs" "$$scratch/system-shims" "$$scratch/tmp" "$$scratch/tmp" "$$scratch/tmp"; \
-: > "$$scratch/global-config.toml"; chmod 600 "$$scratch/global-config.toml"; \
-: > "$$scratch/system-config/config.toml"; chmod 600 "$$scratch/system-config/config.toml"; \
-: > "$$scratch/gitconfig"; chmod 600 "$$scratch/gitconfig"; \
-: > "$$scratch/netrc"; chmod 600 "$$scratch/netrc"; \
-mise_exec() { \
+		: > "$$scratch/global-config.toml"; chmod 600 "$$scratch/global-config.toml"; \
+		: > "$$scratch/system-config/config.toml"; chmod 600 "$$scratch/system-config/config.toml"; \
+		: > "$$scratch/gitconfig"; chmod 600 "$$scratch/gitconfig"; \
+		: > "$$scratch/netrc"; chmod 600 "$$scratch/netrc"; \
+		mise_exec() { \
 		mise_config_mode="$$1"; shift; \
 		case "$$mise_config_mode" in \
 			no-config) mise_config_argument='MISE_NO_CONFIG=1' ;; \
@@ -728,80 +742,86 @@ mise_exec() { \
 			if [ "$(OS)" = "Windows_NT" ]; then mise_runtime_path="$$mise_runtime_path.exe"; fi; \
 		fi; \
 		env -i \
-'GIT_CONFIG_NOSYSTEM=1' \
-'GIT_TERMINAL_PROMPT=0' \
-'LANG=C' \
-'LC_ALL=C' \
-'MISE_SAFE=1' \
-'MISE_PARANOID=true' \
-'MISE_NO_ENV=1' \
-'MISE_NO_HOOKS=1' \
-'MISE_AUTO_ENV=false' \
-'MISE_AUTO_INSTALL=false' \
-'MISE_EXEC_AUTO_INSTALL=false' \
-'MISE_TASK_RUN_AUTO_INSTALL=false' \
-'MISE_AUTO_UPDATE=false' \
-'MISE_HTTP_RETRIES=0' \
-'MISE_NETRC=false' \
-'MISE_NOT_FOUND_AUTO_INSTALL=false' \
-'MISE_NOT_FOUND_SYSTEM_FALLBACK=false' \
-'MISE_OVERRIDE_CONFIG_FILENAMES=.mise.toml' \
-'MISE_OVERRIDE_TOOL_VERSIONS_FILENAMES=none' \
-'MISE_GITHUB_GH_CLI_TOKENS=false' \
-'MISE_GITHUB_USE_GIT_CREDENTIALS=false' \
-'MISE_GITHUB_OAUTH_CLIENT_ID=' \
-'MISE_GITHUB_OAUTH_EXPORT_ENV=' \
-'MISE_GITHUB_OAUTH_OPEN_BROWSER=false' \
-'MISE_LOCKFILE=true' \
-'MISE_LOCKED=true' \
-'MISE_MINIMUM_RELEASE_AGE=10d' \
-'MISE_NPM_PACKAGE_MANAGER=bun' \
-$${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
-"HOME=$$scratch/home" \
-"USERPROFILE=$$scratch/home" \
-"APPDATA=$$scratch/appdata" \
-"LOCALAPPDATA=$$scratch/appdata" \
-"XDG_CONFIG_HOME=$$scratch/xdg-config" \
-"XDG_DATA_HOME=$$scratch/xdg-data" \
-"XDG_CACHE_HOME=$$scratch/xdg-cache" \
-"XDG_STATE_HOME=$$scratch/xdg-state" \
-"NETRC=$$scratch/netrc" \
-"GIT_CONFIG_GLOBAL=$$scratch/gitconfig" \
-"MISE_NETRC_FILE=$$scratch/netrc" \
-"MISE_GLOBAL_CONFIG_FILE=$$scratch/global-config.toml" \
-"MISE_CONFIG_DIR=$$scratch/config" \
-"MISE_TMP_DIR=$$scratch/tmp" \
-"MISE_GLOBAL_CONFIG_ROOT=$$scratch/." \
-"MISE_SYSTEM_CONFIG_DIR=$$scratch/system-config" \
-"MISE_SYSTEM_CONFIG_FILE=$$scratch/system-config/config.toml" \
-"MISE_SYSTEM_DATA_DIR=$$scratch/system-data" \
-"MISE_SYSTEM_INSTALLS_DIR=$$scratch/system-installs" \
-"MISE_SYSTEM_SHIMS_DIR=$$scratch/system-shims" \
-"TMPDIR=$$scratch/tmp" \
-"TMP=$$scratch/tmp" \
-"TEMP=$$scratch/tmp" \
-"MISE_DATA_DIR=$$mise_storage_root" \
-"MISE_CACHE_DIR=$$mise_storage_root/cache" \
-"MISE_STATE_DIR=$$mise_storage_root/state" \
-"MISE_INSTALLS_DIR=$$mise_storage_root/installs" \
-"MISE_SHIMS_DIR=$$mise_storage_root/shims" \
-"UV_CACHE_DIR=$$mise_storage_root/uv-cache" \
-"GIT_CEILING_DIRECTORIES=$$project_parent" \
+				'GIT_CONFIG_NOSYSTEM=1' \
+				'GIT_TERMINAL_PROMPT=0' \
+				'LANG=C' \
+				'LC_ALL=C' \
+				'MISE_SAFE=1' \
+				'MISE_PARANOID=true' \
+				'MISE_NO_ENV=1' \
+				'MISE_NO_HOOKS=1' \
+				'MISE_AUTO_ENV=false' \
+				'MISE_AUTO_INSTALL=false' \
+				'MISE_EXEC_AUTO_INSTALL=false' \
+				'MISE_TASK_RUN_AUTO_INSTALL=false' \
+				'MISE_AUTO_UPDATE=false' \
+				'MISE_HTTP_RETRIES=0' \
+				'MISE_NETRC=false' \
+				'MISE_NOT_FOUND_AUTO_INSTALL=false' \
+				'MISE_NOT_FOUND_SYSTEM_FALLBACK=false' \
+				'MISE_OVERRIDE_CONFIG_FILENAMES=.mise.toml' \
+				'MISE_OVERRIDE_TOOL_VERSIONS_FILENAMES=none' \
+				'MISE_GITHUB_GH_CLI_TOKENS=false' \
+				'MISE_GITHUB_USE_GIT_CREDENTIALS=false' \
+				'MISE_GITHUB_OAUTH_CLIENT_ID=' \
+				'MISE_GITHUB_OAUTH_EXPORT_ENV=' \
+				'MISE_GITHUB_OAUTH_OPEN_BROWSER=false' \
+				'MISE_LOCKFILE=true' \
+				'MISE_LOCKED=true' \
+				'MISE_MINIMUM_RELEASE_AGE=10d' \
+				'MISE_NPM_PACKAGE_MANAGER=bun' \
+				$${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
+				"HOME=$$scratch/home" \
+				"USERPROFILE=$$scratch/home" \
+				"APPDATA=$$scratch/appdata" \
+				"LOCALAPPDATA=$$scratch/appdata" \
+				"XDG_CONFIG_HOME=$$scratch/xdg-config" \
+				"XDG_DATA_HOME=$$scratch/xdg-data" \
+				"XDG_CACHE_HOME=$$scratch/xdg-cache" \
+				"XDG_STATE_HOME=$$scratch/xdg-state" \
+				"NETRC=$$scratch/netrc" \
+				"GIT_CONFIG_GLOBAL=$$scratch/gitconfig" \
+				"MISE_NETRC_FILE=$$scratch/netrc" \
+				"MISE_GLOBAL_CONFIG_FILE=$$scratch/global-config.toml" \
+				"MISE_CONFIG_DIR=$$scratch/config" \
+				"MISE_TMP_DIR=$$scratch/tmp" \
+				"MISE_GLOBAL_CONFIG_ROOT=$$scratch/." \
+				"MISE_SYSTEM_CONFIG_DIR=$$scratch/system-config" \
+				"MISE_SYSTEM_CONFIG_FILE=$$scratch/system-config/config.toml" \
+				"MISE_SYSTEM_DATA_DIR=$$scratch/system-data" \
+				"MISE_SYSTEM_INSTALLS_DIR=$$scratch/system-installs" \
+				"MISE_SYSTEM_SHIMS_DIR=$$scratch/system-shims" \
+				"TMPDIR=$$scratch/tmp" \
+				"TMP=$$scratch/tmp" \
+				"TEMP=$$scratch/tmp" \
+				"MISE_DATA_DIR=$$mise_storage_root" \
+				"MISE_CACHE_DIR=$$mise_storage_root/cache" \
+				"MISE_STATE_DIR=$$mise_storage_root/state" \
+				"MISE_INSTALLS_DIR=$$mise_storage_root/installs" \
+				"MISE_SHIMS_DIR=$$mise_storage_root/shims" \
+				"UV_CACHE_DIR=$$mise_storage_root/uv-cache" \
+				"GIT_CEILING_DIRECTORIES=$$project_parent" \
 			"MISE_CEILING_PATHS=$$project_parent" \
 			"MISE_TRUSTED_CONFIG_PATHS=$$mise_trusted_config_paths" \
-$${caller_path:+"PATH=$$caller_path"} \
-$${caller_comspec:+"COMSPEC=$$caller_comspec"} \
-$${caller_pathext:+"PATHEXT=$$caller_pathext"} \
-$${caller_systemroot:+"SYSTEMROOT=$$caller_systemroot"} \
-$${caller_windir:+"WINDIR=$$caller_windir"} \
-$${caller_github_token:+"GITHUB_TOKEN=$$caller_github_token"} \
-$${caller_gh_token:+"GH_TOKEN=$$caller_gh_token"} \
-$${caller_mise_github_token:+"MISE_GITHUB_TOKEN=$$caller_mise_github_token"} \
-$${caller_mise_http_timeout:+"MISE_HTTP_TIMEOUT=$$caller_mise_http_timeout"} \
-$${caller_flext_mypy_profile_output:+"FLEXT_MYPY_PROFILE_OUTPUT=$$caller_flext_mypy_profile_output"} \
-$${caller_mise_version:+"MISE_VERSION=$$caller_mise_version"} \
-$${mise_config_argument:+"$$mise_config_argument"} \
+				$${caller_path:+"PATH=$$caller_path"} \
+				$${caller_comspec:+"COMSPEC=$$caller_comspec"} \
+				$${caller_pathext:+"PATHEXT=$$caller_pathext"} \
+				$${caller_systemroot:+"SYSTEMROOT=$$caller_systemroot"} \
+				$${caller_windir:+"WINDIR=$$caller_windir"} \
+				$${caller_github_token:+"GITHUB_TOKEN=$$caller_github_token"} \
+				$${caller_gh_token:+"GH_TOKEN=$$caller_gh_token"} \
+				$${caller_mise_github_token:+"MISE_GITHUB_TOKEN=$$caller_mise_github_token"} \
+				$${caller_mise_http_timeout:+"MISE_HTTP_TIMEOUT=$$caller_mise_http_timeout"} \
+				$${caller_flext_mypy_profile_output:+"FLEXT_MYPY_PROFILE_OUTPUT=$$caller_flext_mypy_profile_output"} \
+				$${caller_flext_setup_credential_store:+"FLEXT_SETUP_CREDENTIAL_STORE=$$caller_flext_setup_credential_store"} \
+				$${caller_mise_version:+"MISE_VERSION=$$caller_mise_version"} \
+				$${mise_config_argument:+"$$mise_config_argument"} \
 			$${mise_runtime_path:+"MISE_INSTALL_PATH=$$mise_runtime_path"} \
+				$${caller_flext_setup_credential_store:+GIT_CONFIG_COUNT=2} \
+				$${caller_flext_setup_credential_store:+GIT_CONFIG_KEY_0=credential.https://github.com.helper} \
+				$${caller_flext_setup_credential_store:+GIT_CONFIG_VALUE_0="store --file=$$caller_flext_setup_credential_store"} \
+				$${caller_flext_setup_credential_store:+GIT_CONFIG_KEY_1=credential.https://github.com.username} \
+				$${caller_flext_setup_credential_store:+GIT_CONFIG_VALUE_1=x-access-token} \
 			"$$@"; \
 	}; \
 	mise_offline() { \
@@ -964,9 +984,9 @@ mise_has_blocking_warning() { \
 			# Mise release beside a newer lockfile revision. \
 			mkdir -p "$$lock_stage/artifacts/bin"; \
 			mise_checked "$$scratch/install-script.log" mise_exec no-config "$$pinned_mise" generate install-script --version "$$runtime_release" --write "$$lock_stage/artifacts/bin/mise" --windows; \
-chmod 755 "$$lock_stage/artifacts/bin/mise"; \
-chmod 644 "$$lock_stage/artifacts/bin/mise.cmd"; \
-mise_receipt launcher-version "$$lock_stage/artifacts/bin/mise"; \
+				chmod 755 "$$lock_stage/artifacts/bin/mise"; \
+				chmod 644 "$$lock_stage/artifacts/bin/mise.cmd"; \
+				mise_receipt launcher-version "$$lock_stage/artifacts/bin/mise"; \
 			if [ "$$receipt_release" != "$$runtime_release" ]; then \
 				printf 'ERROR: staged Mise launcher runs %s, not %s\n' "$$receipt_release" "$$runtime_release" >&2; exit 2; \
 			fi; \
@@ -1020,24 +1040,24 @@ mise_receipt launcher-version "$$lock_stage/artifacts/bin/mise"; \
 	# them, and Mise never replaces a shim bound to another binary, so CI rebuilds \
 	# the farm from the pinned release before publishing it. \
 	if [ -n "$${GITHUB_PATH:-}" ]; then \
-shim_farm="$$mise_storage_root/shims"; \
+			shim_farm="$$mise_storage_root/shims"; \
 		rm -rf "$$shim_farm"; \
 		mise_checked "$$scratch/reshim.log" mise_offline project "$$pinned_mise" -C "$$project_root" reshim; \
 		printf '%s\n' "$$shim_farm" >> "$$GITHUB_PATH"; \
-fi; \
+		fi; \
 	printf 'setup: entering lifecycle (submodules, environment, hooks) make=%s\n' "$(SELF_MAKE_EXECUTABLE)"; \
 	scratch_present=0; if [ -d "$$scratch" ]; then scratch_present=1; fi; \
 	printf 'mise scratch: before lifecycle path=%s present=%s\n' "$$scratch" "$$scratch_present" >&2; \
 	mise_runtime_path="$$mise_storage_root/bootstrap/mise-$${runtime_release}"; \
 	if [ "$(OS)" = "Windows_NT" ]; then mise_runtime_path="$$mise_runtime_path.exe"; fi; \
 	if env \
-"MISE_DATA_DIR=$$mise_storage_root" \
-"MISE_CACHE_DIR=$$mise_storage_root/cache" \
-"MISE_STATE_DIR=$$mise_storage_root/state" \
-"MISE_INSTALLS_DIR=$$mise_storage_root/installs" \
-"MISE_SHIMS_DIR=$$mise_storage_root/shims" \
-"UV_CACHE_DIR=$$mise_storage_root/uv-cache" \
-"GIT_CEILING_DIRECTORIES=$$project_parent" \
+			"MISE_DATA_DIR=$$mise_storage_root" \
+			"MISE_CACHE_DIR=$$mise_storage_root/cache" \
+			"MISE_STATE_DIR=$$mise_storage_root/state" \
+			"MISE_INSTALLS_DIR=$$mise_storage_root/installs" \
+			"MISE_SHIMS_DIR=$$mise_storage_root/shims" \
+			"UV_CACHE_DIR=$$mise_storage_root/uv-cache" \
+			"GIT_CEILING_DIRECTORIES=$$project_parent" \
 		"MISE_CEILING_PATHS=$$project_parent" \
 		"MISE_TRUSTED_CONFIG_PATHS=$$project_root" \
 		"MISE_VERSION=$$runtime_release" \
@@ -1113,7 +1133,7 @@ _bootstrap_setup_tools: _builtin_require_workspace
 
 # Execute the interpreter provisioned by setup without discovering a project
 # workspace or creating a dependency-resolution file during a runtime command.
-override UV_RUN := env -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u PROJECT_ROOT PYTHONPATH="$(PROJECT_ROOT)/src" $(UV) run --no-project --python "$(RUNTIME_PYTHON)"
+override UV_RUN := env -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u PROJECT_ROOT PYTHONPATH="$(PROJECT_ROOT)/src" $(UV) run --directory "$(PROJECT_ROOT)" --no-project --python "$(RUNTIME_PYTHON)"
 # The checked-out flext-infra lane owns every lifecycle verb: a workspace
 # runs the generator it carries (the submodule src), so a broken published
 # dependency tip can never block the local recovery cycle. A checkout without

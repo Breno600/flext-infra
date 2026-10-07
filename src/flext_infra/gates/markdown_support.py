@@ -18,7 +18,7 @@ from flext_infra.gates.base_gate import FlextInfraGate
 from flext_infra.utilities import u
 
 if TYPE_CHECKING:
-    from flext_infra.gates.models import m
+    from flext_infra import m
     from flext_infra.gates.typings import t
 
 

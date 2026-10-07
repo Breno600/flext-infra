@@ -13,7 +13,7 @@ from flext_infra.utilities import u
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from flext_infra.docs.models import m
+    from flext_infra import m
     from flext_infra.docs.typings import t
 
 

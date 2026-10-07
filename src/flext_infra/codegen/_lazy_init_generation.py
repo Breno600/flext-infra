@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from flext_infra._models.flext_infra_codegen_lazy_init_planner import (
         FlextInfraCodegenLazyInitPlanner,
     )
-    from flext_infra.codegen.models import m
+    from flext_infra import m
     from flext_infra.codegen.typings import t
 
 

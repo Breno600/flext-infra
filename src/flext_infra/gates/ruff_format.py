@@ -18,7 +18,7 @@ from flext_infra.utilities import u
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra.gates.protocols import p
+    from flext_infra import p
     from flext_infra.gates.typings import t
 
 

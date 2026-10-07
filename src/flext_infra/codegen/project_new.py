@@ -21,7 +21,7 @@ from flext_infra.utilities import u
 # accessor typing/config+settings symmetry fixed in templates in the same lane.
 
 if TYPE_CHECKING:
-    from flext_infra.codegen.protocols import p
+    from flext_infra import p
 
 
 class FlextInfraCodegenProjectNew(
