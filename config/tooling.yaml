@@ -99,6 +99,12 @@ Infra:
           # hand-wrapping them is overwritten by the next release render
           # (operator authorization 2026-10-03).
           - CHANGELOG.md
+          # Codegen-managed docs projections (make gen / docs generate): the
+          # renderer's output is canonical as emitted — prettier reformatting
+          # them fights the codegen fixed point and the conform gate flags
+          # the drift both ways (merge-admin 2026-10-07, root evidence).
+          - docs/docs_config.json
+          - docs/architecture/architecture_config.json
           - .mypy_cache/**
           - .pytest_cache/**
           - .ruff_cache/**
