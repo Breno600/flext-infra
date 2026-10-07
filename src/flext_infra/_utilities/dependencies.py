@@ -12,6 +12,7 @@ from importlib.resources import files
 from pathlib import Path
 from types import MappingProxyType
 
+from flext_cli import u
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
 from packaging.version import InvalidVersion, Version
@@ -40,8 +41,6 @@ class FlextInfraUtilitiesDependenciesFamily:
                 The resulting ``t.MappingKV[str, t.StrSequence]``.
 
             """
-            from flext_cli import u
-
             project = u.Cli.json_as_mapping(payload.get(c.Infra.PROJECT, None))
             optional = u.Cli.json_as_mapping(
                 project.get(c.Infra.OPTIONAL_DEPENDENCIES, None),
@@ -66,8 +65,6 @@ class FlextInfraUtilitiesDependenciesFamily:
                 The resulting ``t.MappingKV[str, t.StrSequence]``.
 
             """
-            from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
             normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
             if not normalized:
                 # Keep the empty mapping immutable and fully typed.
@@ -85,8 +82,6 @@ class FlextInfraUtilitiesDependenciesFamily:
                 The resulting ``t.StrSequence``.
 
             """
-            from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
             normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
             if not normalized:
                 return ()
@@ -139,8 +134,6 @@ class FlextInfraUtilitiesDependenciesFamily:
             """
             # FLEXT dependencies are first-party contracts even
             # when their uv source declaration is owned by an enclosing workspace.
-
-            from flext_infra._utilities import FlextInfraUtilitiesPyproject
 
             normalized = FlextInfraUtilitiesPyproject.validate_infra_payload(payload)
             return tuple(
@@ -405,9 +398,9 @@ class FlextInfraUtilitiesDependenciesFamily:
                 Strict names from the PEP 621 runtime dependency array.
 
             Raises:
-                TypeError: If pyproject payload must define a [project] mapping; or if
-                    [project].dependencies must be an array of requirement strings; or if
-                    [project].dependencies entries must be strings.
+                TypeError: If pyproject payload must define a [project] mapping; or
+                    if [project].dependencies must be an array of requirement
+                    strings; or if [project].dependencies entries must be strings.
                 ValueError: If [project].dependencies entries must not be blank.
 
             """
@@ -551,10 +544,6 @@ class FlextInfraUtilitiesDependenciesFamily:
                 The resulting ``t.SequenceOf[Path]``.
 
             """
-            from flext_cli import u
-
-            from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
             pyproject = project_root / c.PYPROJECT_FILENAME
             payload = u.Cli.toml_read_json(pyproject).unwrap()
             project_name = canonicalize_name(
@@ -620,9 +609,10 @@ class FlextInfraUtilitiesDependenciesFamily:
 
             A prerelease resolution is not a floor either: publishing ``>=X.Yb1``
             forces every downstream consumer onto that beta, which is how the fleet
-            ended up pinned to ``pydantic>=2.14.0b1`` from a single runtime resolution. The
-            empty string means "this resolution cannot serve as a public floor", and
-            every caller keeps the declared constraint instead of rewriting it.
+            ended up pinned to ``pydantic>=2.14.0b1`` from a single runtime
+            resolution. The empty string means "this resolution cannot serve as a
+            public floor", and every caller keeps the declared constraint instead
+            of rewriting it.
 
             Returns:
                 The resolved installed version as an open-ended dependency floor.
@@ -641,19 +631,18 @@ class FlextInfraUtilitiesDependenciesFamily:
 
         @classmethod
         def resolved_dependency_versions(cls) -> t.MappingKV[str, str]:
-            """Read registry versions from the provisioned runtime, not release provenance.
+            """Read registry versions from the runtime, not release provenance.
 
             Returns:
                 The resulting ``t.MappingKV[str, str]``.
 
             Raises:
                 TypeError: If Installed distribution has no Name metadata.
-                ValueError: If No registry packages found in the provisioned runtime; or if
-                    Invalid installed distribution name; or if Ambiguous installed version.
+                ValueError: If No registry packages found in the provisioned
+                    runtime; or if Invalid installed distribution name; or if
+                    Ambiguous installed version.
 
             """
-            from flext_cli import u
-
             versions: MutableMapping[str, str] = {}
             for distribution in u.installed_distributions():
                 if distribution.read_text("direct_url.json") is not None:
@@ -807,8 +796,6 @@ class FlextInfraUtilitiesDependenciesFamily:
                 Normalized dependency names from one TOML document.
 
             """
-            from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
             normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
             if not normalized:
                 return ()
@@ -953,9 +940,7 @@ class FlextInfraUtilitiesDependenciesFamily:
             return tuple(sorted(name for name in declared if name in workspace_names))
 
 
-# The flat module-level re-export: the package lazy map and the internal
-# importers
-# (`from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles`)
+# Flat module-level re-export: the package lazy map and the internal importers
 # resolve this name at module scope; the S6 namespace nesting moved the class
 # inside the family facade and the from-import contract requires the flat
 # binding to survive.
