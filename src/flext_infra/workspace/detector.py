@@ -864,23 +864,12 @@ class FlextInfraWorkspaceDetector(
         superproject_members = cls._superproject_workspace_members(
             identity.superproject_root,
         )
-        resolved_beads = cls._resolved_beads(
-            resolved_root,
-            cls._policy_overlay(manifest),
-        )
-        if resolved_beads.failure:
-            return r[m.Infra.WorkspaceSpec].from_failure(resolved_beads)
-        beads_result = cls._effective_beads(
-            resolved_root,
-            identity,
-            resolved_beads.value[0],
-        )
-        if beads_result.failure:
-            return r[m.Infra.WorkspaceSpec].from_failure(beads_result)
-        beads = beads_result.value
+        beads = cls._effective_workspace_beads(resolved_root, identity, manifest)
+        if beads.failure:
+            return r[m.Infra.WorkspaceSpec].from_failure(beads)
         refs = cls._resolved_workspace_refs(
             resolved_root,
-            beads,
+            beads.value,
             composed=identity.is_attached_submodule,
             allow_unprovisioned_members=allow_unprovisioned_members,
         )
@@ -889,13 +878,13 @@ class FlextInfraWorkspaceDetector(
         (repository_ref, gascity_enabled, declared_project), (subprojects, external) = (
             refs.value
         )
-        named = cls._workspace_name(beads, manifest)
+        named = cls._workspace_name(beads.value, manifest)
         if named.failure:
             return r[m.Infra.WorkspaceSpec].from_failure(named)
         return r[m.Infra.WorkspaceSpec].ok(
             m.Infra.WorkspaceSpec(
                 name=named.value,
-                beads=beads,
+                beads=beads.value,
                 gascity_enabled=gascity_enabled,
                 repository=repository_ref,
                 project=declared_project,
@@ -1071,6 +1060,31 @@ class FlextInfraWorkspaceDetector(
         return r[t.Pair[m.Infra.BeadsProjectSpec, bool]].ok((beads_result.value, True))
 
     @classmethod
+    def _effective_workspace_beads(
+        cls,
+        resolved_root: Path,
+        identity: m.Infra.GitIdentityReport,
+        manifest: m.Infra.WorkspaceManifestSpec | None,
+    ) -> p.Result[m.Infra.BeadsProjectSpec | None]:
+        """Resolve the effective Beads ledger from the declared policy overlay.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.BeadsProjectSpec | None]``.
+
+        """
+        resolved_beads = cls._resolved_beads(
+            resolved_root,
+            cls._policy_overlay(manifest),
+        )
+        if resolved_beads.failure:
+            return r[m.Infra.BeadsProjectSpec | None].from_failure(resolved_beads)
+        return cls._effective_beads(
+            resolved_root,
+            identity,
+            resolved_beads.value[0],
+        )
+
+    @classmethod
     def _effective_beads(
         cls,
         resolved_root: Path,
@@ -1156,7 +1170,7 @@ class FlextInfraWorkspaceDetector(
                 or "Git submodule is not a declared governed project: "
                 f"{member_root}",
             )
-        return result_type.ok((inherited_beads.value, loaded_member.value))
+        return result_type.ok(inherited_beads.value)
 
     @classmethod
     def _resolved_workspace_refs(
