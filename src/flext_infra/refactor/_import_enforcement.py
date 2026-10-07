@@ -56,38 +56,12 @@ class FlextInfraImportNormalization:
     re-bound at the point of use; no half-initialized ``= None`` fallback
     survives. A guarded name the module still uses at definition time falls
     back to a plain module-level import, never to a silent ``None``.
-    """
 
-    LETTER_ORDER: ClassVar[t.MappingKV[str, int]] = {
-        "c": 2,
-        "t": 3,
-        "p": 4,
-        "m": 5,
-        "u": 6,
-    }
-    LETTER_RENDER_ORDER: ClassVar[t.StrSequence] = ("c", "m", "p", "t", "u")
-    FAMILY_LETTER: ClassVar[t.MappingKV[str, str]] = {
-        "constants": "c",
-        "typings": "t",
-        "protocols": "p",
-        "models": "m",
-        "utilities": "u",
-    }
-    FAMILY_RANK: ClassVar[t.MappingKV[str, int]] = {
-        "constants": 2,
-        "typings": 3,
-        "protocols": 4,
-        "models": 5,
-        "utilities": 6,
-    }
-    FACADE_RANK: ClassVar[t.MappingKV[str, int]] = {"api": 10, "cli": 11}
-    MAX_PASSES: ClassVar[int] = 24
-    FAMILY_PATH_DEPTH: ClassVar[int] = 2
-    """Module-path depth of one family root (``<package>.<family>``)."""
-    LEAF_PATH_DEPTH: ClassVar[int] = 3
-    """Module-path depth of one family leaf (``<package>.<family>.<leaf>``)."""
-    DEFAULT_LAYER_RANK: ClassVar[int] = 7
-    """Layer rank of a module outside every declared layer."""
+    The layer-order ranking lives in the constants family (``c.Infra.*``):
+    ``LETTER_ORDER``, ``LETTER_RENDER_ORDER``, ``FAMILY_LETTER``,
+    ``FAMILY_RANK``, ``FACADE_RANK``, ``MAX_PASSES``, ``FAMILY_PATH_DEPTH``,
+    ``LEAF_PATH_DEPTH`` and ``DEFAULT_LAYER_RANK``.
+    """
 
     @classmethod
     def apply_files(cls, project_root: Path, files: t.SequenceOf[Path]) -> bool:
