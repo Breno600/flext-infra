@@ -265,28 +265,13 @@ class _SourceBindingCollector:
     ) -> bool:
         """Return whether every target is an external runtime table mutation.
 
-        Standard-library alias re-registration (CPython's ``collections``
-        publishes ``sys.modules['collections.abc'] = _collections_abc``) is
-        an external runtime table mutation, never a class rebinding — the
-        touched names stay unknown. The same holds for subscript stores
-        through any plain module-level table whose name is not a live class
-        binding (CPython's http.server ``_control_char_table[ord(...)] =
-        ...``): a subscript store cannot redefine a class through a
-        non-class root, so the mutation is a runtime table write regardless
-        of the enclosing conditionality.
+        The typed rule is owned by the canonical collector; this boundary
+        delegates so both classification surfaces stay one implementation.
 
         """
-        return all(
-            isinstance(target, ast.Subscript)
-            and isinstance(target.value, ast.Name)
-            and (
-                m.Infra.SubscriptRebind(
-                    root_name=target.value.id,
-                ).is_module_table_mutation
-                or bindings is None
-                or bindings.get(target.value.id) is None
-            )
-            for target in targets
+        return FlextInfraUtilitiesRopeSourceBindingCollector._module_table_mutation(
+            targets,
+            bindings,
         )
 
     @staticmethod

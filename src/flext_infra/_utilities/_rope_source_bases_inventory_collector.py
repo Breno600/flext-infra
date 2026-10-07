@@ -298,6 +298,33 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         )
 
     @staticmethod
+    def _subscript_rebind_target(
+        target: ast.expr,
+    ) -> m.Infra.SubscriptRebind | None:
+        """Return the typed rebind rule for one subscript target, or None.
+
+        The subscript's value expression is either a plain name
+        (``_control_char_table[...]``) or a rooted attribute chain
+        (``_sys.modules[...]``); any other shape is not a recognized
+        rebind target.
+
+        Returns:
+            The typed rule, or None when the shape is unsupported.
+
+        """
+        expression: ast.expr = target.value
+        attributes: list[str] = []
+        while isinstance(expression, ast.Attribute):
+            attributes.insert(0, expression.attr)
+            expression = expression.value
+        if not isinstance(expression, ast.Name):
+            return None
+        return m.Infra.SubscriptRebind(
+            root_name=expression.id,
+            attribute=".".join(attributes) if attributes else None,
+        )
+
+    @staticmethod
     def _module_table_mutation(
         targets: t.SequenceOf[ast.expr],
         bindings: t.MappingKV[str, m.Infra.SourceClassReference | None] | None = None,
@@ -317,13 +344,17 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         """
         return all(
             isinstance(target, ast.Subscript)
-            and isinstance(target.value, ast.Name)
             and (
-                m.Infra.SubscriptRebind(
-                    root_name=target.value.id,
-                ).is_module_table_mutation
+                rebind
+                := FlextInfraUtilitiesRopeSourceBindingCollector._subscript_rebind_target(
+                    target,
+                )
+            )
+            is not None
+            and (
+                rebind.is_module_table_mutation
                 or bindings is None
-                or bindings.get(target.value.id) is None
+                or bindings.get(rebind.root_name) is None
             )
             for target in targets
         )
