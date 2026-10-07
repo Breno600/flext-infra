@@ -10,19 +10,18 @@ import ast
 import importlib
 import importlib.util
 import sys
-from collections.abc import MutableMapping
-from importlib.util import resolve_name
 from pathlib import Path
 from typing import ClassVar
 
 from flext_infra import c, m, p, t
 from flext_infra._utilities import (
-    FlextInfraUtilitiesRopeAnalysisSourceScan,
     FlextInfraUtilitiesRopeCore,
     FlextInfraUtilitiesRopeRuntime,
     FlextInfraUtilitiesRopeSourceBasesAliases,
 )
-from flext_infra._utilities._rope_source_bases_inventory import _SourceBindingCollector
+from flext_infra._utilities._rope_source_bases_inventory import (
+    FlextInfraUtilitiesRopeSourceBasesInventory,
+)
 
 
 class _RuntimeBaseResolver:
@@ -187,57 +186,18 @@ class _RuntimeBaseResolver:
                 semantics.
 
         """
-        path, source = captured
-        resource = (
-            FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
-                self._project,
-                path,
-            )
-            if path.is_file()
-            else None
-        )
-        parsed = FlextInfraUtilitiesRopeRuntime.build_string_module(
-            self._project,
-            source,
-            resource=resource,
-        ).get_ast()
-        if not isinstance(parsed, ast.Module):
-            message = f"Rope returned a non-module AST for {path}"
-            raise TypeError(message)
-        package = module if path.name == "__init__.py" else module.rpartition(".")[0]
-        globals_: MutableMapping[str, m.Infra.SourceClassReference | None] = {}
-        collector = _SourceBindingCollector(
+        request = m.Infra.SourceBindingInventoryRequest(
+            project=self._project,
             module=module,
-            package=package,
-            definitions=self._definitions,
+            path=captured[0],
+            source=captured[1],
             required_line=required_line,
             allow_conditional=allow_conditional,
         )
-        collector.collect(parsed.body, globals_, globals_, "")
-        targets, references = (
-            FlextInfraUtilitiesRopeAnalysisSourceScan.lazy_import_mapping_source(
-                source,
-            )
+        return FlextInfraUtilitiesRopeSourceBasesInventory._inventory(
+            request,
+            self._definitions,
         )
-        if references and not module.startswith(("tests.", "tests.")):
-            # Test and benchmark modules build installer maps at runtime from
-            # the constants they exercise; the declared-mapping invariant
-            # gates the production lazy-init modules only.
-            message = (
-                f"Unresolved declared lazy import mapping in {module}: {references}"
-            )
-            raise ValueError(message)
-        for target, exports in targets:
-            destination = (
-                resolve_name(target, package) if target.startswith(".") else target
-            )
-            for name in exports:
-                globals_[name] = m.Infra.SourceClassReference(
-                    target=destination,
-                    attributes=(name,),
-                    qualified_base=f"{module}.{name}",
-                )
-        return globals_
 
     def _external_identity(self, value: t.Infra.RopePyObject) -> str:
         """Return the declaration identity of one external Rope object.

@@ -19,7 +19,6 @@ from flext_infra._utilities import (
     FlextInfraUtilitiesIterationWorkspace,
     FlextInfraUtilitiesProjectDiscovery,
     FlextInfraUtilitiesRopeCore,
-    FlextInfraUtilitiesRopeSourceBases,
 )
 
 
