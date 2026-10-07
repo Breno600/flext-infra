@@ -342,11 +342,12 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         of the enclosing conditionality (flext-2klp8).
 
         """
+        collector = FlextInfraUtilitiesRopeSourceBindingCollector
         return all(
             isinstance(target, ast.Subscript)
             and (
                 rebind
-                := FlextInfraUtilitiesRopeSourceBindingCollector._subscript_rebind_target(
+                := collector._subscript_rebind_target(
                     target,
                 )
             )

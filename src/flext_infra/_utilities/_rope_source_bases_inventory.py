@@ -235,7 +235,7 @@ class _SourceBindingCollector:
         """
         if self._provider_metadata_rebind(targets, bindings):
             return
-        if self._module_table_mutation(targets, bindings):
+        if self.module_table_mutation(targets, bindings):
             return
         if self._complete_class_namespace(node, targets, bindings, lexical):
             return
@@ -259,7 +259,7 @@ class _SourceBindingCollector:
         )
 
     @staticmethod
-    def _module_table_mutation(
+    def module_table_mutation(
         targets: t.SequenceOf[ast.expr],
         bindings: t.MappingKV[str, m.Infra.SourceClassReference | None] | None = None,
     ) -> bool:
@@ -269,7 +269,7 @@ class _SourceBindingCollector:
         delegates so both classification surfaces stay one implementation.
 
         """
-        return FlextInfraUtilitiesRopeSourceBindingCollector._module_table_mutation(
+        return FlextInfraUtilitiesRopeSourceBindingCollector.module_table_mutation(
             targets,
             bindings,
         )
