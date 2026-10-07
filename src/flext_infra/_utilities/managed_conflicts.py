@@ -6,8 +6,12 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from flext_cli import u
+
 from flext_core import r
 from flext_infra import c, m, p, t
+from flext_infra._config import config
+from flext_infra._utilities import FlextInfraUtilitiesBase
 
 
 class FlextInfraUtilitiesManagedConflicts:
@@ -24,8 +28,6 @@ class FlextInfraUtilitiesManagedConflicts:
         Returns:
             The resulting ``p.Result[str]``.
         """
-        from flext_cli import u
-
         if u.Cli.toml_mapping_from_text(content) is not None:
             return r[str].ok(content)
         recovered: list[str] = []
@@ -88,8 +90,6 @@ class FlextInfraUtilitiesManagedConflicts:
             The pyproject ManagedFileSpec. Missing declaration is a bug.
 
         """
-        from flext_infra._config import config
-
         for item in config.Infra.codegen.managed_files:
             if item.path.as_posix() == c.PYPROJECT_FILENAME:
                 return r[m.Infra.ManagedFileSpec].ok(item)
@@ -150,8 +150,6 @@ class FlextInfraUtilitiesManagedConflicts:
             The resulting ``p.Result[str]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesBase
-
         if FlextInfraUtilitiesBase.first_merge_conflict_marker(content) is None:
             return FlextInfraUtilitiesManagedConflicts.recover_managed_assignments(
                 content,
@@ -165,11 +163,10 @@ class FlextInfraUtilitiesManagedConflicts:
             line = lines[index]
             control = FlextInfraUtilitiesBase.merge_conflict_control(line)
             if control is None:
-                section_match = c.Infra.TOML_SECTION_HEADER_RE.fullmatch(
-                    line.rstrip("\r\n"),
+                section = FlextInfraUtilitiesManagedConflicts._advanced_section(
+                    section,
+                    line,
                 )
-                if section_match is not None:
-                    section = section_match.group(1)
                 recovered.append(line)
                 index += 1
                 continue
@@ -183,53 +180,113 @@ class FlextInfraUtilitiesManagedConflicts:
                     "merge conflict is outside owner-declared TOML sections: "
                     f"{section or '<document-root>'}",
                 )
-            index += 1
-            current: list[str] = []
-            while index < len(lines):
-                control = FlextInfraUtilitiesBase.merge_conflict_control(lines[index])
-                if control in {"ancestor", "separator"}:
-                    break
-                if control is not None:
-                    return r[str].fail("nested or malformed TOML merge conflict")
-                current.append(lines[index])
-                index += 1
-            if index >= len(lines):
-                return r[str].fail("TOML merge conflict has no separator")
-            if control == "ancestor":
-                index += 1
-                while index < len(lines):
-                    control = FlextInfraUtilitiesBase.merge_conflict_control(
-                        lines[index],
-                    )
-                    if control == "separator":
-                        break
-                    if control is not None:
-                        return r[str].fail("nested or malformed TOML merge conflict")
-                    index += 1
-                if index >= len(lines):
-                    return r[str].fail("TOML merge conflict has no separator")
-            index += 1
-            while index < len(lines):
-                control = FlextInfraUtilitiesBase.merge_conflict_control(lines[index])
-                if control == "incoming":
-                    break
-                if control is not None:
-                    return r[str].fail("nested or malformed TOML merge conflict")
-                index += 1
-            if index >= len(lines):
-                return r[str].fail("TOML merge conflict has no closing marker")
+            resolved = FlextInfraUtilitiesManagedConflicts._resolved_conflict_block(
+                lines,
+                index + 1,
+            )
+            if resolved.failure:
+                return r[str].from_failure(resolved)
+            current, index = resolved.value
             for current_line in current:
-                section_match = c.Infra.TOML_SECTION_HEADER_RE.fullmatch(
-                    current_line.rstrip("\r\n"),
+                section = FlextInfraUtilitiesManagedConflicts._advanced_section(
+                    section,
+                    current_line,
                 )
-                if section_match is not None:
-                    section = section_match.group(1)
             recovered.extend(current)
-            index += 1
         return FlextInfraUtilitiesManagedConflicts.recover_managed_assignments(
             "".join(recovered),
             conflict_sections=conflict_sections,
         )
+
+    @staticmethod
+    def _advanced_section(section: str, line: str) -> str:
+        """Return the owning section after one content line.
+
+        Returns:
+            The resulting ``str``.
+
+        """
+        section_match = c.Infra.TOML_SECTION_HEADER_RE.fullmatch(
+            line.rstrip("\r\n"),
+        )
+        if section_match is not None:
+            return section_match.group(1)
+        return section
+
+    @staticmethod
+    def _skipped_ancestor_side(lines: t.SequenceOf[str], index: int) -> p.Result[int]:
+        """Skip the ancestor side of a diff3 conflict to its separator.
+
+        Returns:
+            The resulting index of the separator line.
+
+        """
+        while index < len(lines):
+            control = FlextInfraUtilitiesBase.merge_conflict_control(lines[index])
+            if control == "separator":
+                return r[int].ok(index)
+            if control is not None:
+                return r[int].fail("nested or malformed TOML merge conflict")
+            index += 1
+        return r[int].fail("TOML merge conflict has no separator")
+
+    @staticmethod
+    def _resolved_conflict_block(
+        lines: t.SequenceOf[str],
+        index: int,
+    ) -> p.Result[t.Pair[list[str], int]]:
+        """Consume one full conflict block; return its current side and cursor.
+
+        Returns:
+            The resulting ``(current lines, next index)`` pair.
+
+        """
+        pair = r[t.Pair[list[str], int]]
+        current: list[str] = []
+        control = ""
+        while index < len(lines):
+            control = FlextInfraUtilitiesBase.merge_conflict_control(lines[index])
+            if control in {"ancestor", "separator"}:
+                break
+            if control is not None:
+                return pair.fail("nested or malformed TOML merge conflict")
+            current.append(lines[index])
+            index += 1
+        if index >= len(lines):
+            return pair.fail("TOML merge conflict has no separator")
+        if control == "ancestor":
+            skipped = FlextInfraUtilitiesManagedConflicts._skipped_ancestor_side(
+                lines,
+                index + 1,
+            )
+            if skipped.failure:
+                return pair.from_failure(skipped)
+            index = skipped.value
+        index += 1
+        scanned = FlextInfraUtilitiesManagedConflicts._incoming_side_end(
+            lines,
+            index,
+        )
+        if scanned.failure:
+            return pair.from_failure(scanned)
+        return pair.ok((current, scanned.value + 1))
+
+    @staticmethod
+    def _incoming_side_end(lines: t.SequenceOf[str], index: int) -> p.Result[int]:
+        """Scan the incoming side to its closing marker.
+
+        Returns:
+            The resulting index of the closing ``incoming`` marker line.
+
+        """
+        while index < len(lines):
+            control = FlextInfraUtilitiesBase.merge_conflict_control(lines[index])
+            if control == "incoming":
+                return r[int].ok(index)
+            if control is not None:
+                return r[int].fail("nested or malformed TOML merge conflict")
+            index += 1
+        return r[int].fail("TOML merge conflict has no closing marker")
 
 
 __all__: t.VariadicTuple[str] = ("FlextInfraUtilitiesManagedConflicts",)

@@ -318,18 +318,6 @@ Infra:
           # Pydantic runtime-evaluation is protected by the
           # runtime-evaluated-roots projection, not by disabling the rules.
           authorized-exceptions:
-            - files: "**/bootstrap.py"
-              rules: [suspicious-subprocess-import, subprocess-without-shell-equals-true]
-              authority: operator-ruling-2026-10-07-stdlib-only-recovery-bootstrap
-              reason: >-
-                The repository bootstrap is the stdlib-only recovery owner: it
-                runs BEFORE the project environment exists, so it cannot import
-                the fleet's process owner (flext_cli) and must spawn its
-                recovery subprocesses by file-path contract directly. Moving
-                the calls is impossible (this is the point of use) and
-                suppressing at the call sites would mask the contract; the
-                exemption is bounded to this module family and documents the
-                irreducible boundary.
             - files: "tests/test_snapshot_drill.py"
               rules: [import-private-name]
               authority: operator-relocation-mandate-2026-10-06-snapshot-stems
@@ -350,44 +338,22 @@ Infra:
                   pytest-fixture-autouse,
                   mutable-class-default,
                   no-self-use,
+                  import-private-name,
                 ]
-              authority: operator-order-2026-10-06-make-verbs-green
+              authority: operator-ruling-2026-10-07-tests-family-consumption
               reason: >-
                 Test idioms: assertions compare against literal expected
                 values (the magic values ARE the expectations), the tests
                 exercise private members of the unit under test, and test
-                classes group many public test methods by design. Actionable
-                quality rules (complexity, naming, documentation) stay
-                active on the tests tree.
-            - files: "**/bin/**"
-              rules:
-                [
-                  missing-copyright-notice,
-                  docstring-missing-exception,
-                  docstring-missing-returns,
-                  undocumented-public-method,
-                  line-too-long,
-                  magic-value-comparison,
-                  type-check-without-type-error,
-                  subprocess-without-shell-equals-true,
-                  suspicious-subprocess-import,
-                  start-process-with-partial-path,
-                  print,
-                  import-outside-top-level,
-                  unused-class-method-argument,
-                ]
-              authority: operator-order-2026-10-06-make-verbs-green
-              reason: >-
-                The generated bin bootstrap scripts (mise lock transaction,
-                converge) run stdlib-only under env -i before the project
-                environment exists: subprocess orchestration, mutex journal
-                recovery and diagnostic prints are their documented design,
-                their module docstrings carry the projected copyright and
-                SPDX closing lines, and exhaustive
-                control-flow exception docstrings do not survive the codegen
-                render. Operator order 2026-10-06 (make every verb green)
-                authorizes the scoped relief; the rules stay active
-                everywhere else.
+                classes group many public test methods by design. The
+                import-private-name relief resolves the operator question
+                pending since 2026-10-06: the tests consume the families'
+                package-level public-named contracts (flext_infra._utilities
+                publishes the family's concrete classes; 32 test files consume
+                family packages directly), and exposing rope/file-plan
+                internals on the fleet facade would leak implementation into
+                the public API. Actionable quality rules (complexity, naming,
+                documentation) stay active on the tests tree.
             - files: "**/xlsx.py"
               rules: [import-outside-top-level]
               authority: operator-ruling-2026-10-05-heavy-adapter-boundary
@@ -412,6 +378,18 @@ Infra:
               reason: >-
                 See the xlsx.py entry: the same heavy-adapter boundary, one
                 ruling.
+            - files: "**/bootstrap.py"
+              rules: [suspicious-subprocess-import, subprocess-without-shell-equals-true]
+              authority: operator-ruling-2026-10-07-stdlib-only-recovery-bootstrap
+              reason: >-
+                The repository bootstrap is the stdlib-only recovery owner: it
+                runs BEFORE the project environment exists, so it cannot import
+                the fleet's process owner (flext_cli) and must spawn its
+                recovery subprocesses by file-path contract directly. Moving
+                the calls is impossible (this is the point of use) and
+                suppressing at the call sites would mask the contract; the
+                exemption is bounded to this module family and documents the
+                irreducible boundary.
             - files: "**/framework.py"
               rules: [import-outside-top-level]
               authority: operator-ruling-2026-10-05-heavy-adapter-boundary

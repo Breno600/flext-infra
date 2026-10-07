@@ -185,9 +185,7 @@ class FlextInfraEnsurePackagingPhase:
         package_name: str,
         data: m.Infra.PackagedDataSelection,
         data_excludes: t.StrSequence,
-        root_modules: t.StrSequence,
-        root_packages: t.StrSequence,
-        repository_namespace_packages: t.StrSequence,
+        surfaces: t.Triple[t.StrSequence, t.StrSequence, t.StrSequence],
     ) -> m.Infra.DepsToml.PhaseConfig:
         """Build bounded distribution targets for one resolved package name.
 
@@ -195,6 +193,7 @@ class FlextInfraEnsurePackagingPhase:
             The resulting ``m.Infra.DepsToml.PhaseConfig``.
 
         """
+        root_modules, root_packages, repository_namespace_packages = surfaces
         package_path = f"{c.Infra.DEFAULT_SRC_DIR}/{package_name}"
         package_paths = (
             package_path,
@@ -428,9 +427,11 @@ class FlextInfraEnsurePackagingPhase:
                 package_name=package_name,
                 data=data_paths,
                 data_excludes=data_excludes,
-                root_modules=topology.root_modules,
-                root_packages=topology.root_packages,
-                repository_namespace_packages=topology.repository_namespace_packages,
+                surfaces=(
+                    topology.root_modules,
+                    topology.root_packages,
+                    topology.repository_namespace_packages,
+                ),
             ),
         )
 

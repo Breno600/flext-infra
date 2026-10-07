@@ -1,4 +1,4 @@
-{% from "docker_mise_bootstrap.j2" import docker_header, docker_bootstrap_proof with context -%}
+{% from "docker_proof_macros.j2" import docker_header, docker_bootstrap_proof with context -%}
 {{ docker_header("fedora.Dockerfile.j2", "Fedora") }}
 FROM fedora:41
 

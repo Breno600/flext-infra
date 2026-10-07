@@ -14,7 +14,10 @@ from typing import Annotated, Literal, Self
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._constants import FlextInfraConstantsCodegenProject
+from flext_infra._constants import (
+    FlextInfraConstantsCodegenProject,
+    FlextInfraConstantsSharedInfra,
+)
 from flext_infra._models import (
     FlextInfraConfigModelsContexts,
     FlextInfraConfigModelsContract,
@@ -93,31 +96,20 @@ class FlextInfraConfigModelsArtifact:
             m.Field(ge=1, description="Per-module code-LOC ceiling"),
         ]
 
-    class CodegenModesSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Filesystem modes the codegen pipeline emits (the mode SSOT)."""
+    class RetiredProjectionSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """One retired projection and the generated evidence that owns it."""
 
-        file_default: Annotated[
-            int,
+        path: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Repository-relative retired projection path"),
+        ]
+        evidence: Annotated[
+            t.NonEmptyStr,
             m.Field(
-                ge=0,
-                le=0o7777,
-                description="Rendered artifacts without a managed mode",
-            ),
-        ]
-        file_private: Annotated[
-            int,
-            m.Field(ge=0, le=0o7777, description="Engine-private lock and mutex files"),
-        ]
-        directory_private: Annotated[
-            int,
-            m.Field(ge=0, le=0o7777, description="Engine-only state and staging trees"),
-        ]
-        directory_generated: Annotated[
-            int,
-            m.Field(
-                ge=0,
-                le=0o7777,
-                description="Generated directory trees in consumers",
+                description=(
+                    "Literal bytes the generated file carries; removal requires "
+                    "the match so conform never deletes a hand-written file"
+                ),
             ),
         ]
 
@@ -126,11 +118,13 @@ class FlextInfraConfigModelsArtifact:
 
         version: Annotated[int, m.Field(ge=1, description="Config schema version")]
         retired_projections: Annotated[
-            t.VariadicTuple[str],
+            t.VariadicTuple[str | FlextInfraConfigModelsArtifact.RetiredProjectionSpec],
             m.Field(
                 description=(
                     "Repository-relative generated projections that no template "
-                    "renders any more; generation removes them from consumers"
+                    "renders any more; generation removes them from consumers. "
+                    "A plain string removes files carrying the generated marker; "
+                    "a mapping adds the exact evidence bytes required for removal"
                 ),
             ),
         ]
@@ -141,10 +135,6 @@ class FlextInfraConfigModelsArtifact:
         loc_cap: Annotated[
             FlextInfraConfigModelsArtifact.CodegenLocCapSpec,
             m.Field(description="Per-module code-LOC ceiling policy"),
-        ]
-        modes: Annotated[
-            FlextInfraConfigModelsArtifact.CodegenModesSpec,
-            m.Field(description="Filesystem modes the pipeline emits (the mode SSOT)"),
         ]
         toolchain: Annotated[
             FlextInfraConfigModelsContract.ToolchainSpec,
@@ -342,8 +332,6 @@ class FlextInfraConfigModelsArtifact:
                 The resulting
                     ``t.VariadicTuple[FlextInfraConfigModelsScaffold.ScaffoldGitignoreSectionSpec]``.
             """
-            from flext_infra._constants import FlextInfraConstantsSharedInfra
-
             scaffold_sections = self.scaffold.gitignore_sections
             # A declared section may already govern a derived artifact, in
             # either direction: a whitelist re-allows `.agents/` with `!`, so
@@ -445,8 +433,6 @@ class FlextInfraConfigModelsArtifact:
                     if GitHub artifacts must be full-managed.
 
             """
-            from flext_infra._constants import FlextInfraConstantsSharedInfra
-
             github_templates = tuple(
                 Path(entry.destination)
                 for entry in self.templates.entries
@@ -540,22 +526,6 @@ class FlextInfraConfigModelsArtifact:
             FlextInfraConstantsCodegenProject.CodegenConformMode,
             m.Field(description="Read-only check or atomic apply"),
         ] = FlextInfraConstantsCodegenProject.CodegenConformMode.CHECK
-
-    class CodegenPyprojectProjectDeps(FlextInfraConfigModelsContract.ConfigContract):
-        """The ``[project]`` slice the conform's git-peer refresh reads.
-
-        Only the declared dependency strings are modeled; every other
-        ``[project]`` key is ignored so one typed contract answers exactly
-        the question ``settle_repository`` asks — which dependencies move
-        by git declaration.
-        """
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore")
-
-        dependencies: Annotated[
-            t.VariadicTuple[str],
-            m.Field(description="Declared [project] dependency requirements"),
-        ] = ()
 
     class CodegenArtifactComposition(FlextInfraConfigModelsContract.ConfigContract):
         """Rendered artifact plus the exact source states used to compose it."""

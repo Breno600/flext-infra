@@ -40,7 +40,7 @@ class TestsFlextInfraCodegenMakeVerbs:
         project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
             profile,
-            package=True,
+            shape=u.Tests.MakeEnvironmentShape(package=True),
         )
         makefile = (project_root / "Makefile").read_text(encoding="utf-8")
         tm.that('$(UV) build --project "$(PROJECT_ROOT)"' in makefile, eq=True)
@@ -66,7 +66,7 @@ class TestsFlextInfraCodegenMakeVerbs:
         project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
             profile,
-            package=False,
+            shape=u.Tests.MakeEnvironmentShape(package=False),
         )
         makefile = (project_root / "Makefile").read_text(encoding="utf-8")
         tm.that('$(UV) build --project "$(PROJECT_ROOT)"' in makefile, eq=False)
@@ -187,8 +187,10 @@ class TestsFlextInfraCodegenMakeVerbs:
         project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
             profile,
-            extra_verbs=(
-                m.Infra.MakeVerbSpec(name="literal-help", description=description),
+            shape=u.Tests.MakeEnvironmentShape(
+                extra_verbs=(
+                    m.Infra.MakeVerbSpec(name="literal-help", description=description),
+                ),
             ),
         )
         process = tm.ok(
@@ -265,8 +267,10 @@ class TestsFlextInfraCodegenMakeVerbs:
         project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,
-            extra_verbs=extra_verbs,
-            script_dispatch=script_dispatch,
+            shape=u.Tests.MakeEnvironmentShape(
+                extra_verbs=extra_verbs,
+                script_dispatch=script_dispatch,
+            ),
         )
         (project_root / "scripts" / "sync").mkdir(parents=True)
         (project_root / "scripts" / "sync" / "all.sh").write_text(

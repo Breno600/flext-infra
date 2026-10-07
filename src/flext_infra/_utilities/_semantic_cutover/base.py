@@ -90,6 +90,45 @@ class FlextInfraUtilitiesSemanticCutoverBase(
         rule_id = c.Infra.SEMANTIC_CUTOVER_RULE_IDS.get(phase)
         selected = tuple(finding for finding in findings if finding.rule_id == rule_id)
         match phase:
+            case (
+                c.Infra.SemanticCutoverPhase.CLASS_NESTING
+                | c.Infra.SemanticCutoverPhase.COMPAT_ALIAS
+                | c.Infra.SemanticCutoverPhase.PRIVATE_IMPORT
+                | c.Infra.SemanticCutoverPhase.FACADE_BASE
+                | c.Infra.SemanticCutoverPhase.MODEL_FIELDS
+            ):
+                return cls._plan_selected_phase(
+                    phase,
+                    rope_workspace,
+                    sources,
+                    selected,
+                )
+            case (
+                c.Infra.SemanticCutoverPhase.SELF_FACADE_IMPORT
+                | c.Infra.SemanticCutoverPhase.DYNAMIC_ENVIRONMENT
+                | c.Infra.SemanticCutoverPhase.MODULE_END
+                | c.Infra.SemanticCutoverPhase.NOTICE_LAST
+            ):
+                return cls._plan_ordered_phase(phase, root, sources, selected)
+            case _:
+                assert_never(phase)
+
+    @classmethod
+    def _plan_selected_phase(
+        cls,
+        phase: c.Infra.SemanticCutoverPhase,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        sources: t.MappingKV[Path, str],
+        selected: t.SequenceOf[m.Infra.ModScanFinding],
+    ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
+        """Plan one finding-selected cutover phase.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        """
+        root = rope_workspace.repository_root
+        match phase:
             case c.Infra.SemanticCutoverPhase.CLASS_NESTING:
                 return cls._plan_class_nesting(rope_workspace, sources)
             case c.Infra.SemanticCutoverPhase.COMPAT_ALIAS:
@@ -100,6 +139,24 @@ class FlextInfraUtilitiesSemanticCutoverBase(
                 return cls._plan_facade_bases(root, sources, selected)
             case c.Infra.SemanticCutoverPhase.MODEL_FIELDS:
                 return cls._plan_model_fields(sources)
+            case _:
+                assert_never(phase)
+
+    @classmethod
+    def _plan_ordered_phase(
+        cls,
+        phase: c.Infra.SemanticCutoverPhase,
+        root: Path,
+        sources: t.MappingKV[Path, str],
+        selected: t.SequenceOf[m.Infra.ModScanFinding],
+    ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
+        """Plan one order-driven cutover phase.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        """
+        match phase:
             case c.Infra.SemanticCutoverPhase.SELF_FACADE_IMPORT:
                 return cls._plan_self_facade_imports(root, sources, selected)
             case c.Infra.SemanticCutoverPhase.DYNAMIC_ENVIRONMENT:

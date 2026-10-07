@@ -14,10 +14,7 @@ from flext_cli import m
 
 from flext_infra import t
 from flext_infra._constants import FlextInfraConstantsRelease
-from flext_infra._models import (
-    FlextInfraConfigModelsContexts,
-    FlextInfraConfigModelsContract,
-)
+from flext_infra._models import FlextInfraConfigModelsContract
 
 
 class FlextInfraConfigModelsRelease:
@@ -205,7 +202,3 @@ class FlextInfraConfigModelsRelease:
             t.VariadicTuple[str],
             m.Field(description="Ordered dependency groups synchronized by setup"),
         ]
-        editable_repositories: Annotated[
-            t.VariadicTuple[FlextInfraConfigModelsContexts.RepositoryRef],
-            m.Field(description="Local repositories installed by setup"),
-        ] = ()

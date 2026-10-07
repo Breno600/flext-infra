@@ -69,9 +69,11 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             "fixture-duplication",
-            workspace="duplication-workspace",
-            database="duplication-database",
-            issue_prefix="duplication-prefix",
+            beads=u.Tests.BeadsIdentity(
+                workspace="duplication-workspace",
+                database="duplication-database",
+                issue_prefix="duplication-prefix",
+            ),
         )
         package = root / "src" / "fixture_duplication"
         package.mkdir(parents=True, exist_ok=True)
@@ -165,9 +167,11 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
             u.Tests.WorktreeFixture.initialize_governed_project(
                 member,
                 name,
-                workspace="sibling-workspace",
-                database="sibling_workspace",
-                issue_prefix="sibling",
+                beads=u.Tests.BeadsIdentity(
+                    workspace="sibling-workspace",
+                    database="sibling_workspace",
+                    issue_prefix="sibling",
+                ),
             )
             package = member / "src" / name.replace("-", "_")
             package.mkdir(parents=True, exist_ok=True)

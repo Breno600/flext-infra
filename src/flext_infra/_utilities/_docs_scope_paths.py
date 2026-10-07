@@ -8,8 +8,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from flext_cli import u
+
 from flext_core.result import FlextResult as r
 from flext_infra import c, p, t
+from flext_infra._utilities import FlextInfraUtilitiesGit
 
 
 class FlextInfraUtilitiesDocsScopePathsMixin:
@@ -42,8 +45,6 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
             ValueError: If ``planned.failure``.
 
         """
-        from flext_cli import u
-
         planned = u.Cli.atomic_plan_directory_chain(path)
         if planned.failure:
             raise ValueError(planned.error or f"docs directory is unsafe: {path}")
@@ -60,8 +61,6 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
             ValueError: If ``state.failure``.
 
         """
-        from flext_cli import u
-
         state = u.Cli.atomic_read_binary_file_state(path, required=False)
         if state.failure:
             raise ValueError(state.error or f"docs file is unsafe: {path}")
@@ -101,15 +100,57 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
 
         from flext_core.result import FlextResult as r
         """
-        from flext_cli import u
-
-        from flext_infra._utilities import FlextInfraUtilitiesGit
-
         root = FlextInfraUtilitiesDocsScopePathsMixin.absolute_lexical(repository_root)
         if not FlextInfraUtilitiesDocsScopePathsMixin.physical_directory_exists(root):
             return r[t.VariadicTuple[Path]].fail(
                 f"docs repository root is missing: {root}",
             )
+        declared = (
+            FlextInfraUtilitiesDocsScopePathsMixin._attested_declared_submodule_paths(
+                root,
+            )
+        )
+        if declared.failure:
+            return r[t.VariadicTuple[Path]].from_failure(declared)
+        candidates_result = (
+            FlextInfraUtilitiesDocsScopePathsMixin._declared_root_candidates(
+                root,
+                declared.value,
+            )
+        )
+        if candidates_result.failure:
+            return r[t.VariadicTuple[Path]].from_failure(candidates_result)
+        candidates = list(candidates_result.value)
+        for candidate in extra_roots:
+            lexical = FlextInfraUtilitiesDocsScopePathsMixin.absolute_lexical(candidate)
+            if not lexical.is_relative_to(root):
+                return r[t.VariadicTuple[Path]].fail(
+                    f"docs source root escapes repository {root}: {lexical}",
+                )
+            candidates.append(lexical)
+        roots = [
+            candidate
+            for candidate in dict.fromkeys(candidates)
+            if FlextInfraUtilitiesDocsScopePathsMixin.physical_directory_exists(
+                candidate,
+            )
+        ]
+        return r[t.VariadicTuple[Path]].ok(tuple(roots))
+
+    @staticmethod
+    def _attested_declared_submodule_paths(
+        root: Path,
+    ) -> p.Result[t.VariadicTuple[Path]]:
+        """Read declared submodule paths under a stable manifest topology.
+
+        The ``.gitmodules`` bytes are read before and after the declaration
+        walk; a changed manifest fails the discovery instead of composing
+        candidates from a tree that moved underneath it.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[Path]]``.
+
+        """
         manifest_path = root / c.Infra.GITMODULES
         manifest_before = u.Cli.atomic_read_binary_file_state(
             manifest_path,
@@ -130,29 +171,28 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
             return r[t.VariadicTuple[Path]].fail(
                 f"docs repository topology changed during discovery: {manifest_path}",
             )
-        candidates = [root]
-        for declared_path in declared.value:
+        return r[t.VariadicTuple[Path]].ok(declared.value)
+
+    @staticmethod
+    def _declared_root_candidates(
+        root: Path,
+        declared_paths: t.SequenceOf[str],
+    ) -> p.Result[t.VariadicTuple[Path]]:
+        """Compose repository-root candidates from declared submodule paths.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[Path]]``.
+
+        """
+        candidates: list[Path] = [root]
+        for declared_path in declared_paths:
             selector = Path(declared_path)
             if selector.is_absolute() or ".." in selector.parts:
                 return r[t.VariadicTuple[Path]].fail(
                     f"invalid docs composed project path: {selector}",
                 )
             candidates.append(root / selector)
-        for candidate in extra_roots:
-            lexical = FlextInfraUtilitiesDocsScopePathsMixin.absolute_lexical(candidate)
-            if not lexical.is_relative_to(root):
-                return r[t.VariadicTuple[Path]].fail(
-                    f"docs source root escapes repository {root}: {lexical}",
-                )
-            candidates.append(lexical)
-        roots = [
-            candidate
-            for candidate in dict.fromkeys(candidates)
-            if FlextInfraUtilitiesDocsScopePathsMixin.physical_directory_exists(
-                candidate,
-            )
-        ]
-        return r[t.VariadicTuple[Path]].ok(tuple(roots))
+        return r[t.VariadicTuple[Path]].ok(tuple(candidates))
 
 
 __all__: list[str] = ["FlextInfraUtilitiesDocsScopePathsMixin"]

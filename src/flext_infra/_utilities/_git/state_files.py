@@ -10,8 +10,13 @@ import os
 import stat
 from pathlib import Path
 
+from flext_cli import u
+
 from flext_infra import m, t
-from flext_infra._utilities import FlextInfraUtilitiesGitStatePublicationMixin
+from flext_infra._utilities import (
+    FlextInfraUtilitiesGitStatePublicationMixin,
+    FlextInfraUtilitiesGitWorktreeIO,
+)
 
 
 class FlextInfraUtilitiesGitStateFilesMixin(
@@ -47,7 +52,6 @@ class FlextInfraUtilitiesGitStateFilesMixin(
         path: Path,
         owned: t.SequenceOf[Path],
     ) -> None:
-        from flext_cli import u
 
         manifest = u.Cli.atomic_inventory_physical_tree(root / path).unwrap()
         for entry in manifest.entries:
@@ -64,8 +68,6 @@ class FlextInfraUtilitiesGitStateFilesMixin(
             The resulting ``str``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
-
         with FlextInfraUtilitiesGitWorktreeIO.git_stdin(content) as stream:
             return cls._repo(root).git.hash_object("--stdin", istream=stream)
 
@@ -117,7 +119,6 @@ class FlextInfraUtilitiesGitStateFilesMixin(
         desired: m.Infra.GitWorktreeFileState | None,
         allowed: t.SequenceOf[m.Infra.GitWorktreeFileState | None],
     ) -> None:
-        from flext_cli import u
 
         destination = root / path
         if destination.is_symlink():
@@ -184,7 +185,6 @@ class FlextInfraUtilitiesGitStateFilesMixin(
 
     @staticmethod
     def _state_remove_empty_tree(path: Path) -> None:
-        from flext_cli import u
 
         manifest = u.Cli.atomic_inventory_physical_tree(path).unwrap()
         if any(entry.kind != "directory" for entry in manifest.entries):

@@ -1,4 +1,4 @@
-"""Strict isolated subprocess environment for Mise artifact generation.
+"""Atomic staging writes shared by generation phases.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -6,8 +6,6 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import os
-from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -21,13 +19,14 @@ if TYPE_CHECKING:
 
 
 class FlextInfraMiseArtifactsProcess:
-    """Strict isolated subprocess environment for Mise artifact generation."""
+    """Exact isolated-state writes through the canonical atomic owner."""
 
     @classmethod
-    def prepare_isolation(
+    def write_new(
         cls,
-        scratch: Path,
-        contract: m.Infra.MiseBootstrapEnvironmentSpec,
+        path: Path,
+        content: bytes,
+        mode: int,
     ) -> p.Result[bool]:
         """Create only invocation-local policy, home, and receipt paths.
 

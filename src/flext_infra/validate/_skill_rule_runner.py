@@ -62,8 +62,9 @@ class FlextInfraSkillRuleRunnerMixin:
             )
             violations.append(f"[{rule_id}] {count} {label}")
 
-    @staticmethod
+    @classmethod
     def _run_ast_grep_count(
+        cls,
         rule: t.MappingKV[str, t.JsonValue],
         skill_dir: Path,
         project_path: Path,
@@ -81,16 +82,7 @@ class FlextInfraSkillRuleRunnerMixin:
                 ast-grep exited with code.
 
         """
-        rule_file_raw = u.Cli.json_get_str_key(rule, c.Infra.RK_FILE)
-        if not rule_file_raw:
-            msg = "ast-grep rule must declare a non-empty file"
-            raise RuntimeError(msg)
-        rule_file = Path(rule_file_raw)
-        if not rule_file.is_absolute():
-            rule_file = (skill_dir / rule_file_raw).resolve()
-        if not rule_file.exists():
-            msg = f"ast-grep rule file does not exist: {rule_file}"
-            raise RuntimeError(msg)
+        rule_file = cls._rule_file_path(rule, skill_dir)
         cmd = [c.Infra.SG, c.Infra.SCAN, "--rule", str(rule_file), "--json=stream"]
         for pat in include_globs:
             cmd.extend(["--globs", pat])
@@ -112,13 +104,48 @@ class FlextInfraSkillRuleRunnerMixin:
                 f"ast-grep exited with code {result.outcome.raw_return_code}: {detail}"
             )
             raise RuntimeError(msg)
+        return cls._parsed_match_count(result.stdout or "")
+
+    @classmethod
+    def _rule_file_path(
+        cls,
+        rule: t.MappingKV[str, t.JsonValue],
+        skill_dir: Path,
+    ) -> Path:
+        """Resolve one ast-grep rule's declared rule file path.
+
+        Returns:
+            The resolved rule file path.
+
+        Raises:
+            RuntimeError: If ast-grep rule must declare a non-empty file; or if
+                ast-grep rule file does not exist.
+
+        """
+        rule_file_raw = u.Cli.json_get_str_key(rule, c.Infra.RK_FILE)
+        if not rule_file_raw:
+            msg = "ast-grep rule must declare a non-empty file"
+            raise RuntimeError(msg)
+        rule_file = Path(rule_file_raw)
+        if not rule_file.is_absolute():
+            rule_file = (skill_dir / rule_file_raw).resolve()
+        if not rule_file.exists():
+            msg = f"ast-grep rule file does not exist: {rule_file}"
+            raise RuntimeError(msg)
+        return rule_file
+
+    @staticmethod
+    def _parsed_match_count(stdout: str) -> int:
+        """Count the parseable JSON lines of ast-grep's stream output.
+
+        Returns:
+            The resulting ``int``.
+
+        """
         count = 0
-        for raw_line in (result.stdout or "").splitlines():
+        for raw_line in stdout.splitlines():
             line = raw_line.strip()
-            if not line:
-                continue
-            parsed_line_result = u.Cli.json_parse(line)
-            if parsed_line_result.success:
+            if line and u.Cli.json_parse(line).success:
                 count += 1
         return count
 

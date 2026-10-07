@@ -9,6 +9,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_infra import c, m, t, u
+from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
+from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 
 class FlextInfraEnsureRuffConfigPhase:
@@ -33,8 +36,6 @@ class FlextInfraEnsureRuffConfigPhase:
             ValueError: If ``paths.failure``.
 
         """
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
             return ()
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
@@ -62,8 +63,6 @@ class FlextInfraEnsureRuffConfigPhase:
             ValueError: If ``paths.failure``.
 
         """
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
             return frozenset()
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
@@ -85,8 +84,6 @@ class FlextInfraEnsureRuffConfigPhase:
             The resulting ``m.Infra.DepsToml.PhaseConfig``.
 
         """
-        from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
-
         ruff_cfg = self._tool_config.tools.ruff
         workspace_exclusions = (
             self._workspace_exclusion_globs(path.parent)
@@ -298,8 +295,6 @@ class FlextInfraEnsureRuffConfigPhase:
         """
         # One fleet exemption map, declared with its authority at the tooling
         # owner, reaches every project unchanged.
-        from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
-
         effective_ignores = self._tool_config.tools.ruff.lint.per_file_ignores
         current_ignores = u.Cli.toml_mapping_path(
             payload,

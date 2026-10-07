@@ -13,6 +13,13 @@ from functools import lru_cache
 from pathlib import Path
 
 from flext_infra import c, m, t
+from flext_infra._config import config
+from flext_infra._utilities import (
+    FlextInfraUtilitiesIterationWorkspace,
+    FlextInfraUtilitiesProjectDiscovery,
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeSourceBases,
+)
 
 
 class FlextInfraUtilitiesRopeAnalysisWorkspace:
@@ -26,8 +33,6 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             The resulting ``frozenset[str]``.
 
         """
-        from flext_infra._config import config
-
         ignored = frozenset[str](config.Infra.codegen.source_scan_ignored)
         return frozenset[str]((*c.Infra.ITERATION_EXCLUDED_PARTS, *ignored))
 
@@ -193,11 +198,6 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             The declared roots and the derived bases, by qualified name.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesRopeCore,
-            FlextInfraUtilitiesRopeSourceBases,
-        )
-
         root = project_root.resolve()
         sources = {
             cls.module_name_for_file(path, project_root=root): (path, source)
@@ -270,8 +270,6 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             Each source by resolved path.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesIterationWorkspace
-
         sources: MutableMapping[Path, str] = {}
         if root.is_dir():
             files = FlextInfraUtilitiesIterationWorkspace.iter_python_files(
@@ -313,8 +311,6 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             Every declared governed project root, resolved.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
-
         return frozenset(
             FlextInfraUtilitiesProjectDiscovery.discover_rope_project_roots(
                 repository_root,
@@ -448,8 +444,6 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             Indexed sources, declared wrapper modules, and typing stubs.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeCore
-
         governed_roots = cls._governed_roots(resolved_root)
         python_paths = {
             path.resolve()
@@ -503,8 +497,6 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
                 MutableMapping[str, Path], MutableMapping[str, str], set[Path]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
-
         modules_by_path: MutableMapping[str, m.Infra.RopeModuleIndexEntry] = {}
         modules_by_dir: MutableMapping[Path, list[m.Infra.RopeModuleIndexEntry]] = {}
         package_dir_by_name: MutableMapping[str, Path] = {}
@@ -582,6 +574,103 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             package_dirs,
         )
 
+    @staticmethod
+    def _package_family_maps(
+        sorted_package_dirs: t.VariadicTuple[Path],
+    ) -> t.Pair[
+        MutableMapping[Path, list[Path]],
+        MutableMapping[Path, list[Path]],
+    ]:
+        """Map every package dir to its direct-child and descendant package dirs.
+
+        Returns:
+            The resulting ``(direct children, descendants)`` map pair.
+
+        """
+        package_dir_set = frozenset(sorted_package_dirs)
+        direct_children_by_dir: MutableMapping[Path, list[Path]] = {
+            package_dir: [] for package_dir in sorted_package_dirs
+        }
+        descendants_by_dir: MutableMapping[Path, list[Path]] = {
+            package_dir: [] for package_dir in sorted_package_dirs
+        }
+        for package_dir in sorted_package_dirs:
+            parent_dir = package_dir.parent
+            if parent_dir in package_dir_set:
+                direct_children_by_dir[parent_dir].append(package_dir)
+            for ancestor_dir in package_dir.parents:
+                if ancestor_dir == package_dir:
+                    continue
+                if ancestor_dir in package_dir_set:
+                    descendants_by_dir[ancestor_dir].append(package_dir)
+        return direct_children_by_dir, descendants_by_dir
+
+    @classmethod
+    def _package_identity(
+        cls,
+        package_dir: Path,
+        modules_by_dir: t.MappingKV[Path, list[m.Infra.RopeModuleIndexEntry]],
+        modules_by_path: t.MappingKV[str, m.Infra.RopeModuleIndexEntry],
+    ) -> t.Quad[
+        t.VariadicTuple[m.Infra.RopeModuleIndexEntry],
+        Path,
+        Path | None,
+        str,
+    ]:
+        """Resolve one package's modules, init path, project root, and name.
+
+        Returns:
+            The resulting ``(sorted modules, init path, project root, name)``.
+
+        """
+        dir_modules = tuple(
+            sorted(
+                modules_by_dir.get(package_dir, ()),
+                key=operator.attrgetter("file_path.name"),
+            ),
+        )
+        init_path = (package_dir / c.Infra.INIT_PY).resolve()
+        init_entry = modules_by_path.get(str(init_path))
+        project_root = (
+            init_entry.project_root
+            if init_entry is not None
+            else next(
+                (
+                    entry.project_root
+                    for entry in dir_modules
+                    if entry.project_root is not None
+                ),
+                None,
+            )
+        )
+        package_name = (
+            cls.package_name_for_dir(package_dir, project_root=project_root)
+            if project_root is not None
+            else init_entry.package_name
+            if init_entry is not None
+            else ""
+        )
+        return dir_modules, init_path, project_root, package_name
+
+    @staticmethod
+    def _register_package_identity(
+        package_dir: Path,
+        project_root: Path | None,
+        package_name: str,
+        package_dir_by_name: MutableMapping[str, Path],
+        project_package_by_root: MutableMapping[str, str],
+    ) -> None:
+        """Record one package's name in the index maps when it is new."""
+        if package_name and package_name not in package_dir_by_name:
+            package_dir_by_name[package_name] = package_dir
+        if (
+            project_root is not None
+            and "." not in package_name
+            and package_dir.parent.name == c.Infra.DEFAULT_SRC_DIR
+            and str(project_root) not in project_package_by_root
+        ):
+            project_package_by_root[str(project_root)] = package_name
+
     @classmethod
     def index_rope_workspace(
         cls,
@@ -604,70 +693,32 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             package_dirs,
         ) = cls._collect_modules(rope_project, resolved_root)
         sorted_package_dirs = tuple(sorted(package_dirs))
-        package_dir_set = frozenset(sorted_package_dirs)
-        direct_children_by_dir: MutableMapping[Path, list[Path]] = {
-            package_dir: [] for package_dir in sorted_package_dirs
-        }
-        descendants_by_dir: MutableMapping[Path, list[Path]] = {
-            package_dir: [] for package_dir in sorted_package_dirs
-        }
-        for package_dir in sorted_package_dirs:
-            parent_dir = package_dir.parent
-            if parent_dir in package_dir_set:
-                direct_children_by_dir[parent_dir].append(package_dir)
-            for ancestor_dir in package_dir.parents:
-                if ancestor_dir == package_dir:
-                    continue
-                if ancestor_dir in package_dir_set:
-                    descendants_by_dir[ancestor_dir].append(package_dir)
+        direct_children_by_dir, descendants_by_dir = cls._package_family_maps(
+            sorted_package_dirs,
+        )
         packages_by_dir: MutableMapping[str, m.Infra.RopePackageIndexEntry] = {}
         for package_dir in sorted_package_dirs:
-            dir_modules = tuple(
-                sorted(
-                    modules_by_dir.get(package_dir, ()),
-                    key=operator.attrgetter("file_path.name"),
-                ),
+            (
+                dir_modules,
+                init_path,
+                project_root,
+                package_name,
+            ) = cls._package_identity(package_dir, modules_by_dir, modules_by_path)
+            cls._register_package_identity(
+                package_dir,
+                project_root,
+                package_name,
+                package_dir_by_name,
+                project_package_by_root,
             )
-            init_path = (package_dir / c.Infra.INIT_PY).resolve()
-            init_entry = modules_by_path.get(str(init_path))
-            project_root = (
-                init_entry.project_root
-                if init_entry is not None
-                else next(
-                    (
-                        entry.project_root
-                        for entry in dir_modules
-                        if entry.project_root is not None
-                    ),
-                    None,
-                )
-            )
-            package_name = (
-                cls.package_name_for_dir(package_dir, project_root=project_root)
-                if project_root is not None
-                else init_entry.package_name
-                if init_entry is not None
-                else ""
-            )
-            if package_name and package_name not in package_dir_by_name:
-                package_dir_by_name[package_name] = package_dir
-            if (
-                project_root is not None
-                and "." not in package_name
-                and package_dir.parent.name == c.Infra.DEFAULT_SRC_DIR
-                and str(project_root) not in project_package_by_root
-            ):
-                project_package_by_root[str(project_root)] = package_name
-            direct_child_dirs = tuple(direct_children_by_dir.get(package_dir, ()))
-            descendant_child_dirs = tuple(descendants_by_dir.get(package_dir, ()))
             packages_by_dir[str(package_dir)] = m.Infra.RopePackageIndexEntry(
                 package_dir=package_dir,
                 init_path=init_path,
                 package_name=package_name,
                 project_root=project_root,
                 modules=dir_modules,
-                direct_child_dirs=direct_child_dirs,
-                descendant_child_dirs=descendant_child_dirs,
+                direct_child_dirs=tuple(direct_children_by_dir.get(package_dir, ())),
+                descendant_child_dirs=tuple(descendants_by_dir.get(package_dir, ())),
             )
         return m.Infra.RopeWorkspaceIndex(
             repository_root=resolved_root,

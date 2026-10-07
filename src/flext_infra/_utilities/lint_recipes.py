@@ -24,6 +24,8 @@ from operator import itemgetter
 from pathlib import Path
 
 from flext_infra import c, m, t
+from flext_infra._config import config
+from flext_infra._utilities import FlextInfraUtilitiesPyproject
 
 
 class FlextInfraUtilitiesLintRecipes:
@@ -83,9 +85,6 @@ class FlextInfraUtilitiesLintRecipes:
                 identity.
 
         """
-        from flext_infra._config import config
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
         for candidate in (pkg_dir, *pkg_dir.parents):
             if not (candidate / c.PYPROJECT_FILENAME).is_file():
                 continue
@@ -142,19 +141,48 @@ class FlextInfraUtilitiesLintRecipes:
 
         ``path`` names the module in every refusal and locates the project
         whose declared author signs the notice; the notice is derived only
-        when a copyright finding asks for it. A module without a docstring
-        receives one, summarized from its name, to carry the notice.
+        when a copyright finding asks for it.
 
         Returns:
             The repaired module source.
 
-        Raises:
-            ValueError: If an issue's code has no recipe or its recipe cannot
-                be placed in the module.
-
         """
         tree = ast.parse(source)
         lines = source.splitlines(keepends=True)
+        sections, summaries, wants_notice = cls._collected_sections(
+            tree,
+            issues,
+            path,
+            recipes,
+        )
+        edits = list(cls._static_method_plan(source, tree, issues, path, recipes))
+        edits.extend(cls._docstring_section_edits(lines, sections, path))
+        edits.extend(cls._summary_edits(lines, summaries))
+        if wants_notice:
+            edits.append(cls._notice_edit(lines, tree, path))
+        return cls._applied_edits(source, edits)
+
+    @classmethod
+    def _collected_sections(
+        cls,
+        tree: ast.Module,
+        issues: t.SequenceOf[m.Infra.Issue],
+        path: Path,
+        recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
+    ) -> t.Triple[
+        MutableMapping[
+            ast.FunctionDef | ast.AsyncFunctionDef,
+            MutableMapping[str, list[str]],
+        ],
+        MutableMapping[ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef, str],
+        bool,
+    ]:
+        """Dispatch every issue's recipe into section, summary, or notice plans.
+
+        Returns:
+            The resulting ``(sections, summaries, wants notice)`` triple.
+
+        """
         sections: MutableMapping[
             ast.FunctionDef | ast.AsyncFunctionDef,
             MutableMapping[str, list[str]],
@@ -189,7 +217,28 @@ class FlextInfraUtilitiesLintRecipes:
                 case c.Infra.LintFixRecipe.STATIC_METHOD:
                     # Planned per method below, after duplicates collapse.
                     continue
-        edits = list(cls._static_method_plan(source, tree, issues, path, recipes))
+        return sections, summaries, wants_notice
+
+    @classmethod
+    def _docstring_section_edits(
+        cls,
+        lines: t.SequenceOf[str],
+        sections: t.MappingKV[
+            ast.FunctionDef | ast.AsyncFunctionDef,
+            t.MappingKV[str, list[str]],
+        ],
+        path: Path,
+    ) -> list[t.Triple[int, int, str]]:
+        """Build the section-insertion edits for every documented function.
+
+        Returns:
+            The resulting ``list[t.Triple[int, int, str]]``.
+
+        Raises:
+            ValueError: If a function at line has no docstring.
+
+        """
+        edits: list[t.Triple[int, int, str]] = []
         for function, wanted in sections.items():
             docstring = cls._docstring_expr(function)
             if docstring is None:
@@ -201,6 +250,24 @@ class FlextInfraUtilitiesLintRecipes:
                 end,
                 cls._with_sections(raw, " " * docstring.col_offset, wanted),
             ))
+        return edits
+
+    @classmethod
+    def _summary_edits(
+        cls,
+        lines: t.SequenceOf[str],
+        summaries: t.MappingKV[
+            ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+            str,
+        ],
+    ) -> list[t.Triple[int, int, str]]:
+        """Build the synthetic-docstring edits for undocumented definitions.
+
+        Returns:
+            The resulting ``list[t.Triple[int, int, str]]``.
+
+        """
+        edits: list[t.Triple[int, int, str]] = []
         for definition, text in summaries.items():
             first = definition.body[0]
             decorators: list[ast.expr] = (
@@ -214,21 +281,45 @@ class FlextInfraUtilitiesLintRecipes:
             first_line = min((first.lineno, *(item.lineno for item in decorators)))
             offset = cls._offset(lines, first_line, 0)
             edits.append((offset, offset, f'{" " * first.col_offset}"""{text}"""\n'))
-        if wants_notice:
-            notice = cls.copyright_notice(path.parent, module=path)
-            module_docstring = cls._docstring_expr(tree)
-            if module_docstring is None:
-                offset = len(lines[0]) if lines and lines[0].startswith("#!") else 0
-                stem = path.parent.name if path.stem == "__init__" else path.stem
-                summary = stem.strip("_").replace("_", " ").capitalize()
-                edits.append((
-                    offset,
-                    offset,
-                    f'"""{summary} module.\n\n{notice}\n"""\n\n',
-                ))
-            else:
-                start, end, raw = cls._literal(lines, module_docstring, path)
-                edits.append((start, end, cls._with_notice(raw, notice)))
+        return edits
+
+    @classmethod
+    def _notice_edit(
+        cls,
+        lines: t.SequenceOf[str],
+        tree: ast.Module,
+        path: Path,
+    ) -> t.Triple[int, int, str]:
+        """Build the copyright-notice edit for the module docstring.
+
+        A module without a docstring receives one, summarized from its name,
+        to carry the notice.
+
+        Returns:
+            The resulting ``(start, end, text)`` edit triple.
+
+        """
+        notice = cls.copyright_notice(path.parent, module=path)
+        module_docstring = cls._docstring_expr(tree)
+        if module_docstring is None:
+            offset = len(lines[0]) if lines and lines[0].startswith("#!") else 0
+            stem = path.parent.name if path.stem == "__init__" else path.stem
+            summary = stem.strip("_").replace("_", " ").capitalize()
+            return (offset, offset, f'"""{summary} module.\n\n{notice}\n"""\n\n')
+        start, end, raw = cls._literal(lines, module_docstring, path)
+        return (start, end, cls._with_notice(raw, notice))
+
+    @staticmethod
+    def _applied_edits(
+        source: str,
+        edits: t.SequenceOf[t.Triple[int, int, str]],
+    ) -> str:
+        """Apply every edit back-to-front over the source text.
+
+        Returns:
+            The repaired module source.
+
+        """
         rewritten = source
         for start, end, text in sorted(
             edits,
@@ -926,8 +1017,6 @@ class FlextInfraUtilitiesLintRecipes:
             The docstring literal with the wanted sections appended.
 
         """
-        from flext_infra._config import config
-
         width = config.Infra.tooling.tools.ruff.line_length
         prefix, inner = cls._split_literal(raw)
         inner = inner.rstrip()
@@ -967,6 +1056,33 @@ class FlextInfraUtilitiesLintRecipes:
             inner = f"{inner}\n\n" + "\n\n".join(appended)
         return f'{prefix}"""{inner}\n{indent}"""'
 
+    @staticmethod
+    def _notice_span(inner: str, path: Path) -> t.Triple[int, int, str]:
+        """Locate the notice paragraph span and the text that follows it.
+
+        The notice paragraph starts at the line the declared notice pattern
+        (``tools.ruff.lint.copyright-notice-rgx``) matches and runs to the
+        next blank line.
+
+        Returns:
+            The resulting ``(first, last, after)`` notice span.
+
+        Raises:
+            ValueError: If module docstring carries no copyright notice.
+
+        """
+        found = re.search(
+            config.Infra.tooling.tools.ruff.lint.copyright_notice_rgx,
+            inner,
+        )
+        if found is None:
+            msg = f"{path}: module docstring carries no copyright notice"
+            raise ValueError(msg)
+        first = inner.rfind("\n", 0, found.start()) + 1
+        blank = inner.find("\n\n", found.end())
+        last = len(inner) if blank < 0 else blank
+        return first, last, inner[last:].strip("\n")
+
     @classmethod
     def notice_last(cls, source: str, *, path: Path) -> str:
         """Return ``source`` with its docstring notice paragraph as the last text.
@@ -985,8 +1101,6 @@ class FlextInfraUtilitiesLintRecipes:
                 carries no notice.
 
         """
-        from flext_infra._config import config
-
         docstring = cls._docstring_expr(ast.parse(source, filename=str(path)))
         if docstring is None:
             msg = f"{path}: module has no docstring carrying a notice"
@@ -997,17 +1111,7 @@ class FlextInfraUtilitiesLintRecipes:
             path,
         )
         prefix, inner = cls._split_literal(raw)
-        found = re.search(
-            config.Infra.tooling.tools.ruff.lint.copyright_notice_rgx,
-            inner,
-        )
-        if found is None:
-            msg = f"{path}: module docstring carries no copyright notice"
-            raise ValueError(msg)
-        first = inner.rfind("\n", 0, found.start()) + 1
-        blank = inner.find("\n\n", found.end())
-        last = len(inner) if blank < 0 else blank
-        after = inner[last:].strip("\n")
+        first, last, after = cls._notice_span(inner, path)
         if not after.strip():
             return source
         before = inner[:first].rstrip("\n")

@@ -552,8 +552,10 @@ class TestsFlextInfraCodegenCiMatrix:
             ci_trigger_branches=u.CodegenTestSupport.Ci.ci_trigger_branches(
                 "develop",
             ),
-            has_devcontainer=True,
-            cooldown_excluded_dependencies=excluded,
+            overrides=u.CodegenTestSupport.Ci.WorkflowRenderOverrides(
+                has_devcontainer=True,
+                cooldown_excluded_dependencies=excluded,
+            ),
         )
         days = config.Infra.codegen.toolchain.dependency_cooldown_days
         template = (

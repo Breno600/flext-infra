@@ -214,21 +214,9 @@ class FlextInfraCodegenLayoutPlanMixin:
 
         """
         name = entry.name
-        if entry.is_dir() and name in spec.move_docs_dirs:
-            return self._finding("move", name, f"{spec.docs_target}/{name}")
-        if entry.is_file() and name in spec.move_docs_files:
-            target = f"{spec.docs_target}/{name}"
-            if (entry.parent / target).exists():
-                return self._finding(
-                    "archive",
-                    name,
-                    f"{spec.archive_root}/{project_name}/{name}",
-                    message=(
-                        f"archive {name} -> {spec.archive_root}/{project_name}/{name} "
-                        f"(canonical docs/{name} kept)"
-                    ),
-                )
-            return self._finding("move", name, target)
+        docs_finding = self._classify_docs_entry(spec, project_name, entry)
+        if docs_finding is not None:
+            return docs_finding
         if entry.is_file() and name in spec.move_example_files:
             return self._finding("move", name, f"{spec.examples_target}/{name}")
         if entry.is_file() and any(
@@ -246,6 +234,36 @@ class FlextInfraCodegenLayoutPlanMixin:
                 f"{spec.archive_root}/{project_name}/{name}",
             )
         return self._finding("review", name)
+
+    def _classify_docs_entry(
+        self,
+        spec: m.Infra.LayoutSpec,
+        project_name: str,
+        entry: Path,
+    ) -> m.Infra.LayoutFinding | None:
+        """Classify a docs move or an archived docs conflict, else None.
+
+        Returns:
+            The resulting ``m.Infra.LayoutFinding | None``.
+
+        """
+        name = entry.name
+        if entry.is_dir() and name in spec.move_docs_dirs:
+            return self._finding("move", name, f"{spec.docs_target}/{name}")
+        if entry.is_file() and name in spec.move_docs_files:
+            target = f"{spec.docs_target}/{name}"
+            if (entry.parent / target).exists():
+                return self._finding(
+                    "archive",
+                    name,
+                    f"{spec.archive_root}/{project_name}/{name}",
+                    message=(
+                        f"archive {name} -> {spec.archive_root}/{project_name}/{name} "
+                        f"(canonical docs/{name} kept)"
+                    ),
+                )
+            return self._finding("move", name, target)
+        return None
 
     def _override_move_findings(
         self,

@@ -12,19 +12,263 @@ from importlib.resources import files
 from pathlib import Path
 from types import MappingProxyType
 
+from flext_cli import u
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
 from packaging.version import InvalidVersion, Version
 
 from flext_core import r
 from flext_infra import c, m, p, t
+from flext_infra._utilities import FlextInfraUtilitiesPyproject
 
 # Why: dependency_waves subscripts r[t.SequenceOf[t.StrSequence]] at runtime, so
 # the typings facade cannot be TYPE_CHECKING-only here. c -> t is a forward
 # facade import and stays cycle-free.
 
 
-class FlextInfraUtilitiesDependencies:
+class FlextInfraUtilitiesDependenciesProfiles:
+    """Dev-group and dependency-profile surfaces of the dependency facade."""
+
+    @staticmethod
+    def project_dev_groups_from_payload(
+        payload: t.JsonMapping,
+    ) -> t.MappingKV[str, t.StrSequence]:
+        """Collect optional dependency groups from one normalized payload.
+
+        Returns:
+            The resulting ``t.MappingKV[str, t.StrSequence]``.
+
+        """
+        project = u.Cli.json_as_mapping(payload.get(c.Infra.PROJECT, None))
+        optional = u.Cli.json_as_mapping(
+            project.get(c.Infra.OPTIONAL_DEPENDENCIES, None),
+        )
+        groups = {
+            str(group): tuple(
+                str(item) for item in u.Cli.json_as_sequence(optional.get(group, None))
+            )
+            for group in c.Infra.CANONICAL_DEV_DEPENDENCY_GROUPS
+        }
+        return {group: values for group, values in groups.items() if values}
+
+    @classmethod
+    def project_dev_groups(
+        cls,
+        document: t.Cli.TomlDocument,
+    ) -> t.MappingKV[str, t.StrSequence]:
+        """Collect optional dependency groups from one TOML document.
+
+        Returns:
+            The resulting ``t.MappingKV[str, t.StrSequence]``.
+
+        """
+        normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
+        if not normalized:
+            # Keep the empty mapping immutable and fully typed.
+            return MappingProxyType(dict[str, t.VariadicTuple[str]]())
+        return cls.project_dev_groups_from_payload(normalized)
+
+    @classmethod
+    def canonical_dev_dependencies(cls, document: t.Cli.TomlDocument) -> t.StrSequence:
+        """Merge all canonical dev dependency groups from one TOML document.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
+        normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
+        if not normalized:
+            return ()
+        return cls.canonical_dev_dependencies_from_payload(normalized)
+
+    @classmethod
+    def canonical_dev_dependencies_from_payload(
+        cls,
+        payload: t.JsonMapping,
+    ) -> t.StrSequence:
+        """Merge all canonical dev dependency groups from one normalized payload.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
+        groups = cls.project_dev_groups_from_payload(payload)
+        return cls.dedupe_specs([
+            requirement
+            for group in c.Infra.CANONICAL_DEV_DEPENDENCY_GROUPS
+            for requirement in groups.get(str(group), ())
+        ])
+
+    @classmethod
+    def flext_dependency_namespaces(cls, document: t.Cli.TomlDocument) -> t.StrSequence:
+        """Extract declared FLEXT dependency namespaces from one TOML document.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
+        normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
+        if not normalized:
+            return ()
+        return cls.flext_dependency_namespaces_from_payload(normalized)
+
+    @classmethod
+    def flext_dependency_namespaces_from_payload(
+        cls,
+        payload: t.MappingKV[str, t.JsonValue],
+    ) -> t.StrSequence:
+        """Extract every declared ``flext-*`` dependency as a Python namespace.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
+        # FLEXT dependencies are first-party contracts even
+        # when their uv source declaration is owned by an enclosing workspace.
+
+        normalized = FlextInfraUtilitiesPyproject.validate_infra_payload(payload)
+        return tuple(
+            sorted(
+                name.replace("-", "_")
+                for name in cls.declared_dependency_names_from_payload(normalized)
+                if name == "flext" or name.startswith(c.Infra.PKG_PREFIX_HYPHEN)
+            ),
+        )
+
+    @staticmethod
+    def dependency_profile_upstreams(
+        profiles: t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec],
+        *,
+        distribution: str,
+        runtime_names: t.Infra.StrSet,
+    ) -> t.StrSequence:
+        """Return the most specific shared profile upstreams one project selects.
+
+        The root of the dependency tree declares no upstream distribution: a
+        distribution that IS a profile's upstream owns that profile. Otherwise
+        every shared profile whose upstream is a runtime dependency is a
+        candidate, and a candidate implied by another candidate's runtime is
+        dropped. One entry is the governed selection; none means no declared
+        profile governs the project; several are an ambiguous declaration.
+
+        Returns:
+            The most specific shared profile upstreams one project selects.
+
+        """
+        shared = tuple(item for item in profiles if item.project is None)
+        own = next(
+            (
+                item
+                for item in shared
+                if item.upstream.replace("_", "-") == distribution
+            ),
+            None,
+        )
+        candidates = (
+            (own,)
+            if own is not None
+            else tuple(
+                item
+                for item in shared
+                if item.upstream.replace("_", "-") in runtime_names
+            )
+        )
+        runtime_of = {
+            item.upstream: {
+                name
+                for dependency in item.runtime
+                if (name := FlextInfraUtilitiesDependencies.dep_name(dependency))
+            }
+            for item in candidates
+        }
+        return tuple(
+            item.upstream
+            for item in candidates
+            if not any(
+                item.upstream.replace("_", "-") in runtime_of[other.upstream]
+                for other in candidates
+                if other is not item
+            )
+        )
+
+    @staticmethod
+    def dependency_profile_rows(
+        profiles: t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec],
+        *,
+        upstream: str,
+        distribution: str,
+    ) -> t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec]:
+        """Return the shared upstream profile followed by the project's additions.
+
+        Empty when the upstream declares no shared profile.
+
+        Returns:
+            The shared upstream profile followed by the project's additions.
+
+        """
+        base = next(
+            (
+                item
+                for item in profiles
+                if item.project is None and item.upstream == upstream
+            ),
+            None,
+        )
+        if base is None:
+            return ()
+        return (base, *(item for item in profiles if item.project == distribution))
+
+    @classmethod
+    def composed_dependency_profile(
+        cls,
+        profiles: t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec],
+        *,
+        upstream: str,
+        distribution: str,
+    ) -> m.Infra.ScaffoldDependencyProfileSpec | None:
+        """Compose the shared upstream and project-specific dependency rows once.
+
+        Returns:
+            The resulting ``m.Infra.ScaffoldDependencyProfileSpec | None``.
+        """
+        rows = cls.dependency_profile_rows(
+            profiles,
+            upstream=upstream,
+            distribution=distribution,
+        )
+        if not rows:
+            return None
+        profile, *additions = rows
+        if not additions:
+            return profile
+        return m.Infra.ScaffoldDependencyProfileSpec.model_validate(
+            {
+                **profile.model_dump(),
+                "runtime": tuple(
+                    dict.fromkeys((
+                        *profile.runtime,
+                        *(
+                            requirement
+                            for item in additions
+                            for requirement in item.runtime
+                        ),
+                    )),
+                ),
+                "codegen": tuple(
+                    dict.fromkeys((
+                        *profile.codegen,
+                        *(
+                            requirement
+                            for item in additions
+                            for requirement in item.codegen
+                        ),
+                    )),
+                ),
+            },
+        )
+
+
+class FlextInfraUtilitiesDependencies(FlextInfraUtilitiesDependenciesProfiles):
     """Static helpers for inspecting dependency declarations in pyproject payloads."""
 
     @staticmethod
@@ -289,10 +533,6 @@ class FlextInfraUtilitiesDependencies:
             The resulting ``t.SequenceOf[Path]``.
 
         """
-        from flext_cli import u
-
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
         pyproject = project_root / c.PYPROJECT_FILENAME
         payload = u.Cli.toml_read_json(pyproject).unwrap()
         project_name = canonicalize_name(
@@ -390,8 +630,6 @@ class FlextInfraUtilitiesDependencies:
                 Invalid installed distribution name; or if Ambiguous installed version.
 
         """
-        from flext_cli import u
-
         versions: MutableMapping[str, str] = {}
         for distribution in u.installed_distributions():
             if distribution.read_text("direct_url.json") is not None:
@@ -440,19 +678,13 @@ class FlextInfraUtilitiesDependencies:
             The resulting ``str | None``.
 
         """
+        guard = cls._rewritable_requirement(requirement, internal_names)
+        if guard is None:
+            return None
+        dependency_name, requirement_part = guard
         raw_text = requirement.strip()
-        if not raw_text or " @ " in raw_text:
-            return None
         requirement_part, marker_separator, marker_part = raw_text.partition(";")
-        if " @ " in requirement_part:
-            return None
-        head_match = c.Infra.PEP621_REQUIREMENT_HEAD_RE.match(requirement_part.strip())
-        if head_match is None:
-            return None
-        head = head_match.group("head").strip()
-        dependency_name = cls.dep_name(head)
-        if dependency_name is None or dependency_name in set(internal_names):
-            return None
+        head = cls._requirement_head(requirement_part)
         locked_version = resolved_versions.get(dependency_name)
         if locked_version is None:
             return None
@@ -482,6 +714,43 @@ class FlextInfraUtilitiesDependencies:
             rewritten = f"{rewritten}; {marker_text}"
         return rewritten if rewritten != raw_text else None
 
+    @classmethod
+    def _rewritable_requirement(
+        cls,
+        requirement: str,
+        internal_names: t.StrSequence,
+    ) -> t.Pair[str, str] | None:
+        """Return the dependency name and part of one rewritable requirement.
+
+        Returns:
+            The dependency name and requirement part, or None when the
+            requirement carries a direct URL, an unparsable head, or an
+            internal dependency name.
+
+        """
+        raw_text = requirement.strip()
+        if not raw_text or " @ " in raw_text:
+            return None
+        requirement_part = raw_text.partition(";")[0]
+        if " @ " in requirement_part:
+            return None
+        head = cls._requirement_head(requirement_part)
+        dependency_name = cls.dep_name(head)
+        if dependency_name is None or dependency_name in set(internal_names):
+            return None
+        return dependency_name, requirement_part
+
+    @staticmethod
+    def _requirement_head(requirement_part: str) -> str:
+        """Return the canonical head of one requirement part.
+
+        Returns:
+            The resulting ``str``.
+
+        """
+        head_match = c.Infra.PEP621_REQUIREMENT_HEAD_RE.match(requirement_part.strip())
+        return head_match.group("head").strip() if head_match is not None else ""
+
     @staticmethod
     def dedupe_specs(specs: t.StrSequence) -> t.StrSequence:
         """Return deterministic unique dependency specs keyed by normalized name.
@@ -509,8 +778,6 @@ class FlextInfraUtilitiesDependencies:
             Normalized dependency names from one TOML document.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
         normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
         if not normalized:
             return ()
@@ -653,253 +920,6 @@ class FlextInfraUtilitiesDependencies:
             return ()
         workspace_names = set(workspace_project_names)
         return tuple(sorted(name for name in declared if name in workspace_names))
-
-    @staticmethod
-    def project_dev_groups_from_payload(
-        payload: t.JsonMapping,
-    ) -> t.MappingKV[str, t.StrSequence]:
-        """Collect optional dependency groups from one normalized payload.
-
-        Returns:
-            The resulting ``t.MappingKV[str, t.StrSequence]``.
-
-        """
-        from flext_cli import u
-
-        project = u.Cli.json_as_mapping(payload.get(c.Infra.PROJECT, None))
-        optional = u.Cli.json_as_mapping(
-            project.get(c.Infra.OPTIONAL_DEPENDENCIES, None),
-        )
-        groups = {
-            str(group): tuple(
-                str(item) for item in u.Cli.json_as_sequence(optional.get(group, None))
-            )
-            for group in c.Infra.CANONICAL_DEV_DEPENDENCY_GROUPS
-        }
-        return {group: values for group, values in groups.items() if values}
-
-    @classmethod
-    def project_dev_groups(
-        cls,
-        document: t.Cli.TomlDocument,
-    ) -> t.MappingKV[str, t.StrSequence]:
-        """Collect optional dependency groups from one TOML document.
-
-        Returns:
-            The resulting ``t.MappingKV[str, t.StrSequence]``.
-
-        """
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
-        normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
-        if not normalized:
-            # Keep the empty mapping immutable and fully typed.
-            return MappingProxyType(dict[str, t.VariadicTuple[str]]())
-        return cls.project_dev_groups_from_payload(normalized)
-
-    @classmethod
-    def canonical_dev_dependencies(cls, document: t.Cli.TomlDocument) -> t.StrSequence:
-        """Merge all canonical dev dependency groups from one TOML document.
-
-        Returns:
-            The resulting ``t.StrSequence``.
-
-        """
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
-        normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
-        if not normalized:
-            return ()
-        return cls.canonical_dev_dependencies_from_payload(normalized)
-
-    @classmethod
-    def canonical_dev_dependencies_from_payload(
-        cls,
-        payload: t.JsonMapping,
-    ) -> t.StrSequence:
-        """Merge all canonical dev dependency groups from one normalized payload.
-
-        Returns:
-            The resulting ``t.StrSequence``.
-
-        """
-        groups = cls.project_dev_groups_from_payload(payload)
-        return cls.dedupe_specs([
-            requirement
-            for group in c.Infra.CANONICAL_DEV_DEPENDENCY_GROUPS
-            for requirement in groups.get(str(group), ())
-        ])
-
-    @classmethod
-    def flext_dependency_namespaces(cls, document: t.Cli.TomlDocument) -> t.StrSequence:
-        """Extract declared FLEXT dependency namespaces from one TOML document.
-
-        Returns:
-            The resulting ``t.StrSequence``.
-
-        """
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
-        normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
-        if not normalized:
-            return ()
-        return cls.flext_dependency_namespaces_from_payload(normalized)
-
-    @classmethod
-    def flext_dependency_namespaces_from_payload(
-        cls,
-        payload: t.MappingKV[str, t.JsonValue],
-    ) -> t.StrSequence:
-        """Extract every declared ``flext-*`` dependency as a Python namespace.
-
-        Returns:
-            The resulting ``t.StrSequence``.
-
-        """
-        # FLEXT dependencies are first-party contracts even
-        # when their uv source declaration is owned by an enclosing workspace.
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
-        normalized = FlextInfraUtilitiesPyproject.validate_infra_payload(payload)
-        return tuple(
-            sorted(
-                name.replace("-", "_")
-                for name in cls.declared_dependency_names_from_payload(normalized)
-                if name == "flext" or name.startswith(c.Infra.PKG_PREFIX_HYPHEN)
-            ),
-        )
-
-    @staticmethod
-    def dependency_profile_upstreams(
-        profiles: t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec],
-        *,
-        distribution: str,
-        runtime_names: t.Infra.StrSet,
-    ) -> t.StrSequence:
-        """Return the most specific shared profile upstreams one project selects.
-
-        The root of the dependency tree declares no upstream distribution: a
-        distribution that IS a profile's upstream owns that profile. Otherwise
-        every shared profile whose upstream is a runtime dependency is a
-        candidate, and a candidate implied by another candidate's runtime is
-        dropped. One entry is the governed selection; none means no declared
-        profile governs the project; several are an ambiguous declaration.
-
-        Returns:
-            The most specific shared profile upstreams one project selects.
-
-        """
-        shared = tuple(item for item in profiles if item.project is None)
-        own = next(
-            (
-                item
-                for item in shared
-                if item.upstream.replace("_", "-") == distribution
-            ),
-            None,
-        )
-        candidates = (
-            (own,)
-            if own is not None
-            else tuple(
-                item
-                for item in shared
-                if item.upstream.replace("_", "-") in runtime_names
-            )
-        )
-        runtime_of = {
-            item.upstream: {
-                name
-                for dependency in item.runtime
-                if (name := FlextInfraUtilitiesDependencies.dep_name(dependency))
-            }
-            for item in candidates
-        }
-        return tuple(
-            item.upstream
-            for item in candidates
-            if not any(
-                item.upstream.replace("_", "-") in runtime_of[other.upstream]
-                for other in candidates
-                if other is not item
-            )
-        )
-
-    @staticmethod
-    def dependency_profile_rows(
-        profiles: t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec],
-        *,
-        upstream: str,
-        distribution: str,
-    ) -> t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec]:
-        """Return the shared upstream profile followed by the project's additions.
-
-        Empty when the upstream declares no shared profile.
-
-        Returns:
-            The shared upstream profile followed by the project's additions.
-
-        """
-        base = next(
-            (
-                item
-                for item in profiles
-                if item.project is None and item.upstream == upstream
-            ),
-            None,
-        )
-        if base is None:
-            return ()
-        return (base, *(item for item in profiles if item.project == distribution))
-
-    @classmethod
-    def composed_dependency_profile(
-        cls,
-        profiles: t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec],
-        *,
-        upstream: str,
-        distribution: str,
-    ) -> m.Infra.ScaffoldDependencyProfileSpec | None:
-        """Compose the shared upstream and project-specific dependency rows once.
-
-        Returns:
-            The resulting ``m.Infra.ScaffoldDependencyProfileSpec | None``.
-        """
-        rows = cls.dependency_profile_rows(
-            profiles,
-            upstream=upstream,
-            distribution=distribution,
-        )
-        if not rows:
-            return None
-        profile, *additions = rows
-        if not additions:
-            return profile
-        return m.Infra.ScaffoldDependencyProfileSpec.model_validate(
-            {
-                **profile.model_dump(),
-                "runtime": tuple(
-                    dict.fromkeys((
-                        *profile.runtime,
-                        *(
-                            requirement
-                            for item in additions
-                            for requirement in item.runtime
-                        ),
-                    )),
-                ),
-                "codegen": tuple(
-                    dict.fromkeys((
-                        *profile.codegen,
-                        *(
-                            requirement
-                            for item in additions
-                            for requirement in item.codegen
-                        ),
-                    )),
-                ),
-            },
-        )
 
 
 __all__: list[str] = ["FlextInfraUtilitiesDependencies"]

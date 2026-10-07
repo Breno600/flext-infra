@@ -11,13 +11,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from flext_core import r
-from flext_infra import c, m, u
+from flext_infra import c, m, t, u
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from flext_infra import p
 
 type _JournalFileRole = Literal["desired", "backup", "rollback"]
 
@@ -58,68 +58,144 @@ class FlextInfraMiseArtifactsVerification:
                 )
         registered: list[m.Infra.CodegenJournalDirectory] = []
         for directory in journal.directories:
-            project = next(
-                item
-                for item in files.transaction_participants(layout)
-                if item.selector == directory.project
-            )
-            target = files.resolve_transaction(
+            validated = cls._registered_directory(
                 layout,
-                directory.path,
-                purpose="temporary tree manifest",
+                journal,
+                directory,
+                created,
             )
-            if target.failure:
-                return result_type.from_failure(target)
-            if (
-                directory.disposition != "temporary"
-                or target.value != project.transaction_root
-            ):
-                registered.append(directory)
-                continue
+            if validated.failure:
+                return result_type.from_failure(validated)
+            validated_value, _validated_present = validated.value
+            registered.append(validated_value)
+        return result_type.ok(tuple(registered))
+
+    @classmethod
+    def _registered_directory(
+        cls,
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
+        journal: m.Infra.CodegenTransactionJournal,
+        directory: m.Infra.CodegenJournalDirectory,
+        created: t.VariadicTuple[m.Cli.AtomicFileState | m.Cli.AtomicDirectoryState],
+    ) -> p.Result[t.Pair[m.Infra.CodegenJournalDirectory, bool]]:
+        """Register one temporary-tree manifest or pass its directory through.
+
+        Returns:
+            The resulting ``p.Result[t.Pair[m.Infra.CodegenJournalDirectory,
+            bool]]`` where the boolean marks registration (False keeps the
+            directory unchanged in the journal).
+
+        """
+        result_type = r[t.Pair[m.Infra.CodegenJournalDirectory, bool]]
+        project = next(
+            item
+            for item in files.transaction_participants(layout)
+            if item.selector == directory.project
+        )
+        target = files.resolve_transaction(
+            layout,
+            directory.path,
+            purpose="temporary tree manifest",
+        )
+        if target.failure:
+            return result_type.from_failure(target)
+        unmanaged = directory.disposition != "temporary" or (
+            target.value != project.transaction_root
+        )
+        if unmanaged or (not target.value.exists() and not target.value.is_symlink()):
+            return result_type.ok((directory, False))
+        observed = cls._temporary_tree_manifest(layout, journal, directory, created)
+        if observed.failure:
+            return result_type.from_failure(observed)
+        if observed.value is None:
+            return result_type.ok((directory, False))
+        validated: p.Result[m.Infra.CodegenJournalDirectory] = u.validate_value(
+            m.Infra.CodegenJournalDirectory,
+            {**directory.model_dump(), "manifest": observed.value},
+        )
+        if validated.failure:
+            return result_type.fail_op(
+                "validate temporary-tree manifest",
+                validated.error,
+            )
+        return result_type.ok((validated.value, True))
+
+    @classmethod
+    def _temporary_tree_manifest(
+        cls,
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
+        journal: m.Infra.CodegenTransactionJournal,
+        directory: m.Infra.CodegenJournalDirectory,
+        created: t.VariadicTuple[m.Cli.AtomicFileState | m.Cli.AtomicDirectoryState],
+    ) -> p.Result[m.Cli.AtomicPhysicalTreeManifest | None]:
+        """Inventory a live temporary tree and validate it against its receipt.
+
+        Returns:
+            The resulting ``p.Result[m.Cli.AtomicPhysicalTreeManifest | None]``
+            where None marks a manifest that did not change.
+
+        """
+        result_type = r[m.Cli.AtomicPhysicalTreeManifest | None]
+        if directory.created is None:
+            return result_type.fail(
+                f"temporary tree has no created identity: {directory.path}",
+            )
+        manifest = directory.manifest
+        if manifest is None:
+            # First registration: the transaction just created this tree, so
+            # its created receipt is the only authorization. Inventory the
+            # live root and register that inventory as the manifest; the
+            # authorized and observed manifests coincide on the first cycle.
             if directory.created is None:
                 return result_type.fail(
                     f"temporary tree has no created identity: {directory.path}",
                 )
-            if not target.value.exists() and not target.value.is_symlink():
-                registered.append(directory)
-                continue
-            observed = u.Cli.atomic_inventory_physical_tree(target.value)
-            if observed.failure:
-                return result_type.from_failure(observed)
-            physical = cls._manifest_root_matches_created(directory, observed.value)
-            if physical.failure:
-                return result_type.from_failure(physical)
-            aliases = tuple(
-                entry.path
-                for entry in observed.value.entries
-                if entry.kind == "symlink"
+            seeded = u.Cli.atomic_inventory_physical_tree(directory.created.path)
+            if seeded.failure:
+                return result_type.from_failure(seeded)
+            manifest = seeded.value
+        observed = cls._validated_tree_inventory(directory, manifest)
+        if observed.failure:
+            return result_type.from_failure(observed)
+        transition = cls._validate_manifest_transition(
+            layout,
+            journal,
+            manifest,
+            observed.value,
+            created=created,
+        )
+        if transition.failure:
+            return result_type.from_failure(transition)
+        return result_type.ok(observed.value)
+
+    @classmethod
+    def _validated_tree_inventory(
+        cls,
+        directory: m.Infra.CodegenJournalDirectory,
+        manifest: m.Cli.AtomicPhysicalTreeManifest,
+    ) -> p.Result[m.Cli.AtomicPhysicalTreeManifest]:
+        """Inventory the live tree and prove it matches its created receipt.
+
+        Returns:
+            The resulting ``p.Result[m.Cli.AtomicPhysicalTreeManifest]``.
+
+        """
+        result_type = r[m.Cli.AtomicPhysicalTreeManifest]
+        observed = u.Cli.atomic_inventory_physical_tree(manifest.root.path)
+        if observed.failure:
+            return result_type.from_failure(observed)
+        physical = cls._manifest_root_matches_created(directory, observed.value)
+        if physical.failure:
+            return result_type.from_failure(physical)
+        aliases = tuple(
+            entry.path for entry in observed.value.entries if entry.kind == "symlink"
+        )
+        if aliases:
+            return result_type.fail(
+                "temporary tree contains aliases: "
+                + ", ".join(path.as_posix() for path in aliases),
             )
-            if aliases:
-                return result_type.fail(
-                    "temporary tree contains aliases: "
-                    + ", ".join(path.as_posix() for path in aliases),
-                )
-            if directory.manifest is not None:
-                transition = cls._validate_manifest_transition(
-                    layout,
-                    journal,
-                    directory.manifest,
-                    observed.value,
-                    created=created,
-                )
-                if transition.failure:
-                    return result_type.from_failure(transition)
-            validated: p.Result[m.Infra.CodegenJournalDirectory] = u.validate_value(
-                m.Infra.CodegenJournalDirectory,
-                {**directory.model_dump(), "manifest": observed.value},
-            )
-            if validated.failure:
-                return result_type.fail_op(
-                    "validate temporary-tree manifest",
-                    validated.error,
-                )
-            registered.append(validated.value)
-        return result_type.ok(tuple(registered))
+        return result_type.ok(observed.value)
 
     @classmethod
     def authorized_cleanup_manifest(
@@ -171,6 +247,36 @@ class FlextInfraMiseArtifactsVerification:
             The resulting ``p.Result[bool]``.
 
         """
+        identifiers = cls._verified_topology_identifiers(layout, journal)
+        if identifiers.failure:
+            return identifiers
+        by_selector = cls._verified_recorded_identities(layout, journal)
+        if by_selector.failure:
+            return by_selector
+        directory_targets = cls._resolved_directory_targets(layout, journal)
+        if directory_targets.failure:
+            return r[bool].from_failure(directory_targets)
+        bindings = cls._verified_directory_bindings(
+            journal,
+            by_selector.value,
+            directory_targets.value,
+        )
+        if bindings.failure:
+            return bindings
+        return cls._verified_entry_bindings(layout, journal, by_selector.value)
+
+    @classmethod
+    def _verified_topology_identifiers(
+        cls,
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
+        journal: m.Infra.CodegenTransactionJournal,
+    ) -> p.Result[bool]:
+        """Bind the journal transaction id, scope identity, and inventories.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         if layout.transaction_id != journal.transaction_id:
             return r[bool].fail("generation journal transaction id differs from layout")
         scope = files.physical_directory_identity(layout.scope_root)
@@ -186,10 +292,21 @@ class FlextInfraMiseArtifactsVerification:
             )
         if journal.file_participants != layout.file_participants:
             return r[bool].fail("generation file capabilities differ from the journal")
-        by_selector = {
-            project.selector: project
-            for project in files.transaction_participants(layout)
-        }
+        return r[bool].ok(value=True)
+
+    @classmethod
+    def _resolved_directory_targets(
+        cls,
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
+        journal: m.Infra.CodegenTransactionJournal,
+    ) -> p.Result[t.MappingKV[Path, m.Infra.CodegenJournalDirectory]]:
+        """Resolve every journaled directory onto its transaction path.
+
+        Returns:
+            The resulting ``p.Result[t.MappingKV[Path,
+                m.Infra.CodegenJournalDirectory]]``.
+
+        """
         directory_targets: MutableMapping[Path, m.Infra.CodegenJournalDirectory] = {}
         for directory in journal.directories:
             target = files.resolve_transaction(
@@ -198,76 +315,164 @@ class FlextInfraMiseArtifactsVerification:
                 purpose="journaled generation directory",
             )
             if target.failure:
-                return r[bool].from_failure(target)
+                failure = r[t.MappingKV[Path, m.Infra.CodegenJournalDirectory]]
+                return failure.from_failure(target)
             directory_targets[target.value] = directory
+        return r[t.MappingKV[Path, m.Infra.CodegenJournalDirectory]].ok(
+            directory_targets,
+        )
+
+    @classmethod
+    def _verified_recorded_identities(
+        cls,
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
+        journal: m.Infra.CodegenTransactionJournal,
+    ) -> p.Result[t.MappingKV[str, m.Infra.MiseToolchainProjectLayout]]:
+        """Prove every recorded project and participant kept its physical identity.
+
+        Returns:
+            The resulting ``p.Result[t.MappingKV[str,
+                m.Infra.MiseToolchainProjectLayout]]`` keyed by selector.
+
+        """
+        by_selector = {
+            project.selector: project
+            for project in files.transaction_participants(layout)
+        }
         for recorded in (*journal.projects, *journal.file_participants):
             project = by_selector[recorded.selector]
             identity = files.physical_directory_identity(project.root)
             if identity.failure:
-                return r[bool].from_failure(identity)
+                return r[
+                    t.MappingKV[str, m.Infra.MiseToolchainProjectLayout]
+                ].from_failure(identity)
             if identity.value != (recorded.device, recorded.inode):
-                return r[bool].fail(
+                return r[t.MappingKV[str, m.Infra.MiseToolchainProjectLayout]].fail(
                     f"generation project identity changed: {recorded.selector}",
                 )
+        return r[t.MappingKV[str, m.Infra.MiseToolchainProjectLayout]].ok(by_selector)
+
+    @classmethod
+    def _verified_directory_bindings(
+        cls,
+        journal: m.Infra.CodegenTransactionJournal,
+        by_selector: t.MappingKV[str, m.Infra.MiseToolchainProjectLayout],
+        directory_targets: t.MappingKV[Path, m.Infra.CodegenJournalDirectory],
+    ) -> p.Result[bool]:
+        """Bind every journaled directory to its project and parent identity.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         for directory in journal.directories:
-            project = by_selector[directory.project]
-            resolved_target = next(
-                path
-                for path, candidate in directory_targets.items()
-                if candidate == directory
+            binding = cls._verified_directory_binding(
+                by_selector,
+                directory_targets,
+                directory,
             )
-            if resolved_target == project.root or not resolved_target.is_relative_to(
-                project.root,
-            ):
-                return r[bool].fail(
-                    f"generation directory escapes its project: {directory.path}",
-                )
+            if binding.failure:
+                return binding
+        return r[bool].ok(value=True)
+
+    @classmethod
+    def _verified_directory_binding(
+        cls,
+        by_selector: t.MappingKV[str, m.Infra.MiseToolchainProjectLayout],
+        directory_targets: t.MappingKV[Path, m.Infra.CodegenJournalDirectory],
+        directory: m.Infra.CodegenJournalDirectory,
+    ) -> p.Result[bool]:
+        """Bind one journaled directory to its project and parent identity.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        project = by_selector[directory.project]
+        resolved_target = next(
+            path
+            for path, candidate in directory_targets.items()
+            if candidate == directory
+        )
+        if resolved_target == project.root or not resolved_target.is_relative_to(
+            project.root,
+        ):
+            return r[bool].fail(
+                f"generation directory escapes its project: {directory.path}",
+            )
+        if directory.before is not None and directory.before.path != resolved_target:
+            return r[bool].fail(
+                f"generation directory preflight path differs: {directory.path}",
+            )
+        if directory.created is not None:
+            parent_bound = cls._verified_created_parent(
+                directory,
+                directory_targets,
+                resolved_target,
+            )
+            if parent_bound.failure:
+                return parent_bound
+        if directory.disposition == "temporary":
+            transaction_root = project.transaction_root
             if (
-                directory.before is not None
-                and directory.before.path != resolved_target
+                directory.phase != "transaction"
+                or transaction_root is None
+                or not transaction_root.is_relative_to(resolved_target)
             ):
                 return r[bool].fail(
-                    f"generation directory preflight path differs: {directory.path}",
+                    (f"temporary directory escapes transaction root: {directory.path}"),
                 )
-            if directory.created is not None:
-                if directory.created.path != resolved_target:
-                    return r[bool].fail(
-                        f"generation created directory path differs: {directory.path}",
-                    )
-                parent = directory_targets.get(resolved_target.parent)
-                expected_parent = (
-                    (directory.before.parent_device, directory.before.parent_inode)
-                    if directory.before is not None
-                    else (
-                        None
-                        if parent is None or parent.created is None
-                        else (parent.created.device, parent.created.inode)
-                    )
-                )
-                if (
-                    expected_parent is None
-                    or (directory.created.parent_device, directory.created.parent_inode)
-                    != expected_parent
-                ):
-                    return r[bool].fail(
-                        (
-                            f"generation directory parent "
-                            f"binding differs: {directory.path}"
-                        ),
-                    )
-            if directory.disposition == "temporary":
-                transaction_root = project.transaction_root
-                if (
-                    directory.phase != "transaction"
-                    or transaction_root is None
-                    or not transaction_root.is_relative_to(resolved_target)
-                ):
-                    return r[bool].fail(
-                        (
-                            f"temporary directory escapes "
-                            f"transaction root: {directory.path}"
-                        ),
-                    )
+        return r[bool].ok(value=True)
+
+    @staticmethod
+    def _verified_created_parent(
+        directory: m.Infra.CodegenJournalDirectory,
+        directory_targets: t.MappingKV[Path, m.Infra.CodegenJournalDirectory],
+        resolved_target: Path,
+    ) -> p.Result[bool]:
+        """Bind a created directory's parent to its journaled ancestry.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        if directory.created.path != resolved_target:
+            return r[bool].fail(
+                f"generation created directory path differs: {directory.path}",
+            )
+        parent = directory_targets.get(resolved_target.parent)
+        expected_parent = (
+            (directory.before.parent_device, directory.before.parent_inode)
+            if directory.before is not None
+            else (
+                None
+                if parent is None or parent.created is None
+                else (parent.created.device, parent.created.inode)
+            )
+        )
+        if (
+            expected_parent is None
+            or (directory.created.parent_device, directory.created.parent_inode)
+            != expected_parent
+        ):
+            return r[bool].fail(
+                (f"generation directory parent binding differs: {directory.path}"),
+            )
+        return r[bool].ok(value=True)
+
+    @classmethod
+    def _verified_entry_bindings(
+        cls,
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
+        journal: m.Infra.CodegenTransactionJournal,
+        by_selector: t.MappingKV[str, m.Infra.MiseToolchainProjectLayout],
+    ) -> p.Result[bool]:
+        """Bind every journal entry and its staging paths to the transaction root.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         for entry in journal.entries:
             project = by_selector[entry.project]
             target = files.resolve_transaction(
@@ -288,42 +493,65 @@ class FlextInfraMiseArtifactsVerification:
                 staging_paths.append(("desired", entry.desired_staging))
             if entry.rollback_staging is not None:
                 staging_paths.append(("rollback", entry.rollback_staging))
-            transaction_root = project.transaction_root
-            if staging_paths and transaction_root is None:
+            if staging_paths and project.transaction_root is None:
                 return r[bool].fail(
                     "generation recovery layout has no transaction root",
                 )
-            for role, selector in staging_paths:
-                staging = files.resolve_transaction(
-                    layout,
-                    selector,
-                    purpose=f"generation {role} staging",
+            staged = cls._verified_entry_staging(
+                layout,
+                entry,
+                staging_paths,
+                project.transaction_root,
+            )
+            if staged.failure:
+                return staged
+        return r[bool].ok(value=True)
+
+    @classmethod
+    def _verified_entry_staging(
+        cls,
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
+        entry: m.Infra.CodegenJournalEntry,
+        staging_paths: t.SequenceOf[t.Pair[str, str]],
+        transaction_root: Path | None,
+    ) -> p.Result[bool]:
+        """Bind one entry's backup, desired, and rollback staging selectors.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        for role, selector in staging_paths:
+            staging = files.resolve_transaction(
+                layout,
+                selector,
+                purpose=f"generation {role} staging",
+            )
+            if staging.failure:
+                return r[bool].from_failure(staging)
+            if transaction_root is None or not staging.value.is_relative_to(
+                transaction_root,
+            ):
+                return r[bool].fail(
+                    (
+                        f"generation {role} staging escapes "
+                        f"transaction root: {entry.path}"
+                    ),
                 )
-                if staging.failure:
-                    return r[bool].from_failure(staging)
-                if transaction_root is None or not staging.value.is_relative_to(
-                    transaction_root,
-                ):
-                    return r[bool].fail(
-                        (
-                            f"generation {role} staging escapes "
-                            f"transaction root: {entry.path}"
-                        ),
-                    )
-            if entry.original_backup is not None:
-                backup = files.resolve_transaction(
-                    layout,
-                    entry.original_backup,
-                    purpose="generation recovery backup",
+        if entry.original_backup is not None:
+            backup = files.resolve_transaction(
+                layout,
+                entry.original_backup,
+                purpose="generation recovery backup",
+            )
+            if backup.failure:
+                return r[bool].from_failure(backup)
+            if transaction_root is None or backup.value.parent != (
+                transaction_root / "recovery"
+            ):
+                return r[bool].fail(
+                    f"generation backup escapes its recovery root: {entry.path}",
                 )
-                if backup.failure:
-                    return r[bool].from_failure(backup)
-                if transaction_root is None or backup.value.parent != (
-                    transaction_root / "recovery"
-                ):
-                    return r[bool].fail(
-                        f"generation backup escapes its recovery root: {entry.path}",
-                    )
         return r[bool].ok(value=True)
 
     @classmethod
@@ -462,26 +690,9 @@ class FlextInfraMiseArtifactsVerification:
             return result.from_failure(current)
         if current.value == witness:
             return result.ok(expected)
-        created = {
-            item.created.path: item.created
-            for item in journal.directories
-            if item.created is not None and item.disposition == "generated"
-        }
-        ancestry = list(witness.anchor_ancestry)
-        for path in witness.directories:
-            identity = created.get(path)
-            if identity is None or identity.device is None or identity.inode is None:
-                return result.fail(
-                    f"generation source parent was not created by this journal: {path}",
-                )
-            if (identity.parent_device, identity.parent_inode) != ancestry[-1]:
-                return result.fail(
-                    (
-                        f"generation source parent ancestry "
-                        f"differs from its journal: {path}"
-                    ),
-                )
-            ancestry.append((identity.device, identity.inode))
+        ancestry = cls._verified_parent_ancestry(journal, witness)
+        if ancestry.failure:
+            return result.from_failure(ancestry)
         observed = current.value
         if observed.directories or observed.anchor_ancestry != tuple(ancestry):
             return result.fail(
@@ -495,6 +706,41 @@ class FlextInfraMiseArtifactsVerification:
                 },
             ),
         )
+
+    @classmethod
+    def _verified_parent_ancestry(
+        cls,
+        journal: m.Infra.CodegenTransactionJournal,
+        witness: m.Cli.AtomicDirectoryState,
+    ) -> p.Result[t.VariadicTuple[t.Pair[int, int]]]:
+        """Rebuild the parent ancestry chain from journal-created directories.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[t.Pair[int, int]]]``.
+
+        """
+        result_type = r[t.VariadicTuple[t.Pair[int, int]]]
+        created = {
+            item.created.path: item.created
+            for item in journal.directories
+            if item.created is not None and item.disposition == "generated"
+        }
+        ancestry = list(witness.anchor_ancestry)
+        for path in witness.directories:
+            identity = created.get(path)
+            if identity is None or identity.device is None or identity.inode is None:
+                return result_type.fail(
+                    f"generation source parent was not created by this journal: {path}",
+                )
+            if (identity.parent_device, identity.parent_inode) != ancestry[-1]:
+                return result_type.fail(
+                    (
+                        f"generation source parent ancestry "
+                        f"differs from its journal: {path}"
+                    ),
+                )
+            ancestry.append((identity.device, identity.inode))
+        return result_type.ok(tuple(ancestry))
 
     @classmethod
     def phase_analysis_live(
@@ -580,13 +826,7 @@ class FlextInfraMiseArtifactsVerification:
 
         """
         for project in plan.projects:
-            expected_states = (
-                project.config.before,
-                project.artifacts.unix_launcher,
-                project.artifacts.windows_launcher,
-                project.artifacts.version_pin,
-            )
-            current = cls.states_current(expected_states)
+            current = cls.states_current((project.config.before,))
             if current.failure:
                 return current
         return r[bool].ok(value=True)
@@ -665,17 +905,55 @@ class FlextInfraMiseArtifactsVerification:
         source_before = cls.sources(plan)
         if source_before.failure:
             return source_before
+        staged = cls._staged_replacements(publications or ())
+        if staged.failure:
+            return r[bool].from_failure(staged)
+        stable = cls._stable_artifact_snapshot(plan, staged.value, owner)
+        if stable.failure:
+            return r[bool].from_failure(stable)
+        source_after = cls.sources(plan)
+        if source_after.failure:
+            return source_after
+        return r[bool].ok(value=True)
+
+    @staticmethod
+    def _staged_replacements(
+        publications: t.VariadicTuple[m.Infra.CodegenStagedFile],
+    ) -> p.Result[t.MappingKV[Path, t.Pair[bytes, int | None]]]:
+        """Collect every staged Mise replacement keyed by its live path.
+
+        Returns:
+            The resulting ``p.Result[t.MappingKV[Path, t.Pair[bytes,
+                int | None]]]``.
+
+        """
+        result_type = r[t.MappingKV[Path, t.Pair[bytes, int | None]]]
         replacements: MutableMapping[Path, t.Pair[bytes, int | None]] = {}
-        for publication in publications or ():
+        for publication in publications:
             replacement = publication.replacement
             if replacement is None or replacement.content is None:
-                return r[bool].fail(
+                return result_type.fail(
                     f"Mise replacement is absent: {publication.before.path}",
                 )
             replacements[publication.before.path] = (
                 replacement.content,
                 replacement.mode,
             )
+        return result_type.ok(replacements)
+
+    @classmethod
+    def _stable_artifact_snapshot(
+        cls,
+        plan: m.Infra.MiseToolchainWorkspacePlan,
+        replacements: t.MappingKV[Path, t.Pair[bytes, int | None]],
+        owner: p.Infra.MiseArtifactsOwner,
+    ) -> p.Result[bool]:
+        """Exercise real consumers and prove the rendered artifacts unchanged.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         artifact_before = cls._artifact_snapshot(plan, replacements)
         if artifact_before.failure:
             return r[bool].from_failure(artifact_before)
@@ -691,9 +969,6 @@ class FlextInfraMiseArtifactsVerification:
             return r[bool].from_failure(artifact_after)
         if artifact_after.value != artifact_before.value:
             return r[bool].fail("published Mise artifacts changed during validation")
-        source_after = cls.sources(plan)
-        if source_after.failure:
-            return source_after
         return r[bool].ok(value=True)
 
     @classmethod
@@ -731,6 +1006,31 @@ class FlextInfraMiseArtifactsVerification:
             for path, (role, _entry) in file_specs.value.items()
             if role in {"desired", "rollback"}
         }
+        expected_check = cls._verified_expected_entries(expected, current, consumable)
+        if expected_check.failure:
+            return expected_check
+        created_by_path = {receipt.path: receipt for receipt in created}
+        return cls._verified_tree_additions(
+            authorized,
+            expected,
+            current,
+            file_specs.value,
+            created_by_path,
+        )
+
+    @classmethod
+    def _verified_expected_entries(
+        cls,
+        expected: t.MappingKV[Path, m.Cli.AtomicPhysicalTreeEntry],
+        current: t.MappingKV[Path, m.Cli.AtomicPhysicalTreeEntry],
+        consumable: t.AbstractSet[Path],
+    ) -> p.Result[bool]:
+        """Prove every authorized entry survived with a stable identity.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         for path, entry in expected.items():
             current_entry = current.get(path)
             if current_entry is None:
@@ -746,11 +1046,33 @@ class FlextInfraMiseArtifactsVerification:
                     )
             elif current_entry != entry:
                 return r[bool].fail(f"temporary-tree file identity changed: {path}")
+        return r[bool].ok(value=True)
+
+    @classmethod
+    def _verified_tree_additions(
+        cls,
+        authorized: m.Cli.AtomicPhysicalTreeManifest,
+        expected: t.MappingKV[Path, m.Cli.AtomicPhysicalTreeEntry],
+        current: t.MappingKV[Path, m.Cli.AtomicPhysicalTreeEntry],
+        file_specs: t.MappingKV[Path, t.Pair[str, m.Infra.CodegenJournalEntry]],
+        created_by_path: t.MappingKV[
+            Path,
+            m.Cli.AtomicFileState | m.Cli.AtomicDirectoryState,
+        ],
+    ) -> p.Result[bool]:
+        """Authenticate every observed addition against receipts or the journal.
+
+        An addition is admitted only as a registered transition: a created
+        receipt, a directory above a journaled file, or a journaled file.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         additions = tuple(
             entry for path, entry in current.items() if path not in expected
         )
-        authorized_files = set(file_specs.value)
-        created_by_path = {receipt.path: receipt for receipt in created}
+        authorized_files = set(file_specs)
         for path in created_by_path:
             if path.is_relative_to(authorized.root.path) and (
                 path in expected or path not in current
@@ -775,7 +1097,7 @@ class FlextInfraMiseArtifactsVerification:
                         f"unregistered temporary-tree directory exists: {entry.path}",
                     )
                 continue
-            spec = file_specs.value.get(entry.path)
+            spec = file_specs.get(entry.path)
             if spec is None or not cls._matches_journal_file(entry, *spec):
                 return r[bool].fail(
                     f"unregistered temporary-tree file exists: {entry.path}",
@@ -992,25 +1314,17 @@ class FlextInfraMiseArtifactsVerification:
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
         states: list[m.Cli.AtomicFileState] = []
         for project in plan.projects:
-            artifacts = (
-                project.config.before,
-                project.artifacts.unix_launcher,
-                project.artifacts.windows_launcher,
-                project.artifacts.version_pin,
-            )
-            for expected, (_name, required_mode) in zip(
+            artifacts = (project.config.before,)
+            for expected, required_mode in zip(
                 artifacts,
-                c.Infra.PUBLICATION_SPECS,
+                (c.Infra.CONFIG_SPEC[1],),
                 strict=True,
             ):
                 current = files.read_state(expected.path, required=False)
                 if current.failure or current.value.content is None:
-                    repair = (
-                        "make gen" if expected is project.config.before else "make upg"
-                    )
                     return r[tuple[m.Cli.AtomicFileState, ...]].fail(
                         f"published Mise artifact is absent: {expected.path}; "
-                        f"run {repair}",
+                        "run make gen",
                     )
                 if current.value.mode is None:
                     return r[tuple[m.Cli.AtomicFileState, ...]].fail(

@@ -217,10 +217,6 @@ class FlextInfraConfigModelsRender:
             FlextInfraConfigModelsMake.MakeSpec,
             m.Field(description="Canonical Make CI token contract for ENV CI=Y"),
         ]
-        mise_bootstrap: Annotated[
-            FlextInfraConfigModelsContract.MiseBootstrapEnvironmentSpec,
-            m.Field(description="Strict Mise environment projected into containers"),
-        ]
 
     class EnvrcRenderSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Typed input consumed only by the generated project ``.envrc``."""
@@ -278,10 +274,6 @@ class FlextInfraConfigModelsRender:
         environment_path_prepends: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(description="Project-relative executable paths"),
-        ]
-        mise_bootstrap: Annotated[
-            FlextInfraConfigModelsContract.MiseBootstrapEnvironmentSpec,
-            m.Field(description="Strict persistent Mise storage contract"),
         ]
         environment_directory: Annotated[
             t.NonEmptyStr,

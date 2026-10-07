@@ -24,9 +24,11 @@ class TestsFlextInfraCodegenBeadsProjection:
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             "fixture-project",
-            workspace="fixture-workspace",
-            database=database,
-            issue_prefix=issue_prefix,
+            beads=u.Tests.BeadsIdentity(
+                workspace="fixture-workspace",
+                database=database,
+                issue_prefix=issue_prefix,
+            ),
         )
         return root
 
@@ -101,7 +103,9 @@ class TestsFlextInfraCodegenBeadsProjection:
         u.Tests.write_standalone_workspace_manifest(
             root,
             "fixture-project",
-            gascity_enabled=False,
+            declaration=u.Tests.StandaloneManifestDeclaration(
+                gascity_enabled=False,
+            ),
         )
 
         plan = u.Tests.governed_project_plan(root)
@@ -164,7 +168,9 @@ class TestsFlextInfraCodegenBeadsProjection:
         u.Tests.write_standalone_workspace_manifest(
             root,
             "fixture-project",
-            gascity_enabled=False,
+            declaration=u.Tests.StandaloneManifestDeclaration(
+                gascity_enabled=False,
+            ),
         )
 
         plan = u.Tests.governed_project_plan(root)
@@ -267,7 +273,9 @@ class TestsFlextInfraCodegenBeadsProjection:
         u.Tests.write_standalone_workspace_manifest(
             root,
             "fixture-project",
-            gascity_enabled=gascity_enabled,
+            declaration=u.Tests.StandaloneManifestDeclaration(
+                gascity_enabled=gascity_enabled,
+            ),
         )
 
         rendered_envrc = u.Tests.planned_text(

@@ -22,6 +22,11 @@ from pathlib import Path
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
+from flext_infra._config import FlextInfraConfig
+from flext_infra.codegen import (
+    FlextInfraCodegenMiseArtifacts,
+    FlextInfraCodegenTransaction,
+)
 
 
 class FlextInfraModTextGateEngine:
@@ -113,8 +118,6 @@ class FlextInfraModTextGateEngine:
         """
         # The packaged rules live at the same sub-path of whichever SSOT
         # config directory is active, including a declared relocation.
-        from flext_infra._config import FlextInfraConfig
-
         provider = FlextInfraConfig.ssot_config_dir() / (
             c.Infra.CODEMOD_TEXT_RULES_RELPATH.relative_to(c.CONFIG_DIR_NAME)
         )
@@ -287,6 +290,33 @@ class FlextInfraModTextGateEngine:
         )
 
     @staticmethod
+    def _validated_captures(
+        entry: t.MappingKV[str, t.JsonValue],
+        source: Path,
+        compiled: re.Pattern[str],
+    ) -> p.Result[t.MappingKV[str, str]]:
+        """Validate the capture_equals map against the compiled pattern groups.
+
+        Returns:
+            The resulting ``p.Result[t.MappingKV[str, str]]``.
+
+        """
+        raw_captures = entry.get(c.Infra.CODEMOD_TEXT_KEY_CAPTURE_EQUALS, {})
+        if not isinstance(raw_captures, dict):
+            return FlextInfraModTextGateEngine._captures_failure(source)
+        captures: dict[str, str] = {}
+        for name, value in raw_captures.items():
+            if not isinstance(value, str):
+                return FlextInfraModTextGateEngine._captures_failure(source)
+            captures[name] = value
+        unknown_captures = set(captures).difference(compiled.groupindex)
+        if unknown_captures:
+            return r[t.MappingKV[str, str]].fail(
+                f"unknown regex captures {sorted(unknown_captures)} in {source}",
+            )
+        return r[t.MappingKV[str, str]].ok(captures)
+
+    @staticmethod
     def _validated_selector_fields(
         entry: t.MappingKV[str, t.JsonValue],
         source: Path,
@@ -311,19 +341,15 @@ class FlextInfraModTextGateEngine:
         distributions = tuple(name for name in declared if isinstance(name, str))
         if len(set(distributions)) != len(distributions):
             return FlextInfraModTextGateEngine._selector_failure(source)
-        raw_captures = entry.get(c.Infra.CODEMOD_TEXT_KEY_CAPTURE_EQUALS, {})
-        if not isinstance(raw_captures, dict):
-            return FlextInfraModTextGateEngine._captures_failure(source)
-        captures: dict[str, str] = {}
-        for name, value in raw_captures.items():
-            if not isinstance(value, str):
-                return FlextInfraModTextGateEngine._captures_failure(source)
-            captures[name] = value
-        unknown_captures = set(captures).difference(compiled.groupindex)
-        if unknown_captures:
+        captures = FlextInfraModTextGateEngine._validated_captures(
+            entry,
+            source,
+            compiled,
+        )
+        if captures.failure:
             return r[
                 tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]
-            ].fail(f"unknown regex captures {sorted(unknown_captures)} in {source}")
+            ].from_failure(captures)
         expected = entry.get(c.Infra.CODEMOD_TEXT_KEY_EXPECTED)
         if expected is not None and (
             not isinstance(expected, int) or isinstance(expected, bool) or expected < 0
@@ -335,7 +361,7 @@ class FlextInfraModTextGateEngine:
             )
         return r[tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]].ok((
             distributions,
-            captures,
+            captures.value,
             expected,
         ))
 
@@ -472,6 +498,199 @@ class FlextInfraModTextGateEngine:
         return r[t.VariadicTuple[Path]].ok(tuple(sorted(paths)))
 
     @classmethod
+    def _elected_rules(
+        cls,
+        root: Path,
+    ) -> p.Result[
+        t.Triple[
+            t.VariadicTuple[m.Cli.AtomicFileState],
+            m.Cli.AtomicFileState,
+            t.VariadicTuple[m.Infra.ModTextRule],
+        ]
+    ]:
+        """Authenticate the catalogues and the project identity, then elect rules.
+
+        Returns:
+            The resulting authenticated ``(catalogues, identity, rules)`` triple.
+
+        """
+        catalogues = cls._catalogue_states(root)
+        if catalogues.failure:
+            return r[
+                t.Triple[
+                    t.VariadicTuple[m.Cli.AtomicFileState],
+                    m.Cli.AtomicFileState,
+                    t.VariadicTuple[m.Infra.ModTextRule],
+                ]
+            ].from_failure(catalogues)
+        loaded = cls._rules_from_states(catalogues.value)
+        if loaded.failure:
+            return r[
+                t.Triple[
+                    t.VariadicTuple[m.Cli.AtomicFileState],
+                    m.Cli.AtomicFileState,
+                    t.VariadicTuple[m.Infra.ModTextRule],
+                ]
+            ].from_failure(loaded)
+        identity = u.Cli.atomic_read_binary_file_state(
+            root / c.PYPROJECT_FILENAME,
+            required=True,
+        )
+        if identity.failure:
+            return r[
+                t.Triple[
+                    t.VariadicTuple[m.Cli.AtomicFileState],
+                    m.Cli.AtomicFileState,
+                    t.VariadicTuple[m.Infra.ModTextRule],
+                ]
+            ].from_failure(identity)
+        selected = cls._selected_rules(identity.value, loaded.value)
+        if selected.failure:
+            return r[
+                t.Triple[
+                    t.VariadicTuple[m.Cli.AtomicFileState],
+                    m.Cli.AtomicFileState,
+                    t.VariadicTuple[m.Infra.ModTextRule],
+                ]
+            ].from_failure(selected)
+        return r[
+            t.Triple[
+                t.VariadicTuple[m.Cli.AtomicFileState],
+                m.Cli.AtomicFileState,
+                t.VariadicTuple[m.Infra.ModTextRule],
+            ]
+        ].ok((catalogues.value, identity.value, selected.value))
+
+    @staticmethod
+    def _authenticated_source(
+        root: Path,
+        path: Path,
+    ) -> p.Result[t.Triple[m.Cli.AtomicFileState, str, str]]:
+        """Read one source's authenticated bytes with its repository-relative name.
+
+        Returns:
+            The resulting ``(state, text, relative)`` triple.
+
+        """
+        relative = path.relative_to(root).as_posix()
+        captured = u.Cli.atomic_read_binary_file_state(path, required=True)
+        if captured.failure:
+            return r[t.Triple[m.Cli.AtomicFileState, str, str]].from_failure(captured)
+        before = captured.value
+        if before.content is None:
+            return r[t.Triple[m.Cli.AtomicFileState, str, str]].fail(
+                f"text source disappeared during inventory: {path}",
+            )
+        return r[t.Triple[m.Cli.AtomicFileState, str, str]].ok((
+            before,
+            before.content.decode(c.Cli.ENCODING_DEFAULT),
+            relative,
+        ))
+
+    @staticmethod
+    def _rewrite_plan(
+        root: Path,
+        path: Path,
+        before: m.Cli.AtomicFileState,
+        updated: str,
+        base_states: t.VariadicTuple[m.Cli.AtomicFileState],
+    ) -> m.Infra.CodegenFilePlan:
+        """Build one authenticated publication plan for a rewritten source.
+
+        Returns:
+            The resulting ``m.Infra.CodegenFilePlan``.
+
+        """
+        return m.Infra.CodegenFilePlan(
+            project=root,
+            path=path,
+            before=before,
+            desired_content=updated.encode(c.Cli.ENCODING_DEFAULT),
+            desired_mode=before.mode,
+            source_states=(*base_states, before),
+            owner="mod-text",
+        )
+
+    @classmethod
+    def _scan_paths(
+        cls,
+        root: Path,
+        sources: t.SequenceOf[Path],
+        rules: t.VariadicTuple[m.Infra.ModTextRule],
+        base_states: t.VariadicTuple[m.Cli.AtomicFileState],
+        *,
+        fix: bool,
+    ) -> p.Result[
+        t.Triple[
+            m.Infra.ModTextReport,
+            t.VariadicTuple[m.Infra.CodegenFilePlan],
+            t.VariadicTuple[m.Cli.AtomicFileState],
+        ]
+    ]:
+        """Rewrite every elected source and collect the report and fix plans.
+
+        Returns:
+            The resulting ``(report, plans, inputs)`` triple.
+
+        """
+        entries: list[m.Infra.ModTextFinding] = []
+        files: set[Path] = set()
+        actionable = 0
+        inputs = [*base_states]
+        plans: list[m.Infra.CodegenFilePlan] = []
+        for path in sources:
+            prepared = cls._authenticated_source(root, path)
+            if prepared.failure:
+                return r[
+                    t.Triple[
+                        m.Infra.ModTextReport,
+                        t.VariadicTuple[m.Infra.CodegenFilePlan],
+                        t.VariadicTuple[m.Cli.AtomicFileState],
+                    ]
+                ].from_failure(prepared)
+            before, source, relative = prepared.value
+            inputs.append(before)
+            updated, target_entries, target_actionable = cls._rewrite_source(
+                source,
+                relative,
+                rules,
+            )
+            entries.extend(target_entries)
+            actionable += target_actionable
+            if target_entries:
+                files.add(Path(relative))
+            if fix and updated != source:
+                if source.startswith(c.Infra.AUTOGEN_HEADERS):
+                    return r[
+                        t.Triple[
+                            m.Infra.ModTextReport,
+                            t.VariadicTuple[m.Infra.CodegenFilePlan],
+                            t.VariadicTuple[m.Cli.AtomicFileState],
+                        ]
+                    ].fail(
+                        "generated findings require canonical generator repair: "
+                        f"{path}",
+                    )
+                if path.suffix == c.Infra.EXT_PYTHON:
+                    ast.parse(updated, filename=str(path))
+                plans.append(
+                    cls._rewrite_plan(root, path, before, updated, base_states),
+                )
+        report = m.Infra.ModTextReport(
+            findings=len(entries),
+            actionable=actionable,
+            files=frozenset(files),
+            entries=tuple(entries),
+        )
+        return r[
+            t.Triple[
+                m.Infra.ModTextReport,
+                t.VariadicTuple[m.Infra.CodegenFilePlan],
+                t.VariadicTuple[m.Cli.AtomicFileState],
+            ]
+        ].ok((report, tuple(plans), tuple(inputs)))
+
+    @classmethod
     def scan(
         cls,
         root: Path,
@@ -486,83 +705,60 @@ class FlextInfraModTextGateEngine:
 
         """
         root = root.absolute()
-        catalogues = cls._catalogue_states(root)
-        if catalogues.failure:
-            return r[m.Infra.ModTextReport].from_failure(catalogues)
-        loaded = cls._rules_from_states(catalogues.value)
-        if loaded.failure:
-            return r[m.Infra.ModTextReport].from_failure(loaded)
-        identity = u.Cli.atomic_read_binary_file_state(
-            root / c.PYPROJECT_FILENAME,
-            required=True,
-        )
-        if identity.failure:
-            return r[m.Infra.ModTextReport].from_failure(identity)
-        selected = cls._selected_rules(identity.value, loaded.value)
-        if selected.failure:
-            return r[m.Infra.ModTextReport].from_failure(selected)
-        rules = selected.value
+        context = cls._elected_rules(root)
+        if context.failure:
+            return r[m.Infra.ModTextReport].from_failure(context)
+        catalogues, identity, rules = context.value
         sources = cls._source_paths(root, rules)
         if sources.failure:
             return r[m.Infra.ModTextReport].from_failure(sources)
-        entries: list[m.Infra.ModTextFinding] = []
-        files: set[Path] = set()
-        actionable = 0
-        inputs = [*catalogues.value, identity.value]
-        plans: list[m.Infra.CodegenFilePlan] = []
-        for path in sources.value:
-            relative = path.relative_to(root).as_posix()
-            captured = u.Cli.atomic_read_binary_file_state(path, required=True)
-            if captured.failure:
-                return r[m.Infra.ModTextReport].from_failure(captured)
-            before = captured.value
-            if before.content is None:
-                return r[m.Infra.ModTextReport].fail(
-                    f"text source disappeared during inventory: {path}",
-                )
-            inputs.append(before)
-            source = before.content.decode(c.Cli.ENCODING_DEFAULT)
-            updated, target_entries, target_actionable = cls._rewrite_source(
-                source,
-                relative,
-                rules,
-            )
-            entries.extend(target_entries)
-            actionable += target_actionable
-            if target_entries:
-                files.add(Path(relative))
-            if fix and updated != source:
-                if source.startswith(c.Infra.AUTOGEN_HEADERS):
-                    return r[m.Infra.ModTextReport].fail(
-                        "generated findings require canonical generator repair: "
-                        f"{path}",
-                    )
-                if path.suffix == c.Infra.EXT_PYTHON:
-                    ast.parse(updated, filename=str(path))
-                plans.append(
-                    m.Infra.CodegenFilePlan(
-                        project=root,
-                        path=path,
-                        before=before,
-                        desired_content=updated.encode(c.Cli.ENCODING_DEFAULT),
-                        desired_mode=before.mode,
-                        source_states=(*catalogues.value, identity.value, before),
-                        owner="mod-text",
-                    ),
-                )
-        report = m.Infra.ModTextReport(
-            findings=len(entries),
-            actionable=actionable,
-            files=frozenset(files),
-            entries=tuple(entries),
+        scanned = cls._scan_paths(
+            root,
+            sources.value,
+            rules,
+            (*catalogues, identity),
+            fix=fix,
         )
+        if scanned.failure:
+            return r[m.Infra.ModTextReport].from_failure(scanned)
+        report, plans, inputs = scanned.value
         if validate_receipts:
             cls._validate_expected_receipts(rules, report)
         if fix and plans:
-            published = cls._publish(root, tuple(plans), tuple(inputs), rules)
+            published = cls._publish(root, plans, inputs, rules)
             if published.failure:
                 return r[m.Infra.ModTextReport].from_failure(published)
         return r[m.Infra.ModTextReport].ok(report)
+
+    @classmethod
+    def _validate_inventory(
+        cls,
+        root: Path,
+        inputs: t.VariadicTuple[m.Cli.AtomicFileState],
+        rules: t.VariadicTuple[m.Infra.ModTextRule],
+    ) -> p.Result[bool]:
+        """Require the source inventory to be unchanged since the scan.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        catalogue_states = cls._catalogue_states(root)
+        if catalogue_states.failure:
+            return r[bool].from_failure(catalogue_states)
+        catalogues = {state.path for state in catalogue_states.value}
+        identity_path = root / c.PYPROJECT_FILENAME
+        expected = {
+            state.path
+            for state in inputs
+            if state.path not in catalogues and state.path != identity_path
+        }
+        observed = cls._source_paths(root, rules)
+        if observed.failure:
+            return r[bool].from_failure(observed)
+        if set(observed.value) != expected:
+            return r[bool].fail("text source inventory changed before publication")
+        return r[bool].ok(value=True)
 
     @classmethod
     def _publish(
@@ -578,16 +774,10 @@ class FlextInfraModTextGateEngine:
             The resulting ``p.Result[t.VariadicTuple[Path]]``.
 
         """
-        from flext_infra.codegen import (
-            FlextInfraCodegenMiseArtifacts,
-            FlextInfraCodegenTransaction,
-        )
-
         transaction = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
         roots = {"@mod-text": root}
-        identity_path = root / c.PYPROJECT_FILENAME
         analysis = m.Infra.CodegenPhaseAnalysis(
             phase="mod-text",
             files=plans,
@@ -595,21 +785,7 @@ class FlextInfraModTextGateEngine:
         )
 
         def validate_inventory() -> p.Result[bool]:
-            catalogue_states = cls._catalogue_states(root)
-            if catalogue_states.failure:
-                return r[bool].from_failure(catalogue_states)
-            catalogues = {state.path for state in catalogue_states.value}
-            expected = {
-                state.path
-                for state in inputs
-                if state.path not in catalogues and state.path != identity_path
-            }
-            observed = cls._source_paths(root, rules)
-            if observed.failure:
-                return r[bool].from_failure(observed)
-            if set(observed.value) != expected:
-                return r[bool].fail("text source inventory changed before publication")
-            return r[bool].ok(value=True)
+            return cls._validate_inventory(root, inputs, rules)
 
         def validate_published() -> p.Result[bool]:
             inventory = validate_inventory()

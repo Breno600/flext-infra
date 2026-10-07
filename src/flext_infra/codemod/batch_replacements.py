@@ -13,10 +13,71 @@ from typing import TYPE_CHECKING, override
 import libcst as cst
 
 from flext_core import r
-from flext_infra import c, m, u
+from flext_infra import c, m, t, u
+from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
+from flext_infra.transformers import FlextInfraSemanticPublication
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from flext_infra import p
+
+
+class _DeadScaffold(cst.CSTTransformer):
+    """Remove ``if TYPE_CHECKING:`` blocks whose body is only ``pass``."""
+
+    @override
+    def leave_If(
+        self,
+        original_node: cst.If,
+        updated_node: cst.If,
+    ) -> cst.If | cst.RemovalSentinel:
+        test = updated_node.test
+        body = updated_node.body
+        if isinstance(test, cst.Name) and test.value == "TYPE_CHECKING":
+            statements = (
+                body.body
+                if isinstance(
+                    body,
+                    cst.SimpleStatementSuite | cst.IndentedBlock,
+                )
+                else ()
+            )
+            if len(statements) == 1 and isinstance(
+                statements[0],
+                cst.SimpleStatementLine,
+            ):
+                inner = statements[0].body
+                if len(inner) == 1 and isinstance(inner[0], cst.Pass):
+                    return cst.RemoveFromParent()
+        return updated_node
+
+
+class _OrphanImport(cst.CSTTransformer):
+    """Drop the ``TYPE_CHECKING`` name once its block is gone."""
+
+    @override
+    def leave_ImportFrom(
+        self,
+        original_node: cst.ImportFrom,
+        updated_node: cst.ImportFrom,
+    ) -> cst.ImportFrom | cst.RemovalSentinel:
+        module = updated_node.module
+        if not (isinstance(module, cst.Name) and module.value == "typing"):
+            return updated_node
+        names = updated_node.names
+        if isinstance(names, cst.ImportStar):
+            return updated_node
+        kept = tuple(
+            alias
+            for alias in names
+            if not (
+                isinstance(alias.name, cst.Name) and alias.name.value == "TYPE_CHECKING"
+            )
+        )
+        if len(kept) == len(names):
+            return updated_node
+        if not kept:
+            return cst.RemoveFromParent()
+        return updated_node.with_changes(names=kept)
 
 
 class FlextInfraModReplacements:
@@ -70,9 +131,6 @@ class FlextInfraModReplacements:
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
-        from flext_infra.transformers import FlextInfraSemanticPublication
-
         allowed = cls.require_authored(
             tuple(finding for finding in report.entries if finding.actionable),
         )
@@ -84,83 +142,149 @@ class FlextInfraModReplacements:
                 grouped.setdefault(root / finding.file, []).append(finding)
         plans: list[m.Infra.SemanticFilePlan] = []
         for path, findings in sorted(grouped.items()):
-            before = findings[0].source_state
-            if before is None or before.content is None:
-                return r[bool].fail(
-                    f"actionable finding lacks authenticated state: {path}",
-                )
-            replacements: list[t.Triple[int, int, bytes]] = []
-            for finding in findings:
-                if finding.source_state != before or finding.replacement is None:
-                    return r[bool].fail(
-                        f"inconsistent actionable finding source: {path}",
-                    )
-                raw_offsets = finding.payload.get("replacementOffsets")
-                raw_match = finding.range.get("byteOffset")
-                if not isinstance(raw_offsets, Mapping) or not isinstance(
-                    raw_match,
-                    Mapping,
-                ):
-                    return r[bool].fail(
-                        f"ast-grep finding lacks byte coordinates: "
-                        f"{path}:{finding.rule_id}",
-                    )
-                offsets = m.Infra.ModReplacementOffsets.model_validate(raw_offsets)
-                matched = m.Infra.ModReplacementOffsets.model_validate(raw_match)
-                if not (
-                    0 <= offsets.start <= offsets.end <= len(before.content)
-                ) or not (0 <= matched.start <= matched.end <= len(before.content)):
-                    return r[bool].fail(
-                        f"ast-grep byte coordinates escape source: {path}",
-                    )
-                if before.content[matched.start : matched.end] != finding.text.encode(
-                    c.Cli.ENCODING_DEFAULT,
-                ):
-                    return r[bool].fail(
-                        f"ast-grep match differs from authenticated source: {path}",
-                    )
-                replacements.append((
-                    offsets.start,
-                    offsets.end,
-                    finding.replacement.encode(c.Cli.ENCODING_DEFAULT),
-                ))
-            updated = before.content
-            boundary = len(updated)
-            for start, end, replacement in sorted(replacements, reverse=True):
-                if end > boundary:
-                    return r[bool].fail(f"ast-grep replacements overlap: {path}")
-                updated = updated[:start] + replacement + updated[end:]
-                boundary = start
-            plans.append(
-                m.Infra.SemanticFilePlan(
-                    project=u.Infra.project_root(path) or root,
-                    path=path,
-                    before=before,
-                    desired_content=updated,
-                    desired_mode=before.mode,
-                    changes=tuple(finding.rule_id for finding in findings),
-                ),
-            )
+            plan = cls._path_plan(root, path, findings)
+            if plan.failure:
+                return r[bool].from_failure(plan)
+            plans.append(plan.value)
         published = FlextInfraSemanticPublication.publish_semantic_file_plans(
             plans,
             repository_root=root,
         )
         if published.failure:
             return r[bool].from_failure(published)
+        return cls._finish_publication(root, tuple(sorted(grouped)))
+
+    @classmethod
+    def _path_plan(
+        cls,
+        root: Path,
+        path: Path,
+        findings: t.SequenceOf[m.Infra.ModScanFinding],
+    ) -> p.Result[m.Infra.SemanticFilePlan]:
+        """Validate one path's actionable findings into one publication plan.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.SemanticFilePlan]``.
+
+        """
+        before = findings[0].source_state
+        if before is None or before.content is None:
+            return r[m.Infra.SemanticFilePlan].fail(
+                f"actionable finding lacks authenticated state: {path}",
+            )
+        replacements: list[t.Triple[int, int, bytes]] = []
+        for finding in findings:
+            if finding.source_state != before or finding.replacement is None:
+                return r[m.Infra.SemanticFilePlan].fail(
+                    f"inconsistent actionable finding source: {path}",
+                )
+            coordinates = cls._finding_replacement(
+                before.content,
+                finding,
+                finding.replacement,
+                path,
+            )
+            if coordinates.failure:
+                return r[m.Infra.SemanticFilePlan].from_failure(coordinates)
+            replacements.append(coordinates.value)
+        updated = cls._apply_replacements(before.content, replacements, path)
+        if updated.failure:
+            return r[m.Infra.SemanticFilePlan].from_failure(updated)
+        return r[m.Infra.SemanticFilePlan].ok(
+            m.Infra.SemanticFilePlan(
+                project=u.Infra.project_root(path) or root,
+                path=path,
+                before=before,
+                desired_content=updated.value,
+                desired_mode=before.mode,
+                changes=tuple(finding.rule_id for finding in findings),
+            ),
+        )
+
+    @staticmethod
+    def _finding_replacement(
+        content: bytes,
+        finding: m.Infra.ModScanFinding,
+        replacement: str,
+        path: Path,
+    ) -> p.Result[t.Triple[int, int, bytes]]:
+        """Validate one finding's byte coordinates against the authenticated bytes.
+
+        Returns:
+            The resulting ``(start, end, replacement)`` replacement triple.
+
+        """
+        raw_offsets = finding.payload.get("replacementOffsets")
+        raw_match = finding.range.get("byteOffset")
+        if not isinstance(raw_offsets, Mapping) or not isinstance(raw_match, Mapping):
+            return r[t.Triple[int, int, bytes]].fail(
+                f"ast-grep finding lacks byte coordinates: {path}:{finding.rule_id}",
+            )
+        offsets = m.Infra.ModReplacementOffsets.model_validate(raw_offsets)
+        matched = m.Infra.ModReplacementOffsets.model_validate(raw_match)
+        if not (0 <= offsets.start <= offsets.end <= len(content)) or not (
+            0 <= matched.start <= matched.end <= len(content)
+        ):
+            return r[t.Triple[int, int, bytes]].fail(
+                f"ast-grep byte coordinates escape source: {path}",
+            )
+        if content[matched.start : matched.end] != finding.text.encode(
+            c.Cli.ENCODING_DEFAULT,
+        ):
+            return r[t.Triple[int, int, bytes]].fail(
+                f"ast-grep match differs from authenticated source: {path}",
+            )
+        return r[t.Triple[int, int, bytes]].ok((
+            offsets.start,
+            offsets.end,
+            replacement.encode(c.Cli.ENCODING_DEFAULT),
+        ))
+
+    @staticmethod
+    def _apply_replacements(
+        content: bytes,
+        replacements: t.SequenceOf[t.Triple[int, int, bytes]],
+        path: Path,
+    ) -> p.Result[bytes]:
+        """Apply one path's replacements back-to-front, rejecting overlaps.
+
+        Returns:
+            The resulting updated content.
+
+        """
+        updated = content
+        boundary = len(updated)
+        for start, end, replacement in sorted(replacements, reverse=True):
+            if end > boundary:
+                return r[bytes].fail(f"ast-grep replacements overlap: {path}")
+            updated = updated[:start] + replacement + updated[end:]
+            boundary = start
+        return r[bytes].ok(updated)
+
+    @classmethod
+    def _finish_publication(
+        cls,
+        root: Path,
+        paths: t.SequenceOf[Path],
+    ) -> p.Result[bool]:
+        """Normalize imports, strip dead scaffolds, and format the changed paths.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         # AST rewrites can also leave imports whose last reference was removed.
         with u.Infra.open_project(root) as rope_project:
             normalized = u.Infra.normalize_imports(
                 rope_project,
-                file_paths=tuple(sorted(grouped)),
+                file_paths=tuple(sorted(paths)),
             )
         if normalized.failure:
             return r[bool].from_failure(normalized)
-        stripped = FlextInfraModReplacements._strip_dead_type_only_scaffolds(
-            tuple(sorted(grouped)),
-        )
+        stripped = cls._strip_dead_type_only_scaffolds(tuple(sorted(paths)))
         if stripped.failure:
             return r[bool].from_failure(stripped)
-        formatted = FlextInfraRuffFormatGate.format_files(root, tuple(sorted(grouped)))
+        formatted = FlextInfraRuffFormatGate.format_files(root, tuple(sorted(paths)))
         if formatted.failure:
             return r[bool].from_failure(formatted)
         return r[bool].ok(value=True)
@@ -179,65 +303,6 @@ class FlextInfraModReplacements:
             The resulting ``p.Result[bool]``.
 
         """
-
-        class _DeadScaffold(cst.CSTTransformer):
-            """Remove ``if TYPE_CHECKING:`` blocks whose body is only ``pass``."""
-
-            @override
-            def leave_If(
-                self,
-                original_node: cst.If,
-                updated_node: cst.If,
-            ) -> cst.If | cst.RemovalSentinel:
-                test = updated_node.test
-                body = updated_node.body
-                if isinstance(test, cst.Name) and test.value == "TYPE_CHECKING":
-                    statements = (
-                        body.body
-                        if isinstance(
-                            body,
-                            cst.SimpleStatementSuite | cst.IndentedBlock,
-                        )
-                        else ()
-                    )
-                    if len(statements) == 1 and isinstance(
-                        statements[0],
-                        cst.SimpleStatementLine,
-                    ):
-                        inner = statements[0].body
-                        if len(inner) == 1 and isinstance(inner[0], cst.Pass):
-                            return cst.RemoveFromParent()
-                return updated_node
-
-        class _OrphanImport(cst.CSTTransformer):
-            """Drop the ``TYPE_CHECKING`` name once its block is gone."""
-
-            @override
-            def leave_ImportFrom(
-                self,
-                original_node: cst.ImportFrom,
-                updated_node: cst.ImportFrom,
-            ) -> cst.ImportFrom | cst.RemovalSentinel:
-                module = updated_node.module
-                if not (isinstance(module, cst.Name) and module.value == "typing"):
-                    return updated_node
-                names = updated_node.names
-                if isinstance(names, cst.ImportStar):
-                    return updated_node
-                kept = tuple(
-                    alias
-                    for alias in names
-                    if not (
-                        isinstance(alias.name, cst.Name)
-                        and alias.name.value == "TYPE_CHECKING"
-                    )
-                )
-                if len(kept) == len(names):
-                    return updated_node
-                if not kept:
-                    return cst.RemoveFromParent()
-                return updated_node.with_changes(names=kept)
-
         changed = False
         for path in paths:
             if not path.is_file():
