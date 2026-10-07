@@ -296,6 +296,15 @@ Infra:
           # Pydantic runtime-evaluation is protected by the
           # runtime-evaluated-roots projection, not by disabling the rules.
           authorized-exceptions:
+            - files: "tests/test_snapshot_drill.py"
+              rules: [import-private-name]
+              authority: operator-relocation-mandate-2026-10-06-snapshot-stems
+              reason: >-
+                The datacosmos-backup snapshot drill exercises the canonical
+                use-case stem directly through a fake port; the models family
+                module is private by naming, public by contract (the root lazy
+                map publishes its class), and the public facades cannot expose
+                it without an import cycle through the root package.
             - files: "**/tests/**"
               rules:
                 [

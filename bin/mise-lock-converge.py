@@ -20,6 +20,7 @@ import os
 import re
 import shutil
 import subprocess
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -471,6 +472,76 @@ class MiseLockConverge:
                 tool = stripped.split("=", 1)[0].strip().strip('"')
                 if tool in resolved:
                     lines[index] = f'{tool} = "{resolved[tool]}"\n'
+                    pinned += 1
+        manifest_path.write_text("".join(lines), encoding="utf-8")
+        print(
+            f"INFO: pinned {pinned} staged tools to their locked resolutions",
+            file=sys.stderr,
+        )
+        return 0
+
+    @classmethod
+    def pin_stage_manifest(
+        cls, stage: Path, committed_lock: Path | None = None
+    ) -> int:
+        """Pin the staged manifest's moving selectors to the staged lock.
+
+        The locked install resolves a moving selector against the live
+        registry where the supply-chain cooldown hides the newest releases,
+        so the lock's own resolution is the only installable truth. The
+        staged manifest is throwaway; the committed manifest keeps its
+        declared selector and the staged lock stays the frozen instrument.
+
+        A tool whose fresh provenance verification failed (a throttled
+        attestation proxy) gets no stage-lock entries, which would make the
+        verified committed entries unresolvable; fix-forward merges the
+        committed blocks for exactly those tools back into the staged lock
+        before pinning.
+        """
+        lock_path = stage / "mise.lock"
+        lock = lock_path.read_text(encoding="utf-8")
+        resolved: dict[str, str] = {}
+        present: set[str] = set()
+        for name, body in re.findall(
+            r"\[\[tools\.(\S+?)\]\]\n(.*?)(?=\n\[\[|\Z)", lock, re.S
+        ):
+            present.add(name)
+            found = re.search(r'^version = "([^"]+)"', body, re.M)
+            if found:
+                resolved[name.strip('"').removeprefix("core:")] = found.group(1)
+        if committed_lock is not None and committed_lock.is_file():
+            committed = committed_lock.read_text(encoding="utf-8")
+            for block, entry_name in re.findall(
+                r"(\[\[tools\.(\S+?)\]\]\n.*?)(?=\n\[\[|\Z)", committed, re.S
+            ):
+                if entry_name not in present:
+                    lock = lock.rstrip("\n") + "\n\n" + block.rstrip("\n") + "\n"
+                    lock_path.write_text(lock, encoding="utf-8")
+                    present.add(entry_name)
+                    found = re.search(r'^version = "([^"]+)"', block, re.M)
+                    if found:
+                        resolved[entry_name.strip('"').removeprefix("core:")] = found.group(1)
+                    print(
+                        f"INFO: merged committed {entry_name} entries the fresh "
+                        "pass could not verify",
+                        file=sys.stderr,
+                    )
+        manifest_path = cls.staged_manifest(stage)
+        lines = manifest_path.read_text(encoding="utf-8").splitlines(
+            keepends=True
+        )
+        in_tools = False
+        pinned = 0
+        for index, line in enumerate(lines):
+            stripped = line.strip()
+            if stripped.startswith("["):
+                in_tools = stripped == "[tools]"
+                continue
+            if in_tools and "=" in stripped:
+                tool = stripped.split("=", 1)[0].strip().strip('"')
+                if tool in resolved:
+                    key = stripped.split("=", 1)[0].strip()
+                    lines[index] = f'{key} = "{resolved[tool]}"\n'
                     pinned += 1
         manifest_path.write_text("".join(lines), encoding="utf-8")
         print(
