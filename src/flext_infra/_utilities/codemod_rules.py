@@ -62,12 +62,12 @@ class FlextInfraUtilitiesCodemodRules:
             return r[m.Infra.CodemodRulePlan].from_failure(runtime_order)
         providers: list[t.Pair[str, Path]] = []
         for name in (*universal_order.value, *runtime_order.value):
-            config = universal.get(name) or runtime.get(name)
-            if config is None:
+            provider_config = universal.get(name) or runtime.get(name)
+            if provider_config is None:
                 return r[m.Infra.CodemodRulePlan].fail(
                     f"codemod provider disappeared from resolved graph: {name}",
                 )
-            providers.append((name, config))
+            providers.append((name, provider_config))
         local_config = root / c.Infra.CODEMOD_CONFIG_RELPATH
         if local_config.is_file():
             providers.append((f"{root_name}:local", local_config))
@@ -213,14 +213,15 @@ class FlextInfraUtilitiesCodemodRules:
                 raise ValueError(configs.error or f"resolve codemod provider: {name}")
             if not configs.value:
                 continue
-            config = configs.value[0]
-            declared_scope = cls._config_scope(config)
+            provider_config = configs.value[0]
+            declared_scope = cls._config_scope(provider_config)
             if declared_scope.failure:
                 raise ValueError(
-                    declared_scope.error or f"resolve codemod scope: {config}",
+                    declared_scope.error
+                    or f"resolve codemod scope: {provider_config}",
                 )
             if declared_scope.value == scope:
-                providers[name] = config
+                providers[name] = provider_config
         return providers
 
     @classmethod

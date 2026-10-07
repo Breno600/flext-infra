@@ -13,7 +13,7 @@ import tokenize
 from pathlib import Path
 
 from flext_infra import c, m, t, u
-from flext_infra._config import config
+from flext_infra._config import FlextInfraConfig, config
 
 
 class FlextInfraRenameSources:
@@ -65,8 +65,6 @@ class FlextInfraRenameSources:
             ValueError: If rename source disappeared.
 
         """
-        from flext_infra._config import FlextInfraConfig
-
         files: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
         ignored = config.Infra.codegen.source_scan_ignored
         generated = {item.path for item in config.Infra.codegen.managed_files}
