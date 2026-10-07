@@ -1370,7 +1370,7 @@ Infra:
             runtime: [flext-api, bcrypt>=5.0.0, PyJWT>=2.15.1]
           - upstream: flext_core
             project: flext-cli
-            runtime: [click>=8.5.0, typer>=0.27.2, jinja2>=3.1.6, jsonschema>=4.26.0, tomlkit>=0.15.1, ruamel.yaml>=0.19.1, defusedxml>=0.7.1, openpyxl>=3.1.5, python-docx>=1.2.0, python-pptx>=1.0.2]
+            runtime: [click>=8.5.0, typer>=0.27.3, jinja2>=3.1.6, jsonschema>=4.26.0, tomlkit>=0.15.1, ruamel.yaml>=0.19.1, defusedxml>=0.7.1, openpyxl>=3.1.5, python-docx>=1.2.0, python-pptx>=1.0.2]
           - upstream: flext_cli
             project: flext-infra
             runtime: [flext-cli, defusedxml>=0.7.1, GitPython>=3.2.0, jinja2>=3.1.6, libcst>=1.9.0, Markdown>=3.11, "rope @ git+https://github.com/marlon-costa-dc/rope.git@datacosmos", pytest>=9.1.1, mkdocs>=1.6.1]

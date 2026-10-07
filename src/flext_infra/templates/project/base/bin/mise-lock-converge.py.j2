@@ -113,27 +113,7 @@ class MiseLockConverge:
                 f"Mise exited {completed.returncode}: {' '.join(arguments)}\n{diagnostics.strip()}"
             )
             raise ValueError(message)
-        # The minimum_release_age supply-chain policy emits a deterministic
-        # informational warning on every version listing (newer releases are
-        # hidden by the declared age window, by design). It is not a defect:
-        # treating it as blocking would make every converge fail forever.
-        # Cross-platform lock-time listing noise is equally deterministic:
-        # third-party releases (jscpd, qlty) publish no SLSA attestations and
-        # some python-build releases ship assets for only a subset of the
-        # six lockfile platforms, so their listings resolve on fewer targets.
-        expected_warnings = (
-            "hidden by minimum_release_age",
-            "lock-time provenance verification failed",
-            "failed to resolve",
-        )
-        warned = [line for line in diagnostics.splitlines() if "mise WARN" in line]
-        expected_folded = [expected.lower() for expected in expected_warnings]
-        unexpected = [
-            line
-            for line in warned
-            if not any(expected in line.lower() for expected in expected_folded)
-        ]
-        if unexpected:
+        if "mise WARN" in diagnostics:
             sys.stderr.write(diagnostics)
             message = f"Mise warned during {' '.join(arguments)}; converge stopped"
             raise ValueError(message)
@@ -338,20 +318,19 @@ class MiseLockConverge:
             present.add(name)
             found = re.search(r'^version = "([^"]+)"', body, re.M)
             if found:
-                resolved[name.removeprefix("core:")] = found.group(1)
+                resolved[name.strip('"').removeprefix("core:")] = found.group(1)
         if committed_lock is not None and committed_lock.is_file():
             committed = committed_lock.read_text(encoding="utf-8")
-            for name, body in re.findall(
+            for block, entry_name in re.findall(
                 r"(\[\[tools\.(\S+?)\]\]\n.*?)(?=\n\[\[|\Z)", committed, re.S
             ):
-                entry_name = name
                 if entry_name not in present:
-                    lock = lock.rstrip("\n") + "\n\n" + name.rstrip("\n") + "\n"
+                    lock = lock.rstrip("\n") + "\n\n" + block.rstrip("\n") + "\n"
                     lock_path.write_text(lock, encoding="utf-8")
                     present.add(entry_name)
-                    found = re.search(r'^version = "([^"]+)"', body, re.M)
+                    found = re.search(r'^version = "([^"]+)"', block, re.M)
                     if found:
-                        resolved[entry_name.removeprefix("core:")] = found.group(1)
+                        resolved[entry_name.strip('"').removeprefix("core:")] = found.group(1)
                     print(
                         f"INFO: merged committed {entry_name} entries the fresh "
                         "pass could not verify",
@@ -371,7 +350,8 @@ class MiseLockConverge:
             if in_tools and "=" in stripped:
                 tool = stripped.split("=", 1)[0].strip().strip('"')
                 if tool in resolved:
-                    lines[index] = f'{tool} = "{resolved[tool]}"\n'
+                    key = stripped.split("=", 1)[0].strip()
+                    lines[index] = f'{key} = "{resolved[tool]}"\n'
                     pinned += 1
         manifest_path.write_text("".join(lines), encoding="utf-8")
         print(
