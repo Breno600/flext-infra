@@ -14,7 +14,6 @@ from pathlib import Path
 
 from flext_core import r
 from flext_infra import c, m, p, t
-from flext_infra._utilities import FlextInfraUtilitiesGit
 
 
 class FlextInfraUtilitiesWorkspaceFingerprint:
@@ -89,6 +88,7 @@ class FlextInfraUtilitiesWorkspaceFingerprint:
             The resulting ``p.Result[m.Infra.WorkspaceFingerprint]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesGit
         root = checkout.resolve()
         inputs = FlextInfraUtilitiesGit.git_fingerprint_inputs(
             m.Infra.GitRepoRequest(repo_root=root),

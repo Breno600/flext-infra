@@ -9,13 +9,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
-from flext_cli import r, u
+from flext_cli import r
 
 from flext_infra import c, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesDependencies,
-    FlextInfraUtilitiesRepository,
-)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -41,6 +37,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             Each ``t.Pair[t.Cli.TomlTable, str]``.
 
         """
+        from flext_cli import u
         for section_name in (c.Infra.OPTIONAL_DEPENDENCIES, c.Infra.DEPENDENCY_GROUPS):
             parent = (
                 project if section_name == c.Infra.OPTIONAL_DEPENDENCIES else document
@@ -66,6 +63,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_cli import u
         project = u.Cli.toml_ensure_table(document, c.Infra.PROJECT)
         normalized = cls._normalize_requirement_field(
             project,
@@ -104,6 +102,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_cli import u
         raw_value = u.Cli.toml_value(container, key)
         if raw_value is None:
             return r[bool].ok(value=True)
@@ -147,6 +146,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             ValueError: If dependency ordering requires a named requirement.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies
         name = FlextInfraUtilitiesDependencies.dep_name(requirement)
         if name is None:
             message = "dependency ordering requires a named requirement"
@@ -179,6 +179,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             The resulting ``p.Result[str]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies, FlextInfraUtilitiesRepository
         dependency_name = FlextInfraUtilitiesDependencies.dep_name(requirement)
         if dependency_name is None or not (
             dependency_name.startswith("flext-")
@@ -263,6 +264,8 @@ class FlextInfraUtilitiesPyprojectRequirements:
         required_dev_dependencies: t.StrSequence,
     ) -> None:
         """Migrate optional dev dependencies and normalize declared groups."""
+        from flext_cli import u
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies
         project = u.Cli.toml_ensure_table(document, c.Infra.PROJECT)
         groups = u.Cli.toml_ensure_table(document, c.Infra.DEPENDENCY_GROUPS)
         optional = u.Cli.toml_table_child(project, c.Infra.OPTIONAL_DEPENDENCIES)
@@ -341,6 +344,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             The resulting ``bool``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies
         name = FlextInfraUtilitiesDependencies.dep_name(requirement)
         return (
             name is not None
@@ -361,6 +365,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
         so a git-pinned duplicate would silently win the resolution away from
         the live worktrees.
         """
+        from flext_cli import u
         groups = u.Cli.toml_table_child(document, c.Infra.DEPENDENCY_GROUPS)
         if groups is not None:
             u.Cli.toml_remove_key_if_present(groups, "workspace")
@@ -377,6 +382,8 @@ class FlextInfraUtilitiesPyprojectRequirements:
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_cli import u
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies, FlextInfraUtilitiesRepository
         payload = u.Cli.toml_as_mapping(document)
         if payload is None:
             return r[bool].fail("pyproject document is not a TOML mapping")

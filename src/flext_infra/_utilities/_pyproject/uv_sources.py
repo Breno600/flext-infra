@@ -8,14 +8,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from flext_cli import r, u
+from flext_cli import r
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesDependencies,
-    FlextInfraUtilitiesPyprojectRequirements,
-    FlextInfraUtilitiesPyprojectSession,
-)
+from flext_infra._utilities import FlextInfraUtilitiesPyprojectRequirements, FlextInfraUtilitiesPyprojectSession
 
 
 class FlextInfraUtilitiesPyprojectUvSources(
@@ -35,6 +31,8 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``p.Result[list[str]]``.
 
         """
+        from flext_cli import u
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies
         payload = u.Cli.toml_as_mapping(document)
         if payload is None:
             return r[list[str]].fail("pyproject document is not a TOML mapping")
@@ -68,6 +66,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``t.VariadicTuple[str]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies
         return tuple(
             active
             for item in cls._document_requirement_lines(document).unwrap()
@@ -94,6 +93,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``p.Result[t.VariadicTuple[str]]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies
         lines = cls._document_requirement_lines(document)
         if lines.failure:
             return r[t.VariadicTuple[str]].from_failure(lines)
@@ -127,6 +127,8 @@ class FlextInfraUtilitiesPyprojectUvSources(
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_cli import u
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if tool is None:
             tool = u.Cli.toml_ensure_table(document, c.Infra.TOOL)
@@ -223,8 +225,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
             required_names = {
                 name
                 for line in cls._document_requirement_lines(document).unwrap()
-                if (name := FlextInfraUtilitiesDependencies.dep_name(line))
-                is not None
+                if (name := FlextInfraUtilitiesDependencies.dep_name(line)) is not None
             }
             wanted_members = sorted(set(workspace_members) & required_names)
         else:

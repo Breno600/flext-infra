@@ -9,7 +9,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_infra import m, p, t
-from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors
 
 
 class FlextInfraUtilitiesCodegenPathCutover:
@@ -36,6 +35,7 @@ class FlextInfraUtilitiesCodegenPathCutover:
                 snapshot; or if Rope change escaped the governed source inventory.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors
         project = rope_workspace.rope_project
         root = Path(project.root.real_path)
         owner_module = "flext_infra.codegen._mise_artifacts_files"

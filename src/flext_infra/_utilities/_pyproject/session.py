@@ -6,10 +6,9 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_cli import r, u
+from flext_cli import r
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities import FlextInfraUtilitiesDependencies
 
 
 class FlextInfraUtilitiesPyprojectSession:
@@ -29,6 +28,8 @@ class FlextInfraUtilitiesPyprojectSession:
             The resulting ``p.Result[m.Infra.BindingResolution]``.
 
         """
+        from flext_cli import u
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if (
             tool is not None

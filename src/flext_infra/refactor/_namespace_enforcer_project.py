@@ -10,11 +10,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m
-from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
-from flext_infra.refactor._import_enforcement import FlextInfraImportNormalization
-from flext_infra.refactor.namespace_relocations import (
-    FlextInfraNamespaceRelocationCascade,
-)
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -49,6 +44,8 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             The resulting ``m.Infra.ProjectEnforcementReport``.
 
         """
+        from flext_infra.refactor._import_enforcement import FlextInfraImportNormalization
+        from flext_infra.refactor.namespace_relocations import FlextInfraNamespaceRelocationCascade
         py_files = self._collect_py_files(project_root=project_root)
         if apply:
             # The canonical import-form engine runs over every scoped file
@@ -94,6 +91,7 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             The resulting ``t.Infra.ModScanReport | None``.
 
         """
+        from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
         scan = FlextInfraModGateEngine.scan(project_root, fix=False)
         return None if scan.failure else scan.value
 
@@ -105,6 +103,7 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             The resulting ``t.SequenceOf[Path]``.
 
         """
+        from flext_infra.refactor.namespace_relocations import FlextInfraNamespaceRelocationCascade
         return FlextInfraNamespaceRelocationCascade.scoped_py_files(project_root)
 
     def _relocate_rule_findings(
@@ -128,6 +127,7 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             The resulting ``t.Pair[t.NonNegativeInt, t.NonNegativeInt]``.
 
         """
+        from flext_infra.refactor.namespace_relocations import FlextInfraNamespaceRelocationCascade
         if not (apply and findings):
             return len(findings), 0
         cascade = FlextInfraNamespaceRelocationCascade()

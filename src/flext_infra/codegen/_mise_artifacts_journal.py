@@ -19,9 +19,6 @@ from flext_infra.codegen._mise_artifacts_process import (
 from flext_infra.codegen._mise_artifacts_state import (
     FlextInfraMiseArtifactsState as journal_state,
 )
-from flext_infra.codegen._mise_artifacts_verification import (
-    FlextInfraMiseArtifactsVerification,
-)
 
 
 class FlextInfraMiseArtifactsJournal:
@@ -211,6 +208,7 @@ class FlextInfraMiseArtifactsJournal:
             The resulting ``p.Result[m.Infra.CodegenTransactionJournal]``.
 
         """
+        from flext_infra.codegen._mise_artifacts_verification import FlextInfraMiseArtifactsVerification
         registered = FlextInfraMiseArtifactsVerification.register_transaction_manifests(
             layout,
             journal,
@@ -984,6 +982,7 @@ class FlextInfraMiseArtifactsJournal:
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra.codegen._mise_artifacts_verification import FlextInfraMiseArtifactsVerification
         return FlextInfraMiseArtifactsVerification.journal_topology(
             plan.layout,
             journal,

@@ -19,6 +19,15 @@ snapshots:
       start: 26
       end: 37
   ? |
+    def shell() -> object:
+        from flext_infra import workspace
+        return workspace
+  : labels:
+    - source: from flext_infra import workspace
+      style: primary
+      start: 27
+      end: 60
+  ? |
     from importlib import import_module
     module = import_module("json")
   : labels:

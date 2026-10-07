@@ -13,15 +13,7 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import m, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesCodegenNamespace,
-    FlextInfraUtilitiesRopeRuntimeModules,
-    FlextInfraUtilitiesSemanticCutoverClassScope,
-    FlextInfraUtilitiesSemanticCutoverEdits,
-    FlextInfraUtilitiesSemanticCutoverNestingCst,
-    FlextInfraUtilitiesSemanticCutoverNestingOwner,
-    FlextInfraUtilitiesSemanticFamilyFlatten,
-)
+from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverClassScope, FlextInfraUtilitiesSemanticCutoverEdits, FlextInfraUtilitiesSemanticCutoverNestingCst, FlextInfraUtilitiesSemanticCutoverNestingOwner, FlextInfraUtilitiesSemanticFamilyFlatten
 from flext_infra._utilities._semantic_cutover.test_helpers import (
     FlextInfraUtilitiesSemanticTestHelpers,
 )
@@ -180,6 +172,7 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
             The resulting ``p.Result[t.StrMapping]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
         planned = r[t.StrMapping]
         family = FlextInfraUtilitiesCodegenNamespace.facade_family_of_file(
             file_path.name,
@@ -300,6 +293,7 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
             The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
         planned_edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
         modules = {
             entry.file_path.resolve(): entry for entry in rope_workspace.modules()

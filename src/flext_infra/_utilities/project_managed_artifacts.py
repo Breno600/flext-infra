@@ -11,11 +11,9 @@ import stat
 from collections.abc import MutableMapping
 from pathlib import Path
 
-from flext_cli import u
 
 from flext_core import r
 from flext_infra import c, m, p, t
-from flext_infra._utilities import FlextInfraUtilitiesGit
 
 
 class FlextInfraUtilitiesProjectManagedArtifacts:
@@ -35,6 +33,7 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
             The resulting ``p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]``.
 
         """
+        from flext_cli import u
         if not project_dir.exists() and not project_dir.is_symlink():
             return r[tuple[m.Cli.AtomicFileState, ...]].ok(())
         project_identity = cls._required_directory_identity(
@@ -259,6 +258,7 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
             The resulting ``p.Result[m.Infra.ProjectManagedArtifactsSnapshot]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesGit
         resolved = project_dir.expanduser().resolve()
         blobs = FlextInfraUtilitiesGit.git_committed_directory_blobs(
             resolved,
@@ -340,6 +340,7 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
             The fragment, empty when the source declares no ``ManagedArtifacts``.
 
         """
+        from flext_cli import u
         try:
             source_text = content.decode(c.Cli.ENCODING_DEFAULT)
         except UnicodeDecodeError as exc:
@@ -513,6 +514,7 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
             The resulting ``p.Result[str]``.
 
         """
+        from flext_cli import u
         local_tools = resolution.artifacts.Mise.tools
         if not local_tools:
             return r[str].ok(rendered)

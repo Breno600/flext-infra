@@ -12,7 +12,7 @@ from __future__ import annotations
 from collections.abc import MutableMapping
 from pathlib import Path
 
-from flext_cli import r, u
+from flext_cli import r
 
 from flext_infra import c, m, p, t
 
@@ -38,6 +38,7 @@ class FlextInfraUtilitiesRefactor:
             TypeError: If expected list value.
 
         """
+        from flext_cli import u
         if value is None:
             return []
         if isinstance(value, str):
@@ -79,6 +80,7 @@ class FlextInfraUtilitiesRefactor:
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_cli import u
         payload = {
             "files": [
                 {
@@ -113,6 +115,7 @@ class FlextInfraUtilitiesRefactor:
             The resulting ``p.Result[m.Infra.ModScanEvidenceReceipt]``.
 
         """
+        from flext_cli import u
         classified = (
             report.actionable + report.detection_only + report.non_actionable_with_fix
         )
@@ -212,6 +215,7 @@ class FlextInfraUtilitiesRefactor:
             The resulting ``p.Result[Path]``.
 
         """
+        from flext_cli import u
         content = (report.model_dump_json(indent=2) + "\n").encode(
             c.Cli.ENCODING_DEFAULT,
         )

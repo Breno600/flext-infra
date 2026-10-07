@@ -16,11 +16,6 @@ from flext_infra import c, m, p, t, u
 from flext_infra.codegen._conform.artifact_render import (
     FlextInfraCodegenConformArtifactRender,
 )
-from flext_infra.deps import FlextInfraPyprojectModernizer
-from flext_infra.services.codegen import FlextInfraCodegen
-from flext_infra.workspace.environment_contracts import (
-    FlextInfraWorkspaceEnvironmentContracts,
-)
 
 
 class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRender):
@@ -40,6 +35,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
 
         """
+        from flext_infra.deps import FlextInfraPyprojectModernizer
         root = target.root
         repository = target.repository
         stage_started = time.monotonic()
@@ -527,6 +523,8 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
 
         """
+        from flext_infra.services.codegen import FlextInfraCodegen
+        from flext_infra.workspace.environment_contracts import FlextInfraWorkspaceEnvironmentContracts
         root = target.root
         profile = target.make_profile
         governed_by_path = {

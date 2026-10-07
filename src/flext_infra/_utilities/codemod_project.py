@@ -23,22 +23,11 @@ from importlib.util import find_spec
 from pathlib import Path
 from types import MappingProxyType
 
-from flext_cli import r, u
+from flext_cli import r
 from packaging.utils import canonicalize_name
 
 from flext_infra import c, m, p, t
-from flext_infra._config import config
-from flext_infra._utilities import (
-    FlextInfraUtilitiesBase,
-    FlextInfraUtilitiesCodegenNamespace,
-    FlextInfraUtilitiesCodemodRules,
-    FlextInfraUtilitiesPyproject,
-    FlextInfraUtilitiesRopeAnalysisAstHelpers,
-    FlextInfraUtilitiesRopeAnalysisExports,
-    FlextInfraUtilitiesRopeAnalysisImportState,
-    FlextInfraUtilitiesRopeCore,
-    FlextInfraUtilitiesRopeImports,
-)
+from flext_infra._utilities import FlextInfraUtilitiesCodemodRules
 
 
 class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
@@ -63,6 +52,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             ValueError: If rope could not name module.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeCore, FlextInfraUtilitiesRopeImports
         raw: MutableMapping[str, set[str]] = {}
         modules: MutableMapping[Path, str] = {}
         with FlextInfraUtilitiesRopeCore.open_project(root) as project:
@@ -111,6 +101,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             The resulting ``t.MappingKV[str, frozenset[str]]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesBase
         cycles: MutableMapping[str, frozenset[str]] = {}
         for component in FlextInfraUtilitiesBase.strongly_connected_components({
             name: set(targets) for name, targets in graph.items()
@@ -132,6 +123,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             Whether ``file_path`` lies in a source-scan-ignored tree.
 
         """
+        from flext_infra._config import config
         resolved = file_path.resolve()
         root_resolved = root.resolve()
         parts = (
@@ -166,6 +158,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 absent from the project import graph.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace, FlextInfraUtilitiesRopeAnalysisImportState
         graph, modules = facts.import_graph, facts.import_modules
         source = modules.get(file_path.resolve())
         if source is None:
@@ -225,6 +218,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             Whether ``namespace`` in a facade module composes its family.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers, FlextInfraUtilitiesRopeAnalysisExports
         package = facade_file.parent / f"_{facade_file.stem}"
         if not package.is_dir():
             return True
@@ -268,6 +262,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             ValueError: If class.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
         tree = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(
             facade_file.read_text(encoding=c.Cli.ENCODING_DEFAULT),
         ).get_ast()
@@ -409,6 +404,8 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             ValueError: If project layout is unresolved.
 
         """
+        from flext_cli import u
+        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
         if package == own:
             layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
             if layout is None:
@@ -435,6 +432,8 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             ValueError: If project layout is unresolved; or if predicate.
 
         """
+        from flext_infra._config import config
+        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace, FlextInfraUtilitiesPyproject
         value, of = captured
         predicate = condition.predicate
         module = cls._top_module(value)
@@ -555,6 +554,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             The resulting ``frozenset[str]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisExports
         return frozenset(
             FlextInfraUtilitiesRopeAnalysisExports.public_export_names_source(
                 file_path.read_text(encoding=c.Cli.ENCODING_DEFAULT),
@@ -575,6 +575,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             The resulting ``frozenset[str]``.
 
         """
+        from flext_infra._config import config
         letters = frozenset(config.Infra.tooling.lazy_init.import_layer_order)
         facades = (
             file_path,
@@ -631,6 +632,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             Whether an import reaches a later layer than its module's.
 
         """
+        from flext_infra._config import config
         order = tuple(config.Infra.tooling.lazy_init.import_layer_order)
         owner = cls._layer_rank(
             order,
@@ -666,6 +668,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             ValueError: If project layout is unresolved.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
         layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
         if layout is None:
             msg = f"project layout is unresolved: {root}"
@@ -715,6 +718,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             Whether the family package holding a module has ``base.py``.
 
         """
+        from flext_infra._config import config
         letters = frozenset(config.Infra.tooling.lazy_init.import_layer_order)
         for directory in file_path.parents:
             facade = directory.parent / f"{directory.name.removeprefix('_')}.py"
@@ -730,6 +734,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
     @classmethod
     def _path_layers(cls, path: Path) -> frozenset[str]:
 
+        from flext_infra._config import config
         order = frozenset(config.Infra.tooling.lazy_init.import_layer_order)
         stems = {
             part.removeprefix("_").removesuffix(c.Infra.EXT_PYTHON)
@@ -751,6 +756,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             The resulting ``Path | None``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
         layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
         if layout is None or not file_path.is_relative_to(layout.src_dir):
             return None
