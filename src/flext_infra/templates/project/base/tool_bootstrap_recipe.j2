@@ -7,13 +7,14 @@
 	if [ -z "$$caller_xdg_data_home" ] && [ -n "$$caller_home" ]; then \
 		caller_xdg_data_home="$$caller_home/.local/share"; \
 	fi; \
+	caller_flext_setup_credential_store="$${FLEXT_SETUP_CREDENTIAL_STORE:-}"; \
 	caller_path="$$PATH"; \
 	mise_trusted_config_paths="$$project_root"; \
 {% for name, value in bootstrap.fixed_environment if name == "MISE_LOCKFILE_PLATFORMS" -%}
-	mise_lockfile_platforms="{{ value }}"; \
+{{ "	" }}	mise_lockfile_platforms="{{ value }}"; \
 {% endfor -%}
 {% for name in bootstrap.passthrough_environment if name != "PATH" -%}
-	caller_{{ name | lower }}="{{ '$${' ~ name ~ ':-}' }}"; \
+{{ "	" }}	caller_{{ name | lower }}="{{ '$${' ~ name ~ ':-}' }}"; \
 {% endfor -%}
 	mise_pin_file="$(MISE_VERSION_PIN)"; \
 	mise_pin=; \
@@ -119,9 +120,9 @@
 	printf 'mise scratch: allocated path=%s\n' "$$scratch" >&2; \
 	mkdir -p{% for _name, relative in bootstrap.transient_environment if relative not in bootstrap.empty_files %} "$$scratch/{{ relative }}"{% endfor %}; \
 {% for relative in bootstrap.empty_files -%}
-	: > "$$scratch/{{ relative }}"; chmod 600 "$$scratch/{{ relative }}"; \
+{{ "	" }}	: > "$$scratch/{{ relative }}"; chmod 600 "$$scratch/{{ relative }}"; \
 {% endfor -%}
-	mise_exec() { \
+{{ "	" }}	mise_exec() { \
 		mise_config_mode="$$1"; shift; \
 		case "$$mise_config_mode" in \
 			no-config) mise_config_argument='MISE_NO_CONFIG=1' ;; \
@@ -135,23 +136,28 @@
 		fi; \
 		env -i \
 {% for name, value in bootstrap.fixed_environment if name != "MISE_LOCKFILE_PLATFORMS" -%}
-			'{{ name }}={{ value }}' \
+{{ "	" }}			'{{ name }}={{ value }}' \
 {% endfor -%}
-			$${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
+{{ "	" }}			$${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
 {% for name, relative in bootstrap.transient_environment -%}
-			"{{ name }}=$$scratch/{{ relative }}" \
+{{ "	" }}			"{{ name }}=$$scratch/{{ relative }}" \
 {% endfor -%}
 {% for name, relative in bootstrap.persistent_environment -%}
-			"{{ name }}=$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}" \
+{{ "	" }}			"{{ name }}=$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}" \
 {% endfor -%}
-			"GIT_CEILING_DIRECTORIES=$$project_parent" \
+{{ "	" }}			"GIT_CEILING_DIRECTORIES=$$project_parent" \
 			"MISE_CEILING_PATHS=$$project_parent" \
 			"MISE_TRUSTED_CONFIG_PATHS=$$mise_trusted_config_paths" \
 {% for name in bootstrap.passthrough_environment -%}
-			$${caller_{{ name | lower }}:+"{{ name }}=$$caller_{{ name | lower }}"} \
+{{ "	" }}			$${caller_{{ name | lower }}:+"{{ name }}=$$caller_{{ name | lower }}"} \
 {% endfor -%}
-			$${mise_config_argument:+"$$mise_config_argument"} \
+{{ "	" }}			$${mise_config_argument:+"$$mise_config_argument"} \
 			$${mise_runtime_path:+"MISE_INSTALL_PATH=$$mise_runtime_path"} \
+				$${caller_flext_setup_credential_store:+GIT_CONFIG_COUNT=2} \
+				$${caller_flext_setup_credential_store:+GIT_CONFIG_KEY_0=credential.https://github.com.helper} \
+				$${caller_flext_setup_credential_store:+GIT_CONFIG_VALUE_0="store --file=$$caller_flext_setup_credential_store"} \
+				$${caller_flext_setup_credential_store:+GIT_CONFIG_KEY_1=credential.https://github.com.username} \
+				$${caller_flext_setup_credential_store:+GIT_CONFIG_VALUE_1=x-access-token} \
 			"$$@"; \
 	}; \
 	mise_offline() { \
@@ -183,7 +189,11 @@
 		tool_paths="$${tool_paths:+$$tool_paths:}$$tool_path"; \
 	done < "$$scratch/paths"; \
 	if [ -z "$$tool_paths" ]; then printf 'ERROR: Mise returned no installed tool paths; run make setup\n' >&2; exit 2; fi; \
-	PATH="$(RUNTIME_BIN):$$tool_paths:$$caller_path" "$$@"
+	if [ -n "$$caller_flext_setup_credential_store" ]; then \
+		GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=credential.https://github.com.helper GIT_CONFIG_VALUE_0="store --file=$$caller_flext_setup_credential_store" GIT_CONFIG_KEY_1=credential.https://github.com.username GIT_CONFIG_VALUE_1=x-access-token PATH="$(RUNTIME_BIN):$$tool_paths:$$caller_path" "$$@"; \
+	else \
+		PATH="$(RUNTIME_BIN):$$tool_paths:$$caller_path" "$$@"; \
+	fi
 {%- endmacro %}
 
 {% macro mise_runtime_bootstrap(project_root, mise, bootstrap) -%}
@@ -371,9 +381,9 @@
 			mkdir -p "$$lock_stage/artifacts/bin"; \
 			mise_checked "$$scratch/install-script.log" mise_exec no-config "$$pinned_mise" generate install-script --version "$$runtime_release" --write "$$lock_stage/artifacts/{{ bootstrap.artifact_specs[0][0] }}" --windows; \
 {% for relative, mode in bootstrap.artifact_specs[:2] -%}
-			chmod {{ '%o' | format(mode) }} "$$lock_stage/artifacts/{{ relative }}"; \
+{{ "	" }}			chmod {{ '%o' | format(mode) }} "$$lock_stage/artifacts/{{ relative }}"; \
 {% endfor -%}
-			mise_receipt launcher-version "$$lock_stage/artifacts/{{ bootstrap.artifact_specs[0][0] }}"; \
+{{ "	" }}			mise_receipt launcher-version "$$lock_stage/artifacts/{{ bootstrap.artifact_specs[0][0] }}"; \
 			if [ "$$receipt_release" != "$$runtime_release" ]; then \
 				printf 'ERROR: staged Mise launcher runs %s, not %s\n' "$$receipt_release" "$$runtime_release" >&2; exit 2; \
 			fi; \
@@ -428,12 +438,12 @@
 	# the farm from the pinned release before publishing it. \
 	if [ -n "$${GITHUB_PATH:-}" ]; then \
 {% for name, relative in bootstrap.persistent_environment if name == "MISE_SHIMS_DIR" -%}
-		shim_farm="$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}"; \
+{{ "	" }}		shim_farm="$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}"; \
 		rm -rf "$$shim_farm"; \
 		mise_checked "$$scratch/reshim.log" mise_offline project "$$pinned_mise" -C "$$project_root" reshim; \
 		printf '%s\n' "$$shim_farm" >> "$$GITHUB_PATH"; \
 {% endfor -%}
-	fi; \
+{{ "	" }}	fi; \
 	printf 'setup: entering lifecycle (submodules, environment, hooks) make=%s\n' "$(SELF_MAKE_EXECUTABLE)"; \
 	scratch_present=0; if [ -d "$$scratch" ]; then scratch_present=1; fi; \
 	printf 'mise scratch: before lifecycle path=%s present=%s\n' "$$scratch" "$$scratch_present" >&2; \
@@ -441,9 +451,9 @@
 	if [ "$(OS)" = "Windows_NT" ]; then mise_runtime_path="$$mise_runtime_path.exe"; fi; \
 	if env \
 {% for name, relative in bootstrap.persistent_environment -%}
-		"{{ name }}=$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}" \
+{{ "	" }}		"{{ name }}=$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}" \
 {% endfor -%}
-		"GIT_CEILING_DIRECTORIES=$$project_parent" \
+{{ "	" }}		"GIT_CEILING_DIRECTORIES=$$project_parent" \
 		"MISE_CEILING_PATHS=$$project_parent" \
 		"MISE_TRUSTED_CONFIG_PATHS=$$project_root" \
 		"MISE_VERSION=$$runtime_release" \
