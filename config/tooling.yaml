@@ -318,6 +318,18 @@ Infra:
           # Pydantic runtime-evaluation is protected by the
           # runtime-evaluated-roots projection, not by disabling the rules.
           authorized-exceptions:
+            - files: "**/__init__.py"
+              rules: [ENFORCE-046]
+              authority: operator-projection-law-2026-10-07-generated-lazy-init-imports
+              reason: >-
+                The generated package __init__ TYPE_CHECKING block renders one
+                bare Flext* class import per lazy-map entry: the projection
+                itself emits it, the runtime exposure flows exclusively through
+                install_lazy_exports, and the flagged class base is the
+                sanctioned single-letter family shape. The projections are the
+                law; where the render and the census disagree, the census
+                yields for the generated block until the render emits the
+                aliased form.
             - files: "tests/test_snapshot_drill.py"
               rules: [import-private-name]
               authority: operator-relocation-mandate-2026-10-06-snapshot-stems
