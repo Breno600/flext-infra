@@ -18,7 +18,7 @@ from flext_infra.refactor._census_apply_formatting import (
 from flext_infra.utilities import u
 
 if TYPE_CHECKING:
-    from flext_infra.refactor.protocols import p
+    from flext_infra.protocols import p
     from flext_infra.refactor.typings import t
 
 

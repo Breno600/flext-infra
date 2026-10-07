@@ -21,7 +21,7 @@ from flext_infra.models import m
 from flext_infra.utilities import u
 
 if TYPE_CHECKING:
-    from flext_infra.transformers.protocols import p
+    from flext_infra.protocols import p
     from flext_infra.transformers.typings import t
 
 

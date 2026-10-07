@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from flext_infra.codegen.models import m
-    from flext_infra.codegen.protocols import p
+    from flext_infra.protocols import p
     from flext_infra.codegen.typings import t
 
 

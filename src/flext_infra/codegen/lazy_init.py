@@ -29,7 +29,7 @@ from flext_infra.utilities import u
 from flext_infra.workspace.rope import FlextInfraRopeWorkspace
 
 if TYPE_CHECKING:
-    from flext_infra.codegen.protocols import p
+    from flext_infra.protocols import p
 
 
 class FlextInfraCodegenLazyInit(

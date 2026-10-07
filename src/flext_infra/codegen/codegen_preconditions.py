@@ -18,7 +18,7 @@ from flext_infra.codegen._mise_artifacts_verification import (
 from flext_infra.models import m
 
 if TYPE_CHECKING:
-    from flext_infra.codegen.protocols import p
+    from flext_infra.protocols import p
     from flext_infra.codegen.typings import t
 
 

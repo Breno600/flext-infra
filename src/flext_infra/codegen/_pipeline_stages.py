@@ -25,7 +25,7 @@ from flext_infra.utilities import u
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from flext_infra.codegen.protocols import p
+    from flext_infra.protocols import p
 
 
 class FlextInfraCodegenPipelineStagesMixin:

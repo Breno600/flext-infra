@@ -19,7 +19,7 @@ from flext_infra.utilities import u
 from flext_infra.workspace._governance import FlextInfraWorkspaceGovernanceMixin
 
 if TYPE_CHECKING:
-    from flext_infra.workspace.protocols import p
+    from flext_infra.protocols import p
 
 
 class FlextInfraWorkspaceDetector(
