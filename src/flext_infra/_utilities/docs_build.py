@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, cast
 from flext_cli import u
 
 from flext_infra import c, m
-from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
+from flext_infra._utilities import FlextInfraUtilitiesDocs
 
 if TYPE_CHECKING:
     from types import ModuleType

@@ -12,7 +12,7 @@ from typing import Annotated, Self
 from flext_core import m
 from flext_infra import t
 from flext_infra._constants import FlextInfraConstantsRelease
-from flext_infra._models.mixins import FlextInfraModelsMixins
+from flext_infra._models import FlextInfraModelsMixins
 
 
 class FlextInfraModelsRelease:
@@ -160,7 +160,7 @@ class FlextInfraModelsRelease:
             return self
 
     class ReleasePlan(m.StrictBoundaryModel):
-        """The protocol's decision for one repository, derived and never typed by hand."""
+        """The protocol's decision for one repository, never typed by hand."""
 
         current: Annotated[
             t.NonEmptyStr,
@@ -298,7 +298,7 @@ class FlextInfraModelsRelease:
         FlextInfraModelsMixins.VersionTagMixin,
         m.ArbitraryTypesModel,
     ):
-        """Resolved input of one release phase: the repository, its declared version and its tag."""
+        """Resolved inputs of one release phase: repository, version, and tag."""
 
         dry_run: Annotated[bool, m.Field(description="Dry run flag")] = False
         phase: Annotated[

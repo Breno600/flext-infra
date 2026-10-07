@@ -6,18 +6,11 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from git import GitCommandError, Repo
 
 from flext_core import r
-from flext_infra import m
-from flext_infra._utilities._git.semantic_index import (
-    FlextInfraUtilitiesGitSemanticIndexMixin,
-)
-
-if TYPE_CHECKING:
-    from flext_infra import p
+from flext_infra import m, p
+from flext_infra._utilities import FlextInfraUtilitiesGitSemanticIndexMixin
 
 
 class FlextInfraUtilitiesGitSemanticWorktreeMixin(
@@ -99,18 +92,24 @@ class FlextInfraUtilitiesGitSemanticWorktreeMixin(
             The resulting ``p.Result[m.Infra.GitBoolReport]``.
 
         """
+
+    @classmethod
+    def _force_attach_branch_at_head(cls, request: m.Infra.GitRepoRequest) -> None:
+        """Force-create the branch at HEAD and set its upstream when present."""
+        repo = cls._repo(request.repo_root)
+        repo.git.branch("--quiet", "-f", request.branch, "HEAD")
+        repo.git.symbolic_ref("HEAD", f"refs/heads/{request.branch}")
+        remote_ref = f"refs/remotes/origin/{request.branch}"
+        if remote_ref in {ref.path for ref in repo.refs}:
+            repo.git.branch(
+                "--quiet",
+                "--set-upstream-to",
+                f"origin/{request.branch}",
+                request.branch,
+            )
+
         try:
-            repo = cls._repo(request.repo_root)
-            repo.git.branch("--quiet", "-f", request.branch, "HEAD")
-            repo.git.symbolic_ref("HEAD", f"refs/heads/{request.branch}")
-            remote_ref = f"refs/remotes/origin/{request.branch}"
-            if remote_ref in {ref.path for ref in repo.refs}:
-                repo.git.branch(
-                    "--quiet",
-                    "--set-upstream-to",
-                    f"origin/{request.branch}",
-                    request.branch,
-                )
+            cls._force_attach_branch_at_head(request)
         except (GitCommandError, OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(
                 f"failed to attach {request.branch} at HEAD: {exc}",

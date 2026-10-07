@@ -10,17 +10,17 @@ import ast
 from collections.abc import MutableMapping, Sequence
 from pathlib import Path
 
-from flext_infra import c, config, m, p, t
-from flext_infra._utilities._semantic_cutover.family_references import (
+from flext_cli import u
+
+from flext_infra import c, m, p, t
+from flext_infra._config import config
+from flext_infra._utilities import (
+    FlextInfraUtilitiesCodegenNamespace,
+    FlextInfraUtilitiesRopeRuntimeModules,
+    FlextInfraUtilitiesRopeRuntimeRefactors,
+    FlextInfraUtilitiesRopeStructure,
     FlextInfraUtilitiesSemanticFamilyReferences,
 )
-from flext_infra._utilities.rope_runtime_modules import (
-    FlextInfraUtilitiesRopeRuntimeModules,
-)
-from flext_infra._utilities.rope_runtime_refactors import (
-    FlextInfraUtilitiesRopeRuntimeRefactors,
-)
-from flext_infra._utilities.rope_structure import FlextInfraUtilitiesRopeStructure
 
 
 class FlextInfraUtilitiesSemanticFamilyFlatten(
@@ -34,12 +34,14 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         workspace: p.Infra.RopeWorkspaceDsl,
         sources: t.MappingKV[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
-        from flext_infra import u
 
         candidates = tuple(
             path
             for path in sources
-            if u.Infra.facade_family_of_directory(path.parent.name) is not None
+            if FlextInfraUtilitiesCodegenNamespace.facade_family_of_directory(
+                path.parent.name,
+            )
+            is not None
             and not sources[path].startswith(c.Infra.AUTOGEN_HEADERS)
         )
         if not candidates:

@@ -7,32 +7,23 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import ast
+import traceback
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import m, t
-from flext_infra._utilities._semantic_cutover.class_scope import (
+from flext_infra._utilities import (
+    FlextInfraUtilitiesCodegenNamespace,
+    FlextInfraUtilitiesRopeRuntimeModules,
     FlextInfraUtilitiesSemanticCutoverClassScope,
-)
-from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
-)
-from flext_infra._utilities._semantic_cutover.family_flatten import (
-    FlextInfraUtilitiesSemanticFamilyFlatten,
-)
-from flext_infra._utilities._semantic_cutover.nesting_cst import (
     FlextInfraUtilitiesSemanticCutoverNestingCst,
-)
-from flext_infra._utilities._semantic_cutover.nesting_owner import (
     FlextInfraUtilitiesSemanticCutoverNestingOwner,
+    FlextInfraUtilitiesSemanticFamilyFlatten,
 )
 from flext_infra._utilities._semantic_cutover.test_helpers import (
     FlextInfraUtilitiesSemanticTestHelpers,
-)
-from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
-from flext_infra._utilities.rope_runtime_modules import (
-    FlextInfraUtilitiesRopeRuntimeModules,
 )
 
 if TYPE_CHECKING:
@@ -317,7 +308,11 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         owned = tuple(item for item in editable if item[0] in modules)
 
         def definitions_for(item: t.Pair[Path, str]) -> p.Result[t.StrMapping]:
-            return cls._class_nesting_definitions(rope_workspace, *item)
+            try:
+                return cls._class_nesting_definitions(rope_workspace, *item)
+            except Exception:
+                traceback.print_exc()
+                raise
 
         planned = r[t.StrMapping].traverse(owned, definitions_for, fail_fast=False)
         if planned.failure:

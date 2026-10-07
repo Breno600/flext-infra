@@ -6,6 +6,14 @@ valid:
     def load() -> object:
         return json.loads("{}")
   - |
+    def build() -> object:
+        from flext_infra._models import FlextInfraModel
+        return FlextInfraModel()
+  - |
+    def resolve() -> object:
+        from flext_infra import u
+        return u.Infra
+  - |
     from typing import TYPE_CHECKING
 
     if TYPE_CHECKING:
@@ -23,6 +31,10 @@ invalid:
     def build() -> object:
         from pathlib import Path
         return Path()
+  - |
+    def shell() -> object:
+        from flext_infra import workspace
+        return workspace
   - |
     module = importlib.import_module("json")
   - |

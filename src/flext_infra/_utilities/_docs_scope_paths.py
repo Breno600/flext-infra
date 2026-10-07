@@ -7,16 +7,12 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from flext_cli import u
 
 from flext_core.result import FlextResult as r
-from flext_infra import c, t
-from flext_infra._utilities.git import FlextInfraUtilitiesGit
-
-if TYPE_CHECKING:
-    from flext_infra import p
+from flext_infra import c, p, t
+from flext_infra._utilities import FlextInfraUtilitiesGit
 
 
 class FlextInfraUtilitiesDocsScopePathsMixin:
@@ -102,6 +98,7 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
         Returns:
             The resulting ``p.Result[t.VariadicTuple[Path]]``.
 
+        from flext_core.result import FlextResult as r
         """
         root = FlextInfraUtilitiesDocsScopePathsMixin.absolute_lexical(repository_root)
         if not FlextInfraUtilitiesDocsScopePathsMixin.physical_directory_exists(root):

@@ -400,15 +400,11 @@ class TestsMiseHoldConvergence:
     def test_staged_manifest_resolves_inside_the_declared_stage(
         tmp_path: Path,
     ) -> None:
-        """Test remote release candidates walk below the failed release."""
-
-        def fake_ls_remote(
-            runtime: Path,
-            arguments: list[str],
-            environment: dict[str, str],
-        ) -> str:
-            tm.that(arguments[:1] == ["ls-remote"])
-            return "v5.4.0\n5.3.3\nv5.3.2\n5.2.0\nnot-a-version\n"
+        """The staged manifest resolves to the stage's own ``.mise.toml``."""
+        stage = tmp_path / "stage"
+        stage.mkdir()
+        manifest = stage / ".mise.toml"
+        manifest.write_text("[tools]\n", encoding="utf-8")
 
         resolved = _converge_module().MiseLockConverge.staged_manifest(stage)
 

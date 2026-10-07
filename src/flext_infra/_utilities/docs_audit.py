@@ -7,22 +7,17 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
 
-from flext_infra import c, config, m
-from flext_infra._utilities._docs_audit_detectors import (
+from flext_infra import c, m, t
+from flext_infra._config import config
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDocs,
+    FlextInfraUtilitiesDocsApi,
     FlextInfraUtilitiesDocsAuditDetectorsMixin,
-)
-from flext_infra._utilities._docs_command_contract import (
     FlextInfraUtilitiesDocsCommandContractMixin,
+    FlextInfraUtilitiesDocsGithubLinks,
+    FlextInfraUtilitiesDocsScope,
 )
-from flext_infra._utilities._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
-from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
-from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
-from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
-
-if TYPE_CHECKING:
-    from flext_infra import t
 
 
 class FlextInfraUtilitiesDocsAudit(

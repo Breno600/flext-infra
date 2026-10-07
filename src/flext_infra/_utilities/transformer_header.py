@@ -10,9 +10,7 @@ import ast
 from collections.abc import MutableMapping
 
 from flext_infra import c, t
-from flext_infra._utilities.transformer_header_parser import (
-    FlextInfraUtilitiesTransformerHeaderParser,
-)
+from flext_infra._utilities import FlextInfraUtilitiesTransformerHeaderParser
 
 
 class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderParser):

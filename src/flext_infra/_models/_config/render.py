@@ -17,11 +17,13 @@ from flext_infra._constants import (
     FlextInfraConstantsDocs,
     FlextInfraConstantsWorkspace,
 )
-from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
-from flext_infra._models._config.contract import FlextInfraConfigModelsContract
-from flext_infra._models._config.make import FlextInfraConfigModelsMake
-from flext_infra._models._config.provider import FlextInfraConfigModelsProvider
-from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
+from flext_infra._models import (
+    FlextInfraConfigModelsContexts,
+    FlextInfraConfigModelsContract,
+    FlextInfraConfigModelsMake,
+    FlextInfraConfigModelsProvider,
+    FlextInfraModelsDepsToolConfig,
+)
 
 
 class FlextInfraConfigModelsRender:

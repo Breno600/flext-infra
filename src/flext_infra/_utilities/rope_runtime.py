@@ -6,13 +6,9 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_infra._utilities.rope_runtime_modules import (
+from flext_infra._utilities import (
     FlextInfraUtilitiesRopeRuntimeModules,
-)
-from flext_infra._utilities.rope_runtime_refactors import (
     FlextInfraUtilitiesRopeRuntimeRefactors,
-)
-from flext_infra._utilities.rope_runtime_types import (
     FlextInfraUtilitiesRopeRuntimeTypes,
 )
 

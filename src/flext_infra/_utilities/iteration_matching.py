@@ -9,7 +9,7 @@ from __future__ import annotations
 import fnmatch
 from typing import TYPE_CHECKING
 
-from flext_infra._utilities._git.scope import FlextInfraUtilitiesGitScopeMixin
+from flext_infra._utilities import FlextInfraUtilitiesGitScopeMixin
 
 if TYPE_CHECKING:
     from pathlib import Path

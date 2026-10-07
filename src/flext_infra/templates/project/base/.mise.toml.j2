@@ -18,13 +18,9 @@
 minimum_release_age = "{{ dependency_cooldown_days }}d"
 lockfile = {{ "true" if mise_lockfile else "false" }}
 locked = {{ "true" if mise_locked else "false" }}
-# Third-party releases in the manifest (jscpd, qlty) publish no SLSA
-# attestations, so strict lock-time provenance verification can never pass
-# for them. API outages degrade to best-effort instead of failing the lock;
-# release checksums still enforce integrity, and verification resumes
-# automatically wherever attestations exist.
-provenance_api_failures_fatal = false
-locked_verify_provenance = false
+# API failures must fail closed; locked installs reverify recorded provenance.
+provenance_api_failures_fatal = true
+locked_verify_provenance = true
 lockfile_platforms = [{% for platform in mise_lockfile_platforms %}"{{ platform }}"{{ ", " if not loop.last }}{% endfor %}]
 [settings.python]
 compile = {{ "true" if python_compile else "false" }}

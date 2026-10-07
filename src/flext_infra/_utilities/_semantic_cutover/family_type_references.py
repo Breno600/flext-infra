@@ -10,10 +10,8 @@ import ast
 from collections.abc import Iterator
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities.rope_runtime_modules import (
+from flext_infra._utilities import (
     FlextInfraUtilitiesRopeRuntimeModules,
-)
-from flext_infra._utilities.rope_runtime_refactors import (
     FlextInfraUtilitiesRopeRuntimeRefactors,
 )
 

@@ -84,7 +84,7 @@ class TestsFlextInfraDocsGeneratorInternals:
 
     @staticmethod
     def test_build_toc_uses_rendered_ids_and_plain_link_labels() -> None:
-        """Explicit IDs, inline links and duplicates resolve to real rendered anchors."""
+        """Explicit IDs, inline links, duplicates resolve to real anchors."""
         content = (
             "# Main\n\n"
             "## Vault pending {#incident-vault}\n\n"

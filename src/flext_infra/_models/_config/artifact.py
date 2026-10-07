@@ -18,20 +18,20 @@ from flext_infra._constants import (
     FlextInfraConstantsCodegenProject,
     FlextInfraConstantsSharedInfra,
 )
-from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
-from flext_infra._models._config.contract import FlextInfraConfigModelsContract
-from flext_infra._models._config.make import FlextInfraConfigModelsMake
-from flext_infra._models._config.provider import FlextInfraConfigModelsProvider
-from flext_infra._models._config.release import FlextInfraConfigModelsRelease
-from flext_infra._models._config.render import FlextInfraConfigModelsRender
-from flext_infra._models._config.scaffold import FlextInfraConfigModelsScaffold
-from flext_infra._models._config.templates import FlextInfraConfigModelsTemplates
-from flext_infra._models._config.workspace import FlextInfraConfigModelsWorkspace
-from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
-from flext_infra._models.deps_tool_config_project_artifacts import (
+from flext_infra._models import (
+    FlextInfraConfigModelsContexts,
+    FlextInfraConfigModelsContract,
+    FlextInfraConfigModelsMake,
+    FlextInfraConfigModelsProvider,
+    FlextInfraConfigModelsRelease,
+    FlextInfraConfigModelsRender,
+    FlextInfraConfigModelsScaffold,
+    FlextInfraConfigModelsTemplates,
+    FlextInfraConfigModelsWorkspace,
+    FlextInfraModelsDepsToolConfig,
     FlextInfraModelsDepsToolConfigProjectArtifacts,
+    FlextInfraModelsLayout,
 )
-from flext_infra._models.layout import FlextInfraModelsLayout
 
 
 class FlextInfraConfigModelsArtifact:
@@ -62,7 +62,7 @@ class FlextInfraConfigModelsArtifact:
         ] = False
 
     class CodegenVscodeSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Fully modeled content of the ``vscode`` section of ``config/codegen.yaml``."""
+        """Fully modeled ``vscode`` section of ``config/codegen.yaml``."""
 
         scalar_settings: Annotated[
             Mapping[str, str | bool | int],

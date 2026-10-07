@@ -11,7 +11,6 @@ from importlib.metadata import requires
 from importlib.resources import files
 from pathlib import Path
 from types import MappingProxyType
-from typing import TYPE_CHECKING
 
 from flext_cli import u
 from packaging.requirements import InvalidRequirement, Requirement
@@ -19,19 +18,34 @@ from packaging.utils import canonicalize_name
 from packaging.version import InvalidVersion, Version
 
 from flext_core import r
-from flext_infra import c, m, t
-from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
+from flext_infra import c, m, p, t
+from flext_infra._utilities import FlextInfraUtilitiesPyproject
 
 # Why: dependency_waves subscripts r[t.SequenceOf[t.StrSequence]] at runtime, so
 # the typings facade cannot be TYPE_CHECKING-only here. c -> t is a forward
 # facade import and stays cycle-free.
 
-if TYPE_CHECKING:
-    from flext_infra import p
-
 
 class FlextInfraUtilitiesDependencies:
     """Static helpers for inspecting dependency declarations in pyproject payloads."""
+
+    @staticmethod
+    def raw_requirement_values(raw: p.AttributeProbe) -> list[str]:
+        """Collect requirement strings from dependency arrays or group tables.
+
+        Returns:
+            Requirement strings retained from the declared arrays.
+        """
+        if isinstance(raw, Mapping):
+            values: list[str] = []
+            for group in raw.values():
+                values.extend(
+                    FlextInfraUtilitiesDependencies.raw_requirement_values(group),
+                )
+            return values
+        if isinstance(raw, (list, tuple)):
+            return [item for item in raw if isinstance(item, str)]
+        return []
 
     @staticmethod
     def active_requirement(
@@ -396,6 +410,18 @@ class FlextInfraUtilitiesDependencies:
             raise ValueError(msg)
         return versions
 
+    @staticmethod
+    def _parsed_requirement(requirement_text: str) -> Requirement | None:
+        """Parse one PEP 508 requirement string, or None when invalid.
+
+        Returns:
+            The resulting ``Requirement | None``.
+        """
+        try:
+            return Requirement(requirement_text.strip())
+        except InvalidRequirement:
+            return None
+
     @classmethod
     def rewrite_requirement_constraint(
         cls,
@@ -410,53 +436,47 @@ class FlextInfraUtilitiesDependencies:
             The resulting ``str | None``.
 
         """
-        result: str | None = None
         raw_text = requirement.strip()
-        if raw_text:
-            requirement_part, marker_separator, marker_part = raw_text.partition(";")
-            if " @ " not in requirement_part:
-                head_match = c.Infra.PEP621_REQUIREMENT_HEAD_RE.match(
-                    requirement_part.strip(),
-                )
-                if head_match is not None:
-                    head = head_match.group("head").strip()
-                    dependency_name = cls.dep_name(head)
-                    internal_set = set(internal_names)
-                    if (
-                        dependency_name is not None
-                        and dependency_name not in internal_set
-                    ):
-                        locked_version = resolved_versions.get(dependency_name)
-                        if locked_version is not None:
-                            try:
-                                parsed = Requirement(requirement_part.strip())
-                            except InvalidRequirement:
-                                parsed = None
-                            if parsed is not None and not parsed.specifier.contains(
-                                locked_version,
-                                prereleases=True,
-                            ):
-                                return None
-                            retained = (
-                                ()
-                                if parsed is None
-                                else tuple(
-                                    str(specifier)
-                                    for specifier in parsed.specifier
-                                    if specifier.operator in {"<", "<=", "!="}
-                                )
-                            )
-                            constraint = cls.constraint_specifier(locked_version)
-                            if not constraint:
-                                return None
-                            if retained:
-                                constraint = ",".join((constraint, *retained))
-                            rewritten = f"{head}{constraint}"
-                            marker_text = marker_part.strip()
-                            if marker_separator and marker_text:
-                                rewritten = f"{rewritten}; {marker_text}"
-                            result = rewritten if rewritten != raw_text else None
-        return result
+        if not raw_text or " @ " in raw_text:
+            return None
+        requirement_part, marker_separator, marker_part = raw_text.partition(";")
+        if " @ " in requirement_part:
+            return None
+        head_match = c.Infra.PEP621_REQUIREMENT_HEAD_RE.match(requirement_part.strip())
+        if head_match is None:
+            return None
+        head = head_match.group("head").strip()
+        dependency_name = cls.dep_name(head)
+        if dependency_name is None or dependency_name in set(internal_names):
+            return None
+        locked_version = resolved_versions.get(dependency_name)
+        if locked_version is None:
+            return None
+        parsed = cls._parsed_requirement(requirement_part)
+        if parsed is not None and not parsed.specifier.contains(
+            locked_version,
+            prereleases=True,
+        ):
+            return None
+        retained = (
+            ()
+            if parsed is None
+            else tuple(
+                str(specifier)
+                for specifier in parsed.specifier
+                if specifier.operator in {"<", "<=", "!="}
+            )
+        )
+        constraint = cls.constraint_specifier(locked_version)
+        if not constraint:
+            return None
+        if retained:
+            constraint = ",".join((constraint, *retained))
+        rewritten = f"{head}{constraint}"
+        marker_text = marker_part.strip()
+        if marker_separator and marker_text:
+            rewritten = f"{rewritten}; {marker_text}"
+        return rewritten if rewritten != raw_text else None
 
     @staticmethod
     def dedupe_specs(specs: t.StrSequence) -> t.StrSequence:

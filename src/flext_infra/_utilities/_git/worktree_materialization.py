@@ -8,20 +8,16 @@ from __future__ import annotations
 
 from pathlib import Path
 from stat import S_IMODE
-from typing import TYPE_CHECKING
 
 from flext_cli import u
 from git import GitCommandError
 
 from flext_core import r
-from flext_infra import c, t
-from flext_infra._utilities._git.worktree_discovery import (
+from flext_infra import c, p, t
+from flext_infra._utilities import (
     FlextInfraUtilitiesGitWorktreeDiscoveryMixin,
+    FlextInfraUtilitiesGitWorktreeIO,
 )
-from flext_infra._utilities._git.worktree_io import FlextInfraUtilitiesGitWorktreeIO
-
-if TYPE_CHECKING:
-    from flext_infra import p
 
 
 class FlextInfraUtilitiesGitWorktreeMaterializationMixin(

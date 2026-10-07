@@ -20,10 +20,10 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from flext_infra import c
-from flext_infra._utilities.private_import_facades import (
+from flext_infra._utilities import (
     FlextInfraUtilitiesPrivateImportFacades,
+    FlextInfraUtilitiesRopeAnalysis,
 )
-from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

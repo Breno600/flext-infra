@@ -10,19 +10,19 @@ import ast
 from collections.abc import MutableMapping
 from pathlib import Path
 
+from flext_core import u as core_u
 from flext_infra import c, m, t
-from flext_infra._utilities._rope_analysis.asthelpers import (
-    FlextInfraUtilitiesRopeAnalysisAstHelpers,
-)
-from flext_infra._utilities.namespace_common import (
+from flext_infra._utilities import (
+    FlextInfraUtilitiesProtectedEdit,
     FlextInfraUtilitiesRefactorNamespaceCommon,
+    FlextInfraUtilitiesRopeAnalysis,
+    FlextInfraUtilitiesRopeAnalysisAstHelpers,
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeImports,
+    FlextInfraUtilitiesRopeRuntime,
+    FlextInfraUtilitiesRopeSource,
+    FlextInfraUtilitiesTransformerHeader,
 )
-from flext_infra._utilities.protected_edit import FlextInfraUtilitiesProtectedEdit
-from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
-from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities.rope_imports import FlextInfraUtilitiesRopeImports
-from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
-from flext_infra._utilities.rope_source import FlextInfraUtilitiesRopeSource
 
 
 class FlextInfraUtilitiesRefactorNamespaceMoves:
@@ -295,10 +295,9 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         published: pyright then rejects every consumer with
         ``reportPrivateUsage`` and ruff reports the alias as unused at its new
         home, so the whole move validates red and is reverted. Filtering here
-        rather than at each caller keeps one owner for the rule.
-
-        Raises:
-            RuntimeError: If ``not ok``.
+        rather than at each caller keeps one owner for the rule. The gate
+        check propagates the ``RuntimeError`` its verifier raises when the
+        move does not hold.
 
         """
         public_alias_names = {name for name in alias_names if not name.startswith("_")}
@@ -415,7 +414,8 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                 existing = target_bindings.get(bound)
                 if existing is not None and existing != import_line:
                     return
-        collect_missing = FlextInfraUtilitiesRefactorNamespaceMoves._collect_missing_runtime_alias_imports
+        namespace_moves = FlextInfraUtilitiesRefactorNamespaceMoves
+        collect_missing = namespace_moves.collect_missing_runtime_alias_imports
         fallback_runtime_imports = collect_missing(
             target_source=target_source,
             blocks=moved_lines,
@@ -490,7 +490,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             else kept_lines
         )
 
-        ok, reports = FlextInfraUtilitiesProtectedEdit.protected_source_writes(
+        ok, _reports = FlextInfraUtilitiesProtectedEdit.protected_source_writes(
             {
                 target_file: updated_target + "\n",
                 source_file: "\n".join(updated_source_lines).rstrip() + "\n",
@@ -574,8 +574,6 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             The resulting ``str``.
 
         """
-        from flext_infra import u
-
         prefix, separator, names_part = import_line.partition(" import ")
         if not separator:
             return import_line
@@ -584,14 +582,17 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             for name, bound in FlextInfraUtilitiesRopeSource.parse_import_names(
                 names_part,
             )
-            if not u.Infra.alias_locally_bound(target_source, bound)
+            if not FlextInfraUtilitiesTransformerHeader.alias_locally_bound(
+                target_source,
+                bound,
+            )
         ]
         if not kept:
             return ""
         return f"{prefix} import {', '.join(kept)}"
 
     @staticmethod
-    def _collect_missing_runtime_alias_imports(
+    def collect_missing_runtime_alias_imports(
         *,
         target_source: str,
         blocks: t.StrSequence,
@@ -602,8 +603,6 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             The resulting ``t.StrSequence``.
 
         """
-        from flext_infra import u
-
         moved_source = "\n".join(blocks)
         moved_pymodule = FlextInfraUtilitiesRopeAnalysis.parse_string_module(
             moved_source,
@@ -611,7 +610,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         moved_ast = FlextInfraUtilitiesRopeAnalysis.ensure_ast_node(
             moved_pymodule.get_ast(),
         )
-        runtime_aliases = u.runtime_alias_names(c.Infra.PKG_INFRA_UNDERSCORE)
+        runtime_aliases = core_u.runtime_alias_names(c.Infra.PKG_INFRA_UNDERSCORE)
         moved_ast = moved_pymodule.get_ast()
         if not FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(moved_ast):
             return ()

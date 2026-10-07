@@ -10,6 +10,8 @@ from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING, override
 
+import libcst as cst
+
 from flext_core import r
 from flext_infra import c, m, u
 from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
@@ -169,7 +171,6 @@ class FlextInfraModReplacements:
         Import normalization drops the last real reference inside a type-only
         block and a statement fix leaves ``pass`` behind; the scaffold then
         carries no information. The block is removed and the ``TYPE_CHECKING``
-        import goes with it once nothing references it anymore. Unparsable
         subjects are left untouched; the following format gate stays the owner
         of any syntax verdict.
 
@@ -177,7 +178,6 @@ class FlextInfraModReplacements:
             The resulting ``p.Result[bool]``.
 
         """
-        import libcst as cst
 
         class _DeadScaffold(cst.CSTTransformer):
             """Remove ``if TYPE_CHECKING:`` blocks whose body is only ``pass``."""

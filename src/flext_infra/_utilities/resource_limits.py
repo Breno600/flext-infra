@@ -10,17 +10,18 @@ import platform
 import shutil
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar
 
 from flext_cli import u
 
-from flext_infra import c, config, m, settings, t
-from flext_infra._utilities.process import FlextInfraUtilitiesProcess
-from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
-from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
-
-if TYPE_CHECKING:
-    from flext_infra import p
+from flext_infra import c, m, p, t
+from flext_infra._config import config
+from flext_infra._settings import settings
+from flext_infra._utilities import (
+    FlextInfraUtilitiesProcess,
+    FlextInfraUtilitiesProjectDiscovery,
+    FlextInfraUtilitiesPyproject,
+)
 
 
 class FlextInfraUtilitiesResourceLimits:

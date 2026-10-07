@@ -10,7 +10,7 @@ from collections import defaultdict
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
-from flext_infra import config
+from flext_infra._config import config
 from flext_infra.codegen._codegen_generation_paths import (
     FlextInfraCodegenGenerationPathsMixin,
 )

@@ -11,14 +11,12 @@ from collections.abc import MutableMapping
 from typing import ClassVar
 
 from flext_infra import c, m, t
-from flext_infra._utilities._rope_analysis.asthelpers import (
+from flext_infra._utilities import (
     FlextInfraUtilitiesRopeAnalysisAstHelpers,
-)
-from flext_infra._utilities._rope_analysis.sourcescan import (
     FlextInfraUtilitiesRopeAnalysisSourceScan,
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeRuntime,
 )
-from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeAnalysisExports:

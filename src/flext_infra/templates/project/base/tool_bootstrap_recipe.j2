@@ -7,13 +7,14 @@
 	if [ -z "$$caller_xdg_data_home" ] && [ -n "$$caller_home" ]; then \
 		caller_xdg_data_home="$$caller_home/.local/share"; \
 	fi; \
+	caller_flext_setup_credential_store="$${FLEXT_SETUP_CREDENTIAL_STORE:-}"; \
 	caller_path="$$PATH"; \
 	mise_trusted_config_paths="$$project_root"; \
 {% for name, value in bootstrap.fixed_environment if name == "MISE_LOCKFILE_PLATFORMS" -%}
-	mise_lockfile_platforms="{{ value }}"; \
+{{ "	" }}	mise_lockfile_platforms="{{ value }}"; \
 {% endfor -%}
 {% for name in bootstrap.passthrough_environment if name != "PATH" -%}
-	caller_{{ name | lower }}="{{ '$${' ~ name ~ ':-}' }}"; \
+{{ "	" }}	caller_{{ name | lower }}="{{ '$${' ~ name ~ ':-}' }}"; \
 {% endfor -%}
 	mise_pin_file="$(MISE_VERSION_PIN)"; \
 	mise_pin=; \
@@ -119,9 +120,9 @@
 	printf 'mise scratch: allocated path=%s\n' "$$scratch" >&2; \
 	mkdir -p{% for _name, relative in bootstrap.transient_environment if relative not in bootstrap.empty_files %} "$$scratch/{{ relative }}"{% endfor %}; \
 {% for relative in bootstrap.empty_files -%}
-	: > "$$scratch/{{ relative }}"; chmod 600 "$$scratch/{{ relative }}"; \
+{{ "	" }}	: > "$$scratch/{{ relative }}"; chmod 600 "$$scratch/{{ relative }}"; \
 {% endfor -%}
-	mise_exec() { \
+{{ "	" }}	mise_exec() { \
 		mise_config_mode="$$1"; shift; \
 		case "$$mise_config_mode" in \
 			no-config) mise_config_argument='MISE_NO_CONFIG=1' ;; \
@@ -135,23 +136,28 @@
 		fi; \
 		env -i \
 {% for name, value in bootstrap.fixed_environment if name != "MISE_LOCKFILE_PLATFORMS" -%}
-			'{{ name }}={{ value }}' \
+{{ "	" }}			'{{ name }}={{ value }}' \
 {% endfor -%}
-			$${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
+{{ "	" }}			$${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
 {% for name, relative in bootstrap.transient_environment -%}
-			"{{ name }}=$$scratch/{{ relative }}" \
+{{ "	" }}			"{{ name }}=$$scratch/{{ relative }}" \
 {% endfor -%}
 {% for name, relative in bootstrap.persistent_environment -%}
-			"{{ name }}=$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}" \
+{{ "	" }}			"{{ name }}=$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}" \
 {% endfor -%}
-			"GIT_CEILING_DIRECTORIES=$$project_parent" \
+{{ "	" }}			"GIT_CEILING_DIRECTORIES=$$project_parent" \
 			"MISE_CEILING_PATHS=$$project_parent" \
 			"MISE_TRUSTED_CONFIG_PATHS=$$mise_trusted_config_paths" \
 {% for name in bootstrap.passthrough_environment -%}
-			$${caller_{{ name | lower }}:+"{{ name }}=$$caller_{{ name | lower }}"} \
+{{ "	" }}			$${caller_{{ name | lower }}:+"{{ name }}=$$caller_{{ name | lower }}"} \
 {% endfor -%}
-			$${mise_config_argument:+"$$mise_config_argument"} \
+{{ "	" }}			$${mise_config_argument:+"$$mise_config_argument"} \
 			$${mise_runtime_path:+"MISE_INSTALL_PATH=$$mise_runtime_path"} \
+				$${caller_flext_setup_credential_store:+GIT_CONFIG_COUNT=2} \
+				$${caller_flext_setup_credential_store:+GIT_CONFIG_KEY_0=credential.https://github.com.helper} \
+				$${caller_flext_setup_credential_store:+GIT_CONFIG_VALUE_0="store --file=$$caller_flext_setup_credential_store"} \
+				$${caller_flext_setup_credential_store:+GIT_CONFIG_KEY_1=credential.https://github.com.username} \
+				$${caller_flext_setup_credential_store:+GIT_CONFIG_VALUE_1=x-access-token} \
 			"$$@"; \
 	}; \
 	mise_offline() { \
@@ -183,7 +189,11 @@
 		tool_paths="$${tool_paths:+$$tool_paths:}$$tool_path"; \
 	done < "$$scratch/paths"; \
 	if [ -z "$$tool_paths" ]; then printf 'ERROR: Mise returned no installed tool paths; run make setup\n' >&2; exit 2; fi; \
-	PATH="$(RUNTIME_BIN):$$tool_paths:$$caller_path" "$$@"
+	if [ -n "$$caller_flext_setup_credential_store" ]; then \
+		GIT_CONFIG_COUNT=2 GIT_CONFIG_KEY_0=credential.https://github.com.helper GIT_CONFIG_VALUE_0="store --file=$$caller_flext_setup_credential_store" GIT_CONFIG_KEY_1=credential.https://github.com.username GIT_CONFIG_VALUE_1=x-access-token PATH="$(RUNTIME_BIN):$$tool_paths:$$caller_path" "$$@"; \
+	else \
+		PATH="$(RUNTIME_BIN):$$tool_paths:$$caller_path" "$$@"; \
+	fi
 {%- endmacro %}
 
 {% macro mise_runtime_bootstrap(project_root, mise, bootstrap) -%}
@@ -192,34 +202,12 @@
    the persistent cache, and `make upg` (release resolution, lock, launcher).
    Every other Mise call runs through mise_offline. The Makefile preamble owns
    the credential selection; the passthrough carries it into env -i. -#}
-{# The only tolerated Mise warning: ephemeral CI runners ship pre-seeded
-   shims (python3, make) and `mise install` always announces it declines to
-   replace them while every real install still succeeds (cosmos-main PR 346,
-   CI run 37348896444, bead on cosmos-l2wc2). Every OTHER mise WARN stays
-   fatal: red-means-red is untouched. Shell '#' comment lines are forbidden
+{# Every Mise warning is fatal. Shell '#' comment lines are forbidden
    inside this one-line recipe: a physical line without a trailing backslash
    splits it into a second shell that loses scratch/storage (flext-u8eij,
     flext-1k3ca). -#}
 	mise_has_blocking_warning() { \
-		case "$$1" in \
-			*converge.log|*pin-lock.log) \
-				grep -F 'mise WARN' "$$1" \
-					| grep -Fv 'not replacing unmanaged file in shims directory' \
-					| grep -Fv 'lock-time provenance verification failed' \
-					| grep -Fv 'hidden by minimum_release_age' \
-					| grep -Fiv 'failed to resolve tool version list for' \
-					| grep -Fiv 'is not in the lockfile' \
-					| grep -Ev 'failed to resolve [^:]+ for [^:]+: No such file or directory .*version .*, and [0-9]+ more platform' \
-					| grep -q .; \
-				;; \
-			*) \
-				grep -F 'mise WARN' "$$1" \
-					| grep -Fv 'not replacing unmanaged file in shims directory' \
-					| grep -Fv 'lock-time provenance verification failed' \
-					| grep -Ev 'failed to resolve [^:]+ for [^:]+: No such file or directory .*version .*, and [0-9]+ more platform' \
-					| grep -q .; \
-				;; \
-		esac; \
+		grep -Fq 'mise WARN' "$$1"; \
 	}; \
 	mise_checked() { \
 		mise_log="$$1"; shift; \
@@ -304,12 +292,6 @@
 		exit 2; \
 	fi; \
 	{{ mise_runtime_bootstrap(project_root, mise, bootstrap) }}; \
-	project_parent=$${project_root%/*}; \
-	if [ -z "$$project_parent" ]; then project_parent=/; fi; \
-	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
-	if [ -z "$$scratch" ] || [ ! -d "$$scratch" ]; then \
-		printf 'ERROR: mise bootstrap scratch creation failed (template: %s/.%s.mise-bootstrap.XXXXXX)\n' "$$project_parent" "$${project_root##*/}" >&2; exit 2; \
-	fi; \
 	# Only ``upg`` locks, once per manifest it provisions from. Lock every \
 	# configured tool in one pass so removed selectors cannot survive beside \
 	# their replacement in mise.lock. The relock half of ``upg`` (lock without \
@@ -342,30 +324,8 @@
 			if [ -d "$$project_root/.mise/locks" ]; then mkdir -p "$$lock_stage/.mise"; cp -R "$$project_root/.mise/locks" "$$lock_stage/.mise/locks"; fi; \
 		fi; \
 		mise_trusted_config_paths="$$lock_stage"; \
-		if mise_checked "$$scratch/lock.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" lock --bump; then \
-			python3 "$$project_root/bin/mise-lock-converge.py" pin "$$lock_stage" "$$project_root/mise.lock"; \
-			mise_checked "$$scratch/pin-lock.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" lock; \
-		elif grep -q "refusing to replace locked version" "$$scratch/lock.log"; then \
-			printf 'INFO: kept the current mise.lock: the newest release was refused for missing platform assets; retry the bump when the release regains full platform coverage\n' >&2; \
-		else \
-			cat "$$scratch/lock.log" >&2; \
-			exit 2; \
-		fi; \
-		# A broken upstream release fails the staged install. The generated \
-		# converge script holds every failing tool at its newest installable release \
-		# inside the stage (loud INFO per hold; the committed manifest never \
-		# changes, so the next upg retries the newest release), then the \
-		# install is retried against the held stage before publication. \
-		if mise_exec project 'MISE_LOCKED=false' "$$pinned_mise" -C "$$lock_stage" install --yes >"$$scratch/install.log" 2>&1; then :; \
-		else install_status=$$?; cat "$$scratch/install.log" >&2; \
-			printf 'upg relock: staged install failed (exit %s); holding failing tools at their newest installable releases\n' "$$install_status" >&2; \
-			converge_python=$$(command -v python3 || true); \
-			if [ -z "$$converge_python" ]; then \
-				printf 'ERROR: converge needs a host python3 (stdlib only); provision one and retry\n' >&2; exit 2; \
-			fi; \
-			mise_checked "$$scratch/converge.log" "$$converge_python" "$$project_root/{{ bootstrap.lock_converge_script }}" "$$mise_storage_root" "$$lock_stage" "$$runtime_release"; \
-			mise_checked "$$scratch/install-retry.log" mise_exec project 'MISE_LOCKED=false' "$$pinned_mise" -C "$$lock_stage" install --yes; \
-		fi; \
+		mise_checked "$$scratch/lock.log" mise_exec project 'MISE_LOCKED=false' "$$pinned_mise" -C "$$lock_stage" lock --bump; \
+		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" install --locked --yes; \
 		mise_checked "$$scratch/staged-python.log" mise_offline project "$$pinned_mise" -C "$$lock_stage" which python; \
 		staged_python=$$(cat "$$scratch/staged-python.log"); \
 		if [ ! -x "$$staged_python" ]; then printf 'ERROR: staged Mise Python is not executable: %s\n' "$$staged_python" >&2; exit 2; fi; \
@@ -377,9 +337,9 @@
 			mkdir -p "$$lock_stage/artifacts/bin"; \
 			mise_checked "$$scratch/install-script.log" mise_exec no-config "$$pinned_mise" generate install-script --version "$$runtime_release" --write "$$lock_stage/artifacts/{{ bootstrap.artifact_specs[0][0] }}" --windows; \
 {% for relative, mode in bootstrap.artifact_specs[:2] -%}
-			chmod {{ '%o' | format(mode) }} "$$lock_stage/artifacts/{{ relative }}"; \
+{{ "	" }}			chmod {{ '%o' | format(mode) }} "$$lock_stage/artifacts/{{ relative }}"; \
 {% endfor -%}
-			mise_receipt launcher-version "$$lock_stage/artifacts/{{ bootstrap.artifact_specs[0][0] }}"; \
+{{ "	" }}			mise_receipt launcher-version "$$lock_stage/artifacts/{{ bootstrap.artifact_specs[0][0] }}"; \
 			if [ "$$receipt_release" != "$$runtime_release" ]; then \
 				printf 'ERROR: staged Mise launcher runs %s, not %s\n' "$$receipt_release" "$$runtime_release" >&2; exit 2; \
 			fi; \
@@ -391,7 +351,7 @@
 	else \
 		# Setup consumes the declared lock policy in one install. An invalid \
 		# lock stops here with its original cause; only make upg repairs it. \
-		mise_checked "$$scratch/install.log" mise_exec project 'MISE_LOCKED=false' "$$pinned_mise" -C "$$project_root" install --yes; \
+		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$project_root" install --locked --yes; \
 	fi; \
 	mise_checked_stdout "$$scratch/ast-grep-version.stdout" "$$scratch/ast-grep-version.stderr" mise_offline project "$$pinned_mise" -C "$$project_root" exec -- ast-grep --version; \
 	if [ -s "$$scratch/ast-grep-version.stderr" ]; then \
@@ -416,6 +376,15 @@
 	if [ ! -x "$$direnv_executable" ]; then \
 		printf 'ERROR: Mise resolved a non-executable direnv path: %s\n' "$$direnv_executable" >&2; exit 2; \
 	fi; \
+	# The .envrc is a managed projection artifact: approve its hash so the \
+	# activation contract holds on fresh machines (a CI runner never runs an \
+	# interactive allow, and every downstream direnv activation — including \
+	# the check gate's — refuses a blocked .envrc). direnv re-blocks on any \
+	# later content change through its own hash check, so this approves only \
+	# the projected form, never arbitrary edits. \
+	if [ -f "$$project_root/.envrc" ]; then \
+		"$$direnv_executable" allow "$$project_root"; \
+	fi; \
 	mise_checked "$$scratch/python-path.log" mise_offline project "$$pinned_mise" -C "$$project_root" which python; \
 	python_executable=$$(cat "$$scratch/python-path.log"); \
 	# CI receives only the shim farm: a project bin/ on PATH would bind every \
@@ -425,12 +394,12 @@
 	# the farm from the pinned release before publishing it. \
 	if [ -n "$${GITHUB_PATH:-}" ]; then \
 {% for name, relative in bootstrap.persistent_environment if name == "MISE_SHIMS_DIR" -%}
-		shim_farm="$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}"; \
+{{ "	" }}		shim_farm="$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}"; \
 		rm -rf "$$shim_farm"; \
 		mise_checked "$$scratch/reshim.log" mise_offline project "$$pinned_mise" -C "$$project_root" reshim; \
 		printf '%s\n' "$$shim_farm" >> "$$GITHUB_PATH"; \
 {% endfor -%}
-	fi; \
+{{ "	" }}	fi; \
 	printf 'setup: entering lifecycle (submodules, environment, hooks) make=%s\n' "$(SELF_MAKE_EXECUTABLE)"; \
 	scratch_present=0; if [ -d "$$scratch" ]; then scratch_present=1; fi; \
 	printf 'mise scratch: before lifecycle path=%s present=%s\n' "$$scratch" "$$scratch_present" >&2; \
@@ -438,9 +407,9 @@
 	if [ "$(OS)" = "Windows_NT" ]; then mise_runtime_path="$$mise_runtime_path.exe"; fi; \
 	if env \
 {% for name, relative in bootstrap.persistent_environment -%}
-		"{{ name }}=$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}" \
+{{ "	" }}		"{{ name }}=$$mise_storage_root{% if relative != "." %}/{{ relative }}{% endif %}" \
 {% endfor -%}
-		"GIT_CEILING_DIRECTORIES=$$project_parent" \
+{{ "	" }}		"GIT_CEILING_DIRECTORIES=$$project_parent" \
 		"MISE_CEILING_PATHS=$$project_parent" \
 		"MISE_TRUSTED_CONFIG_PATHS=$$project_root" \
 		"MISE_VERSION=$$runtime_release" \

@@ -12,7 +12,7 @@ from operator import itemgetter
 from pathlib import Path
 
 from flext_infra import c, t
-from flext_infra._utilities.discovery import FlextInfraUtilitiesDiscovery
+from flext_infra._utilities import FlextInfraUtilitiesDiscovery
 
 
 class FlextInfraUtilitiesRopeSource:

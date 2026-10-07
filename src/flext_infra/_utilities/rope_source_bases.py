@@ -10,11 +10,15 @@ import ast
 import importlib.util
 import sys
 from collections.abc import MutableMapping
+from importlib.util import resolve_name
 from pathlib import Path
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities import (
+    FlextInfraUtilitiesRopeAnalysisSourceScan,
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeRuntime,
+)
 
 
 class FlextInfraUtilitiesRopeSourceBases:
@@ -189,6 +193,14 @@ class FlextInfraUtilitiesRopeSourceBases:
                 aliases[key_node.value] = value
         return aliases
 
+    @staticmethod
+    def _subscript_root_name(target: ast.Subscript) -> str:
+        """Return the root name of a subscript target's value expression."""
+        value = target.value
+        if isinstance(value, ast.Attribute):
+            value = value.value
+        return value.id if isinstance(value, ast.Name) else ""
+
     @classmethod
     def _inventory(
         cls,
@@ -204,7 +216,8 @@ class FlextInfraUtilitiesRopeSourceBases:
         """Index lexical bindings without installing a cross-module Rope overlay.
 
         A provider class is indexed at its native declaration line. Unreferenced
-        provider classes remain qualified declarations, not fabricated lineages.
+        module-level provider classes remain qualified declarations, not fabricated
+        lineages. A captured class owns its nested declaration identities.
 
         Returns:
             The module's explicit lexical bindings, including value shadowing.
@@ -237,6 +250,12 @@ class FlextInfraUtilitiesRopeSourceBases:
             scope: str,
         ) -> None:
             for node in statements:
+                if (
+                    required_line is not None
+                    and not scope
+                    and node.lineno > required_line
+                ):
+                    break
                 if isinstance(node, ast.ClassDef):
                     if (
                         required_line is not None
@@ -327,11 +346,61 @@ class FlextInfraUtilitiesRopeSourceBases:
                         node.targets if isinstance(node, ast.Assign) else [node.target]
                     )
                     if any(not isinstance(target, ast.Name) for target in targets):
-                        # Attribute and subscript targets mutate an existing
-                        # object; they never declare a lexical class binding,
-                        # so the scan records nothing and resolution keeps its
-                        # own failure for a binding that is actually required.
-                        continue
+                        if allow_conditional and all(
+                            isinstance(target, ast.Attribute)
+                            and isinstance(target.value, ast.Name)
+                            and target.value.id in bindings
+                            and bindings[target.value.id] is None
+                            for target in targets
+                        ):
+                            # Provider function metadata does not rebind a class.
+                            continue
+                        if allow_conditional and all(
+                            isinstance(target, ast.Subscript)
+                            and m.Infra.SubscriptRebind(
+                                root_name=cls._subscript_root_name(target),
+                            ).is_module_table_mutation
+                            for target in targets
+                        ):
+                            # Standard-library alias re-registration (CPython's
+                            # ``collections`` publishes ``sys.modules[
+                            # 'collections.abc'] = _collections_abc``): an
+                            # external runtime table mutation, never a class
+                            # rebind — the touched names stay unknown.
+                            continue
+                        if (
+                            len(targets) == 1
+                            and isinstance(targets[0], ast.Attribute)
+                            and isinstance(targets[0].value, ast.Name)
+                            and targets[0].value.id in bindings
+                            and bindings[targets[0].value.id] is not None
+                            and isinstance(node.value, ast.Name)
+                        ):
+                            # Class-namespace completion rebind (``base.t = final``):
+                            # a module completes a deferred base namespace and
+                            # publishes the RHS class under the attribute name in
+                            # its own exported namespace, so the binding map
+                            # registers it exactly like a module-level alias.
+                            visible = {**lexical, **bindings}
+                            if (
+                                node.value.id in visible
+                                and visible[node.value.id] is not None
+                            ):
+                                reference = cls._reference(node.value, visible, module)
+                                if reference is not None:
+                                    bindings[targets[0].attr] = reference.model_copy(
+                                        update={
+                                            "qualified_base": (
+                                                f"{module}.{targets[0].attr}"
+                                            ),
+                                        },
+                                    )
+                            continue
+                        message = (
+                            f"Unsupported class binding mutation in {module}: "
+                            f"{ast.unparse(node)}"
+                        )
+                        raise ValueError(message)
                     value = node.value
                     if value is None:
                         continue
@@ -355,6 +424,20 @@ class FlextInfraUtilitiesRopeSourceBases:
                                 if reference is not None
                                 else None
                             )
+                elif (
+                    isinstance(node, ast.AugAssign)
+                    and allow_conditional
+                    and isinstance(node.target, ast.Name)
+                ):
+                    bindings[node.target.id] = None
+                elif (
+                    isinstance(node, ast.Delete)
+                    and allow_conditional
+                    and all(isinstance(target, ast.Name) for target in node.targets)
+                ):
+                    for target in node.targets:
+                        if isinstance(target, ast.Name):
+                            bindings.pop(target.id, None)
                 elif isinstance(node, (ast.Delete, ast.AugAssign)):
                     # An augmented assignment or deletion mutates an existing
                     # object and never declares a class binding; a Name target
@@ -368,6 +451,19 @@ class FlextInfraUtilitiesRopeSourceBases:
                 elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     bindings[node.name] = None
                 elif isinstance(node, ast.If):
+                    match node.test:
+                        case ast.Compare(
+                            left=ast.Name(id="__name__"),
+                            ops=[ast.Eq()],
+                            comparators=[ast.Constant(value="__main__")],
+                        ):
+                            collect(
+                                node.body if module == "__main__" else node.orelse,
+                                bindings,
+                                lexical,
+                                scope,
+                            )
+                            continue
                     if isinstance(node.test, ast.Constant) and isinstance(
                         node.test.value,
                         bool,
@@ -434,6 +530,27 @@ class FlextInfraUtilitiesRopeSourceBases:
                         bindings[name] = None
 
         collect(parsed.body, globals_, globals_, "")
+        targets, references = (
+            FlextInfraUtilitiesRopeAnalysisSourceScan.lazy_import_mapping_source(source)
+        )
+        if references and not module.startswith(("tests.", "tests.")):
+            # Test and benchmark modules build installer maps at runtime from
+            # the constants they exercise; the declared-mapping invariant
+            # gates the production lazy-init modules only.
+            message = (
+                f"Unresolved declared lazy import mapping in {module}: {references}"
+            )
+            raise ValueError(message)
+        for target, exports in targets:
+            destination = (
+                resolve_name(target, package) if target.startswith(".") else target
+            )
+            for name in exports:
+                globals_[name] = m.Infra.SourceClassReference(
+                    target=destination,
+                    attributes=(name,),
+                    qualified_base=f"{module}.{name}",
+                )
         return globals_
 
     @classmethod
@@ -466,6 +583,12 @@ class FlextInfraUtilitiesRopeSourceBases:
             module: cls._inventory(project, module, path, source, definitions)
             for module, (path, source) in sources.items()
         }
+        namespaces = {
+            ".".join(parts[:index])
+            for module in modules
+            for parts in (module.split("."),)
+            for index in range(1, len(parts) + 1)
+        }
         module_aliases: dict[str, str] = {}
         for alias_module, (alias_path, alias_source) in sources.items():
             for alias, absolute in cls.lazy_module_aliases(
@@ -473,15 +596,21 @@ class FlextInfraUtilitiesRopeSourceBases:
                 alias_path,
                 alias_source,
             ).items():
+                # A lazy re-export alias is a module-local binding, never a
+                # global rename. When its name collides with a real analyzed
+                # module (or namespace), the real module wins: an absolute
+                # import elsewhere in the tree refers to the real module —
+                # a facade re-exporting a subpackage named like the project
+                # package must not shadow it (cosmos-docgen tests/unit
+                # re-exports a `dcdoc` subpackage; class bases declared as
+                # `from dcdoc import DcdocServiceBase` mean the project one).
+                if alias in modules or alias in namespaces:
+                    continue
                 module_aliases.setdefault(alias, absolute)
         for alias, absolute in (extra_module_aliases or {}).items():
+            if alias in modules or alias in namespaces:
+                continue
             module_aliases.setdefault(alias, absolute)
-        namespaces = {
-            ".".join(parts[:index])
-            for module in modules
-            for parts in (module.split("."),)
-            for index in range(1, len(parts) + 1)
-        }
         owned_definitions = tuple(definitions.values())
         definition_keys: dict[str, str] = {}
         for definition_identity, definition in definitions.items():
@@ -490,24 +619,27 @@ class FlextInfraUtilitiesRopeSourceBases:
         external: MutableMapping[str, t.Infra.RopePyObject] = {}
         linearizations: MutableMapping[str, t.StrTuple] = {}
         active: set[str] = set()
+        native_module_type = FlextInfraUtilitiesRopeRuntime.runtime_type(
+            "rope.base.builtins",
+            "BuiltinModule",
+        )
 
         def external_identity(value: t.Infra.RopePyObject) -> str:
-            # TypedDict builds its class through a function call, so Rope
-            # resolves the declared base to a PyFunction; the base identity
-            # is still the class that call constructs at runtime.
-            if (
-                isinstance(
-                    value,
-                    FlextInfraUtilitiesRopeRuntime.runtime_type(
-                        "rope.base.pyobjectsdef",
-                        "PyFunction",
-                    ),
-                )
-                and value.get_name() == "TypedDict"
-            ):
+            # TypedDict and NamedTuple build their classes through function
+            # calls, so Rope resolves the declared base to a PyFunction; the
+            # base identity is still the class that call constructs at
+            # runtime.
+            if isinstance(
+                value,
+                FlextInfraUtilitiesRopeRuntime.runtime_type(
+                    "rope.base.pyobjectsdef",
+                    "PyFunction",
+                ),
+            ) and value.get_name() in {"TypedDict", "NamedTuple"}:
                 module = value.get_module()
                 module_name = module.get_name() if module is not None else ""
-                return f"{module_name}.TypedDict" if module_name else "TypedDict"
+                name = value.get_name()
+                return f"{module_name}.{name}" if module_name else name
             if not FlextInfraUtilitiesRopeRuntime.abstract_class(value):
                 message = "Rope did not resolve a required base to a class"
                 raise TypeError(message)
@@ -639,13 +771,10 @@ class FlextInfraUtilitiesRopeSourceBases:
         def provider_module(
             imported: p.Infra.RopeImportedModule,
         ) -> t.Infra.RopePyModule:
-            resource = imported.resource
-            if resource is not None:
-                return FlextInfraUtilitiesRopeCore.resolve_pymodule(project, resource)
             name = provider_module_name(imported)
             module = project.get_module(name)
-            resource = project.find_module(name)
-            if resource is not None:
+            resource = imported.resource or project.find_module(name)
+            if resource is not None and not isinstance(module, native_module_type):
                 module = FlextInfraUtilitiesRopeCore.resolve_pymodule(project, resource)
             return module
 
@@ -743,7 +872,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                     raise
                 module = project.get_module(real)
             resource = project.find_module(target)
-            if resource is not None:
+            if resource is not None and not isinstance(module, native_module_type):
                 module = FlextInfraUtilitiesRopeCore.resolve_pymodule(project, resource)
             return provider_reference(module, attributes, visiting, depth)
 

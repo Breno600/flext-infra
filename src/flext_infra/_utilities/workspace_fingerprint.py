@@ -11,14 +11,10 @@ import os
 import stat
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m
-from flext_infra._utilities.git import FlextInfraUtilitiesGit
-
-if TYPE_CHECKING:
-    from flext_infra import p, t
+from flext_infra import c, m, p, t
+from flext_infra._utilities import FlextInfraUtilitiesGit
 
 
 class FlextInfraUtilitiesWorkspaceFingerprint:

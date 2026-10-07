@@ -8,14 +8,10 @@ from __future__ import annotations
 
 import ast
 from collections.abc import MutableMapping
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar
 
-from flext_infra._utilities._rope_analysis.asthelpers import (
-    FlextInfraUtilitiesRopeAnalysisAstHelpers,
-)
-
-if TYPE_CHECKING:
-    from flext_infra import t
+from flext_infra import t
+from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
 
 
 class FlextInfraUtilitiesRopeAnalysisSourceScan:
@@ -105,28 +101,28 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
                 return wrapped.id
         return ""
 
-    @staticmethod
-    def module_assignment_strings_source(source: str, name: str) -> t.StrSequence:
+    @classmethod
+    def module_assignment_strings_source(cls, source: str, name: str) -> t.StrSequence:
         """Collect strings from a literal module-level assignment.
 
         Returns:
             The resulting ``t.StrSequence``.
 
         """
-        scan = FlextInfraUtilitiesRopeAnalysisSourceScan
-        value = scan._top_level_value(source, name)
-        values = scan.literal_string_sequence(value)
+        value = cls._top_level_value(source, name)
+        values = cls.literal_string_sequence(value)
         if values:
             return values
         # Generated roots use ``__all__ = tuple(_PUBLIC_EXPORTS)``; follow the
         # bound name so docs validate matches the live lazy-init ABI.
-        nested_name = scan._sequence_constructor_ref(value)
+        nested_name = cls._sequence_constructor_ref(value)
         if not nested_name or nested_name == name:
             return ()
-        return scan.module_assignment_strings_source(source, nested_name)
+        return cls.module_assignment_strings_source(source, nested_name)
 
-    @staticmethod
+    @classmethod
     def module_mapping_assignment_source(
+        cls,
         source: str,
         name: str,
     ) -> t.Pair[t.VariadicTuple[t.Pair[str, t.StrSequence]], t.StrSequence]:
@@ -137,8 +133,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
                 t.StrSequence]``.
 
         """
-        scan = FlextInfraUtilitiesRopeAnalysisSourceScan
-        return scan.mapping_entries_refs(scan._top_level_value(source, name))
+        return cls.mapping_entries_refs(cls._top_level_value(source, name))
 
     @staticmethod
     def mapping_entries_refs(
@@ -276,7 +271,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             for alias in node.names:
                 if (alias.asname or alias.name) != symbol_name:
                     continue
-                relative_module_name = FlextInfraUtilitiesRopeAnalysisSourceScan.relative_import_module_name
+                relative_module_name = cls.relative_import_module_name
                 module_name = relative_module_name(
                     current_module=current_module,
                     imported_module=node.module or "",
@@ -367,22 +362,21 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             return None
         return next((item.value for item in call.keywords if item.arg == keyword), None)
 
-    @staticmethod
-    def lazy_public_exports_source(source: str) -> t.Pair[t.StrSequence, str]:
+    @classmethod
+    def lazy_public_exports_source(cls, source: str) -> t.Pair[t.StrSequence, str]:
         """Return lazy-loader public exports or the local symbol holding them.
 
         Returns:
             Lazy-loader public exports or the local symbol holding them.
 
         """
-        scan = FlextInfraUtilitiesRopeAnalysisSourceScan
-        public_exports = scan._keyword_value(
-            scan._first_call(source, "install_lazy_exports"),
+        public_exports = cls._keyword_value(
+            cls._first_call(source, "install_lazy_exports"),
             "public_exports",
         )
         if public_exports is None:
             return ((), "")
-        values = scan.literal_string_sequence(public_exports)
+        values = cls.literal_string_sequence(public_exports)
         if values:
             return (values, "")
         return ((), FlextInfraUtilitiesRopeAnalysisAstHelpers.name_of(public_exports))

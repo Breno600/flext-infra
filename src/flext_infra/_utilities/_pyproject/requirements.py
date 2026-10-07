@@ -12,8 +12,10 @@ from typing import TYPE_CHECKING
 from flext_cli import r, u
 
 from flext_infra import c, t
-from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
-from flext_infra._utilities.repository import FlextInfraUtilitiesRepository
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDependencies,
+    FlextInfraUtilitiesRepository,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

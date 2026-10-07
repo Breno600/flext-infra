@@ -86,6 +86,7 @@ if TYPE_CHECKING:
     from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
     from flext_infra.codemod.loop_phases import (
         FlextInfraAccessorRenamePhase,
+        FlextInfraImportNormalizationPhase,
         FlextInfraNamespaceRelocationPhase,
     )
     from flext_infra.codemod.semantic_apply import FlextInfraCodemodSemanticApply
@@ -292,6 +293,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraGate",
     "FlextInfraGateRegistry",
     "FlextInfraGitService",
+    "FlextInfraImportNormalizationPhase",
     "FlextInfraIndexDeclarationsGate",
     "FlextInfraInjectCommentsPhase",
     "FlextInfraInventoryService",
@@ -480,6 +482,7 @@ install_lazy_exports(
         "FlextInfraGate": ".gates.base_gate",
         "FlextInfraGateRegistry": ".check.gate_registry",
         "FlextInfraGitService": ".git",
+        "FlextInfraImportNormalizationPhase": ".codemod.loop_phases",
         "FlextInfraIndexDeclarationsGate": ".gates.index_declarations",
         "FlextInfraInjectCommentsPhase": ".deps.phases.inject_comments",
         "FlextInfraInventoryService": ".validate.inventory",

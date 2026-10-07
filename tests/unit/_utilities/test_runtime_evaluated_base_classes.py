@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import config, t, u
+from flext_infra import c, config, t, u
 
 
 class TestsFlextInfraRuntimeEvaluatedBaseClasses:
@@ -162,6 +162,73 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                 )),
             ),
         )
+
+    def test_generated_lazy_bindings_are_indexed_without_importing(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Generated package exports bind the same source-defined model identity."""
+        package = tmp_path / "src" / "generated_contract"
+        package.mkdir(parents=True)
+        (package / "__init__.py").write_text(
+            c.Infra.AUTOGEN_HEADERS[0]
+            + "\nfrom types import MappingProxyType\n"
+            + "from typing import TYPE_CHECKING\n"
+            + "from flext_core import install_lazy_exports\n"
+            + "if TYPE_CHECKING:\n    from .models import m\n"
+            + "install_lazy_exports(__name__, __file__, "
+            'MappingProxyType({"m": ".models"}), public_exports=("m",))\n'
+            + 'raise RuntimeError("This package must not be imported")\n',
+            encoding="utf-8",
+        )
+        planned = {
+            package / "models.py": self._root_import()
+            + "class Contract(RuntimeRoot): pass\n"
+            + "class Derived(Contract): pass\nm = Contract\n",
+            package / "consumer.py": (
+                "from generated_contract import m\nclass Consumer(m): pass\n"
+            ),
+        }
+        tm.that(
+            u.Infra.runtime_evaluated_base_classes(tmp_path, planned, self._roots()),
+            eq=tuple(
+                sorted((
+                    *self._roots(),
+                    "generated_contract.models.Contract",
+                    "generated_contract.m",
+                )),
+            ),
+        )
+        tm.that("generated_contract" in sys.modules, eq=False)
+
+    def test_native_stdlib_aliases_preserve_the_same_qualified_bases(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A native stdlib provider has one identity through either import form."""
+        path = tmp_path / "src" / "native_contract" / "models.py"
+        direct = u.Infra.runtime_evaluated_base_classes(
+            tmp_path,
+            {
+                path: (
+                    "from collections.abc import Mapping\n"
+                    "class Consumer(Mapping): pass\n"
+                ),
+            },
+            self._roots(),
+        )
+        aliased = u.Infra.runtime_evaluated_base_classes(
+            tmp_path,
+            {
+                path: (
+                    "import collections.abc as provider\n"
+                    "class Consumer(provider.Mapping): pass\n"
+                ),
+            },
+            self._roots(),
+        )
+        tm.that(aliased, eq=direct)
+        tm.that(set(self._roots()).issubset(aliased), eq=True)
 
     def test_value_shadowing_is_a_visible_invalid_base(self, tmp_path: Path) -> None:
         source = self._root_import() + (

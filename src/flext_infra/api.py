@@ -10,7 +10,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_core import r
-from flext_infra import FlextInfraConfig, m, t, u
+from flext_infra import m, t, u
+from flext_infra._config import FlextInfraConfig
 from flext_infra.base import s
 from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 from flext_infra.codegen.census import FlextInfraCodegenCensus
@@ -23,6 +24,7 @@ from flext_infra.codemod.apply_renames import FlextInfraApplyRenames
 from flext_infra.codemod.batch_apply import FlextInfraCodemodBatchApply
 from flext_infra.codemod.loop_phases import (
     FlextInfraAccessorRenamePhase,
+    FlextInfraImportNormalizationPhase,
     FlextInfraNamespaceRelocationPhase,
 )
 from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
@@ -334,6 +336,7 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
                 rope=rope,
                 rename_inputs=tuple(campaigns),
                 phase_callbacks=(
+                    FlextInfraImportNormalizationPhase(),
                     FlextInfraNamespaceRelocationPhase(),
                     FlextInfraAccessorRenamePhase(),
                 ),

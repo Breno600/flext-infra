@@ -8,7 +8,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_infra import c, config, p, u
+from flext_infra import c, p, u
+from flext_infra._config import config
 
 if TYPE_CHECKING:
     from collections.abc import Iterable

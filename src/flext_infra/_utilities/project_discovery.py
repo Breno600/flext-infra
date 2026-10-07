@@ -14,19 +14,16 @@ from typing import TYPE_CHECKING, override
 
 from flext_cli import u
 
-from flext_infra import config
+from flext_infra import c, m
+from flext_infra._config import config
 from flext_infra._utilities import (
     FlextInfraUtilitiesGit,
     FlextInfraUtilitiesProjectDiscoveryCandidatesMixin,
-)
-from flext_infra._utilities.workspace_manifest import (
     FlextInfraUtilitiesWorkspaceManifest,
 )
-from flext_infra.constants import c
-from flext_infra.models import m
 
 if TYPE_CHECKING:
-    from flext_infra.typings import t
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesProjectDiscovery(
@@ -298,14 +295,27 @@ class FlextInfraUtilitiesProjectDiscovery(
                 # Recursively scan configured directories for Python sources:
                 # modules and the stubs the catalog rules also govern.
                 for directory in scan_dirs:
-                    scan_dir = project / directory
-                    if scan_dir.exists():
-                        for target in scan_dir.rglob(f"*{suffix}"):
-                            if target.is_file():
-                                targets.add(
-                                    target.relative_to(resolved_root).as_posix(),
-                                )
+                    cls._collect_scan_dir_targets(
+                        project / directory,
+                        f"*{suffix}",
+                        resolved_root,
+                        targets,
+                    )
         return tuple(sorted(targets))
+
+    @staticmethod
+    def _collect_scan_dir_targets(
+        scan_dir: Path,
+        pattern: str,
+        resolved_root: Path,
+        targets: set[str],
+    ) -> None:
+        """Add every Python file under one configured scan directory."""
+        if not scan_dir.exists():
+            return
+        for target in scan_dir.rglob(pattern):
+            if target.is_file():
+                targets.add(target.relative_to(resolved_root).as_posix())
 
     @classmethod
     def governed_project_roots(cls, repository_root: Path) -> t.SequenceOf[Path]:

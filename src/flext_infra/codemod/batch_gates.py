@@ -14,8 +14,10 @@ from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 
 from flext_core import r
-from flext_infra import c, m, p, settings, t, u
+from flext_infra import c, m, p, t, u
+from flext_infra._settings import settings
 from flext_infra.codemod import FlextInfraCodemodSnapshotReconciler
+from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
 
 
 class FlextInfraModGateEngine:
@@ -437,6 +439,11 @@ class FlextInfraModGateEngine:
     def _validate_finding_receipt(stderr: str, errors: int) -> p.Result[bool]:
         """Authenticate ast-grep's exact error-finding stderr receipt.
 
+        The mise toolchain wrapper may prepend its own ``mise WARN``/``hint:``
+        resolution notices to any managed tool's stderr; they are wrapper
+        noise, never tool output, and are dropped before authentication (the
+        same standing the mypy gate gives its verbose ``LOG:`` channel).
+
         Returns:
             The resulting ``p.Result[bool]``.
 
@@ -445,10 +452,15 @@ class FlextInfraModGateEngine:
             c.Infra.AST_GREP_ERROR_FINDING_RECEIPT.format(count=errors),
             c.Infra.AST_GREP_ERROR_FINDING_HELP,
         ))
-        if stderr.strip() != expected:
+        receipt = "\n".join(
+            line
+            for line in stderr.splitlines()
+            if not line.startswith(("mise WARN", "hint:"))
+        ).strip()
+        if receipt != expected:
             return r[bool].fail(
                 f"ast-grep finding receipt mismatch: parsed_errors={errors} "
-                f"expected={expected!r} actual={stderr.strip()!r}",
+                f"expected={expected!r} actual={receipt!r}",
             )
         return r[bool].ok(value=True)
 
@@ -834,8 +846,6 @@ class FlextInfraModGateEngine:
             return r[m.Infra.ModScanReport].from_failure(receipt)
         cls._report_evidence(receipt.value)
         if fix:
-            from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
-
             published = FlextInfraModReplacements.publish(root, complete_report)
             if published.failure:
                 return r[m.Infra.ModScanReport].from_failure(published)

@@ -8,7 +8,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, config, m
+from flext_infra import c, m
+from flext_infra._config import config
 from flext_infra.gates.markdown_support import FlextInfraMarkdownGateBase
 
 if TYPE_CHECKING:

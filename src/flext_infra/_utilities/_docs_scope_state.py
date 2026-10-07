@@ -12,12 +12,12 @@ from pathlib import Path
 from flext_cli import u
 
 from flext_infra import c, t
-from flext_infra._models.workspace import FlextInfraModelsWorkspace
-from flext_infra._utilities._docs_scope_paths import (
+from flext_infra._models import FlextInfraModelsWorkspace
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDependencies,
     FlextInfraUtilitiesDocsScopePathsMixin,
+    FlextInfraUtilitiesPyproject,
 )
-from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
-from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
 
 
 class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMixin):

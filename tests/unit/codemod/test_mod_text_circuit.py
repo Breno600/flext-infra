@@ -330,7 +330,10 @@ class TestsFlextInfraModTextGateEngine:
         """
         u.Cli.atomic_write_text_file(
             root / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
-            "rules:\n  - id: publication-probe\n    find: 'before'\n    replace: 'after'\n",
+            "rules:\n"
+            "  - id: publication-probe\n"
+            "    find: 'before'\n"
+            "    replace: 'after'\n",
         ).unwrap()
         package = root / "src" / "mod_workspace"
         u.Cli.ensure_dir(package).unwrap()
@@ -646,7 +649,9 @@ class TestsFlextInfraModTextGateEngine:
         tm.ok(
             u.Cli.atomic_write_text_file(
                 mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
-                "rules:\n  - id: first\n    find: 'alpha'\n  - id: first\n    find: 'beta'\n",
+                "rules:\n"
+                "  - id: first\n    find: 'alpha'\n"
+                "  - id: first\n    find: 'beta'\n",
             ),
         )
         duplicate = FlextInfraModTextGateEngine.load_rules(mod_workspace)
@@ -656,7 +661,9 @@ class TestsFlextInfraModTextGateEngine:
         tm.ok(
             u.Cli.atomic_write_text_file(
                 mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
-                "rules:\n  - id: first\n    find: 'alpha'\n  - id: second\n    find: 'beta'\n",
+                "rules:\n"
+                "  - id: first\n    find: 'alpha'\n"
+                "  - id: second\n    find: 'beta'\n",
             ),
         )
         valid = tm.ok(FlextInfraModTextGateEngine.load_rules(mod_workspace))

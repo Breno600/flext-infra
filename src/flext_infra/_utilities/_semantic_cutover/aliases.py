@@ -9,22 +9,14 @@ from __future__ import annotations
 import ast
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m, t
-from flext_infra._utilities._semantic_cutover.alias_cst import (
+from flext_infra import c, m, p, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesCompatibilityAliasValidation,
     FlextInfraUtilitiesSemanticCutoverAliasCst,
-)
-from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
 )
-from flext_infra._utilities.compatibility_alias_validation import (
-    FlextInfraUtilitiesCompatibilityAliasValidation,
-)
-
-if TYPE_CHECKING:
-    from flext_infra import p
 
 
 class FlextInfraUtilitiesSemanticCutoverAliases(

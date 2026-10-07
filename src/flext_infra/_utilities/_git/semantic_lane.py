@@ -12,9 +12,7 @@ from flext_cli import u
 
 from flext_core import r
 from flext_infra import c, m
-from flext_infra._utilities._git.semantic_worktree import (
-    FlextInfraUtilitiesGitSemanticWorktreeMixin,
-)
+from flext_infra._utilities import FlextInfraUtilitiesGitSemanticWorktreeMixin
 
 if TYPE_CHECKING:
     from collections.abc import Callable

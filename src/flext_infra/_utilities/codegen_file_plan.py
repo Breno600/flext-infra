@@ -95,12 +95,9 @@ class FlextInfraUtilitiesCodegenFilePlan:
                     }:
                         raise
                     if time.monotonic() >= deadline:
-                        timeout_error = (
+                        raise (
                             FlextInfraUtilitiesCodegenFilePlan.JournalLeaseTimeoutError
-                        )
-                        raise timeout_error(
-                            lock_path,
-                        ) from error
+                        )(lock_path) from error
                     time.sleep(c.Infra.JOURNAL_LEASE_POLL_SECONDS)
                     continue
                 acquired = True
@@ -175,7 +172,8 @@ class FlextInfraUtilitiesCodegenFilePlan:
         """Whether publication must change a generated-file destination.
 
         Returns:
-            The resulting ``bool``.
+                    The resulting ``bool``.
+        from flext_cli import m as cli_m
 
         """
         if isinstance(plan.before, cli_m.Cli.AtomicDirectoryChainPlan):

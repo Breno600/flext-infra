@@ -7,13 +7,11 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities._semantic_cutover.family_type_references import (
+from flext_infra._utilities import (
+    FlextInfraUtilitiesRopeRuntimeRefactors,
+    FlextInfraUtilitiesRopeStructure,
     FlextInfraUtilitiesSemanticFamilyTypeReferences,
 )
-from flext_infra._utilities.rope_runtime_refactors import (
-    FlextInfraUtilitiesRopeRuntimeRefactors,
-)
-from flext_infra._utilities.rope_structure import FlextInfraUtilitiesRopeStructure
 
 
 class FlextInfraUtilitiesSemanticFamilyReferences(

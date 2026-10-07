@@ -7,16 +7,12 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from git import BadName, GitCommandError
 
 from flext_core import r
-from flext_infra import c, m
-from flext_infra._utilities._git.worktree import FlextInfraUtilitiesGitWorktreeMixin
-
-if TYPE_CHECKING:
-    from flext_infra import p
+from flext_infra import c, m, p
+from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeMixin
 
 
 class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixin):

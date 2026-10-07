@@ -23,25 +23,22 @@ from importlib.util import find_spec
 from pathlib import Path
 from types import MappingProxyType
 
-from flext_cli import u
+from flext_cli import r, u
 from packaging.utils import canonicalize_name
 
-from flext_infra import c, config, m, p, r, t
-from flext_infra._utilities._rope_analysis.asthelpers import (
+from flext_infra import c, m, p, t
+from flext_infra._config import config
+from flext_infra._utilities import (
+    FlextInfraUtilitiesBase,
+    FlextInfraUtilitiesCodegenNamespace,
+    FlextInfraUtilitiesCodemodRules,
+    FlextInfraUtilitiesPyproject,
     FlextInfraUtilitiesRopeAnalysisAstHelpers,
-)
-from flext_infra._utilities._rope_analysis.exports import (
     FlextInfraUtilitiesRopeAnalysisExports,
-)
-from flext_infra._utilities._rope_analysis.importstate import (
     FlextInfraUtilitiesRopeAnalysisImportState,
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeImports,
 )
-from flext_infra._utilities.base import FlextInfraUtilitiesBase
-from flext_infra._utilities.codemod_rules import FlextInfraUtilitiesCodemodRules
-from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
-from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
-from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities.rope_imports import FlextInfraUtilitiesRopeImports
 
 
 class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
@@ -732,6 +729,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
 
     @classmethod
     def _path_layers(cls, path: Path) -> frozenset[str]:
+
         order = frozenset(config.Infra.tooling.lazy_init.import_layer_order)
         stems = {
             part.removeprefix("_").removesuffix(c.Infra.EXT_PYTHON)

@@ -9,7 +9,8 @@ from __future__ import annotations
 from typing import override
 
 from flext_core import r
-from flext_infra import c, m, p, s, u
+from flext_infra import c, m, p, u
+from flext_infra.base import s
 from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 
 

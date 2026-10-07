@@ -12,7 +12,7 @@ from typing import Annotated, ClassVar
 
 from flext_core import m, u
 from flext_infra import c, t
-from flext_infra._models.mixins import FlextInfraModelsMixins
+from flext_infra._models import FlextInfraModelsMixins
 
 
 class FlextInfraModelsCheck:
@@ -266,7 +266,9 @@ class FlextInfraModelsCheck:
         )
         issues: t.VariadicTuple[FlextInfraModelsCheck.Issue] = m.Field(
             default_factory=tuple,
-            description="Complete native gate diagnostics, including informative findings",
+            description=(
+                "Complete native gate diagnostics, including informative findings"
+            ),
         )
         raw_output: str = m.Field(
             "",

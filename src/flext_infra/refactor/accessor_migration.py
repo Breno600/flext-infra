@@ -18,6 +18,7 @@ from flext_infra.refactor._accessor_report import FlextInfraAccessorMigrationRep
 from flext_infra.refactor._accessor_rewrite import (
     FlextInfraAccessorMigrationRewriteMixin,
 )
+from flext_infra.refactor._import_enforcement import FlextInfraImportNormalization
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -104,6 +105,14 @@ class FlextInfraAccessorMigrationOrchestrator(
         if iter_result.failure:
             return r[m.Infra.AccessorMigrationReport].from_failure(iter_result)
         scoped_files = self._scope_selected(iter_result.value)
+        if not self.effective_dry_run:
+            # The same canonical import-form pass fix-namespace and the mod
+            # loop own: a migrated accessor lands in a file whose imports
+            # already hold the canonical forms.
+            FlextInfraImportNormalization.apply_files(
+                self.repository_root,
+                scoped_files,
+            )
         previews: t.MutableSequenceOf[m.Infra.AccessorMigrationFile] = []
         files_with_changes = 0
         automated_change_count = 0

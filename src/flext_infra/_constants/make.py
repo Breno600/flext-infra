@@ -10,7 +10,7 @@ import re
 from enum import StrEnum
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra._constants.check import FlextInfraConstantsCheck
+from flext_infra._constants import FlextInfraConstantsCheck
 
 if TYPE_CHECKING:
     from flext_infra import t

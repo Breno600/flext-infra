@@ -377,6 +377,7 @@ asyncio_default_fixture_loop_scope = "function"
 filterwarnings = [
   "error",
   "module::flext_core._constants.enforcement.FlextMroViolation",
+  "once::pytest.PytestAssertRewriteWarning",
 ]
 markers = [
   "smoke: public-interface smoke tests",
@@ -402,7 +403,15 @@ python_files = ["*_test.py", "*_tests.py", "test_*.py"]
 testpaths = ["tests"]
 
 [tool.ruff]
-extend-exclude = []
+extend-exclude = [
+  "**/.archive/**",
+  "**/protos/**",
+  "**/.agents/aihub-hooks/**",
+  "**/.claude/aihub-hooks/**",
+  "**/.codex/aihub-hooks/**",
+  "**/.cursor/aihub-hooks/**",
+  "**/.gemini/aihub-hooks/**",
+]
 fix = false
 line-length = 88
 namespace-packages = ["tests", "examples", "scripts"]
@@ -467,15 +476,14 @@ runtime-evaluated-base-classes = [
   "flext_core.m.FlexibleModel",
   "flext_core.m.RootModel",
   "flext_core.m.StrictBoundaryModel",
-  "flext_infra.FlextInfraServiceBase",
+  "flext_infra._models.FlextInfraConfigModelsContract.ConfigContract",
+  "flext_infra._models.FlextInfraExternalCacheDirectorySpec",
   "flext_infra._models._codegen.fix.BulkFixItem",
   "flext_infra._models._codegen.pipeline.CodegenCommand",
   "flext_infra._models._config.contexts.MakeCommandContext",
   "flext_infra._models._config.contexts.MakeRenderContext",
   "flext_infra._models._config.contract.ConfigContract",
   "flext_infra._models._config.contract.DocsAuditOverridesSpec",
-  "flext_infra._models._config.contract.FlextInfraConfigModelsContract.ConfigContract",
-  "flext_infra._models._config.external_cache.FlextInfraExternalCacheDirectorySpec",
   "flext_infra._models.codegen_render.MkdocsRenderContext",
   "flext_infra._models.git.GitRemoteRequest",
   "flext_infra._models.layout._LayoutContract",
@@ -510,7 +518,6 @@ runtime-evaluated-base-classes = [
   "flext_infra.release._release_project.FlextInfraReleaseProjectMixin",
   "flext_infra.release._release_publish.FlextInfraReleasePublishMixin",
   "flext_infra.release._release_source.FlextInfraReleaseSourceMixin",
-  "flext_infra.s",
   "flext_infra.services.cli_dispatch.FlextInfraCliDispatchService",
   "flext_infra.validate._pytest_runner.base.FlextInfraPytestRunnerBase",
   "flext_infra.validate._pytest_runner.command.FlextInfraPytestRunnerCommand",

@@ -11,7 +11,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, config, m, u
+from flext_infra import c, m, u
+from flext_infra._config import config
 from flext_infra.codegen import (
     FlextInfraCodegenMiseArtifacts,
     FlextInfraCodegenTransaction,

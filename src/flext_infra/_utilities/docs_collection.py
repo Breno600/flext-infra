@@ -12,10 +12,10 @@ from hashlib import sha256
 from pathlib import Path
 
 from flext_infra import m, t
-from flext_infra._utilities.docs_collection_verify import (
+from flext_infra._utilities import (
     FlextInfraUtilitiesDocsCollectionVerify,
+    FlextInfraUtilitiesDocsContract,
 )
-from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
 
 
 class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify):

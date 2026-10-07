@@ -13,9 +13,11 @@ from flext_cli import u
 
 from flext_core import r
 from flext_infra import c, t
-from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
-from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
-from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDocs,
+    FlextInfraUtilitiesDocsApi,
+    FlextInfraUtilitiesDocsScope,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path

@@ -12,9 +12,7 @@ from pathlib import Path
 from flext_cli import u
 
 from flext_infra import c, m, t
-from flext_infra._utilities._git.state_files import (
-    FlextInfraUtilitiesGitStateFilesMixin,
-)
+from flext_infra._utilities import FlextInfraUtilitiesGitStateFilesMixin
 
 
 class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFilesMixin):

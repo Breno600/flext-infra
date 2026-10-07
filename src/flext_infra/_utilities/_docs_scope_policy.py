@@ -12,10 +12,8 @@ from pathlib import Path
 from flext_cli import u
 
 from flext_infra import c, t
-from flext_infra._utilities._docs_scope_state import (
+from flext_infra._utilities import (
     FlextInfraUtilitiesDocsScopeStateMixin,
-)
-from flext_infra._utilities.workspace_manifest import (
     FlextInfraUtilitiesWorkspaceManifest,
 )
 

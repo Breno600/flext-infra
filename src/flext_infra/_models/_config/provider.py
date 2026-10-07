@@ -12,7 +12,7 @@ from flext_cli import m
 
 from flext_infra import t
 from flext_infra._constants import FlextInfraConstantsSharedInfra
-from flext_infra._models._config.contract import FlextInfraConfigModelsContract
+from flext_infra._models import FlextInfraConfigModelsContract
 
 
 class FlextInfraConfigModelsProvider:
@@ -106,7 +106,7 @@ class FlextInfraConfigModelsProvider:
     class CiPrivateSubmoduleDeployKeySpec(
         FlextInfraConfigModelsContract.ConfigContract,
     ):
-        """One read-only deploy key that unlocks a private workspace subproject in CI."""
+        """One read-only deploy key unlocking a private subproject in CI."""
 
         secret: Annotated[
             t.NonEmptyStr,

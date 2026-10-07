@@ -11,9 +11,7 @@ from typing import Annotated, Literal, Self
 from flext_cli import m
 
 from flext_infra import c, t
-from flext_infra._models.deps_tool_config_project import (
-    FlextInfraModelsDepsToolConfigProject,
-)
+from flext_infra._models import FlextInfraModelsDepsToolConfigProject
 
 
 class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProject):
@@ -311,6 +309,17 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
     class RuffConfig(m.ArbitraryTypesModel):
         """Ruff top-level settings loaded from YAML."""
 
+        extend_exclude: Annotated[
+            t.StrSequence,
+            m.Field(
+                alias="extend-exclude",
+                description=(
+                    "Workspace exclusions added to Ruff's defaults: "
+                    "provider-owned tool-home projections stay outside the "
+                    "member lint scope."
+                ),
+            ),
+        ] = m.Field(default_factory=tuple)
         namespace_packages: Annotated[
             t.StrSequence,
             m.Field(

@@ -15,12 +15,12 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra._constants.codegen_detection import FlextInfraConstantsCodegenDetection
-from flext_infra._constants.codegen_lazy import FlextInfraConstantsCodegenLazy
-from flext_infra._constants.codegen_render_names import (
+from flext_infra._constants import (
+    FlextInfraConstantsCodegenDetection,
+    FlextInfraConstantsCodegenLazy,
     FlextInfraConstantsCodegenRenderNames,
+    FlextInfraConstantsWorkspace,
 )
-from flext_infra._constants.workspace import FlextInfraConstantsWorkspace
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -256,6 +256,11 @@ class FlextInfraConstantsCodegen(
         "MISE_GITHUB_TOKEN",
         "MISE_HTTP_TIMEOUT",
         "FLEXT_MYPY_PROFILE_OUTPUT",
+        # The docs-lifecycle CI mints a private-dependency installation token
+        # into this 0600 store (ci.yml FLEXT_SETUP_CREDENTIAL_STORE); the
+        # bootstrap carries it so git fetches inside uv/mise subprocesses
+        # authenticate the private sibling clones.
+        "FLEXT_SETUP_CREDENTIAL_STORE",
         # The generated launchers bake their release; the bootstrap passes the
         # committed pin, or the release `make upg` is installing, explicitly.
         "MISE_VERSION",

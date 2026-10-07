@@ -32,7 +32,8 @@ from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, config, m, t, u
+from flext_infra import c, m, t, u
+from flext_infra._config import config
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:

@@ -9,7 +9,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import m
+from flext_infra import c, m
+from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
+from flext_infra.refactor._import_enforcement import FlextInfraImportNormalization
 from flext_infra.refactor.namespace_relocations import (
     FlextInfraNamespaceRelocationCascade,
 )
@@ -48,17 +50,52 @@ class FlextInfraNamespaceEnforcerProjectMixin:
 
         """
         py_files = self._collect_py_files(project_root=project_root)
+        if apply:
+            # The canonical import-form engine runs over every scoped file
+            # before the residue count: its rewrites are the same canonical
+            # pass the mod loop's import-normalization phase applies, and a
+            # rule capture is not required to reach a file the operator law
+            # governs.
+            FlextInfraImportNormalization.apply_files(project_root, py_files)
+        scan = self._scan_project(project_root=project_root)
+        if scan is None:
+            return m.Infra.ProjectEnforcementReport(
+                project=project_name,
+                project_root=str(project_root),
+                files_scanned=len(py_files),
+                error="mod scan failed; see the published scan evidence",
+            )
+        findings = FlextInfraNamespaceRelocationCascade.findings_from_report(
+            project_root,
+            py_files,
+            scan.entries,
+        )
+        remaining, applied = self._relocate_rule_findings(
+            project_root=project_root,
+            py_files=py_files,
+            findings=findings,
+            apply=apply,
+            gates=gates,
+        )
         return m.Infra.ProjectEnforcementReport(
             project=project_name,
             project_root=str(project_root),
-            relocation_findings=self._relocate_rule_findings(
-                project_root=project_root,
-                py_files=py_files,
-                apply=apply,
-                gates=gates,
-            ),
+            relocation_findings=remaining,
+            applied_relocations=applied,
+            warnings=scan.detection_only + scan.non_actionable_with_fix,
             files_scanned=len(py_files),
         )
+
+    @staticmethod
+    def _scan_project(*, project_root: Path) -> t.Infra.ModScanReport | None:
+        """Scan one project once; ``None`` means the scan itself failed.
+
+        Returns:
+            The resulting ``t.Infra.ModScanReport | None``.
+
+        """
+        scan = FlextInfraModGateEngine.scan(project_root, fix=False)
+        return None if scan.failure else scan.value
 
     @staticmethod
     def _collect_py_files(*, project_root: Path) -> t.SequenceOf[Path]:
@@ -75,29 +112,33 @@ class FlextInfraNamespaceEnforcerProjectMixin:
         *,
         project_root: Path,
         py_files: t.SequenceOf[Path],
+        findings: t.SequenceOf[
+            t.Pair[c.Infra.CodemodRelocation, m.Infra.ModScanFinding]
+        ],
         apply: bool,
         gates: t.StrSequence | None,
-    ) -> t.NonNegativeInt:
+    ) -> t.Pair[t.NonNegativeInt, t.NonNegativeInt]:
         """Run the rope relocation each finding's rule declares; count the rest.
 
         With ``apply`` the relocations run once over the captured values and
-        the catalog is scanned again; the returned count is what remains.
+        the catalog is scanned again; the returned pair is the residue and
+        the number of relocations performed.
 
         Returns:
-            The resulting ``t.NonNegativeInt``.
+            The resulting ``t.Pair[t.NonNegativeInt, t.NonNegativeInt]``.
 
         """
-        cascade = FlextInfraNamespaceRelocationCascade()
-        findings = cascade.scan_findings(project_root, py_files)
         if not (apply and findings):
-            return len(findings)
-        return cascade.run(
+            return len(findings), 0
+        cascade = FlextInfraNamespaceRelocationCascade()
+        remaining = cascade.run(
             project_root=project_root,
             rope_project=self._rope_project,
             findings=findings,
             py_files=py_files,
             gates=gates,
         )
+        return remaining, max(len(findings) - remaining, 0)
 
 
 __all__: list[str] = ["FlextInfraNamespaceEnforcerProjectMixin"]

@@ -13,8 +13,8 @@ from typing import Annotated, Self
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
-from flext_infra._models.mise_toolchain import FlextInfraModelsMiseToolchain
+from flext_infra._constants import FlextInfraConstantsSharedInfra
+from flext_infra._models import FlextInfraModelsMiseToolchain
 
 
 class FlextInfraConfigModelsContract:

@@ -11,7 +11,7 @@ from typing import Annotated
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._models.mixins import FlextInfraModelsMixins
+from flext_infra._models import FlextInfraModelsMixins
 
 
 class FlextInfraModelsNamespaceEnforcer:
@@ -43,10 +43,37 @@ class FlextInfraModelsNamespaceEnforcer:
                 ),
             ),
         ] = 0
+        applied_relocations: Annotated[
+            t.NonNegativeInt,
+            m.Field(
+                description=(
+                    "Relocations the apply pass performed in this project: the "
+                    "captured findings minus the residue the rescan counts."
+                ),
+            ),
+        ] = 0
+        warnings: Annotated[
+            t.NonNegativeInt,
+            m.Field(
+                description=(
+                    "Detection-only and non-actionable findings surfaced for "
+                    "repair by their owners; they never abort the sweep."
+                ),
+            ),
+        ] = 0
         files_scanned: Annotated[
             t.NonNegativeInt,
             m.Field(description="Files scanned"),
         ] = 0
+        error: Annotated[
+            str | None,
+            m.Field(
+                description=(
+                    "Why this project's enforcement pass failed; the sweep "
+                    "continues to the remaining projects either way."
+                ),
+            ),
+        ] = None
 
         @m.computed_field
         @property
@@ -79,6 +106,16 @@ class FlextInfraModelsNamespaceEnforcer:
                 The resulting ``bool``.
             """
             return any(project.has_violations for project in self.projects)
+
+        @m.computed_field
+        @property
+        def has_errors(self) -> bool:
+            """Whether any project's enforcement pass itself failed.
+
+            Returns:
+                The resulting ``bool``.
+            """
+            return any(project.error is not None for project in self.projects)
 
 
 __all__: list[str] = ["FlextInfraModelsNamespaceEnforcer"]

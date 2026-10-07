@@ -13,10 +13,12 @@ from typing import TYPE_CHECKING, ClassVar
 
 from flext_core import r
 from flext_infra import c, t
-from flext_infra._utilities.namespace_config import FlextInfraUtilitiesNamespaceConfig
-from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
-from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
-from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
+from flext_infra._utilities import (
+    FlextInfraUtilitiesNamespaceConfig,
+    FlextInfraUtilitiesProjectDiscovery,
+    FlextInfraUtilitiesPyproject,
+    FlextInfraUtilitiesRopeAnalysis,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator

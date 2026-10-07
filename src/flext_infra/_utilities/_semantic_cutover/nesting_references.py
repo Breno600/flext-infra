@@ -7,18 +7,16 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from collections.abc import Callable, MutableMapping
-from typing import TYPE_CHECKING, override
+from typing import override
 
 import libcst as cst
 from libcst.metadata import MetadataWrapper, ParentNodeProvider, QualifiedNameProvider
 
-from flext_infra._utilities._semantic_cutover.nesting_module_aliases import (
+from flext_infra import m, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesQualifiedNames,
     FlextInfraUtilitiesSemanticCutoverNestingModuleAliases,
 )
-from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
-
-if TYPE_CHECKING:
-    from flext_infra import m, t
 
 
 class FlextInfraUtilitiesSemanticCutoverNestingReferences(

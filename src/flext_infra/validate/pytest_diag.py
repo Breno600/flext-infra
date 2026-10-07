@@ -130,16 +130,16 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
         """Validate public properties once at their typed ingress boundary.
 
         Raises:
-            ValueError: If Markdown evidence must contain typed JSON text; or if
-                Markdown origin differs from reported node; or if Markdown attempt proof
-                differs from reported node.
+            TypeError: If Markdown evidence does not contain typed JSON text.
+            ValueError: If Markdown origin differs from reported node; or if
+                Markdown attempt proof differs from reported node.
         """
         for name, value in event.user_properties:
             if name not in {"flext_markdown_origin", "flext_markdown_attempt"}:
                 continue
             if not isinstance(value, str):
                 msg = "Markdown evidence must contain typed JSON text"
-                raise ValueError(msg)
+                raise TypeError(msg)
             if name == "flext_markdown_origin":
                 item = m.Infra.PytestMarkdownItem.model_validate_json(value)
                 if item.node_id != event.nodeid:

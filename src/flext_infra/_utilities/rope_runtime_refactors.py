@@ -8,8 +8,10 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from rope.base import codeanalyze, simplify
+
 from flext_infra import m, p, t
-from flext_infra._utilities.rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeBase
 
 
 class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase):
@@ -34,8 +36,6 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
             ValueError: If Rope wrapper body has inconsistent indentation.
 
         """
-        from rope.base import codeanalyze, simplify
-
         lines = codeanalyze.SourceLinesAdapter(source)
         regions = tuple(simplify.ignored_regions(source))
         start = lines.get_line_start(layout.header_start)

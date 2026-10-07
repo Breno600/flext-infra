@@ -10,13 +10,11 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, t
-from flext_infra._utilities._docs_scope_selection import (
+from flext_infra._utilities import (
+    FlextInfraUtilitiesBase,
+    FlextInfraUtilitiesDocsScope,
     FlextInfraUtilitiesDocsScopeSelectionMixin,
-)
-from flext_infra._utilities.base import FlextInfraUtilitiesBase
-from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
-from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
-from flext_infra._utilities.workspace_manifest import (
+    FlextInfraUtilitiesPyproject,
     FlextInfraUtilitiesWorkspaceManifest,
 )
 

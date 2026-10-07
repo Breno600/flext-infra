@@ -567,10 +567,13 @@ Infra:
           - 0.12.0-dev
       docs:
         # `make docs` is a docs-only lifecycle (generate -> fix -> fmt ->
-        # check); it never runs the workspace-wide codegen conform as a
-        # prerequisite. `validate` is the structural check (blocking when the
-        # .md set is incomplete).
-        actions: [generate, fix, fmt, validate, audit]
+        # build -> check); it never runs the workspace-wide codegen conform as a
+        # prerequisite. `build` renders the MkDocs site into the reports dir —
+        # the docs workflow's Build site step runs this same lifecycle and its
+        # Upload site artifact consumes `.reports/docs/site`, so a lifecycle
+        # without build makes that step untarable on every consumer. `validate`
+        # is the structural check (blocking when the .md set is incomplete).
+        actions: [generate, fix, fmt, build, validate, audit]
         mutable_actions: [fix, fmt]
         reports_dir: .reports/docs
         overview_preview_limits:
@@ -714,8 +717,11 @@ Infra:
       - {name: .agents, source_scan_ignore: true, vscode_exclude: false, watch_exclude: false}
       - {name: .beads, source_scan_ignore: true}
       - {name: .benchmarks}
+    # Historical evidence trees (operator law: archives are evidence only,
+    # never live authority) are not production input to any analyzer.
     # Archive-not-delete target for the layout engine; the generated
     # .gitignore projection must never track archived loose files.
+      - {name: .archive, source_scan_ignore: true}
       - {name: .bkp}
       - {name: .cache, source_scan_ignore: true}
     # Agent worktrees are duplicate repositories, never production input.
@@ -761,6 +767,9 @@ Infra:
       - {name: build, source_scan_ignore: true}
       - {name: dist, source_scan_ignore: true}
       - {name: node_modules, source_scan_ignore: true}
+    # protoc-generated wire-protocol modules ("DO NOT EDIT"): conditional
+    # imports are intrinsic to the generated surface, never first-party code.
+      - {name: protos, source_scan_ignore: true}
       - {name: site, watch_exclude: false}
       - {name: target}
       - {name: .pyrefly_cache, vscode_exclude: false, watch_exclude: false, source_scan_ignore: true}

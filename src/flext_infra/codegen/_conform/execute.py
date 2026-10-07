@@ -10,7 +10,8 @@ from pathlib import Path
 from typing import Self, override
 
 from flext_core import r
-from flext_infra import c, config, m, p, t, u
+from flext_infra import c, m, p, t, u
+from flext_infra._config import config
 from flext_infra.codegen import (
     FlextInfraCodegenLazyInit,
     FlextInfraCodegenMiseArtifacts,

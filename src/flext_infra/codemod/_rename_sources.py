@@ -12,7 +12,8 @@ import re
 import tokenize
 from pathlib import Path
 
-from flext_infra import FlextInfraConfig, c, config, m, t, u
+from flext_infra import c, m, t, u
+from flext_infra._config import FlextInfraConfig, config
 
 
 class FlextInfraRenameSources:

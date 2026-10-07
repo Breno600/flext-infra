@@ -12,14 +12,12 @@ from pathlib import Path
 from typing import ClassVar
 
 from flext_infra import c, m, t
-from flext_infra._utilities._rope_analysis.asthelpers import (
+from flext_infra._utilities import (
     FlextInfraUtilitiesRopeAnalysisAstHelpers,
-)
-from flext_infra._utilities._rope_analysis.exports import (
     FlextInfraUtilitiesRopeAnalysisExports,
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeRuntime,
 )
-from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeAnalysisImportState:
@@ -128,7 +126,8 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         if cached is not None:
             return cached
         pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
-        state_from = FlextInfraUtilitiesRopeAnalysisImportState._module_semantic_state_from_pymodule
+        import_state = FlextInfraUtilitiesRopeAnalysisImportState
+        state_from = import_state.module_semantic_state_from_pymodule
         state = state_from(
             rope_project=rope_project,
             resource=resource,
@@ -154,7 +153,7 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         )
 
     @staticmethod
-    def _module_semantic_state_from_pymodule(
+    def module_semantic_state_from_pymodule(
         *,
         rope_project: t.Infra.RopeProject,
         resource: t.Infra.RopeResource,

@@ -10,10 +10,10 @@ import cProfile
 import os
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from flext_infra import m
+from flext_infra import c, m, u
+from flext_infra._config import config
+from flext_infra.validate.pytest_runner import FlextInfraPytestRunner
 
 
 class FlextInfraPytestProfile:
@@ -54,9 +54,6 @@ class FlextInfraPytestProfile:
         self.context = context
 
     def _run_parent(self, started_at_monotonic: float) -> int:
-        from flext_infra import c, m
-        from flext_infra.validate.pytest_runner import FlextInfraPytestRunner
-
         runner = FlextInfraPytestRunner.from_environment(
             started_at_monotonic=started_at_monotonic,
             collection_command_prefix=(
@@ -111,7 +108,6 @@ class FlextInfraPytestProfile:
     def _finish(self, profile: cProfile.Profile) -> None:
         """Keep raw profiles on early failure, but publish only this run's receipt."""
         profile.dump_stats(str(self.output))
-        from flext_infra import config
 
         policy = config.Infra.tooling.tools.pytest
         if self.output.name == policy.profile_suite_filename:
@@ -121,8 +117,6 @@ class FlextInfraPytestProfile:
                 self.output,
             )
         if self.context is not None:
-            from flext_infra import u
-
             receipt = self.context.model_copy(
                 update={"profile_sha256": u.Cli.sha256_bytes(self.output.read_bytes())},
             )

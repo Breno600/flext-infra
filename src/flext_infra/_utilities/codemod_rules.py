@@ -14,13 +14,16 @@ from importlib.metadata import Distribution
 from importlib.util import find_spec
 from pathlib import Path
 
-from flext_cli import u
+from flext_cli import r, u
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
-from flext_infra import c, config, m, p, r, t
-from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
-from flext_infra._utilities.resource_limits import FlextInfraUtilitiesResourceLimits
+from flext_infra import c, m, p, t
+from flext_infra._config import config
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDependencies,
+    FlextInfraUtilitiesResourceLimits,
+)
 
 
 class FlextInfraUtilitiesCodemodRules:
@@ -194,6 +197,7 @@ class FlextInfraUtilitiesCodemodRules:
         scope: str,
         selected: frozenset[str],
     ) -> MutableMapping[str, Path]:
+
         providers: MutableMapping[str, Path] = {}
         for name in sorted(selected):
             installed = indexed.get(name)

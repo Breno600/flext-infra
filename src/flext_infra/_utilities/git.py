@@ -9,20 +9,12 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_infra._utilities._git.attestation import (
+from flext_infra._utilities import (
     FlextInfraUtilitiesGitAttestationMixin,
-)
-from flext_infra._utilities._git.mutation_scope import (
     FlextInfraUtilitiesGitMutationScopeMixin,
-)
-from flext_infra._utilities._git.scope import FlextInfraUtilitiesGitScopeMixin
-from flext_infra._utilities._git.semantic_submodule import (
+    FlextInfraUtilitiesGitScopeMixin,
     FlextInfraUtilitiesGitSemanticSubmoduleMixin,
-)
-from flext_infra._utilities._git.state_capture import (
     FlextInfraUtilitiesGitStateCaptureMixin,
-)
-from flext_infra._utilities._git.worktree_facts import (
     FlextInfraUtilitiesGitWorktreeFactsMixin,
 )
 

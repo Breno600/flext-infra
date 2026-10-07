@@ -9,20 +9,17 @@ from __future__ import annotations
 import re
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar
 
 from flext_cli import u
 from git import GitCommandError
 
 from flext_core import r
-from flext_infra import m
-from flext_infra._utilities._git.remote import FlextInfraUtilitiesGitRemote
-from flext_infra._utilities._git.semantic_identity import (
+from flext_infra import m, p, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesGitRemote,
     FlextInfraUtilitiesGitSemanticIdentityMixin,
 )
-
-if TYPE_CHECKING:
-    from flext_infra import p, t
 
 
 class FlextInfraUtilitiesGitAttestationMixin(

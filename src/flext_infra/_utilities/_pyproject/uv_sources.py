@@ -7,21 +7,15 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TYPE_CHECKING
 
 from flext_cli import r, u
 
-from flext_infra import c, t
-from flext_infra._utilities._pyproject.requirements import (
+from flext_infra import c, m, p, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDependencies,
     FlextInfraUtilitiesPyprojectRequirements,
-)
-from flext_infra._utilities._pyproject.session import (
     FlextInfraUtilitiesPyprojectSession,
 )
-from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
-
-if TYPE_CHECKING:
-    from flext_infra import m, p
 
 
 class FlextInfraUtilitiesPyprojectUvSources(
@@ -48,11 +42,17 @@ class FlextInfraUtilitiesPyprojectUvSources(
         project = payload.get(c.Infra.PROJECT)
         if isinstance(project, Mapping):
             for key in (c.Infra.DEPENDENCIES, c.Infra.OPTIONAL_DEPENDENCIES):
-                requirements.extend(cls.raw_requirement_values(project.get(key)))
+                requirements.extend(
+                    FlextInfraUtilitiesDependencies.raw_requirement_values(
+                        project.get(key),
+                    ),
+                )
         groups = payload.get(c.Infra.DEPENDENCY_GROUPS)
         if isinstance(groups, Mapping):
             for group in groups.values():
-                requirements.extend(cls.raw_requirement_values(group))
+                requirements.extend(
+                    FlextInfraUtilitiesDependencies.raw_requirement_values(group),
+                )
         return r[list[str]].ok(requirements)
 
     @classmethod
@@ -218,29 +218,6 @@ class FlextInfraUtilitiesPyprojectUvSources(
         if not tuple(sources):
             u.Cli.toml_remove_key_if_present(uv, "sources")
         return r[bool].ok(value=True)
-
-    @staticmethod
-    def raw_requirement_values(raw: p.AttributeProbe) -> list[str]:
-        """Collect raw requirement strings from a dependencies value or group table.
-
-        ``project.dependencies`` is one array while ``optional-dependencies``
-        and ``dependency-groups`` are tables of arrays; this is the single
-        owner of that shape for read-only requirement scans.
-
-        Returns:
-            The resulting ``list[str]``.
-
-        """
-        if isinstance(raw, Mapping):
-            values: list[str] = []
-            for group in raw.values():
-                values.extend(
-                    FlextInfraUtilitiesPyprojectUvSources.raw_requirement_values(group),
-                )
-            return values
-        if isinstance(raw, (list, tuple)):
-            return [item for item in raw if isinstance(item, str)]
-        return []
 
 
 __all__: list[str] = ["FlextInfraUtilitiesPyprojectUvSources"]

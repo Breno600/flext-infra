@@ -271,7 +271,8 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
             return ("if TYPE_CHECKING:", "    from flext_core import FlextTypes")
         normalized_groups: MutableMapping[str, t.StrPairSequence] = {}
         for mod, items in groups.items():
-            normalize_path = FlextInfraCodegenGenerationTypeCheckingMixin._normalize_type_checking_module_path
+            generation_mixin = FlextInfraCodegenGenerationTypeCheckingMixin
+            normalize_path = generation_mixin.normalize_type_checking_module_path
             resolved = normalize_path(
                 mod,
                 local_package_root,
@@ -284,6 +285,13 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
             normalized_groups[resolved] = (*normalized_groups.get(resolved, ()), *items)
         collapsed = cls._collapse_to_children(normalized_groups, child_packages)
         merged_groups = cls._merge_root_alias_groups(collapsed)
+        # With include_flext_types=False the collapsed groups are the only
+        # content the block would carry; a package whose references collapsed
+        # away (its re-exported children moved elsewhere) must render no
+        # TYPE_CHECKING block at all — a bare "if TYPE_CHECKING:" header is
+        # invalid Python and breaks every conform that follows.
+        if not merged_groups and not include_flext_types:
+            return ()
         root_name = "" if not local_package_root else local_package_root.split(".")[0]
         # Derive the set of first-party roots for isort sectioning. When the
         # caller provides an explicit root_names (e.g. test facades need both

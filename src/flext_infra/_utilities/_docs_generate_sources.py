@@ -7,17 +7,15 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from flext_cli import u as cli_u
 
 from flext_core import r
-from flext_infra import c, m, t
-from flext_infra._utilities.codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
-from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
-
-if TYPE_CHECKING:
-    from flext_infra import p
+from flext_infra import c, m, p, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesCodegenFilePlan,
+    FlextInfraUtilitiesDocsScope,
+)
 
 
 class FlextInfraUtilitiesDocsGenerateSourcesMixin:
@@ -49,6 +47,7 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
         Returns:
             The resulting ``p.Result[t.VariadicTuple[Path]]``.
 
+        from flext_cli import u as cli_u
         """
         planned = cli_u.Cli.atomic_plan_directory_chain(root)
         if planned.failure:
@@ -79,6 +78,7 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
         Returns:
             The resulting ``p.Result[t.VariadicTuple[Path]]``.
 
+        from flext_cli import u as cli_u
         """
         roots = FlextInfraUtilitiesDocsScope.docs_repository_roots(
             repository_root,

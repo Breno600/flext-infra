@@ -14,7 +14,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, config, m, t, u
+from flext_infra import c, m, t, u
+from flext_infra._config import config
 
 if TYPE_CHECKING:
     from flext_infra import p

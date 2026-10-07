@@ -20,7 +20,8 @@ from pathlib import Path
 from typing import Annotated, override
 
 from flext_core import r
-from flext_infra import c, config, m, p, t, u
+from flext_infra import c, m, p, t, u
+from flext_infra._config import config
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
 from flext_infra.deps._extra_paths_sync import FlextInfraExtraPathsSyncMixin
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector

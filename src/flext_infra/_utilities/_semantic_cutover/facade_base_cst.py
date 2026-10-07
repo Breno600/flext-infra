@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
-from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
+import libcst as cst
+
+from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
 
 if TYPE_CHECKING:
-    import libcst as cst
-
     from flext_infra import t
 
 
@@ -34,7 +34,6 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBaseCst:
             The facade source extending ``owner`` with its layout kept.
 
         """
-        import libcst as cst
 
         class _FacadeBaseTransformer(cst.CSTTransformer):
             """Swap the letter import and base for the parent's declared class."""

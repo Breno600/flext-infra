@@ -7,14 +7,9 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import ast
-from typing import TYPE_CHECKING
 
-from flext_infra._utilities._rope_analysis.exports import (
-    FlextInfraUtilitiesRopeAnalysisExports,
-)
-
-if TYPE_CHECKING:
-    from flext_infra import t
+from flext_infra import t
+from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisExports
 
 
 class FlextInfraUtilitiesRopeModulePatch:

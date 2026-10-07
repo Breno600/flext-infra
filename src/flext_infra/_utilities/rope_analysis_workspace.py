@@ -12,13 +12,14 @@ from collections.abc import MutableMapping
 from functools import lru_cache
 from pathlib import Path
 
-from flext_infra import c, config, m, t
-from flext_infra._utilities.iteration_workspace import (
+from flext_infra import c, m, t
+from flext_infra._config import config
+from flext_infra._utilities import (
     FlextInfraUtilitiesIterationWorkspace,
+    FlextInfraUtilitiesProjectDiscovery,
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeSourceBases,
 )
-from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
-from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities.rope_source_bases import FlextInfraUtilitiesRopeSourceBases
 
 
 class FlextInfraUtilitiesRopeAnalysisWorkspace:
@@ -235,7 +236,11 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
         # src modules import flext_core), and a member-only rope path raises
         # ModuleNotFoundError for every cross-member base resolution.
         workspace_root = next(
-            (parent for parent in (root, *root.parents) if (parent / "src").is_dir() and (parent / "flext-core").is_dir()),
+            (
+                parent
+                for parent in (root, *root.parents)
+                if (parent / "src").is_dir() and (parent / "flext-core").is_dir()
+            ),
             root,
         )
         project_roots = [
@@ -387,6 +392,10 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             )
             or bool(
                 set(directory.relative_to(resolved_root).parts) & cls._excluded_parts(),
+            )
+            or any(
+                c.Infra.TRANSIENT_PYTEST_SCRATCH_PART.match(part)
+                for part in directory.relative_to(resolved_root).parts
             )
         )
 

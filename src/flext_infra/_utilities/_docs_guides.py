@@ -12,9 +12,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, config, m, t
-from flext_infra._utilities._docs_generate_plan import (
+from flext_infra import c, m, t
+from flext_infra._config import config
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDocsCommandContractMixin,
     FlextInfraUtilitiesDocsGeneratePlanMixin,
+    FlextInfraUtilitiesWorkspaceManifest,
 )
 
 if TYPE_CHECKING:
@@ -96,8 +99,6 @@ class FlextInfraUtilitiesDocsGuidesMixin:
             ValueError: If ``issues``.
 
         """
-        from flext_infra import u
-
         source_root = repository_root / c.Infra.DIR_DOCS / "guides"
         destination_root = scope.path / c.Infra.DIR_DOCS / "guides"
         if source_root == destination_root:
@@ -170,7 +171,9 @@ class FlextInfraUtilitiesDocsGuidesMixin:
                 owned.add(path)
         artifacts: list[t.Infra.DocsRenderedArtifactTuple] = []
         expected_paths = {destination_root / path.name for path in sources}
-        loaded = u.Infra.load_workspace_manifest(repository_root)
+        loaded = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
+            repository_root,
+        )
         if loaded.failure:
             return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
                 loaded,
@@ -191,7 +194,8 @@ class FlextInfraUtilitiesDocsGuidesMixin:
                     f"{destination}",
                 )
             relative_path = source_path.relative_to(repository_root).as_posix()
-            contract_issues = FlextInfraUtilitiesDocsCommandContractMixin.docs_command_contract_content_issues
+            contract_mixin = FlextInfraUtilitiesDocsCommandContractMixin
+            contract_issues = contract_mixin.docs_command_contract_content_issues
             issues = contract_issues(
                 source,
                 relative_path=relative_path,

@@ -132,7 +132,7 @@ class TestsFlextInfraGitRefsSemantics:
     def test_show_toplevel_reports_the_current_worktree_root(
         tmp_path: Path,
     ) -> None:
-        """The toplevel owner reports the worktree it was asked about, not the primary."""
+        """The toplevel owner reports the asked-about worktree, not primary."""
         repository = u.Tests.git_repository(tmp_path)
         lane = u.Tests.git_linked_lane(tmp_path, repository, "toplevel-lane")
 

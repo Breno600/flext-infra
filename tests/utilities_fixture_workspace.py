@@ -281,10 +281,12 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         package_root = project_dir / "src" / name.replace("-", "_")
         package_root.mkdir(parents=True, exist_ok=True)
         (package_root / "__init__.py").write_text("", encoding="utf-8")
+        project_spec = TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name)
         (project_dir / "pyproject.toml").write_text(
             "[project]\n"
             f'name = "{name}"\n'
-            f'authors = [{{name = "{TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name).author_name}", email = "{TestsFlextInfraUtilitiesProjectFixtureMixin.project_spec(name).author_email}"}}]\n'
+            f'authors = [{{name = "{project_spec.author_name}", '
+            f'email = "{project_spec.author_email}"}}]\n'
             'version = "0.1.0"\n'
             f'requires-python = "{python_required}"\n'
             f'dependencies = ["{upstream_source}"]\n'
