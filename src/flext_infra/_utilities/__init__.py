@@ -21,18 +21,6 @@ if TYPE_CHECKING:
         _rope_analysis,
         _semantic_cutover,
     )
-    from flext_infra._utilities._dependencies_graph import (
-        FlextInfraUtilitiesDependenciesGraphMixin,
-    )
-    from flext_infra._utilities._dependencies_inspection import (
-        FlextInfraUtilitiesDependenciesInspectionMixin,
-    )
-    from flext_infra._utilities._dependencies_profiles import (
-        FlextInfraUtilitiesDependenciesProfilesMixin,
-    )
-    from flext_infra._utilities._dependencies_versions import (
-        FlextInfraUtilitiesDependenciesVersionsMixin,
-    )
     from flext_infra._utilities._docs_audit_detectors import (
         FlextInfraUtilitiesDocsAuditDetectorsMixin,
     )
@@ -230,6 +218,9 @@ if TYPE_CHECKING:
     )
     from flext_infra._utilities._rope_source_bases_inventory import (
         FlextInfraUtilitiesRopeSourceBasesInventory,
+    )
+    from flext_infra._utilities._rope_source_bases_inventory_collector import (
+        FlextInfraUtilitiesRopeSourceBindingCollector,
     )
     from flext_infra._utilities._rope_source_bases_runtime import (
         FlextInfraUtilitiesRopeSourceBasesRuntime,
@@ -490,10 +481,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesCompatibilityAliasValidation",
     "FlextInfraUtilitiesDeferredSelfReferenceRewrite",
     "FlextInfraUtilitiesDependencies",
-    "FlextInfraUtilitiesDependenciesGraphMixin",
-    "FlextInfraUtilitiesDependenciesInspectionMixin",
-    "FlextInfraUtilitiesDependenciesProfilesMixin",
-    "FlextInfraUtilitiesDependenciesVersionsMixin",
     "FlextInfraUtilitiesDiscovery",
     "FlextInfraUtilitiesDocs",
     "FlextInfraUtilitiesDocsApi",
@@ -629,6 +616,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesRopeSourceBasesAliases",
     "FlextInfraUtilitiesRopeSourceBasesInventory",
     "FlextInfraUtilitiesRopeSourceBasesRuntime",
+    "FlextInfraUtilitiesRopeSourceBindingCollector",
     "FlextInfraUtilitiesRopeStructure",
     "FlextInfraUtilitiesSemanticCutover",
     "FlextInfraUtilitiesSemanticCutoverAliasCst",
@@ -694,10 +682,6 @@ install_lazy_exports(
             ".deferred_self_reference_rewrite"
         ),
         "FlextInfraUtilitiesDependencies": ".dependencies",
-        "FlextInfraUtilitiesDependenciesGraphMixin": "._dependencies_graph",
-        "FlextInfraUtilitiesDependenciesInspectionMixin": "._dependencies_inspection",
-        "FlextInfraUtilitiesDependenciesProfilesMixin": "._dependencies_profiles",
-        "FlextInfraUtilitiesDependenciesVersionsMixin": "._dependencies_versions",
         "FlextInfraUtilitiesDiscovery": ".discovery",
         "FlextInfraUtilitiesDocs": ".docs",
         "FlextInfraUtilitiesDocsApi": ".docs_api",
@@ -837,6 +821,9 @@ install_lazy_exports(
         "FlextInfraUtilitiesRopeSourceBasesAliases": "._rope_source_bases_aliases",
         "FlextInfraUtilitiesRopeSourceBasesInventory": "._rope_source_bases_inventory",
         "FlextInfraUtilitiesRopeSourceBasesRuntime": "._rope_source_bases_runtime",
+        "FlextInfraUtilitiesRopeSourceBindingCollector": (
+            "._rope_source_bases_inventory_collector"
+        ),
         "FlextInfraUtilitiesRopeStructure": ".rope_structure",
         "FlextInfraUtilitiesSemanticCutover": ".semantic_cutover",
         "FlextInfraUtilitiesSemanticCutoverAliasCst": "._semantic_cutover.alias_cst",

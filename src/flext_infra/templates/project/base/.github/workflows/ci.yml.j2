@@ -95,7 +95,7 @@ jobs:
       - name: Checkout
         uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].version }}
         with:
-          submodules: false
+          submodules: {{ checkout_submodules }}
           persist-credentials: false
           fetch-depth: 0
 {%- endif %}
@@ -209,7 +209,7 @@ jobs:
         uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].version }}
         with:
           fetch-depth: 0
-          submodules: false
+          submodules: {{ checkout_submodules }}
           persist-credentials: false
 {%- include "_fragments/private_dependency_auth.j2" %}
 {%- include "_fragments/mise_install.j2" %}

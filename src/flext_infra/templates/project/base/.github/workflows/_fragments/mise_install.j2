@@ -1,13 +1,19 @@
-{#- Native mise installation for one CI job. mise self-manages: this step only
-    provides the host binary and its shims on PATH; `make setup` provisions
-    the pinned github:jdx/mise release plus every declared tool from the
-    committed mise.lock. The host bin is appended before the shims directory
-    so a post-setup shim (the pinned release) always wins resolution. bash is
-    pinned explicitly so the same fragment runs on Windows runners. #}
-      - name: Install mise
+{#- Native mise installation for one CI job. The step provides the host
+    binary and its shims on PATH AND immediately provisions the release the
+    committed mise.lock pins (SSOT — no second hardcoded version), so a guard
+    or setup step resolving mise on this runner always sees the declared
+    release, never a late or missing one (root cures #461/#462, landed at the
+    fragment so every workflow site inherits them). The host bin is appended
+    before the shims directory so a post-setup shim (the pinned release)
+    always wins resolution. bash is pinned explicitly so the same fragment
+    runs on Windows runners. #}
+      - name: Install the mise release pinned by mise.lock
         shell: bash
         run: |
           set -eu
           curl -fsSL https://mise.run | sh
           echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
           echo "${HOME}/.local/share/mise/shims" >> "${GITHUB_PATH}"
+          mise_pin="$(awk 'index($0, "[[tools.\"github:jdx/mise\"]]") == 1 { inside = 1; next } inside && substr($0, 1, 1) == "[" { exit } inside && $1 == "version" { gsub(/[",]/, "", $3); print $3; exit }' mise.lock)"
+          "${HOME}/.local/bin/mise" install "github:jdx/mise@${mise_pin}"
+          "${HOME}/.local/bin/mise" use --global "github:jdx/mise@${mise_pin}"

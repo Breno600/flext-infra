@@ -24,6 +24,8 @@ from operator import itemgetter
 from pathlib import Path
 
 from flext_infra import c, m, t
+from flext_infra._config import config
+from flext_infra._utilities import FlextInfraUtilitiesPyproject
 
 
 class FlextInfraUtilitiesLintRecipes:
@@ -83,9 +85,6 @@ class FlextInfraUtilitiesLintRecipes:
                 identity.
 
         """
-        from flext_infra._config import config
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
         for candidate in (pkg_dir, *pkg_dir.parents):
             if not (candidate / c.PYPROJECT_FILENAME).is_file():
                 continue
@@ -1018,8 +1017,6 @@ class FlextInfraUtilitiesLintRecipes:
             The docstring literal with the wanted sections appended.
 
         """
-        from flext_infra._config import config
-
         width = config.Infra.tooling.tools.ruff.line_length
         prefix, inner = cls._split_literal(raw)
         inner = inner.rstrip()
@@ -1074,8 +1071,6 @@ class FlextInfraUtilitiesLintRecipes:
             ValueError: If module docstring carries no copyright notice.
 
         """
-        from flext_infra._config import config
-
         found = re.search(
             config.Infra.tooling.tools.ruff.lint.copyright_notice_rgx,
             inner,
