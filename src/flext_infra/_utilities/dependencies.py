@@ -182,12 +182,7 @@ class FlextInfraUtilitiesDependenciesProfiles:
             item.upstream: {
                 name
                 for dependency in item.runtime
-                if (
-                    name
-                    := FlextInfraUtilitiesDependencies.FlextInfraUtilitiesDependencies.dep_name(
-                        dependency,
-                    )
-                )
+                if (name := FlextInfraUtilitiesDependencies.dep_name(dependency))
             }
             for item in candidates
         }
@@ -292,9 +287,7 @@ class FlextInfraUtilitiesDependencies(FlextInfraUtilitiesDependenciesProfiles):
             values: list[str] = []
             for group in raw.values():
                 values.extend(
-                    FlextInfraUtilitiesDependencies.FlextInfraUtilitiesDependencies.raw_requirement_values(
-                        group,
-                    ),
+                    FlextInfraUtilitiesDependencies.raw_requirement_values(group),
                 )
             return values
         if isinstance(raw, (list, tuple)):
@@ -778,9 +771,7 @@ class FlextInfraUtilitiesDependencies(FlextInfraUtilitiesDependenciesProfiles):
             item = raw.strip()
             if not item:
                 continue
-            dependency_name = FlextInfraUtilitiesDependencies.FlextInfraUtilitiesDependencies.dep_name(
-                item,
-            )
+            dependency_name = FlextInfraUtilitiesDependencies.dep_name(item)
             if dependency_name is None or dependency_name in selected_by_name:
                 continue
             selected_by_name[dependency_name] = item

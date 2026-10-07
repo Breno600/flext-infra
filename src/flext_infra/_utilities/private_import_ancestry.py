@@ -135,7 +135,7 @@ class FlextInfraUtilitiesPrivateImportAncestry:
         for module, (source, is_package) in sources.items():
             tree = ast.parse(source, filename=module)
             package = module if is_package else module.rpartition(".")[0]
-            collector = FlextInfraUtilitiesPrivateImportAncestry._ClassBaseCollector(
+            collector = _ClassBaseCollector(
                 module=module,
                 package=package,
             )
@@ -143,9 +143,6 @@ class FlextInfraUtilitiesPrivateImportAncestry:
             bases.update(collector.bases)
         return bases
 
-
-FlextInfraUtilitiesPrivateImportAncestry = FlextInfraUtilitiesPrivateImportAncestry
-"""Backward alias: the wrapper namespace flattened onto the canonical class."""
 
 __all__: list[str] = [
     "FlextInfraUtilitiesPrivateImportAncestry",
