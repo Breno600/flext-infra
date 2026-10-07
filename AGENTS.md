@@ -24,25 +24,25 @@ plugin (only `flext-tests` may depend on it).
 ```text
 src/flext_infra/
 ├── api.py cli.py __main__.py base.py git.py worktree.py promoted.py
-├── codegen/ codemod/ refactor/ detectors/ fixers/ transformers/ templates/
+├── codegen/ codemod/ refactor/ transformers/ templates/
 ├── deps/ gates/ check/ validate/ docs/ maintenance/
-├── release/ workspace/ services/ _enforcement/ _promoted/
+├── release/ workspace/ services/ _promoted/
 ├── constants.py typings.py protocols.py models.py utilities.py
 └── _constants/ _typings/ _protocols/ _models/ _utilities/
 ```
 
 ## Code Map
 
-| Symbol                          | Kind  | Location                  | Role                                                     |
-| ------------------------------- | ----- | ------------------------- | -------------------------------------------------------- |
-| `FlextInfra`                    | class | `api.py`                  | Rope workspace / health facade                           |
-| `FlextInfraCli`                 | class | `cli.py`                  | CLI entry                                                |
-| `FlextInfraEnforcementEngine`   | class | `_enforcement/engine.py`  | catalog-backed enforcement                               |
-| `FlextInfraCodegenPipeline`     | class | `codegen/pipeline.py`     | codegen pipeline                                         |
-| `FlextInfraPyprojectModernizer` | class | `deps/modernizer.py`      | managed pyproject enforcement                            |
-| `FlextInfraCodegenConform`      | class | `codegen/conform.py`      | body-less conform facade over `codegen/_conform/base.py` |
-| `FlextInfraConfigModels`        | class | `_models/_config/base.py` | config model facade over `_models/_config/*` families    |
-| `FlextInfraPromoted`            | class | `promoted.py`             | promoted command framework facade                        |
+| Symbol                          | Kind  | Location                       | Role                                                       |
+| ------------------------------- | ----- | ------------------------------ | ---------------------------------------------------------- |
+| `FlextInfra`                    | class | `api.py`                       | Rope workspace / health facade                             |
+| `FlextInfraCli`                 | class | `cli.py`                       | CLI entry                                                  |
+| `FlextInfraCodegenPipeline`     | class | `codegen/pipeline.py`          | codegen pipeline                                           |
+| `FlextInfraCodegenLazyInitPlanner` | class | `codegen/lazy_init_planner.py` | lazy-init export planning (service composite)              |
+| `FlextInfraPyprojectModernizer` | class | `deps/modernizer.py`           | managed pyproject enforcement                              |
+| `FlextInfraCodegenConform`      | class | `codegen/conform.py`           | body-less conform facade over `codegen/_conform/execute.py` |
+| `FlextInfraConfigModels`        | class | `_models/_config/base.py`      | config model facade over `_models/_config/*` families      |
+| `FlextInfraPromoted`            | class | `promoted.py`                  | promoted command framework facade                          |
 
 ## Promoted command framework
 
