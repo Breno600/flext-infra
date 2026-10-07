@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Annotated, ClassVar
 
 from flext_cli import m
+from pydantic import StringConstraints
 
 from flext_infra import c, p, t
 from flext_infra._models import FlextInfraCodegen, FlextInfraModelsMixins
@@ -47,11 +48,28 @@ class FlextInfraModelsRope:
                 description="Root name of the subscript's value expression.",
             ),
         ]
+        attribute: Annotated[
+            str | None,
+            m.Field(
+                description=(
+                    "Dotted attribute path between the root and the subscript "
+                    "when the subscript applies to an attribute expression "
+                    "(for example ``modules`` in ``sys.modules[...]``)."
+                ),
+            ),
+        ] = None
 
         @m.computed_field
         @property
         def is_module_table_mutation(self) -> bool:
-            """Whether the rebind mutates ``sys`` (underscore alias included)."""
+            """Whether the rebind mutates an interpreter module table.
+
+            ``<alias>.modules[...] = ...`` only ever writes the interpreter's
+            module registry (``sys`` aliases included), never a class binding
+            of the indexed module.
+            """
+            if self.attribute == "modules":
+                return True
             return self.root_name.lstrip("_") == "sys"
 
     class ExportOptions(m.ContractModel):
@@ -173,8 +191,13 @@ class FlextInfraModelsRope:
             m.Field(description="Qualified module name under inventory"),
         ]
         path: Annotated[Path, m.Field(description="Captured module path")]
+        # Why: the family contract strips field whitespace, which would shift
+        # every parsed line number of captured source; the inventory indexes
+        # declarations by their exact 1-based lines, so the text must survive
+        # byte-for-byte.
         source: Annotated[
             t.NonEmptyStr,
+            StringConstraints(strip_whitespace=False),
             m.Field(description="Captured module source text"),
         ]
         required_line: Annotated[
@@ -253,8 +276,11 @@ class FlextInfraModelsRope:
             bool,
             m.Field(description="Whether the statement is inside TYPE_CHECKING"),
         ] = False
+        # Why: the slice is rope-owned line/offset-aligned source text; the
+        # family whitespace strip would detach it from its declared offsets.
         text: Annotated[
             str,
+            StringConstraints(strip_whitespace=False),
             m.Field(description="Rope-owned source slice for the statement"),
         ] = ""
 
