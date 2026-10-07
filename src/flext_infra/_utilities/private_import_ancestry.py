@@ -12,6 +12,9 @@ from importlib.util import resolve_name
 from flext_infra import t
 
 
+class FlextInfraUtilitiesPrivateImportAncestry:
+    """Canonical namespace owner."""
+
 class _ClassBaseCollector:
     """Collect one module's class bases with scope-aware import bindings."""
 
@@ -130,20 +133,25 @@ class FlextInfraUtilitiesPrivateImportAncestry:
         Returns:
             The resulting ``t.MappingKV[str, t.VariadicTuple[str]]``.
 
-        """
-        bases: t.MutableMappingKV[str, t.VariadicTuple[str]] = {}
-        for module, (source, is_package) in sources.items():
-            tree = ast.parse(source, filename=module)
-            package = module if is_package else module.rpartition(".")[0]
-            collector = _ClassBaseCollector(
-                module=module,
-                package=package,
-            )
-            collector.collect_root(tree.body)
-            bases.update(collector.bases)
-        return bases
+            """
+            bases: t.MutableMappingKV[str, t.VariadicTuple[str]] = {}
+            for module, (source, is_package) in sources.items():
+                tree = ast.parse(source, filename=module)
+                package = module if is_package else module.rpartition(".")[0]
+                collector = (
+                    FlextInfraUtilitiesPrivateImportAncestry._ClassBaseCollector(
+                        module=module,
+                        package=package,
+                    )
+                )
+                collector.collect_root(tree.body)
+                bases.update(collector.bases)
+            return bases
 
 
-__all__: list[str] = [
-    "FlextInfraUtilitiesPrivateImportAncestry",
-]
+
+
+# The flat module-level re-export: the package lazy map and the internal
+# from-import contract resolve this name at module scope (the S6 nesting
+# moved the class inside the family facade).
+__all__: list[str] = ["FlextInfraUtilitiesPrivateImportAncestry"]

@@ -173,7 +173,7 @@ class FlextInfraDocCollector:
 
     @staticmethod
     def _prune_bundle_directories(
-        bundle: m.Infra.DocsCollectedBundle,
+        bundle: m.Infra.PlanCollectionBundle,
     ) -> p.Result[bool]:
         """Delete the bundle's empty prunable directories.
 

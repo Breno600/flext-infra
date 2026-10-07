@@ -23,6 +23,11 @@ if TYPE_CHECKING:
 
     from flext_infra import p
 
+_GitSource = t.Pair[str, str]
+"One parsed Git provenance: source URL and declared ref."
+_ParsedProvenance = t.Triple[str, t.Pair[bool, str], _GitSource]
+"One requirement's canonical head, rendered marker pair, and Git provenance."
+
 
 @dataclasses.dataclass(frozen=True, slots=True)
 class _RequirementProvenance:
@@ -339,7 +344,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
     def _parsed_canonical_provenance(
         cls,
         requirement: str,
-    ) -> p.Result[t.Pair[str, t.Pair[t.Pair[bool, str], t.Pair[str, str]]]]:
+    ) -> p.Result[_ParsedProvenance]:
         """Parse one internal requirement's head, marker, and Git provenance.
 
         Returns:
@@ -350,14 +355,16 @@ class FlextInfraUtilitiesPyprojectRequirements:
         requirement_part, separator, marker = requirement.partition(";")
         head_match = c.Infra.PEP621_REQUIREMENT_HEAD_RE.match(requirement_part.strip())
         if head_match is None:
-            return r.fail(f"invalid internal requirement: {requirement}")
+            return r[_ParsedProvenance].fail(
+                f"invalid internal requirement: {requirement}",
+            )
         source = FlextInfraUtilitiesRepository.declared_git_source(requirement)
         if source.failure:
-            return r.from_failure(source)
+            return r[_ParsedProvenance].from_failure(source)
         marker_text = marker.strip()
         head = head_match.group("head").strip()
         marker_pair = (bool(separator and marker_text), marker_text)
-        return r.ok((head, marker_pair, source.value))
+        return r[_ParsedProvenance].ok((head, marker_pair, source.value))
 
     @staticmethod
     def _declared_member_override(

@@ -22,6 +22,9 @@ from flext_infra import c, m, p, t
 from flext_infra._utilities import FlextInfraUtilitiesPyproject
 
 
+class FlextInfraUtilitiesDependencies:
+    """Canonical namespace owner."""
+
 # Why: dependency_waves subscripts r[t.SequenceOf[t.StrSequence]] at runtime, so
 # the typings facade cannot be TYPE_CHECKING-only here. c -> t is a forward
 # facade import and stays cycle-free.
@@ -159,42 +162,47 @@ class FlextInfraUtilitiesDependenciesProfiles:
         Returns:
             The most specific shared profile upstreams one project selects.
 
-        """
-        shared = tuple(item for item in profiles if item.project is None)
-        own = next(
-            (
-                item
-                for item in shared
-                if item.upstream.replace("_", "-") == distribution
-            ),
-            None,
-        )
-        candidates = (
-            (own,)
-            if own is not None
-            else tuple(
-                item
-                for item in shared
-                if item.upstream.replace("_", "-") in runtime_names
+            """
+            shared = tuple(item for item in profiles if item.project is None)
+            own = next(
+                (
+                    item
+                    for item in shared
+                    if item.upstream.replace("_", "-") == distribution
+                ),
+                None,
             )
-        )
-        runtime_of = {
-            item.upstream: {
-                name
-                for dependency in item.runtime
-                if (name := FlextInfraUtilitiesDependencies.dep_name(dependency))
+            candidates = (
+                (own,)
+                if own is not None
+                else tuple(
+                    item
+                    for item in shared
+                    if item.upstream.replace("_", "-") in runtime_names
+                )
+            )
+            runtime_of = {
+                item.upstream: {
+                    name
+                    for dependency in item.runtime
+                    if (
+                        name
+                        := FlextInfraUtilitiesDependencies.FlextInfraUtilitiesDependencies.dep_name(
+                            dependency,
+                        )
+                    )
+                }
+                for item in candidates
             }
-            for item in candidates
-        }
-        return tuple(
-            item.upstream
-            for item in candidates
-            if not any(
-                item.upstream.replace("_", "-") in runtime_of[other.upstream]
-                for other in candidates
-                if other is not item
+            return tuple(
+                item.upstream
+                for item in candidates
+                if not any(
+                    item.upstream.replace("_", "-") in runtime_of[other.upstream]
+                    for other in candidates
+                    if other is not item
+                )
             )
-        )
 
     @staticmethod
     def dependency_profile_rows(
@@ -280,19 +288,21 @@ class FlextInfraUtilitiesDependencies(FlextInfraUtilitiesDependenciesProfiles):
     def raw_requirement_values(raw: p.AttributeProbe) -> list[str]:
         """Collect requirement strings from dependency arrays or group tables.
 
-        Returns:
-            Requirement strings retained from the declared arrays.
-        """
-        if isinstance(raw, Mapping):
-            values: list[str] = []
-            for group in raw.values():
-                values.extend(
-                    FlextInfraUtilitiesDependencies.raw_requirement_values(group),
-                )
-            return values
-        if isinstance(raw, (list, tuple)):
-            return [item for item in raw if isinstance(item, str)]
-        return []
+            Returns:
+                Requirement strings retained from the declared arrays.
+            """
+            if isinstance(raw, Mapping):
+                values: list[str] = []
+                for group in raw.values():
+                    values.extend(
+                        FlextInfraUtilitiesDependencies.FlextInfraUtilitiesDependencies.raw_requirement_values(
+                            group,
+                        ),
+                    )
+                return values
+            if isinstance(raw, (list, tuple)):
+                return [item for item in raw if isinstance(item, str)]
+            return []
 
     @staticmethod
     def active_requirement(
@@ -765,17 +775,19 @@ class FlextInfraUtilitiesDependencies(FlextInfraUtilitiesDependenciesProfiles):
         Returns:
             Deterministic unique dependency specs keyed by normalized name.
 
-        """
-        selected_by_name: MutableMapping[str, str] = {}
-        for raw in specs:
-            item = raw.strip()
-            if not item:
-                continue
-            dependency_name = FlextInfraUtilitiesDependencies.dep_name(item)
-            if dependency_name is None or dependency_name in selected_by_name:
-                continue
-            selected_by_name[dependency_name] = item
-        return tuple(selected_by_name[name] for name in sorted(selected_by_name))
+            """
+            selected_by_name: MutableMapping[str, str] = {}
+            for raw in specs:
+                item = raw.strip()
+                if not item:
+                    continue
+                dependency_name = FlextInfraUtilitiesDependencies.FlextInfraUtilitiesDependencies.dep_name(
+                    item,
+                )
+                if dependency_name is None or dependency_name in selected_by_name:
+                    continue
+                selected_by_name[dependency_name] = item
+            return tuple(selected_by_name[name] for name in sorted(selected_by_name))
 
     @classmethod
     def declared_dependency_names(
@@ -932,6 +944,15 @@ class FlextInfraUtilitiesDependencies(FlextInfraUtilitiesDependenciesProfiles):
         return tuple(sorted(name for name in declared if name in workspace_names))
 
 
+# The flat module-level re-export: the package lazy map and the internal
+# importers (`from flext_infra._utilities import FlextInfraUtilitiesDependencies`)
+# resolve this name at module scope; the S6 namespace nesting moved the class
+# inside the family facade and the from-import contract requires the flat
+# binding to survive.
+FlextInfraUtilitiesDependencies = (
+)
+
 __all__: list[str] = [
     "FlextInfraUtilitiesDependencies",
 ]
+__all__: list[str] = ["FlextInfraUtilitiesDependencies"]

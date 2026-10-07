@@ -558,7 +558,7 @@ class FlextInfraUtilitiesDocsApi:
             return tuple(dict.fromkeys(symbols))
 
     @staticmethod
-    def _bare_contract(metadata: t.Infra.ProjectMetadata) -> t.JsonMapping:
+    def _bare_contract(metadata: m.ProjectMetadata) -> t.JsonMapping:
         """Build the contract of a package without a live facade package.
 
         Returns:
@@ -644,7 +644,7 @@ class FlextInfraUtilitiesDocsApi:
         project_root: Path,
         package_name: str,
         source: str,
-        metadata: t.Infra.ProjectMetadata,
+        metadata: m.ProjectMetadata,
     ) -> t.JsonMapping:
         """Build the contract of one live facade package through Rope validation.
 

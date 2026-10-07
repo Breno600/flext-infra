@@ -14,15 +14,11 @@ from pathlib import Path
 from typing import ClassVar
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesRopeCore,
-    FlextInfraUtilitiesRopeRuntime,
-    FlextInfraUtilitiesRopeSourceBasesAliases,
-)
-from flext_infra._utilities._rope_source_bases_inventory import (
-    FlextInfraUtilitiesRopeSourceBasesInventory,
-)
+from flext_infra._utilities._rope_source_bases_inventory import _SourceBindingCollector
 
+
+class FlextInfraUtilitiesRopeSourceBasesRuntime:
+    """Canonical namespace owner."""
 
 class _RuntimeBaseResolver:
     """Resolve owned classes in C3 order and external classes through Rope.
@@ -969,15 +965,19 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
         Returns:
             Sorted configured roots and derived Ruff-qualified base expressions.
 
-        """
-        return _RuntimeBaseResolver(
-            project,
-            sources,
-            roots,
-            extra_module_aliases,
-        ).run()
+            """
+            return FlextInfraUtilitiesRopeSourceBasesRuntime._RuntimeBaseResolver(
+                project,
+                sources,
+                roots,
+                extra_module_aliases,
+            ).run()
 
 
-__all__: list[str] = [
-    "FlextInfraUtilitiesRopeSourceBasesRuntime",
-]
+
+
+# The flat module-level re-export: the package lazy map and the
+# internal from-import contract resolve this name at module scope
+# (the S6 nesting moved the class inside the family facade).
+
+__all__: list[str] = ["FlextInfraUtilitiesRopeSourceBasesRuntime"]
