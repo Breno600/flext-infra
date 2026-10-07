@@ -10,79 +10,14 @@ import ast
 import importlib.util
 from pathlib import Path
 
-from flext_infra import m, t
-
 
 class FlextInfraUtilitiesRopeSourceBasesAliases:
-    """Alias and lazy-module resolution part of the source-bases composite."""
+    """Alias and lazy-module resolution part of the source-bases composite.
 
-    @staticmethod
-    def _is_type_checking_test(test: ast.expr) -> bool:
-        """Return whether one condition gate is the TYPE_CHECKING constant.
-
-        Returns:
-            True for the bare name and for the ``typing`` /
-            ``typing_extensions`` attribute forms.
-
-        """
-        if isinstance(test, ast.Name):
-            return test.id == "TYPE_CHECKING"
-        return (
-            isinstance(test, ast.Attribute)
-            and test.attr == "TYPE_CHECKING"
-            and isinstance(test.value, ast.Name)
-            and test.value.id in {"typing", "typing_extensions"}
-        )
-
-    @staticmethod
-    def _reference(
-        expression: ast.expr,
-        bindings: t.MappingKV[str, m.Infra.SourceClassReference | None],
-        module: str,
-    ) -> m.Infra.SourceClassReference:
-        """Capture the binding visible when a base expression is evaluated.
-
-        Returns:
-            The bound identity, attributes, and Ruff-qualified spelling.
-
-        Raises:
-            TypeError: If the expression is not a class reference form.
-            ValueError: If its lexical binding is not a class.
-
-        """
-        # Unwrap Subscript and Attribute in ONE loop: a chained form like
-        # `_CLUSTERS[0].environment` is Attribute(Subscript(Name)) — consuming
-        # attributes first left the inner Subscript unprocessed and raised
-        # "Unsupported class reference" on every consumer whose SSOT-derived
-        # constants subscript a module-level binding (cosmos-main
-        # tests/constants.py, bead cosmos-gamnt).
-        attributes: list[str] = []
-        while isinstance(expression, ast.Subscript | ast.Attribute):
-            if isinstance(expression, ast.Attribute):
-                attributes.insert(0, expression.attr)
-            expression = expression.value
-        if not isinstance(expression, ast.Name):
-            message = (
-                f"Unsupported class reference in {module}: {ast.unparse(expression)}"
-            )
-            raise TypeError(message)
-        name = expression.id
-        if name in bindings:
-            binding = bindings[name]
-            if binding is None:
-                message = f"Non-class binding used as a base in {module}: {name}"
-                raise ValueError(message)
-        else:
-            binding = m.Infra.SourceClassReference(
-                target="builtins",
-                attributes=(name,),
-                qualified_base=f"{module}.{name}",
-            )
-        return m.Infra.SourceClassReference(
-            target=binding.target,
-            attributes=(*binding.attributes, *attributes),
-            qualified_base=".".join((binding.qualified_base, *attributes)),
-        )
+    Class-reference capture (``_reference``, ``_is_type_checking_test``) is
+    owned by ``FlextInfraUtilitiesRopeSourceBindingCollector``; this part
+    contributes only alias and lazy-module resolution.
+    """
 
     @classmethod
     def _stdlib_backing_module(cls, target: str) -> str | None:
@@ -185,11 +120,3 @@ class FlextInfraUtilitiesRopeSourceBasesAliases:
                     value = ".".join(part for part in (base, remainder) if part)
                 aliases[key_node.value] = value
         return aliases
-
-    @staticmethod
-    def _subscript_root_name(target: ast.Subscript) -> str:
-        """Return the root name of a subscript target's value expression."""
-        value = target.value
-        if isinstance(value, ast.Attribute):
-            value = value.value
-        return value.id if isinstance(value, ast.Name) else ""
