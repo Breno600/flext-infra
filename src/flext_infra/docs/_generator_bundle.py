@@ -17,7 +17,7 @@ from flext_infra.typings import t
 from flext_infra.utilities import u
 
 if TYPE_CHECKING:
-    from flext_infra.docs.protocols import p
+    from flext_infra.protocols import p
 
 type _DocsScopeArtifacts = t.Pair[
     m.Infra.DocScope,

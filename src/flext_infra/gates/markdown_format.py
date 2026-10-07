@@ -22,7 +22,7 @@ from flext_infra.gates.markdown_support import FlextInfraMarkdownGateBase
 from flext_infra.models import m
 
 if TYPE_CHECKING:
-    from flext_infra.gates.protocols import p
+    from flext_infra.protocols import p
     from flext_infra.gates.typings import t
 
 

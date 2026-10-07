@@ -23,7 +23,7 @@ from flext_infra.models import m
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from flext_infra.docs.protocols import p
+    from flext_infra.protocols import p
     from flext_infra.docs.typings import t
 
 

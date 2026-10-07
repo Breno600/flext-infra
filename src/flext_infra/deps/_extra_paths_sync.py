@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-    from flext_infra.deps.protocols import p
+    from flext_infra.protocols import p
     from flext_infra.deps.typings import t
 
 

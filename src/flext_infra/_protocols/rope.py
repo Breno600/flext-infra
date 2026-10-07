@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from types import TracebackType
 
     from flext_infra._protocols.models import m
-    from flext_infra._protocols.protocols import p
+    from flext_infra.protocols import p
     from flext_infra._protocols.typings import t
 
 
