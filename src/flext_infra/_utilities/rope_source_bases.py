@@ -688,7 +688,9 @@ class FlextInfraUtilitiesRopeSourceBasesFamily:
             for alias_module, captured in self._sources.items():
                 alias_path, alias_source = captured
                 for alias, absolute in (
-                    FlextInfraUtilitiesRopeSourceBases.FlextInfraUtilitiesRopeSourceBases.lazy_module_aliases(
+                    FlextInfraUtilitiesRopeSourceBasesFamily
+                    .FlextInfraUtilitiesRopeSourceBases
+                    .lazy_module_aliases(
                         alias_module,
                         alias_path,
                         alias_source,
