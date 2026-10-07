@@ -34,6 +34,7 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
 
         """
         from flext_infra.deps import FlextInfraPyprojectModernizer
+
         project = workspace.project
         if project is None:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
@@ -218,6 +219,7 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
 
         """
         from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
+
         result_type = r[t.SequenceOf[m.Infra.CodegenFilePlan]]
         pyproject_entry = next(
             (

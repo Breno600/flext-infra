@@ -14,7 +14,10 @@ from typing import Annotated, Literal, Self
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._constants import FlextInfraConstantsCodegenProject, FlextInfraConstantsMake
+from flext_infra._constants import (
+    FlextInfraConstantsCodegenProject,
+    FlextInfraConstantsMake,
+)
 from flext_infra._models import (
     FlextInfraConfigModelsContract,
     FlextInfraExternalCacheDirectorySpec,
@@ -282,6 +285,7 @@ class FlextInfraConfigModelsMake:
 
             """
             from flext_infra._constants import FlextInfraConstantsDocs
+
             if len(set(self.actions)) != len(self.actions):
                 msg = "docs actions must be unique"
                 raise ValueError(msg)
@@ -1033,6 +1037,7 @@ class FlextInfraConfigModelsMake:
 
             """
             from flext_infra._constants import FlextInfraConstantsCheck
+
             declared = {verb.name for verb in self.verbs}
             if len(declared) != len(self.verbs):
                 msg = "make public verb names must be unique"

@@ -31,6 +31,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
 
         """
         from flext_infra.workspace import FlextInfraWorkspaceDetector
+
         config_spec = config.Infra.codegen
         root = request.root.expanduser().resolve()
         repository_root = root

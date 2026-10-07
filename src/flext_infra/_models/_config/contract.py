@@ -52,6 +52,7 @@ class FlextInfraConfigModelsContract:
         @m.model_validator(mode="after")
         def _validate_evidence_files(self) -> Self:
             from flext_infra._constants import FlextInfraConstantsSharedInfra
+
             files = self.historical_evidence_files
             if len(set(files)) != len(files):
                 msg = "historical evidence files must be unique"

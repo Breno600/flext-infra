@@ -79,7 +79,6 @@ class FlextInfraCodegenPipelineStagesMixin:
         """
         from flext_infra.codegen import FlextInfraCodegenConform
 
-        from flext_infra.codegen import FlextInfraCodegenConform
         def _action() -> m.Infra.CodegenResult:
             dry_run = bool(ctx.settings.get(c.Infra.PIPELINE_KEY_DRY_RUN, False))
             result = FlextInfraCodegenConform.execute_request(
@@ -128,7 +127,6 @@ class FlextInfraCodegenPipelineStagesMixin:
         """
         from flext_infra.deps import FlextInfraRuntimeDevDependencyDetector
 
-        from flext_infra.deps import FlextInfraRuntimeDevDependencyDetector
         def _action() -> bool:
             dry_run = bool(ctx.settings.get(c.Infra.PIPELINE_KEY_DRY_RUN, False))
             projects = self._state.discovered_projects
@@ -165,7 +163,6 @@ class FlextInfraCodegenPipelineStagesMixin:
         """
         from flext_infra.codegen import FlextInfraCodegenPyTyped
 
-        from flext_infra.codegen import FlextInfraCodegenPyTyped
         def _action() -> int:
             py_typed = FlextInfraCodegenPyTyped(repository_root=ctx.repository_root)
             return py_typed.run()
@@ -228,7 +225,6 @@ class FlextInfraCodegenPipelineStagesMixin:
         """
         from flext_infra.codegen import FlextInfraCodegenScaffolder
 
-        from flext_infra.codegen import FlextInfraCodegenScaffolder
         def _action() -> t.SequenceOf[m.Infra.ScaffoldResult]:
             dry_run = bool(ctx.settings.get(c.Infra.PIPELINE_KEY_DRY_RUN, False))
             projects = self._state.discovered_projects
@@ -259,7 +255,6 @@ class FlextInfraCodegenPipelineStagesMixin:
         """
         from flext_infra.codegen import FlextInfraCodegenFixer
 
-        from flext_infra.codegen import FlextInfraCodegenFixer
         def _action() -> t.SequenceOf[m.Infra.AutoFixResult]:
             dry_run = bool(ctx.settings.get(c.Infra.PIPELINE_KEY_DRY_RUN, False))
             projects = self._state.discovered_projects
@@ -290,7 +285,6 @@ class FlextInfraCodegenPipelineStagesMixin:
         """
         from flext_infra.codegen import FlextInfraCodegenLazyInit
 
-        from flext_infra.codegen import FlextInfraCodegenLazyInit
         def _action() -> int:
             analysis = (
                 FlextInfraCodegenLazyInit(repository_root=ctx.repository_root)

@@ -94,6 +94,7 @@ if TYPE_CHECKING:
     from flext_infra.codegen._mise_artifacts_candidates import (
         FlextInfraMiseArtifactsCandidates,
     )
+    from flext_infra.codegen._mise_artifacts_cold_start import FlextInfraMiseColdStart
     from flext_infra.codegen._mise_artifacts_journal import (
         FlextInfraMiseArtifactsJournal,
     )
@@ -205,6 +206,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraMiseArtifactsProcess",
     "FlextInfraMiseArtifactsState",
     "FlextInfraMiseArtifactsVerification",
+    "FlextInfraMiseColdStart",
     "FlextInfraMisePublication",
     "FlextInfraMiseRecovery",
     "FlextInfraMiseStaging",
@@ -290,6 +292,7 @@ install_lazy_exports(
         "FlextInfraMiseArtifactsProcess": "._mise_artifacts_process",
         "FlextInfraMiseArtifactsState": "._mise_artifacts_state",
         "FlextInfraMiseArtifactsVerification": "._mise_artifacts_verification",
+        "FlextInfraMiseColdStart": "._mise_artifacts_cold_start",
         "FlextInfraMisePublication": ".pipeline",
         "FlextInfraMiseRecovery": "._mise_artifacts_recovery",
         "FlextInfraMiseStaging": "._mise_artifacts_staging",

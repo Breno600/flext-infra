@@ -102,6 +102,7 @@ class FlextInfraMiseWorkspacePlanner:
 
         """
         from flext_infra.workspace import FlextInfraWorkspaceDetector
+
         requested = self._owner.repository_root.expanduser().absolute()
         resolved_scope = (
             self.scope_root() if scope_root is None else r[Path].ok(scope_root)

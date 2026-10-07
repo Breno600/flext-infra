@@ -638,7 +638,6 @@ split-on-trailing-comma = false
   "typing-only-first-party-import",
 ]
 "tests/**/*.py" = ["assert"]
-"tests/test_snapshot_drill.py" = ["import-private-name"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

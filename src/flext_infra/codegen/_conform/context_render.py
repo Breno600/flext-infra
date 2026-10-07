@@ -254,6 +254,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
 
         """
         from flext_infra.deps import FlextInfraEnsurePackagingPhase
+
         target = render_inputs.target
         workspace = render_inputs.workspace
         codegen = render_inputs.codegen

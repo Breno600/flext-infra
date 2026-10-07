@@ -38,7 +38,10 @@ class FlextInfraMiseStaging:
                 t.VariadicTuple[m.Cli.AtomicDirectoryState]]]``.
 
         """
-        from flext_infra.codegen._mise_artifacts_candidates import FlextInfraMiseArtifactsCandidates
+        from flext_infra.codegen._mise_artifacts_candidates import (
+            FlextInfraMiseArtifactsCandidates,
+        )
+
         result_type = r[
             tuple[
                 tuple[m.Infra.CodegenStagedFile, ...],
