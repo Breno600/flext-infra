@@ -22,7 +22,7 @@ from flext_infra import c, m, p, t
 from flext_infra._utilities import FlextInfraUtilitiesPyproject
 
 
-class FlextInfraUtilitiesDependencies:
+class FlextInfraUtilitiesDependenciesFamily:
     """Canonical namespace owner."""
 
     # Why: dependency_waves subscripts r[t.SequenceOf[t.StrSequence]] at runtime, so
@@ -931,5 +931,14 @@ class FlextInfraUtilitiesDependencies:
         workspace_names = set(workspace_project_names)
         return tuple(sorted(name for name in declared if name in workspace_names))
 
+
+# The flat module-level re-export: the package lazy map and the internal
+# importers (`from flext_infra._utilities import FlextInfraUtilitiesDependencies`)
+# resolve this name at module scope; the S6 namespace nesting moved the class
+# inside the family facade and the from-import contract requires the flat
+# binding to survive.
+FlextInfraUtilitiesDependencies = (
+    FlextInfraUtilitiesDependenciesFamily.FlextInfraUtilitiesDependencies
+)
 
 __all__: list[str] = ["FlextInfraUtilitiesDependencies"]
