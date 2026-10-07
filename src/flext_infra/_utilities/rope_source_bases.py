@@ -244,16 +244,6 @@ class FlextInfraUtilitiesRopeSourceBases:
                 f"Unsupported class binding mutation in {self._module}: {ast.unparse(node)}"
             )
             raise ValueError(message)
-        if self._provider_metadata_rebind(targets, bindings):
-            return
-        if self._module_table_mutation(targets, bindings):
-            return
-        if self._complete_class_namespace(node, targets, bindings, lexical):
-            return
-        message = (
-            f"Unsupported class binding mutation in {self._module}: {ast.unparse(node)}"
-        )
-        raise ValueError(message)
 
         def _provider_metadata_rebind(
             self,
@@ -597,6 +587,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                 attributes=(*binding.attributes, *attributes),
                 qualified_base=".".join((binding.qualified_base, *attributes)),
             )
+        return None
 
     class _RuntimeBaseResolver:
         """Resolve owned classes in C3 order and external classes through Rope.
@@ -754,7 +745,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                 required_line: When set, index only bindings visible at the line.
                 allow_conditional: Whether conditional bindings may degrade.
 
-        Returns:
+            Returns:
             The module's explicit lexical bindings, including value shadowing.
 
             Raises:
@@ -1702,15 +1693,13 @@ class FlextInfraUtilitiesRopeSourceBases:
         Returns:
             Sorted configured roots and derived Ruff-qualified base expressions.
 
-            """
-            return FlextInfraUtilitiesRopeSourceBases._RuntimeBaseResolver(
-                project,
-                sources,
-                roots,
-                extra_module_aliases,
-            ).run()
-
-
+        """
+        return FlextInfraUtilitiesRopeSourceBases._RuntimeBaseResolver(
+            project,
+            sources,
+            roots,
+            extra_module_aliases,
+        ).run()
 
 
 # The flat module-level re-export: the package lazy map and the

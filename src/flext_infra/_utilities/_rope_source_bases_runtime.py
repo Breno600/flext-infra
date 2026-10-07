@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import ClassVar
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities._rope_source_bases_inventory import _SourceBindingCollector
 
 
 class FlextInfraUtilitiesRopeSourceBasesRuntime:
