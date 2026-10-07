@@ -12,7 +12,7 @@ from importlib.util import resolve_name
 from flext_infra import t
 
 
-class FlextInfraFlextUtilitiesPrivateImportAncestry:
+class FlextInfraUtilitiesPrivateImportAncestry:
     """Canonical namespace owner."""
 
     class _ClassBaseCollector:
@@ -138,7 +138,7 @@ class FlextInfraFlextUtilitiesPrivateImportAncestry:
                 tree = ast.parse(source, filename=module)
                 package = module if is_package else module.rpartition(".")[0]
                 collector = (
-                    FlextInfraFlextUtilitiesPrivateImportAncestry._ClassBaseCollector(
+                    FlextInfraUtilitiesPrivateImportAncestry._ClassBaseCollector(
                         module=module,
                         package=package,
                     )
@@ -148,10 +148,9 @@ class FlextInfraFlextUtilitiesPrivateImportAncestry:
             return bases
 
 
-__all__: list[str] = ["FlextInfraFlextUtilitiesPrivateImportAncestry"]
 
 
 # The flat module-level re-export: the package lazy map and the internal
 # from-import contract resolve this name at module scope (the S6 nesting
 # moved the class inside the family facade).
-FlextInfraUtilitiesPrivateImportAncestry = FlextInfraFlextUtilitiesPrivateImportAncestry.FlextInfraUtilitiesPrivateImportAncestry
+__all__: list[str] = ["FlextInfraUtilitiesPrivateImportAncestry"]

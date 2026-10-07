@@ -19,7 +19,7 @@ from flext_infra import c, m, p, t
 from flext_infra._utilities._rope_source_bases_inventory import _SourceBindingCollector
 
 
-class FlextInfraFlextUtilitiesRopeSourceBasesRuntime:
+class FlextInfraUtilitiesRopeSourceBasesRuntime:
     """Canonical namespace owner."""
 
     class _RuntimeBaseResolver:
@@ -1043,7 +1043,7 @@ class FlextInfraFlextUtilitiesRopeSourceBasesRuntime:
                 Sorted configured roots and derived Ruff-qualified base expressions.
 
             """
-            return FlextInfraFlextUtilitiesRopeSourceBasesRuntime._RuntimeBaseResolver(
+            return FlextInfraUtilitiesRopeSourceBasesRuntime._RuntimeBaseResolver(
                 project,
                 sources,
                 roots,
@@ -1056,6 +1056,5 @@ class FlextInfraFlextUtilitiesRopeSourceBasesRuntime:
 # The flat module-level re-export: the package lazy map and the
 # internal from-import contract resolve this name at module scope
 # (the S6 nesting moved the class inside the family facade).
-FlextInfraUtilitiesRopeSourceBasesRuntime = FlextInfraFlextUtilitiesRopeSourceBasesRuntime.FlextInfraUtilitiesRopeSourceBasesRuntime
 
-__all__: list[str] = ["FlextInfraFlextUtilitiesRopeSourceBasesRuntime", "FlextInfraUtilitiesRopeSourceBasesRuntime"]
+__all__: list[str] = ["FlextInfraUtilitiesRopeSourceBasesRuntime"]
