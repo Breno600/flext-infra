@@ -329,18 +329,6 @@ Infra:
                 the call is impossible (this is the point of use) and
                 suppressing at the call sites would mask the contract; the
                 exemption is bounded to this module family.
-            - files: "**/__init__.py"
-              rules: [ENFORCE-046]
-              authority: operator-projection-law-2026-10-07-generated-lazy-init-imports
-              reason: >-
-                The generated package __init__ TYPE_CHECKING block renders one
-                bare Flext* class import per lazy-map entry: the projection
-                itself emits it, the runtime exposure flows exclusively through
-                install_lazy_exports, and the flagged class base is the
-                sanctioned single-letter family shape. The projections are the
-                law; where the render and the census disagree, the census
-                yields for the generated block until the render emits the
-                aliased form.
             - files: "tests/test_snapshot_drill.py"
               rules: [import-private-name]
               authority: operator-relocation-mandate-2026-10-06-snapshot-stems
@@ -350,26 +338,6 @@ Infra:
                 module is private by naming, public by contract (the root lazy
                 map publishes its class), and the public facades cannot expose
                 it without an import cycle through the root package.
-            - files: "**/tests/**"
-              rules:
-                [
-                  magic-value-comparison,
-                  private-member-access,
-                  compare-to-empty-string,
-                  too-many-public-methods,
-                  boolean-positional-value-in-call,
-                  pytest-fixture-autouse,
-                  mutable-class-default,
-                  no-self-use,
-                ]
-              authority: operator-order-2026-10-06-make-verbs-green
-              reason: >-
-                Test idioms: assertions compare against literal expected
-                values (the magic values ARE the expectations), the tests
-                exercise private members of the unit under test, and test
-                classes group many public test methods by design. Actionable
-                quality rules (complexity, naming, documentation) stay
-                active on the tests tree.
             - files: "**/bin/**"
               rules:
                 [

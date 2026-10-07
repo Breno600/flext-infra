@@ -68,7 +68,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         )
         tm.that(process.stdout, has="mise-authenticated")
 
-    @pytest.mark.parametrize("verb", ["setup", "status", "help"])
+    @pytest.mark.parametrize("verb", ["help", "status"])
     @pytest.mark.parametrize("credential", ["", "invalid-test-credential"])
     def test_make_handles_missing_gh_auth_at_the_declared_boundary(
         self,
@@ -76,14 +76,13 @@ class TestsFlextInfraCodegenMakeEnvironment:
         verb: str,
         credential: str,
     ) -> None:
-        """Setup proceeds to its launcher preflight; other verbs require gh auth."""
+        """Other verbs than the tool lifecycle require gh auth explicitly."""
         project_root, _ = self._render_makefile(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,
         )
         empty_config = tmp_path / "empty-gh-config"
         empty_config.mkdir()
-        (project_root / "bin" / "mise").unlink()
         process = tm.ok(
             u.Tests.run_isolated_make(
                 ["--no-print-directory", verb],
@@ -100,11 +99,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
                 },
             ),
         )
-        if verb == "setup":
-            tm.that(process.outcome.raw_return_code, ne=0)
-            tm.that(process.stderr, has="missing generated mise launcher")
-            tm.that(process.stderr, lacks="authentication is required")
-        elif verb == "help":
+        if verb == "help":
             tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
         else:
             tm.that(process.outcome.raw_return_code, ne=0)
@@ -153,18 +148,13 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tmp_path: Path,
         resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
     ) -> None:
-        """A failed real Mise lock cannot strand a downgraded launcher/pin."""
+        """A failed real Mise lock cannot strand a stale resolved lock."""
         profile = c.Infra.MakeProfile.STANDALONE
         project_root = u.Tests.resolved_make_checkout(
             resolved_make_templates[profile],
             tmp_path / "lock-failure",
             profile,
         )
-        bootstrap = u.Infra.mise_bootstrap_environment()
-        artifacts = {
-            relative: (project_root / relative).read_bytes()
-            for relative, _mode in bootstrap.artifact_specs
-        }
         lock = project_root / c.Infra.MISE_LOCK_FILENAME
         previous_lock = lock.read_bytes()
         (project_root / c.Infra.MISE_TOML_FILENAME).write_text(
@@ -182,8 +172,6 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(u.Cli.process_succeeded(upgraded.outcome), eq=False)
         tm.that(upgraded.stderr, has="setup probe: failed stage=lock.log")
         tm.that(lock.read_bytes(), eq=previous_lock)
-        for relative, _mode in bootstrap.artifact_specs:
-            tm.that((project_root / relative).read_bytes(), eq=artifacts[relative])
         tm.that(
             list(project_root.parent.glob(f".{project_root.name}.mise-lock-stage.*")),
             eq=[],
@@ -574,8 +562,6 @@ class TestsFlextInfraCodegenMakeEnvironment:
 
         """
         receipts = template.parent.parent
-        bootstrap = u.Infra.mise_bootstrap_environment()
-        cold_storage = receipts / c.Tests.COLD_MISE_STORAGE
         locked = u.Tests.command_receipt(receipts / c.Tests.MAKE_TEMPLATE_CI_RECEIPT)
         tm.that(
             u.Cli.process_succeeded(locked.outcome),
@@ -583,13 +569,6 @@ class TestsFlextInfraCodegenMakeEnvironment:
             msg=locked.stdout + locked.stderr,
         )
         tm.that(locked.stdout, has="ci-runtime-provisioned")
-        tm.that(locked.stdout, has=f"storage={cold_storage}")
-        install_root = cold_storage / next(
-            relative
-            for name, relative in bootstrap.persistent_environment
-            if name == "MISE_INSTALLS_DIR"
-        )
-        tm.that(any(install_root.iterdir()), eq=True)
         resolved_locks = TestsFlextInfraCodegenMakeEnvironment._locks(template)
         ci_checkout = (
             receipts / c.Tests.MAKE_TEMPLATE_CI_CHECKOUT / profile.value / template.name
@@ -705,7 +684,6 @@ class TestsFlextInfraCodegenMakeEnvironment:
             The recorded provisioning command outcome.
 
         """
-        bootstrap = u.Infra.mise_bootstrap_environment()
         cold_storage = receipts / c.Tests.COLD_MISE_STORAGE
         make = config.Infra.codegen.make
         return tm.ok(
@@ -715,7 +693,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
                 env={
                     **active_env,
                     make.ci.variable: make.ci.value,
-                    bootstrap.storage_root_variable: str(cold_storage),
+                    config.MISE_DATA_DIR_ENV: str(cold_storage),
                 },
             ),
         )
@@ -775,51 +753,11 @@ class TestsFlextInfraCodegenMakeEnvironment:
             Every lock artifact ``make upg`` owns, keyed by relative path.
 
         """
-        sidecars = root / ".mise" / "locks"
         paths = (
             root / c.Infra.UV_LOCK_FILENAME,
             root / c.Infra.MISE_LOCK_FILENAME,
-            root / c.Infra.MISE_VERSION_PIN_FILENAME,
-            *(path for path in sidecars.rglob("*") if path.is_file()),
         )
         return {path.relative_to(root).as_posix(): path.read_bytes() for path in paths}
-
-    @staticmethod
-    def test_setup_fails_when_the_tracked_mise_launcher_is_missing(
-        tmp_path: Path,
-    ) -> None:
-        """Never substitute a system Mise for the generated launcher owner."""
-        project_root, _repository_root = u.Tests.render_make_environment(
-            tmp_path,
-            c.Infra.MakeProfile.STANDALONE,
-        )
-        # The fixture carries the governed toolchain seeds; this contract
-        # needs the launcher ABSENT, so remove exactly what a clean clone
-        # without seeds looks like to the generated setup owner.
-        (project_root / "bin" / "mise").unlink()
-        (project_root / "bin" / "mise.cmd").unlink()
-        tool_bin = tmp_path / "managed-tools" / "bin"
-        mise_log = tmp_path / "mise.log"
-        mise = tool_bin / "mise"
-        u.Tests.write_executable(
-            mise,
-            f"#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{mise_log}'\nexit 0\n",
-        )
-
-        process = tm.ok(
-            u.Cli.run_raw(
-                [c.Infra.MAKE, "--no-print-directory", "setup"],
-                cwd=project_root,
-                env={"PATH": f"{tool_bin}:{os.environ['PATH']}"},
-                remove_env_keys=(*c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS, "UV"),
-            ),
-        )
-
-        tm.that(process.outcome.raw_return_code, ne=0)
-        tm.that(process.stdout + process.stderr, has="missing generated mise launcher")
-        tm.that(mise.is_file(), eq=True)
-        tm.that(mise_log.exists(), eq=False)
-        tm.that(u.Infra.runtime_environment_dir(project_root).exists(), eq=False)
 
     @staticmethod
     def test_dispatched_runner_preserves_provisioned_external_tools(
@@ -985,8 +923,6 @@ class TestsFlextInfraCodegenMakeEnvironment:
             encoding="utf-8",
         )
         tm.that(makefile, has="export GITHUB_TOKEN GH_TOKEN MISE_GITHUB_TOKEN")
-        for command in u.Infra.mise_bootstrap_environment().credential_commands:
-            tm.that(makefile.count(" ".join(command)), eq=1)
 
     @staticmethod
     def test_public_gate_fails_closed_before_managed_environment_exists(

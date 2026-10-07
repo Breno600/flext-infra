@@ -534,7 +534,7 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenTransactionRecovery):
 
         """
         source_states = FlextInfraCodegenPreconditions.phase_sources(
-            "conform",
+            c.Infra.CodegenStagedFilePhase.CONFORM_BOOTSTRAP,
             file_plans,
         )
         if source_states.failure:
@@ -770,7 +770,7 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenTransactionRecovery):
         """
         ordinary_staged = FlextInfraCodegenStaging.stage_file_plans(
             layout,
-            "conform",
+            c.Infra.CodegenStagedFilePhase.CONFORM_BOOTSTRAP,
             ordinary,
         )
         if ordinary_staged.failure:

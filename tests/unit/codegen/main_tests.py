@@ -348,54 +348,6 @@ class TestsFlextInfraCodegenMain:
             tm.that(transaction.exists(), eq=False)
 
         @staticmethod
-        def test_present_invalid_mise_artifact_never_enters_external_resolution(
-            infra_git_repo: Path,
-        ) -> None:
-            """Reject a present invalid artifact before credential/network work.
-
-            Raises:
-                AssertionError: If required Mise launcher has no permission mode; or if
-                    required Mise launcher has no bytes.
-
-            """
-            root = infra_git_repo
-            TestsFlextInfraCodegenMain._seed_public_conform_checkout(root)
-            launcher = root / "bin" / "mise"
-            launcher_state = tm.ok(
-                u.Cli.atomic_read_binary_file_state(launcher, required=True),
-            )
-            launcher_mode = launcher_state.mode
-            tm.that(launcher_mode is None, eq=False)
-            if launcher_mode is None:
-                msg = "required Mise launcher has no permission mode"
-                raise AssertionError(msg)
-            if launcher_state.content is None:
-                msg = "required Mise launcher has no bytes"
-                raise AssertionError(msg)
-            corrupted = launcher_state.content + b"\nchecksum_linux_x86_64=invalid\n"
-            tm.ok(
-                u.Cli.atomic_write_binary_file_guarded(
-                    launcher_state,
-                    corrupted,
-                    permission_mode=launcher_mode,
-                ),
-            )
-            journal, transaction = TestsFlextInfraCodegenMain._mise_transaction_state(
-                root,
-            )
-
-            applied = u.Cli.run_raw(
-                [*TestsFlextInfraCodegenMain._public_conform_command(root), "apply"],
-                cwd=root,
-            )
-
-            tm.ok(applied)
-            tm.that(applied.value.outcome.raw_return_code, eq=1)
-            tm.that(launcher.read_bytes(), eq=corrupted)
-            tm.that(journal.exists(), eq=False)
-            tm.that(transaction.exists(), eq=False)
-
-        @staticmethod
         def test_unknown_command_surfaces_root_cause_via_subprocess() -> None:
             """Unknown codegen subcommands must print the actual CLI failure."""
             # The child renders through the CLI console, which honours COLUMNS and

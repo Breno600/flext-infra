@@ -79,7 +79,7 @@ class FlextInfraUtilitiesCodegenFilePlan:
         descriptor = os.open(
             lock_path,
             os.O_RDWR | os.O_CREAT,
-            0o600,
+            c.Infra.JOURNAL_MODE,
         )
         acquired = False
         try:

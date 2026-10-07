@@ -475,7 +475,7 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                 owner,
                 path,
                 content,
-                desired_mode=0o644,
+                desired_mode=c.Infra.DOCS_ARTIFACT_MODE,
                 source_states=inputs,
             ).unwrap()
             expected = state.states.get(path)

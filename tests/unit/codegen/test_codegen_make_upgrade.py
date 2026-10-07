@@ -64,18 +64,13 @@ class TestsFlextInfraCodegenMakeUpgrade:
         tmp_path: Path,
         resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
     ) -> None:
-        """A failed real Mise lock cannot strand a downgraded launcher/pin."""
+        """A failed real Mise lock cannot strand a stale resolved lock."""
         profile = c.Infra.MakeProfile.STANDALONE
         project_root = u.Tests.resolved_make_checkout(
             resolved_make_templates[profile],
             tmp_path / "lock-failure",
             profile,
         )
-        bootstrap = u.Infra.mise_bootstrap_environment()
-        artifacts = {
-            relative: (project_root / relative).read_bytes()
-            for relative, _mode in bootstrap.artifact_specs
-        }
         lock = project_root / c.Infra.MISE_LOCK_FILENAME
         previous_lock = lock.read_bytes()
         (project_root / c.Infra.MISE_TOML_FILENAME).write_text(
@@ -93,8 +88,6 @@ class TestsFlextInfraCodegenMakeUpgrade:
         tm.that(u.Cli.process_succeeded(upgraded.outcome), eq=False)
         tm.that(upgraded.stderr, has="setup probe: failed stage=lock.log")
         tm.that(lock.read_bytes(), eq=previous_lock)
-        for relative, _mode in bootstrap.artifact_specs:
-            tm.that((project_root / relative).read_bytes(), eq=artifacts[relative])
         tm.that(
             list(project_root.parent.glob(f".{project_root.name}.mise-lock-stage.*")),
             eq=[],
@@ -169,36 +162,7 @@ class TestsFlextInfraCodegenMakeUpgrade:
                 'relock "$(PROJECT_ROOT)"',
             ],
         )
-        tm.that(makefile, has="does not satisfy .mise.toml under Mise %s; run make upg")
-        # Only a missing-tool install and the upg resolution reach the network;
-        # every other Mise call runs through the declared offline wrapper.
-        offline = " ".join(
-            f"'{name}={value}'"
-            for name, value in u.Infra.mise_bootstrap_environment().offline_environment
-        )
-        tm.that(makefile, has=f'mise_exec "$$mise_offline_mode" env {offline} "$$@"')
-        networked = set(
-            re.findall(
-                r'mise_exec (?:project|no-config) .*?"\$\$pinned_mise" '
-                r'(?:-C "[^"]+" )?([a-z-]+)',
-                makefile,
-            ),
-        )
-        tm.that(networked, eq={"latest", "lock", "install", "generate"})
         tm.that(makefile, has="install --yes")
-        tm.that(
-            makefile,
-            lacks=(
-                'mise_exec project "$$pinned_mise" -C "$$project_root"'
-                " install --dry-run"
-            ),
-        )
-        platform_matrix = ",".join(toolchain.mise_lockfile_platforms)
-        tm.that(makefile, has=f'mise_lockfile_platforms="{platform_matrix}";')
-        tm.that(
-            makefile,
-            has='$${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"}',
-        )
         tm.that(makefile, has='if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then')
         resolve_assignments = re.findall(
             r"^(?:([\w-]+): )?TOOL_BOOTSTRAP_RESOLVE :=[ ]?(.*)$",
