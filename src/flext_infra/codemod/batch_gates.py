@@ -73,7 +73,16 @@ class FlextInfraModGateEngine:
                     temp_root=temp_root,
                     owner_rules=owner_rules,
                 )
-                tested = cls._run_tool(temp_root, (c.Infra.SG, c.Infra.TEST))
+                tested = cls._run_tool(
+                    temp_root,
+                    (
+                        c.Infra.SG,
+                        c.Infra.TEST,
+                        c.Infra.SG_CONFIG_FLAG,
+                        str(temp_root / c.Infra.CODEMOD_CONFIG_FILENAME),
+                    ),
+                    toolchain_root=root,
+                )
                 if tested.failure:
                     remedy = (
                         c.Infra.CODEMOD_SNAPSHOT_REFRESH_HINT
@@ -130,9 +139,25 @@ class FlextInfraModGateEngine:
                 )
                 cls._run_tool(
                     temp_root,
-                    (c.Infra.SG, c.Infra.TEST, c.Infra.SG_UPDATE_ALL),
+                    (
+                        c.Infra.SG,
+                        c.Infra.TEST,
+                        c.Infra.SG_UPDATE_ALL,
+                        c.Infra.SG_CONFIG_FLAG,
+                        str(temp_root / c.Infra.CODEMOD_CONFIG_FILENAME),
+                    ),
+                    toolchain_root=root,
                 ).unwrap()
-                cls._run_tool(temp_root, (c.Infra.SG, c.Infra.TEST)).unwrap()
+                cls._run_tool(
+                    temp_root,
+                    (
+                        c.Infra.SG,
+                        c.Infra.TEST,
+                        c.Infra.SG_CONFIG_FLAG,
+                        str(temp_root / c.Infra.CODEMOD_CONFIG_FILENAME),
+                    ),
+                    toolchain_root=root,
+                ).unwrap()
                 changes.extend(
                     cls._publish_regenerated_snapshots(
                         config_root=config_root,
@@ -393,8 +418,14 @@ class FlextInfraModGateEngine:
         command: t.StrSequence,
         *,
         finding_exit_code: int | None = None,
+        toolchain_root: Path,
     ) -> p.Result[p.Cli.CommandOutput]:
         """Run one AST tool and preserve its documented finding status.
+
+        The tool resolves through the ``toolchain_root`` repository's pinned
+        mise lock even when the process cwd is a staged fixture copy outside
+        that tree; a bare PATH resolution there falls back to an unpinned
+        global binary whose rule semantics can differ.
 
         Returns:
             The resulting ``p.Result[p.Cli.CommandOutput]``.
@@ -404,7 +435,15 @@ class FlextInfraModGateEngine:
             f"mod: start {' '.join(command[:2])} args={max(0, len(command) - 2)}\n",
         )
         sys.stderr.flush()
-        run = u.Cli.run_raw(command, cwd=root, timeout=c.Infra.TIMEOUT_SHORT)
+        pinned = (
+            c.Infra.MISE,
+            "-C",
+            str(toolchain_root),
+            "exec",
+            "--",
+            *command,
+        )
+        run = u.Cli.run_raw(pinned, cwd=root, timeout=c.Infra.TIMEOUT_SHORT)
         if run.failure:
             return r[p.Cli.CommandOutput].from_failure(run)
         output = run.value
@@ -811,7 +850,12 @@ class FlextInfraModGateEngine:
                 targets=targets,
                 json_stream=True,
             )
-            run = cls._run_tool(root, scan_command, finding_exit_code=1)
+            run = cls._run_tool(
+                root,
+                scan_command,
+                finding_exit_code=1,
+                toolchain_root=root,
+            )
             if run.failure:
                 return r[m.Infra.ModScanReport].from_failure(run)
             report = cls._parse_findings(

@@ -267,6 +267,8 @@ class FlextInfraConstantsBase(
     "Ambient uv variables removed before a policy-bound release build."
     SG: ClassVar[str] = "ast-grep"
     "Canonical ast-grep binary."
+    MISE: ClassVar[str] = "mise"
+    "Canonical mise binary; -C <root> exec -- resolves the repository-pinned tool."
     SG_CONFIG_FLAG: ClassVar[str] = "--config"
     "Canonical ast-grep configuration-file option."
     SG_FILTER_FLAG: ClassVar[str] = "--filter"
