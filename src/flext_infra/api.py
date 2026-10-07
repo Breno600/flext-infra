@@ -386,9 +386,6 @@ class FlextInfra(
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-        from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
         source_root = u.Infra.resolve_repository_root_or_cwd(request.repository_root)
         workspace = FlextInfraWorkspaceDetector.load_workspace_spec(source_root)
         if workspace.failure:

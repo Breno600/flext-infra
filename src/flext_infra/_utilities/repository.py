@@ -15,8 +15,17 @@ import re
 from pathlib import Path
 from urllib.parse import urlparse
 
+from flext_cli import u
+
 from flext_core import r
 from flext_infra import c, m, p, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDependenciesProfiles,
+    FlextInfraUtilitiesGitSemanticPublishMixin,
+    FlextInfraUtilitiesGitWorktreeDiscoveryMixin,
+    FlextInfraUtilitiesPyproject,
+    FlextInfraUtilitiesWorkspaceManifest,
+)
 
 
 class FlextInfraUtilitiesRepository:
@@ -158,8 +167,6 @@ class FlextInfraUtilitiesRepository:
             The resulting ``p.Result[m.Infra.WorkspaceIntegrationSpec]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeDiscoveryMixin
-
         source = codegen.infra_repository
         distribution = source.distribution
         preference = codegen.branch_policy.integration_branch_preference
@@ -252,8 +259,6 @@ class FlextInfraUtilitiesRepository:
             The resulting ``p.Result[t.Pair[str, str]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
         metadata = FlextInfraUtilitiesPyproject.read_project_metadata_result(
             repository_root,
         )
@@ -301,8 +306,6 @@ class FlextInfraUtilitiesRepository:
         Returns:
             The validated origin URL and integration branch.
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGitSemanticPublishMixin
-
         origin = FlextInfraUtilitiesGitSemanticPublishMixin.git_remote_url(
             m.Infra.GitRemoteUrlRequest(
                 repo_root=repository_root,
@@ -339,8 +342,6 @@ class FlextInfraUtilitiesRepository:
             The manifest's hand-authored ``project.flext_source`` line.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesWorkspaceManifest
-
         loaded = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
             repository_root,
         )
@@ -416,9 +417,6 @@ class FlextInfraUtilitiesRepository:
         # Identity detection consumes the same owner-recovered declaration as
         # metadata and template composition. Raw projection bytes may still
         # carry managed merge blocks while the transaction is only planning.
-        from flext_cli import u
-
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
 
         text = FlextInfraUtilitiesPyproject.live_pyproject_text(pyproject_path)
         if text.failure:
@@ -553,8 +551,6 @@ class FlextInfraUtilitiesRepository:
         Returns:
             Requirement strings from all declared dependency groups.
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
-
         requirements: list[str] = []
         project = payload.get(c.Infra.PROJECT)
         if isinstance(project, dict):
@@ -582,8 +578,6 @@ class FlextInfraUtilitiesRepository:
         Returns:
             The provider URL and ref, or the empty pair for a non-line.
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
-
         name = FlextInfraUtilitiesDependenciesProfiles.dep_name(requirement)
         if name is None or not name.startswith(prefix):
             return r[t.Pair[str, str]].ok(("", ""))
@@ -622,8 +616,6 @@ class FlextInfraUtilitiesRepository:
             The workspace manifest's declared URL for one distribution.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesWorkspaceManifest
-
         loaded = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
             repository_root,
         )
@@ -654,8 +646,6 @@ class FlextInfraUtilitiesRepository:
             The resulting ``p.Result[m.Infra.ProviderIdentitySpec]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeDiscoveryMixin
-
         url = repository.url.strip()
         organization, separator, _ = (
             FlextInfraUtilitiesGitWorktreeDiscoveryMixin.git_remote_identity(
@@ -690,8 +680,6 @@ class FlextInfraUtilitiesRepository:
             The provider HTTPS page of one repository, whatever its transport.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeDiscoveryMixin
-
         provider = cls.repository_provider(repository)
         if provider.failure:
             return r[str].from_failure(provider)
@@ -731,8 +719,6 @@ class FlextInfraUtilitiesRepository:
             The integration branch one repository integrates on.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesWorkspaceManifest
-
         manifest = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
             repository_root,
         )
@@ -800,8 +786,6 @@ class FlextInfraUtilitiesRepository:
             The integration baseline the repository actually publishes.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGitSemanticPublishMixin
-
         candidates = preference or c.Infra.INTEGRATION_BRANCH_PREFERENCE
         for candidate in candidates:
             reference = f"refs/remotes/origin/{candidate}"

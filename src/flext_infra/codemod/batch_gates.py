@@ -16,6 +16,8 @@ from pathlib import Path
 from flext_core import r
 from flext_infra import c, m, p, t, u
 from flext_infra._settings import settings
+from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
+from flext_infra.codemod.snapshot_reconciler import FlextInfraCodemodSnapshotReconciler
 
 
 class FlextInfraModGateEngine:
@@ -38,10 +40,6 @@ class FlextInfraModGateEngine:
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra.codemod.snapshot_reconciler import (
-            FlextInfraCodemodSnapshotReconciler,
-        )
-
         for config_root, owner_rules, owner_is_governed in cls._fixture_owners(
             root,
             rules,
@@ -232,10 +230,6 @@ class FlextInfraModGateEngine:
                 fixture scratch must be outside its source root.
 
         """
-        from flext_infra.codemod.snapshot_reconciler import (
-            FlextInfraCodemodSnapshotReconciler,
-        )
-
         governed_roots = tuple(
             project.resolve() for project in u.Infra.governed_project_roots(root)
         )
@@ -276,10 +270,6 @@ class FlextInfraModGateEngine:
             ValueError: If ast-grep fixture must be a regular file or directory.
 
         """
-        from flext_infra.codemod.snapshot_reconciler import (
-            FlextInfraCodemodSnapshotReconciler,
-        )
-
         directories = FlextInfraCodemodSnapshotReconciler.fixture_directories(
             config_root,
         )
@@ -362,10 +352,6 @@ class FlextInfraModGateEngine:
                 required id.
 
         """
-        from flext_infra.codemod.snapshot_reconciler import (
-            FlextInfraCodemodSnapshotReconciler,
-        )
-
         source_rules = set(owner_rules)
         directories = FlextInfraCodemodSnapshotReconciler.fixture_directories(
             config_root,
@@ -408,10 +394,6 @@ class FlextInfraModGateEngine:
             The resulting ``t.StrSequence``.
 
         """
-        from flext_infra.codemod.snapshot_reconciler import (
-            FlextInfraCodemodSnapshotReconciler,
-        )
-
         pattern = f"*{c.Infra.CODEMOD_SNAPSHOT_SUFFIX}"
         changes: list[str] = []
         for test_dir in FlextInfraCodemodSnapshotReconciler.fixture_directories(
@@ -994,8 +976,6 @@ class FlextInfraModGateEngine:
             The resulting ``p.Result[m.Infra.ModScanReport]``.
 
         """
-        from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
-
         planned = u.Infra.codemod_rule_plan(root)
         if planned.failure:
             return r[m.Infra.ModScanReport].from_failure(planned)

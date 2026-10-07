@@ -12,9 +12,12 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from flext_infra import t
+from flext_infra._config import config
 from flext_infra._utilities import (
+    FlextInfraUtilitiesProjectDiscovery,
     FlextInfraUtilitiesRopeCorePyModuleMixin,
     FlextInfraUtilitiesRopeCoreResourcesMixin,
+    FlextInfraUtilitiesRopeRuntime,
 )
 
 
@@ -46,8 +49,6 @@ class FlextInfraUtilitiesRopeCore(
             The resulting ``t.Infra.RopeProject``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
-
         resolved_root = repository_root.resolve()
         project_roots = tuple(
             project_root
@@ -75,9 +76,6 @@ class FlextInfraUtilitiesRopeCore(
             The resulting ``t.Infra.RopeProject``.
 
         """
-        from flext_infra._config import config
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
-
         source_folders = sorted({
             str(scan_path.relative_to(resolved_root))
             for project_root in project_roots

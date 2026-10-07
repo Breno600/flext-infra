@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, override
 from flext_core import r
 from flext_infra import c, m, u
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
+from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -199,10 +200,6 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
             OSError: If writing scaffold.
 
         """
-        from flext_infra.codegen._mise_artifacts_publication import (
-            FlextInfraMisePublication,
-        )
-
         files_created: t.MutableSequenceOf[str] = []
         files_skipped: t.MutableSequenceOf[str] = []
         for filename, suffix, base_class, doc_suffix in request.modules:
