@@ -20,7 +20,7 @@ from flext_core import r
 from flext_infra import c, m, p, t
 
 
-class FlextInfraUtilitiesDependencies:
+class FlextInfraUtilitiesDependenciesFamily:
     """Canonical namespace owner."""
 
     # Why: dependency_waves subscripts r[t.SequenceOf[t.StrSequence]] at runtime, so
@@ -195,7 +195,8 @@ class FlextInfraUtilitiesDependencies:
                     name
                     for dependency in item.runtime
                     if (
-                        name := FlextInfraUtilitiesDependencies.dep_name(
+                        name
+                        := FlextInfraUtilitiesDependencies.dep_name(
                             dependency,
                         )
                     )
@@ -965,7 +966,7 @@ class FlextInfraUtilitiesDependencies:
 # inside the family facade and the from-import contract requires the flat
 # binding to survive.
 FlextInfraUtilitiesDependencies = (
-    FlextInfraUtilitiesDependencies.FlextInfraUtilitiesDependencies
+    FlextInfraUtilitiesDependenciesFamily.FlextInfraUtilitiesDependencies
 )
 
 __all__: list[str] = ["FlextInfraUtilitiesDependencies"]
