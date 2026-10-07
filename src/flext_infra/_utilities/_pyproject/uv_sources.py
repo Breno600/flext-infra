@@ -123,8 +123,9 @@ class FlextInfraUtilitiesPyprojectUvSources(
         *,
         resolution: m.Infra.UvResolutionSpec,
         candidate_sources: t.StrMapping,
+        workspace_members: t.StrSequence = (),
     ) -> p.Result[bool]:
-        """Render the conform-owned ``[tool.uv]`` keys and drop workspace sources.
+        """Render the conform-owned ``[tool.uv]`` keys and workspace identity.
 
         The resolver keys are always declared, so the table always exists and
         never ends empty.
@@ -217,17 +218,44 @@ class FlextInfraUtilitiesPyprojectUvSources(
             u.Cli.toml_sync_value(uv, "exclude-dependencies", exclude_payload)
         else:
             u.Cli.toml_remove_key_if_present(uv, "exclude-dependencies")
-        # Each repository owns its own frozen lock and external environment.
-        # A root uv workspace would require every gitlink in root-only CI.
-        u.Cli.toml_remove_key_if_present(uv, "workspace")
+        # The workspace root declares its attached members as a native uv
+        # workspace (the declared topology is the SSOT) and redirects every
+        # member requirement to that identity through a workspace source, so
+        # `uv sync --all-packages` provisions the live worktrees. Standalone
+        # repositories own their own frozen lock and external environment: no
+        # workspace table and no member sources survive there.
+        if workspace_members:
+            members = u.Cli.toml_ensure_table(uv, "workspace")
+            u.Cli.toml_sync_string_list(
+                members,
+                "members",
+                tuple(sorted(workspace_members)),
+            )
+            required_names = {
+                name
+                for line in cls._document_requirement_lines(document).unwrap()
+                if (name := FlextInfraUtilitiesDependencies.dep_name(line))
+                is not None
+            }
+            wanted_members = sorted(set(workspace_members) & required_names)
+        else:
+            u.Cli.toml_remove_key_if_present(uv, "workspace")
+            wanted_members = []
         sources = u.Cli.toml_table_child(uv, "sources")
-        if sources is None:
-            return r[bool].ok(value=True)
-        for source_name in tuple(sources):
-            if source_name.startswith("flext-"):
-                u.Cli.toml_remove_key_if_present(sources, source_name)
-        if not tuple(sources):
-            u.Cli.toml_remove_key_if_present(uv, "sources")
+        if wanted_members:
+            if sources is None:
+                sources = u.Cli.toml_ensure_table(uv, "sources")
+            for source_name in tuple(sources):
+                if source_name not in wanted_members:
+                    u.Cli.toml_remove_key_if_present(sources, source_name)
+            for member_name in wanted_members:
+                u.Cli.toml_sync_value(sources, member_name, {"workspace": True})
+        elif sources is not None:
+            for source_name in tuple(sources):
+                if source_name.startswith("flext-"):
+                    u.Cli.toml_remove_key_if_present(sources, source_name)
+            if not tuple(sources):
+                u.Cli.toml_remove_key_if_present(uv, "sources")
         return r[bool].ok(value=True)
 
 

@@ -15,6 +15,7 @@ from flext_infra import c, m, u
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -39,11 +40,22 @@ class FlextInfraMiseWorkspacePlanner:
         if physical.failure:
             return r[m.Infra.GitIdentityReport].from_failure(physical)
         identity = self._exact_git_identity(requested)
-        if identity.failure:
+        if identity.failure or not identity.value.is_attached_submodule:
             return identity
-        if not identity.value.is_attached_submodule:
-            return identity
-        superproject_root = identity.value.superproject_root
+        return self._submodule_scope_identity(requested, identity.value)
+
+    def _submodule_scope_identity(
+        self,
+        requested: Path,
+        identity: m.Infra.GitIdentityReport,
+    ) -> p.Result[m.Infra.GitIdentityReport]:
+        """Resolve the coordination identity for an attached Git submodule.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitIdentityReport]``.
+
+        """
+        superproject_root = identity.superproject_root
         if superproject_root is None:
             return r[m.Infra.GitIdentityReport].fail(
                 f"Git submodule has no Mise coordination root: {requested}",
@@ -55,9 +67,9 @@ class FlextInfraMiseWorkspacePlanner:
         gitlinks = u.Infra.git_index_gitlink_paths(scope_root)
         if gitlinks.failure:
             return r[m.Infra.GitIdentityReport].from_failure(gitlinks)
-        member = identity.value.repo_root.relative_to(superproject_root)
+        member = identity.repo_root.relative_to(superproject_root)
         if member.as_posix() not in gitlinks.value:
-            return identity
+            return r[m.Infra.GitIdentityReport].ok(identity)
         physical_scope = self._physical_directory(scope_root)
         if physical_scope.failure:
             return r[m.Infra.GitIdentityReport].from_failure(physical_scope)
@@ -101,8 +113,6 @@ class FlextInfraMiseWorkspacePlanner:
             The resulting ``p.Result[m.Infra.MiseToolchainWorkspaceLayout]``.
 
         """
-        from flext_infra.workspace import FlextInfraWorkspaceDetector
-
         requested = self._owner.repository_root.expanduser().absolute()
         resolved_scope = (
             self.scope_root() if scope_root is None else r[Path].ok(scope_root)

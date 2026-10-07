@@ -37,6 +37,7 @@ import time
 import tomllib
 from collections.abc import Generator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 from flext_infra._config import config
@@ -51,6 +52,25 @@ STORAGE_DIRECTORIES = ("cache", "state", "installs", "shims", "uv-cache", "boots
 
 _GIT_BINARY = shutil.which("git") or "git"
 """Resolved Git executable; an absolute path whenever Git is on ``PATH``."""
+
+
+@dataclass(frozen=True)
+class _MiseRuntimeContext:
+    """Typed Mise runtime context shared by every bootstrap verb."""
+
+    storage: Path
+    runtime: Path
+    cooldown: str
+    platforms: str
+
+
+@dataclass(frozen=True)
+class _ReconcileContext(_MiseRuntimeContext):
+    """Typed reconcile seed context: one project and its pinned release."""
+
+    project: Path
+    manifest: Path
+    release: str
 
 
 class FlextInfraBootstrapPayloadError(TypeError, ValueError):
@@ -174,6 +194,48 @@ class FlextInfraBootstrap:
         return selector
 
     @classmethod
+    def _verified_sidecar(
+        cls,
+        root: Path,
+        graph: str,
+        filename: str,
+        annotation: dict[str, object],
+    ) -> str:
+        """Verify one sidecar annotation and return its relative path.
+
+        Raises:
+            ValueError: If invalid Mise sidecar digest; or if Mise sidecar is
+                absent; or if Mise sidecar digest differs.
+        """
+        relative = annotation.get("path")
+        digest = annotation.get("digest")
+        if not isinstance(relative, str) or not isinstance(digest, str):
+            msg = f"mise.lock {graph} annotation is incomplete"
+            raise FlextInfraBootstrapPayloadError(msg)
+        selector = cls._sidecar_selector(relative)
+        if not digest.startswith("sha256:"):
+            msg = f"invalid mise.lock sidecar digest: {relative}"
+            raise ValueError(
+                msg,
+            )
+        cls._reject_symlink_path(root, relative)
+        sidecar = root.joinpath(*selector.parts)
+        cls._physical_directory(sidecar)
+        source = cls._bytes(sidecar / filename)
+        if source is None:
+            msg = f"mise.lock sidecar is absent: {sidecar / filename}"
+            raise ValueError(
+                msg,
+            )
+        actual = hashlib.sha256(source.replace(b"\r\n", b"\n")).hexdigest()
+        if actual != digest.removeprefix("sha256:"):
+            msg = f"mise.lock sidecar digest differs: {sidecar / filename}"
+            raise ValueError(
+                msg,
+            )
+        return relative
+
+    @classmethod
     def _sidecars(cls, content: bytes | None, root: Path) -> dict[str, str]:
         if content is None:
             return {}
@@ -195,33 +257,9 @@ class FlextInfraBootstrap:
                     if not isinstance(annotation, dict):
                         msg = f"mise.lock {graph} annotation is not a table"
                         raise FlextInfraBootstrapPayloadError(msg)
-                    relative = annotation.get("path")
-                    digest = annotation.get("digest")
-                    if not isinstance(relative, str) or not isinstance(digest, str):
-                        msg = f"mise.lock {graph} annotation is incomplete"
-                        raise FlextInfraBootstrapPayloadError(msg)
+                    relative = cls._verified_sidecar(root, graph, filename, annotation)
                     selector = cls._sidecar_selector(relative)
-                    if not digest.startswith("sha256:"):
-                        msg = f"invalid mise.lock sidecar digest: {relative}"
-                        raise ValueError(
-                            msg,
-                        )
-                    cls._reject_symlink_path(root, relative)
-                    sidecar = root.joinpath(*selector.parts)
-                    cls._physical_directory(sidecar)
-                    source = cls._bytes(sidecar / filename)
-                    if source is None:
-                        msg = f"mise.lock sidecar is absent: {sidecar / filename}"
-                        raise ValueError(
-                            msg,
-                        )
-                    actual = hashlib.sha256(source.replace(b"\r\n", b"\n")).hexdigest()
-                    if actual != digest.removeprefix("sha256:"):
-                        msg = f"mise.lock sidecar digest differs: {sidecar / filename}"
-                        raise ValueError(
-                            msg,
-                        )
-                    result[relative] = cls._tree_digest(sidecar)
+                    result[relative] = cls._tree_digest(root.joinpath(*selector.parts))
         return result
 
     @classmethod
@@ -238,8 +276,9 @@ class FlextInfraBootstrap:
             return cls._sidecars(content, project)
         index = subprocess.run(
             [_GIT_BINARY, "-C", str(project), "ls-files", "-u", "--", "mise.lock"],
-            check=True,
             capture_output=True,
+            shell=False,
+            check=True,
         ).stdout
         if not any(
             line.split(b"\t", 1)[0].endswith(b" 2") for line in index.splitlines()
@@ -248,8 +287,9 @@ class FlextInfraBootstrap:
             raise ValueError(msg)
         prior = subprocess.run(
             [_GIT_BINARY, "-C", str(project), "show", ":2:mise.lock"],
-            check=True,
             capture_output=True,
+            shell=False,
+            check=True,
         ).stdout
         return cls._sidecars(prior, project)
 
@@ -489,15 +529,9 @@ class FlextInfraBootstrap:
     @classmethod
     def _attempt_seed(
         cls,
-        project: Path,
-        manifest: Path,
+        context: _ReconcileContext,
         name: str,
         payload: bytes | None,
-        storage: Path,
-        runtime: Path,
-        cooldown: str,
-        platforms: str,
-        release: str,
         failures: list[str],
     ) -> bool:
         """Resolve one reconcile seed into the stage and publish it if it proves.
@@ -508,6 +542,7 @@ class FlextInfraBootstrap:
         The seed lock propagates the ``ValueError`` that ``_run`` raises when
         Mise exits or warns during the seed lock.
         """
+        project = context.project
         stage = Path(
             tempfile.mkdtemp(
                 prefix=f".{project.name}.mise-lock-stage.",
@@ -516,18 +551,18 @@ class FlextInfraBootstrap:
         )
         scratch = Path(tempfile.mkdtemp(prefix="mise-reconcile."))
         try:
-            shutil.copyfile(manifest, stage / ".mise.toml")
+            shutil.copyfile(context.manifest, stage / ".mise.toml")
             if payload is not None:
                 (stage / "mise.lock").write_bytes(payload)
             environment = cls._mise_environment(
-                storage,
+                context.storage,
                 stage,
                 scratch,
-                cooldown,
-                platforms,
+                context.cooldown,
+                context.platforms,
             )
             try:
-                cls._run(runtime, ["-C", str(stage), "lock"], environment)
+                cls._run(context.runtime, ["-C", str(stage), "lock"], environment)
             except ValueError as error:
                 if "refusing to replace locked version" not in str(error):
                     failures.append(f"{name}: lock failed: {error}")
@@ -536,13 +571,13 @@ class FlextInfraBootstrap:
                 # lacks platform coverage and kept the locked version; the
                 # staged dry-run below remains the publication gate (the
                 # same tolerance the upg lock stage ships).
-            if not cls._staged_lock_satisfies(runtime, stage, environment):
+            if not cls._staged_lock_satisfies(context.runtime, stage, environment):
                 failures.append(
                     f"{name}: staged lock does not satisfy the manifest",
                 )
                 return False
             staged_python = cls._run(
-                runtime,
+                context.runtime,
                 ["-C", str(stage), "which", "python"],
                 environment,
             )
@@ -551,7 +586,8 @@ class FlextInfraBootstrap:
                 return False
             cls._publish_or_park(project, stage)
             sys.stdout.write(
-                f"reconcile: published the {name} mise.lock Mise {release} satisfies\n",
+                f"reconcile: published the {name} mise.lock"
+                f" Mise {context.release} satisfies\n",
             )
             return True
         finally:
@@ -560,22 +596,14 @@ class FlextInfraBootstrap:
                 shutil.rmtree(stage, ignore_errors=True)
 
     @classmethod
-    def _attempt_held_lock(
-        cls,
-        project: Path,
-        manifest: Path,
-        storage: Path,
-        runtime: Path,
-        cooldown: str,
-        platforms: str,
-        release: str,
-    ) -> None:
+    def _attempt_held_lock(cls, context: _ReconcileContext) -> None:
         """Resolve a fresh held lock (broken releases held) and publish it.
 
         Raises:
             ValueError: If the held lock cannot be produced or still fails its
                 staged install probe, or if Mise exits or warns during.
         """
+        project = context.project
         held_stage = Path(
             tempfile.mkdtemp(
                 prefix=f".{project.name}.mise-lock-stage.",
@@ -585,35 +613,36 @@ class FlextInfraBootstrap:
         try:
             scratch = Path(tempfile.mkdtemp(prefix="mise-reconcile."))
             try:
-                shutil.copyfile(manifest, held_stage / ".mise.toml")
+                shutil.copyfile(context.manifest, held_stage / ".mise.toml")
                 environment = cls._mise_environment(
-                    storage,
+                    context.storage,
                     held_stage,
                     scratch,
-                    cooldown,
-                    platforms,
+                    context.cooldown,
+                    context.platforms,
                 )
                 try:
-                    cls._run(runtime, ["-C", str(held_stage), "lock"], environment)
+                    cls._run(
+                        context.runtime,
+                        ["-C", str(held_stage), "lock"],
+                        environment,
+                    )
                 except ValueError as error:
                     if "refusing to replace locked version" not in str(error):
                         raise
                 satisfied, probe_output = cls._probe_stage(
-                    runtime,
+                    context.runtime,
                     held_stage,
                     environment,
                 )
                 if not satisfied:
                     holds = cls._hold_stage_tools(
-                        runtime,
-                        storage,
+                        context,
                         held_stage,
-                        cooldown,
-                        platforms,
                         cls._failing_install_tools(probe_output),
                     )
                     satisfied, _ = cls._probe_stage(
-                        runtime,
+                        context.runtime,
                         held_stage,
                         environment,
                     )
@@ -625,7 +654,7 @@ class FlextInfraBootstrap:
                 cls._publish_or_park(project, held_stage)
                 sys.stdout.write(
                     "reconcile: published the held mise.lock "
-                    f"Mise {release} satisfies\n",
+                    f"Mise {context.release} satisfies\n",
                 )
             finally:
                 shutil.rmtree(scratch, ignore_errors=True)
@@ -1003,6 +1032,7 @@ class FlextInfraBootstrap:
             env=environment,
             capture_output=True,
             text=True,
+            shell=False,
             check=False,
         )
         output = completed.stdout.strip()
@@ -1038,6 +1068,7 @@ class FlextInfraBootstrap:
             completed = subprocess.run(
                 [_GIT_BINARY, "-C", str(project), "show", "HEAD:mise.lock"],
                 capture_output=True,
+                shell=False,
                 check=False,
             )
         except OSError:
@@ -1064,6 +1095,7 @@ class FlextInfraBootstrap:
             env=environment,
             capture_output=True,
             text=True,
+            shell=False,
             check=False,
         )
         return completed.returncode == 0, completed.stdout + completed.stderr
@@ -1182,11 +1214,8 @@ class FlextInfraBootstrap:
     @classmethod
     def _hold_stage_tools(
         cls,
-        runtime: Path,
-        storage: Path,
+        context: _MiseRuntimeContext,
         stage: Path,
-        cooldown: str,
-        platforms: str,
         failed_tools: list[tuple[str, str]],
     ) -> dict[str, str]:
         """Hold every failing tool at its newest installable release, in stage.
@@ -1207,16 +1236,16 @@ class FlextInfraBootstrap:
         scratch = Path(tempfile.mkdtemp(prefix="mise-hold."))
         try:
             environment = cls._mise_environment(
-                storage,
+                context.storage,
                 stage,
                 scratch,
-                cooldown,
-                platforms,
+                context.cooldown,
+                context.platforms,
             )
             for selector, failed_version in failed_tools:
                 held: str | None = None
                 for candidate in cls._remote_release_candidates(
-                    runtime,
+                    context.runtime,
                     environment,
                     selector,
                     failed_version,
@@ -1227,12 +1256,20 @@ class FlextInfraBootstrap:
                         candidate,
                     )
                     try:
-                        cls._run(runtime, ["-C", str(stage), "lock"], environment)
+                        cls._run(
+                            context.runtime,
+                            ["-C", str(stage), "lock"],
+                            environment,
+                        )
                     except ValueError as error:
                         if "refusing to replace locked version" in str(error):
                             continue
                         raise
-                    satisfied, _ = cls._probe_stage(runtime, stage, environment)
+                    satisfied, _ = cls._probe_stage(
+                        context.runtime,
+                        stage,
+                        environment,
+                    )
                     if satisfied:
                         held = candidate
                         break
@@ -1281,6 +1318,15 @@ class FlextInfraBootstrap:
             (storage / relative).mkdir(parents=True, exist_ok=True)
         runtime = cls._pinned_runtime(storage, release)
         cooldown, platforms = cls._manifest_settings(manifest)
+        context = _ReconcileContext(
+            project=project,
+            manifest=manifest,
+            storage=storage,
+            runtime=runtime,
+            cooldown=cooldown,
+            platforms=platforms,
+            release=release,
+        )
         seeds: list[tuple[str, bytes | None]] = [
             ("working", cls._bytes(project / "mise.lock")),
         ]
@@ -1290,29 +1336,10 @@ class FlextInfraBootstrap:
         seeds.append(("fresh", None))
         failures: list[str] = []
         for name, payload in seeds:
-            if cls._attempt_seed(
-                project,
-                manifest,
-                name,
-                payload,
-                storage,
-                runtime,
-                cooldown,
-                platforms,
-                release,
-                failures,
-            ):
+            if cls._attempt_seed(context, name, payload, failures):
                 return
         try:
-            cls._attempt_held_lock(
-                project,
-                manifest,
-                storage,
-                runtime,
-                cooldown,
-                platforms,
-                release,
-            )
+            cls._attempt_held_lock(context)
         except ValueError as held_error:
             failures.append(f"held: {held_error}")
         else:
@@ -1347,31 +1374,22 @@ class FlextInfraBootstrap:
         storage = cls._mise_storage_root()
         runtime = cls._pinned_runtime(storage, release)
         cooldown, platforms = cls._manifest_settings(manifest)
-        satisfied, probe_output = cls._probe_with_scratch(
-            runtime,
-            stage,
-            storage,
-            cooldown,
-            platforms,
+        context = _MiseRuntimeContext(
+            storage=storage,
+            runtime=runtime,
+            cooldown=cooldown,
+            platforms=platforms,
         )
+        satisfied, probe_output = cls._probe_with_scratch(context, stage)
         if satisfied:
             sys.stdout.write("converge: staged lock installs; nothing to hold\n")
             return
         holds = cls._hold_stage_tools(
-            runtime,
-            storage,
+            context,
             stage,
-            cooldown,
-            platforms,
             cls._failing_install_tools(probe_output),
         )
-        satisfied, _ = cls._probe_with_scratch(
-            runtime,
-            stage,
-            storage,
-            cooldown,
-            platforms,
-        )
+        satisfied, _ = cls._probe_with_scratch(context, stage)
         if not satisfied:
             msg = f"converge: held lock still fails install: {sorted(holds)}"
             raise ValueError(
@@ -1382,11 +1400,8 @@ class FlextInfraBootstrap:
     @classmethod
     def _probe_with_scratch(
         cls,
-        runtime: Path,
+        context: _MiseRuntimeContext,
         stage: Path,
-        storage: Path,
-        cooldown: str,
-        platforms: str,
     ) -> tuple[bool, str]:
         """Probe a stage inside a throwaway isolated Mise environment.
 
@@ -1397,13 +1412,13 @@ class FlextInfraBootstrap:
         scratch = Path(tempfile.mkdtemp(prefix="mise-converge."))
         try:
             environment = cls._mise_environment(
-                storage,
+                context.storage,
                 stage,
                 scratch,
-                cooldown,
-                platforms,
+                context.cooldown,
+                context.platforms,
             )
-            return cls._probe_stage(runtime, stage, environment)
+            return cls._probe_stage(context.runtime, stage, environment)
         finally:
             shutil.rmtree(scratch, ignore_errors=True)
 
@@ -1437,6 +1452,7 @@ class FlextInfraBootstrap:
             [cls._uv_binary(), *arguments],
             capture_output=True,
             text=True,
+            shell=False,
             check=False,
         )
         if completed.returncode != 0:
