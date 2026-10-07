@@ -525,9 +525,14 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         return r[p.Model].ok(
             m.Infra.GithubWorkflowRenderSpec(
                 dist=dist,
+                # Why: every governed standalone project also carries a
+                # config/workspace.yaml, so file existence would mark the
+                # standalone member itself as the umbrella and skip the very
+                # fleet-root materialization its CI needs. The typed role is
+                # the only signal (see fleet_umbrella).
                 owns_workspace_manifest=(
-                    repository_root / "config/workspace.yaml"
-                ).is_file(),
+                    target.repository.role is c.Infra.MakeProfile.WORKSPACE
+                ),
                 make_profile=target.make_profile,
                 gascity_enabled=target.gascity_enabled,
                 repository_branch=branch,

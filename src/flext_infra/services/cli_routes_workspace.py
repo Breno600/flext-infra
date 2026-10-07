@@ -36,9 +36,9 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-        from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
+        from flext_infra.workspace.flext_binding import FlextInfraBindingService
 
-        return FlextInfraFlextBindingService.apply(
+        return FlextInfraBindingService.apply(
             consumer_root=params.repository_root,
             flext_root=params.flext_root,
             python=params.python,

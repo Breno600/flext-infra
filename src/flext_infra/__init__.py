@@ -216,7 +216,7 @@ if TYPE_CHECKING:
         FlextInfraWorkspaceEnvironmentProvenance,
     )
     from flext_infra.workspace.fleet_gaps import FlextInfraWorkspaceFleetGaps
-    from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
+    from flext_infra.workspace.flext_binding import FlextInfraBindingService
     from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
     from flext_infra.workspace.rope import FlextInfraRopeWorkspace
     from flext_infra.worktree import FlextInfraWorktreeService
@@ -228,6 +228,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraAccessorRenamePhase",
     "FlextInfraApplyRenames",
     "FlextInfraBanditGate",
+    "FlextInfraBindingService",
     "FlextInfraCProfileReport",
     "FlextInfraCandidateBootstrapService",
     "FlextInfraCleanService",
@@ -288,7 +289,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraEnsurePyrightConfigPhase",
     "FlextInfraEnsureRuffConfigPhase",
     "FlextInfraExtraPathsManager",
-    "FlextInfraFlextBindingService",
     "FlextInfraFreshImportGate",
     "FlextInfraGate",
     "FlextInfraGateRegistry",
@@ -477,7 +477,7 @@ install_lazy_exports(
         "FlextInfraEnsurePyrightConfigPhase": ".deps.phases.ensure_pyright",
         "FlextInfraEnsureRuffConfigPhase": ".deps.phases.ensure_ruff",
         "FlextInfraExtraPathsManager": ".deps.extra_paths",
-        "FlextInfraFlextBindingService": ".workspace.flext_binding",
+        "FlextInfraBindingService": ".workspace.flext_binding",
         "FlextInfraFreshImportGate": ".gates.fresh_import",
         "FlextInfraGate": ".gates.base_gate",
         "FlextInfraGateRegistry": ".check.gate_registry",

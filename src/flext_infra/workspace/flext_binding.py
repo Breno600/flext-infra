@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from flext_infra import p
 
 
-class FlextInfraFlextBindingService:
+class FlextInfraBindingService:
     """Resolve and apply one session binding onto a flext worktree."""
 
     @staticmethod
@@ -301,4 +301,4 @@ class FlextInfraFlextBindingService:
         return r[int].ok(0)
 
 
-__all__: list[str] = ["FlextInfraFlextBindingService"]
+__all__: list[str] = ["FlextInfraBindingService"]
