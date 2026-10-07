@@ -501,9 +501,7 @@ class _SourceBindingCollector:
 
         """
         if not self._allow_conditional:
-            message = (
-                f"Conditional exception-backed class bindings in {self._module}"
-            )
+            message = f"Conditional exception-backed class bindings in {self._module}"
             raise ValueError(message)
         conditional: MutableMapping[str, m.Infra.SourceClassReference | None] = {}
         self.collect(node.body, conditional, lexical, scope)
@@ -567,7 +565,9 @@ class _SourceBindingCollector:
                 attributes.insert(0, expression.attr)
             expression = expression.value
         if not isinstance(expression, ast.Name):
-            message = f"Unsupported class reference in {module}: {ast.unparse(expression)}"
+            message = (
+                f"Unsupported class reference in {module}: {ast.unparse(expression)}"
+            )
             raise TypeError(message)
         name = expression.id
         if name in bindings:
@@ -809,8 +809,6 @@ class _RuntimeBaseResolver:
             TypeError: If Rope resolves a required base to a non-class.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
-
         function_identity = self._function_object_identity(value)
         if function_identity is not None:
             return function_identity
@@ -995,8 +993,6 @@ class _RuntimeBaseResolver:
                 relative import escapes the package.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeCore
-
         if imported.module_name is None:
             if imported.resource is None:
                 message = "Import has no declared module location"
@@ -1042,8 +1038,6 @@ class _RuntimeBaseResolver:
             The resolved Rope module object.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeCore
-
         name = self._provider_module_name(imported)
         module = self._project.get_module(name)
         resource = imported.resource or self._project.find_module(name)
@@ -1074,8 +1068,6 @@ class _RuntimeBaseResolver:
                 as a class base, or cycles through provider reexports.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
-
         if depth > c.Infra.ROPE_WALK_DEPTH_BUDGET:
             message = f"Unresolved external base: {module.get_name()} at depth {depth}"
             raise ValueError(message)
@@ -1205,11 +1197,6 @@ class _RuntimeBaseResolver:
             ModuleNotFoundError: If the target has no virtual stdlib backing.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesRopeCore,
-            FlextInfraUtilitiesRopeRuntime,
-        )
-
         try:
             module = self._project.get_module(target)
         except (
@@ -1400,8 +1387,6 @@ class _RuntimeBaseResolver:
             TypeError: If the external value is not a Rope builtin class.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
-
         value = self._external[identity]
         if not isinstance(value, p.Infra.RopeBuiltinClass):
             message = (

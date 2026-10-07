@@ -12,6 +12,11 @@ from importlib.util import resolve_name
 from pathlib import Path
 
 from flext_infra import m, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesRopeAnalysisSourceScan,
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeRuntime,
+)
 
 
 class FlextInfraUtilitiesRopeSourceBasesInventory:
@@ -43,12 +48,6 @@ class FlextInfraUtilitiesRopeSourceBasesInventory:
             ValueError: If a required binding has unsupported source semantics.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesRopeAnalysisSourceScan,
-            FlextInfraUtilitiesRopeCore,
-            FlextInfraUtilitiesRopeRuntime,
-        )
-
         resource = (
             FlextInfraUtilitiesRopeCore.resolve_resource_from_path(project, path)
             if path.is_file()
