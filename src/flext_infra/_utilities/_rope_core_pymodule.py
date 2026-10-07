@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import ClassVar
 
 from flext_infra import t
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeCorePyModuleMixin:
@@ -56,6 +57,25 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
         return None
 
     @staticmethod
+    def resolvable_module_resource(resource: t.Infra.RopeResource) -> bool:
+        """Whether the resource can own a Python module for rope's resolver.
+
+        A plain data directory (no ``__init__.py``, no sibling source module)
+        owns no module: rope's ``find_module`` still reports it, and handing
+        it to ``resolve_pymodule`` would fail loud on a non-PyModule.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
+        if FlextInfraUtilitiesRopeRuntime.file_resource(resource):
+            return True
+        path = Path(resource.real_path)
+        return (
+            (path / "__init__.py").is_file() or path.with_suffix(".py").is_file()
+        )
+
+    @staticmethod
     def resolve_pymodule(
         rope_project: t.Infra.RopeProject,
         resource: t.Infra.RopeResource,
@@ -72,8 +92,6 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
             TypeError: If rope project returned non-PyModule.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
-
         if not FlextInfraUtilitiesRopeRuntime.file_resource(resource):
             path = Path(resource.real_path)
             if (
@@ -102,8 +120,6 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
             RuntimeError: If rope module import table unavailable for.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
-
         try:
             module_imports = FlextInfraUtilitiesRopeRuntime.module_imports_for_pymodule(
                 rope_project,
