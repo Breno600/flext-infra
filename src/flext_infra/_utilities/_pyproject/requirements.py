@@ -232,12 +232,14 @@ class FlextInfraUtilitiesPyprojectRequirements:
         requirement: str,
         workspace_members: t.StrSequence,
     ) -> str | None:
-        """Render a sibling workspace member's bare-name requirement, or None.
+        """Render a workspace root's declared member requirement, or None.
 
-        A sibling member of the enclosing uv workspace renders as the bare
-        name plus the ``[tool.uv.sources] workspace = true`` provenance, and a
-        git+ URL here would double-declare the source uv already resolves
-        from the workspace.
+        Only the workspace root's render passes its declared members here: a
+        member requirement renders as the bare name plus the
+        ``[tool.uv.sources] workspace = true`` provenance, and a git+ URL
+        would double-declare the source uv already resolves from the root's
+        own workspace manifest. Every other render passes no members — its
+        internal requirements flow on to the inline git+ form.
 
         Returns:
             The resulting ``str | None``.

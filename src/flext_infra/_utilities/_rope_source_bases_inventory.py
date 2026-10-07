@@ -258,8 +258,8 @@ class _SourceBindingCollector:
             for target in targets
         )
 
+    @staticmethod
     def _module_table_mutation(
-        self,
         targets: t.SequenceOf[ast.expr],
         bindings: t.MappingKV[str, m.Infra.SourceClassReference | None] | None = None,
     ) -> bool:
