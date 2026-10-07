@@ -125,7 +125,7 @@ jobs:
           key: ${{ runner.os }}-3.13-flext-testmon-flext-infra-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml', 'config/**') }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             ${{ runner.os }}-3.13-flext-testmon-flext-infra-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml', 'config/**') }}-
-- name: Install mise
+      - name: Install mise
         shell: bash
         run: |
           set -eu
@@ -225,7 +225,7 @@ jobs:
           fetch-depth: 0
           submodules: false
           persist-credentials: false
-        - name: Install mise
+      - name: Install mise
         shell: bash
         run: |
           set -eu

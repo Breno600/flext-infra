@@ -92,7 +92,7 @@ jobs:
           # No step needs authenticated git after checkout; persisting the
           # token into .git/config would expose it to every later command.
           persist-credentials: false
-        - name: Install mise
+      - name: Install mise
         shell: bash
         run: |
           set -eu
@@ -131,7 +131,7 @@ jobs:
           # No step needs authenticated git after checkout; persisting the
           # token into .git/config would expose it to every later command.
           persist-credentials: false
-        - name: Install mise
+      - name: Install mise
         shell: bash
         run: |
           set -eu

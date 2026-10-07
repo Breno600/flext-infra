@@ -64,7 +64,7 @@ jobs:
           key: ${{ runner.os }}-3.13-tools-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-3.13-tools-
-- name: Install mise
+      - name: Install mise
         shell: bash
         run: |
           set -eu
@@ -187,7 +187,7 @@ jobs:
           key: ${{ runner.os }}-3.13-tools-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-3.13-tools-
-- name: Install mise
+      - name: Install mise
         shell: bash
         run: |
           set -eu
