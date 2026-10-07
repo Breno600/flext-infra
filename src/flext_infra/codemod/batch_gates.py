@@ -157,6 +157,24 @@ class FlextInfraModGateEngine:
                         str(temp_root / c.Infra.CODEMOD_CONFIG_FILENAME),
                     ),
                     toolchain_root=root,
+                    (
+                        c.Infra.SG,
+                        c.Infra.TEST,
+                        c.Infra.SG_UPDATE_ALL,
+                        c.Infra.SG_CONFIG_FLAG,
+                        str(temp_root / c.Infra.CODEMOD_CONFIG_FILENAME),
+                    ),
+                    toolchain_root=root,
+                ).unwrap()
+                cls._run_tool(
+                    temp_root,
+                    (
+                        c.Infra.SG,
+                        c.Infra.TEST,
+                        c.Infra.SG_CONFIG_FLAG,
+                        str(temp_root / c.Infra.CODEMOD_CONFIG_FILENAME),
+                    ),
+                    toolchain_root=root,
                 ).unwrap()
                 cls._run_tool(
                     temp_root,
@@ -421,8 +439,14 @@ class FlextInfraModGateEngine:
         *,
         finding_exit_code: int | None = None,
         toolchain_root: Path,
+        toolchain_root: Path,
     ) -> p.Result[p.Cli.CommandOutput]:
         """Run one AST tool and preserve its documented finding status.
+
+        The tool resolves through the ``toolchain_root`` repository's pinned
+        mise lock even when the process cwd is a staged fixture copy outside
+        that tree; a bare PATH resolution there falls back to an unpinned
+        global binary whose rule semantics can differ.
 
         The tool resolves through the ``toolchain_root`` repository's pinned
         mise lock even when the process cwd is a staged fixture copy outside
@@ -445,6 +469,15 @@ class FlextInfraModGateEngine:
             f"mod: start {' '.join(command[:2])} args={max(0, len(command) - 2)}\n",
         )
         sys.stderr.flush()
+        pinned = (
+            c.Infra.MISE,
+            "-C",
+            str(toolchain_root),
+            "exec",
+            "--",
+            *command,
+        )
+        run = u.Cli.run_raw(pinned, cwd=root, timeout=c.Infra.TIMEOUT_SHORT)
         pinned = (
             c.Infra.MISE,
             "-C",
