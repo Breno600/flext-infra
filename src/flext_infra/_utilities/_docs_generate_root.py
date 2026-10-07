@@ -23,7 +23,7 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
     @staticmethod
     def _aggregate_root_pages(
         repository_root: Path,
-        workspace_contract: m.Infra.DocsWorkspaceContract,
+        workspace_contract: t.JsonMapping,
         src_paths: t.SequenceOf[str],
         catalog_entries: t.SequenceOf[m.Infra.DocsCatalogEntry],
         exclude_docs: t.StrSequence,
@@ -58,7 +58,7 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
         cls,
         repository_root: Path,
         scopes: t.SequenceOf[m.Infra.DocScope],
-        workspace_contract: m.Infra.DocsWorkspaceContract,
+        workspace_contract: t.JsonMapping,
         exclude_docs: t.StrSequence,
     ) -> p.Result[
         t.Triple[

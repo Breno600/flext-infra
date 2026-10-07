@@ -988,7 +988,7 @@ class FlextInfraUtilitiesRopeImports:
         cls,
         rope_project: t.Infra.RopeProject,
         repository_root: Path,
-        entry: m.Infra.RopeWorkspaceEntry,
+        entry: m.Infra.RopeModuleIndexEntry,
     ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan, bool]]:
         """Plan the absolute-form rewrite of one indexed module's imports.
 
