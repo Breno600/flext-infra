@@ -39,4 +39,16 @@
           install -m 600 /dev/null "$store"
           printf 'https://x-access-token:%s@github.com\n' "$PRIVATE_DEPENDENCY_TOKEN" > "$store"
           printf 'FLEXT_SETUP_CREDENTIAL_STORE=%s\n' "$store" >> "$GITHUB_ENV"
+          # The store alone is not enough: it only authenticates when
+          # FLEXT_SETUP_CREDENTIAL_STORE survives every make and mise hop into
+          # the uv sync receipt. The cosmos-main CI evidence (runs
+          # 37536376992 and 37614946505, 2026-10) shows uv's git fetch still
+          # ran with no credential ("could not read Username") even though
+          # this step minted and stored the token. Install the url.insteadOf
+          # rewrite this fragment's header already documents: a global git
+          # config file is read from disk by every https://github.com/ fetch
+          # (uv's git subprocesses, submodules, bare git), so the minted
+          # token rides them regardless of environment propagation. Same
+          # mechanism as the cross-repo dependency credential fragment.
+          git config --global url."https://x-access-token:${PRIVATE_DEPENDENCY_TOKEN}@github.com/".insteadOf "https://github.com/"
 {%- endif -%}
