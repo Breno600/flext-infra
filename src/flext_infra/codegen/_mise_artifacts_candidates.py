@@ -57,7 +57,7 @@ class FlextInfraMiseArtifactsCandidates:
                     )
                 publications.append(
                     m.Infra.CodegenStagedFile(
-                        phase="mise",
+                        phase=c.Infra.CodegenStagedFilePhase.MISE,
                         project=project.layout.root,
                         before=before,
                         replacement=replacement.value,
