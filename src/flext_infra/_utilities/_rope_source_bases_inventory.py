@@ -190,26 +190,6 @@ class FlextInfraUtilitiesRopeSourceBasesInventory:
                             # external runtime table mutation, never a class
                             # rebind — the touched names stay unknown.
                             continue
-                        if all(
-                            isinstance(target, ast.Subscript)
-                            and isinstance(target.value, ast.Name)
-                            and (
-                                m.Infra.SubscriptRebind(
-                                    root_name=target.value.id,
-                                ).is_module_table_mutation
-                                or target.value.id not in bindings
-                                or bindings[target.value.id] is None
-                            )
-                            for target in targets
-                        ):
-                            # Runtime table mutations through plain module
-                            # dicts (CPython's http.server
-                            # ``_control_char_table[ord(...)] = ...``): a
-                            # subscript store through a name that is not a
-                            # live class binding can never redefine a class —
-                            # the touched names stay unknown to the binding
-                            # map (flext-2klp8).
-                            continue
                         if (
                             len(targets) == 1
                             and isinstance(targets[0], ast.Attribute)
