@@ -28,7 +28,252 @@ class FlextInfraUtilitiesDependenciesFamily:
     # Why: dependency_waves subscripts r[t.SequenceOf[t.StrSequence]] at runtime, so
     # the typings facade cannot be TYPE_CHECKING-only here. c -> t is a forward
     # facade import and stays cycle-free.
-    class FlextInfraUtilitiesDependenciesProfiles:
+    class _RequirementRewriting:
+        """Requirement-text parsing, evaluation, and constraint rewriting."""
+
+        @staticmethod
+        def active_requirement(
+            requirement: str,
+            *,
+            environment: t.StrMapping,
+        ) -> str | None:
+            """Evaluate a strictly parsed requirement on the consumer interpreter.
+
+            Returns:
+                The resulting ``str | None``.
+
+            """
+            parsed = Requirement(requirement)
+            return (
+                str(parsed)
+                if parsed.marker is None
+                or parsed.marker.evaluate(environment=dict(environment))
+                else None
+            )
+
+        @staticmethod
+        def dep_name(requirement: str, *, active_only: bool = False) -> str | None:
+            """Extract one normalized dependency name, optionally evaluating markers.
+
+            Returns:
+                The resulting ``str | None``.
+
+            """
+            text = requirement.strip()
+            if not text:
+                return None
+            try:
+                parsed = Requirement(text)
+            except InvalidRequirement:
+                parsed = None
+            if parsed is not None:
+                if (
+                    active_only
+                    and parsed.marker is not None
+                    and not parsed.marker.evaluate()
+                ):
+                    return None
+                return canonicalize_name(parsed.name)
+            if ";" in text:
+                text = text.split(";", maxsplit=1)[0].strip()
+            if " @ " in text:
+                text = text.split(" @ ", maxsplit=1)[0].strip()
+            for separator in ("[", "==", ">=", "<=", "~=", "!=", ">", "<"):
+                if separator in text:
+                    text = text.split(separator, maxsplit=1)[0].strip()
+            if "/" in text:
+                text = text.rsplit("/", maxsplit=1)[-1].strip()
+            normalized = text.lower()
+            return normalized or None
+
+        @staticmethod
+        def constraint_specifier(version: str) -> str:
+            """Return the resolved installed version as an open-ended dependency floor.
+
+            PEP 440 permits a local version label only with ``==`` or ``!=``, so a
+            floor built straight from a locally tagged resolution is rejected by
+            every build backend. The public release is what a floor means, and the
+            local build satisfies it.
+
+            A prerelease resolution is not a floor either: publishing ``>=X.Yb1``
+            forces every downstream consumer onto that beta, which is how the fleet
+            ended up pinned to ``pydantic>=2.14.0b1`` from a single runtime
+            resolution. The empty string means "this resolution cannot serve as a
+            public floor", and every caller keeps the declared constraint instead
+            of rewriting it.
+
+            Returns:
+                The resolved installed version as an open-ended dependency floor.
+
+            """
+            public_version = version.strip().partition("+")[0]
+            if not public_version:
+                return ""
+            try:
+                parsed_version = Version(public_version)
+            except InvalidVersion:
+                return ""
+            if parsed_version.is_prerelease:
+                return ""
+            return f">={public_version}"
+
+        @classmethod
+        def resolved_dependency_versions(cls) -> t.MappingKV[str, str]:
+            """Read registry versions from the runtime, not release provenance.
+
+            Returns:
+                The resulting ``t.MappingKV[str, str]``.
+
+            Raises:
+                TypeError: If Installed distribution has no Name metadata.
+                ValueError: If No registry packages found in the provisioned
+                    runtime; or if Invalid installed distribution name; or if
+                    Ambiguous installed version.
+
+            """
+            versions: MutableMapping[str, str] = {}
+            for distribution in u.installed_distributions():
+                if distribution.read_text("direct_url.json") is not None:
+                    continue
+                name = distribution.metadata.get("Name")
+                if name is None:
+                    msg = "Installed distribution has no Name metadata"
+                    raise TypeError(msg)
+                normalized = cls.dep_name(name)
+                if normalized is None:
+                    msg = f"Invalid installed distribution name: {name}"
+                    raise ValueError(msg)
+                version = distribution.version
+                if normalized in versions and versions[normalized] != version:
+                    msg = f"Ambiguous installed version: {normalized}"
+                    raise ValueError(msg)
+                versions[normalized] = version
+            if not versions:
+                msg = "No registry packages found in the provisioned runtime"
+                raise ValueError(msg)
+            return versions
+
+        @staticmethod
+        def _parsed_requirement(requirement_text: str) -> Requirement | None:
+            """Parse one PEP 508 requirement string, or None when invalid.
+
+            Returns:
+                The resulting ``Requirement | None``.
+            """
+            try:
+                return Requirement(requirement_text.strip())
+            except InvalidRequirement:
+                return None
+
+        @classmethod
+        def rewrite_requirement_constraint(
+            cls,
+            requirement: str,
+            *,
+            resolved_versions: t.MappingKV[str, str],
+            internal_names: t.StrSequence = (),
+        ) -> str | None:
+            """Rewrite one PEP 621 requirement to the resolved runtime floor.
+
+            Returns:
+                The resulting ``str | None``.
+
+            """
+            guard = cls._rewritable_requirement(requirement, internal_names)
+            if guard is None:
+                return None
+            dependency_name, requirement_part = guard
+            raw_text = requirement.strip()
+            requirement_part, marker_separator, marker_part = raw_text.partition(";")
+            head = cls._requirement_head(requirement_part)
+            locked_version = resolved_versions.get(dependency_name)
+            if locked_version is None:
+                return None
+            parsed = cls._parsed_requirement(requirement_part)
+            if parsed is not None and not parsed.specifier.contains(
+                locked_version,
+                prereleases=True,
+            ):
+                return None
+            retained = (
+                ()
+                if parsed is None
+                else tuple(
+                    str(specifier)
+                    for specifier in parsed.specifier
+                    if specifier.operator in {"<", "<=", "!="}
+                )
+            )
+            constraint = cls.constraint_specifier(locked_version)
+            if not constraint:
+                return None
+            if retained:
+                constraint = ",".join((constraint, *retained))
+            rewritten = f"{head}{constraint}"
+            marker_text = marker_part.strip()
+            if marker_separator and marker_text:
+                rewritten = f"{rewritten}; {marker_text}"
+            return rewritten if rewritten != raw_text else None
+
+        @classmethod
+        def _rewritable_requirement(
+            cls,
+            requirement: str,
+            internal_names: t.StrSequence,
+        ) -> t.Pair[str, str] | None:
+            """Return the dependency name and part of one rewritable requirement.
+
+            Returns:
+                The dependency name and requirement part, or None when the
+                requirement carries a direct URL, an unparsable head, or an
+                internal dependency name.
+
+            """
+            raw_text = requirement.strip()
+            if not raw_text or " @ " in raw_text:
+                return None
+            requirement_part = raw_text.partition(";")[0]
+            if " @ " in requirement_part:
+                return None
+            head = cls._requirement_head(requirement_part)
+            dependency_name = cls.dep_name(head)
+            if dependency_name is None or dependency_name in set(internal_names):
+                return None
+            return dependency_name, requirement_part
+
+        @staticmethod
+        def _requirement_head(requirement_part: str) -> str:
+            """Return the canonical head of one requirement part.
+
+            Returns:
+                The resulting ``str``.
+
+            """
+            head_match = c.Infra.PEP621_REQUIREMENT_HEAD_RE.match(
+                requirement_part.strip(),
+            )
+            return head_match.group("head").strip() if head_match is not None else ""
+
+        @staticmethod
+        def dedupe_specs(specs: t.StrSequence) -> t.StrSequence:
+            """Return deterministic unique dependency specs keyed by normalized name.
+
+            Returns:
+                Deterministic unique dependency specs keyed by normalized name.
+
+            """
+            selected_by_name: MutableMapping[str, str] = {}
+            for raw in specs:
+                item = raw.strip()
+                if not item:
+                    continue
+                dependency_name = FlextInfraUtilitiesDependenciesProfiles.dep_name(item)
+                if dependency_name is None or dependency_name in selected_by_name:
+                    continue
+                selected_by_name[dependency_name] = item
+            return tuple(selected_by_name[name] for name in sorted(selected_by_name))
+
+    class FlextInfraUtilitiesDependenciesProfiles(_RequirementRewriting):
         """Dev-group and dependency-profile surfaces of the dependency facade."""
 
         @staticmethod
@@ -301,26 +546,6 @@ class FlextInfraUtilitiesDependenciesFamily:
             return []
 
         @staticmethod
-        def active_requirement(
-            requirement: str,
-            *,
-            environment: t.StrMapping,
-        ) -> str | None:
-            """Evaluate a strictly parsed requirement on the consumer interpreter.
-
-            Returns:
-                The resulting ``str | None``.
-
-            """
-            parsed = Requirement(requirement)
-            return (
-                str(parsed)
-                if parsed.marker is None
-                or parsed.marker.evaluate(environment=dict(environment))
-                else None
-            )
-
-        @staticmethod
         def dependency_extras(requirements: t.StrSequence, name: str) -> str:
             """Retain the union of requested extras for one selected distribution.
 
@@ -351,41 +576,6 @@ class FlextInfraUtilitiesDependenciesFamily:
             )
             marker = f"; {parsed.marker}" if parsed.marker is not None else ""
             return f"{parsed.name}{source}{marker}"
-
-        @staticmethod
-        def dep_name(requirement: str, *, active_only: bool = False) -> str | None:
-            """Extract one normalized dependency name, optionally evaluating markers.
-
-            Returns:
-                The resulting ``str | None``.
-
-            """
-            text = requirement.strip()
-            if not text:
-                return None
-            try:
-                parsed = Requirement(text)
-            except InvalidRequirement:
-                parsed = None
-            if parsed is not None:
-                if (
-                    active_only
-                    and parsed.marker is not None
-                    and not parsed.marker.evaluate()
-                ):
-                    return None
-                return canonicalize_name(parsed.name)
-            if ";" in text:
-                text = text.split(";", maxsplit=1)[0].strip()
-            if " @ " in text:
-                text = text.split(" @ ", maxsplit=1)[0].strip()
-            for separator in ("[", "==", ">=", "<=", "~=", "!=", ">", "<"):
-                if separator in text:
-                    text = text.split(separator, maxsplit=1)[0].strip()
-            if "/" in text:
-                text = text.rsplit("/", maxsplit=1)[-1].strip()
-            normalized = text.lower()
-            return normalized or None
 
         @classmethod
         def project_dependency_names_from_payload(
@@ -597,193 +787,6 @@ class FlextInfraUtilitiesDependenciesFamily:
                         seen.add(resolved)
                         discovered.append(resolved)
             return tuple(discovered)
-
-        @staticmethod
-        def constraint_specifier(version: str) -> str:
-            """Return the resolved installed version as an open-ended dependency floor.
-
-            PEP 440 permits a local version label only with ``==`` or ``!=``, so a
-            floor built straight from a locally tagged resolution is rejected by
-            every build backend. The public release is what a floor means, and the
-            local build satisfies it.
-
-            A prerelease resolution is not a floor either: publishing ``>=X.Yb1``
-            forces every downstream consumer onto that beta, which is how the fleet
-            ended up pinned to ``pydantic>=2.14.0b1`` from a single runtime
-            resolution. The empty string means "this resolution cannot serve as a
-            public floor", and every caller keeps the declared constraint instead
-            of rewriting it.
-
-            Returns:
-                The resolved installed version as an open-ended dependency floor.
-
-            """
-            public_version = version.strip().partition("+")[0]
-            if not public_version:
-                return ""
-            try:
-                parsed_version = Version(public_version)
-            except InvalidVersion:
-                return ""
-            if parsed_version.is_prerelease:
-                return ""
-            return f">={public_version}"
-
-        @classmethod
-        def resolved_dependency_versions(cls) -> t.MappingKV[str, str]:
-            """Read registry versions from the runtime, not release provenance.
-
-            Returns:
-                The resulting ``t.MappingKV[str, str]``.
-
-            Raises:
-                TypeError: If Installed distribution has no Name metadata.
-                ValueError: If No registry packages found in the provisioned
-                    runtime; or if Invalid installed distribution name; or if
-                    Ambiguous installed version.
-
-            """
-            versions: MutableMapping[str, str] = {}
-            for distribution in u.installed_distributions():
-                if distribution.read_text("direct_url.json") is not None:
-                    continue
-                name = distribution.metadata.get("Name")
-                if name is None:
-                    msg = "Installed distribution has no Name metadata"
-                    raise TypeError(msg)
-                normalized = cls.dep_name(name)
-                if normalized is None:
-                    msg = f"Invalid installed distribution name: {name}"
-                    raise ValueError(msg)
-                version = distribution.version
-                if normalized in versions and versions[normalized] != version:
-                    msg = f"Ambiguous installed version: {normalized}"
-                    raise ValueError(msg)
-                versions[normalized] = version
-            if not versions:
-                msg = "No registry packages found in the provisioned runtime"
-                raise ValueError(msg)
-            return versions
-
-        @staticmethod
-        def _parsed_requirement(requirement_text: str) -> Requirement | None:
-            """Parse one PEP 508 requirement string, or None when invalid.
-
-            Returns:
-                The resulting ``Requirement | None``.
-            """
-            try:
-                return Requirement(requirement_text.strip())
-            except InvalidRequirement:
-                return None
-
-        @classmethod
-        def rewrite_requirement_constraint(
-            cls,
-            requirement: str,
-            *,
-            resolved_versions: t.MappingKV[str, str],
-            internal_names: t.StrSequence = (),
-        ) -> str | None:
-            """Rewrite one PEP 621 requirement to the resolved runtime floor.
-
-            Returns:
-                The resulting ``str | None``.
-
-            """
-            guard = cls._rewritable_requirement(requirement, internal_names)
-            if guard is None:
-                return None
-            dependency_name, requirement_part = guard
-            raw_text = requirement.strip()
-            requirement_part, marker_separator, marker_part = raw_text.partition(";")
-            head = cls._requirement_head(requirement_part)
-            locked_version = resolved_versions.get(dependency_name)
-            if locked_version is None:
-                return None
-            parsed = cls._parsed_requirement(requirement_part)
-            if parsed is not None and not parsed.specifier.contains(
-                locked_version,
-                prereleases=True,
-            ):
-                return None
-            retained = (
-                ()
-                if parsed is None
-                else tuple(
-                    str(specifier)
-                    for specifier in parsed.specifier
-                    if specifier.operator in {"<", "<=", "!="}
-                )
-            )
-            constraint = cls.constraint_specifier(locked_version)
-            if not constraint:
-                return None
-            if retained:
-                constraint = ",".join((constraint, *retained))
-            rewritten = f"{head}{constraint}"
-            marker_text = marker_part.strip()
-            if marker_separator and marker_text:
-                rewritten = f"{rewritten}; {marker_text}"
-            return rewritten if rewritten != raw_text else None
-
-        @classmethod
-        def _rewritable_requirement(
-            cls,
-            requirement: str,
-            internal_names: t.StrSequence,
-        ) -> t.Pair[str, str] | None:
-            """Return the dependency name and part of one rewritable requirement.
-
-            Returns:
-                The dependency name and requirement part, or None when the
-                requirement carries a direct URL, an unparsable head, or an
-                internal dependency name.
-
-            """
-            raw_text = requirement.strip()
-            if not raw_text or " @ " in raw_text:
-                return None
-            requirement_part = raw_text.partition(";")[0]
-            if " @ " in requirement_part:
-                return None
-            head = cls._requirement_head(requirement_part)
-            dependency_name = cls.dep_name(head)
-            if dependency_name is None or dependency_name in set(internal_names):
-                return None
-            return dependency_name, requirement_part
-
-        @staticmethod
-        def _requirement_head(requirement_part: str) -> str:
-            """Return the canonical head of one requirement part.
-
-            Returns:
-                The resulting ``str``.
-
-            """
-            head_match = c.Infra.PEP621_REQUIREMENT_HEAD_RE.match(
-                requirement_part.strip(),
-            )
-            return head_match.group("head").strip() if head_match is not None else ""
-
-        @staticmethod
-        def dedupe_specs(specs: t.StrSequence) -> t.StrSequence:
-            """Return deterministic unique dependency specs keyed by normalized name.
-
-            Returns:
-                Deterministic unique dependency specs keyed by normalized name.
-
-            """
-            selected_by_name: MutableMapping[str, str] = {}
-            for raw in specs:
-                item = raw.strip()
-                if not item:
-                    continue
-                dependency_name = FlextInfraUtilitiesDependenciesProfiles.dep_name(item)
-                if dependency_name is None or dependency_name in selected_by_name:
-                    continue
-                selected_by_name[dependency_name] = item
-            return tuple(selected_by_name[name] for name in sorted(selected_by_name))
 
         @classmethod
         def declared_dependency_names(
