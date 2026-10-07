@@ -12,8 +12,8 @@ import libcst as cst
 from libcst.codemod import CodemodContext
 from libcst.codemod.visitors import AddImportsVisitor
 
-from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverNestingReferences
 from flext_infra import t
+from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverNestingReferences
 
 
 class FlextInfraUtilitiesSemanticCutoverNestingCst(

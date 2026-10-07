@@ -14,7 +14,12 @@ from collections.abc import MutableMapping
 from importlib.util import resolve_name
 from pathlib import Path
 
-from flext_infra import c, t, p, m
+from flext_infra import c, m, p, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesRopeAnalysisSourceScan,
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeRuntime,
+)
 
 
 class FlextInfraUtilitiesRopeSourceBases:
@@ -214,7 +219,6 @@ class FlextInfraUtilitiesRopeSourceBases:
             ValueError: If a required binding has unsupported source semantics.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisSourceScan, FlextInfraUtilitiesRopeCore, FlextInfraUtilitiesRopeRuntime
         resource = (
             FlextInfraUtilitiesRopeCore.resolve_resource_from_path(project, path)
             if path.is_file()
@@ -515,7 +519,6 @@ class FlextInfraUtilitiesRopeSourceBases:
         the resolution helpers propagate unchanged.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeCore, FlextInfraUtilitiesRopeRuntime
         definitions: MutableMapping[str, m.Infra.SourceClassDefinition] = {}
         sys.setrecursionlimit(max(sys.getrecursionlimit(), 4096))
         modules = {

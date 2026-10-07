@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 from flext_infra import c, u
 
 if TYPE_CHECKING:
-    from flext_infra import t, p, m
+    from flext_infra import m, p, t
 
 
 class FlextInfraSkillRuleRunnerMixin:

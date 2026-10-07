@@ -10,13 +10,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
+from flext_infra import c, m
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
-from flext_infra import c, m
 
 if TYPE_CHECKING:
-    from flext_infra import t, p
+    from flext_infra import p, t
 
 
 class FlextInfraMiseArtifactsCandidates:

@@ -11,7 +11,12 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import ClassVar, TypeGuard
 
-from flext_infra import t, p, m
+from flext_infra import m, p, t
+from flext_infra._settings import settings
+from flext_infra._utilities import (
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeRuntime,
+)
 
 
 class FlextInfraUtilitiesRopeAnalysisAstHelpers:
@@ -56,7 +61,6 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
             The resulting ``t.Triple[str, str, int]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeCore
         file_path = FlextInfraUtilitiesRopeCore.resource_file_path(
             rope_project,
             resource,
@@ -123,7 +127,6 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
             The resulting ``t.Infra.RopePyModule``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
         rope_project = FlextInfraUtilitiesRopeAnalysisAstHelpers._shared_parse_project()
         result: t.Infra.RopePyModule = (
             FlextInfraUtilitiesRopeRuntime.build_string_module(rope_project, source)
@@ -138,7 +141,6 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
             A process-wide rope project usable for string parsing.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeCore
         cached = FlextInfraUtilitiesRopeAnalysisAstHelpers._parse_project
         if cached is None:
             # Root-cause fix: the anchor was a hardcoded
@@ -147,8 +149,6 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
             # settings SSOT, with cwd as last resort — both exist where CLI runs.
             # Path() coercion keeps this correct while settings migrates the
             # field from str to Path (both accepted).
-            from flext_infra._settings import settings
-
             repository_root = settings.Infra.repository_root
             anchor = Path(repository_root) if repository_root else Path.cwd()
             cached = FlextInfraUtilitiesRopeCore.init_rope_project(anchor)

@@ -6,7 +6,9 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_infra import c, t, m
+from rope.base import codeanalyze
+
+from flext_infra import c, m, t
 
 
 class FlextInfraUtilitiesRopeStructure:
@@ -20,8 +22,6 @@ class FlextInfraUtilitiesRopeStructure:
             Rope logical regions with scope and TYPE_CHECKING context.
 
         """
-        from rope.base import codeanalyze
-
         if not source:
             return ()
         lines = codeanalyze.SourceLinesAdapter(source)

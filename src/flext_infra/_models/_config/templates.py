@@ -11,10 +11,12 @@ from typing import Annotated, Literal, Self
 
 from flext_cli import m
 
-from flext_infra._constants import FlextInfraConstantsCodegenProject
-from flext_infra._models import FlextInfraConfigModelsContract
-from flext_infra._models import FlextInfraConfigModelsScaffold
 from flext_infra import t
+from flext_infra._constants import FlextInfraConstantsCodegenProject
+from flext_infra._models import (
+    FlextInfraConfigModelsContract,
+    FlextInfraConfigModelsScaffold,
+)
 
 
 class FlextInfraConfigModelsTemplates:

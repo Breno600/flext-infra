@@ -10,7 +10,7 @@ import io
 import token
 import tokenize
 
-from flext_infra import c, t, m
+from flext_infra import c, m, t
 
 
 class FlextInfraUtilitiesTransformerHeaderParser:

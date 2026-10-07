@@ -10,10 +10,10 @@ from collections import defaultdict
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
+from flext_infra import c
 from flext_infra.codegen._codegen_generation_imports import (
     FlextInfraCodegenGenerationImportsMixin,
 )
-from flext_infra import c
 
 if TYPE_CHECKING:
     from flext_infra import t

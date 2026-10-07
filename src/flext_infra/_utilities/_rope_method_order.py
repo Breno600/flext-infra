@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from flext_infra import c, t, m
+from flext_infra import c, m, t
 
 
 class FlextInfraUtilitiesRopeMethodOrderMixin:

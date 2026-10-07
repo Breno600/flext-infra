@@ -9,8 +9,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_core import r
+from flext_infra import c, m, p, t, u
 from flext_infra.codegen._conform import FlextInfraCodegenConformExecute
-from flext_infra import c, t, p, m, u
 
 if TYPE_CHECKING:
     from pathlib import Path

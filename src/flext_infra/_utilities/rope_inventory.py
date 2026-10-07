@@ -9,7 +9,13 @@ from __future__ import annotations
 from operator import itemgetter
 from pathlib import Path
 
-from flext_infra import c, t, p, m
+from flext_infra import c, m, p, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesCodegenNamespace,
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeImports,
+    FlextInfraUtilitiesRopeRuntime,
+)
 
 
 class FlextInfraUtilitiesRopeInventory:
@@ -35,7 +41,6 @@ class FlextInfraUtilitiesRopeInventory:
             ValueError: If path is outside the active rope workspace.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeCore, FlextInfraUtilitiesRopeRuntime
         rope_project = rope_workspace.rope_project
         resource = rope_workspace.resource(file_path)
         if resource is None:
@@ -256,7 +261,6 @@ class FlextInfraUtilitiesRopeInventory:
             The resulting ``t.VariadicTuple[t.Pair[str, t.Infra.RopePyName]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
         candidates: list[t.Triple[int, str, t.Infra.RopePyName]] = []
         for name, pyname in names.items():
             if FlextInfraUtilitiesRopeRuntime.imported_name(pyname):
@@ -377,7 +381,6 @@ class FlextInfraUtilitiesRopeInventory:
             The resulting ``p.Infra.RopeScopeDsl | None``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
         location = pyname.get_definition_location()
         _, line = location
         if line is None:
@@ -411,7 +414,6 @@ class FlextInfraUtilitiesRopeInventory:
             The resulting ``str``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
         result: str
         if FlextInfraUtilitiesRopeRuntime.parameter_name(pyname):
             result = "parameter"
@@ -460,7 +462,6 @@ class FlextInfraUtilitiesRopeInventory:
                 t.VariadicTuple[m.Infra.ReferenceSite]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeCore, FlextInfraUtilitiesRopeImports
         name = options.name
         lines = options.source.splitlines(keepends=True)
         offset = FlextInfraUtilitiesRopeCore.find_identifier_offset_in_lines(
@@ -559,7 +560,6 @@ class FlextInfraUtilitiesRopeInventory:
             The resulting ``Path | None``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeImports
         return FlextInfraUtilitiesRopeImports.location_file_path(location)
 
     @staticmethod
@@ -725,7 +725,6 @@ class FlextInfraUtilitiesRopeInventory:
             The expected tier for a module convention.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
         expected: str = convention.module_policy.expected_family or ""
         if expected:
             return expected

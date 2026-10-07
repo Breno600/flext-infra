@@ -14,8 +14,9 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
+from flext_infra import m, p, t, u
 from flext_infra.base import s
-from flext_infra import t, p, m, u
+from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -48,7 +49,6 @@ class FlextInfraNamespaceValidator(s[bool]):
             The resulting ``p.Result[m.Infra.ValidationReport]``.
 
         """
-        from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
         project_root = self.repository_root.resolve()
         scanned = FlextInfraModGateEngine.scan(project_root, fix=False)
         if scanned.failure:

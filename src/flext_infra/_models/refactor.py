@@ -14,10 +14,12 @@ from typing import TYPE_CHECKING, Annotated, ClassVar
 
 from flext_cli import m
 
-from flext_infra._models import FlextInfraModelsMixins
-from flext_infra._models import FlextInfraModelsRefactorGrep
-from flext_infra._models import FlextInfraModelsNamespaceEnforcer
 from flext_infra import t
+from flext_infra._models import (
+    FlextInfraModelsMixins,
+    FlextInfraModelsNamespaceEnforcer,
+    FlextInfraModelsRefactorGrep,
+)
 
 if TYPE_CHECKING:
     from flext_infra._models import FlextInfraModelsScan

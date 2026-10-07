@@ -9,8 +9,9 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from flext_infra._config import config
 from flext_infra import c
+from flext_infra._config import config
+from flext_infra.validate.cprofile_report import FlextInfraCProfileReport
 
 
 class FlextInfraCProfileEntry:
@@ -24,7 +25,6 @@ class FlextInfraCProfileEntry:
             The resulting ``int``.
 
         """
-        from flext_infra.validate.cprofile_report import FlextInfraCProfileReport
         report_root = Path.cwd().resolve() / ".reports" / "cprofile"
         profile_path = (
             Path(sys.argv[1]) if len(sys.argv) > 1 else report_root / "pytest.pstats"

@@ -12,8 +12,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
+from flext_infra import c, m, t
 from flext_infra._config import config
-from flext_infra import c, t, m
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDocsCommandContractMixin,
+    FlextInfraUtilitiesDocsGeneratePlanMixin,
+    FlextInfraUtilitiesWorkspaceManifest,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -94,8 +99,6 @@ class FlextInfraUtilitiesDocsGuidesMixin:
             ValueError: If ``issues``.
 
         """
-
-        from flext_infra._utilities import FlextInfraUtilitiesDocsCommandContractMixin, FlextInfraUtilitiesDocsGeneratePlanMixin
         source_root = repository_root / c.Infra.DIR_DOCS / "guides"
         destination_root = scope.path / c.Infra.DIR_DOCS / "guides"
         if source_root == destination_root:
@@ -168,9 +171,9 @@ class FlextInfraUtilitiesDocsGuidesMixin:
                 owned.add(path)
         artifacts: list[t.Infra.DocsRenderedArtifactTuple] = []
         expected_paths = {destination_root / path.name for path in sources}
-        from flext_infra import u
-
-        loaded = u.Infra.load_workspace_manifest(repository_root)
+        loaded = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
+            repository_root,
+        )
         if loaded.failure:
             return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
                 loaded,

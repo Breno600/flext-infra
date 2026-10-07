@@ -17,7 +17,7 @@ from flext_infra import c, u
 from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
-    from flext_infra import t, m
+    from flext_infra import m, t
 
 
 class FlextInfraMarkdownGateBase(FlextInfraGate):

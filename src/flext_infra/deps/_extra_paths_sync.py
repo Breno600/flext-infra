@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-    from flext_infra import t, p
+    from flext_infra import p, t
 
 
 class FlextInfraExtraPathsSyncMixin:

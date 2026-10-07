@@ -11,7 +11,10 @@ from os.path import commonpath
 from pathlib import Path
 
 from flext_core import r
-from flext_infra import c, t, p, m, u
+from flext_infra import c, m, p, t, u
+from flext_infra.codemod._rename_sources import FlextInfraRenameSources
+from flext_infra.codemod._rename_symbols import FlextInfraRenameSymbols
+from flext_infra.transformers import FlextInfraSemanticPublication
 
 
 class FlextInfraApplyRenames:
@@ -24,8 +27,6 @@ class FlextInfraApplyRenames:
         roots: t.SequenceOf[Path],
         pairs: t.SequenceOf[t.Pair[str, str]],
     ) -> t.Pair[t.VariadicTuple[m.Infra.SemanticFilePlan], int]:
-        from flext_infra.codemod._rename_sources import FlextInfraRenameSources
-        from flext_infra.codemod._rename_symbols import FlextInfraRenameSymbols
         inventory = FlextInfraRenameSources.inventory(roots, params)
         sources = {
             path: state.content.decode(c.Cli.ENCODING_DEFAULT)
@@ -87,8 +88,6 @@ class FlextInfraApplyRenames:
             The resulting ``p.Result[m.Infra.ApplyRenamesReport]``.
 
         """
-        from flext_infra.codemod._rename_sources import FlextInfraRenameSources
-        from flext_infra.transformers import FlextInfraSemanticPublication
         roots = tuple(sorted({Path(value).resolve() for value in params.roots}))
         for root in roots:
             if not root.is_dir():

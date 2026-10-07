@@ -11,8 +11,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
+from flext_infra import c, m, t, u
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
-from flext_infra import c, t, m, u
+from flext_infra.codegen._mise_artifacts_derivation import (
+    FlextInfraMiseArtifactsDerivation,
+)
+from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -131,7 +135,6 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra.codegen._mise_artifacts_derivation import FlextInfraMiseArtifactsDerivation
         declared = self._validate_config(project_root)
         if declared.failure:
             return declared
@@ -145,8 +148,6 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra.codegen._mise_artifacts_derivation import FlextInfraMiseArtifactsDerivation
-        from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
         declared = self._validate_config(self.repository_root)
         if declared.failure or self.config_only:
             return declared

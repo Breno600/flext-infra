@@ -11,6 +11,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import Annotated, override
 
+from flext_infra import c, m, p, t, u
 from flext_infra.codegen._lazy_init_planner_aliases import (
     FlextInfraCodegenLazyInitPlannerAliasesMixin,
 )
@@ -32,7 +33,6 @@ from flext_infra.codegen._lazy_init_planner_parents import (
 from flext_infra.codegen._lazy_init_planner_public_root import (
     FlextInfraCodegenLazyInitPlannerPublicRootMixin,
 )
-from flext_infra import c, t, p, m, u
 
 
 class FlextInfraCodegenLazyInitPlanner(

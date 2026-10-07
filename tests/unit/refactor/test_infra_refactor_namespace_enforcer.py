@@ -328,3 +328,155 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         published = json.loads(receipt.read_text(encoding="utf-8"))
         tm.that(published["workspace"], eq=str(workspace))
         tm.that(published["projects"], empty=False)
+
+    @staticmethod
+    def test_namespace_enforcer_report_mode_never_fails_on_findings(
+        tmp_path: Path,
+    ) -> None:
+        """The report verdict returns findings; only tool failures fail."""
+        workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path)
+        _ = (pkg / "service.py").write_text(
+            "from __future__ import annotations\n"
+            "from typing import Protocol\n\n"
+            "class ServiceContract(Protocol):\n"
+            '    """Service contract awaiting relocation."""\n'
+            "\n"
+            "    def run(self) -> str:\n"
+            '        """Run the contract."""\n'
+            "        ...\n",
+            encoding="utf-8",
+        )
+        u.Tests.provision_checkout(workspace)
+
+        result = FlextInfraNamespaceEnforcer.execute_command(
+            m.Infra.RefactorNamespaceEnforceInput(repository_root=workspace),
+        )
+
+        tm.that(result.failure, eq=False)
+        tm.that(result.value.projects[0].relocation_findings > 0, eq=True)
+        tm.that(result.value.has_violations, eq=True)
+
+    @staticmethod
+    def test_namespace_enforcer_surfaces_detection_only_findings_as_warnings(
+        tmp_path: Path,
+    ) -> None:
+        """Detection-only findings count as warnings, never as residue."""
+        workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path)
+        _ = (pkg / "service.py").write_text(
+            "from __future__ import annotations\n"
+            "import logging\n"
+            "from typing import Protocol\n\n"
+            "logger = logging.getLogger(__name__)\n\n"
+            "class ServiceContract(Protocol):\n"
+            '    """Service contract under relocation."""\n'
+            "\n"
+            "    def run(self) -> str:\n"
+            '        """Run the contract."""\n'
+            "        ...\n",
+            encoding="utf-8",
+        )
+        u.Tests.provision_checkout(workspace)
+
+        report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
+            apply=True,
+        )
+
+        tm.that(report.projects[0].relocation_findings, eq=0)
+        tm.that(report.projects[0].warnings > 0, eq=True)
+
+    @staticmethod
+    def test_namespace_enforcer_counts_applied_relocations(
+        tmp_path: Path,
+    ) -> None:
+        """The apply pass reports how many relocations it performed."""
+        workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path)
+        _ = (pkg / "service.py").write_text(
+            "from __future__ import annotations\n"
+            "from typing import Protocol\n\n"
+            "class ServiceContract(Protocol):\n"
+            '    """Service contract under relocation."""\n'
+            "\n"
+            "    def run(self) -> str:\n"
+            '        """Run the contract."""\n'
+            "        ...\n",
+            encoding="utf-8",
+        )
+        u.Tests.provision_checkout(workspace)
+        enforcer = FlextInfraNamespaceEnforcer(repository_root=workspace)
+
+        pending = enforcer.enforce(apply=False)
+        applied = enforcer.enforce(apply=True)
+
+        tm.that(pending.projects[0].relocation_findings > 0, eq=True)
+        tm.that(applied.projects[0].relocation_findings, eq=0)
+        tm.that(applied.projects[0].applied_relocations > 0, eq=True)
+
+    @staticmethod
+    def test_namespace_enforcer_isolates_one_failed_project(
+        tmp_path: Path,
+    ) -> None:
+        """A project that fails enforcement is reported; the sweep continues."""
+        workspace = tmp_path / "workspace"
+        _healthy, healthy_pkg = u.Tests.demo_project(workspace, name="healthy-proj")
+        _ = (healthy_pkg / "service.py").write_text(
+            "from __future__ import annotations\n"
+            "from typing import Protocol\n\n"
+            "class ServiceContract(Protocol):\n"
+            '    """Service contract under relocation."""\n'
+            "\n"
+            "    def run(self) -> str:\n"
+            '        """Run the contract."""\n'
+            "        ...\n",
+            encoding="utf-8",
+        )
+        broken, _broken_pkg = u.Tests.demo_project(workspace, name="broken-proj")
+        _ = (broken / "pyproject.toml").write_text(
+            "[project]\nname='broken-proj'\n\n"
+            "[tool.flext.namespace]\nenabled = 'yes'\n",
+            encoding="utf-8",
+        )
+        u.Tests.declare_workspace_projects(workspace, ("healthy-proj", "broken-proj"))
+        u.Tests.provision_checkout(workspace)
+
+        report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
+            apply=True,
+        )
+
+        tm.that(report.has_errors, eq=True)
+        by_name = {project.project: project for project in report.projects}
+        tm.that(by_name["broken-proj"].error, has="must be a boolean")
+        tm.that(by_name["healthy-proj"].error, eq=None)
+        tm.that(by_name["healthy-proj"].relocation_findings, eq=0)
+        tm.that((healthy_pkg / "protocols.py").exists(), eq=True)
+
+    @staticmethod
+    def test_namespace_enforcer_render_text_reports_the_totals(
+        tmp_path: Path,
+    ) -> None:
+        """The text report carries the aggregate counters the operator reads."""
+        workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path)
+        _ = (pkg / "service.py").write_text(
+            "from __future__ import annotations\n"
+            "import logging\n"
+            "from typing import Protocol\n\n"
+            "logger = logging.getLogger(__name__)\n\n"
+            "class ServiceContract(Protocol):\n"
+            '    """Service contract under relocation."""\n'
+            "\n"
+            "    def run(self) -> str:\n"
+            '        """Run the contract."""\n'
+            "        ...\n",
+            encoding="utf-8",
+        )
+        u.Tests.provision_checkout(workspace)
+
+        report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
+            apply=True,
+        )
+        rendered = FlextInfraNamespaceEnforcer.render_text(report)
+
+        tm.that(rendered, has="Violations:")
+        tm.that(rendered, has="Relocations applied:")
+        tm.that(rendered, has="Warnings:")
+        tm.that(rendered, has="Files scanned:")
+        tm.that(rendered, has="failed passes:")

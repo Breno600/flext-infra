@@ -6,17 +6,20 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import traceback
 from typing import TYPE_CHECKING, assert_never
 
-from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverAliases
-from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverDynamicEnvironment
-from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverFacadeBases
-from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverModelFields
-from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverModuleLayout
-from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverNesting
-from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverPrivateImports
-from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverSelfFacade
-from flext_infra import c, t, m
+from flext_infra import c, m, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesSemanticCutoverAliases,
+    FlextInfraUtilitiesSemanticCutoverDynamicEnvironment,
+    FlextInfraUtilitiesSemanticCutoverFacadeBases,
+    FlextInfraUtilitiesSemanticCutoverModelFields,
+    FlextInfraUtilitiesSemanticCutoverModuleLayout,
+    FlextInfraUtilitiesSemanticCutoverNesting,
+    FlextInfraUtilitiesSemanticCutoverPrivateImports,
+    FlextInfraUtilitiesSemanticCutoverSelfFacade,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -58,8 +61,6 @@ class FlextInfraUtilitiesSemanticCutoverBase(
         try:
             return cls._plan_dispatch(phase, rope_workspace, sources, findings)
         except Exception:
-            import traceback
-
             traceback.print_exc()
             raise
 
@@ -74,8 +75,6 @@ class FlextInfraUtilitiesSemanticCutoverBase(
         try:
             return cls._plan_phases(phase, rope_workspace, sources, findings)
         except Exception:
-            import traceback
-
             traceback.print_exc()
             raise
 

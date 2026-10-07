@@ -10,9 +10,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
+from flext_infra import c, m, t, u
 from flext_infra._config import config
 from flext_infra.base import s
-from flext_infra import c, t, m, u
 from flext_infra.workspace._governance import FlextInfraWorkspaceGovernanceMixin
 
 if TYPE_CHECKING:

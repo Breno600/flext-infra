@@ -13,8 +13,8 @@ from pathlib import Path
 from git import GitCommandError, GitConfigParser
 
 from flext_core import r
+from flext_infra import c, m, p, t
 from flext_infra._utilities import FlextInfraUtilitiesGitSemanticIdentityMixin
-from flext_infra import c, t, p, m
 
 
 class FlextInfraUtilitiesGitSemanticSubmoduleMixin(
@@ -82,6 +82,7 @@ class FlextInfraUtilitiesGitSemanticSubmoduleMixin(
         Returns:
             The resulting ``p.Result[t.StrMapping]``.
 
+        from configparser import Error as ConfigParserError
         """
         gitmodules = request.repo_root / c.Infra.GITMODULES
         if not gitmodules.is_file():

@@ -8,10 +8,16 @@ from __future__ import annotations
 
 import re
 
+from flext_infra import c, m, t
 from flext_infra._config import config
-from flext_infra._utilities import FlextInfraUtilitiesDocsAuditDetectorsMixin
-from flext_infra._utilities import FlextInfraUtilitiesDocsCommandContractMixin
-from flext_infra import c, t, m
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDocs,
+    FlextInfraUtilitiesDocsApi,
+    FlextInfraUtilitiesDocsAuditDetectorsMixin,
+    FlextInfraUtilitiesDocsCommandContractMixin,
+    FlextInfraUtilitiesDocsGithubLinks,
+    FlextInfraUtilitiesDocsScope,
+)
 
 
 class FlextInfraUtilitiesDocsAudit(
@@ -41,7 +47,6 @@ class FlextInfraUtilitiesDocsAudit(
             Whether the target should be ignored as prose, not a path.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDocs
         if FlextInfraUtilitiesDocs.docs_is_secure_web_url(target):
             return False
         looks_like_prose = ".md" not in raw and "/" not in raw
@@ -98,7 +103,6 @@ class FlextInfraUtilitiesDocsAudit(
         # heuristic) owns docs policy resolution — a workspace-root project
         # scope IS its own repository root, and only a genuine member-project
         # scope carries a `repository_root_override` set at scope build time.
-        from flext_infra._utilities import FlextInfraUtilitiesDocsScope
         payload = FlextInfraUtilitiesDocsScope.load_config(scope.repository_root)
         return m.Infra.DocsAuditPolicySpec.model_validate(payload.get("audit", {}))
 
@@ -122,7 +126,6 @@ class FlextInfraUtilitiesDocsAudit(
             Public symbol names that are still exported by one docs scope.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDocsApi
         if not scope.package_name:
             return set()
         contract = FlextInfraUtilitiesDocsApi.public_contract(
@@ -147,7 +150,6 @@ class FlextInfraUtilitiesDocsAudit(
             The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDocs, FlextInfraUtilitiesDocsGithubLinks
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
             rel = md_file.relative_to(scope.path).as_posix()
@@ -222,7 +224,6 @@ class FlextInfraUtilitiesDocsAudit(
             The resulting ``t.SequenceOf[m.Infra.AuditIssue]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDocs
         policy = FlextInfraUtilitiesDocsAudit.docs_audit_policy(scope)
         tokens = policy.stale_symbols
         exempt_paths = set(policy.stale_symbol_exempt_paths)
@@ -270,7 +271,6 @@ class FlextInfraUtilitiesDocsAudit(
             The resulting ``t.StrSequence``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDocs
         metric_lines: t.MutableSequenceOf[str] = []
         if docstring_coverage is not None:
             metric_lines.append(

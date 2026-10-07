@@ -12,10 +12,8 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pytest
-
 from flext_tests import tm
 
 from flext_infra.codegen.fixer import FlextInfraCodegenFixer
@@ -26,9 +24,6 @@ from flext_infra.refactor.namespace_relocations import (
 )
 from tests import u
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
 
 def _finding(
     file: Path,
@@ -36,7 +31,11 @@ def _finding(
     module: str,
     name: str,
 ) -> m.Infra.ModScanFinding:
-    """Build one minimal package-root-import finding payload."""
+    """Build one minimal package-root-import finding payload.
+
+    Returns:
+        The resulting ``m.Infra.ModScanFinding``.
+    """
     return m.Infra.ModScanFinding(
         rule_file="namespace-law.yml",
         rule_id="ban-noncanonical-alias-import",
@@ -59,7 +58,9 @@ def _finding(
 
 def _reports_import_cycle(result: m.Infra.AutoFixResult) -> bool:
     """Return whether one auto-fix result reports an IMPORT-CYCLE skip."""
-    return any(violation.rule == "IMPORT-CYCLE" for violation in result.violations_skipped)
+    return any(
+        violation.rule == "IMPORT-CYCLE" for violation in result.violations_skipped
+    )
 
 
 class TestsFlextInfraCodegenFixerCycleProof:

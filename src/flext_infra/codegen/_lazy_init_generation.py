@@ -8,19 +8,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from flext_infra import c, u
 from flext_infra.codegen._lazy_init_generation_files import (
     FlextInfraCodegenLazyInitGenerationFilePlanMixin,
 )
 from flext_infra.codegen._lazy_init_generation_registry import (
     FlextInfraCodegenLazyInitGenerationRegistryMixin,
 )
-from flext_infra import c, u
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
     from pathlib import Path
 
-    from flext_infra import t, m
+    from flext_infra import m, t
     from flext_infra._models import FlextInfraCodegenLazyInitPlanner
 
 

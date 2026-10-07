@@ -10,10 +10,15 @@ from pathlib import Path
 from typing import Self, override
 
 from flext_core import r
+from flext_infra import c, m, p, t, u
 from flext_infra._config import config
-from flext_infra.codegen import FlextInfraCodegenTransaction
+from flext_infra.codegen import (
+    FlextInfraCodegenLazyInit,
+    FlextInfraCodegenMiseArtifacts,
+    FlextInfraCodegenTransaction,
+)
 from flext_infra.codegen._conform.plan import FlextInfraCodegenConformPlan
-from flext_infra import c, t, p, m, u
+from flext_infra.workspace import FlextInfraWorkspaceDetector
 
 
 class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
@@ -207,7 +212,6 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             The resulting ``p.Result[m.Infra.CodegenResult]``.
 
         """
-        from flext_infra.codegen import FlextInfraCodegenMiseArtifacts
         request = self.request or m.Infra.CodegenConformRequest(
             root=self.repository_root,
         )
@@ -239,7 +243,6 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             The resulting ``p.Result[m.Infra.CodegenResult]``.
 
         """
-        from flext_infra.codegen import FlextInfraCodegenMiseArtifacts
         u.Cli.header("Codegen Conform")
         u.Cli.info(
             f"stage=plan mode={request.mode} scope={request.scope} "
@@ -383,7 +386,6 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             The resulting ``p.Result[m.Infra.CodegenResult]``.
 
         """
-        from flext_infra.codegen import FlextInfraCodegenMiseArtifacts
         ports = self.ports
         if ports is None:
             return r[m.Infra.CodegenResult].fail(
@@ -459,7 +461,6 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             The resulting ``p.Result[m.Infra.CodegenPhaseAnalysis]``.
 
         """
-        from flext_infra.codegen import FlextInfraCodegenLazyInit
         files: list[m.Infra.CodegenFilePlan] = []
         inputs: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
         publications: list[m.Infra.LazyInitPlan] = []
@@ -712,7 +713,6 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             The resulting ``p.Result[t.VariadicTuple[m.Cli.AtomicDirectoryState]]``.
 
         """
-        from flext_infra.workspace import FlextInfraWorkspaceDetector
         if (
             c.Infra.CodegenConformMode(request.mode)
             is not c.Infra.CodegenConformMode.APPLY
@@ -870,7 +870,6 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra.codegen import FlextInfraCodegenMiseArtifacts
         u.Cli.info("stage=verify-fixed-point")
         verified = self.plan(request)
         if verified.failure:

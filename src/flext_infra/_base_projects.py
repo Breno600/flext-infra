@@ -10,7 +10,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import c, t, p, m, u
+from flext_infra import c, m, p, t, u
 
 
 class FlextInfraProjectSelectionMixin:

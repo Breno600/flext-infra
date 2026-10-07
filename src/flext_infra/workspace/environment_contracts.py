@@ -14,7 +14,7 @@ import re
 from pathlib import Path
 from typing import Final
 
-from flext_infra import c, t, m, u
+from flext_infra import c, m, t, u
 
 
 class FlextInfraWorkspaceEnvironmentContracts:

@@ -11,8 +11,13 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_core import r
-from flext_infra._utilities import FlextInfraUtilitiesDocsGenerateProjectMixin
-from flext_infra import c, t, p, m
+from flext_infra import c, m, p, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDocsApi,
+    FlextInfraUtilitiesDocsContract,
+    FlextInfraUtilitiesDocsGenerateProjectMixin,
+    FlextInfraUtilitiesDocsRender,
+)
 
 
 class FlextInfraUtilitiesDocsGenerateRootMixin(
@@ -32,7 +37,6 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
                 ``p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDocsApi, FlextInfraUtilitiesDocsContract, FlextInfraUtilitiesDocsRender
         workspace_contract = FlextInfraUtilitiesDocsContract.docs_workspace_contract(
             repository_root,
         )

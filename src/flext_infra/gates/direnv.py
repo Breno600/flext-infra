@@ -15,11 +15,14 @@ from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, m, u
 from flext_infra.gates.base_gate import FlextInfraGate
+from flext_infra.workspace.environment_contracts import (
+    FlextInfraWorkspaceEnvironmentContracts,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import t, p
+    from flext_infra import p, t
 
 
 class FlextInfraDirenvGate(FlextInfraGate):
@@ -37,7 +40,6 @@ class FlextInfraDirenvGate(FlextInfraGate):
             The contract owner typed at its published ``p.Infra`` boundary.
 
         """
-        from flext_infra.workspace.environment_contracts import FlextInfraWorkspaceEnvironmentContracts
         return FlextInfraWorkspaceEnvironmentContracts
 
     @staticmethod

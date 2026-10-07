@@ -11,8 +11,8 @@ from typing import Annotated, override
 
 from flext_cli import r
 
+from flext_infra import c, m, p, t, u
 from flext_infra.base import s
-from flext_infra import c, t, p, m, u
 
 
 class FlextInfraWorktreeService(s[str]):

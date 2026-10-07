@@ -11,11 +11,11 @@ from typing import ClassVar
 from flext_cli import cli
 
 from flext_core import r
+from flext_infra import c, m, p, t
 from flext_infra.api import infra
 from flext_infra.codegen.protocol_models import FlextInfraCodegenProtocolModels
 from flext_infra.codemod.ast_scan import FlextInfraCodemodAstScan
 from flext_infra.codemod.snapshot_refresh import FlextInfraCodemodSnapshotRefresh
-from flext_infra import c, t, p, m
 from flext_infra.refactor.accessor_migration import (
     FlextInfraAccessorMigrationOrchestrator,
 )
@@ -25,6 +25,7 @@ from flext_infra.refactor.violations_sweep import FlextInfraRefactorViolationsSw
 from flext_infra.refactor.wrapper_root_namespace import (
     FlextInfraWrapperRootNamespaceRefactor,
 )
+from flext_infra.services.cli_mod_progress import FlextInfraCliModProgress
 from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
 
 
@@ -41,7 +42,6 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-        from flext_infra.services.cli_mod_progress import FlextInfraCliModProgress
         result = infra.apply_renames(request)
         if result.failure:
             return r[t.Cli.ResultValue].from_failure(result)
@@ -61,7 +61,6 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-        from flext_infra.services.cli_mod_progress import FlextInfraCliModProgress
         return infra.mod(request, FlextInfraCliModProgress())
 
     @staticmethod

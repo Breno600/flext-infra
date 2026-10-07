@@ -11,11 +11,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra._config import config
 from flext_infra import c, m, u
+from flext_infra._config import config
+from flext_infra.codegen import (
+    FlextInfraCodegenMiseArtifacts,
+    FlextInfraCodegenTransaction,
+)
 
 if TYPE_CHECKING:
-    from flext_infra import t, p
+    from flext_infra import p, t
 
 
 class FlextInfraSemanticPublication:
@@ -38,7 +42,6 @@ class FlextInfraSemanticPublication:
             The resulting ``p.Result[t.VariadicTuple[Path]]``.
 
         """
-        from flext_infra.codegen import FlextInfraCodegenMiseArtifacts, FlextInfraCodegenTransaction
         files: list[m.Infra.CodegenFilePlan] = []
         template_sources = u.Infra.codegen_template_sources(
             config.Infra.codegen if codegen is None else codegen,

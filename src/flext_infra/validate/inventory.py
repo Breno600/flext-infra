@@ -13,8 +13,8 @@ from pathlib import Path
 from typing import Annotated, cast, override
 
 from flext_core import r
+from flext_infra import c, m, p, t, u
 from flext_infra.base import s
-from flext_infra import c, t, p, m, u
 
 
 class FlextInfraInventoryService(s[bool]):

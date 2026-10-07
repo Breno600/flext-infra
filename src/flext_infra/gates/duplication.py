@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_core import r
-from flext_infra import c, t, m, u
+from flext_infra import c, m, t, u
 from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:

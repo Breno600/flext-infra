@@ -10,7 +10,7 @@ import ast
 from difflib import SequenceMatcher
 from pathlib import Path
 
-from flext_infra import t, p, m, u
+from flext_infra import m, p, t, u
 
 
 class FlextInfraRenameSymbols:

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from flext_infra import t, p
+from flext_infra import p, t
 
 
 class FlextInfraCliRouteBase:

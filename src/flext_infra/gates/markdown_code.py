@@ -24,11 +24,13 @@ from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, m, u
 from flext_infra.gates.base_gate import FlextInfraGate
+from flext_infra.gates.markdown_code_sources import FlextInfraMarkdownCodeSources
+from flext_infra.gates.markdown_support import FlextInfraMarkdownGateBase
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from flext_infra import t, p
+    from flext_infra import p, t
 
 
 class FlextInfraMarkdownCodeGate(FlextInfraGate):
@@ -54,7 +56,6 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             The resulting ``t.SequenceOf[Path]``.
 
         """
-        from flext_infra.gates.markdown_support import FlextInfraMarkdownGateBase
         patterns = FlextInfraMarkdownGateBase.read_ignore_patterns(
             project_dir,
             c.Infra.MARKDOWNLINT_IGNORE_FILENAME,
@@ -185,8 +186,6 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             The resulting ``t.MappingKV[str, t.Pair[str, t.Pair[str, int]]]``.
 
         """
-        from flext_infra.gates.markdown_code_sources import FlextInfraMarkdownCodeSources
-        from flext_infra.gates.markdown_support import FlextInfraMarkdownGateBase
         markdown_files = self._ignore_filtered(
             project_dir,
             FlextInfraMarkdownGateBase.collect_markdown_files(project_dir),
@@ -288,8 +287,6 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             The resulting ``t.SequenceOf[Path]``.
 
         """
-        from flext_infra.gates.markdown_code_sources import FlextInfraMarkdownCodeSources
-        from flext_infra.gates.markdown_support import FlextInfraMarkdownGateBase
         rewritten: t.MutableSequenceOf[Path] = []
         for md_path in self._ignore_filtered(
             project_dir,

@@ -12,9 +12,8 @@ from __future__ import annotations
 import os as _os
 from typing import ClassVar
 
-from flext_core import FlextSettings
+from flext_core import FlextSettings, m
 from flext_infra._models import FlextInfraSettingsModels
-from flext_core import m
 
 
 class FlextInfraSettings(FlextSettings):

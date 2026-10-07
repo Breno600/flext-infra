@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import override
 
 from flext_core import r
-from flext_infra import c, t, p, m, u
+from flext_infra import c, m, p, t, u
 from flext_infra.docs.base import FlextInfraDocServiceBase
 
 

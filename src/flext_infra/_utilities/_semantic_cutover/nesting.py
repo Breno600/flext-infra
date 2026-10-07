@@ -7,19 +7,24 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import ast
+import traceback
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverClassScope
-from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverEdits
-from flext_infra._utilities import FlextInfraUtilitiesSemanticFamilyFlatten
-from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverNestingCst
-from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverNestingOwner
+from flext_infra import m, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesCodegenNamespace,
+    FlextInfraUtilitiesRopeRuntimeModules,
+    FlextInfraUtilitiesSemanticCutoverClassScope,
+    FlextInfraUtilitiesSemanticCutoverEdits,
+    FlextInfraUtilitiesSemanticCutoverNestingCst,
+    FlextInfraUtilitiesSemanticCutoverNestingOwner,
+    FlextInfraUtilitiesSemanticFamilyFlatten,
+)
 from flext_infra._utilities._semantic_cutover.test_helpers import (
     FlextInfraUtilitiesSemanticTestHelpers,
 )
-from flext_infra import t, m
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -175,7 +180,6 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
             The resulting ``p.Result[t.StrMapping]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
         planned = r[t.StrMapping]
         family = FlextInfraUtilitiesCodegenNamespace.facade_family_of_file(
             file_path.name,
@@ -296,7 +300,6 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
             The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
         planned_edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
         modules = {
             entry.file_path.resolve(): entry for entry in rope_workspace.modules()
@@ -308,8 +311,6 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
             try:
                 return cls._class_nesting_definitions(rope_workspace, *item)
             except Exception:
-                import traceback
-
                 traceback.print_exc()
                 raise
 

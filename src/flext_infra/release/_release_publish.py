@@ -9,8 +9,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_core import r
+from flext_infra import c, m, p, u
 from flext_infra._config import config
-from flext_infra import c, p, m, u
 from flext_infra.release._release_build import FlextInfraReleaseBuildMixin
 
 

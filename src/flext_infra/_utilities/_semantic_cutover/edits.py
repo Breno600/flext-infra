@@ -11,7 +11,7 @@ from functools import partial
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, t, m
+from flext_infra import c, m, t
 
 if TYPE_CHECKING:
     from collections.abc import Callable

@@ -9,11 +9,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_core import r
+from flext_infra import c, m, p, t, u
 from flext_infra._config import config
 from flext_infra.codegen._conform.existing_plan import (
     FlextInfraCodegenConformExistingPlan,
 )
-from flext_infra import c, t, p, m, u
+from flext_infra.deps import FlextInfraPyprojectModernizer
+from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
 
 
 class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan):
@@ -33,7 +35,6 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
             The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
 
         """
-        from flext_infra.deps import FlextInfraPyprojectModernizer
         project = workspace.project
         if project is None:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
@@ -217,7 +218,6 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
             The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
 
         """
-        from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
         result_type = r[t.SequenceOf[m.Infra.CodegenFilePlan]]
         pyproject_entry = next(
             (

@@ -12,13 +12,16 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from flext_cli import u
 
 from flext_core import r
+from flext_infra import c, m, p, t
 from flext_infra._config import config
-from flext_infra._utilities import FlextInfraUtilitiesCodegenFacades
-from flext_infra._utilities import FlextInfraUtilitiesCodegenFilePlan
-from flext_infra._utilities import FlextInfraUtilitiesGitignore
-from flext_infra import c, t, p, m
+from flext_infra._utilities import (
+    FlextInfraUtilitiesCodegenFacades,
+    FlextInfraUtilitiesCodegenFilePlan,
+    FlextInfraUtilitiesGitignore,
+)
 
 
 class FlextInfraUtilitiesCodegen(
@@ -256,7 +259,6 @@ class FlextInfraUtilitiesCodegen(
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_cli import u
         if path.exists():
             if not path.is_dir():
                 return r[bool].fail(f"persistent Mise path is not a directory: {path}")
@@ -291,7 +293,6 @@ class FlextInfraUtilitiesCodegen(
             The resulting ``str``.
 
         """
-        from flext_cli import u
         template_path = (
             Path(__file__).resolve().parent.parent
             / "templates"
@@ -319,7 +320,6 @@ class FlextInfraUtilitiesCodegen(
             The resulting ``str``.
 
         """
-        from flext_cli import u
         template_path = (
             Path(__file__).resolve().parent.parent
             / "templates"

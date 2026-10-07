@@ -23,7 +23,7 @@ from typing import (
     get_origin,
 )
 
-from flext_infra import t, p, m
+from flext_infra import m, p, t
 
 
 class FlextInfraCodegenProtocolModelAnnotations:

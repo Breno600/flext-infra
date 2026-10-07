@@ -12,6 +12,7 @@ from operator import itemgetter
 from pathlib import Path
 
 from flext_infra import c, t
+from flext_infra._utilities import FlextInfraUtilitiesDiscovery
 
 
 class FlextInfraUtilitiesRopeSource:
@@ -25,7 +26,6 @@ class FlextInfraUtilitiesRopeSource:
             The resulting ``t.StrSequence``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDiscovery
         src_dir = project_dir / c.Infra.DEFAULT_SRC_DIR
         return [
             name

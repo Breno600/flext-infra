@@ -8,10 +8,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
-if TYPE_CHECKING:
-    import libcst as cst
+import libcst as cst
+from libcst.metadata import MetadataWrapper, QualifiedNameProvider
 
-    from flext_infra import t, p
+if TYPE_CHECKING:
+    from flext_infra import p, t
 
 
 class FlextInfraUtilitiesQualifiedNames:
@@ -25,8 +26,6 @@ class FlextInfraUtilitiesQualifiedNames:
             A static dotted name, or ``None`` for a dynamic expression.
 
         """
-        import libcst as cst
-
         if isinstance(node, cst.Name):
             return node.value
         if isinstance(node, cst.Attribute):
@@ -45,8 +44,6 @@ class FlextInfraUtilitiesQualifiedNames:
             The resulting ``cst.BaseExpression``.
 
         """
-        import libcst as cst
-
         if not isinstance(value, cst.List | cst.Tuple):
             return value
         return value.with_changes(
@@ -70,8 +67,6 @@ class FlextInfraUtilitiesQualifiedNames:
             The resulting ``N``.
 
         """
-        import libcst as cst
-
         targets = (
             tuple(target.target for target in node.targets)
             if isinstance(node, cst.Assign)
@@ -100,8 +95,6 @@ class FlextInfraUtilitiesQualifiedNames:
             The resulting ``t.VariadicTuple[cst.ImportAlias]``.
 
         """
-        import libcst as cst
-
         last_index = len(aliases) - 1
         return tuple(
             alias.with_changes(comma=cst.MaybeSentinel.DEFAULT)
@@ -126,8 +119,6 @@ class FlextInfraUtilitiesQualifiedNames:
             Whether ``parent`` spells ``node`` as a binding, not a reference.
 
         """
-        import libcst as cst
-
         if isinstance(parent, cst.ImportAlias):
             return True
         if isinstance(parent, cst.Attribute) and parent.attr is node:
@@ -146,8 +137,6 @@ class FlextInfraUtilitiesQualifiedNames:
             Candidate qualified names referenced by Python source.
 
         """
-        import libcst as cst
-        from libcst.metadata import MetadataWrapper, QualifiedNameProvider
 
         class _ResidueCollector(cst.CSTVisitor):
             METADATA_DEPENDENCIES = (QualifiedNameProvider,)

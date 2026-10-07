@@ -6,9 +6,11 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_infra._utilities import FlextInfraUtilitiesDocsGenerateRootMixin
-from flext_infra._utilities import FlextInfraUtilitiesDocsGuidesMixin
-from flext_infra._utilities import FlextInfraUtilitiesDocsCollection
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDocsCollection,
+    FlextInfraUtilitiesDocsGenerateRootMixin,
+    FlextInfraUtilitiesDocsGuidesMixin,
+)
 
 # Why: restored lost composition — FlextInfraUtilitiesDocsGuidesMixin was
 # never wired into any composed Docs* facade, leaving consumers unresolved.

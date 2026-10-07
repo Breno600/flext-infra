@@ -11,8 +11,8 @@ from pathlib import Path
 from git import GitCommandError, Repo
 
 from flext_core import r
+from flext_infra import p, t
 from flext_infra._utilities import FlextInfraUtilitiesGitWorktreePatchMixin
-from flext_infra import t, p
 
 
 class FlextInfraUtilitiesGitWorktreeRemovalMixin(

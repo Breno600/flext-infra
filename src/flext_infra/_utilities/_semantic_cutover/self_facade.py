@@ -12,12 +12,15 @@ from typing import TYPE_CHECKING, override
 import libcst as cst
 from libcst.metadata import MetadataWrapper, ParentNodeProvider, QualifiedNameProvider
 
-from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverEdits
+from flext_infra._utilities import (
+    FlextInfraUtilitiesQualifiedNames,
+    FlextInfraUtilitiesSemanticCutoverEdits,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import t, p, m
+    from flext_infra import m, p, t
 
 
 class FlextInfraUtilitiesSemanticCutoverSelfFacade(
@@ -95,7 +98,6 @@ class FlextInfraUtilitiesSemanticCutoverSelfFacade(
             original_node: cst.ImportFrom,
             updated_node: cst.ImportFrom,
         ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
             parent = self.get_metadata(ParentNodeProvider, original_node)
             if not isinstance(parent, cst.SimpleStatementLine):
                 return updated_node

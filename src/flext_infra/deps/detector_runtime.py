@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, p, m, u
+from flext_infra import c, m, p, u
 from flext_infra.deps._detector_runtime_steps import (
     FlextInfraDependencyDetectorRuntimeSteps,
 )

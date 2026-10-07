@@ -6,19 +6,21 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_infra._models import FlextInfraConfigModelsArtifact
-from flext_infra._models import FlextInfraConfigModelsBeads
-from flext_infra._models import FlextInfraConfigModelsContexts
-from flext_infra._models import FlextInfraConfigModelsContract
-from flext_infra._models import FlextInfraConfigModelsMake
-from flext_infra._models import FlextInfraConfigModelsProvider
-from flext_infra._models import FlextInfraConfigModelsRelease
-from flext_infra._models import FlextInfraConfigModelsRender
-from flext_infra._models import FlextInfraConfigModelsRoot
-from flext_infra._models import FlextInfraConfigModelsScaffold
-from flext_infra._models import FlextInfraConfigModelsStatic
-from flext_infra._models import FlextInfraConfigModelsTemplates
-from flext_infra._models import FlextInfraConfigModelsWorkspace
+from flext_infra._models import (
+    FlextInfraConfigModelsArtifact,
+    FlextInfraConfigModelsBeads,
+    FlextInfraConfigModelsContexts,
+    FlextInfraConfigModelsContract,
+    FlextInfraConfigModelsMake,
+    FlextInfraConfigModelsProvider,
+    FlextInfraConfigModelsRelease,
+    FlextInfraConfigModelsRender,
+    FlextInfraConfigModelsRoot,
+    FlextInfraConfigModelsScaffold,
+    FlextInfraConfigModelsStatic,
+    FlextInfraConfigModelsTemplates,
+    FlextInfraConfigModelsWorkspace,
+)
 
 
 class FlextInfraConfigModels(

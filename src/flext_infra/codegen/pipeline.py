@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, override
 from flext_cli import cli
 
 from flext_core import r
+from flext_infra import c, m, p, t, u
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
 from flext_infra.codegen._lazy_init_generation import (
     FlextInfraCodegenLazyInitGenerationMixin,
@@ -18,7 +19,6 @@ from flext_infra.codegen._lazy_init_generation import (
 from flext_infra.codegen._mise_artifacts_files import FlextInfraMiseArtifactsFiles
 from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
 from flext_infra.codegen._pipeline_stages import FlextInfraCodegenPipelineStagesMixin
-from flext_infra import c, t, p, m, u
 
 if TYPE_CHECKING:
     from collections.abc import Callable

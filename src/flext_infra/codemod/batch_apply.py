@@ -11,8 +11,15 @@ from pathlib import Path
 from typing import override
 
 from flext_core import r
+from flext_infra import m, p, t, u
+from flext_infra._utilities import FlextInfraUtilitiesCodemodProject
 from flext_infra.base import FlextInfraServiceBase
-from flext_infra import t, p, m, u
+from flext_infra.codemod import (
+    FlextInfraCodemodSemanticApply,
+    FlextInfraModGateEngine,
+    FlextInfraModTextGateEngine,
+)
+from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
 
 
 class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
@@ -53,7 +60,6 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-        from flext_infra.codemod import FlextInfraModGateEngine, FlextInfraModTextGateEngine
         planned = u.Infra.codemod_rule_plan(self.repository_root)
         if planned.failure:
             return r[t.Cli.ResultValue].from_failure(planned)
@@ -96,7 +102,6 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-        from flext_infra.codemod import FlextInfraModGateEngine
         self.progress.emit("mod: validate ast-grep rule fixtures")
         FlextInfraModGateEngine.validate_rule_fixtures(
             self.repository_root,
@@ -111,8 +116,6 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-        from flext_infra.codemod import FlextInfraCodemodSemanticApply, FlextInfraModGateEngine, FlextInfraModTextGateEngine
-        from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
         root = self.repository_root
         rope_workspace = self.rope
         baseline_cycles = self._import_cycles(root)
@@ -268,7 +271,8 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             )
             return r[t.Cli.ResultValue].ok(value=True)
 
-    def _import_cycles(self, root: Path) -> t.SequenceOf[frozenset[str]]:
+    @staticmethod
+    def _import_cycles(root: Path) -> t.SequenceOf[frozenset[str]]:
         """Collect every runtime import cycle over the governed projects.
 
         The graph comes from the codemod project's Rope module-level import
@@ -279,7 +283,6 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             The resulting ``t.FrozenSet[t.FrozenSet[str]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesCodemodProject
         cycles: set[frozenset[str]] = set()
         for project_root in u.Infra.governed_project_roots(root):
             if not u.Infra.namespace_enabled(project_root):
@@ -314,7 +317,6 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             states the cycle must observe for cross-phase cycle detection.
 
         """
-        from flext_infra.codemod import FlextInfraCodemodSemanticApply, FlextInfraModGateEngine
         fingerprint = FlextInfraCodemodSemanticApply.source_fingerprint
         outcome = r[
             t.Pair[

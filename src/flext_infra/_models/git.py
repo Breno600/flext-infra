@@ -11,10 +11,12 @@ from typing import Annotated, ClassVar
 
 from flext_cli import m
 
-from flext_infra._models import FlextInfraModelsGitIdentity
-from flext_infra._models import FlextInfraModelsGitWorktreeFacts
-from flext_infra._models import FlextInfraModelsGitWorktreeState
 from flext_infra import t
+from flext_infra._models import (
+    FlextInfraModelsGitIdentity,
+    FlextInfraModelsGitWorktreeFacts,
+    FlextInfraModelsGitWorktreeState,
+)
 
 
 class FlextInfraModelsGit(

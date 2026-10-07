@@ -30,7 +30,7 @@ rule:
     - not:
         all:
           - kind: import_from_statement
-          - regex: "^from\\s+flext_[a-z_]+(\\.[a-z_][a-z0-9_]*)*\\s+import\\s+([A-Z][A-Za-z0-9_]*|[cmptu])(\\s*,\\s*([A-Z][A-Za-z0-9_]*|[cmptu]))*\\s*$"
+          - regex: "(^from\\s+flext_[a-z_]+(\\.[a-z_][a-z0-9_]*)*\\s+import\\s+([A-Z][A-Za-z0-9_]*|[cmptu])(\\s*,\\s*([A-Z][A-Za-z0-9_]*|[cmptu]))*\\s*$|(?s)^from\\s+flext_[a-z_]+(\\.[a-z_][a-z0-9_]*)*\\s+import\\s*\\(\\s*([A-Z][A-Za-z0-9_]*|[cmptu])(\\s*,\\s*([A-Z][A-Za-z0-9_]*|[cmptu]))*,?\\s*\\)\\s*$)"
 message: >-
   Inline or dynamic import: declare the dependency at module level; the one
   sanctioned inline form is the canonical lazy import of a concrete project
@@ -49,7 +49,7 @@ rule:
     - not:
         all:
           - kind: import_from_statement
-          - regex: "^from\\s+flext_[a-z_]+(\\.[a-z_][a-z0-9_]*)*\\s+import\\s+([A-Z][A-Za-z0-9_]*|[cmptu])(\\s*,\\s*([A-Z][A-Za-z0-9_]*|[cmptu]))*\\s*$"
+          - regex: "(^from\\s+flext_[a-z_]+(\\.[a-z_][a-z0-9_]*)*\\s+import\\s+([A-Z][A-Za-z0-9_]*|[cmptu])(\\s*,\\s*([A-Z][A-Za-z0-9_]*|[cmptu]))*\\s*$|(?s)^from\\s+flext_[a-z_]+(\\.[a-z_][a-z0-9_]*)*\\s+import\\s*\\(\\s*([A-Z][A-Za-z0-9_]*|[cmptu])(\\s*,\\s*([A-Z][A-Za-z0-9_]*|[cmptu]))*,?\\s*\\)\\s*$)"
 message: >-
   Inline or dynamic import in a utility member: only the canonical lazy form —
   the package's own facade letters or a concrete project object through a

@@ -12,7 +12,7 @@ from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
 
 from flext_core import r
-from flext_infra import c, t, p, u
+from flext_infra import c, p, t, u
 from flext_infra.release._release_source import FlextInfraReleaseSourceMixin
 
 

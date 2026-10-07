@@ -10,9 +10,9 @@ import re
 from pathlib import Path
 
 from flext_core import r
+from flext_infra import c, m, p, t, u
 from flext_infra._config import config
 from flext_infra.codegen._conform.file_plans import FlextInfraCodegenConformFilePlans
-from flext_infra import c, t, p, m, u
 
 
 class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans):

@@ -12,10 +12,15 @@ from operator import attrgetter
 from pathlib import Path
 from typing import TYPE_CHECKING, override
 
+from flext_cli import u
 
-from flext_infra._config import config
-from flext_infra._utilities import FlextInfraUtilitiesProjectDiscoveryCandidatesMixin
 from flext_infra import c, m
+from flext_infra._config import config
+from flext_infra._utilities import (
+    FlextInfraUtilitiesGit,
+    FlextInfraUtilitiesProjectDiscoveryCandidatesMixin,
+    FlextInfraUtilitiesWorkspaceManifest,
+)
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -35,8 +40,6 @@ class FlextInfraUtilitiesProjectDiscovery(
             The resulting ``m.Infra.RefactorConfigSpec``.
 
         """
-        from flext_cli import u
-        from flext_infra._utilities import FlextInfraUtilitiesWorkspaceManifest
         manifest_path = FlextInfraUtilitiesWorkspaceManifest.workspace_manifest_path(
             repository_root,
         )
@@ -79,8 +82,6 @@ class FlextInfraUtilitiesProjectDiscovery(
             Every manifest-relative path that is not a generation participant.
 
         """
-        from flext_cli import u
-        from flext_infra._utilities import FlextInfraUtilitiesWorkspaceManifest
         manifest_path = FlextInfraUtilitiesWorkspaceManifest.workspace_manifest_path(
             repository_root,
         )
@@ -189,7 +190,6 @@ class FlextInfraUtilitiesProjectDiscovery(
             ValueError: If ``declared_paths.failure``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGit
         declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(
             repository_root,
         )
@@ -241,7 +241,6 @@ class FlextInfraUtilitiesProjectDiscovery(
             ValueError: If ``declared_paths.failure``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGit
         resolved_root = repository_root.resolve()
         declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(
             resolved_root,
@@ -371,7 +370,6 @@ class FlextInfraUtilitiesProjectDiscovery(
             The resulting ``Path``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGit
         if runtime_root is None:
             runtime = FlextInfraUtilitiesGit.git_repository_root(
                 m.Infra.GitRepoRequest(repo_root=project_root),

@@ -14,8 +14,10 @@ from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 
 from flext_core import r
+from flext_infra import c, m, p, t, u
 from flext_infra._settings import settings
-from flext_infra import c, t, p, m, u
+from flext_infra.codemod import FlextInfraCodemodSnapshotReconciler
+from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
 
 
 class FlextInfraModGateEngine:
@@ -38,7 +40,6 @@ class FlextInfraModGateEngine:
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra.codemod import FlextInfraCodemodSnapshotReconciler
         for config_root, owner_rules, owner_is_governed in cls._fixture_owners(
             root,
             rules,
@@ -184,7 +185,6 @@ class FlextInfraModGateEngine:
                 fixture scratch must be outside its source root.
 
         """
-        from flext_infra.codemod import FlextInfraCodemodSnapshotReconciler
         governed_roots = tuple(
             project.resolve() for project in u.Infra.governed_project_roots(root)
         )
@@ -225,7 +225,6 @@ class FlextInfraModGateEngine:
             ValueError: If ast-grep fixture must be a regular file or directory.
 
         """
-        from flext_infra.codemod import FlextInfraCodemodSnapshotReconciler
         directories = FlextInfraCodemodSnapshotReconciler.fixture_directories(
             config_root,
         )
@@ -308,7 +307,6 @@ class FlextInfraModGateEngine:
                 required id.
 
         """
-        from flext_infra.codemod import FlextInfraCodemodSnapshotReconciler
         source_rules = set(owner_rules)
         directories = FlextInfraCodemodSnapshotReconciler.fixture_directories(
             config_root,
@@ -351,7 +349,6 @@ class FlextInfraModGateEngine:
             The resulting ``t.StrSequence``.
 
         """
-        from flext_infra.codemod import FlextInfraCodemodSnapshotReconciler
         pattern = f"*{c.Infra.CODEMOD_SNAPSHOT_SUFFIX}"
         changes: list[str] = []
         for test_dir in FlextInfraCodemodSnapshotReconciler.fixture_directories(
@@ -442,6 +439,11 @@ class FlextInfraModGateEngine:
     def _validate_finding_receipt(stderr: str, errors: int) -> p.Result[bool]:
         """Authenticate ast-grep's exact error-finding stderr receipt.
 
+        The mise toolchain wrapper may prepend its own ``mise WARN``/``hint:``
+        resolution notices to any managed tool's stderr; they are wrapper
+        noise, never tool output, and are dropped before authentication (the
+        same standing the mypy gate gives its verbose ``LOG:`` channel).
+
         Returns:
             The resulting ``p.Result[bool]``.
 
@@ -450,10 +452,15 @@ class FlextInfraModGateEngine:
             c.Infra.AST_GREP_ERROR_FINDING_RECEIPT.format(count=errors),
             c.Infra.AST_GREP_ERROR_FINDING_HELP,
         ))
-        if stderr.strip() != expected:
+        receipt = "\n".join(
+            line
+            for line in stderr.splitlines()
+            if not line.startswith(("mise WARN", "hint:"))
+        ).strip()
+        if receipt != expected:
             return r[bool].fail(
                 f"ast-grep finding receipt mismatch: parsed_errors={errors} "
-                f"expected={expected!r} actual={stderr.strip()!r}",
+                f"expected={expected!r} actual={receipt!r}",
             )
         return r[bool].ok(value=True)
 
@@ -752,7 +759,6 @@ class FlextInfraModGateEngine:
             The resulting ``p.Result[m.Infra.ModScanReport]``.
 
         """
-        from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
         planned = u.Infra.codemod_rule_plan(root)
         if planned.failure:
             return r[m.Infra.ModScanReport].from_failure(planned)
@@ -840,7 +846,6 @@ class FlextInfraModGateEngine:
             return r[m.Infra.ModScanReport].from_failure(receipt)
         cls._report_evidence(receipt.value)
         if fix:
-
             published = FlextInfraModReplacements.publish(root, complete_report)
             if published.failure:
                 return r[m.Infra.ModScanReport].from_failure(published)

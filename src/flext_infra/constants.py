@@ -8,23 +8,25 @@ from __future__ import annotations
 
 from flext_cli import FlextCliConstants
 
-from flext_infra._constants import FlextInfraConstantsBase
-from flext_infra._constants import FlextInfraConstantsCensus
-from flext_infra._constants import FlextInfraConstantsCheck
-from flext_infra._constants import FlextInfraConstantsCli
-from flext_infra._constants import FlextInfraConstantsCodegen
-from flext_infra._constants import FlextInfraConstantsCodegenProject
-from flext_infra._constants import FlextInfraConstantsDeps
-from flext_infra._constants import FlextInfraConstantsDocs
-from flext_infra._constants import FlextInfraConstantsGit
-from flext_infra._constants import FlextInfraConstantsNamespace
-from flext_infra._constants import FlextInfraConstantsPromoted
-from flext_infra._constants import FlextInfraConstantsPromotedMessages
-from flext_infra._constants import FlextInfraConstantsRefactor
-from flext_infra._constants import FlextInfraConstantsRelease
-from flext_infra._constants import FlextInfraConstantsRope
-from flext_infra._constants import FlextInfraConstantsSourceCode
-from flext_infra._constants import FlextInfraConstantsWorkspace
+from flext_infra._constants import (
+    FlextInfraConstantsBase,
+    FlextInfraConstantsCensus,
+    FlextInfraConstantsCheck,
+    FlextInfraConstantsCli,
+    FlextInfraConstantsCodegen,
+    FlextInfraConstantsCodegenProject,
+    FlextInfraConstantsDeps,
+    FlextInfraConstantsDocs,
+    FlextInfraConstantsGit,
+    FlextInfraConstantsNamespace,
+    FlextInfraConstantsPromoted,
+    FlextInfraConstantsPromotedMessages,
+    FlextInfraConstantsRefactor,
+    FlextInfraConstantsRelease,
+    FlextInfraConstantsRope,
+    FlextInfraConstantsSourceCode,
+    FlextInfraConstantsWorkspace,
+)
 
 
 class FlextInfraConstants(FlextCliConstants):

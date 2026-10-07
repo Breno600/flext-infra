@@ -183,13 +183,6 @@ Infra:
           - complex-structure
           - suspicious-subprocess-import
           - subprocess-without-shell-equals-true
-          # import-outside-top-level (PLC0415) is informative by operator law:
-          # the mandatory lazy-import order (later-order objects MUST be
-          # imported inside the using function) makes top-level-only imports
-          # architecturally wrong, and blind hoisting was proven to break the
-          # lazy-export architecture (253 circular-import failures). This
-          # aligns the gate with operator law; it is not masking.
-          - import-outside-top-level
         line-length: 88
         preview: true
         respect-gitignore: true

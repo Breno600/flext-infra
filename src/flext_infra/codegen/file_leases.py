@@ -10,10 +10,10 @@ from collections.abc import Generator, MutableMapping
 from contextlib import ExitStack, contextmanager
 from pathlib import Path
 
+from flext_infra import c, m, t, u
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
-from flext_infra import c, t, m, u
 
 
 class FlextInfraCodegenFileLeases:

@@ -15,7 +15,7 @@ from flext_infra import c
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import t, p, m
+    from flext_infra import m, p, t
 
 
 class FlextInfraCodegenLazyInitPlannerChildrenMixin:

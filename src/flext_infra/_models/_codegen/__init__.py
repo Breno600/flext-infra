@@ -13,13 +13,23 @@ from typing import TYPE_CHECKING
 from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
-    from flext_infra._models import FlextInfraCodegen
-    from flext_infra._models import FlextInfraModelsCodegenFixModels
-    from flext_infra._models import FlextInfraModelsCodegenJournalModels
-    from flext_infra._models import FlextInfraModelsCodegenLazyInitModels
-    from flext_infra._models import FlextInfraModelsCodegenPipelineModels
-    from flext_infra._models import FlextInfraModelsCodegenScaffoldModels
-    from flext_infra._models import FlextInfraModelsCodegenTransactionModels
+    from flext_infra._models._codegen.base import FlextInfraCodegen
+    from flext_infra._models._codegen.fix import FlextInfraModelsCodegenFixModels
+    from flext_infra._models._codegen.journal import (
+        FlextInfraModelsCodegenJournalModels,
+    )
+    from flext_infra._models._codegen.lazy_init import (
+        FlextInfraModelsCodegenLazyInitModels,
+    )
+    from flext_infra._models._codegen.pipeline import (
+        FlextInfraModelsCodegenPipelineModels,
+    )
+    from flext_infra._models._codegen.scaffold import (
+        FlextInfraModelsCodegenScaffoldModels,
+    )
+    from flext_infra._models._codegen.transaction import (
+        FlextInfraModelsCodegenTransactionModels,
+    )
 
 
 __all__: tuple[str, ...] = (

@@ -15,10 +15,12 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra._constants import FlextInfraConstantsCodegenDetection
-from flext_infra._constants import FlextInfraConstantsCodegenLazy
-from flext_infra._constants import FlextInfraConstantsCodegenRenderNames
-from flext_infra._constants import FlextInfraConstantsWorkspace
+from flext_infra._constants import (
+    FlextInfraConstantsCodegenDetection,
+    FlextInfraConstantsCodegenLazy,
+    FlextInfraConstantsCodegenRenderNames,
+    FlextInfraConstantsWorkspace,
+)
 
 if TYPE_CHECKING:
     from flext_infra import t

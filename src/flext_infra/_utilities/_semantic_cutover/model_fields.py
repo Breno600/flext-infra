@@ -13,13 +13,15 @@ import libcst as cst
 from libcst.codemod import CodemodContext
 from libcst.codemod.visitors import AddImportsVisitor
 
-from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverEdits
-from flext_infra._utilities import FlextInfraUtilitiesSemanticCutoverModelFieldsBindings
+from flext_infra._utilities import (
+    FlextInfraUtilitiesSemanticCutoverEdits,
+    FlextInfraUtilitiesSemanticCutoverModelFieldsBindings,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import t, p, m
+    from flext_infra import m, p, t
 
 
 class FlextInfraUtilitiesSemanticCutoverModelFields(

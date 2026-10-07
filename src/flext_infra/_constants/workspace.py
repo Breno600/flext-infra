@@ -10,9 +10,11 @@ from enum import StrEnum, unique
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Literal
 
-from flext_infra._constants import FlextInfraConstantsBase as cb
-from flext_infra._constants import FlextInfraConstantsCodegenProject
-from flext_infra._constants import FlextInfraConstantsSharedInfra
+from flext_infra._constants import (
+    FlextInfraConstantsBase as cb,
+    FlextInfraConstantsCodegenProject,
+    FlextInfraConstantsSharedInfra,
+)
 
 if TYPE_CHECKING:
     from flext_infra import t

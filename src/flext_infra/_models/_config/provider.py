@@ -10,9 +10,9 @@ from typing import Annotated, ClassVar, Self
 
 from flext_cli import m
 
+from flext_infra import t
 from flext_infra._constants import FlextInfraConstantsSharedInfra
 from flext_infra._models import FlextInfraConfigModelsContract
-from flext_infra import t
 
 
 class FlextInfraConfigModelsProvider:

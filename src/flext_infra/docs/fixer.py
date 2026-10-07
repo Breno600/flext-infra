@@ -13,7 +13,7 @@ from flext_infra import c, m, u
 from flext_infra.docs.base import FlextInfraDocServiceBase
 
 if TYPE_CHECKING:
-    from flext_infra import t, p
+    from flext_infra import p, t
 
 
 class FlextInfraDocFixer(FlextInfraDocServiceBase):

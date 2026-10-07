@@ -18,7 +18,7 @@ from __future__ import annotations
 import keyword
 from pathlib import Path
 
-from flext_infra import c, t, m, u
+from flext_infra import c, m, t, u
 
 
 class FlextInfraEnsurePackagingPhase:

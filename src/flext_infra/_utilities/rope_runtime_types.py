@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from typing import TypeGuard
 
+from flext_infra import p, t
 from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeBase
-from flext_infra import t, p
 
 
 class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):

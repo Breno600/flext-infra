@@ -9,9 +9,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import p, m, u
+from flext_infra import m, p, u
 from flext_infra.refactor._accessor_rewrite import (
     FlextInfraAccessorMigrationRewriteMixin,
+)
+from flext_infra.refactor._import_enforcement import FlextInfraImportNormalization
+from flext_infra.refactor.namespace_relocations import (
+    FlextInfraNamespaceRelocationCascade,
 )
 
 if TYPE_CHECKING:
@@ -41,8 +45,6 @@ class FlextInfraImportNormalizationPhase:
             The resulting ``p.Result[bool]`` — ``True`` marks changed sources.
 
         """
-        from flext_infra.refactor._import_enforcement import FlextInfraImportNormalization
-        from flext_infra.refactor.namespace_relocations import FlextInfraNamespaceRelocationCascade
         changed = False
         for project_root in u.Infra.governed_project_roots(root):
             if not u.Infra.namespace_enabled(project_root):
@@ -70,7 +72,6 @@ class FlextInfraNamespaceRelocationPhase:
             The resulting ``p.Result[bool]`` — ``True`` marks changed sources.
 
         """
-        from flext_infra.refactor.namespace_relocations import FlextInfraNamespaceRelocationCascade
         cascade = FlextInfraNamespaceRelocationCascade()
         changed = False
         for project_root in u.Infra.governed_project_roots(root):

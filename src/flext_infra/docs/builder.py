@@ -14,7 +14,7 @@ from flext_infra.docs.base import FlextInfraDocServiceBase
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import t, p, m
+    from flext_infra import m, p, t
 
 
 class FlextInfraDocBuilder(FlextInfraDocServiceBase):

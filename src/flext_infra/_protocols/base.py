@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Mapping
     from pathlib import Path
 
-    from flext_infra import c, t, p, m
+    from flext_infra import c, m, p, t
 
 
 @runtime_checkable

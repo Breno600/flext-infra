@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 from defusedxml import ElementTree as DefusedET
 
-from flext_infra import c, p, m
+from flext_infra import c, m, p
 
 if TYPE_CHECKING:
     from pathlib import Path

@@ -18,7 +18,7 @@ from flext_infra import c, m, u
 from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
-    from flext_infra import t, p
+    from flext_infra import p, t
 
 
 class FlextInfraCodemodGate(FlextInfraGate):

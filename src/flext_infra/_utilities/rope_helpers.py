@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import ast
 
-from flext_infra._utilities import FlextInfraUtilitiesRopeMethodOrderMixin
 from flext_infra import t
+from flext_infra._utilities import FlextInfraUtilitiesRopeMethodOrderMixin
 
 
 class FlextInfraUtilitiesRopeHelpers(FlextInfraUtilitiesRopeMethodOrderMixin):

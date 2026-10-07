@@ -16,7 +16,7 @@ from flext_core import r
 from flext_infra import c, t, u
 
 if TYPE_CHECKING:
-    from flext_infra import p, m
+    from flext_infra import m, p
 
 
 class FlextInfraMiseArtifactsDerivation:

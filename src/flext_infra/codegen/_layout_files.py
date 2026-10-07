@@ -14,8 +14,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_core import r
+from flext_infra import m, p, t, u
 from flext_infra._config import config
-from flext_infra import t, p, m, u
+from flext_infra.codegen._layout_plan import FlextInfraCodegenLayoutPlanMixin
 
 
 class FlextInfraCodegenLayoutFilesMixin:
@@ -78,7 +79,6 @@ class FlextInfraCodegenLayoutFilesMixin:
             The resulting ``p.Result[t.Pair[t.Infra.LayoutStatus, str]]``.
 
         """
-        from flext_infra.codegen._layout_plan import FlextInfraCodegenLayoutPlanMixin
         spec = config.Infra.codegen.layout
         project_name = FlextInfraCodegenLayoutPlanMixin.layout_project_name(project_dir)
         target = project_dir / spec.archive_root / project_name / rel

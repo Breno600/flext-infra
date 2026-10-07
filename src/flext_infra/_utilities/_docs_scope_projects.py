@@ -11,8 +11,12 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_core.result import FlextResult as r
-from flext_infra._utilities import FlextInfraUtilitiesDocsScopePolicyMixin
-from flext_infra import c, t, m
+from flext_infra import c, m, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDocsScopePolicyMixin,
+    FlextInfraUtilitiesGit,
+    FlextInfraUtilitiesProjectDiscovery,
+)
 from flext_infra.protocols import FlextInfraProtocols as p
 
 
@@ -81,7 +85,6 @@ class FlextInfraUtilitiesDocsScopeProjectsMixin(
             ValueError: If ``declared.failure``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGit
         root = FlextInfraUtilitiesDocsScopeProjectsMixin.absolute_lexical(
             repository_root,
         )
@@ -167,7 +170,6 @@ class FlextInfraUtilitiesDocsScopeProjectsMixin(
             The resulting ``p.Result[t.SequenceOf[m.Infra.ProjectInfo]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
         owner = FlextInfraUtilitiesDocsScopeProjectsMixin
         roots = owner.docs_repository_roots(repository_root)
         if roots.failure:

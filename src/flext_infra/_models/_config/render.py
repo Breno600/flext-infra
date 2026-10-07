@@ -11,17 +11,19 @@ from typing import Annotated
 
 from flext_cli import m
 
+from flext_infra import t
 from flext_infra._constants import (
     FlextInfraConstantsCodegenProject,
     FlextInfraConstantsDocs,
     FlextInfraConstantsWorkspace,
 )
-from flext_infra._models import FlextInfraConfigModelsContexts
-from flext_infra._models import FlextInfraConfigModelsContract
-from flext_infra._models import FlextInfraConfigModelsMake
-from flext_infra._models import FlextInfraConfigModelsProvider
-from flext_infra._models import FlextInfraModelsDepsToolConfig
-from flext_infra import t
+from flext_infra._models import (
+    FlextInfraConfigModelsContexts,
+    FlextInfraConfigModelsContract,
+    FlextInfraConfigModelsMake,
+    FlextInfraConfigModelsProvider,
+    FlextInfraModelsDepsToolConfig,
+)
 
 
 class FlextInfraConfigModelsRender:

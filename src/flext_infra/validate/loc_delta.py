@@ -13,11 +13,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
-from flext_infra.base import s
 from flext_infra import c, m, u
+from flext_infra.base import s
 
 if TYPE_CHECKING:
-    from flext_infra import t, p
+    from flext_infra import p, t
 
 
 class FlextInfraLocDeltaValidator(s[bool]):

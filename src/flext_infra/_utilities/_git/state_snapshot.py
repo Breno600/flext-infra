@@ -13,8 +13,11 @@ from pathlib import Path
 from git import GitCommandError
 
 from flext_core import r
-from flext_infra._utilities import FlextInfraUtilitiesGitRepo
-from flext_infra import c, t, p, m
+from flext_infra import c, m, p, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesGitRepo,
+    FlextInfraUtilitiesGitWorktreeIO,
+)
 
 
 class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
@@ -36,7 +39,6 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
 
     @classmethod
     def _state_file(cls, root: Path, relative: Path) -> m.Infra.GitWorktreeFileState:
-        from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
         path = root / relative
         if any((root / parent).is_symlink() for parent in relative.parents):
             msg = f"capture path traverses a symlink: {relative}"

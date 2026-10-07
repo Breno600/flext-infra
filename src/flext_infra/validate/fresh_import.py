@@ -16,10 +16,10 @@ from pathlib import Path
 from typing import Annotated, ClassVar, override
 
 from flext_core import r
+from flext_infra import c, m, p, t, u
 from flext_infra._config import config
 from flext_infra._settings import settings
 from flext_infra.base import FlextInfraServiceBase
-from flext_infra import c, t, p, m, u
 
 
 class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):

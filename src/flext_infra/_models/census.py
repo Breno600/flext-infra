@@ -10,8 +10,8 @@ from collections.abc import MutableSet
 from typing import Annotated, ClassVar
 
 from flext_core import m
-from flext_infra._models import FlextInfraModelsMixins
 from flext_infra import c, t
+from flext_infra._models import FlextInfraModelsMixins
 
 
 class FlextInfraModelsCensus:

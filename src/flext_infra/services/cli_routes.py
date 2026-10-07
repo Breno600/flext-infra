@@ -9,9 +9,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_infra import c
+from flext_infra.services.cli_routes_codegen import FlextInfraCodegenRoutes
+from flext_infra.services.cli_routes_validate import FlextInfraValidationRoutes
+from flext_infra.services.cli_routes_workspace import FlextInfraWorkspaceRoutes
 
 if TYPE_CHECKING:
-    from flext_infra import t, m
+    from flext_infra import m, t
 
 
 class FlextInfraCliRouteService:
@@ -28,9 +31,6 @@ class FlextInfraCliRouteService:
             ValueError: If CLI group has no route owner.
 
         """
-        from flext_infra.services.cli_routes_codegen import FlextInfraCodegenRoutes
-        from flext_infra.services.cli_routes_validate import FlextInfraValidationRoutes
-        from flext_infra.services.cli_routes_workspace import FlextInfraWorkspaceRoutes
         if group in {
             c.Infra.CLI_GROUP_CHECK,
             c.Infra.CLI_GROUP_CODEGEN,

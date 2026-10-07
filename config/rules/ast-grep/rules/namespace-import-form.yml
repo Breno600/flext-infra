@@ -10,9 +10,9 @@
 # The engine repairs what it captures through the shared relocation cascade
 # (`import-normalization`): the same canonical pass fix-namespace,
 # fix-accessors and the make mod loop run over every governed source file,
-# merging each parent block's letters in the declared layer order
-# c, t, p, m, u and demoting a letter the module's own layer may not bind
-# eagerly to its point of use.
+# merging each parent block's letters into one alphabetically ordered
+# root-combined statement (isort-stable) and demoting a letter the module's
+# own layer may not bind eagerly to its point of use.
 id: import-letter-noncanonical-form
 language: python
 severity: error

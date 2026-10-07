@@ -13,7 +13,7 @@ from flext_infra import u
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from flext_infra import t, m
+    from flext_infra import m, t
 
 
 class FlextInfraDocAuditorChecksMixin:

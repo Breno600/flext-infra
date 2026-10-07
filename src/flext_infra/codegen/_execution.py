@@ -9,8 +9,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, override
 
-from flext_infra.base import FlextInfraServiceBase
 from flext_infra import m
+from flext_infra.base import FlextInfraServiceBase
 
 
 class FlextInfraCodegenExecutionBase[TResult](

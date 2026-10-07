@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, m
 from flext_infra.gates.base_gate import FlextInfraGate
+from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -39,7 +40,6 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
             The resulting ``m.Infra.GateExecution``.
 
         """
-        from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
         _ = ctx
         started = time.monotonic()
         validator = FlextInfraRuntimeCensusValidator.for_project(

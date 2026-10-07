@@ -8,13 +8,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_infra._utilities import FlextInfraUtilitiesPromotedWorkspace
+from flext_cli import u
+
 from flext_infra import c, m
+from flext_infra._utilities import FlextInfraUtilitiesPromotedWorkspace
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import t, p
+    from flext_infra import p, t
 
 
 class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
@@ -31,7 +33,6 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
                 c.Infra.PromotedRegistryError]``.
 
         """
-
         header = c.Infra.PromotedHeader
         headers: t.MutableMappingKV[
             Path,
@@ -60,8 +61,6 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
                     c.Infra.PromotedMessage.MISSING_HEADER.format(path=path),
                 )
                 continue
-            from flext_infra import u
-
             parsed = u.Cli.toml_mapping_from_text(
                 c.Infra.PromotedJoin.LINES.join(payload),
             )
@@ -87,7 +86,6 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
             The resulting ``p.Infra.PromotedCommand``.
 
         """
-
         key = c.Infra.PromotedHeader
         message = c.Infra.PromotedMessage
         verb = cls._promoted_text(data, key.VERB, path)

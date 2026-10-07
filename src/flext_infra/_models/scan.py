@@ -14,9 +14,11 @@ from typing import Annotated, ClassVar, Literal
 
 from flext_cli import m
 
-from flext_infra._models import FlextInfraModelsMixins
-from flext_infra._models import FlextInfraModelsNamespaceEnforcer
 from flext_infra import c, t
+from flext_infra._models import (
+    FlextInfraModelsMixins,
+    FlextInfraModelsNamespaceEnforcer,
+)
 
 
 class FlextInfraModelsScan:

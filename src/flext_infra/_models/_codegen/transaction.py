@@ -11,9 +11,11 @@ from typing import Annotated, ClassVar, Literal, Self
 
 from flext_cli import m
 
-from flext_infra._models import FlextInfraModelsCodegenJournalModels
-from flext_infra._models import FlextInfraModelsCodegenToolchain
 from flext_infra import t
+from flext_infra._models import (
+    FlextInfraModelsCodegenJournalModels,
+    FlextInfraModelsCodegenToolchain,
+)
 
 
 class FlextInfraModelsCodegenTransactionModels:

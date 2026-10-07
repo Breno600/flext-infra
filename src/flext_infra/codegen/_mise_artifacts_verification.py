@@ -11,13 +11,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 from flext_core import r
+from flext_infra import c, m, u
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
-from flext_infra import c, m, u
 
 if TYPE_CHECKING:
-    from flext_infra import t, p
+    from flext_infra import p, t
 
 type _JournalFileRole = Literal["desired", "backup", "rollback"]
 

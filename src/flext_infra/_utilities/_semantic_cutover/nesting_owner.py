@@ -10,14 +10,16 @@ import ast
 import typing
 from typing import TYPE_CHECKING
 
+from flext_cli import u
 
 from flext_core import r
 from flext_infra import t
+from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p, m
+    from flext_infra import m, p
 
 
 class FlextInfraUtilitiesSemanticCutoverNestingOwner:
@@ -310,8 +312,6 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
             The owner class name, or a failure when the derivation is ambiguous.
 
         """
-        from flext_cli import u
-        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
         derived = r[str]
         policy = convention.module_policy
         namespace = FlextInfraUtilitiesCodegenNamespace
