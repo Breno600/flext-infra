@@ -235,7 +235,7 @@ class _SourceBindingCollector:
         """
         if self._provider_metadata_rebind(targets, bindings):
             return
-        if self._module_table_mutation(targets):
+        if self._module_table_mutation(targets, bindings):
             return
         if self._complete_class_namespace(node, targets, bindings, lexical):
             return
@@ -258,20 +258,34 @@ class _SourceBindingCollector:
             for target in targets
         )
 
-    def _module_table_mutation(self, targets: t.SequenceOf[ast.expr]) -> bool:
+    def _module_table_mutation(
+        self,
+        targets: t.SequenceOf[ast.expr],
+        bindings: t.MappingKV[str, m.Infra.SourceClassReference | None] | None = None,
+    ) -> bool:
         """Return whether every target is an external runtime table mutation.
 
         Standard-library alias re-registration (CPython's ``collections``
         publishes ``sys.modules['collections.abc'] = _collections_abc``) is
         an external runtime table mutation, never a class rebinding — the
-        touched names stay unknown.
+        touched names stay unknown. The same holds for subscript stores
+        through any plain module-level table whose name is not a live class
+        binding (CPython's http.server ``_control_char_table[ord(...)] =
+        ...``): a subscript store cannot redefine a class through a
+        non-class root, so the mutation is a runtime table write regardless
+        of the enclosing conditionality.
 
         """
-        return self._allow_conditional and all(
+        return all(
             isinstance(target, ast.Subscript)
-            and m.Infra.SubscriptRebind(
-                root_name=self._subscript_root_name(target),
-            ).is_module_table_mutation
+            and isinstance(target.value, ast.Name)
+            and (
+                m.Infra.SubscriptRebind(
+                    root_name=target.value.id,
+                ).is_module_table_mutation
+                or bindings is None
+                or bindings.get(target.value.id) is None
+            )
             for target in targets
         )
 
