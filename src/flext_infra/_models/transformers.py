@@ -11,7 +11,7 @@ from typing import Annotated, ClassVar
 
 from flext_cli import m
 
-from flext_infra import t
+from flext_infra.typings import t
 
 
 class FlextInfraModelsTransformers:

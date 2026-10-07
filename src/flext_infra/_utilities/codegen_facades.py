@@ -9,19 +9,17 @@ from __future__ import annotations
 import ast
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
 from libcst import Arg, ClassDef, Module, Name, parse_module
 from libcst.metadata import MetadataWrapper, PositionProvider
 
-from flext_infra import c
 from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
 from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
 from flext_infra._utilities.rope_module_patch import FlextInfraUtilitiesRopeModulePatch
 from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
-
-if TYPE_CHECKING:
-    from flext_infra import t
+from flext_infra.constants import c
+from flext_infra.typings import t
 
 
 class FlextInfraUtilitiesCodegenFacades:

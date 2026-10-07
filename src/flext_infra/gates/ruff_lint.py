@@ -10,11 +10,15 @@ from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, config, m, u
+from flext_infra._config import config
+from flext_infra.constants import c
 from flext_infra.gates.base_gate import FlextInfraGate
+from flext_infra.models import m
+from flext_infra.utilities import u
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from flext_infra.gates.protocols import p
+    from flext_infra.gates.typings import t
 
 
 class FlextInfraRuffLintGate(FlextInfraGate):

@@ -8,12 +8,10 @@ from __future__ import annotations
 
 import ast
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
-
-if TYPE_CHECKING:
-    from flext_infra import m, t
+from flext_infra.models import m
+from flext_infra.typings import t
 
 
 class FlextInfraUtilitiesPrivateImportValidation:

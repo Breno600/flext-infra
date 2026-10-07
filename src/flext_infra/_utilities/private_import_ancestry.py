@@ -8,10 +8,8 @@ from __future__ import annotations
 
 import ast
 from importlib.util import resolve_name
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from flext_infra import t
+from flext_infra.typings import t
 
 
 class FlextInfraUtilitiesPrivateImportAncestry:

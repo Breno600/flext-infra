@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, ClassVar
 from libcst.metadata import ExpressionContextProvider, ParentNodeProvider, ScopeProvider
 
 if TYPE_CHECKING:
-    from flext_infra import t
+    from flext_infra._constants.typings import t
 
 
 class FlextInfraConstantsSharedInfra:

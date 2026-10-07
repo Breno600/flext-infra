@@ -14,7 +14,11 @@ from typing import TYPE_CHECKING, ClassVar
 from flext_cli import cli
 
 from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.protocols import p
+from flext_infra.typings import t
+from flext_infra.utilities import u
 
 if TYPE_CHECKING:
     from flext_infra.check.gate_registry import FlextInfraGateRegistry

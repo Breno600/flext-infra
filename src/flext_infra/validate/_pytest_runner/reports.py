@@ -12,7 +12,9 @@ from typing import TYPE_CHECKING
 from defusedxml import ElementTree as DefusedET
 
 from flext_core import r
-from flext_infra import c, m, u
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.utilities import u
 from flext_infra.validate._pytest_runner.base import FlextInfraPytestRunnerBase
 from flext_infra.validate.pytest_diag import FlextInfraPytestDiagExtractor
 
@@ -300,10 +302,23 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
             receipt,
             diagnostics.model_dump_json(indent=2) + "\n",
         ).unwrap()
+        expected_warnings = (
+            # The runner imports flext_infra in-process to build the pytest
+            # invocation, so pytest's assertion-rewrite hook finds the module
+            # already imported and emits this notice once. It reports the
+            # runner's own module state, not a defect of the code under test;
+            # the diagnostics receipt keeps it visible.
+            "Module already imported so cannot be rewritten; flext_infra",
+        )
+        unexpected_warnings = [
+            line
+            for line in diagnostics.warning_lines
+            if not any(expected in line for expected in expected_warnings)
+        ]
         if any((
             diagnostics.collection_failed_count,
             diagnostics.collection_skipped_count,
-            diagnostics.warning_count,
+            len(unexpected_warnings),
         )):
             msg = f"pytest collection contains blocking findings: {receipt}"
             raise RuntimeError(msg)
@@ -343,8 +358,7 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
                 # A whole-target run (the declared single file) collects its
                 # inventory directly and never runs a separate selection
                 # collection, so only the inventory receipt exists.
-                if selection_plan.whole_target
-                and selection_plan.inventory_collected
+                if selection_plan.whole_target and selection_plan.inventory_collected
                 else (
                     (
                         ("selection", "inventory")

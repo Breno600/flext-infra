@@ -61,17 +61,17 @@ class TestsFlextInfraScriptDispatchMakefile:
         self,
         tmp_path: Path,
     ) -> None:
-        """Extra verbs join PUBLIC_VERBS and dispatch through the declared dispatcher."""
+        """Extra verbs join PUBLIC_VERBS and dispatch through the dispatcher."""
         rendered = self._render_root_makefile(
             tmp_path,
             extra_verbs=(
                 m.Infra.MakeVerbSpec(
                     name="incidente",
-                    description="Dispatch incidente through the declared script dispatcher.",
+                    description="Dispatch incidente through the dispatcher.",
                 ),
                 m.Infra.MakeVerbSpec(
                     name="charts",
-                    description="Dispatch charts through the declared script dispatcher.",
+                    description="Dispatch charts through the dispatcher.",
                 ),
             ),
             script_dispatch=m.Infra.ScriptDispatchSpec(
@@ -398,11 +398,11 @@ class TestsFlextInfraScriptDispatchMakefile:
             extra_verbs=(
                 m.Infra.MakeVerbSpec(
                     name="charts",
-                    description="Dispatch charts through the declared script dispatcher.",
+                    description="Dispatch charts through the dispatcher.",
                 ),
                 m.Infra.MakeVerbSpec(
                     name="chart-release",
-                    description="Dispatch chart-release through the declared script dispatcher.",
+                    description="Dispatch chart-release through the dispatcher.",
                 ),
                 m.Infra.MakeVerbSpec(
                     name="bead",
@@ -431,7 +431,7 @@ class TestsFlextInfraScriptDispatchMakefile:
         self,
         tmp_path: Path,
     ) -> None:
-        """A repo without script dispatch keeps src/tests/scripts paths and excludes scripts."""
+        """A repo without script dispatch keeps canonical paths; scripts excluded."""
         rendered = self._render_root_makefile(
             tmp_path,
             extra_verbs=(),

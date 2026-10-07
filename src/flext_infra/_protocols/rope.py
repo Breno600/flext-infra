@@ -15,7 +15,9 @@ if TYPE_CHECKING:
     from pathlib import Path
     from types import TracebackType
 
-    from flext_infra import m, p, t
+    from flext_infra._protocols.models import m
+    from flext_infra._protocols.protocols import p
+    from flext_infra._protocols.typings import t
 
 
 @runtime_checkable

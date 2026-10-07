@@ -8,13 +8,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, config, m
+from flext_infra._config import config
+from flext_infra.constants import c
 from flext_infra.gates.markdown_support import FlextInfraMarkdownGateBase
+from flext_infra.models import m
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p, t
+    from flext_infra.gates.protocols import p
+    from flext_infra.gates.typings import t
 
 
 class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):

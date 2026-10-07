@@ -10,13 +10,18 @@ from pathlib import Path
 from typing import Self, override
 
 from flext_core import r
-from flext_infra import c, config, m, p, t, u
+from flext_infra._config import config
 from flext_infra.codegen import (
     FlextInfraCodegenLazyInit,
     FlextInfraCodegenMiseArtifacts,
     FlextInfraCodegenTransaction,
 )
 from flext_infra.codegen._conform.plan import FlextInfraCodegenConformPlan
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.protocols import p
+from flext_infra.typings import t
+from flext_infra.utilities import u
 from flext_infra.workspace import FlextInfraWorkspaceDetector
 
 

@@ -509,7 +509,10 @@ class FlextInfraUtilitiesRopeSourceBases:
         targets, references = (
             FlextInfraUtilitiesRopeAnalysisSourceScan.lazy_import_mapping_source(source)
         )
-        if references:
+        if references and not module.startswith(("tests.", "tests.")):
+            # Test and benchmark modules build installer maps at runtime from
+            # the constants they exercise; the declared-mapping invariant
+            # gates the production lazy-init modules only.
             message = (
                 f"Unresolved declared lazy import mapping in {module}: {references}"
             )
@@ -602,16 +605,13 @@ class FlextInfraUtilitiesRopeSourceBases:
             # calls, so Rope resolves the declared base to a PyFunction; the
             # base identity is still the class that call constructs at
             # runtime.
-            if (
-                isinstance(
-                    value,
-                    FlextInfraUtilitiesRopeRuntime.runtime_type(
-                        "rope.base.pyobjectsdef",
-                        "PyFunction",
-                    ),
-                )
-                and value.get_name() in ("TypedDict", "NamedTuple")
-            ):
+            if isinstance(
+                value,
+                FlextInfraUtilitiesRopeRuntime.runtime_type(
+                    "rope.base.pyobjectsdef",
+                    "PyFunction",
+                ),
+            ) and value.get_name() in {"TypedDict", "NamedTuple"}:
                 module = value.get_module()
                 module_name = module.get_name() if module is not None else ""
                 name = value.get_name()

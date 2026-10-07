@@ -339,14 +339,15 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
             The resulting ``Path``.
 
         """
-        provider = TestsFlextInfraUtilitiesProjectFixtureMixin.provider()
+        fixture = TestsFlextInfraUtilitiesProjectFixtureMixin
+        provider = fixture.provider()
         path = repository / c.Infra.GITMODULES
         path.write_text(
             "".join(
                 f'[submodule "{project}"]\n'
                 f"\tpath = {project}\n"
                 f"\turl = {provider.base_url.rstrip('/')}/{Path(project).name}.git\n"
-                f"\tbranch = {TestsFlextInfraUtilitiesProjectFixtureMixin.provider_branch()}\n"
+                f"\tbranch = {fixture.provider_branch()}\n"
                 for project in projects
             ),
             encoding="utf-8",

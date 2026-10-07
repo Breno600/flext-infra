@@ -13,9 +13,8 @@ from pathlib import Path
 from time import perf_counter
 from typing import TYPE_CHECKING, Annotated, override
 
-import flext_infra._models.flext_infra_codegen_lazy_init_planner
 from flext_core import r
-from flext_infra import c, config, m, t, u
+from flext_infra._config import config
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
 from flext_infra.codegen._lazy_init_generation import (
     FlextInfraCodegenLazyInitGenerationMixin,
@@ -23,10 +22,14 @@ from flext_infra.codegen._lazy_init_generation import (
 from flext_infra.codegen._lazy_init_projection_manifest import (
     FlextInfraCodegenLazyInitProjectionManifest,
 )
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.typings import t
+from flext_infra.utilities import u
 from flext_infra.workspace.rope import FlextInfraRopeWorkspace
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra.codegen.protocols import p
 
 
 class FlextInfraCodegenLazyInit(
@@ -300,7 +303,9 @@ class FlextInfraCodegenLazyInit(
         snapshots = self._snapshot_planner_inputs(workspace_index, package_dirs)
         if snapshots.failure:
             return r[m.Infra.CodegenPhaseAnalysis].from_failure(snapshots)
-        planner = flext_infra._models.flext_infra_codegen_lazy_init_planner.FlextInfraCodegenLazyInitPlanner(
+        from flext_infra._models import FlextInfraCodegenLazyInitPlanner
+
+        planner = FlextInfraCodegenLazyInitPlanner(
             rope_workspace=rope,
             lazy_init=config.Infra.tooling.lazy_init,
         )

@@ -11,10 +11,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Self
 
-from flext_infra import c, config, m, t, u
+from flext_infra._config import config
 from flext_infra.base import s
-
-type PytestPolicy = m.Infra.PytestConfig
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.typings import t
+from flext_infra.utilities import u
 
 
 class FlextInfraPytestRunnerBase(s[int]):
@@ -240,7 +242,7 @@ class FlextInfraPytestRunnerBase(s[int]):
             return None
         return u.Infra.project_name_from_payload(pyproject_path, payload)
 
-    def run_timeout_seconds(self, policy: PytestPolicy) -> int:
+    def run_timeout_seconds(self, policy: m.Infra.PytestConfig) -> int:
         """Resolve the declared project's measured wall over the fleet default.
 
         Returns:
@@ -254,7 +256,7 @@ class FlextInfraPytestRunnerBase(s[int]):
 
     def _declared_worker_ceiling(
         self,
-        policy: PytestPolicy,
+        policy: m.Infra.PytestConfig,
     ) -> int | m.Infra.PytestWorkerCeiling:
         """Resolve the declared project's ceiling over the fleet default.
 
@@ -292,7 +294,7 @@ class FlextInfraPytestRunnerBase(s[int]):
         numerator_text, denominator_text = (ceiling.cpu_fraction or "1/1").split("/")
         return max(1, cpu_count * int(numerator_text) // int(denominator_text))
 
-    def parallel_worker_budget(self, policy: PytestPolicy) -> int:
+    def parallel_worker_budget(self, policy: m.Infra.PytestConfig) -> int:
         """Bound xdist by configuration, CPU, and physical memory.
 
         The per-project override map (``[project].name`` → absolute workers or

@@ -11,13 +11,18 @@ from pathlib import Path
 from typing import ClassVar, override
 
 from flext_core import r
-from flext_infra import c, config, m, p, t, u
+from flext_infra._config import config
 from flext_infra.base import FlextInfraServiceBase
 from flext_infra.check._workspace_check_reports import (
     FlextInfraWorkspaceCheckReportsMixin,
 )
 from flext_infra.check.gate_registry import FlextInfraGateRegistry
 from flext_infra.check.workspace_check_gates import FlextInfraWorkspaceCheckGatesMixin
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.protocols import p
+from flext_infra.typings import t
+from flext_infra.utilities import u
 
 
 class FlextInfraWorkspaceChecker(

@@ -159,7 +159,7 @@ class TestsFlextInfraTransactionLease:
         self,
         tmp_path: Path,
     ) -> None:
-        """A same-scope contender waits for a live holder; another scope is independent."""
+        """A same-scope contender waits for a live holder; scopes are free."""
         root = u.Tests.git_repository(tmp_path, "workspace")
         # The workspace is the member's runtime root: it carries the triple.
         u.Tests.copy_tracked_mise_seeds(root)

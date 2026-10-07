@@ -11,7 +11,6 @@ import re
 from collections.abc import MutableMapping
 from pathlib import Path
 
-from flext_infra import m, p, t
 from flext_infra._utilities._semantic_cutover.nesting_types import (
     FlextInfraUtilitiesSemanticNestingTypes,
 )
@@ -19,6 +18,9 @@ from flext_infra._utilities.rope_class_move import FlextInfraUtilitiesRopeClassM
 from flext_infra._utilities.rope_runtime_modules import (
     FlextInfraUtilitiesRopeRuntimeModules,
 )
+from flext_infra.models import m
+from flext_infra.protocols import p
+from flext_infra.typings import t
 
 
 class FlextInfraUtilitiesSemanticHelperReferences(

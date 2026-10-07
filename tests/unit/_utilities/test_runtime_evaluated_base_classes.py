@@ -176,7 +176,8 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
             + "from typing import TYPE_CHECKING\n"
             + "from flext_core import install_lazy_exports\n"
             + "if TYPE_CHECKING:\n    from .models import m\n"
-            + 'install_lazy_exports(__name__, __file__, MappingProxyType({"m": ".models"}), public_exports=("m",))\n'
+            + "install_lazy_exports(__name__, __file__, "
+            'MappingProxyType({"m": ".models"}), public_exports=("m",))\n'
             + 'raise RuntimeError("This package must not be imported")\n',
             encoding="utf-8",
         )
@@ -195,7 +196,7 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                     *self._roots(),
                     "generated_contract.models.Contract",
                     "generated_contract.m",
-                ))
+                )),
             ),
         )
         tm.that("generated_contract" in sys.modules, eq=False)
@@ -209,14 +210,20 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
         direct = u.Infra.runtime_evaluated_base_classes(
             tmp_path,
             {
-                path: "from collections.abc import Mapping\nclass Consumer(Mapping): pass\n"
+                path: (
+                    "from collections.abc import Mapping\n"
+                    "class Consumer(Mapping): pass\n"
+                ),
             },
             self._roots(),
         )
         aliased = u.Infra.runtime_evaluated_base_classes(
             tmp_path,
             {
-                path: "import collections.abc as provider\nclass Consumer(provider.Mapping): pass\n"
+                path: (
+                    "import collections.abc as provider\n"
+                    "class Consumer(provider.Mapping): pass\n"
+                ),
             },
             self._roots(),
         )

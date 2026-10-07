@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import m, t, u
 from flext_infra.codegen._codegen_staging import FlextInfraCodegenStaging
 from flext_infra.codegen._codegen_transaction_recovery import (
     FlextInfraCodegenTransactionRecovery,
@@ -32,9 +31,12 @@ from flext_infra.codegen._mise_artifacts_verification import (
     FlextInfraMiseArtifactsVerification as verify,
 )
 from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
+from flext_infra.models import m
+from flext_infra.typings import t
+from flext_infra.utilities import u
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra.codegen.protocols import p
 
 
 class FlextInfraCodegenTransaction(FlextInfraCodegenTransactionRecovery):

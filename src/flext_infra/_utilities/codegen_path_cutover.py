@@ -7,14 +7,13 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from flext_infra._utilities.rope_runtime_refactors import (
     FlextInfraUtilitiesRopeRuntimeRefactors,
 )
-
-if TYPE_CHECKING:
-    from flext_infra import m, p, t
+from flext_infra.models import m
+from flext_infra.protocols import p
+from flext_infra.typings import t
 
 
 class FlextInfraUtilitiesCodegenPathCutover:
@@ -41,7 +40,7 @@ class FlextInfraUtilitiesCodegenPathCutover:
                 snapshot; or if Rope change escaped the governed source inventory.
 
         """
-        from flext_infra import m, p
+        from flext_infra import models as m, protocols as p
 
         project = rope_workspace.rope_project
         root = Path(project.root.real_path)

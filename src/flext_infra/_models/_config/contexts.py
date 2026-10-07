@@ -12,7 +12,6 @@ from typing import Annotated, Literal
 
 from flext_cli import m
 
-from flext_infra import t
 from flext_infra._constants import (
     FlextInfraConstantsCodegenProject,
     FlextInfraConstantsPromoted,
@@ -24,6 +23,7 @@ from flext_infra._models._config.make import FlextInfraConfigModelsMake
 from flext_infra._models._config.repository import FlextInfraConfigModelsRepository
 from flext_infra._models._config.scaffold import FlextInfraConfigModelsScaffold
 from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
+from flext_infra.typings import t
 
 
 class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
@@ -47,7 +47,9 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
         worktree_environment_directory: Annotated[
             t.NonEmptyStr,
             m.Field(
-                description="Declared sibling directory for linked worktree environments",
+                description=(
+                    "Declared sibling directory for linked worktree environments"
+                ),
             ),
         ]
         contract_env_values: Annotated[
@@ -183,6 +185,16 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
                 description=(
                     "Effective Ruff exemptions: fleet policy composed with this "
                     "repository's own ManagedArtifacts overlay"
+                ),
+            ),
+        ]
+        ruff_extend_exclude: Annotated[
+            t.StrSequence,
+            m.Field(
+                description=(
+                    "Workspace exclusions added to Ruff's defaults: the "
+                    "provider-owned tool-home projections stay outside the "
+                    "member lint scope"
                 ),
             ),
         ]

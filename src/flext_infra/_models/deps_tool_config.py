@@ -11,13 +11,13 @@ from typing import Annotated, Literal, Self
 
 from flext_cli import m
 
-from flext_infra import t
 from flext_infra._models.deps_tool_config_linters import (
     FlextInfraModelsDepsToolConfigLinters,
 )
 from flext_infra._models.deps_tool_config_type_checkers import (
     FlextInfraModelsDepsToolConfigTypeCheckers,
 )
+from flext_infra.typings import t
 
 
 class FlextInfraModelsDepsToolConfig(
@@ -438,7 +438,7 @@ class FlextInfraModelsDepsToolConfig(
 
         @property
         def slow_suite_stop_reserve_seconds(self) -> int:
-            """Derive the slow-phase reserve: in-flight items bounded by the slow ceiling."""
+            """Derive the slow-phase reserve bounded by the slow ceiling."""
             return (
                 self.xdist_items_per_worker * self.slow_timeout_seconds
                 + self.termination_grace_seconds
@@ -737,6 +737,16 @@ class FlextInfraModelsDepsToolConfig(
         ruff: FlextInfraModelsDepsToolConfig.RuffConfig = m.Field(
             description="Ruff settings",
         )
+        ruff_extend_exclude: Annotated[
+            t.StrTuple,
+            m.Field(
+                validation_alias=m.AliasPath("ruff", "extend-exclude"),
+                description=(
+                    "Workspace exclusions added to Ruff's defaults, read "
+                    "flattened for the tooling runtime projection."
+                ),
+            ),
+        ] = ()
         mypy: FlextInfraModelsDepsToolConfig.MypyConfig = m.Field(
             description="Mypy settings",
         )

@@ -12,13 +12,19 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, config, m, t
+from flext_infra._config import config
+from flext_infra._utilities._docs_command_contract import (
+    FlextInfraUtilitiesDocsCommandContractMixin,
+)
 from flext_infra._utilities._docs_generate_plan import (
     FlextInfraUtilitiesDocsGeneratePlanMixin,
 )
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.typings import t
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra import protocols as p
 
 
 class FlextInfraUtilitiesDocsGuidesMixin:
@@ -191,7 +197,8 @@ class FlextInfraUtilitiesDocsGuidesMixin:
                     f"{destination}",
                 )
             relative_path = source_path.relative_to(repository_root).as_posix()
-            contract_issues = FlextInfraUtilitiesDocsCommandContractMixin.docs_command_contract_content_issues
+            contract_mixin = FlextInfraUtilitiesDocsCommandContractMixin
+            contract_issues = contract_mixin.docs_command_contract_content_issues
             issues = contract_issues(
                 source,
                 relative_path=relative_path,

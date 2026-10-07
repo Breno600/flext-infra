@@ -13,7 +13,6 @@ from typing import Annotated, Literal, Self
 
 from flext_cli import m
 
-from flext_infra import t
 from flext_infra._constants import (
     FlextInfraConstantsCheck,
     FlextInfraConstantsCodegenProject,
@@ -24,6 +23,7 @@ from flext_infra._models._config.contract import FlextInfraConfigModelsContract
 from flext_infra._models._config.external_cache import (
     FlextInfraExternalCacheDirectorySpec,
 )
+from flext_infra.typings import t
 
 
 def _shared_mypy_cache_spec() -> FlextInfraConfigModelsMake.MypyCacheSpec:
@@ -590,7 +590,7 @@ class FlextInfraConfigModelsMake:
         """Complete generated Makefile public and extension contract."""
 
         check_gate_suspensions: Annotated[
-            t.VariadicTuple[MakeGateSuspensionSpec],
+            t.VariadicTuple[FlextInfraConfigModelsMake.MakeGateSuspensionSpec],
             m.Field(
                 description=(
                     "Gates temporarily suspended for this project (the gate "
@@ -765,7 +765,7 @@ class FlextInfraConfigModelsMake:
             FlextInfraExternalCacheDirectorySpec,
             FlextInfraConfigModelsContract.ConfigContract,
         ):
-            """Project-keyed shared Mypy cache: one analysis per project, reused across relocks."""
+            """Project-keyed shared Mypy cache: one analysis per project."""
 
             cache_environment_variable: Annotated[
                 FlextInfraConstantsMake.MypyCacheEnvironment,

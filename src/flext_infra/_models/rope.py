@@ -11,9 +11,11 @@ from typing import Annotated, ClassVar
 
 from flext_cli import m
 
-from flext_infra import c, p, t
 from flext_infra._models._codegen.base import FlextInfraCodegen
 from flext_infra._models.mixins import FlextInfraModelsMixins
+from flext_infra.constants import c
+from flext_infra.protocols import p
+from flext_infra.typings import t
 
 
 class FlextInfraModelsRope:

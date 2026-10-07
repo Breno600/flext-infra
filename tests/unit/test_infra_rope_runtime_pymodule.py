@@ -12,9 +12,11 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import FlextInfraRopeWorkspace, c, u
-from flext_infra._utilities._rope.project import FlextInfraRopeProject
-from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities import (
+    FlextInfraRopeProject,
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeRuntime,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -27,6 +29,7 @@ class TestsFlextInfraRopeRuntimePymodule:
     @pytest.mark.parametrize("regular_package", [False, True])
     def test_module_precedes_namespace_but_not_regular_package(
         tmp_path: Path,
+        *,
         regular_package: bool,
     ) -> None:
         """Python source wins over a data directory, not an initialized package.

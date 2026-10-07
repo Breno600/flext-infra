@@ -11,7 +11,6 @@ from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import m, t
 from flext_infra._utilities._semantic_cutover.class_scope import (
     FlextInfraUtilitiesSemanticCutoverClassScope,
 )
@@ -34,11 +33,13 @@ from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
 from flext_infra._utilities.rope_runtime_modules import (
     FlextInfraUtilitiesRopeRuntimeModules,
 )
+from flext_infra.models import m
+from flext_infra.typings import t
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
+    from flext_infra import protocols as p
 
 
 class FlextInfraUtilitiesSemanticCutoverNesting(
@@ -317,7 +318,13 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         owned = tuple(item for item in editable if item[0] in modules)
 
         def definitions_for(item: t.Pair[Path, str]) -> p.Result[t.StrMapping]:
-            return cls._class_nesting_definitions(rope_workspace, *item)
+            try:
+                return cls._class_nesting_definitions(rope_workspace, *item)
+            except Exception:
+                import traceback
+
+                traceback.print_exc()
+                raise
 
         planned = r[t.StrMapping].traverse(owned, definitions_for, fail_fast=False)
         if planned.failure:

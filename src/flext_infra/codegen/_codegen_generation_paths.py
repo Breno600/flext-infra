@@ -8,10 +8,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_infra import c
+from flext_infra.constants import c
 
 if TYPE_CHECKING:
-    from flext_infra import t
+    from flext_infra.codegen.typings import t
 
 
 class FlextInfraCodegenGenerationPathsMixin:
@@ -186,7 +186,7 @@ class FlextInfraCodegenGenerationPathsMixin:
         return mod
 
     @staticmethod
-    def _normalize_type_checking_module_path(
+    def normalize_type_checking_module_path(
         mod: str,
         local_package_root: str | None,
     ) -> str:

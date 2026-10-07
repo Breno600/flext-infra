@@ -6,8 +6,6 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from flext_infra._utilities._rope_analysis.asthelpers import (
     FlextInfraUtilitiesRopeAnalysisAstHelpers,
 )
@@ -20,9 +18,7 @@ from flext_infra._utilities._rope_analysis.importstate import (
 from flext_infra._utilities._rope_analysis.sourcescan import (
     FlextInfraUtilitiesRopeAnalysisSourceScan,
 )
-
-if TYPE_CHECKING:
-    from flext_infra import t
+from flext_infra.typings import t
 
 
 class FlextInfraUtilitiesRopeAnalysisBase(

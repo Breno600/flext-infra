@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, assert_never
 
-from flext_infra import c, m, t
 from flext_infra._utilities._semantic_cutover.aliases import (
     FlextInfraUtilitiesSemanticCutoverAliases,
 )
@@ -33,11 +32,14 @@ from flext_infra._utilities._semantic_cutover.private_imports import (
 from flext_infra._utilities._semantic_cutover.self_facade import (
     FlextInfraUtilitiesSemanticCutoverSelfFacade,
 )
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.typings import t
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
+    from flext_infra import protocols as p
 
 
 class FlextInfraUtilitiesSemanticCutoverBase(
@@ -71,6 +73,38 @@ class FlextInfraUtilitiesSemanticCutoverBase(
             The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
 
         """
+        try:
+            return cls._plan_dispatch(phase, rope_workspace, sources, findings)
+        except Exception:
+            import traceback
+
+            traceback.print_exc()
+            raise
+
+    @classmethod
+    def _plan_dispatch(
+        cls,
+        phase: c.Infra.SemanticCutoverPhase,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        sources: t.MappingKV[Path, str],
+        findings: t.SequenceOf[m.Infra.ModScanFinding] = (),
+    ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
+        try:
+            return cls._plan_phases(phase, rope_workspace, sources, findings)
+        except Exception:
+            import traceback
+
+            traceback.print_exc()
+            raise
+
+    @classmethod
+    def _plan_phases(
+        cls,
+        phase: c.Infra.SemanticCutoverPhase,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        sources: t.MappingKV[Path, str],
+        findings: t.SequenceOf[m.Infra.ModScanFinding] = (),
+    ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
         root = rope_workspace.repository_root
         rule_id = c.Infra.SEMANTIC_CUTOVER_RULE_IDS.get(phase)
         selected = tuple(finding for finding in findings if finding.rule_id == rule_id)

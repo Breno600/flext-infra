@@ -11,10 +11,13 @@ from typing import TYPE_CHECKING
 
 from flext_cli import u
 
-from flext_infra import c, config, m, t
+from flext_infra._config import config
 from flext_infra._utilities._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
 from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
 from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
+from flext_infra.constants import c
+from flext_infra.models import m
+from flext_infra.typings import t
 
 if TYPE_CHECKING:
     import re
