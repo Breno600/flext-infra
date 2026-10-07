@@ -35,6 +35,12 @@ ignores:
   - "**/__main__.py"
   - "**/__version__.py"
   - "**/conftest.py"
+  # pytest11 entry-point modules live under the same contract as conftest.py:
+  # pytest imports hook functions (pytest_configure, pytest_addoption, ...) by
+  # module attribute name, so the hooks must stay module-level and the
+  # facade-nesting the rule mandates is impossible there.
+  - "**/conftest_plugin.py"
+  - "**/enforcement_plugin.py"
   - "**/settings.py"
   - "**/_settings.py"
   - "**/typings.py"
