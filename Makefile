@@ -112,11 +112,13 @@ PYTEST_PROCESS_TIMEOUT_SECONDS := 1204
 override PYTEST_BOUNDED = timeout --signal=TERM --kill-after=5s "$(PYTEST_PROCESS_TIMEOUT_SECONDS)s"
 PYTEST_REPORTS_DIR := .reports/tests
 PYTEST_CACHE_HOME = $(if $(strip $(XDG_CACHE_HOME)),$(XDG_CACHE_HOME),$(if $(strip $(HOME)),$(HOME)/.cache,))
-# One persistent testmon database per project, shared by every checkout and
-# worktree of it (like the Mypy cache): testmon tracks each checkout's source by
-# file checksum, so a new lane starts from the project's measured selection
-# instead of a cold full inventory.
-override FLEXT_PYTEST_TESTMON_DATABASE = $(if $(strip $(PYTEST_CACHE_HOME)),$(PYTEST_CACHE_HOME)/flext/infra/testmon/$(PROJECT_NAME)/.testmondata)
+# One persistent testmon database per checkout: the selection is shared by
+# content checksums, but the journal lease must never be — two lanes running
+# the runner on sibling worktrees of one project contended on a single
+# lease (JournalLeaseTimeoutError on .testmondata.lock, flext-jnldc), so the
+# path carries a deterministic discriminator of the checkout's absolute
+# path: same checkout keeps its warm database, sibling lanes never meet.
+override FLEXT_PYTEST_TESTMON_DATABASE = $(if $(strip $(PYTEST_CACHE_HOME)),$(PYTEST_CACHE_HOME)/flext/infra/testmon/$(PROJECT_NAME)/$(shell printf %s "$(PROJECT_ROOT)" | md5sum | cut -d' ' -f1 | cut -c1-8)/.testmondata)
 # Profiles sit beside the other reports of this checkout (.reports is ignored).
 PROFILE_REPORTS_DIR = $(PROJECT_ROOT)/$(dir $(PYTEST_REPORTS_DIR))profiles
 override PYTEST_CASE_TIMEOUT_SECONDS := 10

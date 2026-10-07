@@ -21,6 +21,18 @@ if TYPE_CHECKING:
         _rope_analysis,
         _semantic_cutover,
     )
+    from flext_infra._utilities._dependencies_graph import (
+        FlextInfraUtilitiesDependenciesGraphMixin,
+    )
+    from flext_infra._utilities._dependencies_inspection import (
+        FlextInfraUtilitiesDependenciesInspectionMixin,
+    )
+    from flext_infra._utilities._dependencies_profiles import (
+        FlextInfraUtilitiesDependenciesProfilesMixin,
+    )
+    from flext_infra._utilities._dependencies_versions import (
+        FlextInfraUtilitiesDependenciesVersionsMixin,
+    )
     from flext_infra._utilities._docs_audit_detectors import (
         FlextInfraUtilitiesDocsAuditDetectorsMixin,
     )
@@ -478,6 +490,10 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesCompatibilityAliasValidation",
     "FlextInfraUtilitiesDeferredSelfReferenceRewrite",
     "FlextInfraUtilitiesDependencies",
+    "FlextInfraUtilitiesDependenciesGraphMixin",
+    "FlextInfraUtilitiesDependenciesInspectionMixin",
+    "FlextInfraUtilitiesDependenciesProfilesMixin",
+    "FlextInfraUtilitiesDependenciesVersionsMixin",
     "FlextInfraUtilitiesDiscovery",
     "FlextInfraUtilitiesDocs",
     "FlextInfraUtilitiesDocsApi",
@@ -678,6 +694,10 @@ install_lazy_exports(
             ".deferred_self_reference_rewrite"
         ),
         "FlextInfraUtilitiesDependencies": ".dependencies",
+        "FlextInfraUtilitiesDependenciesGraphMixin": "._dependencies_graph",
+        "FlextInfraUtilitiesDependenciesInspectionMixin": "._dependencies_inspection",
+        "FlextInfraUtilitiesDependenciesProfilesMixin": "._dependencies_profiles",
+        "FlextInfraUtilitiesDependenciesVersionsMixin": "._dependencies_versions",
         "FlextInfraUtilitiesDiscovery": ".discovery",
         "FlextInfraUtilitiesDocs": ".docs",
         "FlextInfraUtilitiesDocsApi": ".docs_api",
