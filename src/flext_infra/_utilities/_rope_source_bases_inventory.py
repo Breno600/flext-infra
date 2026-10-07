@@ -68,7 +68,7 @@ class FlextInfraUtilitiesRopeSourceBasesInventory:
         )
         globals_: MutableMapping[str, m.Infra.SourceClassReference | None] = {}
         spec = FlextInfraModelsRope.SourceBindingCollectorSpec(
-            module=module,
+            module=request.module,
             package=package,
             required_line=request.required_line,
             allow_conditional=request.allow_conditional,
