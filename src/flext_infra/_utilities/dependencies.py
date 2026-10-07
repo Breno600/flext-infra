@@ -932,8 +932,8 @@ class FlextInfraUtilitiesDependenciesFamily:
         return tuple(sorted(name for name in declared if name in workspace_names))
 
 
-class FlextInfraUtilitiesDependencies(FlextInfraUtilitiesDependenciesProfiles):
-    """Canonical dependencies namespace owner (flat facade over the profiles)."""
+class FlextInfraUtilitiesDependencies(FlextInfraUtilitiesDependenciesFamily):
+    """Canonical dependencies namespace owner (flat facade over the family)."""
 
 
 __all__: list[str] = ["FlextInfraUtilitiesDependencies"]
