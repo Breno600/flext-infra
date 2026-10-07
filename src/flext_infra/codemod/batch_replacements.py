@@ -14,6 +14,7 @@ import libcst as cst
 
 from flext_core import r
 from flext_infra import c, m, t, u
+from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -274,7 +275,6 @@ class FlextInfraModReplacements:
 
         """
         # AST rewrites can also leave imports whose last reference was removed.
-        from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
 
         with u.Infra.open_project(root) as rope_project:
             normalized = u.Infra.normalize_imports(

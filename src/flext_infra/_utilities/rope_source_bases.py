@@ -1,24 +1,18 @@
 """Qualified runtime-base discovery over captured, unpublished source.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
+SPDX-License-Identifier: MIT.
 """
 
 from __future__ import annotations
 
-import ast
-import importlib
-import importlib.util
-import sys
 from collections.abc import MutableMapping
-from importlib.util import resolve_name
 from pathlib import Path
-from typing import ClassVar
 
 from flext_infra import c, m, p, t
 
 
-class FlextInfraUtilitiesRopeSourceBasesFamily:
+class FlextInfraUtilitiesRopeSourceBases:
     """Canonical namespace owner."""
 
     class _SourceBindingCollector:
@@ -241,10 +235,19 @@ class FlextInfraUtilitiesRopeSourceBasesFamily:
                 return
             if self._complete_class_namespace(node, targets, bindings, lexical):
                 return
-            message = (
-                f"Unsupported class binding mutation in {self._module}: {ast.unparse(node)}"
-            )
+            message = f"Unsupported class binding mutation in {self._module}: {ast.unparse(node)}"
             raise ValueError(message)
+
+        if self._provider_metadata_rebind(targets, bindings):
+            return
+        if self._module_table_mutation(targets, bindings):
+            return
+        if self._complete_class_namespace(node, targets, bindings, lexical):
+            return
+        message = (
+            f"Unsupported class binding mutation in {self._module}: {ast.unparse(node)}"
+        )
+        raise ValueError(message)
 
         def _provider_metadata_rebind(
             self,
@@ -260,37 +263,36 @@ class FlextInfraUtilitiesRopeSourceBasesFamily:
                 for target in targets
             )
 
-        def _module_table_mutation(
-            self,
-            targets: t.SequenceOf[ast.expr],
-            bindings: t.MappingKV[str, m.Infra.SourceClassReference | None]
-            | None = None,
-        ) -> bool:
-            """Return whether every target is an external runtime table mutation.
+    def _module_table_mutation(
+        self,
+        targets: t.SequenceOf[ast.expr],
+        bindings: t.MappingKV[str, m.Infra.SourceClassReference | None] | None = None,
+    ) -> bool:
+        """Return whether every target is an external runtime table mutation.
 
-            Standard-library alias re-registration (CPython's ``collections``
-            publishes ``sys.modules['collections.abc'] = _collections_abc``) is
-            an external runtime table mutation, never a class rebinding — the
-            touched names stay unknown. The same holds for subscript stores
-            through any plain module-level table whose name is not a live class
-            binding (CPython's http.server ``_control_char_table[ord(...)] =
-            ...``): a subscript store cannot redefine a class through a
-            non-class root, so the mutation is a runtime table write regardless
-            of the enclosing conditionality.
+        Standard-library alias re-registration (CPython's ``collections``
+        publishes ``sys.modules['collections.abc'] = _collections_abc``) is
+        an external runtime table mutation, never a class rebinding — the
+        touched names stay unknown. The same holds for subscript stores
+        through any plain module-level table whose name is not a live class
+        binding (CPython's http.server ``_control_char_table[ord(...)] =
+        ...``): a subscript store cannot redefine a class through a
+        non-class root, so the mutation is a runtime table write regardless
+        of the enclosing conditionality.
 
-            """
-            return all(
-                isinstance(target, ast.Subscript)
-                and isinstance(target.value, ast.Name)
-                and (
-                    m.Infra.SubscriptRebind(
-                        root_name=target.value.id,
-                    ).is_module_table_mutation
-                    or bindings is None
-                    or bindings.get(target.value.id) is None
-                )
-                for target in targets
+        """
+        return all(
+            isinstance(target, ast.Subscript)
+            and isinstance(target.value, ast.Name)
+            and (
+                m.Infra.SubscriptRebind(
+                    root_name=target.value.id,
+                ).is_module_table_mutation
+                or bindings is None
+                or bindings.get(target.value.id) is None
             )
+            for target in targets
+        )
 
         @staticmethod
         def _is_class_namespace_completion(
@@ -590,6 +592,8 @@ class FlextInfraUtilitiesRopeSourceBasesFamily:
                 qualified_base=".".join((binding.qualified_base, *attributes)),
             )
 
+        return None
+
     class _RuntimeBaseResolver:
         """Resolve owned classes in C3 order and external classes through Rope.
 
@@ -688,9 +692,7 @@ class FlextInfraUtilitiesRopeSourceBasesFamily:
             for alias_module, captured in self._sources.items():
                 alias_path, alias_source = captured
                 for alias, absolute in (
-                    FlextInfraUtilitiesRopeSourceBasesFamily
-                    .FlextInfraUtilitiesRopeSourceBases
-                    .lazy_module_aliases(
+                    FlextInfraUtilitiesRopeSourceBases.FlextInfraUtilitiesRopeSourceBases.lazy_module_aliases(
                         alias_module,
                         alias_path,
                         alias_source,
@@ -785,14 +787,12 @@ class FlextInfraUtilitiesRopeSourceBasesFamily:
                 module if path.name == "__init__.py" else module.rpartition(".")[0]
             )
             globals_: MutableMapping[str, m.Infra.SourceClassReference | None] = {}
-            collector = (
-                FlextInfraUtilitiesRopeSourceBasesFamily._SourceBindingCollector(
-                    module=module,
-                    package=package,
-                    definitions=self._definitions,
-                    required_line=required_line,
-                    allow_conditional=allow_conditional,
-                )
+            collector = FlextInfraUtilitiesRopeSourceBases._SourceBindingCollector(
+                module=module,
+                package=package,
+                definitions=self._definitions,
+                required_line=required_line,
+                allow_conditional=allow_conditional,
             )
             collector.collect(parsed.body, globals_, globals_, "")
             targets, references = (
@@ -1590,137 +1590,62 @@ class FlextInfraUtilitiesRopeSourceBasesFamily:
 
         _stdlib_backing_cache: ClassVar[dict[str, str] | None] = None
 
-    class FlextInfraUtilitiesRopeSourceBases:
-        """Keep source declaration identities separate from Ruff's qualified bases."""
 
-        @classmethod
-        def lazy_module_aliases(
-            cls,
-            module: str,
-            path: Path,
-            source: str,
-        ) -> dict[str, str]:
-            """Read the ``install_lazy_exports`` namespace alias map of one module.
+class FlextInfraUtilitiesRopeSourceBases:
+    """Source-bases composite facade over the inventory and runtime parts."""
 
-            The canonical package facade binds its public namespace names (``m``,
-            ``p``, ``t`` and siblings) to provider modules through a lazy-exports
-            call whose final argument is the alias mapping. Those names are module
-            reexports, not lexical imports, so the lexical inventory cannot see
-            them; base references qualified through the facade (``m.BaseModel``
-            with ``from <pkg> import m``) must rewrite to the provider module
-            before namespace resolution.
+    @classmethod
+    def inventory(
+        cls,
+        request: m.Infra.SourceBindingInventoryRequest,
+        definitions: MutableMapping[str, m.Infra.SourceClassDefinition],
+    ) -> t.MappingKV[str, m.Infra.SourceClassReference | None]:
+        """Index lexical bindings without installing a cross-module Rope overlay.
 
-            Parameters:
-                module: The qualified module name of the captured source.
-                path: The module's file path.
-                source: The captured source text.
+        Returns:
+            The module's explicit lexical bindings, including value shadowing.
 
-            Returns:
-                Alias name to absolute provider module path.
+        Raises:
+            TypeError: If Rope does not return a module AST.
+            ValueError: If a required binding has unsupported source semantics.
 
-            """
-            try:
-                parsed = ast.parse(source, filename=str(path))
-            except SyntaxError:
-                return {}
-            package = (
-                module if path.name == "__init__.py" else module.rpartition(".")[0]
-            )
-            aliases: dict[str, str] = {}
-            for node in ast.walk(parsed):
-                if not (
-                    isinstance(node, ast.Call)
-                    and isinstance(node.func, ast.Name)
-                    and node.func.id == "install_lazy_exports"
-                ):
-                    continue
-                mapping = next(
-                    (
-                        arg
-                        for arg in (*node.args, *node.keywords)
-                        if isinstance(arg, ast.Dict)
-                        or (
-                            isinstance(arg, ast.Call)
-                            and isinstance(arg.func, ast.Name)
-                            and arg.func.id == "MappingProxyType"
-                        )
-                    ),
-                    None,
-                )
-                if isinstance(mapping, ast.Call):
-                    mapping = mapping.args[0] if mapping.args else None
-                if not isinstance(mapping, ast.Dict):
-                    continue
-                for key_node, value_node in zip(
-                    mapping.keys,
-                    mapping.values,
-                    strict=False,
-                ):
-                    if not (
-                        isinstance(key_node, ast.Constant)
-                        and isinstance(key_node.value, str)
-                        and isinstance(value_node, ast.Constant)
-                        and isinstance(value_node.value, str)
-                    ):
-                        continue
-                    value = value_node.value
-                    if value.startswith("."):
-                        parts = package.split(".") if package else []
-                        depth = len(value) - len(value.lstrip("."))
-                        remainder = value.lstrip(".")
-                        if depth > len(parts):
-                            continue
-                        base = (
-                            ".".join(parts[: len(parts) - depth + 1])
-                            if depth
-                            else package
-                        )
-                        value = ".".join(part for part in (base, remainder) if part)
-                    aliases[key_node.value] = value
-            return aliases
+        """
+        return FlextInfraUtilitiesRopeSourceBasesInventory.inventory(
+            request,
+            definitions,
+        )
 
-        @classmethod
-        def runtime_bases(
-            cls,
-            project: t.Infra.RopeProject,
-            sources: t.MappingKV[str, t.Pair[Path, str]],
-            roots: t.StrSequence,
-            extra_module_aliases: t.MappingKV[str, str] | None = None,
-        ) -> t.StrTuple:
-            """Resolve owned classes in C3 order and external classes through Rope.
+    @classmethod
+    def runtime_bases(
+        cls,
+        project: t.Infra.RopeProject,
+        sources: t.MappingKV[str, t.Pair[Path, str]],
+        roots: t.StrSequence,
+        extra_module_aliases: t.MappingKV[str, str] | None = None,
+    ) -> t.StrTuple:
+        """Resolve owned classes in C3 order and external classes through Rope.
 
-            Only configured roots mark model evaluation boundaries. No first-party
-            module is imported or resolved from disk when its planned source exists.
-            Provider reexports follow Rope's declared import provenance. Their source
-            declarations, not Rope's possibly incomplete superclass inference, supply
-            the ordered bases. Missing references and invalid inheritance fail
-            loudly: a non-class required base raises ``TypeError``, and an invalid
-            source binding or inheritance order raises ``ValueError`` through the
-            resolver.
+        Only configured roots mark model evaluation boundaries. No first-party
+        module is imported or resolved from disk when its planned source exists.
+        Provider reexports follow Rope's declared import provenance. Their source
+        declarations, not Rope's possibly incomplete superclass inference, supply
+        the ordered bases. Missing references and invalid inheritance fail
+        loudly.
 
-            Parameters:
-                project: The open Rope project scoped to the analysis roots.
-                sources: The qualified module name to captured path and source.
-                roots: The configured root qualified names.
-                extra_module_aliases: Facade alias maps read outside the sources.
+        Returns:
+            Sorted configured roots and derived Ruff-qualified base expressions.
 
-            Returns:
-                Sorted configured roots and derived Ruff-qualified base expressions.
-
-            """
-            return FlextInfraUtilitiesRopeSourceBasesFamily._RuntimeBaseResolver(
-                project,
-                sources,
-                roots,
-                extra_module_aliases,
-            ).run()
+        """
+        return FlextInfraUtilitiesRopeSourceBases._RuntimeBaseResolver(
+            project,
+            sources,
+            roots,
+            extra_module_aliases,
+        ).run()
 
 
 # The flat module-level re-export: the package lazy map and the
 # internal from-import contract resolve this name at module scope
 # (the S6 nesting moved the class inside the family facade).
-FlextInfraUtilitiesRopeSourceBases = (
-    FlextInfraUtilitiesRopeSourceBasesFamily.FlextInfraUtilitiesRopeSourceBases
-)
 
 __all__: list[str] = ["FlextInfraUtilitiesRopeSourceBases"]

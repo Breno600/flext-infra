@@ -411,18 +411,18 @@ class FlextInfraUtilitiesPyprojectUvSources(
         The `[tool.uv.workspace]` TABLE is owned by the pyproject template
         alone: only the workspace root's render declares it, so a member
         manifest never grows a nested workspace (uv rejects nesting). This
-        sync manages the SOURCES identity on both shapes: the root
-        redirects every attached member requirement to the workspace; a
-        member (superproject membership detected through the detector's
-        single superproject-manifest read) redirects the siblings IT
-        references; a true standalone keeps its git+ form and prunes fleet
-        member sources.
+        sync manages the SOURCES identity on that same single gate: only the
+        workspace root's render redirects member requirements through
+        ``[tool.uv.sources] workspace = true`` — that provenance resolves
+        solely inside the root's manifest, so a member or standalone render
+        (which publishes a manifest consumers resolve alone) keeps the inline
+        git+ form and prunes fleet member sources.
         """
         from flext_cli import u
 
         if not owns_workspace_table:
             u.Cli.toml_remove_key_if_present(uv, "workspace")
-        if workspace_members:
+        if owns_workspace_table and workspace_members:
             cls._sync_member_sources(
                 uv,
                 cls._wanted_workspace_members(document, workspace_members),
