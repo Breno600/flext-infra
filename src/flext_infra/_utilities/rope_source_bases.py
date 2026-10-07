@@ -878,7 +878,11 @@ class FlextInfraUtilitiesRopeSourceBases:
                     raise
                 module = project.get_module(real)
             resource = project.find_module(target)
-            if resource is not None and not isinstance(module, native_module_type):
+            if (
+                resource is not None
+                and not isinstance(module, native_module_type)
+                and FlextInfraUtilitiesRopeCore.resolvable_module_resource(resource)
+            ):
                 module = FlextInfraUtilitiesRopeCore.resolve_pymodule(project, resource)
             return provider_reference(module, attributes, visiting, depth)
 
