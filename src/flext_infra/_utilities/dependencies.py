@@ -283,6 +283,8 @@ class FlextInfraUtilitiesDependenciesFamily:
                 },
             )
 
+        return None
+
     @staticmethod
     def raw_requirement_values(raw: p.AttributeProbe) -> list[str]:
         """Collect requirement strings from dependency arrays or group tables.
@@ -946,6 +948,8 @@ class FlextInfraUtilitiesDependenciesFamily:
                 return ()
             workspace_names = set(workspace_project_names)
             return tuple(sorted(name for name in declared if name in workspace_names))
+
+        return None
 
 
 # The flat module-level re-export: the package lazy map and the internal
