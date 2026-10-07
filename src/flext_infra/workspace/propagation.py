@@ -12,6 +12,8 @@ from flext_core import r
 from flext_infra import c, m, p, u
 from flext_infra._config import config
 from flext_infra.base import s
+from flext_infra.codegen.conform import FlextInfraCodegenConform
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -47,8 +49,6 @@ class FlextInfraWorkspacePropagation(s[bool]):
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
         root = self.root
         loaded = FlextInfraWorkspaceDetector.load_workspace_spec(root)
         if loaded.failure:
@@ -208,8 +208,6 @@ class FlextInfraWorkspacePropagation(s[bool]):
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra.codegen.conform import FlextInfraCodegenConform
-
         member_root = self.root / member.path
         base = u.Infra.resolve_integration_branch(
             member_root,

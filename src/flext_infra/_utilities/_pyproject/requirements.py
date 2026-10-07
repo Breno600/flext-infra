@@ -271,9 +271,9 @@ class FlextInfraUtilitiesPyprojectRequirements:
         if declared is not None:
             declared_result = cls._declared_member_override(head, declared)
             if declared_result.failure:
-                return r[
-                    t.Pair[t.Pair[str, str], str | None]
-                ].from_failure(declared_result)
+                return r[t.Pair[t.Pair[str, str], str | None]].from_failure(
+                    declared_result,
+                )
             # An attached member renders on the line its declaration carries.
             declared_url, member_line = declared_result.value
             if not url:
@@ -287,9 +287,9 @@ class FlextInfraUtilitiesPyprojectRequirements:
                 url,
             )
             if candidate_result.failure:
-                return r[
-                    t.Pair[t.Pair[str, str], str | None]
-                ].from_failure(candidate_result)
+                return r[t.Pair[t.Pair[str, str], str | None]].from_failure(
+                    candidate_result,
+                )
             url, declared_ref = candidate_result.value
             line = declared_ref
         return r[t.Pair[t.Pair[str, str], str | None]].ok(((url, declared_ref), line))

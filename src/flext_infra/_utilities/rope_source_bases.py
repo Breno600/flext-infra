@@ -240,8 +240,7 @@ class _SourceBindingCollector:
         if self._complete_class_namespace(node, targets, bindings, lexical):
             return
         message = (
-            f"Unsupported class binding mutation in {self._module}: "
-            f"{ast.unparse(node)}"
+            f"Unsupported class binding mutation in {self._module}: {ast.unparse(node)}"
         )
         raise ValueError(message)
 
@@ -1050,9 +1049,7 @@ class _RuntimeBaseResolver:
 
         """
         if depth > c.Infra.ROPE_WALK_DEPTH_BUDGET:
-            message = (
-                f"Unresolved external base: {module.get_name()} at depth {depth}"
-            )
+            message = f"Unresolved external base: {module.get_name()} at depth {depth}"
             raise ValueError(message)
         if not attributes:
             message = f"Module used as a class base: {module.get_name()}"
@@ -1215,9 +1212,7 @@ class _RuntimeBaseResolver:
 
         """
         if depth > c.Infra.ROPE_WALK_DEPTH_BUDGET:
-            message = (
-                f"Unresolved external base: {reference.target} at depth {depth}"
-            )
+            message = f"Unresolved external base: {reference.target} at depth {depth}"
             raise ValueError(message)
         target, attributes = self._alias_rewritten_target(reference)
         key = ".".join((target, *attributes))
@@ -1372,8 +1367,7 @@ class _RuntimeBaseResolver:
         value = self._external[identity]
         if not isinstance(value, p.Infra.RopeBuiltinClass):
             message = (
-                f"External class has no declared source or native identity: "
-                f"{identity}"
+                f"External class has no declared source or native identity: {identity}"
             )
             raise TypeError(message)
         builtin_class = FlextInfraUtilitiesRopeRuntime.runtime_type(

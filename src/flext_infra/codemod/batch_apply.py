@@ -255,9 +255,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             )
         if current.detection_only or current.non_actionable_with_fix:
             detection_rules = sorted({
-                finding.rule_id
-                for finding in current.entries
-                if not finding.actionable
+                finding.rule_id for finding in current.entries if not finding.actionable
             })
             self.progress.emit(
                 f"mod: {current.detection_only} detection-only and "

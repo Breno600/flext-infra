@@ -14,6 +14,7 @@ from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra.workspace._governance import FlextInfraWorkspaceGovernanceMixin
+    from flext_infra.workspace._rope_query import FlextInfraRopeQueryMixin
     from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
     from flext_infra.workspace.environment import FlextInfraWorkspaceEnvironmentMixin
     from flext_infra.workspace.environment_contracts import (
@@ -30,6 +31,7 @@ if TYPE_CHECKING:
 
 __all__: tuple[str, ...] = (
     "FlextInfraFlextBindingService",
+    "FlextInfraRopeQueryMixin",
     "FlextInfraRopeWorkspace",
     "FlextInfraWorkspaceDetector",
     "FlextInfraWorkspaceEnvironmentContracts",
@@ -45,6 +47,7 @@ install_lazy_exports(
     globals(),
     MappingProxyType({
         "FlextInfraFlextBindingService": ".flext_binding",
+        "FlextInfraRopeQueryMixin": "._rope_query",
         "FlextInfraRopeWorkspace": ".rope",
         "FlextInfraWorkspaceDetector": ".detector",
         "FlextInfraWorkspaceEnvironmentContracts": ".environment_contracts",

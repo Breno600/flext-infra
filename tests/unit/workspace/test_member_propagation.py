@@ -73,9 +73,11 @@ class TestsFlextInfraWorkspaceMemberPropagation:
                     u.Tests.WorktreeFixture.initialize_governed_project(
                         root / name,
                         name,
-                        workspace="fixture-workspace",
-                        database="fixture_workspace",
-                        issue_prefix="fixture-workspace",
+                        beads=u.Tests.BeadsIdentity(
+                            workspace="fixture-workspace",
+                            database="fixture_workspace",
+                            issue_prefix="fixture-workspace",
+                        ),
                     )
                     u.Tests.checkout_integration(root / name)
                 u.Tests.WorktreeFixture.write_gitmodules(root, self.MEMBERS)

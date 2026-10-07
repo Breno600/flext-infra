@@ -566,6 +566,27 @@ dependencies = []
         )
         tm.that(u.Tests.scaffold_text(root, c.PYPROJECT_FILENAME), eq=first)
 
+    @staticmethod
+    def _assert_unmanaged_tool_tables_survive(
+        live: str,
+        rendered: str,
+        document: t.JsonMapping,
+    ) -> None:
+        """`ruff` is managed: the rendered projection wins over the live file.
+
+        `bandit` is unmanaged and live-only, so it survives untouched.
+        """
+        tool = tm.not_none(u.Cli.toml_mapping_child(document, "tool"))
+        ruff = tm.not_none(u.Cli.toml_mapping_child(tool, "ruff"))
+        bandit = tm.not_none(u.Cli.toml_mapping_child(tool, "bandit"))
+        live_tool = u.Tests.toml_table_at(live, "tool")
+        rendered_payload = tm.not_none(u.Cli.toml_mapping_from_text(rendered))
+        rendered_tool = tm.not_none(u.Cli.toml_mapping_child(rendered_payload, "tool"))
+        rendered_ruff = tm.not_none(u.Cli.toml_mapping_child(rendered_tool, "ruff"))
+        tm.that(ruff["line-length"], eq=rendered_ruff["line-length"])
+        live_bandit = u.Cli.toml_mapping_child(live_tool, "bandit")
+        tm.that(bandit["skips"], eq=(live_bandit or {}).get("skips"))
+
     def test_overlay_preserves_custom_scripts_and_unmanaged_tools(self) -> None:
         """Package requirements survive without restoring stale profile pins."""
         rendered = """[project]
@@ -603,14 +624,8 @@ line-length = 120
 skips = ["B101"]
 """
         first = tm.ok(u.Infra.overlay_preserved(rendered, live))
-        document = u.Cli.toml_mapping_from_text(first)
-        tm.that(document, none=False)
-        if document is None:
-            return
-        project = u.Cli.toml_mapping_child(document, "project")
-        tm.that(project, none=False)
-        if project is None:
-            return
+        document = tm.not_none(u.Cli.toml_mapping_from_text(first))
+        project = tm.not_none(u.Cli.toml_mapping_child(document, "project"))
         expected_requirements = frozenset({
             "pydantic>=2",
             "beartype>=0.22",
@@ -672,30 +687,4 @@ skips = ["B101"]
             ),
         )
         tm.that("flext-dev" in u.Tests.toml_mapping(project["scripts"]), eq=True)
-        tool = u.Cli.toml_mapping_child(document, "tool")
-        tm.that(tool, none=False)
-        if tool is None:
-            return
-        ruff = u.Cli.toml_mapping_child(tool, "ruff")
-        bandit = u.Cli.toml_mapping_child(tool, "bandit")
-        tm.that(ruff is not None and bandit is not None, eq=True)
-        if ruff is None or bandit is None:
-            return
-        live_tool = u.Tests.toml_table_at(live, "tool")
-        rendered_payload = u.Cli.toml_mapping_from_text(rendered)
-        tm.that(rendered_payload, none=False)
-        if rendered_payload is None:
-            return
-        # `ruff` is a managed tool table: the rendered projection wins over
-        # the live file; `bandit` is unmanaged and live-only, so it survives.
-        rendered_tool = u.Cli.toml_mapping_child(rendered_payload, "tool")
-        tm.that(rendered_tool, none=False)
-        if rendered_tool is None:
-            return
-        rendered_ruff = u.Cli.toml_mapping_child(rendered_tool, "ruff")
-        tm.that(rendered_ruff, none=False)
-        if rendered_ruff is None:
-            return
-        tm.that(ruff["line-length"], eq=rendered_ruff["line-length"])
-        live_bandit = u.Cli.toml_mapping_child(live_tool, "bandit")
-        tm.that(bandit["skips"], eq=(live_bandit or {}).get("skips"))
+        self._assert_unmanaged_tool_tables_survive(live, rendered, document)

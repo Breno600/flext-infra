@@ -13,7 +13,7 @@ import re
 from pathlib import Path
 
 from flext_infra import c, m, t
-from flext_infra._config import FlextInfraConfig
+from flext_infra._config import FlextInfraConfig, config
 
 # Concrete-owner imports: this module resolves during the root's lazy ``u``
 # export, when the root namespace is still initializing — a root from-import
@@ -26,8 +26,6 @@ class FlextInfraUtilitiesDocsGithubLinks:
     @staticmethod
     def _config() -> FlextInfraConfig:
 
-        from flext_infra._config import config
-
         return config
 
     @staticmethod
@@ -38,8 +36,6 @@ class FlextInfraUtilitiesDocsGithubLinks:
             The typed GitHub repo map from make.docs SSOT.
 
         """
-        from flext_infra._config import config
-
         return config.Infra.codegen.make.docs.github_repos
 
     @staticmethod
@@ -220,17 +216,37 @@ class FlextInfraUtilitiesDocsGithubLinks:
         )
         if repo is None:
             return None
-        path = FlextInfraUtilitiesDocsGithubLinks.docs_github_governed_path(
+        governed_path = FlextInfraUtilitiesDocsGithubLinks.docs_github_governed_path(
             match.group("refpath"),
             repo.branch,
         )
-        if path is None:
+        if governed_path is None:
             return None
         root = FlextInfraUtilitiesDocsGithubLinks.docs_expand_local_checkout(
             repo.local_checkout,
         )
         if root is None:
             return None
+        return FlextInfraUtilitiesDocsGithubLinks._github_member_path(
+            root,
+            repo,
+            repository,
+            governed_path,
+        )
+
+    @staticmethod
+    def _github_member_path(
+        root: Path,
+        repo: m.Infra.DocsGithubRepoSpec,
+        repository: str,
+        path: Path,
+    ) -> Path:
+        """Join one local checkout root with its governed relative path.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         # Member repos under flext monorepo: flext-sh/flext-core -> ~/flext/flext-core
         if (
             repo.organization == "flext-sh"

@@ -29,17 +29,21 @@ class TestsFlextInfraWorkspaceEnvironmentProvenance:
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             "sample",
-            workspace="sample-workspace",
-            database="sample-database",
-            issue_prefix="sample-prefix",
+            beads=u.Tests.BeadsIdentity(
+                workspace="sample-workspace",
+                database="sample-database",
+                issue_prefix="sample-prefix",
+            ),
         )
         member = root / distribution
         u.Tests.WorktreeFixture.initialize_governed_project(
             member,
             distribution,
-            workspace=f"{distribution}-workspace",
-            database=f"{distribution}-database",
-            issue_prefix=f"{distribution}-prefix",
+            beads=u.Tests.BeadsIdentity(
+                workspace=f"{distribution}-workspace",
+                database=f"{distribution}-database",
+                issue_prefix=f"{distribution}-prefix",
+            ),
             beads_owner=False,
         )
         u.Tests.WorktreeFixture.link_member_beads(

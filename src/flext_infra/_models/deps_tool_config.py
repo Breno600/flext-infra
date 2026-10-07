@@ -459,18 +459,22 @@ class FlextInfraModelsDepsToolConfig(
             Returns:
                 The resulting ``Self``.
 
+            """
+            self._validate_timeouts()
+            self._validate_arg_vocabulary()
+            return self
+
+        def _validate_timeouts(self) -> None:
+            """Keep item and termination budgets inside the hard invocation cap.
+
             Raises:
-                ValueError: If pytest case timeout must be less than run timeout; or if
-                    pytest termination grace must be less than run timeout; or if pytest
-                    slow timeout must exceed the per-case timeout; or if pytest slow
-                    timeout must be less than run timeout; or if pytest run timeout must
-                    exceed the suite stop reserve; or if pytest runtime policy options
-                    are derived from typed fields; or if pytest progress args must
-                    expose verbose item progress; or if pytest ci-excluded-markers must
-                    be declared in standard-markers; or if pytest slow-marker must be
-                    declared in standard-markers; or if pytest external-gate-markers
-                    must be a non-empty subset of standard-markers; undeclared; or if
-                    pytest reporting args must not override runner-owned policy.
+                ValueError: If pytest case timeout must be less than run timeout; or
+                    if pytest termination grace must be less than run timeout; or if
+                    pytest slow timeout must exceed the per-case timeout; or if pytest
+                    slow timeout must be less than run timeout; or if pytest run
+                    timeout must exceed the suite stop reserve; or if pytest runtime
+                    policy options are derived from typed fields; or if pytest
+                    progress args must expose verbose item progress.
 
             """
             if self.case_timeout_seconds >= self.run_timeout_seconds:
@@ -514,6 +518,18 @@ class FlextInfraModelsDepsToolConfig(
             if "--verbose" not in self.progress_args:
                 msg = "pytest progress args must expose verbose item progress"
                 raise ValueError(msg)
+
+        def _validate_arg_vocabulary(self) -> None:
+            """Bind the declared CLI vocabulary to the standard marker table.
+
+            Raises:
+                ValueError: If pytest ci-excluded-markers must be declared in
+                    standard-markers; or if pytest slow-marker must be declared in
+                    standard-markers; or if pytest external-gate-markers must be a
+                    non-empty subset of standard-markers; undeclared; or if pytest
+                    reporting args must not override runner-owned policy.
+
+            """
             declared_markers = {
                 marker.split(":", 1)[0].strip() for marker in self.standard_markers
             }
@@ -560,7 +576,6 @@ class FlextInfraModelsDepsToolConfig(
                 ):
                     msg = "pytest reporting args must not override runner-owned policy"
                     raise ValueError(msg)
-            return self
 
     class TomlsortConfig(m.ArbitraryTypesModel):
         """tomlsort baseline settings loaded from YAML."""

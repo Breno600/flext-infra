@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import ClassVar
 
 from flext_infra import t
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeCorePyModuleMixin:
@@ -72,8 +73,6 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
             TypeError: If rope project returned non-PyModule.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
-
         if not FlextInfraUtilitiesRopeRuntime.file_resource(resource):
             path = Path(resource.real_path)
             if (
@@ -102,8 +101,6 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
             RuntimeError: If rope module import table unavailable for.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
-
         try:
             module_imports = FlextInfraUtilitiesRopeRuntime.module_imports_for_pymodule(
                 rope_project,

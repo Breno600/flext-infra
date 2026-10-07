@@ -171,6 +171,9 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             resolution=uv_resolution,
             candidate_sources=candidate_sources,
             workspace_members=workspace_members,
+            owns_workspace_table=(
+                workspace.repository.role is c.Infra.MakeProfile.WORKSPACE
+            ),
         )
         if sources_result.failure:
             return r[bool].from_failure(sources_result)

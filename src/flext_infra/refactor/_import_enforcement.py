@@ -10,10 +10,24 @@ import ast
 import operator
 from collections import defaultdict
 from collections.abc import MutableMapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
 
 from flext_infra import c, t
+
+
+@dataclass(frozen=True)
+class _DemotionScan:
+    """Immutable per-pass context for one lazy demotion scan."""
+
+    tree: ast.Module
+    parents: t.MappingKV[int, ast.AST]
+    frozen: t.Infra.StrSet
+    package: str
+    module_rank: int
+    file_path: Path
+    family_exports: t.MappingKV[str, t.Infra.StrSet]
 
 
 class FlextInfraImportNormalization:
@@ -68,6 +82,12 @@ class FlextInfraImportNormalization:
     }
     FACADE_RANK: ClassVar[t.MappingKV[str, int]] = {"api": 10, "cli": 11}
     MAX_PASSES: ClassVar[int] = 24
+    FAMILY_PATH_DEPTH: ClassVar[int] = 2
+    """Module-path depth of one family root (``<package>.<family>``)."""
+    LEAF_PATH_DEPTH: ClassVar[int] = 3
+    """Module-path depth of one family leaf (``<package>.<family>.<leaf>``)."""
+    DEFAULT_LAYER_RANK: ClassVar[int] = 7
+    """Layer rank of a module outside every declared layer."""
 
     @classmethod
     def apply_files(cls, project_root: Path, files: t.SequenceOf[Path]) -> bool:
@@ -314,7 +334,7 @@ class FlextInfraImportNormalization:
         if len(names) == 1 and names[0] == package:
             root_form = True
         elif (
-            len(names) == 2
+            len(names) == FlextInfraImportNormalization.FAMILY_PATH_DEPTH
             and names[0] == package
             and names[1].lstrip("_") in cls.FAMILY_LETTER
         ):
@@ -341,6 +361,77 @@ class FlextInfraImportNormalization:
 
     # -- rule 4: flattened family paths -----------------------------------------------
 
+    @staticmethod
+    def _partition_clauses(
+        aliases: t.SequenceOf[ast.alias],
+        exported: t.Infra.StrSet,
+    ) -> tuple[list[str], list[str]]:
+        """Split one statement's aliases into family-exported and kept clauses.
+
+        Returns:
+            The resulting ``tuple[list[str], list[str]]``: the clauses that
+            move onto the family init, then the clauses that stay leaf.
+
+        """
+        moved: list[str] = []
+        kept: list[str] = []
+        for alias in aliases:
+            clause = (
+                alias.name
+                if alias.asname is None
+                else f"{alias.name} as {alias.asname}"
+            )
+            if alias.name in exported:
+                moved.append(clause)
+            else:
+                kept.append(clause)
+        return moved, kept
+
+    @classmethod
+    def _flatten_import_edit(
+        cls,
+        node: ast.stmt,
+        package: str,
+        file_path: Path,
+        family_exports: t.MappingKV[str, t.Infra.StrSet],
+        lines: t.StrSequence,
+    ) -> tuple[int, int, t.StrSequence] | None:
+        """Return the flatten edit for one import, or ``None`` when it stays.
+
+        Returns:
+            The resulting ``tuple[int, int, t.StrSequence] | None``.
+
+        """
+        if not isinstance(node, ast.ImportFrom) or node.level or node.module is None:
+            return None
+        names = node.module.split(".")
+        # No member of the family may bind a sibling name through the
+        # family init: the init is still assembling while its own modules
+        # load, so the flattened form closes a self-family import cycle
+        # (its own deep imports are the publication form itself).
+        is_family_leaf = (
+            len(names) >= cls.LEAF_PATH_DEPTH
+            and names[0] == package
+            and names[1].lstrip("_") in cls.FAMILY_LETTER
+            and not cls._inside_family(file_path, names[1])
+        )
+        exported = family_exports.get(names[1].lstrip("_")) if is_family_leaf else None
+        if not exported:
+            return None
+        moved_clauses, kept_clauses = cls._partition_clauses(node.names, exported)
+        if not moved_clauses:
+            return None
+        indent = cls._line_indent(lines[node.lineno - 1])
+        replacement: list[str] = []
+        if kept_clauses:
+            replacement.append(
+                f"{indent}from {node.module} import {', '.join(kept_clauses)}",
+            )
+        replacement.append(
+            f"{indent}from {names[0]}.{names[1]} import {', '.join(moved_clauses)}",
+        )
+        return (node.lineno, cls._end_line(node), tuple(replacement))
+
     @classmethod
     def _flatten_edits(
         cls,
@@ -359,51 +450,15 @@ class FlextInfraImportNormalization:
         edits: t.MutableSequenceOf[tuple[int, int, t.StrSequence]] = []
         lines = source.splitlines()
         for node in cls._iter_imports(tree):
-            if (
-                not isinstance(node, ast.ImportFrom)
-                or node.level
-                or node.module is None
-            ):
-                continue
-            names = node.module.split(".")
-            if len(names) < 3 or names[0] != package:
-                continue
-            family = names[1].lstrip("_")
-            if family not in cls.FAMILY_LETTER:
-                continue
-            # No member of the family may bind a sibling name through the
-            # family init: the init is still assembling while its own modules
-            # load, so the flattened form closes a self-family import cycle
-            # (its own deep imports are the publication form itself).
-            if cls._inside_family(file_path, names[1]):
-                continue
-            exported = family_exports.get(family)
-            if not exported:
-                continue
-            kept_clauses: list[str] = []
-            moved_clauses: list[str] = []
-            for alias in node.names:
-                clause = (
-                    alias.name
-                    if alias.asname is None
-                    else f"{alias.name} as {alias.asname}"
-                )
-                if alias.name in exported:
-                    moved_clauses.append(clause)
-                else:
-                    kept_clauses.append(clause)
-            if not moved_clauses:
-                continue
-            indent = cls._line_indent(lines[node.lineno - 1])
-            replacement: list[str] = []
-            if kept_clauses:
-                replacement.append(
-                    f"{indent}from {node.module} import {', '.join(kept_clauses)}",
-                )
-            replacement.append(
-                f"{indent}from {names[0]}.{names[1]} import {', '.join(moved_clauses)}",
+            edit = cls._flatten_import_edit(
+                node,
+                package,
+                file_path,
+                family_exports,
+                lines,
             )
-            edits.append((node.lineno, cls._end_line(node), tuple(replacement)))
+            if edit is not None:
+                edits.append(edit)
         return edits
 
     @classmethod
@@ -467,8 +522,8 @@ class FlextInfraImportNormalization:
         return names
 
     @staticmethod
-    def module_name_of(file_path: Path, leaf: str) -> str:
-        """Return the owning module name of a file for leaf comparison.
+    def module_name_of(leaf: str) -> str:
+        """Return the owning module name of a leaf for comparison.
 
         Returns:
             The resulting ``str``.
@@ -485,6 +540,70 @@ class FlextInfraImportNormalization:
 
         """
         return family_dir in file_path.parts
+
+    @staticmethod
+    def _partition_sibling_clauses(
+        node: ast.ImportFrom,
+        leaf_by_name: t.MappingKV[str, str],
+    ) -> tuple[list[str], MutableMapping[str, list[str]]]:
+        """Split one sibling binding into kept clauses and per-leaf moves.
+
+        Returns:
+            The resulting ``tuple[list[str], MutableMapping[str, list[str]]]``:
+            the clauses that stay on the family init, then the clauses each
+            defining leaf module re-owns.
+
+        """
+        kept_clauses: list[str] = []
+        moved: MutableMapping[str, list[str]] = defaultdict(list)
+        for alias in node.names:
+            clause = (
+                alias.name
+                if alias.asname is None
+                else f"{alias.name} as {alias.asname}"
+            )
+            leaf = leaf_by_name.get(alias.name)
+            # A leaf equal to this file's own module means the name is
+            # defined or re-exported right here: no rewrite can own it.
+            if leaf is None or FlextInfraImportNormalization.module_name_of(leaf):
+                kept_clauses.append(clause)
+            else:
+                moved[leaf].append(clause)
+        return kept_clauses, moved
+
+    @classmethod
+    def _self_family_import_edit(
+        cls,
+        node: ast.stmt,
+        sibling_module: str,
+        leaf_by_name: t.MappingKV[str, str],
+        parents: t.MappingKV[int, ast.AST],
+        lines: t.StrSequence,
+    ) -> tuple[int, int, t.StrSequence] | None:
+        """Return the unflatten edit for one import, or ``None`` when it stays.
+
+        Returns:
+            The resulting ``tuple[int, int, t.StrSequence] | None``.
+
+        """
+        if not isinstance(node, ast.ImportFrom) or node.level or node.module is None:
+            return None
+        if not cls._at_module_level(node, parents):
+            return None
+        if node.module != sibling_module:
+            return None
+        kept_clauses, moved = cls._partition_sibling_clauses(node, leaf_by_name)
+        if not moved:
+            return None
+        indent = cls._line_indent(lines[node.lineno - 1])
+        replacement: list[str] = []
+        if kept_clauses:
+            replacement.append(
+                f"{indent}from {node.module} import {', '.join(kept_clauses)}",
+            )
+        for leaf, clauses in sorted(moved.items()):
+            replacement.append(f"{indent}from {leaf} import {', '.join(clauses)}")
+        return (node.lineno, cls._end_line(node), tuple(replacement))
 
     @classmethod
     def _self_family_unflatten_edits(
@@ -519,46 +638,17 @@ class FlextInfraImportNormalization:
         edits: t.MutableSequenceOf[tuple[int, int, t.StrSequence]] = []
         lines = source.splitlines()
         parents = cls._parent_map(tree)
+        sibling_module = f"{package}.{family_dir}"
         for node in cls._iter_imports(tree):
-            if (
-                not isinstance(node, ast.ImportFrom)
-                or node.level
-                or node.module is None
-            ):
-                continue
-            if not cls._at_module_level(node, parents):
-                continue
-            names = node.module.split(".")
-            if len(names) != 2 or names[0] != package:
-                continue
-            if names[1] != family_dir:
-                continue
-            kept_clauses: list[str] = []
-            moved: MutableMapping[str, list[str]] = defaultdict(list)
-            for alias in node.names:
-                clause = (
-                    alias.name
-                    if alias.asname is None
-                    else f"{alias.name} as {alias.asname}"
-                )
-                leaf = leaf_by_name.get(alias.name)
-                # A leaf equal to this file's own module means the name is
-                # defined or re-exported right here: no rewrite can own it.
-                if leaf is None or cls.module_name_of(file_path, leaf):
-                    kept_clauses.append(clause)
-                else:
-                    moved[leaf].append(clause)
-            if not moved:
-                continue
-            indent = cls._line_indent(lines[node.lineno - 1])
-            replacement: list[str] = []
-            if kept_clauses:
-                replacement.append(
-                    f"{indent}from {node.module} import {', '.join(kept_clauses)}",
-                )
-            for leaf, clauses in sorted(moved.items()):
-                replacement.append(f"{indent}from {leaf} import {', '.join(clauses)}")
-            edits.append((node.lineno, cls._end_line(node), tuple(replacement)))
+            edit = cls._self_family_import_edit(
+                node,
+                sibling_module,
+                leaf_by_name,
+                parents,
+                lines,
+            )
+            if edit is not None:
+                edits.append(edit)
         return edits
 
     @classmethod
@@ -610,99 +700,177 @@ class FlextInfraImportNormalization:
 
         """
         lines = source.splitlines()
-        parents = cls._parent_map(tree)
-        frozen = cls._frozen_node_ids(tree)
-        module_rank = cls._module_layer_rank(file_path)
+        scan = _DemotionScan(
+            tree=tree,
+            parents=cls._parent_map(tree),
+            frozen=cls._frozen_node_ids(tree),
+            package=package,
+            module_rank=cls._module_layer_rank(file_path),
+            file_path=file_path,
+            family_exports=family_exports,
+        )
         insertions: MutableMapping[
             int,
             MutableMapping[str, t.Infra.StrSet],
         ] = defaultdict(lambda: defaultdict(set))
         edits: t.MutableSequenceOf[tuple[int, int, t.StrSequence]] = []
         for node in cls._iter_imports(tree):
-            if not isinstance(node, ast.ImportFrom) or node.level:
+            if not cls._demotion_scope(node, package, scan.parents):
                 continue
-            if node.module is None:
-                continue
-            top_module = node.module.split(".", maxsplit=1)[0]
-            if top_module != package and not top_module.startswith("flext_"):
-                continue
-            if cls._inside_type_checking(node, parents):
-                continue
-            if not cls._at_module_level(node, parents):
-                continue
-            demotable: list[tuple[str, str]] = []
-            kept: list[str] = []
-            for alias in node.names:
-                bound = alias.asname or alias.name
-                reverse_edge = cls._source_is_later_layer(
-                    node.module or "",
-                    package,
-                    module_rank,
-                    file_path,
-                )
-                if not cls._demotion_candidate(
-                    alias,
-                    bound,
-                    package,
-                    module_rank,
-                    reverse_edge,
-                ):
+            cls._collect_demotion_edits(scan, node, insertions, edits)
+        guard_edits = cls._guard_cleanup_edits(
+            tree,
+            lines,
+            scan.parents,
+            scan.frozen,
+            insertions,
+        )
+        edits.extend(guard_edits)
+        edits.extend(cls._insertion_edits(insertions, lines))
+        return edits
+
+    @staticmethod
+    def _demotion_scope(
+        node: ast.stmt,
+        package: str,
+        parents: t.MappingKV[int, ast.AST],
+    ) -> bool:
+        """Return whether one import statement is a lazy-demotion subject.
+
+        Returns:
+            Whether one import statement is a lazy-demotion subject.
+
+        """
+        if not isinstance(node, ast.ImportFrom) or node.level:
+            return False
+        if node.module is None:
+            return False
+        top_module = node.module.split(".", maxsplit=1)[0]
+        if top_module != package and not top_module.startswith("flext_"):
+            return False
+        if FlextInfraImportNormalization._inside_type_checking(node, parents):
+            return False
+        return FlextInfraImportNormalization._at_module_level(node, parents)
+
+    @classmethod
+    def _collect_demotion_edits(
+        cls,
+        scan: _DemotionScan,
+        node: ast.stmt,
+        insertions: MutableMapping[int, MutableMapping[str, t.Infra.StrSet]],
+        edits: t.MutableSequenceOf[tuple[int, int, t.StrSequence]],
+    ) -> None:
+        """Record one subject import's demotion plan into insertions/edits."""
+        demotable: list[tuple[str, str]] = []
+        kept: list[str] = []
+        for alias in node.names:
+            demotes, bound = cls._record_alias_plan(scan, node, alias, insertions)
+            if not demotes:
+                if bound is not None:
                     kept.append(bound)
-                    continue
-                sites = cls._use_sites(tree, bound)
-                if not sites:
-                    if reverse_edge or cls._is_late_letter(
-                        alias,
-                        bound,
-                        package,
-                        module_rank,
-                    ):
-                        # An unused late letter at module level is never a
-                        # typing reference: binding it eagerly only risks the
-                        # self-facade cycle (u inside the utilities tree).
-                        continue
-                    kept.append(bound)
-                    continue
-                if not all(cls._demotable(site, parents, frozen) for site in sites):
-                    kept.append(bound)
-                    continue
-                demotable.append((alias.name, bound))
-                target_module = cls._canonical_lazy_module(
-                    node.module,
-                    alias.name,
-                    package,
-                    family_exports,
-                )
-                for anchor in cls._function_anchors(sites, parents):
-                    insertions[anchor][target_module].add(
-                        alias.name
-                        if alias.asname is None
-                        else f"{alias.name} as {alias.asname}",
-                    )
-            if not demotable:
                 continue
-            if kept:
-                clauses = ", ".join(
-                    alias.name
-                    if alias.asname is None
-                    else f"{alias.name} as {alias.asname}"
-                    for alias in node.names
-                    if (alias.asname or alias.name) in set(kept)
-                )
-                edits.append(
-                    (
-                        node.lineno,
-                        cls._end_line(node),
-                        (f"from {node.module} import {clauses}",),
-                    ),
-                )
-            else:
-                edits.append((node.lineno, cls._end_line(node), ()))
-        edits.extend(cls._guard_cleanup_edits(tree, lines, parents, frozen, insertions))
+            demotable.append((alias.name, bound))
+        if not demotable:
+            return
+        cls._append_demotion_edit(node, kept, edits)
+
+    @classmethod
+    def _record_alias_plan(
+        cls,
+        scan: _DemotionScan,
+        node: ast.ImportFrom,
+        alias: ast.alias,
+        insertions: MutableMapping[int, MutableMapping[str, t.Infra.StrSet]],
+    ) -> tuple[bool, str | None]:
+        """Decide one alias's placement, recording its insertion anchors.
+
+        Returns:
+            The resulting ``tuple[bool, str | None]``: whether the alias
+            demotes to its use sites, then the bound name kept at module
+            level (``None`` when the binding is dropped entirely).
+
+        """
+        bound = alias.asname or alias.name
+        reverse_edge = cls._source_is_later_layer(
+            node.module or "",
+            scan.package,
+            scan.module_rank,
+            scan.file_path,
+        )
+        if not cls._demotion_candidate(
+            alias,
+            bound,
+            scan.module_rank,
+            reverse_edge=reverse_edge,
+        ):
+            return False, bound
+        sites = cls._use_sites(scan.tree, bound)
+        if not sites:
+            if reverse_edge or cls._is_late_letter(alias, bound, scan.module_rank):
+                # An unused late letter at module level is never a typing
+                # reference: binding it eagerly only risks the self-facade
+                # cycle (u inside the utilities tree).
+                return False, None
+            return False, bound
+        if not all(cls._demotable(site, scan.parents, scan.frozen) for site in sites):
+            return False, bound
+        target_module = cls._canonical_lazy_module(
+            node.module,
+            alias.name,
+            scan.package,
+            scan.family_exports,
+        )
+        for anchor in cls._function_anchors(sites, scan.parents):
+            insertions[anchor][target_module].add(
+                alias.name
+                if alias.asname is None
+                else f"{alias.name} as {alias.asname}",
+            )
+        return True, bound
+
+    @classmethod
+    def _append_demotion_edit(
+        cls,
+        node: ast.stmt,
+        kept: t.SequenceOf[str],
+        edits: t.MutableSequenceOf[tuple[int, int, t.StrSequence]],
+    ) -> None:
+        """Append the rewritten or deleted import line for one subject."""
+        if not kept:
+            edits.append((node.lineno, cls._end_line(node), ()))
+            return
+        clauses = ", ".join(
+            alias.name if alias.asname is None else f"{alias.name} as {alias.asname}"
+            for alias in node.names
+            if (alias.asname or alias.name) in set(kept)
+        )
+        edits.append(
+            (
+                node.lineno,
+                cls._end_line(node),
+                (f"from {node.module} import {clauses}",),
+            ),
+        )
+
+    @staticmethod
+    def _insertion_edits(
+        insertions: t.MappingKV[int, t.MappingKV[str, t.Infra.StrSet]],
+        lines: t.StrSequence,
+    ) -> t.SequenceOf[tuple[int, int, t.StrSequence]]:
+        """Turn one scan's recorded insertions into before-insert edits.
+
+        Returns:
+            The resulting ``t.SequenceOf[tuple[int, int, t.StrSequence]]``.
+
+        """
+        edits: list[tuple[int, int, t.StrSequence]] = []
         for anchor, by_module in insertions.items():
             if not by_module:
                 continue
-            indent = cls._function_body_indent(lines, anchor)
+            indent = FlextInfraImportNormalization._function_body_indent(
+                lines,
+                anchor,
+            )
             insert_lines = [
                 f"{indent}from {module} import {', '.join(sorted(bounds))}"
                 for module, bounds in sorted(by_module.items())
@@ -714,7 +882,6 @@ class FlextInfraImportNormalization:
     def _is_late_letter(
         alias: ast.alias,
         bound: str,
-        package: str,
         module_rank: int,
     ) -> bool:
         """Return whether one binding is an own-package letter at/after its layer.
@@ -763,7 +930,7 @@ class FlextInfraImportNormalization:
             # same-layer edge, never a reverse one.
             return False
         tail = names[-1]
-        if len(names) == 2:
+        if len(names) == cls.FAMILY_PATH_DEPTH:
             rank = cls.FAMILY_RANK.get(tail.lstrip("_"))
             if rank is not None:
                 return rank > module_rank
@@ -771,15 +938,15 @@ class FlextInfraImportNormalization:
             return cls.FACADE_RANK[tail] > module_rank
         if "services" in names or tail == "base":
             return (9 if "services" in names else 8) > module_rank
-        return module_rank < 7
+        return module_rank < cls.DEFAULT_LAYER_RANK
 
     @classmethod
     def _demotion_candidate(
         cls,
         alias: ast.alias,
         bound: str,
-        package: str,
         module_rank: int,
+        *,
         reverse_edge: bool,
     ) -> bool:
         """Return whether one binding is a lazy-placement candidate at all.
@@ -796,7 +963,76 @@ class FlextInfraImportNormalization:
         """
         if bound[:1].isupper() or reverse_edge:
             return True
-        return cls._is_late_letter(alias, bound, package, module_rank)
+        return cls._is_late_letter(alias, bound, module_rank)
+
+    @staticmethod
+    def _is_import_guard(node: ast.stmt) -> bool:
+        """Return whether one statement is a bare ``try/except ImportError``.
+
+        Returns:
+            Whether one statement is a bare ``try/except ImportError``.
+
+        """
+        if not isinstance(node, ast.Try) or not node.handlers:
+            return False
+        return all(
+            isinstance(handler.type, ast.Name) and handler.type.id == "ImportError"
+            for handler in node.handlers
+        )
+
+    @staticmethod
+    def _guarded_imports(node: ast.Try) -> list[tuple[str, str]]:
+        """Return the ``(module, bound)`` pairs one import guard rebinds.
+
+        Returns:
+            The resulting ``list[tuple[str, str]]``.
+
+        """
+        return [
+            (statement.module, alias.asname or alias.name)
+            for statement in node.body
+            if isinstance(statement, ast.ImportFrom) and statement.module
+            for alias in statement.names
+        ]
+
+    @classmethod
+    def _cleanup_import_guard(
+        cls,
+        tree: ast.Module,
+        node: ast.Try,
+        parents: t.MappingKV[int, ast.AST],
+        frozen: t.Infra.StrSet,
+        insertions: MutableMapping[int, MutableMapping[str, t.Infra.StrSet]],
+    ) -> tuple[
+        tuple[int, int, t.StrSequence] | None,
+        list[tuple[str, tuple[str, ...]]],
+    ]:
+        """Plan one guard's removal, routing each name to its placement.
+
+        Returns:
+            The resulting ``tuple[
+                tuple[int, int, t.StrSequence] | None,
+                list[tuple[str, tuple[str, ...]]],
+            ]``: the guard-deletion edit (``None`` when the guard binds
+            nothing), then each module whose names still need a plain
+            module-level fallback import with its sorted names.
+
+        """
+        guarded = cls._guarded_imports(node)
+        if not guarded:
+            return None, []
+        fallback_by_module: MutableMapping[str, set[str]] = defaultdict(set)
+        for module, bound in guarded:
+            sites = cls._use_sites(tree, bound)
+            if sites and all(cls._demotable(site, parents, frozen) for site in sites):
+                for anchor in cls._function_anchors(sites, parents):
+                    insertions[anchor][module].add(bound)
+            else:
+                fallback_by_module[module].add(bound)
+        return (node.lineno, cls._end_line(node), ()), [
+            (module, tuple(sorted(names)))
+            for module, names in fallback_by_module.items()
+        ]
 
     @classmethod
     def _guard_cleanup_edits(
@@ -817,39 +1053,22 @@ class FlextInfraImportNormalization:
 
         """
         edits: t.MutableSequenceOf[tuple[int, int, t.StrSequence]] = []
-        fallbacks: list[tuple[str, t.StrSequence]] = []
         for node in tree.body:
-            if not isinstance(node, ast.Try):
+            if not cls._is_import_guard(node):
                 continue
-            if not node.handlers or not all(
-                isinstance(handler.type, ast.Name) and handler.type.id == "ImportError"
-                for handler in node.handlers
-            ):
-                continue
-            guarded: list[tuple[str, str]] = []
-            for statement in node.body:
-                if isinstance(statement, ast.ImportFrom) and statement.module:
-                    guarded.extend(
-                        (statement.module, alias.asname or alias.name)
-                        for alias in statement.names
-                    )
-            if not guarded:
-                continue
-            fallback_by_module: MutableMapping[str, set[str]] = defaultdict(set)
-            for module, bound in guarded:
-                sites = cls._use_sites(tree, bound)
-                if sites and all(
-                    cls._demotable(site, parents, frozen) for site in sites
-                ):
-                    for anchor in cls._function_anchors(sites, parents):
-                        insertions[anchor][module].add(bound)
-                else:
-                    fallback_by_module[module].add(bound)
-            for module, names in fallback_by_module.items():
-                fallbacks.append((module, tuple(sorted(names))))
-            edits.append((node.lineno, cls._end_line(node), ()))
-        for module, names in fallbacks:
-            edits.append(cls._guard_fallback_edit(tree, lines, module, names))
+            removal, fallbacks = cls._cleanup_import_guard(
+                tree,
+                node,
+                parents,
+                frozen,
+                insertions,
+            )
+            if removal is not None:
+                edits.append(removal)
+            edits.extend(
+                cls._guard_fallback_edit(tree, lines, module, names)
+                for module, names in fallbacks
+            )
         return edits
 
     @classmethod
@@ -914,6 +1133,27 @@ class FlextInfraImportNormalization:
             node = parents.get(id(node))
         return False
 
+    @staticmethod
+    def _freeze_function_decorators(
+        frozen: t.Infra.StrSet,
+        node: ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> None:
+        """Freeze one function's decorators, defaults, and annotations."""
+        for decorator in node.decorator_list:
+            frozen.update(id(sub) for sub in ast.walk(decorator))
+        for default in (*node.args.defaults, *node.args.kw_defaults):
+            if default is not None:
+                frozen.update(id(sub) for sub in ast.walk(default))
+        if node.returns is not None:
+            frozen.update(id(sub) for sub in ast.walk(node.returns))
+        for argument in (
+            *node.args.args,
+            *node.args.posonlyargs,
+            *node.args.kwonlyargs,
+        ):
+            if argument.annotation is not None:
+                frozen.update(id(sub) for sub in ast.walk(argument.annotation))
+
     @classmethod
     def _frozen_node_ids(cls, tree: ast.Module) -> t.Infra.StrSet:
         """Mark every subtree that must stay at module definition time.
@@ -934,20 +1174,7 @@ class FlextInfraImportNormalization:
                 for keyword in node.keywords:
                     frozen.update(id(sub) for sub in ast.walk(keyword.value))
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                for decorator in node.decorator_list:
-                    frozen.update(id(sub) for sub in ast.walk(decorator))
-                for default in (*node.args.defaults, *node.args.kw_defaults):
-                    if default is not None:
-                        frozen.update(id(sub) for sub in ast.walk(default))
-                if node.returns is not None:
-                    frozen.update(id(sub) for sub in ast.walk(node.returns))
-                for argument in (
-                    *node.args.args,
-                    *node.args.posonlyargs,
-                    *node.args.kwonlyargs,
-                ):
-                    if argument.annotation is not None:
-                        frozen.update(id(sub) for sub in ast.walk(argument.annotation))
+                cls._freeze_function_decorators(frozen, node)
         return frozen
 
     @classmethod
@@ -1014,6 +1241,20 @@ class FlextInfraImportNormalization:
         return "    "
 
     @classmethod
+    def _declared_family_rank(cls, file_path: Path) -> int | None:
+        """Return the family rank one file's path declares, when it lives in one.
+
+        Returns:
+            The resulting ``int | None``.
+
+        """
+        for part in file_path.parts:
+            rank = cls.FAMILY_RANK.get(part.lstrip("_"))
+            if rank is not None and (part.startswith("_") or part in cls.FAMILY_RANK):
+                return rank
+        return None
+
+    @classmethod
     def _module_layer_rank(cls, file_path: Path) -> int:
         """Return the module's own layer rank over the declared order.
 
@@ -1021,24 +1262,24 @@ class FlextInfraImportNormalization:
             The resulting ``int``.
 
         """
-        for part in file_path.parts:
-            rank = cls.FAMILY_RANK.get(part.lstrip("_"))
-            if rank is not None and (part.startswith("_") or part in cls.FAMILY_RANK):
-                return rank
+        family_rank = cls._declared_family_rank(file_path)
+        if family_rank is not None:
+            return family_rank
         name = file_path.name
-        if name in {"settings.py", "_settings.py"} or "_settings" in file_path.parts:
-            return 0
-        if name in {"config.py", "_config.py"} or "_config" in file_path.parts:
-            return 1
-        if name == "base.py":
-            return 8
-        if "services" in file_path.parts:
-            return 9
-        if name == "api.py":
-            return 10
-        if name == "cli.py":
-            return 11
-        return 7
+        settings_here = "_settings" in file_path.parts
+        config_here = "_config" in file_path.parts
+        layers: t.SequenceOf[tuple[bool, int]] = (
+            (name in {"settings.py", "_settings.py"} or settings_here, 0),
+            (name in {"config.py", "_config.py"} or config_here, 1),
+            (name == "base.py", 8),
+            ("services" in file_path.parts, 9),
+            (name == "api.py", 10),
+            (name == "cli.py", 11),
+        )
+        return next(
+            (rank for matched, rank in layers if matched),
+            cls.DEFAULT_LAYER_RANK,
+        )
 
     @classmethod
     def _canonical_lazy_module(
@@ -1055,7 +1296,7 @@ class FlextInfraImportNormalization:
 
         """
         names = module.split(".")
-        if len(names) < 3 or names[0] != package:
+        if len(names) < cls.LEAF_PATH_DEPTH or names[0] != package:
             return module
         family = names[1].lstrip("_")
         if family not in cls.FAMILY_LETTER:
@@ -1110,18 +1351,17 @@ class FlextInfraImportNormalization:
             if not letters or len(letters) != len(node.names):
                 continue
             indent = cls._line_indent(lines[node.lineno - 1])
+            ordered = sorted(letters, key=cls.LETTER_ORDER.get)
             edits.append(
                 (
                     node.lineno,
                     cls._end_line(node),
-                    (
-                        f"{indent}from flext_core import {', '.join(sorted(letters, key=cls.LETTER_ORDER.get))}",
-                    ),
+                    (f"{indent}from flext_core import {', '.join(ordered)}",),
                 ),
             )
         return edits
 
-    # -- shared helpers ------------------------------------------------------------------
+    # -- shared helpers -------------------------------------------------
 
     @staticmethod
     def _parse(source: str) -> ast.Module | None:

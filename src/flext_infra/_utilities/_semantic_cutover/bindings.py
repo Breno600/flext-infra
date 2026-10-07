@@ -45,6 +45,17 @@ class FlextInfraUtilitiesSemanticCutoverBindings:
                 | ast.TypeVarTuple(name=name)
             ):
                 return (name,)
+        return FlextInfraUtilitiesSemanticCutoverBindings._bound_scope_identifiers(node)
+
+    @staticmethod
+    def _bound_scope_identifiers(node: ast.AST) -> t.VariadicTuple[str]:
+        """Return the module, import, and scope target names of one node.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
+        """
+        match node:
             case ast.Global(names=names) | ast.Nonlocal(names=names):
                 return tuple(names)
             case ast.Import(names=aliases):

@@ -185,6 +185,43 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
         return tuple(nodes)
 
     @classmethod
+    def _collect_annotation_expressions(
+        cls,
+        expressions: list[ast.expr],
+        statement: ast.stmt,
+    ) -> None:
+        """Append one statement's deferred annotations, then descend.
+
+        Names inside nested calls (``u.Field(default_factory=...)``,
+        ``m.BeforeValidator(...)``) are runtime value positions, not type
+        positions: pydantic resolves them through the parent frame locals at
+        deferred-evaluation time, and static checkers evaluate them in the
+        class-body scope where the owner class is not yet bound.
+
+        """
+        if isinstance(statement, ast.AnnAssign):
+            expressions.append(statement.annotation)
+            return
+        if isinstance(statement, ast.FunctionDef | ast.AsyncFunctionDef):
+            expressions.extend(cls._evaluated_function_annotations(statement))
+        if isinstance(
+            statement,
+            ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
+        ):
+            children: t.SequenceOf[ast.stmt] = statement.body
+        elif isinstance(statement, ast.TypeAlias):
+            expressions.append(statement.value)
+            return
+        else:
+            children = tuple(
+                child
+                for child in ast.iter_child_nodes(statement)
+                if isinstance(child, ast.stmt)
+            )
+        for child in children:
+            cls._collect_annotation_expressions(expressions, child)
+
+    @classmethod
     def _annotation_expressions(cls, node: ast.ClassDef) -> t.SequenceOf[ast.expr]:
         """Collect deferred annotations while excluding executable class bases.
 
@@ -193,29 +230,8 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
 
         """
         expressions: list[ast.expr] = []
-
-        def collect(statement: ast.stmt) -> None:
-            if isinstance(statement, ast.AnnAssign):
-                expressions.append(statement.annotation)
-                return
-            if isinstance(statement, ast.FunctionDef | ast.AsyncFunctionDef):
-                expressions.extend(cls._evaluated_function_annotations(statement))
-                for child in statement.body:
-                    collect(child)
-                return
-            if isinstance(statement, ast.ClassDef):
-                for child in statement.body:
-                    collect(child)
-                return
-            if isinstance(statement, ast.TypeAlias):
-                expressions.append(statement.value)
-                return
-            for child in ast.iter_child_nodes(statement):
-                if isinstance(child, ast.stmt):
-                    collect(child)
-
         for statement in node.body:
-            collect(statement)
+            cls._collect_annotation_expressions(expressions, statement)
         return tuple(expressions)
 
     @staticmethod

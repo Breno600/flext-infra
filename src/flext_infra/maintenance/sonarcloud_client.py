@@ -78,15 +78,14 @@ class FlextInfraSonarcloudClient[TResult](s[TResult]):
         api_url: str,
         timeout_seconds: int,
         token: t.SecretStr,
-        method: str,
-        path: str,
-        form: t.SequenceOf[t.Pair[str, str]],
+        request: t.Triple[str, str, t.SequenceOf[t.Pair[str, str]]],
     ) -> p.Result[str]:
         """Send one authenticated request to the configured web API origin.
 
         Returns:
             The resulting ``p.Result[str]``.
         """
+        method, path, form = request
         return u.Infra.http_bearer_text(
             method,
             f"{api_url}{path}",

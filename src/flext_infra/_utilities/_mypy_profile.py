@@ -12,6 +12,7 @@ import sys
 from mypy import api
 
 from flext_infra import m
+from flext_infra._utilities import FlextInfraUtilitiesResourceLimits
 
 
 class FlextInfraMypyProfiler:
@@ -28,8 +29,6 @@ class FlextInfraMypyProfiler:
             ValueError: If Mypy profiling requires an output destination.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesResourceLimits
-
         destination = invocation.profile_output
         if destination is None:
             msg = "Mypy profiling requires an output destination"

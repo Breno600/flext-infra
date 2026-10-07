@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import dataclasses
 from typing import TYPE_CHECKING
 
 import pytest
@@ -18,17 +19,50 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+@dataclasses.dataclass(frozen=True)
+class ComposedFacadeFixture:
+    """The seeded wrapper, composed facade, consumer, and their sources."""
+
+    root: Path
+    path: Path
+    facade_path: Path
+    consumer: Path
+    source: str
+    facade: str
+    references: str
+    project: str
+
+
+@dataclasses.dataclass(frozen=True)
+class WrapperFamilyFixture:
+    """The seeded wrapper family and every source its consumers declare."""
+
+    root: Path
+    path: Path
+    consumer: Path
+    homonym: Path
+    source: str
+    references: str
+    unrelated: str
+
+
 class TestsFlextInfraFamilyFlatten:
     """Exercise the real module graph, not mocked semantic identities."""
 
     @staticmethod
-    @pytest.mark.parametrize("collision", [False, True])
-    def test_snapshot_rewrites_alias_and_inherited_consumers_without_effects(
+    def _seed_wrapper_family(
         tmp_path: Path,
         *,
         collision: bool,
-    ) -> None:
-        """Test snapshot rewrites alias and inherited consumers without effects."""
+    ) -> WrapperFamilyFixture:
+        """Seed the wrapper family, its consumers, and one unrelated homonym.
+
+        Imports and MRO must resolve the proposed wrapper, not its disk name.
+
+        Returns:
+            The seeded wrapper family fixture.
+
+        """
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         directory = u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
         family = package / directory
@@ -64,10 +98,98 @@ class TestsFlextInfraFamilyFlatten:
             "VALUE = Other.Wrapper.TEXT\n"
         )
         homonym.write_text(unrelated, encoding="utf-8")
-        sources = {path: source, consumer: references, homonym: unrelated}
+        return WrapperFamilyFixture(
+            root=root,
+            path=path,
+            consumer=consumer,
+            homonym=homonym,
+            source=source,
+            references=references,
+            unrelated=unrelated,
+        )
+
+    @staticmethod
+    def _seed_composed_facade(
+        tmp_path: Path,
+    ) -> ComposedFacadeFixture:
+        """Seed the nested wrapper, its composed facade, and one consumer.
+
+        Returns:
+            The composed facade fixture.
+
+        """
+        root, package = u.Tests.create_lazy_init_workspace(tmp_path)
+        directory = u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
+        family = package / directory
+        family.mkdir()
+        (family / "__init__.py").write_text("", encoding="utf-8")
+        path = family / "payload.py"
+        owner = f"{u.derive_class_stem(root.name)}ModelsPayload"
+        source = (
+            f"class {owner}:\n"
+            "    class VerbReceipt:\n"
+            "        class Stage:\n"
+            "            pass\n"
+            "        class Report:\n"
+            "            pass\n"
+            f"\n__all__ = ['{owner}']\n"
+        )
+        path.write_text(source, encoding="utf-8")
+        facade_name = f"{u.derive_class_stem(root.name)}Models"
+        project = u.derive_class_stem(root.name)
+        facade = (
+            f"from {package.name}.{directory}.payload import {owner}\n\n"
+            f"class {facade_name}:\n"
+            f"    class {project}({owner}):\n"
+            "        pass\n\n"
+            f"m = {facade_name}\n"
+        )
+        facade_path = package / "models.py"
+        facade_path.write_text(facade, encoding="utf-8")
+        consumer = package / "consumer.py"
+        references = (
+            "from __future__ import annotations\n"
+            f"from {package.name} import m\n\n"
+            f"def render() -> m.{project}.VerbReceipt.Stage:\n"
+            f"    return m.{project}.VerbReceipt.Stage()\n"
+        )
+        consumer.write_text(references, encoding="utf-8")
+        return ComposedFacadeFixture(
+            root=root,
+            path=path,
+            facade_path=facade_path,
+            consumer=consumer,
+            source=source,
+            facade=facade,
+            references=references,
+            project=project,
+        )
+
+    @staticmethod
+    @pytest.mark.parametrize("collision", [False, True])
+    def test_snapshot_rewrites_alias_and_inherited_consumers_without_effects(
+        tmp_path: Path,
+        *,
+        collision: bool,
+    ) -> None:
+        """Test snapshot rewrites alias and inherited consumers without effects."""
+        fixture = TestsFlextInfraFamilyFlatten._seed_wrapper_family(
+            tmp_path,
+            collision=collision,
+        )
+        root = fixture.root
+        path = fixture.path
+        consumer = fixture.consumer
+        homonym = fixture.homonym
+        unrelated = fixture.unrelated
+        sources = {
+            path: fixture.source,
+            consumer: fixture.references,
+            homonym: unrelated,
+        }
         # Imports and MRO must resolve the proposed wrapper, not its disk name.
-        sources[path] = source.replace("class Wrapper:", "class Grouping:")
-        sources[consumer] = references.replace(".Wrapper.", ".Grouping.")
+        sources[path] = fixture.source.replace("class Wrapper:", "class Grouping:")
+        sources[consumer] = fixture.references.replace(".Wrapper.", ".Grouping.")
         with infra.rope_workspace(root) as rope:
             planned = u.Infra.plan_semantic_cutover(
                 c.Infra.SemanticCutoverPhase.CLASS_NESTING,
@@ -96,8 +218,8 @@ class TestsFlextInfraFamilyFlatten:
             tm.ok(remaining)
             tm.that(remaining.value, empty=True)
         for file_path, original in {
-            path: source,
-            consumer: references,
+            path: fixture.source,
+            consumer: fixture.references,
             homonym: unrelated,
         }.items():
             tm.that(file_path.read_text(encoding="utf-8"), eq=original)
@@ -170,11 +292,16 @@ class TestsFlextInfraFamilyFlatten:
         tm.that(path.read_text(encoding="utf-8"), eq=source)
 
     @staticmethod
-    def test_flatten_removes_wrapper_docstring_and_promotes_alias_member(
-        tmp_path: Path,
-    ) -> None:
-        """Test flatten removes wrapper docstring and promotes alias member."""
-        root, package = u.Tests.create_lazy_init_workspace(tmp_path)
+    def _seed_docstring_wrapper_fixture(
+        root: Path,
+        package: Path,
+    ) -> tuple[Path, Path, str, str]:
+        """Seed the models payload wrapper and its aliased consumer.
+
+        Returns:
+            The payload path, the consumer path, and both sources.
+
+        """
         directory = u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
         family = package / directory
         family.mkdir()
@@ -199,6 +326,20 @@ class TestsFlextInfraFamilyFlatten:
             f"{owner} as Part\n\nmember: Part.Wrapper.Grouped\n"
         )
         consumer.write_text(references, encoding="utf-8")
+        return path, consumer, source, references
+
+    @staticmethod
+    def test_flatten_removes_wrapper_docstring_and_promotes_alias_member(
+        tmp_path: Path,
+    ) -> None:
+        """Test flatten removes wrapper docstring and promotes alias member."""
+        root, package = u.Tests.create_lazy_init_workspace(tmp_path)
+        path, consumer, source, references = (
+            TestsFlextInfraFamilyFlatten._seed_docstring_wrapper_fixture(
+                root,
+                package,
+            )
+        )
         with infra.rope_workspace(root) as rope:
             planned = u.Infra.plan_semantic_cutover(
                 c.Infra.SemanticCutoverPhase.CLASS_NESTING,
@@ -220,43 +361,17 @@ class TestsFlextInfraFamilyFlatten:
         tmp_path: Path,
     ) -> None:
         """A facade alias that still names the wrapper is not flattened away."""
-        root, package = u.Tests.create_lazy_init_workspace(tmp_path)
-        directory = u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory
-        family = package / directory
-        family.mkdir()
-        (family / "__init__.py").write_text("", encoding="utf-8")
-        path = family / "payload.py"
-        owner = f"{u.derive_class_stem(root.name)}ModelsPayload"
-        source = (
-            f"class {owner}:\n"
-            "    class VerbReceipt:\n"
-            "        class Stage:\n"
-            "            pass\n"
-            "        class Report:\n"
-            "            pass\n"
-            f"\n__all__ = ['{owner}']\n"
-        )
-        path.write_text(source, encoding="utf-8")
-        facade_name = f"{u.derive_class_stem(root.name)}Models"
-        project = u.derive_class_stem(root.name)
-        facade = (
-            f"from {package.name}.{directory}.payload import {owner}\n\n"
-            f"class {facade_name}:\n"
-            f"    class {project}({owner}):\n"
-            "        pass\n\n"
-            f"m = {facade_name}\n"
-        )
-        facade_path = package / "models.py"
-        facade_path.write_text(facade, encoding="utf-8")
-        consumer = package / "consumer.py"
-        references = (
-            "from __future__ import annotations\n"
-            f"from {package.name} import m\n\n"
-            f"def render() -> m.{project}.VerbReceipt.Stage:\n"
-            f"    return m.{project}.VerbReceipt.Stage()\n"
-        )
-        consumer.write_text(references, encoding="utf-8")
-        sources = {path: source, facade_path: facade, consumer: references}
+        fixture = TestsFlextInfraFamilyFlatten._seed_composed_facade(tmp_path)
+        root = fixture.root
+        path = fixture.path
+        consumer = fixture.consumer
+        references = fixture.references
+        project = fixture.project
+        sources = {
+            path: fixture.source,
+            fixture.facade_path: fixture.facade,
+            consumer: references,
+        }
         with infra.rope_workspace(root) as rope:
             planned = u.Infra.plan_semantic_cutover(
                 c.Infra.SemanticCutoverPhase.CLASS_NESTING,

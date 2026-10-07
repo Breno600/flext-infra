@@ -154,14 +154,17 @@ class TestsFlextInfraTransactionLease:
         tm.ok(transaction.run_locked(prepare=True, operation=r[Path].ok))
         acquired.set()
 
-    @pytest.mark.slow
-    def test_contenders_cannot_reconcile_live_journal_across_member_scope(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        """A same-scope contender waits for a live holder; scopes are free."""
+    @staticmethod
+    def _member_workspace(tmp_path: Path) -> tuple[Path, Path, Path]:
+        """Compose one governed workspace root with a submodule member.
+
+        The workspace is the member's runtime root: it carries the triple.
+
+        Returns:
+            The workspace root, the member checkout, and one independent repo.
+
+        """
         root = u.Tests.git_repository(tmp_path, "workspace")
-        # The workspace is the member's runtime root: it carries the triple.
         u.Tests.copy_tracked_mise_seeds(root)
         seed = u.Tests.git_repository(tmp_path, "member-source")
         u.Tests.copy_tracked_mise_seeds(seed)
@@ -180,6 +183,42 @@ class TestsFlextInfraTransactionLease:
         member = root / "member"
         independent = u.Tests.git_repository(tmp_path, "independent")
         u.Tests.copy_tracked_mise_seeds(independent)
+        return root, member, independent
+
+    @staticmethod
+    def _run_member_transaction(member: Path) -> None:
+        """Run one full transaction against the held member scope."""
+        owner = FlextInfraCodegenMiseArtifacts(repository_root=member)
+        tm.ok(
+            FlextInfraCodegenTransaction(owner).run_locked(
+                prepare=True,
+                operation=lambda scope: owner.validate_artifacts(member, scope),
+            ),
+        )
+
+    @staticmethod
+    def _run_independent_transaction(independent: Path) -> None:
+        """Run one full transaction in the free scope while the lease is held."""
+        independent_owner = FlextInfraCodegenMiseArtifacts(
+            repository_root=independent,
+        )
+        tm.ok(
+            FlextInfraCodegenTransaction(independent_owner).run_locked(
+                prepare=True,
+                operation=lambda scope: independent_owner.validate_artifacts(
+                    independent,
+                    scope,
+                ),
+            ),
+        )
+
+    @pytest.mark.slow
+    def test_contenders_cannot_reconcile_live_journal_across_member_scope(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A same-scope contender waits for a live holder; scopes are free."""
+        root, member, independent = self._member_workspace(tmp_path)
         identity = tm.ok(u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=root)))
         journal_path = FlextInfraMiseWorkspacePlanner.journal_path(identity)
         lock_path = journal_path.with_name(f"{journal_path.name}.lock")
@@ -210,18 +249,7 @@ class TestsFlextInfraTransactionLease:
             tm.that(granted.wait(timeout=5.0), eq=False)
             tm.that(journal_path.read_bytes(), eq=journal_before)
 
-            independent_owner = FlextInfraCodegenMiseArtifacts(
-                repository_root=independent,
-            )
-            tm.ok(
-                FlextInfraCodegenTransaction(independent_owner).run_locked(
-                    prepare=True,
-                    operation=lambda scope: independent_owner.validate_artifacts(
-                        independent,
-                        scope,
-                    ),
-                ),
-            )
+            self._run_independent_transaction(independent)
             tm.that(journal_path.read_bytes(), eq=journal_before)
 
             # Releasing the holder hands the lease to the waiting contender.
@@ -251,13 +279,7 @@ class TestsFlextInfraTransactionLease:
             (lock_after.st_dev, lock_after.st_ino),
             eq=(lock_before.st_dev, lock_before.st_ino),
         )
-        owner = FlextInfraCodegenMiseArtifacts(repository_root=member)
-        tm.ok(
-            FlextInfraCodegenTransaction(owner).run_locked(
-                prepare=True,
-                operation=lambda scope: owner.validate_artifacts(member, scope),
-            ),
-        )
+        self._run_member_transaction(member)
         tm.that(lock_path.stat().st_ino, eq=lock_after.st_ino)
 
     def test_file_participant_lease_lives_in_ignored_state_directory(

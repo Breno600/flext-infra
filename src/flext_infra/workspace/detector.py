@@ -894,9 +894,7 @@ class FlextInfraWorkspaceDetector(
                     else ()
                 ),
                 integration=(
-                    declared_manifest[0].integration
-                    if declared_manifest
-                    else None
+                    declared_manifest[0].integration if declared_manifest else None
                 ),
                 candidate_dependencies=(
                     declared_manifest[0].candidate_dependencies
@@ -909,9 +907,7 @@ class FlextInfraWorkspaceDetector(
                     else ()
                 ),
                 external_consumers=(
-                    declared_manifest[0].external_consumers
-                    if declared_manifest
-                    else ()
+                    declared_manifest[0].external_consumers if declared_manifest else ()
                 ),
                 subprojects=subprojects,
                 external_dependency_paths=external,
@@ -1167,8 +1163,7 @@ class FlextInfraWorkspaceDetector(
         if loaded_member.failure or isinstance(loaded_member.value, Path):
             return result_type.fail(
                 loaded_member.error
-                or "Git submodule is not a declared governed project: "
-                f"{member_root}",
+                or f"Git submodule is not a declared governed project: {member_root}",
             )
         return result_type.ok(inherited_beads.value)
 

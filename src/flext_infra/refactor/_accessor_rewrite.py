@@ -169,6 +169,41 @@ class FlextInfraAccessorMigrationRewriteMixin:
         line_offset = sum(len(item) for item in source_lines[: line - 1])
         return line_offset + column
 
+    @staticmethod
+    def _declared_function_name(stripped: str) -> str | None:
+        """Return the function name one source line declares, when any.
+
+        Returns:
+            The resulting ``str | None``.
+
+        """
+        function_prefix = ""
+        if stripped.startswith("def "):
+            function_prefix = "def "
+        elif stripped.startswith("async def "):
+            function_prefix = "async def "
+        if not function_prefix:
+            return None
+        return (
+            stripped
+            .split(function_prefix, maxsplit=1)[1]
+            .split("(", maxsplit=1)[0]
+            .strip()
+        )
+
+    def _function_is_exempt(self, function_name: str) -> bool:
+        """Whether one accessor function is already covered without a warning.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
+        return (
+            function_name.startswith("_")
+            or function_name in self._AUTOMATED_NAMES
+            or function_name in c.ENFORCEMENT_ACCESSOR_EXTERNAL_CONTRACTS
+        )
+
     def _collect_manual_warnings(
         self,
         py_file: Path,
@@ -200,27 +235,13 @@ class FlextInfraAccessorMigrationRewriteMixin:
                 )
                 scope_stack.append((f"class:{class_name}", indent))
                 continue
-            function_prefix = ""
-            if stripped.startswith("def "):
-                function_prefix = "def "
-            elif stripped.startswith("async def "):
-                function_prefix = "async def "
-            if not function_prefix:
+            function_name = self._declared_function_name(stripped)
+            if function_name is None:
                 continue
-            function_name = (
-                stripped
-                .split(function_prefix, maxsplit=1)[1]
-                .split("(", maxsplit=1)[0]
-                .strip()
-            )
             parent_scope = scope_stack[-1][0] if scope_stack else "module"
             scope_stack.append((f"def:{function_name}", indent))
-            if parent_scope.startswith("def:"):
-                continue
-            if (
-                function_name.startswith("_")
-                or function_name in self._AUTOMATED_NAMES
-                or function_name in c.ENFORCEMENT_ACCESSOR_EXTERNAL_CONTRACTS
+            if parent_scope.startswith("def:") or self._function_is_exempt(
+                function_name,
             ):
                 continue
             matched_prefix = next(

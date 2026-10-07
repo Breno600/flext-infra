@@ -154,6 +154,95 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
             from_json=True,
         )
 
+    def _write_settings(
+        self,
+        plan: m.Infra.SonarcloudSettingsPlan,
+        token: str,
+    ) -> p.Result[bool]:
+        """Write the SSOT settings, then prove the server readback holds them.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        request = self.settings_write_request(plan)
+        written = self.call(
+            plan.api_url,
+            plan.timeout_seconds,
+            token,
+            ("POST", request.api_path, request.form),
+        )
+        if written.failure:
+            return r[bool].from_failure(written)
+        readback = self._server_values(plan, token)
+        if readback.failure:
+            return r[bool].from_failure(readback)
+        diverged = self._readback_divergence(plan, readback.value)
+        if diverged is not None:
+            return diverged
+        u.Cli.info(
+            f"sonarcloud-sync: {plan.project_key} now holds "
+            f"{len(plan.field_values)} SSOT issue exclusion(s)",
+        )
+        self.log.info(
+            "sonarcloud_settings_synced",
+            project_key=plan.project_key,
+            exclusions=len(plan.field_values),
+        )
+        return r[bool].ok(value=True)
+
+    def _readback_divergence(
+        self,
+        plan: m.Infra.SonarcloudSettingsPlan,
+        readback: m.Infra.SonarcloudSettingsValues,
+    ) -> p.Result[bool] | None:
+        """Report the divergent server state after a write, or ``None`` when synced.
+
+        Returns:
+            The divergence failure, or ``None`` when the server now holds the SSOT.
+
+        """
+        if self.in_sync_with(plan, readback):
+            return None
+        held = ", ".join(
+            value.model_dump_json(by_alias=True)
+            for value in self.current_field_values(plan, readback)
+        )
+        return r[bool].fail(
+            f"sonarcloud-sync: {plan.project_key} readback differs from the "
+            f"SSOT; server holds [{held}]",
+        )
+
+    def _authenticate(
+        self,
+        plan: m.Infra.SonarcloudSettingsPlan,
+        token: str,
+    ) -> p.Result[bool]:
+        """Prove the configured token against SonarCloud's auth validate endpoint.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        auth_body = self.call(
+            plan.api_url,
+            plan.timeout_seconds,
+            token,
+            ("GET", c.Infra.SONARCLOUD_API_AUTH_VALIDATE_PATH, ()),
+        )
+        if auth_body.failure:
+            return r[bool].from_failure(auth_body)
+        auth = u.validate_value(
+            m.Infra.SonarcloudAuthentication,
+            auth_body.value,
+            from_json=True,
+        )
+        if auth.failure:
+            return r[bool].from_failure(auth)
+        if not auth.value.valid:
+            return r[bool].fail("SonarCloud rejected SONAR_TOKEN as invalid")
+        return r[bool].ok(value=True)
+
     @override
     def execute(self) -> p.Result[bool]:
         """Converge the server value; the payload is whether a write happened.
@@ -170,64 +259,16 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
         if planned.failure:
             return r[bool].from_failure(planned)
         plan = planned.value
-        auth_body = self.call(
-            plan.api_url,
-            plan.timeout_seconds,
-            token,
-            "GET",
-            c.Infra.SONARCLOUD_API_AUTH_VALIDATE_PATH,
-            (),
-        )
-        if auth_body.failure:
-            return r[bool].from_failure(auth_body)
-        auth = u.validate_value(
-            m.Infra.SonarcloudAuthentication,
-            auth_body.value,
-            from_json=True,
-        )
-        if auth.failure:
-            return r[bool].from_failure(auth)
-        if not auth.value.valid:
-            return r[bool].fail("SonarCloud rejected SONAR_TOKEN as invalid")
+        authentication = self._authenticate(plan, token)
+        if authentication.failure:
+            return r[bool].from_failure(authentication)
         current = self._server_values(plan, token)
         if current.failure:
             return r[bool].from_failure(current)
         if self.in_sync_with(plan, current.value):
             u.Cli.info(f"sonarcloud-sync: {plan.project_key} already matches the SSOT")
             return r[bool].ok(value=False)
-        request = self.settings_write_request(plan)
-        written = self.call(
-            plan.api_url,
-            plan.timeout_seconds,
-            token,
-            "POST",
-            request.api_path,
-            request.form,
-        )
-        if written.failure:
-            return r[bool].from_failure(written)
-        readback = self._server_values(plan, token)
-        if readback.failure:
-            return r[bool].from_failure(readback)
-        if not self.in_sync_with(plan, readback.value):
-            held = ", ".join(
-                value.model_dump_json(by_alias=True)
-                for value in self.current_field_values(plan, readback.value)
-            )
-            return r[bool].fail(
-                f"sonarcloud-sync: {plan.project_key} readback differs from the "
-                f"SSOT; server holds [{held}]",
-            )
-        u.Cli.info(
-            f"sonarcloud-sync: {plan.project_key} now holds "
-            f"{len(plan.field_values)} SSOT issue exclusion(s)",
-        )
-        self.log.info(
-            "sonarcloud_settings_synced",
-            project_key=plan.project_key,
-            exclusions=len(plan.field_values),
-        )
-        return r[bool].ok(value=True)
+        return self._write_settings(plan, token)
 
 
 __all__: list[str] = ["FlextInfraSonarcloudSettingsSync"]

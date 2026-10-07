@@ -563,27 +563,20 @@ class FlextInfraModelsCodegenJournalModels:
 
             Raises:
                 ValueError: If Mise journal original recovery tuple is inconsistent; or
-                    if absent codegen original cannot contain host metadata; or if
-                    codegen journal desired identity is inconsistent; or if codegen
-                    journal desired staging path is inconsistent; or if absent codegen
-                    desired state cannot contain host metadata; or if codegen journal
-                    rollback identity has no presence state; or if codegen journal
-                    rollback parent identity is incomplete; or if codegen journal
-                    rollback identity is incomplete; or if codegen journal rollback
-                    staging path is inconsistent; or if absent codegen rollback cannot
-                    contain file identity; or if absent codegen rollback cannot contain
-                    host metadata; or if codegen journal contains a reparse identity.
+                    if absent codegen original cannot contain host metadata.
 
             """
-            original = (
-                self.original_backup,
-                self.original_sha256,
-                self.original_mode,
-                self.original_device,
-                self.original_inode,
-                self.original_link_count,
+            populated = tuple(
+                value is not None
+                for value in (
+                    self.original_backup,
+                    self.original_sha256,
+                    self.original_mode,
+                    self.original_device,
+                    self.original_inode,
+                    self.original_link_count,
+                )
             )
-            populated = tuple(value is not None for value in original)
             if (self.original_exists and not all(populated)) or (
                 not self.original_exists and any(populated)
             ):
@@ -595,14 +588,31 @@ class FlextInfraModelsCodegenJournalModels:
             ):
                 msg = "absent codegen original cannot contain host metadata"
                 raise ValueError(msg)
-            desired = (
-                self.desired_sha256,
-                self.desired_mode,
-                self.desired_device,
-                self.desired_inode,
-                self.desired_link_count,
+            return self
+
+        @m.model_validator(mode="after")
+        def _validate_desired_tuple(self) -> Self:
+            """Require the desired identity and staging path to be consistent.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If codegen journal desired identity is inconsistent; or
+                    if codegen journal desired staging path is inconsistent; or if
+                    absent codegen desired state cannot contain host metadata.
+
+            """
+            desired_populated = tuple(
+                value is not None
+                for value in (
+                    self.desired_sha256,
+                    self.desired_mode,
+                    self.desired_device,
+                    self.desired_inode,
+                    self.desired_link_count,
+                )
             )
-            desired_populated = tuple(value is not None for value in desired)
             if (self.desired_exists and not all(desired_populated)) or (
                 not self.desired_exists and any(desired_populated)
             ):
@@ -617,16 +627,38 @@ class FlextInfraModelsCodegenJournalModels:
             ):
                 msg = "absent codegen desired state cannot contain host metadata"
                 raise ValueError(msg)
-            rollback = (
-                self.rollback_sha256,
-                self.rollback_mode,
-                self.rollback_device,
-                self.rollback_inode,
-                self.rollback_link_count,
+            return self
+
+        @m.model_validator(mode="after")
+        def _validate_rollback_tuple(self) -> Self:
+            """Require the rollback identity to match its declared presence state.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If codegen journal rollback identity has no presence state;
+                    or if codegen journal rollback parent identity is incomplete; or if
+                    codegen journal rollback identity is incomplete; or if codegen
+                    journal rollback staging path is inconsistent; or if absent codegen
+                    rollback cannot contain file identity; or if absent codegen rollback
+                    cannot contain host metadata.
+
+            """
+            rollback_populated = tuple(
+                value is not None
+                for value in (
+                    self.rollback_sha256,
+                    self.rollback_mode,
+                    self.rollback_device,
+                    self.rollback_inode,
+                    self.rollback_link_count,
+                )
             )
-            rollback_populated = tuple(value is not None for value in rollback)
-            rollback_parent = (self.rollback_parent_device, self.rollback_parent_inode)
-            parent_populated = tuple(value is not None for value in rollback_parent)
+            parent_populated = tuple(
+                value is not None
+                for value in (self.rollback_parent_device, self.rollback_parent_inode)
+            )
             if self.rollback_exists is None and (
                 any(rollback_populated) or any(parent_populated)
             ):
@@ -650,6 +682,19 @@ class FlextInfraModelsCodegenJournalModels:
             ):
                 msg = "absent codegen rollback cannot contain host metadata"
                 raise ValueError(msg)
+            return self
+
+        @m.model_validator(mode="after")
+        def _validate_reparse_absence(self) -> Self:
+            """Reject any reparse identity in the journal's file states.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If codegen journal contains a reparse identity.
+
+            """
             marker = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
             physical = (
                 (self.original_file_attributes, self.original_reparse_tag),

@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -22,6 +23,16 @@ if TYPE_CHECKING:
 
 class TestsFlextInfraUtilitiesGatesMixin:
     """Typed quality-gate execution and enforcement fixture helpers."""
+
+    @dataclasses.dataclass(frozen=True)
+    class CensusOptions:
+        """Optional refactor-census knobs grouped into one contract."""
+
+        kinds: t.StrSequence | None = None
+        include_local_scopes: bool = False
+        impact_map_output: str | None = None
+        apply_changes: bool = False
+        dry_run: bool = False
 
     @staticmethod
     def detector_context(
@@ -211,11 +222,7 @@ class TestsFlextInfraUtilitiesGatesMixin:
         workspace: Path,
         *,
         rules: t.StrSequence,
-        kinds: t.StrSequence | None = None,
-        include_local_scopes: bool = False,
-        impact_map_output: str | None = None,
-        apply_changes: bool = False,
-        dry_run: bool = False,
+        options: CensusOptions | None = None,
     ) -> m.Infra.WorkspaceReport:
         """Execute one refactor census and unwrap its successful report.
 
@@ -223,14 +230,16 @@ class TestsFlextInfraUtilitiesGatesMixin:
             The resulting ``m.Infra.WorkspaceReport``.
 
         """
+        fixture = TestsFlextInfraUtilitiesGatesMixin
+        resolved = fixture.CensusOptions() if options is None else options
         TestsFlextInfraUtilitiesToolingFixtureMixin.provision_checkout(workspace)
         result = FlextInfraRefactorCensus(
             repository_root=workspace,
-            apply_changes=apply_changes,
-            dry_run=dry_run,
-            impact_map_output=impact_map_output,
-            include_local_scopes=include_local_scopes,
-            kinds=kinds,
+            apply_changes=resolved.apply_changes,
+            dry_run=resolved.dry_run,
+            impact_map_output=resolved.impact_map_output,
+            include_local_scopes=resolved.include_local_scopes,
+            kinds=resolved.kinds,
             rules=rules,
         ).execute()
         tm.ok(result)

@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
 from flext_infra import c, m, t, u
+from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
+from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 from flext_infra.docs._generator_bundle import FlextInfraDocGeneratorBundleMixin
 from flext_infra.docs.base import FlextInfraDocServiceBase
 
@@ -59,9 +61,6 @@ class FlextInfraDocGenerator(
             The resulting ``p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]``.
 
         """
-        from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
-        from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
-
         prepared = self._prepare_request(request)
         if prepared.failure:
             return r[t.SequenceOf[m.Infra.DocsPhaseReport]].from_failure(prepared)
@@ -132,16 +131,9 @@ class FlextInfraDocGenerator(
 
         """
         outputs = {plan.path for plan in plans}
-        for expected in bundle.source_states:
-            if expected.path in outputs:
-                continue
-            observed = u.Cli.atomic_read_binary_file_state(expected.path, required=True)
-            if observed.failure:
-                return r[bool].from_failure(observed)
-            if observed.value != expected:
-                return r[bool].fail(
-                    f"docs source changed during publication: {expected.path}",
-                )
+        untouched = self._verify_sources_unchanged(bundle.source_states, outputs)
+        if untouched.failure:
+            return r[bool].from_failure(untouched)
         prepared = self._prepare_request(request)
         if prepared.failure:
             return r[bool].from_failure(prepared)
@@ -154,6 +146,29 @@ class FlextInfraDocGenerator(
             return r[bool].from_failure(current)
         if any(u.Infra.codegen_file_requires_effect(plan) for plan in current.value):
             return r[bool].fail("docs generation did not reach an unchanged render")
+        return r[bool].ok(value=True)
+
+    @staticmethod
+    def _verify_sources_unchanged(
+        source_states: t.VariadicTuple[m.Cli.AtomicFileState],
+        outputs: t.AbstractSet[Path],
+    ) -> p.Result[bool]:
+        """Require every authenticated source to be untouched by the publication.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        for expected in source_states:
+            if expected.path in outputs:
+                continue
+            observed = u.Cli.atomic_read_binary_file_state(expected.path, required=True)
+            if observed.failure:
+                return r[bool].from_failure(observed)
+            if observed.value != expected:
+                return r[bool].fail(
+                    f"docs source changed during publication: {expected.path}",
+                )
         return r[bool].ok(value=True)
 
     def _generation_reports(

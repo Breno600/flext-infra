@@ -11,6 +11,149 @@ from collections.abc import MutableMapping
 from typing import ClassVar
 
 from flext_infra import c, m, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesRopeAnalysisAstHelpers,
+    FlextInfraUtilitiesRopeAnalysisSourceScan,
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeRuntime,
+)
+
+
+class _ExportBindingInventory:
+    """Inventory one statement list's exports, definitions, and ``__all__``."""
+
+    def __init__(self) -> None:
+        """Initialize the empty inventory."""
+        self.assignments: t.MutableSequenceOf[str] = []
+        self.definitions: t.MutableSequenceOf[t.Pair[str, bool]] = []
+        self.explicit_all = False
+
+    def collect(self, statements: t.SequenceOf[ast.stmt]) -> None:
+        """Inventory each statement in declaration order.
+
+        Parameters:
+            statements: The module or block statements to inventory.
+
+        """
+        for statement in statements:
+            self._dispatch(statement)
+
+    def _dispatch(self, statement: ast.stmt) -> None:
+        """Route one statement to its inventory handler."""
+        if isinstance(statement, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            self._define(statement)
+        elif isinstance(statement, (ast.Import, ast.ImportFrom)):
+            return
+        elif isinstance(statement, ast.If):
+            self._if(statement)
+        elif isinstance(statement, (ast.For, ast.AsyncFor, ast.While)):
+            self._collect_branches(statement)
+        elif isinstance(statement, (ast.With, ast.AsyncWith)):
+            self.collect(statement.body)
+        elif isinstance(statement, (ast.Try, ast.TryStar)):
+            self._try(statement)
+        elif isinstance(statement, ast.Match):
+            self._match(statement)
+        else:
+            self._assign(statement)
+
+    def _define(
+        self,
+        statement: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> None:
+        """Record one definition and whether it declares a class."""
+        self.definitions.append((
+            statement.name,
+            isinstance(statement, ast.ClassDef),
+        ))
+
+    def _assign(self, statement: ast.stmt) -> None:
+        """Record one assignment statement's bound names."""
+        names = self._bound_statement_names(statement)
+        if not names:
+            return
+        self.explicit_all = self.explicit_all or c.Infra.DUNDER_ALL in names
+        self.assignments.extend(name for name in names if name != c.Infra.DUNDER_ALL)
+
+    def _bound_statement_names(self, statement: ast.stmt) -> t.StrSequence:
+        """Return the names one assignment statement binds.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
+        if isinstance(statement, ast.Assign):
+            return tuple(
+                name
+                for target in statement.targets
+                for name in self._bound_names(target)
+            )
+        if isinstance(statement, (ast.AnnAssign, ast.AugAssign)):
+            return self._bound_names(statement.target)
+        return ()
+
+    def _if(self, statement: ast.If) -> None:
+        """Inventory one conditional statement's statically executed branches."""
+        if self._main_guard(statement):
+            return
+        self.collect(statement.body)
+        self.collect(statement.orelse)
+
+    def _collect_branches(self, statement: ast.stmt) -> None:
+        """Inventory one loop statement's body and else branch."""
+        self.collect(statement.body)
+        self.collect(statement.orelse)
+
+    def _try(self, statement: ast.Try | ast.TryStar) -> None:
+        """Inventory one try statement's handlers, else, and finally blocks."""
+        self.collect(statement.body)
+        for handler in statement.handlers:
+            self.collect(handler.body)
+        self.collect(statement.orelse)
+        self.collect(statement.finalbody)
+
+    def _match(self, statement: ast.Match) -> None:
+        """Inventory one match statement's case bodies."""
+        for case in statement.cases:
+            self.collect(case.body)
+
+    @staticmethod
+    def _main_guard(statement: ast.If) -> bool:
+        """Return whether one if statement is the ``__main__`` guard.
+
+        Returns:
+            Whether one if statement is the ``__main__`` guard.
+
+        """
+        test = statement.test
+        sides = (
+            (test.left, test.comparators[0])
+            if isinstance(test, ast.Compare)
+            and len(test.ops) == 1
+            and isinstance(test.ops[0], ast.Eq)
+            and len(test.comparators) == 1
+            else ()
+        )
+        names_in_test = {side.id for side in sides if isinstance(side, ast.Name)}
+        values_in_test = {
+            side.value for side in sides if isinstance(side, ast.Constant)
+        }
+        return names_in_test == {"__name__"} and values_in_test == {"__main__"}
+
+    def _bound_names(self, target: ast.expr) -> t.StrSequence:
+        """Return the names one assignment target binds.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
+        if isinstance(target, ast.Name):
+            return (target.id,)
+        if isinstance(target, (ast.List, ast.Tuple)):
+            return tuple(
+                name for element in target.elts for name in self._bound_names(element)
+            )
+        return ()
 
 
 class FlextInfraUtilitiesRopeAnalysisExports:
@@ -115,11 +258,6 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             Module-local export names from Rope metadata.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesRopeAnalysisAstHelpers,
-            FlextInfraUtilitiesRopeCore,
-        )
-
         resolved_export_options = export_options or m.Infra.ExportOptions()
         cache_key = (
             *FlextInfraUtilitiesRopeAnalysisAstHelpers.resource_cache_key(
@@ -165,93 +303,14 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             Module-local exports from one parsed source snapshot.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisSourceScan
-
         resolved_options = export_options or m.Infra.ExportOptions()
         module = ast.parse(source)
-        assignments: t.MutableSequenceOf[str] = []
-        definitions: t.MutableSequenceOf[t.Pair[str, bool]] = []
-        explicit_all = False
-
-        def bound_names(target: ast.expr) -> t.StrSequence:
-            if isinstance(target, ast.Name):
-                return (target.id,)
-            if isinstance(target, (ast.List, ast.Tuple)):
-                return tuple(
-                    name for element in target.elts for name in bound_names(element)
-                )
-            return ()
-
-        def collect(statements: t.SequenceOf[ast.stmt]) -> None:
-            nonlocal explicit_all
-            for statement in statements:
-                if isinstance(
-                    statement,
-                    (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef),
-                ):
-                    definitions.append((
-                        statement.name,
-                        isinstance(statement, ast.ClassDef),
-                    ))
-                    continue
-                names: t.StrSequence
-                if isinstance(statement, ast.Assign):
-                    names = tuple(
-                        name
-                        for target in statement.targets
-                        for name in bound_names(target)
-                    )
-                elif isinstance(statement, (ast.AnnAssign, ast.AugAssign)):
-                    names = bound_names(statement.target)
-                else:
-                    names = ()
-                if names:
-                    explicit_all = explicit_all or c.Infra.DUNDER_ALL in names
-                    assignments.extend(
-                        name for name in names if name != c.Infra.DUNDER_ALL
-                    )
-                    continue
-                if isinstance(statement, (ast.Import, ast.ImportFrom)):
-                    continue
-                if isinstance(statement, ast.If):
-                    sides = (
-                        (statement.test.left, statement.test.comparators[0])
-                        if isinstance(statement.test, ast.Compare)
-                        and len(statement.test.ops) == 1
-                        and isinstance(statement.test.ops[0], ast.Eq)
-                        and len(statement.test.comparators) == 1
-                        else ()
-                    )
-                    names_in_test = {
-                        side.id for side in sides if isinstance(side, ast.Name)
-                    }
-                    values_in_test = {
-                        side.value for side in sides if isinstance(side, ast.Constant)
-                    }
-                    if names_in_test == {"__name__"} and values_in_test == {"__main__"}:
-                        continue
-                    collect(statement.body)
-                    collect(statement.orelse)
-                    continue
-                if isinstance(statement, (ast.For, ast.AsyncFor, ast.While)):
-                    collect(statement.body)
-                    collect(statement.orelse)
-                    continue
-                if isinstance(statement, (ast.With, ast.AsyncWith)):
-                    collect(statement.body)
-                    continue
-                if isinstance(statement, (ast.Try, ast.TryStar)):
-                    collect(statement.body)
-                    for handler in statement.handlers:
-                        collect(handler.body)
-                    collect(statement.orelse)
-                    collect(statement.finalbody)
-                    continue
-                if isinstance(statement, ast.Match):
-                    for case in statement.cases:
-                        collect(case.body)
-
-        collect(module.body)
+        inventory = FlextInfraUtilitiesRopeAnalysisExports._source_binding_inventory(
+            module.body,
+        )
+        assignments = inventory[0]
+        definitions = inventory[1]
+        explicit_all = inventory[2]
         if resolved_options.include_dunder:
             return tuple(
                 dict.fromkeys(
@@ -281,6 +340,25 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         if resolved_options.allow_assignments:
             implicit_names.extend(assignments)
         return tuple(dict.fromkeys(implicit_names))
+
+    @staticmethod
+    def _source_binding_inventory(
+        statements: t.SequenceOf[ast.stmt],
+    ) -> t.Triple[
+        t.MutableSequenceOf[str],
+        t.MutableSequenceOf[t.Pair[str, bool]],
+        bool,
+    ]:
+        """Inventory one statement list's assignments, definitions, and ``__all__``.
+
+        Returns:
+            The assignment names, the definition name and class-kind pairs,
+            and whether ``__all__`` was bound.
+
+        """
+        collector = _ExportBindingInventory()
+        collector.collect(statements)
+        return (collector.assignments, collector.definitions, collector.explicit_all)
 
     @staticmethod
     def _module_export_names(
@@ -329,11 +407,6 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             Locally assigned dunder export names.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesRopeAnalysisAstHelpers,
-            FlextInfraUtilitiesRopeRuntime,
-        )
-
         return tuple(
             dict.fromkeys(
                 name
@@ -362,11 +435,6 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             Explicit ``__all__`` export names when declared locally.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesRopeAnalysisAstHelpers,
-            FlextInfraUtilitiesRopeRuntime,
-        )
-
         explicit_all_name = attributes.get(c.Infra.DUNDER_ALL)
         if (
             explicit_all_name is None
@@ -398,8 +466,6 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             Implicit export names accepted by the export options.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
-
         guard_spans = FlextInfraUtilitiesRopeAnalysisExports._script_guard_spans(
             pymodule,
         )
@@ -457,7 +523,32 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         return tuple(spans)
 
     @staticmethod
+    def _assignment_export_allowed(
+        export_options: m.Infra.ExportOptions,
+        pyname: t.Infra.RopePyName,
+        guard_spans: t.SequenceOf[t.Pair[int, int]],
+    ) -> bool:
+        """Return whether one assigned name is exportable under the options.
+
+        Returns:
+            Whether one assigned name is exportable under the options.
+
+        """
+        allow_assignments: bool = export_options.allow_assignments
+        if not allow_assignments:
+            return False
+        lines = tuple(
+            line
+            for assignment in pyname.assignments
+            if (line := getattr(assignment.ast_node, "lineno", None)) is not None
+        )
+        return not lines or not all(
+            any(start <= line <= end for start, end in guard_spans) for line in lines
+        )
+
+    @classmethod
     def _is_export_name(
+        cls,
         *,
         export_options: m.Infra.ExportOptions,
         name: str,
@@ -470,22 +561,13 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             Whether one Rope name is exportable under the options.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
-
         if FlextInfraUtilitiesRopeRuntime.imported_name(pyname):
             return False
         if FlextInfraUtilitiesRopeRuntime.assigned_name(pyname):
-            allow_assignments: bool = export_options.allow_assignments
-            if not allow_assignments:
-                return False
-            lines = tuple(
-                line
-                for assignment in pyname.assignments
-                if (line := getattr(assignment.ast_node, "lineno", None)) is not None
-            )
-            return not lines or not all(
-                any(start <= line <= end for start, end in guard_spans)
-                for line in lines
+            return cls._assignment_export_allowed(
+                export_options,
+                pyname,
+                guard_spans,
             )
         if not FlextInfraUtilitiesRopeRuntime.defined_name(pyname):
             return False
@@ -532,8 +614,6 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             The explicit public ABI declared by one module source.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisSourceScan
-
         return (
             FlextInfraUtilitiesRopeAnalysisSourceScan.module_assignment_strings_source(
                 source,
@@ -549,8 +629,6 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             Whether ``source`` starts with a module docstring (rope-parsed).
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
-
         pymodule = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(source)
         return bool(pymodule.get_doc())
 
@@ -562,8 +640,6 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             The PEP 257 summary line of the module docstring (rope-parsed).
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
-
         pymodule = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(source)
         doc = pymodule.get_doc() or ""
         summary = next((line for line in doc.splitlines() if line.strip()), "")
@@ -580,11 +656,6 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             The resulting ``bool``.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesRopeAnalysisAstHelpers,
-            FlextInfraUtilitiesRopeRuntime,
-        )
-
         pymodule = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(source)
         pyname = pymodule.get_attributes().get(symbol_name)
         if pyname is None or not FlextInfraUtilitiesRopeRuntime.defined_name(pyname):
@@ -608,8 +679,6 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             Assignment names followed by a string-literal expression (rope-parsed).
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
-
         pymodule = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(source)
         module_ast = pymodule.get_ast()
         body = getattr(module_ast, "body", []) or []

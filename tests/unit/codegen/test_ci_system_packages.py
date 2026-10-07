@@ -30,7 +30,9 @@ class TestsFlextInfraCiSystemPackages:
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="develop",
             ci_trigger_branches=("develop", "main"),
-            system_packages=system_packages,
+            overrides=u.CodegenTestSupport.Ci.WorkflowRenderOverrides(
+                system_packages=system_packages,
+            ),
         )
         return tm.ok(u.Cli.template_render(cls.ci_template, spec))
 

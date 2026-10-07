@@ -91,6 +91,12 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
             t.NonEmptyStr,
             m.Field(description="Mise backend selector the mise.lock pin is read from"),
         ]
+        mise_version: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description="Declared mise release the running binary must match",
+            ),
+        ]
         python_version: Annotated[
             t.NonEmptyStr,
             m.Field(description="Python minor line the environment syncs against"),

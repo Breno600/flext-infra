@@ -340,9 +340,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                     project=declared_member.value.project,
                     namespace_scan_dirs=(declared_member.value.namespace_scan_dirs),
                     candidate_dependencies=workspace.candidate_dependencies,
-                    superproject_members=(
-                        declared_member.value.superproject_members
-                    ),
+                    superproject_members=(declared_member.value.superproject_members),
                 ),
             )
         local_workspace_result = FlextInfraWorkspaceDetector.load_workspace_spec(

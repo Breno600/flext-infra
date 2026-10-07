@@ -20,6 +20,10 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from flext_infra import c
+from flext_infra._utilities import (
+    FlextInfraUtilitiesPrivateImportFacades,
+    FlextInfraUtilitiesRopeAnalysis,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -41,11 +45,6 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
             ValueError: If facade package is not importable for derivation.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesPrivateImportFacades,
-            FlextInfraUtilitiesRopeAnalysis,
-        )
-
         modules = FlextInfraUtilitiesPrivateImportFacades.source_modules(
             {},
             (f"from {package} import *",),
@@ -105,8 +104,6 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
                 frozenset()) != resolved``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
-
         resolved = cls._facade_declared_class(modules, module, letter, frozenset())
         if resolved is None:
             return None
@@ -122,6 +119,96 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
             msg = f"{module} does not publish {owner_module}.{owner} as {owner}"
             raise ValueError(msg)
         return owner
+
+    @staticmethod
+    def _assigns_name(
+        node: ast.Assign | ast.AnnAssign,
+        name: str,
+    ) -> bool:
+        """Report whether one assignment statement binds ``name``.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
+        return any(
+            isinstance(bound, ast.Name) and bound.id == name
+            for bound in (
+                node.targets if isinstance(node, ast.Assign) else (node.target,)
+            )
+        )
+
+    @staticmethod
+    def _assigned_value_binding(
+        node: ast.Assign | ast.AnnAssign,
+        module: str,
+    ) -> t.Pair[str, str] | None:
+        """Return the ``module.name`` target of a plain-name value, else ``None``.
+
+        Returns:
+            The resulting ``t.Pair[str, str] | None``.
+
+        """
+        return (module, node.value.id) if isinstance(node.value, ast.Name) else None
+
+    @staticmethod
+    def _imported_binding(
+        node: ast.ImportFrom,
+        name: str,
+        package: str,
+    ) -> t.Pair[str, str] | None:
+        """Resolve the import that binds ``name`` relative to ``package``.
+
+        Returns:
+            The resulting ``t.Pair[str, str] | None``.
+
+        """
+        for imported in node.names:
+            if (imported.asname or imported.name) == name:
+                source_module = (
+                    resolve_name(
+                        "." * node.level + (node.module or ""),
+                        package,
+                    )
+                    if node.level
+                    else node.module or ""
+                )
+                return source_module, imported.name
+        return None
+
+    @classmethod
+    def _facade_binding_state(
+        cls,
+        source: str,
+        module: str,
+        name: str,
+        package: str,
+    ) -> t.Pair[t.Pair[str, str] | None, bool]:
+        """Follow module-scope execution order to the last binding of ``name``.
+
+        Returns:
+            The resulting ``(target, declared)`` binding state after the body.
+
+        """
+        target: t.Pair[str, str] | None = None
+        declared = False
+        for node in cls._facade_module_statements(source, module):
+            if isinstance(node, ast.AnnAssign) and node.value is None:
+                # An annotation without a value does not rebind an existing name.
+                continue
+            if isinstance(node, ast.ClassDef) and node.name == name:
+                target, declared = None, True
+            elif isinstance(node, ast.Assign | ast.AnnAssign) and cls._assigns_name(
+                node,
+                name,
+            ):
+                target = cls._assigned_value_binding(node, module)
+                declared = False
+            elif isinstance(node, ast.ImportFrom):
+                binding = cls._imported_binding(node, name, package)
+                if binding is not None:
+                    target, declared = binding, False
+        return target, declared
 
     @classmethod
     def _facade_declared_class(
@@ -149,42 +236,11 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
             return None
         source, is_package = indexed
         package = module if is_package else module.rpartition(".")[0]
-        target: t.Pair[str, str] | None = None
-        declared = False
-        # The generated lazy publication has one owner: the cached index.
-        lazy = cls._facade_lazy_bindings(source, module)
-        for node in cls._facade_module_statements(source, module):
-            if isinstance(node, ast.AnnAssign) and node.value is None:
-                # An annotation without a value does not rebind an existing name.
-                continue
-            if isinstance(node, ast.ClassDef) and node.name == name:
-                target, declared = None, True
-            elif isinstance(node, ast.Assign | ast.AnnAssign) and any(
-                isinstance(bound, ast.Name) and bound.id == name
-                for bound in (
-                    node.targets if isinstance(node, ast.Assign) else (node.target,)
-                )
-            ):
-                target = (
-                    (module, node.value.id)
-                    if isinstance(node.value, ast.Name)
-                    else None
-                )
-                declared = False
-            elif isinstance(node, ast.ImportFrom):
-                for imported in node.names:
-                    if (imported.asname or imported.name) == name:
-                        source_module = (
-                            resolve_name(
-                                "." * node.level + (node.module or ""),
-                                package,
-                            )
-                            if node.level
-                            else node.module or ""
-                        )
-                        target, declared = (source_module, imported.name), False
+        target, declared = cls._facade_binding_state(source, module, name, package)
         if declared:
             return module, name
+        # The generated lazy publication has one owner: the cached index.
+        lazy = cls._facade_lazy_bindings(source, module)
         if target is None and name in lazy:
             # A lazy entry binds the name through its submodule; resolution
             # continues where the submodule defines it.

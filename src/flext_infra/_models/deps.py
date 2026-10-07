@@ -13,6 +13,7 @@ from flext_cli import m
 
 from flext_infra import t
 from flext_infra._models import (
+    FlextInfraConfigModelsScaffold,
     FlextInfraModelsDepsToml,
     FlextInfraModelsDepsToolConfig,
     FlextInfraModelsMixins,
@@ -495,6 +496,42 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             description="Dependency limits",
             validate_default=True,
         )
+
+    class ToolingContextRequest(m.ArbitraryTypesModel):
+        """Declared inputs the modernizer resolves into a runtime context."""
+
+        project_name: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Distribution name of the project"),
+        ]
+        package_name: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Importable package name of the project"),
+        ]
+        path: Annotated[
+            Path,
+            m.Field(description="Absolute path of the project's pyproject file"),
+        ]
+        topology: Annotated[
+            FlextInfraModelsDeps.PyprojectDeclaredTopology,
+            m.Field(description="Declared repository topology"),
+        ]
+        scaffold_project: Annotated[
+            FlextInfraConfigModelsScaffold.ScaffoldProjectSpec,
+            m.Field(description="Scaffold project specification"),
+        ]
+        upstream: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Upstream branch the project integrates on"),
+        ]
+        runtime_dependency_overlay: Annotated[
+            t.StrSequence,
+            m.Field(description="Runtime dependency overlay requirement lines"),
+        ]
+        declared_project_dependencies: Annotated[
+            t.StrSequence,
+            m.Field(description="Declared project dependency requirement lines"),
+        ]
 
 
 __all__: list[str] = ["FlextInfraModelsDeps"]

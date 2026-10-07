@@ -15,7 +15,9 @@ from flext_cli import m
 
 from flext_infra import t
 from flext_infra._constants import (
+    FlextInfraConstantsCheck,
     FlextInfraConstantsCodegenProject,
+    FlextInfraConstantsDocs,
     FlextInfraConstantsMake,
 )
 from flext_infra._models import (
@@ -284,8 +286,6 @@ class FlextInfraConfigModelsMake:
                     the docs lifecycle.
 
             """
-            from flext_infra._constants import FlextInfraConstantsDocs
-
             if len(set(self.actions)) != len(self.actions):
                 msg = "docs actions must be unique"
                 raise ValueError(msg)
@@ -1036,12 +1036,35 @@ class FlextInfraConfigModelsMake:
                     be repository-relative.
 
             """
-            from flext_infra._constants import FlextInfraConstantsCheck
-
             declared = {verb.name for verb in self.verbs}
             if len(declared) != len(self.verbs):
                 msg = "make public verb names must be unique"
                 raise ValueError(msg)
+            self._validate_standalone_gates(declared)
+            # Why (hq-36xk, flext-lq86m): the guard that lived here read
+            # `if "setup" in serialized` and protected `make setup` from being
+            # placed in the serialized mutation set, so it could never require
+            # the managed validation environment it is supposed to CREATE.
+            # 3e5fbc747 exterminated the serialize-make lifecycle and deleted
+            # `self.serialization`, but rebound this condition to `declared`
+            # instead of removing it with the concept it guarded. `setup` is a
+            # mandatory canonical verb, so the inverted check rejected every
+            # valid configuration and `flext_infra.config` could not be built at
+            # all. The serialized set no longer exists; the guard has no object.
+            self._validate_workflow(declared)
+            self._validate_docs_verb(declared)
+            return self
+
+        def _validate_standalone_gates(self, declared: t.StrSet) -> None:
+            """Validate the standalone check-gate routing against declared verbs.
+
+            Raises:
+                ValueError: If make standalone_check_gates names undeclared verbs; or
+                    if make standalone_check_gates requires verbs in every profile; or
+                    if make standalone_check_gates names unknown gates; or if make
+                    standalone_check_gates must route each gate once.
+
+            """
             unknown_standalone_verbs = sorted(
                 set(self.standalone_check_gates) - declared,
             )
@@ -1078,16 +1101,29 @@ class FlextInfraConfigModelsMake:
             if len(standalone_gates) != len(set(standalone_gates)):
                 msg = "make standalone_check_gates must route each gate once"
                 raise ValueError(msg)
-            # Why (hq-36xk, flext-lq86m): the guard that lived here read
-            # `if "setup" in serialized` and protected `make setup` from being
-            # placed in the serialized mutation set, so it could never require
-            # the managed validation environment it is supposed to CREATE.
-            # 3e5fbc747 exterminated the serialize-make lifecycle and deleted
-            # `self.serialization`, but rebound this condition to `declared`
-            # instead of removing it with the concept it guarded. `setup` is a
-            # mandatory canonical verb, so the inverted check rejected every
-            # valid configuration and `flext_infra.config` could not be built at
-            # all. The serialized set no longer exists; the guard has no object.
+
+        def _validate_workflow(self, declared: t.StrSet) -> None:
+            """Validate the workflow verbs against the declared public verbs.
+
+            Why (hq-36xk, flext-lq86m): the guard that lived here read
+            ``if "setup" in serialized`` and protected ``make setup`` from being
+            placed in the serialized mutation set, so it could never require
+            the managed validation environment it is supposed to CREATE.
+            3e5fbc747 exterminated the serialize-make lifecycle and deleted
+            ``self.serialization``, but rebound this condition to ``declared``
+            instead of removing it with the concept it guarded. ``setup`` is a
+            mandatory canonical verb, so the inverted check rejected every
+            valid configuration and ``flext_infra.config`` could not be built
+            at all. The serialized set no longer exists; the guard has no
+            object.
+
+            Raises:
+                ValueError: If make workflow verbs must be unique; or if make
+                    workflow verbs are not declared public verbs; or if make
+                    workflow verbs must exist in every profile; or if make pre-commit
+                    must be declared in every profile.
+
+            """
             workflow_verbs = tuple(step.verb for step in self.workflow)
             if len(set(workflow_verbs)) != len(workflow_verbs):
                 msg = "make workflow verbs must be unique"
@@ -1128,6 +1164,16 @@ class FlextInfraConfigModelsMake:
             if "pre-commit" not in declared:
                 msg = "make pre-commit must be declared in every profile"
                 raise ValueError(msg)
+
+        def _validate_docs_verb(self, declared: t.StrSet) -> None:
+            """Validate the docs verb declaration and its report directory.
+
+            Raises:
+                ValueError: If make fmt gates are not declared gate vocabulary; or
+                    if make docs verb must be declared; or if make docs reports_dir
+                    must be repository-relative.
+
+            """
             unknown_fmt_gates = set(self.fmt_gates) - set(
                 FlextInfraConstantsCheck.SARIF_TOOL_INFO,
             )
@@ -1146,7 +1192,6 @@ class FlextInfraConfigModelsMake:
             ):
                 msg = "make docs reports_dir must be repository-relative"
                 raise ValueError(msg)
-            return self
 
         @m.computed_field
         @property

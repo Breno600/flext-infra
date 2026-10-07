@@ -61,8 +61,9 @@ class FlextInfraProtocolsRope(Protocol):
         def pyobject(self) -> t.Infra.RopePyObject: ...
 
     @runtime_checkable
-    class RopeWorkspaceDsl(Protocol):
-        """Public DSL contract for one shared Rope workspace session."""
+    @runtime_checkable
+    class RopeSessionLifecycleDsl(Protocol):
+        """Lifecycle contract of one shared Rope workspace session."""
 
         repository_root: Path
 
@@ -94,6 +95,10 @@ class FlextInfraProtocolsRope(Protocol):
         ) -> None: ...
 
         def close(self) -> None: ...
+
+    @runtime_checkable
+    class RopeWorkspaceDsl(RopeSessionLifecycleDsl, Protocol):
+        """Public DSL contract for one shared Rope workspace session."""
 
         def resource(self, file_path: Path) -> t.Infra.RopeResource | None: ...
 

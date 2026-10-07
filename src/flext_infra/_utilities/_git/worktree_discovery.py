@@ -14,7 +14,10 @@ from git import GitCommandError, GitConfigParser
 
 from flext_core import r
 from flext_infra import c, m, p, t
-from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeRootsMixin
+from flext_infra._utilities import (
+    FlextInfraUtilitiesBase,
+    FlextInfraUtilitiesGitWorktreeRootsMixin,
+)
 
 
 class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
@@ -188,8 +191,6 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
             ValueError: If malformed git submodule status line.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesBase
-
         try:
             repo = cls._repo(repository_root)
             status = repo.git.submodule("status", "--recursive")

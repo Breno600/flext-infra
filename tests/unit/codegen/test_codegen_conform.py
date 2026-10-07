@@ -151,6 +151,13 @@ class TestsFlextInfraCodegenConform:
         published = root / c.Infra.MAKEFILE_FILENAME
         original = published.read_bytes() + b"\n# recoverable drift\n"
         published.write_bytes(original)
+        if scenario == "lazy-failure":
+            package = root / "src" / config.Infra.name.replace("-", "_")
+            obsolete = package / next(iter(sorted(c.Infra.OBSOLETE_ROOT_SUPPORT_NAMES)))
+            obsolete.symlink_to(root / "README.md")
+        elif scenario == "docs-failure":
+            docs_config = root / c.Infra.DIR_DOCS / c.Infra.DOCS_CONFIG_FILENAME
+            docs_config.write_text("{invalid", encoding="utf-8")
         if scenario in {"cas", "source-race"}:
             (root / ".lifecycle-cas").write_bytes(b"before\n")
         identity = tm.ok(u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=root)))
@@ -187,13 +194,6 @@ class TestsFlextInfraCodegenConform:
             scenario,
             conformed_template,
         )
-        if scenario == "lazy-failure":
-            package = root / "src" / config.Infra.name.replace("-", "_")
-            obsolete = package / next(iter(sorted(c.Infra.OBSOLETE_ROOT_SUPPORT_NAMES)))
-            obsolete.symlink_to(root / "README.md")
-        elif scenario == "docs-failure":
-            docs_config = root / c.Infra.DIR_DOCS / c.Infra.DOCS_CONFIG_FILENAME
-            docs_config.write_text("{invalid", encoding="utf-8")
         _ = capsys.readouterr()
         execute = (
             FlextInfraCodegenConform.execute_request

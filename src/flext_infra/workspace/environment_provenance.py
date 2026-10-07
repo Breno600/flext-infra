@@ -17,8 +17,11 @@ from urllib.request import url2pathname
 from flext_core import r
 from flext_infra import m, u
 from flext_infra._config import config
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
+    from importlib.metadata import Distribution
+
     from flext_infra import p, t
 
 
@@ -51,8 +54,6 @@ class FlextInfraWorkspaceEnvironmentProvenance:
             The resulting ``p.Result[int]``.
 
         """
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
         resolved_root = repository_root.resolve()
         workspace_result = FlextInfraWorkspaceDetector.load_workspace_spec(
             resolved_root,
@@ -69,61 +70,82 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         )
         validated = 0
         for repository in repositories:
-            matches = u.installed_distributions(
-                name=repository.distribution,
-                path=metadata_paths,
+            provenance = cls._validate_editable_provenance(
+                repository,
+                resolved_root,
+                metadata_paths=metadata_paths,
             )
-            if len(matches) != 1:
-                return r[int].fail(
-                    "editable provenance distribution count mismatch: "
-                    f"distribution={repository.distribution} expected=1 "
-                    f"actual={len(matches)}",
-                )
-            distribution = matches[0]
-            expected_root = (resolved_root / repository.path).resolve()
-            direct_url_result = cls._validate_direct_url(
-                repository.distribution,
-                distribution.read_text("direct_url.json"),
-                expected_root,
-            )
-            if direct_url_result.failure:
-                return direct_url_result
-            files = distribution.files
-            if files is None:
-                return r[int].fail(
-                    "editable provenance has no installed file inventory: "
-                    f"distribution={repository.distribution}",
-                )
-            pth_files = tuple(
-                Path(str(distribution.locate_file(file)))
-                for file in files
-                if str(file).endswith(".pth")
-            )
-            if len(pth_files) != 1:
-                return r[int].fail(
-                    "editable provenance pth count mismatch: "
-                    f"distribution={repository.distribution} expected=1 "
-                    f"actual={len(pth_files)}",
-                )
-            pth_result = cls._validate_pth(
-                repository.distribution,
-                pth_files[0],
-                expected_root,
-            )
-            if pth_result.failure:
-                return pth_result
-            validated += 1
+            if provenance.failure:
+                return r[int].from_failure(provenance)
+            validated += int(provenance.value)
         return r[int].ok(validated)
 
-    @staticmethod
-    def validate_locked(repository_root: Path) -> p.Result[int]:
+    @classmethod
+    def _validate_editable_provenance(
+        cls,
+        repository: m.Infra.RepositoryRef,
+        resolved_root: Path,
+        *,
+        metadata_paths: t.StrSequence | None,
+    ) -> p.Result[bool]:
+        """Prove one editable member's PEP 610 and path metadata provenance.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        matches = u.installed_distributions(
+            name=repository.distribution,
+            path=metadata_paths,
+        )
+        if len(matches) != 1:
+            return r[bool].fail(
+                "editable provenance distribution count mismatch: "
+                f"distribution={repository.distribution} expected=1 "
+                f"actual={len(matches)}",
+            )
+        distribution = matches[0]
+        expected_root = (resolved_root / repository.path).resolve()
+        direct_url_result = cls._validate_direct_url(
+            repository.distribution,
+            distribution.read_text("direct_url.json"),
+            expected_root,
+        )
+        if direct_url_result.failure:
+            return r[bool].from_failure(direct_url_result)
+        files = distribution.files
+        if files is None:
+            return r[bool].fail(
+                "editable provenance has no installed file inventory: "
+                f"distribution={repository.distribution}",
+            )
+        pth_files = tuple(
+            Path(str(distribution.locate_file(file)))
+            for file in files
+            if str(file).endswith(".pth")
+        )
+        if len(pth_files) != 1:
+            return r[bool].fail(
+                "editable provenance pth count mismatch: "
+                f"distribution={repository.distribution} expected=1 "
+                f"actual={len(pth_files)}",
+            )
+        pth_result = cls._validate_pth(
+            repository.distribution,
+            pth_files[0],
+            expected_root,
+        )
+        if pth_result.failure:
+            return r[bool].from_failure(pth_result)
+        return r[bool].ok(value=True)
+
+    @classmethod
+    def validate_locked(cls, repository_root: Path) -> p.Result[int]:
         """Prove normal installed artifacts match the root's committed lock.
 
         Returns:
             The resulting ``p.Result[int]``.
         """
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
         document = u.Cli.toml_read_json(repository_root / "uv.lock")
         if document.failure:
             return r[int].from_failure(document)
@@ -143,76 +165,128 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         )
         validated = 0
         for name in sorted(required):
-            distributions = u.installed_distributions(name=name)
-            if len(distributions) != 1:
-                return r[int].fail(
-                    f"locked provenance needs one installed distribution: {name}",
-                )
-            distribution = distributions[0]
-            location = Path(str(distribution.locate_file(""))).resolve()
-            if not location.is_relative_to(Path(prefix).resolve()):
-                return r[int].fail(
-                    f"locked dependency is outside the owned environment: {name}",
-                )
-            matches = tuple(
-                item
-                for item in locked.package
-                if item.name == name and item.version == distribution.version
-            )
-            if len(matches) != 1:
-                return r[int].fail(
-                    f"installed version differs from committed lock: {name}",
-                )
-            item = matches[0]
-            raw = distribution.read_text("direct_url.json")
-            if raw is None and item.source.git is not None:
-                return r[int].fail(
-                    f"locked dependency lacks PEP 610 provenance: {name}",
-                )
-            receipt = (
-                m.Infra.DirectUrlReceipt.model_validate_json(raw)
-                if raw is not None
-                else None
-            )
-            if (
-                receipt is not None
-                and receipt.dir_info is not None
-                and receipt.dir_info.editable
-            ):
-                return r[int].fail(f"CI dependency is editable: {name}")
-            if item.source.git is None and item.source.registry is None:
-                return r[int].fail(f"CI member needs a locked artifact source: {name}")
-            if item.source.git is not None:
-                expected = urlparse(item.source.git.removeprefix("git+"))
-                if (
-                    receipt is None
-                    or receipt.vcs_info is None
-                    or receipt.vcs_info.vcs != "git"
-                    or receipt.vcs_info.commit_id != expected.fragment
-                    or u.Infra.git_remote_identity(receipt.url)
-                    != u.Infra.git_remote_identity(expected.geturl())
-                ):
-                    return r[int].fail(
-                        "installed dependency origin differs from committed"
-                        f" lock: {name}",
-                    )
-            files = distribution.files
-            if files is None:
-                return r[int].fail(f"installed artifact has no file inventory: {name}")
-            for file in files:
-                if str(file).endswith(".pth"):
-                    path = Path(str(distribution.locate_file(file)))
-                    for line in path.read_text(encoding="utf-8").splitlines():
-                        if Path(line).is_absolute() and not Path(
-                            line,
-                        ).resolve().is_relative_to(
-                            Path(prefix).resolve(),
-                        ):
-                            return r[int].fail(
-                                f"CI artifact exposes an external source path: {name}",
-                            )
-            validated += 1
+            provenance = cls._validate_locked_provenance(name, locked)
+            if provenance.failure:
+                return r[int].from_failure(provenance)
+            validated += int(provenance.value)
         return r[int].ok(validated)
+
+    @classmethod
+    def _validate_locked_provenance(
+        cls,
+        name: str,
+        locked: m.Infra.LockedEnvironment,
+    ) -> p.Result[bool]:
+        """Prove one locked dependency's installed origin and path containment.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        distributions = u.installed_distributions(name=name)
+        if len(distributions) != 1:
+            return r[bool].fail(
+                f"locked provenance needs one installed distribution: {name}",
+            )
+        distribution = distributions[0]
+        location = Path(str(distribution.locate_file(""))).resolve()
+        if not location.is_relative_to(Path(prefix).resolve()):
+            return r[bool].fail(
+                f"locked dependency is outside the owned environment: {name}",
+            )
+        matches = tuple(
+            item
+            for item in locked.package
+            if item.name == name and item.version == distribution.version
+        )
+        if len(matches) != 1:
+            return r[bool].fail(
+                f"installed version differs from committed lock: {name}",
+            )
+        origin = cls._locked_origin_verdict(
+            name,
+            matches[0],
+            distribution.read_text("direct_url.json"),
+        )
+        if origin.failure:
+            return r[bool].from_failure(origin)
+        paths = cls._locked_pth_verdict(name, distribution)
+        if paths.failure:
+            return r[bool].from_failure(paths)
+        return r[bool].ok(value=True)
+
+    @classmethod
+    def _locked_origin_verdict(
+        cls,
+        name: str,
+        item: m.Infra.LockedPackage,
+        raw: str | None,
+    ) -> p.Result[bool]:
+        """Prove one locked dependency's PEP 610 origin against the lock entry.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        if raw is None and item.source.git is not None:
+            return r[bool].fail(
+                f"locked dependency lacks PEP 610 provenance: {name}",
+            )
+        receipt = (
+            m.Infra.DirectUrlReceipt.model_validate_json(raw)
+            if raw is not None
+            else None
+        )
+        if (
+            receipt is not None
+            and receipt.dir_info is not None
+            and receipt.dir_info.editable
+        ):
+            return r[bool].fail(f"CI dependency is editable: {name}")
+        if item.source.git is None and item.source.registry is None:
+            return r[bool].fail(f"CI member needs a locked artifact source: {name}")
+        if item.source.git is not None:
+            expected = urlparse(item.source.git.removeprefix("git+"))
+            if (
+                receipt is None
+                or receipt.vcs_info is None
+                or receipt.vcs_info.vcs != "git"
+                or receipt.vcs_info.commit_id != expected.fragment
+                or u.Infra.git_remote_identity(receipt.url)
+                != u.Infra.git_remote_identity(expected.geturl())
+            ):
+                return r[bool].fail(
+                    f"installed dependency origin differs from committed lock: {name}",
+                )
+        return r[bool].ok(value=True)
+
+    @staticmethod
+    def _locked_pth_verdict(
+        name: str,
+        distribution: Distribution,
+    ) -> p.Result[bool]:
+        """Prove one installed artifact's path inventory stays environment-owned.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        files = distribution.files
+        if files is None:
+            return r[bool].fail(f"installed artifact has no file inventory: {name}")
+        for file in files:
+            if str(file).endswith(".pth"):
+                path = Path(str(distribution.locate_file(file)))
+                for line in path.read_text(encoding="utf-8").splitlines():
+                    if Path(line).is_absolute() and not Path(
+                        line,
+                    ).resolve().is_relative_to(
+                        Path(prefix).resolve(),
+                    ):
+                        return r[bool].fail(
+                            f"CI artifact exposes an external source path: {name}",
+                        )
+        return r[bool].ok(value=True)
 
     @classmethod
     def _validate_direct_url(

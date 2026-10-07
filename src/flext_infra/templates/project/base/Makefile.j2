@@ -401,10 +401,9 @@ awk 'index($$0, "[[tools.\"{{ selector }}\"]]") == 1 { inside = 1; next } inside
 .PHONY: _bootstrap_setup_tools
 _bootstrap_setup_tools: _builtin_require_mise
 	@set -eu; \
-	mise_pin="$$( {{ mise_lock_pin_reader("$(RUNTIME_ROOT)", mise_selector) }} )"; \
 	mise_actual="$$(mise --version 2>/dev/null | cut -d ' ' -f1)"; \
-	if [ "$$mise_actual" != "$$mise_pin" ]; then \
-		printf 'ERROR: mise %s differs from the mise.lock pin %s; run make setup\n' "$$mise_actual" "$$mise_pin" >&2; \
+	if [ "$$mise_actual" != "{{ mise_version }}" ]; then \
+		printf 'ERROR: mise %s differs from the declared release %s; run: mise use -g github:jdx/mise@{{ mise_version }}\n' "$$mise_actual" "{{ mise_version }}" >&2; \
 		exit 2; \
 	fi; \
 	export MISE_VERSION="$$mise_pin"; \
@@ -674,14 +673,9 @@ _builtin_require_mise:
 		printf 'ERROR: missing %s/mise.lock; run make upg\n' "$(RUNTIME_ROOT)" >&2; \
 		exit 2; \
 	fi; \
-	mise_pin="$$( {{ mise_lock_pin_reader("$(RUNTIME_ROOT)", mise_selector) }} )"; \
-	if [ -z "$$mise_pin" ]; then \
-		printf 'ERROR: mise.lock pins no {{ mise_selector }} release; run make upg\n' "$(RUNTIME_ROOT)" >&2; \
-		exit 2; \
-	fi; \
 	mise_actual="$$(mise --version 2>/dev/null | cut -d ' ' -f1)"; \
-	if [ "$$mise_actual" != "$$mise_pin" ]; then \
-		printf 'ERROR: mise %s differs from the mise.lock pin %s; run make setup\n' "$$mise_actual" "$$mise_pin" >&2; \
+	if [ "$$mise_actual" != "{{ mise_version }}" ]; then \
+		printf 'ERROR: mise %s differs from the declared release %s; run: mise use -g github:jdx/mise@{{ mise_version }}\n' "$$mise_actual" "{{ mise_version }}" >&2; \
 		exit 2; \
 	fi
 

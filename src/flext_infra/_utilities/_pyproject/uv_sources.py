@@ -238,6 +238,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
         resolution: m.Infra.UvResolutionSpec,
         candidate_sources: t.StrMapping,
         workspace_members: t.StrSequence = (),
+        owns_workspace_table: bool = False,
     ) -> p.Result[bool]:
         """Render the conform-owned ``[tool.uv]`` keys and workspace identity.
 
@@ -312,7 +313,12 @@ class FlextInfraUtilitiesPyprojectUvSources(
             u.Cli.toml_sync_value(uv, "exclude-dependencies", exclude_payload)
         else:
             u.Cli.toml_remove_key_if_present(uv, "exclude-dependencies")
-        cls._sync_uv_workspace(uv, document, workspace_members)
+        cls._sync_uv_workspace(
+            uv,
+            document,
+            workspace_members,
+            owns_workspace_table=owns_workspace_table,
+        )
         return r[bool].ok(value=True)
 
     @classmethod
@@ -368,29 +374,29 @@ class FlextInfraUtilitiesPyprojectUvSources(
         uv: Table,
         document: t.Cli.TomlDocument,
         workspace_members: t.StrSequence,
+        *,
+        owns_workspace_table: bool,
     ) -> None:
         """Render or remove the native uv workspace identity and its sources.
 
-        The workspace root declares its attached members as a native uv
-        workspace (the declared topology is the SSOT) and redirects every
-        member requirement to that identity through a workspace source, so
-        `uv sync --all-packages` provisions the live worktrees. Standalone
-        repositories own their own frozen lock and external environment: no
-        workspace table and no member sources survive there.
+        The `[tool.uv.workspace]` TABLE is owned by the pyproject template
+        alone: only the workspace root's render declares it, so a member
+        manifest never grows a nested workspace (uv rejects nesting). This
+        sync manages the SOURCES identity on both shapes: the root
+        redirects every attached member requirement to the workspace; a
+        member (superproject membership detected through the detector's
+        single superproject-manifest read) redirects the siblings IT
+        references; a true standalone keeps its git+ form and prunes fleet
+        member sources.
         """
+        if not owns_workspace_table:
+            u.Cli.toml_remove_key_if_present(uv, "workspace")
         if workspace_members:
-            members = u.Cli.toml_ensure_table(uv, "workspace")
-            u.Cli.toml_sync_string_list(
-                members,
-                "members",
-                tuple(sorted(workspace_members)),
-            )
             cls._sync_member_sources(
                 uv,
                 cls._wanted_workspace_members(document, workspace_members),
             )
             return
-        u.Cli.toml_remove_key_if_present(uv, "workspace")
         cls._prune_member_sources(uv)
 
 

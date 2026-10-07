@@ -99,17 +99,21 @@ class TestsFlextInfraWorktreeBinding:
         u.Tests.WorktreeFixture.initialize_governed_project(
             flext_root,
             "flext",
-            workspace="flext",
-            database="flext",
-            issue_prefix="flext",
+            beads=u.Tests.BeadsIdentity(
+                workspace="flext",
+                database="flext",
+                issue_prefix="flext",
+            ),
         )
         for name in ("flext-core", "flext-cli"):
             u.Tests.WorktreeFixture.initialize_governed_project(
                 flext_root / name,
                 name,
-                workspace=name,
-                database=name,
-                issue_prefix=name,
+                beads=u.Tests.BeadsIdentity(
+                    workspace=name,
+                    database=name,
+                    issue_prefix=name,
+                ),
                 beads_owner=False,
             )
             u.Tests.WorktreeFixture.link_member_beads(
@@ -153,9 +157,11 @@ class TestsFlextInfraWorktreeBinding:
         u.Tests.WorktreeFixture.initialize_governed_project(
             supplier,
             distribution,
-            workspace=distribution,
-            database=distribution,
-            issue_prefix=distribution,
+            beads=u.Tests.BeadsIdentity(
+                workspace=distribution,
+                database=distribution,
+                issue_prefix=distribution,
+            ),
         )
         consumer = self._consumer(tmp_path)
         declaration = consumer / c.PYPROJECT_FILENAME
