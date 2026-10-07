@@ -234,17 +234,17 @@ class FlextInfraFlextUtilitiesRopeSourceBases:
                 ValueError: If the mutation is not a recognized provider
                     metadata, module table, or class namespace rebinding.
 
-        """
-        if self._provider_metadata_rebind(targets, bindings):
-            return
-        if self._module_table_mutation(targets, bindings):
-            return
-        if self._complete_class_namespace(node, targets, bindings, lexical):
-            return
-        message = (
-            f"Unsupported class binding mutation in {self._module}: {ast.unparse(node)}"
-        )
-        raise ValueError(message)
+            """
+            if self._provider_metadata_rebind(targets, bindings):
+                return
+            if self._module_table_mutation(targets, bindings):
+                return
+            if self._complete_class_namespace(node, targets, bindings, lexical):
+                return
+            message = (
+                f"Unsupported class binding mutation in {self._module}: {ast.unparse(node)}"
+            )
+            raise ValueError(message)
 
         def _provider_metadata_rebind(
             self,
@@ -1711,4 +1711,11 @@ class FlextInfraFlextUtilitiesRopeSourceBases:
             ).run()
 
 
-__all__: list[str] = ["FlextInfraFlextUtilitiesRopeSourceBases"]
+
+
+# The flat module-level re-export: the package lazy map and the
+# internal from-import contract resolve this name at module scope
+# (the S6 nesting moved the class inside the family facade).
+FlextInfraUtilitiesRopeSourceBases = FlextInfraFlextUtilitiesRopeSourceBases.FlextInfraUtilitiesRopeSourceBases
+
+__all__: list[str] = ["FlextInfraFlextUtilitiesRopeSourceBases", "FlextInfraUtilitiesRopeSourceBases"]
