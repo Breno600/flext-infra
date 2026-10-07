@@ -21,19 +21,14 @@ class TestsFlextInfraDetectorOwnsNoProjectRegistry:
     def _standalone(root: Path, *, name: str) -> Path:
         """Create a real Git repository that flext-infra has never heard of.
 
+        The derived default beads identity keeps the repository unknown to any
+        flext-infra-owned catalog.
+
         Returns:
             The resulting ``Path``.
 
         """
-        u.Tests.WorktreeFixture.initialize_governed_project(
-            root,
-            name,
-            beads=u.Tests.BeadsIdentity(
-                workspace=f"{name}-workspace",
-                database=f"{name}-database",
-                issue_prefix=f"{name}-prefix",
-            ),
-        )
+        u.Tests.WorktreeFixture.initialize_governed_project(root, name)
         return root
 
     def test_unknown_project_derives_its_own_identity(self, tmp_path: Path) -> None:

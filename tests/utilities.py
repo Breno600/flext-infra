@@ -519,7 +519,9 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             tm.that(upgraded.stderr, has="setup probe: failed stage=lock.log")
             tm.that(lock.read_bytes(), eq=previous_lock)
             tm.that(
-                list(project_root.parent.glob(f".{project_root.name}.mise-lock-stage.*")),
+                list(
+                    project_root.parent.glob(f".{project_root.name}.mise-lock-stage.*"),
+                ),
                 eq=[],
             )
 

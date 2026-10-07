@@ -240,10 +240,9 @@ class FlextInfraUtilitiesRopeSourceBases:
                 return
             if self._complete_class_namespace(node, targets, bindings, lexical):
                 return
-            message = (
-                f"Unsupported class binding mutation in {self._module}: {ast.unparse(node)}"
-            )
+            message = f"Unsupported class binding mutation in {self._module}: {ast.unparse(node)}"
             raise ValueError(message)
+
         if self._provider_metadata_rebind(targets, bindings):
             return
         if self._module_table_mutation(targets, bindings):
@@ -597,6 +596,8 @@ class FlextInfraUtilitiesRopeSourceBases:
                 attributes=(*binding.attributes, *attributes),
                 qualified_base=".".join((binding.qualified_base, *attributes)),
             )
+
+        return None
 
     class _RuntimeBaseResolver:
         """Resolve owned classes in C3 order and external classes through Rope.
@@ -1594,9 +1595,6 @@ class FlextInfraUtilitiesRopeSourceBases:
 
         _stdlib_backing_cache: ClassVar[dict[str, str] | None] = None
 
-class FlextInfraUtilitiesRopeSourceBases:
-    """Source-bases composite facade over the inventory and runtime parts."""
-
     @classmethod
     def inventory(
         cls,
@@ -1634,15 +1632,13 @@ class FlextInfraUtilitiesRopeSourceBases:
         Returns:
             Sorted configured roots and derived Ruff-qualified base expressions.
 
-            """
-            return FlextInfraUtilitiesRopeSourceBases._RuntimeBaseResolver(
-                project,
-                sources,
-                roots,
-                extra_module_aliases,
-            ).run()
-
-
+        """
+        return FlextInfraUtilitiesRopeSourceBases._RuntimeBaseResolver(
+            project,
+            sources,
+            roots,
+            extra_module_aliases,
+        ).run()
 
 
 # The flat module-level re-export: the package lazy map and the

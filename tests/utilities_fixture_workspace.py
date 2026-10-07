@@ -938,7 +938,8 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             root: Path,
             distribution: str,
             *,
-            beads: TestsFlextInfraUtilitiesWorkspaceFixtureMixin.BeadsIdentity,
+            beads: TestsFlextInfraUtilitiesWorkspaceFixtureMixin.BeadsIdentity
+            | None = None,
             custom_issue_types: t.VariadicTuple[str] = (),
             beads_owner: bool = True,
         ) -> Path:
@@ -946,7 +947,8 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
 
             Every governed repository commits its own checksum-verified Mise seeds;
             ``codegen conform`` validates them and never mints them, so the fixture
-            carries them exactly as a real checkout does.
+            carries them exactly as a real checkout does. Without an explicit
+            ``beads`` identity, every string derives from ``distribution``.
 
             Returns:
                 The resulting ``Path``.
@@ -955,11 +957,20 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             pyproject = cls.write_python_project(root, distribution)
             TestsFlextInfraUtilitiesToolingFixtureMixin.copy_tracked_mise_seeds(root)
             if beads_owner:
+                identity = (
+                    beads
+                    if beads is not None
+                    else TestsFlextInfraUtilitiesWorkspaceFixtureMixin.BeadsIdentity(
+                        workspace=f"{distribution}-workspace",
+                        database=f"{distribution}-database",
+                        issue_prefix=f"{distribution}-prefix",
+                    )
+                )
                 cls.write_beads_project(
                     root,
-                    workspace=beads.workspace,
-                    database=beads.database,
-                    issue_prefix=beads.issue_prefix,
+                    workspace=identity.workspace,
+                    database=identity.database,
+                    issue_prefix=identity.issue_prefix,
                     custom_issue_types=custom_issue_types,
                 )
             TestsFlextInfraUtilitiesProjectFixtureMixin.write_workspace_manifest(
