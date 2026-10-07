@@ -46,8 +46,7 @@ class FlextInfraUtilitiesRopeSourceBasesAliases:
             The bound identity, attributes, and Ruff-qualified spelling.
 
         Raises:
-            TypeError: If the expression is not a class reference form.
-            ValueError: If its lexical binding is not a class.
+            ValueError: If the expression or its lexical binding is not a class.
 
         """
         # Unwrap Subscript and Attribute in ONE loop: a chained form like
@@ -65,7 +64,7 @@ class FlextInfraUtilitiesRopeSourceBasesAliases:
             message = (
                 f"Unsupported class reference in {module}: {ast.unparse(expression)}"
             )
-            raise TypeError(message)
+            raise ValueError(message)
         name = expression.id
         if name in bindings:
             binding = bindings[name]
@@ -101,7 +100,7 @@ class FlextInfraUtilitiesRopeSourceBasesAliases:
         backing: str | None = None
         try:
             runtime = importlib.import_module(target)
-        except ImportError:
+        except Exception:
             runtime = None
         file = getattr(runtime, "__file__", None)
         if file:

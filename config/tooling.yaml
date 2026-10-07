@@ -736,11 +736,6 @@ Infra:
             justification: >-
               Analyze Rope's installed source without suppressing import-untyped;
               https://mypy.readthedocs.io/en/stable/config_file.html#follow-untyped-imports
-          - modules: [rope.*]
-            follow-untyped-imports: true
-            justification: >-
-              Analyze Rope's installed source without suppressing import-untyped;
-              https://mypy.readthedocs.io/en/stable/config_file.html#follow-untyped-imports
       pydantic-mypy:
         init_forbid_extra: true
         init_typed: true
