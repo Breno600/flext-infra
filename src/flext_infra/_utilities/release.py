@@ -15,7 +15,7 @@ from tempfile import TemporaryDirectory
 from flext_cli import r, u
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities import FlextInfraUtilitiesDependenciesProfiles
+from flext_infra._utilities import FlextInfraUtilitiesDependencies
 
 
 class FlextInfraUtilitiesRelease:
@@ -433,7 +433,7 @@ class FlextInfraUtilitiesRelease:
                     if dependency in selected and dependency != name
                 ),
             )
-        return FlextInfraUtilitiesDependenciesProfiles.dependency_waves(edges)
+        return FlextInfraUtilitiesDependencies.dependency_waves(edges)
 
     @staticmethod
     def _release_runtime_dependencies(path: Path) -> p.Result[t.StrSequence]:
@@ -470,7 +470,7 @@ class FlextInfraUtilitiesRelease:
                     for requirement in requirements
                     if isinstance(requirement, str)
                     and (
-                        name := FlextInfraUtilitiesDependenciesProfiles.dep_name(
+                        name := FlextInfraUtilitiesDependencies.dep_name(
                             requirement,
                         )
                     )

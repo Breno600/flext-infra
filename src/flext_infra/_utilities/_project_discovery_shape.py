@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from flext_infra import c
 from flext_infra._utilities import (
-    FlextInfraUtilitiesDependenciesProfiles,
+    FlextInfraUtilitiesDependencies,
     FlextInfraUtilitiesPyproject,
 )
 
@@ -46,7 +46,7 @@ class FlextInfraUtilitiesProjectDiscoveryShapeMixin:
         if not payload:
             return False
         dependency_names: set[str] = set(
-            FlextInfraUtilitiesDependenciesProfiles.declared_dependency_names_from_payload(
+            FlextInfraUtilitiesDependencies.declared_dependency_names_from_payload(
                 payload,
             ),
         )

@@ -19,7 +19,7 @@ from flext_cli import u
 
 from flext_infra import c, m, p, r, t
 from flext_infra._utilities import (
-    FlextInfraUtilitiesDependenciesProfiles,
+    FlextInfraUtilitiesDependencies,
     FlextInfraUtilitiesGitSemanticPublishMixin,
     FlextInfraUtilitiesGitWorktreeDiscoveryMixin,
     FlextInfraUtilitiesPyproject,
@@ -554,12 +554,12 @@ class FlextInfraUtilitiesRepository:
         if isinstance(project, dict):
             for key in (c.Infra.DEPENDENCIES, c.Infra.OPTIONAL_DEPENDENCIES):
                 requirements.extend(
-                    FlextInfraUtilitiesDependenciesProfiles.raw_requirement_values(
+                    FlextInfraUtilitiesDependencies.raw_requirement_values(
                         project.get(key),
                     ),
                 )
         requirements.extend(
-            FlextInfraUtilitiesDependenciesProfiles.raw_requirement_values(
+            FlextInfraUtilitiesDependencies.raw_requirement_values(
                 payload.get(c.Infra.DEPENDENCY_GROUPS),
             ),
         )
@@ -576,7 +576,7 @@ class FlextInfraUtilitiesRepository:
         Returns:
             The provider URL and ref, or the empty pair for a non-line.
         """
-        name = FlextInfraUtilitiesDependenciesProfiles.dep_name(requirement)
+        name = FlextInfraUtilitiesDependencies.dep_name(requirement)
         if name is None or not name.startswith(prefix):
             return r[t.Pair[str, str]].ok(("", ""))
         parsed = cls.declared_git_source(requirement)

@@ -13,7 +13,7 @@ from flext_cli import r, u
 
 from flext_infra import c, t
 from flext_infra._utilities import (
-    FlextInfraUtilitiesDependenciesProfiles,
+    FlextInfraUtilitiesDependencies,
     FlextInfraUtilitiesRepository,
 )
 from flext_infra._utilities._pyproject._requirements_provenance import (
@@ -146,7 +146,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             ValueError: If dependency ordering requires a named requirement.
 
         """
-        name = FlextInfraUtilitiesDependenciesProfiles.dep_name(requirement)
+        name = FlextInfraUtilitiesDependencies.dep_name(requirement)
         if name is None:
             message = "dependency ordering requires a named requirement"
             raise ValueError(message)
@@ -234,11 +234,11 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         bare_requirement = requirement.strip().strip('"').strip()
-        if FlextInfraUtilitiesDependenciesProfiles.dep_name(bare_requirement) not in (
+        if FlextInfraUtilitiesDependencies.dep_name(bare_requirement) not in (
             workspace_members
         ):
             return None
-        member_name = FlextInfraUtilitiesDependenciesProfiles.dep_name(bare_requirement)
+        member_name = FlextInfraUtilitiesDependencies.dep_name(bare_requirement)
         marker = bare_requirement.partition(";")[2]
         if marker:
             return f"{member_name}; {marker.strip()}"
@@ -318,7 +318,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             The dependency name, or None for an external requirement.
 
         """
-        dependency_name = FlextInfraUtilitiesDependenciesProfiles.dep_name(requirement)
+        dependency_name = FlextInfraUtilitiesDependencies.dep_name(requirement)
         if dependency_name is None:
             return None
         if (
@@ -467,13 +467,13 @@ class FlextInfraUtilitiesPyprojectRequirements:
         sourced_live_names = {
             name
             for requirement in live_dev
-            if (name := FlextInfraUtilitiesDependenciesProfiles.dep_name(requirement))
+            if (name := FlextInfraUtilitiesDependencies.dep_name(requirement))
             and cls._declares_direct_source(requirement)
         }
         required_dev = tuple(
             requirement
             for requirement in required_dev_dependencies
-            if FlextInfraUtilitiesDependenciesProfiles.dep_name(requirement)
+            if FlextInfraUtilitiesDependencies.dep_name(requirement)
             != project_name
             and not cls._floor_yields_to_declared_source(
                 requirement,
@@ -485,7 +485,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             u.Cli.toml_sync_string_list(
                 groups,
                 str(c.Infra.DEV),
-                FlextInfraUtilitiesDependenciesProfiles.dedupe_specs(tuple(dev)),
+                FlextInfraUtilitiesDependencies.dedupe_specs(tuple(dev)),
             )
         else:
             u.Cli.toml_remove_key_if_present(groups, str(c.Infra.DEV))
@@ -495,7 +495,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             u.Cli.toml_sync_string_list(
                 groups,
                 "codegen",
-                FlextInfraUtilitiesDependenciesProfiles.dedupe_specs(tuple(codegen)),
+                FlextInfraUtilitiesDependencies.dedupe_specs(tuple(codegen)),
             )
         else:
             u.Cli.toml_remove_key_if_present(groups, "codegen")
@@ -527,7 +527,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             The resulting ``bool``.
 
         """
-        name = FlextInfraUtilitiesDependenciesProfiles.dep_name(requirement)
+        name = FlextInfraUtilitiesDependencies.dep_name(requirement)
         return (
             name is not None
             and name.startswith("flext-")
@@ -577,7 +577,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             payload,
         )
         for requirement in raw_values:
-            dependency_name = FlextInfraUtilitiesDependenciesProfiles.dep_name(
+            dependency_name = FlextInfraUtilitiesDependencies.dep_name(
                 requirement,
             )
             if dependency_name is None or dependency_name not in member_names:

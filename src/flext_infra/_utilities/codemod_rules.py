@@ -20,7 +20,7 @@ from packaging.utils import canonicalize_name
 
 from flext_infra import c, config, m, p, t
 from flext_infra._utilities import (
-    FlextInfraUtilitiesDependenciesProfiles,
+    FlextInfraUtilitiesDependencies,
     FlextInfraUtilitiesResourceLimits,
 )
 
@@ -236,7 +236,7 @@ class FlextInfraUtilitiesCodemodRules:
             for name in selected
         }
         try:
-            ordered = FlextInfraUtilitiesDependenciesProfiles.dependency_order(
+            ordered = FlextInfraUtilitiesDependencies.dependency_order(
                 tuple(selected),
                 dependencies=lambda name: edges.get(name, ()),
             )

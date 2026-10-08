@@ -10,7 +10,7 @@ from flext_cli import r, u
 
 from flext_infra import c, p, t
 from flext_infra._utilities import (
-    FlextInfraUtilitiesDependenciesProfiles,
+    FlextInfraUtilitiesDependencies,
     FlextInfraUtilitiesManagedConflicts,
     FlextInfraUtilitiesPyprojectRequirements,
 )
@@ -72,7 +72,7 @@ class FlextInfraUtilitiesPyprojectOverlay:
 
         """
         owned_names = {
-            FlextInfraUtilitiesDependenciesProfiles.dep_name(item) for item in required
+            FlextInfraUtilitiesDependencies.dep_name(item) for item in required
         }
         return list[t.JsonValue](
             sorted(
@@ -81,7 +81,7 @@ class FlextInfraUtilitiesPyprojectOverlay:
                     *(
                         item
                         for item in custom
-                        if FlextInfraUtilitiesDependenciesProfiles.dep_name(item)
+                        if FlextInfraUtilitiesDependencies.dep_name(item)
                         not in owned_names
                     ),
                 )),
