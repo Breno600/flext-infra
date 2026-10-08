@@ -811,6 +811,17 @@ class FlextInfraUtilitiesRopeSourceBases:
                     )
                     module = ".".join(parts[:index])
                     attributes = [*parts[index:], *attributes]
+                    # Import-from can bind a captured child module rather than
+                    # a package export. Explicit package bindings still win.
+                    while (
+                        attributes
+                        and (
+                            module not in modules
+                            or attributes[0] not in modules[module]
+                        )
+                        and f"{module}.{attributes[0]}" in namespaces
+                    ):
+                        module = f"{module}.{attributes.pop(0)}"
                     if not attributes:
                         message = f"Module used as a class base: {module}"
                         raise ValueError(message)

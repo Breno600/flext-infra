@@ -299,6 +299,94 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                 self._roots(),
             )
 
+    @pytest.mark.parametrize(
+        "import_statement",
+        [
+            "from binding_contract.parts import document as part",
+            "from .parts import document as part",
+            "import binding_contract.parts.document as part",
+        ],
+    )
+    def test_planned_submodule_import_resolves_its_declared_class(
+        self,
+        tmp_path: Path,
+        import_statement: str,
+    ) -> None:
+        """An import-from submodule alias does not require an initializer export."""
+        package = tmp_path / "src" / "binding_contract"
+        planned = {
+            package / "__init__.py": "",
+            package / "parts" / "__init__.py": "",
+            package / "parts" / "document.py": self._root_import()
+            + "class Document(RuntimeRoot): pass\n",
+            package / "facade.py": (
+                f"{import_statement}\nclass Facade(part.Document): pass\n"
+                "class Consumer(Facade): pass\n"
+            ),
+        }
+        tm.that(
+            u.Infra.runtime_evaluated_base_classes(tmp_path, planned, self._roots()),
+            eq=tuple(
+                sorted((
+                    *self._roots(),
+                    "binding_contract.parts.document.Document",
+                    "binding_contract.facade.Facade",
+                )),
+            ),
+        )
+        tm.that(package.exists(), eq=False)
+        tm.that("binding_contract" in sys.modules, eq=False)
+
+    @pytest.mark.parametrize(
+        ("shadow", "diagnostic"),
+        [
+            ("document = 0", r"Unresolved planned base: shadowed_submodule\.document"),
+            ("class document: pass", "Missing inherited class member:"),
+        ],
+    )
+    def test_planned_package_binding_is_not_replaced_by_a_submodule(
+        self,
+        tmp_path: Path,
+        shadow: str,
+        diagnostic: str,
+    ) -> None:
+        """Explicit package values/classes retain precedence over file names."""
+        package = tmp_path / "src" / "shadowed_submodule"
+        planned = {
+            package / "__init__.py": shadow + "\n",
+            package / "document.py": self._root_import()
+            + "class Document(RuntimeRoot): pass\n",
+            package / "consumer.py": (
+                "from . import document as part\nclass Invalid(part.Document): pass\n"
+            ),
+        }
+        with pytest.raises(ValueError, match=diagnostic):
+            u.Infra.runtime_evaluated_base_classes(tmp_path, planned, self._roots())
+
+    def test_planned_submodule_does_not_invent_a_missing_class(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A captured submodule proves its location, not arbitrary class exports."""
+        package = tmp_path / "src" / "missing_submodule_class"
+        with pytest.raises(
+            ValueError,
+            match=r"Unresolved planned base: missing_submodule_class\.parts\.document\.Missing",
+        ):
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {
+                    package / "__init__.py": "",
+                    package / "parts" / "__init__.py": "",
+                    package / "parts" / "document.py": "class Document: pass\n",
+                    package / "consumer.py": (
+                        "from .parts import document as part\n"
+                        "class Invalid(part.Missing): pass\n"
+                    ),
+                },
+                self._roots(),
+            )
+
     @pytest.mark.parametrize("name", ["Structure", "Union", "Array"])
     def test_ctypes_native_private_parents_do_not_require_module_exports(
         self,

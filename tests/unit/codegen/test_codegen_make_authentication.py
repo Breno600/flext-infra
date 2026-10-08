@@ -129,11 +129,14 @@ class TestsFlextInfraCodegenMakeAuthentication:
             "    git_protocol: https\n",
             encoding="utf-8",
         )
-        TestsFlextInfraCodegenMakeAuthentication._probe_credential(
+        process = TestsFlextInfraCodegenMakeAuthentication._probe_credential(
             tmp_path / "project",
             selected,
             {"GH_CONFIG_DIR": str(gh_config)},
         )
+        tm.that(process.stdout, has="command-exit=0 command=")
+        tm.that(process.stdout, has="physical-command=")
+        tm.that(process.stdout, has="gh-config-override=yes")
 
     @staticmethod
     @pytest.mark.parametrize("verb", ["status", "help", "clean"])
