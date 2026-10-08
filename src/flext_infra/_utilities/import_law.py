@@ -97,6 +97,33 @@ class FlextInfraUtilitiesImportLaw:
         return order.index(c.Infra.IMPORT_LAW_OTHER_LAYER)
 
     @staticmethod
+    def import_direct_module(namespace_dir: Path, file_path: Path) -> bool:
+        """Return whether one module keeps direct leaf imports.
+
+        A settings/config module (any path segment starting with ``settings``
+        or ``config``, with or without leading underscores) and a family
+        ``base.py`` (a ``base.py`` inside a private ``_<family>/`` package)
+        import their own namespace only through direct leaf modules, so the
+        settings/config graph and the family bases never re-enter a lazy
+        package that is still initializing.
+
+        Returns:
+            Whether the module is exempt from root-alias and lazy routing.
+
+        """
+        relative = file_path.resolve().relative_to(namespace_dir.resolve())
+        stems = tuple(part.removesuffix(".py").lstrip("_") for part in relative.parts)
+        if any(
+            stem.startswith(tuple(c.Infra.IMPORT_LAW_ROOT_SINGLETONS)) for stem in stems
+        ):
+            return True
+        return (
+            len(relative.parts) > 1
+            and relative.name == c.Infra.IMPORT_LAW_FAMILY_BASE_FILE
+            and relative.parts[-2].startswith("_")
+        )
+
+    @staticmethod
     def import_package_dir(project_root: Path, package: str) -> Path | None:
         """Return the directory of one dotted package the project owns.
 
