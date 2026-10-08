@@ -12,12 +12,10 @@ from typing import Annotated, ClassVar
 from flext_cli import m
 
 from flext_infra import c, t
-from flext_infra._models import (
-    FlextInfraConfigModels,
-    FlextInfraConfigModelsContexts,
-    FlextInfraModelsGitIdentity,
-    FlextInfraModelsMixins,
-)
+from flext_infra._models._config.base import FlextInfraConfigModels
+from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
+from flext_infra._models._git.identity import FlextInfraModelsGitIdentity
+from flext_infra._models.mixins import FlextInfraModelsMixins
 
 
 class FlextInfraModelsWorkspace:

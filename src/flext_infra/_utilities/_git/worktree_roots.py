@@ -11,7 +11,7 @@ from pathlib import Path
 from git import GitCommandError
 
 from flext_infra import m, p, r
-from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeFactsMixin
+from flext_infra._utilities._git.worktree_facts import FlextInfraUtilitiesGitWorktreeFactsMixin
 
 
 class FlextInfraUtilitiesGitWorktreeRootsMixin(

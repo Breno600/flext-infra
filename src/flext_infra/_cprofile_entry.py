@@ -10,7 +10,6 @@ import sys
 from pathlib import Path
 
 from flext_infra import c, config
-from flext_infra.validate import FlextInfraCProfileReport
 
 
 class FlextInfraCProfileEntry:
@@ -24,6 +23,7 @@ class FlextInfraCProfileEntry:
             The resulting ``int``.
 
         """
+        from flext_infra.validate import FlextInfraCProfileReport
         report_root = Path.cwd().resolve() / ".reports" / "cprofile"
         profile_path = (
             Path(sys.argv[1]) if len(sys.argv) > 1 else report_root / "pytest.pstats"

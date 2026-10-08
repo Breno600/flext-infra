@@ -17,11 +17,7 @@ from git import (
 )
 
 from flext_infra import c, m, p, r, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesGitRemote,
-    FlextInfraUtilitiesGitRepo,
-    FlextInfraUtilitiesGitSemanticLaneMixin,
-)
+from flext_infra._utilities._git.semantic_lane import FlextInfraUtilitiesGitSemanticLaneMixin
 
 
 class FlextInfraUtilitiesGitSemanticIdentityMixin(
@@ -154,6 +150,7 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
             Whether ``repo_root`` sits inside a Git work tree.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesGitRepo
         refreshed = FlextInfraUtilitiesGitRepo.refresh_binary()
         if refreshed.failure:
             return r[m.Infra.GitBoolReport].from_failure(refreshed)
@@ -189,6 +186,7 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
             The resulting ``(origin, upstream)`` redacted remote URL pair.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesGitRemote
         remotes = {remote.name: remote.url for remote in repo.remotes}
         origin = remotes.get("origin")
         upstream = remotes.get("upstream")

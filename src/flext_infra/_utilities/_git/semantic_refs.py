@@ -11,7 +11,7 @@ from pathlib import Path
 from git import BadName, GitCommandError
 
 from flext_infra import c, m, p, r
-from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeMixin
+from flext_infra._utilities._git.worktree import FlextInfraUtilitiesGitWorktreeMixin
 
 
 class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixin):

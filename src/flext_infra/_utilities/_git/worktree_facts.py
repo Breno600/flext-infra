@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Literal
 
 from flext_infra import c, m, t
-from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeMeasureMixin
+from flext_infra._utilities._git.worktree_measure import FlextInfraUtilitiesGitWorktreeMeasureMixin
 
 
 class FlextInfraUtilitiesGitWorktreeFactsMixin(

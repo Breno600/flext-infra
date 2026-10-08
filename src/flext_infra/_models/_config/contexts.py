@@ -18,14 +18,12 @@ from flext_infra._constants import (
     FlextInfraConstantsPromoted,
     FlextInfraConstantsWorkspace,
 )
-from flext_infra._models import (
-    FlextInfraConfigModelsBeads,
-    FlextInfraConfigModelsContract,
-    FlextInfraConfigModelsMake,
-    FlextInfraConfigModelsRepository,
-    FlextInfraConfigModelsScaffold,
-    FlextInfraModelsDepsToolConfig,
-)
+from flext_infra._models._config.beads import FlextInfraConfigModelsBeads
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
+from flext_infra._models._config.make import FlextInfraConfigModelsMake
+from flext_infra._models._config.repository import FlextInfraConfigModelsRepository
+from flext_infra._models._config.scaffold import FlextInfraConfigModelsScaffold
+from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
 
 
 class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
@@ -95,6 +93,17 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
             t.NonEmptyStr,
             m.Field(
                 description="Declared mise release the running binary must match",
+            ),
+        ]
+        mise_install_tools: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                min_length=1,
+                description=(
+                    "Explicit [tools] keys `mise install` provisions in setup "
+                    "and upg, so the operator's global Mise registry is never "
+                    "installed by a project verb"
+                ),
             ),
         ]
         python_version: Annotated[

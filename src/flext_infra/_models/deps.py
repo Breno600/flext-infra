@@ -12,12 +12,10 @@ from typing import Annotated, ClassVar
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._models import (
-    FlextInfraConfigModelsScaffold,
-    FlextInfraModelsDepsToml,
-    FlextInfraModelsDepsToolConfig,
-    FlextInfraModelsMixins,
-)
+from flext_infra._models._config.scaffold import FlextInfraConfigModelsScaffold
+from flext_infra._models.deps_toml import FlextInfraModelsDepsToml
+from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
+from flext_infra._models.mixins import FlextInfraModelsMixins
 
 
 class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsToml):

@@ -11,7 +11,6 @@ from typing import override
 
 from flext_cli.config import FlextCliConfig
 
-from flext_infra._constants import FlextInfraConstantsCodegenProject
 from flext_infra._models import FlextInfraConfigModels
 
 
@@ -21,12 +20,6 @@ class FlextInfraConfig(FlextCliConfig):
     # Direct config.Infra is the only codegen information surface; no accessor
     # method.
     Infra: FlextInfraConfigModels.Infra
-
-    # Environment key names owned by the typed config (semantic-cutover
-    # provenance for the bootstrap's Mise storage resolution).
-    MISE_DATA_DIR_ENV: str = "MISE_DATA_DIR"
-    XDG_DATA_HOME_ENV: str = "XDG_DATA_HOME"
-    HOME_ENV: str = "HOME"
 
     @classmethod
     def ssot_config_dir(cls) -> Path:
@@ -55,6 +48,7 @@ class FlextInfraConfig(FlextCliConfig):
             The resulting ``list[Path]``.
 
         """
+        from flext_infra._constants import FlextInfraConstantsCodegenProject
         files = [
             item
             for item in super()._config_files()

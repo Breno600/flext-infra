@@ -10,7 +10,7 @@ from enum import StrEnum, unique
 from typing import ClassVar
 
 from flext_core import e
-from flext_infra._constants import FlextInfraConstantsSharedInfra
+from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
 
 
 class FlextInfraConstantsPromoted:

@@ -14,8 +14,6 @@ from flext_infra.codegen import FlextInfraCodegenTransaction
 from flext_infra.codegen._conform.execute_scaffold import (
     FlextInfraCodegenConformExecuteScaffold,
 )
-from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
-from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 
 
 class FlextInfraCodegenConformExecute(FlextInfraCodegenConformExecuteScaffold):
@@ -283,6 +281,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformExecuteScaffold):
             The resulting ``p.Result[m.Infra.CodegenResult]``.
 
         """
+        from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
         request = self.request or m.Infra.CodegenConformRequest(
             root=self.repository_root,
         )
@@ -319,6 +318,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformExecuteScaffold):
             The checked or atomically published initializer plan.
 
         """
+        from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
         transaction = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=request.root),
         )
@@ -424,6 +424,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformExecuteScaffold):
             The resulting ``p.Result[m.Infra.CodegenResult]``.
 
         """
+        from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
         u.Cli.header("Codegen Conform")
         u.Cli.info(
             f"stage=plan mode={request.mode} scope={request.scope} "
@@ -589,6 +590,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformExecuteScaffold):
             The resulting ``p.Result[m.Infra.CodegenResult]``.
 
         """
+        from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
         ports = self.ports
         if ports is None:
             return r[m.Infra.CodegenResult].fail(
@@ -664,6 +666,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformExecuteScaffold):
             The resulting ``p.Result[m.Infra.CodegenPhaseAnalysis]``.
 
         """
+        from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
         files: list[m.Infra.CodegenFilePlan] = []
         inputs: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
         publications: list[m.Infra.LazyInitPlan] = []
@@ -1099,6 +1102,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformExecuteScaffold):
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
         u.Cli.info("stage=verify-fixed-point")
         verified = self.plan(request)
         if verified.failure:

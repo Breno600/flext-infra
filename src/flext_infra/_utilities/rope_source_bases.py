@@ -10,15 +10,6 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_infra import m, t
-from flext_infra._utilities._rope_source_bases_aliases import (
-    FlextInfraUtilitiesRopeSourceBasesAliases,
-)
-from flext_infra._utilities._rope_source_bases_inventory import (
-    FlextInfraUtilitiesRopeSourceBasesInventory,
-)
-from flext_infra._utilities._rope_source_bases_runtime import (
-    FlextInfraUtilitiesRopeSourceBasesRuntime,
-)
 
 
 class FlextInfraUtilitiesRopeSourceBases:
@@ -36,6 +27,7 @@ class FlextInfraUtilitiesRopeSourceBases:
             The module's explicit lexical bindings, including value shadowing.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeSourceBasesInventory
         return FlextInfraUtilitiesRopeSourceBasesInventory.inventory(
             request,
             definitions,
@@ -54,6 +46,7 @@ class FlextInfraUtilitiesRopeSourceBases:
             The module's facade alias names routed to their lazy module paths.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeSourceBasesAliases
         return FlextInfraUtilitiesRopeSourceBasesAliases.lazy_module_aliases(
             module,
             path,
@@ -81,6 +74,7 @@ class FlextInfraUtilitiesRopeSourceBases:
             Sorted configured roots and derived Ruff-qualified base expressions.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeSourceBasesRuntime
         return FlextInfraUtilitiesRopeSourceBasesRuntime.runtime_bases(
             project,
             sources,

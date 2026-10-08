@@ -8,13 +8,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from flext_cli import r, u
+from flext_cli import r
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesDependencies,
-    FlextInfraUtilitiesPyprojectUvSources,
-)
+from flext_infra._utilities._pyproject.uv_sources import FlextInfraUtilitiesPyprojectUvSources
 
 
 class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources):
@@ -31,6 +28,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             The resulting ``p.Result[t.Pair[t.Cli.TomlDocument, str]]``.
 
         """
+        from flext_cli import u
         source = u.Cli.toml_parse_text(pyproject_content)
         if source is None:
             return r[t.Pair[t.Cli.TomlDocument, str]].fail(
@@ -74,6 +72,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             Canonical TOML with autonomous dependencies and uv policy.
 
         """
+        from flext_cli import u
         parsed = cls._parsed_pyproject(pyproject_content)
         if parsed.failure:
             return r[str].from_failure(parsed)
@@ -149,6 +148,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             The declared and candidate requirement sources.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDependencies
         declared_sources = (
             {
                 member.distribution: f"git+{member.url}@{workspace.integration.branch}"
@@ -244,6 +244,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         The ``[tool.flext]`` table is preserved because it carries project-local
         tooling policy unrelated to repository topology.
         """
+        from flext_cli import u
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if tool is None:
             return
@@ -264,6 +265,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_cli import u
         if not namespace_scan_dirs:
             return r[bool].ok(value=True)
         namespace = u.Cli.toml_ensure_path(document, c.Infra.CONFORM_NAMESPACE_TABLE)
@@ -282,6 +284,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_cli import u
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if tool is None:
             return r[bool].ok(value=True)

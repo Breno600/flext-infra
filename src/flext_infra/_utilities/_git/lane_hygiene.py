@@ -17,7 +17,7 @@ from git import BadName, GitCommandError, Repo
 
 from flext_core import r
 from flext_infra import c, m, p, t
-from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeStatusMixin
+from flext_infra._utilities._git.worktree_status import FlextInfraUtilitiesGitWorktreeStatusMixin
 
 
 class FlextInfraUtilitiesGitLaneHygieneMixin(

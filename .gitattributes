@@ -22,8 +22,6 @@
 "/.markdownlintignore" -merge linguist-generated
 "/.mise.toml" -merge linguist-generated
 "/.pre-commit-config.yaml" -merge linguist-generated
-"/.prettierignore" -merge linguist-generated
-"/.prettierrc" -merge linguist-generated
 "/.python-version" -merge linguist-generated
 "/.qlty/qlty.toml" -merge linguist-generated
 "/Makefile" -merge linguist-generated

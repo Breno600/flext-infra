@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_cli import u
 
 from flext_infra import c, m, r, t
 
@@ -37,6 +36,7 @@ class FlextInfraUtilitiesLogParser:
             The resulting ``p.Result[t.VariadicTuple[m.Infra.SarifResult]]``.
 
         """
+        from flext_cli import u
         report_dir = (
             u.Cli.resolve_report_dir(
                 repository_root,
