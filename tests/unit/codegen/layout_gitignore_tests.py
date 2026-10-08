@@ -23,7 +23,6 @@ from tests.unit.codegen.layout_fixture import (
 )
 
 
-@pytest.mark.usefixtures("local_context")
 class TestsFlextInfraCodegenLayoutGitignore:
     """Test suite for layout gitignore, tracked-file moves, and canonical render."""
 
