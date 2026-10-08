@@ -14,7 +14,6 @@ from libcst.codemod import CodemodContext
 from libcst.codemod.visitors import AddImportsVisitor
 from libcst.metadata import MetadataWrapper, ParentNodeProvider, QualifiedNameProvider
 
-
 if TYPE_CHECKING:
     from flext_infra import m, t
 
@@ -40,6 +39,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
         ) -> cst.BaseSmallStatement | cst.FlattenSentinel[cst.BaseSmallStatement]:
 
             from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
             if original_node.relative or isinstance(
                 updated_node.names,
                 cst.ImportStar,
@@ -117,6 +117,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
 
             """
             from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
             targets = {
                 replacement
                 for qualified_name in self.get_metadata(
@@ -169,6 +170,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
 
             """
             from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
             module = FlextInfraUtilitiesQualifiedNames.dotted_name(
                 original_node.module,
             )

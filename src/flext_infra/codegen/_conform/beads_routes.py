@@ -38,6 +38,7 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
 
         """
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
         root = request.root.expanduser().resolve()
         workspace_result = FlextInfraWorkspaceDetector.load_workspace_spec(root)
         if workspace_result.failure:

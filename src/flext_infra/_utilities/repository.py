@@ -15,7 +15,6 @@ import re
 from pathlib import Path
 from urllib.parse import urlparse
 
-
 from flext_infra import c, m, p, r, t
 
 
@@ -159,6 +158,7 @@ class FlextInfraUtilitiesRepository:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeDiscoveryMixin
+
         source = codegen.infra_repository
         distribution = source.distribution
         preference = codegen.branch_policy.integration_branch_preference
@@ -252,6 +252,7 @@ class FlextInfraUtilitiesRepository:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
         metadata = FlextInfraUtilitiesPyproject.read_project_metadata_result(
             repository_root,
         )
@@ -300,6 +301,7 @@ class FlextInfraUtilitiesRepository:
             The validated origin URL and integration branch.
         """
         from flext_infra._utilities import FlextInfraUtilitiesGitSemanticPublishMixin
+
         origin = FlextInfraUtilitiesGitSemanticPublishMixin.git_remote_url(
             m.Infra.GitRemoteUrlRequest(
                 repo_root=repository_root,
@@ -337,6 +339,7 @@ class FlextInfraUtilitiesRepository:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesWorkspaceManifest
+
         loaded = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
             repository_root,
         )
@@ -414,7 +417,9 @@ class FlextInfraUtilitiesRepository:
         # carry managed merge blocks while the transaction is only planning.
 
         from flext_cli import u
+
         from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
         text = FlextInfraUtilitiesPyproject.live_pyproject_text(pyproject_path)
         if text.failure:
             return r[t.JsonMapping].from_failure(text)
@@ -548,6 +553,7 @@ class FlextInfraUtilitiesRepository:
             Requirement strings from all declared dependency groups.
         """
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         requirements: list[str] = []
         project = payload.get(c.Infra.PROJECT)
         if isinstance(project, dict):
@@ -576,6 +582,7 @@ class FlextInfraUtilitiesRepository:
             The provider URL and ref, or the empty pair for a non-line.
         """
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         name = FlextInfraUtilitiesDependencies.dep_name(requirement)
         if name is None or not name.startswith(prefix):
             return r[t.Pair[str, str]].ok(("", ""))
@@ -615,6 +622,7 @@ class FlextInfraUtilitiesRepository:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesWorkspaceManifest
+
         loaded = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
             repository_root,
         )
@@ -646,6 +654,7 @@ class FlextInfraUtilitiesRepository:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeDiscoveryMixin
+
         url = repository.url.strip()
         organization, separator, _ = (
             FlextInfraUtilitiesGitWorktreeDiscoveryMixin.git_remote_identity(
@@ -681,6 +690,7 @@ class FlextInfraUtilitiesRepository:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeDiscoveryMixin
+
         provider = cls.repository_provider(repository)
         if provider.failure:
             return r[str].from_failure(provider)
@@ -721,6 +731,7 @@ class FlextInfraUtilitiesRepository:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesWorkspaceManifest
+
         manifest = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
             repository_root,
         )
@@ -791,6 +802,7 @@ class FlextInfraUtilitiesRepository:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesGitSemanticPublishMixin
+
         candidates = preference or c.Infra.INTEGRATION_BRANCH_PREFERENCE
         for candidate in candidates:
             reference = f"refs/remotes/origin/{candidate}"

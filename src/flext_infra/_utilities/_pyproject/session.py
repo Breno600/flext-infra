@@ -29,7 +29,9 @@ class FlextInfraUtilitiesPyprojectSession:
 
         """
         from flext_cli import u
+
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if (
             tool is not None

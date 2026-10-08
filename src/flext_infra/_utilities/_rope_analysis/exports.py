@@ -118,7 +118,11 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             Module-local export names from Rope metadata.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers, FlextInfraUtilitiesRopeCore
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeAnalysisAstHelpers,
+            FlextInfraUtilitiesRopeCore,
+        )
+
         resolved_export_options = export_options or m.Infra.ExportOptions()
         cache_key = (
             *FlextInfraUtilitiesRopeAnalysisAstHelpers.resource_cache_key(
@@ -165,6 +169,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisSourceScan
+
         resolved_options = export_options or m.Infra.ExportOptions()
         module = ast.parse(source)
         inventory = FlextInfraUtilitiesRopeAnalysisExports._source_binding_inventory(
@@ -269,7 +274,11 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             Locally assigned dunder export names.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers, FlextInfraUtilitiesRopeRuntime
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeAnalysisAstHelpers,
+            FlextInfraUtilitiesRopeRuntime,
+        )
+
         return tuple(
             dict.fromkeys(
                 name
@@ -298,7 +307,11 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             Explicit ``__all__`` export names when declared locally.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers, FlextInfraUtilitiesRopeRuntime
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeAnalysisAstHelpers,
+            FlextInfraUtilitiesRopeRuntime,
+        )
+
         explicit_all_name = attributes.get(c.Infra.DUNDER_ALL)
         if (
             explicit_all_name is None
@@ -331,6 +344,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
+
         guard_spans = FlextInfraUtilitiesRopeAnalysisExports._script_guard_spans(
             pymodule,
         )
@@ -427,6 +441,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         if FlextInfraUtilitiesRopeRuntime.imported_name(pyname):
             return False
         if FlextInfraUtilitiesRopeRuntime.assigned_name(pyname):
@@ -481,6 +496,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisSourceScan
+
         return (
             FlextInfraUtilitiesRopeAnalysisSourceScan.module_assignment_strings_source(
                 source,
@@ -497,6 +513,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
+
         pymodule = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(source)
         return bool(pymodule.get_doc())
 
@@ -509,6 +526,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
+
         pymodule = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(source)
         doc = pymodule.get_doc() or ""
         summary = next((line for line in doc.splitlines() if line.strip()), "")
@@ -525,7 +543,11 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             The resulting ``bool``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers, FlextInfraUtilitiesRopeRuntime
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeAnalysisAstHelpers,
+            FlextInfraUtilitiesRopeRuntime,
+        )
+
         pymodule = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(source)
         pyname = pymodule.get_attributes().get(symbol_name)
         if pyname is None or not FlextInfraUtilitiesRopeRuntime.defined_name(pyname):
@@ -550,6 +572,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
+
         pymodule = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(source)
         module_ast = pymodule.get_ast()
         body = getattr(module_ast, "body", []) or []

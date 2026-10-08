@@ -287,6 +287,7 @@ class FlextInfraUtilitiesVersioning:
 
         """
         from flext_cli import u
+
         pyproject = project_path / c.PYPROJECT_FILENAME
         try:
             content = pyproject.read_text(encoding=c.Cli.ENCODING_DEFAULT)

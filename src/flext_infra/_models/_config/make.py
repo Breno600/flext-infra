@@ -15,7 +15,9 @@ from flext_cli import m
 
 from flext_infra import c, t
 from flext_infra._models._config.contract import FlextInfraConfigModelsContract
-from flext_infra._models._config.external_cache import FlextInfraExternalCacheDirectorySpec
+from flext_infra._models._config.external_cache import (
+    FlextInfraExternalCacheDirectorySpec,
+)
 from flext_infra._models._config.make_clean import FlextInfraConfigModelsMakeClean
 from flext_infra._models._config.make_docs import FlextInfraConfigModelsMakeDocs
 

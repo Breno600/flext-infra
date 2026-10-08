@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-
 from flext_infra import c, config
 
 if TYPE_CHECKING:
@@ -38,6 +37,7 @@ class FlextInfraUtilitiesPyrefly:
 
         """
         from flext_cli import u
+
         document = u.Cli.toml_read(project_dir / c.PYPROJECT_FILENAME)
         tool = (
             None if document is None else u.Cli.toml_table_child(document, c.Infra.TOOL)

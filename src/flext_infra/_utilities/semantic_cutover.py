@@ -6,7 +6,9 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_infra._utilities._semantic_cutover.base import FlextInfraUtilitiesSemanticCutoverBase
+from flext_infra._utilities._semantic_cutover.base import (
+    FlextInfraUtilitiesSemanticCutoverBase,
+)
 
 
 class FlextInfraUtilitiesSemanticCutover(FlextInfraUtilitiesSemanticCutoverBase):

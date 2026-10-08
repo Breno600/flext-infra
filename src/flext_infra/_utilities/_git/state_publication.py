@@ -25,6 +25,7 @@ class FlextInfraUtilitiesGitStatePublicationMixin(
     def _state_remote_url(cls, root: Path, remote: str) -> str:
 
         from flext_infra._utilities import FlextInfraUtilitiesGitRemote
+
         repo = cls._repo(root)
         fetch = repo.git.remote("get-url", "--all", remote).splitlines()
         push = repo.git.remote("get-url", "--push", "--all", remote).splitlines()

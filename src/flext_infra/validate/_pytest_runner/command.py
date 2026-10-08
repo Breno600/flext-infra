@@ -337,6 +337,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
 
         """
         from flext_infra._pytest_collection import FlextInfraPytestCollection
+
         pytest = config.Infra.tooling.tools.pytest
         selected_node_ids = selection_plan.node_ids if selection_plan else None
         selection = selected_node_ids or None

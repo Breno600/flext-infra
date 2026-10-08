@@ -88,6 +88,7 @@ class FlextInfraUtilitiesDocsApi:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
         return FlextInfraUtilitiesRopeAnalysis.module_assignment_strings_source(
             source,
             name,
@@ -109,6 +110,7 @@ class FlextInfraUtilitiesDocsApi:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
         return FlextInfraUtilitiesRopeAnalysis.imported_symbol_binding_source(
             source,
             current_module=current_module,
@@ -189,6 +191,7 @@ class FlextInfraUtilitiesDocsApi:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
         key = f"{module_name}:{symbol_name}"
         if key in visited:
             return {}
@@ -296,6 +299,7 @@ class FlextInfraUtilitiesDocsApi:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
         literal_values, export_name = (
             FlextInfraUtilitiesRopeAnalysis.lazy_public_exports_source(source)
         )
@@ -334,6 +338,7 @@ class FlextInfraUtilitiesDocsApi:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
         return FlextInfraUtilitiesRopeAnalysis.export_target_modules_source(
             source,
             package_name,
@@ -349,6 +354,7 @@ class FlextInfraUtilitiesDocsApi:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
         return FlextInfraUtilitiesRopeAnalysis.module_has_docstring_source(source)
 
     @staticmethod
@@ -360,6 +366,7 @@ class FlextInfraUtilitiesDocsApi:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
         return set(FlextInfraUtilitiesRopeAnalysis.assignment_docstrings_source(source))
 
     @staticmethod
@@ -371,6 +378,7 @@ class FlextInfraUtilitiesDocsApi:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
         if FlextInfraUtilitiesRopeAnalysis.symbol_has_docstring_source(
             source,
             symbol_name,
@@ -395,6 +403,7 @@ class FlextInfraUtilitiesDocsApi:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
         if not FlextInfraUtilitiesRopeAnalysis.class_declared_source(
             source,
             symbol_name,
@@ -539,6 +548,7 @@ class FlextInfraUtilitiesDocsApi:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+
         with FlextInfraUtilitiesRopeCore.open_project(project_root) as rope_project:
             symbols: t.MutableSequenceOf[str] = []
             for export_name, module_name in target_map.items():
@@ -658,6 +668,7 @@ class FlextInfraUtilitiesDocsApi:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
         project = metadata.project
         docs = metadata.flext.docs
         all_exports, target_map = FlextInfraUtilitiesDocsApi._exports_and_targets(
@@ -718,6 +729,7 @@ class FlextInfraUtilitiesDocsApi:
         # Retain flext-core's validated metadata object; no shadow DTO.
 
         from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
         metadata_result = FlextInfraUtilitiesPyproject.read_project_metadata_result(
             project_root,
         )

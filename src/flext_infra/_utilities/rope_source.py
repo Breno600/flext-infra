@@ -26,6 +26,7 @@ class FlextInfraUtilitiesRopeSource:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDiscovery
+
         src_dir = project_dir / c.Infra.DEFAULT_SRC_DIR
         return [
             name
@@ -224,6 +225,7 @@ class FlextInfraUtilitiesRopeSource:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         _ = rope_project
         if not FlextInfraUtilitiesRopeRuntime.file_resource(resource):
             msg = f"expected a Rope file resource: {resource.path}"

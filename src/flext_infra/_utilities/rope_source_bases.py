@@ -155,10 +155,7 @@ class FlextInfraUtilitiesRopeSourceBases:
             root_name=expression.id,
             attribute=".".join(attributes) if attributes else None,
         )
-        return (
-            rebind.is_module_table_mutation
-            or bindings.get(rebind.root_name) is None
-        )
+        return rebind.is_module_table_mutation or bindings.get(rebind.root_name) is None
 
     @classmethod
     def _collect(
@@ -177,8 +174,14 @@ class FlextInfraUtilitiesRopeSourceBases:
             ):
                 break
             if isinstance(node, ast.ClassDef):
-                if spec.required_line is not None and not scope and not (
-                    node.lineno <= spec.required_line <= (node.end_lineno or node.lineno)
+                if (
+                    spec.required_line is not None
+                    and not scope
+                    and not (
+                        node.lineno
+                        <= spec.required_line
+                        <= (node.end_lineno or node.lineno)
+                    )
                 ):
                     bindings[node.name] = m.Infra.SourceClassReference(
                         target=spec.module,
@@ -226,9 +229,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                     if alias.name == "*":
                         if spec.allow_conditional:
                             continue
-                        message = (
-                            f"Star import has no explicit class binding in {spec.module}"
-                        )
+                        message = f"Star import has no explicit class binding in {spec.module}"
                         raise ValueError(message)
                     bindings[alias.asname or alias.name] = m.Infra.SourceClassReference(
                         target=imported,
@@ -245,7 +246,9 @@ class FlextInfraUtilitiesRopeSourceBases:
                         qualified_base=target,
                     )
             elif isinstance(node, ast.Assign | ast.AnnAssign):
-                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                targets = (
+                    node.targets if isinstance(node, ast.Assign) else [node.target]
+                )
                 if any(not isinstance(target, ast.Name) for target in targets):
                     if spec.allow_conditional and all(
                         isinstance(target, ast.Attribute)
@@ -274,7 +277,9 @@ class FlextInfraUtilitiesRopeSourceBases:
                         if value.id in visible and visible[value.id] is not None:
                             reference = cls._reference(value, visible, spec.module)
                             bindings[target.attr] = reference.model_copy(
-                                update={"qualified_base": f"{spec.module}.{target.attr}"},
+                                update={
+                                    "qualified_base": f"{spec.module}.{target.attr}"
+                                },
                             )
                         continue
                     message = (
@@ -417,7 +422,8 @@ class FlextInfraUtilitiesRopeSourceBases:
                 (
                     arg
                     for arg in (
-                        *node.args, *(keyword.value for keyword in node.keywords)
+                        *node.args,
+                        *(keyword.value for keyword in node.keywords),
                     )
                     if isinstance(arg, ast.Dict)
                     or (

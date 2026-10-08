@@ -25,6 +25,7 @@ class FlextInfraApplyRenames:
     ) -> t.Pair[t.VariadicTuple[m.Infra.SemanticFilePlan], int]:
         from flext_infra.codemod._rename_sources import FlextInfraRenameSources
         from flext_infra.codemod._rename_symbols import FlextInfraRenameSymbols
+
         inventory = FlextInfraRenameSources.inventory(roots, params)
         sources = {
             path: state.content.decode(c.Cli.ENCODING_DEFAULT)
@@ -109,6 +110,7 @@ class FlextInfraApplyRenames:
 
         """
         from flext_infra.transformers import FlextInfraSemanticPublication
+
         csv_path, driver = state
         plans, pending = planned
 
@@ -163,6 +165,7 @@ class FlextInfraApplyRenames:
 
         """
         from flext_infra.codemod._rename_sources import FlextInfraRenameSources
+
         roots = tuple(sorted({Path(value).resolve() for value in params.roots}))
         error = cls._campaign_error(params, roots)
         if error is not None:

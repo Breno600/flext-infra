@@ -42,7 +42,11 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
             ValueError: If facade package is not importable for derivation.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesPrivateImportFacades, FlextInfraUtilitiesRopeAnalysis
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesPrivateImportFacades,
+            FlextInfraUtilitiesRopeAnalysis,
+        )
+
         modules = FlextInfraUtilitiesPrivateImportFacades.source_modules(
             {},
             (f"from {package} import *",),
@@ -103,6 +107,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
         resolved = cls._facade_declared_class(modules, module, letter, frozenset())
         if resolved is None:
             return None
@@ -295,6 +300,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeSourceBasesAliases
+
         path = Path(
             c.Infra.INIT_PY if is_package else f"{module.rpartition('.')[2]}.py",
         )
@@ -320,6 +326,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeSourceBindingCollector
+
         for node in body:
             if isinstance(node, ast.If):
                 is_static_only = (

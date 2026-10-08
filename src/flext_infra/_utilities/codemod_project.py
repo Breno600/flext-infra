@@ -29,15 +29,8 @@ from packaging.utils import canonicalize_name
 
 from flext_infra import c, config, m, p, t
 from flext_infra._utilities import (
-    FlextInfraUtilitiesBase,
-    FlextInfraUtilitiesCodegenNamespace,
     FlextInfraUtilitiesCodemodRules,
-    FlextInfraUtilitiesPyproject,
-    FlextInfraUtilitiesRopeAnalysisAstHelpers,
-    FlextInfraUtilitiesRopeAnalysisExports,
-    FlextInfraUtilitiesRopeAnalysisImportState,
     FlextInfraUtilitiesRopeCore,
-    FlextInfraUtilitiesRopeImports,
     FlextInfraUtilitiesRopeRuntime,
     FlextInfraUtilitiesRopeRuntimeModules,
     FlextInfraUtilitiesRopeSourceBases,
@@ -956,6 +949,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
 
         """
         from flext_cli import u
+
         from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
 
         if package == own:

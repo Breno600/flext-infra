@@ -14,7 +14,6 @@ from logging.handlers import BufferingHandler
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-
 from flext_infra import c, m
 
 if TYPE_CHECKING:
@@ -149,6 +148,7 @@ class FlextInfraUtilitiesDocsBuild:
 
         """
         from flext_cli import u
+
         site_dir = (
             scope.path
             / c.Infra.DEFAULT_DOCS_OUTPUT_DIR
@@ -179,6 +179,7 @@ class FlextInfraUtilitiesDocsBuild:
     def _run_mkdocs_api(settings: Path, site_dir: Path) -> None:
         """Run MkDocs build via the Python API with lazy imports."""
         from flext_cli import u
+
         mkdocs_build = import_module("mkdocs.commands.build")
         mkdocs_config = import_module("mkdocs.config")
         load = cast(
@@ -257,7 +258,9 @@ class FlextInfraUtilitiesDocsBuild:
     ) -> None:
         """Persist the standard build summary and markdown report."""
         from flext_cli import u
+
         from flext_infra._utilities import FlextInfraUtilitiesDocs
+
         _ = u.Cli.json_write(
             scope.report_dir / "build-summary.json",
             {c.Infra.RK_SUMMARY: report.model_dump()},

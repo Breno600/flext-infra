@@ -6,7 +6,9 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_infra._utilities._docs_generate_root import FlextInfraUtilitiesDocsGenerateRootMixin
+from flext_infra._utilities._docs_generate_root import (
+    FlextInfraUtilitiesDocsGenerateRootMixin,
+)
 from flext_infra._utilities._docs_guides import FlextInfraUtilitiesDocsGuidesMixin
 from flext_infra._utilities.docs_collection import FlextInfraUtilitiesDocsCollection
 

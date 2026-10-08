@@ -396,7 +396,10 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             The resulting ``p.Result[m.Infra.ProjectRenderContext]``.
 
         """
-        from flext_infra.deps.phases.ensure_packaging import FlextInfraEnsurePackagingPhase
+        from flext_infra.deps.phases.ensure_packaging import (
+            FlextInfraEnsurePackagingPhase,
+        )
+
         target = render_inputs.target
         workspace = render_inputs.workspace
         codegen = render_inputs.codegen

@@ -50,6 +50,7 @@ class FlextInfraCodegenQualityGate(s[bool]):
         """
         from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
         from flext_infra.refactor.census import FlextInfraRefactorCensus
+
         lazy_plans = FlextInfraCodegenLazyInit(
             repository_root=self.repository_root,
         ).plan_files()

@@ -28,6 +28,7 @@ class FlextInfraDocCollector:
         """
         from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
         from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+
         authenticated = cls._authenticated_configuration(request)
         if authenticated.failure:
             return r[bool].from_failure(authenticated)

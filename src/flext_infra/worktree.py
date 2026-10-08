@@ -277,6 +277,7 @@ class FlextInfraWorktreeService(s[str]):
 
         """
         from flext_infra.git import FlextInfraGitService
+
         if not self.apply_changes:
             return r[str].fail("worktree add requires --apply")
         if base.startswith("-"):
@@ -472,6 +473,7 @@ class FlextInfraWorktreeService(s[str]):
 
         """
         from flext_infra.git import FlextInfraGitService
+
         if not self.apply_changes:
             return r[str].fail("worktree remove requires --apply")
         lane_result = self.registered_lane(primary_root, branch)

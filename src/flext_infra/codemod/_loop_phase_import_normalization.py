@@ -38,8 +38,13 @@ class FlextInfraImportNormalizationPhase:
             The resulting ``p.Result[bool]`` — ``True`` marks changed sources.
 
         """
-        from flext_infra.refactor._import_enforcement import FlextInfraImportNormalization
-        from flext_infra.refactor.namespace_relocations import FlextInfraNamespaceRelocationCascade
+        from flext_infra.refactor._import_enforcement import (
+            FlextInfraImportNormalization,
+        )
+        from flext_infra.refactor.namespace_relocations import (
+            FlextInfraNamespaceRelocationCascade,
+        )
+
         changed = False
         for project_root in u.Infra.governed_project_roots(root):
             if not u.Infra.namespace_enabled(project_root):

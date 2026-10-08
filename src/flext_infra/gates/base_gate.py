@@ -69,6 +69,7 @@ class FlextInfraGate:
 
         """
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
         return u.Infra.discover_python_targets(
             project_dir,
             workspace_excluded_top_dirs=(
@@ -776,6 +777,7 @@ class FlextInfraGate:
     def _mutation_lease(project_dir: Path) -> Generator[None]:
         """Serialize direct fixer effects with generation and WIP capture."""
         from flext_infra.codegen.file_leases import FlextInfraCodegenFileLeases
+
         with FlextInfraCodegenFileLeases.mutation_lease(project_dir):
             yield
 

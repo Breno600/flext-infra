@@ -110,6 +110,7 @@ class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):
         """
         from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
         from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
+
         cli.display_text("ast: validate ast-grep rule fixtures")
         FlextInfraModGateEngine.validate_rule_fixtures(root, rules).unwrap()
         current = FlextInfraModGateEngine.scan(root, fix=False).unwrap()

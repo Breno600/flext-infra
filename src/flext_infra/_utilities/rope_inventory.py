@@ -37,7 +37,11 @@ class FlextInfraUtilitiesRopeInventory:
             ValueError: If path is outside the active rope workspace.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeCore, FlextInfraUtilitiesRopeRuntime
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeCore,
+            FlextInfraUtilitiesRopeRuntime,
+        )
+
         rope_project = rope_workspace.rope_project
         resource = rope_workspace.resource(file_path)
         if resource is None:
@@ -259,6 +263,7 @@ class FlextInfraUtilitiesRopeInventory:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         candidates: list[t.Triple[int, str, t.Infra.RopePyName]] = []
         for name, pyname in names.items():
             if FlextInfraUtilitiesRopeRuntime.imported_name(pyname):
@@ -380,6 +385,7 @@ class FlextInfraUtilitiesRopeInventory:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         location = pyname.get_definition_location()
         _, line = location
         if line is None:
@@ -456,6 +462,7 @@ class FlextInfraUtilitiesRopeInventory:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         obj = pyname.get_object()
         if FlextInfraUtilitiesRopeRuntime.abstract_class(obj):
             return "class"
@@ -488,6 +495,7 @@ class FlextInfraUtilitiesRopeInventory:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         if FlextInfraUtilitiesRopeRuntime.parameter_name(pyname):
             return "parameter"
         if FlextInfraUtilitiesRopeRuntime.assigned_name(pyname):
@@ -518,6 +526,7 @@ class FlextInfraUtilitiesRopeInventory:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeImports
+
         if definition_path is None:
             return None
         module_name = options.module_name
@@ -699,7 +708,11 @@ class FlextInfraUtilitiesRopeInventory:
             RuntimeError: If the definition identifier or path cannot be located.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeCore, FlextInfraUtilitiesRopeImports
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeCore,
+            FlextInfraUtilitiesRopeImports,
+        )
+
         name = options.name
         lines = options.source.splitlines(keepends=True)
         offset = FlextInfraUtilitiesRopeCore.find_identifier_offset_in_lines(
@@ -783,6 +796,7 @@ class FlextInfraUtilitiesRopeInventory:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeImports
+
         return FlextInfraUtilitiesRopeImports.location_file_path(location)
 
     @staticmethod
@@ -949,6 +963,7 @@ class FlextInfraUtilitiesRopeInventory:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+
         expected: str = convention.module_policy.expected_family or ""
         if expected:
             return expected

@@ -24,7 +24,6 @@ from flext_infra._utilities._git.semantic_submodule import (
 )
 from flext_infra._utilities._git.state_capture import (
     FlextInfraUtilitiesGitStateCaptureMixin,
-    FlextInfraUtilitiesGitWorktreeFactsMixin,
     FlextInfraUtilitiesGitWorktreeMixin,
 )
 

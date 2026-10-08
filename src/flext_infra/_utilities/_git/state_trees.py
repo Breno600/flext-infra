@@ -55,6 +55,7 @@ class FlextInfraUtilitiesGitStateTreesMixin(FlextInfraUtilitiesGitStateSnapshotM
     ) -> None:
 
         from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
+
         repo = cls._repo(root)
         with repo.git.custom_environment(
             GIT_INDEX_FILE=str(index_file) if index_file else None,

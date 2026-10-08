@@ -52,6 +52,7 @@ class FlextInfraWorkspaceEnvironmentProvenance:
 
         """
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
         resolved_root = repository_root.resolve()
         ci = config.Infra.codegen.make.ci
         if u.Infra.env_value(ci.variable).strip() == ci.value:

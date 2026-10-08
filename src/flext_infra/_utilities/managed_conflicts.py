@@ -6,7 +6,6 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-
 from flext_infra import c, config, m, p, r, t
 
 
@@ -86,6 +85,7 @@ class FlextInfraUtilitiesManagedConflicts:
             The resulting ``p.Result[str]``.
         """
         from flext_cli import u
+
         if u.Cli.toml_mapping_from_text(content) is not None:
             return r[str].ok(content)
         recovered: list[str] = []
@@ -209,6 +209,7 @@ class FlextInfraUtilitiesManagedConflicts:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesBase
+
         if FlextInfraUtilitiesBase.first_merge_conflict_marker(content) is None:
             return FlextInfraUtilitiesManagedConflicts.recover_managed_assignments(
                 content,
@@ -281,6 +282,7 @@ class FlextInfraUtilitiesManagedConflicts:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesBase
+
         while index < len(lines):
             control = FlextInfraUtilitiesBase.merge_conflict_control(lines[index])
             if control == "separator":
@@ -302,6 +304,7 @@ class FlextInfraUtilitiesManagedConflicts:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesBase
+
         pair = r[t.Pair[list[str], int]]
         current: list[str] = []
         control = ""
@@ -341,6 +344,7 @@ class FlextInfraUtilitiesManagedConflicts:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesBase
+
         while index < len(lines):
             control = FlextInfraUtilitiesBase.merge_conflict_control(lines[index])
             if control == "incoming":

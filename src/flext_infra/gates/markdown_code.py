@@ -55,6 +55,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
 
         """
         from flext_infra.gates.markdown_support import FlextInfraMarkdownGateBase
+
         patterns = FlextInfraMarkdownGateBase.read_ignore_patterns(
             project_dir,
             c.Infra.MARKDOWNLINT_IGNORE_FILENAME,
@@ -185,8 +186,11 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             The resulting ``t.MappingKV[str, t.Pair[str, t.Pair[str, int]]]``.
 
         """
-        from flext_infra.gates.markdown_code_sources import FlextInfraMarkdownCodeSources
+        from flext_infra.gates.markdown_code_sources import (
+            FlextInfraMarkdownCodeSources,
+        )
         from flext_infra.gates.markdown_support import FlextInfraMarkdownGateBase
+
         markdown_files = self._ignore_filtered(
             project_dir,
             FlextInfraMarkdownGateBase.collect_markdown_files(project_dir),
@@ -289,6 +293,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
 
         """
         from flext_infra.gates.markdown_support import FlextInfraMarkdownGateBase
+
         rewritten: t.MutableSequenceOf[Path] = []
         for md_path in self._ignore_filtered(
             project_dir,
@@ -311,7 +316,10 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             The rewritten path, or ``None`` when the document stayed identical.
 
         """
-        from flext_infra.gates.markdown_code_sources import FlextInfraMarkdownCodeSources
+        from flext_infra.gates.markdown_code_sources import (
+            FlextInfraMarkdownCodeSources,
+        )
+
         content = md_path.read_text(c.Cli.ENCODING_DEFAULT)
         relative_posix = md_path.relative_to(project_dir).as_posix()
         # Preserve indexes across fragments the formatter does not own.
@@ -379,7 +387,10 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             staged source ends the round trip.
 
         """
-        from flext_infra.gates.markdown_code_sources import FlextInfraMarkdownCodeSources
+        from flext_infra.gates.markdown_code_sources import (
+            FlextInfraMarkdownCodeSources,
+        )
+
         blocks: t.MutableSequenceOf[str] = []
         for index, _original in staged:
             source = sources_dir / FlextInfraMarkdownCodeSources.source_name(

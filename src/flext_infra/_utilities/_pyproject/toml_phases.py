@@ -6,7 +6,6 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-
 from flext_infra import c, m, t
 
 
@@ -46,6 +45,7 @@ class FlextInfraUtilitiesPyprojectTomlPhases:
 
         """
         from flext_cli import u
+
         phase_path = (*parent_path, *phase.root_path, *phase.table_path)
         table = u.Cli.toml_mapping_ensure_path(payload, phase_path)
         prefix = u.Cli.toml_dot_path(*phase_path)
@@ -74,6 +74,7 @@ class FlextInfraUtilitiesPyprojectTomlPhases:
 
         """
         from flext_cli import u
+
         if isinstance(operation, m.Infra.DepsToml.SetOp):
             changed = u.Cli.toml_mapping_sync_value(
                 table,

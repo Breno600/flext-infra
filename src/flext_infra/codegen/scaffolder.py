@@ -198,7 +198,10 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
             OSError: If writing scaffold.
 
         """
-        from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
+        from flext_infra.codegen._mise_artifacts_publication import (
+            FlextInfraMisePublication,
+        )
+
         files_created: t.MutableSequenceOf[str] = []
         files_skipped: t.MutableSequenceOf[str] = []
         for filename, suffix, base_class, doc_suffix in request.modules:

@@ -190,6 +190,7 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesBase
+
         try:
             repo = cls._repo(repository_root)
             status = repo.git.submodule("status", "--recursive")

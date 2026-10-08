@@ -77,6 +77,7 @@ class FlextInfraCodegenLayoutFilesMixin:
 
         """
         from flext_infra.codegen._layout_plan import FlextInfraCodegenLayoutPlanMixin
+
         spec = config.Infra.codegen.layout
         project_name = FlextInfraCodegenLayoutPlanMixin.layout_project_name(project_dir)
         target = project_dir / spec.archive_root / project_name / rel

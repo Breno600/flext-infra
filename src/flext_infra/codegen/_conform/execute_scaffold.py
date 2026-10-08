@@ -71,6 +71,7 @@ class FlextInfraCodegenConformExecuteScaffold(FlextInfraCodegenConformPlan):
 
         """
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
         result_type = r[
             t.Pair[
                 t.Pair[m.Infra.WorkspaceSpec | None, m.Infra.ProjectSpec | None],

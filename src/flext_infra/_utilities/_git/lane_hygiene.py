@@ -28,6 +28,7 @@ class FlextInfraUtilitiesGitLaneHygieneMixin:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesGitSemanticRefsMixin
+
         errors: list[str] = []
         refs: list[m.Infra.GitLaneRef] = []
         stash_oids: tuple[str, ...] = ()

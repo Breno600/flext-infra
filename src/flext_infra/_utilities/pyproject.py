@@ -11,12 +11,8 @@ from collections.abc import Mapping, Sequence
 from functools import cache, lru_cache
 from pathlib import Path
 
-
 from flext_infra import c, config, m, p, r, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesGit,
-    FlextInfraUtilitiesManagedConflicts,
-)
+from flext_infra._utilities import FlextInfraUtilitiesManagedConflicts
 
 
 class FlextInfraUtilitiesPyproject:

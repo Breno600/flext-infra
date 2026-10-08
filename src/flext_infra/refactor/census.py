@@ -144,6 +144,7 @@ class FlextInfraRefactorCensus(
 
         """
         from flext_infra.workspace.rope import FlextInfraRopeWorkspace
+
         started = time.monotonic()
         with FlextInfraRopeWorkspace.open_workspace(
             self.root,

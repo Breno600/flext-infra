@@ -85,6 +85,7 @@ class FlextInfraWorkspaceCheckReportsMixin:
 
         """
         from flext_infra.__version__ import FlextInfraVersion
+
         rules_by_id: MutableMapping[str, m.Infra.SarifRule] = {}
         sarif_results: list[m.Infra.SarifResult] = []
         for project in results:

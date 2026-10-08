@@ -51,6 +51,7 @@ class FlextInfraUtilitiesRefactorNamespaceCommon:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeSource
+
         if not imports:
             return list(lines)
         insert_idx = (

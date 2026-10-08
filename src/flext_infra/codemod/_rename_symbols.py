@@ -259,6 +259,7 @@ class FlextInfraRenameSymbols:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         resources: dict[Path, t.Infra.RopeFile] = {}
         for path in ordered_paths:
             resource = project.get_resource(path.relative_to(root).as_posix())

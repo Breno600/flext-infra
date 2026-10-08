@@ -210,6 +210,7 @@ class FlextInfraUtilitiesDocsContract:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDocsScope
+
         payload = FlextInfraUtilitiesDocsScope.project_payload(project_root)
         project_value = payload.get(c.Infra.PROJECT)
         if not isinstance(project_value, Mapping):
@@ -264,6 +265,7 @@ class FlextInfraUtilitiesDocsContract:
 
         """
         from flext_cli import u
+
         if (
             not project.is_absolute()
             or not path.is_absolute()

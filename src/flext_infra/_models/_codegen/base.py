@@ -11,7 +11,9 @@ from flext_infra._models._codegen.journal import FlextInfraModelsCodegenJournalM
 from flext_infra._models._codegen.lazy_init import FlextInfraModelsCodegenLazyInitModels
 from flext_infra._models._codegen.pipeline import FlextInfraModelsCodegenPipelineModels
 from flext_infra._models._codegen.scaffold import FlextInfraModelsCodegenScaffoldModels
-from flext_infra._models._codegen.transaction import FlextInfraModelsCodegenTransactionModels
+from flext_infra._models._codegen.transaction import (
+    FlextInfraModelsCodegenTransactionModels,
+)
 from flext_infra._models.codegen_render import FlextInfraModelsCodegenRender
 from flext_infra._models.codegen_toolchain import FlextInfraModelsCodegenToolchain
 

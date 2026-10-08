@@ -12,7 +12,9 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_infra import m, p, t
-from flext_infra._utilities._semantic_cutover.nesting_types import FlextInfraUtilitiesSemanticNestingTypes
+from flext_infra._utilities._semantic_cutover.nesting_types import (
+    FlextInfraUtilitiesSemanticNestingTypes,
+)
 
 
 class FlextInfraUtilitiesSemanticHelperReferences(
@@ -40,6 +42,7 @@ class FlextInfraUtilitiesSemanticHelperReferences(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         root = Path(project.root.real_path)
         resource = project.get_resource(path.relative_to(root).as_posix())
@@ -133,7 +136,11 @@ class FlextInfraUtilitiesSemanticHelperReferences(
             ValueError: If moved helper import changed its quoted binding.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeClassMove, FlextInfraUtilitiesRopeRuntimeModules
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeClassMove,
+            FlextInfraUtilitiesRopeRuntimeModules,
+        )
+
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         request = move.request
         root = Path(request.rope_project.root.real_path)
@@ -209,6 +216,7 @@ class FlextInfraUtilitiesSemanticHelperReferences(
         lazy ``from target import name`` form the materialized alias serves.
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         request = move.request
         target = move.target_module
@@ -269,6 +277,7 @@ class FlextInfraUtilitiesSemanticHelperReferences(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         body = ast.parse(source).body
         declared = {
@@ -319,6 +328,7 @@ class FlextInfraUtilitiesSemanticHelperReferences(
     ) -> t.Pair[str, str | None]:
 
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         request = move.request
         project = request.rope_project
@@ -371,6 +381,7 @@ class FlextInfraUtilitiesSemanticHelperReferences(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         project = move.request.rope_project
         origin = move.origin_module
@@ -424,6 +435,7 @@ class FlextInfraUtilitiesSemanticHelperReferences(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         kept: list[t.Pair[str, str | None]] = []
         moved: list[t.Pair[str, str | None]] = []

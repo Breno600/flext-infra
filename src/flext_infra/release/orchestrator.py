@@ -138,6 +138,7 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
 
         """
         from flext_infra.codegen.conform import FlextInfraCodegenConform
+
         root = ctx.repository_root
         stamped = u.Infra.replace_project_version(root, plan.next)
         if stamped.failure:

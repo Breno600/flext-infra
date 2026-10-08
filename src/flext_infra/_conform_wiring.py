@@ -32,6 +32,7 @@ class _FlextInfraConformWiringMixin:
 
         """
         from flext_infra.docs import FlextInfraDocGenerator
+
         return FlextInfraDocGenerator(
             repository_root=repository_root,
             projects=projects,
@@ -47,6 +48,7 @@ class _FlextInfraConformWiringMixin:
 
         """
         from flext_infra.gates import FlextInfraMarkdownFormatGate
+
         return FlextInfraMarkdownFormatGate(repository_root)
 
     def codegen_conform_collaborators(self) -> m.Infra.CodegenConformPorts:

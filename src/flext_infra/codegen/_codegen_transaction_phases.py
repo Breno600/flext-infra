@@ -164,7 +164,10 @@ class FlextInfraCodegenTransactionPhases(FlextInfraCodegenTransactionRecovery):
             The consumer's session after both authority barriers succeed.
 
         """
-        from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
+        from flext_infra.codegen.codegen_preconditions import (
+            FlextInfraCodegenPreconditions,
+        )
+
         result_type = r[m.Infra.CodegenTransactionSession]
         checked = validator(current, staged)
         if checked.failure:
@@ -463,7 +466,10 @@ class FlextInfraCodegenTransactionPhases(FlextInfraCodegenTransactionRecovery):
             The session with its staging intentions durably recorded.
 
         """
-        from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
+        from flext_infra.codegen.codegen_preconditions import (
+            FlextInfraCodegenPreconditions,
+        )
+
         result_type = r[m.Infra.CodegenTransactionSession]
         aligned = FlextInfraCodegenPreconditions.unchanged_journal(
             session,
@@ -510,6 +516,7 @@ class FlextInfraCodegenTransactionPhases(FlextInfraCodegenTransactionRecovery):
 
         """
         from flext_infra.codegen._codegen_staging import FlextInfraCodegenStaging
+
         result_type = r[
             t.Pair[t.VariadicTuple[tuple[Path, bytes, int]], t.VariadicTuple[Path]]
         ]
@@ -618,7 +625,10 @@ class FlextInfraCodegenTransactionPhases(FlextInfraCodegenTransactionRecovery):
             session, the tagged sources, and their bare states.
 
         """
-        from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
+        from flext_infra.codegen.codegen_preconditions import (
+            FlextInfraCodegenPreconditions,
+        )
+
         result_type = r[
             t.Triple[
                 m.Infra.CodegenTransactionSession,
@@ -683,6 +693,7 @@ class FlextInfraCodegenTransactionPhases(FlextInfraCodegenTransactionRecovery):
 
         """
         from flext_infra.codegen._codegen_staging import FlextInfraCodegenStaging
+
         session = authorized[0]
         layout = session.plan.layout
         staged = FlextInfraCodegenStaging.stage_file_plans(
@@ -740,7 +751,10 @@ class FlextInfraCodegenTransactionPhases(FlextInfraCodegenTransactionRecovery):
                 m.Cli.AtomicFileState]]``.
 
         """
-        from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
+        from flext_infra.codegen.codegen_preconditions import (
+            FlextInfraCodegenPreconditions,
+        )
+
         result_type = r[
             t.Pair[m.Infra.CodegenTransactionJournal, m.Cli.AtomicFileState]
         ]
@@ -810,7 +824,10 @@ class FlextInfraCodegenTransactionPhases(FlextInfraCodegenTransactionRecovery):
             files.
 
         """
-        from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
+        from flext_infra.codegen._mise_artifacts_publication import (
+            FlextInfraMisePublication,
+        )
+
         published = FlextInfraMisePublication.publish(staged)
         if published.failure:
             return r[t.VariadicTuple[Path]].from_failure(
@@ -883,7 +900,10 @@ class FlextInfraCodegenTransactionPhases(FlextInfraCodegenTransactionRecovery):
                 m.Cli.AtomicFileState]]``.
 
         """
-        from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
+        from flext_infra.codegen.codegen_preconditions import (
+            FlextInfraCodegenPreconditions,
+        )
+
         result_type = r[
             t.Pair[m.Infra.CodegenTransactionJournal, m.Cli.AtomicFileState]
         ]
@@ -968,7 +988,10 @@ class FlextInfraCodegenTransactionPhases(FlextInfraCodegenTransactionRecovery):
                 m.Cli.AtomicFileState]]``.
 
         """
-        from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
+        from flext_infra.codegen.codegen_preconditions import (
+            FlextInfraCodegenPreconditions,
+        )
+
         result_type = r[
             t.Pair[m.Infra.CodegenTransactionJournal, m.Cli.AtomicFileState]
         ]

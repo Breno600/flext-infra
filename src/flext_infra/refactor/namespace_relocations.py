@@ -116,6 +116,7 @@ class FlextInfraNamespaceRelocationCascade:
 
         """
         from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
+
         report = FlextInfraModGateEngine.scan(project_root, fix=False).unwrap()
         return FlextInfraNamespaceRelocationCascade.findings_from_report(
             project_root,

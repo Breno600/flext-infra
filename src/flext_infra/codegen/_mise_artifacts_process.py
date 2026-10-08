@@ -33,7 +33,10 @@ class FlextInfraMiseArtifactsProcess:
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra.codegen._mise_artifacts_files import FlextInfraMiseArtifactsFiles
+        from flext_infra.codegen._mise_artifacts_files import (
+            FlextInfraMiseArtifactsFiles,
+        )
+
         if intent is None:
             before = u.Cli.atomic_read_binary_file_state(path, required=False)
             if before.failure:

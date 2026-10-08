@@ -9,7 +9,6 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING
 
-
 from flext_infra import c, config, m, t
 
 if TYPE_CHECKING:
@@ -28,7 +27,11 @@ class FlextInfraUtilitiesDocsFix:
             A corrected link target when a simple fix is possible.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDocs, FlextInfraUtilitiesDocsGithubLinks
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesDocs,
+            FlextInfraUtilitiesDocsGithubLinks,
+        )
+
         if FlextInfraUtilitiesDocs.docs_is_secure_web_url(raw_link):
             return FlextInfraUtilitiesDocsGithubLinks.docs_rewrite_github_url(raw_link)
         result: str | None = None
@@ -64,7 +67,12 @@ class FlextInfraUtilitiesDocsFix:
 
         """
         from flext_cli import u
-        from flext_infra._utilities import FlextInfraUtilitiesDocs, FlextInfraUtilitiesDocsContract
+
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesDocs,
+            FlextInfraUtilitiesDocsContract,
+        )
+
         changed: t.MutableSequenceOf[m.Infra.GeneratedFile] = []
         for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
             original = md_file.read_text(
@@ -168,6 +176,7 @@ class FlextInfraUtilitiesDocsFix:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDocs
+
         original = md_file.read_text(
             encoding=c.Cli.ENCODING_DEFAULT,
             errors=c.Infra.IGNORE,
@@ -212,6 +221,7 @@ class FlextInfraUtilitiesDocsFix:
     ) -> None:
         """Persist the standard fix summary and markdown report."""
         from flext_infra._utilities import FlextInfraUtilitiesDocs
+
         FlextInfraUtilitiesDocs.docs_write_phase_reports(
             scope,
             phase="fix",

@@ -37,6 +37,7 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
 
         """
         from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
+
         return FlextInfraFlextBindingService.apply(
             consumer_root=params.repository_root,
             flext_root=params.flext_root,
@@ -53,7 +54,10 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-        from flext_infra.workspace.environment import FlextInfraWorkspaceEnvironmentMixin
+        from flext_infra.workspace.environment import (
+            FlextInfraWorkspaceEnvironmentMixin,
+        )
+
         request = m.Infra.WorkspaceEnvironmentSyncRequest.model_validate(
             params.model_dump(),
         )

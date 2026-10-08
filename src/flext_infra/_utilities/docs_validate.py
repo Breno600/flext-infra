@@ -9,7 +9,6 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
-
 from flext_infra import c, r, t
 
 if TYPE_CHECKING:
@@ -82,6 +81,7 @@ class FlextInfraUtilitiesDocsValidate:
 
         """
         from flext_cli import u
+
         settings = repository_root / "docs/architecture/architecture_config.json"
         if not settings.exists():
             return r[t.StrSequence].ok([])
@@ -127,6 +127,7 @@ class FlextInfraUtilitiesDocsValidate:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDocsScope
+
         if scope.name == c.Infra.RK_ROOT:
             required = [
                 "README.md",
@@ -161,6 +162,7 @@ class FlextInfraUtilitiesDocsValidate:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDocsApi
+
         if scope.name == c.Infra.RK_ROOT or not scope.package_name:
             return []
         messages: t.MutableSequenceOf[str] = []
@@ -214,7 +216,9 @@ class FlextInfraUtilitiesDocsValidate:
     ) -> None:
         """Persist the standard validate summary and markdown report."""
         from flext_cli import u
+
         from flext_infra._utilities import FlextInfraUtilitiesDocs
+
         _ = u.Cli.json_write(
             scope.report_dir / c.Infra.DOCS_VALIDATE_SUMMARY_FILENAME,
             {c.Infra.RK_SUMMARY: report.model_dump(mode="json")},

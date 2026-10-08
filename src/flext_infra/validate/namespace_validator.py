@@ -48,6 +48,7 @@ class FlextInfraNamespaceValidator(s[bool]):
 
         """
         from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
+
         project_root = self.repository_root.resolve()
         scanned = FlextInfraModGateEngine.scan(project_root, fix=False)
         if scanned.failure:

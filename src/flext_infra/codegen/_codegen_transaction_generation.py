@@ -35,6 +35,7 @@ class FlextInfraCodegenTransactionGeneration(FlextInfraCodegenTransactionRecover
     def __init__(self, owner: p.Infra.MiseArtifactsOwner) -> None:
         """Initialize the transaction with its configured Mise artifact owner."""
         from flext_infra.codegen._mise_artifacts_staging import FlextInfraMiseStaging
+
         super().__init__(owner)
         self._owner = owner
         self._mise_staging = FlextInfraMiseStaging()
@@ -159,7 +160,10 @@ class FlextInfraCodegenTransactionGeneration(FlextInfraCodegenTransactionRecover
                 m.Cli.AtomicFileState]]]``.
 
         """
-        from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
+        from flext_infra.codegen.codegen_preconditions import (
+            FlextInfraCodegenPreconditions,
+        )
+
         source_states = FlextInfraCodegenPreconditions.phase_sources(
             c.Infra.CodegenStagedFilePhase.CONFORM_BOOTSTRAP,
             file_plans,
@@ -393,6 +397,7 @@ class FlextInfraCodegenTransactionGeneration(FlextInfraCodegenTransactionRecover
 
         """
         from flext_infra.codegen._codegen_staging import FlextInfraCodegenStaging
+
         ordinary_staged = FlextInfraCodegenStaging.stage_file_plans(
             layout,
             c.Infra.CodegenStagedFilePhase.CONFORM_BOOTSTRAP,
@@ -498,7 +503,10 @@ class FlextInfraCodegenTransactionGeneration(FlextInfraCodegenTransactionRecover
             files.
 
         """
-        from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
+        from flext_infra.codegen._mise_artifacts_publication import (
+            FlextInfraMisePublication,
+        )
+
         published = FlextInfraMisePublication.publish(publications)
         if published.failure:
             return r[t.VariadicTuple[Path]].from_failure(

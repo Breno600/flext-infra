@@ -83,6 +83,7 @@ class FlextInfraCodegenFixerPassesMixin(FlextInfraCodegenFixerResultsMixin):
     def _run_lazy_init_preflight(ctx: m.Infra.FixContext, project_path: Path) -> None:
         """Preflight lazy-init plans and leave publication to conform."""
         from flext_infra.codegen import FlextInfraCodegenLazyInit
+
         plans = (
             FlextInfraCodegenLazyInit(repository_root=project_path)
             .plan_files()

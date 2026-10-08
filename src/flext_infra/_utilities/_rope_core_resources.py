@@ -31,6 +31,7 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         root_real_path = getattr(getattr(rope_project, "root", None), "real_path", None)
         if not isinstance(root_real_path, str):
             return None
@@ -84,7 +85,11 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
             Whether a path should be exposed as a Python Rope resource.
 
         """
-        from flext_infra._constants import FlextInfraConstantsNamespace, FlextInfraConstantsSharedInfra
+        from flext_infra._constants import (
+            FlextInfraConstantsNamespace,
+            FlextInfraConstantsSharedInfra,
+        )
+
         return (
             file_path.suffix == FlextInfraConstantsSharedInfra.EXT_PYTHON
             and not (
@@ -114,6 +119,7 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         return tuple(
             sorted(
                 (

@@ -61,6 +61,7 @@ class FlextInfraFreshImportGate(FlextInfraGate):
 
         """
         from flext_infra.validate.fresh_import import FlextInfraValidateFreshImport
+
         _ = ctx
         started = time.monotonic()
         # The runtime is derived from the gated checkout itself (a subproject

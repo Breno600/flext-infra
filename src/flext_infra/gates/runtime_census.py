@@ -40,6 +40,7 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
 
         """
         from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
+
         _ = ctx
         started = time.monotonic()
         validator = FlextInfraRuntimeCensusValidator.for_project(

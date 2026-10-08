@@ -128,6 +128,7 @@ class FlextInfraRefactorCensusRemovalMixin(
 
         """
         from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
+
         touched_paths: set[Path] = set()
         for candidate in report.removal_candidates:
             apply_result = u.Infra.apply_simple_removal_candidate(

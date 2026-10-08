@@ -9,7 +9,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_infra import c
-from flext_infra._utilities._promoted.workspace import FlextInfraUtilitiesPromotedWorkspace
+from flext_infra._utilities._promoted.workspace import (
+    FlextInfraUtilitiesPromotedWorkspace,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -112,6 +114,7 @@ class FlextInfraUtilitiesPromotedInvocation(FlextInfraUtilitiesPromotedWorkspace
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesBase
+
         if param.name == c.Infra.PromotedSelector.WHAT:
             return command.what
         return FlextInfraUtilitiesBase.env_value(param.name, param.default)

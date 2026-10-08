@@ -35,6 +35,7 @@ class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticIndexMixin)
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesGitSemanticIdentityMixin
+
         resolved_scope = Path(scope_root).resolve()
         probe = FlextInfraUtilitiesGitSemanticIdentityMixin.git_is_inside_work_tree
         probed = probe(m.Infra.GitRepoRequest(repo_root=resolved_scope))

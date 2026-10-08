@@ -42,6 +42,7 @@ class FlextInfraValidateLazyMapFreshness(FlextInfraProjectSelectionServiceBase[b
 
         """
         from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
+
         planned = FlextInfraCodegenLazyInit(
             repository_root=repository_root,
         ).plan_files()

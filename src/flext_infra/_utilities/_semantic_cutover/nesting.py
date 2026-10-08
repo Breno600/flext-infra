@@ -13,11 +13,21 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import m, r, t
-from flext_infra._utilities._semantic_cutover.class_scope import FlextInfraUtilitiesSemanticCutoverClassScope
-from flext_infra._utilities._semantic_cutover.edits import FlextInfraUtilitiesSemanticCutoverEdits
-from flext_infra._utilities._semantic_cutover.family_flatten import FlextInfraUtilitiesSemanticFamilyFlatten
-from flext_infra._utilities._semantic_cutover.nesting_cst import FlextInfraUtilitiesSemanticCutoverNestingCst
-from flext_infra._utilities._semantic_cutover.nesting_owner import FlextInfraUtilitiesSemanticCutoverNestingOwner
+from flext_infra._utilities._semantic_cutover.class_scope import (
+    FlextInfraUtilitiesSemanticCutoverClassScope,
+)
+from flext_infra._utilities._semantic_cutover.edits import (
+    FlextInfraUtilitiesSemanticCutoverEdits,
+)
+from flext_infra._utilities._semantic_cutover.family_flatten import (
+    FlextInfraUtilitiesSemanticFamilyFlatten,
+)
+from flext_infra._utilities._semantic_cutover.nesting_cst import (
+    FlextInfraUtilitiesSemanticCutoverNestingCst,
+)
+from flext_infra._utilities._semantic_cutover.nesting_owner import (
+    FlextInfraUtilitiesSemanticCutoverNestingOwner,
+)
 from flext_infra._utilities._semantic_cutover.test_helpers import (
     FlextInfraUtilitiesSemanticTestHelpers,
 )
@@ -225,6 +235,7 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+
         planned = r[t.StrMapping]
         family = FlextInfraUtilitiesCodegenNamespace.facade_family_of_file(
             file_path.name,
@@ -348,6 +359,7 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
         planned_edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
         modules = {
             entry.file_path.resolve(): entry for entry in rope_workspace.modules()

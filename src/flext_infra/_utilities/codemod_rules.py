@@ -93,6 +93,7 @@ class FlextInfraUtilitiesCodemodRules:
     ) -> p.Result[t.Pair[str, t.StrSequence]]:
 
         from flext_cli import u
+
         pyproject = root / c.PYPROJECT_FILENAME
         document = u.Cli.toml_read_document(pyproject)
         if document.failure:
@@ -139,6 +140,7 @@ class FlextInfraUtilitiesCodemodRules:
     def codemod_distributions() -> MutableMapping[str, Distribution]:
 
         from flext_cli import u
+
         indexed: MutableMapping[str, Distribution] = {}
         # Import search paths may repeat the same physical directory. Query each
         # directory once; distinct installations with the same name still fail.
@@ -225,6 +227,7 @@ class FlextInfraUtilitiesCodemodRules:
     ) -> p.Result[t.StrSequence]:
 
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         selected = frozenset(providers)
         edges = {
             name: tuple(
@@ -290,7 +293,6 @@ class FlextInfraUtilitiesCodemodRules:
         """
         from flext_cli import u
 
-        from flext_cli import u
         parsed = u.Cli.yaml_parse(config.read_text(encoding=c.Cli.ENCODING_DEFAULT))
         if parsed.failure:
             return r[str].from_failure(parsed)
@@ -448,6 +450,7 @@ class FlextInfraUtilitiesCodemodRules:
     ) -> p.Result[t.SequenceOf[m.Infra.CodemodRule]]:
 
         from flext_cli import u
+
         parsed_config = u.Cli.yaml_parse(
             config.read_text(encoding=c.Cli.ENCODING_DEFAULT),
         )
@@ -495,6 +498,7 @@ class FlextInfraUtilitiesCodemodRules:
 
         """
         from flext_cli import u
+
         if not cache_file.is_file():
             return None
         loaded = u.Cli.json_loads(
@@ -522,6 +526,7 @@ class FlextInfraUtilitiesCodemodRules:
 
         """
         from flext_cli import u
+
         if parsed.failure:
             return parsed
         payload = u.Cli.json_dumps([
@@ -555,7 +560,9 @@ class FlextInfraUtilitiesCodemodRules:
 
         """
         from flext_cli import u
+
         from flext_infra._utilities import FlextInfraUtilitiesResourceLimits
+
         identity = u.Cli.json_dumps([
             provider,
             Path(__file__).read_text(encoding=c.Cli.ENCODING_DEFAULT),
@@ -589,6 +596,7 @@ class FlextInfraUtilitiesCodemodRules:
 
         """
         from flext_cli import u
+
         body = u.Cli.json_dumps({
             key: value
             for key, value in parsed_rule.items()
@@ -623,6 +631,7 @@ class FlextInfraUtilitiesCodemodRules:
 
         """
         from flext_cli import u
+
         rule_id = parsed_rule.get("id")
         if not isinstance(rule_id, str) or not rule_id.strip():
             return r[m.Infra.CodemodRule].fail(
@@ -684,6 +693,7 @@ class FlextInfraUtilitiesCodemodRules:
 
         """
         from flext_cli import u
+
         if not any(
             line.strip() and not line.lstrip().startswith("#")
             for line in raw_document.splitlines()

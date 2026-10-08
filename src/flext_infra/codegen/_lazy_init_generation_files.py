@@ -69,6 +69,7 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
 
         """
         from flext_infra.codegen.codegen_generation import FlextInfraCodegenGeneration
+
         selected_dirs = frozenset(package_dirs)
         module_paths = {
             entry.file_path.resolve()
@@ -205,6 +206,7 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
 
         """
         from flext_infra.codegen.codegen_generation import FlextInfraCodegenGeneration
+
         if plan.action is c.Infra.LazyInitAction.SKIP:
             return r[tuple[m.Infra.CodegenFilePlan, ...]].ok(())
         if plan.action is c.Infra.LazyInitAction.REMOVE:
@@ -259,6 +261,7 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
 
         """
         from flext_infra.codegen.codegen_generation import FlextInfraCodegenGeneration
+
         plans: list[m.Infra.CodegenFilePlan] = []
         for generated_dir in self._generated_source_dirs(plan.context.pkg_dir):
             init_path = generated_dir / c.Infra.INIT_PY

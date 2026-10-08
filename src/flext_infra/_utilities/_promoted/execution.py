@@ -12,10 +12,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_cli import u
-
 from flext_infra import c, m
-from flext_infra._settings import settings
 from flext_infra._utilities import FlextInfraUtilitiesPromotedInvocation
 
 if TYPE_CHECKING:
@@ -41,7 +38,9 @@ class FlextInfraUtilitiesPromotedExecution(FlextInfraUtilitiesPromotedInvocation
 
         """
         from flext_cli import u
+
         from flext_infra._settings import settings
+
         message, env_name = c.Infra.PromotedMessage, c.Infra.PromotedEnv
         project_root = cls.promoted_find_owner_root(command.path)
         if project_root is None:

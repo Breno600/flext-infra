@@ -144,6 +144,7 @@ class FlextInfraCodegenProjectNew(
 
         """
         from flext_infra.codegen.conform import FlextInfraCodegenConform
+
         if self.effective_dry_run:
             return r[m.Infra.CodegenResult].fail("codegen new requires apply mode")
         # Every identity fact is an explicit caller declaration: for a

@@ -37,7 +37,10 @@ class FlextInfraDirenvGate(FlextInfraGate):
             The contract owner typed at its published ``p.Infra`` boundary.
 
         """
-        from flext_infra.workspace.environment_contracts import FlextInfraWorkspaceEnvironmentContracts
+        from flext_infra.workspace.environment_contracts import (
+            FlextInfraWorkspaceEnvironmentContracts,
+        )
+
         return FlextInfraWorkspaceEnvironmentContracts
 
     @staticmethod

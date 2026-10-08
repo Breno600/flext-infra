@@ -43,6 +43,7 @@ class FlextInfraWorkspacePropagation(s[bool]):
 
         """
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
         root = self.root
         loaded = FlextInfraWorkspaceDetector.load_workspace_spec(root)
         if loaded.failure:
@@ -203,6 +204,7 @@ class FlextInfraWorkspacePropagation(s[bool]):
 
         """
         from flext_infra.codegen.conform import FlextInfraCodegenConform
+
         member_root = self.root / member.path
         base = u.Infra.resolve_integration_branch(
             member_root,

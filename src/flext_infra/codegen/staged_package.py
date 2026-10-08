@@ -67,6 +67,7 @@ class FlextInfraStagedPackage:
         workspace: Path,
     ) -> p.Result[dict[str, m.Infra.RopeProjectLayout]]:
         from flext_infra.workspace import FlextInfraWorkspaceDetector
+
         spec = FlextInfraWorkspaceDetector.load_workspace_spec(workspace)
         if spec.failure:
             return r[dict[str, m.Infra.RopeProjectLayout]].from_failure(spec)

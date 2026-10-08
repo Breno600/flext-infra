@@ -25,7 +25,9 @@ from flext_infra._models._config.scaffold import FlextInfraConfigModelsScaffold
 from flext_infra._models._config.templates import FlextInfraConfigModelsTemplates
 from flext_infra._models._config.workspace import FlextInfraConfigModelsWorkspace
 from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
-from flext_infra._models.deps_tool_config_project_artifacts import FlextInfraModelsDepsToolConfigProjectArtifacts
+from flext_infra._models.deps_tool_config_project_artifacts import (
+    FlextInfraModelsDepsToolConfigProjectArtifacts,
+)
 from flext_infra._models.layout import FlextInfraModelsLayout
 from flext_infra._models.mise_toolchain import FlextInfraModelsMiseToolchain
 
@@ -412,6 +414,7 @@ class FlextInfraConfigModelsArtifact:
                     ``t.VariadicTuple[FlextInfraConfigModelsScaffold.ScaffoldGitignoreSectionSpec]``.
             """
             from flext_infra._constants import FlextInfraConstantsSharedInfra
+
             scaffold_sections = self.scaffold.gitignore_sections
             # A declared section may already govern a derived artifact, in
             # either direction: a whitelist re-allows `.agents/` with `!`, so
@@ -516,6 +519,7 @@ class FlextInfraConfigModelsArtifact:
 
             """
             from flext_infra._constants import FlextInfraConstantsSharedInfra
+
             github_templates = tuple(
                 Path(entry.destination)
                 for entry in self.templates.entries

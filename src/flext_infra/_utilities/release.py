@@ -237,6 +237,7 @@ class FlextInfraUtilitiesRelease:
 
         """
         from flext_cli import u
+
         lines: t.MutableSequenceOf[str] = [
             f"# Release {tag}",
             "",
@@ -345,6 +346,7 @@ class FlextInfraUtilitiesRelease:
     ) -> None:
         """Write the docs changelog plus the latest and tagged release notes."""
         from flext_cli import u
+
         docs = repository_root / c.Infra.DIR_DOCS
         changelog_path = docs / "CHANGELOG.md"
         latest_path = docs / "releases" / "latest.md"
@@ -383,6 +385,7 @@ class FlextInfraUtilitiesRelease:
 
         """
         from flext_cli import u
+
         date = u.now().date().isoformat()
         heading = f"## {version} - "
         section = (
@@ -420,6 +423,7 @@ class FlextInfraUtilitiesRelease:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         selected = {name for name, _ in targets}
         edges: MutableMapping[str, t.StrSequence] = {}
         for name, path in targets:
@@ -452,7 +456,9 @@ class FlextInfraUtilitiesRelease:
 
         """
         from flext_cli import u
+
         from flext_infra._utilities import FlextInfraUtilitiesDependencies
+
         pyproject = path / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
             return r[t.StrSequence].fail(

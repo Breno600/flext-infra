@@ -37,7 +37,11 @@ class FlextInfraSemanticPublication:
             The resulting ``p.Result[t.VariadicTuple[Path]]``.
 
         """
-        from flext_infra.codegen import FlextInfraCodegenMiseArtifacts, FlextInfraCodegenTransaction
+        from flext_infra.codegen import (
+            FlextInfraCodegenMiseArtifacts,
+            FlextInfraCodegenTransaction,
+        )
+
         files = cls._concrete_file_plans(plans, codegen)
         if files.failure:
             return r[tuple[Path, ...]].from_failure(files)

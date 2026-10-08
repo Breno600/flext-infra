@@ -32,6 +32,7 @@ class FlextInfraRefactorViolationsSweep(s[m.Infra.ViolationsSweepReport]):
 
         """
         from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
+
         root = self.repository_root
         before_scan = FlextInfraModGateEngine.scan(root, fix=False)
         if before_scan.failure:

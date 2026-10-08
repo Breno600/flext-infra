@@ -11,7 +11,9 @@ from pathlib import Path
 from flext_cli import u as cli_u
 
 from flext_infra import m, p, r, t
-from flext_infra._utilities._docs_generate_sources import FlextInfraUtilitiesDocsGenerateSourcesMixin
+from flext_infra._utilities._docs_generate_sources import (
+    FlextInfraUtilitiesDocsGenerateSourcesMixin,
+)
 
 
 class FlextInfraUtilitiesDocsGeneratePlanMixin(
@@ -108,6 +110,7 @@ class FlextInfraUtilitiesDocsGeneratePlanMixin(
         # scope is a member when the root is excluded from the render.
 
         from flext_infra._utilities import FlextInfraUtilitiesDocsContract
+
         repository_root = bundle.repository_root
         scope_roots = tuple(scoped.scope.path for scoped in bundle.scopes)
         # The single race barrier of the docs cycle: every snapshotted source is
