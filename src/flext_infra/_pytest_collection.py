@@ -30,9 +30,9 @@ from pytest_markdown_docs.plugin import (
     MarkdownTextFile,
     extract_fence_tests,
 )
+from flext_cli import u
 from xdist.dsession import DSession
 
-from flext_infra import u
 from flext_infra._constants import FlextInfraConstantsCheck, FlextInfraConstantsMake
 from flext_infra._models import FlextInfraModelsCore
 
