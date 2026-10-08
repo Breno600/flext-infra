@@ -11,7 +11,7 @@ from typing import Annotated, ClassVar
 
 from flext_cli import m
 
-from flext_infra import t
+from flext_infra import c, t
 from flext_infra._models import (
     FlextInfraModelsGitIdentity,
     FlextInfraModelsGitWorktreeFacts,
@@ -54,6 +54,39 @@ class FlextInfraModelsGit(
             m.Field(description="Raw git status --porcelain output"),
         ]
         dirty: Annotated[bool, m.Field(description="Whether the worktree is dirty")]
+
+    class GitLaneViolation(m.ContractModel):
+        """One lane accumulation offence with the instruction that cures it."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        kind: Annotated[
+            c.Infra.LaneViolationKind,
+            m.Field(description="Violation class"),
+        ]
+        ref: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Offending stash, branch, or worktree path"),
+        ]
+        detail: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="The canonical way to fix the violation"),
+        ]
+
+    class GitLaneHygieneReport(m.ContractModel):
+        """Lane accumulation census of one repository against its integration base."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
+        integration_base: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Remote integration base, as origin/HEAD resolves"),
+        ]
+        violations: Annotated[
+            t.VariadicTuple[FlextInfraModelsGit.GitLaneViolation],
+            m.Field(description="Every lane accumulation violation found"),
+        ] = ()
 
     class GitPrimaryRootReport(m.ContractModel):
         """Resolved primary worktree root."""
