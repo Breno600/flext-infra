@@ -98,3 +98,19 @@ retirement, or enforcement over arbitrary external Git commands. Checkpoint capt
 publication, and merge-forward remain available to consolidate existing work without
 stash. Reopening admission requires the existing canonical ownership and preservation
 protocols to reach the native mutation boundary, not another ledger or approval flag.
+
+## Recovery Branches
+
+`git_create_checkpoint_branch(checkpoint, publication, branch)` creates a history
+alias of an actual checkpoint only after revalidating its live independent remote
+retention and original scoped index/working bytes. It never switches HEAD, creates
+a worktree, accepts a caller-selected start, or carries uncaptured WIP. Creation is
+CAS-protected against an existing branch and uses the same writer lease as capture.
+Managed `git_create_branch` remains fail-closed for unproven lane ownership.
+
+`git_publish_checkpoint_branch` publishes only that exact captured commit without
+force and verifies its live advertisement. `git_delete_checkpoint_branch` removes
+only the remote alias on the exact retained-object lease, while rechecking that the
+independent checkpoint remains published. Alias cleanup is not checkpoint retirement
+or managed lane integration approval. The original source tree and index remain
+unchanged; checkpoint scope remains explicit, not an assertion of global ownership.

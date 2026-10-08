@@ -6,12 +6,16 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from collections.abc import Generator
+from contextlib import ExitStack, contextmanager
 from pathlib import Path
 
+from flext_cli import u
 from git import GitCommandError
 
-from flext_infra import c, m, p, r
+from flext_infra import c, m, p, r, t
 from flext_infra._utilities import (
+    FlextInfraUtilitiesCodegenFilePlan,
     FlextInfraUtilitiesGitStateTreesMixin,
     FlextInfraUtilitiesGitWorktreeIO,
 )
@@ -19,6 +23,25 @@ from flext_infra._utilities import (
 
 class FlextInfraUtilitiesGitStateCheckpointMixin(FlextInfraUtilitiesGitStateTreesMixin):
     """Keep index-only and working-byte versions reachable after a save commit."""
+
+    @classmethod
+    @contextmanager
+    def _state_leases(cls, roots: t.SequenceOf[Path]) -> Generator[None]:
+        journals = {
+            Path(cls._repo(root).git_dir) / c.Infra.JOURNAL_NAME for root in roots
+        }
+        with ExitStack() as stack:
+            for journal in sorted(journals):
+                u.Cli.atomic_read_binary_file_state(
+                    journal.with_name(f"{journal.name}.lock"),
+                    required=False,
+                ).unwrap()
+                stack.enter_context(
+                    FlextInfraUtilitiesCodegenFilePlan.codegen_transaction_lease(
+                        journal,
+                    ),
+                )
+            yield
 
     @classmethod
     def _state_require_original(
