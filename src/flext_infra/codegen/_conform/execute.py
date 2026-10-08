@@ -550,8 +550,14 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformExecuteDirected):
                 "ports; run it through FlextInfra.codegen_conform",
             )
         mode = c.Infra.CodegenConformMode(request.mode)
+        policy = ports.participant_policy(request.root)
+        if policy.failure:
+            return r[m.Infra.CodegenResult].from_failure(policy)
         mise_owner = FlextInfraCodegenMiseArtifacts(repository_root=request.root)
-        transaction = FlextInfraCodegenTransaction(mise_owner)
+        transaction = FlextInfraCodegenTransaction(
+            mise_owner,
+            participant_policy=policy.value,
+        )
         return transaction.run_locked(
             prepare=mode is c.Infra.CodegenConformMode.APPLY,
             operation=lambda scope_root: self._execute_managed_locked(

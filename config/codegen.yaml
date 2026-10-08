@@ -198,17 +198,8 @@ Infra:
             binary: go
             arguments: [version]
             pattern: "^go version go{version} "
-        # Generated .mise.toml must declare make as a managed
-        # mise tool so direnv exec resolves a real installed binary instead of a
-        # stale host shim (e.g. a conda-carried make). Every project invokes make
-        # through the lifecycle; make is the one tool the Makefile cannot
-        # resolve from itself, so mise must provision it.
-        - name: make
-          version: latest
-          version_probe:
-            binary: make
-            arguments: [--version]
-            pattern: "^GNU Make {version}$"
+        # Make, curl and Git remain system-owned. Recursive Make keeps the
+        # physical executable that invoked the generated lifecycle.
         - name: qlty
           selector: github:qltysh/qlty
           version: latest
@@ -767,6 +758,8 @@ Infra:
           description: Publish only receipt-attested release artifacts.
         - name: gen
           description: Regenerate every managed projection atomically.
+        - name: gen-footprint
+          description: Inspect the pending generation journal and declared physical effect footprint without leases, recovery, or publication.
           produces_activation: true
         - name: initialize
           description: Materialize the declared package initializer graph.

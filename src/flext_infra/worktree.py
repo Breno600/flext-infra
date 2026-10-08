@@ -13,7 +13,7 @@ from flext_cli import r
 
 from flext_infra import c, m, p, t, u
 from flext_infra.base import s
-from flext_infra.git import FlextInfraGitService
+from flext_infra.git_lanes import FlextInfraGitLanes
 
 
 class FlextInfraWorktreeService(s[str]):
@@ -293,7 +293,7 @@ class FlextInfraWorktreeService(s[str]):
         base_oid = self._resolved_base(primary_root, base)
         if base_oid.failure:
             return r[str].from_failure(base_oid)
-        admission = FlextInfraGitService.admit_lane(
+        admission = FlextInfraGitLanes.admit_lane(
             primary_root,
             branch,
             base_oid.value,
@@ -489,7 +489,7 @@ class FlextInfraWorktreeService(s[str]):
                 f"worktree remove refuses lane {branch} while children are "
                 f"registered: {nested}",
             )
-        integrated = FlextInfraGitService.verify_retirement(primary_root, branch)
+        integrated = FlextInfraGitLanes.verify_retirement(primary_root, branch)
         if integrated.failure:
             return r[str].from_failure(integrated)
         return u.Infra.git_remove_clean_worktree(primary_root, lane).map(

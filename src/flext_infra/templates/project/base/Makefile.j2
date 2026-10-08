@@ -1060,6 +1060,9 @@ _builtin_gen_init:
 _builtin_gen_all:
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --scope all --mode apply
 
+_builtin-gen-footprint:
+	@$(PROJECT_FLEXT_INFRA) codegen footprint --root "$(PROJECT_ROOT)" --scope all
+
 _builtin-bootstrap-candidate: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) codegen candidate-bootstrap --repository-root "$(PROJECT_ROOT)"
 

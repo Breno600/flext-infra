@@ -38,8 +38,32 @@ class FlextInfraModelsGit(
         repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
 
     class GitLaneVerificationRequest(GitRepoRequest):
-        """Read-only lane census, optionally consuming coordinator evidence."""
+        """One read-only lane admission and census request over a repository.
 
+        A single owner carries the whole lane contract: the declared
+        integration authority and the explicitly selected ownership sources
+        for the census evaluator, plus the verified boundary, candidate and
+        expected tip for the native admission evaluator. It extends
+        ``GitRepoRequest`` so the native facts read accepts it wherever a
+        repository-scoped query is required.
+        """
+
+        remote: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Lane remote the integration tip is verified on"),
+        ] = "origin"
+        operation: Annotated[
+            Literal["verify", "create", "retire"],
+            m.Field(description="Boundary being verified, never an effect selector"),
+        ] = "verify"
+        candidate: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Commit whose integration ancestry must be proved"),
+        ] = "HEAD"
+        expected_tip: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(description="Previously observed tip; drift refuses admission"),
+        ] = None
         declared: Annotated[
             str | None,
             m.Field(description="Governing integration declaration"),
@@ -365,22 +389,6 @@ class FlextInfraModelsGit(
         expected_oid: Annotated[
             t.NonEmptyStr | None,
             m.Field(description="Remote tip the mutation is leased on"),
-        ] = None
-
-    class GitLaneVerificationRequest(GitRemoteRequest):
-        """Read-only lane admission against the declared live integration tip."""
-
-        operation: Annotated[
-            Literal["verify", "create", "retire"],
-            m.Field(description="Boundary being verified, never an effect selector"),
-        ] = "verify"
-        candidate: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Commit whose integration ancestry must be proved"),
-        ] = "HEAD"
-        expected_tip: Annotated[
-            t.NonEmptyStr | None,
-            m.Field(description="Previously observed tip; drift refuses admission"),
         ] = None
 
     class GitRefHeadsRequest(m.ContractModel):

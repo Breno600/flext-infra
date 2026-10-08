@@ -15,7 +15,7 @@ from flext_infra import c, config, m, p, r, t, u
 from flext_infra.codegen._conform.artifact_render import (
     FlextInfraCodegenConformArtifactRender,
 )
-from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
+from flext_infra.deps import FlextInfraPyprojectModernizer
 
 
 class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRender):

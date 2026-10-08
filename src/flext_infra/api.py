@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import m, r, s, t, u
-from flext_infra._conform_wiring import _FlextInfraConformWiringMixin
+from flext_infra._conform_wiring import FlextInfraConformWiring
 from flext_infra.workspace import FlextInfraWorkspaceEnvironmentMixin
 
 if TYPE_CHECKING:
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 class FlextInfra(
     FlextInfraWorkspaceEnvironmentMixin,
-    _FlextInfraConformWiringMixin,
+    FlextInfraConformWiring,
     s[t.JsonDict],
 ):
     """Thin public FLEXT facade over infra services."""
