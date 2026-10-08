@@ -173,8 +173,23 @@ class TestsFlextInfraCodegenMakeUpgrade:
         tm.that(makefile, has="upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle")
         sync_flags = re.search(r"^UV_SYNC_FLAGS := (.*)$", makefile, re.MULTILINE)
         assert sync_flags is not None
-        tm.that(sync_flags.group(1), has="--locked")
         tm.that(sync_flags.group(1), lacks="--upgrade")
+        # Lock law (operator 2026-10-03): setup never writes uv.lock. Its only
+        # uv lock call is the read-only check; a matching lock syncs --locked,
+        # a drifted lock is reported and synced --frozen, and nothing deletes
+        # or re-derives the committed lock.
+        setup_recipe = makefile.split("SETUP_ENVIRONMENT_RECIPE = ", 1)[1].split(
+            "\n\n",
+            1,
+        )[0]
+        tm.that(
+            re.findall(r"\$\(UV\) lock (--\S+)", setup_recipe),
+            eq=["--check"],
+        )
+        tm.that(setup_recipe, has=["uv_lock_mode=--locked", "uv_lock_mode=--frozen"])
+        tm.that(setup_recipe, has="$$uv_lock_mode")
+        tm.that(setup_recipe, lacks=['rm -f "$(UV_PROJECT)/uv.lock"', ">/dev/null"])
+        tm.that(setup_recipe, has="make upg")
 
         mise_toml = u.Cli.toml_mapping_from_text(
             (project_root / c.Infra.MISE_TOML_FILENAME).read_text(encoding="utf-8"),

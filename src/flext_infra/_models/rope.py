@@ -193,9 +193,10 @@ class FlextInfraModelsRope:
         # Why: the family contract strips field whitespace, which would shift
         # every parsed line number of captured source; the inventory indexes
         # declarations by their exact 1-based lines, so the text must survive
-        # byte-for-byte.
+        # byte-for-byte. An empty module (e.g. an empty package __init__.py)
+        # is valid Python with no bindings, so the empty text is admitted.
         source: Annotated[
-            t.NonEmptyStr,
+            str,
             t.StringConstraints(strip_whitespace=False),
             m.Field(description="Captured module source text"),
         ]
