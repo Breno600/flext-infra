@@ -135,6 +135,14 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
         edits: MutableMapping[t.Pair[int, int], str] = {}
         for sibling in siblings:
             for expression in cls._annotation_expressions(sibling):
+                for node in cls._call_value_nodes(expression):
+                    if (
+                        isinstance(node, ast.Attribute)
+                        and isinstance(node.value, ast.Name)
+                        and node.value.id == outer.name
+                        and node.attr in owned_names
+                    ):
+                        edits[cls._node_span(offsets, node)] = node.attr
                 for node in cls._deferred_type_nodes(expression):
                     if (
                         isinstance(node, ast.Attribute)
@@ -187,6 +195,31 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
                 if isinstance(child, ast.expr)
             )
         return tuple(nodes)
+
+    @classmethod
+    def _call_value_nodes(cls, expression: ast.expr) -> t.SequenceOf[ast.expr]:
+        """Walk the runtime value positions of one deferred annotation.
+
+        Every call reached through the annotation's type positions carries
+        value arguments (``u.Field(default_factory=...)``); a sibling there
+        must stay bare, so an owner-qualified reference is repaired back to
+        the name the parent-frame locals resolve.
+
+        Returns:
+            Every expression node inside the arguments of those calls.
+
+        """
+        return tuple(
+            node
+            for call in cls._deferred_type_nodes(expression)
+            if isinstance(call, ast.Call)
+            for argument in (
+                *call.args,
+                *(keyword.value for keyword in call.keywords),
+            )
+            for node in ast.walk(argument)
+            if isinstance(node, ast.expr)
+        )
 
     @classmethod
     def _collect_annotation_expressions(
