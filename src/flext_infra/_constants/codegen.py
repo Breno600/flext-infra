@@ -59,6 +59,9 @@ class FlextInfraConstantsCodegen(
 
     TRANSACTION_ID_LENGTH: ClassVar[int] = 32
 
+    FACADE_MODULE_PARTS: ClassVar[int] = 2
+    """Dotted parts of the ``package.module`` a type facade destination names."""
+
     SRC_MODULES: ClassVar[t.VariadicTuple[t.Quad[str, str, str, str]]] = (
         ("constants.py", "Constants", "FlextConstants", "Constants"),
         ("typings.py", "Types", "FlextTypes", "Type aliases"),

@@ -22,6 +22,7 @@ if TYPE_CHECKING:
         FlextInfraExternalCacheDirectorySpec,
     )
     from flext_infra._models._config.make import FlextInfraConfigModelsMake
+    from flext_infra._models._config.make_docs import FlextInfraConfigModelsMakeDocs
     from flext_infra._models._config.provider import FlextInfraConfigModelsProvider
     from flext_infra._models._config.release import FlextInfraConfigModelsRelease
     from flext_infra._models._config.render import FlextInfraConfigModelsRender
@@ -40,6 +41,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraConfigModelsContexts",
     "FlextInfraConfigModelsContract",
     "FlextInfraConfigModelsMake",
+    "FlextInfraConfigModelsMakeDocs",
     "FlextInfraConfigModelsProvider",
     "FlextInfraConfigModelsRelease",
     "FlextInfraConfigModelsRender",
@@ -62,6 +64,7 @@ install_lazy_exports(
         "FlextInfraConfigModelsContexts": ".contexts",
         "FlextInfraConfigModelsContract": ".contract",
         "FlextInfraConfigModelsMake": ".make",
+        "FlextInfraConfigModelsMakeDocs": ".make_docs",
         "FlextInfraConfigModelsProvider": ".provider",
         "FlextInfraConfigModelsRelease": ".release",
         "FlextInfraConfigModelsRender": ".render",

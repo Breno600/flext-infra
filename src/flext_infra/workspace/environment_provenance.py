@@ -152,6 +152,11 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         workspace = FlextInfraWorkspaceDetector.load_workspace_spec(
             repository_root,
         ).unwrap()
+        member_roots = frozenset(
+            (repository_root / repository.path).resolve()
+            for repository in workspace.subprojects
+            if repository.package
+        )
         required = {
             repository.distribution
             for repository in workspace.subprojects
@@ -163,7 +168,12 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         )
         validated = 0
         for name in sorted(required):
-            provenance = cls._validate_locked_provenance(name, locked)
+            provenance = cls._validate_locked_provenance(
+                name,
+                locked,
+                repository_root=repository_root,
+                member_roots=member_roots,
+            )
             if provenance.failure:
                 return r[int].from_failure(provenance)
             validated += int(provenance.value)
@@ -174,6 +184,9 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         cls,
         name: str,
         locked: m.Infra.LockedEnvironment,
+        *,
+        repository_root: Path,
+        member_roots: frozenset[Path],
     ) -> p.Result[bool]:
         """Prove one locked dependency's installed origin and path containment.
 
@@ -205,6 +218,8 @@ class FlextInfraWorkspaceEnvironmentProvenance:
             name,
             matches[0],
             distribution.read_text("direct_url.json"),
+            repository_root=repository_root,
+            member_roots=member_roots,
         )
         if origin.failure:
             return r[bool].from_failure(origin)
@@ -219,13 +234,29 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         name: str,
         item: m.Infra.LockedPackage,
         raw: str | None,
+        *,
+        repository_root: Path,
+        member_roots: frozenset[Path],
     ) -> p.Result[bool]:
         """Prove one locked dependency's PEP 610 origin against the lock entry.
+
+        A native uv workspace member (ADR-003 §2) is locked with an
+        ``editable`` source naming its checkout; CI installs it
+        ``--no-editable``, so its receipt must be a noneditable directory
+        install of exactly that declared member checkout. Every other entry
+        must be a locked git or registry artifact.
 
         Returns:
             The resulting ``p.Result[bool]``.
 
         """
+        if item.source.editable is not None:
+            return cls._workspace_member_verdict(
+                name,
+                (repository_root / item.source.editable).resolve(),
+                raw,
+                member_roots=member_roots,
+            )
         if raw is None and item.source.git is not None:
             return r[bool].fail(
                 f"locked dependency lacks PEP 610 provenance: {name}",
@@ -256,6 +287,40 @@ class FlextInfraWorkspaceEnvironmentProvenance:
                 return r[bool].fail(
                     f"installed dependency origin differs from committed lock: {name}",
                 )
+        return r[bool].ok(value=True)
+
+    @staticmethod
+    def _workspace_member_verdict(
+        name: str,
+        member_root: Path,
+        raw: str | None,
+        *,
+        member_roots: frozenset[Path],
+    ) -> p.Result[bool]:
+        """Prove one native workspace member is a noneditable build of its checkout.
+
+        Returns:
+            Success only when the lock names a declared package member and the
+            installed receipt is a noneditable directory install of that path.
+
+        """
+        if member_root not in member_roots:
+            return r[bool].fail(
+                f"locked editable source is not a declared workspace member: {name}",
+            )
+        if raw is None:
+            return r[bool].fail(f"workspace member lacks PEP 610 provenance: {name}")
+        receipt = m.Infra.DirectUrlReceipt.model_validate_json(raw)
+        if receipt.dir_info is None or receipt.dir_info.editable:
+            return r[bool].fail(
+                f"CI workspace member is not a noneditable build: {name}",
+            )
+        parsed = urlparse(receipt.url)
+        installed_root = Path(url2pathname(unquote(parsed.path))).resolve()
+        if parsed.scheme != "file" or installed_root != member_root:
+            return r[bool].fail(
+                f"installed workspace member differs from its checkout: {name}",
+            )
         return r[bool].ok(value=True)
 
     @staticmethod
