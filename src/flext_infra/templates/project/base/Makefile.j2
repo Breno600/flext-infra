@@ -1004,8 +1004,8 @@ _builtin_release_build: _builtin_require_environment
 _builtin_release_publish: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) release run --phase publish --apply $(if $(filter Y,$(INDEX)),--index)
 
-# Generation has one transaction owner. Conform runs at this repository's own
-# scope and journals ordinary, Mise, lazy-init, and documentation phases through
+# Generation has one transaction owner. Conform covers this root and all declared
+# members and journals ordinary, Mise, lazy-init, and documentation phases through
 # one fixed point. Only `upg` resolves and rewrites the locks; gen installs
 # nothing and never runs another writer before or after conform's journal.
 _builtin_gen_init:
@@ -1013,7 +1013,7 @@ _builtin_gen_init:
 	@$(PROJECT_FLEXT_INFRA) codegen init --repository-root "$(PROJECT_ROOT)" --check-only
 
 _builtin_gen_all:
-	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode apply
+	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --scope all --mode apply
 
 _builtin-bootstrap-candidate: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) codegen candidate-bootstrap --repository-root "$(PROJECT_ROOT)"

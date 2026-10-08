@@ -215,6 +215,32 @@ class TestsFlextInfraCodegenLazyInitFilePlans:
                 eq=repository.resolve() in expected,
             )
         tm.ok(infra.codegen_conform(request, workspace))
+        if scope is c.Infra.CodegenConformScope.ALL:
+            projections = (
+                *(package / c.Infra.INIT_PY for package in packages),
+                *(repository / c.Infra.MAKEFILE_FILENAME for repository in selected),
+            )
+            converged = {path: path.read_bytes() for path in projections}
+            tm.ok(infra.codegen_conform(applied, workspace))
+            tm.that({path: path.read_bytes() for path in projections}, eq=converged)
+
+            member_makefile = member / c.Infra.MAKEFILE_FILENAME
+            tm.ok(
+                u.Cli.atomic_write_text_file(
+                    member_makefile,
+                    member_makefile.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+                    + "# managed member drift\n",
+                ),
+            )
+            drifted = {path: path.read_bytes() for path in projections}
+            tm.fail(
+                infra.codegen_conform(request, workspace),
+                has="codegen drift detected",
+            )
+            tm.that({path: path.read_bytes() for path in projections}, eq=drifted)
+            tm.ok(infra.codegen_conform(applied, workspace))
+            tm.that({path: path.read_bytes() for path in projections}, eq=converged)
+            tm.ok(infra.codegen_conform(request, workspace))
 
     @staticmethod
     def test_scope_outside_workspace_is_a_causal_plan_failure(
