@@ -92,7 +92,9 @@ class TestsFlextInfraBanditAndMarkdownGates:
         """
         entry = config.Infra.tooling.tools.bandit.authorized_exceptions[0]
         owner = next(pattern for pattern in entry.files if "*" not in pattern)
-        consumer = f"{c.Infra.DEFAULT_SRC_DIR}/consumer/spawn.py"
+        # A literal Bandit exclusion for the owner also matches this filename;
+        # the consumer must instead remain in the exact unowned partition.
+        consumer = f"{owner}_extra.py"
         project_dir = u.Tests.mk_project(tmp_path, "bandit-owner-project")
         for relative in (owner, consumer):
             module = project_dir / relative

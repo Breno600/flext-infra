@@ -66,24 +66,19 @@ class FlextInfraBanditGate(FlextInfraGate):
         ctx: m.Infra.GateContext,
         check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Audit the package surface minus generated trees and owner modules.
+        """Audit the selected modules minus generated source trees.
 
         Bandit reads no Git ignore rules, so the generated-source globs of the
-        codegen artifact SSOT are passed as its exclusion list. The modules of
-        every authorized exception are excluded as well: their own invocation
-        audits them with every test except the authorized ones.
+        codegen artifact SSOT are passed as its exclusion list. Owner modules
+        are partitioned before invocation because Bandit exclusion strings
+        match substrings rather than exact file identities.
 
         Returns:
             The Bandit invocation over ``check_dirs``.
 
         """
         command = super()._build_check_command(project_dir, ctx, check_dirs)
-        owned = tuple(
-            path
-            for _, files in self._owner_scopes(project_dir, check_dirs)
-            for path in files
-        )
-        return self._with_exclusions(command, owned)
+        return self._with_exclusions(command)
 
     @override
     def _execute_check_command(
@@ -104,32 +99,39 @@ class FlextInfraBanditGate(FlextInfraGate):
             The gate execution combining every Bandit run.
 
         """
+        scopes = self._owner_scopes(project_dir, targets)
+        if not scopes:
+            return super()._execute_check_command(project_dir, ctx, targets, started)
+        owned = frozenset(path for _, files in scopes for path in files)
+        unowned = self._unowned_files(project_dir, targets, owned)
         executions = (
-            super()._execute_check_command(project_dir, ctx, targets, started),
-            *(
-                self._parsed_gate_execution(
-                    project_dir,
-                    ctx,
-                    self._run(
-                        self._with_exclusions(
-                            self._python_module_command(
-                                *self.check_module_command_prefix,
-                                *files,
-                                *self.check_module_command_suffix,
-                                "--skip",
-                                ",".join(tests),
-                            ),
-                            (),
+            (
+                super()._execute_check_command(project_dir, ctx, unowned, started),
+            )
+            if unowned
+            else ()
+        ) + tuple(
+            self._parsed_gate_execution(
+                project_dir,
+                ctx,
+                self._run(
+                    self._with_exclusions(
+                        self._python_module_command(
+                            *self.check_module_command_prefix,
+                            *files,
+                            *self.check_module_command_suffix,
+                            "--skip",
+                            ",".join(tests),
                         ),
-                        project_dir,
-                        timeout=self._check_timeout(project_dir, ctx),
-                        env=self._check_env(project_dir, ctx),
-                        remove_env_keys=self._check_remove_env_keys(project_dir, ctx),
                     ),
-                    started,
-                )
-                for tests, files in self._owner_scopes(project_dir, targets)
-            ),
+                    project_dir,
+                    timeout=self._check_timeout(project_dir, ctx),
+                    env=self._check_env(project_dir, ctx),
+                    remove_env_keys=self._check_remove_env_keys(project_dir, ctx),
+                ),
+                started,
+            )
+            for tests, files in scopes
         )
         if len(executions) == 1:
             return executions[0]
@@ -185,17 +187,39 @@ class FlextInfraBanditGate(FlextInfraGate):
         return tuple((tests, files) for tests, files in scopes if files)
 
     @staticmethod
+    def _unowned_files(
+        project_dir: Path,
+        targets: t.StrSequence,
+        owned: frozenset[str],
+    ) -> t.StrSequence:
+        """Select Python files whose exact paths have no authorized exception.
+
+        Returns:
+            Sorted project-relative paths for the full security audit.
+        """
+        return tuple(
+            sorted({
+                relative
+                for target in targets
+                for root in (project_dir / target,)
+                for path in (root.rglob("*.py") if root.is_dir() else (root,))
+                if path.is_file() and path.suffix == ".py"
+                for relative in (path.relative_to(project_dir).as_posix(),)
+                if relative not in owned
+            }),
+        )
+
+    @staticmethod
     def _with_exclusions(
         command: t.StrSequence,
-        owned: t.StrSequence,
     ) -> t.StrSequence:
-        """Append the generated-source globs and ``owned`` as Bandit exclusions.
+        """Append only the declared generated-source globs as exclusions.
 
         Returns:
             ``command`` with its ``--exclude`` list, or unchanged when empty.
 
         """
-        excluded = (*config.Infra.codegen.generated_source_globs, *owned)
+        excluded = config.Infra.codegen.generated_source_globs
         if not excluded:
             return command
         return (*command, "--exclude", ",".join(excluded))
