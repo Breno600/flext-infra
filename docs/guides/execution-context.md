@@ -161,6 +161,7 @@ with `--frozen`, without rewriting it. Drift and any resulting dependency
 incompatibility remain red until `make upg` produces matching locks. A missing
 lock fails with an actionable diagnostic. A failed native resolver or installer
 retains its original failure; no downgrade, retry or disabled lock policy masks it.
+Only successful resolution, installation and generation establish alignment.
 The platforms declared by `toolchain.mise_lockfile_platforms` compose the lock
 together with the platform of the machine running the upgrade, which Mise always
 includes.
