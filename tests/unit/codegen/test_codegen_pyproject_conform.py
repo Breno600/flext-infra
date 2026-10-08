@@ -338,26 +338,15 @@ class TestsFlextInfraCodegenPyprojectConform:
         sources = u.Tests.toml_mapping(
             u.Tests.toml_table_at(first, "tool", "uv").get("sources", {}),
         )
-        expected_sources = (
-            {
-                member.distribution: {"workspace": True}
-                for member in workspace.subprojects
-                if member.package
-            }
-            if is_root
-            else {}
-        )
-        tm.that(sources, eq=expected_sources)
+        # A member render is context-independent: attached to a superproject
+        # or standalone, it carries git-sourced floors and no fleet source, so
+        # it installs from a clone. Only the workspace root redirects members.
         for name in internal:
-            expected = (
-                name
-                if is_root
-                else (
-                    f"{name} @ git+{dependency_source.base_url}/{name}.git"
-                    f"@{dependency_source.branch}"
-                )
-            )
+            expected = name if is_root else u.Tests.flext_source(name)
             tm.that(expected in dev, eq=True)
+            tm.that(name in sources, eq=is_root)
+            if is_root:
+                tm.that(sources[name], eq={"workspace": True})
         second = tm.ok(
             u.Infra.pyproject_conform(
                 first,
@@ -701,7 +690,8 @@ dependencies = []
     def test_scaffold_mypy_policy_matches_ssot_and_converges(tmp_path: Path) -> None:
         """The actual Jinja scaffold preserves typed policy on repeated rendering."""
         root = tmp_path / "fixture-project"
-        first = u.Tests.scaffold_text(root, c.PYPROJECT_FILENAME)
+        surface = c.Infra.CodegenConformSurface.PYPROJECT
+        first = u.Tests.scaffold_text(root, c.PYPROJECT_FILENAME, what=surface)
         mypy = u.Tests.toml_table_at(first, "tool", "mypy")
         policy = config.Infra.tooling.tools.mypy
         tm.that(
@@ -718,7 +708,10 @@ dependencies = []
             u.Tests.toml_table_at(first, "tool", "pydantic-mypy"),
             eq=config.Infra.tooling.tools.pydantic_mypy.model_dump(),
         )
-        tm.that(u.Tests.scaffold_text(root, c.PYPROJECT_FILENAME), eq=first)
+        tm.that(
+            u.Tests.scaffold_text(root, c.PYPROJECT_FILENAME, what=surface),
+            eq=first,
+        )
 
     @staticmethod
     def _assert_unmanaged_tool_tables_survive(

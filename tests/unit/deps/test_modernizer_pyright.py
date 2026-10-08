@@ -15,6 +15,7 @@ from flext_infra import (
     FlextInfraEnsurePyrightConfigPhase,
     FlextInfraPyprojectModernizer,
     FlextInfraWorkspaceDetector,
+    config,
 )
 from tests import m, t, u
 
@@ -169,7 +170,10 @@ class TestsFlextInfraDepsModernizerPyright:
 
         tm.that(
             sorted(u.Tests.toml_strings(pyright["exclude"])),
-            eq=sorted(set(rules.default_excludes)),
+            eq=sorted({
+                *rules.default_excludes,
+                *config.Infra.codegen.generated_source_globs,
+            }),
         )
         if rules.ignored_diagnostic_globs:
             tm.that(
@@ -325,10 +329,13 @@ class TestsFlextInfraDepsModernizerPyright:
             sorted(u.Tests.toml_strings(pyright["include"])),
             eq=sorted([rules.source_dir, rules.test_like_dirs[0]]),
         )
+        # Pyright reads no Git ignore rules: the generated-source trees of the
+        # codegen artifact key must reach its exclude list (flext-gknfx).
         tm.that(
-            set(u.Tests.toml_strings(pyright["exclude"])).issuperset(
-                rules.default_excludes,
-            ),
+            set(u.Tests.toml_strings(pyright["exclude"])).issuperset({
+                *rules.default_excludes,
+                *config.Infra.codegen.generated_source_globs,
+            }),
             eq=True,
         )
 

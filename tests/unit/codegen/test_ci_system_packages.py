@@ -48,8 +48,10 @@ class TestsFlextInfraCiSystemPackages:
                 "engine-calc engine-fonts"
             ),
         )
+        # The single blocking approval step (setup -> audit -> check -> test)
+        # needs the engines installed before it runs.
         tm.that(
-            rendered.index(self.step_name) < rendered.index("setup (blocking)"),
+            rendered.index(self.step_name) < rendered.index("Approval (blocking)"),
             eq=True,
         )
 

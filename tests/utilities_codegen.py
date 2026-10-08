@@ -41,8 +41,8 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         """Render the fleet Ruff policy as a pyproject fragment.
 
         Reads the same typed SSOT production reads (P0): fixture
-        workspaces carry the real policy — select, preview and the
-        per-file-ignores map — never a hand-rolled fragment.
+        workspaces carry the real policy — select, the global ignore table,
+        preview and the per-file-ignores map — never a hand-rolled fragment.
 
         Returns:
             The resulting ``str``.
@@ -50,6 +50,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         """
         ruff_cfg = config.Infra.tooling.tools.ruff
         select = ", ".join(f'"{rule}"' for rule in sorted(ruff_cfg.lint.select))
+        ignore = ", ".join(f'"{rule}"' for rule in sorted(ruff_cfg.lint.ignore))
         quoted_rules = {
             pattern: ", ".join(f'"{rule}"' for rule in rules)
             for pattern, rules in sorted(ruff_cfg.lint.per_file_ignores.items())
@@ -66,7 +67,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         return (
             f"[tool.ruff]\nsrc = [{src}]\n"
             f"preview = {str(ruff_cfg.preview).lower()}\n\n"
-            f"[tool.ruff.lint]\nselect = [{select}]\n\n"
+            f"[tool.ruff.lint]\nselect = [{select}]\nignore = [{ignore}]\n\n"
             "[tool.ruff.lint.isort]\n"
             f"combine-as-imports = {str(isort.combine_as_imports).lower()}\n"
             f"force-single-line = {str(isort.force_single_line).lower()}\n"
@@ -141,12 +142,15 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         root: Path,
         *,
         members: t.StrSequence = (),
+        what: c.Infra.CodegenConformSurface = c.Infra.CodegenConformSurface.ALL,
     ) -> m.Infra.CodegenPlan:
-        """Plan every artifact conform renders for a fresh repository scaffold.
+        """Plan the artifacts conform renders for a fresh repository scaffold.
 
         Without members the fixture repository is standalone; each member
         makes it a workspace composing that project, so generated surfaces
         are observed exactly as the public codegen owner renders them.
+        ``what`` selects the conform surface, so a scenario about one surface
+        never pays for planning every template.
 
         Returns:
             The resulting ``m.Infra.CodegenPlan``.
@@ -173,6 +177,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
                     fixture.repository_ref(name, path=Path(name)) for name in members
                 ),
             ),
+            what=what,
         )
 
     @staticmethod
@@ -181,6 +186,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         destination: str,
         *,
         members: t.StrSequence = (),
+        what: c.Infra.CodegenConformSurface = c.Infra.CodegenConformSurface.ALL,
     ) -> str:
         """Return one rendered scaffold artifact, failing when it is not planned.
 
@@ -193,6 +199,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
                 TestsFlextInfraUtilitiesCodegenMixin.scaffold_plan(
                     root,
                     members=members,
+                    what=what,
                 ),
                 destination,
             ),

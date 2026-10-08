@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, m, r, t, u
+from flext_infra import c, config, m, r, t, u
 from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
@@ -57,6 +57,28 @@ class FlextInfraBanditGate(FlextInfraGate):
         if not (project_dir / c.Infra.DEFAULT_SRC_DIR).exists():
             return []
         return [c.Infra.DEFAULT_SRC_DIR]
+
+    @override
+    def _build_check_command(
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        check_dirs: t.StrSequence,
+    ) -> t.StrSequence:
+        """Audit the package surface minus the generated source trees.
+
+        Bandit reads no Git ignore rules, so the generated-source globs of the
+        codegen artifact SSOT are passed as its exclusion list.
+
+        Returns:
+            The Bandit invocation over ``check_dirs``.
+
+        """
+        command = super()._build_check_command(project_dir, ctx, check_dirs)
+        generated = config.Infra.codegen.generated_source_globs
+        if not generated:
+            return command
+        return (*command, "--exclude", ",".join(generated))
 
     @override
     def _parse_check_output(
