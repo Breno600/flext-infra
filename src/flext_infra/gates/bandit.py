@@ -6,11 +6,10 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, config, m, r, t, u
+from flext_infra import c, config, m, t, u
 from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
@@ -164,27 +163,32 @@ class FlextInfraBanditGate(FlextInfraGate):
             One ``(tests, files)`` pair per exception that owns a file under
             ``targets``; files are project-relative POSIX paths.
 
+        Raises:
+            ValueError: If an owner path resolves outside the project root.
+            OSError: If the selected owner or project root cannot be resolved.
+
         """
         roots = tuple(PurePosixPath(target) for target in targets)
-        scopes = (
-            (
-                entry.tests,
-                tuple(
-                    sorted({
-                        str(relative)
-                        for pattern in entry.files
-                        for relative in (
-                            PurePosixPath(path.relative_to(project_dir).as_posix())
-                            for path in project_dir.glob(pattern)
-                            if path.is_file()
-                        )
-                        if any(relative.is_relative_to(root) for root in roots)
-                    }),
-                ),
+        scopes: list[t.Pair[t.StrSequence, t.StrSequence]] = []
+        physical_root = project_dir.resolve(strict=True)
+        for entry in config.Infra.tooling.tools.bandit.authorized_exceptions:
+            files = tuple(
+                sorted({
+                    str(relative)
+                    for pattern in entry.files
+                    for relative in (
+                        PurePosixPath(path.relative_to(project_dir).as_posix())
+                        for path in project_dir.glob(pattern)
+                        if path.is_file()
+                    )
+                    if any(relative.is_relative_to(root) for root in roots)
+                }),
             )
-            for entry in config.Infra.tooling.tools.bandit.authorized_exceptions
-        )
-        return tuple((tests, files) for tests, files in scopes if files)
+            for relative in files:
+                (project_dir / relative).resolve(strict=True).relative_to(physical_root)
+            if files:
+                scopes.append((entry.tests, files))
+        return tuple(scopes)
 
     @staticmethod
     def _unowned_files(
@@ -196,6 +200,7 @@ class FlextInfraBanditGate(FlextInfraGate):
 
         Returns:
             Sorted project-relative paths for the full security audit.
+
         """
         return tuple(
             sorted({
@@ -244,41 +249,45 @@ class FlextInfraBanditGate(FlextInfraGate):
                     self._parse_error_issue("bandit produced no JSON output"),
                 )
             return self._finalize_parse_result(result, project_dir, (), c.Infra.BANDIT)
-        parsed_payload = self._parse_bandit_payload(result.stdout)
-        if parsed_payload.failure:
+        validated: p.Result[m.Infra.BanditReport] = u.validate_value(
+            m.Infra.BanditReport,
+            result.stdout,
+            from_json=True,
+            strict=True,
+        )
+        if validated.failure:
             return False, (
                 self._parse_error_issue(
-                    parsed_payload.error or "Tool output parsing failed",
+                    "Bandit report does not match its required schema",
                 ),
             )
+        report = validated.value
+        issues = (
+            *self._bandit_issues(report),
+            *(
+                m.Infra.Issue(
+                    file=str(PurePosixPath(error.filename)),
+                    line=0,
+                    column=0,
+                    code=c.Infra.ToolOutcome.ERROR.value,
+                    message="Bandit could not audit this source file",
+                    severity=c.Infra.GateSeverity.ERROR.value,
+                )
+                for error in report.errors
+            ),
+        )
+        if report.errors:
+            return False, issues
         return self._finalize_parse_result(
             result,
             project_dir,
-            self._bandit_issues(parsed_payload.unwrap()),
+            issues,
             c.Infra.BANDIT,
         )
 
     @staticmethod
-    def _parse_bandit_payload(stdout: str) -> p.Result[t.MappingKV[str, t.JsonValue]]:
-        """Parse Bandit JSON stdout into a typed payload mapping.
-
-        Returns:
-            The resulting ``p.Result[t.MappingKV[str, t.JsonValue]]``.
-
-        """
-        parsed_result = u.Cli.json_parse(stdout)
-        if parsed_result.failure:
-            return r[t.MappingKV[str, t.JsonValue]].from_failure(parsed_result)
-        raw_payload = parsed_result.unwrap()
-        if not isinstance(raw_payload, Mapping):
-            return r[t.MappingKV[str, t.JsonValue]].fail(
-                "Bandit output is not a JSON object",
-            )
-        return r[t.MappingKV[str, t.JsonValue]].ok(u.Cli.json_as_mapping(raw_payload))
-
-    @staticmethod
     def _bandit_issues(
-        bandit_data: t.MappingKV[str, t.JsonValue],
+        report: m.Infra.BanditReport,
     ) -> t.SequenceOf[m.Infra.Issue]:
         """Build typed gate issues from parsed Bandit result entries.
 
@@ -294,18 +303,14 @@ class FlextInfraBanditGate(FlextInfraGate):
         """
         return tuple(
             m.Infra.Issue(
-                file=str(
-                    PurePosixPath(u.Cli.json_pick_str(raw_item, "filename", "?")),
-                ),
-                line=u.Cli.json_pick_int(raw_item, "line_number"),
+                file=str(PurePosixPath(finding.filename)),
+                line=finding.line_number,
                 column=0,
-                code=u.Cli.json_pick_str(raw_item, "test_id"),
-                message=u.Cli.json_pick_str(raw_item, "issue_text"),
+                code=finding.test_id,
+                message=finding.issue_text,
                 severity=c.Infra.GateSeverity.ERROR.value,
             )
-            for raw_item in u.Cli.json_as_mapping_list(
-                bandit_data.get(c.Infra.BANDIT_RESULTS_KEY, []),
-            )
+            for finding in report.results
         )
 
     @staticmethod

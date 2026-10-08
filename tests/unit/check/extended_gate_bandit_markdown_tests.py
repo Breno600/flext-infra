@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import shutil
+from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, ClassVar
 
 import pytest
@@ -25,6 +26,18 @@ if TYPE_CHECKING:
 class TestsFlextInfraBanditAndMarkdownGates:
     """Declarative public-contract tests for Bandit and Markdown gates."""
 
+    BANDIT_OWNER_CASES: ClassVar[
+        t.VariadicTuple[tuple[m.Infra.BanditAuthorizedException, str, str]]
+    ] = tuple(
+        (
+            entry,
+            pattern,
+            pattern.replace("**/", "").replace("*", "probe").removesuffix(".py")
+            + ".py",
+        )
+        for entry in config.Infra.tooling.tools.bandit.authorized_exceptions
+        for pattern in entry.files
+    )
     HEADING_SKIP = "# Test\n\n### Skip\n"
     REFLOW_HINT = (
         "# Test\n\n"
@@ -81,8 +94,15 @@ class TestsFlextInfraBanditAndMarkdownGates:
         tm.that(result.issues[0].file, has="main.py")
 
     @staticmethod
+    @pytest.mark.parametrize(
+        ("entry", "pattern", "owner"),
+        BANDIT_OWNER_CASES,
+    )
     def test_bandit_owner_scope_skips_only_its_authorized_tests(
         tmp_path: Path,
+        entry: m.Infra.BanditAuthorizedException,
+        pattern: str,
+        owner: str,
     ) -> None:
         """An authorized owner module drops only its tests; others keep all.
 
@@ -90,11 +110,18 @@ class TestsFlextInfraBanditAndMarkdownGates:
         has no per-path exception, so the gate audits the owner modules in
         their own run that skips only the authorized tests.
         """
-        entry = config.Infra.tooling.tools.bandit.authorized_exceptions[0]
-        owner = next(pattern for pattern in entry.files if "*" not in pattern)
         # A literal Bandit exclusion for the owner also matches this filename;
         # the consumer must instead remain in the exact unowned partition.
-        consumer = f"{owner}_extra.py"
+        consumer = f"{c.Infra.DEFAULT_SRC_DIR}/consumer/{owner}_extra.py"
+        tm.that(PurePosixPath(owner).full_match(pattern), eq=True)
+        tm.that(
+            any(
+                PurePosixPath(consumer).full_match(authorized)
+                for configured in config.Infra.tooling.tools.bandit.authorized_exceptions
+                for authorized in configured.files
+            ),
+            eq=False,
+        )
         project_dir = u.Tests.mk_project(tmp_path, "bandit-owner-project")
         for relative in (owner, consumer):
             module = project_dir / relative
@@ -112,14 +139,23 @@ class TestsFlextInfraBanditAndMarkdownGates:
             for relative in (owner, consumer)
         }
         tm.that(result.result.passed, eq=False)
-        tm.that(codes[owner], eq={"B101"})
-        tm.that(codes[consumer], eq={"B101", *entry.tests})
+        raised_codes = {"B101", "B404", "B603"}
+        tm.that(codes[owner], eq=raised_codes - set(entry.tests))
+        tm.that(codes[consumer], eq=raised_codes)
 
     @staticmethod
-    def test_bandit_owner_scope_alone_passes(tmp_path: Path) -> None:
-        """A project whose only process spawn lives in its owner module passes."""
-        entry = config.Infra.tooling.tools.bandit.authorized_exceptions[0]
-        owner = next(pattern for pattern in entry.files if "*" not in pattern)
+    @pytest.mark.parametrize(
+        ("entry", "pattern", "owner"),
+        BANDIT_OWNER_CASES,
+    )
+    def test_bandit_owner_scope_alone_obeys_its_authorized_tests(
+        tmp_path: Path,
+        entry: m.Infra.BanditAuthorizedException,
+        pattern: str,
+        owner: str,
+    ) -> None:
+        """An owner-only project's verdict follows the declared exception."""
+        tm.that(PurePosixPath(owner).full_match(pattern), eq=True)
         project_dir = u.Tests.mk_project(tmp_path, "bandit-owner-only")
         module = project_dir / owner
         module.parent.mkdir(parents=True)
@@ -131,8 +167,49 @@ class TestsFlextInfraBanditAndMarkdownGates:
 
         result = u.Tests.run_gate_check(FlextInfraBanditGate, tmp_path, project_dir)
 
-        tm.that(result.result.passed, eq=True, msg=str(result.issues))
-        tm.that(result.issues, eq=())
+        remaining = {"B404", "B603"} - set(entry.tests)
+        tm.that(result.result.passed, eq=not remaining, msg=str(result.issues))
+        tm.that({issue.code for issue in result.issues}, eq=remaining)
+
+    @staticmethod
+    def test_bandit_syntax_error_is_a_failed_audit(tmp_path: Path) -> None:
+        """Bandit's successful process exit cannot approve an unaudited source."""
+        project = u.Tests.mk_project(tmp_path, "bandit-invalid-source")
+        source = project / c.Infra.DEFAULT_SRC_DIR / "invalid.py"
+        source.parent.mkdir(parents=True)
+        source.write_text("def invalid(:\n", encoding="utf-8")
+
+        result = u.Tests.run_gate_check(FlextInfraBanditGate, tmp_path, project)
+
+        tm.that(result.result.passed, eq=False)
+        tm.that(result.outcome, eq=c.Infra.ToolOutcome.ERROR)
+        tm.that(result.issues, length=1)
+        tm.that(result.issues[0].file, has=source.name)
+        tm.that(result.issues[0].code, eq=c.Infra.ToolOutcome.ERROR.value)
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        ("pattern", "owner"),
+        (
+            (pattern, owner) for _, pattern, owner in BANDIT_OWNER_CASES
+        ),
+    )
+    def test_bandit_owner_cannot_alias_a_source_outside_the_project(
+        tmp_path: Path,
+        pattern: str,
+        owner: str,
+    ) -> None:
+        """An owner path cannot grant subprocess relief to an external source."""
+        tm.that(PurePosixPath(owner).full_match(pattern), eq=True)
+        project = u.Tests.mk_project(tmp_path, "bandit-external-owner")
+        external = tmp_path / "external.py"
+        external.write_text("import subprocess\n", encoding="utf-8")
+        source = project / owner
+        source.parent.mkdir(parents=True)
+        source.symlink_to(external)
+
+        with pytest.raises(ValueError):
+            u.Tests.run_gate_check(FlextInfraBanditGate, tmp_path, project)
 
     @staticmethod
     def test_bandit_without_source_tree_has_no_audit_surface(
