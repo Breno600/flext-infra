@@ -20,7 +20,12 @@ class TestsFlextInfraCiCheckoutModeNormalization:
 
     @staticmethod
     def test_ci_job_normalizes_checkout_modes_before_gates() -> None:
-        """Test ci job normalizes checkout modes before gates."""
+        """Every CI-profile Make invocation runs after the mode normalization.
+
+        The ci job reaches every ``ci``-context workflow verb through the one
+        approval invocation, so the normalization must precede the first
+        CI-profile Make command, whichever verb it names.
+        """
         steps = u.CodegenTestSupport.Ci.ci_job_steps(
             TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
                 repository_branch="0.12.0-dev",
@@ -33,10 +38,11 @@ class TestsFlextInfraCiCheckoutModeNormalization:
                 commands.extend(line.strip() for line in script.splitlines())
         normalize_at = commands.index("chmod -R go-w .")
         ci = config.Infra.codegen.make.ci
-        generation_at = commands.index(f"{ci.variable}={ci.value} make gen")
-        tm.that(normalize_at < generation_at, eq=True)
-        for step in config.Infra.codegen.make.workflow:
-            if "ci" not in step.contexts:
-                continue
-            gate_at = commands.index(f"{ci.variable}={ci.value} make {step.verb}")
-            tm.that(normalize_at < gate_at, eq=True)
+        make_prefix = f"{ci.variable}={ci.value} make "
+        make_at = [
+            index
+            for index, command in enumerate(commands)
+            if command.startswith(make_prefix)
+        ]
+        tm.that(make_at, empty=False)
+        tm.that(normalize_at < min(make_at), eq=True)

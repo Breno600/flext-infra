@@ -291,6 +291,11 @@ class FlextInfraConstantsCheck:
         "Provisioned by mise from codegen.toolchain.tools entry 'prettier'; "
         "never a runner or a version here."
     )
+    PRETTIER_PLAIN_OUTPUT_ARG: ClassVar[str] = "--no-color"
+    (
+        "Prettier auto-enables ANSI color under CI, which breaks the "
+        "``[warn] <file>`` parse; the gate always requests plain output."
+    )
     JSCPD_MODE: ClassVar[str] = "strict"
     JSCPD_MIN_LINES: ClassVar[int] = 10
     "Minimum lines for a clone (R2: 10 lines = 62 tokens per consumption-law.md)."

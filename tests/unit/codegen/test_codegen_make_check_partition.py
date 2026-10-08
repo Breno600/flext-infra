@@ -91,17 +91,25 @@ class TestsFlextInfraCodegenMakeCheckPartition:
 
     @staticmethod
     def test_ci_workflow_runs_only_the_ci_partition() -> None:
-        """The rendered CI job runs CI=Y check once and never the local partition."""
+        """The CI job reaches check once, through the CI-profile approval only.
+
+        CI and ``make pre-commit`` share one declared workflow (the make
+        config validator enforces it), so the job runs check exactly once
+        inside the single CI-profile approval and never names the local
+        partition.
+        """
         make = config.Infra.codegen.make
+        ci_verbs = {step.verb for step in make.workflow if "ci" in step.contexts}
+        tm.that(ci_verbs, has=c.Infra.VERB_CHECK)
         steps = u.CodegenTestSupport.Ci.ci_job_steps(
             TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
                 repository_branch="0.12.0-dev",
             ),
         )
         commands = [str(step.get("run", "")) for step in steps]
-        fast = f"{make.ci.variable}={make.ci.value} make {c.Infra.VERB_CHECK}"
-        local = f"{make.ci.variable}={make.ci.local_value} make {c.Infra.VERB_CHECK}"
-        tm.that(sum(fast in command for command in commands), eq=1)
+        approval = f"{make.ci.variable}={make.ci.value} make pre-commit"
+        local = f"{make.ci.variable}={make.ci.local_value} make"
+        tm.that(sum(approval in command for command in commands), eq=1)
         tm.that(any(local in command for command in commands), eq=False)
 
     @staticmethod

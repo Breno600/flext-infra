@@ -61,11 +61,17 @@ class FlextInfraMarkdownFormatGate(FlextInfraMarkdownGateBase):
     def _binary_args(self) -> t.StrSequence:
         """Anchor the invocation to the mise-provisioned binary on PATH.
 
+        Output is always plain: prettier enables color under CI, and colored
+        ``[warn]`` lines would never match the parsed finding pattern.
+
         Returns:
             The resulting ``t.StrSequence``.
 
         """
-        return (self._resolve_binary() or c.Infra.PRETTIER_BINARY,)
+        return (
+            self._resolve_binary() or c.Infra.PRETTIER_BINARY,
+            c.Infra.PRETTIER_PLAIN_OUTPUT_ARG,
+        )
 
     @override
     def check(

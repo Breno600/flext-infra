@@ -291,7 +291,12 @@ class TestsFlextInfraCodegenPyprojectConform:
         *,
         attached: bool,
     ) -> None:
-        """Members publish inline sources; only the root keeps bare local floors."""
+        """Members publish inline sources; only the root keeps bare local floors.
+
+        A member render is context-independent: attached to a superproject or
+        standalone, it carries no fleet ``workspace`` source, because the
+        workspace root's sources already redirect every member.
+        """
         provider = u.Tests.provider()
         branch = u.Tests.provider_branch()
         floors = tuple(config.Infra.codegen.scaffold.project.dev)
@@ -339,11 +344,8 @@ class TestsFlextInfraCodegenPyprojectConform:
         for name in internal:
             expected = name if is_root else u.Tests.flext_source(name)
             tm.that(expected in dev, eq=True)
-            tm.that(
-                name in sources,
-                eq=attached or is_root,
-            )
-            if attached or is_root:
+            tm.that(name in sources, eq=is_root)
+            if is_root:
                 tm.that(sources[name], eq={"workspace": True})
         second = tm.ok(
             u.Infra.pyproject_conform(

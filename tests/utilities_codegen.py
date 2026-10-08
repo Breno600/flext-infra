@@ -41,8 +41,8 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         """Render the fleet Ruff policy as a pyproject fragment.
 
         Reads the same typed SSOT production reads (P0): fixture
-        workspaces carry the real policy — select, preview and the
-        per-file-ignores map — never a hand-rolled fragment.
+        workspaces carry the real policy — select, the global ignore table,
+        preview and the per-file-ignores map — never a hand-rolled fragment.
 
         Returns:
             The resulting ``str``.
@@ -50,6 +50,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         """
         ruff_cfg = config.Infra.tooling.tools.ruff
         select = ", ".join(f'"{rule}"' for rule in sorted(ruff_cfg.lint.select))
+        ignore = ", ".join(f'"{rule}"' for rule in sorted(ruff_cfg.lint.ignore))
         quoted_rules = {
             pattern: ", ".join(f'"{rule}"' for rule in rules)
             for pattern, rules in sorted(ruff_cfg.lint.per_file_ignores.items())
@@ -66,7 +67,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         return (
             f"[tool.ruff]\nsrc = [{src}]\n"
             f"preview = {str(ruff_cfg.preview).lower()}\n\n"
-            f"[tool.ruff.lint]\nselect = [{select}]\n\n"
+            f"[tool.ruff.lint]\nselect = [{select}]\nignore = [{ignore}]\n\n"
             "[tool.ruff.lint.isort]\n"
             f"combine-as-imports = {str(isort.combine_as_imports).lower()}\n"
             f"force-single-line = {str(isort.force_single_line).lower()}\n"
