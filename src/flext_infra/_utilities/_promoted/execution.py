@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_cli import m
+from flext_cli import m, u
 
 from flext_infra import c
 from flext_infra._utilities._promoted.invocation import FlextInfraUtilitiesPromotedInvocation
