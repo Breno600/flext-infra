@@ -81,14 +81,11 @@ class FlextInfraCodegenLayoutGitignoreMixin:
             path=gitignore_path,
             before=before.value,
             desired_content=rendered.value.encode(c.Cli.ENCODING_DEFAULT),
-            desired_mode=config.Infra.codegen.modes.file_default,
+            desired_mode=0o644,
             owner="codegen",
             policy="full",
         )
-        written = FlextInfraMisePublication.publish_file_plan(
-            planned,
-            phase=c.Infra.CodegenStagedFilePhase.LAYOUT,
-        )
+        written = FlextInfraMisePublication.publish_file_plan(planned, phase="layout")
         if written.failure:
             return r[t.Infra.LayoutStatus].from_failure(written)
         applied_status: t.Infra.LayoutStatus = "applied"
@@ -136,14 +133,11 @@ class FlextInfraCodegenLayoutGitignoreMixin:
             path=gitignore_path,
             before=before.value,
             desired_content=text.encode(c.Cli.ENCODING_DEFAULT),
-            desired_mode=config.Infra.codegen.modes.file_default,
+            desired_mode=0o644,
             owner="codegen",
             policy="merge",
         )
-        written = FlextInfraMisePublication.publish_file_plan(
-            planned,
-            phase=c.Infra.CodegenStagedFilePhase.LAYOUT,
-        )
+        written = FlextInfraMisePublication.publish_file_plan(planned, phase="layout")
         if written.failure:
             return r[t.Infra.LayoutStatus].from_failure(written)
         applied_status: t.Infra.LayoutStatus = "applied"

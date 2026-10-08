@@ -170,7 +170,7 @@ class FlextInfraCodegenLazyInit(
             return r[m.Infra.CodegenPhaseAnalysis].from_failure(manifests)
         return r[m.Infra.CodegenPhaseAnalysis].ok(
             m.Infra.CodegenPhaseAnalysis(
-                phase=c.Infra.CodegenStagedFilePhase.LAZY_INIT,
+                phase="lazy-init",
                 files=composed + manifests.value,
                 inputs=tuple(inputs[path] for path in sorted(inputs)),
                 publications=tuple(
@@ -406,9 +406,9 @@ class FlextInfraCodegenLazyInit(
             return result_type.from_failure(stable)
         return result_type.ok(
             m.Infra.CodegenPhaseAnalysis(
-                phase=c.Infra.CodegenStagedFilePhase.LAZY_INIT,
-                files=all_plans,
-                inputs=tuple(snapshots.value[path] for path in sorted(snapshots.value)),
+                phase="lazy-init",
+                files=file_plans.value,
+                inputs=tuple(snapshots[path] for path in sorted(snapshots)),
                 publications=tuple(package_plans),
             ),
         )

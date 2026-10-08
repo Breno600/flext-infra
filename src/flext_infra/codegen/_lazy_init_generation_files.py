@@ -122,9 +122,7 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
             path=before.path,
             before=before,
             desired_content=desired_content,
-            desired_mode=config.Infra.codegen.modes.file_default
-            if desired_content is not None
-            else None,
+            desired_mode=0o644 if desired_content is not None else None,
         )
 
     @staticmethod

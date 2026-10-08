@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING, Literal
 
 from flext_core import r
 from flext_infra import c, m, t, u
-from flext_infra._config import config
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
@@ -120,7 +119,7 @@ class FlextInfraMiseArtifactsState:
         )
         temporary = cls.plan_directories(
             layout,
-            phase=c.Infra.CodegenStagedFilePhase.TRANSACTION,
+            phase="transaction",
             requested=tuple(roots),
             disposition="temporary",
         )
@@ -146,7 +145,7 @@ class FlextInfraMiseArtifactsState:
         )
         generated = cls.plan_directories(
             layout,
-            phase=c.Infra.CodegenStagedFilePhase.MISE,
+            phase="mise",
             requested=parents,
             disposition="generated",
         )

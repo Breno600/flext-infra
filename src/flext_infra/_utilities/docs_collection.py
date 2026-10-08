@@ -248,9 +248,6 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                 collection projection association.
 
         """
-        from flext_infra._config import config
-        from flext_infra._utilities import FlextInfraUtilitiesDocsContract
-
         root = repository_root.absolute()
         relative = configuration.canonical_dir
         if relative.is_absolute() or not relative.parts or ".." in relative.parts:
@@ -478,7 +475,7 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                 owner,
                 path,
                 content,
-                desired_mode=config.Infra.codegen.modes.file_default,
+                desired_mode=0o644,
                 source_states=inputs,
             ).unwrap()
             expected = state.states.get(path)

@@ -25,7 +25,7 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
         relative_path: str,
         rendered: str,
         *,
-        mode: int | None = None,
+        mode: int = 0o644,
         source_states: t.VariadicTuple[m.Cli.AtomicFileState] = (),
     ) -> p.Result[m.Infra.CodegenFilePlan]:
         """Snapshot one target and bind it to exact desired bytes and mode.
@@ -50,9 +50,7 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
                 path=path,
                 before=before.value,
                 desired_content=rendered.encode(c.Cli.ENCODING_DEFAULT),
-                desired_mode=(
-                    config.Infra.codegen.modes.file_default if mode is None else mode
-                ),
+                desired_mode=mode,
                 source_states=source_states,
             ),
         )

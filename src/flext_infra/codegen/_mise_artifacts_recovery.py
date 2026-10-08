@@ -458,7 +458,7 @@ class FlextInfraMiseRecovery:
         )
         return r[m.Infra.CodegenStagedFile].ok(
             m.Infra.CodegenStagedFile(
-                phase=c.Infra.CodegenStagedFilePhase.RECOVERY,
+                phase="recovery",
                 project=project,
                 before=action.current,
                 replacement=candidate.value,
@@ -586,7 +586,7 @@ class FlextInfraMiseRecovery:
             )
             candidates.append(
                 m.Infra.CodegenStagedFile(
-                    phase=c.Infra.CodegenStagedFilePhase.RECOVERY,
+                    phase="recovery",
                     project=project,
                     before=action.current,
                     replacement=candidate.value,

@@ -577,7 +577,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 inputs[state.path] = state
         return r[m.Infra.CodegenPhaseAnalysis].ok(
             m.Infra.CodegenPhaseAnalysis(
-                phase=c.Infra.CodegenStagedFilePhase.LAZY_INIT,
+                phase="lazy-init",
                 files=tuple(files),
                 inputs=tuple(inputs[path] for path in sorted(inputs)),
                 publications=tuple(publications),
@@ -910,7 +910,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             return result_type.from_failure(docs_plans)
         owned_docs_files = self.owned_docs_files(request, docs_plans.value)
         docs_analysis = m.Infra.CodegenPhaseAnalysis(
-            phase=c.Infra.CodegenStagedFilePhase.DOCS,
+            phase="docs",
             files=owned_docs_files,
             inputs=docs_bundle.value.source_states,
         )
@@ -1053,7 +1053,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 return result_type.from_failure(planned)
             materialized = u.Cli.atomic_create_directory_chain_guarded(
                 planned.value,
-                permission_mode=config.Infra.codegen.modes.directory_generated,
+                permission_mode=0o755,
             )
             if materialized.failure:
                 rollback = self._rollback_scaffold_directories(tuple(created))

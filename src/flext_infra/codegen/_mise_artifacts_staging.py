@@ -95,7 +95,7 @@ class FlextInfraMiseStaging:
             )
         created = u.Cli.atomic_create_directory_chain_guarded(
             stage_plan.value,
-            permission_mode=config.Infra.codegen.modes.directory_private,
+            permission_mode=0o700,
         )
         if created.failure:
             return result_type.from_failure(created)

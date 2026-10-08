@@ -49,8 +49,8 @@ class FlextInfraSemanticPublication:
         if not files.value:
             return r[tuple[Path, ...]].ok(())
         analysis = m.Infra.CodegenPhaseAnalysis(
-            phase=c.Infra.CodegenStagedFilePhase.SEMANTIC,
-            files=tuple(files),
+            phase="semantic",
+            files=tuple(files.value),
             inputs=tuple(plan.before for plan in plans),
         )
         roots = {
