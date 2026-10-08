@@ -278,7 +278,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                         f"{rel}#block{index}.py",
                         "-",
                     ],
-                    options=u.Cli.ProcessOptions(
+                    options=m.Cli.ProcessOptions(
                         input_data=match.group("body").encode(),
                     ),
                 )

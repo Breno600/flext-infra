@@ -312,7 +312,7 @@ class FlextInfraUtilitiesPyproject:
         result = u.Cli.run_bytes(
             command,
             cwd=execution_root,
-            options=u.Cli.ProcessOptions(
+            options=m.Cli.ProcessOptions(
                 input_data=source.encode(c.Cli.ENCODING_DEFAULT),
             ),
             timeout=process_timeout_seconds,

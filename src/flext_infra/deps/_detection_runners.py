@@ -226,7 +226,7 @@ class FlextInfraDependencyDetectionRunnersMixin:
             [str(pip), c.Infra.VERB_CHECK],
             cwd=repository_root,
             timeout=c.Infra.TIMEOUT_SHORT,
-            options=u.Cli.ProcessOptions(env=env),
+            options=m.Cli.ProcessOptions(env=env),
         )
         if result.failure:
             return r[t.Pair[t.StrSequence, int]].from_failure(result)
