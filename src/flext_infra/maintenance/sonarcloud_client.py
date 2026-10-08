@@ -21,6 +21,26 @@ class FlextInfraSonarcloudClient[TResult](s[TResult]):
     """Derive one project identity and authenticate without persisting secrets."""
 
     @staticmethod
+    def optional_token() -> p.Result[t.SecretStr]:
+        """Return ``SONAR_TOKEN``; the empty secret is the typed absence.
+
+        The operator ruling (run-if-available-else-skip) makes a missing
+        credential a declared skip, never a failure; the railway result bans
+        ``None`` success payloads, so absence is the empty ``SecretStr``.
+        A present-but-malformed token is still a failure — a mistyped
+        credential is not an absence.
+
+        Returns:
+            The resulting ``p.Result[t.SecretStr]``.
+        """
+        if settings.Infra.sonar_token is None:
+            return r[t.SecretStr].ok(t.SecretStr(""))
+        validated = FlextInfraSonarcloudClient.required_token()
+        if validated.failure:
+            return r[t.SecretStr].from_failure(validated)
+        return r[t.SecretStr].ok(validated.value)
+
+    @staticmethod
     def required_token() -> p.Result[t.SecretStr]:
         """Return ``SONAR_TOKEN`` exactly as the process environment holds it."""
         token = settings.Infra.sonar_token
