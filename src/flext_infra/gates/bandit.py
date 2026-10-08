@@ -104,9 +104,7 @@ class FlextInfraBanditGate(FlextInfraGate):
         owned = frozenset(path for _, files in scopes for path in files)
         unowned = self._unowned_files(project_dir, targets, owned)
         executions = (
-            (
-                super()._execute_check_command(project_dir, ctx, unowned, started),
-            )
+            (super()._execute_check_command(project_dir, ctx, unowned, started),)
             if unowned
             else ()
         ) + tuple(

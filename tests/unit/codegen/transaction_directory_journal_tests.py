@@ -15,12 +15,10 @@ from flext_tests import tm
 from flext_infra import m, p, r
 from flext_infra.codegen import (
     FlextInfraMiseArtifactsJournal,
+    FlextInfraMiseArtifactsVerification,
     codegen_transaction as transaction,
 )
 from flext_infra.codegen._mise_artifacts_state import FlextInfraMiseArtifactsState
-from flext_infra.codegen._mise_artifacts_verification import (
-    FlextInfraMiseArtifactsVerification,
-)
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
 from tests import t, u
@@ -30,6 +28,32 @@ class TestsFlextInfraTransactionDirectoryJournal:
     """Exercise creation and cleanup against real physical filesystem state."""
 
     _TRANSACTION_ID = "a" * 32
+
+    @staticmethod
+    def test_live_artifact_verification_preserves_native_read_failure(
+        tmp_path: Path,
+    ) -> None:
+        """A configuration replaced by a directory retains its reader failure."""
+        root = u.Tests.git_repository(tmp_path)
+        u.Tests.copy_tracked_mise_seeds(root)
+        owner = FlextInfraCodegenMiseArtifacts(repository_root=root)
+        planner = FlextInfraMiseWorkspacePlanner(owner)
+        layout = tm.ok(planner.layout_from_selectors(root, (".",)))
+        plan = tm.ok(planner.snapshot(layout))
+        config_path = layout.projects[0].config
+        preserved = tmp_path / "preserved-mise-config"
+        config_path.rename(preserved)
+        config_path.mkdir()
+        baseline = u.Cli.atomic_read_binary_file_state(
+            config_path,
+            required=False,
+        )
+
+        observed = FlextInfraMiseArtifactsVerification.live(owner, plan)
+
+        tm.that(tm.fail(observed), eq=tm.fail(baseline))
+        tm.that(config_path.is_dir(), eq=True)
+        tm.that(preserved.read_bytes(), eq=plan.projects[0].config.before.content)
 
     @staticmethod
     @pytest.mark.parametrize("pending", [False, True])
