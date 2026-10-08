@@ -87,12 +87,14 @@ class FlextInfraDocCollector:
                 scope_root,
                 roots,
                 analysis,
-                tuple(
-                    path
-                    for path in bundle.required_directories
-                    if path not in roots.values()
+                m.Infra.CodegenPhasePublicationPolicy(
+                    directories=tuple(
+                        path
+                        for path in bundle.required_directories
+                        if path not in roots.values()
+                    ),
+                    validator=validate,
                 ),
-                validate,
             )
             if published.failure:
                 return r[bool].from_failure(published)

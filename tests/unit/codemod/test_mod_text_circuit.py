@@ -483,7 +483,7 @@ class TestsFlextInfraModTextGateEngine:
             for state in states
         )
         analysis = m.Infra.CodegenPhaseAnalysis(
-            phase="mod-text",
+            phase=c.Infra.CodegenStagedFilePhase.MOD_TEXT,
             files=plans,
             inputs=states,
         )

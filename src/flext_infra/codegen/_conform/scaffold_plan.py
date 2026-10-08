@@ -479,10 +479,12 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
             integration=workspace.integration,
         )
         return u.Cli.yaml_roundtrip_dump_text(
-            manifest.model_dump(
-                mode="json",
-                exclude_none=True,
-                exclude_computed_fields=True,
+            u.Cli.yaml_deep_to_commented(
+                manifest.model_dump(
+                    mode="json",
+                    exclude_none=True,
+                    exclude_computed_fields=True,
+                ),
             ),
         )
 

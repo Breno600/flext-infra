@@ -12,10 +12,9 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m, t
 from flext_infra.codegen import FlextInfraCodegenConform
-from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-from tests import u
+from flext_infra.workspace import FlextInfraWorkspaceDetector
+from tests import c, m, t, u
 
 
 class TestsFlextInfraRepositoryLocalTopology:

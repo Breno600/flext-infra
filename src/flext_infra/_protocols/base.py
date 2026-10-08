@@ -230,8 +230,7 @@ class FlextInfraProtocolsBase(Protocol):
             scope_root: Path,
             roots: t.MappingKV[str, Path],
             analysis: m.Infra.CodegenPhaseAnalysis,
-            directories: t.VariadicTuple[Path],
-            validator: Callable[[], p.Result[bool]],
+            policy: m.Infra.CodegenPhasePublicationPolicy,
         ) -> p.Result[t.VariadicTuple[Path]]:
             """Publish one recoverable multi-root phase and verify before commit."""
             ...

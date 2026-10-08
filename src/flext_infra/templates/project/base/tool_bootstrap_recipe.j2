@@ -27,7 +27,7 @@ mise -C "{{ project_root }}" install --yes{% for tool in install_tools %} "{{ to
 		exit 2; \
 	fi; \
 	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
-		mise -C "$(PROJECT_ROOT)" lock --bump; \
+		mise -C "$(PROJECT_ROOT)" lock --upgrade --bump; \
 	fi; \
 	{{ mise_install_command(project_root, install_tools) }}; \
 	mise_pin="$$( {{ mise_lock_pin_reader(project_root, mise_selector) }} )"; \

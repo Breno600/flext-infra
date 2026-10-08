@@ -12,12 +12,16 @@ import tempfile
 from collections.abc import Iterator
 from contextlib import ExitStack
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from flext_tests import tm
 
 from flext_infra import config, infra, p
 from tests import c, t, u
+
+if TYPE_CHECKING:
+    from flext_cli._utilities import FlextCliUtilitiesCli
 
 # NOTE(flext-p68a.9.4, agent codex): the installed flext-tests pytest11 plugin is
 # the only fixture owner; conftest must not re-export or shadow its fixtures.
@@ -172,22 +176,22 @@ def infra_test_workspace(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def infra_subprocess() -> u.Cli:
+def infra_subprocess() -> p.Cli.CommandRunner:
     """Provide the public CLI utility facade for subprocess tests.
 
     Returns:
-        The resulting ``u.Cli``.
+        The public command runner implemented by ``u.Cli``.
 
     """
     return u.Cli()
 
 
 @pytest.fixture
-def infra_toml() -> u.Cli:
+def infra_toml() -> FlextCliUtilitiesCli:
     """Provide the public CLI utility facade for TOML tests.
 
     Returns:
-        The resulting ``u.Cli``.
+        The declaring CLI utility class exposed through ``u.Cli``.
 
     """
     return u.Cli()
@@ -250,7 +254,7 @@ def infra_selection() -> u.Infra:
 
 @pytest.fixture
 def infra_safe_command_output(
-    infra_subprocess: u.Cli,
+    infra_subprocess: p.Cli.CommandRunner,
     infra_test_workspace: Path,
 ) -> str:
     """Capture successful public command output inside the test workspace.

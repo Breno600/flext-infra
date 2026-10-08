@@ -11,8 +11,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra import m, t, u
+from flext_infra import m, r, t, u
 from flext_infra.codegen._codegen_transaction_generation import (
     FlextInfraCodegenTransactionGeneration,
 )
@@ -43,6 +42,8 @@ class FlextInfraCodegenTransaction(
         self,
         roots: t.MappingKV[str, Path],
         operation: Callable[[Path], p.Result[T]],
+        *,
+        prepare: bool = True,
     ) -> p.Result[T]:
         """Hold Git and shared destination leases before planning or recovery.
 
@@ -63,36 +64,71 @@ class FlextInfraCodegenTransaction(
         with u.Infra.codegen_transaction_lease(
             self._planner.journal_path(identity.value),
         ):
-            participants = {
-                item.root: item for item in proposed.value.file_participants
-            }
-            observed = state.journal_state(proposed.value)
-            if observed.failure:
-                return r[T].from_failure(observed)
-            snapshot = state.journal_snapshot(observed.value)
-            if snapshot is not None and snapshot.content is not None:
-                loaded = journal_io.read(proposed.value)
-                if loaded.failure:
-                    return r[T].from_failure(loaded)
-                for participant in loaded.value[0].file_participants:
-                    current = participants.get(participant.root)
-                    if current is not None and (current.device, current.inode) != (
-                        participant.device,
-                        participant.inode,
-                    ):
-                        return r[T].fail(
-                            "file capability identity changed before recovery",
-                        )
-                    participants[participant.root] = participant
+            participants = self._file_recovery_participants(
+                proposed.value,
+                prepare=prepare,
+            )
+            if participants.failure:
+                return r[T].from_failure(participants)
             with self._lease_file_participants(
-                tuple(participants.values()),
+                participants.value,
                 held_roots=frozenset({identity.value.repo_root.resolve()}),
             ):
+                if not prepare:
+                    residue = state.transaction_residue(proposed.value)
+                    if residue:
+                        return r[T].fail(
+                            "unregistered generation staging blocks readiness: "
+                            f"{residue[0]}",
+                        )
+                    u.Cli.info(
+                        "stage=file-transaction-readiness "
+                        "journal=absent residue=0 leased=true",
+                    )
                 return self._run_locked_operation(
                     identity.value,
-                    prepare=True,
+                    prepare=prepare,
                     operation=operation,
                 )
+
+    @staticmethod
+    def _file_recovery_participants(
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
+        *,
+        prepare: bool,
+    ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFileParticipant]]:
+        """Authenticate current and recorded participants under the journal lease.
+
+        Returns:
+            The ordered participants whose destination leases must be acquired.
+
+        """
+        result_type = r[t.VariadicTuple[m.Infra.CodegenFileParticipant]]
+        participants = {item.root: item for item in layout.file_participants}
+        observed = state.journal_state(layout)
+        if observed.failure:
+            return result_type.from_failure(observed)
+        snapshot = state.journal_snapshot(observed.value)
+        if snapshot is not None and snapshot.content is not None:
+            if not prepare:
+                return result_type.fail(
+                    "pending file generation journal blocks read-only readiness; "
+                    "authenticated apply recovery is required",
+                )
+            loaded = journal_io.read(layout)
+            if loaded.failure:
+                return result_type.from_failure(loaded)
+            for participant in loaded.value[0].file_participants:
+                current = participants.get(participant.root)
+                if current is not None and (current.device, current.inode) != (
+                    participant.device,
+                    participant.inode,
+                ):
+                    return result_type.fail(
+                        "file capability identity changed before recovery",
+                    )
+                participants[participant.root] = participant
+        return result_type.ok(tuple(participants.values()))
 
     def begin_files_locked(
         self,
@@ -254,8 +290,16 @@ class FlextInfraCodegenTransaction(
         scope_root: Path,
         roots: t.MappingKV[str, Path],
         analysis: m.Infra.CodegenPhaseAnalysis,
-        directories: t.VariadicTuple[Path],
-        validator: Callable[[], p.Result[bool]],
+        policy: m.Infra.CodegenPhasePublicationPolicy,
+        *,
+        staged_validator: Callable[
+            [
+                m.Infra.CodegenTransactionSession,
+                t.VariadicTuple[m.Infra.CodegenStagedFile],
+            ],
+            p.Result[m.Infra.CodegenTransactionSession],
+        ]
+        | None = None,
     ) -> p.Result[t.VariadicTuple[Path]]:
         """Compose file publication through the same durable phase lifecycle.
 
@@ -270,7 +314,7 @@ class FlextInfraCodegenTransaction(
         prepared = self.append_directories_locked(
             started.value,
             analysis.phase,
-            directories,
+            policy.directories,
         )
         if prepared.failure:
             return result_type.from_failure(prepared)
@@ -278,10 +322,11 @@ class FlextInfraCodegenTransaction(
             prepared.value,
             analysis.phase,
             analysis.files,
+            staged_validator=staged_validator,
         )
         if published.failure:
             return result_type.from_failure(published)
-        return self.commit_locked(published.value, validator)
+        return self.commit_locked(published.value, policy.validator)
 
     def validate(
         self,

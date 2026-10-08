@@ -115,7 +115,10 @@ class FlextInfraModelsCodegenToolchain:
 
         @m.model_validator(mode="after")
         def _validate_participants(self) -> Self:
-            participants = (*self.projects, *self.file_participants)
+            participants: t.VariadicTuple[
+                FlextInfraModelsCodegenToolchain.MiseToolchainProjectLayout
+                | FlextInfraModelsCodegenToolchain.CodegenFileParticipant
+            ] = (*self.projects, *self.file_participants)
             if not participants:
                 msg = "generation layout requires an explicit participant"
                 raise ValueError(msg)

@@ -591,9 +591,6 @@ class FlextInfraPytestRunnerExecution(
         Returns:
             The resulting ``p.Result[int]``.
 
-        Raises:
-            RuntimeError: If testmon database changed after the checkpoint receipt.
-            ValueError: If testmon publication path cannot contain output delimiters.
         """
         execution_mode = (
             c.Infra.PytestExecutionMode.FULL
@@ -635,6 +632,17 @@ class FlextInfraPytestRunnerExecution(
                 execution_mode=execution_mode,
             )
         # Only the parent publishes, after SQLite closure and lease release.
+        self._publish_cache_output()
+        return result
+
+    def _publish_cache_output(self) -> None:
+        """Publish the checkpoint produced by the completed leased operation.
+
+        Raises:
+            RuntimeError: If the database changed after the checkpoint receipt.
+            ValueError: If the database path contains output delimiters.
+
+        """
         publication = self._cache_publication
         output = self._optional_environment_path("GITHUB_OUTPUT")
         if publication is not None and output is not None:
@@ -653,7 +661,6 @@ class FlextInfraPytestRunnerExecution(
                     f"testmon_digest={publication.digest}\n"
                     f"testmon_saveable={str(publication.saveable).lower()}\n",
                 )
-        return result
 
     def _execute_testmon_leased(
         self,

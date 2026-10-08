@@ -37,6 +37,14 @@ class FlextInfraConfigModelsBeads:
             t.NonEmptyStr,
             m.Field(description="Repository-owned issue prefix"),
         ]
+        ownership_command_prefix: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(description="Declared public wrapper for ownership reads"),
+        ] = ()
+        ownership_command_cwd: Annotated[
+            Path | None,
+            m.Field(description="Declared city/rig scope of ownership reads"),
+        ] = None
         custom_issue_types: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(

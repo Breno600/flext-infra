@@ -40,7 +40,7 @@ class FlextInfraMiseArtifactsVerificationTopology:
             return identifiers
         by_selector = cls._verified_recorded_identities(layout, journal)
         if by_selector.failure:
-            return by_selector
+            return r[bool].from_failure(by_selector)
         directory_targets = cls._resolved_directory_targets(layout, journal)
         if directory_targets.failure:
             return r[bool].from_failure(directory_targets)
@@ -115,36 +115,55 @@ class FlextInfraMiseArtifactsVerificationTopology:
         cls,
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         journal: m.Infra.CodegenTransactionJournal,
-    ) -> p.Result[t.MappingKV[str, m.Infra.MiseToolchainProjectLayout]]:
+    ) -> p.Result[
+        t.MappingKV[
+            str,
+            m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
+        ]
+    ]:
         """Prove every recorded project and participant kept its physical identity.
 
         Returns:
             The resulting ``p.Result[t.MappingKV[str,
-                m.Infra.MiseToolchainProjectLayout]]`` keyed by selector.
+                m.Infra.MiseToolchainProjectLayout |
+                m.Infra.CodegenFileParticipant]]`` keyed by selector.
 
         """
-        by_selector = {
+        result_type = r[
+            t.MappingKV[
+                str,
+                m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
+            ]
+        ]
+        by_selector: t.MappingKV[
+            str,
+            m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
+        ] = {
             project.selector: project
             for project in files.transaction_participants(layout)
         }
-        for recorded in (*journal.projects, *journal.file_participants):
+        recorded_participants: t.VariadicTuple[
+            m.Infra.CodegenJournalProject | m.Infra.CodegenFileParticipant
+        ] = (*journal.projects, *journal.file_participants)
+        for recorded in recorded_participants:
             project = by_selector[recorded.selector]
             identity = files.physical_directory_identity(project.root)
             if identity.failure:
-                return r[
-                    t.MappingKV[str, m.Infra.MiseToolchainProjectLayout]
-                ].from_failure(identity)
+                return result_type.from_failure(identity)
             if identity.value != (recorded.device, recorded.inode):
-                return r[t.MappingKV[str, m.Infra.MiseToolchainProjectLayout]].fail(
+                return result_type.fail(
                     f"generation project identity changed: {recorded.selector}",
                 )
-        return r[t.MappingKV[str, m.Infra.MiseToolchainProjectLayout]].ok(by_selector)
+        return result_type.ok(by_selector)
 
     @classmethod
     def _verified_directory_bindings(
         cls,
         journal: m.Infra.CodegenTransactionJournal,
-        by_selector: t.MappingKV[str, m.Infra.MiseToolchainProjectLayout],
+        by_selector: t.MappingKV[
+            str,
+            m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
+        ],
         directory_targets: t.MappingKV[Path, m.Infra.CodegenJournalDirectory],
     ) -> p.Result[bool]:
         """Bind every journaled directory to its project and parent identity.
@@ -166,7 +185,10 @@ class FlextInfraMiseArtifactsVerificationTopology:
     @classmethod
     def _verified_directory_binding(
         cls,
-        by_selector: t.MappingKV[str, m.Infra.MiseToolchainProjectLayout],
+        by_selector: t.MappingKV[
+            str,
+            m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
+        ],
         directory_targets: t.MappingKV[Path, m.Infra.CodegenJournalDirectory],
         directory: m.Infra.CodegenJournalDirectory,
     ) -> p.Result[bool]:
@@ -205,7 +227,10 @@ class FlextInfraMiseArtifactsVerificationTopology:
             if (
                 directory.phase != "transaction"
                 or transaction_root is None
-                or not transaction_root.is_relative_to(resolved_target)
+                or not (
+                    transaction_root.is_relative_to(resolved_target)
+                    or resolved_target.is_relative_to(transaction_root)
+                )
             ):
                 return r[bool].fail(
                     (f"temporary directory escapes transaction root: {directory.path}"),
@@ -224,7 +249,10 @@ class FlextInfraMiseArtifactsVerificationTopology:
             The resulting ``p.Result[bool]``.
 
         """
-        if directory.created.path != resolved_target:
+        created = directory.created
+        if created is None:
+            return r[bool].fail(f"directory has no created identity: {directory.path}")
+        if created.path != resolved_target:
             return r[bool].fail(
                 f"generation created directory path differs: {directory.path}",
             )
@@ -240,8 +268,7 @@ class FlextInfraMiseArtifactsVerificationTopology:
         )
         if (
             expected_parent is None
-            or (directory.created.parent_device, directory.created.parent_inode)
-            != expected_parent
+            or (created.parent_device, created.parent_inode) != expected_parent
         ):
             return r[bool].fail(
                 (f"generation directory parent binding differs: {directory.path}"),
@@ -253,7 +280,10 @@ class FlextInfraMiseArtifactsVerificationTopology:
         cls,
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         journal: m.Infra.CodegenTransactionJournal,
-        by_selector: t.MappingKV[str, m.Infra.MiseToolchainProjectLayout],
+        by_selector: t.MappingKV[
+            str,
+            m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
+        ],
     ) -> p.Result[bool]:
         """Bind every journal entry and its staging paths to the transaction root.
 

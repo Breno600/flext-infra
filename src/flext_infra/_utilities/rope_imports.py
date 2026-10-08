@@ -12,6 +12,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_cli import u
+from rope.base import exceptions
 
 from flext_infra import c, m, p, r, t
 from flext_infra._utilities import (
@@ -137,7 +138,10 @@ class FlextInfraUtilitiesRopeImports:
                 in_hierarchy=in_hierarchy,
             )
         except (
-            *FlextInfraUtilitiesRopeRuntime.rope_runtime_errors(),
+            exceptions.RefactoringError,
+            exceptions.ResourceNotFoundError,
+            exceptions.ModuleNotFoundError,
+            AttributeError,
             TypeError,
             RecursionError,
         ) as exc:
@@ -243,8 +247,12 @@ class FlextInfraUtilitiesRopeImports:
             organizer = FlextInfraUtilitiesRopeRuntime.import_organizer(rope_project)
             changes = organizer.organize_imports(resource)
         except (
-            *FlextInfraUtilitiesRopeRuntime.rope_syntax_errors(),
-            *FlextInfraUtilitiesRopeRuntime.rope_runtime_errors(),
+            SyntaxError,
+            exceptions.ModuleSyntaxError,
+            exceptions.RefactoringError,
+            exceptions.ResourceNotFoundError,
+            exceptions.ModuleNotFoundError,
+            AttributeError,
             TypeError,
         ) as exc:
             return r[bool].fail(f"rope organize_imports raised: {exc!s}", exception=exc)

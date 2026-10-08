@@ -107,6 +107,9 @@ class FlextInfraPytestProfile:
             msg = f"profiled run published more than one run context: {owned}"
             raise RuntimeError(msg)
         bind(owned)
+        if not isinstance(outcome, int):
+            msg = f"profiled runner returned a non-integer exit status: {outcome!r}"
+            raise TypeError(msg)
         return outcome
 
     def _finish(self, profile: cProfile.Profile) -> None:

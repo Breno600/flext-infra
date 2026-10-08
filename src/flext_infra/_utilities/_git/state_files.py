@@ -13,10 +13,10 @@ from pathlib import Path
 from flext_cli import u
 
 from flext_infra import m, t
-from flext_infra._utilities import (
+from flext_infra._utilities._git.state_publication import (
     FlextInfraUtilitiesGitStatePublicationMixin,
-    FlextInfraUtilitiesGitWorktreeIO,
 )
+from flext_infra._utilities._git.worktree_io import FlextInfraUtilitiesGitWorktreeIO
 
 
 class FlextInfraUtilitiesGitStateFilesMixin(
@@ -37,6 +37,7 @@ class FlextInfraUtilitiesGitStateFilesMixin(
 
         Raises:
             ValueError: If cat-file failed for.
+            TypeError: If cat-file returned a non-binary payload.
 
         """
         proc = cls._repo(root).git.cat_file("blob", oid, as_process=True)
@@ -44,6 +45,9 @@ class FlextInfraUtilitiesGitStateFilesMixin(
         if proc.returncode != 0:
             msg = f"cat-file failed for {oid}: {stderr!r}"
             raise ValueError(msg)
+        if not isinstance(payload, bytes):
+            msg = f"cat-file returned a non-binary payload for {oid}"
+            raise TypeError(msg)
         return payload
 
     @staticmethod
@@ -67,9 +71,16 @@ class FlextInfraUtilitiesGitStateFilesMixin(
         Returns:
             The resulting ``str``.
 
+        Raises:
+            TypeError: If hash-object returned a non-text object identifier.
+
         """
         with FlextInfraUtilitiesGitWorktreeIO.git_stdin(content) as stream:
-            return cls._repo(root).git.hash_object("--stdin", istream=stream)
+            oid = cls._repo(root).git.hash_object("--stdin", istream=stream)
+        if not isinstance(oid, str):
+            msg = "hash-object returned a non-text object identifier"
+            raise TypeError(msg)
+        return oid
 
     @classmethod
     def _state_require_payload(

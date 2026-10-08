@@ -34,6 +34,7 @@ class TestsFlextInfraCodegenArtifactSsot:
     @staticmethod
     def test_artifact_names_are_unique(codegen: m.Infra.CodegenConfigSpec) -> None:
         """Reject ambiguous projection keys at the typed owner."""
+        codegen = config.Infra.codegen
         names = tuple(artifact.name for artifact in codegen.artifacts)
         tm.that(bool(names), eq=True)
         tm.that(len(names), eq=len(set(names)))
@@ -44,6 +45,7 @@ class TestsFlextInfraCodegenArtifactSsot:
         codegen: m.Infra.CodegenConfigSpec,
     ) -> None:
         """Derive every expected mapping from the same typed artifact records."""
+        codegen = config.Infra.codegen
         expected_files = {
             f"**/{artifact.name}": True
             for artifact in codegen.artifacts
@@ -63,6 +65,7 @@ class TestsFlextInfraCodegenArtifactSsot:
         codegen: m.Infra.CodegenConfigSpec,
     ) -> None:
         """Derive ignored source names from their owner flags."""
+        codegen = config.Infra.codegen
         expected = tuple(
             artifact.name
             for artifact in codegen.artifacts
@@ -76,6 +79,7 @@ class TestsFlextInfraCodegenArtifactSsot:
         codegen: m.Infra.CodegenConfigSpec,
     ) -> None:
         """Preserve configured order while rendering directory suffixes."""
+        codegen = config.Infra.codegen
         expected = tuple(
             f"{artifact.name}/" if artifact.is_dir else artifact.name
             for artifact in codegen.artifacts
@@ -141,6 +145,7 @@ class TestsFlextInfraCodegenArtifactSsot:
         codegen: m.Infra.CodegenConfigSpec,
     ) -> None:
         """Require every derived pattern to be governed or appended."""
+        codegen = config.Infra.codegen
         emitted = {
             pattern
             for section in codegen.gitignore_sections
@@ -168,6 +173,7 @@ class TestsFlextInfraCodegenArtifactSsot:
         profile: c.Infra.MakeProfile,
     ) -> None:
         """Track portable governance and exclude machine-owned provider settings."""
+        codegen = config.Infra.codegen
         rendered = tm.ok(
             FlextInfraCodegenConform.render_project_gitignore(
                 codegen,
@@ -212,6 +218,7 @@ class TestsFlextInfraCodegenArtifactSsot:
         codegen: m.Infra.CodegenConfigSpec,
     ) -> None:
         """Cover repository profiles through one generic template entry."""
+        codegen = config.Infra.codegen
         entries = tuple(
             entry
             for entry in codegen.templates.entries
@@ -229,6 +236,7 @@ class TestsFlextInfraCodegenArtifactSsot:
         codegen: m.Infra.CodegenConfigSpec,
     ) -> None:
         """Hook stages share validation but never repeat mutating steps."""
+        codegen = config.Infra.codegen
         workflow = codegen.make.workflow
         pre_commit = tuple(step for step in workflow if "pre_commit" in step.contexts)
         pre_push = tuple(step for step in workflow if "pre_push" in step.contexts)
@@ -268,6 +276,7 @@ class TestsFlextInfraCodegenArtifactSsot:
         codegen: m.Infra.CodegenConfigSpec,
     ) -> None:
         """Validate the public renderer output instead of private implementation."""
+        codegen = config.Infra.codegen
         project = u.Tests.mk_project(
             tmp_path,
             "artifact-ssot",

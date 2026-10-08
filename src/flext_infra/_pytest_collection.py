@@ -332,7 +332,8 @@ class FlextInfraPytestCollection:
         def pytest_sessionstart(self, session: pytest.Session) -> None:
             """Bind the controller session that owns the stop decision."""
             self.session = session
-            self.controller = session if isinstance(session, DSession) else None
+            controller = session.config.pluginmanager.getplugin("dsession")
+            self.controller = controller if isinstance(controller, DSession) else None
 
         def pytest_runtest_logreport(self, report: pytest.TestReport) -> None:
             """Request the stop once a completed item crosses the instant.

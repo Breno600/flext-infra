@@ -49,6 +49,7 @@ class TestsFlextInfraModRuleFixtureSnapshots:
         catalog = cls._catalog(root)
         for directory in (root / "src", catalog / "rules", catalog / "tests"):
             tm.ok(u.Cli.ensure_dir(directory))
+        u.Tests.copy_tracked_mise_seeds(root)
         tm.ok(
             u.Cli.atomic_write_text_file(
                 root / c.Infra.CODEMOD_CONFIG_RELPATH,

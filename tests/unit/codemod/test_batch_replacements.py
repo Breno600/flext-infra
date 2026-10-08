@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m
+from flext_infra import c, m, t
 from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
 from tests import u
@@ -30,7 +30,7 @@ class TestsFlextInfraBatchReplacements:
         path.write_bytes(content)
         state = tm.ok(u.Cli.atomic_read_binary_file_state(path, required=True))
         start = content.index(b"before")
-        offsets = {"start": start, "end": start + len(b"before")}
+        offsets: t.JsonDict = {"start": start, "end": start + len(b"before")}
         finding = m.Infra.ModScanFinding(
             rule_file=str(path.parent / "rule.yaml"),
             rule_id="fixture-rewrite",
@@ -170,7 +170,7 @@ class TestsFlextInfraBatchReplacements:
         state = tm.ok(u.Cli.atomic_read_binary_file_state(path, required=True))
         statement = b'__all__ = ["X"]'
         start = original.index(statement)
-        offsets = {"start": start, "end": start + len(statement)}
+        offsets: t.JsonDict = {"start": start, "end": start + len(statement)}
         finding = m.Infra.ModScanFinding(
             rule_file=str(root / "rule.yaml"),
             rule_id="ban-test-suite-module-all",

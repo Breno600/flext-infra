@@ -9,14 +9,21 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_infra._utilities import (
+from flext_infra._utilities._git.attestation import (
     FlextInfraUtilitiesGitAttestationMixin,
+)
+from flext_infra._utilities._git.lane_hygiene import (
     FlextInfraUtilitiesGitLaneHygieneMixin,
+)
+from flext_infra._utilities._git.mutation_scope import (
     FlextInfraUtilitiesGitMutationScopeMixin,
-    FlextInfraUtilitiesGitScopeMixin,
+)
+from flext_infra._utilities._git.scope import FlextInfraUtilitiesGitScopeMixin
+from flext_infra._utilities._git.semantic_submodule import (
     FlextInfraUtilitiesGitSemanticSubmoduleMixin,
+)
+from flext_infra._utilities._git.state_capture import (
     FlextInfraUtilitiesGitStateCaptureMixin,
-    FlextInfraUtilitiesGitWorktreeFactsMixin,
 )
 
 
@@ -25,7 +32,6 @@ class FlextInfraUtilitiesGit(
     FlextInfraUtilitiesGitAttestationMixin,
     FlextInfraUtilitiesGitScopeMixin,
     FlextInfraUtilitiesGitSemanticSubmoduleMixin,
-    FlextInfraUtilitiesGitWorktreeFactsMixin,
     FlextInfraUtilitiesGitLaneHygieneMixin,
     FlextInfraUtilitiesGitStateCaptureMixin,
 ):
@@ -48,6 +54,11 @@ class FlextInfraUtilitiesGit(
     ``GitSemanticMixin``, is what keeps the two chains from colliding: they
     share ``worktree`` as a base, so joining them mid-chain re-derives the same
     methods through two paths and every shared member becomes an override.
+
+    Lane hygiene's mixin supplies native facts only; the Git service owns the
+    single verdict, fresh integration election and ownership interpretation.
+    Worktree facts are inherited through the semantic submodule chain rather
+    than repeated as a direct base of this facet.
     """
 
     @staticmethod

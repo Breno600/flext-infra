@@ -116,11 +116,15 @@ class TestsFlextInfraCiIntegrationBranchTriggers:
             approval[0]["run"],
             eq=f"{codegen.make.ci.variable}={codegen.make.ci.value} make pre-commit",
         )
-        # CI never executes a mutating or resolving verb; the workflow comments
-        # may still explain why (e.g. "CI never runs `make upg`"), so the
-        # contract is checked on the executed step commands.
-        run_commands = " ".join(str(step.get("run", "")) for step in steps)
-        tm.that(run_commands, lacks=["make gen", "make upg", "make dep"])
+        # Quoted diagnostics may recommend a local resolver without executing it.
+        for step in steps:
+            for line in str(step.get("run", "")).splitlines():
+                command = c.Infra.DOCS_MAKE_COMMAND_RE.match(line)
+                if command is not None:
+                    tm.that(
+                        command.group("verb") in {"gen", "upg", "dep"},
+                        eq=False,
+                    )
         tm.that(rendered, lacks=["Candidate cleanliness", "continue-on-error"])
         hook = tm.ok(
             u.Cli.template_render(

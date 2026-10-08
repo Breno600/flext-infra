@@ -54,7 +54,7 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
         projects_report: MutableMapping[str, MutableMapping[str, t.JsonValue]] = {}
         report_model = m.Infra.WorkspaceDependencyReport(
             workspace=str(root),
-            projects=projects_report,
+            projects={},
             pip_check=None,
             dependency_limits=None,
         )
@@ -72,6 +72,10 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
             )
             if project_result.failure:
                 return r[bool].from_failure(project_result)
+        report_model.projects = {
+            project_name: m.Infra.ProjectRuntimeReport.model_validate(project_payload)
+            for project_name, project_payload in projects_report.items()
+        }
         pip_check_result = self._run_pip_check(root, venv_bin, params, report_model)
         if pip_check_result.failure:
             return r[bool].from_failure(pip_check_result)

@@ -190,13 +190,21 @@ class FlextInfraUtilitiesDocsBuild:
             FlextInfraUtilitiesDocsBuild._module_callable(mkdocs_build, "build"),
         )
         site_dir.parent.mkdir(parents=True, exist_ok=True)
-        config_obj = FlextInfraUtilitiesDocsBuild._load_mkdocs_config(
-            load,
-            settings,
-            site_dir,
-        )
-        config_obj["strict"] = True
-        _ = build(config_obj, dirty=False)
+        logger = logging.getLogger("mkdocs")
+        diagnostics = logging.StreamHandler()
+        diagnostics.setLevel(logging.WARNING)
+        logger.addHandler(diagnostics)
+        try:
+            config_obj = FlextInfraUtilitiesDocsBuild._load_mkdocs_config(
+                load,
+                settings,
+                site_dir,
+            )
+            config_obj["strict"] = True
+            _ = build(config_obj, dirty=False)
+        finally:
+            logger.removeHandler(diagnostics)
+            diagnostics.close()
 
     @staticmethod
     def docs_serve_mkdocs(

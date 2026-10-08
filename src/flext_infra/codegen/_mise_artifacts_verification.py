@@ -117,15 +117,15 @@ class FlextInfraMiseArtifactsVerification(
         if ancestry.failure:
             return result.from_failure(ancestry)
         observed = current.value
-        if observed.directories or observed.anchor_ancestry != tuple(ancestry):
+        if observed.directories or observed.anchor_ancestry != ancestry.value:
             return result.fail(
                 f"generation source parent identity changed: {expected.path}",
             )
         return result.ok(
             expected.model_copy(
                 update={
-                    "parent_device": ancestry[-1][0],
-                    "parent_inode": ancestry[-1][1],
+                    "parent_device": ancestry.value[-1][0],
+                    "parent_inode": ancestry.value[-1][1],
                 },
             ),
         )
@@ -134,7 +134,7 @@ class FlextInfraMiseArtifactsVerification(
     def _verified_parent_ancestry(
         cls,
         journal: m.Infra.CodegenTransactionJournal,
-        witness: m.Cli.AtomicDirectoryState,
+        witness: m.Cli.AtomicDirectoryChainPlan,
     ) -> p.Result[t.VariadicTuple[t.Pair[int, int]]]:
         """Rebuild the parent ancestry chain from journal-created directories.
 
@@ -398,7 +398,7 @@ class FlextInfraMiseArtifactsVerification(
     def _artifact_snapshot(
         cls,
         plan: m.Infra.MiseToolchainWorkspacePlan,
-        replacements: MutableMapping[Path, t.Pair[bytes, int | None]],
+        replacements: t.MappingKV[Path, t.Pair[bytes, int | None]],
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
         states: list[m.Cli.AtomicFileState] = []
         for project in plan.projects:

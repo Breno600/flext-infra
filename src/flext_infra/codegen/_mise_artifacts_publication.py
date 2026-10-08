@@ -81,7 +81,7 @@ class FlextInfraMisePublication:
         if plan.desired_content is None:
             return result_type.ok(
                 m.Infra.CodegenStagedFile(
-                    phase=phase,
+                    phase=c.Infra.CodegenStagedFilePhase(phase),
                     project=plan.project,
                     before=before,
                     replacement=None,
@@ -109,7 +109,7 @@ class FlextInfraMisePublication:
             return result_type.from_failure(staged)
         return result_type.ok(
             m.Infra.CodegenStagedFile(
-                phase=phase,
+                phase=c.Infra.CodegenStagedFilePhase(phase),
                 project=plan.project,
                 before=before,
                 replacement=staged.value,

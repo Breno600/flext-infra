@@ -55,8 +55,9 @@ class TestsFlextInfraInfraMaintenanceMain:
     @staticmethod
     def _make_enforcer(workspace: Path) -> FlextInfraPythonVersionEnforcer:
         class _TestEnforcer(FlextInfraPythonVersionEnforcer):
+            @staticmethod
             @override
-            def _repository_root_from_file(self, file: str | Path) -> Path:
+            def _repository_root_from_file(file: str | Path) -> Path:
                 _ = file
                 return workspace
 

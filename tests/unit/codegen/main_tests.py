@@ -285,8 +285,10 @@ class TestsFlextInfraCodegenMain:
             infra_git_repo: Path,
         ) -> None:
             """Report a managed conflict without touching live bytes or journals."""
-            pyproject = TestsFlextInfraCodegenMain._seed_managed_conflict(
-                infra_git_repo,
+            pyproject = (
+                TestsFlextInfraCodegenMain.TestsMainEntryPoint._seed_managed_conflict(
+                    infra_git_repo,
+                )
             )
             before = pyproject.read_bytes()
             journal, transaction = TestsFlextInfraCodegenMain._mise_transaction_state(
@@ -306,7 +308,11 @@ class TestsFlextInfraCodegenMain:
         ) -> None:
             """Publish the conformed bytes through the transaction, then hold still."""
             root = infra_git_repo
-            pyproject = TestsFlextInfraCodegenMain._seed_managed_conflict(root)
+            pyproject = (
+                TestsFlextInfraCodegenMain.TestsMainEntryPoint._seed_managed_conflict(
+                    root,
+                )
+            )
             journal, transaction = TestsFlextInfraCodegenMain._mise_transaction_state(
                 root,
             )

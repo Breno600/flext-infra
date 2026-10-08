@@ -106,7 +106,9 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
                 exclude_dependencies=cls.routed_uv_exclude_dependencies(render_inputs),
                 environments=tuple(codegen.toolchain.uv_environments),
             ),
-            flext_line=flext_line.value,
+            options=u.Infra.PyprojectConformOptions(
+                flext_line=flext_line.value,
+            ),
         )
 
     @staticmethod

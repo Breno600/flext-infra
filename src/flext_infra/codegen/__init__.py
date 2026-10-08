@@ -56,6 +56,9 @@ if TYPE_CHECKING:
         FlextInfraCodegenConformDocsOwnership,
     )
     from flext_infra.codegen._conform.execute import FlextInfraCodegenConformExecute
+    from flext_infra.codegen._conform.execute_directed import (
+        FlextInfraCodegenConformExecuteDirected,
+    )
     from flext_infra.codegen._conform.execute_scaffold import (
         FlextInfraCodegenConformExecuteScaffold,
     )
@@ -160,6 +163,7 @@ if TYPE_CHECKING:
     from flext_infra.codegen.protocol_models import FlextInfraCodegenProtocolModels
     from flext_infra.codegen.py_typed import FlextInfraCodegenPyTyped
     from flext_infra.codegen.scaffolder import FlextInfraCodegenScaffolder
+    from flext_infra.codegen.staged_package import FlextInfraStagedPackage
     from flext_infra.codegen.version_file import FlextInfraCodegenVersionFile
 
 
@@ -172,6 +176,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenConformContextRender",
     "FlextInfraCodegenConformDocsOwnership",
     "FlextInfraCodegenConformExecute",
+    "FlextInfraCodegenConformExecuteDirected",
     "FlextInfraCodegenConformExecuteScaffold",
     "FlextInfraCodegenConformExistingPlan",
     "FlextInfraCodegenConformFilePlans",
@@ -237,6 +242,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraMiseRecovery",
     "FlextInfraMiseStaging",
     "FlextInfraMiseWorkspacePlanner",
+    "FlextInfraStagedPackage",
     "_conform",
 )
 
@@ -252,6 +258,7 @@ install_lazy_exports(
         "FlextInfraCodegenConformContextRender": "._conform.context_render",
         "FlextInfraCodegenConformDocsOwnership": "._conform.docs_ownership",
         "FlextInfraCodegenConformExecute": "._conform.execute",
+        "FlextInfraCodegenConformExecuteDirected": "._conform.execute_directed",
         "FlextInfraCodegenConformExecuteScaffold": "._conform.execute_scaffold",
         "FlextInfraCodegenConformExistingPlan": "._conform.existing_plan",
         "FlextInfraCodegenConformFilePlans": "._conform.file_plans",
@@ -335,6 +342,7 @@ install_lazy_exports(
         "FlextInfraMiseRecovery": "._mise_artifacts_recovery",
         "FlextInfraMiseStaging": "._mise_artifacts_staging",
         "FlextInfraMiseWorkspacePlanner": ".mise_artifacts_workspace",
+        "FlextInfraStagedPackage": ".staged_package",
         "_conform": "._conform",
     }),
     public_exports=__all__,

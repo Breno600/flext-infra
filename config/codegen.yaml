@@ -406,6 +406,11 @@ Infra:
     # Nothing here catalogs organizations, and nothing resolves a provider by
     # matching a Git origin against configured rows.
     branch_policy:
+      lane_remote: origin
+      lane_pr_limit: 1000
+      lane_governance_file: ~/agents/config/governance.json
+      lane_temporary_roots:
+        - /tmp
       # Pushes to these branches trigger the generated CI workflow. The renderer
       # adds the repository's own integration branch to this list; it never
       # hardcodes a fleet branch name.
@@ -691,6 +696,9 @@ Infra:
           description: Approve this project through locked setup, audit, check, and incremental tests with the enforced CI contract.
         - name: upg
           description: Resolve the newest declared releases, write the uv and mise locks, then prove the upgraded tree still converges; gates stay with make check.
+        - name: validate-lifecycle
+          description: Serially run setup, gen, upg, setup, gen, gen in the root and every governed member, publishing typed receipts and stopping at the first failure.
+          profiles: [workspace]
         # Workspace-only (topology owns applicability): a standalone Makefile
         # never declares it. Never merges; a rerun continues the same lanes.
         - name: propagate
