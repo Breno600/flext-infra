@@ -73,7 +73,7 @@ class TestsFlextInfraDepsExtraPathsSync:
     @pytest.mark.parametrize(
         "scenario",
         [
-            SyncScenario("project"),
+            SyncScenario("project", project_dirs=["proj"]),
             SyncScenario(
                 "project",
                 dry_run=True,
