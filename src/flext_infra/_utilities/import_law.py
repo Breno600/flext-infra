@@ -97,7 +97,7 @@ class FlextInfraUtilitiesImportLaw:
         return order.index(c.Infra.IMPORT_LAW_OTHER_LAYER)
 
     @staticmethod
-    def package_dir(project_root: Path, package: str) -> Path | None:
+    def import_package_dir(project_root: Path, package: str) -> Path | None:
         """Return the directory of one dotted package the project owns.
 
         Returns:
@@ -114,7 +114,7 @@ class FlextInfraUtilitiesImportLaw:
         return None
 
     @classmethod
-    def lazy_exports(cls, package_dir: Path, package: str) -> t.StrMapping:
+    def import_lazy_exports(cls, package_dir: Path, package: str) -> t.StrMapping:
         """Map each name one package ``__init__`` publishes to its module.
 
         Relative targets resolve against the package; a target naming another
