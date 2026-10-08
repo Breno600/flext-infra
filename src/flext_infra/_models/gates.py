@@ -90,6 +90,10 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
             t.StrSequence,
             m.Field(description="Extra arguments for Pyright"),
         ] = ()
+        selected_files: Annotated[
+            t.VariadicTuple[Path],
+            m.Field(description="Validated literal file selection; empty means project"),
+        ] = ()
 
     class MypyDiagnostic(m.ContractModel):
         """One complete record from Mypy's native JSON formatter."""

@@ -793,33 +793,11 @@ _builtin_test_file_all: _builtin_require_environment
     runner=pytest_test_file_runner(),
 ) }}
 
-# The fast per-file pre-gate (operator P0, val2026100417xx): `make file-gate
-# FILE=<repository-relative path>` gates exactly one file with the fast gates
-# (ruff lint, ruff format, pyrefly, pyright, ast-grep, typos) before the file
-# ever reaches the tree-wide `make mod`/`make check` pipeline. Ruff lint and
-# format are the hard gates; the type and spelling scanners report advisories.
-# Empty or non-relative FILE fails loud. This pre-gate never substitutes the
-# tree-wide verbs: code is accepted only after `make mod`, with fmt/fix/check/
-# mod/spells green (ADR-004 §3, ADR-018).
+# Literal-file selection and verdicts belong to the existing canonical checker.
+# Export the raw Make value instead of interpolating operator input into shell code.
+export FLEXT_FILE_GATE_FILE := $(value FILE)
 _builtin_file_gate_all: _builtin_require_environment
-	@set -eu; \
-	if [ -z "$(strip $(FILE))" ]; then printf 'ERROR: file-gate requires FILE=<repository-relative path>\n' >&2; exit 2; fi; \
-	case "$(FILE)" in /*|*..*) printf 'ERROR: FILE must stay a repository-relative path: %s\n' "$(FILE)" >&2; exit 2 ;; esac; \
-	if [ ! -f "$(PROJECT_ROOT)/$(FILE)" ]; then printf 'ERROR: FILE is not an existing repository file: %s\n' "$(FILE)" >&2; exit 2; fi; \
-	file="$(PROJECT_ROOT)/$(FILE)"; \
-	echo "file-gate: ruff check $(FILE)"; \
-	$(RUNTIME_PYTHON) -m ruff check "$$file"; \
-	echo "file-gate: ruff format --check $(FILE)"; \
-	$(RUNTIME_PYTHON) -m ruff format --check "$$file"; \
-	echo "file-gate: pyrefly $(FILE)"; \
-	$(RUNTIME_PYTHON) -m pyrefly check "$$file" || true; \
-	echo "file-gate: pyright $(FILE)"; \
-	$(RUNTIME_PYTHON) -m pyright "$$file" || true; \
-	echo "file-gate: ast-grep scan $(FILE)"; \
-	ast-grep scan "$$file" || true; \
-	echo "file-gate: typos $(FILE)"; \
-	typos "$$file" || true; \
-	echo "file-gate: OK (pre-gate only; tree-wide make mod/check remain the acceptance gates)"
+	@{{ check_run("lint format pyrefly mypy pyright codemod", ' --file "$$FLEXT_FILE_GATE_FILE"') }}
 
 _builtin_tests_all: _builtin_require_environment
 	+@$(SELF_MAKE) test
