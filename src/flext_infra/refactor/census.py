@@ -26,7 +26,6 @@ from flext_infra.refactor._census_collect import FlextInfraRefactorCensusCollect
 from flext_infra.refactor._census_collect_helpers import (
     FlextInfraRefactorCensusCollectHelpersMixin,
 )
-from flext_infra.workspace.rope import FlextInfraRopeWorkspace
 
 
 class FlextInfraRefactorCensus(
@@ -145,6 +144,7 @@ class FlextInfraRefactorCensus(
             The final report and the pre-apply report the impact map reads.
 
         """
+        from flext_infra.workspace.rope import FlextInfraRopeWorkspace
         started = time.monotonic()
         with FlextInfraRopeWorkspace.open_workspace(
             self.root,

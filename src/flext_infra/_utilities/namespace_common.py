@@ -9,7 +9,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_infra import c, t
-from flext_infra._utilities import FlextInfraUtilitiesRopeSource
 
 
 class FlextInfraUtilitiesRefactorNamespaceCommon:
@@ -51,6 +50,7 @@ class FlextInfraUtilitiesRefactorNamespaceCommon:
             The resulting ``t.StrSequence``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeSource
         if not imports:
             return list(lines)
         insert_idx = (

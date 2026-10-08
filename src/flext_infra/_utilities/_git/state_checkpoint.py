@@ -12,10 +12,7 @@ from git import GitCommandError
 
 from flext_core import r
 from flext_infra import c, m, p
-from flext_infra._utilities import (
-    FlextInfraUtilitiesGitStateTreesMixin,
-    FlextInfraUtilitiesGitWorktreeIO,
-)
+from flext_infra._utilities import FlextInfraUtilitiesGitStateTreesMixin
 
 
 class FlextInfraUtilitiesGitStateCheckpointMixin(FlextInfraUtilitiesGitStateTreesMixin):
@@ -44,6 +41,7 @@ class FlextInfraUtilitiesGitStateCheckpointMixin(FlextInfraUtilitiesGitStateTree
         checkpoint_ref: str,
     ) -> m.Infra.GitWorktreeStateCheckpoint:
 
+        from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
         cls._state_require_original(snapshot)
         repo = cls._repo(snapshot.repo_root)
         if not checkpoint_ref.startswith("refs/") or checkpoint_ref.startswith((

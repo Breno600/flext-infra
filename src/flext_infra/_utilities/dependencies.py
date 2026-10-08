@@ -6,10 +6,16 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_infra._utilities import (
+from flext_infra._utilities._dependencies_graph import (
     FlextInfraUtilitiesDependenciesGraphMixin,
+)
+from flext_infra._utilities._dependencies_inspection import (
     FlextInfraUtilitiesDependenciesInspectionMixin,
+)
+from flext_infra._utilities._dependencies_profiles import (
     FlextInfraUtilitiesDependenciesProfilesMixin,
+)
+from flext_infra._utilities._dependencies_versions import (
     FlextInfraUtilitiesDependenciesVersionsMixin,
 )
 

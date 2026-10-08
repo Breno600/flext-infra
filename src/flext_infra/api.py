@@ -9,33 +9,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import FlextInfraConfig, m, r, s, t, u
-from flext_infra.check import FlextInfraWorkspaceChecker
-from flext_infra.codegen import (
-    FlextInfraCodegenCensus,
-    FlextInfraCodegenConform,
-    FlextInfraCodegenFixer,
-    FlextInfraCodegenMiseArtifacts,
-    FlextInfraCodegenPipeline,
-    FlextInfraCodegenTransaction,
-)
-from flext_infra.codemod import (
-    FlextInfraAccessorRenamePhase,
-    FlextInfraApplyRenames,
-    FlextInfraCodemodBatchApply,
-    FlextInfraImportNormalizationPhase,
-    FlextInfraModTextGateEngine,
-    FlextInfraNamespaceRelocationPhase,
-)
-from flext_infra.docs import FlextInfraDocGenerator
-from flext_infra.gates import FlextInfraMarkdownFormatGate
-from flext_infra.services import FlextInfraCandidateBootstrapService
-from flext_infra.validate import FlextInfraNamespaceValidator
-from flext_infra.workspace import (
-    FlextInfraRopeWorkspace,
-    FlextInfraWorkspaceDetector,
-    FlextInfraWorkspaceEnvironmentMixin,
-)
+from flext_infra import m, r, s, t, u
+from flext_infra.workspace import FlextInfraWorkspaceEnvironmentMixin
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -61,6 +36,7 @@ class _FlextInfraConformWiringMixin:
             The resulting ``p.Infra.DocsArtifactPlanner``.
 
         """
+        from flext_infra.docs import FlextInfraDocGenerator
         return FlextInfraDocGenerator(
             repository_root=repository_root,
             projects=projects,
@@ -75,6 +51,7 @@ class _FlextInfraConformWiringMixin:
             The resulting ``p.Infra.MarkdownFormatGate``.
 
         """
+        from flext_infra.gates import FlextInfraMarkdownFormatGate
         return FlextInfraMarkdownFormatGate(repository_root)
 
     def codegen_conform_collaborators(self) -> m.Infra.CodegenConformPorts:
@@ -108,6 +85,9 @@ class FlextInfra(
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra.codegen import FlextInfraCodegenConform, FlextInfraCodegenMiseArtifacts, FlextInfraCodegenTransaction
+        from flext_infra.services import FlextInfraCandidateBootstrapService
+        from flext_infra.workspace import FlextInfraWorkspaceDetector
         identity = u.Infra.exact_worktree_root(
             request.repository_root.expanduser().absolute(),
         )
@@ -144,6 +124,7 @@ class FlextInfra(
         """
         # NOTE (multi-agent, flext-wkii.17.24): Rope reads its source policy
         # directly from config.Infra at the service boundary.
+        from flext_infra.workspace import FlextInfraRopeWorkspace
         resolved_root = (
             self.repository_root if repository_root is None else repository_root
         )
@@ -157,6 +138,7 @@ class FlextInfra(
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra.check import FlextInfraWorkspaceChecker
         return FlextInfraWorkspaceChecker(
             repository_root=request.repository_root,
         ).execute_payload(request)
@@ -169,6 +151,7 @@ class FlextInfra(
             The resulting ``p.Result[str]``.
 
         """
+        from flext_infra.codegen import FlextInfraCodegenCensus
         return FlextInfraCodegenCensus(
             repository_root=request.repository_root,
             apply_changes=request.apply,
@@ -185,6 +168,7 @@ class FlextInfra(
             The resulting ``p.Result[str]``.
 
         """
+        from flext_infra.codegen import FlextInfraCodegenFixer
         return FlextInfraCodegenFixer(
             repository_root=request.repository_root,
             apply_changes=request.apply,
@@ -202,6 +186,7 @@ class FlextInfra(
             The resulting ``p.Result[str]``.
 
         """
+        from flext_infra.codegen import FlextInfraCodegenPipeline
         return FlextInfraCodegenPipeline(
             repository_root=request.repository_root,
             apply_changes=request.apply,
@@ -222,6 +207,7 @@ class FlextInfra(
             The resulting ``p.Result[m.Infra.CodegenResult]``.
 
         """
+        from flext_infra.codegen import FlextInfraCodegenConform
         return FlextInfraCodegenConform.execute_request(
             request,
             initial_workspace,
@@ -288,6 +274,7 @@ class FlextInfra(
             The resulting ``p.Result[m.Infra.ApplyRenamesReport]``.
 
         """
+        from flext_infra.codemod import FlextInfraApplyRenames
         return FlextInfraApplyRenames().run(request)
 
     def mod(
@@ -301,6 +288,8 @@ class FlextInfra(
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
+        from flext_infra import FlextInfraConfig
+        from flext_infra.codemod import FlextInfraAccessorRenamePhase, FlextInfraApplyRenames, FlextInfraCodemodBatchApply, FlextInfraImportNormalizationPhase, FlextInfraNamespaceRelocationPhase
         root = u.Infra.resolve_repository_root_or_cwd(request.repository_root)
         config = FlextInfraConfig.fetch_global().Infra.refactor_csv_campaigns
         config_dir = FlextInfraConfig.ssot_config_dir()
@@ -361,6 +350,7 @@ class FlextInfra(
             The resulting ``p.Result[m.Infra.ValidationReport]``.
 
         """
+        from flext_infra.validate import FlextInfraNamespaceValidator
         return FlextInfraNamespaceValidator(
             repository_root=request.repository_root,
         ).build_report()
@@ -373,6 +363,7 @@ class FlextInfra(
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
+        from flext_infra.codemod import FlextInfraModTextGateEngine
         root = u.Infra.resolve_repository_root_or_cwd(request.repository_root)
         return FlextInfraModTextGateEngine.run(root, apply=request.apply)
 
@@ -386,6 +377,8 @@ class FlextInfra(
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
+        from flext_infra.codemod import FlextInfraModTextGateEngine
+        from flext_infra.workspace import FlextInfraWorkspaceDetector
         source_root = u.Infra.resolve_repository_root_or_cwd(request.repository_root)
         workspace = FlextInfraWorkspaceDetector.load_workspace_spec(source_root)
         if workspace.failure:
@@ -415,6 +408,7 @@ class FlextInfra(
             The resulting ``p.Result[m.Infra.WorkspaceProjectContext]``.
 
         """
+        from flext_infra.workspace import FlextInfraWorkspaceDetector
         resolved = cwd.expanduser().resolve()
         if not resolved.is_dir():
             return r[m.Infra.WorkspaceProjectContext].fail(

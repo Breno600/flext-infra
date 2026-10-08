@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m, t, u
-from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
@@ -289,6 +288,7 @@ class FlextInfraEnsurePyrightConfigPhase:
             The complete config-owned Pyright exclude list.
 
         """
+        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
         rules = self._tool_config.tools.pyright.path_rules
         workspace_excludes: t.StrSequence = ()
         if analysis_exclusions is None and project_root is not None:
@@ -364,6 +364,7 @@ class FlextInfraEnsurePyrightConfigPhase:
             The resulting ``t.StrSequence``.
 
         """
+        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
         generated_roots = (
             paths_manager.generated_python_roots if paths_manager is not None else ()
         )

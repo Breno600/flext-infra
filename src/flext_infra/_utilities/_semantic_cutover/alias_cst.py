@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, override
 import libcst as cst
 from libcst.metadata import MetadataWrapper, ParentNodeProvider, QualifiedNameProvider
 
-from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
 
 if TYPE_CHECKING:
     from flext_infra import m
@@ -35,6 +34,7 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
             updated_node: cst.Name,
         ) -> cst.Name:
 
+            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
             targets = {
                 target
                 for qualified_name in self.get_metadata(
@@ -68,6 +68,7 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
             updated_node: cst.Assign,
         ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
 
+            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
             if (
                 len(original_node.targets) == 1
                 and isinstance(original_node.targets[0].target, cst.Name)
@@ -90,6 +91,7 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
             updated_node: cst.AnnAssign,
         ) -> cst.BaseSmallStatement:
 
+            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
             return FlextInfraUtilitiesQualifiedNames.filter_exports(
                 updated_node,
                 self.plan.local_aliases,
@@ -102,6 +104,7 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
             updated_node: cst.ImportFrom,
         ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
 
+            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
             rewrites = self.plan.import_aliases.get(
                 FlextInfraUtilitiesQualifiedNames.dotted_name(original_node.module)
                 or "",
@@ -132,6 +135,7 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
             updated_node: cst.Attribute,
         ) -> cst.BaseExpression:
 
+            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
             owner = (
                 FlextInfraUtilitiesQualifiedNames.dotted_name(original_node.value) or ""
             )

@@ -9,7 +9,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_infra import c
-from flext_infra._config import config
 from flext_infra._utilities import FlextInfraUtilitiesGitScopeMixin
 
 if TYPE_CHECKING:
@@ -36,6 +35,7 @@ class FlextInfraUtilitiesIterationDirectory(FlextInfraUtilitiesGitScopeMixin):
             does not exist.
 
         """
+        from flext_infra._config import config
         resolved_directory = directory.resolve()
         if not resolved_directory.is_dir():
             return []

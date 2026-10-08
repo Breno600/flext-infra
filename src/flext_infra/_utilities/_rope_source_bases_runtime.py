@@ -14,12 +14,6 @@ from pathlib import Path
 from typing import ClassVar
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesRopeCore,
-    FlextInfraUtilitiesRopeRuntime,
-    FlextInfraUtilitiesRopeSourceBasesAliases,
-    FlextInfraUtilitiesRopeSourceBasesInventory,
-)
 
 
 class FlextInfraUtilitiesRopeSourceBasesRuntime:
@@ -52,6 +46,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 extra_module_aliases: Facade alias maps read outside the sources.
 
             """
+            from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
             self._project = project
             self._sources = sources
             self._roots = roots
@@ -118,6 +113,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
             bases declared as `from dcdoc import DcdocServiceBase` mean the
             project one).
             """
+            from flext_infra._utilities import FlextInfraUtilitiesRopeSourceBasesAliases
             for alias_module, captured in self._sources.items():
                 alias_path, alias_source = captured
                 for alias, absolute in (
@@ -184,6 +180,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 shadowing.
 
             """
+            from flext_infra._utilities import FlextInfraUtilitiesRopeSourceBasesInventory
             request = m.Infra.SourceBindingInventoryRequest(
                 project=self._project,
                 module=module,
@@ -204,6 +201,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 TypeError: If Rope resolves a required base to a non-class.
 
             """
+            from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
             function_identity = self._function_object_identity(value)
             if function_identity is not None:
                 return function_identity
@@ -234,6 +232,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 The constructed class identity, or None for other objects.
 
             """
+            from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
             if not isinstance(
                 value,
                 FlextInfraUtilitiesRopeRuntime.runtime_type(
@@ -390,6 +389,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                     relative import escapes the package.
 
             """
+            from flext_infra._utilities import FlextInfraUtilitiesRopeCore
             if imported.module_name is None:
                 if imported.resource is None:
                     message = "Import has no declared module location"
@@ -435,6 +435,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 The resolved Rope module object.
 
             """
+            from flext_infra._utilities import FlextInfraUtilitiesRopeCore
             name = self._provider_module_name(imported)
             module = self._project.get_module(name)
             resource = imported.resource or self._project.find_module(name)
@@ -465,6 +466,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                     as a class base, or cycles through provider reexports.
 
             """
+            from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
             if depth > c.Infra.ROPE_WALK_DEPTH_BUDGET:
                 message = (
                     f"Unresolved external base: {module.get_name()} at depth {depth}"
@@ -598,6 +600,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 ModuleNotFoundError: If the target has no virtual stdlib backing.
 
             """
+            from flext_infra._utilities import FlextInfraUtilitiesRopeCore, FlextInfraUtilitiesRopeRuntime
             try:
                 module = self._project.get_module(target)
             except (
@@ -790,6 +793,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 TypeError: If the external value is not a Rope builtin class.
 
             """
+            from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
             value = self._external[identity]
             if not isinstance(value, p.Infra.RopeBuiltinClass):
                 message = (
