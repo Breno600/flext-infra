@@ -125,6 +125,10 @@ candidate campaign adds exact paths only in its worktree lane and removes them b
 landing. An empty list
 fails loud when the verb runs, rather than claiming a completed bootstrap. After
 Makefile bootstrap, run `make setup` and `make gen` in that consumer's worktree.
+The `pyproject` bootstrap regenerates declared tool tables through the existing
+dependency conformance phases before Rope or uv reads the physical document. Project
+metadata, dependency groups, and unowned tables remain live inputs; multiline string
+contents never select a table. Normal generation and all gates still run afterward.
 `docs-config` renders only the declared docs policy template when a conflicted
 generated JSON file prevents ordinary generation from parsing it; afterward run
 `make gen` to verify the full projection. Generated targets are never edited

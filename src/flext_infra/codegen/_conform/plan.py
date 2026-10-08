@@ -405,7 +405,14 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                 return result_type.from_failure(workspace_result)
             workspace = workspace_result.value
         current_repository = workspace.repository
-        if self.initial_workspace is None:
+        if (
+            self.initial_workspace is None
+            and request.what
+            not in {
+                c.Infra.CodegenConformSurface.MAKEFILE,
+                c.Infra.CodegenConformSurface.PYPROJECT,
+            }
+        ):
             current_target_result = FlextInfraWorkspaceDetector.conform_target(
                 root,
                 workspace,

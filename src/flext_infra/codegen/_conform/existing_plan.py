@@ -40,6 +40,15 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
 
         """
         root = target.root
+        repository = target.repository
+        if contract.destinations == frozenset(c.Infra.ARTIFACT_NAMES):
+            return FlextInfraMiseColdStart.candidate_plans(root)
+        if contract.destinations == c.Infra.MAKEFILE_BOOTSTRAP_DESTINATIONS:
+            return self._plan_existing_bootstrap(target, workspace, codegen)
+        if contract.destinations == frozenset({c.PYPROJECT_FILENAME}):
+            return self._plan_existing_pyproject_bootstrap(root)
+        stage_started = time.monotonic()
+        u.Cli.info(f"  stage=pyproject repository={repository.name}")
         pyproject = root / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
@@ -267,6 +276,77 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 ),
             ),
         )
+        if tooling_context.failure:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
+                tooling_context,
+            )
+        u.Cli.info(
+            f"  stage=tooling-context repository={repository.name} "
+            f"elapsed={time.monotonic() - stage_started:.2f}s",
+        )
+        render_inputs = self.resolve_render_inputs(
+            target=target,
+            workspace=workspace,
+            codegen=codegen,
+            tooling_runtime=tooling_context.value,
+            managed_artifacts=managed_artifacts.value,
+        )
+        managed_result = self._plan_existing_templates(
+            render_inputs=render_inputs,
+            contract=contract,
+        )
+        if managed_result.failure:
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(managed_result)
+        planned = list(managed_result.value)
+        if contract.custom:
+            custom_result = self._plan_existing_custom(
+                root,
+                codegen,
+                profile=target.make_profile.value,
+            )
+            if custom_result.failure:
+                return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
+                    custom_result,
+                )
+            planned.extend(custom_result.value)
+        return r[t.SequenceOf[m.Infra.CodegenFilePlan]].ok(tuple(planned))
+
+    def _plan_existing_pyproject_bootstrap(
+        self,
+        root: Path,
+    ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
+        """Project owned policy before consumers require a valid physical TOML file."""
+        result_type = r[t.SequenceOf[m.Infra.CodegenFilePlan]]
+        live = u.Infra.live_pyproject_text(
+            root / c.PYPROJECT_FILENAME,
+            regenerate_managed_tools=True,
+        )
+        if live.failure:
+            return result_type.from_failure(live)
+        spec = u.Infra.pyproject_managed_file()
+        if spec.failure:
+            return result_type.from_failure(spec)
+        modernizer = FlextInfraPyprojectModernizer(
+            repository_root=root,
+            skip_check=True,
+        )
+        conformed = modernizer.conform_source(
+            live.value,
+            path=root / c.PYPROJECT_FILENAME,
+            format_source=False,
+            topology=m.Infra.PyprojectDeclaredTopology(),
+        )
+        if conformed.failure:
+            return result_type.from_failure(conformed)
+        planned = self.file_plan(
+            root,
+            c.PYPROJECT_FILENAME,
+            conformed.value,
+            mode=spec.value.mode,
+        )
+        if planned.failure:
+            return result_type.from_failure(planned)
+        return result_type.ok((planned.value,))
 
     def _plan_existing_bootstrap(
         self,
