@@ -215,7 +215,7 @@ class TestsFlextInfraBanditAndMarkdownGates:
     @staticmethod
     @pytest.mark.parametrize(
         "report",
-        (
+        [
             "{}",
             '{"errors":[]}',
             '{"results":[]}',
@@ -230,7 +230,7 @@ class TestsFlextInfraBanditAndMarkdownGates:
                 '{"results":[{"filename":"source.py","line_number":"1",'
                 '"test_id":"B101","issue_text":"assert used"}],"errors":[]}'
             ),
-        ),
+        ],
     )
     def test_bandit_report_rejects_missing_or_malformed_native_arrays(
         report: str,
