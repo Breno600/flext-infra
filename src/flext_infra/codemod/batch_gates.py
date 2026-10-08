@@ -15,8 +15,6 @@ from pathlib import Path
 
 from flext_infra import c, m, p, r, t, u
 from flext_infra._settings import settings
-from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
-from flext_infra.codemod.snapshot_reconciler import FlextInfraCodemodSnapshotReconciler
 
 
 class FlextInfraModGateEngine:
@@ -39,6 +37,10 @@ class FlextInfraModGateEngine:
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra.codemod.snapshot_reconciler import (
+            FlextInfraCodemodSnapshotReconciler,
+        )
+
         for config_root, owner_rules, owner_is_governed in cls._fixture_owners(
             root,
             rules,
@@ -80,7 +82,6 @@ class FlextInfraModGateEngine:
                         c.Infra.SG_CONFIG_FLAG,
                         str(temp_root / c.Infra.CODEMOD_CONFIG_FILENAME),
                     ),
-                    toolchain_root=root,
                 )
                 if tested.failure:
                     remedy = (
@@ -145,7 +146,6 @@ class FlextInfraModGateEngine:
                         c.Infra.SG_CONFIG_FLAG,
                         str(temp_root / c.Infra.CODEMOD_CONFIG_FILENAME),
                     ),
-                    toolchain_root=root,
                 ).unwrap()
                 cls._run_tool(
                     temp_root,
@@ -155,7 +155,6 @@ class FlextInfraModGateEngine:
                         c.Infra.SG_CONFIG_FLAG,
                         str(temp_root / c.Infra.CODEMOD_CONFIG_FILENAME),
                     ),
-                    toolchain_root=root,
                 ).unwrap()
                 changes.extend(
                     cls._publish_regenerated_snapshots(
@@ -209,6 +208,10 @@ class FlextInfraModGateEngine:
                 fixture scratch must be outside its source root.
 
         """
+        from flext_infra.codemod.snapshot_reconciler import (
+            FlextInfraCodemodSnapshotReconciler,
+        )
+
         governed_roots = tuple(
             project.resolve() for project in u.Infra.governed_project_roots(root)
         )
@@ -249,6 +252,10 @@ class FlextInfraModGateEngine:
             ValueError: If ast-grep fixture must be a regular file or directory.
 
         """
+        from flext_infra.codemod.snapshot_reconciler import (
+            FlextInfraCodemodSnapshotReconciler,
+        )
+
         directories = FlextInfraCodemodSnapshotReconciler.fixture_directories(
             config_root,
         )
@@ -331,6 +338,10 @@ class FlextInfraModGateEngine:
                 required id.
 
         """
+        from flext_infra.codemod.snapshot_reconciler import (
+            FlextInfraCodemodSnapshotReconciler,
+        )
+
         source_rules = set(owner_rules)
         directories = FlextInfraCodemodSnapshotReconciler.fixture_directories(
             config_root,
@@ -373,6 +384,10 @@ class FlextInfraModGateEngine:
             The resulting ``t.StrSequence``.
 
         """
+        from flext_infra.codemod.snapshot_reconciler import (
+            FlextInfraCodemodSnapshotReconciler,
+        )
+
         pattern = f"*{c.Infra.CODEMOD_SNAPSHOT_SUFFIX}"
         changes: list[str] = []
         for test_dir in FlextInfraCodemodSnapshotReconciler.fixture_directories(
@@ -409,32 +424,30 @@ class FlextInfraModGateEngine:
         command: t.StrSequence,
         *,
         finding_exit_code: int | None = None,
-        toolchain_root: Path,
     ) -> p.Result[p.Cli.CommandOutput]:
         """Run one AST tool and preserve its documented finding status.
 
-        The tool resolves through the ``toolchain_root`` repository's pinned
-        mise lock even when the process cwd is a staged fixture copy outside
-        that tree; a bare PATH resolution there falls back to an unpinned
-        global binary whose rule semantics can differ.
+        Resolve and authenticate in Make's declared tool-owning invocation
+        context first. Execute the absolute managed binary in the consumer
+        directory, so neither a shim nor that directory can select another tool.
 
         Returns:
             The resulting ``p.Result[p.Cli.CommandOutput]``.
 
         """
-        pinned = (
-            c.Infra.MISE,
-            "-C",
-            str(toolchain_root),
-            "exec",
-            "--",
-            *command,
-        )
+        # Make owns the invocation context; root is only the scanned consumer.
+        binary = u.Infra.managed_mise_binary(command[0], Path.cwd())
+        if binary.failure:
+            return r[p.Cli.CommandOutput].from_failure(binary)
         sys.stderr.write(
             f"mod: start {' '.join(command[:2])} args={max(0, len(command) - 2)}\n",
         )
         sys.stderr.flush()
-        run = u.Cli.run_raw(pinned, cwd=root, timeout=c.Infra.TIMEOUT_SHORT)
+        run = u.Cli.run_raw(
+            (str(binary.value), *command[1:]),
+            cwd=root,
+            timeout=c.Infra.TIMEOUT_SHORT,
+        )
         if run.failure:
             return r[p.Cli.CommandOutput].from_failure(run)
         output = run.value
@@ -523,8 +536,45 @@ class FlextInfraModGateEngine:
             root,
             tuple(rules_by_id[entry.rule_id] for entry in report.entries),
         )
+        occurrence_rules = tuple(
+            rule
+            for rule in rules_by_id.values()
+            if any(
+                condition.predicate
+                in {
+                    c.Infra.CodemodContextPredicate.RESOLVED_SYMBOL,
+                    c.Infra.CodemodContextPredicate.SAME_BINDING,
+                    c.Infra.CodemodContextPredicate.EXECUTABLE_OCCURRENCE,
+                    c.Infra.CodemodContextPredicate.UNREFERENCED_IMPORT,
+                }
+                for condition in rule.context
+            )
+        )
+        selected_ids = {rule.id for rule in occurrence_rules}
+        states = tuple(
+            entry.source_state
+            for entry in report.entries
+            if entry.rule_id in selected_ids and entry.source_state is not None
+        )
+        snapshot = (
+            u.Infra.codemod_binding_snapshot(
+                root,
+                states,
+                tuple(
+                    condition.arg[0]
+                    for rule in occurrence_rules
+                    for condition in rule.context
+                    if condition.predicate
+                    is c.Infra.CodemodContextPredicate.RESOLVED_SYMBOL
+                ),
+            )
+            if states
+            else None
+        )
         entries = tuple(
-            entry
+            entry.model_copy(update={"binding_states": snapshot.states})
+            if snapshot is not None and entry.rule_id in selected_ids
+            else entry
             for entry in report.entries
             if u.Infra.codemod_context_admits(
                 root,
@@ -532,9 +582,10 @@ class FlextInfraModGateEngine:
                 entry.file,
                 FlextInfraModGateEngine._captures(entry.payload),
                 facts,
+                snapshot,
             )
         )
-        if len(entries) == len(report.entries):
+        if entries == report.entries:
             return report
         return FlextInfraModGateEngine.recounted(entries)
 
@@ -916,7 +967,6 @@ class FlextInfraModGateEngine:
             root,
             scan_command,
             finding_exit_code=1,
-            toolchain_root=root,
         )
         if run.failure:
             return r[m.Infra.ModScanReport].from_failure(run)
@@ -942,6 +992,8 @@ class FlextInfraModGateEngine:
             The resulting ``p.Result[m.Infra.ModScanReport]``.
 
         """
+        from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
+
         planned = u.Infra.codemod_rule_plan(root)
         if planned.failure:
             return r[m.Infra.ModScanReport].from_failure(planned)

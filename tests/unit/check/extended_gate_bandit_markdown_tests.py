@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import shutil
+from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, ClassVar
 
 import pytest
@@ -25,6 +26,18 @@ if TYPE_CHECKING:
 class TestsFlextInfraBanditAndMarkdownGates:
     """Declarative public-contract tests for Bandit and Markdown gates."""
 
+    BANDIT_OWNER_CASES: ClassVar[
+        t.VariadicTuple[tuple[m.Infra.BanditAuthorizedException, str, str]]
+    ] = tuple(
+        (
+            entry,
+            pattern,
+            pattern.replace("**/", "").replace("*", "probe").removesuffix(".py")
+            + ".py",
+        )
+        for entry in config.Infra.tooling.tools.bandit.authorized_exceptions
+        for pattern in entry.files
+    )
     HEADING_SKIP = "# Test\n\n### Skip\n"
     REFLOW_HINT = (
         "# Test\n\n"
@@ -79,6 +92,171 @@ class TestsFlextInfraBanditAndMarkdownGates:
         )
 
         tm.that(result.issues[0].file, has="main.py")
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        ("entry", "pattern", "owner"),
+        BANDIT_OWNER_CASES,
+    )
+    def test_bandit_owner_scope_skips_only_its_authorized_tests(
+        tmp_path: Path,
+        entry: m.Infra.BanditAuthorizedException,
+        pattern: str,
+        owner: str,
+    ) -> None:
+        """An authorized owner module drops only its tests; others keep all.
+
+        Premise (operator-ruling-2026-10-08-subprocess-test-imports): Bandit
+        has no per-path exception, so the gate audits the owner modules in
+        their own run that skips only the authorized tests.
+        """
+        # A literal Bandit exclusion for the owner also matches this filename;
+        # the consumer must instead remain in the exact unowned partition.
+        consumer = f"{c.Infra.DEFAULT_SRC_DIR}/consumer/{owner}_extra.py"
+        entries = config.Infra.tooling.tools.bandit.authorized_exceptions
+        tm.that(PurePosixPath(owner).full_match(pattern), eq=True)
+        tm.that(
+            any(
+                PurePosixPath(consumer).full_match(authorized)
+                for configured in entries
+                for authorized in configured.files
+            ),
+            eq=False,
+        )
+        project_dir = u.Tests.mk_project(tmp_path, "bandit-owner-project")
+        for relative in (owner, consumer):
+            module = project_dir / relative
+            module.parent.mkdir(parents=True, exist_ok=True)
+            module.write_text(
+                "import subprocess\n\n\ndef spawn(argv):\n"
+                "    assert argv\n    return subprocess.run(argv, check=True)\n",
+                encoding="utf-8",
+            )
+
+        result = u.Tests.run_gate_check(FlextInfraBanditGate, tmp_path, project_dir)
+
+        codes = {
+            relative: {issue.code for issue in result.issues if issue.file == relative}
+            for relative in (owner, consumer)
+        }
+        tm.that(result.result.passed, eq=False)
+        raised_codes = {"B101", "B404", "B603"}
+        tm.that(codes[owner], eq=raised_codes - set(entry.tests))
+        tm.that(codes[consumer], eq=raised_codes)
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        ("entry", "pattern", "owner"),
+        BANDIT_OWNER_CASES,
+    )
+    def test_bandit_owner_scope_alone_obeys_its_authorized_tests(
+        tmp_path: Path,
+        entry: m.Infra.BanditAuthorizedException,
+        pattern: str,
+        owner: str,
+    ) -> None:
+        """An owner-only project's verdict follows the declared exception."""
+        tm.that(PurePosixPath(owner).full_match(pattern), eq=True)
+        project_dir = u.Tests.mk_project(tmp_path, "bandit-owner-only")
+        module = project_dir / owner
+        module.parent.mkdir(parents=True)
+        module.write_text(
+            "import subprocess\n\n\ndef spawn(argv):\n"
+            "    return subprocess.run(argv, check=True)\n",
+            encoding="utf-8",
+        )
+
+        result = u.Tests.run_gate_check(FlextInfraBanditGate, tmp_path, project_dir)
+
+        remaining = {"B404", "B603"} - set(entry.tests)
+        tm.that(result.result.passed, eq=not remaining, msg=str(result.issues))
+        tm.that({issue.code for issue in result.issues}, eq=remaining)
+
+    @staticmethod
+    def test_bandit_syntax_error_is_a_failed_audit(tmp_path: Path) -> None:
+        """Bandit's successful process exit cannot approve an unaudited source."""
+        project = u.Tests.mk_project(tmp_path, "bandit-invalid-source")
+        source = project / c.Infra.DEFAULT_SRC_DIR / "invalid.py"
+        source.parent.mkdir(parents=True)
+        source.write_text("def invalid(:\n", encoding="utf-8")
+
+        result = u.Tests.run_gate_check(FlextInfraBanditGate, tmp_path, project)
+
+        tm.that(result.result.passed, eq=False)
+        tm.that(result.outcome, eq=c.Infra.ToolOutcome.ERROR)
+        tm.that(result.issues, length=1)
+        tm.that(result.issues[0].file, has=source.name)
+        tm.that(result.issues[0].code, eq=c.Infra.ToolOutcome.ERROR.value)
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        ("pattern", "owner"),
+        ((pattern, owner) for _, pattern, owner in BANDIT_OWNER_CASES),
+    )
+    def test_bandit_owner_cannot_alias_a_source_outside_the_project(
+        tmp_path: Path,
+        pattern: str,
+        owner: str,
+    ) -> None:
+        """An owner path cannot grant subprocess relief to an external source."""
+        tm.that(PurePosixPath(owner).full_match(pattern), eq=True)
+        project = u.Tests.mk_project(tmp_path, "bandit-external-owner")
+        external = tmp_path / "external.py"
+        external.write_text("import subprocess\n", encoding="utf-8")
+        source = project / owner
+        source.parent.mkdir(parents=True)
+        source.symlink_to(external)
+
+        with pytest.raises(ValueError, match="is not in the subpath of"):
+            u.Tests.run_gate_check(FlextInfraBanditGate, tmp_path, project)
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        "report",
+        [
+            "{}",
+            '{"errors":[]}',
+            '{"results":[]}',
+            '{"results":null,"errors":[]}',
+            '{"results":[],"errors":null}',
+            '{"results":{},"errors":[]}',
+            '{"results":[],"errors":{}}',
+            '{"results":[{}],"errors":[]}',
+            '{"results":[],"errors":[{}]}',
+            '{"results":[],"errors":[{"filename":"source.py","reason":7}]}',
+            (
+                '{"results":[{"filename":"source.py","line_number":"1",'
+                '"test_id":"B101","issue_text":"assert used"}],"errors":[]}'
+            ),
+        ],
+    )
+    def test_bandit_report_rejects_missing_or_malformed_native_arrays(
+        report: str,
+    ) -> None:
+        """The public typed boundary rejects unauditable native report shapes."""
+        result = u.validate_value(
+            m.Infra.BanditReport,
+            report,
+            from_json=True,
+            strict=True,
+        )
+
+        tm.that(result.failure, eq=True)
+
+    @staticmethod
+    def test_bandit_report_accepts_explicit_clean_native_arrays() -> None:
+        """Two explicit empty native arrays represent a clean report."""
+        result = u.validate_value(
+            m.Infra.BanditReport,
+            '{"results":[],"errors":[]}',
+            from_json=True,
+            strict=True,
+        )
+
+        tm.that(result.success, eq=True)
+        report = result.unwrap()
+        tm.that(report.results, empty=True)
+        tm.that(report.errors, empty=True)
 
     @staticmethod
     def test_bandit_without_source_tree_has_no_audit_surface(

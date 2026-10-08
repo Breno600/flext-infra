@@ -11,10 +11,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c, config, m, r, t, u
-from flext_infra.codegen import (
-    FlextInfraCodegenMiseArtifacts,
-    FlextInfraCodegenTransaction,
-)
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -41,15 +37,27 @@ class FlextInfraSemanticPublication:
             The resulting ``p.Result[t.VariadicTuple[Path]]``.
 
         """
+        from flext_infra.codegen import (
+            FlextInfraCodegenMiseArtifacts,
+            FlextInfraCodegenTransaction,
+        )
+
         files = cls._concrete_file_plans(plans, codegen)
         if files.failure:
             return r[tuple[Path, ...]].from_failure(files)
         if not files.value:
             return r[tuple[Path, ...]].ok(())
+        inputs: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
+        for plan in plans:
+            for state in (plan.before, *plan.source_states):
+                if inputs.setdefault(state.path, state) != state:
+                    return r[tuple[Path, ...]].fail(
+                        f"semantic input snapshots disagree: {state.path}",
+                    )
         analysis = m.Infra.CodegenPhaseAnalysis(
             phase=c.Infra.CodegenStagedFilePhase.SEMANTIC,
             files=tuple(files.value),
-            inputs=tuple(plan.before for plan in plans),
+            inputs=tuple(inputs.values()),
         )
         roots = {
             f"@semantic-{index}": project
@@ -132,7 +140,7 @@ class FlextInfraSemanticPublication:
                     before=plan.before,
                     desired_content=plan.desired_content,
                     desired_mode=plan.desired_mode,
-                    source_states=(plan.before,),
+                    source_states=(plan.before, *plan.source_states),
                     owner="semantic",
                 ),
             )

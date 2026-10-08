@@ -146,6 +146,19 @@ print(json.dumps({
 
     FLEET_GAPS_ROUTE_NAME: ClassVar[str] = "fleet-gaps"
     "Canonical workspace CLI verb that reports per-repository fleet gaps."
+    LIFECYCLE_VERBS: ClassVar[t.StrSequence] = (
+        "setup",
+        "gen",
+        "upg",
+        "setup",
+        "gen",
+        "gen",
+    )
+    "Fixed serial lifecycle, including the post-upgrade generation fixed point."
+    LIFECYCLE_REPORT_RELATIVE_PATH: ClassVar[Path] = (
+        Path(cb.REPORTS_DIR_NAME) / "validate-lifecycle.json"
+    )
+    "Typed receipts for the invoking workspace root and governed members."
     FLEET_GAPS_REPORT_RELATIVE_PATH: ClassVar[Path] = (
         Path(cb.REPORTS_DIR_NAME) / "fleet-gaps.json"
     )

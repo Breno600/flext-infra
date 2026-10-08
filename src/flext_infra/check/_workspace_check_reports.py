@@ -11,7 +11,6 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_infra import c, m, p, r, t, u
-from flext_infra.__version__ import FlextInfraVersion
 
 
 class FlextInfraWorkspaceCheckReportsMixin:
@@ -59,16 +58,13 @@ class FlextInfraWorkspaceCheckReportsMixin:
                     f"- {gate}: {gate_status} ({len(execution.issues)} issues)",
                 )
                 lines.extend(f"  - {issue.formatted}" for issue in execution.issues)
-                if (
-                    execution.outcome is c.Infra.ToolOutcome.ERROR
-                    and execution.raw_output
-                ):
+                if execution.raw_receipt is not None:
                     lines.extend([
-                        "",
-                        f"Native output ({gate}):",
-                        "",
-                        *(f"    {line}" for line in execution.raw_output.split("\n")),
-                        "",
+                        (
+                            f"  - Native output receipt: "
+                            f"[{execution.raw_receipt.name}]"
+                            f"({execution.raw_receipt.resolve().as_uri()})"
+                        ),
                     ])
             lines.append("")
         return "\n".join(lines)
@@ -85,6 +81,8 @@ class FlextInfraWorkspaceCheckReportsMixin:
             The resulting ``m.Infra.SarifReport``.
 
         """
+        from flext_infra.__version__ import FlextInfraVersion
+
         rules_by_id: MutableMapping[str, m.Infra.SarifRule] = {}
         sarif_results: list[m.Infra.SarifResult] = []
         for project in results:

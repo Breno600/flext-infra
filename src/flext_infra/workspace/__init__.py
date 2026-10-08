@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     )
     from flext_infra.workspace.fleet_gaps import FlextInfraWorkspaceFleetGaps
     from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
+    from flext_infra.workspace.lifecycle import FlextInfraWorkspaceLifecycle
     from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
     from flext_infra.workspace.rope import FlextInfraRopeWorkspace
 
@@ -48,6 +49,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraWorkspaceFleetGaps",
     "FlextInfraWorkspaceGovernanceMixin",
     "FlextInfraWorkspaceIdentityMixin",
+    "FlextInfraWorkspaceLifecycle",
     "FlextInfraWorkspacePropagation",
     "FlextInfraWorkspaceSubprojectsMixin",
 )
@@ -67,6 +69,7 @@ install_lazy_exports(
         "FlextInfraWorkspaceFleetGaps": ".fleet_gaps",
         "FlextInfraWorkspaceGovernanceMixin": "._governance",
         "FlextInfraWorkspaceIdentityMixin": "._detector_identity",
+        "FlextInfraWorkspaceLifecycle": ".lifecycle",
         "FlextInfraWorkspacePropagation": ".propagation",
         "FlextInfraWorkspaceSubprojectsMixin": "._detector_subprojects",
     }),

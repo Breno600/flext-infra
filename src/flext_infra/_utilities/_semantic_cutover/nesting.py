@@ -9,25 +9,30 @@ from __future__ import annotations
 import ast
 import traceback
 from collections.abc import MutableMapping
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import m, r, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesCodegenNamespace,
-    FlextInfraUtilitiesRopeRuntimeModules,
+from flext_infra._utilities._semantic_cutover.class_scope import (
     FlextInfraUtilitiesSemanticCutoverClassScope,
+)
+from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
-    FlextInfraUtilitiesSemanticCutoverNestingCst,
-    FlextInfraUtilitiesSemanticCutoverNestingOwner,
+)
+from flext_infra._utilities._semantic_cutover.family_flatten import (
     FlextInfraUtilitiesSemanticFamilyFlatten,
+)
+from flext_infra._utilities._semantic_cutover.nesting_cst import (
+    FlextInfraUtilitiesSemanticCutoverNestingCst,
+)
+from flext_infra._utilities._semantic_cutover.nesting_owner import (
+    FlextInfraUtilitiesSemanticCutoverNestingOwner,
 )
 from flext_infra._utilities._semantic_cutover.test_helpers import (
     FlextInfraUtilitiesSemanticTestHelpers,
 )
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from flext_infra import p
 
 
@@ -167,11 +172,61 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         return frozenset(pinned)
 
     @classmethod
+    def _class_value_aliases(
+        cls,
+        project: p.Infra.RopeProject,
+        file_path: Path,
+        tree: ast.Module,
+    ) -> frozenset[str]:
+        """Pin nested class identities instead of treating them as loose values.
+
+        Returns:
+            Bindings holding a nested class or its instance in the same snapshot.
+
+        Loose top-level helper and sentinel classes can move together with their
+        construction sites. A class already inside an owner is not such a helper.
+        """
+        resource = project.get_resource(
+            file_path.relative_to(Path(project.root.real_path)).as_posix(),
+        )
+        module = project.get_pymodule(resource)
+        pending = [(module.get_scope(), 0)]
+        identities: list[t.Infra.RopePyObject] = []
+        while pending:
+            scope, class_depth = pending.pop()
+            if scope.get_kind() == "Class":
+                class_depth += 1
+                if class_depth > 1:
+                    identities.append(scope.pyobject)
+            pending.extend((child, class_depth) for child in scope.get_scopes())
+        aliases: set[str] = set()
+        for statement in tree.body:
+            if not isinstance(statement, ast.Assign | ast.AnnAssign):
+                continue
+            name = cls._loose_value_name(statement)
+            value = statement.value
+            if isinstance(value, ast.Call):
+                value = value.func
+            if name is None or not isinstance(value, ast.Name | ast.Attribute):
+                continue
+            resolved = FlextInfraUtilitiesRopeRuntimeModules.resolve_symbol(
+                module.get_scope(),
+                value,
+            )
+            if resolved is not None and any(
+                resolved.get_object() is identity for identity in identities
+            ):
+                aliases.add(name)
+        return frozenset(aliases)
+
+    @classmethod
     def _class_nesting_definitions(
         cls,
         rope_workspace: p.Infra.RopeWorkspaceDsl,
         file_path: Path,
         source: str,
+        *,
+        project: p.Infra.RopeProject,
     ) -> p.Result[t.StrMapping]:
         """Map each loose top-level class to the owner Rope's module policy elects.
 
@@ -179,6 +234,8 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
             The resulting ``p.Result[t.StrMapping]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+
         planned = r[t.StrMapping]
         family = FlextInfraUtilitiesCodegenNamespace.facade_family_of_file(
             file_path.name,
@@ -198,6 +255,8 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
             tree,
             values=not convention.module_policy.allow_type_alias,
         )
+        class_aliases = cls._class_value_aliases(project, file_path, tree)
+        loose = tuple(name for name in loose if name not in class_aliases)
         if len(classes) <= 1 and not loose:
             return planned.ok({})
         owned = cls._module_owner(
@@ -299,22 +358,33 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
             The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
         planned_edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
         modules = {
             entry.file_path.resolve(): entry for entry in rope_workspace.modules()
         }
         editable = cls._editable_sources(sources)
         owned = tuple(item for item in editable if item[0] in modules)
+        project = FlextInfraUtilitiesRopeRuntimeModules.snapshot_project(
+            rope_workspace.rope_project,
+            sources,
+        )
 
         def definitions_for(item: t.Pair[Path, str]) -> p.Result[t.StrMapping]:
             try:
-                return cls._class_nesting_definitions(rope_workspace, *item)
+                return cls._class_nesting_definitions(
+                    rope_workspace,
+                    *item,
+                    project=project,
+                )
             except Exception:
                 traceback.print_exc()
                 raise
 
         planned = r[t.StrMapping].traverse(owned, definitions_for, fail_fast=False)
         if planned.failure:
+            project.close()
             return planned_edits.from_failure(planned)
         definitions_by_file = {
             path: definitions
@@ -327,6 +397,7 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
             bindings = bindings_by_module.setdefault(module_name, {})
             for name, owner in definitions.items():
                 if bindings.setdefault(name, owner) != owner:
+                    project.close()
                     return planned_edits.fail(
                         f"ambiguous class-nesting owner for {module_name}.{name}: "
                         f"{bindings[name]}, {owner}",
@@ -335,11 +406,8 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
             name for bindings in bindings_by_module.values() for name in bindings
         )
         if not nested_names:
+            project.close()
             return planned_edits.ok(())
-        project = FlextInfraUtilitiesRopeRuntimeModules.snapshot_project(
-            rope_workspace.rope_project,
-            sources,
-        )
         try:
             quoted = cls._nesting_quoted_sources(
                 project,

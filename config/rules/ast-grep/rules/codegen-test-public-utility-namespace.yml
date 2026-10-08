@@ -1,0 +1,59 @@
+id: codegen-test-public-utility-namespace
+language: python
+severity: error
+files:
+  - "tests/unit/codegen/*.py"
+constraints:
+  OWNER:
+    regex: '^(?:tests\.)?utilities\.TestsFlextInfraUtilities$'
+metadata:
+  context:
+    OWNER:
+      - is: resolved-symbol
+        arg: tests.utilities TestsFlextInfraUtilities
+      - is: same-binding
+        arg: u
+rule:
+  pattern: $OWNER.CodegenTestSupport.Ci
+fix: u.CodegenTestSupport.Ci
+message: Consume the helper through the already-bound identical public test facade.
+---
+id: codegen-test-public-utility-binding-required
+language: python
+severity: error
+files:
+  - "tests/unit/codegen/*.py"
+constraints:
+  OWNER:
+    regex: '^(?:tests\.)?utilities\.TestsFlextInfraUtilities$'
+metadata:
+  context:
+    OWNER:
+      - is: resolved-symbol
+        arg: tests.utilities TestsFlextInfraUtilities
+      - not: same-binding
+        arg: u
+rule:
+  pattern: $OWNER.CodegenTestSupport.Ci
+message: >-
+  The legacy helper resolves to the canonical utilities owner, but u does not
+  bind that same class here. No token fixer may create or overwrite that binding;
+  a semantic import cutover must establish it before the reference can migrate.
+---
+id: codegen-test-public-utility-import-semantic-required
+language: python
+severity: error
+files:
+  - "tests/unit/codegen/*.py"
+metadata:
+  context:
+    IMPORT:
+      is: unreferenced-import
+rule:
+  all:
+    - kind: import_statement
+    - pattern: $IMPORT
+    - regex: '^import tests\.utilities$'
+message: >-
+  This legacy module import has no executable reader. Its semantic import owner
+  must adjudicate retirement; a textual import-to-facade replacement is unsafe.

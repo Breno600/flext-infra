@@ -20,6 +20,9 @@ from flext_infra._utilities import (
     FlextInfraUtilitiesSemanticCutoverPrivateImports,
     FlextInfraUtilitiesSemanticCutoverSelfFacade,
 )
+from flext_infra._utilities._semantic_cutover.declaration_relocation import (
+    FlextInfraUtilitiesSemanticDeclarationRelocation,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -28,6 +31,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesSemanticCutoverBase(
+    FlextInfraUtilitiesSemanticDeclarationRelocation,
     FlextInfraUtilitiesSemanticCutoverNesting,
     FlextInfraUtilitiesSemanticCutoverAliases,
     FlextInfraUtilitiesSemanticCutoverPrivateImports,
@@ -95,7 +99,8 @@ class FlextInfraUtilitiesSemanticCutoverBase(
         selected = tuple(finding for finding in findings if finding.rule_id == rule_id)
         match phase:
             case (
-                c.Infra.SemanticCutoverPhase.CLASS_NESTING
+                c.Infra.SemanticCutoverPhase.DECLARATION_RELOCATION
+                | c.Infra.SemanticCutoverPhase.CLASS_NESTING
                 | c.Infra.SemanticCutoverPhase.COMPAT_ALIAS
                 | c.Infra.SemanticCutoverPhase.PRIVATE_IMPORT
                 | c.Infra.SemanticCutoverPhase.FACADE_BASE
@@ -134,6 +139,8 @@ class FlextInfraUtilitiesSemanticCutoverBase(
         """
         root = rope_workspace.repository_root
         match phase:
+            case c.Infra.SemanticCutoverPhase.DECLARATION_RELOCATION:
+                return cls._plan_declaration_relocation(rope_workspace, sources)
             case c.Infra.SemanticCutoverPhase.CLASS_NESTING:
                 return cls._plan_class_nesting(rope_workspace, sources)
             case c.Infra.SemanticCutoverPhase.COMPAT_ALIAS:

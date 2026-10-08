@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
-from flext_infra import FlextInfraWorkspaceDetector, c, config, m, p, r, t, u
+from flext_infra import c, config, m, p, r, t, u
 
 
 class FlextInfraGitLanes:
@@ -250,6 +250,8 @@ class FlextInfraGitLanes:
             Bead ownership output from the declared city/rig command only.
 
         """
+        from flext_infra import FlextInfraWorkspaceDetector
+
         loaded = FlextInfraWorkspaceDetector.load_beads_spec(repo_root)
         if loaded.failure:
             return r[str].from_failure(loaded)

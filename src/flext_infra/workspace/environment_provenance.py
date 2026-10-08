@@ -15,7 +15,6 @@ from urllib.parse import unquote, urlparse
 from urllib.request import url2pathname
 
 from flext_infra import c, config, m, r, u
-from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from importlib.metadata import Distribution
@@ -52,6 +51,8 @@ class FlextInfraWorkspaceEnvironmentProvenance:
             The resulting ``p.Result[int]``.
 
         """
+        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
         resolved_root = repository_root.resolve()
         ci = config.Infra.codegen.make.ci
         if u.Infra.env_value(ci.variable).strip() == ci.value:

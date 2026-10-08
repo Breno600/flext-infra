@@ -7,16 +7,14 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated, ClassVar, Self
+from typing import Annotated, ClassVar, Literal
 
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._models import (
-    FlextInfraModelsGitIdentity,
-    FlextInfraModelsGitWorktreeFacts,
-    FlextInfraModelsGitWorktreeState,
-)
+from flext_infra._models._git.identity import FlextInfraModelsGitIdentity
+from flext_infra._models._git.worktree_facts import FlextInfraModelsGitWorktreeFacts
+from flext_infra._models._git.worktree_state import FlextInfraModelsGitWorktreeState
 from flext_infra._models.git_lane_inputs import FlextInfraModelsGitLaneInputs
 from flext_infra._models.git_lane_ownership import FlextInfraModelsGitLaneOwnership
 
@@ -367,6 +365,22 @@ class FlextInfraModelsGit(
         expected_oid: Annotated[
             t.NonEmptyStr | None,
             m.Field(description="Remote tip the mutation is leased on"),
+        ] = None
+
+    class GitLaneVerificationRequest(GitRemoteRequest):
+        """Read-only lane admission against the declared live integration tip."""
+
+        operation: Annotated[
+            Literal["verify", "create", "retire"],
+            m.Field(description="Boundary being verified, never an effect selector"),
+        ] = "verify"
+        candidate: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Commit whose integration ancestry must be proved"),
+        ] = "HEAD"
+        expected_tip: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(description="Previously observed tip; drift refuses admission"),
         ] = None
 
     class GitRefHeadsRequest(m.ContractModel):

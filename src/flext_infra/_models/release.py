@@ -12,7 +12,7 @@ from typing import Annotated, Self
 from flext_core import m
 from flext_infra import t
 from flext_infra._constants import FlextInfraConstantsRelease
-from flext_infra._models import FlextInfraModelsMixins
+from flext_infra._models.mixins import FlextInfraModelsMixins
 
 
 class FlextInfraModelsRelease:
@@ -121,8 +121,8 @@ class FlextInfraModelsRelease:
         ]
         artifacts: Annotated[
             t.VariadicTuple[FlextInfraModelsRelease.BuildArtifact],
-            m.Field(default=(), description="Validated wheel and sdist artifacts"),
-        ]
+            m.Field(description="Validated wheel and sdist artifacts"),
+        ] = ()
         commit_oid: Annotated[
             t.Infra.ReleaseCommitOid | None,
             m.Field(default=None, description="Source commit object ID"),
@@ -225,8 +225,8 @@ class FlextInfraModelsRelease:
         ]
         records: Annotated[
             t.VariadicTuple[FlextInfraModelsRelease.BuildRecord],
-            m.Field(default=(), description="Per-project build records"),
-        ]
+            m.Field(description="Per-project build records"),
+        ] = ()
         dry_run: Annotated[bool, m.Field(description="Metadata-only build report")]
         build_constraints_sha256: Annotated[
             t.Infra.ReleaseArtifactSha256,

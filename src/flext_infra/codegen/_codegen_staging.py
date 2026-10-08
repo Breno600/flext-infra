@@ -9,7 +9,7 @@ from __future__ import annotations
 import stat
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, get_args
 
 from flext_infra import c, m, r, t, u
 from flext_infra.codegen._mise_artifacts_files import (
@@ -26,7 +26,10 @@ if TYPE_CHECKING:
 class FlextInfraCodegenStaging:
     """Stage generated-file plans beside their live destinations."""
 
-    _phases: ClassVar[frozenset[str]] = frozenset(c.Infra.CodegenStagedFilePhase)
+    _phases: ClassVar[frozenset[str]] = frozenset({
+        "conform",
+        *get_args(m.Infra.CodegenPhaseAnalysis.model_fields["phase"].annotation),
+    })
 
     @classmethod
     def stage_file_plans(

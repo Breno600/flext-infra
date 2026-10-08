@@ -9,12 +9,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m, r, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesBase,
-    FlextInfraUtilitiesDocsScope,
+from flext_infra._utilities._docs_scope_selection import (
     FlextInfraUtilitiesDocsScopeSelectionMixin,
-    FlextInfraUtilitiesPyproject,
-    FlextInfraUtilitiesWorkspaceManifest,
 )
 
 if TYPE_CHECKING:
@@ -39,6 +35,8 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
             Normalized project filters for docs-scoped operations.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesBase
+
         _ = repository_root
         return list(FlextInfraUtilitiesBase.normalize_sequence_values(projects) or ())
 
@@ -86,6 +84,12 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
             The resulting ``t.SequenceOf[m.Infra.DocScope]``.
 
         """
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesDocsScope,
+            FlextInfraUtilitiesPyproject,
+            FlextInfraUtilitiesWorkspaceManifest,
+        )
+
         resolved_root = repository_root.resolve()
         project_state = FlextInfraUtilitiesDocsScope.project_state(resolved_root)
         is_enabled = FlextInfraUtilitiesDocsScope.docs_scope_enabled(
@@ -202,6 +206,8 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
             ValueError: If ``discovered_result.failure``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocsScope
+
         discovered_result = FlextInfraUtilitiesDocsScope.resolve_projects(
             repository_root,
             (),

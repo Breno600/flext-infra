@@ -63,28 +63,27 @@ class FlextInfraModelsDuplication:
         )
 
         absolute: Annotated[t.StrictBool, m.Field(description="Emit absolute paths")]
-        formats_exts: Annotated[
-            t.MappingKV[str, t.StrSequence],
-            m.Field(alias="formatsExts", description="Extensions by parser format"),
-        ]
+        formats_exts: t.MappingKV[str, t.StrSequence] = m.Field(
+            alias="formatsExts",
+            description="Extensions by parser format",
+        )
         ignore: Annotated[t.StrSequence, m.Field(description="Ignored path patterns")]
-        min_lines: Annotated[
-            t.PositiveInt,
-            m.Field(alias="minLines", description="Minimum duplicated line count"),
-        ]
-        min_tokens: Annotated[
-            t.PositiveInt,
-            m.Field(alias="minTokens", description="Minimum duplicated token count"),
-        ]
+        min_lines: t.PositiveInt = m.Field(
+            alias="minLines",
+            description="Minimum duplicated line count",
+        )
+        min_tokens: t.PositiveInt = m.Field(
+            alias="minTokens",
+            description="Minimum duplicated token count",
+        )
         mode: Annotated[t.NonEmptyStr, m.Field(description="jscpd detection mode")]
-        no_colors: Annotated[
-            t.StrictBool,
-            m.Field(alias="noColors", description="Disable color output"),
-        ]
-        no_tips: Annotated[
-            t.StrictBool,
-            m.Field(alias="noTips", description="Disable tip output"),
-        ]
+        no_colors: t.StrictBool = m.Field(
+            alias="noColors",
+            description="Disable color output",
+        )
+        no_tips: t.StrictBool = m.Field(
+            alias="noTips", description="Disable tip output"
+        )
         reporters: Annotated[
             t.StrSequence,
             m.Field(description="Required report formats"),

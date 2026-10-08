@@ -405,6 +405,7 @@ testpaths = ["tests"]
 [tool.ruff]
 extend-exclude = [
   "**/.archive/**",
+  "**/protos/**",
   "**/.agents/aihub-hooks/**",
   "**/.claude/aihub-hooks/**",
   "**/.codex/aihub-hooks/**",
@@ -480,6 +481,19 @@ runtime-evaluated-base-classes = [
   "flext_core.m.StrictBoundaryModel",
   "flext_infra._models.FlextInfraConfigModelsContract.ConfigContract",
   "flext_infra._models.FlextInfraExternalCacheDirectorySpec",
+  "flext_infra._models.FlextInfraModelsMixins.AbsoluteFilePathTextMixin",
+  "flext_infra._models.FlextInfraModelsMixins.ErrorDetailMixin",
+  "flext_infra._models.FlextInfraModelsMixins.FilePathMixin",
+  "flext_infra._models.FlextInfraModelsMixins.NestedClassPathMixin",
+  "flext_infra._models.FlextInfraModelsMixins.NonNegativeLineMixin",
+  "flext_infra._models.FlextInfraModelsMixins.PositiveLineMixin",
+  "flext_infra._models.FlextInfraModelsMixins.ProjectEntryNameMixin",
+  "flext_infra._models.FlextInfraModelsMixins.ProjectNameMixin",
+  "flext_infra._models.FlextInfraModelsMixins.ProjectNamesListMixin",
+  "flext_infra._models.FlextInfraModelsMixins.RepositoryRootPathMixin",
+  "flext_infra._models.FlextInfraModelsMixins.RequiredNonNegativeLineMixin",
+  "flext_infra._models.FlextInfraModelsMixins.VersionTagMixin",
+  "flext_infra._models.FlextInfraModelsMixins.WriteMixin",
   "flext_infra._models._codegen.fix.BulkFixItem",
   "flext_infra._models._codegen.pipeline.CodegenCommand",
   "flext_infra._models._config.contexts.MakeCommandContext",
@@ -491,6 +505,9 @@ runtime-evaluated-base-classes = [
   "flext_infra._models.git.GitRepoRequest",
   "flext_infra._models.layout._LayoutContract",
   "flext_infra._models.mise_toolchain._ConfigContract",
+  "flext_infra._models.mixins.FilePathMixin",
+  "flext_infra._models.mixins.PositiveLineMixin",
+  "flext_infra._models.mixins.ScopeMixin",
   "flext_infra.base.FlextInfraServiceBase",
   "flext_infra.base.s",
   "flext_infra.base_selection.FlextInfraProjectSelectionServiceBase",
@@ -562,10 +579,6 @@ split-on-trailing-comma = false
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = ["line-too-long", "non-empty-init-module", "unused-import"]
 "**/_config.py" = ["invalid-function-name"]
-"**/_utilities/credential.py" = [
-  "subprocess-without-shell-equals-true",
-  "suspicious-subprocess-import",
-]
 "**/bin/**" = [
   "docstring-missing-exception",
   "docstring-missing-returns",
@@ -574,16 +587,9 @@ split-on-trailing-comma = false
   "magic-value-comparison",
   "missing-copyright-notice",
   "print",
-  "start-process-with-partial-path",
-  "subprocess-without-shell-equals-true",
-  "suspicious-subprocess-import",
   "type-check-without-type-error",
   "undocumented-public-method",
   "unused-class-method-argument",
-]
-"**/bootstrap.py" = [
-  "subprocess-without-shell-equals-true",
-  "suspicious-subprocess-import",
 ]
 "**/docx.py" = ["import-outside-top-level"]
 "**/file_test_helpers.py" = ["line-too-long"]
@@ -607,12 +613,7 @@ split-on-trailing-comma = false
   "pytest-fixture-autouse",
   "too-many-public-methods",
 ]
-"**/tests/python/**" = [
-  "raise-vanilla-args",
-  "start-process-with-partial-path",
-  "subprocess-without-shell-equals-true",
-  "suspicious-subprocess-import",
-]
+"**/tests/python/**" = ["raise-vanilla-args"]
 "**/xlsx.py" = ["import-outside-top-level"]
 "scripts/**" = [
   "any-type",
@@ -652,9 +653,6 @@ split-on-trailing-comma = false
   "repeated-append",
   "runtime-cast-value",
   "shebang-not-executable",
-  "start-process-with-partial-path",
-  "subprocess-without-shell-equals-true",
-  "suspicious-subprocess-import",
   "undocumented-public-class",
   "undocumented-public-function",
   "undocumented-public-init",

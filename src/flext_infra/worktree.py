@@ -13,7 +13,6 @@ from flext_cli import r
 
 from flext_infra import c, m, p, t, u
 from flext_infra.base import s
-from flext_infra.git import FlextInfraGitService
 
 
 class FlextInfraWorktreeService(s[str]):
@@ -277,10 +276,21 @@ class FlextInfraWorktreeService(s[str]):
             The resulting ``p.Result[str]``.
 
         """
+        from flext_infra.git import FlextInfraGitService
+
         if not self.apply_changes:
             return r[str].fail("worktree add requires --apply")
         if base.startswith("-"):
             return r[str].fail(f"invalid base commitish: {base}")
+        admitted = u.Infra.git_verify_lane(
+            m.Infra.GitLaneVerificationRequest(
+                repo_root=self.repository_root,
+                operation="create",
+                candidate=base,
+            ),
+        )
+        if admitted.failure:
+            return r[str].from_failure(admitted)
         base_oid = self._resolved_base(primary_root, base)
         if base_oid.failure:
             return r[str].from_failure(base_oid)
@@ -462,6 +472,8 @@ class FlextInfraWorktreeService(s[str]):
             The resulting ``p.Result[str]``.
 
         """
+        from flext_infra.git import FlextInfraGitService
+
         if not self.apply_changes:
             return r[str].fail("worktree remove requires --apply")
         lane_result = self.registered_lane(primary_root, branch)

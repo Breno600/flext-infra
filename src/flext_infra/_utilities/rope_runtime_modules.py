@@ -11,10 +11,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from flext_infra import c, config, p, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesRopeRuntimeBase,
-    FlextInfraUtilitiesRopeRuntimeTypes,
-)
+from flext_infra._utilities.rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
 
 
 class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
@@ -45,6 +42,8 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         cls,
         project: p.Infra.RopeProject,
         sources: t.MappingKV[Path, str],
+        *,
+        captured: m.Infra.CodemodBindingSnapshot | None = None,
     ) -> p.Infra.RopeProject:
         """Capture a complete identity graph with proposed sources authoritative.
 
@@ -63,10 +62,18 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
             ValueError: If Rope proposed source is outside its input inventory.
 
         """
-        inventory = {
-            Path(resource.real_path).resolve(): resource.read()
-            for resource in project.get_python_files()
-        }
+        inventory = (
+            {
+                Path(resource.real_path).resolve(): resource.read()
+                for resource in project.get_python_files()
+            }
+            if captured is None
+            else {
+                state.path.resolve(): state.content.decode("utf-8")
+                for state in captured.states
+                if state.content is not None
+            }
+        )
         root = Path(project.root.real_path).resolve()
         for path, source in sources.items():
             resolved = path.resolve()
@@ -128,12 +135,16 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         cls,
         pymodule: t.Infra.RopePyModule,
         offset: int,
+        *,
+        expected_binding: p.Infra.RopePyName | None = None,
     ) -> str | None:
         """Resolve the defining module's on-disk path of the name at ``offset``.
 
         Imported chains (``ImportedName``/``ImportedModule``) resolve through
         to their foreign definition; a builtin, dynamic, or unresolvable name
         resolves to ``None`` so callers can refuse unsafe rewrites.
+        When supplied, ``expected_binding`` must match through Rope's existing
+        name-identity comparator before the defining path is returned.
 
         Returns:
             The resulting ``str | None``.
@@ -142,6 +153,11 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         resolver = cls._runtime_callable("rope.base.evaluate", "eval_location")
         result = resolver(pymodule, offset)
         if not isinstance(result, p.Infra.RopePyName):
+            return None
+        if expected_binding is not None and not cls.same_name(
+            expected_binding,
+            result,
+        ):
             return None
         holder, _lineno = result.get_definition_location()
         if holder is None:

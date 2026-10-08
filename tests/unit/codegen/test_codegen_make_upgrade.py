@@ -18,53 +18,54 @@ from tests import c, t, u
 
 
 class TestsFlextInfraCodegenMakeUpgrade:
-    """Prove only ``upg`` resolves locks and publishes them transactionally."""
+    """Prove only ``upg`` resolves locks and setup preserves native lock inputs."""
 
     @staticmethod
     @pytest.mark.remote
     @pytest.mark.slow
-    def test_upg_replaces_newer_lock_revision_before_older_mise_reads_it(
+    def test_setup_preserves_the_resolved_native_locks(
         tmp_path: Path,
         resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
     ) -> None:
-        """The public upgrade recovers a v3 lock with a v2 Mise release."""
+        """Provision the real fixture without replacing its native lock payloads."""
         profile = c.Infra.MakeProfile.STANDALONE
         project_root = u.Tests.resolved_make_checkout(
             resolved_make_templates[profile],
-            tmp_path / "lock-revision",
+            tmp_path / "locked-setup",
             profile,
         )
-        lock = project_root / c.Infra.MISE_LOCK_FILENAME
-        previous = lock.read_text(encoding="utf-8")
-        tm.that(previous, has="lockfile_version = 2")
-        lock.write_text(
-            previous.replace("lockfile_version = 2", "lockfile_version = 3", 1),
-            encoding="utf-8",
+        locks = (
+            project_root / c.Infra.MISE_LOCK_FILENAME,
+            project_root / c.Infra.UV_LOCK_FILENAME,
         )
+        previous = tuple(lock.read_bytes() for lock in locks)
 
-        upgraded = tm.ok(
+        provisioned = tm.ok(
             u.Tests.run_isolated_make(
-                ["--no-print-directory", "upg"],
+                ["--no-print-directory", "setup"],
                 cwd=project_root,
             ),
         )
 
         tm.that(
-            u.Cli.process_succeeded(upgraded.outcome),
+            u.Cli.process_succeeded(provisioned.outcome),
             eq=True,
-            msg=upgraded.stdout + upgraded.stderr,
+            msg=provisioned.stdout + provisioned.stderr,
         )
-        tm.that(lock.read_text(encoding="utf-8"), has="lockfile_version = 2")
-        tm.that(upgraded.stdout, has="setup probe: end stage=publish-lock.log exit=0")
+        tm.that(tuple(lock.read_bytes() for lock in locks), eq=previous)
+        tm.that(
+            (u.Infra.runtime_environment_dir(project_root) / "pyvenv.cfg").is_file(),
+            eq=True,
+        )
 
     @staticmethod
     @pytest.mark.remote
     @pytest.mark.slow
-    def test_failed_upg_lock_preserves_runtime_and_retires_own_stage(
+    def test_failed_native_upg_resolution_preserves_the_previous_lock(
         tmp_path: Path,
         resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
     ) -> None:
-        """A failed real Mise lock cannot strand a stale resolved lock."""
+        """Invalid native manifest input fails without replacing the prior lock."""
         profile = c.Infra.MakeProfile.STANDALONE
         project_root = u.Tests.resolved_make_checkout(
             resolved_make_templates[profile],
@@ -86,12 +87,8 @@ class TestsFlextInfraCodegenMakeUpgrade:
         )
 
         tm.that(u.Cli.process_succeeded(upgraded.outcome), eq=False)
-        tm.that(upgraded.stderr, has="setup probe: failed stage=lock.log")
+        tm.that(bool(upgraded.stderr.strip()), eq=True)
         tm.that(lock.read_bytes(), eq=previous_lock)
-        tm.that(
-            list(project_root.parent.glob(f".{project_root.name}.mise-lock-stage.*")),
-            eq=[],
-        )
 
     @staticmethod
     def _recipe_targets_containing(
@@ -126,11 +123,9 @@ class TestsFlextInfraCodegenMakeUpgrade:
             current = header.group(1) if header else None
         return targets
 
-    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
     def test_upg_is_the_only_resolver_and_setup_installs_frozen(
         self,
-        tmp_path: Path,
-        profile: c.Infra.MakeProfile,
+        generated_make_template: t.Pair[c.Infra.MakeProfile, Path],
     ) -> None:
         """Operator law 2026-09-24: only `upg` resolves and writes the locks.
 
@@ -140,11 +135,7 @@ class TestsFlextInfraCodegenMakeUpgrade:
         `--locked`, and the generated `.mise.toml` makes mise install exactly
         what the lock pins.
         """
-        project_root, _repository_root = u.Tests.render_make_environment(
-            tmp_path,
-            profile,
-            bootstrap=True,
-        )
+        _profile, project_root = generated_make_template
         makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
             encoding="utf-8",
         )
@@ -176,7 +167,15 @@ class TestsFlextInfraCodegenMakeUpgrade:
                 'relock "$(PROJECT_ROOT)"',
             ],
         )
-        tm.that(makefile, has="install --yes")
+        # Every `mise install` names exactly the declared toolchain keys: a
+        # bare install would also provision the operator's global registry.
+        declared = " ".join(f'"{key}"' for key in toolchain.mise_install_keys)
+        installs = re.findall(r"install --yes(.*?)(?:; \\|$)", makefile, re.MULTILINE)
+        tm.that(len(installs), eq=2)
+        tm.that({install.strip() for install in installs}, eq={declared})
+        # Setup proves the provisioned toolchain before post-setup runs.
+        activated = makefile.split("_setup_activated:\n", 1)[1].split("\n\n", 1)[0]
+        tm.that(activated.splitlines()[0], has="codegen mise-proof")
         tm.that(makefile, has='if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then')
         resolve_assignments = re.findall(
             r"^(?:([\w-]+): )?TOOL_BOOTSTRAP_RESOLVE :=[ ]?(.*)$",
@@ -221,17 +220,12 @@ class TestsFlextInfraCodegenMakeUpgrade:
             eq=list(toolchain.mise_lockfile_platforms),
         )
 
-    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
     def test_generated_dependency_upgrade_projects_lock_floors(
         self,
-        tmp_path: Path,
-        profile: c.Infra.MakeProfile,
+        generated_make_template: t.Pair[c.Infra.MakeProfile, Path],
     ) -> None:
         """`upg` owns lock upgrade, open-floor projection, and final resolution."""
-        project_root, _repository_root = u.Tests.render_make_environment(
-            tmp_path,
-            profile,
-        )
+        _profile, project_root = generated_make_template
         makefile = (project_root / "Makefile").read_text(encoding="utf-8")
 
         for needle in (
@@ -252,11 +246,9 @@ class TestsFlextInfraCodegenMakeUpgrade:
         )
         tm.that(makefile, lacks="--constraint-policy")
 
-    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
     def test_upg_relocks_the_manifest_gen_projected_before_installing(
         self,
-        tmp_path: Path,
-        profile: c.Infra.MakeProfile,
+        generated_make_template: t.Pair[c.Infra.MakeProfile, Path],
     ) -> None:
         """One `make upg` resolves the requirements its own `gen` projects.
 
@@ -264,11 +256,7 @@ class TestsFlextInfraCodegenMakeUpgrade:
         runtime dependency into pyproject.toml after uv.lock was written, so
         the lock and the environment lacked it until a second `make upg`.
         """
-        project_root, _repository_root = u.Tests.render_make_environment(
-            tmp_path,
-            profile,
-            bootstrap=True,
-        )
+        _profile, project_root = generated_make_template
         makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
             encoding="utf-8",
         )
@@ -302,27 +290,35 @@ class TestsFlextInfraCodegenMakeUpgrade:
         )
         tm.that(bumped < activated, eq=True)
 
-    def test_upg_converge_verifies_the_cycle_it_upgraded(self, tmp_path: Path) -> None:
-        """An upgrade publishes after gen converges; gates stay with `make check`."""
-        project_root, _repository_root = u.Tests.render_make_environment(
-            tmp_path,
-            c.Infra.MakeProfile.WORKSPACE,
-            bootstrap=True,
-        )
+    @pytest.mark.parametrize(
+        "generated_make_template",
+        [c.Infra.MakeProfile.WORKSPACE],
+        indirect=True,
+    )
+    def test_upg_converge_verifies_the_cycle_it_upgraded(
+        self,
+        generated_make_template: t.Pair[c.Infra.MakeProfile, Path],
+    ) -> None:
+        """An upgrade publishes after gen converges; gates stay with make check."""
+        _profile, project_root = generated_make_template
         makefile = (project_root / "Makefile").read_text(encoding="utf-8")
 
-        tm.that(makefile, has="make upg did not converge")
+        tm.that(
+            self._recipe_targets_containing(
+                makefile,
+                'codegen conform --root "$(PROJECT_ROOT)" --mode check',
+            ),
+            eq={"_upg_lifecycle", "_builtin-verify-clean"},
+        )
         tm.that(
             "_upg_lifecycle"
             in self._recipe_targets_containing(makefile, "$(SELF_MAKE) check"),
             eq=False,
         )
 
-    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
     def test_upg_activates_gen_only_after_relocking_the_rendered_manifest(
         self,
-        tmp_path: Path,
-        profile: c.Infra.MakeProfile,
+        generated_make_template: t.Pair[c.Infra.MakeProfile, Path],
     ) -> None:
         """One `make upg` converges when `gen` moves the Mise self-pin.
 
@@ -333,11 +329,7 @@ class TestsFlextInfraCodegenMakeUpgrade:
         project whose manifest gains or moves the self-pin stops on a lock
         resolved from the previous manifest.
         """
-        project_root, _repository_root = u.Tests.render_make_environment(
-            tmp_path,
-            profile,
-            bootstrap=True,
-        )
+        _profile, project_root = generated_make_template
         makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
             encoding="utf-8",
         )
@@ -356,7 +348,8 @@ class TestsFlextInfraCodegenMakeUpgrade:
                 "install --yes",
                 "$(SELF_MAKE) _builtin_require_mise",
                 "$(call RUN_PUBLIC_ACTIVATE,gen)",
-                "$(SELF_MAKE) gen;",
+                "$(SELF_MAKE) gen",
+                'codegen conform --root "$(PROJECT_ROOT)" --mode check',
             )
         ]
         tm.that(order, eq=sorted(set(order)))

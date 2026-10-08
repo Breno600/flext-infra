@@ -12,8 +12,10 @@ from typing import Annotated, Literal, Self
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._models import (
+from flext_infra._models.deps_tool_config_linters import (
     FlextInfraModelsDepsToolConfigLinters,
+)
+from flext_infra._models.deps_tool_config_type_checkers import (
     FlextInfraModelsDepsToolConfigTypeCheckers,
 )
 
@@ -655,10 +657,9 @@ class FlextInfraModelsDepsToolConfig(
         omit: Annotated[
             t.StrSequence,
             m.Field(
-                default_factory=tuple,
                 description="Glob patterns excluded from coverage collection.",
             ),
-        ]
+        ] = m.Field(default_factory=tuple)
 
     class VultureConfig(m.ArbitraryTypesModel):
         """Vulture production-reachability policy loaded from YAML."""
@@ -685,31 +686,6 @@ class FlextInfraModelsDepsToolConfig(
             description="Enable Vulture's internal scanner trace when requested.",
         )
 
-    class MarkdownPrettierConfig(m.ArbitraryTypesModel):
-        """Prettier projection policy: ``make fmt``'s markdown formatter."""
-
-        prose_wrap: Annotated[
-            str,
-            m.Field(
-                alias="prose-wrap",
-                description="Prettier proseWrap contract for markdown prose.",
-            ),
-        ]
-        tab_width: Annotated[
-            int,
-            m.Field(
-                alias="tab-width",
-                description="Prettier tabWidth for non-markdown targets.",
-            ),
-        ]
-        md_tab_width: Annotated[
-            int,
-            m.Field(
-                alias="md-tab-width",
-                description="Prettier tabWidth override for markdown targets.",
-            ),
-        ]
-
     class MarkdownConfig(m.ArbitraryTypesModel):
         """Markdown lint rules and excluded non-documentation surfaces."""
 
@@ -724,13 +700,6 @@ class FlextInfraModelsDepsToolConfig(
         exclude: t.StrTuple = m.Field(
             description="Glob patterns excluded from Markdown quality checks.",
         )
-
-        prettier: Annotated[
-            FlextInfraModelsDepsToolConfig.MarkdownPrettierConfig,
-            m.Field(
-                description="Prettier formatting policy projected into .prettierrc.",
-            ),
-        ]
 
     class ToolConfigTools(m.ArbitraryTypesModel):
         """Tool map loaded from YAML."""
@@ -836,6 +805,14 @@ class FlextInfraModelsDepsToolConfig(
     class ToolConfigDocument(m.ArbitraryTypesModel):
         """Root schema for canonical ``config/tooling.yaml`` policy data."""
 
+        raw_check_receipt_suffix: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                alias="raw-check-receipt-suffix",
+                pattern=r"^\.[A-Za-z0-9_.-]+$",
+                description="Filename suffix for verbatim native check receipts.",
+            ),
+        ]
         tools: FlextInfraModelsDepsToolConfig.ToolConfigTools = m.Field(
             description="Tools",
         )

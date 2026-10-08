@@ -317,7 +317,7 @@ def _provision_make_template(run_root: Path, profile: c.Infra.MakeProfile) -> No
             env={
                 **u.Tests.hostile_uv_environment(hostile_venv),
                 make.ci.variable: make.ci.value,
-                config.MISE_DATA_DIR_ENV: str(parent / c.Tests.COLD_MISE_STORAGE),
+                c.Tests.MISE_DATA_DIR_ENV: str(parent / c.Tests.COLD_MISE_STORAGE),
             },
         ),
     )
@@ -389,6 +389,25 @@ def hermetic_git_environment(tmp_path_factory: pytest.TempPathFactory) -> t.StrM
             mirrored = u.Tests.build_git_mirrors(_PROJECT_ROOT, mirrors)
             tm.ok(u.Cli.atomic_write_text_file(receipt, "\n".join(mirrored) + "\n"))
     return u.Tests.hermetic_git_environment(mirrors)
+
+
+@pytest.fixture(scope="session", params=tuple(c.Infra.MakeProfile))
+def generated_make_template(
+    request: pytest.FixtureRequest,
+    tmp_path_factory: pytest.TempPathFactory,
+) -> t.Pair[c.Infra.MakeProfile, Path]:
+    """Render the real Make contract once per profile and worker session.
+
+    Returns:
+        The declared profile and its generated project checkout.
+    """
+    profile = c.Infra.MakeProfile(request.param)
+    root, _ = u.Tests.render_make_environment(
+        tmp_path_factory.mktemp(f"make-contract-{profile.value}"),
+        profile,
+        bootstrap=True,
+    )
+    return profile, root
 
 
 @pytest.fixture

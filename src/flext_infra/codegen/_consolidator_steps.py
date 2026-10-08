@@ -9,7 +9,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import c, m, p, r, t, u
-from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -147,7 +146,7 @@ class FlextInfraCodegenConsolidatorStepsMixin:
 
         """
         resource = scanned.resource
-        if not FlextInfraUtilitiesRopeRuntime.file_resource(resource):
+        if not u.Infra.file_resource(resource):
             msg = f"expected a Rope file resource: {py_file}"
             raise TypeError(msg)
         original_source = scanned.source

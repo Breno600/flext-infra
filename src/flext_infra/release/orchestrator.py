@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Annotated, override
 
 from flext_infra import c, m, p, r, t, u
-from flext_infra.codegen.conform import FlextInfraCodegenConform
 from flext_infra.release._release_plan import FlextInfraReleasePlanMixin
 
 
@@ -36,14 +35,13 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
     conform_collaborators: Annotated[
         m.Infra.CodegenConformPorts | None,
         m.Field(
-            default=None,
             exclude=True,
             description=(
                 "Docs port bound by the FlextInfra facade; the settling "
                 "conform fails before any effect without it"
             ),
         ),
-    ]
+    ] = None
 
     @override
     def execute(self) -> p.Result[bool]:
@@ -139,6 +137,8 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra.codegen.conform import FlextInfraCodegenConform
+
         root = ctx.repository_root
         stamped = u.Infra.replace_project_version(root, plan.next)
         if stamped.failure:

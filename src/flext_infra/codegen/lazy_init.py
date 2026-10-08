@@ -18,10 +18,6 @@ from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
 from flext_infra.codegen._lazy_init_generation import (
     FlextInfraCodegenLazyInitGenerationMixin,
 )
-from flext_infra.codegen._lazy_init_projection_manifest import (
-    FlextInfraCodegenLazyInitProjectionManifest,
-)
-from flext_infra.codegen.lazy_init_planner import FlextInfraCodegenLazyInitPlanner
 from flext_infra.workspace.rope import FlextInfraRopeWorkspace
 
 if TYPE_CHECKING:
@@ -142,6 +138,10 @@ class FlextInfraCodegenLazyInit(
             The resulting ``p.Result[m.Infra.CodegenPhaseAnalysis]``.
 
         """
+        from flext_infra.codegen._lazy_init_projection_manifest import (
+            FlextInfraCodegenLazyInitProjectionManifest,
+        )
+
         roots = (
             (self.repository_root.resolve(),)
             if self.project_scope_roots is None
@@ -168,7 +168,7 @@ class FlextInfraCodegenLazyInit(
             return r[m.Infra.CodegenPhaseAnalysis].from_failure(manifests)
         return r[m.Infra.CodegenPhaseAnalysis].ok(
             m.Infra.CodegenPhaseAnalysis(
-                phase=c.Infra.CodegenStagedFilePhase.LAZY_INIT,
+                phase="lazy-init",
                 files=composed + manifests.value,
                 inputs=tuple(inputs[path] for path in sorted(inputs)),
                 publications=tuple(
@@ -376,6 +376,10 @@ class FlextInfraCodegenLazyInit(
             The resulting ``p.Result[m.Infra.CodegenPhaseAnalysis]``.
 
         """
+        from flext_infra.codegen.lazy_init_planner import (
+            FlextInfraCodegenLazyInitPlanner,
+        )
+
         result_type = r[m.Infra.CodegenPhaseAnalysis]
         planner = FlextInfraCodegenLazyInitPlanner(
             rope_workspace=rope,

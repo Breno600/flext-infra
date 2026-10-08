@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import r, u
-from flext_infra.codegen._mise_artifacts_files import FlextInfraMiseArtifactsFiles
 
 if TYPE_CHECKING:
     from flext_infra import m, p
@@ -34,6 +33,10 @@ class FlextInfraMiseArtifactsProcess:
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra.codegen._mise_artifacts_files import (
+            FlextInfraMiseArtifactsFiles,
+        )
+
         if intent is None:
             before = u.Cli.atomic_read_binary_file_state(path, required=False)
             if before.failure:

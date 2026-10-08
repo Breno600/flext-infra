@@ -13,7 +13,6 @@ from typing import TYPE_CHECKING, override
 
 from flext_infra import c, m, r, u
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
-from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -199,6 +198,10 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
             OSError: If writing scaffold.
 
         """
+        from flext_infra.codegen._mise_artifacts_publication import (
+            FlextInfraMisePublication,
+        )
+
         files_created: t.MutableSequenceOf[str] = []
         files_skipped: t.MutableSequenceOf[str] = []
         for filename, suffix, base_class, doc_suffix in request.modules:
@@ -247,7 +250,7 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
             )
             written = FlextInfraMisePublication.publish_file_plan(
                 planned,
-                phase=c.Infra.CodegenStagedFilePhase.SCAFFOLD,
+                phase="scaffold",
             )
             if written.failure:
                 message = f"writing scaffold {filepath}: {written.error}"
