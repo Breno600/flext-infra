@@ -395,6 +395,16 @@ class FlextInfraModelsRefactor(
                 ),
             ),
         ] = None
+        direct_imports: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Whether the module keeps direct leaf imports: a "
+                    "settings/config module or a family base.py, which must "
+                    "never route through the namespace root or a lazy package"
+                ),
+            ),
+        ] = False
 
         @m.computed_field
         @property

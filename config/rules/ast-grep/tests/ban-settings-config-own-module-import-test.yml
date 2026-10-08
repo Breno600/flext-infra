@@ -1,0 +1,15 @@
+id: ban-settings-config-own-module-import
+valid:
+  - |
+    from flext_infra._settings import FlextInfraSettings
+  - |
+    from flext_infra._constants.config import FlextInfraConstantsConfig
+  - |
+    from flext_infra._models._config.beads import FlextInfraConfigModelsBeads
+  - |
+    from flext_infra._models.base import FlextInfraModelsBase
+invalid:
+  - |
+    from flext_infra._constants import FlextInfraConstantsCodegenProject
+  - |
+    from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig

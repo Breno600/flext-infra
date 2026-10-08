@@ -75,6 +75,8 @@ class FlextInfraConstantsRefactor:
         "ModuleNotFoundError",
     })
     "Exceptions whose handlers make a ``try`` around imports an import guard."
+    IMPORT_LAW_FAMILY_BASE_FILE: ClassVar[str] = "base.py"
+    "File name of a private family's leaf base module."
 
     @unique
     class ImportPlacement(StrEnum):
