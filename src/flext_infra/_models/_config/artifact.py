@@ -30,6 +30,7 @@ from flext_infra._models.deps_tool_config_project_artifacts import (
 )
 from flext_infra._models.layout import FlextInfraModelsLayout
 from flext_infra._models.mise_toolchain import FlextInfraModelsMiseToolchain
+from flext_infra._constants import FlextInfraConstantsSharedInfra
 
 
 class FlextInfraConfigModelsArtifact:
@@ -413,7 +414,7 @@ class FlextInfraConfigModelsArtifact:
                 The resulting
                     ``t.VariadicTuple[FlextInfraConfigModelsScaffold.ScaffoldGitignoreSectionSpec]``.
             """
-            from flext_infra._constants import FlextInfraConstantsSharedInfra
+
 
             scaffold_sections = self.scaffold.gitignore_sections
             # A declared section may already govern a derived artifact, in
@@ -518,7 +519,7 @@ class FlextInfraConfigModelsArtifact:
                     if GitHub artifacts must be full-managed.
 
             """
-            from flext_infra._constants import FlextInfraConstantsSharedInfra
+
 
             github_templates = tuple(
                 Path(entry.destination)

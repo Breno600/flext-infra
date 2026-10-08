@@ -22,6 +22,7 @@ from typing import Annotated, override
 from flext_infra import c, config, m, p, r, t, u
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
 from flext_infra.deps._extra_paths_sync import FlextInfraExtraPathsSyncMixin
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 
 class FlextInfraExtraPathsManager(
@@ -261,7 +262,7 @@ class FlextInfraExtraPathsManager(
             The resulting ``t.StrSequence``.
 
         """
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
 
         rules = config.Infra.tooling.tools.pyrefly.path_rules
         # Never reread an on-disk Pyright table while its

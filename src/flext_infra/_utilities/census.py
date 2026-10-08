@@ -16,6 +16,16 @@ from typing import ClassVar
 from flext_cli import u
 
 from flext_infra import c, m, p, r, t
+from flext_infra._utilities import FlextInfraUtilitiesProtectedEdit
+from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities import FlextInfraUtilitiesRopeImports
+from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+from flext_infra._utilities import FlextInfraUtilitiesRopeImports
+from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities import FlextInfraUtilitiesRopeHelpers
+from flext_infra._utilities import FlextInfraUtilitiesRopeImports
 
 
 class FlextInfraUtilitiesRefactorCensus:
@@ -180,11 +190,11 @@ class FlextInfraUtilitiesRefactorCensus:
             Same-file occurrence lines for local aliases of ``imported_name``.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesRopeAnalysis,
-            FlextInfraUtilitiesRopeCore,
-            FlextInfraUtilitiesRopeImports,
-        )
+
+
+
+
+
 
         resource = rope.resource(file_path)
         if resource is None:
@@ -371,10 +381,10 @@ class FlextInfraUtilitiesRefactorCensus:
             Simple alias names removed together with ``target_name``.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesRopeCore,
-            FlextInfraUtilitiesRopeRuntime,
-        )
+
+
+
+
 
         if not removed_ranges:
             return ()
@@ -460,10 +470,10 @@ class FlextInfraUtilitiesRefactorCensus:
             The resulting ``t.MappingKV[Path, str] | None``.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesRopeAnalysis,
-            FlextInfraUtilitiesRopeImports,
-        )
+
+
+
+
 
         target_name = candidate.object_name
         definition_path = Path(candidate.file_path).resolve()
@@ -539,7 +549,7 @@ class FlextInfraUtilitiesRefactorCensus:
             (new_source, disqualified) after removing ``base_name`` from bases.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeHelpers
+
 
         rewritten_lines = source.splitlines(keepends=True)
         headers = sorted(
@@ -710,7 +720,7 @@ class FlextInfraUtilitiesRefactorCensus:
             RuntimeError: If ``cleanup_result.failure``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeImports
+
 
         try:
             rope.rope_project.validate()
@@ -799,7 +809,7 @@ class FlextInfraUtilitiesRefactorCensus:
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesProtectedEdit
+
 
         planned = FlextInfraUtilitiesRefactorCensus._planned_simple_removal(
             rope,
@@ -857,7 +867,7 @@ class FlextInfraUtilitiesRefactorCensus:
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesProtectedEdit
+
 
         source_cache: MutableMapping[Path, str] = {}
         planned = FlextInfraUtilitiesRefactorCensus._planned_simple_removal(
@@ -1006,7 +1016,7 @@ class FlextInfraUtilitiesRefactorCensus:
             The resulting ``t.IntPair | None``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeHelpers
+
 
         return FlextInfraUtilitiesRopeHelpers.top_level_definition_span(
             source,
@@ -1041,7 +1051,7 @@ class FlextInfraUtilitiesRefactorCensus:
             The resulting ``t.IntPair | None``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeHelpers
+
 
         for statement in ast.parse(source).body:
             start, end = FlextInfraUtilitiesRopeHelpers.statement_line_span(statement)

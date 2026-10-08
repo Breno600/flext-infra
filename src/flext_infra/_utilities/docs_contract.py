@@ -14,6 +14,8 @@ from markdown import Markdown
 from markdown.extensions.toc import slugify
 
 from flext_infra import c, m, r, t
+from flext_cli import u
+from flext_infra._utilities import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -209,7 +211,7 @@ class FlextInfraUtilitiesDocsContract:
             TypeError: If docs project metadata is missing.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDocsScope
+
 
         payload = FlextInfraUtilitiesDocsScope.project_payload(project_root)
         project_value = payload.get(c.Infra.PROJECT)
@@ -264,7 +266,7 @@ class FlextInfraUtilitiesDocsContract:
             The resulting ``p.Result[m.Infra.CodegenFilePlan]``.
 
         """
-        from flext_cli import u
+
 
         if (
             not project.is_absolute()

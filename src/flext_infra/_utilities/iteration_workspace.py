@@ -12,6 +12,7 @@ from flext_infra import c, config, p, r, t
 from flext_infra._utilities.iteration_directory import (
     FlextInfraUtilitiesIterationDirectory,
 )
+from flext_infra._utilities import FlextInfraUtilitiesGitScopeMixin
 
 
 class FlextInfraUtilitiesIterationWorkspace(FlextInfraUtilitiesIterationDirectory):
@@ -59,7 +60,7 @@ class FlextInfraUtilitiesIterationWorkspace(FlextInfraUtilitiesIterationDirector
             Configured Python sources with one Git inventory per project.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGitScopeMixin
+
 
         source_roots = tuple(
             path

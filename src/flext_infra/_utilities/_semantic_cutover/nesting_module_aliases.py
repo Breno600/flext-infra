@@ -13,6 +13,7 @@ import libcst as cst
 from libcst.metadata import MetadataWrapper, ParentNodeProvider
 
 from flext_infra import m, t
+from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
 
 
 class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
@@ -138,7 +139,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             The absolute dotted module name.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
 
         suffix = FlextInfraUtilitiesQualifiedNames.dotted_name(node.module) or ""
         if not node.relative:
@@ -158,7 +159,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             The ``as`` name, else the imported dotted name.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
 
         if imported.asname is not None and isinstance(imported.asname.name, cst.Name):
             return imported.asname.name.value
@@ -180,7 +181,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             nested modules whose members or owner it already imports.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
 
         if isinstance(node.names, cst.ImportStar):
             return {}, frozenset()
@@ -214,7 +215,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             Local name to nested module.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
 
         bound: t.MutableStrMapping = {}
         for imported in node.names:
@@ -237,7 +238,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             use that still needs the module object.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
 
         if FlextInfraUtilitiesQualifiedNames.rebinds_name_in_place(
             parent,

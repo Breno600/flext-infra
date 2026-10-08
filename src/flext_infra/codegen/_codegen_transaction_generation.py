@@ -24,6 +24,10 @@ from flext_infra.codegen._mise_artifacts_state import (
 from flext_infra.codegen._mise_artifacts_verification import (
     FlextInfraMiseArtifactsVerification as verify,
 )
+from flext_infra.codegen._codegen_staging import FlextInfraCodegenStaging
+from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
+from flext_infra.codegen._mise_artifacts_staging import FlextInfraMiseStaging
+from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -34,7 +38,7 @@ class FlextInfraCodegenTransactionGeneration(FlextInfraCodegenTransactionRecover
 
     def __init__(self, owner: p.Infra.MiseArtifactsOwner) -> None:
         """Initialize the transaction with its configured Mise artifact owner."""
-        from flext_infra.codegen._mise_artifacts_staging import FlextInfraMiseStaging
+
 
         super().__init__(owner)
         self._owner = owner
@@ -160,9 +164,9 @@ class FlextInfraCodegenTransactionGeneration(FlextInfraCodegenTransactionRecover
                 m.Cli.AtomicFileState]]]``.
 
         """
-        from flext_infra.codegen.codegen_preconditions import (
-            FlextInfraCodegenPreconditions,
-        )
+
+
+
 
         source_states = FlextInfraCodegenPreconditions.phase_sources(
             c.Infra.CodegenStagedFilePhase.CONFORM_BOOTSTRAP,
@@ -396,7 +400,7 @@ class FlextInfraCodegenTransactionGeneration(FlextInfraCodegenTransactionRecover
             with the complete publication set (conform plus changed Mise files).
 
         """
-        from flext_infra.codegen._codegen_staging import FlextInfraCodegenStaging
+
 
         ordinary_staged = FlextInfraCodegenStaging.stage_file_plans(
             layout,
@@ -503,9 +507,9 @@ class FlextInfraCodegenTransactionGeneration(FlextInfraCodegenTransactionRecover
             files.
 
         """
-        from flext_infra.codegen._mise_artifacts_publication import (
-            FlextInfraMisePublication,
-        )
+
+
+
 
         published = FlextInfraMisePublication.publish(publications)
         if published.failure:

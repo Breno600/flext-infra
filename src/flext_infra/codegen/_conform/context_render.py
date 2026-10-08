@@ -13,6 +13,7 @@ from flext_infra import c, config, m, p, r, t, u
 from flext_infra.codegen._conform.pyproject_policy import (
     FlextInfraCodegenConformPyprojectPolicy,
 )
+from flext_infra.deps.phases.ensure_packaging import FlextInfraEnsurePackagingPhase
 
 
 class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPolicy):
@@ -396,9 +397,9 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             The resulting ``p.Result[m.Infra.ProjectRenderContext]``.
 
         """
-        from flext_infra.deps.phases.ensure_packaging import (
-            FlextInfraEnsurePackagingPhase,
-        )
+
+
+
 
         target = render_inputs.target
         workspace = render_inputs.workspace

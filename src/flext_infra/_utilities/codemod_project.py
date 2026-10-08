@@ -37,6 +37,18 @@ from flext_infra._utilities import (
     FlextInfraUtilitiesSemanticCutoverBindings,
     FlextInfraUtilitiesSemanticFamilyTypeReferences,
 )
+from flext_cli import u
+from flext_infra._utilities import FlextInfraUtilitiesBase
+from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisImportState
+from flext_infra._utilities import FlextInfraUtilitiesPyproject
+from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
+from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
+from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisExports
+from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisExports
+from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities import FlextInfraUtilitiesRopeImports
 
 
 class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
@@ -75,10 +87,10 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         Raises:
             ValueError: If rope could not name module.
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesRopeCore,
-            FlextInfraUtilitiesRopeImports,
-        )
+
+
+
+
 
         raw: MutableMapping[str, set[str]] = {}
         modules: MutableMapping[Path, str] = {}
@@ -135,7 +147,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             The resulting ``t.MappingKV[str, frozenset[str]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesBase
+
 
         cycles: MutableMapping[str, frozenset[str]] = {}
         for component in FlextInfraUtilitiesBase.strongly_connected_components({
@@ -192,10 +204,10 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 absent from the project import graph.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesCodegenNamespace,
-            FlextInfraUtilitiesRopeAnalysisImportState,
-        )
+
+
+
+
 
         graph, modules = facts.import_graph, facts.import_modules
         source = modules.get(file_path.resolve())
@@ -256,10 +268,10 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             Whether ``namespace`` in a facade module composes its family.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesRopeAnalysisAstHelpers,
-            FlextInfraUtilitiesRopeAnalysisExports,
-        )
+
+
+
+
 
         package = facade_file.parent / f"_{facade_file.stem}"
         if not package.is_dir():
@@ -304,7 +316,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             ValueError: If class.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
+
 
         tree = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(
             facade_file.read_text(encoding=c.Cli.ENCODING_DEFAULT),
@@ -948,9 +960,9 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             ValueError: If project layout is unresolved.
 
         """
-        from flext_cli import u
 
-        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+
+
 
         if package == own:
             layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
@@ -978,7 +990,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             ValueError: If the predicate is not one the engine declares.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
 
         predicate = condition.predicate
         declared = isinstance(predicate, c.Infra.CodemodContextPredicate)
@@ -1070,7 +1082,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             ValueError: If project layout is unresolved.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+
 
         value, of = captured
         module = cls._top_module(value)
@@ -1189,7 +1201,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             ValueError: If project layout is unresolved.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+
 
         layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
         if layout is None:
@@ -1254,7 +1266,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             The resulting ``frozenset[str]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisExports
+
 
         return frozenset(
             FlextInfraUtilitiesRopeAnalysisExports.public_export_names_source(
@@ -1367,7 +1379,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             ValueError: If project layout is unresolved.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+
 
         layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
         if layout is None:
@@ -1454,7 +1466,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             The resulting ``Path | None``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+
 
         layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
         if layout is None or not file_path.is_relative_to(layout.src_dir):

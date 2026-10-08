@@ -13,6 +13,7 @@ from flext_infra import c, m, t
 from flext_infra._utilities._git.state_files import (
     FlextInfraUtilitiesGitStateFilesMixin,
 )
+from flext_cli import u
 
 
 class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFilesMixin):
@@ -257,7 +258,7 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
         cleanup: bool,
     ) -> None:
 
-        from flext_cli import u
+
 
         expected = {file.path: file for file in snapshot.files}
         base = {

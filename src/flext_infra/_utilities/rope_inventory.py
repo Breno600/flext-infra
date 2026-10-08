@@ -12,6 +12,13 @@ from pathlib import Path
 from rope.base import exceptions
 
 from flext_infra import c, m, p, t
+from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities import FlextInfraUtilitiesRopeImports
+from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities import FlextInfraUtilitiesRopeImports
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeInventory:
@@ -37,10 +44,10 @@ class FlextInfraUtilitiesRopeInventory:
             ValueError: If path is outside the active rope workspace.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesRopeCore,
-            FlextInfraUtilitiesRopeRuntime,
-        )
+
+
+
+
 
         rope_project = rope_workspace.rope_project
         resource = rope_workspace.resource(file_path)
@@ -262,7 +269,7 @@ class FlextInfraUtilitiesRopeInventory:
             The resulting ``t.VariadicTuple[t.Pair[str, t.Infra.RopePyName]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
 
         candidates: list[t.Triple[int, str, t.Infra.RopePyName]] = []
         for name, pyname in names.items():
@@ -384,7 +391,7 @@ class FlextInfraUtilitiesRopeInventory:
             The resulting ``p.Infra.RopeScopeDsl | None``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
 
         location = pyname.get_definition_location()
         _, line = location
@@ -461,7 +468,7 @@ class FlextInfraUtilitiesRopeInventory:
             The resulting ``str``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
 
         obj = pyname.get_object()
         if FlextInfraUtilitiesRopeRuntime.abstract_class(obj):
@@ -494,7 +501,7 @@ class FlextInfraUtilitiesRopeInventory:
             The resulting ``str``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
 
         if FlextInfraUtilitiesRopeRuntime.parameter_name(pyname):
             return "parameter"
@@ -525,7 +532,7 @@ class FlextInfraUtilitiesRopeInventory:
             The resulting ``t.VariadicTuple[t.Infra.RopeResource] | None``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeImports
+
 
         if definition_path is None:
             return None
@@ -708,10 +715,10 @@ class FlextInfraUtilitiesRopeInventory:
             RuntimeError: If the definition identifier or path cannot be located.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesRopeCore,
-            FlextInfraUtilitiesRopeImports,
-        )
+
+
+
+
 
         name = options.name
         lines = options.source.splitlines(keepends=True)
@@ -795,7 +802,7 @@ class FlextInfraUtilitiesRopeInventory:
             The resulting ``Path | None``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeImports
+
 
         return FlextInfraUtilitiesRopeImports.location_file_path(location)
 
@@ -962,7 +969,7 @@ class FlextInfraUtilitiesRopeInventory:
             The expected tier for a module convention.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+
 
         expected: str = convention.module_policy.expected_family or ""
         if expected:

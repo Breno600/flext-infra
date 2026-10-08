@@ -13,6 +13,7 @@ from flext_infra import c, config, m, p, t
 from flext_infra._utilities.codegen_facades import FlextInfraUtilitiesCodegenFacades
 from flext_infra._utilities.codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
 from flext_infra._utilities.gitignore import FlextInfraUtilitiesGitignore
+from flext_cli import u
 
 
 class FlextInfraUtilitiesCodegen(
@@ -60,7 +61,7 @@ class FlextInfraUtilitiesCodegen(
             The resulting ``str``.
 
         """
-        from flext_cli import u
+
 
         template_path = (
             Path(__file__).resolve().parent.parent
@@ -89,7 +90,7 @@ class FlextInfraUtilitiesCodegen(
             The resulting ``str``.
 
         """
-        from flext_cli import u
+
 
         template_path = (
             Path(__file__).resolve().parent.parent

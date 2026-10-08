@@ -9,6 +9,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_infra import m, p, t
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors
 
 
 class FlextInfraUtilitiesCodegenPathCutover:
@@ -71,7 +73,7 @@ class FlextInfraUtilitiesCodegenPathCutover:
             ValueError: If Rope source differs from the mod planning snapshot.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
 
         selected = tuple(
             path
@@ -141,7 +143,7 @@ class FlextInfraUtilitiesCodegenPathCutover:
             The resulting ``t.VariadicTuple[m.Infra.SemanticMigrationEdit]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors
+
 
         transformations = (
             (

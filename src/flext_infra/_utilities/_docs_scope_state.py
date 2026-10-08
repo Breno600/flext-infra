@@ -14,6 +14,10 @@ from flext_infra._models import FlextInfraModelsWorkspace
 from flext_infra._utilities._docs_scope_paths import (
     FlextInfraUtilitiesDocsScopePathsMixin,
 )
+from flext_cli import u
+from flext_infra._utilities import FlextInfraUtilitiesDependencies
+from flext_infra._utilities import FlextInfraUtilitiesPyproject
+from flext_infra._utilities import FlextInfraUtilitiesPyproject
 
 
 class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMixin):
@@ -38,7 +42,7 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
             ValueError: If ``snapshot.failure``.
 
         """
-        from flext_cli import u
+
 
         root = FlextInfraUtilitiesDocsScopeStateMixin.absolute_lexical(project_root)
         pyproject_path = root / c.PYPROJECT_FILENAME
@@ -70,12 +74,12 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
                 or if docs pyproject is not valid UTF-8.
 
         """
-        from flext_cli import u
 
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesDependencies,
-            FlextInfraUtilitiesPyproject,
-        )
+
+
+
+
+
 
         if content is None:
             payload: t.JsonMapping = {}
@@ -155,7 +159,7 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
             The declared project name from ``[project].name``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
 
         return FlextInfraUtilitiesPyproject.project_name_from_payload(entry, payload)
 
@@ -179,7 +183,7 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
             The resulting ``t.JsonMapping``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
 
         return FlextInfraUtilitiesPyproject.docs_meta_from_payload(payload)
 
@@ -224,7 +228,7 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
             The primary package name using pre-loaded payload.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
 
         return FlextInfraUtilitiesPyproject.package_name_from_payload(
             project_root,

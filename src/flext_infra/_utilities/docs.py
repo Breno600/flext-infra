@@ -13,6 +13,9 @@ from flext_infra import c, m, r, t
 from flext_infra._utilities._docs_scope_build import (
     FlextInfraUtilitiesDocsScopeBuildMixin,
 )
+from flext_cli import u
+from flext_infra._utilities import FlextInfraUtilitiesDocsContract
+from flext_infra._utilities import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -35,7 +38,7 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             ValueError: If insecure documentation URL is prohibited; use HTTPS.
 
         """
-        from flext_cli import u
+
 
         normalized = u.norm_str(target, case="lower").lstrip("<")
         scheme = urlsplit(normalized).scheme
@@ -95,7 +98,7 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             The resulting ``t.SequenceOf[Path]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDocsScope
+
 
         scope_root = scope.path
         files = FlextInfraUtilitiesDocs.iter_markdown_files(scope_root)
@@ -131,7 +134,7 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_cli import u
+
 
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -157,7 +160,7 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
         Every table row is one changed file, so the row count is the changed
         file count both reports publish.
         """
-        from flext_cli import u
+
 
         summary_payload = t.Cli.JSON_MAPPING_ADAPTER.validate_python({
             c.Infra.RK_SUMMARY: {
@@ -215,7 +218,7 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             The resulting ``str``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDocsContract
+
 
         return FlextInfraUtilitiesDocsContract.docs_contract_anchorize(text)
 
@@ -227,7 +230,7 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             The resulting ``str``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDocsContract
+
 
         return FlextInfraUtilitiesDocsContract.docs_contract_build_toc(content)
 
@@ -239,7 +242,7 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             The resulting ``t.StrIntPair``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDocsContract
+
 
         return FlextInfraUtilitiesDocsContract.docs_contract_update_toc(content)
 

@@ -20,6 +20,17 @@ from typing import ClassVar
 from flext_cli import r
 
 from flext_infra import c, config, m, p, t
+from flext_cli import u
+from flext_infra._utilities import FlextInfraUtilitiesDiscovery
+from flext_infra._utilities import FlextInfraUtilitiesDiscovery
+from flext_infra._utilities import FlextInfraUtilitiesDocsScope
+from flext_infra._utilities import FlextInfraUtilitiesDiscovery
+from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities import FlextInfraUtilitiesDocsScope
+from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities import FlextInfraUtilitiesRopeSource
 
 
 class FlextInfraUtilitiesCodegenNamespace:
@@ -359,12 +370,12 @@ class FlextInfraUtilitiesCodegenNamespace:
             The canonical project layout contract for one project root.
 
         """
-        from flext_cli import u
 
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesDiscovery,
-            FlextInfraUtilitiesDocsScope,
-        )
+
+
+
+
+
 
         resolved_root = project_root.resolve()
         package_name = (
@@ -420,11 +431,11 @@ class FlextInfraUtilitiesCodegenNamespace:
             ValueError: If facade source is unavailable to Rope.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesDiscovery,
-            FlextInfraUtilitiesRopeAnalysis,
-            FlextInfraUtilitiesRopeCore,
-        )
+
+
+
+
+
 
         family_alias = cls.facade_family_of_directory(file_path.parent.name)
         declared_exports = cls._declared_exports(file_path)
@@ -530,7 +541,7 @@ class FlextInfraUtilitiesCodegenNamespace:
             The resulting ``str``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDiscovery
+
 
         project_root = (
             project_layout.project_root
@@ -695,7 +706,7 @@ class FlextInfraUtilitiesCodegenNamespace:
             The resulting ``m.Infra.NamespaceModulePolicy``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDiscovery
+
 
         package_name = current_pkg or FlextInfraUtilitiesDiscovery.package_name(
             file_path,
@@ -776,11 +787,11 @@ class FlextInfraUtilitiesCodegenNamespace:
             ValueError: If facade source is unavailable to Rope.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesDiscovery,
-            FlextInfraUtilitiesRopeAnalysis,
-            FlextInfraUtilitiesRopeCore,
-        )
+
+
+
+
+
 
         policy = cls.publication_policy(
             file_path,
@@ -841,7 +852,7 @@ class FlextInfraUtilitiesCodegenNamespace:
             The resulting ``p.Result[t.SequenceOf[m.Infra.ProjectInfo]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDocsScope
+
 
         if projects is None:
             projects_result = FlextInfraUtilitiesDocsScope.discover_projects(
@@ -901,7 +912,7 @@ class FlextInfraUtilitiesCodegenNamespace:
         the pass never rebases an already-parented facade onto flext-core, so
         it is idempotent and correct across project boundaries.
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+
 
         if not file_path.is_file():
             return
@@ -943,7 +954,7 @@ class FlextInfraUtilitiesCodegenNamespace:
             The resulting ``str | None``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
 
         source = resource.read()
         class_infos = sorted(
@@ -1009,7 +1020,7 @@ class FlextInfraUtilitiesCodegenNamespace:
             The resulting ``str``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeSource
+
 
         lines = source.splitlines()
         if import_line in lines:
@@ -1100,7 +1111,7 @@ class FlextInfraUtilitiesCodegenNamespace:
             The resulting ``m.Infra.ViolationKey``.
 
         """
-        from flext_cli import u
+
 
         if violation.module not in source_cache:
             source_cache[violation.module] = cls._read_source_lines(

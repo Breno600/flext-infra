@@ -15,6 +15,7 @@ from libcst.metadata import MetadataWrapper, ParentNodeProvider, QualifiedNamePr
 from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
 )
+from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -98,7 +99,7 @@ class FlextInfraUtilitiesSemanticCutoverSelfFacade(
             updated_node: cst.ImportFrom,
         ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
 
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
 
             parent = self.get_metadata(ParentNodeProvider, original_node)
             if not isinstance(parent, cst.SimpleStatementLine):

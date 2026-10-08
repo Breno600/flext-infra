@@ -10,6 +10,9 @@ import operator
 from pathlib import Path
 
 from flext_infra import t
+from flext_infra._constants import FlextInfraConstantsNamespace
+from flext_infra._constants import FlextInfraConstantsSharedInfra
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeCoreResourcesMixin:
@@ -30,7 +33,7 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
             Rope File for a filesystem Path, or None if outside project.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
 
         root_real_path = getattr(getattr(rope_project, "root", None), "real_path", None)
         if not isinstance(root_real_path, str):
@@ -85,10 +88,10 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
             Whether a path should be exposed as a Python Rope resource.
 
         """
-        from flext_infra._constants import (
-            FlextInfraConstantsNamespace,
-            FlextInfraConstantsSharedInfra,
-        )
+
+
+
+
 
         return (
             file_path.suffix == FlextInfraConstantsSharedInfra.EXT_PYTHON
@@ -118,7 +121,7 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
             Rope's already-filtered Python resources without a path roundtrip.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
 
         return tuple(
             sorted(

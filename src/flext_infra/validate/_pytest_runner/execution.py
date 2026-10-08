@@ -18,6 +18,7 @@ import pytest
 from flext_infra import c, config, m, r, t, u
 from flext_infra.validate._pytest_runner.command import FlextInfraPytestRunnerCommand
 from flext_infra.validate._pytest_runner.reports import FlextInfraPytestRunnerReports
+from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -40,7 +41,7 @@ class FlextInfraPytestRunnerExecution(
             The resulting ``p.Result[m.Infra.TestmonCacheState]``.
 
         """
-        from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
+
 
         return FlextInfraTestmonDbInspector(
             repository_root=self.root,
@@ -644,7 +645,7 @@ class FlextInfraPytestRunnerExecution(
             ValueError: If the database path contains output delimiters.
 
         """
-        from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
+
 
         publication = self._cache_publication
         output = self._optional_environment_path("GITHUB_OUTPUT")
@@ -682,7 +683,7 @@ class FlextInfraPytestRunnerExecution(
                 cache.
 
         """
-        from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
+
 
         report_dir = self._report_directory()
         self._write_run_context(
@@ -811,7 +812,7 @@ class FlextInfraPytestRunnerExecution(
             RuntimeError: If completed testmon run has no checkpointed database.
 
         """
-        from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
+
 
         accounting = m.Infra.TestmonRunAccounting.model_validate_json(
             (report_dir / "run-accounting.json").read_text(encoding="utf-8"),

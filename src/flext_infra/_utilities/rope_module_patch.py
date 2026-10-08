@@ -9,6 +9,7 @@ from __future__ import annotations
 import ast
 
 from flext_infra import t
+from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisExports
 
 
 class FlextInfraUtilitiesRopeModulePatch:
@@ -53,7 +54,7 @@ class FlextInfraUtilitiesRopeModulePatch:
             The exported lower-case names bound directly to a class.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisExports
+
 
         tree = ast.parse(source)
         class_names = {
@@ -111,7 +112,7 @@ class FlextInfraUtilitiesRopeModulePatch:
             Source with one published alias letter removed from ``__all__``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisExports
+
 
         exports = FlextInfraUtilitiesRopeAnalysisExports.public_export_names_source(
             source,

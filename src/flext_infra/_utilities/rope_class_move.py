@@ -9,6 +9,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_infra import c, m, p, t
+from flext_cli import u
+from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities import FlextInfraUtilitiesRopeCorePyModuleMixin
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeClassMove:
@@ -22,7 +27,7 @@ class FlextInfraUtilitiesRopeClassMove:
             The resulting ``Path``.
 
         """
-        from flext_cli import u
+
 
         target_file, mover = cls._class_mover(request)
         root = Path(request.rope_project.root.real_path).resolve()
@@ -122,10 +127,10 @@ class FlextInfraUtilitiesRopeClassMove:
             ValueError: If class move source and target are identical; or if class.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesRopeCorePyModuleMixin,
-            FlextInfraUtilitiesRopeRuntime,
-        )
+
+
+
+
 
         root = Path(request.rope_project.root.real_path).resolve()
         source_file = cls._owned_path(root, request.source_file)
@@ -184,7 +189,7 @@ class FlextInfraUtilitiesRopeClassMove:
             The resulting ``Path``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+
 
         module_stem = cls.class_module_stem(class_name)
         if family:
@@ -208,7 +213,7 @@ class FlextInfraUtilitiesRopeClassMove:
         root: Path,
         file_path: Path,
     ) -> t.Infra.RopeFile:
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
 
         relative_path = file_path.relative_to(root).as_posix()
         resource = rope_project.get_resource(relative_path)

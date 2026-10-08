@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from flext_infra import c, m
+from flext_cli import u
+from flext_infra._utilities import FlextInfraUtilitiesDocs
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -147,7 +149,7 @@ class FlextInfraUtilitiesDocsBuild:
             The resulting ``m.Infra.DocsPhaseReport``.
 
         """
-        from flext_cli import u
+
 
         site_dir = (
             scope.path
@@ -178,7 +180,7 @@ class FlextInfraUtilitiesDocsBuild:
     @staticmethod
     def _run_mkdocs_api(settings: Path, site_dir: Path) -> None:
         """Run MkDocs build via the Python API with lazy imports."""
-        from flext_cli import u
+
 
         mkdocs_build = import_module("mkdocs.commands.build")
         mkdocs_config = import_module("mkdocs.config")
@@ -257,9 +259,9 @@ class FlextInfraUtilitiesDocsBuild:
         report: m.Infra.DocsPhaseReport,
     ) -> None:
         """Persist the standard build summary and markdown report."""
-        from flext_cli import u
 
-        from flext_infra._utilities import FlextInfraUtilitiesDocs
+
+
 
         _ = u.Cli.json_write(
             scope.report_dir / "build-summary.json",

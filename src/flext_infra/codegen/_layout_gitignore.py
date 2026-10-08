@@ -13,6 +13,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_infra import c, config, m, p, r, t, u
+from flext_infra.codegen._layout_plan import FlextInfraCodegenLayoutPlanMixin
+from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 
 class FlextInfraCodegenLayoutGitignoreMixin:
@@ -48,10 +51,10 @@ class FlextInfraCodegenLayoutGitignoreMixin:
             The resulting ``p.Result[t.Infra.LayoutStatus]``.
 
         """
-        from flext_infra.codegen._layout_plan import FlextInfraCodegenLayoutPlanMixin
-        from flext_infra.codegen._mise_artifacts_publication import (
-            FlextInfraMisePublication,
-        )
+
+
+
+
 
         rendered = u.Infra.render_project_gitignore(
             config.Infra.codegen,
@@ -102,9 +105,9 @@ class FlextInfraCodegenLayoutGitignoreMixin:
             The resulting ``p.Result[t.Infra.LayoutStatus]``.
 
         """
-        from flext_infra.codegen._mise_artifacts_publication import (
-            FlextInfraMisePublication,
-        )
+
+
+
 
         gitignore_path = project_dir / c.Infra.GITIGNORE
         current = ""
@@ -155,7 +158,7 @@ class FlextInfraCodegenLayoutGitignoreMixin:
             The resulting ``p.Result[c.Infra.MakeProfile | None]``.
 
         """
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
 
         workspace = FlextInfraWorkspaceDetector.load_workspace_spec(
             u.Infra.resolve_repository_root_or_cwd(project_dir),

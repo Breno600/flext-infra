@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c, config, m, r, t, u
+from flext_infra.codegen import FlextInfraCodegenMiseArtifacts
+from flext_infra.codegen import FlextInfraCodegenTransaction
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -37,10 +39,10 @@ class FlextInfraSemanticPublication:
             The resulting ``p.Result[t.VariadicTuple[Path]]``.
 
         """
-        from flext_infra.codegen import (
-            FlextInfraCodegenMiseArtifacts,
-            FlextInfraCodegenTransaction,
-        )
+
+
+
+
 
         files = cls._concrete_file_plans(plans, codegen)
         if files.failure:

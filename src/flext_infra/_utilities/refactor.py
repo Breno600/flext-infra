@@ -15,6 +15,7 @@ from pathlib import Path
 from flext_cli import r
 
 from flext_infra import c, m, p, t
+from flext_cli import u
 
 
 class FlextInfraUtilitiesRefactor:
@@ -38,7 +39,7 @@ class FlextInfraUtilitiesRefactor:
             TypeError: If expected list value.
 
         """
-        from flext_cli import u
+
 
         if value is None:
             return []
@@ -81,7 +82,7 @@ class FlextInfraUtilitiesRefactor:
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_cli import u
+
 
         payload = {
             "files": [
@@ -117,7 +118,7 @@ class FlextInfraUtilitiesRefactor:
             The resulting ``p.Result[m.Infra.ModScanEvidenceReceipt]``.
 
         """
-        from flext_cli import u
+
 
         totals = FlextInfraUtilitiesRefactor._validated_mod_scan_totals(report)
         if totals.failure:
@@ -217,7 +218,7 @@ class FlextInfraUtilitiesRefactor:
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_cli import u
+
 
         prepared = u.Cli.ensure_dir(report_path.parent)
         if prepared.failure:
@@ -261,7 +262,7 @@ class FlextInfraUtilitiesRefactor:
             The resulting ``p.Result[Path]``.
 
         """
-        from flext_cli import u
+
 
         content = (report.model_dump_json(indent=2) + "\n").encode(
             c.Cli.ENCODING_DEFAULT,

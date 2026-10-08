@@ -10,6 +10,9 @@ from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m, p, t
+from flext_infra._utilities import FlextInfraUtilitiesPyproject
+from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+from flext_infra._utilities import FlextInfraUtilitiesRopeCore
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -87,7 +90,7 @@ class FlextInfraUtilitiesDocsApi:
             The resulting ``t.StrSequence``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
 
         return FlextInfraUtilitiesRopeAnalysis.module_assignment_strings_source(
             source,
@@ -109,7 +112,7 @@ class FlextInfraUtilitiesDocsApi:
             The source module and original name for one imported symbol.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
 
         return FlextInfraUtilitiesRopeAnalysis.imported_symbol_binding_source(
             source,
@@ -190,7 +193,7 @@ class FlextInfraUtilitiesDocsApi:
             The resulting ``t.StrMapping``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
 
         key = f"{module_name}:{symbol_name}"
         if key in visited:
@@ -298,7 +301,7 @@ class FlextInfraUtilitiesDocsApi:
             Runtime public exports from lazy-loader or ``__all__`` contracts.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
 
         literal_values, export_name = (
             FlextInfraUtilitiesRopeAnalysis.lazy_public_exports_source(source)
@@ -337,7 +340,7 @@ class FlextInfraUtilitiesDocsApi:
             The resulting ``t.StrMapping``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
 
         return FlextInfraUtilitiesRopeAnalysis.export_target_modules_source(
             source,
@@ -353,7 +356,7 @@ class FlextInfraUtilitiesDocsApi:
             Whether source starts with a module docstring.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
 
         return FlextInfraUtilitiesRopeAnalysis.module_has_docstring_source(source)
 
@@ -365,7 +368,7 @@ class FlextInfraUtilitiesDocsApi:
             Assignment names followed by a literal docstring expression.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
 
         return set(FlextInfraUtilitiesRopeAnalysis.assignment_docstrings_source(source))
 
@@ -377,7 +380,7 @@ class FlextInfraUtilitiesDocsApi:
             Whether one exported class/function starts with a docstring.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
 
         if FlextInfraUtilitiesRopeAnalysis.symbol_has_docstring_source(
             source,
@@ -402,7 +405,7 @@ class FlextInfraUtilitiesDocsApi:
             Whether one class inherits documentation through its FLEXT chain.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
 
         if not FlextInfraUtilitiesRopeAnalysis.class_declared_source(
             source,
@@ -547,7 +550,7 @@ class FlextInfraUtilitiesDocsApi:
             The resulting ``t.StrSequence``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+
 
         with FlextInfraUtilitiesRopeCore.open_project(project_root) as rope_project:
             symbols: t.MutableSequenceOf[str] = []
@@ -667,7 +670,7 @@ class FlextInfraUtilitiesDocsApi:
             The resulting ``t.JsonMapping``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
+
 
         project = metadata.project
         docs = metadata.flext.docs
@@ -728,7 +731,7 @@ class FlextInfraUtilitiesDocsApi:
         """
         # Retain flext-core's validated metadata object; no shadow DTO.
 
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
+
 
         metadata_result = FlextInfraUtilitiesPyproject.read_project_metadata_result(
             project_root,

@@ -18,6 +18,8 @@ from flext_infra._utilities._rope_core_pymodule import (
 from flext_infra._utilities._rope_core_resources import (
     FlextInfraUtilitiesRopeCoreResourcesMixin,
 )
+from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeCore(
@@ -48,7 +50,7 @@ class FlextInfraUtilitiesRopeCore(
             The resulting ``t.Infra.RopeProject``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
+
 
         resolved_root = repository_root.resolve()
         project_roots = tuple(
@@ -77,7 +79,7 @@ class FlextInfraUtilitiesRopeCore(
             The resulting ``t.Infra.RopeProject``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
 
         source_folders = sorted({
             str(scan_path.relative_to(resolved_root))

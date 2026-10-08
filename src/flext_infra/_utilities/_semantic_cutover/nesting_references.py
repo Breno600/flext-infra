@@ -16,6 +16,7 @@ from flext_infra import m, t
 from flext_infra._utilities._semantic_cutover.nesting_module_aliases import (
     FlextInfraUtilitiesSemanticCutoverNestingModuleAliases,
 )
+from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
 
 
 class FlextInfraUtilitiesSemanticCutoverNestingReferences(
@@ -119,7 +120,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
         @override
         def visit_ImportFrom(self, node: cst.ImportFrom) -> None:
 
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
 
             bindings = self.bindings_by_module.get(self._import_module(node), {})
             if not bindings or isinstance(node.names, cst.ImportStar):
@@ -246,7 +247,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
             updated_node: cst.Name,
         ) -> cst.BaseExpression:
 
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
 
             bound = self._single_binding(original_node, ambiguity="binding")
             if bound is None:
@@ -309,7 +310,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
             updated_node: cst.ImportFrom,
         ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
 
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
 
             if not isinstance(updated_node.names, cst.ImportStar):
                 kept = tuple(
@@ -365,7 +366,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
                 The resulting ``bool``.
 
             """
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
 
             local = (
                 self._alias_name(imported.asname)
@@ -381,7 +382,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
             updated_node: cst.Import,
         ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
 
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
 
             kept = tuple(
                 imported
@@ -409,7 +410,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
                 The bound names, or an empty tuple for other statements.
 
             """
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
 
             if not isinstance(statement, cst.Import | cst.ImportFrom):
                 return ()
@@ -468,7 +469,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
             updated_node: cst.Assign,
         ) -> cst.BaseSmallStatement:
 
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
 
             return FlextInfraUtilitiesQualifiedNames.filter_exports(
                 updated_node,
@@ -482,7 +483,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
             updated_node: cst.AnnAssign,
         ) -> cst.BaseSmallStatement:
 
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
 
             return FlextInfraUtilitiesQualifiedNames.filter_exports(
                 updated_node,

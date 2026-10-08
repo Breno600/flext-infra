@@ -12,6 +12,7 @@ from flext_infra import c, m, t
 from flext_infra._utilities._git.semantic_index import (
     FlextInfraUtilitiesGitSemanticIndexMixin,
 )
+from flext_infra._utilities import FlextInfraUtilitiesGitSemanticIdentityMixin
 
 
 class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticIndexMixin):
@@ -34,7 +35,7 @@ class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticIndexMixin)
             RuntimeError: If opened Git repository has no worktree.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGitSemanticIdentityMixin
+
 
         resolved_scope = Path(scope_root).resolve()
         probe = FlextInfraUtilitiesGitSemanticIdentityMixin.git_is_inside_work_tree

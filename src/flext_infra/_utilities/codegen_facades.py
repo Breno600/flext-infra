@@ -15,6 +15,12 @@ from libcst import Arg, ClassDef, Module, Name, parse_module
 from libcst.metadata import MetadataWrapper, PositionProvider
 
 from flext_infra import c, t
+from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities import FlextInfraUtilitiesRopeModulePatch
+from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities import FlextInfraUtilitiesRopeModulePatch
 
 
 class FlextInfraUtilitiesCodegenFacades:
@@ -40,10 +46,10 @@ class FlextInfraUtilitiesCodegenFacades:
                 unsupported class, exports, or declarations, or does not resolve
                 to exactly one full exported type owner.
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesCodegenNamespace,
-            FlextInfraUtilitiesRopeModulePatch,
-        )
+
+
+
+
 
         source = sources[facade_path]
         tree = ast.parse(source, filename=str(facade_path))
@@ -163,7 +169,7 @@ class FlextInfraUtilitiesCodegenFacades:
             ValueError: If multiple package modules declare the same facade letter.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeModulePatch
+
 
         owners = tuple(
             module
@@ -212,7 +218,7 @@ class FlextInfraUtilitiesCodegenFacades:
                 base insertion cannot identify a valid source span.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+
 
         facade_path = cls.facade_module_path(pkg_dir, family)
         owners_dir = (
@@ -317,10 +323,10 @@ class FlextInfraUtilitiesCodegenFacades:
         family: Literal["u", "p", "m"],
     ) -> frozenset[str]:
 
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesRopeCore,
-            FlextInfraUtilitiesRopeRuntime,
-        )
+
+
+
+
 
         methods: set[str] = set()
         with FlextInfraUtilitiesRopeCore.open_project(pkg_dir.parent) as project:
@@ -495,7 +501,7 @@ class FlextInfraUtilitiesCodegenFacades:
         # instead made every generated consumer facade import from flext-infra,
         # a module that does not exist in the consumer's own distribution.
 
-        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+
 
         lines = source.splitlines(keepends=True)
         directory = FlextInfraUtilitiesCodegenNamespace.facade_families()[

@@ -16,6 +16,7 @@ from libcst.metadata import (
     QualifiedNameProvider,
     QualifiedNameSource,
 )
+from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
 
 if TYPE_CHECKING:
     from flext_infra import m
@@ -39,7 +40,7 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
                 Qualified identities consistent with the lexical receiver.
 
             """
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
 
             names = tuple(self.get_metadata(QualifiedNameProvider, node, ()))
             if isinstance(node, cst.Attribute) and any(
@@ -179,7 +180,7 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
             updated_node: cst.Name,
         ) -> cst.Name:
 
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
 
             parent = self.get_metadata(ParentNodeProvider, original_node)
             if FlextInfraUtilitiesQualifiedNames.rebinds_name_in_place(
@@ -198,7 +199,7 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
             updated_node: cst.Assign,
         ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
 
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
 
             if (
                 len(original_node.targets) == 1
@@ -222,7 +223,7 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
             updated_node: cst.AnnAssign,
         ) -> cst.BaseSmallStatement:
 
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
 
             return FlextInfraUtilitiesQualifiedNames.filter_exports(
                 updated_node,
@@ -236,7 +237,7 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
             updated_node: cst.ImportFrom,
         ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
 
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
 
             rewrites = self.plan.import_aliases.get(
                 FlextInfraUtilitiesQualifiedNames.dotted_name(original_node.module)

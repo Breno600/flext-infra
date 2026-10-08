@@ -13,6 +13,8 @@ from typing import TYPE_CHECKING
 from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
 )
+from flext_infra._utilities import FlextInfraUtilitiesLintRecipes
+from flext_infra._utilities import FlextInfraUtilitiesRopeSource
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
@@ -42,7 +44,7 @@ class FlextInfraUtilitiesSemanticCutoverModuleLayout(
             One edit per module whose reported statements do not close it.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeSource
+
 
         selected: MutableMapping[Path, set[str]] = defaultdict(set)
         for finding in findings:
@@ -84,7 +86,7 @@ class FlextInfraUtilitiesSemanticCutoverModuleLayout(
             One edit per module whose notice does not close its docstring.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesLintRecipes
+
 
         selected = {(root / finding.file).resolve() for finding in findings}
 

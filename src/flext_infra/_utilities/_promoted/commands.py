@@ -12,6 +12,7 @@ from flext_infra import c, m
 from flext_infra._utilities._promoted.workspace import (
     FlextInfraUtilitiesPromotedWorkspace,
 )
+from flext_cli import u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -33,7 +34,7 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
                 c.Infra.PromotedRegistryError]``.
 
         """
-        from flext_cli import u
+
 
         header = c.Infra.PromotedHeader
         headers: t.MutableMappingKV[

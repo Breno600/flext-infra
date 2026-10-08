@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c, config, m, r, u
+from flext_infra.codegen.codegen_generation import FlextInfraCodegenGeneration
 
 if TYPE_CHECKING:
     from collections.abc import Set as AbstractSet
@@ -68,7 +69,7 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
             The resulting ``p.Result[MutableMapping[Path, m.Cli.AtomicFileState]]``.
 
         """
-        from flext_infra.codegen.codegen_generation import FlextInfraCodegenGeneration
+
 
         selected_dirs = frozenset(package_dirs)
         module_paths = {
@@ -205,7 +206,7 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
             The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]``.
 
         """
-        from flext_infra.codegen.codegen_generation import FlextInfraCodegenGeneration
+
 
         if plan.action is c.Infra.LazyInitAction.SKIP:
             return r[tuple[m.Infra.CodegenFilePlan, ...]].ok(())
@@ -260,7 +261,7 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
             The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]``.
 
         """
-        from flext_infra.codegen.codegen_generation import FlextInfraCodegenGeneration
+
 
         plans: list[m.Infra.CodegenFilePlan] = []
         for generated_dir in self._generated_source_dirs(plan.context.pkg_dir):

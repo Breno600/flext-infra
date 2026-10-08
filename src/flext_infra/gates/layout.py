@@ -14,6 +14,7 @@ from typing import ClassVar, override
 
 from flext_infra import c, m, t
 from flext_infra.gates.base_gate import FlextInfraGate
+from flext_infra.codegen.layout import FlextInfraCodegenLayout
 
 
 class FlextInfraLayoutGate(FlextInfraGate):
@@ -35,7 +36,7 @@ class FlextInfraLayoutGate(FlextInfraGate):
             The resulting ``m.Infra.GateExecution``.
 
         """
-        from flext_infra.codegen.layout import FlextInfraCodegenLayout
+
 
         started = time.monotonic()
         engine = FlextInfraCodegenLayout(repository_root=ctx.repository_root)

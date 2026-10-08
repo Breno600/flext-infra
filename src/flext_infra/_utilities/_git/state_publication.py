@@ -14,6 +14,7 @@ from flext_infra import c, m, p, r
 from flext_infra._utilities._git.state_checkpoint import (
     FlextInfraUtilitiesGitStateCheckpointMixin,
 )
+from flext_infra._utilities import FlextInfraUtilitiesGitRemote
 
 
 class FlextInfraUtilitiesGitStatePublicationMixin(
@@ -24,7 +25,7 @@ class FlextInfraUtilitiesGitStatePublicationMixin(
     @classmethod
     def _state_remote_url(cls, root: Path, remote: str) -> str:
 
-        from flext_infra._utilities import FlextInfraUtilitiesGitRemote
+
 
         repo = cls._repo(root)
         fetch = repo.git.remote("get-url", "--all", remote).splitlines()

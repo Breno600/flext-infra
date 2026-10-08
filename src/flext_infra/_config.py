@@ -12,6 +12,7 @@ from typing import override
 from flext_cli.config import FlextCliConfig
 
 from flext_infra._models import FlextInfraConfigModels
+from flext_infra._constants import FlextInfraConstantsCodegenProject
 
 
 class FlextInfraConfig(FlextCliConfig):
@@ -48,7 +49,7 @@ class FlextInfraConfig(FlextCliConfig):
             The resulting ``list[Path]``.
 
         """
-        from flext_infra._constants import FlextInfraConstantsCodegenProject
+
 
         files = [
             item

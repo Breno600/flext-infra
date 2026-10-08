@@ -16,6 +16,8 @@ from flext_infra import c, p, r, t
 from flext_infra._utilities._git.worktree_discovery import (
     FlextInfraUtilitiesGitWorktreeDiscoveryMixin,
 )
+from flext_cli import u
+from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
 
 if TYPE_CHECKING:
     from git import Repo
@@ -38,7 +40,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
             The resulting ``p.Result[str]``.
 
         """
-        from flext_cli import u
+
 
         ensure_parent = u.Cli.ensure_dir(worktree_root.parent)
         if ensure_parent.failure:
@@ -99,7 +101,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_cli import u
+
 
         source_path = source_root / relative_path
         if source_path.is_dir() and not source_path.is_symlink():
@@ -358,7 +360,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
         patches: t.VariadicTuple[bytes],
     ) -> None:
         """Verify then apply both layer patches through one stdin stream each."""
-        from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
+
 
         for check in (True, False):
             for patch_bytes, layer in zip(patches, ((), ("--cached",)), strict=True):

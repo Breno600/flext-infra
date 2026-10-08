@@ -14,6 +14,7 @@ from flext_cli import r
 from packaging.version import InvalidVersion, Version
 
 from flext_infra import c, p, t
+from flext_cli import u
 
 
 class FlextInfraUtilitiesVersioning:
@@ -286,7 +287,7 @@ class FlextInfraUtilitiesVersioning:
             r[bool] with True on success.
 
         """
-        from flext_cli import u
+
 
         pyproject = project_path / c.PYPROJECT_FILENAME
         try:

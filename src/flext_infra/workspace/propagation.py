@@ -11,6 +11,8 @@ from typing import Annotated, override
 
 from flext_infra import c, config, m, p, r, u
 from flext_infra.base import s
+from flext_infra.codegen.conform import FlextInfraCodegenConform
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 
 class FlextInfraWorkspacePropagation(s[bool]):
@@ -42,7 +44,7 @@ class FlextInfraWorkspacePropagation(s[bool]):
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
 
         root = self.root
         loaded = FlextInfraWorkspaceDetector.load_workspace_spec(root)
@@ -203,7 +205,7 @@ class FlextInfraWorkspacePropagation(s[bool]):
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra.codegen.conform import FlextInfraCodegenConform
+
 
         member_root = self.root / member.path
         base = u.Infra.resolve_integration_branch(

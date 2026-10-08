@@ -15,6 +15,9 @@ from flext_infra import m, p, t
 from flext_infra._utilities._semantic_cutover.nesting_types import (
     FlextInfraUtilitiesSemanticNestingTypes,
 )
+from flext_infra._utilities import FlextInfraUtilitiesRopeClassMove
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
 
 
 class FlextInfraUtilitiesSemanticHelperReferences(
@@ -41,7 +44,7 @@ class FlextInfraUtilitiesSemanticHelperReferences(
             ValueError: If quoted helper import changed its elected binding.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
 
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         root = Path(project.root.real_path)
@@ -136,10 +139,10 @@ class FlextInfraUtilitiesSemanticHelperReferences(
             ValueError: If moved helper import changed its quoted binding.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesRopeClassMove,
-            FlextInfraUtilitiesRopeRuntimeModules,
-        )
+
+
+
+
 
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         request = move.request
@@ -215,7 +218,7 @@ class FlextInfraUtilitiesSemanticHelperReferences(
         destination expression; a consumer without a quoted reference takes the
         lazy ``from target import name`` form the materialized alias serves.
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
 
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         request = move.request
@@ -276,7 +279,7 @@ class FlextInfraUtilitiesSemanticHelperReferences(
             The resulting ``str``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
 
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         body = ast.parse(source).body
@@ -327,7 +330,7 @@ class FlextInfraUtilitiesSemanticHelperReferences(
         protected: t.Pair[int, int] | None,
     ) -> t.Pair[str, str | None]:
 
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
 
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         request = move.request
@@ -380,7 +383,7 @@ class FlextInfraUtilitiesSemanticHelperReferences(
             ValueError: If shared helper consumer has no Rope scope.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
 
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         project = move.request.rope_project
@@ -434,7 +437,7 @@ class FlextInfraUtilitiesSemanticHelperReferences(
                 t.SequenceOf[t.Pair[str, str | None]]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
 
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         kept: list[t.Pair[str, str | None]] = []

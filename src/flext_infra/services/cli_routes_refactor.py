@@ -24,6 +24,8 @@ from flext_infra.refactor.wrapper_root_namespace import (
     FlextInfraWrapperRootNamespaceRefactor,
 )
 from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
+from flext_infra.api import infra
+from flext_infra.services.cli_mod_progress import FlextInfraCliModProgress
 
 
 class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
@@ -39,8 +41,8 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-        from flext_infra.api import infra
-        from flext_infra.services.cli_mod_progress import FlextInfraCliModProgress
+
+
 
         result = infra.apply_renames(request)
         if result.failure:
@@ -61,8 +63,8 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-        from flext_infra.api import infra
-        from flext_infra.services.cli_mod_progress import FlextInfraCliModProgress
+
+
 
         return infra.mod(request, FlextInfraCliModProgress())
 
@@ -76,7 +78,7 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-        from flext_infra.api import infra
+
 
         return infra.mod_text(request)
 
@@ -90,7 +92,7 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-        from flext_infra.api import infra
+
 
         return infra.mod_text_candidate(request)
 

@@ -13,6 +13,11 @@ from functools import lru_cache
 from pathlib import Path
 
 from flext_infra import c, config, m, t
+from flext_infra._utilities import FlextInfraUtilitiesIterationWorkspace
+from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
+from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities import FlextInfraUtilitiesRopeSourceBases
 
 
 class FlextInfraUtilitiesRopeAnalysisWorkspace:
@@ -222,10 +227,10 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             The declared roots and the derived bases, by qualified name.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesRopeCore,
-            FlextInfraUtilitiesRopeSourceBases,
-        )
+
+
+
+
 
         root = project_root.resolve()
         sources = {
@@ -311,7 +316,7 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             Each source by resolved path.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesIterationWorkspace
+
 
         sources: MutableMapping[Path, str] = {}
         if root.is_dir():
@@ -354,7 +359,7 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             Every declared governed project root, resolved.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
+
 
         return frozenset(
             FlextInfraUtilitiesProjectDiscovery.discover_rope_project_roots(
@@ -489,7 +494,7 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             Indexed sources, declared wrapper modules, and typing stubs.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+
 
         governed_roots = cls._governed_roots(resolved_root)
         python_paths = {
@@ -544,7 +549,7 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
                 MutableMapping[str, Path], MutableMapping[str, str], set[Path]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
+
 
         modules_by_path: MutableMapping[str, m.Infra.RopeModuleIndexEntry] = {}
         modules_by_dir: MutableMapping[Path, list[m.Infra.RopeModuleIndexEntry]] = {}

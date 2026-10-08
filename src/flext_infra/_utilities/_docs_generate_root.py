@@ -14,6 +14,12 @@ from flext_infra import c, m, p, r, t
 from flext_infra._utilities._docs_generate_project import (
     FlextInfraUtilitiesDocsGenerateProjectMixin,
 )
+from flext_infra._utilities import FlextInfraUtilitiesDocsApi
+from flext_infra._utilities import FlextInfraUtilitiesDocsContract
+from flext_infra._utilities import FlextInfraUtilitiesDocsRender
+from flext_infra._utilities import FlextInfraUtilitiesDocsContract
+from flext_infra._utilities import FlextInfraUtilitiesDocsRender
+from flext_infra._utilities import FlextInfraUtilitiesDocsRender
 
 
 class FlextInfraUtilitiesDocsGenerateRootMixin(
@@ -35,7 +41,7 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
             The resulting ``list[t.Pair[Path, str]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDocsRender
+
 
         return [
             (
@@ -74,11 +80,11 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
             The resulting ``(rendered, project scopes, scope modules)`` triple.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesDocsApi,
-            FlextInfraUtilitiesDocsContract,
-            FlextInfraUtilitiesDocsRender,
-        )
+
+
+
+
+
 
         project_scopes = [scope for scope in scopes if scope.path != repository_root]
         catalog_entries: t.MutableSequenceOf[m.Infra.DocsCatalogEntry] = []
@@ -177,7 +183,7 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
             The resulting ``list[t.Pair[Path, str]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDocsRender
+
 
         projects_index_entries: t.MutableSequenceOf[m.Infra.DocsProjectIndexEntry] = []
         for scope in project_scopes:
@@ -290,10 +296,10 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
                 ``p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]``.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesDocsContract,
-            FlextInfraUtilitiesDocsRender,
-        )
+
+
+
+
 
         workspace_contract = FlextInfraUtilitiesDocsContract.docs_workspace_contract(
             repository_root,

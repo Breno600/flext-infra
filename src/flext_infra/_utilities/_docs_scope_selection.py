@@ -10,6 +10,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_infra import m, t
+from flext_infra._utilities import FlextInfraUtilitiesDocsScope
 
 
 class FlextInfraUtilitiesDocsScopeSelectionMixin:
@@ -101,7 +102,7 @@ class FlextInfraUtilitiesDocsScopeSelectionMixin:
                 ``roots.failure``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDocsScope
+
 
         relative = Path(name)
         if relative.is_absolute() or ".." in relative.parts:
@@ -190,7 +191,7 @@ class FlextInfraUtilitiesDocsScopeSelectionMixin:
             The resulting ``m.Infra.DocScope``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDocsScope
+
 
         payload = FlextInfraUtilitiesDocsScope.project_payload(project_root)
         docs_meta = FlextInfraUtilitiesDocsScope.docs_meta_from_payload(payload)

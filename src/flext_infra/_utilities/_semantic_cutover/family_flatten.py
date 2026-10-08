@@ -14,6 +14,13 @@ from flext_infra import c, config, m, p, t
 from flext_infra._utilities._semantic_cutover.family_references import (
     FlextInfraUtilitiesSemanticFamilyReferences,
 )
+from flext_cli import u
+from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors
+from flext_infra._utilities import FlextInfraUtilitiesRopeStructure
 
 
 class FlextInfraUtilitiesSemanticFamilyFlatten(
@@ -28,13 +35,13 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         sources: t.MappingKV[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
 
-        from flext_cli import u
 
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesCodegenNamespace,
-            FlextInfraUtilitiesRopeRuntimeModules,
-            FlextInfraUtilitiesRopeRuntimeRefactors,
-        )
+
+
+
+
+
+
 
         candidates = tuple(
             path
@@ -164,7 +171,7 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
             ValueError: If inline namespace wrapper cannot be flattened safely.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeStructure
+
 
         facts = FlextInfraUtilitiesRopeStructure.logical_statements(source)
         header = next(item for item in facts if item.line == child.get_start())
@@ -215,7 +222,7 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
                 wrapper prefix collision is ambiguous.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeStructure
+
 
         wrapper_name = child.pyobject.get_name()
         owner_name = owner_scope.pyobject.get_name()
@@ -287,7 +294,7 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         rewrites: MutableMapping[Path, list[m.Infra.SourceRewrite]],
     ) -> int:
 
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors
+
 
         scopes = cls._wrapper_scopes(workspace, project, path)
         if scopes is None:
@@ -352,7 +359,7 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
             Whether a resolved wrapper member has no planned rewrite.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
 
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         root = Path(project.root.real_path)

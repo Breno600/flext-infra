@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m, r, t
+from flext_cli import u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -35,7 +36,7 @@ class FlextInfraUtilitiesLogParser:
             The resulting ``p.Result[t.VariadicTuple[m.Infra.SarifResult]]``.
 
         """
-        from flext_cli import u
+
 
         report_dir = (
             u.Cli.resolve_report_dir(

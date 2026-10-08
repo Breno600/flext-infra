@@ -30,6 +30,9 @@ from flext_infra.codegen._mise_artifacts_state import (
 from flext_infra.codegen._mise_artifacts_verification import (
     FlextInfraMiseArtifactsVerification as verify,
 )
+from flext_infra.codegen._codegen_staging import FlextInfraCodegenStaging
+from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
+from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -164,9 +167,9 @@ class FlextInfraCodegenTransactionPhases(FlextInfraCodegenTransactionRecovery):
             The consumer's session after both authority barriers succeed.
 
         """
-        from flext_infra.codegen.codegen_preconditions import (
-            FlextInfraCodegenPreconditions,
-        )
+
+
+
 
         result_type = r[m.Infra.CodegenTransactionSession]
         checked = validator(current, staged)
@@ -466,9 +469,9 @@ class FlextInfraCodegenTransactionPhases(FlextInfraCodegenTransactionRecovery):
             The session with its staging intentions durably recorded.
 
         """
-        from flext_infra.codegen.codegen_preconditions import (
-            FlextInfraCodegenPreconditions,
-        )
+
+
+
 
         result_type = r[m.Infra.CodegenTransactionSession]
         aligned = FlextInfraCodegenPreconditions.unchanged_journal(
@@ -515,7 +518,7 @@ class FlextInfraCodegenTransactionPhases(FlextInfraCodegenTransactionRecovery):
             The ordered writes and sorted transaction directories they require.
 
         """
-        from flext_infra.codegen._codegen_staging import FlextInfraCodegenStaging
+
 
         result_type = r[
             t.Pair[t.VariadicTuple[tuple[Path, bytes, int]], t.VariadicTuple[Path]]
@@ -625,9 +628,9 @@ class FlextInfraCodegenTransactionPhases(FlextInfraCodegenTransactionRecovery):
             session, the tagged sources, and their bare states.
 
         """
-        from flext_infra.codegen.codegen_preconditions import (
-            FlextInfraCodegenPreconditions,
-        )
+
+
+
 
         result_type = r[
             t.Triple[
@@ -692,7 +695,7 @@ class FlextInfraCodegenTransactionPhases(FlextInfraCodegenTransactionRecovery):
             The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile]]``.
 
         """
-        from flext_infra.codegen._codegen_staging import FlextInfraCodegenStaging
+
 
         session = authorized[0]
         layout = session.plan.layout
@@ -751,9 +754,9 @@ class FlextInfraCodegenTransactionPhases(FlextInfraCodegenTransactionRecovery):
                 m.Cli.AtomicFileState]]``.
 
         """
-        from flext_infra.codegen.codegen_preconditions import (
-            FlextInfraCodegenPreconditions,
-        )
+
+
+
 
         result_type = r[
             t.Pair[m.Infra.CodegenTransactionJournal, m.Cli.AtomicFileState]
@@ -824,9 +827,9 @@ class FlextInfraCodegenTransactionPhases(FlextInfraCodegenTransactionRecovery):
             files.
 
         """
-        from flext_infra.codegen._mise_artifacts_publication import (
-            FlextInfraMisePublication,
-        )
+
+
+
 
         published = FlextInfraMisePublication.publish(staged)
         if published.failure:
@@ -900,9 +903,9 @@ class FlextInfraCodegenTransactionPhases(FlextInfraCodegenTransactionRecovery):
                 m.Cli.AtomicFileState]]``.
 
         """
-        from flext_infra.codegen.codegen_preconditions import (
-            FlextInfraCodegenPreconditions,
-        )
+
+
+
 
         result_type = r[
             t.Pair[m.Infra.CodegenTransactionJournal, m.Cli.AtomicFileState]
@@ -988,9 +991,9 @@ class FlextInfraCodegenTransactionPhases(FlextInfraCodegenTransactionRecovery):
                 m.Cli.AtomicFileState]]``.
 
         """
-        from flext_infra.codegen.codegen_preconditions import (
-            FlextInfraCodegenPreconditions,
-        )
+
+
+
 
         result_type = r[
             t.Pair[m.Infra.CodegenTransactionJournal, m.Cli.AtomicFileState]

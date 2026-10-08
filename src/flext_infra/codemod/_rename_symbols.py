@@ -11,6 +11,7 @@ from difflib import SequenceMatcher
 from pathlib import Path
 
 from flext_infra import m, p, t, u
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraRenameSymbols:
@@ -258,7 +259,7 @@ class FlextInfraRenameSymbols:
             ValueError: If Rope input changed after authentication.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
 
         resources: dict[Path, t.Infra.RopeFile] = {}
         for path in ordered_paths:

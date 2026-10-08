@@ -14,6 +14,8 @@ from flext_infra import m, t
 from flext_infra._utilities._git.state_publication import (
     FlextInfraUtilitiesGitStatePublicationMixin,
 )
+from flext_cli import u
+from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
 
 
 class FlextInfraUtilitiesGitStateFilesMixin(
@@ -54,7 +56,7 @@ class FlextInfraUtilitiesGitStateFilesMixin(
         owned: t.SequenceOf[Path],
     ) -> None:
 
-        from flext_cli import u
+
 
         manifest = u.Cli.atomic_inventory_physical_tree(root / path).unwrap()
         for entry in manifest.entries:
@@ -74,7 +76,7 @@ class FlextInfraUtilitiesGitStateFilesMixin(
             TypeError: If hash-object returned a non-text object identifier.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
+
 
         with FlextInfraUtilitiesGitWorktreeIO.git_stdin(content) as stream:
             oid = cls._repo(root).git.hash_object("--stdin", istream=stream)
@@ -132,7 +134,7 @@ class FlextInfraUtilitiesGitStateFilesMixin(
         allowed: t.SequenceOf[m.Infra.GitWorktreeFileState | None],
     ) -> None:
 
-        from flext_cli import u
+
 
         destination = root / path
         if destination.is_symlink():
@@ -200,7 +202,7 @@ class FlextInfraUtilitiesGitStateFilesMixin(
     @staticmethod
     def _state_remove_empty_tree(path: Path) -> None:
 
-        from flext_cli import u
+
 
         manifest = u.Cli.atomic_inventory_physical_tree(path).unwrap()
         if any(entry.kind != "directory" for entry in manifest.entries):

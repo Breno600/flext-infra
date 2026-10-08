@@ -19,6 +19,7 @@ from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
 from flext_infra.validate.scanner import FlextInfraTextPatternScanner
 from flext_infra.validate.skill_validator import FlextInfraSkillValidator
 from flext_infra.validate.stub_chain import FlextInfraStubSupplyChain
+from flext_infra.api import infra
 
 
 class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
@@ -34,7 +35,7 @@ class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
             The resulting ``p.Result[m.Infra.ValidationReport]``.
 
         """
-        from flext_infra.api import infra
+
 
         result = infra.validate_namespace(request)
         if result.failure:

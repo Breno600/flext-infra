@@ -14,6 +14,7 @@ from pathlib import Path
 from flext_cli import u as cli_u
 
 from flext_infra import c, t
+from flext_infra._settings import FlextInfraSettings
 
 if os.name != "nt":
     import pwd
@@ -41,7 +42,7 @@ class FlextInfraUtilitiesBase:
             One raw environment value through the governed boundary.
 
         """
-        from flext_infra._settings import FlextInfraSettings
+
 
         return FlextInfraSettings.env_lookup(name)
 
@@ -56,7 +57,7 @@ class FlextInfraUtilitiesBase:
             One stripped dynamic environment value, or the stripped default.
 
         """
-        from flext_infra._settings import FlextInfraSettings
+
 
         value = FlextInfraSettings.env_lookup(name)
         return default.strip() if value is None else value.strip()

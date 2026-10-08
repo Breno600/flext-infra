@@ -11,6 +11,7 @@ from typing import Annotated, override
 
 from flext_infra import c, m, p, r, t, u
 from flext_infra.release._release_plan import FlextInfraReleasePlanMixin
+from flext_infra.codegen.conform import FlextInfraCodegenConform
 
 
 class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
@@ -137,7 +138,7 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra.codegen.conform import FlextInfraCodegenConform
+
 
         root = ctx.repository_root
         stamped = u.Infra.replace_project_version(root, plan.next)

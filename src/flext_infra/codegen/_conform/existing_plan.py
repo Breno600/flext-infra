@@ -15,6 +15,9 @@ from flext_infra import c, m, p, r, t, u
 from flext_infra.codegen._conform.artifact_render import (
     FlextInfraCodegenConformArtifactRender,
 )
+from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
+from flext_infra.services.codegen import FlextInfraCodegen
+from flext_infra.workspace.environment_contracts import FlextInfraWorkspaceEnvironmentContracts
 
 
 class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRender):
@@ -214,7 +217,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             The resulting ``p.Result[m.Infra.ToolingRuntimeContext]``.
 
         """
-        from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
+
 
         root = target.root
         repository = target.repository
@@ -1098,7 +1101,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             bool]]`` with its presence flag.
 
         """
-        from flext_infra.services.codegen import FlextInfraCodegen
+
 
         result_type = r[t.Pair[m.Infra.CodegenFilePlan | None, bool]]
         merged = FlextInfraCodegen.render_vscode_settings(root)
@@ -1139,9 +1142,9 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             bool]]`` with its presence flag.
 
         """
-        from flext_infra.workspace.environment_contracts import (
-            FlextInfraWorkspaceEnvironmentContracts,
-        )
+
+
+
 
         result_type = r[t.Pair[m.Infra.CodegenFilePlan | None, bool]]
         normalized = FlextInfraWorkspaceEnvironmentContracts.envrc_local_normalized(

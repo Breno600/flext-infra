@@ -12,6 +12,9 @@ from pathlib import Path
 from typing import ClassVar, TypeGuard
 
 from flext_infra import m, p, t
+from flext_infra._settings import settings
+from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeAnalysisAstHelpers:
@@ -56,7 +59,7 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
             The resulting ``t.Triple[str, str, int]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+
 
         file_path = FlextInfraUtilitiesRopeCore.resource_file_path(
             rope_project,
@@ -124,7 +127,7 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
             The resulting ``t.Infra.RopePyModule``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
 
         rope_project = FlextInfraUtilitiesRopeAnalysisAstHelpers._shared_parse_project()
         result: t.Infra.RopePyModule = (
@@ -140,8 +143,8 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
             A process-wide rope project usable for string parsing.
 
         """
-        from flext_infra._settings import settings
-        from flext_infra._utilities import FlextInfraUtilitiesRopeCore
+
+
 
         cached = FlextInfraUtilitiesRopeAnalysisAstHelpers._parse_project
         if cached is None:

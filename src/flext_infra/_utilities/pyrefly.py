@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_infra import c, config
+from flext_cli import u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -36,7 +37,7 @@ class FlextInfraUtilitiesPyrefly:
             The resulting ``t.StrSequence``.
 
         """
-        from flext_cli import u
+
 
         document = u.Cli.toml_read(project_dir / c.PYPROJECT_FILENAME)
         tool = (

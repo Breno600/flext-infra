@@ -7,6 +7,8 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from flext_infra import c, config, m, p, r, t
+from flext_cli import u
+from flext_infra._utilities import FlextInfraUtilitiesBase
 
 
 class FlextInfraUtilitiesManagedConflicts:
@@ -84,7 +86,7 @@ class FlextInfraUtilitiesManagedConflicts:
         Returns:
             The resulting ``p.Result[str]``.
         """
-        from flext_cli import u
+
 
         if u.Cli.toml_mapping_from_text(content) is not None:
             return r[str].ok(content)
@@ -208,7 +210,7 @@ class FlextInfraUtilitiesManagedConflicts:
             The resulting ``p.Result[str]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesBase
+
 
         if FlextInfraUtilitiesBase.first_merge_conflict_marker(content) is None:
             return FlextInfraUtilitiesManagedConflicts.recover_managed_assignments(
@@ -281,7 +283,7 @@ class FlextInfraUtilitiesManagedConflicts:
             The resulting index of the separator line.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesBase
+
 
         while index < len(lines):
             control = FlextInfraUtilitiesBase.merge_conflict_control(lines[index])
@@ -303,7 +305,7 @@ class FlextInfraUtilitiesManagedConflicts:
             The resulting ``(current lines, next index)`` pair.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesBase
+
 
         pair = r[t.Pair[list[str], int]]
         current: list[str] = []
@@ -343,7 +345,7 @@ class FlextInfraUtilitiesManagedConflicts:
             The resulting index of the closing ``incoming`` marker line.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesBase
+
 
         while index < len(lines):
             control = FlextInfraUtilitiesBase.merge_conflict_control(lines[index])

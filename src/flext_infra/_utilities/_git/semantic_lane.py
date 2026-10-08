@@ -13,6 +13,7 @@ from flext_infra import c, m, r
 from flext_infra._utilities._git.semantic_worktree import (
     FlextInfraUtilitiesGitSemanticWorktreeMixin,
 )
+from flext_cli import u
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -96,7 +97,7 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_cli import u
+
 
         root = request.repo_root
         admitted = cls.git_verify_lane(
@@ -132,7 +133,7 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
             To ``base`` and remove the lane branch that carries nothing.
 
         """
-        from flext_cli import u
+
 
         root = request.repo_root
         for command in (
@@ -152,7 +153,7 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_cli import u
+
 
         root, branch = request.repo_root, request.branch
         local = u.Cli.capture(
@@ -225,7 +226,7 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_cli import u
+
 
         root, branch = request.repo_root, request.branch
         pushed = cls.git_push_upstream(

@@ -14,6 +14,7 @@ from flext_infra import c, m, p, r, t
 from flext_infra._utilities._git.worktree_checkpoint import (
     FlextInfraUtilitiesGitWorktreeCheckpointMixin,
 )
+from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
 
 
 class FlextInfraUtilitiesGitWorktreePatchMixin(
@@ -35,7 +36,7 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
+
 
         if not patch:
             return r[bool].ok(value=True)
@@ -155,7 +156,7 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
+
 
         collisions = tuple(
             path
@@ -195,7 +196,7 @@ class FlextInfraUtilitiesGitWorktreePatchMixin(
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
+
 
         if not delta.patch:
             return r[bool].ok(value=True)

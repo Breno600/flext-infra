@@ -31,6 +31,8 @@ from flext_infra._utilities._semantic_cutover.nesting_owner import (
 from flext_infra._utilities._semantic_cutover.test_helpers import (
     FlextInfraUtilitiesSemanticTestHelpers,
 )
+from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -234,7 +236,7 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
             The resulting ``p.Result[t.StrMapping]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+
 
         planned = r[t.StrMapping]
         family = FlextInfraUtilitiesCodegenNamespace.facade_family_of_file(
@@ -358,7 +360,7 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
             The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
 
         planned_edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
         modules = {

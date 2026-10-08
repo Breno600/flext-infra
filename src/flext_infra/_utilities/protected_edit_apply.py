@@ -14,6 +14,7 @@ from flext_infra import c, m, p, r, t
 from flext_infra._utilities.protected_edit_preview import (
     FlextInfraUtilitiesProtectedEditPreview,
 )
+from flext_cli import u
 
 
 class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPreview):
@@ -152,7 +153,7 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_cli import u
+
 
         if "tests" not in py_file.parts and not py_file.name.startswith("test_"):
             return r[bool].ok(value=True)

@@ -12,6 +12,8 @@ from typing import Annotated, override
 
 from flext_infra import m, p, t
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
+from flext_infra.deps.detection import FlextInfraDependencyDetectionService
+from flext_infra.deps.detector_runtime import FlextInfraDependencyDetectorRuntime
 
 
 class FlextInfraRuntimeDevDependencyDetector(
@@ -76,10 +78,10 @@ class FlextInfraRuntimeDevDependencyDetector(
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra.deps.detection import FlextInfraDependencyDetectionService
-        from flext_infra.deps.detector_runtime import (
-            FlextInfraDependencyDetectorRuntime,
-        )
+
+
+
+
 
         payload: MutableMapping[str, t.JsonValue] = {
             "repository_root": str(self.root),

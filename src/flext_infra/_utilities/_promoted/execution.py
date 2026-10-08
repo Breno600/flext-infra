@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING
 
 from flext_infra import c, m
 from flext_infra._utilities import FlextInfraUtilitiesPromotedInvocation
+from flext_cli import u
+from flext_infra._settings import settings
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -37,9 +39,9 @@ class FlextInfraUtilitiesPromotedExecution(FlextInfraUtilitiesPromotedInvocation
             PromotedRegistryError: If ``result.failure``.
 
         """
-        from flext_cli import u
 
-        from flext_infra._settings import settings
+
+
 
         message, env_name = c.Infra.PromotedMessage, c.Infra.PromotedEnv
         project_root = cls.promoted_find_owner_root(command.path)

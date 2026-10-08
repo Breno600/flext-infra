@@ -14,6 +14,7 @@ from functools import lru_cache
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m, r, t
+from flext_cli import u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -47,7 +48,7 @@ class FlextInfraUtilitiesWorkspaceManifest:
             The resulting ``p.Result[t.SequenceOf[m.Infra.WorkspaceManifestSpec]]``.
 
         """
-        from flext_cli import u
+
 
         manifest_path = cls.workspace_manifest_path(repository_root)
         if not manifest_path.is_file():
@@ -74,7 +75,7 @@ class FlextInfraUtilitiesWorkspaceManifest:
             The resulting ``p.Result[t.SequenceOf[m.Infra.WorkspaceManifestSpec]]``.
 
         """
-        from flext_cli import u
+
 
         loaded = u.Cli.yaml_parse(text)
         if loaded.failure:
