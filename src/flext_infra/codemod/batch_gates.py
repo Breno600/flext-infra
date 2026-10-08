@@ -81,15 +81,6 @@ class FlextInfraModGateEngine:
                         str(temp_root / c.Infra.CODEMOD_CONFIG_FILENAME),
                     ),
                 )
-                tested = cls._run_tool(
-                    temp_root,
-                    (
-                        c.Infra.SG,
-                        c.Infra.TEST,
-                        c.Infra.SG_CONFIG_FLAG,
-                        str(temp_root / c.Infra.CODEMOD_CONFIG_FILENAME),
-                    ),
-                )
                 if tested.failure:
                     remedy = (
                         c.Infra.CODEMOD_SNAPSHOT_REFRESH_HINT
@@ -150,15 +141,6 @@ class FlextInfraModGateEngine:
                         c.Infra.SG,
                         c.Infra.TEST,
                         c.Infra.SG_UPDATE_ALL,
-                        c.Infra.SG_CONFIG_FLAG,
-                        str(temp_root / c.Infra.CODEMOD_CONFIG_FILENAME),
-                    ),
-                ).unwrap()
-                cls._run_tool(
-                    temp_root,
-                    (
-                        c.Infra.SG,
-                        c.Infra.TEST,
                         c.Infra.SG_CONFIG_FLAG,
                         str(temp_root / c.Infra.CODEMOD_CONFIG_FILENAME),
                     ),

@@ -130,7 +130,10 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
 
         Returns ``(workspace, project, package)``. ``declare`` writes the
         governed ``.gitmodules`` row; a scan that must observe an undeclared
-        project sets it to ``False``.
+        project sets it to ``False``. Workspace and project both carry the
+        tracked Mise seeds, as governed repositories do: the rule engine runs
+        ast-grep through the scanned repository's pinned lock, and a bare
+        fixture resolved only a host-global binary (none on CI runners).
 
         Returns:
             The resulting ``t.Triple[Path, Path, Path]``.
@@ -144,6 +147,10 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             pyproject=pyproject,
         )
         (project / "Makefile").write_text("all:\n\t@true\n", encoding="utf-8")
+        for governed_root in (workspace, project):
+            TestsFlextInfraUtilitiesToolingFixtureMixin.copy_tracked_mise_seeds(
+                governed_root,
+            )
         if declare:
             TestsFlextInfraUtilitiesProjectFixtureMixin.declare_workspace_projects(
                 workspace,

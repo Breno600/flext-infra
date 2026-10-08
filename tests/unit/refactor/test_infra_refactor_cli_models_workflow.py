@@ -44,6 +44,9 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
             "        ...\n",
             encoding="utf-8",
         )
+        # The enforcer scans through the repository's pinned Mise lock, which
+        # every governed repository carries; CI runners have no global tool.
+        u.Tests.copy_tracked_mise_seeds(workspace)
         u.Tests.initialize_git_repo(workspace)
         buffer = StringIO()
         cli_args = [
