@@ -822,13 +822,12 @@ class FlextInfraConfigModelsMake(
         testmon_cache_policy: Annotated[
             FlextInfraConfigModelsMake.TestmonCachePolicySpec,
             m.Field(
-                default_factory=FlextInfraConfigModelsMake.TestmonCachePolicySpec,
                 description=(
                     "Declarative save/budget/quota policy for the shared"
                     " testmon cache (#1001 delta)"
                 ),
             ),
-        ]
+        ] = m.Field(default_factory=_default_testmon_cache_policy)
         codemod_rules_cache: Annotated[
             FlextInfraConfigModelsMake.MakeSpec.CodemodRulesCacheSpec,
             m.Field(description="Content-keyed parsed codemod rule catalog cache"),

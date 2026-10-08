@@ -7,7 +7,6 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import ClassVar
 
 from flext_cli import u
 
@@ -17,8 +16,6 @@ from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeBase
 
 class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase):
     """Load Rope refactor helpers behind protocols."""
-
-    _WORD_RANGE_SIZE: ClassVar[int] = 2
 
     @classmethod
     def unwrap_class_rewrites(
@@ -258,14 +255,12 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
             msg = "rope Worder does not expose callable get_primary_range"
             raise TypeError(msg)
         value = primary_range(offset)
-        if (
-            not isinstance(value, tuple)
-            or len(value) != cls._WORD_RANGE_SIZE
-            or not all(isinstance(item, int) for item in value)
-        ):
-            msg = "rope Worder returned invalid primary range"
-            raise TypeError(msg)
-        return value
+        match value:
+            case tuple([int() as start, int() as end]):
+                return start, end
+            case _:
+                msg = "rope Worder returned invalid primary range"
+                raise TypeError(msg)
 
     @classmethod
     def word_is_function_call(cls, source: str, offset: int) -> bool:
