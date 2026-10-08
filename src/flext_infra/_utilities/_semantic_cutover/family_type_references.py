@@ -40,6 +40,9 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
 
         Selection uses the same resolved typing identities as quoted rewrites;
         an ordinary runtime assignment is not implicitly a type declaration.
+
+        Returns:
+            The resulting ``frozenset[t.Pair[int, int]]``.
         """
         protected: set[t.Pair[int, int]] = set()
         runtime = FlextInfraUtilitiesRopeRuntimeModules

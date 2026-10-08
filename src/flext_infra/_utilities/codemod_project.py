@@ -456,7 +456,16 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         source_states: tuple[m.Cli.AtomicFileState, ...] = (),
         modules: t.StrSequence = (),
     ) -> m.Infra.CodemodBindingSnapshot:
-        """Capture Python owners and their static import closure before inference."""
+        """Capture Python owners and their static import closure before inference.
+
+        Returns:
+            The resulting ``m.Infra.CodemodBindingSnapshot``.
+
+        Raises:
+            TypeError: If binding package has no source resource contract.
+            ValueError: If binding source snapshots disagree; or if binding source is
+                absent.
+        """
         states: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
         for state in source_states:
             if states.setdefault(state.path.resolve(), state) != state:
@@ -548,6 +557,14 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         names an expression in the occurrence's lexical scope. Annotation payloads
         are not executable migration candidates. Missing coordinates are a rule
         defect, not permission to resolve at module scope.
+
+        Returns:
+            The resulting ``bool``.
+
+        Raises:
+            ValueError: If binding capture differs from source; or if resolved-symbol
+                requires a module and an expression; or if same-binding requires one
+                lexical expression.
         """
         capture = m.Infra.AstGrepCapture.model_validate(captures[condition.variable])
         sources = {
@@ -714,7 +731,11 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         sources: t.MappingKV[Path, str],
         visited: frozenset[t.Pair[str, str]] = frozenset(),
     ) -> bool:
-        """Reject rebound receivers, intermediate owners, and imported alias chains."""
+        """Reject rebound receivers, intermediate owners, and imported alias chains.
+
+        Returns:
+            The resulting ``bool``.
+        """
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         if isinstance(expression, ast.Attribute):
             if not cls._stable_binding_chain(
@@ -870,7 +891,11 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         offset: int,
         declared_routes: t.StrMapping | None = None,
     ) -> bool:
-        """Prove one unconditional declaration instead of Rope's last assignment."""
+        """Prove one unconditional declaration instead of Rope's last assignment.
+
+        Returns:
+            The resulting ``bool``.
+        """
         tree = ast.parse(source)
         parents = {
             child: parent

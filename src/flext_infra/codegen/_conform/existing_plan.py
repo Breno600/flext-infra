@@ -310,7 +310,11 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         self,
         root: Path,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
-        """Project owned policy before consumers require a valid physical TOML file."""
+        """Project owned policy before consumers require a valid physical TOML file.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
+        """
         result_type = r[t.SequenceOf[m.Infra.CodegenFilePlan]]
         live = u.Infra.live_pyproject_text(
             root / c.PYPROJECT_FILENAME,
