@@ -34,11 +34,30 @@ class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
+        # The engines currently own full-corpus inventories and count receipts.
+        # Refuse narrower requests before either engine can scan or publish.
+        if any(
+            selector is not None
+            for selector in (
+                self.target_module,
+                self.target_namespace,
+                self.project_filter,
+            )
+        ):
+            return r[t.Cli.ResultValue].fail(
+                "ast: selected scope is not supported by both mechanical "
+                "inventories and their count receipts; no scan or rewrite executed",
+            )
+        if self.output_format != c.Cli.OutputFormats.TEXT:
+            return r[t.Cli.ResultValue].fail(
+                f"ast: output format {self.output_format!r} is not supported; "
+                "no scan or rewrite executed",
+            )
         planned = u.Infra.codemod_rule_plan(self.repository_root)
         if planned.failure:
             return r[t.Cli.ResultValue].from_failure(planned)
         rules = tuple(dict.fromkeys(rule.resource for rule in planned.value.rules))
-        if self.apply_changes:
+        if not self.effective_dry_run:
             return self._execute_apply(self.repository_root, rules)
         ast_report = FlextInfraModGateEngine.scan(
             self.repository_root,

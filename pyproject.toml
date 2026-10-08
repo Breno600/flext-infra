@@ -525,6 +525,7 @@ runtime-evaluated-base-classes = [
   "flext_infra.release._release_project.FlextInfraReleaseProjectMixin",
   "flext_infra.release._release_publish.FlextInfraReleasePublishMixin",
   "flext_infra.release._release_source.FlextInfraReleaseSourceMixin",
+  "flext_infra.s",
   "flext_infra.services.cli_dispatch.FlextInfraCliDispatchService",
   "flext_infra.validate._pytest_runner.base.FlextInfraPytestRunnerBase",
   "flext_infra.validate._pytest_runner.command.FlextInfraPytestRunnerCommand",
