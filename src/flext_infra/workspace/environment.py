@@ -122,6 +122,9 @@ class FlextInfraWorkspaceEnvironmentMixin:
         envrc = request.repository_root / c.Infra.ENVRC_FILENAME
         if not request.apply or not request.allow_direnv or not envrc.is_file():
             return r[bool].ok(value=False)
+        verified = cls._verify_generated_envrc(envrc)
+        if verified.failure:
+            return verified
         runner_service = runner or u.Cli
         result = runner_service.run_raw(
             (c.Infra.CLI_DIRENV, "allow", str(request.repository_root)),
@@ -135,6 +138,28 @@ class FlextInfraWorkspaceEnvironmentMixin:
             return r[bool].fail(
                 f"direnv allow failed for {request.repository_root}: "
                 f"{output.stderr.strip() or output.stdout.strip()}",
+            )
+        return r[bool].ok(value=True)
+
+    @classmethod
+    def _verify_generated_envrc(cls, envrc: Path) -> p.Result[bool]:
+        """Authenticate the exact rendered owner bytes before native approval.
+
+        Returns:
+            Owned content identity or an explicit refusal to authorize it.
+
+        """
+        if envrc.is_symlink():
+            return r[bool].fail(f"refusing to authorize symlinked environment: {envrc}")
+        rendered = cls._render_environment_template(c.Infra.ENVRC_FILENAME)
+        if rendered.failure:
+            return r[bool].from_failure(rendered)
+        observed = u.Cli.files_read_text(envrc)
+        if observed.failure:
+            return r[bool].from_failure(observed)
+        if observed.value != rendered.value:
+            return r[bool].fail(
+                f"refusing to authorize environment not produced by its owner: {envrc}",
             )
         return r[bool].ok(value=True)
 

@@ -24,11 +24,14 @@ from flext_infra._utilities._git.semantic_submodule import (
 )
 from flext_infra._utilities._git.state_capture import (
     FlextInfraUtilitiesGitStateCaptureMixin,
+    FlextInfraUtilitiesGitWorktreeFactsMixin,
+    FlextInfraUtilitiesGitWorktreeMixin,
 )
 
 
 class FlextInfraUtilitiesGit(
     FlextInfraUtilitiesGitMutationScopeMixin,
+    FlextInfraUtilitiesGitWorktreeMixin,
     FlextInfraUtilitiesGitAttestationMixin,
     FlextInfraUtilitiesGitScopeMixin,
     FlextInfraUtilitiesGitSemanticSubmoduleMixin,
@@ -37,28 +40,9 @@ class FlextInfraUtilitiesGit(
 ):
     """Canonical Git owner for flext-infra: scope + worktree + checkpoint/patch.
 
-    The private mixins form TWO chains, and this facet is where they meet:
-
-      scope -> semantic -> worktree -> ... -> repo
-      submodule -> identity -> semantic_worktree -> index -> paths -> publish
-                -> refs -> worktree -> ... -> repo
-
-    Only the first was composed, so everything the second chain owns —
-    ``git_submodule_init``, ``git_submodule_sections``,
-    ``git_submodule_config_value``, ``git_staged_gitlink_oid`` — was absent
-    from ``u.Infra`` even though the modules defining them shipped and were
-    exported. ``worktree_provisioning.py`` calls all four, so the facade
-    advertised an API that resolved to nothing at runtime.
-
-    Composing at the facet, rather than inserting the submodule mixin into
-    ``GitSemanticMixin``, is what keeps the two chains from colliding: they
-    share ``worktree`` as a base, so joining them mid-chain re-derives the same
-    methods through two paths and every shared member becomes an override.
-
-    Lane hygiene's mixin supplies native facts only; the Git service owns the
-    single verdict, fresh integration election and ownership interpretation.
-    Worktree facts are inherited through the semantic submodule chain rather
-    than repeated as a direct base of this facet.
+    Removal and semantic publication share the refs/preflight owner below both
+    effect boundaries. Compose removal here, not below refs: otherwise the
+    removal owner cannot call the shared guard without an import cycle.
     """
 
     @staticmethod

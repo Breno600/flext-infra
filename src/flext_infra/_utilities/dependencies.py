@@ -17,13 +17,14 @@ from packaging.utils import canonicalize_name
 from packaging.version import InvalidVersion, Version
 
 from flext_infra import c, m, p, r, t
-from flext_infra._utilities.dependency_requirements import (
-    FlextInfraUtilitiesDependencyRequirements,
+from flext_infra._utilities import (
+    FlextInfraUtilitiesPyproject,
+    FlextInfraUtilitiesRequirementSpecs,
 )
 
 
-class FlextInfraUtilitiesDependencies(FlextInfraUtilitiesDependencyRequirements):
-    """Dependency parsing and inspection helpers for flext-infra utilities."""
+class FlextInfraUtilitiesDependencies(FlextInfraUtilitiesRequirementSpecs):
+    """Workspace dependency policy composed over independent requirement parsing."""
 
     @staticmethod
     def project_dev_groups_from_payload(

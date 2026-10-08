@@ -10,6 +10,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pytest
@@ -17,41 +18,7 @@ from flext_tests import tm
 
 from flext_infra import infra
 from flext_infra.codegen.fixer import FlextInfraCodegenFixer
-from flext_infra.refactor.namespace_relocations import (
-    FlextInfraNamespaceRelocationCascade,
-)
-from tests import c, m, u
-
-
-def _finding(
-    file: Path,
-    *,
-    module: str,
-    name: str,
-) -> m.Infra.ModScanFinding:
-    """Build one minimal package-root-import finding payload.
-
-    Returns:
-        The resulting ``m.Infra.ModScanFinding``.
-    """
-    return m.Infra.ModScanFinding(
-        rule_file="namespace-law.yml",
-        rule_id="ban-noncanonical-alias-import",
-        repository="test",
-        file=file,
-        range={"start": {"line": 0, "column": 0}, "end": {"line": 0, "column": 1}},
-        text=f"from {module} import {name}",
-        actionable=False,
-        classification=c.Infra.ModScanFindingClass.DETECTION_ONLY,
-        payload={
-            "metaVariables": {
-                "single": {
-                    "MODULE": module,
-                    "NAME": name,
-                },
-            },
-        },
-    )
+from tests import m, u
 
 
 def _reports_import_cycle(result: m.Infra.AutoFixResult) -> bool:
@@ -132,22 +99,38 @@ class TestsFlextInfraCodegenFixerCycleProof:
             tmp_path=tmp_path,
             name="bind-proj",
             pkg_name="bind_pkg",
-            files={"consumer.py": "from bind_pkg.models import u\n"},
+            files={
+                "__init__.py": "u = __name__\n",
+                "models.py": "u = __name__\n",
+                "consumer.py": (
+                    "from bind_pkg.models import u\nassert u == __package__\n"
+                ),
+            },
         )
-        finding = _finding(
-            Path("src/bind_pkg/consumer.py"),
-            module="bind_pkg.models",
-            name="u",
-        )
-        consumer = project / finding.file
-        with infra.rope_workspace(project) as workspace:
-            FlextInfraNamespaceRelocationCascade().run(
-                project_root=project,
-                rope_project=workspace.rope_project,
-                findings=((c.Infra.CodemodRelocation.PACKAGE_ROOT_IMPORT, finding),),
-                py_files=(consumer,),
+        path = project / "src" / "bind_pkg" / "consumer.py"
+        original = path.read_text(encoding="utf-8")
+        with infra.rope_workspace(project) as rope:
+            edits = tm.ok(
+                u.Infra.plan_package_root_import(
+                    rope,
+                    path,
+                    source_module="bind_pkg.models",
+                    aliases=("u",),
+                )
             )
-        tm.that(consumer.read_text(encoding="utf-8"), eq="from bind_pkg import u\n")
+        tm.that(len(edits), eq=1)
+        tm.that(path.read_text(encoding="utf-8"), eq=original)
+        path.write_text(edits[0].updated_source, encoding="utf-8")
+        output = tm.ok(
+            u.Cli.run_raw((
+                sys.executable,
+                "-I",
+                "-c",
+                "import sys; sys.path.insert(0, sys.argv[1]); import bind_pkg.consumer",
+                str(project / "src"),
+            ))
+        )
+        tm.that(u.Cli.process_succeeded(output.outcome), eq=True, msg=output.stderr)
 
     @staticmethod
     def test_package_root_import_preserves_foreign_package_identity(
@@ -160,17 +143,16 @@ class TestsFlextInfraCodegenFixerCycleProof:
             pkg_name="foreign_pkg",
             files={"consumer.py": "from flext_cli.utilities import u\n"},
         )
-        finding = _finding(
-            Path("src/foreign_pkg/consumer.py"),
-            module="flext_cli.utilities",
-            name="u",
-        )
-        consumer = project / finding.file
-        with infra.rope_workspace(project) as workspace:
-            FlextInfraNamespaceRelocationCascade().run(
-                project_root=project,
-                rope_project=workspace.rope_project,
-                findings=((c.Infra.CodemodRelocation.PACKAGE_ROOT_IMPORT, finding),),
-                py_files=(consumer,),
+        path = project / "src" / "foreign_pkg" / "consumer.py"
+        original = path.read_text(encoding="utf-8")
+        with infra.rope_workspace(project) as rope:
+            edits = tm.ok(
+                u.Infra.plan_package_root_import(
+                    rope,
+                    path,
+                    source_module="flext_cli.utilities",
+                    aliases=("u",),
+                )
             )
-        tm.that(consumer.read_text(encoding="utf-8"), eq="from flext_cli import u\n")
+        tm.that(edits, empty=True)
+        tm.that(path.read_text(encoding="utf-8"), eq=original)

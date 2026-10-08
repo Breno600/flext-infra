@@ -203,7 +203,9 @@ class FlextInfraConstantsCheck:
         r"^(?P<file>.*?):(?P<line>\d+):(?P<col>\d+):\s+\[(?P<code>MD\d+)\]\s+(?P<msg>.*)$",
     )
     MARKDOWN_FORMAT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\[warn\]\s+(?P<file>\S+\.md)\s*$",
+        # Prettier applies terminal SGR styling to the warning label in CI.
+        r"^\[(?:\x1b\[[0-9;]*m)*warn(?:\x1b\[[0-9;]*m)*\]"
+        r"\s+(?P<file>\S+\.md)\s*$",
         re.MULTILINE,
     )
     (

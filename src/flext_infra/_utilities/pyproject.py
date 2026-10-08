@@ -12,11 +12,86 @@ from functools import cache, lru_cache
 from pathlib import Path
 
 
-from flext_infra import c, m, p, r, t
+from flext_infra import c, config, m, p, r, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesGit,
+    FlextInfraUtilitiesManagedConflicts,
+)
 
 
 class FlextInfraUtilitiesPyproject:
     """Static helpers for reading and normalizing ``pyproject.toml`` payloads."""
+
+    @staticmethod
+    def managed_mise_binary(name: str, owner_root: Path) -> p.Result[Path]:
+        """Resolve a locked managed executable before entering a consumer cwd.
+
+        Returns:
+            An authenticated absolute binary, never a PATH shim or global default.
+        """
+        tool = next(
+            (
+                item
+                for item in config.Infra.codegen.toolchain.tools
+                if item.name == name
+            ),
+            None,
+        )
+        if tool is None:
+            return r[Path].fail(f"tool is not declared by the toolchain owner: {name}")
+        pinned = FlextInfraUtilitiesPyproject._locked_mise_version(
+            owner_root,
+            tool.selector or tool.name,
+            tool.version,
+        )
+        if pinned.failure:
+            return r[Path].from_failure(pinned)
+        located = FlextInfraUtilitiesPyproject._managed_mise_path(name, owner_root)
+        if located.failure:
+            return located
+        return FlextInfraUtilitiesPyproject._managed_binary_identity(
+            located.value,
+            pinned.value,
+            owner_root,
+        )
+
+    @staticmethod
+    def _managed_mise_path(name: str, owner_root: Path) -> p.Result[Path]:
+        located = u.Cli.run_raw(
+            (c.Infra.MISE, "-C", str(owner_root), "which", name),
+            cwd=owner_root,
+            timeout=c.Infra.TIMEOUT_SHORT,
+        )
+        if located.failure:
+            return r[Path].from_failure(located)
+        if not u.Cli.process_succeeded(located.value.outcome):
+            return r[Path].fail(located.value.stderr or located.value.stdout)
+        binary = Path(located.value.stdout.strip())
+        if not binary.is_absolute() or not binary.is_file():
+            return r[Path].fail(f"managed executable is not an absolute file: {binary}")
+        return r[Path].ok(binary)
+
+    @staticmethod
+    def _managed_binary_identity(
+        binary: Path,
+        pinned: str,
+        owner_root: Path,
+    ) -> p.Result[Path]:
+        identified = u.Cli.run_raw(
+            (str(binary), "--version"),
+            cwd=owner_root,
+            timeout=c.Infra.TIMEOUT_SHORT,
+        )
+        if identified.failure:
+            return r[Path].from_failure(identified)
+        if not u.Cli.process_succeeded(identified.value.outcome):
+            return r[Path].fail(identified.value.stderr or identified.value.stdout)
+        if pinned not in identified.value.stdout.split():
+            return r[Path].fail(
+                f"managed executable differs from lock: expected={pinned} "
+                f"observed={identified.value.stdout.strip()}",
+            )
+        return r[Path].ok(binary)
 
     @staticmethod
     def recover_live_pyproject_text(raw: str) -> p.Result[str]:
@@ -34,6 +109,7 @@ class FlextInfraUtilitiesPyproject:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesManagedConflicts
+
         spec_result = FlextInfraUtilitiesManagedConflicts.pyproject_managed_file()
         if spec_result.failure:
             return r[str].from_failure(spec_result)
@@ -55,6 +131,7 @@ class FlextInfraUtilitiesPyproject:
 
         """
         from flext_cli import u
+
         raw = u.Cli.atomic_read_binary_file_state(pyproject_path, required=True)
         if raw.failure:
             return r[str].from_failure(raw)
@@ -89,6 +166,7 @@ class FlextInfraUtilitiesPyproject:
 
         """
         from flext_cli import u
+
         live = FlextInfraUtilitiesPyproject.live_pyproject_text(
             project_root / c.PYPROJECT_FILENAME,
         )
@@ -150,6 +228,7 @@ class FlextInfraUtilitiesPyproject:
 
         """
         from flext_cli import u
+
         config_path = toolchain_root / c.Infra.TAPLO_CONFIG_FILENAME
         config_content = config_path.read_bytes() if config_path.is_file() else b""
         resolved_path = path.resolve()
@@ -203,6 +282,7 @@ class FlextInfraUtilitiesPyproject:
 
         """
         from flext_cli import u
+
         lock_path = toolchain_root / c.Infra.MISE_LOCK_FILENAME
         source = u.Cli.files_read_text(lock_path)
         if source.failure:
@@ -233,6 +313,7 @@ class FlextInfraUtilitiesPyproject:
     ) -> p.Result[str]:
 
         from flext_cli import u
+
         taplo_result = FlextInfraUtilitiesPyproject._taplo_binary(*taplo)
         if taplo_result.failure:
             return r[str].from_failure(taplo_result)
@@ -363,6 +444,7 @@ class FlextInfraUtilitiesPyproject:
 
         """
         from flext_cli import u
+
         document = u.Cli.toml_parse_text(
             lock_path.read_text(encoding=c.Cli.ENCODING_DEFAULT),
         )
@@ -421,6 +503,7 @@ class FlextInfraUtilitiesPyproject:
 
         """
         from flext_cli import u
+
         pinned = FlextInfraUtilitiesPyproject._locked_mise_version(
             execution_root,
             c.Infra.TAPLO_MISE_TOOL_NAME,
@@ -514,6 +597,7 @@ class FlextInfraUtilitiesPyproject:
 
         """
         from flext_cli import u
+
         payload = u.Cli.toml_mapping_from_text(text)
         if payload is None:
             msg = f"pyproject payload at {pyproject_path} is not valid TOML"
@@ -529,6 +613,7 @@ class FlextInfraUtilitiesPyproject:
 
         """
         from flext_cli import u
+
         payload = u.Cli.toml_as_mapping(document)
         if not payload:
             return {}
@@ -705,6 +790,7 @@ class FlextInfraUtilitiesPyproject:
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesGit
+
         declared = FlextInfraUtilitiesGit.git_declared_submodule_paths(repository_root)
         if declared.failure:
             msg = declared.error or f"invalid workspace topology: {repository_root}"

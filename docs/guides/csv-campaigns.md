@@ -14,6 +14,10 @@ Python files in governed source trees are scanned by default. A rule may also
 declare a relative `include` glob ending in a file suffix to elect authored
 Markdown or configuration text. The same authenticated inventory and atomic
 publisher cover these files; a generated-file header rejects a direct rewrite.
+Sed `include` and `exclude` scopes must be lists of non-empty strings. Scalar,
+mapping, null, non-string, and blank entries fail before any publication; no
+scope is expanded into characters or coerced into a glob. Omitted scopes retain
+the typed rule defaults, and empty lists remain valid unrestricted selectors.
 When a candidate's Python package cannot import, the healthy Infra provider
 can run `make mod-text-candidate` after its workspace manifest declares exactly
 one `candidate_bootstrap_targets` entry. The same target declaration also

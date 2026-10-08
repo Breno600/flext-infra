@@ -433,11 +433,11 @@ SETUP_ENVIRONMENT_RECIPE = set -eu; \
 		uv_lock_mode=--frozen; \
 	fi; \
 	$$credential_env $(UV) sync --project "$(UV_PROJECT)" --python "{{ python_version }}" $(UV_SYNC_FLAGS) $$uv_lock_mode --link-mode "$(UV_LINK_MODE)"; \
+	$(PROJECT_FLEXT_INFRA) workspace sync-environment --repository-root "$(PROJECT_ROOT)"; \
 	if [ "$(strip $({{ make.ci.variable }}))" != "{{ make.ci.value }}" ]; then \
-		direnv allow "$(PROJECT_ROOT)"; \
 		for member in $(WORKSPACE_SUBPROJECTS); do \
 			if [ -f "$(PROJECT_ROOT)/$$member/.envrc" ]; then \
-				direnv allow "$(PROJECT_ROOT)/$$member"; \
+				$(PROJECT_FLEXT_INFRA) workspace sync-environment --repository-root "$(PROJECT_ROOT)/$$member"; \
 			fi; \
 		done; \
 	fi

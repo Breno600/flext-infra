@@ -79,7 +79,6 @@ class FlextInfraModGateEngine:
                         c.Infra.SG_CONFIG_FLAG,
                         str(temp_root / c.Infra.CODEMOD_CONFIG_FILENAME),
                     ),
-                    toolchain_root=root,
                 )
                 if tested.failure:
                     remedy = (
@@ -144,7 +143,6 @@ class FlextInfraModGateEngine:
                         c.Infra.SG_CONFIG_FLAG,
                         str(temp_root / c.Infra.CODEMOD_CONFIG_FILENAME),
                     ),
-                    toolchain_root=root,
                 ).unwrap()
                 cls._run_tool(
                     temp_root,
@@ -154,7 +152,6 @@ class FlextInfraModGateEngine:
                         c.Infra.SG_CONFIG_FLAG,
                         str(temp_root / c.Infra.CODEMOD_CONFIG_FILENAME),
                     ),
-                    toolchain_root=root,
                 ).unwrap()
                 changes.extend(
                     cls._publish_regenerated_snapshots(
@@ -412,32 +409,30 @@ class FlextInfraModGateEngine:
         command: t.StrSequence,
         *,
         finding_exit_code: int | None = None,
-        toolchain_root: Path,
     ) -> p.Result[p.Cli.CommandOutput]:
         """Run one AST tool and preserve its documented finding status.
 
-        The tool resolves through the ``toolchain_root`` repository's pinned
-        mise lock even when the process cwd is a staged fixture copy outside
-        that tree; a bare PATH resolution there falls back to an unpinned
-        global binary whose rule semantics can differ.
+        Resolve and authenticate in Make's declared tool-owning invocation
+        context first. Execute the absolute managed binary in the consumer
+        directory, so neither a shim nor that directory can select another tool.
 
         Returns:
             The resulting ``p.Result[p.Cli.CommandOutput]``.
 
         """
-        pinned = (
-            c.Infra.MISE,
-            "-C",
-            str(toolchain_root),
-            "exec",
-            "--",
-            *command,
-        )
+        # Make owns the invocation context; root is only the scanned consumer.
+        binary = u.Infra.managed_mise_binary(command[0], Path.cwd())
+        if binary.failure:
+            return r[p.Cli.CommandOutput].from_failure(binary)
         sys.stderr.write(
             f"mod: start {' '.join(command[:2])} args={max(0, len(command) - 2)}\n",
         )
         sys.stderr.flush()
-        run = u.Cli.run_raw(pinned, cwd=root, timeout=c.Infra.TIMEOUT_SHORT)
+        run = u.Cli.run_raw(
+            (str(binary.value), *command[1:]),
+            cwd=root,
+            timeout=c.Infra.TIMEOUT_SHORT,
+        )
         if run.failure:
             return r[p.Cli.CommandOutput].from_failure(run)
         output = run.value
@@ -957,7 +952,6 @@ class FlextInfraModGateEngine:
             root,
             scan_command,
             finding_exit_code=1,
-            toolchain_root=root,
         )
         if run.failure:
             return r[m.Infra.ModScanReport].from_failure(run)

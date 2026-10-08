@@ -99,6 +99,15 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
         """
         from flext_cli import u
         root = request.repo_root
+        admitted = cls.git_verify_lane(
+            m.Infra.GitLaneVerificationRequest(
+                repo_root=root,
+                operation="create",
+                candidate=request.base,
+            ),
+        )
+        if admitted.failure:
+            return r[bool].from_failure(admitted)
         base = cls._verified_lane_base(request)
         if base.failure:
             return r[bool].from_failure(base)

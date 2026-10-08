@@ -36,7 +36,9 @@ class FlextInfraUtilitiesCodegenFacades:
             Generated facade source inheriting its complete declared type owner.
 
         Raises:
-            ValueError: If documentation, declarations, or ownership are invalid.
+            ValueError: If the facade lacks module documentation, declares an
+                unsupported class, exports, or declarations, or does not resolve
+                to exactly one full exported type owner.
         """
         from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace, FlextInfraUtilitiesRopeModulePatch
         source = sources[facade_path]

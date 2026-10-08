@@ -281,6 +281,15 @@ class FlextInfraWorktreeService(s[str]):
             return r[str].fail("worktree add requires --apply")
         if base.startswith("-"):
             return r[str].fail(f"invalid base commitish: {base}")
+        admitted = u.Infra.git_verify_lane(
+            m.Infra.GitLaneVerificationRequest(
+                repo_root=self.repository_root,
+                operation="create",
+                candidate=base,
+            ),
+        )
+        if admitted.failure:
+            return r[str].from_failure(admitted)
         base_oid = self._resolved_base(primary_root, base)
         if base_oid.failure:
             return r[str].from_failure(base_oid)
