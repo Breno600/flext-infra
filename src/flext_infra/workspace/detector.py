@@ -57,9 +57,10 @@ class FlextInfraWorkspaceDetector(
         beads = cls._effective_workspace_beads(resolved_root, identity, manifest)
         if beads.failure:
             return r[m.Infra.WorkspaceSpec].from_failure(beads)
+        workspace_beads = beads.value[0] if beads.value else None
         refs = cls._resolved_workspace_refs(
             resolved_root,
-            beads.value,
+            workspace_beads,
             composed=identity.is_attached_submodule,
             allow_unprovisioned_members=allow_unprovisioned_members,
         )
@@ -68,13 +69,13 @@ class FlextInfraWorkspaceDetector(
         (repository_ref, gascity_enabled, declared_project), (subprojects, external) = (
             refs.value
         )
-        named = cls._workspace_name(beads.value, manifest)
+        named = cls._workspace_name(workspace_beads, manifest)
         if named.failure:
             return r[m.Infra.WorkspaceSpec].from_failure(named)
         return r[m.Infra.WorkspaceSpec].ok(
             m.Infra.WorkspaceSpec(
                 name=named.value,
-                beads=beads.value,
+                beads=workspace_beads,
                 gascity_enabled=gascity_enabled,
                 repository=repository_ref,
                 project=declared_project,
@@ -203,11 +204,12 @@ class FlextInfraWorkspaceDetector(
         resolved_root: Path,
         identity: m.Infra.GitIdentityReport,
         manifest: m.Infra.WorkspaceManifestSpec | None,
-    ) -> p.Result[m.Infra.BeadsProjectSpec | None]:
+    ) -> p.Result[t.VariadicTuple[m.Infra.BeadsProjectSpec]]:
         """Resolve the effective Beads ledger from the declared policy overlay.
 
         Returns:
-            The resulting ``p.Result[m.Infra.BeadsProjectSpec | None]``.
+            The effective ledger as a 0-or-1 tuple; a Beads-free repository is
+            the empty tuple, never a ``None`` success payload.
 
         """
         resolved_beads = cls._resolved_beads(
@@ -215,7 +217,9 @@ class FlextInfraWorkspaceDetector(
             cls._policy_overlay(manifest),
         )
         if resolved_beads.failure:
-            return r[m.Infra.BeadsProjectSpec | None].from_failure(resolved_beads)
+            return r[t.VariadicTuple[m.Infra.BeadsProjectSpec]].from_failure(
+                resolved_beads,
+            )
         return cls._effective_beads(
             resolved_root,
             identity,
@@ -228,14 +232,14 @@ class FlextInfraWorkspaceDetector(
         resolved_root: Path,
         identity: m.Infra.GitIdentityReport,
         beads: m.Infra.BeadsProjectSpec | None,
-    ) -> p.Result[m.Infra.BeadsProjectSpec | None]:
+    ) -> p.Result[t.VariadicTuple[m.Infra.BeadsProjectSpec]]:
         """Resolve the effective Beads ledger, inheriting through submodules.
 
         Returns:
-            The resulting effective workspace Beads specification.
+            The effective workspace Beads specification as a 0-or-1 tuple.
 
         """
-        result_type = r[m.Infra.BeadsProjectSpec | None]
+        result_type = r[t.VariadicTuple[m.Infra.BeadsProjectSpec]]
         member_root = identity.primary_root
         member_beads = member_root / c.Infra.BEADS_DIRNAME
         if not (
@@ -243,7 +247,7 @@ class FlextInfraWorkspaceDetector(
             and identity.is_attached_submodule
             and member_beads.is_symlink()
         ):
-            return result_type.ok(beads)
+            return result_type.ok(() if beads is None else (beads,))
         superproject_root = identity.superproject_root
         if superproject_root is None:
             return result_type.fail(
@@ -259,7 +263,7 @@ class FlextInfraWorkspaceDetector(
                 "composed project must follow the workspace Beads ledger: "
                 f"{route_error}",
             )
-        return result_type.ok(inherited_beads)
+        return result_type.ok((inherited_beads,))
 
     @classmethod
     def _inherited_member_beads(
