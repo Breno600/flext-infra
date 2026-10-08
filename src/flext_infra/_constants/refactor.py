@@ -61,6 +61,51 @@ class FlextInfraConstantsRefactor:
         "Help: Scan succeeded and found error level diagnostics in the codebase."
     )
     "Exact second stderr line emitted for error-severity JSONL findings."
+    IMPORT_NORMALIZATION_LETTER_ORDER: ClassVar[t.MappingKV[str, int]] = {
+        "c": 2,
+        "t": 3,
+        "p": 4,
+        "m": 5,
+        "u": 6,
+    }
+    "Facade-letter ordering ranks for import normalization."
+    IMPORT_NORMALIZATION_LETTER_RENDER_ORDER: ClassVar[t.StrSequence] = (
+        "c",
+        "m",
+        "p",
+        "t",
+        "u",
+    )
+    "Facade-letter render order for import normalization."
+    IMPORT_NORMALIZATION_FAMILY_LETTER: ClassVar[t.MappingKV[str, str]] = {
+        "constants": "c",
+        "typings": "t",
+        "protocols": "p",
+        "models": "m",
+        "utilities": "u",
+    }
+    "Family-name to facade-letter mapping for import normalization."
+    IMPORT_NORMALIZATION_FAMILY_RANK: ClassVar[t.MappingKV[str, int]] = {
+        "constants": 2,
+        "typings": 3,
+        "protocols": 4,
+        "models": 5,
+        "utilities": 6,
+    }
+    "Family-name to layer rank mapping for import normalization."
+    IMPORT_NORMALIZATION_FACADE_RANK: ClassVar[t.MappingKV[str, int]] = {
+        "api": 10,
+        "cli": 11,
+    }
+    "Facade-module rank for import normalization."
+    IMPORT_NORMALIZATION_MAX_PASSES: ClassVar[int] = 24
+    "Fixed-point pass ceiling for import normalization."
+    IMPORT_NORMALIZATION_FAMILY_PATH_DEPTH: ClassVar[int] = 2
+    "Module-path depth of one family root (``<package>.<family>``)."
+    IMPORT_NORMALIZATION_LEAF_PATH_DEPTH: ClassVar[int] = 3
+    "Module-path depth of one family leaf (``<package>.<family>.<leaf>``)."
+    IMPORT_NORMALIZATION_DEFAULT_LAYER_RANK: ClassVar[int] = 7
+    "Layer rank of a module outside every declared layer."
 
     @unique
     class ModScanCommand(StrEnum):
