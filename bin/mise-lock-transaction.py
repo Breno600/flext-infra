@@ -119,7 +119,7 @@ class MiseLockTransaction:
         return selector
 
     @classmethod
-    def _sidecar_digest(cls, graph: str, filename: str, annotation: object, root: Path) -> tuple[str, str]:
+    def _sidecar_digest(cls, graph: str, filename: str, annotation: object, root: Path, *, resolved_previous: bool = False) -> tuple[str, str] | None:
         """Authenticate one native-graph annotation against its physical sidecar."""
         if not isinstance(annotation, dict):
             raise ValueError(f"{cls.LOCK} {graph} annotation is not a table")
@@ -132,6 +132,8 @@ class MiseLockTransaction:
             raise ValueError(f"invalid {cls.LOCK} sidecar digest: {relative}")
         cls._reject_symlink_path(root, relative)
         sidecar = root.joinpath(*selector.parts)
+        if resolved_previous and not sidecar.exists():
+            return None
         cls._physical_directory(sidecar)
         source = cls._bytes(sidecar / filename)
         if source is None:
@@ -142,7 +144,7 @@ class MiseLockTransaction:
         return relative, cls._tree_digest(sidecar)
 
     @classmethod
-    def _sidecars(cls, content: bytes | None, root: Path) -> dict[str, str]:
+    def _sidecars(cls, content: bytes | None, root: Path, *, resolved_previous: bool = False) -> dict[str, str]:
         if content is None:
             return {}
         payload = tomllib.loads(content.decode("utf-8"))
@@ -156,21 +158,28 @@ class MiseLockTransaction:
                     raise ValueError(f"{cls.LOCK} tool entry is not a table")
                 for graph, filename in cls.NATIVE_GRAPHS:
                     if entry.get(graph) is not None:
-                        relative, tree = cls._sidecar_digest(graph, filename, entry[graph], root)
-                        result[relative] = tree
+                        reference = cls._sidecar_digest(graph, filename, entry[graph], root, resolved_previous=resolved_previous)
+                        if reference is not None:
+                            relative, tree = reference
+                            result[relative] = tree
         return result
 
     @classmethod
-    def _previous_sidecars(cls, content: bytes | None, project: Path) -> dict[str, str]:
-        """Read the owned graph from Git stage 2 during a lock merge conflict.
+    def _previous_sidecars(cls, content: bytes | None, project: Path, *, resolved_previous: bool = False) -> dict[str, str]:
+        """Authenticate existing physical graphs before replacing the lock.
 
         A generated lock with conflict markers is not a TOML declaration. Git's
         unmerged index retains the exact prior lock; its sidecars must still
         validate against the physical checkout before publication can replace
-        them. Ordinary malformed locks continue to fail at the TOML parser.
+        them. With no physical graph namespace there is no old sidecar to
+        claim or replace; the transaction still journals the exact old lock.
+        A malformed lock with existing graphs remains a blocking error.
         """
+        cls._reject_symlink_path(project, ".mise/locks")
         if content is None or b"<<<<<<< " not in content:
-            return cls._sidecars(content, project)
+            if resolved_previous and not (project / ".mise/locks").exists():
+                return {}
+            return cls._sidecars(content, project, resolved_previous=resolved_previous)
         index = subprocess.run(
             ["git", "-C", str(project), "ls-files", "-u", "--", cls.LOCK],
             check=True,
@@ -554,7 +563,7 @@ class MiseLockTransaction:
             cls._move(stage / relative, destination, project)
 
     @classmethod
-    def publish(cls, project: Path, stage: Path) -> None:
+    def publish(cls, project: Path, stage: Path, *, resolved_previous: bool = False) -> None:
         """Publish sidecars first and make the lock rename the commit point."""
         cls._require_roots(project, stage)
         cls._recover_prior_stages(project, stage)
@@ -562,8 +571,8 @@ class MiseLockTransaction:
         new = cls._bytes(stage / cls.LOCK)
         if new is None:
             raise ValueError(f"staged {cls.LOCK} is absent: {stage}")
-        old_refs = cls._previous_sidecars(old, project)
         new_refs = cls._sidecars(new, stage)
+        old_refs = cls._previous_sidecars(old, project, resolved_previous=resolved_previous)
         old_artifacts, new_artifacts = cls._stage_artifacts(project, stage)
         cls._sync_tree(stage)
         cls._check_targets(project, old_refs, new_refs)
@@ -589,13 +598,13 @@ class MiseLockTransaction:
 
     @classmethod
     def main(cls, arguments: list[str]) -> int:
-        if len(arguments) != 3 or arguments[0] not in {"publish", "recover"}:
-            raise ValueError("usage: mise-lock-transaction.py (publish|recover) PROJECT STAGE")
+        if len(arguments) != 3 or arguments[0] not in {"publish", "publish-resolved", "recover"}:
+            raise ValueError("usage: mise-lock-transaction.py (publish|publish-resolved|recover) PROJECT STAGE")
         project = Path(arguments[1]).absolute()
         stage = Path(arguments[2]).absolute()
         with cls._serialized(project):
-            if arguments[0] == "publish":
-                cls.publish(project, stage)
+            if arguments[0] in {"publish", "publish-resolved"}:
+                cls.publish(project, stage, resolved_previous=arguments[0] == "publish-resolved")
             elif stage.exists() or stage.is_symlink():
                 cls.recover(project, stage)
         return 0

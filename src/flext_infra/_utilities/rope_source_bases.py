@@ -592,7 +592,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                     target = external_reference(
                         target,
                         tuple(attributes),
-                        visiting | {key},
+                        visiting,
                         depth + 1,
                     )
                     attributes.clear()
