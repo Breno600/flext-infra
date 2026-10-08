@@ -11,8 +11,7 @@ from collections.abc import Callable, MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra import m, t, u
+from flext_infra import r, m, t, u
 from flext_infra.codegen._codegen_staging import FlextInfraCodegenStaging
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,

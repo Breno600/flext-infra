@@ -13,8 +13,7 @@ from urllib.parse import urlparse
 
 from git import GitCommandError, GitConfigParser
 
-from flext_core import r
-from flext_infra import c, m, t
+from flext_infra import r, c, m, t
 from flext_infra._utilities._git.worktree_roots import (
     FlextInfraUtilitiesGitWorktreeRootsMixin,
 )

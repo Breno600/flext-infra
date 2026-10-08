@@ -11,8 +11,7 @@ from typing import TYPE_CHECKING
 
 from flext_cli import u as cli_u
 
-from flext_core import r
-from flext_infra import m, t
+from flext_infra import r, m, t
 from flext_infra._utilities._docs_generate_sources import (
     FlextInfraUtilitiesDocsGenerateSourcesMixin,
 )

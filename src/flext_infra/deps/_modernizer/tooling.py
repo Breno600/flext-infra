@@ -8,8 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra import c, config, m, t, u
+from flext_infra import r, c, config, m, t, u
 from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
 from flext_infra.deps.phases.ensure_pyright import FlextInfraEnsurePyrightConfigPhase
 
@@ -150,7 +149,8 @@ class FlextInfraPyprojectModernizerTooling:
             )
             if group_dev.failure:
                 return result_type.fail_op(
-                    "validate live dev dependencies", group_dev.error,
+                    "validate live dev dependencies",
+                    group_dev.error,
                 )
             live_dev = (
                 *group_dev.value,

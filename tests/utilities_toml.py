@@ -11,8 +11,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_core import r
-from flext_infra import config, u
+from flext_infra import r, config, u
 from tests import c, m, p, t
 
 

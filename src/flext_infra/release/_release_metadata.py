@@ -11,8 +11,7 @@ from pathlib import PurePosixPath
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
 
-from flext_core import r
-from flext_infra import c, p, t, u
+from flext_infra import r, c, p, t, u
 from flext_infra.release._release_source import FlextInfraReleaseSourceMixin
 
 

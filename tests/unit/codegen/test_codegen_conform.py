@@ -16,8 +16,7 @@ from typing import override
 import pytest
 from flext_tests import tm
 
-from flext_core import r
-from flext_infra import config, infra, main
+from flext_infra import r, config, infra, main
 from flext_infra.codegen import (
     FlextInfraCodegenConform,
     FlextInfraCodegenMiseArtifacts,

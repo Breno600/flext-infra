@@ -13,8 +13,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, override
 
-from flext_core import r
-from flext_infra import m, p, t, u
+from flext_infra import r, m, p, t, u
 from flext_infra.base import s
 from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 

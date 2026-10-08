@@ -17,8 +17,7 @@ from git import (
     Repo,
 )
 
-from flext_core import r
-from flext_infra import c, m
+from flext_infra import r, c, m
 from flext_infra._utilities._git.remote import FlextInfraUtilitiesGitRemote
 from flext_infra._utilities._git.repo import FlextInfraUtilitiesGitRepo
 from flext_infra._utilities._git.semantic_lane import (

@@ -12,8 +12,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_core import r
-from flext_infra import c, m, p, u
+from flext_infra import r, c, m, p, u
 from flext_infra.codegen import codegen_transaction as transaction
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner

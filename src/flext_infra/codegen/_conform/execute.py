@@ -9,8 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Self, override
 
-from flext_core import r
-from flext_infra import c, config, m, p, t, u
+from flext_infra import r, c, config, m, p, t, u
 from flext_infra.codegen import (
     FlextInfraCodegenLazyInit,
     FlextInfraCodegenMiseArtifacts,

@@ -18,8 +18,7 @@ from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
 from packaging.version import InvalidVersion, Version
 
-from flext_core import r
-from flext_infra import c, m, t
+from flext_infra import r, c, m, t
 from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
 
 # Why: dependency_waves subscripts r[t.SequenceOf[t.StrSequence]] at runtime, so

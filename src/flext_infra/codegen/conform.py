@@ -8,8 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra import c, m, p, u
+from flext_infra import r, c, m, p, u
 from flext_infra.codegen._conform import FlextInfraCodegenConformExecute
 
 if TYPE_CHECKING:

@@ -15,8 +15,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from urllib.parse import urlparse
 
-from flext_core import r
-from flext_infra import c, m, p, t
+from flext_infra import r, c, m, p, t
 from flext_infra._utilities._git.worktree_discovery import (
     FlextInfraUtilitiesGitWorktreeDiscoveryMixin,
 )

@@ -13,8 +13,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra import c, m
+from flext_infra import r, c, m
 from flext_infra._utilities.git import FlextInfraUtilitiesGit
 
 if TYPE_CHECKING:

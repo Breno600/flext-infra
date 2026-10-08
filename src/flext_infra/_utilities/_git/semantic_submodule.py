@@ -13,8 +13,7 @@ from typing import TYPE_CHECKING
 
 from git import GitCommandError, GitConfigParser
 
-from flext_core import r
-from flext_infra import c, m, t
+from flext_infra import r, c, m, t
 from flext_infra._utilities._git.semantic_identity import (
     FlextInfraUtilitiesGitSemanticIdentityMixin,
 )

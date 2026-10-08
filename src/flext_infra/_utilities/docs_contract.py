@@ -14,8 +14,7 @@ from flext_cli import u
 from markdown import Markdown
 from markdown.extensions.toc import slugify
 
-from flext_core import r
-from flext_infra import c, m, t
+from flext_infra import r, c, m, t
 from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:

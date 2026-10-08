@@ -10,8 +10,7 @@ from typing import TYPE_CHECKING
 
 from flext_cli import cli
 
-from flext_core import r
-from flext_infra import m, u
+from flext_infra import r, m, u
 from flext_infra.refactor._namespace_enforcer_project import (
     FlextInfraNamespaceEnforcerProjectMixin,
 )

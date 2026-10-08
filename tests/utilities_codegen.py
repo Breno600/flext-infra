@@ -10,8 +10,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_core import r
-from flext_infra import config, u
+from flext_infra import r, config, u
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from flext_infra.codegen.consolidator import FlextInfraCodegenConsolidator
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit

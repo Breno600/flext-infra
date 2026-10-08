@@ -15,8 +15,7 @@ from time import perf_counter
 from types import TracebackType
 from typing import Annotated, ClassVar, Self, override
 
-from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import r, c, m, p, t, u
 from flext_infra.base import s
 
 

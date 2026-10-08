@@ -9,8 +9,7 @@ from __future__ import annotations
 import tarfile
 from pathlib import Path
 
-from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import r, c, m, p, t, u
 from flext_infra.release._release_artifact import FlextInfraReleaseArtifactMixin
 
 

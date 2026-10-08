@@ -12,8 +12,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_core import r
-from flext_infra import c, config, infra, m, p, u
+from flext_infra import r, c, config, infra, m, p, u
 from flext_infra.codegen import (
     FlextInfraCodegenMiseArtifacts,
     FlextInfraCodegenTransaction,

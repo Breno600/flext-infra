@@ -8,8 +8,7 @@ from __future__ import annotations
 
 from typing import Annotated, override
 
-from flext_core import r
-from flext_infra import c, m, p, u
+from flext_infra import r, c, m, p, u
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from flext_infra.release._release_plan import FlextInfraReleasePlanMixin
 

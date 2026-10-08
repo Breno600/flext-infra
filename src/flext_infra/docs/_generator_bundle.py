@@ -10,8 +10,7 @@ from pathlib import Path
 from time import perf_counter
 from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra import c, m, t, u
+from flext_infra import r, c, m, t, u
 
 if TYPE_CHECKING:
     from flext_infra import p

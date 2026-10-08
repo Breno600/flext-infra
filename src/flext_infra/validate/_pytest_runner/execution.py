@@ -15,8 +15,7 @@ from typing import TYPE_CHECKING, override
 
 import pytest
 
-from flext_core import r
-from flext_infra import c, config, m, t, u
+from flext_infra import r, c, config, m, t, u
 from flext_infra.validate._pytest_runner.command import FlextInfraPytestRunnerCommand
 from flext_infra.validate._pytest_runner.reports import FlextInfraPytestRunnerReports
 from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector

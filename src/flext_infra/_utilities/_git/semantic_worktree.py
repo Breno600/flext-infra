@@ -10,8 +10,7 @@ from typing import TYPE_CHECKING
 
 from git import GitCommandError, Repo
 
-from flext_core import r
-from flext_infra import m
+from flext_infra import r, m
 from flext_infra._utilities._git.semantic_index import (
     FlextInfraUtilitiesGitSemanticIndexMixin,
 )
