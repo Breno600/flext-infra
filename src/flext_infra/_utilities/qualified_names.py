@@ -9,7 +9,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 import libcst as cst
-from libcst.metadata import MetadataWrapper, QualifiedNameProvider
+from libcst.metadata import (
+    MetadataWrapper,
+    QualifiedName,
+    QualifiedNameProvider,
+    QualifiedNameSource,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -17,6 +22,54 @@ if TYPE_CHECKING:
 
 class FlextInfraUtilitiesQualifiedNames:
     """Resolve lazy LibCST qualified-name metadata through its public visitor API."""
+
+    @staticmethod
+    def lexical_root(node: cst.CSTNode) -> cst.CSTNode:
+        """Return the lexical receiver underlying a dotted attribute expression.
+
+        Returns:
+            The leftmost receiver node.
+
+        """
+        while isinstance(node, cst.Attribute):
+            node = node.value
+        return node
+
+    @staticmethod
+    def prove_import_root(
+        names: t.VariadicTuple[QualifiedName],
+        roots: t.VariadicTuple[QualifiedName],
+    ) -> frozenset[QualifiedName]:
+        """Require imported attribute identities to agree with lexical root bindings.
+
+        Returns:
+            Identities compatible with the lexical root, excluding shadowed imports.
+
+        Raises:
+            ValueError: If an imported identity has unresolved or competing roots.
+
+        """
+        proven: set[QualifiedName] = set()
+        for name in names:
+            if name.source is not QualifiedNameSource.IMPORT:
+                proven.add(name)
+                continue
+            if not roots:
+                msg = "unresolved qualified alias lexical root"
+                raise ValueError(msg)
+            compatible = [
+                root
+                for root in roots
+                if root.source is QualifiedNameSource.IMPORT
+                and (name.name == root.name or name.name.startswith(f"{root.name}."))
+            ]
+            if not compatible:
+                continue
+            if len(compatible) != len(roots):
+                msg = "ambiguous qualified alias lexical root"
+                raise ValueError(msg)
+            proven.add(name)
+        return frozenset(proven)
 
     @staticmethod
     def dotted_name(node: cst.BaseExpression | None) -> str | None:
@@ -147,13 +200,25 @@ class FlextInfraUtilitiesQualifiedNames:
 
             @override
             def on_visit(self, node: cst.CSTNode) -> bool:
+                names = tuple(self.get_metadata(QualifiedNameProvider, node, ()))
+                if isinstance(node, cst.Attribute) and any(
+                    name.name in self.candidates for name in names
+                ):
+                    names = tuple(
+                        cls.prove_import_root(
+                            names,
+                            tuple(
+                                self.get_metadata(
+                                    QualifiedNameProvider,
+                                    cls.lexical_root(node),
+                                    (),
+                                ),
+                            ),
+                        ),
+                    )
                 self.residue.update(
                     qualified_name.name
-                    for qualified_name in self.get_metadata(
-                        QualifiedNameProvider,
-                        node,
-                        (),
-                    )
+                    for qualified_name in names
                     if qualified_name.name in self.candidates
                 )
                 return True

@@ -99,6 +99,42 @@ class FlextInfraWorkspaceChecker(
             The resulting ``p.Result[bool]``.
 
         """
+        selected_files: t.VariadicTuple[Path] = ()
+        if params.file is not None:
+            if not params.gates:
+                return r[bool].fail("--file requires explicit canonical --gates selection")
+            if (
+                params.apply
+                or params.ruff_args is not None
+                or params.pyright_args is not None
+                or (params.project_names and tuple(params.project_names) != (".",))
+            ):
+                return r[bool].fail(
+                    "file-gate requires read-only local selection without tool overrides",
+                )
+            raw = params.file
+            relative = Path(raw)
+            if (
+                not raw
+                or raw != raw.strip()
+                or relative.is_absolute()
+                or any(part in {"", ".", ".."} for part in raw.split("/"))
+            ):
+                return r[bool].fail(f"invalid literal repository-relative FILE: {raw!r}")
+            root = params.repository_root.resolve(strict=True)
+            selected = root / relative
+            current = root
+            for part in relative.parts:
+                current /= part
+                if current.is_symlink():
+                    return r[bool].fail(f"FILE has a symlink component: {current}")
+            if (
+                not selected.is_file()
+                or not selected.resolve(strict=True).is_relative_to(root)
+                or selected.suffix not in {".py", ".pyi"}
+            ):
+                return r[bool].fail(f"FILE is not an existing repository file: {selected}")
+            selected_files = (selected,)
         project_targets_result = self._resolve_project_targets(params)
         if project_targets_result.failure:
             return r[bool].from_failure(project_targets_result)
@@ -106,6 +142,11 @@ class FlextInfraWorkspaceChecker(
         # An omitted gate selection is the typed SSOT default: every default
         # check gate (the set an unset CI token runs), never an empty run.
         gates = list(params.gates or config.Infra.codegen.make.check_gates_default)
+        if selected_files:
+            u.Cli.info(
+                f"file-gate: source={selected_files[0]} gates={gates} "
+                "selection=CLI:check run --gates"
+            )
         gate_ctx = m.Infra.GateContext(
             repository_root=params.repository_root,
             reports_dir=params.reports_dir_path,
@@ -114,6 +155,7 @@ class FlextInfraWorkspaceChecker(
             fail_fast=params.fail_fast,
             ruff_args=tuple(self.parse_tool_args(params.ruff_args)),
             pyright_args=tuple(self.parse_tool_args(params.pyright_args)),
+            selected_files=selected_files,
         )
         run_result = self.run_projects(
             projects=project_targets,

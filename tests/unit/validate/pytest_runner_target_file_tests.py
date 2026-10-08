@@ -11,13 +11,124 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import config
+from flext_infra import config, m
+from tests import c, t, u
 from tests.unit.validate.pytest_runner_support import runner_for, summary
 
 
 @pytest.mark.unit
 class TestsFlextInfraPytestTargetFile:
     """A declared file replaces the suite directory as the only node target."""
+
+    @staticmethod
+    @pytest.mark.slow
+    @pytest.mark.remote
+    @pytest.mark.parametrize(
+        ("budgeted", "slow", "failure"),
+        [
+            (True, False, ""),
+            (False, True, ""),
+            (True, True, ""),
+            (False, False, ""),
+            (True, True, "budgeted"),
+            (True, True, "slow"),
+            (True, True, "collection"),
+        ],
+    )
+    def test_public_make_runs_requested_file_phases(
+        provisioned_infra_checkout: t.Pair[str, Path],
+        *,
+        budgeted: bool,
+        slow: bool,
+        failure: str,
+    ) -> None:
+        """Native Make runs both scopes, preserves failures and rejects zero-run."""
+        _, root = provisioned_infra_checkout
+        generated = tm.ok(u.Tests.run_isolated_make(["gen"], cwd=root))
+        tm.that(
+            u.Cli.process_succeeded(generated.outcome),
+            eq=True,
+            msg=generated.stdout + generated.stderr,
+        )
+        make = config.Infra.codegen.make
+        cache = make.testmon_cache
+        policy = config.Infra.tooling.tools.pytest
+        probe = f"file_phase_probe_{budgeted}_{slow}_{failure or 'passed'}"
+        filename = policy.python_files[0].replace("*", probe)
+        relative = Path(cache.target_directory) / filename
+        proof = root / f"{probe}.log"
+        source = "import pytest\nfrom pathlib import Path\n\n"
+        if failure == "collection":
+            source += "raise RuntimeError('file-phase-collection-failure')\n"
+        expected: list[str] = []
+        for phase, enabled in (("budgeted", budgeted), ("slow", slow)):
+            if not enabled:
+                continue
+            if phase == "slow":
+                source += f"@pytest.mark.{policy.slow_marker}\n"
+            source += (
+                f"def test_{phase}() -> None:\n"
+                f"    with Path({str(proof)!r}).open('a') as stream:\n"
+                f"        stream.write('{phase}\\n')\n"
+                + ("    assert False\n" if failure == phase else "")
+                + "\n"
+            )
+            if failure != "collection" and failure != "budgeted":
+                expected.append(phase)
+            elif failure == "budgeted" and phase == "budgeted":
+                expected.append(phase)
+        (root / relative).write_text(source, encoding=c.Infra.ENCODING_DEFAULT)
+        # An unrelated failing module proves FILE remains the complete scope.
+        (root / relative.with_name(filename.replace("probe", "unrelated"))).write_text(
+            "def test_unrelated() -> None:\n    assert False\n",
+            encoding=c.Infra.ENCODING_DEFAULT,
+        )
+        reports = root / cache.reports_directory
+        before = set(reports.glob("*/run-context.json"))
+        process = tm.ok(
+            u.Tests.run_isolated_make(
+                ["test-file", f"FILE={relative.as_posix()}"],
+                cwd=root,
+                env={make.ci.variable: make.ci.local_value},
+            ),
+        )
+        tm.that(
+            u.Cli.process_succeeded(process.outcome),
+            eq=bool(expected) and not failure,
+            msg=process.stdout + process.stderr,
+        )
+        tm.that(
+            proof.read_text().splitlines() if proof.exists() else [],
+            eq=expected,
+        )
+        contexts = sorted(
+            set(reports.glob("*/run-context.json")) - before,
+            key=lambda path: path.stat().st_mtime_ns,
+        )
+        tm.that(len(contexts), eq=1 if failure in {"budgeted", "collection"} else 2)
+        receipts = [
+            m.Infra.PytestRunContext.model_validate_json(path.read_text())
+            for path in contexts
+        ]
+        tm.that(len({receipt.testmon_db for receipt in receipts}), eq=1)
+        if len(receipts) == 2:
+            tm.that(receipts[0].deadline_monotonic, ne=receipts[1].deadline_monotonic)
+        if not budgeted and not slow:
+            tm.that(process.stderr, has="test-file executed zero requested tests")
+        if expected and not failure:
+            repeated = tm.ok(
+                u.Tests.run_isolated_make(
+                    ["test-file", f"FILE={relative.as_posix()}"],
+                    cwd=root,
+                    env={make.ci.variable: make.ci.local_value},
+                ),
+            )
+            tm.that(
+                u.Cli.process_succeeded(repeated.outcome),
+                eq=True,
+                msg=repeated.stdout + repeated.stderr,
+            )
+            tm.that(proof.read_text().splitlines(), eq=expected * 2)
 
     @staticmethod
     def test_declared_file_replaces_the_suite_directory(

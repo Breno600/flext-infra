@@ -98,6 +98,11 @@ class FlextInfraUtilitiesSemanticCutoverAliases(
             import_aliases: MutableMapping[str, MutableMapping[str, str]] = {}
             attribute_aliases: MutableMapping[t.Pair[str, str], str] = {}
             qualified_aliases = dict(local_aliases)
+            qualified_aliases.update(
+                (f"{module}.{alias}", target)
+                for module, aliases in specs_by_module.items()
+                for alias, target in aliases.items()
+            )
             for node in ast.walk(tree):
                 if (
                     isinstance(node, ast.ImportFrom)
@@ -110,7 +115,7 @@ class FlextInfraUtilitiesSemanticCutoverAliases(
                         )
                         if imported_target is None:
                             continue
-                        if imported.asname not in {None, imported.name}:
+                        if imported.asname is not None:
                             msg = (
                                 "ambiguous compatibility import alias "
                                 f"{imported.name} as {imported.asname}"
@@ -131,7 +136,7 @@ class FlextInfraUtilitiesSemanticCutoverAliases(
                             {},
                         ).items()
                     )
-            if not (local_aliases or import_aliases or attribute_aliases):
+            if not qualified_aliases:
                 return source, ()
             FlextInfraUtilitiesCompatibilityAliasValidation.require_static_compatibility_alias_exports(
                 tree,
