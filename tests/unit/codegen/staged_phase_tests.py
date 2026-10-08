@@ -83,3 +83,51 @@ class TestsFlextInfraCodegenStagedFilePhase:
             _ = m.Infra.CodegenStagedFile.model_validate(
                 _staged_file_payload("bogus-phase", tmp_path),
             )
+
+    @staticmethod
+    def test_analysis_subset_accepts_enum_and_wire_roundtrips() -> None:
+        """Analysis receipts retain their subset and canonical wire values."""
+        phases = (
+            c.Infra.CodegenStagedFilePhase.DOCS,
+            c.Infra.CodegenStagedFilePhase.LAZY_INIT,
+            c.Infra.CodegenStagedFilePhase.MOD_TEXT,
+            c.Infra.CodegenStagedFilePhase.SEMANTIC,
+            c.Infra.CodegenStagedFilePhase.CANDIDATE_BOOTSTRAP,
+            c.Infra.CodegenStagedFilePhase.CONFORM_BOOTSTRAP,
+        )
+        schema = m.Infra.CodegenPhaseAnalysis.model_json_schema()
+        tm.that(
+            schema["properties"]["phase"]["enum"],
+            eq=[phase.value for phase in phases],
+        )
+        for phase in phases:
+            for value in (phase, phase.value):
+                analysis = m.Infra.CodegenPhaseAnalysis.model_validate({
+                    "phase": value,
+                    "files": (),
+                    "inputs": (),
+                })
+                tm.that(analysis.phase, eq=phase)
+                tm.that(analysis.model_dump(mode="json")["phase"], eq=phase.value)
+                restored = m.Infra.CodegenPhaseAnalysis.model_validate_json(
+                    analysis.model_dump_json(),
+                )
+                tm.that(restored, eq=analysis)
+
+    @staticmethod
+    def test_analysis_rejects_other_journal_phases_and_unknown_values() -> None:
+        """A valid journal phase does not automatically become an analysis phase."""
+        schema = m.Infra.CodegenPhaseAnalysis.model_json_schema()
+        accepted = schema["properties"]["phase"]["enum"]
+        rejected = tuple(
+            phase.value
+            for phase in c.Infra.CodegenStagedFilePhase
+            if phase.value not in accepted
+        )
+        for phase in (*rejected, "bogus-phase"):
+            with pytest.raises(ValidationError):
+                _ = m.Infra.CodegenPhaseAnalysis.model_validate({
+                    "phase": phase,
+                    "files": (),
+                    "inputs": (),
+                })

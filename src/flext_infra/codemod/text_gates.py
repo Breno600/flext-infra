@@ -422,7 +422,7 @@ class FlextInfraModTextGateEngine:
         if selector.failure:
             return r[m.Infra.ModTextRule].from_failure(selector)
         distributions, captures, expected = selector.value
-        scopes: dict[str, t.VariadicTuple[str]] = {}
+        scopes: t.MutableMappingKV[str, t.VariadicTuple[str]] = {}
         for key in (
             c.Infra.CODEMOD_TEXT_KEY_INCLUDE,
             c.Infra.CODEMOD_TEXT_KEY_EXCLUDE,
@@ -781,7 +781,7 @@ class FlextInfraModTextGateEngine:
         )
         roots = {"@mod-text": root}
         analysis = m.Infra.CodegenPhaseAnalysis(
-            phase="mod-text",
+            phase=c.Infra.CodegenStagedFilePhase.MOD_TEXT,
             files=plans,
             inputs=inputs,
         )

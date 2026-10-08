@@ -11,7 +11,7 @@ from typing import Annotated, ClassVar, Literal, Self
 
 from flext_cli import m
 
-from flext_infra import p, t
+from flext_infra import c, p, t
 from flext_infra._models import (
     FlextInfraConfigModels,
     FlextInfraModelsCodegenFixModels,
@@ -68,12 +68,12 @@ class FlextInfraModelsCodegenPipelineModels:
 
         phase: Annotated[
             Literal[
-                "docs",
-                "lazy-init",
-                "mod-text",
-                "semantic",
-                "candidate-bootstrap",
-                "conform-bootstrap",
+                c.Infra.CodegenStagedFilePhase.DOCS,
+                c.Infra.CodegenStagedFilePhase.LAZY_INIT,
+                c.Infra.CodegenStagedFilePhase.MOD_TEXT,
+                c.Infra.CodegenStagedFilePhase.SEMANTIC,
+                c.Infra.CodegenStagedFilePhase.CANDIDATE_BOOTSTRAP,
+                c.Infra.CodegenStagedFilePhase.CONFORM_BOOTSTRAP,
             ],
             m.Field(description="Generation phase that produced this receipt"),
         ]

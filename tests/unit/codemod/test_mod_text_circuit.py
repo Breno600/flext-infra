@@ -749,7 +749,9 @@ class TestsFlextInfraModTextGateEngine:
             ),
         )
         tm.that(first.read_text(encoding="utf-8"), eq='value = "before"\n')
-        tm.that(tuple(entry.file.as_posix() for entry in scanned.entries), eq=(selected,))
+        tm.that(
+            tuple(entry.file.as_posix() for entry in scanned.entries), eq=(selected,),
+        )
         applied = tm.ok(
             FlextInfraModTextGateEngine.scan(
                 mod_workspace,
@@ -771,7 +773,7 @@ class TestsFlextInfraModTextGateEngine:
         mod_workspace: Path,
         scopes: str,
     ) -> None:
-        """Absent and empty scopes keep the existing unrestricted contract."""
+        """Absent scopes use typed defaults; explicit empty scopes override them."""
         paths = self._publication_inputs(mod_workspace)
         tm.ok(
             u.Cli.atomic_write_text_file(
@@ -785,8 +787,13 @@ class TestsFlextInfraModTextGateEngine:
         )
         loaded = tm.ok(FlextInfraModTextGateEngine.load_rules(mod_workspace))
         rule = next(rule for rule in loaded if rule.rule_id == "scope-defaults")
-        defaults = m.Infra.ModTextRule(rule_id=rule.rule_id, find=rule.find)
-        tm.that((rule.include, rule.exclude), eq=(defaults.include, defaults.exclude))
+        if not scopes:
+            defaults = m.Infra.ModTextRule(rule_id=rule.rule_id, find=rule.find)
+            tm.that(
+                (rule.include, rule.exclude), eq=(defaults.include, defaults.exclude),
+            )
+            return
+        tm.that((rule.include, rule.exclude), eq=((), ()))
         scanned = tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=False))
         applied = tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=True))
         tm.that(applied, eq=scanned)

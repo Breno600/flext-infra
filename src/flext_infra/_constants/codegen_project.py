@@ -75,14 +75,17 @@ class FlextInfraConstantsCodegenProject:
 
         The closed vocabulary the journal models accept in ``phase``; every
         publication site names its owner through this enum instead of a
-        string literal, so the journal's phase contract is code-owned.
+        string literal, so staging and journal validation share this owner.
         """
 
+        CANDIDATE_BOOTSTRAP = "candidate-bootstrap"
+        CONFORM = "conform"
         CONFORM_BOOTSTRAP = "conform-bootstrap"
         DOCS = "docs"
         LAZY_INIT = "lazy-init"
         LAYOUT = "layout"
         MISE = "mise"
+        MOD_TEXT = "mod-text"
         RECOVERY = "recovery"
         SCAFFOLD = "scaffold"
         SEMANTIC = "semantic"
