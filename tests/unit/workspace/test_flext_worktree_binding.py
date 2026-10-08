@@ -22,8 +22,8 @@ from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
-from flext_infra import FlextInfraFlextBindingService, config
-from tests import c, m, t, u
+from flext_infra import FlextInfraFlextBindingService, c, config
+from tests import m, t, u
 
 if TYPE_CHECKING:
     from flext_cli import p

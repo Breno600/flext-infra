@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 
 from flext_cli import m, u
 
-from flext_infra import c
+from flext_infra import c, m
 from flext_infra._settings import settings
 from flext_infra._utilities import FlextInfraUtilitiesPromotedInvocation
 

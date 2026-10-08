@@ -752,8 +752,8 @@ endif
 # manifest before the second frozen install proves the committed mise.lock
 # satisfies it (mise has no `lock --check`: the locked install IS the
 # satisfaction check), `_builtin_require_mise` re-proves the pinned release,
-# and the convergence fixed point plus every active gate must be green before
-# the upgrade publishes. Branch-tracked git dependencies are moving sources by
+# and the convergence fixed point must hold before the upgrade publishes.
+# Gates are not part of the upgrade: `make check` stays its own verb. Branch-tracked git dependencies are moving sources by
 # declaration (workspace.yaml owns the branch): --refresh re-reads their
 # metadata so a stale cached requires-dist can never block or skew the
 # resolution. Like `setup`, it runs the declared pre-/post-upg lifecycle
@@ -781,7 +781,6 @@ _upg_lifecycle: _builtin_setup_submodules
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode check
 	@$(PROJECT_FLEXT_INFRA) deps verify-locks --repository-root "$(PROJECT_ROOT)"
 	+@$(if $(filter {{ make.ci.value }},$({{ make.ci.variable }})),$(SELF_MAKE) _upg_activated,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _upg_activated)
-	@$(SELF_MAKE) check
 
 .PHONY: _upg_activated
 _upg_activated:

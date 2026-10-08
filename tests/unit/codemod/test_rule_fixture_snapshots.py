@@ -71,6 +71,10 @@ class TestsFlextInfraModRuleFixtureSnapshots:
                 f"id: demo\nvalid:\n  - baz(1)\ninvalid:\n{cases}",
             ),
         )
+        # The rule engine runs ast-grep through the owner's pinned Mise lock,
+        # which every governed repository carries; without it a host-global
+        # binary (or none, on CI runners) answered instead.
+        u.Tests.copy_tracked_mise_seeds(root)
         # A bare root becomes a checkout through its initial commit; an
         # existing checkout commits the catalog it now declares.
         if (root / c.Infra.GIT_DIR).exists():

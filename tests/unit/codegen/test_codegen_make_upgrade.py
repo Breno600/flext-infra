@@ -291,7 +291,7 @@ class TestsFlextInfraCodegenMakeUpgrade:
         self,
         generated_make_template: t.Pair[c.Infra.MakeProfile, Path],
     ) -> None:
-        """An upgrade publishes only after gen converges and every gate passes."""
+        """An upgrade publishes after gen converges; gates stay with make check."""
         _profile, project_root = generated_make_template
         makefile = (project_root / "Makefile").read_text(encoding="utf-8")
 
@@ -305,7 +305,7 @@ class TestsFlextInfraCodegenMakeUpgrade:
         tm.that(
             "_upg_lifecycle"
             in self._recipe_targets_containing(makefile, "$(SELF_MAKE) check"),
-            eq=True,
+            eq=False,
         )
 
     def test_upg_activates_gen_only_after_relocking_the_rendered_manifest(
