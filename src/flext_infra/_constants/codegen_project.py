@@ -78,11 +78,13 @@ class FlextInfraConstantsCodegenProject:
         string literal, so the journal's phase contract is code-owned.
         """
 
+        CANDIDATE_BOOTSTRAP = "candidate-bootstrap"
         CONFORM_BOOTSTRAP = "conform-bootstrap"
         DOCS = "docs"
         LAZY_INIT = "lazy-init"
         LAYOUT = "layout"
         MISE = "mise"
+        MOD_TEXT = "mod-text"
         RECOVERY = "recovery"
         SCAFFOLD = "scaffold"
         SEMANTIC = "semantic"
