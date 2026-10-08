@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from collections.abc import Mapping
+from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, config, m, r, t, u
@@ -65,20 +66,163 @@ class FlextInfraBanditGate(FlextInfraGate):
         ctx: m.Infra.GateContext,
         check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """Audit the package surface minus the generated source trees.
+        """Audit the selected modules minus generated source trees.
 
         Bandit reads no Git ignore rules, so the generated-source globs of the
-        codegen artifact SSOT are passed as its exclusion list.
+        codegen artifact SSOT are passed as its exclusion list. Owner modules
+        are partitioned before invocation because Bandit exclusion strings
+        match substrings rather than exact file identities.
 
         Returns:
             The Bandit invocation over ``check_dirs``.
 
         """
         command = super()._build_check_command(project_dir, ctx, check_dirs)
-        generated = config.Infra.codegen.generated_source_globs
-        if not generated:
+        return self._with_exclusions(command)
+
+    @override
+    def _execute_check_command(
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        targets: t.StrSequence,
+        started: float,
+    ) -> m.Infra.GateExecution:
+        """Audit unscoped modules and each owner scope in its own invocation.
+
+        Bandit applies ``--skip`` to a whole run and reads no per-path
+        exception, so each authorized exception gets one more native run over
+        exactly its owner modules that skips only its tests. The gate passes
+        only when every run passes; findings of every run are reported.
+
+        Returns:
+            The gate execution combining every Bandit run.
+
+        """
+        scopes = self._owner_scopes(project_dir, targets)
+        if not scopes:
+            return super()._execute_check_command(project_dir, ctx, targets, started)
+        owned = frozenset(path for _, files in scopes for path in files)
+        unowned = self._unowned_files(project_dir, targets, owned)
+        executions = (
+            (
+                super()._execute_check_command(project_dir, ctx, unowned, started),
+            )
+            if unowned
+            else ()
+        ) + tuple(
+            self._parsed_gate_execution(
+                project_dir,
+                ctx,
+                self._run(
+                    self._with_exclusions(
+                        self._python_module_command(
+                            *self.check_module_command_prefix,
+                            *files,
+                            *self.check_module_command_suffix,
+                            "--skip",
+                            ",".join(tests),
+                        ),
+                    ),
+                    project_dir,
+                    timeout=self._check_timeout(project_dir, ctx),
+                    env=self._check_env(project_dir, ctx),
+                    remove_env_keys=self._check_remove_env_keys(project_dir, ctx),
+                ),
+                started,
+            )
+            for tests, files in scopes
+        )
+        if len(executions) == 1:
+            return executions[0]
+        issues = tuple(issue for execution in executions for issue in execution.issues)
+        # ToolOutcome declares CLEAN < FINDINGS < ERROR; the worst run decides.
+        ranking = tuple(c.Infra.ToolOutcome)
+        return m.Infra.GateExecution(
+            result=self._gate_result(
+                project_dir,
+                passed=all(execution.result.passed for execution in executions),
+                errors=[issue.formatted for issue in issues],
+                started=started,
+            ),
+            issues=issues,
+            raw_output="\n".join(execution.raw_output for execution in executions),
+            outcome=max(
+                (execution.outcome for execution in executions),
+                key=ranking.index,
+            ),
+        )
+
+    @staticmethod
+    def _owner_scopes(
+        project_dir: Path,
+        targets: t.StrSequence,
+    ) -> t.SequenceOf[t.Pair[t.StrSequence, t.StrSequence]]:
+        """Resolve each authorized exception to its owner modules under targets.
+
+        Returns:
+            One ``(tests, files)`` pair per exception that owns a file under
+            ``targets``; files are project-relative POSIX paths.
+
+        """
+        roots = tuple(PurePosixPath(target) for target in targets)
+        scopes = (
+            (
+                entry.tests,
+                tuple(
+                    sorted({
+                        str(relative)
+                        for pattern in entry.files
+                        for relative in (
+                            PurePosixPath(path.relative_to(project_dir).as_posix())
+                            for path in project_dir.glob(pattern)
+                            if path.is_file()
+                        )
+                        if any(relative.is_relative_to(root) for root in roots)
+                    }),
+                ),
+            )
+            for entry in config.Infra.tooling.tools.bandit.authorized_exceptions
+        )
+        return tuple((tests, files) for tests, files in scopes if files)
+
+    @staticmethod
+    def _unowned_files(
+        project_dir: Path,
+        targets: t.StrSequence,
+        owned: frozenset[str],
+    ) -> t.StrSequence:
+        """Select Python files whose exact paths have no authorized exception.
+
+        Returns:
+            Sorted project-relative paths for the full security audit.
+        """
+        return tuple(
+            sorted({
+                relative
+                for target in targets
+                for root in (project_dir / target,)
+                for path in (root.rglob("*.py") if root.is_dir() else (root,))
+                if path.is_file() and path.suffix == ".py"
+                for relative in (path.relative_to(project_dir).as_posix(),)
+                if relative not in owned
+            }),
+        )
+
+    @staticmethod
+    def _with_exclusions(
+        command: t.StrSequence,
+    ) -> t.StrSequence:
+        """Append only the declared generated-source globs as exclusions.
+
+        Returns:
+            ``command`` with its ``--exclude`` list, or unchanged when empty.
+
+        """
+        excluded = config.Infra.codegen.generated_source_globs
+        if not excluded:
             return command
-        return (*command, "--exclude", ",".join(generated))
+        return (*command, "--exclude", ",".join(excluded))
 
     @override
     def _parse_check_output(
@@ -140,7 +284,9 @@ class FlextInfraBanditGate(FlextInfraGate):
 
         Bandit fails its run on every reported result, so each one is a
         blocking gate finding; Bandit's own LOW/MEDIUM/HIGH rating is not the
-        gate severity vocabulary and stays in the raw report.
+        gate severity vocabulary and stays in the raw report. Bandit names a
+        file given on its command line ``./<path>`` and a discovered one
+        ``<path>``; the issue carries the one project-relative spelling.
 
         Returns:
             The resulting ``t.SequenceOf[m.Infra.Issue]``.
@@ -148,7 +294,9 @@ class FlextInfraBanditGate(FlextInfraGate):
         """
         return tuple(
             m.Infra.Issue(
-                file=u.Cli.json_pick_str(raw_item, "filename", "?"),
+                file=str(
+                    PurePosixPath(u.Cli.json_pick_str(raw_item, "filename", "?")),
+                ),
                 line=u.Cli.json_pick_int(raw_item, "line_number"),
                 column=0,
                 code=u.Cli.json_pick_str(raw_item, "test_id"),
