@@ -6,7 +6,6 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import dataclasses
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
@@ -17,21 +16,14 @@ from flext_infra._utilities import (
     FlextInfraUtilitiesDependencies,
     FlextInfraUtilitiesRepository,
 )
+from flext_infra._utilities._pyproject._requirements_provenance import (
+    _RequirementProvenance,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from flext_infra import p
-
-
-@dataclasses.dataclass(frozen=True, slots=True)
-class _RequirementProvenance:
-    """Workspace provenance consulted while canonicalizing requirement lines."""
-
-    declared_sources: t.StrMapping
-    candidate_sources: t.StrMapping
-    family_line: str | None
-    workspace_members: t.StrSequence = ()
 
 
 class FlextInfraUtilitiesPyprojectRequirements:
@@ -481,8 +473,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
         required_dev = tuple(
             requirement
             for requirement in required_dev_dependencies
-            if FlextInfraUtilitiesDependencies.dep_name(requirement)
-            != project_name
+            if FlextInfraUtilitiesDependencies.dep_name(requirement) != project_name
             and not cls._floor_yields_to_declared_source(
                 requirement,
                 sourced_live_names,
