@@ -4,12 +4,19 @@
    provisioned from that lock, and every later `mise` resolved through the
    mise-managed shims runs exactly that release. The version guard replaces
    the retired mise.version pin file: the running mise must match the lock
-   pin, or the environment is stale and only `make setup` repairs it. -#}
+   pin, or the environment is stale and only `make setup` repairs it.
+   `mise install` always receives the explicit declared tool list
+   (toolchain.mise_install_keys): a bare `mise install` would also provision
+   every tool of the operator's global Mise registry. -#}
 {% macro mise_lock_pin_reader(project_root, mise_selector) -%}
 awk 'index($$0, "[[tools.\"{{ mise_selector }}\"]]") == 1 { inside = 1; next } inside && substr($$0, 1, 1) == "[" { exit } inside && $$1 == "version" { gsub(/[",]/, "", $$3); print $$3; exit }' "{{ project_root }}/mise.lock"
 {%- endmacro %}
 
-{% macro tool_bootstrap_recipe(target, project_root, mise_selector, lifecycle, make) -%}
+{% macro mise_install_command(project_root, install_tools) -%}
+mise -C "{{ project_root }}" install --yes{% for tool in install_tools %} "{{ tool }}"{% endfor %}
+{%- endmacro %}
+
+{% macro tool_bootstrap_recipe(target, project_root, mise_selector, install_tools, lifecycle, make) -%}
 .PHONY: {{ target }}
 
 {{ target }}:
@@ -22,7 +29,7 @@ awk 'index($$0, "[[tools.\"{{ mise_selector }}\"]]") == 1 { inside = 1; next } i
 	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
 		mise -C "$(PROJECT_ROOT)" lock --bump; \
 	fi; \
-	mise -C "$(PROJECT_ROOT)" install --yes; \
+	{{ mise_install_command(project_root, install_tools) }}; \
 	mise_pin="$$( {{ mise_lock_pin_reader(project_root, mise_selector) }} )"; \
 	if [ -z "$$mise_pin" ]; then \
 		printf 'ERROR: mise.lock pins no {{ mise_selector }} release; run make upg\n' >&2; \

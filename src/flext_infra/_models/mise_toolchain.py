@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import re
 from typing import Annotated, Literal, Self
 
 from flext_core import m, t
@@ -96,6 +97,56 @@ class FlextInfraModelsMiseToolchain:
                 raise ValueError(msg)
             return self
 
+    class MiseToolVersionProbe(_ConfigContract):
+        """Declared command whose output proves the provisioned tool version.
+
+        The setup reality proof resolves ``binary`` through ``mise which``,
+        runs it with ``arguments``, and searches the output for ``pattern``
+        with its single ``{version}`` placeholder replaced by the escaped
+        mise.lock version. The probe is data; no tool has a default probe.
+        """
+
+        binary: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Executable name resolved through `mise which`"),
+        ]
+        arguments: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(description="Arguments that make the binary print its version"),
+        ]
+        pattern: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Multiline regular expression the probe output must match; "
+                    "exactly one `{version}` placeholder stands for the escaped "
+                    "mise.lock version"
+                ),
+            ),
+        ]
+
+        @m.model_validator(mode="after")
+        def _validate_pattern(self) -> Self:
+            """Require one version placeholder and a compilable expression.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If the pattern carries no single placeholder.
+
+            """
+            placeholder = "{version}"
+            if self.pattern.count(placeholder) != 1:
+                msg = (
+                    "version_probe.pattern must carry exactly one "
+                    f"{placeholder} placeholder: {self.pattern}"
+                )
+                raise ValueError(msg)
+            # A malformed expression raises re.PatternError unchanged here.
+            re.compile(self.pattern.replace(placeholder, "0"))
+            return self
+
     class MiseToolEntry(_ConfigContract):
         """One declarative fleet tool rendered into generated ``.mise.toml``.
 
@@ -117,8 +168,8 @@ class FlextInfraModelsMiseToolchain:
             m.Field(
                 default=None,
                 description=(
-                    "Full Mise selector (npm:, aqua:, github:) rendered as the "
-                    "[tools] key"
+                    "Full Mise selector (aqua:, github:) rendered as the "
+                    "[tools] key; the fleet toolchain has no npm: backend"
                 ),
             ),
         ] = None
@@ -141,17 +192,36 @@ class FlextInfraModelsMiseToolchain:
             ),
         ] = None
         form: Annotated[
-            Literal["scalar", "inline", "table"],
+            Literal["scalar", "table"],
             m.Field(
                 default="scalar",
                 description=(
                     "Rendered [tools] shape; the projection byte contract. "
-                    "scalar (default) is the bare assignment, inline declares "
-                    "the npm lifecycle approval (allow_builds derives from the "
-                    "npm selector), table carries version_prefix"
+                    "scalar (default) is the bare assignment, table carries "
+                    "version_prefix"
                 ),
             ),
         ] = "scalar"
+        lock_checksum: Annotated[
+            bool,
+            m.Field(
+                default=True,
+                description=(
+                    "Whether the tool's current-platform mise.lock section "
+                    "must carry a checksum; false only for a tool whose "
+                    "upstream release metadata publishes none"
+                ),
+            ),
+        ] = True
+        version_probe: Annotated[
+            FlextInfraModelsMiseToolchain.MiseToolVersionProbe,
+            m.Field(
+                description=(
+                    "Command whose output proves the provisioned version in "
+                    "the setup reality proof; every tool declares one"
+                ),
+            ),
+        ]
 
     class ToolchainSpec(_ConfigContract):
         """Language-runtime and native-tool versions shared by generated projects.
@@ -300,17 +370,6 @@ class FlextInfraModelsMiseToolchain:
                 ),
             ),
         ]
-        npm_package_manager: Annotated[
-            Literal["aube", "bun"],
-            m.Field(
-                description=(
-                    "Mise npm installer. aube replays the locked dependency "
-                    "graph; bun installs faster with --trust lifecycle "
-                    "approval and no aube sidecars (the lock keeps the "
-                    "top-level pin only). Operator choice 2026-10-05"
-                ),
-            ),
-        ]
         tools: Annotated[
             t.VariadicTuple[FlextInfraModelsMiseToolchain.MiseToolEntry],
             m.Field(
@@ -410,6 +469,36 @@ class FlextInfraModelsMiseToolchain:
 
         @m.computed_field
         @property
+        def tool_keys(self) -> t.MappingKV[str, str]:
+            """The [tools] key (selector, else name) of every fleet tool.
+
+            The same key names the tool's ``mise.lock`` table.
+
+            Returns:
+                The resulting ``t.MappingKV[str, str]``.
+            """
+            return {entry.name: entry.selector or entry.name for entry in self.tools}
+
+        @m.computed_field
+        @property
+        def mise_install_keys(self) -> t.VariadicTuple[str]:
+            """Every [tools] key the project declares, in projection order.
+
+            ``make setup``/``make upg`` pass this explicit list to
+            ``mise install`` so only the declared toolchain is provisioned,
+            never a tool from the operator's global Mise registry.
+
+            Returns:
+                The resulting ``t.VariadicTuple[str]``.
+            """
+            return (
+                "python",
+                self.mise_selector,
+                *(entry.selector or entry.name for entry in self.tools),
+            )
+
+        @m.computed_field
+        @property
         def tool_version_prefixes(self) -> t.MappingKV[str, str]:
             """Declared release tag prefix of every prefix-bearing fleet tool.
 
@@ -489,12 +578,24 @@ class FlextInfraModelsMiseToolchain:
             keyless = sorted(
                 entry.name
                 for entry in self.tools
-                if entry.form in {"inline", "table"} and entry.selector is None
+                if entry.form == "table" and entry.selector is None
             )
             if keyless:
                 msg = (
-                    "toolchain tools with inline/table form must declare their "
+                    "toolchain tools with table form must declare their "
                     "selector: " + ", ".join(keyless)
+                )
+                raise ValueError(msg)
+            npm_backed = sorted(
+                entry.name
+                for entry in self.tools
+                if (entry.selector or entry.name).startswith("npm:")
+            )
+            if npm_backed:
+                msg = (
+                    "the fleet toolchain has no npm backend (ADR-025); "
+                    "declare a checksum-locked native selector for: "
+                    + ", ".join(npm_backed)
                 )
                 raise ValueError(msg)
             return self

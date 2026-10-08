@@ -161,7 +161,15 @@ class TestsFlextInfraCodegenMakeUpgrade:
                 'relock "$(PROJECT_ROOT)"',
             ],
         )
-        tm.that(makefile, has="install --yes")
+        # Every `mise install` names exactly the declared toolchain keys: a
+        # bare install would also provision the operator's global registry.
+        declared = " ".join(f'"{key}"' for key in toolchain.mise_install_keys)
+        installs = re.findall(r"install --yes(.*?)(?:; \\|$)", makefile, re.MULTILINE)
+        tm.that(len(installs), eq=2)
+        tm.that({install.strip() for install in installs}, eq={declared})
+        # Setup proves the provisioned toolchain before post-setup runs.
+        activated = makefile.split("_setup_activated:\n", 1)[1].split("\n\n", 1)[0]
+        tm.that(activated.splitlines()[0], has="codegen mise-proof")
         tm.that(makefile, has='if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then')
         resolve_assignments = re.findall(
             r"^(?:([\w-]+): )?TOOL_BOOTSTRAP_RESOLVE :=[ ]?(.*)$",
