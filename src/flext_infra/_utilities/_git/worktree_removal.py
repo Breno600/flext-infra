@@ -52,12 +52,6 @@ class FlextInfraUtilitiesGitWorktreeRemovalMixin(
                 ),
                 None,
             )
-            worktree_repo = cls._repo(worktree_root)
-            with worktree_repo.git.custom_environment(GIT_OPTIONAL_LOCKS="0"):
-                dirty = cls._nested_submodule_changes(worktree_repo)
-                porcelain = worktree_repo.git.status(
-                    "--porcelain", "--untracked-files=all",
-                )
         except GitCommandError as exc:
             return r[Repo].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
@@ -65,17 +59,44 @@ class FlextInfraUtilitiesGitWorktreeRemovalMixin(
                 f"failed to inspect clean worktree: {exc}",
                 exception=exc,
             )
-        if entry is None:
-            return r[Repo].fail(f"unregistered worktree: {worktree_root}")
-        if entry.locked:
-            return r[Repo].fail(f"locked worktree: {worktree_root}")
+        if entry is None or entry.locked:
+            reason = "unregistered" if entry is None else "locked"
+            return r[Repo].fail(f"{reason} worktree: {worktree_root}")
+        clean = cls._verify_worktree_clean(worktree_root)
+        if clean.failure:
+            return r[Repo].from_failure(clean)
+        return r[Repo].ok(repo)
+
+    @classmethod
+    def _verify_worktree_clean(cls, worktree_root: Path) -> p.Result[bool]:
+        """Inspect working bytes and nested repositories without index refresh.
+
+        Returns:
+            Cleanliness or the original inspection diagnostic.
+
+        """
+        try:
+            worktree_repo = cls._repo(worktree_root)
+            with worktree_repo.git.custom_environment(GIT_OPTIONAL_LOCKS="0"):
+                dirty = cls._nested_submodule_changes(worktree_repo)
+                porcelain = worktree_repo.git.status(
+                    "--porcelain",
+                    "--untracked-files=all",
+                )
+        except GitCommandError as exc:
+            return r[bool].fail(str(exc), exception=exc)
+        except (OSError, ValueError) as exc:
+            return r[bool].fail(
+                f"failed to inspect clean worktree: {exc}",
+                exception=exc,
+            )
         if dirty:
-            return r[Repo].fail(
+            return r[bool].fail(
                 f"dirty nested submodule in {worktree_root}: {'; '.join(dirty)}",
             )
         if porcelain.strip():
-            return r[Repo].fail(f"dirty worktree: {worktree_root}")
-        return r[Repo].ok(repo)
+            return r[bool].fail(f"dirty worktree: {worktree_root}")
+        return r[bool].ok(value=True)
 
     @classmethod
     def git_remove_clean_worktree(

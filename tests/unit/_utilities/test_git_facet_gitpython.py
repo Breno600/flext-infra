@@ -29,17 +29,25 @@ class TestsFlextInfraGitFacet:
         """
         repository = u.Tests.git_repository(tmp_path)
         branch = u.Tests.integration_branch(repository)
-        manifest = tm.ok(u.Infra.load_workspace_manifest(Path(__file__).resolve().parents[3]))[0]
-        declared = manifest.model_copy(update={
-            "integration": m.Infra.WorkspaceIntegrationSpec(
-                provider=manifest.repository.provider, branch=branch,
-            ),
-        })
+        manifest = tm.ok(
+            u.Infra.load_workspace_manifest(Path(__file__).resolve().parents[3]),
+        )[0]
+        declared = manifest.model_copy(
+            update={
+                "integration": m.Infra.WorkspaceIntegrationSpec(
+                    provider=manifest.repository.provider,
+                    branch=branch,
+                ),
+            },
+        )
         directory = repository / c.CONFIG_DIR_NAME
         directory.mkdir(exist_ok=True)
-        tm.ok(u.Cli.yaml_dump(
-            u.Infra.workspace_manifest_path(repository), declared.model_dump(mode="json"),
-        ))
+        tm.ok(
+            u.Cli.yaml_dump(
+                u.Infra.workspace_manifest_path(repository),
+                declared.model_dump(mode="json"),
+            ),
+        )
         u.Tests.git_run(repository, "add", "--", directory.name)
         u.Tests.git_run(repository, "commit", "-m", "test: declare lane integration")
         remote = u.Tests.configure_local_origin(repository, tmp_path / "remote")
@@ -55,45 +63,70 @@ class TestsFlextInfraGitFacet:
         """
         return tuple(
             (path.relative_to(repository).as_posix(), path.read_bytes())
-            for path in sorted(repository.rglob("*")) if path.is_file()
+            for path in sorted(repository.rglob("*"))
+            if path.is_file()
         )
 
     def test_verify_lane_cli_has_no_preview_effects(self, tmp_path: Path) -> None:
         """A live-tip proof changes neither working bytes nor Git metadata."""
         repository, _, _ = self._lane_repository(tmp_path)
         before = self._lane_bytes(repository)
-        tm.that(main(["workspace", "verify-lane", "--repo-root", str(repository)]), eq=0)
+        tm.that(
+            main(["workspace", "verify-lane", "--repo-root", str(repository)]), eq=0,
+        )
         tm.that(self._lane_bytes(repository), eq=before)
 
     @pytest.mark.parametrize("operation", ["verify", "create", "retire"])
     def test_verify_lane_refuses_legacy_stash_ref_without_effects(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str], operation: str,
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+        operation: str,
     ) -> None:
         """Seed an incident ref, never call any stash creation or apply command."""
         repository, _, _ = self._lane_repository(tmp_path)
         u.Tests.git_run(repository, "update-ref", "refs/stash", "HEAD")
         before = self._lane_bytes(repository)
-        tm.that(main([
-            "workspace", "verify-lane", "--repo-root", str(repository),
-            "--operation", operation,
-        ]), eq=1)
+        tm.that(
+            main([
+                "workspace",
+                "verify-lane",
+                "--repo-root",
+                str(repository),
+                "--operation",
+                operation,
+            ]),
+            eq=1,
+        )
         output = capsys.readouterr()
         tm.that(output.out + output.err, has="existing stash state")
         tm.that(self._lane_bytes(repository), eq=before)
 
     @pytest.mark.parametrize("boundary", ["stale", "unabsorbed", "moved"])
     def test_verify_lane_refuses_remote_drift_without_effects(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str], boundary: str,
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+        boundary: str,
     ) -> None:
         """A changed live remote is not made current by a cached ancestry proof."""
         repository, remote, branch = self._lane_repository(tmp_path)
-        tip = tm.ok(FlextInfraGitService.verify_lane(
-            m.Infra.GitLaneVerificationRequest(repo_root=repository),
-        )).oid
+        tip = tm.ok(
+            FlextInfraGitService.verify_lane(
+                m.Infra.GitLaneVerificationRequest(repo_root=repository),
+            ),
+        ).oid
         advanced = u.Tests.git_capture(
-            repository, "commit-tree", "HEAD^{tree}", "-p", "HEAD", "-m", "test: advance remote",
+            repository,
+            "commit-tree",
+            "HEAD^{tree}",
+            "-p",
+            "HEAD",
+            "-m",
+            "test: advance remote",
         ).strip()
-        u.Tests.git_run(repository, "push", c.Infra.GIT_DEFAULT_REMOTE, f"{advanced}:refs/heads/{branch}")
+        u.Tests.git_run(remote, "fetch", str(repository), advanced)
+        u.Tests.git_run(remote, "update-ref", f"refs/heads/{branch}", advanced)
         if boundary != "stale":
             u.Tests.git_run(repository, "fetch", c.Infra.GIT_DEFAULT_REMOTE)
         before = self._lane_bytes(repository)
@@ -109,103 +142,184 @@ class TestsFlextInfraGitFacet:
             "moved": "tip changed before effect",
         }[boundary]
         tm.that(output.out + output.err, has=diagnostic)
-        tm.fail(u.Infra.git_push_upstream(m.Infra.GitPushRequest(
-            repo_root=repository,
-            branch="publication-candidate",
-        )), has=("stale integration cache" if boundary == "stale" else "has not absorbed"))
+        tm.fail(
+            u.Infra.git_push_upstream(
+                m.Infra.GitPushRequest(
+                    repo_root=repository,
+                    branch="publication-candidate",
+                ),
+            ),
+            has=(
+                "stale integration cache" if boundary == "stale" else "has not absorbed"
+            ),
+        )
         tm.that(self._lane_bytes(repository), eq=before)
         tm.that(self._lane_bytes(remote), eq=remote_before)
 
     def test_new_lane_requires_authoritative_ownership_without_touching_foreign_refs(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str],
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Foreign refs do not block verification or authorize a second own lane."""
         repository, _, _ = self._lane_repository(tmp_path)
         u.Tests.git_run(repository, "branch", "foreign-candidate")
-        tm.that(main(["workspace", "verify-lane", "--repo-root", str(repository)]), eq=0)
+        tm.that(
+            main(["workspace", "verify-lane", "--repo-root", str(repository)]), eq=0,
+        )
         _ = capsys.readouterr()
         before = self._lane_bytes(repository)
-        tm.that(main([
-            "workspace", "verify-lane", "--repo-root", str(repository), "--operation", "create",
-        ]), eq=1)
+        tm.that(
+            main([
+                "workspace",
+                "verify-lane",
+                "--repo-root",
+                str(repository),
+                "--operation",
+                "create",
+            ]),
+            eq=1,
+        )
         output = capsys.readouterr()
         tm.that(output.out + output.err, has="authoritative Beads ownership")
-        tm.fail(u.Infra.git_create_branch(m.Infra.GitBranchCreateRequest(
-            repo_root=repository, branch="second-candidate",
-        )), has="authoritative Beads ownership")
+        tm.fail(
+            u.Infra.git_create_branch(
+                m.Infra.GitBranchCreateRequest(
+                    repo_root=repository,
+                    branch="second-candidate",
+                ),
+            ),
+            has="authoritative Beads ownership",
+        )
         lane = tmp_path / "never-created"
-        tm.fail(u.Infra.git_add_lane_worktree(m.Infra.GitWorktreeAddRequest(
-            repo_root=repository, lane=lane, branch="second-candidate", base="HEAD",
-        )), has="authoritative Beads ownership")
-        tm.fail(FlextInfraWorktreeService(
-            repository_root=repository,
-            operation=c.Infra.WorktreeOperation.ADD,
-            branch="second-candidate",
-            base="HEAD",
-            apply_changes=True,
-        ).execute(), has="authoritative Beads ownership")
+        tm.fail(
+            u.Infra.git_add_lane_worktree(
+                m.Infra.GitWorktreeAddRequest(
+                    repo_root=repository,
+                    lane=lane,
+                    branch="second-candidate",
+                    base="HEAD",
+                ),
+            ),
+            has="authoritative Beads ownership",
+        )
+        tm.fail(
+            FlextInfraWorktreeService(
+                repository_root=repository,
+                operation=c.Infra.WorktreeOperation.ADD,
+                branch="second-candidate",
+                base="HEAD",
+                apply_changes=True,
+            ).execute(),
+            has="authoritative Beads ownership",
+        )
         tm.that(lane.exists(), eq=False)
         tm.that(self._lane_bytes(repository), eq=before)
 
     @pytest.mark.parametrize("integrated", [False, True])
     def test_retirement_refuses_clean_unmerged_or_unpreserved_candidate(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str], integrated: bool,
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+        *,
+        integrated: bool,
     ) -> None:
         """A clean tree and even contained HEAD do not authorize retirement."""
         repository, _, _ = self._lane_repository(tmp_path)
         lane = u.Tests.git_linked_lane(tmp_path, repository, "retirement-candidate")
         if not integrated:
-            u.Tests.git_run(lane, "commit", "--allow-empty", "-m", "test: pending integration")
+            u.Tests.git_run(
+                lane, "commit", "--allow-empty", "-m", "test: pending integration",
+            )
         before = self._lane_bytes(repository)
         lane_before = self._lane_bytes(lane)
-        tm.that(main([
-            "workspace", "verify-lane", "--repo-root", str(lane), "--operation", "retire",
-        ]), eq=1)
+        tm.that(
+            main([
+                "workspace",
+                "verify-lane",
+                "--repo-root",
+                str(lane),
+                "--operation",
+                "retire",
+            ]),
+            eq=1,
+        )
         output = capsys.readouterr()
-        diagnostic = "published preservation" if integrated else "unintegrated candidate"
+        diagnostic = (
+            "published preservation" if integrated else "unintegrated candidate"
+        )
         tm.that(output.out + output.err, has=diagnostic)
         tm.fail(u.Infra.git_remove_clean_worktree(repository, lane), has=diagnostic)
-        candidate = tm.ok(u.Infra.git_repository_head(
-            m.Infra.GitRepoRequest(repo_root=lane),
-        )).oid
-        tm.fail(u.Infra.git_delete_ref(m.Infra.GitDeleteRefRequest(
-            repo_root=lane,
-            reference=f"{c.Infra.GIT_REFS_HEADS}retirement-candidate",
-            expected_oid=candidate,
-        )), has=diagnostic)
-        tm.fail(u.Infra.git_delete_remote_branch(m.Infra.GitRemoteBranchRequest(
-            repo_root=lane,
-            branch="retirement-candidate",
-            expected_oid=candidate,
-        )), has=diagnostic)
+        candidate = tm.ok(
+            u.Infra.git_repository_head(
+                m.Infra.GitRepoRequest(repo_root=lane),
+            ),
+        ).oid
+        tm.fail(
+            u.Infra.git_delete_ref(
+                m.Infra.GitDeleteRefRequest(
+                    repo_root=lane,
+                    reference=f"{c.Infra.GIT_REFS_HEADS}retirement-candidate",
+                    expected_oid=candidate,
+                ),
+            ),
+            has=diagnostic,
+        )
+        tm.fail(
+            u.Infra.git_delete_remote_branch(
+                m.Infra.GitRemoteBranchRequest(
+                    repo_root=lane,
+                    branch="retirement-candidate",
+                    expected_oid=candidate,
+                ),
+            ),
+            has=diagnostic,
+        )
         tm.that(self._lane_bytes(repository), eq=before)
         tm.that(self._lane_bytes(lane), eq=lane_before)
 
     @pytest.mark.parametrize("change", ["tracked", "staged", "untracked"])
     def test_retirement_cli_preserves_every_dirty_layer(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str], change: str,
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+        change: str,
     ) -> None:
         """Dirty refusal cannot refresh or overwrite the index or working bytes."""
         repository, _, _ = self._lane_repository(tmp_path)
-        changed = repository / ("untracked.txt" if change == "untracked" else "README.md")
+        changed = repository / (
+            "untracked.txt" if change == "untracked" else "README.md"
+        )
         changed.write_text("retained WIP\n", encoding="utf-8")
         if change == "staged":
             u.Tests.git_run(repository, "add", "--", changed.name)
         before = self._lane_bytes(repository)
-        tm.that(main([
-            "workspace", "verify-lane", "--repo-root", str(repository), "--operation", "retire",
-        ]), eq=1)
+        tm.that(
+            main([
+                "workspace",
+                "verify-lane",
+                "--repo-root",
+                str(repository),
+                "--operation",
+                "retire",
+            ]),
+            eq=1,
+        )
         output = capsys.readouterr()
         tm.that(output.out + output.err, has="dirty worktree")
         tm.that(self._lane_bytes(repository), eq=before)
 
     def test_verify_lane_missing_declaration_is_not_a_guessed_branch(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str],
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """A missing typed integration owner is a visible, effect-free refusal."""
         repository = u.Tests.git_repository(tmp_path)
         before = self._lane_bytes(repository)
-        tm.that(main(["workspace", "verify-lane", "--repo-root", str(repository)]), eq=1)
+        tm.that(
+            main(["workspace", "verify-lane", "--repo-root", str(repository)]), eq=1,
+        )
         output = capsys.readouterr()
         tm.that(output.out + output.err, has="typed config/workspace.yaml integration")
         tm.that(self._lane_bytes(repository), eq=before)
@@ -578,7 +692,10 @@ class TestsFlextInfraGitFacet:
             ),
         )
 
-        tm.fail(u.Infra.git_remove_clean_worktree(repository, lane), has="integration declaration")
+        tm.fail(
+            u.Infra.git_remove_clean_worktree(repository, lane),
+            has="integration declaration",
+        )
 
         assert lane.is_dir()
         assert (repository / "member").is_dir()

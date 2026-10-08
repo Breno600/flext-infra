@@ -141,7 +141,10 @@ class TestsFlextInfraUtilitiesGitMixin:
         # bare origin publishes that same line as its default target.
         branch = TestsFlextInfraUtilitiesGitMixin.integration_branch(repo_root)
         # Initial remote construction is fixture bootstrap, not lane admission.
-        bootstrap(repo_root, ("push", "-u", c.Infra.GIT_ORIGIN, branch))
+        bootstrap(
+            repo_root,
+            ("push", "-u", c.Infra.GIT_ORIGIN, f"HEAD:refs/heads/{branch}"),
+        )
         bootstrap(
             bare_remote,
             ("symbolic-ref", c.Infra.GIT_HEAD, f"refs/heads/{branch}"),

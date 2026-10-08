@@ -750,7 +750,8 @@ class TestsFlextInfraModTextGateEngine:
         )
         tm.that(first.read_text(encoding="utf-8"), eq='value = "before"\n')
         tm.that(
-            tuple(entry.file.as_posix() for entry in scanned.entries), eq=(selected,),
+            tuple(entry.file.as_posix() for entry in scanned.entries),
+            eq=(selected,),
         )
         applied = tm.ok(
             FlextInfraModTextGateEngine.scan(
@@ -790,7 +791,8 @@ class TestsFlextInfraModTextGateEngine:
         if not scopes:
             defaults = m.Infra.ModTextRule(rule_id=rule.rule_id, find=rule.find)
             tm.that(
-                (rule.include, rule.exclude), eq=(defaults.include, defaults.exclude),
+                (rule.include, rule.exclude),
+                eq=(defaults.include, defaults.exclude),
             )
             return
         tm.that((rule.include, rule.exclude), eq=((), ()))
