@@ -204,7 +204,7 @@ class FlextInfraImportNormalizationFamilyMixin(
         node: ast.stmt,
         package: str,
         file_path: Path,
-        family_exports: t.MappingKV[str, t.Infra.StrSet],
+        family_exports: t.FrozensetMapping,
         lines: t.StrSequence,
     ) -> tuple[int, int, t.StrSequence] | None:
         """Return the flatten edit for one import, or ``None`` when it stays.
@@ -250,7 +250,7 @@ class FlextInfraImportNormalizationFamilyMixin(
         source: str,
         package: str,
         file_path: Path,
-        family_exports: t.MappingKV[str, t.Infra.StrSet],
+        family_exports: t.FrozensetMapping,
     ) -> t.SequenceOf[tuple[int, int, t.StrSequence]]:
         """Flatten leaf-family object imports onto the family ``__init__``.
 
@@ -277,14 +277,17 @@ class FlextInfraImportNormalizationFamilyMixin(
         cls,
         project_root: Path,
         package: str,
-    ) -> t.MappingKV[str, t.Infra.StrSet]:
+    ) -> t.FrozensetMapping:
         """Read each family init's published names from its own source.
 
+        A family init that does not parse is a generation defect and fails
+        loud; it is never skipped.
+
         Returns:
-            The resulting ``t.MappingKV[str, t.Infra.StrSet]``.
+            The published names of every family init, keyed by family letter.
 
         """
-        exports: MutableMapping[str, t.Infra.StrSet] = {}
+        exports: t.MutableFrozensetMapping = {}
         base = project_root / "src" if (project_root / "src").is_dir() else project_root
         pkg_dir = base / package
         if not pkg_dir.is_dir():
@@ -294,10 +297,7 @@ class FlextInfraImportNormalizationFamilyMixin(
                 init = candidate / "__init__.py"
                 if not init.is_file():
                     continue
-                try:
-                    exports[family] = cls._published_names(init)
-                except SyntaxError:
-                    continue
+                exports[family] = frozenset(cls._published_names(init))
                 break
         return exports
 

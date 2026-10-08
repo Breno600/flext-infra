@@ -9,10 +9,9 @@ from __future__ import annotations
 import ast
 from collections import defaultdict
 from collections.abc import MutableMapping
-from dataclasses import dataclass
 from pathlib import Path
 
-from flext_infra import c, t
+from flext_infra import c, m, t
 from flext_infra.refactor._import_ast import FlextInfraImportNormalizationAstMixin
 
 
@@ -20,18 +19,6 @@ class FlextInfraImportNormalizationDemotionMixin(
     FlextInfraImportNormalizationAstMixin,
 ):
     """Own rules 1-2: demote function-only imports to their use sites."""
-
-    @dataclass(frozen=True)
-    class DemotionScan:
-        """Immutable per-pass context for one lazy demotion scan."""
-
-        tree: ast.Module
-        parents: t.MappingKV[int, ast.AST]
-        frozen: set[int]
-        package: str
-        module_rank: int
-        file_path: Path
-        family_exports: t.MappingKV[str, t.Infra.StrSet]
 
     # -- rules 1-2: lazy placement -----------------------------------------------------
 
@@ -42,7 +29,7 @@ class FlextInfraImportNormalizationDemotionMixin(
         source: str,
         package: str,
         file_path: Path,
-        family_exports: t.MappingKV[str, t.Infra.StrSet],
+        family_exports: t.FrozensetMapping,
     ) -> t.SequenceOf[tuple[int, int, t.StrSequence]]:
         """Demote function-only module-level imports to their point of use.
 
@@ -51,10 +38,10 @@ class FlextInfraImportNormalizationDemotionMixin(
 
         """
         lines = source.splitlines()
-        scan = cls.DemotionScan(
+        scan = m.Infra.ImportDemotionScan(
             tree=tree,
             parents=cls._parent_map(tree),
-            frozen=cls._frozen_node_ids(tree),
+            frozen=frozenset(cls._frozen_node_ids(tree)),
             package=package,
             module_rank=cls._module_layer_rank(file_path),
             file_path=file_path,
@@ -111,7 +98,7 @@ class FlextInfraImportNormalizationDemotionMixin(
     @classmethod
     def _collect_demotion_edits(
         cls,
-        scan: FlextInfraImportNormalizationDemotionMixin.DemotionScan,
+        scan: m.Infra.ImportDemotionScan,
         node: ast.ImportFrom,
         insertions: MutableMapping[int, MutableMapping[str, t.Infra.StrSet]],
         edits: t.MutableSequenceOf[tuple[int, int, t.StrSequence]],
@@ -133,7 +120,7 @@ class FlextInfraImportNormalizationDemotionMixin(
     @classmethod
     def _record_alias_plan(
         cls,
-        scan: FlextInfraImportNormalizationDemotionMixin.DemotionScan,
+        scan: m.Infra.ImportDemotionScan,
         node: ast.ImportFrom,
         alias: ast.alias,
         insertions: MutableMapping[int, MutableMapping[str, t.Infra.StrSet]],
@@ -359,7 +346,7 @@ class FlextInfraImportNormalizationDemotionMixin(
         tree: ast.Module,
         node: ast.Try,
         parents: t.MappingKV[int, ast.AST],
-        frozen: set[int],
+        frozen: frozenset[int],
         insertions: MutableMapping[int, MutableMapping[str, t.Infra.StrSet]],
     ) -> tuple[
         tuple[int, int, t.StrSequence] | None,
@@ -398,7 +385,7 @@ class FlextInfraImportNormalizationDemotionMixin(
         tree: ast.Module,
         lines: t.StrSequence,
         parents: t.MappingKV[int, ast.AST],
-        frozen: set[int],
+        frozen: frozenset[int],
         insertions: MutableMapping[int, MutableMapping[str, t.Infra.StrSet]],
     ) -> t.SequenceOf[tuple[int, int, t.StrSequence]]:
         """Remove ``try/except ImportError`` import guards; rebind at use.
@@ -459,7 +446,7 @@ class FlextInfraImportNormalizationDemotionMixin(
         module: str,
         bound: str,
         package: str,
-        family_exports: t.MappingKV[str, t.Infra.StrSet],
+        family_exports: t.FrozensetMapping,
     ) -> str:
         """Flatten one lazy import's leaf path onto its family root.
 
@@ -476,7 +463,7 @@ class FlextInfraImportNormalizationDemotionMixin(
         family = names[1].lstrip("_")
         if family not in c.Infra.IMPORT_NORMALIZATION_FAMILY_LETTER:
             return module
-        if bound in family_exports.get(family, set()):
+        if bound in family_exports.get(family, frozenset()):
             return f"{names[0]}.{names[1]}"
         return module
 
