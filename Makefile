@@ -254,6 +254,12 @@ CALLER_VIRTUAL_ENV := $(patsubst %/,%,$(VIRTUAL_ENV))
 override RUNTIME_ROOT := $(REPOSITORY_ROOT)
 override export GIT_CEILING_DIRECTORIES := $(abspath $(RUNTIME_ROOT)/..)
 override export MISE_CEILING_PATHS := $(abspath $(RUNTIME_ROOT)/..)
+override export MISE_CONFIG_DIR := $(RUNTIME_ROOT)/.mise
+override export MISE_GLOBAL_CONFIG_FILE := $(MISE_CONFIG_DIR)/config.toml
+override export MISE_SYSTEM_CONFIG_DIR := $(MISE_CONFIG_DIR)
+# A file override wins over the system directory in native Mise discovery.
+unexport MISE_SYSTEM_CONFIG_FILE
+# Project provisioning must never install or resolve tools from host config.
 # The physical runtime owns both its environment and frozen tool identities.
 # Attached members retain their own lock inputs for standalone consumption;
 # the pinned mise release is the [tools] entry the committed mise.lock pins.
@@ -382,7 +388,7 @@ _bootstrap_setup_tools:
 		exit 2; \
 	fi; \
 	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
-		"$$mise_bootstrap_bin" -C "$(PROJECT_ROOT)" lock --bump; \
+		"$$mise_bootstrap_bin" -C "$(PROJECT_ROOT)" lock --upgrade --bump; \
 	fi; \
 	"$$mise_bootstrap_bin" -C "$(PROJECT_ROOT)" install --yes "python" "github:jdx/mise" "uv" "kubectl" "helm" "kind" "direnv" "taplo" "aqua:ast-grep/ast-grep" "gitleaks" "aqua:boyter/scc" "kubeconform" "node" "go" "make" "github:qltysh/qlty" "github:kucherenko/jscpd" "github:microsoft/waza"; \
 	"$$mise_bootstrap_bin" reshim; \
@@ -416,11 +422,11 @@ SETUP_ENVIRONMENT_RECIPE = set -eu; \
 		uv_lock_mode=--frozen; \
 	fi; \
 	$$credential_env $(UV) sync --project "$(UV_PROJECT)" --python "3.13" $(UV_SYNC_FLAGS) $$uv_lock_mode --link-mode "$(UV_LINK_MODE)"; \
+	$(PROJECT_FLEXT_INFRA) workspace sync-environment --repository-root "$(PROJECT_ROOT)"; \
 	if [ "$(strip $(CI))" != "Y" ]; then \
-		direnv allow "$(PROJECT_ROOT)"; \
 		for member in $(WORKSPACE_SUBPROJECTS); do \
 			if [ -f "$(PROJECT_ROOT)/$$member/.envrc" ]; then \
-				direnv allow "$(PROJECT_ROOT)/$$member"; \
+				$(PROJECT_FLEXT_INFRA) workspace sync-environment --repository-root "$(PROJECT_ROOT)/$$member"; \
 			fi; \
 		done; \
 	fi
@@ -1508,14 +1514,8 @@ _upg_lifecycle: _builtin_setup_submodules
 	@mise -C "$(PROJECT_ROOT)" install --yes "python" "github:jdx/mise" "uv" "kubectl" "helm" "kind" "direnv" "taplo" "aqua:ast-grep/ast-grep" "gitleaks" "aqua:boyter/scc" "kubeconform" "node" "go" "make" "github:qltysh/qlty" "github:kucherenko/jscpd" "github:microsoft/waza"
 	@$(SELF_MAKE) _builtin_require_mise
 	$(call RUN_PUBLIC_ACTIVATE,gen)
-	@set -eu; \
-	before="$$(git -C "$(PROJECT_ROOT)" status --porcelain --untracked-files=all --ignore-submodules=none | sort)"; \
-	$(SELF_MAKE) gen; \
-	after="$$(git -C "$(PROJECT_ROOT)" status --porcelain --untracked-files=all --ignore-submodules=none | sort)"; \
-	if [ "$$before" != "$$after" ]; then \
-		printf 'ERROR: make upg did not converge; `make gen` still rewrites:\n%s\n' "$$after" >&2; \
-		exit 2; \
-	fi
+	@$(SELF_MAKE) gen
+	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode check
 	@$(PROJECT_FLEXT_INFRA) deps verify-locks --repository-root "$(PROJECT_ROOT)"
 	+@$(if $(filter Y,$(CI)),$(SELF_MAKE) _upg_activated,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _upg_activated)
 
@@ -1623,7 +1623,7 @@ if [ "$$file_executed" -eq 0 ]; then printf 'ERROR: test-file executed zero requ
 # Export the raw Make value instead of interpolating operator input into shell code.
 export FLEXT_FILE_GATE_FILE := $(value FILE)
 _builtin_file_gate_all: _builtin_require_environment
-	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "lint format pyrefly mypy pyright codemod" --file "$$FLEXT_FILE_GATE_FILE"
+	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "lint,format,pyrefly,mypy,pyright,codemod" --file "$$FLEXT_FILE_GATE_FILE"
 
 _builtin_tests_all: _builtin_require_environment
 	+@$(SELF_MAKE) test
@@ -1802,8 +1802,8 @@ _builtin_release_build: _builtin_require_environment
 _builtin_release_publish: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) release run --phase publish --apply $(if $(filter Y,$(INDEX)),--index)
 
-# Generation has one transaction owner. Conform runs at this repository's own
-# scope and journals ordinary, Mise, lazy-init, and documentation phases through
+# Generation has one transaction owner. Conform covers this root and all declared
+# members and journals ordinary, Mise, lazy-init, and documentation phases through
 # one fixed point. Only `upg` resolves and rewrites the locks; gen installs
 # nothing and never runs another writer before or after conform's journal.
 _builtin_gen_init:
@@ -1811,7 +1811,7 @@ _builtin_gen_init:
 	@$(PROJECT_FLEXT_INFRA) codegen init --repository-root "$(PROJECT_ROOT)" --check-only
 
 _builtin_gen_all:
-	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode apply
+	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --scope all --mode apply
 
 _builtin-bootstrap-candidate: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) codegen candidate-bootstrap --repository-root "$(PROJECT_ROOT)"
@@ -1861,9 +1861,11 @@ _builtin-fix: _builtin_fix_all
 _builtin-fix-namespace: _builtin_fix_namespace
 _builtin-fix-accessors: _builtin_fix_accessors
 _builtin-audit:
+ifneq ($(CI),Y)
+	@$(PROJECT_FLEXT_INFRA) workspace verify-lanes --repo-root "$(PROJECT_ROOT)"
+endif
 	@$(UV) pip check --python "$(RUNTIME_VENV)"
 	@$(if $(filter Y,$(CI)),$(PROJECT_FLEXT_INFRA) workspace verify-environment --repository-root "$(PROJECT_ROOT)",:)
-	@$(if $(filter Y,$(CI)),:,$(PROJECT_FLEXT_INFRA) workspace verify-lanes --repo-root "$(PROJECT_ROOT)")
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --scope self --mode check
 _builtin-status: _builtin_status_diagnostics
 _builtin-verify-clean: _builtin_require_environment

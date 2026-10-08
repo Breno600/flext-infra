@@ -65,6 +65,24 @@ class FlextInfraConstantsRefactor:
     "Fixed-point pass ceiling for import normalization."
     IMPORT_LAW_OTHER_LAYER: ClassVar[str] = "other"
     "Import-layer slot of a module whose path names no declared layer."
+    IMPORT_LAW_ROOT_SINGLETONS: ClassVar[frozenset[str]] = frozenset({
+        "config",
+        "settings",
+    })
+    "Root singletons and import layers of the config/settings law (ADR-005)."
+
+    @unique
+    class ImportPlacement(StrEnum):
+        """Where the import law places one imported binding."""
+
+        RUNTIME = "runtime"
+        "The module import block."
+        TYPING = "typing"
+        "The module ``if TYPE_CHECKING:`` block (typing-only reverse edge)."
+        BOUND = "bound"
+        "Nowhere new: an equal module-level import already binds it."
+        STAY = "stay"
+        "Its current place: a reverse runtime use or a foreign binding."
 
     @unique
     class ModScanCommand(StrEnum):

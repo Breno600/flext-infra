@@ -1,4 +1,4 @@
-"""Canonical FLEXT import-form enforcement engine.
+"""Canonical FLEXT import-law enforcement engine.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -6,44 +6,45 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
-from flext_infra import c, t
-from flext_infra.refactor._import_demotion import (
-    FlextInfraImportNormalizationDemotionMixin,
+from flext_infra import c, m, t
+from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities.import_law import FlextInfraUtilitiesImportLaw
+from flext_infra.refactor._import_placement import (
+    FlextInfraImportNormalizationPlacementMixin,
 )
-from flext_infra.refactor._import_family import FlextInfraImportNormalizationFamilyMixin
+from flext_infra.refactor._import_routes import FlextInfraImportNormalizationRoutesMixin
 
 
 class FlextInfraImportNormalization(
-    FlextInfraImportNormalizationFamilyMixin,
-    FlextInfraImportNormalizationDemotionMixin,
+    FlextInfraImportNormalizationRoutesMixin,
+    FlextInfraImportNormalizationPlacementMixin,
 ):
-    """Rewrite one module's imports into the canonical FLEXT forms.
+    """Rewrite one module's imports into the FLEXT import law.
 
-    The four operator rules this engine owns, in one idempotent pass:
+    The law (operator-ruling-2026-10-08-import-law), applied to every module
+    of a namespace (the source package or an internal tier such as
+    ``tests``) except the generated package initializers:
 
-    1. Concrete objects (classes/functions) import lazily, inside the
-       outermost function that uses them. Class bases, Pydantic annotations,
-       decorators and signature defaults are structural module-definition
-       uses and stay eager.
-    2. Facade letters follow the layer order (settings, config, c, t, p, m,
-       u, siblings, base, services, api, cli): a module-level letter binding
-       at or after the module's own layer is demoted to the point of use when
-       every use sits inside a function body.
-    3. Letters of one package bind in ONE root-combined statement
-       (``from pkg import c, m, p, t, u``); facade-file, alias-split and
-       relative letter forms rewrite into it.
-    4. Objects import through the family ``__init__``
-       (``from pkg._models import X``); leaf-module paths flatten when the
-       family init publishes the name (its ``TYPE_CHECKING`` imports, lazy
-       export map and ``__all__`` are the export SSOT); internal family
-       wiring the init does not publish stays leaf.
+    1. Every import lives at module level; ``try/except ImportError`` guards
+       become plain imports.
+    2. Imports follow the tooling layer order (settings, config, c, t, p, m,
+       u, other, base, services, api, cli): a reverse import read only in
+       annotations moves under ``if TYPE_CHECKING:``; a reverse import read
+       at runtime keeps its place and its finding, for manual repair.
+    3. A root alias (facade and operational letters, ``config``,
+       ``settings``, names the namespace root re-exports) binds through the
+       module's own namespace root; facade modules keep the letters they
+       declare, family packages keep their own letter's upstream source and
+       settings/config modules keep their own law.
+    4. A concrete object binds through the nearest package ``__init__`` that
+       publishes it lazily.
 
-    ``try/except ImportError`` import guards are removed and their names
-    re-bound at the point of use; no half-initialized ``= None`` fallback
-    survives. A guarded name the module still uses at definition time falls
-    back to a plain module-level import, never to a silent ``None``.
+    ``make mod`` runs it over every governed file; the ``make fix`` lint
+    recipe ``normalize-imports`` runs it over each file Ruff reports for
+    ``import-outside-top-level``, so both verbs converge on one fixed point.
     """
 
     @classmethod
@@ -56,16 +57,13 @@ class FlextInfraImportNormalization(
         """
         changed = False
         for file_path in files:
-            try:
-                source = file_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-            except OSError:
-                continue
+            source = file_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             normalized = cls.normalize_source(
                 project_root=project_root,
                 file_path=file_path,
                 source=source,
             )
-            if normalized is None or normalized == source:
+            if normalized is None:
                 continue
             file_path.write_text(normalized, encoding=c.Cli.ENCODING_DEFAULT)
             changed = True
@@ -79,94 +77,124 @@ class FlextInfraImportNormalization(
         file_path: Path,
         source: str,
     ) -> str | None:
-        """Return the canonical form of one module, or ``None`` when out of scope.
+        """Return the canonical form of one module, or ``None`` when unchanged.
 
         Returns:
-            The resulting ``str | None``.
+            The rewritten source, or ``None`` when the module is out of scope
+            or already canonical.
 
         """
-        located = cls._locate(project_root, file_path)
+        if file_path.name == c.Infra.INIT_PY:
+            return None
+        located = FlextInfraUtilitiesImportLaw.import_namespace(
+            project_root,
+            file_path,
+        )
         if located is None:
             return None
-        package, module_name = located
+        namespace_dir, module = located
         current = source
         for _ in range(c.Infra.IMPORT_NORMALIZATION_MAX_PASSES):
-            updated = cls._one_pass(
-                project_root=project_root,
+            tree = ast.parse(current, filename=str(file_path))
+            scope = m.Infra.ImportLawScope(
+                project_root=project_root.resolve(),
                 file_path=file_path,
-                package=package,
-                module_name=module_name,
-                source=current,
+                namespace_dir=namespace_dir,
+                module=module,
+                layer=FlextInfraUtilitiesImportLaw.module_import_layer(module),
+                own_exports=cls._declared_exports(tree),
+                family_letter=cls._family_letter(namespace_dir, file_path),
             )
-            if updated is None or updated == current:
+            updated = cls._one_pass(tree, current, scope)
+            if updated is None:
                 break
             current = updated
         return current if current != source else None
 
-    # -- one normalization pass ----------------------------------------------------
-
     @classmethod
     def _one_pass(
         cls,
-        *,
-        project_root: Path,
-        file_path: Path,
-        package: str,
-        module_name: str,
+        tree: ast.Module,
         source: str,
+        scope: m.Infra.ImportLawScope,
     ) -> str | None:
-        """Run one convergence pass; each rewrite category applies alone.
+        """Apply the first rewrite category that changes the module.
 
-        A category whose own edits collide is skipped; the outer pass loop
-        re-parses the converged text and retries it on the next pass.
+        Every category's edits are computed against the text they mutate, so
+        categories never share a pass; the caller re-parses between passes.
 
         Returns:
-            The resulting ``str | None``.
+            The rewritten source, or ``None`` when every category is a no-op.
 
         """
-        # One rewrite category per pass: every category's edits are computed
-        # against the text they mutate, so categories never share a pass.
-        tree = cls._parse(source)
-        if tree is None:
-            return None
+        lines = source.splitlines()
         builders = (
-            lambda: cls._relative_import_edits(
-                tree,
-                source,
-                package,
-                module_name,
-                file_path,
-            ),
-            lambda: cls._letter_merge_edits(tree, source, package),
-            lambda: cls._flatten_edits(
-                tree,
-                source,
-                package,
-                file_path,
-                cls._family_exports(project_root, package),
-            ),
-            lambda: cls._lazy_demotion_edits(
-                tree,
-                source,
-                package,
-                file_path,
-                cls._family_exports(project_root, package),
-            ),
-            lambda: cls._foundation_routing_edits(tree, source, package, file_path),
-            lambda: cls._self_family_unflatten_edits(
-                tree,
-                source,
-                package,
-                file_path,
-                project_root,
-            ),
+            lambda: cls._relative_import_edits(tree, lines, scope),
+            lambda: cls._guard_edits(tree, lines),
+            lambda: cls._placement_edits(tree, lines, scope),
+            lambda: cls._route_edits(tree, lines, scope),
         )
         for build in builders:
-            applied = cls._apply_edits(source, build())
-            if applied is None or applied == source:
+            edits = build()
+            if not edits:
                 continue
-            return applied
+            applied = cls._apply_edits(source, edits)
+            if applied is None:
+                msg = f"{scope.file_path}: overlapping import-law edits {edits}"
+                raise ValueError(msg)
+            if applied != source:
+                return applied
         return None
+
+    @staticmethod
+    def _declared_exports(tree: ast.Module) -> frozenset[str]:
+        """Return the names one module declares in its literal ``__all__``.
+
+        Returns:
+            The resulting ``frozenset[str]``.
+
+        """
+        for node in tree.body:
+            target = (
+                node.targets[0]
+                if isinstance(node, ast.Assign) and len(node.targets) == 1
+                else node.target
+                if isinstance(node, ast.AnnAssign)
+                else None
+            )
+            value = node.value if isinstance(node, ast.Assign | ast.AnnAssign) else None
+            if (
+                isinstance(target, ast.Name)
+                and target.id == "__all__"
+                and isinstance(value, ast.List | ast.Tuple)
+            ):
+                return frozenset(
+                    element.value
+                    for element in value.elts
+                    if isinstance(element, ast.Constant)
+                    and isinstance(element.value, str)
+                )
+        return frozenset()
+
+    @staticmethod
+    def _family_letter(namespace_dir: Path, file_path: Path) -> str | None:
+        """Return the facade letter of the family package holding one module.
+
+        Returns:
+            The family letter, or ``None`` outside every family package.
+
+        """
+        directories = {
+            family.directory: letter
+            for letter, family in (
+                FlextInfraUtilitiesCodegenNamespace.facade_families().items()
+            )
+        }
+        relative = file_path.resolve().relative_to(namespace_dir.resolve())
+        return next(
+            (directories[part] for part in relative.parts[:-1] if part in directories),
+            None,
+        )
 
 
 __all__: list[str] = ["FlextInfraImportNormalization"]
