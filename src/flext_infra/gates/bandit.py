@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, config, m, t, u
@@ -223,7 +224,7 @@ class FlextInfraBanditGate(FlextInfraGate):
         excluded = config.Infra.codegen.generated_source_globs
         if not excluded:
             return command
-        return (*command, "--exclude", ",".join(generated))
+        return (*command, "--exclude", ",".join(excluded))
 
     @override
     def _parse_check_output(
@@ -297,8 +298,8 @@ class FlextInfraBanditGate(FlextInfraGate):
         """
         return tuple(
             m.Infra.Issue(
-                file=u.Cli.json_pick_str(raw_item, "filename", "?"),
-                line=u.Cli.json_pick_int(raw_item, "line_number"),
+                file=finding.filename,
+                line=finding.line_number,
                 column=0,
                 code=finding.test_id,
                 message=finding.issue_text,

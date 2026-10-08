@@ -32,6 +32,7 @@ from flext_infra._utilities import (
     FlextInfraUtilitiesBase,
     FlextInfraUtilitiesCodegenNamespace,
     FlextInfraUtilitiesCodemodRules,
+    FlextInfraUtilitiesDeclarationPayload,
     FlextInfraUtilitiesPyproject,
     FlextInfraUtilitiesRopeAnalysisAstHelpers,
     FlextInfraUtilitiesRopeAnalysisExports,

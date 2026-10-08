@@ -37,48 +37,6 @@ class FlextInfraModelsGit(
 
         repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
 
-    class GitLaneVerificationRequest(GitRepoRequest):
-        """Read-only lane census, optionally consuming coordinator evidence."""
-
-        declared: Annotated[
-            str | None,
-            m.Field(description="Governing integration declaration"),
-        ] = None
-        evidence_file: Annotated[
-            Path | None,
-            m.Field(description="Typed Bead/PR evidence captured by the coordinator"),
-        ] = None
-        governance_file: Annotated[
-            Path | None,
-            m.Field(description="Global coordination governance SSOT"),
-        ] = None
-        read_pull_requests: Annotated[
-            bool,
-            m.Field(description="Explicitly authorize public PR ownership reads"),
-        ] = False
-        read_beads: Annotated[
-            bool,
-            m.Field(description="Explicitly authorize declared Beads ownership reads"),
-        ] = False
-
-        @m.model_validator(mode="after")
-        def _validate_ownership_selection(self) -> Self:
-            """Reject competing evidence sources instead of ignoring selection.
-
-            Returns:
-                The uniquely selected ownership request.
-
-            Raises:
-                ValueError: If receipt and live ownership are both selected.
-
-            """
-            if self.evidence_file is not None and (
-                self.read_pull_requests or self.read_beads
-            ):
-                msg = "select either an ownership receipt or authorized live sources"
-                raise ValueError(msg)
-            return self
-
     class GitLaneEvidence(m.ContractModel):
         """Repository-bound coordinator receipt, never a cleanup instruction."""
 
@@ -368,8 +326,33 @@ class FlextInfraModelsGit(
         ] = None
 
     class GitLaneVerificationRequest(GitRemoteRequest):
-        """Read-only lane admission against the declared live integration tip."""
+        """Read-only lane admission and census against the live integration tip.
 
+        One request serves both the semantic publication boundary (operation,
+        candidate, expected tip) and the lane hygiene census (declaration and
+        coordinator ownership evidence).
+        """
+
+        declared: Annotated[
+            str | None,
+            m.Field(description="Governing integration declaration"),
+        ] = None
+        evidence_file: Annotated[
+            Path | None,
+            m.Field(description="Typed Bead/PR evidence captured by the coordinator"),
+        ] = None
+        governance_file: Annotated[
+            Path | None,
+            m.Field(description="Global coordination governance SSOT"),
+        ] = None
+        read_pull_requests: Annotated[
+            bool,
+            m.Field(description="Explicitly authorize public PR ownership reads"),
+        ] = False
+        read_beads: Annotated[
+            bool,
+            m.Field(description="Explicitly authorize declared Beads ownership reads"),
+        ] = False
         operation: Annotated[
             Literal["verify", "create", "retire"],
             m.Field(description="Boundary being verified, never an effect selector"),
@@ -382,6 +365,24 @@ class FlextInfraModelsGit(
             t.NonEmptyStr | None,
             m.Field(description="Previously observed tip; drift refuses admission"),
         ] = None
+
+        @m.model_validator(mode="after")
+        def _validate_ownership_selection(self) -> Self:
+            """Reject competing evidence sources instead of ignoring selection.
+
+            Returns:
+                The uniquely selected ownership request.
+
+            Raises:
+                ValueError: If receipt and live ownership are both selected.
+
+            """
+            if self.evidence_file is not None and (
+                self.read_pull_requests or self.read_beads
+            ):
+                msg = "select either an ownership receipt or authorized live sources"
+                raise ValueError(msg)
+            return self
 
     class GitRefHeadsRequest(m.ContractModel):
         """List every ref below one namespace.
