@@ -11,7 +11,11 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from enum import StrEnum, unique
-from typing import ClassVar
+from types import MappingProxyType
+from typing import TYPE_CHECKING, ClassVar
+
+if TYPE_CHECKING:
+    from flext_infra import t
 
 
 class FlextInfraConstantsGit:
@@ -94,6 +98,43 @@ class FlextInfraConstantsGit:
 
     GIT_REFS_HEADS: ClassVar[str] = "refs/heads/"
     "Local branch ref prefix."
+
+    GIT_REFS_REMOTES: ClassVar[str] = "refs/remotes/"
+    "Remote-tracking ref prefix."
+
+    # --- Lane hygiene audit (stashes, merged branches, orphan worktrees) ---
+
+    @unique
+    class LaneViolationKind(StrEnum):
+        """Classes of lane accumulation the lane hygiene audit rejects."""
+
+        STASH = "stash"
+        MERGED_BRANCH = "merged-branch"
+        TEMP_WORKTREE = "temp-worktree"
+        MISSING_WORKTREE = "missing-worktree"
+        MERGED_WORKTREE = "merged-worktree"
+
+    GIT_LANE_VIOLATION_REMEDY: ClassVar[t.MappingKV[LaneViolationKind, str]] = (
+        MappingProxyType({
+            LaneViolationKind.STASH: (
+                "stash is forbidden: commit the work on a branch and push it"
+            ),
+            LaneViolationKind.MERGED_BRANCH: (
+                "merged branch still alive: git branch -d {ref}"
+            ),
+            LaneViolationKind.TEMP_WORKTREE: (
+                "worktree under temp dir: commit and push its work, then"
+                " git worktree remove {ref}"
+            ),
+            LaneViolationKind.MISSING_WORKTREE: (
+                "worktree directory missing: git worktree prune"
+            ),
+            LaneViolationKind.MERGED_WORKTREE: (
+                "merged worktree still registered: git worktree remove {ref}"
+            ),
+        })
+    )
+    "Fix instruction per lane violation class; ``{ref}`` names the offender."
 
     # --- Linked-worktree registry (filesystem discovery, no Git subprocess) ---
 
