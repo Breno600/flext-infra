@@ -16,7 +16,7 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
     """Expose typed predicates for Rope runtime objects."""
 
     @classmethod
-    def file_resource(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopeResource]:
+    def file_resource(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopeFile]:
         return isinstance(value, cls.runtime_type("rope.base.resources", "File"))
 
     @classmethod

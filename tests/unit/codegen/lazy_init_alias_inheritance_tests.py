@@ -88,7 +88,11 @@ class TestsFlextInfraLazyInitAliasInheritance:
             "print(execute().value)\n"
         )
         result = tm.ok(
-            u.Cli.run([sys.executable, "-c", probe], env=probe_env, cwd=repository),
+            u.Cli.run(
+                [sys.executable, "-c", probe],
+                options=u.Cli.ProcessOptions(env=probe_env),
+                cwd=repository,
+            ),
         )
         tm.that(
             result.stdout.splitlines(),

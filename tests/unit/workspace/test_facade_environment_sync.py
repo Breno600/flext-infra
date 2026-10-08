@@ -54,16 +54,20 @@ class TestsFlextInfraFacadeEnvironmentSync:
             u.Cli.run_checked(
                 ["direnv", "allow", str(workspace)],
                 cwd=workspace,
-                env=activation_env,
-                remove_env_keys=isolation,
+                options=u.Cli.ProcessOptions(
+                    env=activation_env,
+                    remove_env_keys=isolation,
+                ),
             ),
         )
         return tm.ok(
             u.Cli.capture(
                 ["direnv", "exec", str(workspace), "printenv", name],
                 cwd=workspace,
-                env=activation_env,
-                remove_env_keys=isolation,
+                options=u.Cli.ProcessOptions(
+                    env=activation_env,
+                    remove_env_keys=isolation,
+                ),
             ),
         )
 

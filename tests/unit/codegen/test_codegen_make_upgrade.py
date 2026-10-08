@@ -173,8 +173,23 @@ class TestsFlextInfraCodegenMakeUpgrade:
         tm.that(makefile, has="upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle")
         sync_flags = re.search(r"^UV_SYNC_FLAGS := (.*)$", makefile, re.MULTILINE)
         assert sync_flags is not None
-        tm.that(sync_flags.group(1), has="--locked")
         tm.that(sync_flags.group(1), lacks="--upgrade")
+        # Lock law (operator 2026-10-03): setup never writes uv.lock. Its only
+        # uv lock call is the read-only check; a matching lock syncs --locked,
+        # a drifted lock is reported and synced --frozen, and nothing deletes
+        # or re-derives the committed lock.
+        setup_recipe = makefile.split("SETUP_ENVIRONMENT_RECIPE = ", 1)[1].split(
+            "\n\n",
+            1,
+        )[0]
+        tm.that(
+            re.findall(r"\$\(UV\) lock (--\S+)", setup_recipe),
+            eq=["--check"],
+        )
+        tm.that(setup_recipe, has=["uv_lock_mode=--locked", "uv_lock_mode=--frozen"])
+        tm.that(setup_recipe, has="$$uv_lock_mode")
+        tm.that(setup_recipe, lacks=['rm -f "$(UV_PROJECT)/uv.lock"', ">/dev/null"])
+        tm.that(setup_recipe, has="make upg")
 
         mise_toml = u.Cli.toml_mapping_from_text(
             (project_root / c.Infra.MISE_TOML_FILENAME).read_text(encoding="utf-8"),
@@ -194,29 +209,6 @@ class TestsFlextInfraCodegenMakeUpgrade:
 
     @staticmethod
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
-    def test_upg_hands_the_staged_lock_to_the_transaction_publisher(
-        tmp_path: Path,
-        profile: c.Infra.MakeProfile,
-    ) -> None:
-        """The staged lock and its sidecars reach the tree through one publisher.
-
-        ``mise lock`` writes the lock and each tool's sidecar into a stage
-        beside the project; the generated transaction publisher is the one
-        owner that publishes them, sidecars before the lock. The converge
-        step keeps ``gen`` output so a failure carries its cause.
-        """
-        project_root, _repository_root = u.Tests.render_make_environment(
-            tmp_path,
-            profile,
-            bootstrap=True,
-        )
-        makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
-            encoding="utf-8",
-        )
-        tm.that(makefile, has='publish "$$project_root" "$$lock_stage"')
-        tm.that(makefile, has="$(SELF_MAKE) gen; \\")
-        tm.that(makefile, lacks=["gen > /dev/null", "could not be staged"])
-
     def test_generated_dependency_upgrade_projects_lock_floors(
         self,
         tmp_path: Path,

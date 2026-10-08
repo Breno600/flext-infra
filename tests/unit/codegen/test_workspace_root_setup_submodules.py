@@ -41,7 +41,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
             u.Cli.run_raw(
                 ["make", "_builtin_setup_submodules"],
                 cwd=workspace,
-                env=env,
+                options=u.Cli.ProcessOptions(env=env),
             ),
         )
 
@@ -445,11 +445,14 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         self,
         tmp_path: Path,
     ) -> None:
-        """Setup provisions governed gitlinks before the environment recipe.
+        """Setup provisions governed gitlinks, then never creates a missing lock.
 
         The workspace projections derive from the member checkouts, so a
         member-less CI checkout renders a different workspace and breaks the
-        gen fixed point (flext-gdm8w).
+        gen fixed point (flext-gdm8w). The fixture commits no uv.lock: the
+        lock law (operator 2026-10-03, only `make upg` writes uv.lock) makes
+        the environment recipe stop there, name the right path, and leave the
+        workspace without a lock instead of deriving one.
         """
         rendered = self._render_repository_root_makefile(tmp_path)
         tm.that(rendered, has="MAKE_PROFILE := workspace")
@@ -465,14 +468,16 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
             u.Cli.run_raw(
                 ["make", "--no-print-directory", "_builtin_setup_environment"],
                 cwd=workspace,
-                env=env,
+                options=u.Cli.ProcessOptions(env=env),
             ),
         )
 
         tm.that((workspace / "flext-core" / "pyproject.toml").is_file(), eq=True)
         gitlink = self._git_stdout(workspace, "rev-parse", "HEAD:flext-core")
         tm.that(self._git_state(workspace / "flext-core"), eq=("", gitlink))
-        tm.that(process.stderr, has="missing Mise-resolved Python executable")
+        tm.that(process.outcome.raw_return_code, ne=0)
+        tm.that(process.stderr, has=["ERROR[setup] uv.lock is missing", "make upg"])
+        tm.that((workspace / "uv.lock").exists(), eq=False)
 
     def test_unexpected_git_probe_failure_preserves_cause(self, tmp_path: Path) -> None:
         """A Git probe error is never reclassified as a missing remote ref."""

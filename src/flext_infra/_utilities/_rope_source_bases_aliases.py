@@ -64,10 +64,9 @@ class FlextInfraUtilitiesRopeSourceBasesAliases:
             Alias name to absolute provider module path.
 
         """
-        try:
-            parsed = ast.parse(source, filename=str(path))
-        except SyntaxError:
-            return {}
+        # A generated module that does not parse is a defect to surface, never
+        # an empty alias map (fail loud).
+        parsed = ast.parse(source, filename=str(path))
         package = module if path.name == "__init__.py" else module.rpartition(".")[0]
         aliases: dict[str, str] = {}
         for node in ast.walk(parsed):

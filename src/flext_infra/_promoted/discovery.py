@@ -93,7 +93,7 @@ class FlextInfraPromotedDiscovery(FlextInfraPromotedRegistry):
 
     @staticmethod
     def _load_command(
-        message: c.Infra.PromotedMessage,
+        message: type[c.Infra.PromotedMessage],
         path: Path,
         verb_dir: Path,
         headers: t.MappingKV[Path, t.JsonMapping | c.Infra.PromotedRegistryError],

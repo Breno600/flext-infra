@@ -78,6 +78,9 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
         Returns:
             The resulting ``t.SequenceOf[t.Triple[int, int, str]]``.
 
+        Raises:
+            ValueError: If a model field guard has no complete source span.
+
         """
         untrusted = {
             arg.arg
@@ -97,7 +100,13 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
             target = statement.targets[0]
             if not isinstance(target, ast.Name):
                 continue
-            cls._validated_field_boundary(path, function, statement, guard, target)
+            guard = cls._validated_field_boundary(
+                path,
+                function,
+                statement,
+                guard,
+                target,
+            )
             indent = lines[statement.lineno - 1][: statement.col_offset]
             comments = "".join(lines[statement.end_lineno : guard.lineno - 1])
             condition = (
@@ -107,9 +116,16 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
                 f"{indent}    or not {receiver}.model_fields\n"
                 f"{indent}):\n"
             )
+            test_end = guard.test.end_lineno
+            if test_end is None:
+                msg = (
+                    f"model field guard has no complete source span in "
+                    f"{path}:{statement.lineno}"
+                )
+                raise ValueError(msg)
             replacements.append((
                 statement.lineno - 1,
-                guard.test.end_lineno,
+                test_end,
                 comments + condition,
             ))
         return replacements
@@ -122,8 +138,11 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
         statement: ast.Assign,
         guard: ast.stmt | None,
         target: ast.Name,
-    ) -> None:
+    ) -> ast.If:
         """Require one complete, guarded, singly used model-fields boundary.
+
+        Returns:
+            The validated rejecting guard statement.
 
         Raises:
             TypeError: If the model field rejection is not an if statement.
@@ -132,15 +151,15 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
                 receiver.
 
         """
+        if not isinstance(guard, ast.If):
+            msg = "model field rejection must be an if statement"
+            raise TypeError(msg)
         if not cls._rejecting_guard(guard, target.id):
             msg = (
                 f"untrusted model_fields access lacks a rejecting "
                 f"guard in {path}:{statement.lineno}"
             )
             raise ValueError(msg)
-        if not isinstance(guard, ast.If):
-            msg = "model field rejection must be an if statement"
-            raise TypeError(msg)
         uses = {
             node
             for node in ast.walk(function)
@@ -173,6 +192,7 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
         ):
             msg = f"model field receiver is rebound in {path}:{statement.lineno}"
             raise ValueError(msg)
+        return guard
 
     @staticmethod
     def _field_receiver(statement: ast.stmt) -> str | None:

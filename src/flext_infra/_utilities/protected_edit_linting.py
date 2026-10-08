@@ -16,8 +16,7 @@ from typing import ClassVar
 
 from flext_cli import u
 
-from flext_infra import c, m, t
-from flext_infra._config import config
+from flext_infra import c, config, m, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesDiscovery,
     FlextInfraUtilitiesProjectDiscovery,
@@ -200,8 +199,10 @@ class FlextInfraUtilitiesProtectedEditLinting:
                     str(py_file),
                 ],
                 cwd=cls._command_cwd(py_file, workspace),
-                env=cls._command_env(),
-                remove_env_keys=cls._COMMAND_ENV_REMOVE_KEYS,
+                options=u.Cli.ProcessOptions(
+                    env=cls._command_env(),
+                    remove_env_keys=cls._COMMAND_ENV_REMOVE_KEYS,
+                ),
                 timeout=c.Infra.TIMEOUT_SHORT,
             ).unwrap()
             outcome = output.outcome
@@ -481,8 +482,10 @@ class FlextInfraUtilitiesProtectedEditLinting:
         run_result = u.Cli.run_raw(
             cmd,
             cwd=command_cwd,
-            env=cls._command_env(),
-            remove_env_keys=cls._COMMAND_ENV_REMOVE_KEYS,
+            options=u.Cli.ProcessOptions(
+                env=cls._command_env(),
+                remove_env_keys=cls._COMMAND_ENV_REMOVE_KEYS,
+            ),
             timeout=cls._gate_deadline(tool_name),
         )
         if run_result.failure:

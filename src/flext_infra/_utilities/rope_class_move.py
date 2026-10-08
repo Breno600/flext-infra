@@ -205,9 +205,13 @@ class FlextInfraUtilitiesRopeClassMove:
         rope_project: t.Infra.RopeProject,
         root: Path,
         file_path: Path,
-    ) -> t.Infra.RopeResource:
+    ) -> t.Infra.RopeFile:
         relative_path = file_path.relative_to(root).as_posix()
-        return rope_project.get_resource(relative_path)
+        resource = rope_project.get_resource(relative_path)
+        if not FlextInfraUtilitiesRopeRuntime.file_resource(resource):
+            msg = f"expected a Rope file resource: {file_path}"
+            raise TypeError(msg)
+        return resource
 
 
 __all__: list[str] = ["FlextInfraUtilitiesRopeClassMove"]

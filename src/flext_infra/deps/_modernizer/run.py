@@ -9,8 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra import c, m, t, u
+from flext_infra import c, m, r, t, u
 from flext_infra.deps._floor_profile_writer import FlextInfraDepsFloorProfileWriter
 
 if TYPE_CHECKING:

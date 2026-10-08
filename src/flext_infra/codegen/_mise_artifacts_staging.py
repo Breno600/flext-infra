@@ -9,8 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra import m, u
+from flext_infra import m, r, u
 from flext_infra.codegen._mise_artifacts_candidates import (
     FlextInfraMiseArtifactsCandidates,
 )

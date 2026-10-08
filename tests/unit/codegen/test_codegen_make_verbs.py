@@ -197,7 +197,9 @@ class TestsFlextInfraCodegenMakeVerbs:
             u.Cli.run_raw(
                 [c.Infra.MAKE, "--no-print-directory", "help"],
                 cwd=project_root,
-                remove_env_keys=c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
+                options=u.Cli.ProcessOptions(
+                    remove_env_keys=c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
+                ),
             ),
         )
         tm.that(
@@ -231,11 +233,13 @@ class TestsFlextInfraCodegenMakeVerbs:
             u.Cli.run_raw(
                 [c.Infra.MAKE, "--no-print-directory", "help"],
                 cwd=project_root,
-                env=hostile_env,
-                remove_env_keys=tuple(
-                    key
-                    for key in c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS
-                    if key not in hostile_env
+                options=u.Cli.ProcessOptions(
+                    env=hostile_env,
+                    remove_env_keys=tuple(
+                        key
+                        for key in c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS
+                        if key not in hostile_env
+                    ),
                 ),
             ),
         )
@@ -301,7 +305,9 @@ class TestsFlextInfraCodegenMakeVerbs:
             u.Cli.run_raw(
                 [c.Infra.MAKE, "--no-print-directory", "help", "FOO=bar"],
                 cwd=project_root,
-                remove_env_keys=c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
+                options=u.Cli.ProcessOptions(
+                    remove_env_keys=c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
+                ),
             ),
         )
 

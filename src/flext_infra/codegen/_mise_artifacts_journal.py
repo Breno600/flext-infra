@@ -8,8 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, m, p, r, t, u
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
@@ -266,7 +265,7 @@ class FlextInfraMiseArtifactsJournal:
         for previous, current in zip(journal.directories, directories, strict=True):
             compared = cls._validated_recorded_directory(previous, current)
             if compared.failure:
-                return compared
+                return result_type.from_failure(compared)
         validated: p.Result[m.Infra.CodegenTransactionJournal] = u.validate_value(
             m.Infra.CodegenTransactionJournal,
             {
@@ -712,7 +711,9 @@ class FlextInfraMiseArtifactsJournal:
                 current_root,
             )
             if relocated_before.failure:
-                return relocated_before
+                return r[m.Infra.CodegenJournalDirectory].from_failure(
+                    relocated_before,
+                )
             before = relocated_before.value
         created: m.Cli.AtomicDirectoryState | None = None
         if directory.created is not None:
@@ -722,7 +723,9 @@ class FlextInfraMiseArtifactsJournal:
                 current_root,
             )
             if relocated_created.failure:
-                return relocated_created
+                return r[m.Infra.CodegenJournalDirectory].from_failure(
+                    relocated_created,
+                )
             created = relocated_created.value
         manifest: m.Cli.AtomicPhysicalTreeManifest | None = None
         if directory.manifest is not None:
@@ -732,7 +735,9 @@ class FlextInfraMiseArtifactsJournal:
                 current_root,
             )
             if relocated_manifest.failure:
-                return relocated_manifest
+                return r[m.Infra.CodegenJournalDirectory].from_failure(
+                    relocated_manifest,
+                )
             manifest = relocated_manifest.value
         return u.validate_value(
             m.Infra.CodegenJournalDirectory,
@@ -959,17 +964,27 @@ class FlextInfraMiseArtifactsJournal:
     def _entry_project(
         plan: m.Infra.MiseToolchainWorkspacePlan | m.Infra.CodegenFileSessionPlan,
         publication: m.Infra.CodegenStagedFile,
-    ) -> p.Result[t.Pair[m.Infra.MiseToolchainProjectLayout, str]]:
+    ) -> p.Result[
+        t.Pair[
+            m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
+            str,
+        ]
+    ]:
         """Resolve the transaction participant and relative selector of a target.
 
         Returns:
-            The resulting ``p.Result[t.Pair[m.Infra.MiseToolchainProjectLayout,
-                str]]``.
+            The registered Mise or file participant and relative selector.
 
         """
+        result_type = r[
+            t.Pair[
+                m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
+                str,
+            ]
+        ]
         before = publication.before
         if before.parent_device is None or before.parent_inode is None:
-            return r[t.Pair[m.Infra.MiseToolchainProjectLayout, str]].fail(
+            return result_type.fail(
                 f"generation destination parent identity is incomplete: {before.path}",
             )
         project = next(
@@ -981,22 +996,22 @@ class FlextInfraMiseArtifactsJournal:
             None,
         )
         if project is None or project.transaction_root is None:
-            return r[t.Pair[m.Infra.MiseToolchainProjectLayout, str]].fail(
+            return result_type.fail(
                 f"generation publication has no transaction participant: {before.path}",
             )
         selector = files.transaction_relative(plan.layout, before.path)
         if selector.failure:
-            return r[t.Pair[m.Infra.MiseToolchainProjectLayout, str]].from_failure(
+            return result_type.from_failure(
                 selector,
             )
-        return r[t.Pair[m.Infra.MiseToolchainProjectLayout, str]].ok(
+        return result_type.ok(
             (project, selector.value),
         )
 
     @staticmethod
     def _backup_original(
         plan: m.Infra.MiseToolchainWorkspacePlan | m.Infra.CodegenFileSessionPlan,
-        project: m.Infra.MiseToolchainProjectLayout,
+        project: m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
         before: m.Cli.AtomicFileState,
         index: int,
         recovery_roots: set[Path],
@@ -1009,7 +1024,8 @@ class FlextInfraMiseArtifactsJournal:
 
         """
         if (
-            before.mode is None
+            before.content is None
+            or before.mode is None
             or before.device is None
             or before.inode is None
             or before.link_count != 1
@@ -1037,7 +1053,7 @@ class FlextInfraMiseArtifactsJournal:
 
     @staticmethod
     def _prepared_recovery_root(
-        project: m.Infra.MiseToolchainProjectLayout,
+        project: m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
         recovery_roots: set[Path],
     ) -> p.Result[Path]:
         """Inventory or create the project recovery root exactly once.
@@ -1046,6 +1062,10 @@ class FlextInfraMiseArtifactsJournal:
             The resulting ``p.Result[Path]``.
 
         """
+        if project.transaction_root is None:
+            return r[Path].fail(
+                f"transaction participant has no transaction root: {project.root}",
+            )
         recovery_root = project.transaction_root / "recovery"
         if recovery_root in recovery_roots:
             return r[Path].ok(recovery_root)
@@ -1079,6 +1099,10 @@ class FlextInfraMiseArtifactsJournal:
         recovery_roots: set[Path],
     ) -> p.Result[m.Infra.CodegenJournalEntry]:
         before = publication.before
+        if before.parent_device is None or before.parent_inode is None:
+            return r[m.Infra.CodegenJournalEntry].fail(
+                f"generation destination parent identity is incomplete: {before.path}",
+            )
         located = cls._entry_project(plan, publication)
         if located.failure:
             return r[m.Infra.CodegenJournalEntry].from_failure(located)

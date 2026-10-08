@@ -9,7 +9,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_infra import m, p, t
-from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors
+from flext_infra._utilities import (
+    FlextInfraUtilitiesRopeRuntime,
+    FlextInfraUtilitiesRopeRuntimeRefactors,
+)
 
 
 class FlextInfraUtilitiesCodegenPathCutover:
@@ -68,6 +71,7 @@ class FlextInfraUtilitiesCodegenPathCutover:
             The resulting ``(resources, selected paths)`` pair.
 
         Raises:
+            TypeError: If a sibling resource is not a Rope file resource.
             ValueError: If Rope source differs from the mod planning snapshot.
 
         """
@@ -80,6 +84,9 @@ class FlextInfraUtilitiesCodegenPathCutover:
             project.get_resource(path.relative_to(root).as_posix()) for path in selected
         )
         for resource, path in zip(resources, selected, strict=True):
+            if not FlextInfraUtilitiesRopeRuntime.file_resource(resource):
+                msg = f"expected a Rope file resource: {path}"
+                raise TypeError(msg)
             if resource.read() != sources[path]:
                 msg = f"Rope source differs from the mod planning snapshot: {path}"
                 raise ValueError(msg)

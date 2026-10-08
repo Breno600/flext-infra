@@ -2,8 +2,7 @@ id: rewire-staged-file-phase-literal
 language: python
 severity: error
 files:
-  - "src/flext_infra/codegen/**"
-  - "src/flext_infra/transformers/**"
+  - "src/flext_infra/**"
 ignores:
   - "**/tests/**"
   - "**/__init__.py"

@@ -7,7 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import traceback
-from typing import TYPE_CHECKING, assert_never
+from typing import TYPE_CHECKING
 
 from flext_infra import c, m, t
 from flext_infra._utilities import (
@@ -111,7 +111,8 @@ class FlextInfraUtilitiesSemanticCutoverBase(
             ):
                 return cls._plan_ordered_phase(phase, root, sources, selected)
             case _:
-                assert_never(phase)
+                message = f"unsupported semantic cutover phase: {phase}"
+                raise ValueError(message)
 
     @classmethod
     def _plan_selected_phase(
@@ -125,6 +126,9 @@ class FlextInfraUtilitiesSemanticCutoverBase(
 
         Returns:
             The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        Raises:
+            ValueError: When the phase is not finding-selected.
 
         """
         root = rope_workspace.repository_root
@@ -140,7 +144,8 @@ class FlextInfraUtilitiesSemanticCutoverBase(
             case c.Infra.SemanticCutoverPhase.MODEL_FIELDS:
                 return cls._plan_model_fields(sources)
             case _:
-                assert_never(phase)
+                message = f"unsupported semantic cutover phase: {phase}"
+                raise ValueError(message)
 
     @classmethod
     def _plan_ordered_phase(
@@ -155,6 +160,9 @@ class FlextInfraUtilitiesSemanticCutoverBase(
         Returns:
             The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
 
+        Raises:
+            ValueError: When the phase is not order-driven.
+
         """
         match phase:
             case c.Infra.SemanticCutoverPhase.SELF_FACADE_IMPORT:
@@ -166,7 +174,8 @@ class FlextInfraUtilitiesSemanticCutoverBase(
             case c.Infra.SemanticCutoverPhase.NOTICE_LAST:
                 return cls._plan_notice_last(root, sources, selected)
             case _:
-                assert_never(phase)
+                message = f"unsupported semantic cutover phase: {phase}"
+                raise ValueError(message)
 
 
 __all__: list[str] = ["FlextInfraUtilitiesSemanticCutoverBase"]

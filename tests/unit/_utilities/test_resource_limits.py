@@ -357,7 +357,9 @@ class TestsFlextInfraUtilitiesResourceLimits:
                 "-c",
                 "from flext_infra import u; u.Infra.mypy_resource_limit()",
             ],
-            env={c.Infra.MYPY_MEMORY_LIMIT_MB_ENV: invalid_value},
+            options=u.Cli.ProcessOptions(
+                env={c.Infra.MYPY_MEMORY_LIMIT_MB_ENV: invalid_value},
+            ),
         )
         tm.ok(result)
         tm.that(u.Cli.process_succeeded(result.value.outcome), eq=False)

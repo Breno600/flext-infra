@@ -90,8 +90,6 @@ class FlextInfraConstantsCodegen(
     "Regex to parse violation strings: [rule-id] path:line — message."
     PROTOCOL_MODEL_MINIMAL_BODY_LINES: ClassVar[int] = 3
     "Header lines of a generated protocol class; at or below it the body is empty."
-    LAZY_IMPORTS_BINDING: ClassVar[str] = "_LAZY_IMPORTS"
-    "Module binding the flext-core lazy engine writes and resolves exports from."
     MISE_RELEASE_COMPONENT_COUNT: ClassVar[int] = 3
     "Number of numeric components in a generated Mise release version."
     MISE_RELEASE_PATTERN: ClassVar[str] = (

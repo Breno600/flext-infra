@@ -153,7 +153,12 @@ class TestsFlextInfraLazyInitRuntime:
             "    print('count' in str(error))\n"
             "print(dir(package) == list(package.__all__))\n"
         )
-        result = tm.ok(u.Cli.run([sys.executable, "-c", probe], env=probe_env))
+        result = tm.ok(
+            u.Cli.run(
+                [sys.executable, "-c", probe],
+                options=u.Cli.ProcessOptions(env=probe_env),
+            ),
+        )
         tm.that(result.stdout.splitlines(), eq=["True"] * 7)
 
     @staticmethod
@@ -194,7 +199,12 @@ class TestsFlextInfraLazyInitRuntime:
             "print(package.child is child)\n"
             "print(package.PublishedChild is child.PublishedChild)\n"
         )
-        result = tm.ok(u.Cli.run([sys.executable, "-c", probe], env=probe_env))
+        result = tm.ok(
+            u.Cli.run(
+                [sys.executable, "-c", probe],
+                options=u.Cli.ProcessOptions(env=probe_env),
+            ),
+        )
         tm.that(result.stdout.splitlines(), eq=["True", "True"])
 
     @staticmethod
@@ -223,7 +233,12 @@ class TestsFlextInfraLazyInitRuntime:
             "except AttributeError as error:\n"
             "    print('undeclared' in str(error))\n"
         )
-        result = tm.ok(u.Cli.run([sys.executable, "-c", probe], env=probe_env))
+        result = tm.ok(
+            u.Cli.run(
+                [sys.executable, "-c", probe],
+                options=u.Cli.ProcessOptions(env=probe_env),
+            ),
+        )
         tm.that(result.stdout.splitlines(), eq=["True", "True"])
 
     @staticmethod
@@ -350,7 +365,11 @@ class TestsFlextInfraLazyInitRuntime:
             "print(all(hasattr(generated, name) for name in generated.__all__))\n"
         )
         result = tm.ok(
-            u.Cli.run([sys.executable, "-c", probe], env=probe_env, cwd=repository),
+            u.Cli.run(
+                [sys.executable, "-c", probe],
+                options=u.Cli.ProcessOptions(env=probe_env),
+                cwd=repository,
+            ),
         )
         tm.that(
             result.stdout.splitlines(),

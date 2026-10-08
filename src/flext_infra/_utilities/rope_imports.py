@@ -13,8 +13,7 @@ from pathlib import Path
 
 from flext_cli import u
 
-from flext_core import r
-from flext_infra import c, m, p, t
+from flext_infra import c, m, p, r, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesRopeAnalysis,
     FlextInfraUtilitiesRopeCore,
@@ -224,7 +223,7 @@ class FlextInfraUtilitiesRopeImports:
     @staticmethod
     def organize_imports(
         rope_project: t.Infra.RopeProject,
-        resource: t.Infra.RopeResource,
+        resource: t.Infra.RopeFile,
         *,
         apply: bool,
     ) -> p.Result[bool]:
@@ -586,7 +585,7 @@ class FlextInfraUtilitiesRopeImports:
     def relocate_from_import_aliases(
         cls,
         rope_project: t.Infra.RopeProject,
-        resource: t.Infra.RopeResource,
+        resource: t.Infra.RopeFile,
         *,
         source_module: str,
         target_module: str,
@@ -781,7 +780,7 @@ class FlextInfraUtilitiesRopeImports:
     @staticmethod
     def _persisted_import_block(
         module_imports: t.Infra.RopeModuleImports,
-        resource: t.Infra.RopeResource,
+        resource: t.Infra.RopeFile,
         *,
         apply: bool,
     ) -> str | None:
@@ -805,7 +804,7 @@ class FlextInfraUtilitiesRopeImports:
     @staticmethod
     def add_import(
         rope_project: t.Infra.RopeProject,
-        resource: t.Infra.RopeResource,
+        resource: t.Infra.RopeFile,
         from_module: str,
         names: t.StrSequence,
         *,
@@ -837,7 +836,7 @@ class FlextInfraUtilitiesRopeImports:
     @staticmethod
     def remove_import_names(
         rope_project: t.Infra.RopeProject,
-        resource: t.Infra.RopeResource,
+        resource: t.Infra.RopeFile,
         from_module: str,
         names: t.StrSequence,
         *,
@@ -942,7 +941,7 @@ class FlextInfraUtilitiesRopeImports:
                     plan_result,
                 )
             plan_value, plan_present = plan_result.value
-            if plan_present:
+            if plan_present and plan_value is not None:
                 file_plans.append(plan_value)
         return r[t.VariadicTuple[m.Infra.CodegenFilePlan]].ok(tuple(file_plans))
 
@@ -951,8 +950,8 @@ class FlextInfraUtilitiesRopeImports:
         cls,
         rope_project: t.Infra.RopeProject,
         repository_root: Path,
-        entry: m.Infra.RopeWorkspaceEntry,
-    ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan, bool]]:
+        entry: m.Infra.RopeModuleIndexEntry,
+    ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan | None, bool]]:
         """Plan the absolute-form rewrite of one indexed module's imports.
 
         Returns:
@@ -984,7 +983,7 @@ class FlextInfraUtilitiesRopeImports:
             return r[t.Pair[m.Infra.CodegenFilePlan, bool]].ok((None, False))
         before = u.Cli.atomic_read_binary_file_state(file_path, required=False)
         if before.failure:
-            return r[t.Pair[m.Infra.CodegenFilePlan, bool]].from_failure(before)
+            return r[t.Pair[m.Infra.CodegenFilePlan | None, bool]].from_failure(before)
         return r[t.Pair[m.Infra.CodegenFilePlan, bool]].ok(
             (
                 m.Infra.CodegenFilePlan(
