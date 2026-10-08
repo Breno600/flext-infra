@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, override
 
 from flext_infra import c, m, r, u
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
-from flext_infra.codegen.conform import FlextInfraCodegenConform
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -60,6 +59,7 @@ class FlextInfraCodegenMakeBootstrap(FlextInfraCodegenExecutionBase[bool]):
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra.codegen.conform import FlextInfraCodegenConform
         conformed = FlextInfraCodegenConform.execute_request(
             m.Infra.CodegenConformRequest(
                 root=root,

@@ -10,14 +10,10 @@ from collections.abc import Generator
 from contextlib import ExitStack, contextmanager
 from pathlib import Path
 
-from flext_cli import u
 from git import GitCommandError
 
 from flext_infra import c, m, p, r, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesCodegenFilePlan,
-    FlextInfraUtilitiesGitStateTransitionMixin,
-)
+from flext_infra._utilities._git.state_transition import FlextInfraUtilitiesGitStateTransitionMixin
 
 
 class FlextInfraUtilitiesGitStateCaptureMixin(
@@ -29,6 +25,8 @@ class FlextInfraUtilitiesGitStateCaptureMixin(
     @contextmanager
     def _state_leases(cls, roots: t.SequenceOf[Path]) -> Generator[None]:
 
+        from flext_cli import u
+        from flext_infra._utilities import FlextInfraUtilitiesCodegenFilePlan
         journals = {
             Path(cls._repo(root).git_dir) / c.Infra.JOURNAL_NAME for root in roots
         }

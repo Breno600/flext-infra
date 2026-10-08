@@ -12,11 +12,9 @@ from typing import Annotated, Literal, Self
 from flext_cli import m
 
 from flext_infra import c, t
-from flext_infra._models import (
-    FlextInfraConfigModelsBeads,
-    FlextInfraConfigModelsContexts,
-    FlextInfraConfigModelsContract,
-)
+from flext_infra._models._config.beads import FlextInfraConfigModelsBeads
+from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
 
 
 class FlextInfraConfigModelsWorkspace:

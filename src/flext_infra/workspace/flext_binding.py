@@ -32,7 +32,6 @@ from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 
 from flext_infra import c, config, m, r, t, u
-from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -151,6 +150,7 @@ class FlextInfraFlextBindingService:
             The distributions this worktree can supply to the consumer.
 
         """
+        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
         workspace = FlextInfraWorkspaceDetector.load_workspace_spec(flext_root)
         if workspace.failure:
             return r[t.MappingKV[str, Path]].fail(

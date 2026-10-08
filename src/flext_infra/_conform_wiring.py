@@ -10,8 +10,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import m, t
-from flext_infra.docs import FlextInfraDocGenerator
-from flext_infra.gates import FlextInfraMarkdownFormatGate
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -33,6 +31,7 @@ class _FlextInfraConformWiringMixin:
             The resulting ``p.Infra.DocsArtifactPlanner``.
 
         """
+        from flext_infra.docs import FlextInfraDocGenerator
         return FlextInfraDocGenerator(
             repository_root=repository_root,
             projects=projects,
@@ -47,6 +46,7 @@ class _FlextInfraConformWiringMixin:
             The resulting ``p.Infra.MarkdownFormatGate``.
 
         """
+        from flext_infra.gates import FlextInfraMarkdownFormatGate
         return FlextInfraMarkdownFormatGate(repository_root)
 
     def codegen_conform_collaborators(self) -> m.Infra.CodegenConformPorts:

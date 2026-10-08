@@ -14,10 +14,8 @@ from typing import Annotated, Literal, Self
 from flext_cli import m
 
 from flext_infra import c, t
-from flext_infra._models import (
-    FlextInfraConfigModelsContract,
-    FlextInfraExternalCacheDirectorySpec,
-)
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
+from flext_infra._models._config.external_cache import FlextInfraExternalCacheDirectorySpec
 from flext_infra._models._config.make_docs import FlextInfraConfigModelsMakeDocs
 
 
@@ -848,7 +846,7 @@ class FlextInfraConfigModelsMake(FlextInfraConfigModelsMakeDocs):
         testmon_cache_policy: Annotated[
             FlextInfraConfigModelsMake.TestmonCachePolicySpec,
             m.Field(
-                default_factory=FlextInfraConfigModelsMake.TestmonCachePolicySpec,
+                default_factory=TestmonCachePolicySpec,
                 description=(
                     "Declarative save/budget/quota policy for the shared"
                     " testmon cache (#1001 delta)"

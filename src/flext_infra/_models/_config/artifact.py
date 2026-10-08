@@ -14,24 +14,19 @@ from typing import Annotated, Literal, Self
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._constants import (
-    FlextInfraConstantsCodegenProject,
-    FlextInfraConstantsSharedInfra,
-)
-from flext_infra._models import (
-    FlextInfraConfigModelsContexts,
-    FlextInfraConfigModelsContract,
-    FlextInfraConfigModelsMake,
-    FlextInfraConfigModelsProvider,
-    FlextInfraConfigModelsRelease,
-    FlextInfraConfigModelsRender,
-    FlextInfraConfigModelsScaffold,
-    FlextInfraConfigModelsTemplates,
-    FlextInfraConfigModelsWorkspace,
-    FlextInfraModelsDepsToolConfig,
-    FlextInfraModelsDepsToolConfigProjectArtifacts,
-    FlextInfraModelsLayout,
-)
+from flext_infra._constants import FlextInfraConstantsCodegenProject
+from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
+from flext_infra._models._config.make import FlextInfraConfigModelsMake
+from flext_infra._models._config.provider import FlextInfraConfigModelsProvider
+from flext_infra._models._config.release import FlextInfraConfigModelsRelease
+from flext_infra._models._config.render import FlextInfraConfigModelsRender
+from flext_infra._models._config.scaffold import FlextInfraConfigModelsScaffold
+from flext_infra._models._config.templates import FlextInfraConfigModelsTemplates
+from flext_infra._models._config.workspace import FlextInfraConfigModelsWorkspace
+from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
+from flext_infra._models.deps_tool_config_project_artifacts import FlextInfraModelsDepsToolConfigProjectArtifacts
+from flext_infra._models.layout import FlextInfraModelsLayout
 
 
 class FlextInfraConfigModelsArtifact:
@@ -384,6 +379,7 @@ class FlextInfraConfigModelsArtifact:
                 The resulting
                     ``t.VariadicTuple[FlextInfraConfigModelsScaffold.ScaffoldGitignoreSectionSpec]``.
             """
+            from flext_infra._constants import FlextInfraConstantsSharedInfra
             scaffold_sections = self.scaffold.gitignore_sections
             # A declared section may already govern a derived artifact, in
             # either direction: a whitelist re-allows `.agents/` with `!`, so
@@ -487,6 +483,7 @@ class FlextInfraConfigModelsArtifact:
                     if GitHub artifacts must be full-managed.
 
             """
+            from flext_infra._constants import FlextInfraConstantsSharedInfra
             github_templates = tuple(
                 Path(entry.destination)
                 for entry in self.templates.entries

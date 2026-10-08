@@ -17,7 +17,7 @@ from git import (
 )
 
 from flext_infra import c, m, r, t
-from flext_infra._utilities import FlextInfraUtilitiesGitSemanticPathsMixin
+from flext_infra._utilities._git.semantic_paths import FlextInfraUtilitiesGitSemanticPathsMixin
 
 if TYPE_CHECKING:
     from pathlib import Path
