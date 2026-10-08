@@ -805,6 +805,14 @@ class FlextInfraModelsDepsToolConfig(
     class ToolConfigDocument(m.ArbitraryTypesModel):
         """Root schema for canonical ``config/tooling.yaml`` policy data."""
 
+        raw_check_receipt_suffix: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                alias="raw-check-receipt-suffix",
+                pattern=r"^\.[A-Za-z0-9_.-]+$",
+                description="Filename suffix for verbatim native check receipts.",
+            ),
+        ]
         tools: FlextInfraModelsDepsToolConfig.ToolConfigTools = m.Field(
             description="Tools",
         )

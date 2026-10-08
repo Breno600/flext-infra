@@ -1,6 +1,7 @@
 Infra:
   tooling:
     # Canonical validated tooling and suppression-policy SSOT.
+    raw-check-receipt-suffix: .raw.log
     tools:
       codespell:
         check-filenames: true
