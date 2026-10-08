@@ -98,7 +98,7 @@ class FlextInfraUtilitiesGitRepo:
         entries = cls._registered_worktree_entries(porcelain)
         common_dir = Path(
             repo.git.rev_parse(
-                "--path-format=absolute",
+                c.Infra.GIT_REV_PARSE_ABSOLUTE_PATHS,
                 "--git-common-dir",
             ).strip(),
         ).resolve()
@@ -109,7 +109,7 @@ class FlextInfraUtilitiesGitRepo:
             return entries
         git_dir = Path(
             repo.git.rev_parse(
-                "--path-format=absolute",
+                c.Infra.GIT_REV_PARSE_ABSOLUTE_PATHS,
                 "--git-dir",
             ).strip(),
         ).resolve()
@@ -234,7 +234,9 @@ class FlextInfraUtilitiesGitRepo:
         """
         try:
             git_dir = Path(
-                repo.git.rev_parse("--path-format=absolute", "--git-dir").strip(),
+                repo.git.rev_parse(
+                    c.Infra.GIT_REV_PARSE_ABSOLUTE_PATHS, "--git-dir"
+                ).strip(),
             ).resolve()
             caller_root = Path(
                 repo.git.rev_parse("--show-toplevel").strip(),
@@ -311,7 +313,7 @@ class FlextInfraUtilitiesGitRepo:
             repo = cls._repo(repository_path)
             common_dir = Path(
                 repo.git.rev_parse(
-                    "--path-format=absolute",
+                    c.Infra.GIT_REV_PARSE_ABSOLUTE_PATHS,
                     "--git-common-dir",
                 ).strip(),
             ).resolve()

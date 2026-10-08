@@ -76,18 +76,22 @@ class FlextInfraUtilitiesPyprojectOverlay:
         owned_names = {
             FlextInfraUtilitiesDependencies.dep_name(item) for item in required
         }
-        merged: list[str] = sorted(
-            dict.fromkeys((
-                *required,
-                *(
-                    item
-                    for item in custom
-                    if FlextInfraUtilitiesDependencies.dep_name(item) not in owned_names
-                ),
-            )),
-            key=FlextInfraUtilitiesPyprojectRequirements.dependency_order_key,
-        )
-        return list[t.JsonValue](merged)
+        # The list display widens the sorted ``str`` items to the JSON value
+        # list the caller stores, in the single pass that materializes them.
+        return [
+            *sorted(
+                dict.fromkeys((
+                    *required,
+                    *(
+                        item
+                        for item in custom
+                        if FlextInfraUtilitiesDependencies.dep_name(item)
+                        not in owned_names
+                    ),
+                )),
+                key=FlextInfraUtilitiesPyprojectRequirements.dependency_order_key,
+            ),
+        ]
 
     @classmethod
     def _overlay_project_surface(

@@ -543,7 +543,7 @@ class FlextInfraUtilitiesDependencies(FlextInfraUtilitiesDependencyRequirements)
 
         versions: MutableMapping[str, str] = {}
         for distribution in u.installed_distributions():
-            if distribution.read_text("direct_url.json") is not None:
+            if distribution.read_text(c.Infra.DISTRIBUTION_DIRECT_URL_FILE) is not None:
                 continue
             name = distribution.metadata.get("Name")
             if name is None:

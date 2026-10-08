@@ -44,7 +44,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         """
         provenance: t.MutableSequenceOf[str] = []
         for distribution in u.installed_distributions():
-            receipt = distribution.read_text("direct_url.json")
+            receipt = distribution.read_text(c.Infra.DISTRIBUTION_DIRECT_URL_FILE)
             dir_info = (
                 None
                 if receipt is None
