@@ -91,7 +91,10 @@ class _ExportBindingInventory:
         self.collect(statement.body)
         self.collect(statement.orelse)
 
-    def _collect_branches(self, statement: ast.stmt) -> None:
+    def _collect_branches(
+        self,
+        statement: ast.For | ast.AsyncFor | ast.While,
+    ) -> None:
         """Inventory one loop statement's body and else branch."""
         self.collect(statement.body)
         self.collect(statement.orelse)

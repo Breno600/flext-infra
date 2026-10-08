@@ -44,3 +44,8 @@ class TestsFlextInfraCiToolCacheReuse:
         for directory in config.Infra.codegen.make.clean.cache_dirs:
             tm.that(directory in restore_paths, eq=True)
         tm.that(save_with["key"], eq=restore_with["key"])
+        # One path list for both steps; Mise shims never travel through the
+        # cache (a restored shim names an earlier run's Mise binary, which Mise
+        # refuses as unmanaged and warns once per tool).
+        tm.that(str(save_with["path"]).split(), eq=restore_paths)
+        tm.that("!~/.local/share/mise/shims" in restore_paths, eq=True)

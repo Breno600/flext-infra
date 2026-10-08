@@ -186,7 +186,7 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
         # never semantic input for the lazy export map.
         is_generated_or_test = (
             py_file.name in skip_names
-            or c.Infra.GENERATED_EXPORT_SIDECAR_RE.match(py_file.name)
+            or c.Infra.GENERATED_EXPORT_SIDECAR_RE.match(py_file.name) is not None
             or py_file.stem in c.Infra.OBSOLETE_ROOT_SUPPORT_NAMES
             or test_only_source_module
             # A stem that is not an identifier (numbered example scripts,
@@ -194,7 +194,7 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
             # unimportable and never semantic input for the lazy export map.
             or not py_file.stem.isidentifier()
         )
-        is_child_package = child_entry is not None and child_entry.package_name
+        is_child_package = child_entry is not None and bool(child_entry.package_name)
         return is_generated_or_test or is_child_package
 
     def _indexed_export_module(

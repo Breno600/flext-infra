@@ -100,7 +100,13 @@ class TestsFlextInfraSharedHelperPromotion:
     def _run(root: Path, probe: str) -> str:
         env = os.environ.copy()
         env["PYTHONPATH"] = os.pathsep.join([str(root), *sys.path])
-        outcome = tm.ok(u.Cli.run([sys.executable, "-c", probe], cwd=root, env=env))
+        outcome = tm.ok(
+            u.Cli.run(
+                [sys.executable, "-c", probe],
+                cwd=root,
+                options=u.Cli.ProcessOptions(env=env),
+            ),
+        )
         return outcome.stdout.strip()
 
     @staticmethod

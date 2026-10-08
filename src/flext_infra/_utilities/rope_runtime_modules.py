@@ -10,9 +10,11 @@ import ast
 from collections.abc import Iterable
 from pathlib import Path
 
-from flext_infra import c, p, t
-from flext_infra._config import config
-from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeBase
+from flext_infra import c, config, p, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesRopeRuntimeBase,
+    FlextInfraUtilitiesRopeRuntimeTypes,
+)
 
 
 class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
@@ -74,7 +76,13 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
                 except ValueError as error:
                     msg = f"Rope proposed source is outside its input inventory: {path}"
                     raise ValueError(msg) from error
-                resource = project.get_resource(relative.as_posix())
+                candidate_resource = project.get_resource(relative.as_posix())
+                if not FlextInfraUtilitiesRopeRuntimeTypes.file_resource(
+                    candidate_resource,
+                ):
+                    msg = f"Rope proposed source is outside its input inventory: {path}"
+                    raise ValueError(msg)
+                resource = candidate_resource
                 if not Path(resource.real_path).is_file():
                     msg = f"Rope proposed source is outside its input inventory: {path}"
                     raise ValueError(msg)

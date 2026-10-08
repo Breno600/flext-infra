@@ -183,10 +183,11 @@ class TestsFlextInfraRefactorImportNormalization:
             source=source,
         )
         tm.that(first is not None, eq=True)
+        normalized = first or ""
         second = FlextInfraImportNormalization.normalize_source(
             project_root=project,
             file_path=package / "service.py",
-            source=first,
+            source=normalized,
         )
 
         tm.that(second, eq=None)

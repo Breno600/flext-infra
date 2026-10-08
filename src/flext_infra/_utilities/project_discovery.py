@@ -14,8 +14,7 @@ from typing import TYPE_CHECKING, override
 
 from flext_cli import u
 
-from flext_infra import c, m
-from flext_infra._config import config
+from flext_infra import c, config, m
 from flext_infra._utilities import (
     FlextInfraUtilitiesGit,
     FlextInfraUtilitiesProjectDiscoveryCandidatesMixin,

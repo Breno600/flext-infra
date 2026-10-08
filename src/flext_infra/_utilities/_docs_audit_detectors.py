@@ -12,8 +12,7 @@ from pathlib import Path
 
 from flext_cli import u
 
-from flext_infra import c, m, t
-from flext_infra._config import config
+from flext_infra import c, config, m, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesDocs,
     FlextInfraUtilitiesDocsApi,
@@ -279,7 +278,9 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                         f"{rel}#block{index}.py",
                         "-",
                     ],
-                    input_data=match.group("body").encode(),
+                    options=u.Cli.ProcessOptions(
+                        input_data=match.group("body").encode(),
+                    ),
                 )
                 if outcome.failure:
                     detail = outcome.error

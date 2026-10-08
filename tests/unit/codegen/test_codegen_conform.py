@@ -15,8 +15,7 @@ from typing import override
 import pytest
 from flext_tests import tm
 
-from flext_core import r
-from flext_infra import config, infra
+from flext_infra import config, infra, r
 from flext_infra.codegen import (
     FlextInfraCodegenConform,
     FlextInfraCodegenMiseArtifacts,
@@ -525,7 +524,7 @@ class TestsFlextInfraCodegenConform:
         process = u.Cli.capture(
             [sys.executable, "-m", package_name, "ping"],
             cwd=root,
-            env={**os.environ, "PYTHONPATH": pythonpath},
+            options=u.Cli.ProcessOptions(env={**os.environ, "PYTHONPATH": pythonpath}),
             timeout=c.Infra.TIMEOUT_DEFAULT,
         )
         tm.ok(process)
@@ -546,7 +545,7 @@ class TestsFlextInfraCodegenConform:
         )
         selected = u.Cli.run_raw(
             ["make", "-C", str(root), "--dry-run", "_builtin_status_diagnostics"],
-            remove_env_keys=("MAKEFLAGS",),
+            options=u.Cli.ProcessOptions(remove_env_keys=("MAKEFLAGS",)),
         )
 
         selected_process = tm.ok(selected)

@@ -191,12 +191,16 @@ class TestsFlextInfraCodegenHookConformance:
             u.Cli.run_raw(
                 shlex.split(entry),
                 cwd=root,
-                env={
-                    policy.ci.variable: (
-                        policy.ci.value if inherited == "ci" else policy.ci.local_value
-                    ),
-                },
-                remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
+                options=u.Cli.ProcessOptions(
+                    env={
+                        policy.ci.variable: (
+                            policy.ci.value
+                            if inherited == "ci"
+                            else policy.ci.local_value
+                        ),
+                    },
+                    remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
+                ),
             ),
         )
 

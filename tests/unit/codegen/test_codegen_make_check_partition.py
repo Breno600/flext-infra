@@ -135,10 +135,12 @@ class TestsFlextInfraCodegenMakeCheckPartition:
             u.Cli.run_raw(
                 [c.Infra.MAKE, "--no-print-directory", "check"],
                 cwd=root,
-                env=environment,
-                remove_env_keys=(
-                    *c.Tests.MAKE_ISOLATION_ENV_KEYS,
-                    *((policy.ci.variable,) if context == "all" else ()),
+                options=u.Cli.ProcessOptions(
+                    env=environment,
+                    remove_env_keys=(
+                        *c.Tests.MAKE_ISOLATION_ENV_KEYS,
+                        *((policy.ci.variable,) if context == "all" else ()),
+                    ),
                 ),
             ),
         )

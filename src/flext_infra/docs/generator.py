@@ -9,8 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, override
 
-from flext_core import r
-from flext_infra import c, m, t, u
+from flext_infra import c, m, r, t, u
 from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 from flext_infra.docs._generator_bundle import FlextInfraDocGeneratorBundleMixin
@@ -97,7 +96,7 @@ class FlextInfraDocGenerator(
                     directories,
                 )
             analysis = m.Infra.CodegenPhaseAnalysis(
-                phase="docs",
+                phase=c.Infra.CodegenStagedFilePhase.DOCS,
                 files=plans.value,
                 inputs=current.value.source_states,
             )
@@ -151,7 +150,7 @@ class FlextInfraDocGenerator(
     @staticmethod
     def _verify_sources_unchanged(
         source_states: t.VariadicTuple[m.Cli.AtomicFileState],
-        outputs: t.AbstractSet[Path],
+        outputs: t.IterableOf[Path],
     ) -> p.Result[bool]:
         """Require every authenticated source to be untouched by the publication.
 

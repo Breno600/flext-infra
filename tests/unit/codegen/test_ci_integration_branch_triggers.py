@@ -116,16 +116,12 @@ class TestsFlextInfraCiIntegrationBranchTriggers:
             approval[0]["run"],
             eq=f"{codegen.make.ci.variable}={codegen.make.ci.value} make pre-commit",
         )
-        tm.that(
-            rendered,
-            lacks=[
-                "make gen",
-                "Candidate cleanliness",
-                "continue-on-error",
-                "make upg",
-                "make dep",
-            ],
-        )
+        # CI never executes a mutating or resolving verb; the workflow comments
+        # may still explain why (e.g. "CI never runs `make upg`"), so the
+        # contract is checked on the executed step commands.
+        run_commands = " ".join(str(step.get("run", "")) for step in steps)
+        tm.that(run_commands, lacks=["make gen", "make upg", "make dep"])
+        tm.that(rendered, lacks=["Candidate cleanliness", "continue-on-error"])
         hook = tm.ok(
             u.Cli.template_render(
                 root / ".pre-commit-config.yaml.j2",

@@ -9,10 +9,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    # flext-j47u (codex): retained only until the remaining get_ast consumers are
-    # converted atomically; this import never enters the runtime dependency graph.
-
-    from flext_infra import p, t
+    # This boundary also supplies t.Infra's aliases, so it cannot depend on them.
+    from flext_core import p, t
 
 
 @runtime_checkable
@@ -23,7 +21,8 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
     class RopeRoot(Protocol):
         """Rope project root shape."""
 
-        real_path: str
+        @property
+        def real_path(self) -> str: ...
 
         def get_child(
             self,
@@ -32,10 +31,26 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
 
     @runtime_checkable
     class RopeResource(Protocol):
-        """Rope file resource shape."""
+        """Rope project resource shape shared by files and folders."""
 
-        path: str
-        real_path: str
+        @property
+        def path(self) -> str: ...
+
+        @property
+        def real_path(self) -> str: ...
+
+        @property
+        def parent(self) -> FlextInfraProtocolsRopeRuntime.RopeRoot: ...
+
+    @runtime_checkable
+    class RopeFile(Protocol):
+        """Rope file resource with content access."""
+
+        @property
+        def path(self) -> str: ...
+
+        @property
+        def real_path(self) -> str: ...
 
         @property
         def parent(self) -> FlextInfraProtocolsRopeRuntime.RopeRoot: ...
@@ -181,7 +196,7 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
         # the widened contract keeps every consumer None guard live.
         def get_resource(
             self,
-        ) -> FlextInfraProtocolsRopeRuntime.RopeResource | None: ...
+        ) -> FlextInfraProtocolsRopeRuntime.RopeFile | None: ...
 
         def get_attributes(
             self,
@@ -195,11 +210,12 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
     class RopeProject(Protocol):
         """Rope project shape used by flext-infra."""
 
-        root: FlextInfraProtocolsRopeRuntime.RopeRoot
+        @property
+        def root(self) -> FlextInfraProtocolsRopeRuntime.RopeRoot: ...
 
         def get_resource(
             self,
-            path: str,
+            resource_name: str,
         ) -> FlextInfraProtocolsRopeRuntime.RopeResource: ...
 
         def get_pymodule(
@@ -213,32 +229,32 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
 
         def find_module(
             self,
-            module_name: str,
+            modname: str,
             folder: FlextInfraProtocolsRopeRuntime.RopeRoot | None = None,
-        ) -> FlextInfraProtocolsRopeRuntime.RopeResource | None: ...
+        ) -> FlextInfraProtocolsRopeRuntime.RopeFile | None: ...
 
         def find_relative_module(
             self,
-            module_name: str,
+            modname: str,
             folder: FlextInfraProtocolsRopeRuntime.RopeRoot,
             level: int,
         ) -> FlextInfraProtocolsRopeRuntime.RopeResource | None: ...
 
         def get_module(
             self,
-            module_name: str,
+            name: str,
             folder: FlextInfraProtocolsRopeRuntime.RopeRoot | None = None,
         ) -> FlextInfraProtocolsRopeRuntime.RopePyModule: ...
 
         def get_python_files(
             self,
-        ) -> t.SequenceOf[FlextInfraProtocolsRopeRuntime.RopeResource]: ...
+        ) -> t.SequenceOf[FlextInfraProtocolsRopeRuntime.RopeFile]: ...
 
         def do(self, changes: FlextInfraProtocolsRopeRuntime.RopeChangeSet) -> None: ...
 
         def validate(
             self,
-            root: FlextInfraProtocolsRopeRuntime.RopeRoot | None = None,
+            folder: FlextInfraProtocolsRopeRuntime.RopeRoot | None = None,
         ) -> None: ...
 
         def close(self) -> None: ...
@@ -346,7 +362,8 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
         def get_changes(
             self,
             target: FlextInfraProtocolsRopeRuntime.RopeResource,
-            resources: list[FlextInfraProtocolsRopeRuntime.RopeResource] | None = None,
+            resources: t.SequenceOf[FlextInfraProtocolsRopeRuntime.RopeResource,]
+            | None = None,
         ) -> FlextInfraProtocolsRopeRuntime.RopeChangeSet: ...
 
     @runtime_checkable

@@ -526,6 +526,42 @@ class FlextInfraConfigModelsArtifact:
             FlextInfraConstantsCodegenProject.CodegenConformMode,
             m.Field(description="Read-only check or atomic apply"),
         ] = FlextInfraConstantsCodegenProject.CodegenConformMode.CHECK
+        module: Annotated[
+            str | None,
+            m.Field(description="Exact package or module for a file-only surface"),
+        ] = None
+
+        @m.model_validator(mode="after")
+        def _validate_lazy_init_scope(self) -> Self:
+            """Reject selectors that would escape a file-only surface contract.
+
+            Returns:
+                The request with a coherent surface and repository selection.
+
+            Raises:
+                ValueError: If the module or repository selector is incompatible.
+
+            """
+            file_only = self.what in {
+                FlextInfraConstantsCodegenProject.CodegenConformSurface.LAZY_INIT,
+                FlextInfraConstantsCodegenProject.CodegenConformSurface.FACADES,
+            }
+            facades = (
+                self.what
+                == FlextInfraConstantsCodegenProject.CodegenConformSurface.FACADES
+            )
+            if self.module is not None and not file_only:
+                msg = "--module belongs only to lazy-init or facades"
+                raise ValueError(msg)
+            if facades and self.module is None:
+                msg = "facades requires an exact destination --module"
+                raise ValueError(msg)
+            if file_only and (
+                self.scope != FlextInfraConstantsCodegenProject.CodegenConformScope.SELF
+            ):
+                msg = "file-only surfaces require the self repository scope"
+                raise ValueError(msg)
+            return self
 
     class CodegenArtifactComposition(FlextInfraConfigModelsContract.ConfigContract):
         """Rendered artifact plus the exact source states used to compose it."""

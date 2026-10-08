@@ -230,6 +230,7 @@ class TestsFlextInfraUtilitiesGatesMixin:
         workspace: Path,
         *,
         rules: t.StrSequence,
+        kinds: t.StrSequence | None = None,
         options: CensusOptions | None = None,
     ) -> m.Infra.WorkspaceReport:
         """Execute one refactor census and unwrap its successful report.
@@ -240,6 +241,8 @@ class TestsFlextInfraUtilitiesGatesMixin:
         """
         fixture = TestsFlextInfraUtilitiesGatesMixin
         resolved = fixture.CensusOptions() if options is None else options
+        if kinds is not None:
+            resolved = dataclasses.replace(resolved, kinds=kinds)
         TestsFlextInfraUtilitiesToolingFixtureMixin.provision_checkout(workspace)
         result = FlextInfraRefactorCensus(
             repository_root=workspace,

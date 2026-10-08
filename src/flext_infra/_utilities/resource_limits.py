@@ -14,8 +14,7 @@ from typing import ClassVar
 
 from flext_cli import u
 
-from flext_infra import c, m, p, t
-from flext_infra._config import config
+from flext_infra import c, config, m, p, t
 from flext_infra._settings import settings
 from flext_infra._utilities import (
     FlextInfraUtilitiesProcess,
@@ -191,7 +190,9 @@ class FlextInfraUtilitiesResourceLimits:
 
     @staticmethod
     def external_cache_directory(
-        spec: m.Infra.MakeSpec.MypyCacheSpec | m.Infra.MakeSpec.CodemodRulesCacheSpec,
+        spec: m.Infra.MypyCacheSpec
+        | m.Infra.MakeSpec.MypyCacheSpec
+        | m.Infra.MakeSpec.CodemodRulesCacheSpec,
     ) -> Path:
         """Resolve one declared FLEXT cache below the XDG cache home.
 

@@ -11,8 +11,7 @@ import tomllib
 from pathlib import Path
 from typing import ClassVar, override
 
-from flext_core import r
-from flext_infra import c, p, t
+from flext_infra import c, p, r, t
 from flext_infra.base import FlextInfraServiceBase
 
 

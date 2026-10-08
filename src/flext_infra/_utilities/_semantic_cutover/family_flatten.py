@@ -12,8 +12,7 @@ from pathlib import Path
 
 from flext_cli import u
 
-from flext_infra import c, m, p, t
-from flext_infra._config import config
+from flext_infra import c, config, m, p, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesCodegenNamespace,
     FlextInfraUtilitiesRopeRuntimeModules,
@@ -99,7 +98,7 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         workspace: p.Infra.RopeWorkspaceDsl,
         project: p.Infra.RopeProject,
         path: Path,
-    ) -> t.Pair[t.Infra.RopeScopeDsl, t.Infra.RopeScopeDsl] | None:
+    ) -> t.Pair[p.Infra.RopeScopeDsl, p.Infra.RopeScopeDsl] | None:
         """Resolve the family owner scope and its single wrapper child.
 
         Returns:
@@ -142,7 +141,7 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
     @classmethod
     def _wrapper_layout(
         cls,
-        child: t.Infra.RopeScopeDsl,
+        child: p.Infra.RopeScopeDsl,
         source: str,
         path: Path,
     ) -> (
@@ -199,8 +198,8 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         project: p.Infra.RopeProject,
         source: str,
         path: Path,
-        owner_scope: t.Infra.RopeScopeDsl,
-        child: t.Infra.RopeScopeDsl,
+        owner_scope: p.Infra.RopeScopeDsl,
+        child: p.Infra.RopeScopeDsl,
     ) -> m.Infra.FamilyWrapperFlatten:
         """Build the flatten plan after proving the wrapper is safely removable.
 

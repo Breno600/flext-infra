@@ -8,8 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra import c, u
+from flext_infra import c, r, u
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -258,7 +257,7 @@ class FlextInfraExtraPathsSyncMixin:
             return r[bool].from_failure(sync_result)
         if sync_result.value and not dry_run:
             u.Cli.info(f"Updated {pyproject}")
-        return r[bool].ok(value=bool(sync_result.value))
+        return r[bool].ok(value=sync_result.value)
 
 
 __all__: list[str] = ["FlextInfraExtraPathsSyncMixin"]

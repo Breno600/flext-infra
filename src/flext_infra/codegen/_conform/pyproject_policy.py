@@ -9,9 +9,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from flext_core import r
-from flext_infra import c, m, p, t, u
-from flext_infra._config import config
+from flext_infra import c, config, m, p, r, t, u
 from flext_infra.codegen._conform.file_plans import FlextInfraCodegenConformFilePlans
 
 
@@ -100,6 +98,7 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
             source,
             workspace=workspace,
             required_dev_dependencies=codegen.scaffold.project.dev,
+            required_dependency_source=flext_line.value,
             uv_resolution=m.Infra.UvResolutionSpec(
                 link_mode=cls.link_mode(target.repository, codegen.toolchain),
                 constraint_dependencies=tuple(
@@ -155,7 +154,7 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         target_re = re.compile(policy.target_pattern)
         logical_lines = cls._logical_make_lines(content, policy)
         if logical_lines.failure:
-            return logical_lines
+            return r[bool].from_failure(logical_lines)
         in_define = False
         for line_number, raw_line in logical_lines.value:
             if in_define:

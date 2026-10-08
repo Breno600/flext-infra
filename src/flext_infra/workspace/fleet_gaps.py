@@ -8,9 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
-from flext_core import r
-from flext_infra import c, m, p, t, u
-from flext_infra._config import config
+from flext_infra import c, config, m, p, r, t, u
 from flext_infra.base import s
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
@@ -185,13 +183,13 @@ class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
         parsed = u.Cli.json_parse(run.value.stdout)
         if parsed.failure or not isinstance(parsed.value, list):
             return ()
-        validated: p.Result[t.VariadicTuple[m.Infra.FleetPullRequest]] = (
-            u.validate_value(
-                t.VariadicTuple[m.Infra.FleetPullRequest],
-                parsed.value,
-            )
-        )
-        return () if validated.failure else validated.value
+        pull_requests: list[m.Infra.FleetPullRequest] = []
+        for item in parsed.value:
+            validated = u.validate_value(m.Infra.FleetPullRequest, item)
+            if validated.failure:
+                return ()
+            pull_requests.append(validated.value)
+        return tuple(pull_requests)
 
     @classmethod
     def _unmerged_branches(

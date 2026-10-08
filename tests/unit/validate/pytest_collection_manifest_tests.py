@@ -70,8 +70,10 @@ class TestsFlextInfraPytestCollectionManifest:
                     *options,
                 ],
                 cwd=project,
-                env={"PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"},
-                remove_env_keys=("PYTEST_ADDOPTS",),
+                options=u.Cli.ProcessOptions(
+                    env={"PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"},
+                    remove_env_keys=("PYTEST_ADDOPTS",),
+                ),
             ),
         )
         return (project / "models-loaded.txt").read_text(encoding="utf-8")
