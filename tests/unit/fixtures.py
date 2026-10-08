@@ -70,15 +70,15 @@ def deptry_report_payload() -> t.JsonPayload:
 
 
 @pytest.fixture(autouse=True)
-def local_context() -> Iterator[None]:
-    """Run every scenario in the local (non-CI) context unless it declares CI.
+def runner_ci_context_cleared() -> Iterator[None]:
+    """Keep the runner's CI context out of every test body.
 
-    The runner's CI context (CI=Y under the approval path) selects CI-only
-    contracts such as the CI member identity and the CI refusal of
-    resolution, so an inherited marker made the same scenario pass locally
-    and fail on the runner. Every test therefore starts with the configured
-    CI variable cleared; a scenario that exercises CI behavior declares the
-    CI value in its own scoped environment.
+    The approval path runs the suite under ``CI=Y``: collection reads it to
+    deselect CI-excluded tests, but a test body must behave identically on a
+    runner and on a workstation. Inherited ``CI`` silently selected CI-only
+    contracts (the CI member identity, the CI resolution guard) in local
+    scenarios; a scenario that exercises a CI contract passes the configured
+    variable explicitly.
 
     Yields:
         Control inside the scoped environment.

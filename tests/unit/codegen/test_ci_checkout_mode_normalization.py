@@ -20,12 +20,7 @@ class TestsFlextInfraCiCheckoutModeNormalization:
 
     @staticmethod
     def test_ci_job_normalizes_checkout_modes_before_gates() -> None:
-        """Every CI-profile Make invocation runs after the mode normalization.
-
-        The ci job reaches every ``ci``-context workflow verb through the one
-        approval invocation, so the normalization must precede the first
-        CI-profile Make command, whichever verb it names.
-        """
+        """Test ci job normalizes checkout modes before gates."""
         steps = u.CodegenTestSupport.Ci.ci_job_steps(
             TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
                 repository_branch="0.12.0-dev",
@@ -37,12 +32,15 @@ class TestsFlextInfraCiCheckoutModeNormalization:
             if isinstance(script, str):
                 commands.extend(line.strip() for line in script.splitlines())
         normalize_at = commands.index("chmod -R go-w .")
-        ci = config.Infra.codegen.make.ci
-        make_prefix = f"{ci.variable}={ci.value} make "
-        make_at = [
-            index
-            for index, command in enumerate(commands)
-            if command.startswith(make_prefix)
-        ]
-        tm.that(make_at, empty=False)
-        tm.that(normalize_at < min(make_at), eq=True)
+        make = config.Infra.codegen.make
+        # One approval invocation owns every CI-context verb; CI never
+        # generates (gen is a local/pre-push verb) and never runs a verb
+        # outside that single blocking step.
+        approval_at = commands.index(
+            f"{make.ci.variable}={make.ci.value} make pre-commit",
+        )
+        tm.that(normalize_at < approval_at, eq=True)
+        ci_verbs = [step.verb for step in make.workflow if "ci" in step.contexts]
+        tm.that(ci_verbs, empty=False)
+        for verb in ci_verbs:
+            tm.that(verb in make.approval_verbs, eq=True)

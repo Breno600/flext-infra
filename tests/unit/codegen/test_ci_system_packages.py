@@ -10,7 +10,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import c, config
+from flext_infra import c
 from tests import t, u
 
 
@@ -37,14 +37,8 @@ class TestsFlextInfraCiSystemPackages:
         return tm.ok(u.Cli.template_render(cls.ci_template, spec))
 
     def test_declared_packages_render_one_install_step_before_the_gates(self) -> None:
-        """Declared packages install in one step before the CI approval gates.
-
-        The gates run inside the single CI-profile ``make pre-commit``
-        approval, so the install step must precede that invocation.
-        """
+        """Test declared packages render one install step before the gates."""
         rendered = self._render_ci(system_packages=("engine-calc", "engine-fonts"))
-        ci = config.Infra.codegen.make.ci
-        approval = f"{ci.variable}={ci.value} make pre-commit"
 
         tm.that(rendered.count(self.step_name), eq=1)
         tm.that(
@@ -54,8 +48,10 @@ class TestsFlextInfraCiSystemPackages:
                 "engine-calc engine-fonts"
             ),
         )
+        # The single blocking approval step (setup -> audit -> check -> test)
+        # needs the engines installed before it runs.
         tm.that(
-            rendered.index(self.step_name) < rendered.index(approval),
+            rendered.index(self.step_name) < rendered.index("Approval (blocking)"),
             eq=True,
         )
 

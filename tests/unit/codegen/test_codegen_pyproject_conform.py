@@ -291,12 +291,7 @@ class TestsFlextInfraCodegenPyprojectConform:
         *,
         attached: bool,
     ) -> None:
-        """Members publish inline sources; only the root keeps bare local floors.
-
-        A member render is context-independent: attached to a superproject or
-        standalone, it carries no fleet ``workspace`` source, because the
-        workspace root's sources already redirect every member.
-        """
+        """Members publish inline sources; only the root keeps bare local floors."""
         provider = u.Tests.provider()
         branch = u.Tests.provider_branch()
         floors = tuple(config.Infra.codegen.scaffold.project.dev)
@@ -341,6 +336,9 @@ class TestsFlextInfraCodegenPyprojectConform:
         sources = u.Tests.toml_mapping(
             u.Tests.toml_table_at(first, "tool", "uv").get("sources", {}),
         )
+        # A member render is context-independent: attached to a superproject
+        # or standalone, it carries git-sourced floors and no fleet source, so
+        # it installs from a clone. Only the workspace root redirects members.
         for name in internal:
             expected = name if is_root else u.Tests.flext_source(name)
             tm.that(expected in dev, eq=True)
@@ -423,18 +421,14 @@ class TestsFlextInfraCodegenPyprojectConform:
         unattached = config.Infra.codegen.infra_repository.distribution
         result = u.Infra.pyproject_conform(
             f'[project]\nname = "external-consumer"\ndependencies = ["{unattached}"]\n',
-            workspace=self._workspace(role=c.Infra.MakeProfile.STANDALONE),
+            workspace=self._workspace(),
             required_dev_dependencies=(),
             uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
         )
         tm.fail(result, has="internal dependency declares no direct git source")
 
     def test_standalone_canonicalizes_the_declared_git_source(self) -> None:
-        """The declared requirement line is the only URL and branch authority.
-
-        Only a workspace-root render strips members to bare names; a
-        standalone render keeps the declared inline git pin.
-        """
+        """The declared requirement line is the only URL and branch authority."""
         workspace = self._workspace(role=c.Infra.MakeProfile.STANDALONE)
         member = workspace.subprojects[0]
         declared = (
