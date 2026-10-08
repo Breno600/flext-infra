@@ -97,6 +97,17 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
                 description="Declared mise release the running binary must match",
             ),
         ]
+        mise_install_tools: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                min_length=1,
+                description=(
+                    "Explicit [tools] keys `mise install` provisions in setup "
+                    "and upg, so the operator's global Mise registry is never "
+                    "installed by a project verb"
+                ),
+            ),
+        ]
         python_version: Annotated[
             t.NonEmptyStr,
             m.Field(description="Python minor line the environment syncs against"),

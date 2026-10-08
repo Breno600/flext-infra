@@ -33,9 +33,9 @@ class TestsFlextInfraDocsFormatter:
         return FlextInfraDocFormatter(format_gate=infra.markdown_format_gate)
 
     @staticmethod
-    def _write_prettier_policy(workspace: Path) -> None:
-        """Provide the generated prettier settings owner the gate requires."""
-        (workspace / c.Infra.PRETTIER_CONFIG_FILENAME).write_text(
+    def _write_markdown_rules(workspace: Path) -> None:
+        """Provide the generated markdown rule projection the gate requires."""
+        (workspace / c.Infra.MARKDOWNLINT_CONFIG_FILENAME).write_text(
             "{}\n",
             encoding="utf-8",
         )
@@ -43,7 +43,7 @@ class TestsFlextInfraDocsFormatter:
     def test_fmt_returns_report_for_root_scope(self, tmp_path: Path) -> None:
         """The format phase reports the root scope like every docs phase."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
-        self._write_prettier_policy(workspace)
+        self._write_markdown_rules(workspace)
 
         result = self._formatter().format(workspace, apply=True)
 
@@ -54,7 +54,7 @@ class TestsFlextInfraDocsFormatter:
     def test_fmt_check_apply_check_converges(self, tmp_path: Path) -> None:
         """Fail on unformatted drift, format it, then pass at the fixed point."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
-        self._write_prettier_policy(workspace)
+        self._write_markdown_rules(workspace)
         (workspace / "docs/README.md").write_text(
             "#   Docs\n\n##   Overview\ntrailing spaces   \n",
             encoding="utf-8",
@@ -86,7 +86,7 @@ class TestsFlextInfraDocsFormatter:
     def test_toc_fix_and_format_keep_literal_code_symbols(self, tmp_path: Path) -> None:
         """A rendered TOC must survive the real fixer and formatter together."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
-        self._write_prettier_policy(workspace)
+        self._write_markdown_rules(workspace)
         document = workspace / "docs/toc.md"
         document.write_text(
             "# Docs\n\n"
@@ -118,7 +118,7 @@ class TestsFlextInfraDocsFormatter:
     def test_fmt_check_only_never_rewrites_the_tree(self, tmp_path: Path) -> None:
         """The preview pass leaves the pending drift untouched on disk."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
-        self._write_prettier_policy(workspace)
+        self._write_markdown_rules(workspace)
         drift = "#   Docs\n\n##   Overview\n"
         (workspace / "docs/README.md").write_text(drift, encoding="utf-8")
 
@@ -127,11 +127,11 @@ class TestsFlextInfraDocsFormatter:
         tm.ok(result)
         tm.that((workspace / "docs/README.md").read_text(encoding="utf-8"), eq=drift)
 
-    def test_fmt_fails_closed_without_generated_prettier_config(
+    def test_fmt_fails_closed_without_generated_markdown_rules(
         self,
         tmp_path: Path,
     ) -> None:
-        """A missing generated .prettierrc is a generation gap, never a pass."""
+        """A missing generated .markdownlint.json is a generation gap, never a pass."""
         workspace = u.Tests.create_docs_workspace(tmp_path)
 
         result = self._formatter().format(workspace, apply=False)

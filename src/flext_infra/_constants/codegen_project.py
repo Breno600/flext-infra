@@ -17,6 +17,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from enum import StrEnum, unique
+from types import MappingProxyType
 from typing import TYPE_CHECKING, ClassVar, Literal
 
 from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
@@ -258,6 +259,20 @@ class FlextInfraConstantsCodegenProject:
     "Lockfile cache-key fragment (``<version>~<hash>``); never a selector."
     MISE_MOVING_SELECTOR: ClassVar[str] = "latest"
     "Selector resolved only by ``make upg`` into the committed ``mise.lock``."
+    MISE_VERSION_PLACEHOLDER: ClassVar[str] = "{version}"
+    "Placeholder a toolchain version_probe pattern carries for the lock version."
+    MISE_LOCK_PLATFORM_KEY: ClassVar[str] = "platforms.{platform}"
+    "mise.lock per-platform table key of one locked tool version."
+    MISE_PLATFORM_BY_HOST: ClassVar[t.MappingKV[t.StrPair, str]] = MappingProxyType({
+        ("Linux", "x86_64"): "linux-x64",
+        ("Linux", "aarch64"): "linux-arm64",
+        ("Darwin", "x86_64"): "macos-x64",
+        ("Darwin", "arm64"): "macos-arm64",
+        ("Windows", "AMD64"): "windows-x64",
+    })
+    "Host (platform.system(), platform.machine()) -> mise.lock platform name."
+    MISE_MUSL_PLATFORM_SUFFIX: ClassVar[str] = "-musl"
+    "mise.lock platform suffix of a Linux host without glibc."
     GIT_URL_SUFFIX: ClassVar[str] = ".git"
     "Canonical clone-URL suffix every governed RepositoryRef URL carries."
     CUSTOM_MAKE_FILENAME: ClassVar[str] = "custom.mk"
