@@ -90,7 +90,7 @@ class FlextInfraCodegenStaging:
         Returns:
             The resulting ``p.Result[t.Pair[t.VariadicTuple[tuple[
                 m.Infra.CodegenFilePlan, m.Cli.AtomicFileState, tuple[Path,
-                bytes, int], bool]], t.MappingKV[Path,
+                bytes, int] | None, bool]], t.MappingKV[Path,
                 m.Cli.AtomicDirectoryState]]]``.
 
         """

@@ -12,11 +12,11 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import c, infra, m
-from flext_infra.codemod.apply_renames import FlextInfraApplyRenames
-from flext_infra.codemod.batch_apply import FlextInfraCodemodBatchApply
-from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
-from flext_infra.codemod.loop_phases import (
+from flext_infra.codemod import (
     FlextInfraAccessorRenamePhase,
+    FlextInfraApplyRenames,
+    FlextInfraCodemodBatchApply,
+    FlextInfraModGateEngine,
     FlextInfraNamespaceRelocationPhase,
 )
 from tests import u

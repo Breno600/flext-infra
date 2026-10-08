@@ -32,7 +32,7 @@ class FlextInfraAccessorOriginResolver:
         self._pymodules: dict[str, t.Infra.RopePyModule] = {}
 
     @staticmethod
-    def is_origin_path(definition_path: str, *, origin: str) -> bool:
+    def within_origin(definition_path: str, *, origin: str) -> bool:
         """Return whether ``definition_path`` lives inside the origin package.
 
         Returns:
