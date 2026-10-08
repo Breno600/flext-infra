@@ -469,7 +469,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         workspace: m.Infra.WorkspaceSpec,
         contract: m.Infra.CodegenConformSurfaceContract,
         profile: c.Infra.MakeProfile,
-        managed: m.Infra.CodegenManagedFile,
+        managed: m.Infra.ManagedFileSpec,
     ) -> bool:
         """Whether this managed file is out of scope for the current surface.
 
@@ -499,7 +499,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         codegen: m.Infra.CodegenConfigSpec,
         workspace: m.Infra.WorkspaceSpec,
         root: Path,
-        managed: m.Infra.CodegenManagedFile,
+        managed: m.Infra.ManagedFileSpec,
     ) -> p.Result[t.Pair[t.Pair[m.Infra.TemplateEntrySpec, Path], bool]]:
         """Resolve the single render template entry and its physical target path.
 
@@ -560,7 +560,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
     def _retired_workflow_orphan(
         self,
         render_inputs: m.Infra.CodegenRenderInputs,
-        managed: m.Infra.CodegenManagedFile,
+        managed: m.Infra.ManagedFileSpec,
         path: Path,
     ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan, bool]]:
         """Plan retirement of a profile-excluded generated workflow orphan.
@@ -594,7 +594,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
     def _rendered_managed_plan(
         self,
         render_inputs: m.Infra.CodegenRenderInputs,
-        managed: m.Infra.CodegenManagedFile,
+        managed: m.Infra.ManagedFileSpec,
         entry: m.Infra.TemplateEntrySpec,
         path: Path,
     ) -> p.Result[t.Pair[m.Infra.CodegenRenderInputs, m.Infra.CodegenFilePlan]]:
@@ -805,7 +805,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
     def _bind_governed_ownership(
         root: Path,
         planned: t.SequenceOf[m.Infra.CodegenFilePlan],
-        governed_by_path: t.MappingKV[Path, m.Infra.CodegenManagedFile],
+        governed_by_path: t.MappingKV[Path, m.Infra.ManagedFileSpec],
     ) -> p.Result[t.Pair[list[m.Infra.CodegenFilePlan], set[Path]]]:
         """Stamp governed ownership onto the planned files, first plan wins.
 
@@ -847,7 +847,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         cls,
         target: m.Infra.RepositoryConformTarget,
         codegen: m.Infra.CodegenConfigSpec,
-        governed_by_path: t.MappingKV[Path, m.Infra.CodegenManagedFile],
+        governed_by_path: t.MappingKV[Path, m.Infra.ManagedFileSpec],
         represented: set[Path],
         completed: list[m.Infra.CodegenFilePlan],
     ) -> p.Result[bool]:
@@ -933,7 +933,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         root: Path,
         path: Path,
         relative: Path,
-        governed: m.Infra.CodegenManagedFile,
+        governed: m.Infra.ManagedFileSpec,
         current: str,
     ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan, bool]]:
         """Decide the representing plan: owner merge first, plain content next.
@@ -971,7 +971,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         root: Path,
         path: Path,
         relative: Path,
-        governed: m.Infra.CodegenManagedFile,
+        governed: m.Infra.ManagedFileSpec,
         current: str,
     ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan, bool]]:
         """Plan owner-specific merge behavior for special governed artifacts.
@@ -1003,7 +1003,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         cls,
         root: Path,
         relative: Path,
-        governed: m.Infra.CodegenManagedFile,
+        governed: m.Infra.ManagedFileSpec,
         current: str,
     ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan, bool]]:
         """Render the canonical vscode settings merge when it diverges.
@@ -1042,7 +1042,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         root: Path,
         path: Path,
         relative: Path,
-        governed: m.Infra.CodegenManagedFile,
+        governed: m.Infra.ManagedFileSpec,
         current: str,
     ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan, bool]]:
         """Normalize the local envrc overrides or plan the file's deletion.

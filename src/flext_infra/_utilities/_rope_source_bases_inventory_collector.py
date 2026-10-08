@@ -299,7 +299,7 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
 
     @staticmethod
     def _subscript_rebind_target(
-        target: ast.expr,
+        target: ast.Subscript,
     ) -> m.Infra.SubscriptRebind | None:
         """Return the typed rebind rule for one subscript target, or None.
 
@@ -353,7 +353,7 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
 
     @staticmethod
     def _is_module_table_target(
-        target: ast.expr,
+        target: ast.Subscript,
         bindings: t.MappingKV[str, m.Infra.SourceClassReference | None] | None,
     ) -> bool:
         """Return whether one subscript target only writes a runtime table.

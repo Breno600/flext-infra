@@ -262,7 +262,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
             The resulting ``(patches, deleted paths)`` pair.
 
         """
-        patches = tuple(
+        patches: t.VariadicTuple[bytes] = tuple(
             repo.git.diff(
                 *layer,
                 "--binary",
@@ -278,19 +278,21 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
             ).encode(c.Cli.ENCODING_DEFAULT, errors="surrogateescape")
             for layer in ((), ("--cached",))
         )
-        deleted = {
-            Path(name)
-            for name in repo.git.diff(
-                "--name-only",
-                "--diff-filter=D",
-                "-z",
-                c.Infra.GIT_HEAD,
-                "--",
-                ".",
-                *pathspecs,
-            ).split("\0")
-            if name
-        }
+        deleted = frozenset(
+            {
+                Path(name)
+                for name in repo.git.diff(
+                    "--name-only",
+                    "--diff-filter=D",
+                    "-z",
+                    c.Infra.GIT_HEAD,
+                    "--",
+                    ".",
+                    *pathspecs,
+                ).split("\0")
+                if name
+            },
+        )
         return patches, deleted
 
     @staticmethod

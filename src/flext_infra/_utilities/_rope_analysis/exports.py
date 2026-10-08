@@ -391,7 +391,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
     @staticmethod
     def _assignment_export_allowed(
         export_options: m.Infra.ExportOptions,
-        pyname: t.Infra.RopePyName,
+        pyname: t.Infra.RopeAssignedName,
         guard_spans: t.SequenceOf[t.Pair[int, int]],
     ) -> bool:
         """Return whether one assigned name is exportable under the options.

@@ -310,7 +310,7 @@ class FlextInfraCodegenStaging:
                 replacement = staged_state.value
             publications.append(
                 m.Infra.CodegenStagedFile(
-                    phase=phase,
+                    phase=c.Infra.CodegenStagedFilePhase(phase),
                     project=file_plan.project,
                     before=before,
                     replacement=replacement,

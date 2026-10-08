@@ -797,14 +797,31 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                     f"{identity}"
                 )
                 raise TypeError(message)
-            builtin_class = FlextInfraUtilitiesRopeRuntime.runtime_type(
+            builtin_class = FlextInfraUtilitiesRopeRuntime._runtime_callable(
                 "rope.base.builtins",
                 "BuiltinClass",
             )
             return tuple(
-                self._external_identity(builtin_class(base, {}))
+                self._external_identity(
+                    self._builtin_base_identity(builtin_class(base, {})),
+                )
                 for base in value.builtin.__bases__
             )
+
+        @staticmethod
+        def _builtin_base_identity(
+            value: p.AttributeProbe,
+        ) -> t.Infra.RopePyObject:
+            """Narrow one constructed Rope builtin base to its object shape.
+
+            Raises:
+                TypeError: If the constructed base is not a Rope class object.
+
+            """
+            if not FlextInfraUtilitiesRopeRuntime.abstract_class(value):
+                message = "Rope builtin base did not resolve to a class object"
+                raise TypeError(message)
+            return value
 
         def _linearize(self, identity: str) -> t.StrTuple:
             """Return the C3 linearization of one identity's ancestry.
