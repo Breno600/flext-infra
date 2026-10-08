@@ -1,0 +1,51 @@
+id: hoist-inline-acyclic-import
+snapshots:
+  ? |
+    class Owner:
+        def run(self):
+            from flext_infra import c
+            return c
+  : labels:
+    - source: from flext_infra import c
+      style: primary
+      start: 40
+      end: 65
+    - source: flext_infra
+      style: secondary
+      start: 45
+      end: 56
+    - source: c
+      style: secondary
+      start: 64
+      end: 65
+    - source: |-
+        def run(self):
+                from flext_infra import c
+                return c
+      style: secondary
+      start: 17
+      end: 82
+  ? |
+    def run():
+        from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
+        return FlextInfraPyprojectModernizer
+  : labels:
+    - source: from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
+      style: primary
+      start: 15
+      end: 84
+    - source: flext_infra.deps.modernizer
+      style: secondary
+      start: 20
+      end: 47
+    - source: FlextInfraPyprojectModernizer
+      style: secondary
+      start: 55
+      end: 84
+    - source: |-
+        def run():
+            from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
+            return FlextInfraPyprojectModernizer
+      style: secondary
+      start: 0
+      end: 125
