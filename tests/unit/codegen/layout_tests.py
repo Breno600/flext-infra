@@ -22,6 +22,7 @@ from tests.unit.codegen.layout_fixture import (
 )
 
 
+@pytest.mark.usefixtures("local_context")
 class TestsFlextInfraCodegenLayout:
     """Test suite for the declarative project-layout engine."""
 
