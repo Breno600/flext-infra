@@ -186,6 +186,8 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         Loose top-level helper and sentinel classes can move together with their
         construction sites. A class already inside an owner is not such a helper.
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
+
         resource = project.get_resource(
             file_path.relative_to(Path(project.root.real_path)).as_posix(),
         )

@@ -10,7 +10,7 @@ import ast
 from collections.abc import Iterable
 from pathlib import Path
 
-from flext_infra import c, config, p, t
+from flext_infra import c, config, m, p, t
 from flext_infra._utilities.rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
 
 
@@ -62,6 +62,8 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
             ValueError: If Rope proposed source is outside its input inventory.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeTypes
+
         inventory = (
             {
                 Path(resource.real_path).resolve(): resource.read()

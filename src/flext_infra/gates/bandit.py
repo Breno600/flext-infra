@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, config, m, t, u
@@ -223,7 +224,7 @@ class FlextInfraBanditGate(FlextInfraGate):
         excluded = config.Infra.codegen.generated_source_globs
         if not excluded:
             return command
-        return (*command, "--exclude", ",".join(generated))
+        return (*command, "--exclude", ",".join(excluded))
 
     @override
     def _parse_check_output(
@@ -289,7 +290,9 @@ class FlextInfraBanditGate(FlextInfraGate):
 
         Bandit fails its run on every reported result, so each one is a
         blocking gate finding; Bandit's own LOW/MEDIUM/HIGH rating is not the
-        gate severity vocabulary and stays in the raw report.
+        gate severity vocabulary and stays in the raw report. Bandit names a
+        file given on its command line ``./<path>`` and a discovered one
+        ``<path>``; the issue carries the one project-relative spelling.
 
         Returns:
             The resulting ``t.SequenceOf[m.Infra.Issue]``.
@@ -297,8 +300,8 @@ class FlextInfraBanditGate(FlextInfraGate):
         """
         return tuple(
             m.Infra.Issue(
-                file=u.Cli.json_pick_str(raw_item, "filename", "?"),
-                line=u.Cli.json_pick_int(raw_item, "line_number"),
+                file=str(PurePosixPath(finding.filename)),
+                line=finding.line_number,
                 column=0,
                 code=finding.test_id,
                 message=finding.issue_text,
