@@ -494,8 +494,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 if (
                     path in visited
                     or not path.is_file()
-                    or path.suffix
-                    not in {c.Infra.EXT_PYTHON, c.Infra.EXT_PYTHON_STUB}
+                    or path.suffix not in {c.Infra.EXT_PYTHON, c.Infra.EXT_PYTHON_STUB}
                 ):
                     continue
                 visited.add(path)

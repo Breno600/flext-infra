@@ -70,6 +70,11 @@ class FlextInfraConstantsRefactor:
         "settings",
     })
     "Root singletons and import layers of the config/settings law (ADR-005)."
+    IMPORT_LAW_GUARD_ERRORS: ClassVar[frozenset[str]] = frozenset({
+        "ImportError",
+        "ModuleNotFoundError",
+    })
+    "Exceptions whose handlers make a ``try`` around imports an import guard."
 
     @unique
     class ImportPlacement(StrEnum):

@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import ast
 from collections import defaultdict
 from collections.abc import MutableMapping, MutableSequence, MutableSet
 from pathlib import Path
@@ -405,6 +406,29 @@ class FlextInfraModelsRefactor(
 
             """
             return self.namespace_dir.name
+
+    class ImportLawPass(m.ArbitraryTypesModel):
+        """One parsed module and the facts one import-law pass reads from it."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        scope: Annotated[
+            FlextInfraModelsRefactor.ImportLawScope,
+            m.Field(description="Module facts of the pass"),
+        ]
+        tree: Annotated[ast.Module, m.Field(description="Parsed module")]
+        parents: Annotated[
+            t.MappingKV[int, ast.AST],
+            m.Field(description="Child node id to parent node map"),
+        ]
+        bindings: Annotated[
+            t.MappingKV[str, ast.stmt],
+            m.Field(description="Module-level statement binding each top name"),
+        ]
+        root_exports: Annotated[
+            t.StrMapping,
+            m.Field(description="Names the namespace root publishes lazily"),
+        ]
 
 
 __all__: list[str] = ["FlextInfraModelsRefactor"]
