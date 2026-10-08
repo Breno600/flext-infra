@@ -14,6 +14,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_infra import c, config, m, t, u
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 
 class FlextInfraToolTablesPhase:
@@ -73,6 +74,14 @@ class FlextInfraToolTablesPhase:
 
         """
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
+            return ()
+        workspace = FlextInfraWorkspaceDetector.load_workspace_spec(
+            project_dir,
+            allow_unprovisioned_members=True,
+        )
+        if workspace.failure:
+            raise ValueError(workspace.error)
+        if workspace.value.repository.role != c.Infra.MakeProfile.WORKSPACE:
             return ()
         discovered = u.Infra.discover_projects(project_dir)
         if discovered.failure:

@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import pytest
 from flext_tests import tm
 
 from flext_infra import c, u
@@ -13,6 +14,44 @@ from flext_infra import c, u
 
 class TestsFlextInfraManagedConflictRecovery:
     """Prove conflict recovery remains bounded by the document SSOT."""
+
+    @staticmethod
+    @pytest.mark.parametrize("closing_quotes", [0, 1, 2])
+    @pytest.mark.parametrize("delimiter", ['"""', "'''"])
+    @pytest.mark.parametrize("newline", ["\n", "\r\n"])
+    def test_tooling_regeneration_preserves_custom_multiline_values(
+        delimiter: str,
+        newline: str,
+        closing_quotes: int,
+    ) -> None:
+        """A header inside custom data is never treated as managed policy."""
+        spec = tm.ok(u.Infra.pyproject_managed_file())
+        owned = f"tool.{spec.managed_tool_tables[0]}"
+        custom = newline.join((
+            "[project]",
+            'name = "fixture-project"',
+            f"description = {delimiter}",
+            f"[{owned}]",
+            delimiter + delimiter[0] * closing_quotes,
+            "[dependency-groups]",
+            'dev = ["fixture-dependency>=1"]',
+            "",
+        ))
+        corrupt = custom + newline.join((
+            f"[[{owned}.rows]]",
+            "enabled = true",
+            "enabled = false",
+            "",
+        ))
+
+        recovered = tm.ok(u.Infra.pyproject_regeneration_source(corrupt))
+
+        tm.that(u.Cli.toml_mapping_from_text(custom) is not None, eq=True)
+        tm.that(recovered, eq=custom)
+        tm.that(
+            u.Cli.toml_mapping_from_text(recovered),
+            eq=u.Cli.toml_mapping_from_text(custom),
+        )
 
     @staticmethod
     def test_every_table_the_conform_pipeline_writes_is_recoverable() -> None:

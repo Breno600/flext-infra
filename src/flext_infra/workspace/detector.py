@@ -367,16 +367,21 @@ class FlextInfraWorkspaceDetector(
         path: Path = Path(),
         composed: bool = False,
         declared_url: str | None = None,
+        declared_repository: m.Infra.RepositoryRef | None = None,
     ) -> p.Result[m.Infra.RepositoryRef]:
-        """Build repository policy from local metadata and an immutable Git URL.
+        """Build identity from declared recovery topology or validated live metadata.
 
         Returns:
             The resulting ``p.Result[m.Infra.RepositoryRef]``.
 
         """
-        metadata = u.Infra.read_project_metadata_result(repository_root)
-        if metadata.failure:
-            return r[m.Infra.RepositoryRef].from_failure(metadata)
+        if declared_repository is None:
+            metadata = u.Infra.read_project_metadata_result(repository_root)
+            if metadata.failure:
+                return r[m.Infra.RepositoryRef].from_failure(metadata)
+            project_name = metadata.value.project.name
+        else:
+            project_name = declared_repository.distribution
         origin = cls._git_origin_url(repository_root)
         if origin.failure:
             return r[m.Infra.RepositoryRef].from_failure(origin)
@@ -399,7 +404,6 @@ class FlextInfraWorkspaceDetector(
             if (repository_root / c.Infra.GITMODULES).is_file()
             else c.Infra.MakeProfile.STANDALONE
         )
-        project_name = metadata.value.project.name
         _, separator, repository_name = u.Infra.git_remote_identity(
             origin.value,
         ).partition("/")
@@ -427,7 +431,11 @@ class FlextInfraWorkspaceDetector(
                 provider=provider_result.value,
                 kind=c.Infra.ProjectKind.INTERNAL_FLEXT,
                 codegen=c.Infra.CodegenKind.CONFORM,
-                package=u.Infra.layout(repository_root) is not None,
+                package=(
+                    declared_repository.package
+                    if declared_repository is not None
+                    else u.Infra.layout(repository_root) is not None
+                ),
                 editable=composed,
                 read_only=False,
             ),
@@ -769,6 +777,11 @@ class FlextInfraWorkspaceDetector(
         repository = cls._local_repository_ref(
             resolved_root,
             composed=identity.value.is_attached_submodule,
+            declared_repository=(
+                manifest.repository
+                if manifest is not None and allow_unprovisioned_members
+                else None
+            ),
         )
         if repository.failure:
             return r[m.Infra.WorkspaceSpec].from_failure(repository)

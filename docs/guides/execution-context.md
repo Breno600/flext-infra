@@ -148,8 +148,14 @@ committed `.mise.toml` never changes, so the next upgrade retries the newest rel
 When Git leaves the generated `mise.lock` unmerged, the publisher reads the exact
 stage-2 lock from that repository's index solely to authenticate the existing
 sidecars. It still derives the replacement lock from `.mise.toml` through `make upg`
-and publishes that replacement transactionally. A malformed lock without a Git
-conflict, or sidecars that no longer match stage 2, fails without changing the lock.
+and publishes that replacement transactionally. When the physical `.mise/locks`
+namespace is absent, there are no old graphs to authenticate: only the resolver's
+explicit `publish-resolved` operation can replace a malformed inline lock while
+retaining its exact bytes in the journal. Ordinary `publish` remains strict.
+The resolver may rebuild absent old sidecars, but existing trees still require
+authentication and unclaimed target collisions still fail before publication.
+An existing graph namespace still requires a parseable old lock or authenticated
+Git stage 2; mismatched sidecars fail without changing the lock.
 
 Mise reaches GitHub only to install a tool missing from the persistent cache and inside
 `make upg`. Only `make upg` writes `mise.lock` and `uv.lock`; `make setup` never writes

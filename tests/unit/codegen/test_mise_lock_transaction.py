@@ -64,13 +64,18 @@ class TestsFlextInfraMiseLockTransaction:
         return stage
 
     @staticmethod
-    def _publish(root: Path, stage: Path) -> tuple[bool, str]:
+    def _publish(
+        root: Path,
+        stage: Path,
+        *,
+        publication: str = "publish",
+    ) -> tuple[bool, str]:
         outcome = tm.ok(
             u.Cli.run_raw(
                 [
                     sys.executable,
                     str(root / "bin/mise-lock-transaction.py"),
-                    "publish",
+                    publication,
                     str(root),
                     str(stage),
                 ],
@@ -189,9 +194,76 @@ class TestsFlextInfraMiseLockTransaction:
                 eq=f"name: {package}\r\n".encode(),
             )
 
+    @pytest.mark.parametrize("graphs_exist", [False, True])
+    @pytest.mark.parametrize("publication", ["publish", "publish-resolved"])
+    def test_corrupt_lock_recovery_preserves_existing_graphs(
+        self,
+        tmp_path: Path,
+        *,
+        graphs_exist: bool,
+        publication: str,
+    ) -> None:
+        """Only a graph-free old projection can be replaced without parsing it."""
+        generated, _ = u.Tests.render_make_environment(
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
+        )
+        root = tmp_path / "graph-recovery"
+        root.mkdir()
+        script = u.Infra.mise_bootstrap_environment().lock_transaction_script
+        projected_script = root / script
+        projected_script.parent.mkdir(parents=True)
+        projected_script.write_bytes((generated / script).read_bytes())
+        lock = root / "mise.lock"
+        old = b'version = "first"\nversion = "second"\n[tools]\n'
+        lock.write_bytes(old)
+        preserved = root / ".mise/locks/preserved"
+        if graphs_exist:
+            preserved.parent.mkdir(parents=True)
+            preserved.write_bytes(b"existing graph data\n")
+        stage = self._stage(root, "corrupt")
+        expected = (stage / "mise.lock").read_bytes()
+
+        passed, error = self._publish(root, stage, publication=publication)
+
+        succeeds = publication == "publish-resolved" and not graphs_exist
+        tm.that(passed, eq=succeeds, msg=error)
+        tm.that(lock.read_bytes(), eq=expected if succeeds else old)
+        if graphs_exist:
+            tm.that(preserved.read_bytes(), eq=b"existing graph data\n")
+            tm.that((stage / "transaction.json").exists(), eq=False)
+
+    @pytest.mark.parametrize("publication", ["publish", "publish-resolved"])
+    def test_resolver_replaces_only_absent_old_sidecars(
+        self,
+        tmp_path: Path,
+        publication: str,
+    ) -> None:
+        """Missing old payloads never authorize changing an unclaimed physical tree."""
+        root, _ = u.Tests.render_make_environment(
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
+        )
+        replacement = self._stage(root, "missing-replacement")
+        old = (replacement / "mise.lock").read_bytes()
+        (root / "mise.lock").write_bytes(old)
+        unclaimed = root / ".mise/locks/unclaimed/payload"
+        unclaimed.parent.mkdir(parents=True)
+        unclaimed.write_bytes(b"unclaimed data\n")
+        expected = (replacement / "mise.lock").read_bytes()
+
+        passed, error = self._publish(root, replacement, publication=publication)
+
+        succeeds = publication == "publish-resolved"
+        tm.that(passed, eq=succeeds, msg=error)
+        tm.that((root / "mise.lock").read_bytes(), eq=expected if succeeds else old)
+        tm.that(unclaimed.read_bytes(), eq=b"unclaimed data\n")
+
+    @pytest.mark.parametrize("prior_state", ["valid", "malformed", "missing"])
     def test_publish_regenerates_an_unmerged_generated_lock(
         self,
         tmp_path: Path,
+        prior_state: str,
     ) -> None:
         """The public publisher reads Git's prior lock without editing a projection."""
         root, _ = u.Tests.render_make_environment(
@@ -204,28 +276,40 @@ class TestsFlextInfraMiseLockTransaction:
             tm.that(u.Cli.process_succeeded(outcome.outcome), eq=succeeds)
 
         lock = root / "mise.lock"
+        initial = self._stage(root, "initial")
+        old_graph = (initial / "mise.lock").read_bytes()
+        passed, error = self._publish(root, initial)
+        tm.that(passed, eq=True, msg=error)
         git("init", "-b", "main")
         git("config", "user.name", "FLEXT Test")
         git("config", "user.email", "test@flext.invalid")
-        lock.write_text('version = "base"\n[tools]\n', encoding="utf-8")
+        lock.write_bytes(b'version = "base"\n' + old_graph)
         git("add", "mise.lock")
         git("commit", "-m", "base lock")
         git("switch", "-c", "incoming")
-        lock.write_text('version = "incoming"\n[tools]\n', encoding="utf-8")
+        lock.write_bytes(b'version = "incoming"\n' + old_graph)
         git("commit", "-am", "incoming lock")
         git("switch", "main")
-        lock.write_text('version = "current"\n[tools]\n', encoding="utf-8")
+        lock.write_bytes(
+            b'version = "current"\n'
+            + (b'version = "duplicate"\n' if prior_state == "malformed" else b"")
+            + old_graph,
+        )
         git("commit", "-am", "current lock")
         git("merge", "--no-ff", "incoming", succeeds=False)
         tm.that(lock.read_bytes(), has=b"<<<<<<< ")
+        if prior_state == "missing":
+            git("add", "mise.lock")
+        before = lock.read_bytes()
 
         stage = self._stage(root, "merge")
         expected = (stage / "mise.lock").read_bytes()
         passed, error = self._publish(root, stage)
 
-        tm.that(passed, eq=True, msg=error)
-        tm.that(lock.read_bytes(), eq=expected)
-        tm.that(stage.exists(), eq=False)
+        succeeds = prior_state == "valid"
+        tm.that(passed, eq=succeeds, msg=error)
+        tm.that(lock.read_bytes(), eq=expected if succeeds else before)
+        tm.that(stage.exists(), eq=not succeeds)
 
     def test_publish_preserves_another_stage_without_a_journal(
         self,

@@ -46,7 +46,11 @@ class FlextInfraUtilitiesPyproject:
         )
 
     @staticmethod
-    def live_pyproject_text(pyproject_path: Path) -> p.Result[str]:
+    def live_pyproject_text(
+        pyproject_path: Path,
+        *,
+        regenerate_managed_tools: bool = False,
+    ) -> p.Result[str]:
         """Read one live pyproject and resolve managed merge conflicts.
 
         Returns:
@@ -59,8 +63,13 @@ class FlextInfraUtilitiesPyproject:
         content = raw.value.content
         if content is None:
             return r[str].fail(f"pyproject is absent: {pyproject_path}")
-        return FlextInfraUtilitiesPyproject.recover_live_pyproject_text(
+        live = FlextInfraUtilitiesPyproject.recover_live_pyproject_text(
             content.decode(c.Cli.ENCODING_DEFAULT),
+        )
+        if live.failure or not regenerate_managed_tools:
+            return live
+        return FlextInfraUtilitiesManagedConflicts.pyproject_regeneration_source(
+            live.value,
         )
 
     @staticmethod

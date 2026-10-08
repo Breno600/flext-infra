@@ -190,13 +190,8 @@
    the persistent cache, and `make upg` (release resolution, lock, launcher).
    Every other Mise call runs through mise_offline. The Makefile preamble owns
    the credential selection; the passthrough carries it into env -i. -#}
-	# The only tolerated Mise warning: ephemeral CI runners ship pre-seeded
-	# shims (python3, make) and `mise install` always announces it declines to
-	# replace them while every real install still succeeds (cosmos-main PR 346
-	# CI run 37348896444, bead on cosmos-l2wc2). Every OTHER mise WARN stays
-	# fatal: red-means-red is untouched.
 	mise_has_blocking_warning() { \
-		grep -F 'mise WARN' "$$1" | grep -Fv 'not replacing unmanaged file in shims directory' | grep -q .; \
+		grep -Fq 'mise WARN' "$$1"; \
 	}; \
 	mise_checked() { \
 		mise_log="$$1"; shift; \
@@ -342,7 +337,9 @@
 			fi; \
 			printf '%s\n'{% for line in bootstrap.version_pin_header %} '{{ line }}'{% endfor %} "$$runtime_release" > "$$lock_stage/artifacts/{{ bootstrap.artifact_specs[2][0] }}"; \
 		fi; \
-		mise_checked "$$scratch/publish-lock.log" "$$staged_python" "$$project_root/{{ bootstrap.lock_transaction_script }}" publish "$$project_root" "$$lock_stage"; \
+		publication=publish; \
+		if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then publication=publish-resolved; fi; \
+		mise_checked "$$scratch/publish-lock.log" "$$staged_python" "$$project_root/{{ bootstrap.lock_transaction_script }}" "$$publication" "$$project_root" "$$lock_stage"; \
 		mise_trusted_config_paths="$$project_root"; \
 		if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then locked_manifest="$$scratch/locked-manifest.toml"; fi; \
 	else \

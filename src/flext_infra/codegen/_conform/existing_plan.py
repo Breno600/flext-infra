@@ -45,6 +45,10 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         repository = target.repository
         if contract.destinations == frozenset(c.Infra.ARTIFACT_NAMES):
             return FlextInfraMiseColdStart.candidate_plans(root)
+        if contract.destinations == c.Infra.MAKEFILE_BOOTSTRAP_DESTINATIONS:
+            return self._plan_existing_bootstrap(target, workspace, codegen)
+        if contract.destinations == frozenset({c.PYPROJECT_FILENAME}):
+            return self._plan_existing_pyproject_bootstrap(root)
         stage_started = time.monotonic()
         u.Cli.info(f"  stage=pyproject repository={repository.name}")
         pyproject = root / c.PYPROJECT_FILENAME
@@ -77,8 +81,6 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 "PEP 621 project name does not match catalog distribution: "
                 f"{dist} != {repository.distribution}",
             )
-        if contract.destinations == c.Infra.MAKEFILE_BOOTSTRAP_DESTINATIONS:
-            return self._plan_existing_bootstrap(target, workspace, codegen)
         docs_config = (Path(c.Infra.DIR_DOCS) / c.Infra.DOCS_CONFIG_FILENAME).as_posix()
         if contract.destinations == frozenset({docs_config}):
             return self._plan_existing_docs_config(
@@ -178,6 +180,43 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 )
             planned.extend(custom_result.value)
         return r[t.SequenceOf[m.Infra.CodegenFilePlan]].ok(tuple(planned))
+
+    def _plan_existing_pyproject_bootstrap(
+        self,
+        root: Path,
+    ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
+        """Project owned policy before consumers require a valid physical TOML file."""
+        result_type = r[t.SequenceOf[m.Infra.CodegenFilePlan]]
+        live = u.Infra.live_pyproject_text(
+            root / c.PYPROJECT_FILENAME,
+            regenerate_managed_tools=True,
+        )
+        if live.failure:
+            return result_type.from_failure(live)
+        spec = u.Infra.pyproject_managed_file()
+        if spec.failure:
+            return result_type.from_failure(spec)
+        modernizer = FlextInfraPyprojectModernizer(
+            repository_root=root,
+            skip_check=True,
+        )
+        conformed = modernizer.conform_source(
+            live.value,
+            path=root / c.PYPROJECT_FILENAME,
+            format_source=False,
+            topology=m.Infra.PyprojectDeclaredTopology(),
+        )
+        if conformed.failure:
+            return result_type.from_failure(conformed)
+        planned = self.file_plan(
+            root,
+            c.PYPROJECT_FILENAME,
+            conformed.value,
+            mode=spec.value.mode,
+        )
+        if planned.failure:
+            return result_type.from_failure(planned)
+        return result_type.ok((planned.value,))
 
     def _plan_existing_bootstrap(
         self,

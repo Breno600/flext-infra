@@ -143,6 +143,35 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         )
 
     @pytest.mark.slow
+    def test_makefile_bootstrap_does_not_parse_corrupt_tooling(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Declared topology repairs Make even when a tooling projection is corrupt."""
+        source, first, _ = self._campaign(tmp_path)
+        pyproject = first / c.PYPROJECT_FILENAME
+        content = pyproject.read_text(encoding="utf-8")
+        pyproject.write_text(
+            content + '\n[tool.mypy]\nplugins = ["pydantic.mypy"]\n',
+            encoding="utf-8",
+        )
+        before = tm.ok(u.Cli.atomic_read_binary_file_state(pyproject, required=True))
+        makefile = first / c.Infra.MAKEFILE_FILENAME
+        makefile.write_text("ifdef broken\n", encoding="utf-8")
+
+        tm.ok(
+            infra.bootstrap_candidate(
+                m.Infra.CandidateBootstrapCommand(repository_root=source),
+            ),
+        )
+
+        tm.that(makefile.read_text(encoding="utf-8"), lacks="ifdef broken")
+        tm.that(
+            tm.ok(u.Cli.atomic_read_binary_file_state(pyproject, required=True)),
+            eq=before,
+        )
+
+    @pytest.mark.slow
     def test_check_only_reports_drift_without_publication(self, tmp_path: Path) -> None:
         """A check does not enter the recoverable writer or change a target."""
         source, first, _ = self._campaign(tmp_path)
