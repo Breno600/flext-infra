@@ -209,29 +209,6 @@ class TestsFlextInfraCodegenMakeUpgrade:
 
     @staticmethod
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
-    def test_upg_hands_the_staged_lock_to_the_transaction_publisher(
-        tmp_path: Path,
-        profile: c.Infra.MakeProfile,
-    ) -> None:
-        """The staged lock and its sidecars reach the tree through one publisher.
-
-        ``mise lock`` writes the lock and each tool's sidecar into a stage
-        beside the project; the generated transaction publisher is the one
-        owner that publishes them, sidecars before the lock. The converge
-        step keeps ``gen`` output so a failure carries its cause.
-        """
-        project_root, _repository_root = u.Tests.render_make_environment(
-            tmp_path,
-            profile,
-            bootstrap=True,
-        )
-        makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
-            encoding="utf-8",
-        )
-        tm.that(makefile, has='publish "$$project_root" "$$lock_stage"')
-        tm.that(makefile, has="$(SELF_MAKE) gen; \\")
-        tm.that(makefile, lacks=["gen > /dev/null", "could not be staged"])
-
     def test_generated_dependency_upgrade_projects_lock_floors(
         self,
         tmp_path: Path,

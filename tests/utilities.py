@@ -328,13 +328,12 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                 ).plan(request),
             )
             # Materialize the complete activation contract through its guarded
-            # publisher, including Beads metadata consumed by the generated .envrc
-            # and the Mise lock publisher the generated upg recipe runs.
+            # publisher, including Beads metadata consumed by the generated
+            # .envrc. The Mise lock publisher scripts retired with Mise
+            # self-management (config/codegen.yaml retired_projections).
             paths = {
                 project_root / c.Infra.MAKEFILE_FILENAME,
                 project_root / ".envrc",
-                project_root / "bin" / "mise-lock-transaction.py",
-                project_root / "bin" / "mise-lock-converge.py",
             }
             if bootstrap:
                 paths.update(

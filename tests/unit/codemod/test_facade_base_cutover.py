@@ -23,6 +23,31 @@ class TestsFlextInfraFacadeBaseCutover:
     PARENT_CLASS = "ParentDeclaredModelFacade"
     OTHER_CLASS = "OtherDeclaredModelFacade"
 
+    @staticmethod
+    def _lazy_publication(submodule: str, *names: str) -> str:
+        """Render the lazy publication a generated package ``__init__`` carries.
+
+        Generated initializers publish every name through one
+        ``install_lazy_exports(__name__, globals(), MappingProxyType({...}))``
+        call mapping each name to its provider submodule.
+
+        Returns:
+            The publication statements for ``names``.
+
+        """
+        entries = "".join(f'        "{name}": "{submodule}",\n' for name in names)
+        return (
+            "from types import MappingProxyType\n"
+            "from flext_core.lazy import install_lazy_exports\n"
+            "install_lazy_exports(\n"
+            "    __name__,\n"
+            "    globals(),\n"
+            "    MappingProxyType({\n"
+            f"{entries}"
+            "    }),\n"
+            ")\n"
+        )
+
     @pytest.mark.parametrize(
         ("statement", "base", "rebind"),
         [
@@ -86,8 +111,7 @@ class TestsFlextInfraFacadeBaseCutover:
             "from typing import TYPE_CHECKING\n"
             "if TYPE_CHECKING:\n"
             f"    from .models import {self.OTHER_CLASS}, m\n"
-            f"{c.Infra.LAZY_IMPORTS_BINDING} = "
-            f"{{'.models': ({self.OTHER_CLASS!r}, 'm')}}\n"
+            f"{self._lazy_publication('.models', self.OTHER_CLASS, 'm')}"
             f"__all__ = [{self.OTHER_CLASS!r}, 'm']\n"
         )
         sources[other / "models.py"] = (
@@ -163,8 +187,7 @@ class TestsFlextInfraFacadeBaseCutover:
                 "from typing import TYPE_CHECKING\n"
                 "if TYPE_CHECKING:\n"
                 f"    from .models import {self.PARENT_CLASS}, m\n"
-                f"{c.Infra.LAZY_IMPORTS_BINDING} = "
-                f"{{'.models': ({self.PARENT_CLASS!r}, 'm')}}\n"
+                f"{self._lazy_publication('.models', self.PARENT_CLASS, 'm')}"
                 f"__all__ = [{self.PARENT_CLASS!r}, 'm']\n"
             ),
             parent / "models.py": (
@@ -177,8 +200,7 @@ class TestsFlextInfraFacadeBaseCutover:
                 "from typing import TYPE_CHECKING\n"
                 "if TYPE_CHECKING:\n"
                 "    from .protocols import SecondDeclaredProtocols, p\n"
-                f"{c.Infra.LAZY_IMPORTS_BINDING} = "
-                "{'.protocols': ('SecondDeclaredProtocols', 'p')}\n"
+                f"{self._lazy_publication('.protocols', 'SecondDeclaredProtocols', 'p')}"
                 "__all__ = ['SecondDeclaredProtocols', 'p']\n"
             ),
             second / "protocols.py": (
@@ -205,33 +227,21 @@ class TestsFlextInfraFacadeBaseCutover:
         tm.that(updated, has=f"from parent_pkg import {self.PARENT_CLASS}\n")
         tm.that(updated, has="from second_pkg import SecondDeclaredProtocols\n")
 
-    @pytest.mark.parametrize(
-        "annotation",
-        ["", f"{c.Infra.LAZY_IMPORTS_BINDING}: Mapping\n"],
-    )
     def test_lazy_published_letter_resolves_the_declared_class(
         self,
         tmp_path: Path,
-        annotation: str,
     ) -> None:
-        """A letter published only through the lazy map still resolves."""
+        """A letter published only through the generated lazy map resolves.
+
+        The package binds the letter nowhere else (no TYPE_CHECKING import):
+        the ``install_lazy_exports`` publication alone names its provider.
+        """
         parent = tmp_path / "parent/src/parent_pkg"
         child = tmp_path / "child/src/child_pkg/models.py"
         sources = {
             parent / "__init__.py": (
-                "from types import MappingProxyType\n"
                 f"__all__ = [{self.PARENT_CLASS!r}, 'm']\n"
-                f"{annotation}"
-                f"{c.Infra.LAZY_IMPORTS_BINDING} = MappingProxyType(\n"
-                "    build_lazy_import_map(\n"
-                "        MappingProxyType({\n"
-                f'            ".models": ({self.PARENT_CLASS!r}, "m"),\n'
-                "        }),\n"
-                "        alias_groups=MappingProxyType({}),\n"
-                "        sort_keys=False,\n"
-                "    )\n"
-                ")\n"
-                f"{annotation}"
+                f"{self._lazy_publication('.models', self.PARENT_CLASS, 'm')}"
             ),
             parent / "models.py": (
                 "from base_pkg import m\n"
@@ -287,8 +297,7 @@ class TestsFlextInfraFacadeBaseCutover:
         parent = tmp_path / "parent/src/parent_pkg"
         sources[parent / "__init__.py"] = (
             f"{guard_import}\n"
-            f"{c.Infra.LAZY_IMPORTS_BINDING} = "
-            f"{{'.models': ({self.PARENT_CLASS!r}, 'm')}}\n"
+            f"{self._lazy_publication('.models', self.PARENT_CLASS, 'm')}"
             f"if {guard}:\n"
             f"    from parent_pkg import {self.PARENT_CLASS}, m\n"
             f"__all__ = [{self.PARENT_CLASS!r}, 'm']\n"
@@ -431,8 +440,7 @@ class TestsFlextInfraFacadeBaseCutover:
                 "from typing import TYPE_CHECKING\n"
                 "if TYPE_CHECKING:\n"
                 f"    from .models import {self.PARENT_CLASS}, m\n"
-                f"{c.Infra.LAZY_IMPORTS_BINDING} = "
-                f"{{'.models': ({self.PARENT_CLASS!r}, 'm')}}\n"
+                f"{self._lazy_publication('.models', self.PARENT_CLASS, 'm')}"
                 f"__all__ = [{self.PARENT_CLASS!r}, 'm']\n"
             ),
             parent / "models.py": (
