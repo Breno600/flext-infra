@@ -74,6 +74,8 @@ class FlextInfraImportNormalizationRoutesMixin(
             The resulting ``t.SequenceOf[tuple[int, int, t.StrSequence]]``.
 
         """
+        if state.scope.direct_imports:
+            return ()
         edits: t.MutableSequenceOf[tuple[int, int, t.StrSequence]] = []
         for node in cls._iter_imports(state.tree):
             if not isinstance(node, ast.ImportFrom) or node.level or not node.module:
@@ -114,10 +116,9 @@ class FlextInfraImportNormalizationRoutesMixin(
     ) -> str | None:
         """Return the namespace root when one binding is a root alias.
 
-        A facade module keeps the letters it declares, a family package keeps
-        its own letter's upstream source, and the settings/config layers keep
-        their own law; every other module binds a root alias through its own
-        namespace root.
+        A facade module keeps the letters it declares and a family package
+        keeps its own letter's upstream source; every other routed module
+        binds a root alias through its own namespace root.
 
         Returns:
             The namespace root, or ``None`` when the binding is no root alias.
@@ -131,12 +132,7 @@ class FlextInfraImportNormalizationRoutesMixin(
         aliases = c.Infra.ALIAS_NAMES | c.Infra.IMPORT_LAW_ROOT_SINGLETONS
         if bound not in aliases and published != module:
             return None
-        layer = u.Infra.import_layer_order()[scope.layer]
-        if (
-            bound in scope.own_exports
-            or bound == scope.family_letter
-            or layer in c.Infra.IMPORT_LAW_ROOT_SINGLETONS
-        ):
+        if bound in scope.own_exports or bound == scope.family_letter:
             return None
         return scope.namespace
 
