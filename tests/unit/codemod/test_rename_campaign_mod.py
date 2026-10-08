@@ -67,7 +67,7 @@ class TestsFlextInfraRenameCampaignMod:
                     str(mod_workspace),
                     *(("--apply",) if apply else ()),
                 ),
-                options=u.Cli.ProcessOptions(
+                options=m.Cli.ProcessOptions(
                     env={"FLEXT_INFRA_CONFIG_DIR": str(config_dir)},
                 ),
             ),
@@ -177,7 +177,7 @@ class TestsFlextInfraRenameCampaignMod:
                     str(mod_workspace),
                     "--apply",
                 ),
-                options=u.Cli.ProcessOptions(
+                options=m.Cli.ProcessOptions(
                     env={"FLEXT_INFRA_CONFIG_DIR": str(config_dir)},
                 ),
             ),
@@ -232,7 +232,7 @@ class TestsFlextInfraRenameCampaignMod:
                     str(mod_workspace),
                     "--apply",
                 ),
-                options=u.Cli.ProcessOptions(
+                options=m.Cli.ProcessOptions(
                     env={"FLEXT_INFRA_CONFIG_DIR": str(config_dir)},
                 ),
             ),

@@ -104,7 +104,7 @@ class TestsFlextInfraSharedHelperPromotion:
             u.Cli.run(
                 [sys.executable, "-c", probe],
                 cwd=root,
-                options=u.Cli.ProcessOptions(env=env),
+                options=m.Cli.ProcessOptions(env=env),
             ),
         )
         return outcome.stdout.strip()

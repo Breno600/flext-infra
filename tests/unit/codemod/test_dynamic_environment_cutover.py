@@ -86,7 +86,7 @@ class TestsFlextInfraDynamicEnvironmentCutover:
         output = tm.ok(
             u.Cli.run_raw(
                 (sys.executable, "-I", str(path), mode),
-                options=u.Cli.ProcessOptions(
+                options=m.Cli.ProcessOptions(
                     env=environment,
                     remove_env_keys=(key,) if value is None else (),
                 ),

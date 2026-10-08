@@ -48,7 +48,7 @@ class TestsFlextInfraCodegenLayout:
                     ),
                 ],
                 cwd=project,
-                options=u.Cli.ProcessOptions(
+                options=m.Cli.ProcessOptions(
                     env={
                         "FLEXT_INFRA_CONFIG_DIR": str(
                             FlextInfraConfig.ssot_config_dir(),

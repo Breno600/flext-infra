@@ -82,16 +82,6 @@ class FlextInfraModGateEngine:
                     ),
                     toolchain_root=root,
                 )
-                tested = cls._run_tool(
-                    temp_root,
-                    (
-                        c.Infra.SG,
-                        c.Infra.TEST,
-                        c.Infra.SG_CONFIG_FLAG,
-                        str(temp_root / c.Infra.CODEMOD_CONFIG_FILENAME),
-                    ),
-                    toolchain_root=root,
-                )
                 if tested.failure:
                     remedy = (
                         c.Infra.CODEMOD_SNAPSHOT_REFRESH_HINT
@@ -152,16 +142,6 @@ class FlextInfraModGateEngine:
                         c.Infra.SG,
                         c.Infra.TEST,
                         c.Infra.SG_UPDATE_ALL,
-                        c.Infra.SG_CONFIG_FLAG,
-                        str(temp_root / c.Infra.CODEMOD_CONFIG_FILENAME),
-                    ),
-                    toolchain_root=root,
-                ).unwrap()
-                cls._run_tool(
-                    temp_root,
-                    (
-                        c.Infra.SG,
-                        c.Infra.TEST,
                         c.Infra.SG_CONFIG_FLAG,
                         str(temp_root / c.Infra.CODEMOD_CONFIG_FILENAME),
                     ),
@@ -454,23 +434,6 @@ class FlextInfraModGateEngine:
             f"mod: start {' '.join(command[:2])} args={max(0, len(command) - 2)}\n",
         )
         sys.stderr.flush()
-        pinned = (
-            c.Infra.MISE,
-            "-C",
-            str(toolchain_root),
-            "exec",
-            "--",
-            *command,
-        )
-        run = u.Cli.run_raw(pinned, cwd=root, timeout=c.Infra.TIMEOUT_SHORT)
-        pinned = (
-            c.Infra.MISE,
-            "-C",
-            str(toolchain_root),
-            "exec",
-            "--",
-            *command,
-        )
         run = u.Cli.run_raw(pinned, cwd=root, timeout=c.Infra.TIMEOUT_SHORT)
         if run.failure:
             return r[p.Cli.CommandOutput].from_failure(run)
