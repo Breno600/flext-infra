@@ -14,7 +14,7 @@ sonar.sourceEncoding=UTF-8
 {% for member in workspace_subprojects -%}
 {% set scope.members = scope.members + [member ~ "/**"] -%}
 {% endfor -%}
-sonar.exclusions={{ (sonarcloud.exclusions | list + [tests_dir ~ "/**"] + scope.members) | join(",") }}
+sonar.exclusions={{ (sonarcloud.exclusions | list + generated_source_globs | list + [tests_dir ~ "/**"] + scope.members) | join(",") }}
 {% set cpd_exclusions = sonarcloud.cpd_exclusions | list + scope.members -%}
 {% if cpd_exclusions -%}
 sonar.cpd.exclusions={{ cpd_exclusions | join(",") }}

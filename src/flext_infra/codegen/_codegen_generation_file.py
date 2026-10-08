@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_infra import c, m, t
+from flext_infra import c, config, m, t
 from flext_infra.codegen._codegen_generation_standard import (
     FlextInfraCodegenGenerationStandardMixin,
 )
@@ -28,6 +28,10 @@ class FlextInfraCodegenGenerationFileMixin(FlextInfraCodegenGenerationStandardMi
         normally and receive the populated lazy facade (operator init law
         2026-09-16: light init WITH exports — never an empty facade).
 
+        A generated source tree (codegen artifact ``generated_source``) holds
+        foreign-generator modules that declare no FLEXT export contract; its
+        initializer only makes the tree a regular package, so it is static.
+
         Returns:
             The resulting ``str``.
 
@@ -37,7 +41,7 @@ class FlextInfraCodegenGenerationFileMixin(FlextInfraCodegenGenerationStandardMi
         if (
             root_package == c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
             and segments & c.Infra.BOOTSTRAP_CYCLE_EXCEPTION_SEGMENTS
-        ):
+        ) or plan.context.pkg_dir.name in config.Infra.codegen.generated_sources:
             return c.Infra.TEMPLATE_STATIC_INIT
         return c.Infra.TEMPLATE_ROOT_INIT
 

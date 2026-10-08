@@ -266,10 +266,20 @@ class TestsFlextInfraCodegenRepositoryRootScope:
             )
         ]
         tm.that(positions, eq=sorted(positions))
-        tm.that(sum("lock --project" in step for step in steps), eq=1)
-        final_lock = next(i for i, s in enumerate(steps) if "lock --project" in s)
+        # uv.lock resolves twice (flext-5kqsx): the upgrade selects the newest
+        # generator, and the relock resolves the pyproject that generator's
+        # render half projected, so a requirement only the upgraded generator
+        # declares reaches the lock in the same run. The check follows the
+        # final resolution and precedes the tool relock.
+        locks = [i for i, step in enumerate(steps) if "lock --project" in step]
+        tm.that(len(locks), eq=2)
+        upgrade_lock, final_lock = locks
+        tm.that(steps[upgrade_lock], has="--upgrade")
+        tm.that(steps[final_lock], lacks="--upgrade")
+        rendered = next(i for i, s in enumerate(steps) if "_builtin-gen" in s)
         lock_check = max(i for i, s in enumerate(steps) if "lock --check" in s)
-        tm.that(final_lock < lock_check, eq=True)
+        tool_lock = next(i for i, s in enumerate(steps) if "lock --bump" in s)
+        tm.that(rendered < final_lock < lock_check < tool_lock, eq=True)
         tm.that(execution.stdout + execution.stderr, has="_upg_activated")
 
     @staticmethod

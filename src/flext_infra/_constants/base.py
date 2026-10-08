@@ -107,6 +107,8 @@ class FlextInfraConstantsBase(
     "Pyrefly search-path settings key."
     PROJECT_EXCLUDES: ClassVar[str] = "project-excludes"
     "Pyrefly project-excludes settings key."
+    PYREFLY_PROJECT_EXCLUDES_FLAG: ClassVar[str] = "--project-excludes"
+    "Pyrefly CLI flag carrying project excludes when explicit files are checked."
     SUB_CONFIG: ClassVar[str] = "sub-settings"
     "Pyrefly sub-settings key."
     EXTRA_PATHS: ClassVar[str] = "extraPaths"

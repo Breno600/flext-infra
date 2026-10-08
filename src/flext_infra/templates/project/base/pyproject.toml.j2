@@ -263,6 +263,16 @@ disable_error_code = [
 {% endfor %}
 ]
 {% endif %}
+{% if tooling_runtime.mypy_generated_source_modules %}
+
+[[tool.mypy.overrides]]
+module = [
+{% for item in tooling_runtime.mypy_generated_source_modules %}
+  {{ item | tojson }},
+{% endfor %}
+]
+ignore_errors = true
+{% endif %}
 
 [tool.pydantic-mypy]
 init_forbid_extra = {{ tooling.tools.pydantic_mypy.init_forbid_extra | lower }}
@@ -272,7 +282,7 @@ warn_required_dynamic_aliases = {{ tooling.tools.pydantic_mypy.warn_required_dyn
 [tool.pyrefly]
 disable-project-excludes-heuristics = {{ tooling.tools.pyrefly.disable_project_excludes_heuristics | lower }}
 project-excludes = [
-{% for item in tooling.tools.pyrefly.project_exclude_globs | sort %}
+{% for item in tooling_runtime.pyrefly_project_excludes %}
   {{ item | tojson }},
 {% endfor %}
 ]

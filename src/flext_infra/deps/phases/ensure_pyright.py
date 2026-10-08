@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import c, m, t, u
+from flext_infra import c, config, m, t, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
@@ -301,6 +301,7 @@ class FlextInfraEnsurePyrightConfigPhase:
         provided_exclusions = () if analysis_exclusions is None else analysis_exclusions
         return sorted({
             *rules.default_excludes,
+            *config.Infra.codegen.generated_source_globs,
             *workspace_excludes,
             *provided_exclusions,
         })

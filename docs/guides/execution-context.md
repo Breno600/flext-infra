@@ -72,6 +72,11 @@ and `make fmt` never upgrade: they install frozen from those locks, which is the
 path. Git dependencies follow the tips of their declared integration branches, and `APPLY`
 stays removed.
 
+One `make upg` run converges. It upgrades `uv.lock`, installs the upgraded generator,
+projects the manifests through `make gen`, and then resolves `uv.lock` again from the
+projected `pyproject.toml` and installs it. A requirement that only the upgraded
+generator declares therefore reaches the lock and the environment in the same run.
+
 Each internal `flext-*` requirement declares its integration line in `pyproject.toml`,
 never a commit: the resolved commit exists only in `uv.lock`, and only `make upg` moves
 it to the line tip. The manifest does not pin revisions. A commit left in the
