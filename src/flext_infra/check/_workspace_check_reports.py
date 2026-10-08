@@ -59,6 +59,17 @@ class FlextInfraWorkspaceCheckReportsMixin:
                     f"- {gate}: {gate_status} ({len(execution.issues)} issues)",
                 )
                 lines.extend(f"  - {issue.formatted}" for issue in execution.issues)
+                if (
+                    execution.outcome is c.Infra.ToolOutcome.ERROR
+                    and execution.raw_output
+                ):
+                    lines.extend([
+                        "",
+                        f"Native output ({gate}):",
+                        "",
+                        *(f"    {line}" for line in execution.raw_output.split("\n")),
+                        "",
+                    ])
             lines.append("")
         return "\n".join(lines)
 

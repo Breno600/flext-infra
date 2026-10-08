@@ -59,6 +59,7 @@ class FlextInfraConstantsCodegenProject:
         ALL = "all"
         DEPENDENCIES = "dependencies"
         DOCS_CONFIG = "docs-config"
+        LAZY_INIT = "lazy-init"
         MAKEFILE = "makefile"
         PYPROJECT = "pyproject"
 

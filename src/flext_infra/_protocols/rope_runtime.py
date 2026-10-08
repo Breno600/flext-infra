@@ -9,10 +9,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    # flext-j47u (codex): retained only until the remaining get_ast consumers are
-    # converted atomically; this import never enters the runtime dependency graph.
-
-    from flext_infra import p, t
+    # This boundary also supplies t.Infra's aliases, so it cannot depend on them.
+    from flext_core import p, t
 
 
 @runtime_checkable

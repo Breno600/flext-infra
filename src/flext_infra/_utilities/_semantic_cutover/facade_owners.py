@@ -2,7 +2,7 @@
 
 The owner of a facade letter is the module that declares it in its own
 ``__all__`` next to the class it names (``__all__ = ["FlextCliModels", "m"]``).
-Resolution follows the last module-scope binding of each name through imports
+Resolution follows the last runtime module-scope binding of each name through imports
 and plain or annotated aliases, reading editable and installed sources without
 importing them. No class name is ever inferred from a package name.
 
@@ -23,6 +23,7 @@ from flext_infra import c
 from flext_infra._utilities import (
     FlextInfraUtilitiesPrivateImportFacades,
     FlextInfraUtilitiesRopeAnalysis,
+    FlextInfraUtilitiesRopeSourceBindingCollector,
 )
 
 if TYPE_CHECKING:
@@ -262,7 +263,8 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         Every facade letter re-resolves its bindings through the same modules,
         and each conform plan derives the facades twice (plan and fixed-point
         replan), so the key is the exact source text: an edited module is a new
-        key, never a stale tree.
+        key, never a stale tree. TYPE_CHECKING declarations belong to the static
+        source inventory, not this runtime publication view.
 
         Returns:
             The resulting ``t.VariadicTuple[ast.stmt]``.
@@ -331,7 +333,9 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         cls,
         body: t.SequenceOf[ast.stmt],
     ) -> Iterator[ast.stmt]:
-        """Yield module-scope bindings in execution order, entering conditionals.
+        """Yield runtime bindings, excluding static-only TYPE_CHECKING bodies.
+
+        Other conditions retain the existing conservative branch traversal.
 
         Yields:
             Each ``ast.stmt``.
@@ -339,7 +343,10 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         """
         for node in body:
             if isinstance(node, ast.If):
-                yield from cls._facade_ordered_statements(node.body)
+                if not FlextInfraUtilitiesRopeSourceBindingCollector._is_type_checking_test(
+                    node.test,
+                ):
+                    yield from cls._facade_ordered_statements(node.body)
                 yield from cls._facade_ordered_statements(node.orelse)
             else:
                 yield node

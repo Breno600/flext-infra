@@ -89,8 +89,7 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
         """
         ambient_cache_dir = os.environ.get("UV_CACHE_DIR")
         cache = Path(
-            ambient_cache_dir
-            or tm.ok(u.Cli.capture(["uv", "cache", "dir"])).strip(),
+            ambient_cache_dir or tm.ok(u.Cli.capture(["uv", "cache", "dir"])).strip(),
         )
         databases = (project_root, *sorted(cache.glob("git-v*/db/*")))
         mirrored: list[str] = []

@@ -526,6 +526,36 @@ class FlextInfraConfigModelsArtifact:
             FlextInfraConstantsCodegenProject.CodegenConformMode,
             m.Field(description="Read-only check or atomic apply"),
         ] = FlextInfraConstantsCodegenProject.CodegenConformMode.CHECK
+        module: Annotated[
+            str | None,
+            m.Field(description="Exact package or module for the lazy-init surface"),
+        ] = None
+
+        @m.model_validator(mode="after")
+        def _validate_lazy_init_scope(self) -> Self:
+            """Reject selectors that would escape the initializer-only contract.
+
+            Returns:
+                The request with a coherent surface and repository selection.
+
+            Raises:
+                ValueError: If the module or repository selector is incompatible.
+
+            """
+            lazy_init = (
+                self.what
+                is FlextInfraConstantsCodegenProject.CodegenConformSurface.LAZY_INIT
+            )
+            if self.module is not None and not lazy_init:
+                msg = "--module belongs only to the lazy-init surface"
+                raise ValueError(msg)
+            if lazy_init and (
+                self.scope
+                is not FlextInfraConstantsCodegenProject.CodegenConformScope.SELF
+            ):
+                msg = "lazy-init requires the self repository scope"
+                raise ValueError(msg)
+            return self
 
     class CodegenArtifactComposition(FlextInfraConfigModelsContract.ConfigContract):
         """Rendered artifact plus the exact source states used to compose it."""
