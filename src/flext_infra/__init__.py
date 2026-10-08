@@ -67,6 +67,9 @@ if TYPE_CHECKING:
     from flext_infra.codegen.mise_artifacts_workspace import (
         FlextInfraMiseWorkspacePlanner,
     )
+    from flext_infra.codegen.mise_toolchain_proof import (
+        FlextInfraCodegenMiseToolchainProof,
+    )
     from flext_infra.codegen.pipeline import (
         FlextInfraCodegenLazyInitGenerationMixin,
         FlextInfraCodegenPipeline,
@@ -249,6 +252,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenLazyInitPlanner",
     "FlextInfraCodegenMakeBootstrap",
     "FlextInfraCodegenMiseArtifacts",
+    "FlextInfraCodegenMiseToolchainProof",
     "FlextInfraCodegenPipeline",
     "FlextInfraCodegenPipelineStagesMixin",
     "FlextInfraCodegenProjectNew",
@@ -438,6 +442,7 @@ install_lazy_exports(
         "FlextInfraCodegenLazyInitPlanner": ".codegen.lazy_init_planner",
         "FlextInfraCodegenMakeBootstrap": ".codegen.make_bootstrap",
         "FlextInfraCodegenMiseArtifacts": ".codegen.mise_artifacts",
+        "FlextInfraCodegenMiseToolchainProof": ".codegen.mise_toolchain_proof",
         "FlextInfraCodegenPipeline": ".codegen.pipeline",
         "FlextInfraCodegenPipelineStagesMixin": ".codegen.pipeline",
         "FlextInfraCodegenProjectNew": ".codegen.project_new",

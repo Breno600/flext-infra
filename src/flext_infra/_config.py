@@ -22,12 +22,6 @@ class FlextInfraConfig(FlextCliConfig):
     # method.
     Infra: FlextInfraConfigModels.Infra
 
-    # Environment key names owned by the typed config (semantic-cutover
-    # provenance for the bootstrap's Mise storage resolution).
-    MISE_DATA_DIR_ENV: str = "MISE_DATA_DIR"
-    XDG_DATA_HOME_ENV: str = "XDG_DATA_HOME"
-    HOME_ENV: str = "HOME"
-
     @classmethod
     def ssot_config_dir(cls) -> Path:
         """Public resolution of the packaged/workspace ``config/`` directory.
