@@ -190,6 +190,13 @@ class FlextInfraModReplacements:
         updated = cls._apply_replacements(before.content, replacements, path)
         if updated.failure:
             return r[m.Infra.SemanticFilePlan].from_failure(updated)
+        bindings: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
+        for finding in findings:
+            for state in finding.binding_states:
+                if bindings.setdefault(state.path, state) != state:
+                    return r[m.Infra.SemanticFilePlan].fail(
+                        f"binding snapshots disagree: {state.path}",
+                    )
         return r[m.Infra.SemanticFilePlan].ok(
             m.Infra.SemanticFilePlan(
                 project=u.Infra.project_root(path) or root,
@@ -198,6 +205,7 @@ class FlextInfraModReplacements:
                 desired_content=updated.value,
                 desired_mode=before.mode,
                 changes=tuple(finding.rule_id for finding in findings),
+                source_states=tuple(bindings.values()),
             ),
         )
 

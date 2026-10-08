@@ -106,6 +106,10 @@ class FlextInfraModelsScan:
             m.Cli.AtomicFileState | None,
             m.Field(description="Exact source snapshot authenticated before scanning"),
         ] = None
+        binding_states: Annotated[
+            tuple[m.Cli.AtomicFileState, ...],
+            m.Field(default_factory=tuple, description="Closed occurrence-binding source receipts"),
+        ]
         range: Annotated[
             t.JsonMapping,
             m.Field(description="Exact ast-grep source range payload"),

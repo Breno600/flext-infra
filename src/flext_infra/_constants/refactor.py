@@ -179,6 +179,10 @@ class FlextInfraConstantsRefactor:
         PACKAGE_LAYERS = "package-layers"
         PACKAGE_ROOT_INIT = "package-root-init"
         FAMILY_BASE = "family-base"
+        RESOLVED_SYMBOL = "resolved-symbol"
+        SAME_BINDING = "same-binding"
+        EXECUTABLE_OCCURRENCE = "executable-occurrence"
+        UNREFERENCED_IMPORT = "unreferenced-import"
 
     CODEMOD_RUNTIME_CLOSURE_PREDICATES: ClassVar[frozenset[CodemodContextPredicate]] = (
         frozenset({

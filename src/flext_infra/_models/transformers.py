@@ -60,6 +60,10 @@ class FlextInfraModelsTransformers:
             t.VariadicTuple[str],
             m.Field(default_factory=tuple, description="Recorded migration operations"),
         ]
+        source_states: Annotated[
+            tuple[m.Cli.AtomicFileState, ...],
+            m.Field(default_factory=tuple, description="Read-only semantic dependency inputs"),
+        ]
 
     class SemanticMigrationEdit(m.ContractModel):
         """One validated in-memory semantic source rewrite."""

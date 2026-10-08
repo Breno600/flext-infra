@@ -1,0 +1,8 @@
+id: gate-tool-error-typed-binding-required
+valid:
+  - "payload = '{\"status\": \"TOOL_ERROR\"}'"
+  - 'payload = "TOOL_ERROR"'
+invalid:
+  - 'outcome == "TOOL_ERROR"'
+  - 'result.code != "TOOL_ERROR"'
+  - '"TOOL_ERROR" == result.code'
