@@ -57,6 +57,9 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         identity = cls._config_directory_identity(config_dir)
         if identity.failure:
             return quad.from_failure(identity)
+        if not identity.value:
+            # An absent ``config/`` owns no sources; there is nothing to list.
+            return quad.ok((config_dir, project_identity.value, (), ()))
         paths = cls._config_yaml_paths(config_dir, identity.value)
         if paths.failure:
             return quad.from_failure(paths)

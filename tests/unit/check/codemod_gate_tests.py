@@ -130,6 +130,7 @@ class TestsFlextInfraCodemodGate:
     def test_public_file_check_reuses_elected_scanner_scope(
         self,
         tmp_path: Path,
+        *,
         finding: bool,
     ) -> None:
         """Public check uses the native configured scanner for exactly one file."""
@@ -156,7 +157,12 @@ class TestsFlextInfraCodemodGate:
         ])
         tm.that(code, eq=1 if finding else 0)
         findings = tm.ok(u.Infra.check_report_findings(project, reports_dir=reports))
-        tm.that(len(findings), eq=1 if finding else 0)
+        # The bundled policy rules also scan the selected file; the fixture
+        # rule proves the scope, because the unselected sibling matches it too.
+        tm.that(
+            [row.rule_id for row in findings].count("contract-second"),
+            eq=1 if finding else 0,
+        )
         tm.that((selected.read_bytes(), sibling.read_bytes()), eq=before)
 
     @pytest.mark.parametrize("severity", ["error", "warning", "info", "hint"])

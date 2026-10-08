@@ -59,7 +59,9 @@ class FlextInfraModelsCheck:
         ] = None
         file: Annotated[
             str | None,
-            m.Field(description="One literal repository-relative file; read-only gates"),
+            m.Field(
+                description="One literal repository-relative file; read-only gates"
+            ),
         ] = None
 
         @property

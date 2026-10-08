@@ -92,7 +92,9 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
         ] = ()
         selected_files: Annotated[
             t.VariadicTuple[Path],
-            m.Field(description="Validated literal file selection; empty means project"),
+            m.Field(
+                description="Validated literal file selection; empty means project"
+            ),
         ] = ()
 
     class MypyDiagnostic(m.ContractModel):

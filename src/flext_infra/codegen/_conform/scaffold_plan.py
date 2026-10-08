@@ -396,16 +396,10 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
         """
         result_type = r[t.Pair[m.Infra.CodegenFilePlan, m.Infra.CodegenRenderInputs]]
         root = render_inputs.target.root
-        project = workspace.project
-        if project is None:
-            return result_type.fail(
-                f"scaffold workspace has no project metadata: {workspace.name}",
-            )
         rendered = self._scaffold_rendered_source(
             entry,
             destination,
             workspace,
-            project,
             render_inputs,
             context,
         )
