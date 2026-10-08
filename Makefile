@@ -117,6 +117,9 @@ PYTEST_CACHE_HOME = $(if $(strip $(XDG_CACHE_HOME)),$(XDG_CACHE_HOME),$(if $(str
 # file checksum, so a new lane starts from the project's measured selection
 # instead of a cold full inventory.
 override FLEXT_PYTEST_TESTMON_DATABASE = $(if $(strip $(PYTEST_CACHE_HOME)),$(PYTEST_CACHE_HOME)/flext/infra/testmon/$(PROJECT_NAME)/.testmondata)
+# Storage law: the pytest scratch root sits under the user home, keyed by the
+# absolute checkout path, never under /tmp and never inside a versioned tree.
+override FLEXT_PYTEST_SCRATCH_ROOT = $(if $(strip $(HOME)),$(HOME)/tmp/.flext-runtime$(PROJECT_ROOT)/scratch)
 # Profiles sit beside the other reports of this checkout (.reports is ignored).
 PROFILE_REPORTS_DIR = $(PROJECT_ROOT)/$(dir $(PYTEST_REPORTS_DIR))profiles
 override PYTEST_CASE_TIMEOUT_SECONDS := 10
@@ -1495,10 +1498,10 @@ case "$$database" in /*) ;; *) printf 'ERROR: persistent testmon database requir
 case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon database must be outside the checkout: %s\n' "$$database" >&2; exit 2 ;; esac; \
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
-project_root="$(PROJECT_ROOT)"; \
-project_parent="$${project_root%/*}"; \
-if [ -z "$$project_parent" ]; then project_parent=/; fi; \
-scratch="$$(mktemp -d "$$project_parent/.$${project_root##*/}.pytest-scratch.XXXXXX")"; \
+scratch_root="$(FLEXT_PYTEST_SCRATCH_ROOT)"; \
+case "$$scratch_root" in /*) ;; *) printf 'ERROR: pytest scratch root requires HOME: %s\n' "$$scratch_root" >&2; exit 2 ;; esac; \
+mkdir -p "$$scratch_root"; \
+scratch="$$(mktemp -d "$$scratch_root/pytest.XXXXXX")"; \
 trap 'find "$$scratch" -depth -delete' EXIT; \
 mkdir -p "$$scratch/tmp"; \
 scratch_tmp="$$(cd "$$scratch/tmp" && pwd -P)"; \
@@ -1513,10 +1516,10 @@ case "$$database" in /*) ;; *) printf 'ERROR: persistent testmon database requir
 case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon database must be outside the checkout: %s\n' "$$database" >&2; exit 2 ;; esac; \
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
-project_root="$(PROJECT_ROOT)"; \
-project_parent="$${project_root%/*}"; \
-if [ -z "$$project_parent" ]; then project_parent=/; fi; \
-scratch="$$(mktemp -d "$$project_parent/.$${project_root##*/}.pytest-scratch.XXXXXX")"; \
+scratch_root="$(FLEXT_PYTEST_SCRATCH_ROOT)"; \
+case "$$scratch_root" in /*) ;; *) printf 'ERROR: pytest scratch root requires HOME: %s\n' "$$scratch_root" >&2; exit 2 ;; esac; \
+mkdir -p "$$scratch_root"; \
+scratch="$$(mktemp -d "$$scratch_root/pytest.XXXXXX")"; \
 trap 'find "$$scratch" -depth -delete' EXIT; \
 mkdir -p "$$scratch/tmp"; \
 scratch_tmp="$$(cd "$$scratch/tmp" && pwd -P)"; \
@@ -1535,10 +1538,10 @@ case "$$database" in /*) ;; *) printf 'ERROR: persistent testmon database requir
 case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon database must be outside the checkout: %s\n' "$$database" >&2; exit 2 ;; esac; \
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
-project_root="$(PROJECT_ROOT)"; \
-project_parent="$${project_root%/*}"; \
-if [ -z "$$project_parent" ]; then project_parent=/; fi; \
-scratch="$$(mktemp -d "$$project_parent/.$${project_root##*/}.pytest-scratch.XXXXXX")"; \
+scratch_root="$(FLEXT_PYTEST_SCRATCH_ROOT)"; \
+case "$$scratch_root" in /*) ;; *) printf 'ERROR: pytest scratch root requires HOME: %s\n' "$$scratch_root" >&2; exit 2 ;; esac; \
+mkdir -p "$$scratch_root"; \
+scratch="$$(mktemp -d "$$scratch_root/pytest.XXXXXX")"; \
 trap 'find "$$scratch" -depth -delete' EXIT; \
 mkdir -p "$$scratch/tmp"; \
 scratch_tmp="$$(cd "$$scratch/tmp" && pwd -P)"; \
@@ -1669,10 +1672,10 @@ case "$$database" in /*) ;; *) printf 'ERROR: persistent testmon database requir
 case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon database must be outside the checkout: %s\n' "$$database" >&2; exit 2 ;; esac; \
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
-project_root="$(PROJECT_ROOT)"; \
-project_parent="$${project_root%/*}"; \
-if [ -z "$$project_parent" ]; then project_parent=/; fi; \
-scratch="$$(mktemp -d "$$project_parent/.$${project_root##*/}.pytest-scratch.XXXXXX")"; \
+scratch_root="$(FLEXT_PYTEST_SCRATCH_ROOT)"; \
+case "$$scratch_root" in /*) ;; *) printf 'ERROR: pytest scratch root requires HOME: %s\n' "$$scratch_root" >&2; exit 2 ;; esac; \
+mkdir -p "$$scratch_root"; \
+scratch="$$(mktemp -d "$$scratch_root/pytest.XXXXXX")"; \
 trap 'find "$$scratch" -depth -delete' EXIT; \
 mkdir -p "$$scratch/tmp"; \
 scratch_tmp="$$(cd "$$scratch/tmp" && pwd -P)"; \

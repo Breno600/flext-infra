@@ -121,7 +121,7 @@ class FlextInfraCandidateBootstrapService:
                     inputs[state.path] = state
         return r[m.Infra.CodegenPhaseAnalysis].ok(
             m.Infra.CodegenPhaseAnalysis(
-                phase="candidate-bootstrap",
+                phase=c.Infra.CodegenStagedFilePhase.CANDIDATE_BOOTSTRAP,
                 files=tuple(files),
                 inputs=tuple(inputs.values()),
             ),

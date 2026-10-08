@@ -528,12 +528,12 @@ class FlextInfraConfigModelsArtifact:
         ] = FlextInfraConstantsCodegenProject.CodegenConformMode.CHECK
         module: Annotated[
             str | None,
-            m.Field(description="Exact package or module for the lazy-init surface"),
+            m.Field(description="Exact package or module for a file-only surface"),
         ] = None
 
         @m.model_validator(mode="after")
         def _validate_lazy_init_scope(self) -> Self:
-            """Reject selectors that would escape the initializer-only contract.
+            """Reject selectors that would escape a file-only surface contract.
 
             Returns:
                 The request with a coherent surface and repository selection.
@@ -542,18 +542,24 @@ class FlextInfraConfigModelsArtifact:
                 ValueError: If the module or repository selector is incompatible.
 
             """
-            lazy_init = (
+            file_only = self.what in {
+                FlextInfraConstantsCodegenProject.CodegenConformSurface.LAZY_INIT,
+                FlextInfraConstantsCodegenProject.CodegenConformSurface.FACADES,
+            }
+            facades = (
                 self.what
-                is FlextInfraConstantsCodegenProject.CodegenConformSurface.LAZY_INIT
+                == FlextInfraConstantsCodegenProject.CodegenConformSurface.FACADES
             )
-            if self.module is not None and not lazy_init:
-                msg = "--module belongs only to the lazy-init surface"
+            if self.module is not None and not file_only:
+                msg = "--module belongs only to lazy-init or facades"
                 raise ValueError(msg)
-            if lazy_init and (
-                self.scope
-                is not FlextInfraConstantsCodegenProject.CodegenConformScope.SELF
+            if facades and self.module is None:
+                msg = "facades requires an exact destination --module"
+                raise ValueError(msg)
+            if file_only and (
+                self.scope != FlextInfraConstantsCodegenProject.CodegenConformScope.SELF
             ):
-                msg = "lazy-init requires the self repository scope"
+                msg = "file-only surfaces require the self repository scope"
                 raise ValueError(msg)
             return self
 

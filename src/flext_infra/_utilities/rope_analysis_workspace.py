@@ -204,6 +204,11 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             for path, source in cls._project_sources(root, planned_sources).items()
             if cls.module_name_for_file(path, project_root=root)
         }
+        if not sources:
+            # No captured declaration (e.g. a scaffold planned before its
+            # sources exist): nothing derives beyond the declared roots, so no
+            # Rope project is opened and no workspace tree is walked.
+            return tuple(sorted(roots))
         # Generated package inits are projections excluded from the class
         # inventory, yet their install_lazy_exports maps own the namespace
         # aliases (m, p, t and siblings) that facade-qualified bases resolve

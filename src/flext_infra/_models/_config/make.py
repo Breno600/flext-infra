@@ -740,6 +740,67 @@ class FlextInfraConfigModelsMake:
                     raise ValueError(msg)
                 return self
 
+        class PytestScratchSpec(FlextInfraConfigModelsContract.ConfigContract):
+            """Scratch root every pytest-running verb declares (storage law).
+
+            The root is ``$<home>/<home_relative_directory>/<state_directory_name>``
+            followed by the absolute checkout path and ``<namespace>``: never
+            ``/tmp`` and never inside a versioned tree (a workspace member's
+            parent directory is the superproject checkout).
+            """
+
+            user_home_environment_variable: Annotated[
+                c.Infra.PytestCacheEnvironment,
+                m.Field(description="User home variable anchoring the scratch root"),
+            ]
+            home_relative_directory: Annotated[
+                t.NonEmptyStr,
+                m.Field(description="Home-relative scratch base directory"),
+            ]
+            state_directory_name: Annotated[
+                t.NonEmptyStr,
+                m.Field(description="Runtime-state directory name under the base"),
+            ]
+            namespace: Annotated[
+                t.NonEmptyStr,
+                m.Field(description="Scratch namespace below the checkout path"),
+            ]
+
+            @m.model_validator(mode="after")
+            def require_home_relative_components(self) -> Self:
+                """Keep the scratch root anchored at home and free of traversal.
+
+                Returns:
+                    The resulting ``Self``.
+
+                Raises:
+                    ValueError: If the home variable is not the user home, or a
+                        component is absolute, traverses upward, or is not a
+                        single path segment where one is required.
+
+                """
+                if (
+                    self.user_home_environment_variable
+                    != c.Infra.PytestCacheEnvironment.USER_HOME
+                ):
+                    msg = (
+                        "pytest scratch user_home_environment_variable must be "
+                        f"{c.Infra.PytestCacheEnvironment.USER_HOME.value}"
+                    )
+                    raise ValueError(msg)
+                base = Path(self.home_relative_directory)
+                if base.is_absolute() or ".." in base.parts:
+                    msg = "pytest scratch home_relative_directory must stay below home"
+                    raise ValueError(msg)
+                for name, value in (
+                    ("state_directory_name", self.state_directory_name),
+                    ("namespace", self.namespace),
+                ):
+                    if Path(value).name != value or value in {".", ".."}:
+                        msg = f"pytest scratch {name} must be one path segment"
+                        raise ValueError(msg)
+                return self
+
         class CodemodRulesCacheSpec(
             FlextInfraExternalCacheDirectorySpec,
             FlextInfraConfigModelsContract.ConfigContract,
@@ -882,6 +943,10 @@ class FlextInfraConfigModelsMake:
         testmon_cache: Annotated[
             TestmonCacheSpec,
             m.Field(description="Adaptive testmon Actions cache policy"),
+        ]
+        pytest_scratch: Annotated[
+            PytestScratchSpec,
+            m.Field(description="Scratch root declared by every pytest verb"),
         ]
         testmon_cache_policy: Annotated[
             FlextInfraConfigModelsMake.TestmonCachePolicySpec,

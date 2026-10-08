@@ -96,7 +96,7 @@ class FlextInfraDocGenerator(
                     directories,
                 )
             analysis = m.Infra.CodegenPhaseAnalysis(
-                phase="docs",
+                phase=c.Infra.CodegenStagedFilePhase.DOCS,
                 files=plans.value,
                 inputs=current.value.source_states,
             )

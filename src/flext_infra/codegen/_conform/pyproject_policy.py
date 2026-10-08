@@ -98,6 +98,7 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
             source,
             workspace=workspace,
             required_dev_dependencies=codegen.scaffold.project.dev,
+            required_dependency_source=flext_line.value,
             uv_resolution=m.Infra.UvResolutionSpec(
                 link_mode=cls.link_mode(target.repository, codegen.toolchain),
                 constraint_dependencies=tuple(

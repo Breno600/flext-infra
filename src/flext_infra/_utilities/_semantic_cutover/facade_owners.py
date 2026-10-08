@@ -16,6 +16,7 @@ import ast
 from collections.abc import MutableMapping
 from functools import lru_cache
 from importlib.util import resolve_name
+from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
@@ -23,6 +24,7 @@ from flext_infra import c
 from flext_infra._utilities import (
     FlextInfraUtilitiesPrivateImportFacades,
     FlextInfraUtilitiesRopeAnalysis,
+    FlextInfraUtilitiesRopeSourceBasesAliases,
     FlextInfraUtilitiesRopeSourceBindingCollector,
 )
 
@@ -240,13 +242,12 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         target, declared = cls._facade_binding_state(source, module, name, package)
         if declared:
             return module, name
-        # The generated lazy publication has one owner: the cached index.
-        lazy = cls._facade_lazy_bindings(source, module)
+        # The generated lazy publication has one reader: the rope aliases owner.
+        lazy = cls._facade_lazy_bindings(source, module, is_package=is_package)
         if target is None and name in lazy:
-            # A lazy entry binds the name through its submodule; resolution
-            # continues where the submodule defines it.
-            sub = lazy[name]
-            target = (f"{module}{sub}" if sub.startswith(".") else sub, name)
+            # A lazy entry binds the name through its provider module;
+            # resolution continues where that module defines it.
+            target = (lazy[name], name)
         # A submodule import binds a module, never a facade class.
         if target is None or ".".join(target) in modules:
             return None
@@ -278,55 +279,35 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
 
     @staticmethod
     @lru_cache(maxsize=256)
-    def _facade_lazy_bindings(source: str, module: str) -> t.StrMapping:
+    def _facade_lazy_bindings(
+        source: str,
+        module: str,
+        *,
+        is_package: bool,
+    ) -> t.StrMapping:
         """Index the generated lazy publication of one module source once.
 
-        The lazy publication IS a binding statement: every name it lists
-        resolves through its submodule entry, exactly as install_lazy_exports
-        resolves it at runtime. Walking that mapping once per name made every
-        facade derivation quadratic in the package's export count; the key is
-        the exact source text, so an edited module is a new key.
+        The lazy publication IS a binding statement: every name the
+        ``install_lazy_exports`` map lists resolves through its provider
+        module, exactly as it resolves at runtime. The map has one reader
+        (``FlextInfraUtilitiesRopeSourceBasesAliases.lazy_module_aliases``),
+        which understands the generated shape; the key is the exact source
+        text, so an edited module is a new key.
 
         Returns:
-            The resulting ``t.StrMapping``.
+            Published name to absolute provider module.
 
         """
-        bindings: MutableMapping[str, str] = {}
-        for (
-            node
-        ) in FlextInfraUtilitiesSemanticCutoverFacadeOwners._facade_module_statements(
-            source,
-            module,
-        ):
-            if not (
-                isinstance(node, ast.Assign | ast.AnnAssign)
-                and node.value is not None
-                and any(
-                    isinstance(bound, ast.Name)
-                    and bound.id == c.Infra.LAZY_IMPORTS_BINDING
-                    for bound in (
-                        node.targets if isinstance(node, ast.Assign) else (node.target,)
-                    )
-                )
-            ):
-                continue
-            for dict_node in (
-                d for d in ast.walk(node.value) if isinstance(d, ast.Dict)
-            ):
-                for key, value in zip(dict_node.keys, dict_node.values, strict=False):
-                    if not (
-                        isinstance(key, ast.Constant)
-                        and isinstance(key.value, str)
-                        and isinstance(value, ast.Tuple | ast.List)
-                    ):
-                        continue
-                    for element in value.elts:
-                        if isinstance(element, ast.Constant) and isinstance(
-                            element.value,
-                            str,
-                        ):
-                            bindings.setdefault(element.value, key.value)
-        return MappingProxyType(bindings)
+        path = Path(
+            c.Infra.INIT_PY if is_package else f"{module.rpartition('.')[2]}.py",
+        )
+        return MappingProxyType(
+            FlextInfraUtilitiesRopeSourceBasesAliases.lazy_module_aliases(
+                module,
+                path,
+                source,
+            ),
+        )
 
     @classmethod
     def _facade_ordered_statements(

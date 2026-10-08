@@ -701,6 +701,15 @@ dependencies = ["flext-infra"]
 
 [tool.uv.exclude-dependencies.package]
 name = "flext-tests"
+
+[tool.uv.sources.flext-cli]
+workspace = true
+
+[tool.uv.sources.flext-core]
+workspace = true
+
+[tool.uv.sources.flext-tests]
+workspace = true
 [tool.interrogate]
 fail-under = 70
 ignore-init-method = true

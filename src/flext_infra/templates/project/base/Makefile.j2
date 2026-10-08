@@ -41,19 +41,21 @@ case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon data
 case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
 mkdir -p "$$(dirname "$$database")"; \
 {%- endmacro -%}
-{#- Every pytest-running verb owns its children's scratch the way the Mise
-    bootstrap owns its own: ONE transient sandbox beside the checkout per
-    recipe shell, declared through the standard temp triplet and deleted when
-    the shell exits. The verb DECLARES the project scratch root for the suite
-    it starts instead of inheriting the caller's ambient /tmp (fleet repos
-    reject a test scratch under /tmp; cosmos-charts CI run 37235165752 died in
-    pytest_configure on exactly that). One definition feeds every verb, so no
-    pytest verb can drift back to an undeclared scratch. -#}
+{#- Every pytest-running verb owns its children's scratch: ONE transient
+    sandbox per recipe shell under the declared scratch root
+    (make.pytest_scratch: $HOME/tmp/.flext-runtime<checkout>/scratch), exposed
+    through the standard temp triplet and deleted when the shell exits. The
+    verb DECLARES the scratch for the suite it starts instead of inheriting the
+    caller's ambient /tmp (fleet repos reject a test scratch under /tmp;
+    cosmos-charts CI run 37235165752 died in pytest_configure on exactly that)
+    and never places it beside the checkout, which inside a workspace is the
+    superproject's tree. One definition feeds every verb, so no pytest verb can
+    drift back to an undeclared scratch. -#}
 {%- macro pytest_scratch_root() -%}
-project_root="$(PROJECT_ROOT)"; \
-project_parent="$${project_root%/*}"; \
-if [ -z "$$project_parent" ]; then project_parent=/; fi; \
-scratch="$$(mktemp -d "$$project_parent/.$${project_root##*/}.pytest-scratch.XXXXXX")"; \
+scratch_root="$(FLEXT_PYTEST_SCRATCH_ROOT)"; \
+case "$$scratch_root" in /*) ;; *) printf 'ERROR: pytest scratch root requires {{ make.pytest_scratch.user_home_environment_variable }}: %s\n' "$$scratch_root" >&2; exit 2 ;; esac; \
+mkdir -p "$$scratch_root"; \
+scratch="$$(mktemp -d "$$scratch_root/pytest.XXXXXX")"; \
 trap 'find "$$scratch" -depth -delete' EXIT; \
 mkdir -p "$$scratch/tmp"; \
 scratch_tmp="$$(cd "$$scratch/tmp" && pwd -P)"; \
@@ -210,6 +212,9 @@ PYTEST_CACHE_HOME = $(if $(strip $({{ make.testmon_cache.data_home_environment_v
 # file checksum, so a new lane starts from the project's measured selection
 # instead of a cold full inventory.
 override FLEXT_PYTEST_TESTMON_DATABASE = $(if $(strip $(PYTEST_CACHE_HOME)),$(PYTEST_CACHE_HOME)/{{ make.testmon_cache.external_storage_directory }}/$(PROJECT_NAME)/{{ make.testmon_cache.database_filename }})
+# Storage law: the pytest scratch root sits under the user home, keyed by the
+# absolute checkout path, never under /tmp and never inside a versioned tree.
+override FLEXT_PYTEST_SCRATCH_ROOT = $(if $(strip $({{ make.pytest_scratch.user_home_environment_variable }})),$({{ make.pytest_scratch.user_home_environment_variable }})/{{ make.pytest_scratch.home_relative_directory }}/{{ make.pytest_scratch.state_directory_name }}$(PROJECT_ROOT)/{{ make.pytest_scratch.namespace }})
 # Profiles sit beside the other reports of this checkout (.reports is ignored).
 PROFILE_REPORTS_DIR = $(PROJECT_ROOT)/$(dir $(PYTEST_REPORTS_DIR))profiles
 override PYTEST_CASE_TIMEOUT_SECONDS := {{ pytest.case_timeout_seconds }}

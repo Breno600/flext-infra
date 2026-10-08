@@ -461,15 +461,27 @@ class TestsFlextInfraScriptDispatchMakefile:
         pytest must declare a project scratch root through TMPDIR (cosmos-charts
         CI run 37235165752 died in pytest_configure on an inherited /tmp). The
         Makefile verb is that caller, so each pytest verb renders ONE shared
-        declaration next to its testmon database guard. The transient sandbox
-        mirrors the Mise bootstrap mechanism: one mktemp directory beside the
-        checkout, the standard temp triplet resolved physical inside it,
-        deleted when the recipe shell exits.
+        declaration next to its testmon database guard. The storage law places
+        that root under the user home keyed by the absolute checkout
+        (config make.pytest_scratch), never beside the checkout: inside a
+        workspace the checkout's parent is the superproject tree, where Git
+        refuses every fixture repository a test creates. The transient sandbox
+        resolves the standard temp triplet inside it and is deleted when the
+        recipe shell exits.
         """
         rendered = self._render_root_makefile(
             tmp_path,
             extra_verbs=(),
             script_dispatch=None,
+        )
+        scratch = config.Infra.codegen.make.pytest_scratch
+        tm.that(
+            rendered,
+            has=(
+                f"$({scratch.user_home_environment_variable})/"
+                f"{scratch.home_relative_directory}/"
+                f"{scratch.state_directory_name}$(PROJECT_ROOT)/{scratch.namespace}"
+            ),
         )
         verbs = (
             "_builtin_test_all:",
@@ -480,14 +492,12 @@ class TestsFlextInfraScriptDispatchMakefile:
         bodies = {
             verb: rendered.split(verb, 1)[1].split("\n\n", 1)[0] for verb in verbs
         }
-        sandbox = (
-            'scratch="$$(mktemp -d "$$project_parent/'
-            '.$${project_root##*/}.pytest-scratch.XXXXXX")"'
-        )
+        sandbox = 'scratch="$$(mktemp -d "$$scratch_root/pytest.XXXXXX")"'
         for body in bodies.values():
             tm.that(
                 body,
                 has=[
+                    'scratch_root="$(FLEXT_PYTEST_SCRATCH_ROOT)"',
                     sandbox,
                     'mkdir -p "$$scratch/tmp"',
                     "export TMPDIR TMP TEMP",
@@ -502,9 +512,8 @@ class TestsFlextInfraScriptDispatchMakefile:
             # No verb owns a private variant of the shared fragment.
             tm.that(body.count(sandbox), eq=1)
         # The declaration is ONE rendered fragment across the four verbs.
-        tm.that(rendered.count("pytest-scratch.XXXXXX"), eq=len(verbs))
-        # The sandbox lives beside the checkout, never inside it and never
-        # under /tmp: the rejected durable in-tree scratch stays dead.
-        tm.that(rendered, lacks=".test-tmp")
-        tm.that(rendered, lacks="PROJECT_SCRATCH")
+        tm.that(rendered.count(sandbox), eq=len(verbs))
+        # Never beside the checkout (inside a workspace that is another
+        # repository's tree), never under /tmp, never a durable in-tree scratch.
+        tm.that(rendered, lacks=["project_parent", ".test-tmp", "PROJECT_SCRATCH"])
         tm.that(rendered, lacks='TMPDIR="$$test_tmp"')

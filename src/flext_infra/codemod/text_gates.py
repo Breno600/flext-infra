@@ -778,7 +778,7 @@ class FlextInfraModTextGateEngine:
         )
         roots = {"@mod-text": root}
         analysis = m.Infra.CodegenPhaseAnalysis(
-            phase="mod-text",
+            phase=c.Infra.CodegenStagedFilePhase.MOD_TEXT,
             files=plans,
             inputs=inputs,
         )

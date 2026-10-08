@@ -286,7 +286,10 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             root=self.repository_root,
         )
         surface = c.Infra.CodegenConformSurface(request.what)
-        if surface is c.Infra.CodegenConformSurface.LAZY_INIT:
+        if surface in {
+            c.Infra.CodegenConformSurface.LAZY_INIT,
+            c.Infra.CodegenConformSurface.FACADES,
+        }:
             return self._execute_lazy_init(request)
         if surface is c.Infra.CodegenConformSurface.ALL:
             return self._execute_managed(request)
@@ -318,8 +321,8 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         transaction = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=request.root),
         )
-        roots = {"@lazy-init-0": request.root.expanduser().resolve()}
-        if request.mode is c.Infra.CodegenConformMode.CHECK:
+        roots = {f"@{request.what}-0": request.root.expanduser().resolve()}
+        if c.Infra.CodegenConformMode(request.mode) is c.Infra.CodegenConformMode.CHECK:
             return self._execute_lazy_init_locked(
                 request,
                 transaction,
@@ -349,17 +352,25 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             The initializer result, retaining any planner or transaction failure.
 
         """
-        planned = self._plan_lazy_init(request)
+        planned = (
+            self._plan_type_facade(request)
+            if request.what == c.Infra.CodegenConformSurface.FACADES
+            else self._plan_lazy_init(request)
+        )
         if planned.failure:
             return r[m.Infra.CodegenResult].from_failure(planned)
         plan, analysis = planned.value
+        if request.what == c.Infra.CodegenConformSurface.FACADES:
+            u.Cli.info(f"stage=facades-plan files={len(plan.files)} environments=0")
+            for file in plan.files:
+                u.Cli.info(f"  destination={file.path}")
         changed = tuple(
             file
             for file in analysis.files
             if u.Infra.codegen_file_requires_effect(file)
         )
-        if request.mode is c.Infra.CodegenConformMode.CHECK:
-            drift = self._drift_message(changed, "lazy-init")
+        if c.Infra.CodegenConformMode(request.mode) is c.Infra.CodegenConformMode.CHECK:
+            drift = self._drift_message(changed, str(request.what))
             if drift is not None:
                 return r[m.Infra.CodegenResult].fail(drift)
             return r[m.Infra.CodegenResult].ok(m.Infra.CodegenResult(plan=plan))
@@ -398,12 +409,16 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         receipt = FlextInfraCodegenTransaction.validate_phase_analysis_locked(analysis)
         if receipt.failure:
             return receipt
-        planned = self._plan_lazy_init(request)
+        planned = (
+            self._plan_type_facade(request)
+            if request.what == c.Infra.CodegenConformSurface.FACADES
+            else self._plan_lazy_init(request)
+        )
         if planned.failure:
             return r[bool].from_failure(planned)
         return u.Infra.codegen_fixed_point(
             planned.value[1].files,
-            subject="lazy-init",
+            subject=str(request.what),
         )
 
     def _execute_plan(
