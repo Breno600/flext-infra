@@ -277,10 +277,26 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
             bindings,
         ):
             return
-        message = (
-            f"Unsupported class binding mutation in {spec.module}: {ast.unparse(node)}"
+        message = FlextInfraUtilitiesRopeSourceBindingCollector._mutation_message(
+            spec,
+            node,
         )
         raise ValueError(message)
+
+    @staticmethod
+    def _mutation_message(
+        spec: m.Infra.SourceBindingCollectorSpec,
+        node: ast.stmt,
+    ) -> str:
+        """Describe one binding mutation the captured module cannot declare.
+
+        Returns:
+            The message naming the module and the mutating statement.
+
+        """
+        return (
+            f"Unsupported class binding mutation in {spec.module}: {ast.unparse(node)}"
+        )
 
     @staticmethod
     def _provider_metadata_rebind(
@@ -298,7 +314,7 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         )
 
     @staticmethod
-    def _subscript_rebind_target(
+    def subscript_rebind_target(
         target: ast.Subscript,
     ) -> m.Infra.SubscriptRebind | None:
         """Return the typed rebind rule for one subscript target, or None.
@@ -363,7 +379,7 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
             write or the store runs through a non-class table binding.
 
         """
-        rebind = FlextInfraUtilitiesRopeSourceBindingCollector._subscript_rebind_target(
+        rebind = FlextInfraUtilitiesRopeSourceBindingCollector.subscript_rebind_target(
             target,
         )
         if rebind is None:
@@ -407,10 +423,16 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
     ) -> bool:
         """Publish the RHS class under the attribute name; return handling.
 
+        Only an external provider module (``allow_conditional``) completes a
+        deferred class namespace; in captured project sources the rebind is
+        an unsupported mutation that must never redirect a class binding.
+
         Returns:
             True when the assignment completed a class namespace.
 
         """
+        if not spec.allow_conditional:
+            return False
         if not FlextInfraUtilitiesRopeSourceBindingCollector._completes_class_namespace(
             node,
             targets,
@@ -481,16 +503,24 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
     ) -> None:
         """Degrade one augmented assignment's name binding.
 
-        An augmented assignment mutates an existing object and never
-        declares a class binding; a Name target reads as an unknown binding
-        going forward.
+        An external provider module's augmented assignment mutates an
+        existing object and never declares a class binding; a Name target
+        reads as an unknown binding going forward. Captured project sources
+        never mutate a binding in place: the previous class would silently
+        survive the mutation, so the statement fails.
+
+        Raises:
+            ValueError: If a captured project source mutates a binding.
 
         """
-        if spec.allow_conditional and isinstance(node.target, ast.Name):
-            bindings[node.target.id] = None
-            return
+        if not spec.allow_conditional:
+            message = FlextInfraUtilitiesRopeSourceBindingCollector._mutation_message(
+                spec,
+                node,
+            )
+            raise ValueError(message)
         if isinstance(node.target, ast.Name):
-            bindings.setdefault(node.target.id, None)
+            bindings[node.target.id] = None
 
     @staticmethod
     def _delete(
@@ -498,10 +528,22 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         node: ast.Delete,
         bindings: MutableMapping[str, m.Infra.SourceClassReference | None],
     ) -> None:
-        """Drop one deletion's name bindings when conditionals are allowed."""
-        if spec.allow_conditional and all(
-            isinstance(target, ast.Name) for target in node.targets
-        ):
+        """Drop one deletion's name bindings when conditionals are allowed.
+
+        Captured project sources never delete a binding: keeping the previous
+        class would silently survive the deletion, so the statement fails.
+
+        Raises:
+            ValueError: If a captured project source deletes a binding.
+
+        """
+        if not spec.allow_conditional:
+            message = FlextInfraUtilitiesRopeSourceBindingCollector._mutation_message(
+                spec,
+                node,
+            )
+            raise ValueError(message)
+        if all(isinstance(target, ast.Name) for target in node.targets):
             for target in node.targets:
                 if isinstance(target, ast.Name):
                     bindings.pop(target.id, None)
@@ -652,7 +694,8 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
                 comparators=[ast.Constant(value="__main__")],
             ):
                 return True
-        return False
+            case _:
+                return False
 
     @staticmethod
     def is_type_checking_test(test: ast.expr) -> bool:

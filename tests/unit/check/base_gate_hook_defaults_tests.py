@@ -174,7 +174,10 @@ class TestsFlextInfraGateHookDefaults:
             return (
                 sys.executable,
                 "-c",
-                "import time; time.sleep(30); print('FINISHED')",
+                # The marker is assembled at runtime: an interrupted command's
+                # traceback echoes its own source line, so a literal marker in
+                # the code would appear in the output without ever printing.
+                "import time; time.sleep(30); print('FIN' + 'ISHED')",
             )
 
     @staticmethod

@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import ast
 from collections import defaultdict
 from collections.abc import MutableMapping, MutableSequence, MutableSet
 from pathlib import Path
@@ -370,6 +371,28 @@ class FlextInfraModelsRefactor(
         tree: Annotated[
             t.Infra.RopePyModule,
             m.Field(description="Parsed PyObject module representation"),
+        ]
+
+    class ImportDemotionScan(m.ArbitraryTypesModel):
+        """Immutable per-pass context of one lazy import-demotion scan."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        tree: Annotated[ast.Module, m.Field(description="Module being normalized")]
+        parents: Annotated[
+            t.MappingKV[int, ast.AST],
+            m.Field(description="Child node id to parent node map"),
+        ]
+        frozen: Annotated[
+            frozenset[int],
+            m.Field(description="Node ids pinned eager by structural use"),
+        ]
+        package: Annotated[str, m.Field(description="Owning top-level package")]
+        module_rank: Annotated[int, m.Field(description="Module's own layer rank")]
+        file_path: Annotated[Path, m.Field(description="Normalized module path")]
+        family_exports: Annotated[
+            t.FrozensetMapping,
+            m.Field(description="Exports per facade family module"),
         ]
 
 
