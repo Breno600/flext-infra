@@ -115,27 +115,46 @@ class TestsFlextInfraFileGateAndReconcileMakefile:
                 eq=True,
             )
             body = self._file_gate_body(rendered)
-            # The empty-FILE guard fails loud and mirrors the test-file guard.
-            tm.that(body, has="file-gate requires FILE=<repository-relative path>")
-            tm.that(
-                body,
-                has=['case "$(FILE)" in /*|*..*)'],
-            )
-            # Ruff lint and format are the hard gates: no `|| true` on them.
-            tm.that(body.count('-m ruff check "$$file"'), eq=1)
-            tm.that(body.count('-m ruff format --check "$$file"'), eq=1)
-            tm.that(body, has="printf 'ERROR: file-gate requires FILE=")
-            # The advisory scanners stay reportable, never blocking.
             tm.that(
                 body,
                 has=[
-                    '-m pyrefly check "$$file" || true',
-                    '-m pyright "$$file" || true',
-                    'ast-grep scan "$$file" || true',
-                    'typos "$$file" || true',
+                    (
+                        "$(PROJECT_FLEXT_INFRA) check run"
+                        ' --repository-root "$(PROJECT_ROOT)"'
+                    ),
+                    ' --gates "',
+                    ' --file "$$FLEXT_FILE_GATE_FILE"',
                 ],
             )
-            tm.that(body, has="$(RUNTIME_PYTHON)")
+            tm.that(rendered, has="export FLEXT_FILE_GATE_FILE := $(value FILE)")
+            tm.that(body, lacks=["|| true", "-m ruff", "ast-grep scan", 'typos "'])
+
+    @staticmethod
+    @pytest.mark.parametrize("selection", ["", "../outside.py", 'literal";false;.py'])
+    def test_public_make_file_gate_preserves_missing_runtime_failure(
+        tmp_path: Path,
+        selection: str,
+    ) -> None:
+        """The public Make verb never turns an unavailable checker into success."""
+        root, _ = u.Tests.render_make_environment(
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
+        )
+        tm.ok(u.Tests.create_python_environment(root))
+        process = tm.ok(
+            u.Cli.run_raw(
+                [
+                    c.Infra.MAKE,
+                    "--no-print-directory",
+                    "file-gate",
+                    f"FILE={selection}",
+                ],
+                cwd=root,
+                remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
+            ),
+        )
+        tm.that(process.outcome.raw_return_code, ne=0)
+        tm.that(process.stderr, has="No module named flext_infra")
 
     def test_setup_lifecycle_never_wires_a_reconcile_call(
         self,

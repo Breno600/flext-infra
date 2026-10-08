@@ -1,4 +1,4 @@
-"""Locked scaffold parent-chain preparation for conformance execution.
+"""Scaffold parent-directory preparation for conformance execution.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -13,8 +13,11 @@ from flext_infra.codegen._conform.plan import FlextInfraCodegenConformPlan
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 
-class FlextInfraCodegenConformScaffoldDirectories(FlextInfraCodegenConformPlan):
-    """Create and roll back config-declared scaffold parent directories."""
+class FlextInfraCodegenConformExecuteScaffold(FlextInfraCodegenConformPlan):
+    """Create and roll back config-declared scaffold parent chains.
+
+    Composed into execution by MRO: plan <- execute scaffold <- execute.
+    """
 
     def _prepare_scaffold_directories(
         self,
@@ -184,4 +187,4 @@ class FlextInfraCodegenConformScaffoldDirectories(FlextInfraCodegenConformPlan):
         return r[bool].ok(value=True)
 
 
-__all__: list[str] = ["FlextInfraCodegenConformScaffoldDirectories"]
+__all__: list[str] = ["FlextInfraCodegenConformExecuteScaffold"]

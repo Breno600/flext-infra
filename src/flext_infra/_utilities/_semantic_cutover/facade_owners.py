@@ -322,10 +322,11 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
             Each ``ast.stmt``.
 
         """
-        collector = FlextInfraUtilitiesRopeSourceBindingCollector
         for node in body:
             if isinstance(node, ast.If):
-                if not collector.type_checking_gate(node.test):
+                if not FlextInfraUtilitiesRopeSourceBindingCollector.type_checking_test(
+                    node.test,
+                ):
                     yield from cls._facade_ordered_statements(node.body)
                 yield from cls._facade_ordered_statements(node.orelse)
             else:

@@ -56,6 +56,9 @@ if TYPE_CHECKING:
         FlextInfraCodegenConformDocsOwnership,
     )
     from flext_infra.codegen._conform.execute import FlextInfraCodegenConformExecute
+    from flext_infra.codegen._conform.execute_scaffold import (
+        FlextInfraCodegenConformExecuteScaffold,
+    )
     from flext_infra.codegen._conform.existing_plan import (
         FlextInfraCodegenConformExistingPlan,
     )
@@ -66,9 +69,6 @@ if TYPE_CHECKING:
     from flext_infra.codegen._conform.plan import FlextInfraCodegenConformPlan
     from flext_infra.codegen._conform.pyproject_policy import (
         FlextInfraCodegenConformPyprojectPolicy,
-    )
-    from flext_infra.codegen._conform.scaffold_directories import (
-        FlextInfraCodegenConformScaffoldDirectories,
     )
     from flext_infra.codegen._conform.scaffold_plan import (
         FlextInfraCodegenConformScaffoldPlan,
@@ -169,12 +169,12 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenConformContextRender",
     "FlextInfraCodegenConformDocsOwnership",
     "FlextInfraCodegenConformExecute",
+    "FlextInfraCodegenConformExecuteScaffold",
     "FlextInfraCodegenConformExistingPlan",
     "FlextInfraCodegenConformFilePlans",
     "FlextInfraCodegenConformGitignore",
     "FlextInfraCodegenConformPlan",
     "FlextInfraCodegenConformPyprojectPolicy",
-    "FlextInfraCodegenConformScaffoldDirectories",
     "FlextInfraCodegenConformScaffoldPlan",
     "FlextInfraCodegenConsolidator",
     "FlextInfraCodegenConsolidatorStepsMixin",
@@ -248,12 +248,12 @@ install_lazy_exports(
         "FlextInfraCodegenConformContextRender": "._conform.context_render",
         "FlextInfraCodegenConformDocsOwnership": "._conform.docs_ownership",
         "FlextInfraCodegenConformExecute": "._conform.execute",
+        "FlextInfraCodegenConformExecuteScaffold": "._conform.execute_scaffold",
         "FlextInfraCodegenConformExistingPlan": "._conform.existing_plan",
         "FlextInfraCodegenConformFilePlans": "._conform.file_plans",
         "FlextInfraCodegenConformGitignore": "._conform.gitignore",
         "FlextInfraCodegenConformPlan": "._conform.plan",
         "FlextInfraCodegenConformPyprojectPolicy": "._conform.pyproject_policy",
-        "FlextInfraCodegenConformScaffoldDirectories": "._conform.scaffold_directories",
         "FlextInfraCodegenConformScaffoldPlan": "._conform.scaffold_plan",
         "FlextInfraCodegenConsolidator": ".consolidator",
         "FlextInfraCodegenConsolidatorStepsMixin": "._consolidator_steps",

@@ -11,23 +11,21 @@ from typing import Self, override
 
 from flext_infra import c, config, m, p, r, t, u
 from flext_infra.codegen import FlextInfraCodegenTransaction
-from flext_infra.codegen._conform.scaffold_directories import (
-    FlextInfraCodegenConformScaffoldDirectories,
+from flext_infra.codegen._conform.execute_scaffold import (
+    FlextInfraCodegenConformExecuteScaffold,
 )
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 
 
-class FlextInfraCodegenConformExecute(
-    FlextInfraCodegenConformScaffoldDirectories,
-):
+class FlextInfraCodegenConformExecute(FlextInfraCodegenConformExecuteScaffold):
     """Transactional execution of conformance plans.
 
     The chain is linear in dependency order, so execution statically inherits
     everything it calls: bootstrap (service root, request state) <- gitignore
     <- docs ownership <- beads routes <- file plans <- pyproject policy <-
     context render <- artifact render <- existing plan <- scaffold plan <- plan
-    <- scaffold directories <- execute.
+    <- execute scaffold <- execute.
     """
 
     @classmethod

@@ -16,14 +16,13 @@ from flext_tests import tm
 from flext_infra import config
 from tests import c, t, u
 
-pytestmark = pytest.mark.slow
-
 
 class TestsFlextInfraCodegenMakeUpgrade:
     """Prove only ``upg`` resolves locks and publishes them transactionally."""
 
     @staticmethod
     @pytest.mark.remote
+    @pytest.mark.slow
     def test_upg_replaces_newer_lock_revision_before_older_mise_reads_it(
         tmp_path: Path,
         resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
@@ -60,6 +59,7 @@ class TestsFlextInfraCodegenMakeUpgrade:
 
     @staticmethod
     @pytest.mark.remote
+    @pytest.mark.slow
     def test_failed_upg_lock_preserves_runtime_and_retires_own_stage(
         tmp_path: Path,
         resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
@@ -128,9 +128,10 @@ class TestsFlextInfraCodegenMakeUpgrade:
         """Operator law 2026-09-24: only `upg` resolves and writes the locks.
 
         The generated Makefile confines every uv upgrade to the `upg`
-        lifecycle and every `mise lock --bump` to the shared bootstrap gated by
-        a switch that only `upg` sets; `setup` syncs `--locked`, and the
-        generated `.mise.toml` makes mise install exactly what the lock pins.
+        lifecycle and every `mise lock --bump` to that lifecycle or its shared
+        bootstrap gated by a switch that only `upg` sets; `setup` syncs
+        `--locked`, and the generated `.mise.toml` makes mise install exactly
+        what the lock pins.
         """
         project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
@@ -147,11 +148,19 @@ class TestsFlextInfraCodegenMakeUpgrade:
         )
         tm.that(
             self._recipe_targets_containing(makefile, "lock --bump"),
-            eq={"_bootstrap_setup_tools"},
+            eq={"_bootstrap_setup_tools", "_upg_lifecycle"},
         )
         toolchain = config.Infra.codegen.toolchain
-        lock_invocations = re.findall(r"lock --bump([^;]*);", makefile)
-        tm.that(tuple(arguments.strip() for arguments in lock_invocations), eq=("",))
+        lifecycle = makefile.split("_upg_lifecycle: _builtin_setup_submodules\n", 1)[
+            1
+        ].split("\n\n", 1)[0]
+        steps = lifecycle.splitlines()
+        generated = next(
+            i for i, step in enumerate(steps) if "$(SELF_MAKE) gen" in step
+        )
+        relocked = next(i for i, step in enumerate(steps) if "lock --bump" in step)
+        installed = next(i for i, step in enumerate(steps) if "install --yes" in step)
+        tm.that(generated < relocked < installed, eq=True)
         # Setup never locks (operator 2026-10-02): no reconcile or relock path
         # survives, and a lock that no longer satisfies the manifest stops.
         tm.that(
@@ -207,14 +216,16 @@ class TestsFlextInfraCodegenMakeUpgrade:
             eq=list(toolchain.mise_lockfile_platforms),
         )
 
+    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
     def test_generated_dependency_upgrade_projects_lock_floors(
         self,
         tmp_path: Path,
+        profile: c.Infra.MakeProfile,
     ) -> None:
         """`upg` owns lock upgrade, open-floor projection, and final resolution."""
         project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
-            c.Infra.MakeProfile.STANDALONE,
+            profile,
         )
         makefile = (project_root / "Makefile").read_text(encoding="utf-8")
 
@@ -232,7 +243,7 @@ class TestsFlextInfraCodegenMakeUpgrade:
                 makefile,
                 '$(UV) lock --check --project "$(PROJECT_ROOT)"',
             ),
-            eq={"_upg_converge"},
+            eq={"_upg_lifecycle"},
         )
         tm.that(makefile, lacks="--constraint-policy")
 
@@ -247,7 +258,7 @@ class TestsFlextInfraCodegenMakeUpgrade:
 
         tm.that(makefile, has="make upg did not converge")
         tm.that(
-            "_upg_converge"
+            "_upg_lifecycle"
             in self._recipe_targets_containing(makefile, "$(SELF_MAKE) check"),
             eq=True,
         )

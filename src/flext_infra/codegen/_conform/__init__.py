@@ -27,6 +27,9 @@ if TYPE_CHECKING:
         FlextInfraCodegenConformDocsOwnership,
     )
     from flext_infra.codegen._conform.execute import FlextInfraCodegenConformExecute
+    from flext_infra.codegen._conform.execute_scaffold import (
+        FlextInfraCodegenConformExecuteScaffold,
+    )
     from flext_infra.codegen._conform.existing_plan import (
         FlextInfraCodegenConformExistingPlan,
     )
@@ -37,9 +40,6 @@ if TYPE_CHECKING:
     from flext_infra.codegen._conform.plan import FlextInfraCodegenConformPlan
     from flext_infra.codegen._conform.pyproject_policy import (
         FlextInfraCodegenConformPyprojectPolicy,
-    )
-    from flext_infra.codegen._conform.scaffold_directories import (
-        FlextInfraCodegenConformScaffoldDirectories,
     )
     from flext_infra.codegen._conform.scaffold_plan import (
         FlextInfraCodegenConformScaffoldPlan,
@@ -53,12 +53,12 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenConformContextRender",
     "FlextInfraCodegenConformDocsOwnership",
     "FlextInfraCodegenConformExecute",
+    "FlextInfraCodegenConformExecuteScaffold",
     "FlextInfraCodegenConformExistingPlan",
     "FlextInfraCodegenConformFilePlans",
     "FlextInfraCodegenConformGitignore",
     "FlextInfraCodegenConformPlan",
     "FlextInfraCodegenConformPyprojectPolicy",
-    "FlextInfraCodegenConformScaffoldDirectories",
     "FlextInfraCodegenConformScaffoldPlan",
 )
 
@@ -72,12 +72,12 @@ install_lazy_exports(
         "FlextInfraCodegenConformContextRender": ".context_render",
         "FlextInfraCodegenConformDocsOwnership": ".docs_ownership",
         "FlextInfraCodegenConformExecute": ".execute",
+        "FlextInfraCodegenConformExecuteScaffold": ".execute_scaffold",
         "FlextInfraCodegenConformExistingPlan": ".existing_plan",
         "FlextInfraCodegenConformFilePlans": ".file_plans",
         "FlextInfraCodegenConformGitignore": ".gitignore",
         "FlextInfraCodegenConformPlan": ".plan",
         "FlextInfraCodegenConformPyprojectPolicy": ".pyproject_policy",
-        "FlextInfraCodegenConformScaffoldDirectories": ".scaffold_directories",
         "FlextInfraCodegenConformScaffoldPlan": ".scaffold_plan",
     }),
     public_exports=__all__,

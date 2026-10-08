@@ -16,9 +16,9 @@ from flext_cli import m
 from flext_infra import c, t
 from flext_infra._models import (
     FlextInfraConfigModelsContract,
-    FlextInfraConfigModelsMakeCache,
     FlextInfraExternalCacheDirectorySpec,
 )
+from flext_infra._models._config.make_docs import FlextInfraConfigModelsMakeDocs
 
 
 def _shared_mypy_cache_spec() -> FlextInfraConfigModelsMake.MypyCacheSpec:
@@ -45,7 +45,7 @@ def _default_testmon_cache_policy() -> (
     return FlextInfraConfigModelsMake.TestmonCachePolicySpec()
 
 
-class FlextInfraConfigModelsMake(FlextInfraConfigModelsMakeCache):
+class FlextInfraConfigModelsMake(FlextInfraConfigModelsMakeDocs):
     """Make workflow, verb, CI, and cache specification models."""
 
     class MakeCiSpec(FlextInfraConfigModelsContract.ConfigContract):
@@ -207,108 +207,153 @@ class FlextInfraConfigModelsMake(FlextInfraConfigModelsMakeCache):
             m.Field(description="Trace/profile globs removed anywhere in the tree"),
         ]
 
-    class DocsOverviewPreviewLimitsSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Maximum list sizes in the generated public API overview."""
+    class TestmonCachePolicySpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Declarative Actions-cache policy for the shared testmon database.
 
-        aliases: Annotated[int, m.Field(gt=0, description="Alias preview limit")]
-        public_symbols: Annotated[
+        Implements the preserved #1001 delta (bead flext-j0u23): two-phase
+        generations with per-mode caps, a per-repository byte budget with a
+        three-stage quota ladder, a save-ref allowlist (never save from PRs)
+        and a cache-key namespace.
+        """
+
+        mode: Annotated[
+            Literal["bootstrap", "stable"],
+            m.Field(description="Cache phase: bootstrap seeds, stable saves"),
+        ] = "stable"
+        save_enabled: Annotated[
+            bool,
+            m.Field(description="Master switch for cache publishes"),
+        ] = False
+        max_bootstrap_generations: Annotated[
             int,
-            m.Field(gt=0, description="Public symbol preview limit"),
-        ]
-        facades: Annotated[int, m.Field(gt=0, description="Facade preview limit")]
-        module_exports: Annotated[
+            m.Field(gt=0, description="Retention cap for bootstrap generations"),
+        ] = 3
+        max_stable_generations: Annotated[
             int,
-            m.Field(gt=0, description="Module export preview limit"),
-        ]
-        keywords: Annotated[int, m.Field(gt=0, description="Keyword preview limit")]
-
-    class MakeDocsSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Generated Makefile docs verb lifecycle and audit policy."""
-
-        actions: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                min_length=1,
-                description=(
-                    "Docs verb lifecycle actions in execution order; every "
-                    "entry must be a registered docs CLI action"
-                ),
-            ),
-        ]
-        mutable_actions: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(min_length=1, description="Docs actions that mutate"),
-        ]
-        reports_dir: Annotated[
-            Path,
-            m.Field(description="Repository-relative docs reports directory"),
-        ]
-        overview_preview_limits: Annotated[
-            FlextInfraConfigModelsMake.DocsOverviewPreviewLimitsSpec,
-            m.Field(description="Maximum preview sizes for generated API overviews"),
-        ]
-        cross_project_relative_link_pattern: Annotated[
+            m.Field(gt=0, description="Retention cap for stable generations"),
+        ] = 3
+        per_repo_budget_bytes: Annotated[
+            int,
+            m.Field(gt=0, description="Per-repository byte budget"),
+        ] = 52_428_800
+        warning_threshold_percent: Annotated[
+            int,
+            m.Field(ge=0, le=100, description="Quota-ladder warning stage"),
+        ] = 80
+        maintenance_threshold_percent: Annotated[
+            int,
+            m.Field(ge=0, le=100, description="Quota-ladder maintenance stage"),
+        ] = 90
+        block_threshold_percent: Annotated[
+            int,
+            m.Field(ge=0, le=100, description="Quota-ladder block stage"),
+        ] = 95
+        allowed_save_refs: Annotated[
+            tuple[t.NonEmptyStr, ...],
+            m.Field(description="Refs whose pushes may publish cache generations"),
+        ] = ("main", "0.12.0-dev")
+        key_prefix: Annotated[
             t.NonEmptyStr,
-            m.Field(
-                description="Regex rejecting cross-project relative Markdown links",
-            ),
-        ]
-        stale_github_organizations: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default=("organization",),
-                description="Placeholder GitHub orgs that must be rewritten",
-            ),
-        ] = ("organization",)
-        github_repos: Annotated[
-            t.VariadicTuple[FlextInfraConfigModelsMake.DocsGithubRepoSpec],
-            m.Field(
-                default=(),
-                description="Governed org/repo/branch map for cross-repo doc URLs",
-            ),
-        ] = ()
+            m.Field(description="Actions cache key namespace"),
+        ] = "flext-testmon"
 
         @m.model_validator(mode="after")
-        def _validate_actions(self) -> Self:
-            """Reject unknown, duplicated, or out-of-lifecycle docs actions.
+        def require_ascending_quota_ladder(self) -> Self:
+            """Keep the quota ladder strictly ascending within the percent scale.
 
             Returns:
                 The resulting ``Self``.
 
             Raises:
-                ValueError: If docs actions must be unique; or if docs action is not a
-                    registered CLI action; or if mutable_actions entry is not part of
-                    the docs lifecycle.
-
+                ValueError: If testmon cache quota ladder must ascend warning <
+                    maintenance < block <= 100.
             """
-            if len(set(self.actions)) != len(self.actions):
-                msg = "docs actions must be unique"
-                raise ValueError(msg)
-            unknown = next(
-                (
-                    action
-                    for action in self.actions
-                    if action not in c.Infra.DOCS_ACTION_IDS
-                ),
-                None,
-            )
-            if unknown is not None:
-                msg = f"docs action is not a registered CLI action: {unknown}"
-                raise ValueError(msg)
-            outside = next(
-                (
-                    action
-                    for action in self.mutable_actions
-                    if action not in self.actions
-                ),
-                None,
-            )
-            if outside is not None:
+            full_scale = 100
+            if not (
+                self.warning_threshold_percent
+                < self.maintenance_threshold_percent
+                < self.block_threshold_percent
+                <= full_scale
+            ):
                 msg = (
-                    "mutable_actions entry is not part of the docs lifecycle:"
-                    f" {outside}"
+                    "testmon cache quota ladder must ascend "
+                    "warning < maintenance < block <= 100"
                 )
                 raise ValueError(msg)
+            return self
+
+    class MypyCacheSpec(
+        FlextInfraExternalCacheDirectorySpec,
+        FlextInfraConfigModelsContract.ConfigContract,
+    ):
+        """Project-keyed shared Mypy cache, one analysis reused across relocks."""
+
+        cache_environment_variable: Annotated[
+            c.Infra.MypyCacheEnvironment,
+            m.Field(
+                default=c.Infra.MypyCacheEnvironment.CACHE_DIR,
+                description="Mypy's cache-directory environment variable",
+            ),
+        ]
+        data_home_environment_variable: Annotated[
+            c.Infra.MypyCacheEnvironment,
+            m.Field(
+                default=c.Infra.MypyCacheEnvironment.DATA_HOME,
+                description="XDG persistent cache-home variable",
+            ),
+        ]
+        user_home_environment_variable: Annotated[
+            c.Infra.MypyCacheEnvironment,
+            m.Field(
+                default=c.Infra.MypyCacheEnvironment.USER_HOME,
+                description="User home variable for the XDG default",
+            ),
+        ]
+        home_cache_directory: Annotated[
+            Path,
+            m.Field(
+                default=Path(".cache"),
+                description="Standard cache directory below the user home",
+            ),
+        ]
+        external_storage_directory: Annotated[
+            Path,
+            m.Field(
+                default=Path("flext/infra/mypy"),
+                description="FLEXT-owned directory below the cache home",
+            ),
+        ]
+
+        @m.model_validator(mode="after")
+        def require_external_cache_contract(self) -> Self:
+            """Keep the official cache variable and the external path policy exact.
+
+            Returns:
+                The resulting ``Self``.
+
+            Raises:
+                ValueError: If mypy cache.
+            """
+            for name, actual, expected in (
+                (
+                    "cache_environment_variable",
+                    self.cache_environment_variable,
+                    c.Infra.MypyCacheEnvironment.CACHE_DIR,
+                ),
+                (
+                    "data_home_environment_variable",
+                    self.data_home_environment_variable,
+                    c.Infra.MypyCacheEnvironment.DATA_HOME,
+                ),
+                (
+                    "user_home_environment_variable",
+                    self.user_home_environment_variable,
+                    c.Infra.MypyCacheEnvironment.USER_HOME,
+                ),
+            ):
+                if actual != expected:
+                    msg = f"mypy cache {name} must be {expected.value}"
+                    raise ValueError(msg)
             return self
 
     class MakeWorkInProgressSpec(FlextInfraConfigModelsContract.ConfigContract):
@@ -1211,28 +1256,6 @@ class FlextInfraConfigModelsMake(FlextInfraConfigModelsMakeCache):
                     *c.Infra.MakeProfile,
                 )
             }
-
-    class DocsGithubRepoSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """One governed GitHub repository used for cross-repo doc links."""
-
-        organization: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="GitHub organization"),
-        ]
-        repository: Annotated[t.NonEmptyStr, m.Field(description="GitHub repository")]
-        branch: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Working-line branch for doc links"),
-        ]
-        local_checkout: Annotated[
-            str,
-            m.Field(
-                default="",
-                description=(
-                    "Optional local checkout path (~ expanded) for existence checks"
-                ),
-            ),
-        ] = ""
 
     class CustomHandlerPolicy(FlextInfraConfigModelsContract.ConfigContract):
         """Strict schema for the only handwritten Make extension file."""

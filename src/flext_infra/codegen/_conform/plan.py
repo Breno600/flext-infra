@@ -156,14 +156,14 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
         layout = u.Infra.layout(root)
         if layout is None or request.module is None:
             return r[Path].fail("facades requires an existing package and destination")
-        package, separator, module = request.module.partition(".")
+        parts = request.module.split(".")
         if (
-            not separator
-            or package != layout.package_dir.name
-            or not all(part.isidentifier() for part in (package, module))
+            len(parts) != c.Infra.FACADE_MODULE_PARTS
+            or parts[0] != layout.package_dir.name
+            or not all(part.isidentifier() for part in parts)
         ):
             return r[Path].fail("facades --module must name a direct package module")
-        return r[Path].ok(layout.package_dir / f"{module}{c.Infra.EXT_PYTHON}")
+        return r[Path].ok(layout.package_dir / f"{parts[1]}{c.Infra.EXT_PYTHON}")
 
     @staticmethod
     def _type_facade_inputs(

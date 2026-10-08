@@ -1,4 +1,4 @@
-"""Journal relocation onto the current workspace root.
+"""Relocation of a durable generation journal onto a moved physical worktree.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -15,7 +15,7 @@ from flext_infra.codegen._mise_artifacts_files import (
 
 
 class FlextInfraMiseArtifactsJournalRelocation:
-    """Rebind a recorded transaction journal onto the current scope root."""
+    """Rebind authenticated journal paths when the same worktree was moved."""
 
     @classmethod
     def _relocate_journal(

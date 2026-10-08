@@ -151,9 +151,9 @@ class TestsFlextInfraLazyInitRuntime:
             "print(dir(package) == list(package.__all__))\n"
         )
         tm.that(
-            u.Tests.lazy_init_probe_lines(
+            u.Tests.run_lazy_init_probe(
                 probe,
-                import_roots=(str(repository / c.Infra.DEFAULT_SRC_DIR),),
+                python_paths=(str(repository / c.Infra.DEFAULT_SRC_DIR),),
             ),
             eq=["True"] * 7,
         )
@@ -195,9 +195,9 @@ class TestsFlextInfraLazyInitRuntime:
             "print(package.PublishedChild is child.PublishedChild)\n"
         )
         tm.that(
-            u.Tests.lazy_init_probe_lines(
+            u.Tests.run_lazy_init_probe(
                 probe,
-                import_roots=(str(repository / c.Infra.DEFAULT_SRC_DIR),),
+                python_paths=(str(repository / c.Infra.DEFAULT_SRC_DIR),),
             ),
             eq=["True", "True"],
         )
@@ -227,9 +227,9 @@ class TestsFlextInfraLazyInitRuntime:
             "    print('undeclared' in str(error))\n"
         )
         tm.that(
-            u.Tests.lazy_init_probe_lines(
+            u.Tests.run_lazy_init_probe(
                 probe,
-                import_roots=(str(repository / c.Infra.DEFAULT_SRC_DIR),),
+                python_paths=(str(repository / c.Infra.DEFAULT_SRC_DIR),),
             ),
             eq=["True", "True"],
         )
@@ -352,9 +352,9 @@ class TestsFlextInfraLazyInitRuntime:
             "print(all(hasattr(generated, name) for name in generated.__all__))\n"
         )
         tm.that(
-            u.Tests.lazy_init_probe_lines(
+            u.Tests.run_lazy_init_probe(
                 probe,
-                import_roots=(
+                python_paths=(
                     str(repository),
                     str(repository / c.Infra.DEFAULT_SRC_DIR),
                     *sys.path,

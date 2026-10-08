@@ -82,9 +82,9 @@ class TestsFlextInfraLazyInitAliasInheritance:
             "print(execute().value)\n"
         )
         tm.that(
-            u.Tests.lazy_init_probe_lines(
+            u.Tests.run_lazy_init_probe(
                 probe,
-                import_roots=(str(repository / c.Infra.DEFAULT_SRC_DIR), *sys.path),
+                python_paths=(str(repository / c.Infra.DEFAULT_SRC_DIR), *sys.path),
                 cwd=repository,
             ),
             eq=["True", "True", "False", "bootstrap-ready"],
