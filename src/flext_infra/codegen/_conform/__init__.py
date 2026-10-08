@@ -27,6 +27,9 @@ if TYPE_CHECKING:
         FlextInfraCodegenConformDocsOwnership,
     )
     from flext_infra.codegen._conform.execute import FlextInfraCodegenConformExecute
+    from flext_infra.codegen._conform.execute_directed import (
+        FlextInfraCodegenConformExecuteDirected,
+    )
     from flext_infra.codegen._conform.execute_scaffold import (
         FlextInfraCodegenConformExecuteScaffold,
     )
@@ -53,6 +56,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenConformContextRender",
     "FlextInfraCodegenConformDocsOwnership",
     "FlextInfraCodegenConformExecute",
+    "FlextInfraCodegenConformExecuteDirected",
     "FlextInfraCodegenConformExecuteScaffold",
     "FlextInfraCodegenConformExistingPlan",
     "FlextInfraCodegenConformFilePlans",
@@ -72,6 +76,7 @@ install_lazy_exports(
         "FlextInfraCodegenConformContextRender": ".context_render",
         "FlextInfraCodegenConformDocsOwnership": ".docs_ownership",
         "FlextInfraCodegenConformExecute": ".execute",
+        "FlextInfraCodegenConformExecuteDirected": ".execute_directed",
         "FlextInfraCodegenConformExecuteScaffold": ".execute_scaffold",
         "FlextInfraCodegenConformExistingPlan": ".existing_plan",
         "FlextInfraCodegenConformFilePlans": ".file_plans",

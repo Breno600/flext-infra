@@ -635,6 +635,9 @@ Infra:
           description: Approve this project through locked setup, audit, check, and incremental tests with the enforced CI contract.
         - name: upg
           description: Resolve the newest declared releases, write the uv and mise locks, then prove the upgraded tree still converges and passes every active check gate.
+        - name: validate-lifecycle
+          description: Serially run setup, gen, upg, setup, gen, gen in the root and every governed member, publishing typed receipts and stopping at the first failure.
+          profiles: [workspace]
         # Workspace-only (topology owns applicability): a standalone Makefile
         # never declares it. Never merges; a rerun continues the same lanes.
         - name: propagate
@@ -1374,7 +1377,7 @@ Infra:
               - beartype>=0.22.9
               - dependency-injector>=4.49.1
               - packaging>=26.3
-              - pydantic>=2.13.5,<3
+              - pydantic>=2.14.0,<3
               - pydantic-settings>=2.15.0
               - pyyaml>=6.0.3
               - structlog>=26.1.0
@@ -1384,7 +1387,7 @@ Infra:
             runtime:
               - flext-cli
               - flext-core
-              - pydantic>=2.13.5,<3
+              - pydantic>=2.14.0,<3
               - pydantic-settings>=2.15.0
             codegen: [flext-infra]
         # Project-scoped requirements extend the shared profile without

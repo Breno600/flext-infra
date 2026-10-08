@@ -35,6 +35,37 @@ class FlextInfraModelsWorkspace:
 
         repository_root: Annotated[Path, m.Field(description="Repository root path")]
 
+    class LifecycleReceipt(m.ContractModel):
+        """One public Make invocation; an absent exit is never a green receipt."""
+
+        command: Annotated[
+            t.VariadicTuple[str], m.Field(description="Public Make argv")
+        ]
+        cwd: Annotated[Path, m.Field(description="Repository execution directory")]
+        output_file: Annotated[
+            Path,
+            m.Field(description="Durable combined stdout/stderr for reached steps"),
+        ]
+        exit_code: Annotated[
+            int | None,
+            m.Field(
+                description="Observed exit; absent when unreached or launch failed"
+            ),
+        ] = None
+        error: Annotated[
+            str | None, m.Field(description="First execution failure, if observed")
+        ] = None
+
+    class LifecycleReport(m.ContractModel):
+        """Complete declared scope and ordered reached/unreached lifecycle receipts."""
+
+        workspace_root: Annotated[Path, m.Field(description="Invoking workspace root")]
+        scope: Annotated[t.VariadicTuple[Path], m.Field(description="Governed roots")]
+        receipts: Annotated[
+            t.VariadicTuple[FlextInfraModelsWorkspace.LifecycleReceipt],
+            m.Field(description="Ordered public command receipts for the entire scope"),
+        ]
+
     class SubprojectLoadContext(m.ContractModel):
         """Workspace governance scope shared by every declared subproject entry."""
 
