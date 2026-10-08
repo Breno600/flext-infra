@@ -32,6 +32,16 @@ Infra:
     loc_cap:
       max_lines: 1000
 
+    # SINGLE SSOT for every filesystem mode the codegen pipeline emits. Call
+# sites read these rows through config.Infra.codegen.modes; octal mode
+# literals outside the constants and model bounds are defects (the
+# ban-octal-mode-literal rule flags them).
+    modes:
+      file_default: 420 # 0o644
+      file_private: 384 # 0o600
+      directory_private: 448 # 0o700
+      directory_generated: 493 # 0o755
+
     toolchain:
       # The language floor is a minor line. The runtime tool is pinned to the
       # newest Python patch whose lock resolves on all declared platforms.
