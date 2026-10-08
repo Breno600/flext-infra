@@ -104,6 +104,15 @@ class FlextInfraUtilitiesRopeSourceBases:
             for parts in (module.split("."),)
             for index in range(1, len(parts) + 1)
         }
+        module_aliases: dict[str, str] = {}
+        for module, (path, source) in sources.items():
+            for alias, absolute in cls.lazy_module_aliases(module, path, source).items():
+                qualified = f"{module}.{alias}"
+                if qualified not in namespaces:
+                    module_aliases.setdefault(qualified, absolute)
+        for alias, absolute in (extra_module_aliases or {}).items():
+            if alias not in namespaces:
+                module_aliases.setdefault(alias, absolute)
         owned_definitions = tuple(definitions.values())
         external: MutableMapping[str, t.Infra.RopePyObject] = {}
         linearizations: MutableMapping[str, t.StrTuple] = {}
@@ -336,14 +345,20 @@ class FlextInfraUtilitiesRopeSourceBases:
                 message = f"Unresolved external base: {reference.target}"
                 raise ValueError(message)
             target = reference.target
-            key = ".".join((target, *reference.attributes))
+            attributes = list(reference.attributes)
+            if attributes:
+                qualified_head = f"{target}.{attributes[0]}"
+                if qualified_head in module_aliases:
+                    target = module_aliases[qualified_head]
+                    attributes.pop(0)
+            target = module_aliases.get(target, target)
+            key = ".".join((target, *attributes))
             if key in visiting:
                 message = f"Cyclic class alias: {key}"
                 raise ValueError(message)
             memo = resolved_memo.get(key)
             if memo is not None:
                 return memo
-            attributes = list(reference.attributes)
             if target not in definitions and target not in external:
                 parts = target.split(".")
                 if parts[0] in namespaces:
