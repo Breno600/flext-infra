@@ -204,7 +204,10 @@ class FlextInfraNamespaceRelocationCascade:
                         finding,
                         c.Infra.CODEMOD_RULE_MODULE_METAVARIABLE,
                     )
-                    imports[file_path][module, module.split(".", maxsplit=1)[0]].add(
+                    target = u.Infra.package_root_import_owner(project_root, module)
+                    if target is None:
+                        continue
+                    imports[file_path][module, target].add(
                         self._captured(finding, c.Infra.CODEMOD_RULE_NAME_METAVARIABLE),
                     )
                 case c.Infra.CodemodRelocation.OWN_PACKAGE_IMPORT:

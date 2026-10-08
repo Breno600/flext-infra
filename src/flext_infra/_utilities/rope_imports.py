@@ -15,6 +15,7 @@ from flext_cli import u
 
 from flext_infra import c, m, p, r, t
 from flext_infra._utilities import (
+    FlextInfraUtilitiesPyproject,
     FlextInfraUtilitiesRopeAnalysis,
     FlextInfraUtilitiesRopeCore,
     FlextInfraUtilitiesRopeRuntime,
@@ -600,6 +601,89 @@ class FlextInfraUtilitiesRopeImports:
             The resulting ``str | None``.
 
         """
+        updated = cls._planned_from_import_aliases(
+            rope_project,
+            resource,
+            source_module=source_module,
+            target_module=target_module,
+            aliases=aliases,
+        )
+        if updated is not None:
+            resource.write(updated)
+        return updated
+
+    @classmethod
+    def package_root_import_owner(
+        cls, project_root: Path, source_module: str
+    ) -> str | None:
+        """Resolve an own-package target; foreign-package findings stay residue.
+
+        Returns:
+            The declared project package or no owned relocation target.
+        """
+        own = FlextInfraUtilitiesPyproject.project_package_name(project_root)
+        return own if source_module.split(".", maxsplit=1)[0] == own else None
+
+    @classmethod
+    def plan_package_root_import(
+        cls,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        file_path: Path,
+        *,
+        source_module: str,
+        aliases: t.StrSequence,
+    ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
+        """Plan an own-package import without publishing or rebinding foreign names.
+
+        The project declaration owns the target. Rope owns import bindings and
+        aliases; foreign-package findings remain unmodified residue.
+
+        Returns:
+            A typed source edit, no-op, or an explicit resource/ownership failure.
+        """
+        entry = rope_workspace.module(file_path)
+        root = entry.project_root if entry is not None else None
+        if root is None:
+            return r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]].fail(
+                f"import owner has no declared project: {file_path}",
+            )
+        own = cls.package_root_import_owner(root, source_module)
+        if own is None:
+            return r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]].ok(())
+        resource = rope_workspace.resource(file_path)
+        if resource is None:
+            return r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]].fail(
+                f"import owner is not a Rope resource: {file_path}",
+            )
+        original = resource.read()
+        updated = cls._planned_from_import_aliases(
+            rope_workspace.rope_project,
+            resource,
+            source_module=source_module,
+            target_module=own,
+            aliases=aliases,
+        )
+        if updated is None:
+            return r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]].ok(())
+        return r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]].ok((
+            m.Infra.SemanticMigrationEdit(
+                file_path=file_path.resolve(),
+                original_source=original,
+                updated_source=updated,
+                changes=(f"bound import to declared package {own}",),
+            ),
+        ))
+
+    @classmethod
+    def _planned_from_import_aliases(
+        cls,
+        rope_project: t.Infra.RopeProject,
+        resource: t.Infra.RopeFile,
+        *,
+        source_module: str,
+        target_module: str,
+        aliases: t.StrSequence,
+    ) -> str | None:
         aliases_to_move = frozenset(aliases)
         if not aliases_to_move:
             return None
@@ -634,7 +718,6 @@ class FlextInfraUtilitiesRopeImports:
             )
         if updated_source == original_source:
             return None
-        resource.write(updated_source)
         return updated_source
 
     @staticmethod
