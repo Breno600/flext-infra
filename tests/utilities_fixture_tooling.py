@@ -218,17 +218,10 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         reaches no keyring (the session bus is disabled), so the host
         operator's stored credential never enters a test.
 
-        The runner's CI context (``CI=Y`` under the approval path) is outer
-        state too: a scenario selects CI by passing the configured variable.
-
         Returns:
             The resulting ``p.Result[p.Cli.CommandOutput]``.
 
         """
-        isolated = (
-            *c.Tests.MAKE_ISOLATION_ENV_KEYS,
-            config.Infra.codegen.make.ci.variable,
-        )
         return u.Cli.run_raw(
             [c.Infra.MAKE, *args],
             cwd=cwd,
@@ -239,7 +232,9 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
                     **(env or {}),
                 },
                 remove_env_keys=tuple(
-                    key for key in isolated if env is None or key not in env
+                    key
+                    for key in c.Tests.MAKE_ISOLATION_ENV_KEYS
+                    if env is None or key not in env
                 ),
             ),
             capture=capture,

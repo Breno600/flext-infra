@@ -17,7 +17,6 @@ from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from tests import t, u
 
 
-@pytest.mark.usefixtures("local_context")
 class TestsFlextInfraCodegenRuntimeProfiles:
     """Tests for ``FlextInfraCodegenRuntimeProfiles``."""
 
