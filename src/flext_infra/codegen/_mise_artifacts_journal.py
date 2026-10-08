@@ -959,45 +959,54 @@ class FlextInfraMiseArtifactsJournal:
     def _entry_project(
         plan: m.Infra.MiseToolchainWorkspacePlan | m.Infra.CodegenFileSessionPlan,
         publication: m.Infra.CodegenStagedFile,
-    ) -> p.Result[t.Pair[m.Infra.MiseToolchainProjectLayout, str]]:
+    ) -> p.Result[
+        t.Pair[
+            m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
+            str,
+        ]
+    ]:
         """Resolve the transaction participant and relative selector of a target.
 
         Returns:
-            The resulting ``p.Result[t.Pair[m.Infra.MiseToolchainProjectLayout,
-                str]]``.
+            The registered Mise or file participant and relative selector.
 
         """
+        result_type = r[
+            t.Pair[
+                m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
+                str,
+            ]
+        ]
         before = publication.before
         if before.parent_device is None or before.parent_inode is None:
-            return r[t.Pair[m.Infra.MiseToolchainProjectLayout, str]].fail(
+            return result_type.fail(
                 f"generation destination parent identity is incomplete: {before.path}",
             )
         project = next(
             (
                 item
                 for item in files.transaction_participants(plan.layout)
-                if isinstance(item, m.Infra.MiseToolchainProjectLayout)
-                and item.root == publication.project
+                if item.root == publication.project
             ),
             None,
         )
         if project is None or project.transaction_root is None:
-            return r[t.Pair[m.Infra.MiseToolchainProjectLayout, str]].fail(
+            return result_type.fail(
                 f"generation publication has no transaction participant: {before.path}",
             )
         selector = files.transaction_relative(plan.layout, before.path)
         if selector.failure:
-            return r[t.Pair[m.Infra.MiseToolchainProjectLayout, str]].from_failure(
+            return result_type.from_failure(
                 selector,
             )
-        return r[t.Pair[m.Infra.MiseToolchainProjectLayout, str]].ok(
+        return result_type.ok(
             (project, selector.value),
         )
 
     @staticmethod
     def _backup_original(
         plan: m.Infra.MiseToolchainWorkspacePlan | m.Infra.CodegenFileSessionPlan,
-        project: m.Infra.MiseToolchainProjectLayout,
+        project: m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
         before: m.Cli.AtomicFileState,
         index: int,
         recovery_roots: set[Path],
@@ -1039,7 +1048,7 @@ class FlextInfraMiseArtifactsJournal:
 
     @staticmethod
     def _prepared_recovery_root(
-        project: m.Infra.MiseToolchainProjectLayout,
+        project: m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
         recovery_roots: set[Path],
     ) -> p.Result[Path]:
         """Inventory or create the project recovery root exactly once.
