@@ -24,8 +24,6 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraCodegenMakeEnvironment:
     """Prove generated operations ignore the caller shell environment."""
 
-
-
     @staticmethod
     @pytest.mark.parametrize("failure_return", [None, 37])
     def test_public_dispatch_activates_once_before_hooks(
@@ -677,13 +675,6 @@ class TestsFlextInfraCodegenMakeEnvironment:
         for forced in ("PYTHONPYCACHEPREFIX", "export TMPDIR", "PROJECT_STATE_ROOT"):
             tm.that(envrc, lacks=forced)
 
-
-
-
-
-
-
-
     @staticmethod
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
     def test_ci_rebuilds_the_shim_farm_from_the_pinned_release(
@@ -757,8 +748,6 @@ class TestsFlextInfraCodegenMakeEnvironment:
             has=["missing environment interpreter", "make setup creates it"],
         )
 
-
-
     @staticmethod
     def test_workspace_without_local_members_retains_external_flext_sources(
         tmp_path: Path,
@@ -781,9 +770,3 @@ class TestsFlextInfraCodegenMakeEnvironment:
             url, ref = tm.ok(u.Infra.declared_git_source(requirement))
             assert url.endswith(f"/{u.Infra.dep_name(requirement)}.git")
             assert ref == u.Tests.provider_branch()
-
-
-
-
-
-
