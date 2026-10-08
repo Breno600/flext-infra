@@ -20,6 +20,8 @@ from flext_infra.workspace.environment_provenance import (
     FlextInfraWorkspaceEnvironmentProvenance,
 )
 from flext_infra.workspace.fleet_gaps import FlextInfraWorkspaceFleetGaps
+from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
+from flext_infra.workspace.lifecycle import FlextInfraWorkspaceLifecycle
 from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
 
 
@@ -80,11 +82,17 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
         ),
         c.Infra.CLI_GROUP_WORKSPACE: (
             m.Cli.ResultCommandRoute(
-                name="verify-lane",
-                help_text=(
-                    "Verify stash absence and declared live integration ancestry "
-                    "without effects"
+                name="validate-lifecycle",
+                help_text="Validate the root and governed member lifecycles serially",
+                model_cls=m.Infra.WorkspaceEnvironmentRequest,
+                handler=FlextInfraCliRouteBase.result_handler(
+                    FlextInfraWorkspaceLifecycle.execute_request,
                 ),
+                success_message="workspace serial lifecycle validated",
+            ),
+            m.Cli.ResultCommandRoute(
+                name="verify-lanes",
+                help_text="Read-only lane inventory and fresh integration admission",
                 model_cls=m.Infra.GitLaneVerificationRequest,
                 handler=FlextInfraCliRouteBase.result_handler(
                     FlextInfraGitService.verify_lane,

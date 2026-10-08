@@ -644,7 +644,10 @@ Infra:
         - name: pre-commit
           description: Approve this project through locked setup, audit, check, and incremental tests with the enforced CI contract.
         - name: upg
-          description: Resolve the newest declared releases, write the uv and mise locks, then prove the upgraded tree still converges; gates stay with make check.
+          description: Resolve the newest declared releases, write the uv and mise locks, then prove the upgraded tree still converges and passes every active check gate.
+        - name: validate-lifecycle
+          description: Serially run setup, gen, upg, setup, gen, gen in the root and every governed member, publishing typed receipts and stopping at the first failure.
+          profiles: [workspace]
         # Workspace-only (topology owns applicability): a standalone Makefile
         # never declares it. Never merges; a rerun continues the same lanes.
         - name: propagate

@@ -336,6 +336,12 @@ CALLER_VIRTUAL_ENV := $(patsubst %/,%,$(VIRTUAL_ENV))
 override RUNTIME_ROOT := $(REPOSITORY_ROOT)
 override export GIT_CEILING_DIRECTORIES := $(abspath $(RUNTIME_ROOT)/..)
 override export MISE_CEILING_PATHS := $(abspath $(RUNTIME_ROOT)/..)
+override export MISE_CONFIG_DIR := $(RUNTIME_ROOT)/.mise
+override export MISE_GLOBAL_CONFIG_FILE := $(MISE_CONFIG_DIR)/config.toml
+override export MISE_SYSTEM_CONFIG_DIR := $(MISE_CONFIG_DIR)
+# A file override wins over the system directory in native Mise discovery.
+unexport MISE_SYSTEM_CONFIG_FILE
+# Project provisioning must never install or resolve tools from host config.
 # The physical runtime owns both its environment and frozen tool identities.
 # Attached members retain their own lock inputs for standalone consumption;
 # the pinned mise release is the [tools] entry the committed mise.lock pins.
@@ -771,14 +777,8 @@ _upg_lifecycle: _builtin_setup_submodules
 	@mise -C "$(PROJECT_ROOT)" install --yes
 	@$(SELF_MAKE) _builtin_require_mise
 	$(call RUN_PUBLIC_ACTIVATE,gen)
-	@set -eu; \
-	before="$$(git -C "$(PROJECT_ROOT)" status --porcelain --untracked-files=all --ignore-submodules=none | sort)"; \
-	$(SELF_MAKE) gen; \
-	after="$$(git -C "$(PROJECT_ROOT)" status --porcelain --untracked-files=all --ignore-submodules=none | sort)"; \
-	if [ "$$before" != "$$after" ]; then \
-		printf 'ERROR: make upg did not converge; `make gen` still rewrites:\n%s\n' "$$after" >&2; \
-		exit 2; \
-	fi
+	@$(SELF_MAKE) gen
+	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode check
 	@$(PROJECT_FLEXT_INFRA) deps verify-locks --repository-root "$(PROJECT_ROOT)"
 	+@$(if $(filter {{ make.ci.value }},$({{ make.ci.variable }})),$(SELF_MAKE) _upg_activated,direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _upg_activated)
 
@@ -1052,6 +1052,8 @@ _builtin_fix_accessors: _builtin_require_environment
 # each implementation owns one fixed operation.
 _builtin-build: _builtin_build_artifacts
 {% if make_profile == "workspace" %}
+_builtin-validate-lifecycle: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) {{ workspace_cli_group }} validate-lifecycle --repository-root "$(PROJECT_ROOT)"
 _builtin-examples: _builtin_require_environment
 	@{{ timeout_command }} --signal=TERM --kill-after={{ timeout_kill_after_seconds }}s "{{ make.examples_timeout_seconds }}s" $(UV_RUN) python -m examples.runtime
 {% endif %}

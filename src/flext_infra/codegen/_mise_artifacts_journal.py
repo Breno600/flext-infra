@@ -835,16 +835,16 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
     def _desired_staging_selector(
         cls,
         layout: m.Infra.MiseToolchainWorkspaceLayout,
-        replacement: m.Cli.AtomicFileState | None,
+        replacement: m.Cli.AtomicFileState,
         destination: Path,
-    ) -> p.Result[str | None]:
+    ) -> p.Result[str]:
         """Prove a replacement's complete identity before encoding its path.
 
         Returns:
-            The staging selector, or None for a planned deletion.
+            The staging selector for an authenticated replacement.
 
         """
-        incomplete = replacement is not None and any((
+        incomplete = any((
             replacement.content is None,
             replacement.mode is None,
             replacement.device is None,
@@ -852,15 +852,13 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
             replacement.link_count != 1,
         ))
         if incomplete:
-            return r[str | None].fail(
+            return r[str].fail(
                 f"generation staged identity is incomplete: {destination}",
             )
-        if replacement is None:
-            return r[str | None].ok(None)
         relative_staging = files.transaction_relative(layout, replacement.path)
         if relative_staging.failure:
-            return r[str | None].from_failure(relative_staging)
-        return r[str | None].ok(relative_staging.value)
+            return r[str].from_failure(relative_staging)
+        return r[str].ok(relative_staging.value)
 
     @classmethod
     def _journal_entry(
@@ -902,19 +900,22 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
             backup_selector, original_sha = written_backup.value
         replacement = publication.replacement
         desired_exists = replacement is not None
-        desired_staging = cls._desired_staging_selector(
-            plan.layout,
-            replacement,
-            before.path,
-        )
-        if desired_staging.failure:
-            return r[m.Infra.CodegenJournalEntry].from_failure(desired_staging)
+        desired_staging: str | None = None
+        if replacement is not None:
+            staging = cls._desired_staging_selector(
+                plan.layout,
+                replacement,
+                before.path,
+            )
+            if staging.failure:
+                return r[m.Infra.CodegenJournalEntry].from_failure(staging)
+            desired_staging = staging.value
         return r[m.Infra.CodegenJournalEntry].ok(
             m.Infra.CodegenJournalEntry(
                 phase=publication.phase,
                 project=project.selector,
                 path=selector,
-                desired_staging=desired_staging.value,
+                desired_staging=desired_staging,
                 original_exists=before.content is not None,
                 original_parent_device=before.parent_device,
                 original_parent_inode=before.parent_inode,

@@ -6,7 +6,7 @@
 - [Environment activation](#environment-activation)
 - [Dependency locks](#dependency-locks)
 - [Runtime environment](#runtime-environment)
-- [Mise launchers](#mise-launchers)
+- [Mise self-management](#mise-self-management)
 - [SonarCloud exclusions](#sonarcloud-exclusions)
 - [Bootstrap credentials](#bootstrap-credentials)
 - [Evidence and checkpoints](#evidence-and-checkpoints)
@@ -47,12 +47,13 @@ without another writer outside the journal. Initial provisioning remains the
 responsibility of `make setup`. Real commands work without wrapping each call in
 `direnv exec`.
 
-Activation queries `bin-paths` from the installed, pinned Mise and prepends the real
-tool directories to the host's shared shims. The query is isolated, offline, and
-frozen: it neither installs tools nor changes locks. The `.envrc` also watches
-`mise.version` and `mise.lock` to reload paths after `make upg`. A missing pin
-requires `make upg`; a runtime that is not yet installed requires `make setup`, whose
-provisioning happens before activation.
+Activation exposes the native Mise shims and watches `.mise.toml` and `mise.lock`.
+The installed release is selected by the self-management entry in that lock, not
+by a separate launcher or pin file. Make and direnv restrict global and system
+configuration discovery to the elected runtime's `.mise` directory; unrelated
+host tool declarations never belong to project provisioning. A missing pin
+requires `make upg`; missing installed tools require `make setup`, which
+provisions before activation. Activation itself neither installs nor resolves.
 
 When Beads tracking is configured, the generated `.envrc.local` carries its environment:
 `AGENTS_GAS_CITY_ROOT` selects the Gas City root, the Gas City runtime publication
@@ -67,10 +68,9 @@ by hand.
 ## Dependency locks
 
 Configuration declares `latest`. `make upg` is the only verb that resolves newer
-releases and writes the committed `uv.lock` and `mise.lock`. `make setup`, `make gen`,
-and `make fmt` never upgrade: they install frozen from those locks, which is the CI
-path. Git dependencies follow the tips of their declared integration branches, and `APPLY`
-stays removed.
+releases and writes the committed `uv.lock` and `mise.lock`. `make setup` installs
+from committed locks; `make gen` and `make fmt` neither install nor upgrade tools.
+Git dependencies follow their declared integration branches, and `APPLY` stays removed.
 
 One `make upg` run converges. It upgrades `uv.lock`, installs the upgraded generator,
 projects the manifests through `make gen`, and then resolves `uv.lock` again from the
@@ -194,6 +194,32 @@ same operation and the recursive lifecycle. `upg` initializes the declared gitli
 before resolving the Python locks. Other runtime-dependent verbs reject a missing or
 unresolved pin before activation; `help` and `clean` remain local operations without
 that dependency.
+## Mise self-management
+
+The typed toolchain declares Mise's selector and release in `config/codegen.yaml`.
+Generation renders that declaration into `.mise.toml`; native `make upg` resolves
+its tool requests into `mise.lock`. Native `make setup` installs the lock, verifies
+the installed Mise release against its self-management entry and enters the
+recursive Make lifecycle through that installed release. Separate `mise.version`,
+bootstrap launchers and staged lock-convergence scripts are not lifecycle owners.
+
+Only `make upg` writes `mise.lock` and `uv.lock`. It resolves before provisioning,
+updates dependency floors from the installed runtime, generates the manifests,
+relocks those projected manifests, reinstalls and verifies the resulting runtime.
+The declared lock platforms and release cooldown come from the typed toolchain.
+Never edit native lock payloads or substitute manual installation commands.
+
+Setup checks whether `uv.lock` agrees with the manifests. A matching lock uses
+`--locked`; a drifted lock emits its diagnostic and installs the committed lock
+with `--frozen`, without rewriting it. Drift and any resulting dependency
+incompatibility remain red until `make upg` produces matching locks. A missing
+lock fails with an actionable diagnostic. A failed native resolver or installer
+retains its original failure; no downgrade, retry or disabled lock policy masks it.
+
+Generation owns one transaction for ordinary projections, lazy exports and docs.
+A planned deletion has no staged replacement, but its successful result still
+carries a journal receipt: absence belongs inside the typed receipt, never in
+`r.ok(None)`. Repeated unchanged generation must converge before publication.
 
 ## SonarCloud exclusions
 
@@ -215,8 +241,10 @@ preamble, for every verb: the first non-empty of the caller's `GITHUB_TOKEN`,
 `GH_TOKEN`, `MISE_GITHUB_TOKEN`, then `gh auth token` when gh is installed and
 authenticated. Make exports that one value as `GITHUB_TOKEN`, `GH_TOKEN`, and
 `MISE_GITHUB_TOKEN`, so gh, uv, and mise read the same credential and no inherited
-alias can shadow it; `GITHUB_API_TOKEN` is unexported. The network bootstrap passes
-the three names into its isolated `env -i` Mise environment. With no token, public
+alias can shadow it; `GITHUB_API_TOKEN` is unexported. Native Mise inherits those
+exports. The generated Make and direnv owners isolate global/system configuration
+discovery, not all process variables; other caller environment values remain
+inherited. With no token, public
 GitHub requests use the upstream tool's native unauthenticated behavior. The value
 is never printed. An invalid token preserves the backend's native error, without an
 anonymous retry or source switch. CI jobs inject `GITHUB_TOKEN`; containers receive

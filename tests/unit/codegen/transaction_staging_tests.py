@@ -27,6 +27,49 @@ class TestsFlextInfraTransactionStaging:
     """Exercise durable staging authority before publishing live destinations."""
 
     @staticmethod
+    @pytest.mark.parametrize("content", [b"", b"obsolete generated document\n"])
+    def test_planned_deletion_publishes_without_a_success_none_payload(
+        tmp_path: Path,
+        content: bytes,
+    ) -> None:
+        """A journaled deletion has no replacement but a valid result receipt."""
+        root = u.Tests.git_repository(tmp_path)
+        target = root / "obsolete.md"
+        target.write_bytes(content)
+        before = tm.ok(u.Cli.atomic_read_binary_file_state(target, required=True))
+        owner = transaction.FlextInfraCodegenTransaction(
+            FlextInfraCodegenMiseArtifacts(repository_root=root),
+        )
+        roots = {"@docs-0": root}
+
+        def publish(scope_root: Path) -> p.Result[t.VariadicTuple[Path]]:
+            return owner.publish_file_phase_locked(
+                scope_root,
+                roots,
+                m.Infra.CodegenPhaseAnalysis(
+                    phase=c.Infra.CodegenStagedFilePhase.CONFORM,
+                    inputs=(before,),
+                    files=(
+                        m.Infra.CodegenFilePlan(
+                            project=root,
+                            path=target,
+                            before=before,
+                            desired_content=None,
+                            desired_mode=None,
+                            owner="docs",
+                        ),
+                    ),
+                ),
+                m.Infra.CodegenPhasePublicationPolicy(
+                    directories=(),
+                    validator=lambda: r[bool].ok(value=True),
+                ),
+            )
+
+        tm.ok(owner.run_files_locked(roots, publish))
+        tm.that(target.exists(), eq=False)
+
+    @staticmethod
     @pytest.mark.parametrize("scenario", ["valid", "stale-origin", "tampered"])
     def test_staged_package_public_import_precedes_publication(
         tmp_path: Path,
