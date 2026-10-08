@@ -146,7 +146,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
         workspace = self._workspace(cli, infra, role=self._ROLE.STANDALONE).model_copy(
             update={
                 "candidate_dependencies": (
-                    m.Infra.CandidateDependencySourceSpec(
+                    m.Infra.DependencyCommitSourceSpec(
                         distribution=cli.distribution,
                         url=cli.url,
                         commit=candidate_commit,
@@ -205,7 +205,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
         workspace = self._workspace(cli, role=self._ROLE.STANDALONE).model_copy(
             update={
                 "candidate_dependencies": (
-                    m.Infra.CandidateDependencySourceSpec(
+                    m.Infra.DependencyCommitSourceSpec(
                         distribution=cli.distribution,
                         url=foreign.url,
                         commit="b" * 40,
@@ -235,7 +235,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
         workspace = self._workspace(role=self._ROLE.STANDALONE).model_copy(
             update={
                 "candidate_dependencies": (
-                    m.Infra.CandidateDependencySourceSpec(
+                    m.Infra.DependencyCommitSourceSpec(
                         distribution=cli.distribution,
                         url=cli.url,
                         commit="c" * 40,
@@ -264,7 +264,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
         workspace = self._workspace(role=self._ROLE.STANDALONE).model_copy(
             update={
                 "candidate_dependencies": (
-                    m.Infra.CandidateDependencySourceSpec(
+                    m.Infra.DependencyCommitSourceSpec(
                         distribution=cli.distribution,
                         url=cli.url,
                         commit="d" * 40,

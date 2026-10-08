@@ -41,7 +41,7 @@ class FlextInfraWorkspaceSubprojectsMixin(
                 t.VariadicTuple[Path]]]``.
 
         """
-        declared = u.Infra.git_declared_submodule_paths(repository_root)
+        declared = u.Infra.git_submodule_declarations(repository_root)
         result_type = r[tuple[tuple[m.Infra.RepositoryRef, ...], t.VariadicTuple[Path]]]
         if declared.failure:
             return result_type.from_failure(declared)
@@ -50,7 +50,6 @@ class FlextInfraWorkspaceSubprojectsMixin(
             return result_type.from_failure(members)
         subprojects: list[m.Infra.RepositoryRef] = []
         external: list[Path] = []
-        seen: set[Path] = set()
         # The workspace-declared preference owns the baseline order: a fleet
         # integrating on a versioned release line (0.12.0-dev) is not covered
         # by the provider's conventional fallback names alone.
@@ -65,16 +64,11 @@ class FlextInfraWorkspaceSubprojectsMixin(
             workspace_beads=workspace_beads,
             allow_unprovisioned_members=allow_unprovisioned_members,
         )
-        for path in declared.value:
-            if path in seen:
-                return result_type.fail(
-                    f"duplicate .gitmodules path: {path.as_posix()}",
-                )
-            seen.add(path)
+        for declaration in declared.value:
             loaded = cls._load_subproject(
                 repository_root,
-                path,
-                declared_member=members.value.get(path),
+                declaration.path,
+                declared_member=members.value.get(declaration.path),
                 context=context,
             )
             if loaded.failure:
@@ -185,28 +179,26 @@ class FlextInfraWorkspaceSubprojectsMixin(
 
         """
         result_type = r[t.Pair[str, bool]]
-        if path.is_absolute() or not path.parts or ".." in path.parts:
-            return result_type.fail(f"invalid .gitmodules path: {path.as_posix()}")
-        contract = cls._gitmodule_contract(repository_root, path)
+        contract = u.Infra.git_submodule_declaration(
+            m.Infra.GitSubmoduleContractRequest(
+                repo_root=repository_root,
+                member_path=path.as_posix(),
+            ),
+        )
         if contract.failure:
             return result_type.from_failure(contract)
-        declared_url, declared_branch = contract.value
-        unmanaged = u.Infra.git_unmanaged_submodule_paths(
-            m.Infra.GitRepoRequest(repo_root=repository_root),
-        )
-        if unmanaged.failure:
-            return result_type.from_failure(unmanaged)
-        if path in unmanaged.value:
-            return result_type.ok((declared_url, True))
+        declaration = contract.value
+        if declaration.managed is False:
+            return result_type.ok((declaration.url, True))
         if not u.Infra.gitmodule_branch_is_governed(
-            declared_branch,
+            declaration.branch,
             integration_branch=context.integration_branch,
         ):
             return result_type.fail(
                 "governed subproject branch differs from the workspace "
                 f"integration line: {path.as_posix()}",
             )
-        return result_type.ok((declared_url, False))
+        return result_type.ok((declaration.url, False))
 
     @classmethod
     def _ci_member_verdict(

@@ -231,27 +231,6 @@ class FlextInfraWorkspaceIdentityMixin:
             manifest.project,
         ))
 
-    @staticmethod
-    def _gitmodule_contract(
-        repository_root: Path,
-        subproject_path: Path,
-    ) -> p.Result[t.Pair[str, str]]:
-        """Read one exact URL/branch pair from the local ``.gitmodules``.
-
-        Returns:
-            The resulting ``p.Result[t.Pair[str, str]]``.
-
-        """
-        contract = u.Infra.gitmodule_contract(
-            m.Infra.GitSubmoduleContractRequest(
-                repo_root=repository_root,
-                member_path=subproject_path.as_posix(),
-            ),
-        )
-        if contract.failure:
-            return r[tuple[str, str]].from_failure(contract)
-        return r[tuple[str, str]].ok((contract.value.url, contract.value.branch))
-
     @classmethod
     def _local_repository_ref(
         cls,

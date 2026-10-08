@@ -88,10 +88,10 @@ class FlextInfraUtilitiesDocsScopeProjectsMixin(
         root = FlextInfraUtilitiesDocsScopeProjectsMixin.absolute_lexical(
             repository_root,
         )
-        declared = FlextInfraUtilitiesGit.git_declared_submodule_paths(root)
+        declared = FlextInfraUtilitiesGit.git_submodule_declarations(root)
         if declared.failure:
             raise ValueError(declared.error or f"invalid workspace: {root}")
-        return frozenset(root / path for path in declared.value)
+        return frozenset(root / item.path for item in declared.value)
 
     @staticmethod
     def project_info_for_entry(

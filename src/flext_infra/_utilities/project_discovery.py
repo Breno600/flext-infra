@@ -190,17 +190,15 @@ class FlextInfraUtilitiesProjectDiscovery(
             Project roots sorted by their ``.gitmodules`` declaration order.
 
         Raises:
-            ValueError: If ``declared_paths.failure``.
+            ValueError: If ``declared.failure``.
 
         """
         from flext_infra._utilities import FlextInfraUtilitiesGit
 
-        declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(
-            repository_root,
-        )
-        if declared_paths.failure:
-            raise ValueError(declared_paths.error or "invalid .gitmodules")
-        configured_projects = tuple(path.as_posix() for path in declared_paths.value)
+        declared = FlextInfraUtilitiesGit.git_submodule_declarations(repository_root)
+        if declared.failure:
+            raise ValueError(declared.error or "invalid .gitmodules")
+        configured_projects = tuple(item.path.as_posix() for item in declared.value)
         candidates = cls.discover_project_candidates(
             repository_root,
             scan_dirs=scan_dirs,
@@ -249,13 +247,13 @@ class FlextInfraUtilitiesProjectDiscovery(
         from flext_infra._utilities import FlextInfraUtilitiesGit
 
         resolved_root = repository_root.resolve()
-        declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(
+        declared_paths = FlextInfraUtilitiesGit.git_submodule_declarations(
             resolved_root,
         )
         if declared_paths.failure:
             raise ValueError(declared_paths.error or "invalid .gitmodules")
         submodules = frozenset(
-            (resolved_root / path).resolve() for path in declared_paths.value
+            (resolved_root / item.path).resolve() for item in declared_paths.value
         )
         declared = cls.discover_project_candidates(resolved_root)
         nonparticipants = cls.manifest_nonparticipant_paths(resolved_root)

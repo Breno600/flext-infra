@@ -163,7 +163,7 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
         )
         if manifest_before.failure:
             return r[t.VariadicTuple[Path]].from_failure(manifest_before)
-        declared = FlextInfraUtilitiesGit.git_declared_submodule_paths(root)
+        declared = FlextInfraUtilitiesGit.git_submodule_declarations(root)
         if declared.failure:
             return r[t.VariadicTuple[Path]].from_failure(declared)
         manifest_after = u.Cli.atomic_read_binary_file_state(
@@ -176,7 +176,7 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
             return r[t.VariadicTuple[Path]].fail(
                 f"docs repository topology changed during discovery: {manifest_path}",
             )
-        return r[t.VariadicTuple[Path]].ok(tuple(declared.value))
+        return r[t.VariadicTuple[Path]].ok(tuple(item.path for item in declared.value))
 
     @staticmethod
     def _declared_root_candidates(

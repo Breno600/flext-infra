@@ -7,7 +7,8 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated, Literal, Self
+from types import MappingProxyType
+from typing import Annotated, ClassVar, Literal, Self
 
 from flext_cli import m
 
@@ -43,8 +44,13 @@ class FlextInfraConfigModelsWorkspace:
                 raise ValueError(msg)
             return self
 
-    class CandidateDependencySourceSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """One explicitly staged Git commit for a candidate dependency."""
+    class DependencyCommitSourceSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """One dependency distribution resolved to an immutable Git commit.
+
+        A staged candidate and a workspace member's recorded gitlink are the
+        same fact: a distribution, its canonical repository and the exact
+        commit it resolves to.
+        """
 
         distribution: Annotated[
             t.NonEmptyStr,
@@ -62,12 +68,61 @@ class FlextInfraConfigModelsWorkspace:
         @m.model_validator(mode="after")
         def _validate_source(self) -> Self:
             if not self.url.startswith("https://") or not self.url.endswith(".git"):
-                msg = "candidate dependency URL must be canonical HTTPS Git"
+                msg = "dependency commit source URL must be canonical HTTPS Git"
                 raise ValueError(msg)
             if c.Infra.GIT_COMMIT_OID_RE.fullmatch(self.commit) is None:
-                msg = "candidate dependency commit must be a full Git OID"
+                msg = "dependency commit source must pin a full Git OID"
                 raise ValueError(msg)
             return self
+
+    class DependencyManifestSpec(m.ContractModel):
+        """Dependency facts one member's own ``pyproject.toml`` declares."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
+            extra="ignore",
+            frozen=True,
+        )
+
+        name: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                validation_alias=m.AliasPath("project", "name"),
+                description="PEP 621 distribution name",
+            ),
+        ]
+        dependencies: Annotated[
+            t.StrSequence,
+            m.Field(
+                validation_alias=m.AliasPath("project", "dependencies"),
+                description="PEP 621 runtime requirements",
+            ),
+        ] = ()
+        dependency_groups: Annotated[
+            t.MappingKV[str, t.StrSequence],
+            m.Field(
+                validation_alias=c.Infra.DEPENDENCY_GROUPS,
+                description="PEP 735 dependency groups (dev, codegen, ...)",
+            ),
+        ] = m.Field(
+            default_factory=lambda: MappingProxyType[str, t.StrSequence]({}),
+        )
+
+    class DependencyEdgeSpec(m.ContractModel):
+        """One directed requirement edge between two workspace members."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
+            extra="forbid",
+            frozen=True,
+        )
+
+        dependent: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Member distribution declaring the requirement"),
+        ]
+        dependency: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Member distribution it requires"),
+        ]
 
     type CandidateBootstrapTargets = t.VariadicTuple[CandidateBootstrapTargetSpec]
     """Shared declaration type for repeated candidate worktree target fields."""
@@ -225,9 +280,7 @@ class FlextInfraConfigModelsWorkspace:
             m.Field(description="Optional integration provider overlay"),
         ] = None
         candidate_dependencies: Annotated[
-            t.VariadicTuple[
-                FlextInfraConfigModelsWorkspace.CandidateDependencySourceSpec
-            ],
+            t.VariadicTuple[FlextInfraConfigModelsWorkspace.DependencyCommitSourceSpec],
             m.Field(description="Candidate-only exact dependency Git sources"),
         ] = ()
         candidate_bootstrap_targets: Annotated[
@@ -424,9 +477,7 @@ class FlextInfraConfigModelsWorkspace:
             ),
         ] = None
         candidate_dependencies: Annotated[
-            t.VariadicTuple[
-                FlextInfraConfigModelsWorkspace.CandidateDependencySourceSpec
-            ],
+            t.VariadicTuple[FlextInfraConfigModelsWorkspace.DependencyCommitSourceSpec],
             m.Field(description="Candidate-only exact dependency Git sources"),
         ] = ()
         candidate_bootstrap_targets: Annotated[
