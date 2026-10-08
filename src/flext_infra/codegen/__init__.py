@@ -56,6 +56,9 @@ if TYPE_CHECKING:
         FlextInfraCodegenConformDocsOwnership,
     )
     from flext_infra.codegen._conform.execute import FlextInfraCodegenConformExecute
+    from flext_infra.codegen._conform.execute_scaffold import (
+        FlextInfraCodegenConformExecuteScaffold,
+    )
     from flext_infra.codegen._conform.existing_plan import (
         FlextInfraCodegenConformExistingPlan,
     )
@@ -102,6 +105,9 @@ if TYPE_CHECKING:
     )
     from flext_infra.codegen._mise_artifacts_journal import (
         FlextInfraMiseArtifactsJournal,
+    )
+    from flext_infra.codegen._mise_artifacts_journal_relocation import (
+        FlextInfraMiseArtifactsJournalRelocation,
     )
     from flext_infra.codegen._mise_artifacts_process import (
         FlextInfraMiseArtifactsProcess,
@@ -163,6 +169,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenConformContextRender",
     "FlextInfraCodegenConformDocsOwnership",
     "FlextInfraCodegenConformExecute",
+    "FlextInfraCodegenConformExecuteScaffold",
     "FlextInfraCodegenConformExistingPlan",
     "FlextInfraCodegenConformFilePlans",
     "FlextInfraCodegenConformGitignore",
@@ -216,6 +223,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraMiseArtifactsCandidates",
     "FlextInfraMiseArtifactsFiles",
     "FlextInfraMiseArtifactsJournal",
+    "FlextInfraMiseArtifactsJournalRelocation",
     "FlextInfraMiseArtifactsProcess",
     "FlextInfraMiseArtifactsState",
     "FlextInfraMiseArtifactsVerification",
@@ -240,6 +248,7 @@ install_lazy_exports(
         "FlextInfraCodegenConformContextRender": "._conform.context_render",
         "FlextInfraCodegenConformDocsOwnership": "._conform.docs_ownership",
         "FlextInfraCodegenConformExecute": "._conform.execute",
+        "FlextInfraCodegenConformExecuteScaffold": "._conform.execute_scaffold",
         "FlextInfraCodegenConformExistingPlan": "._conform.existing_plan",
         "FlextInfraCodegenConformFilePlans": "._conform.file_plans",
         "FlextInfraCodegenConformGitignore": "._conform.gitignore",
@@ -305,6 +314,9 @@ install_lazy_exports(
         "FlextInfraMiseArtifactsCandidates": "._mise_artifacts_candidates",
         "FlextInfraMiseArtifactsFiles": ".pipeline",
         "FlextInfraMiseArtifactsJournal": "._mise_artifacts_journal",
+        "FlextInfraMiseArtifactsJournalRelocation": (
+            "._mise_artifacts_journal_relocation"
+        ),
         "FlextInfraMiseArtifactsProcess": "._mise_artifacts_process",
         "FlextInfraMiseArtifactsState": "._mise_artifacts_state",
         "FlextInfraMiseArtifactsVerification": "._mise_artifacts_verification",
