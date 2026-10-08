@@ -19,7 +19,7 @@ from flext_infra.workspace.environment import FlextInfraWorkspaceEnvironmentMixi
 from flext_infra.workspace.environment_provenance import (
     FlextInfraWorkspaceEnvironmentProvenance,
 )
-from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
+from flext_infra.workspace.flext_binding import FlextInfraBindingService
 from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
 
 
@@ -36,7 +36,7 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-        return FlextInfraFlextBindingService.apply(
+        return FlextInfraBindingService.apply(
             consumer_root=params.repository_root,
             flext_root=params.flext_root,
             python=params.python,

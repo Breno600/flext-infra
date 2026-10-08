@@ -205,7 +205,7 @@ if TYPE_CHECKING:
     from flext_infra.workspace.environment_provenance import (
         FlextInfraWorkspaceEnvironmentProvenance,
     )
-    from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
+    from flext_infra.workspace.flext_binding import FlextInfraBindingService
     from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
     from flext_infra.workspace.rope import FlextInfraRopeWorkspace
     from flext_infra.worktree import FlextInfraWorktreeService
@@ -275,7 +275,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraEnsurePyrightConfigPhase",
     "FlextInfraEnsureRuffConfigPhase",
     "FlextInfraExtraPathsManager",
-    "FlextInfraFlextBindingService",
+    "FlextInfraBindingService",
     "FlextInfraFreshImportGate",
     "FlextInfraGate",
     "FlextInfraGateRegistry",
@@ -553,7 +553,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".workspace.environment_provenance": (
                 "FlextInfraWorkspaceEnvironmentProvenance",
             ),
-            ".workspace.flext_binding": ("FlextInfraFlextBindingService",),
+            ".workspace.flext_binding": ("FlextInfraBindingService",),
             ".workspace.propagation": ("FlextInfraWorkspacePropagation",),
             ".workspace.rope": ("FlextInfraRopeWorkspace",),
             ".worktree": ("FlextInfraWorktreeService",),
