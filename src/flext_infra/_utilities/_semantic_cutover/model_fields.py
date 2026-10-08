@@ -106,7 +106,6 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
                 statement,
                 guard,
                 target,
-                receiver,
             )
             indent = lines[statement.lineno - 1][: statement.col_offset]
             comments = "".join(lines[statement.end_lineno : guard.lineno - 1])
@@ -139,7 +138,6 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
         statement: ast.Assign,
         guard: ast.stmt | None,
         target: ast.Name,
-        receiver: str,
     ) -> ast.If:
         """Require one complete, guarded, singly used model-fields boundary.
 
@@ -187,6 +185,7 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
                 f"statements in {path}:{statement.lineno}"
             )
             raise ValueError(msg)
+        receiver = cls._field_receiver(statement)
         if any(
             receiver in cls._bound_identifiers(node)
             for body in function.body
