@@ -38,7 +38,7 @@ class FlextInfraImportNormalizationAstMixin:
         cls,
         site: ast.Name,
         parents: t.MappingKV[int, ast.AST],
-        frozen: set[int],
+        frozen: frozenset[int],
     ) -> bool:
         """Return whether one use site can move inside its using function.
 
