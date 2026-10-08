@@ -158,8 +158,7 @@ class FlextInfraWorkspaceChecker(
             or (params.project_names and tuple(params.project_names) != (".",))
         ):
             return r[t.VariadicTuple[Path]].fail(
-                "file-gate requires read-only local selection "
-                "without tool overrides",
+                "file-gate requires read-only local selection without tool overrides",
             )
         return cls._resolve_repository_file(params.repository_root, params.file)
 
