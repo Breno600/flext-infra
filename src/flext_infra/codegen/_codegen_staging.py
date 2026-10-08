@@ -91,7 +91,7 @@ class FlextInfraCodegenStaging:
         Returns:
             The resulting ``p.Result[t.Pair[t.VariadicTuple[tuple[
                 m.Infra.CodegenFilePlan, m.Cli.AtomicFileState, tuple[Path,
-                bytes, int] | None, bool]], t.MappingKV[Path,
+                bytes, int], bool]], t.MappingKV[Path,
                 m.Cli.AtomicDirectoryState]]]``.
 
         """
@@ -310,7 +310,7 @@ class FlextInfraCodegenStaging:
                 replacement = staged_state.value
             publications.append(
                 m.Infra.CodegenStagedFile(
-                    phase=phase,
+                    phase=c.Infra.CodegenStagedFilePhase(phase),
                     project=file_plan.project,
                     before=before,
                     replacement=replacement,

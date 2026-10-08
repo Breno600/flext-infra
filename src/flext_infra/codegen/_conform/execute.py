@@ -193,10 +193,13 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         planned = u.Cli.atomic_plan_directory_chain(root)
         if planned.failure:
             return r[t.VariadicTuple[m.Cli.AtomicDirectoryState]].from_failure(planned)
-        return u.Cli.atomic_create_directory_chain_guarded(
+        created = u.Cli.atomic_create_directory_chain_guarded(
             planned.value,
             permission_mode=0o755,
         )
+        if created.failure:
+            return r[t.VariadicTuple[m.Cli.AtomicDirectoryState]].from_failure(created)
+        return r[t.VariadicTuple[m.Cli.AtomicDirectoryState]].ok(tuple(created.value))
 
     @staticmethod
     def _initialize_request_git(
@@ -939,7 +942,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 planned_workspace,
             )
         (workspace, project), planned_present = planned_workspace.value
-        if not planned_present:
+        if not planned_present or workspace is None or project is None:
             return r[t.VariadicTuple[m.Cli.AtomicDirectoryState]].ok(())
         destinations = self._scaffold_destination_directories(
             request,
@@ -955,7 +958,12 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
     def _scaffold_plan(
         self,
         request: m.Infra.CodegenConformRequest,
-    ) -> p.Result[t.Pair[t.Pair[m.Infra.WorkspaceSpec, m.Infra.ProjectSpec], bool]]:
+    ) -> p.Result[
+        t.Pair[
+            t.Pair[m.Infra.WorkspaceSpec | None, m.Infra.ProjectSpec | None],
+            bool,
+        ]
+    ]:
         """Resolve the workspace and project metadata that drive scaffolding.
 
         Scaffolding a new project requires its declared metadata, and that
@@ -965,13 +973,16 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         ``make gen`` unusable in every repository without its own manifest.
 
         Returns:
-            The resulting ``p.Result[t.Pair[t.Pair[m.Infra.WorkspaceSpec,
-                m.Infra.ProjectSpec], bool]]`` where the boolean marks plan
-            presence (False means no scaffold chain applies).
+            The resulting ``p.Result[t.Pair[t.Pair[m.Infra.WorkspaceSpec |
+                None, m.Infra.ProjectSpec | None], bool]]`` where the boolean
+            marks plan presence (False means no scaffold chain applies).
 
         """
         result_type = r[
-            t.Pair[t.Pair[m.Infra.WorkspaceSpec, m.Infra.ProjectSpec], bool]
+            t.Pair[
+                t.Pair[m.Infra.WorkspaceSpec | None, m.Infra.ProjectSpec | None],
+                bool,
+            ]
         ]
         if (
             c.Infra.CodegenConformMode(request.mode)

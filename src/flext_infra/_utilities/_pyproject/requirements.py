@@ -192,7 +192,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
         prepared = cls._parsed_canonical_provenance(requirement)
         if prepared.failure:
             return r[str].from_failure(prepared)
-        head, marker, (url, declared_ref) = prepared.value
+        head, marker_pair, (url, declared_ref) = prepared.value
         resolved = cls._resolved_requirement_provenance(
             head,
             dependency_name,
@@ -211,7 +211,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             head,
             dependency_name,
             resolved.value,
-            marker,
+            marker_pair,
             pins_commit=pins_commit,
         )
 
@@ -333,7 +333,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
     def _parsed_canonical_provenance(
         cls,
         requirement: str,
-    ) -> p.Result[t.Pair[str, t.Pair[t.Pair[bool, str], t.Pair[str, str]]]]:
+    ) -> p.Result[t.Triple[str, t.Pair[bool, str], t.Pair[str, str]]]:
         """Parse one internal requirement's head, marker, and Git provenance.
 
         Returns:
@@ -367,8 +367,8 @@ class FlextInfraUtilitiesPyprojectRequirements:
         source_line = f"{head} @ {declared}"
         parsed = FlextInfraUtilitiesRepository.declared_git_source(source_line)
         if parsed.failure:
-            return r[str].from_failure(parsed)
-        return r[str].ok(parsed.value)
+            return r[t.Pair[str, str]].from_failure(parsed)
+        return r[t.Pair[str, str]].ok(parsed.value)
 
     @staticmethod
     def _candidate_commit_override(
@@ -384,7 +384,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
         """
         if not url:
-            return r[str].fail(
+            return r[t.Pair[str, str]].fail(
                 "candidate dependency has no declared Git provenance: "
                 f"{dependency_name}",
             )
@@ -392,18 +392,18 @@ class FlextInfraUtilitiesPyprojectRequirements:
             f"{head} @ {candidate}",
         )
         if selected.failure:
-            return r[str].from_failure(selected)
+            return r[t.Pair[str, str]].from_failure(selected)
         candidate_url, candidate_commit = selected.value
         if not FlextInfraUtilitiesRepository.ref_is_commit(candidate_commit):
-            return r[str].fail(
+            return r[t.Pair[str, str]].fail(
                 f"candidate dependency must pin a full Git commit: {dependency_name}",
             )
         if url and url != candidate_url:
-            return r[str].fail(
+            return r[t.Pair[str, str]].fail(
                 "candidate dependency Git URL differs from declared provenance: "
                 f"{dependency_name}",
             )
-        return r[str].ok((candidate_url, candidate_commit))
+        return r[t.Pair[str, str]].ok((candidate_url, candidate_commit))
 
     @staticmethod
     def _rendered_canonical(

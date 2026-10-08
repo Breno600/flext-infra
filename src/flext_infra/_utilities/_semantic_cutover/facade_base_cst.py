@@ -125,6 +125,11 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBaseCst:
 
             """
             retained: list[cst.ImportAlias] = []
+            if isinstance(
+                original_node.names,
+                cst.ImportStar,
+            ) or isinstance(updated_node.names, cst.ImportStar):
+                return []
             for original, updated in zip(
                 original_node.names,
                 updated_node.names,

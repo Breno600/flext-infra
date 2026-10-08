@@ -95,11 +95,11 @@ class FlextInfraUtilitiesPyprojectOverlay:
         merged: t.MutableJsonMapping,
         live_payload: t.JsonMapping,
         project_keys: t.StrSequence,
-    ) -> p.Result[t.JsonMapping]:
+    ) -> p.Result[t.JsonDict]:
         """Overlay every declared CUSTOM project key onto the merged document.
 
         Returns:
-            The resulting ``p.Result[t.JsonMapping]``.
+            The resulting ``p.Result[t.JsonDict]``.
 
         """
         project = dict(u.Cli.toml_mapping_child(merged, c.Infra.PROJECT) or {})
@@ -114,12 +114,12 @@ class FlextInfraUtilitiesPyprojectOverlay:
                     key,
                 )
                 if validated.failure:
-                    return r[t.JsonMapping].from_failure(validated)
+                    return r[t.JsonDict].from_failure(validated)
                 required, custom = validated.value
                 project[key] = cls._merged_requirements(required, custom)
             else:
                 project[key] = live_project[key]
-        return r[t.JsonMapping].ok(project)
+        return r[t.JsonDict].ok(project)
 
     @staticmethod
     def _overlay_dev_group(
