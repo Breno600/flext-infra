@@ -11,10 +11,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from flext_infra import c, config, p, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesRopeRuntimeBase,
-    FlextInfraUtilitiesRopeRuntimeTypes,
-)
+from flext_infra._utilities.rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
 
 
 class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):

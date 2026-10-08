@@ -31,7 +31,7 @@ class FlextInfraRopeWorkspace(
         m.Field(description="Optional Rope project root; defaults to repository_root"),
     ] = None
 
-    _rope_repository_root: Path
+    _rope_repository_root: Path = u.PrivateAttr()
     _rope_project: t.Infra.RopeProject | None = u.PrivateAttr(
         default_factory=lambda: None,
     )

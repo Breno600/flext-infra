@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, override
 
 from flext_infra import c, config, m, p, r, t, u
 from flext_infra.base import s
-from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -35,6 +34,7 @@ class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
             The resulting ``p.Result[m.Infra.FleetGapsReport]``.
 
         """
+        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
         root = self.repository_root
         loaded = FlextInfraWorkspaceDetector.load_workspace_spec(root)
         if loaded.failure:

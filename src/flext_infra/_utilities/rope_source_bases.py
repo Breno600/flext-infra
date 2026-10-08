@@ -36,6 +36,8 @@ class FlextInfraUtilitiesRopeSourceBases:
             The module's explicit lexical bindings, including value shadowing.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeSourceBasesInventory
+
         return FlextInfraUtilitiesRopeSourceBasesInventory.inventory(
             request,
             definitions,
@@ -54,6 +56,8 @@ class FlextInfraUtilitiesRopeSourceBases:
             The module's facade alias names routed to their lazy module paths.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeSourceBasesAliases
+
         return FlextInfraUtilitiesRopeSourceBasesAliases.lazy_module_aliases(
             module,
             path,
@@ -106,7 +110,9 @@ class FlextInfraUtilitiesRopeSourceBases:
         }
         module_aliases: dict[str, str] = {}
         for module, (path, source) in sources.items():
-            for alias, absolute in cls.lazy_module_aliases(module, path, source).items():
+            for alias, absolute in cls.lazy_module_aliases(
+                module, path, source
+            ).items():
                 qualified = f"{module}.{alias}"
                 if qualified not in namespaces:
                     module_aliases.setdefault(qualified, absolute)

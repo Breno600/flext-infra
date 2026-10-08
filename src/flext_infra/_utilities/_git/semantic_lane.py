@@ -9,7 +9,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_cli import u
 
 from flext_infra import c, m, r
 from flext_infra._utilities._git.semantic_worktree import (
@@ -98,6 +97,7 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_cli import u
         root = request.repo_root
         base = cls._verified_lane_base(request)
         if base.failure:
@@ -123,6 +123,7 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
             To ``base`` and remove the lane branch that carries nothing.
 
         """
+        from flext_cli import u
         root = request.repo_root
         for command in (
             [c.Infra.GIT, "switch", request.base],
@@ -141,6 +142,7 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_cli import u
         root, branch = request.repo_root, request.branch
         local = u.Cli.capture(
             [c.Infra.GIT, "rev-parse", "--verify", "--quiet", f"refs/heads/{branch}"],
@@ -212,6 +214,7 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_cli import u
         root, branch = request.repo_root, request.branch
         pushed = cls.git_push_upstream(
             m.Infra.GitPushRequest(repo_root=root, branch=branch),

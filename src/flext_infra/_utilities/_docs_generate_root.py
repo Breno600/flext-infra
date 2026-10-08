@@ -11,12 +11,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_infra import c, m, p, r, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesDocsApi,
-    FlextInfraUtilitiesDocsContract,
-    FlextInfraUtilitiesDocsGenerateProjectMixin,
-    FlextInfraUtilitiesDocsRender,
-)
+from flext_infra._utilities._docs_generate_project import FlextInfraUtilitiesDocsGenerateProjectMixin
 
 
 class FlextInfraUtilitiesDocsGenerateRootMixin(
@@ -38,6 +33,7 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
             The resulting ``list[t.Pair[Path, str]]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocsRender
         return [
             (
                 repository_root / "mkdocs.yml",
@@ -75,6 +71,7 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
             The resulting ``(rendered, project scopes, scope modules)`` triple.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocsApi, FlextInfraUtilitiesDocsContract, FlextInfraUtilitiesDocsRender
         project_scopes = [scope for scope in scopes if scope.path != repository_root]
         catalog_entries: t.MutableSequenceOf[m.Infra.DocsCatalogEntry] = []
         scope_modules: MutableMapping[str, list[str]] = {}
@@ -172,6 +169,7 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
             The resulting ``list[t.Pair[Path, str]]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocsRender
         projects_index_entries: t.MutableSequenceOf[m.Infra.DocsProjectIndexEntry] = []
         for scope in project_scopes:
             rendered.append((
@@ -283,6 +281,7 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
                 ``p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesDocsContract, FlextInfraUtilitiesDocsRender
         workspace_contract = FlextInfraUtilitiesDocsContract.docs_workspace_contract(
             repository_root,
         )

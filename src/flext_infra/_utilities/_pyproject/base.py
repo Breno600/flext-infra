@@ -6,11 +6,9 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_infra._utilities import (
-    FlextInfraUtilitiesPyprojectDocument,
-    FlextInfraUtilitiesPyprojectOverlay,
-    FlextInfraUtilitiesPyprojectTomlPhases,
-)
+from flext_infra._utilities._pyproject.document import FlextInfraUtilitiesPyprojectDocument
+from flext_infra._utilities._pyproject.overlay import FlextInfraUtilitiesPyprojectOverlay
+from flext_infra._utilities._pyproject.toml_phases import FlextInfraUtilitiesPyprojectTomlPhases
 
 
 class FlextInfraUtilitiesPyprojectConformBase(

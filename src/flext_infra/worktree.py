@@ -13,7 +13,6 @@ from flext_cli import r
 
 from flext_infra import c, m, p, t, u
 from flext_infra.base import s
-from flext_infra.git import FlextInfraGitService
 
 
 class FlextInfraWorktreeService(s[str]):
@@ -277,6 +276,7 @@ class FlextInfraWorktreeService(s[str]):
             The resulting ``p.Result[str]``.
 
         """
+        from flext_infra.git import FlextInfraGitService
         if not self.apply_changes:
             return r[str].fail("worktree add requires --apply")
         if base.startswith("-"):
@@ -462,6 +462,7 @@ class FlextInfraWorktreeService(s[str]):
             The resulting ``p.Result[str]``.
 
         """
+        from flext_infra.git import FlextInfraGitService
         if not self.apply_changes:
             return r[str].fail("worktree remove requires --apply")
         lane_result = self.registered_lane(primary_root, branch)

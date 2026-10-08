@@ -10,7 +10,6 @@ from typing import override
 
 from flext_infra import c, m, p, r, u
 from flext_infra.base import s
-from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 
 
 class FlextInfraRefactorViolationsSweep(s[m.Infra.ViolationsSweepReport]):
@@ -32,6 +31,7 @@ class FlextInfraRefactorViolationsSweep(s[m.Infra.ViolationsSweepReport]):
             The resulting ``p.Result[m.Infra.ViolationsSweepReport]``.
 
         """
+        from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
         root = self.repository_root
         before_scan = FlextInfraModGateEngine.scan(root, fix=False)
         if before_scan.failure:

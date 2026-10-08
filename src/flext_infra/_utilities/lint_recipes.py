@@ -24,7 +24,6 @@ from operator import itemgetter
 from pathlib import Path
 
 from flext_infra import c, config, m, t
-from flext_infra._utilities import FlextInfraUtilitiesPyproject
 
 
 class FlextInfraUtilitiesLintRecipes:
@@ -84,6 +83,7 @@ class FlextInfraUtilitiesLintRecipes:
                 identity.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesPyproject
         for candidate in (pkg_dir, *pkg_dir.parents):
             if not (candidate / c.PYPROJECT_FILENAME).is_file():
                 continue

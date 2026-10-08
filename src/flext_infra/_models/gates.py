@@ -15,7 +15,7 @@ from flext_cli import t
 
 from flext_core import m
 from flext_infra import c
-from flext_infra._models import FlextInfraModelsDuplication
+from flext_infra._models.duplication import FlextInfraModelsDuplication
 
 # Gate models use base type primitives; importing the composing project facade
 # here creates unresolved aliases while Pydantic analyzes nested root models.
@@ -103,23 +103,15 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
         file: Annotated[str, m.Field(description="Diagnostic source file path")]
         line: Annotated[int, m.Field(description="Diagnostic start line")]
         column: Annotated[int, m.Field(description="Diagnostic start column")]
-        end_line: Annotated[
-            int | None,
-            m.Field(default=None, description="Diagnostic end line"),
-        ]
+        end_line: Annotated[int | None, m.Field(description="Diagnostic end line")] = (
+            None
+        )
         end_column: Annotated[
-            int | None,
-            m.Field(default=None, description="Diagnostic end column"),
-        ]
+            int | None, m.Field(description="Diagnostic end column")
+        ] = None
         message: Annotated[t.NonEmptyStr, m.Field(description="Diagnostic message")]
-        hint: Annotated[
-            str | None,
-            m.Field(default=None, description="Diagnostic hint"),
-        ]
-        code: Annotated[
-            str | None,
-            m.Field(default=None, description="Mypy diagnostic code"),
-        ]
+        hint: Annotated[str | None, m.Field(description="Diagnostic hint")] = None
+        code: Annotated[str | None, m.Field(description="Mypy diagnostic code")] = None
         severity: Annotated[
             Literal["error", "note"],
             m.Field(description="Mypy diagnostic severity"),
