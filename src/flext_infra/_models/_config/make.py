@@ -18,6 +18,7 @@ from flext_infra._models import (
     FlextInfraConfigModelsContract,
     FlextInfraExternalCacheDirectorySpec,
 )
+from flext_infra._models._config.make_clean import FlextInfraConfigModelsMakeClean
 
 
 def _shared_mypy_cache_spec() -> FlextInfraConfigModelsMake.MypyCacheSpec:
@@ -44,7 +45,7 @@ def _default_testmon_cache_policy() -> (
     return FlextInfraConfigModelsMake.TestmonCachePolicySpec()
 
 
-class FlextInfraConfigModelsMake:
+class FlextInfraConfigModelsMake(FlextInfraConfigModelsMakeClean):
     """Make workflow, verb, CI, and cache specification models."""
 
     class MakeCiSpec(FlextInfraConfigModelsContract.ConfigContract):
@@ -180,31 +181,6 @@ class FlextInfraConfigModelsMake:
                 )
                 raise ValueError(msg)
             return self
-
-    class MakeCleanSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Disposable artifacts the generated clean verb removes.
-
-        Stale caches and traces cause FALSE DIAGNOSES, so the disposable set is
-        declared data rather than a literal buried in a recipe: every project
-        cleans exactly the same things and a new artifact kind is one config row.
-        """
-
-        cache_dirs: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="Cache directory names removed anywhere in the tree"),
-        ]
-        root_dirs: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="Directories removed at the project root only"),
-        ]
-        root_files: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="Files removed at the project root only"),
-        ]
-        trace_globs: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="Trace/profile globs removed anywhere in the tree"),
-        ]
 
     class DocsOverviewPreviewLimitsSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Maximum list sizes in the generated public API overview."""
