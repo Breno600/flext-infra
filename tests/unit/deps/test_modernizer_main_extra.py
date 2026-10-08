@@ -292,8 +292,17 @@ class TestsFlextInfraDepsModernizerMainExtra:
         source = '[project]\nname = "sample"\nversion = "0.1.0"\n'
         path = tmp_path / c.PYPROJECT_FILENAME
         modernizer = FlextInfraPyprojectModernizer(repository_root=tmp_path)
+        topology = m.Infra.PyprojectDeclaredTopology()
+        canonical_source = tm.ok(
+            modernizer.conform_source(
+                source,
+                path=path,
+                format_source=False,
+                topology=topology,
+            ),
+        )
         baseline = u.Infra.format_toml_source(
-            source,
+            canonical_source,
             path=path,
             toolchain_root=tmp_path,
             taplo_version=config.Infra.codegen.toolchain.tool_versions["taplo"],
@@ -303,14 +312,14 @@ class TestsFlextInfraDepsModernizerMainExtra:
         )
 
         result = modernizer.conform_source(
-            source,
+            canonical_source,
             path=path,
-            topology=m.Infra.PyprojectDeclaredTopology(),
+            topology=topology,
         )
 
         error = tm.fail(result)
         tm.that(error, eq=tm.fail(baseline))
-        tm.that(error, has=invalid_glob)
+        tm.that(error, has="taplo format failed (1):")
         tm.that(
             error,
             lacks=["couldn't exec process", "pyproject tooling render failed"],
