@@ -554,7 +554,8 @@ endef
 {% endif %}
 
 # `make upg` is the only verb that writes uv.lock (`uv lock --upgrade
-# --refresh`, then `uv lock --check`). Setup never writes it (lock law above).
+# --refresh`, then `uv lock` of the manifest `gen` projected and `uv lock
+# --check`). Setup never writes it (lock law above).
 
 .PHONY: $(PUBLIC_VERBS) $(addprefix _builtin-,$(PUBLIC_VERBS))
 .PHONY: _builtin_gen_init _builtin_gen_all
@@ -737,7 +738,11 @@ endif
 # the manifest the generator was provisioned with until it is resolved from
 # the rendered one, so activation runs after the relock and its install. A
 # rendered manifest that moves the Mise self-pin therefore converges in one
-# run. Resolve that regenerated
+# run. The upgraded generator may also project requirements the first uv
+# resolution never saw (a runtime dependency its codegen SSOT declares), so
+# uv.lock is resolved again from the projected pyproject and the environment
+# reinstalled from it right after the producer half: one run converges for
+# both locks, never a second `make upg`. Resolve that regenerated
 # manifest before the second frozen install proves the committed mise.lock
 # satisfies it (mise has no `lock --check`: the locked install IS the
 # satisfaction check), `_builtin_require_mise` re-proves the pinned release,
@@ -754,12 +759,14 @@ _upg_lifecycle: _builtin_setup_submodules
 		*" pre-upg "*) $(SELF_MAKE) pre-upg ;; \
 	esac
 	@$(UV) lock --project "$(PROJECT_ROOT)" --upgrade --refresh
-	@$(UV) lock --check --project "$(PROJECT_ROOT)"
 	@$(SELF_MAKE) _builtin_setup_environment
 	@$(PROJECT_FLEXT_INFRA) deps modernize --repository-root "$(PROJECT_ROOT)" \
 		--apply --rewrite-constraints --projects .
 	@$(SELF_MAKE) _builtin_require_environment
 	$(call RUN_PUBLIC_PRODUCE,gen)
+	@$(UV) lock --project "$(PROJECT_ROOT)"
+	@$(UV) lock --check --project "$(PROJECT_ROOT)"
+	@$(SELF_MAKE) _builtin_setup_environment
 	@mise -C "$(PROJECT_ROOT)" lock --bump
 	@mise -C "$(PROJECT_ROOT)" install --yes
 	@$(SELF_MAKE) _builtin_require_mise

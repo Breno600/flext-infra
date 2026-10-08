@@ -944,6 +944,15 @@ class FlextInfraModelsDepsToolConfig(
             t.StrTuple,
             m.Field(description="Modules written in the canonical facade-rebind form"),
         ]
+        mypy_generated_source_modules: Annotated[
+            t.StrTuple,
+            m.Field(
+                description=(
+                    "Module patterns of the generated source trees, which Mypy "
+                    "analyzes for their importers but never reports on"
+                ),
+            ),
+        ] = ()
         ruff_runtime_evaluated_base_classes: Annotated[
             t.StrTuple,
             m.Field(
@@ -960,6 +969,15 @@ class FlextInfraModelsDepsToolConfig(
         pyrefly_project_includes: Annotated[
             t.StrTuple,
             m.Field(description="Resolved Pyrefly production includes"),
+        ]
+        pyrefly_project_excludes: Annotated[
+            t.StrTuple,
+            m.Field(
+                description=(
+                    "Resolved Pyrefly exclusions: declared globs plus the "
+                    "generated-source trees"
+                ),
+            ),
         ]
         pyright_exclude: Annotated[
             t.StrTuple,
