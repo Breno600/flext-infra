@@ -358,17 +358,6 @@ Infra:
                 documentation recommends removing this redundant lint rule when
                 using the formatter; enabling both emits a configuration conflict.
                 https://docs.astral.sh/ruff/rules/missing-trailing-comma/
-            - files: "**/_utilities/credential.py"
-              rules: [suspicious-subprocess-import, subprocess-without-shell-equals-true]
-              authority: operator-relocation-mandate-2026-10-07-keyring-credential
-              reason: >-
-                The datacosmos-backup backup credential resolver is the point
-                of use for the Secret Service lookup: the user keyring is the
-                only secret source and resolving it requires spawning
-                secret-tool with the configured keyring attributes. Moving
-                the call is impossible (this is the point of use) and
-                suppressing at the call sites would mask the contract; the
-                exemption is bounded to this module family.
             - files: "tests/test_snapshot_drill.py"
               rules: [import-private-name]
               authority: operator-relocation-mandate-2026-10-06-snapshot-stems
@@ -388,9 +377,6 @@ Infra:
                   line-too-long,
                   magic-value-comparison,
                   type-check-without-type-error,
-                  subprocess-without-shell-equals-true,
-                  suspicious-subprocess-import,
-                  start-process-with-partial-path,
                   print,
                   import-outside-top-level,
                   unused-class-method-argument,
@@ -399,8 +385,9 @@ Infra:
               reason: >-
                 The generated bin bootstrap scripts (mise lock transaction,
                 converge) run stdlib-only under env -i before the project
-                environment exists: subprocess orchestration, mutex journal
-                recovery and diagnostic prints are their documented design,
+                environment exists: mutex journal recovery and diagnostic
+                prints are their documented design (subprocess relief removed
+                by operator-ruling-2026-10-08-subprocess-supersedes-all),
                 their module docstrings carry the projected copyright and
                 SPDX closing lines, and exhaustive
                 control-flow exception docstrings do not survive the codegen
@@ -431,18 +418,6 @@ Infra:
               reason: >-
                 See the xlsx.py entry: the same heavy-adapter boundary, one
                 ruling.
-            - files: "**/bootstrap.py"
-              rules: [suspicious-subprocess-import, subprocess-without-shell-equals-true]
-              authority: operator-ruling-2026-10-07-stdlib-only-recovery-bootstrap
-              reason: >-
-                The repository bootstrap is the stdlib-only recovery owner: it
-                runs BEFORE the project environment exists, so it cannot import
-                the fleet's process owner (flext_cli) and must spawn its
-                recovery subprocesses by file-path contract directly. Moving
-                the calls is impossible (this is the point of use) and
-                suppressing at the call sites would mask the contract; the
-                exemption is bounded to this module family and documents the
-                irreducible boundary.
             - files: "**/flext_core/_models/pydantic.py"
               rules: [any-type, builtin-argument-shadowing, too-many-arguments]
               authority: operator-ruling-2026-10-07-facade-signature-mirror
@@ -617,15 +592,15 @@ Infra:
                 installation, which is not a re-export.
 
             - files: "scripts/**"
-              rules: [ any-type, unused-function-argument, undocumented-public-class, undocumented-public-method, undocumented-public-function, undocumented-public-init, unnecessary-multiline-docstring, blank-line-after-function, missing-blank-line-after-summary, multi-line-summary-first-line, raw-string-in-exception, f-string-in-exception, commented-out-code, shebang-not-executable, boolean-type-hint-positional-argument, boolean-default-value-positional-argument, read-whole-file, write-whole-file, if-exp-instead-of-or-operator, repeated-append, logging-string-concat, non-lowercase-variable-in-function, invalid-module-name, manual-list-comprehension, manual-list-copy, multiple-starts-ends-with, missing-maxsplit-arg, import-private-name, magic-value-comparison, literal-membership, unspecified-encoding, os-path-abspath, os-path-exists, os-path-join, os-path-dirname, builtin-open, path-constructor-current-directory, avoidable-escaped-quote, unsorted-dunder-all, used-dummy-variable, unused-noqa, noqa-comments, suspicious-subprocess-import, subprocess-without-shell-equals-true, start-process-with-partial-path, print, runtime-cast-value, banned-api, relative-imports, raise-vanilla-args, error-instead-of-exception, verbose-raise ]
+              rules: [ any-type, unused-function-argument, undocumented-public-class, undocumented-public-method, undocumented-public-function, undocumented-public-init, unnecessary-multiline-docstring, blank-line-after-function, missing-blank-line-after-summary, multi-line-summary-first-line, raw-string-in-exception, f-string-in-exception, commented-out-code, shebang-not-executable, boolean-type-hint-positional-argument, boolean-default-value-positional-argument, read-whole-file, write-whole-file, if-exp-instead-of-or-operator, repeated-append, logging-string-concat, non-lowercase-variable-in-function, invalid-module-name, manual-list-comprehension, manual-list-copy, multiple-starts-ends-with, missing-maxsplit-arg, import-private-name, magic-value-comparison, literal-membership, unspecified-encoding, os-path-abspath, os-path-exists, os-path-join, os-path-dirname, builtin-open, path-constructor-current-directory, avoidable-escaped-quote, unsorted-dunder-all, used-dummy-variable, unused-noqa, noqa-comments, print, runtime-cast-value, banned-api, relative-imports, raise-vanilla-args, error-instead-of-exception, verbose-raise ]
               authority: operator-ruling-2026-10-02-mcb-scripts-automation
               reason: >-
-                Repository automation helpers (mcb scripts/**, migrated from mcb config/managed-artifacts.yaml when the project per-file declaration surface retired): CLI entrypoints print to stdout, drive subprocesses and use os.path; the sys.path bootstrap forces module-level imports after executable code. Scoped to scripts/** so shipped source keeps every rule.
+                Repository automation helpers (mcb scripts/**, migrated from mcb config/managed-artifacts.yaml when the project per-file declaration surface retired): CLI entrypoints print to stdout and use os.path; the sys.path bootstrap forces module-level imports after executable code. Scoped to scripts/** so shipped source keeps every rule. Subprocess relief removed by operator-ruling-2026-10-08-subprocess-supersedes-all: processes go through u.Cli.run.
             - files: "**/tests/python/**"
-              rules: [ suspicious-subprocess-import, subprocess-without-shell-equals-true, start-process-with-partial-path, raise-vanilla-args ]
+              rules: [ raise-vanilla-args ]
               authority: operator-ruling-2026-10-02-mcb-tests-python
               reason: >-
-                mcb tests/python exercises the scripts automation end to end and legitimately drives subprocesses (migrated from the retired project per-file surface: S404/S603/S607/TRY003).
+                mcb tests/python exercises the scripts automation end to end (migrated from the retired project per-file surface: TRY003). Subprocess relief removed by operator-ruling-2026-10-08-subprocess-supersedes-all.
       mypy:
         # Wall-time bound for the bounded Mypy execution (SSOT). A project
         # config/tooling.yaml overlay may only lower it; no environment
