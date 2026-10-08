@@ -665,7 +665,7 @@ Infra:
         - name: status
           description: Report the resolved runtime and repository state.
         - name: verify-clean
-          description: Verify that managed artifacts and generated documentation match their sources and leave no unstaged change to a tracked file.
+          description: Verify managed artifacts and generated documentation against their sources, then reject staged, unstaged, untracked changes and stash entries through the public Git service.
         - name: docs
           description: Generate, fix, format, and check documentation.
         - name: clean
