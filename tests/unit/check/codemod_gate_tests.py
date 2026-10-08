@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m
+from flext_infra import c, config, m, main
 from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 from flext_infra.gates.codemod import FlextInfraCodemodGate
 from tests import u
@@ -125,6 +125,45 @@ class TestsFlextInfraCodemodGate:
 
         with pytest.raises(FileNotFoundError):
             gate.check_files((missing,), project, context)
+
+    @pytest.mark.parametrize("finding", [False, True])
+    def test_public_file_check_reuses_elected_scanner_scope(
+        self,
+        tmp_path: Path,
+        *,
+        finding: bool,
+    ) -> None:
+        """Public check uses the native configured scanner for exactly one file."""
+        project = self._project(tmp_path)
+        source_root = project / config.Infra.source_scan.roots[0]
+        source_root.mkdir(exist_ok=True)
+        selected = source_root / "literal.py"
+        selected.write_text("second(1)\n" if finding else "", encoding="utf-8")
+        sibling = source_root / "other.py"
+        sibling.write_text("second(2)\n", encoding="utf-8")
+        before = (selected.read_bytes(), sibling.read_bytes())
+        reports = tmp_path / "reports"
+        code = main([
+            "check",
+            "run",
+            "--repository-root",
+            str(project),
+            "--file",
+            str(selected.relative_to(project)),
+            "--gates",
+            "codemod",
+            "--reports-dir",
+            str(reports),
+        ])
+        tm.that(code, eq=1 if finding else 0)
+        findings = tm.ok(u.Infra.check_report_findings(project, reports_dir=reports))
+        # The bundled policy rules also scan the selected file; the fixture
+        # rule proves the scope, because the unselected sibling matches it too.
+        tm.that(
+            [row.rule_id for row in findings].count("contract-second"),
+            eq=1 if finding else 0,
+        )
+        tm.that((selected.read_bytes(), sibling.read_bytes()), eq=before)
 
     @pytest.mark.parametrize("severity", ["error", "warning", "info", "hint"])
     def test_workspace_pipeline_fails_the_project_on_policy_findings(

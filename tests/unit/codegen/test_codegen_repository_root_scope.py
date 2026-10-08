@@ -72,29 +72,34 @@ class TestsFlextInfraCodegenRepositoryRootScope:
             encoding=c.Infra.ENCODING_DEFAULT,
         )
         cache = config.Infra.codegen.make.testmon_cache
-        recipes = {
-            target: rendered.split(target, 1)[1].split("\n\n", 1)[0]
-            for target in ("_builtin_test_all:", "_builtin_test_file_all:")
-        }
-        test_recipe = recipes["_builtin_test_all:"]
-        tm.that(test_recipe.count("-m flext_infra._pytest_entry"), eq=1)
+        recipe = rendered.split("_builtin_test_all:", 1)[1].split("\n\n", 1)[0]
+        tm.that(recipe.count("-m flext_infra._pytest_entry"), eq=1)
         tm.that(
-            test_recipe,
+            recipe,
             lacks=["_pytest_entry slow", "file-slow", "_pytest_entry full"],
         )
-        file_recipe = recipes["_builtin_test_file_all:"]
-        tm.that(file_recipe.count("-m flext_infra._pytest_entry"), eq=2)
         tm.that(
-            file_recipe.index("_pytest_entry file;")
-            < file_recipe.index("_pytest_entry file-slow"),
-            eq=True,
+            recipe,
+            has=f'{cache.database_environment_variable}="$$database"',
         )
-        tm.that(file_recipe, lacks=["_pytest_entry slow", "_pytest_entry full"])
-        for recipe in recipes.values():
-            tm.that(
-                recipe,
-                has=f'{cache.database_environment_variable}="$$database"',
-            )
+
+    def test_file_verb_composes_both_phases_on_one_cache(self, tmp_path: Path) -> None:
+        """Requested files retain one guard and scratch across independent entries."""
+        root = self._render_root_makefile(tmp_path)
+        rendered = (root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding=c.Infra.ENCODING_DEFAULT,
+        )
+        recipe = rendered.split("_builtin_test_file_all:", 1)[1].split("\n\n", 1)[0]
+        cache = config.Infra.codegen.make.testmon_cache
+        tm.that(recipe.count("-m flext_infra._pytest_entry"), eq=2)
+        tm.that(recipe, has=["_pytest_entry file;", "_pytest_entry file-slow;"])
+        tm.that(
+            recipe.count(f'{cache.database_environment_variable}="$$database"'),
+            eq=2,
+        )
+        tm.that(recipe.count("set -eu;"), eq=1)
+        tm.that(recipe.count("' EXIT;"), eq=1)
+        tm.that(recipe, lacks="_pytest_entry full")
 
     @staticmethod
     def test_conform_owns_repository_root_makefile() -> None:

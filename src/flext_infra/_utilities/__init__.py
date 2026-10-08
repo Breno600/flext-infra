@@ -64,6 +64,9 @@ if TYPE_CHECKING:
     from flext_infra._utilities._git.attestation import (
         FlextInfraUtilitiesGitAttestationMixin,
     )
+    from flext_infra._utilities._git.lane_hygiene import (
+        FlextInfraUtilitiesGitLaneHygieneMixin,
+    )
     from flext_infra._utilities._git.mutation_scope import (
         FlextInfraUtilitiesGitMutationScopeMixin,
     )
@@ -511,6 +514,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesDocsValidate",
     "FlextInfraUtilitiesGit",
     "FlextInfraUtilitiesGitAttestationMixin",
+    "FlextInfraUtilitiesGitLaneHygieneMixin",
     "FlextInfraUtilitiesGitMutationScopeMixin",
     "FlextInfraUtilitiesGitRemote",
     "FlextInfraUtilitiesGitRepo",
@@ -712,6 +716,7 @@ install_lazy_exports(
         "FlextInfraUtilitiesDocsValidate": ".docs_validate",
         "FlextInfraUtilitiesGit": ".git",
         "FlextInfraUtilitiesGitAttestationMixin": "._git.attestation",
+        "FlextInfraUtilitiesGitLaneHygieneMixin": "._git.lane_hygiene",
         "FlextInfraUtilitiesGitMutationScopeMixin": "._git.mutation_scope",
         "FlextInfraUtilitiesGitRemote": "._git.remote",
         "FlextInfraUtilitiesGitRepo": "._git.repo",

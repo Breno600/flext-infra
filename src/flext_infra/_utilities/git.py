@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from flext_infra._utilities import (
     FlextInfraUtilitiesGitAttestationMixin,
+    FlextInfraUtilitiesGitLaneHygieneMixin,
     FlextInfraUtilitiesGitMutationScopeMixin,
     FlextInfraUtilitiesGitScopeMixin,
     FlextInfraUtilitiesGitSemanticSubmoduleMixin,
@@ -25,6 +26,7 @@ class FlextInfraUtilitiesGit(
     FlextInfraUtilitiesGitScopeMixin,
     FlextInfraUtilitiesGitSemanticSubmoduleMixin,
     FlextInfraUtilitiesGitWorktreeFactsMixin,
+    FlextInfraUtilitiesGitLaneHygieneMixin,
     FlextInfraUtilitiesGitStateCaptureMixin,
 ):
     """Canonical Git owner for flext-infra: scope + worktree + checkpoint/patch.

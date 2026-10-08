@@ -66,32 +66,33 @@ export TMPDIR TMP TEMP; \
     remain owned by the explicitly requested full verb. -#}
 {#- Tests run on the provisioned toolchain: every verb's tools resolve from
     the mise-managed PATH, so a test observes the runtime's tool versions. -#}
-{%- macro pytest_test_runner(operations=("",)) -%}
+{%- macro pytest_test_runner(operations=("",), allow_empty_file_phases=false) -%}
 {{ pytest_testmon_guard() }}
 {{ pytest_scratch_root() }}
+{%- if allow_empty_file_phases %}
+file_executed=0; \
+{%- endif %}
 {%- for operation in operations %}
-{{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry{% if operation %} {{ operation }}{% endif %}{% if not loop.last %}; \{% endif %}
+{% if allow_empty_file_phases %}if {% endif %}{{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry{% if operation %} {{ operation }}{% endif %}{% if allow_empty_file_phases %}; then file_executed=1; else phase_status=$$?; case "$$phase_status" in 5) printf 'INFO: test-file {{ operation }} NOT EXECUTED: no requested tests in phase\n' ;; *) exit "$$phase_status" ;; esac; fi; \{% elif not loop.last %}; \{% endif %}
 {%- endfor %}
+{%- if allow_empty_file_phases %}
+if [ "$$file_executed" -eq 0 ]; then printf 'ERROR: test-file executed zero requested tests\n' >&2; exit 5; fi
+{%- endif %}
 {%- endmacro -%}
 {#- The single-file verb validates its FILE input and exports the target in
-    the same shell as the guarded runners. It is the sole single-file path
-    (local only, never a CI or pre-commit context), so the declared file runs
-    through the budgeted phase and then its slow phase, each its own bounded
-    process: a file whose items are all slow-marked still executes them, and
-    the runner's per-phase empty-scope acceptance never ends the verb with zero
-    executed tests. The exported variable name mirrors
+    the same shell as the guarded budgeted and slow phases. It is the sole
+    single-file path (local only, never a CI or pre-commit context): each phase
+    is its own bounded process on the same persistent database, an empty phase
+    is reported NOT EXECUTED, and the verb fails when both phases executed zero
+    requested tests. The exported variable name mirrors
     c.Infra.PYTEST_ENV_TARGET_FILE in flext-infra/_constants/make.py; the entry
     fails loudly on a mismatch. -#}
 {%- macro pytest_test_file_runner() -%}
 if [ -z "$(strip $(FILE))" ]; then printf 'ERROR: test-file requires FILE=<repository-relative test file path>\n' >&2; exit 2; fi; \
 case "$(FILE)" in /*|*..*) printf 'ERROR: FILE must stay a repository-relative path: %s\n' "$(FILE)" >&2; exit 2 ;; esac; \
 if [ ! -f "$(PROJECT_ROOT)/$(FILE)" ]; then printf 'ERROR: FILE is not an existing repository file: %s\n' "$(FILE)" >&2; exit 2; fi; \
-{{ pytest_testmon_guard() }}
-{{ pytest_scratch_root() }}
 export FLEXT_PYTEST_TARGET_FILE="$(FILE)"; \
-{%- for operation in ("file", "file-slow") %}
-{{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry {{ operation }}{% if not loop.last %}; \{% endif %}
-{%- endfor %}
+{{ pytest_test_runner(("file", "file-slow"), allow_empty_file_phases=true) }}
 {%- endmacro -%}
 # @flext-generated: continuous
 # @flext-owner: flext-infra/config/codegen.yaml + flext-infra/src/flext_infra/templates/project/base/Makefile.j2
@@ -799,33 +800,11 @@ _builtin_test_file_all: _builtin_require_environment
     runner=pytest_test_file_runner(),
 ) }}
 
-# The fast per-file pre-gate (operator P0, val2026100417xx): `make file-gate
-# FILE=<repository-relative path>` gates exactly one file with the fast gates
-# (ruff lint, ruff format, pyrefly, pyright, ast-grep, typos) before the file
-# ever reaches the tree-wide `make mod`/`make check` pipeline. Ruff lint and
-# format are the hard gates; the type and spelling scanners report advisories.
-# Empty or non-relative FILE fails loud. This pre-gate never substitutes the
-# tree-wide verbs: code is accepted only after `make mod`, with fmt/fix/check/
-# mod/spells green (ADR-004 §3, ADR-018).
+# Literal-file selection and verdicts belong to the existing canonical checker.
+# Export the raw Make value instead of interpolating operator input into shell code.
+export FLEXT_FILE_GATE_FILE := $(value FILE)
 _builtin_file_gate_all: _builtin_require_environment
-	@set -eu; \
-	if [ -z "$(strip $(FILE))" ]; then printf 'ERROR: file-gate requires FILE=<repository-relative path>\n' >&2; exit 2; fi; \
-	case "$(FILE)" in /*|*..*) printf 'ERROR: FILE must stay a repository-relative path: %s\n' "$(FILE)" >&2; exit 2 ;; esac; \
-	if [ ! -f "$(PROJECT_ROOT)/$(FILE)" ]; then printf 'ERROR: FILE is not an existing repository file: %s\n' "$(FILE)" >&2; exit 2; fi; \
-	file="$(PROJECT_ROOT)/$(FILE)"; \
-	echo "file-gate: ruff check $(FILE)"; \
-	$(RUNTIME_PYTHON) -m ruff check "$$file"; \
-	echo "file-gate: ruff format --check $(FILE)"; \
-	$(RUNTIME_PYTHON) -m ruff format --check "$$file"; \
-	echo "file-gate: pyrefly $(FILE)"; \
-	$(RUNTIME_PYTHON) -m pyrefly check "$$file" || true; \
-	echo "file-gate: pyright $(FILE)"; \
-	$(RUNTIME_PYTHON) -m pyright "$$file" || true; \
-	echo "file-gate: ast-grep scan $(FILE)"; \
-	ast-grep scan "$$file" || true; \
-	echo "file-gate: typos $(FILE)"; \
-	typos "$$file" || true; \
-	echo "file-gate: OK (pre-gate only; tree-wide make mod/check remain the acceptance gates)"
+	@{{ check_run("lint format pyrefly mypy pyright codemod", ' --file "$$FLEXT_FILE_GATE_FILE"') }}
 
 _builtin_tests_all: _builtin_require_environment
 	+@$(SELF_MAKE) test
@@ -1066,6 +1045,7 @@ _builtin-fix-accessors: _builtin_fix_accessors
 _builtin-audit:
 	@$(UV) pip check --python "$(RUNTIME_VENV)"
 	@$(if $(filter {{ make.ci.value }},$({{ make.ci.variable }})),$(PROJECT_FLEXT_INFRA) {{ workspace_cli_group }} verify-environment --repository-root "$(PROJECT_ROOT)",:)
+	@$(if $(filter {{ make.ci.value }},$({{ make.ci.variable }})),:,$(PROJECT_FLEXT_INFRA) {{ workspace_cli_group }} verify-lanes --repo-root "$(PROJECT_ROOT)")
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --scope self --mode check
 _builtin-status: _builtin_status_diagnostics
 _builtin-verify-clean: _builtin_require_environment
