@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, Annotated, override
 
 from flext_infra import c, m, r, u
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
-from flext_infra.codegen.conform import FlextInfraCodegenConform
 
 # New file per operator live
 # order (ULW). ctx via u.derive_class_stem (no parallel detection, ADR-005 §9);
@@ -128,14 +127,13 @@ class FlextInfraCodegenProjectNew(
     conform_collaborators: Annotated[
         m.Infra.CodegenConformPorts | None,
         m.Field(
-            default=None,
             exclude=True,
             description=(
                 "Docs port bound by FlextInfra.codegen_new; the scaffold "
                 "conform fails before any effect without it"
             ),
         ),
-    ]
+    ] = None
 
     @override
     def execute(self) -> p.Result[m.Infra.CodegenResult]:
@@ -145,6 +143,7 @@ class FlextInfraCodegenProjectNew(
             The resulting ``p.Result[m.Infra.CodegenResult]``.
 
         """
+        from flext_infra.codegen.conform import FlextInfraCodegenConform
         if self.effective_dry_run:
             return r[m.Infra.CodegenResult].fail("codegen new requires apply mode")
         # Every identity fact is an explicit caller declaration: for a

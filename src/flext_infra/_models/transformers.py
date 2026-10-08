@@ -57,9 +57,8 @@ class FlextInfraModelsTransformers:
             ),
         ]
         changes: Annotated[
-            t.VariadicTuple[str],
-            m.Field(default_factory=tuple, description="Recorded migration operations"),
-        ]
+            t.VariadicTuple[str], m.Field(description="Recorded migration operations")
+        ] = m.Field(default_factory=tuple)
 
     class SemanticMigrationEdit(m.ContractModel):
         """One validated in-memory semantic source rewrite."""
@@ -254,9 +253,8 @@ class FlextInfraModelsTransformers:
             m.Field(description="Body indent width stripped per line"),
         ]
         docstring_span: Annotated[
-            tuple[int, int] | None,
-            m.Field(default=None, description="Wrapper docstring line span"),
-        ]
+            tuple[int, int] | None, m.Field(description="Wrapper docstring line span")
+        ] = None
 
     class HeaderInfo(m.ArbitraryTypesModel):
         """Structural summary of a module header."""

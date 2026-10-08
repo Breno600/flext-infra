@@ -21,7 +21,7 @@ from flext_infra import config, infra, p
 from tests import c, t, u
 
 if TYPE_CHECKING:
-    from flext_cli._utilities import FlextCliUtilitiesCli
+    from flext_cli import s
 
 # NOTE(flext-p68a.9.4, agent codex): the installed flext-tests pytest11 plugin is
 # the only fixture owner; conftest must not re-export or shadow its fixtures.
@@ -187,7 +187,7 @@ def infra_subprocess() -> p.Cli.CommandRunner:
 
 
 @pytest.fixture
-def infra_toml() -> FlextCliUtilitiesCli:
+def infra_toml() -> s:
     """Provide the public CLI utility facade for TOML tests.
 
     Returns:

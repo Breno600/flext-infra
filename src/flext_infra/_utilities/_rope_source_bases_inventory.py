@@ -11,13 +11,6 @@ from collections.abc import MutableMapping
 from importlib.util import resolve_name
 
 from flext_infra import m, t
-from flext_infra._models.rope import FlextInfraModelsRope
-from flext_infra._utilities import (
-    FlextInfraUtilitiesRopeAnalysisSourceScan,
-    FlextInfraUtilitiesRopeCore,
-    FlextInfraUtilitiesRopeRuntime,
-    FlextInfraUtilitiesRopeSourceBindingCollector,
-)
 
 
 class FlextInfraUtilitiesRopeSourceBasesInventory:
@@ -45,6 +38,7 @@ class FlextInfraUtilitiesRopeSourceBasesInventory:
             ValueError: If a required binding has unsupported source semantics.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisSourceScan, FlextInfraUtilitiesRopeCore, FlextInfraUtilitiesRopeRuntime, FlextInfraUtilitiesRopeSourceBindingCollector
         if provider is not None:
             resource = provider.get_resource()
             if (
@@ -78,7 +72,7 @@ class FlextInfraUtilitiesRopeSourceBasesInventory:
             else request.module.rpartition(".")[0]
         )
         globals_: MutableMapping[str, m.Infra.SourceClassReference | None] = {}
-        spec = FlextInfraModelsRope.SourceBindingCollectorSpec(
+        spec = m.Infra.SourceBindingCollectorSpec(
             module=request.module,
             package=package,
             required_line=request.required_line,

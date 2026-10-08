@@ -16,14 +16,12 @@ from typing import TYPE_CHECKING, Annotated, ClassVar
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._models import (
-    FlextInfraModelsMixins,
-    FlextInfraModelsNamespaceEnforcer,
-    FlextInfraModelsRefactorGrep,
-)
+from flext_infra._models.mixins import FlextInfraModelsMixins
+from flext_infra._models.refactor_ast_grep import FlextInfraModelsRefactorGrep
+from flext_infra._models.refactor_namespace_enforcer import FlextInfraModelsNamespaceEnforcer
 
 if TYPE_CHECKING:
-    from flext_infra._models import FlextInfraModelsScan
+    from flext_infra._models.scan import FlextInfraModelsScan
 
 
 class FlextInfraModelsRefactor(
@@ -299,42 +297,38 @@ class FlextInfraModelsRefactor(
         bindings: Annotated[
             t.MappingKV[str, t.StrSequence],
             m.Field(
-                default_factory=lambda: MappingProxyType[str, t.StrSequence]({}),
                 description=(
                     "CSV expression prefixes mapped to current"
                     " public Rope owner identities"
                 ),
             ),
-        ]
+        ] = m.Field(default_factory=lambda: MappingProxyType[str, t.StrSequence]({}))
         text_globs: Annotated[
             t.StrSequence,
             m.Field(
-                default=(),
                 description=(
                     "Explicit root-relative non-Python documentation"
                     " and configuration text surfaces"
                 ),
             ),
-        ]
+        ] = ()
         python_documentation: Annotated[
             bool,
             m.Field(
-                default=False,
                 description=(
                     "Rename comments and actual Python docstrings,"
                     " preserving executable string payloads"
                 ),
             ),
-        ]
+        ] = False
         exclude_globs: Annotated[
             t.StrSequence,
             m.Field(
-                default=(),
                 description=(
                     "Declared generated projections excluded from campaign targets"
                 ),
             ),
-        ]
+        ] = ()
 
     class ApplyRenamesReport(m.ArbitraryTypesModel):
         """Summary of one CSV-driven rename pass."""

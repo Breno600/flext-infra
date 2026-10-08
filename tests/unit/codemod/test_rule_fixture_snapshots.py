@@ -78,6 +78,7 @@ class TestsFlextInfraModRuleFixtureSnapshots:
         else:
             u.Tests.initialize_git_repo(root)
         u.Tests.git_bootstrap(root, ("add", str(c.Infra.CODEMOD_CONFIG_RELPATH)))
+        u.Tests.git_bootstrap(root, ("add", c.Infra.CODEMOD_CONFIG_FILENAME))
         return rule
 
     @classmethod

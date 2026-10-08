@@ -11,13 +11,11 @@ from typing import Annotated
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._models import (
-    FlextInfraConfigModelsArtifact,
-    FlextInfraConfigModelsContract,
-    FlextInfraConfigModelsRelease,
-    FlextInfraConfigModelsStatic,
-    FlextInfraModelsDepsToolConfig,
-)
+from flext_infra._models._config.artifact import FlextInfraConfigModelsArtifact
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
+from flext_infra._models._config.release import FlextInfraConfigModelsRelease
+from flext_infra._models._config.static import FlextInfraConfigModelsStatic
+from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
 
 
 class FlextInfraConfigModelsRoot:

@@ -25,7 +25,7 @@ class FlextInfraCliRouteBase:
         return value
 
     @staticmethod
-    def result_handler[TParams, TResult: t.Cli.ResultValue](
+    def result_handler[TParams, TResult](
         handler: Callable[[TParams], p.Result[TResult]],
     ) -> p.Cli.ResultRouteHandler:
         """Erase one concrete result payload at the heterogeneous route boundary.

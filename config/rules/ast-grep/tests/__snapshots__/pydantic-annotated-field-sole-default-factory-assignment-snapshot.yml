@@ -1,0 +1,31 @@
+id: pydantic-annotated-field-sole-default-factory-assignment
+snapshots:
+  ? |
+    class Spec:
+        audit: Annotated[
+            Audit,
+            m.Field(default_factory=Audit),
+        ]
+  : fixed: |
+      class Spec:
+          audit: Audit = m.Field(default_factory=Audit)
+    labels:
+    - source: |-
+        audit: Annotated[
+                Audit,
+                m.Field(default_factory=Audit),
+            ]
+      style: primary
+      start: 16
+      end: 94
+  ? |
+    class Spec:
+        items: Annotated[t.StrSequence, m.Field(default_factory=tuple)]
+  : fixed: |
+      class Spec:
+          items: t.StrSequence = m.Field(default_factory=tuple)
+    labels:
+    - source: 'items: Annotated[t.StrSequence, m.Field(default_factory=tuple)]'
+      style: primary
+      start: 16
+      end: 79

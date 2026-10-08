@@ -11,13 +11,8 @@ from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_infra import m, r, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesPrivateImportAncestry as ImportAncestry,
-    FlextInfraUtilitiesPrivateImportFacades,
-    FlextInfraUtilitiesPrivateImportValidation,
-    FlextInfraUtilitiesSemanticCutoverEdits,
-    FlextInfraUtilitiesSemanticCutoverPrivateImportCst,
-)
+from flext_infra._utilities._semantic_cutover.edits import FlextInfraUtilitiesSemanticCutoverEdits
+from flext_infra._utilities._semantic_cutover.private_import_cst import FlextInfraUtilitiesSemanticCutoverPrivateImportCst
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -136,6 +131,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
             The resulting ``t.VariadicTuple[str]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesPrivateImportFacades
         cross_owner_statements: list[str] = []
         for finding in live_findings:
             statement = cls._finding_statement(finding)
@@ -170,6 +166,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
             ``(export bindings, declared exports, class bases)``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesPrivateImportAncestry as ImportAncestry, FlextInfraUtilitiesPrivateImportFacades
         facades: t.MappingKV[
             str,
             t.VariadicTuple[t.Quad[ast.Module, str, str, str]],
@@ -224,6 +221,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
             The resulting ``str | None``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesPrivateImportFacades
         export_bindings, _declared_exports, class_bases = bindings
         return FlextInfraUtilitiesPrivateImportFacades.facade_alias_binding(
             owners=facades.get(package, ()),
@@ -264,6 +262,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
                 exposes cross-owner private import.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesPrivateImportFacades
         export_bindings, declared_exports, _class_bases = bindings
         direct_specs: MutableMapping[Path, MutableMapping[str, t.Pair[str, str]]] = {}
         specs: MutableMapping[Path, list[t.Infra.PrivateImportSpec]] = {}
@@ -438,6 +437,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
             ValueError: If ambiguous facade alias; or if ambiguous public reference for.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesPrivateImportFacades, FlextInfraUtilitiesPrivateImportValidation
         tree = ast.parse(source, filename=str(file_path))
         removals: MutableMapping[str, set[str]] = {}
         obsolete_imports: MutableMapping[str, set[str]] = {}

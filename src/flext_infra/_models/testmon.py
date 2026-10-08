@@ -87,13 +87,12 @@ class FlextInfraModelsTestmon:
         owns_no_tests: Annotated[
             bool,
             m.Field(
-                default=False,
                 description=(
                     "The project declares no test module under the config-owned "
                     "collection roots: zero execution by declared design"
                 ),
             ),
-        ]
+        ] = False
 
         @m.model_validator(mode="after")
         def require_execution_or_verified_deselection(self) -> Self:

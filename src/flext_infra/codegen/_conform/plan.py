@@ -14,8 +14,6 @@ from flext_infra import c, config, m, p, r, t, u
 from flext_infra.codegen._conform.scaffold_plan import (
     FlextInfraCodegenConformScaffoldPlan,
 )
-from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
-from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 
 class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
@@ -327,6 +325,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
             The public plan and its complete authenticated lazy-init receipt.
 
         """
+        from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
         result_type = r[t.Pair[m.Infra.CodegenPlan, m.Infra.CodegenPhaseAnalysis]]
         root = request.root.expanduser().resolve()
         topology = self._planning_workspace(request, root)
@@ -381,6 +380,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                 m.Infra.RepositoryConformTarget, m.Infra.RepositoryRef]]``.
 
         """
+        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
         result_type = r[
             t.Triple[
                 m.Infra.WorkspaceSpec,
@@ -529,6 +529,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                 m.Infra.RepositoryConformTarget, m.Infra.WorkspaceSpec]]``.
 
         """
+        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
         result_type = r[
             t.Triple[
                 Path,
@@ -617,6 +618,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
             The resulting ``p.Result[m.Infra.WorkspaceSpec]``.
 
         """
+        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
         if repository.path != Path():
             declared_member = FlextInfraWorkspaceDetector.load_workspace_spec(
                 repository_root,

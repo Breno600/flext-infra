@@ -11,10 +11,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import m, r
-from flext_infra.codegen._mise_artifacts_state import FlextInfraMiseArtifactsState
-from flext_infra.codegen._mise_artifacts_verification import (
-    FlextInfraMiseArtifactsVerification,
-)
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -74,6 +70,7 @@ class FlextInfraCodegenPreconditions:
             The resulting ``p.Result[bool]``.
 
         """
+        from flext_infra.codegen._mise_artifacts_verification import FlextInfraMiseArtifactsVerification
         source_barrier = FlextInfraMiseArtifactsVerification.states_current(
             FlextInfraCodegenPreconditions.unique_states(sources),
         )
@@ -97,6 +94,7 @@ class FlextInfraCodegenPreconditions:
             The resulting ``p.Result[m.Infra.CodegenTransactionSession]``.
 
         """
+        from flext_infra.codegen._mise_artifacts_state import FlextInfraMiseArtifactsState
         result_type = r[m.Infra.CodegenTransactionSession]
         observed = FlextInfraMiseArtifactsState.journal_state(session.plan.layout)
         observed_snapshot = (
