@@ -292,7 +292,7 @@ class TestsFlextInfraCodegenMakeUpgrade:
 
     @pytest.mark.parametrize(
         "generated_make_template",
-        (c.Infra.MakeProfile.WORKSPACE,),
+        [c.Infra.MakeProfile.WORKSPACE],
         indirect=True,
     )
     def test_upg_converge_verifies_the_cycle_it_upgraded(

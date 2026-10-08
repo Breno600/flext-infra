@@ -81,7 +81,9 @@ class FlextInfraModelsDuplication:
             alias="noColors",
             description="Disable color output",
         )
-        no_tips: t.StrictBool = m.Field(alias="noTips", description="Disable tip output")
+        no_tips: t.StrictBool = m.Field(
+            alias="noTips", description="Disable tip output"
+        )
         reporters: Annotated[
             t.StrSequence,
             m.Field(description="Required report formats"),
