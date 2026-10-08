@@ -15,6 +15,7 @@ from flext_infra import c, config, m, p, r, t, u
 from flext_infra.codegen._conform.artifact_render import (
     FlextInfraCodegenConformArtifactRender,
 )
+from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
 
 
 class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRender):
@@ -305,7 +306,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         spec = u.Infra.pyproject_managed_file()
         if spec.failure:
             return result_type.from_failure(spec)
-        modernizer = u.Infra(
+        modernizer = FlextInfraPyprojectModernizer(
             repository_root=root,
             skip_check=True,
         )

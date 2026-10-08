@@ -292,6 +292,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                         continue
                     value = node.value
                     target = targets[0]
+                    visible = {**spec.lexical, **bindings}
                     if (
                         spec.allow_conditional
                         and len(targets) == 1
@@ -306,18 +307,25 @@ class FlextInfraUtilitiesRopeSourceBases:
                             "__dict__",
                         }
                         and isinstance(target.value, ast.Name)
-                        and target.value.id in bindings
-                        and bindings[target.value.id] is not None
+                        and target.value.id in visible
+                        and visible[target.value.id] is not None
                     ):
-                        visible = {**spec.lexical, **bindings}
-                        if value.id in visible and visible[value.id] is not None:
-                            reference = cls._reference(value, visible, spec.module)
-                            bindings[target.attr] = reference.model_copy(
+                        owner = cls._reference(target.value, visible, spec.module)
+                        if (
+                            owner.target in spec.definitions
+                            and not owner.attributes
+                            and value.id in visible
+                        ):
+                            definition = spec.definitions[owner.target]
+                            spec.definitions[owner.target] = definition.model_copy(
                                 update={
-                                    "qualified_base": f"{spec.module}.{target.attr}"
+                                    "members": {
+                                        **definition.members,
+                                        target.attr: visible[value.id],
+                                    },
                                 },
                             )
-                        continue
+                            continue
                     message = (
                         f"Unsupported class binding mutation in {spec.module}: "
                         f"{ast.unparse(node)}"
@@ -331,7 +339,12 @@ class FlextInfraUtilitiesRopeSourceBases:
                 while isinstance(head, ast.Attribute | ast.Subscript):
                     head = head.value
                 reference = (
-                    cls._reference(value, visible, spec.module)
+                    m.Infra.SourceClassReference(
+                        target="builtins",
+                        attributes=(str(value.value),),
+                    )
+                    if isinstance(value, ast.Constant) and isinstance(value.value, bool)
+                    else cls._reference(value, visible, spec.module)
                     if isinstance(head, ast.Name)
                     and isinstance(value, ast.Name | ast.Attribute | ast.Subscript)
                     and not (head.id in visible and visible[head.id] is None)
@@ -386,16 +399,33 @@ class FlextInfraUtilitiesRopeSourceBases:
                         continue
                     case _:
                         pass
+                head = (
+                    node.test.value
+                    if isinstance(node.test, ast.Attribute)
+                    else node.test
+                )
+                visible = {**spec.lexical, **bindings}
                 if (
-                    isinstance(node.test, ast.Name) and node.test.id == "TYPE_CHECKING"
-                ) or (
-                    isinstance(node.test, ast.Attribute)
-                    and node.test.attr == "TYPE_CHECKING"
-                    and isinstance(node.test.value, ast.Name)
-                    and node.test.value.id in {"typing", "typing_extensions"}
+                    isinstance(node.test, ast.Name | ast.Attribute)
+                    and isinstance(head, ast.Name)
+                    and head.id in visible
+                    and visible[head.id] is not None
                 ):
-                    cls._collect(spec, node.body, bindings, scope)
-                    continue
+                    guard = cls._reference(node.test, visible, spec.module)
+                    if (
+                        guard.target in {"typing", "typing_extensions"}
+                        and guard.attributes == ("TYPE_CHECKING",)
+                    ) or (
+                        guard.target == "builtins"
+                        and guard.attributes in {("True",), ("False",)}
+                    ):
+                        cls._collect(
+                            spec,
+                            node.body if guard.attributes == ("True",) else node.orelse,
+                            bindings,
+                            scope,
+                        )
+                        continue
                 conditional = {
                     child.name
                     for statement in (*node.body, *node.orelse)
