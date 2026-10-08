@@ -952,7 +952,7 @@ class FlextInfraConfigModelsMake:
                     "Public Make verb to checker gate mapping outside make check"
                 ),
             ),
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        ] = m.Field(default_factory=lambda: MappingProxyType[str, str]({}))
         opt_in_check_gates: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
