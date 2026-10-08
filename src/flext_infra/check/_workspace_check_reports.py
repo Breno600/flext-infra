@@ -61,9 +61,11 @@ class FlextInfraWorkspaceCheckReportsMixin:
                 lines.extend(f"  - {issue.formatted}" for issue in execution.issues)
                 if execution.raw_receipt is not None:
                     lines.extend([
-                        f"  - Native output receipt: "
-                        f"[{execution.raw_receipt.name}]"
-                        f"({execution.raw_receipt.resolve().as_uri()})",
+                        (
+                            f"  - Native output receipt: "
+                            f"[{execution.raw_receipt.name}]"
+                            f"({execution.raw_receipt.resolve().as_uri()})"
+                        ),
                     ])
             lines.append("")
         return "\n".join(lines)
