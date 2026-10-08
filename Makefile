@@ -359,10 +359,6 @@ _bootstrap_setup_tools:
 # behavior): [tool.uv.workspace] makes every declared member a workspace
 # member and `uv sync --all-packages` provisions them as editables; CI's
 # --no-editable keeps the frozen builds.
-# The .envrc files are managed projections: setup approves their hash in EVERY
-# context. A CI runner never runs an interactive allow, and the direnv check
-# gate (CI=Y included) activates through `direnv exec`, which refuses a blocked
-# .envrc. direnv re-blocks on any later content change through its own hash.
 SETUP_ENVIRONMENT_RECIPE = set -eu; \
 	trap 'if [ -n "$${FLEXT_SETUP_CREDENTIAL_STORE:-}" ]; then rm -f "$$FLEXT_SETUP_CREDENTIAL_STORE"; fi' EXIT; \
 	$(REQUIRE_WORKSPACE_ENVIRONMENT); \
@@ -380,12 +376,14 @@ SETUP_ENVIRONMENT_RECIPE = set -eu; \
 		uv_lock_mode=--frozen; \
 	fi; \
 	$$credential_env $(UV) sync --project "$(UV_PROJECT)" --python "3.13" $(UV_SYNC_FLAGS) $$uv_lock_mode --link-mode "$(UV_LINK_MODE)"; \
-	direnv allow "$(PROJECT_ROOT)"; \
-	for member in $(WORKSPACE_SUBPROJECTS); do \
-		if [ -f "$(PROJECT_ROOT)/$$member/.envrc" ]; then \
-			direnv allow "$(PROJECT_ROOT)/$$member"; \
-		fi; \
-	done
+	if [ "$(strip $(CI))" != "Y" ]; then \
+		direnv allow "$(PROJECT_ROOT)"; \
+		for member in $(WORKSPACE_SUBPROJECTS); do \
+			if [ -f "$(PROJECT_ROOT)/$$member/.envrc" ]; then \
+				direnv allow "$(PROJECT_ROOT)/$$member"; \
+			fi; \
+		done; \
+	fi
 
 # Reject borrowed environments before bootstrap, activation or custom hooks.
 # Members may use their containing workspace, never an unrelated checkout.
@@ -1480,11 +1478,11 @@ _builtin_check_all: _builtin_require_environment
 	@set -eu; \
 		gates="lint,security,markdown,markdown-format,markdown-code,duplication,pyrefly,mypy,pyright,loc-cap,runtime-census,fresh-import,index-declarations,codemod,layout,direnv"; \
 		if [ "$(strip $(CI))" = "Y" ]; then \
-			gates="lint,security,markdown,markdown-format,markdown-code,duplication,loc-cap,runtime-census,fresh-import,index-declarations,layout,direnv"; \
-			printf 'INFO: CI=Y runs check gates: lint security markdown markdown-format markdown-code duplication loc-cap runtime-census fresh-import index-declarations layout direnv\n'; \
+			gates="lint,security,markdown,markdown-format,markdown-code,duplication,loc-cap,runtime-census,fresh-import,index-declarations,layout"; \
+			printf 'INFO: CI=Y runs check gates: lint security markdown markdown-format markdown-code duplication loc-cap runtime-census fresh-import index-declarations layout\n'; \
 		elif [ "$(strip $(CI))" = "N" ]; then \
-			gates="pyrefly,mypy,pyright,codemod"; \
-			printf 'INFO: CI=N runs check gates: pyrefly mypy pyright codemod\n'; \
+			gates="pyrefly,mypy,pyright,codemod,direnv"; \
+			printf 'INFO: CI=N runs check gates: pyrefly mypy pyright codemod direnv\n'; \
 		else \
 			printf 'INFO: default context runs check gates: lint security markdown markdown-format markdown-code duplication pyrefly mypy pyright loc-cap runtime-census fresh-import index-declarations codemod layout direnv\n'; \
 		fi; \
