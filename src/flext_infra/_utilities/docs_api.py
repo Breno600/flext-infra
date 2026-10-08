@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
-from flext_infra import c, m, t
+from flext_infra import c, m, p, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesPyproject,
     FlextInfraUtilitiesRopeAnalysis,

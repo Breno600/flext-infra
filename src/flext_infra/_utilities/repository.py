@@ -480,10 +480,11 @@ class FlextInfraUtilitiesRepository:
             (never None) when no declared source exists.
 
         """
-        sources = (
-            payload.get("tool", {}).get("uv", {}).get("sources", {})
-            if isinstance(payload.get("tool"), dict)
-            else {}
+        tool = payload.get("tool")
+        uv = tool.get("uv") if isinstance(tool, dict) else None
+        raw_sources = uv.get("sources") if isinstance(uv, dict) else None
+        sources: t.JsonMapping = (
+            raw_sources if isinstance(raw_sources, dict) else {}
         )
         entry = sources.get(distribution)
         if isinstance(entry, dict) and entry.get("workspace") is True:

@@ -155,7 +155,7 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         target_re = re.compile(policy.target_pattern)
         logical_lines = cls._logical_make_lines(content, policy)
         if logical_lines.failure:
-            return logical_lines
+            return r[bool].from_failure(logical_lines)
         in_define = False
         for line_number, raw_line in logical_lines.value:
             if in_define:

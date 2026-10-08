@@ -405,7 +405,6 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
             entry,
             destination,
             workspace,
-            project,
             render_inputs,
             context,
         )

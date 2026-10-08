@@ -686,7 +686,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         if make_plan.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(make_plan)
         make_plan_value, make_plan_present = make_plan.value
-        if make_plan_present:
+        if make_plan_present and make_plan_value is not None:
             plans.append(make_plan_value)
         layout = u.Infra.layout(root)
         if layout is not None and layout.class_stem:
@@ -698,7 +698,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                         facade_plan,
                     )
                 facade_plan_value, facade_plan_present = facade_plan.value
-                if facade_plan_present:
+                if facade_plan_present and facade_plan_value is not None:
                     plans.append(facade_plan_value)
         return r[t.SequenceOf[m.Infra.CodegenFilePlan]].ok(tuple(plans))
 

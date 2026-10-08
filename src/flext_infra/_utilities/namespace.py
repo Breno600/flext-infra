@@ -622,7 +622,7 @@ class FlextInfraUtilitiesCodegenNamespace:
     def _policy_includes_in_lazy_init(
         flags: t.VariadicTuple[bool],
         *,
-        private_stem: bool,
+        private_stem: str,
         declared_exports: t.StrSequence,
     ) -> bool:
         """Whether one module joins its package's lazy facade init.
