@@ -276,9 +276,15 @@ class FlextInfraUtilitiesRopeSourceBases:
                         isinstance(target, ast.Attribute)
                         and isinstance(target.value, ast.Name)
                         and target.value.id in bindings
-                        and bindings[target.value.id] is None
+                        and (
+                            bindings[target.value.id] is None
+                            or target.attr
+                            in {"__module__", "__name__", "__qualname__", "__doc__"}
+                        )
                         for target in targets
                     ):
+                        # Class metadata does not rebind a class or its bases;
+                        # providers may annotate imported and declared classes.
                         continue
                     if all(
                         cls._module_table_target(target, bindings) for target in targets
@@ -291,6 +297,14 @@ class FlextInfraUtilitiesRopeSourceBases:
                         and len(targets) == 1
                         and isinstance(value, ast.Name)
                         and isinstance(target, ast.Attribute)
+                        and target.attr
+                        not in {
+                            "__bases__",
+                            "__base__",
+                            "__mro__",
+                            "__class__",
+                            "__dict__",
+                        }
                         and isinstance(target.value, ast.Name)
                         and target.value.id in bindings
                         and bindings[target.value.id] is not None

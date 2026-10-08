@@ -299,6 +299,119 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                 self._roots(),
             )
 
+    @pytest.mark.parametrize("name", ["ABC", "ABCMeta"])
+    def test_native_abc_provider_metadata_preserves_class_bases(
+        self,
+        tmp_path: Path,
+        name: str,
+    ) -> None:
+        """CPython's ABCMeta metadata assignment is not a lineage mutation."""
+        tm.that(
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {
+                    tmp_path / "src" / "abc_contract" / "models.py": (
+                        f"from abc import {name}\nclass Consumer({name}): pass\n"
+                    ),
+                },
+                self._roots(),
+            ),
+            eq=tuple(sorted(self._roots())),
+        )
+
+    @pytest.mark.parametrize("declared", [False, True])
+    @pytest.mark.parametrize(
+        "metadata",
+        [
+            "Contract.__module__ = __name__",
+            "Contract.__module__: str = 'published_metadata'",
+            "Contract.__name__ = 'PublishedContract'",
+            "Contract.__qualname__ = 'Published.Contract'",
+            "Contract.__doc__ = 'Published documentation'",
+        ],
+    )
+    def test_provider_class_metadata_preserves_imported_and_declared_lineage(
+        self,
+        tmp_path: Path,
+        installed_dependency_path: Path,
+        metadata: str,
+        *,
+        declared: bool,
+    ) -> None:
+        """Metadata neither changes lexical class bindings nor publishes aliases."""
+        provider = installed_dependency_path / "metadata_provider.py"
+        declaration = (
+            self._root_import() + "class Contract(RuntimeRoot): pass\n"
+            if declared
+            else self._root_import() + "Contract = RuntimeRoot\n"
+        )
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                provider,
+                declaration + f"{metadata}\nclass Derived(Contract): pass\n"
+                "raise RuntimeError('provider must not be imported')\n",
+            ),
+        )
+        tm.that(
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {
+                    tmp_path / "src" / "metadata_contract" / "models.py": (
+                        "from metadata_provider import Derived\n"
+                        "class Consumer(Derived): pass\n"
+                    ),
+                },
+                self._roots(),
+            ),
+            eq=tuple(sorted((*self._roots(), "metadata_provider.Derived"))),
+        )
+        tm.that("metadata_provider" in sys.modules, eq=False)
+
+    @pytest.mark.parametrize(
+        "mutation",
+        [
+            "Contract.__bases__ = (Plain,)",
+            "Contract.__bases__ = replacement",
+            "Contract.__class__ = Plain",
+            "Namespace.Contract = 0",
+            "Contract.__module__ = Namespace.Contract = 'metadata'",
+        ],
+    )
+    def test_provider_metadata_never_masks_the_first_binding_mutation(
+        self,
+        tmp_path: Path,
+        installed_dependency_path: Path,
+        mutation: str,
+    ) -> None:
+        """The first unsupported store escapes before a later invalid base."""
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                installed_dependency_path / "mutating_provider.py",
+                self._root_import()
+                + "class Contract(RuntimeRoot): pass\nclass Plain: pass\n"
+                "class Namespace:\n    Contract = Contract\n"
+                "replacement = (Plain,)\n"
+                "Contract.__module__ = __name__\n"
+                f"{mutation}\nclass Derived(Contract): pass\n",
+            ),
+        )
+        with pytest.raises(ValueError) as failure:
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {
+                    tmp_path / "src" / "mutation_consumer" / "models.py": (
+                        "from mutating_provider import Derived\n"
+                        "class Consumer(Derived): pass\n"
+                        "class Later(Missing): pass\n"
+                    ),
+                },
+                self._roots(),
+            )
+        tm.that(
+            str(failure.value),
+            eq=f"Unsupported class binding mutation in mutating_provider: {mutation}",
+        )
+
     def test_inconsistent_mro_fails_visibly(self, tmp_path: Path) -> None:
         source = (
             "class Left: pass\nclass Right: pass\n"

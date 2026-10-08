@@ -248,6 +248,56 @@ class TestsFlextInfraCodegenLazyInit:
             for init_file in generated:
                 tm.that(planned, lacks=init_file)
 
+        def test_declared_sources_do_not_include_foreign_runtime_trees(
+            self,
+            tmp_path: Path,
+        ) -> None:
+            """Only governed source roots supply packages and snapshot inputs."""
+            repository, package = u.Tests.create_lazy_init_workspace(tmp_path)
+            u.Tests.write_lazy_init_namespace_module(
+                package / "models.py",
+                class_name="FlextScopedModels",
+                alias="m",
+                docstring="Owned models.",
+            )
+            owned_inits = {package / c.Infra.INIT_PY}
+            source_roots = config.Infra.source_scan.roots
+            for source_root in source_roots:
+                if source_root == c.Infra.DEFAULT_SRC_DIR:
+                    continue
+                owned = repository / source_root / "owned_package"
+                owned_init = self._create_init_file(owned, "")
+                (owned / "provider.py").write_text(
+                    "class Owned: pass\n__all__ = ('Owned',)\n",
+                    encoding=c.Cli.ENCODING_DEFAULT,
+                )
+                owned_inits.add(owned_init)
+            outside = repository / ("off_scope_" + "_".join(source_roots))
+            foreign_paths: set[Path] = set()
+            for relative in (
+                "worktrees/member/.flext-venvs/python/bin",
+                "skills/provider/scripts",
+                "scratch/demos/examples",
+            ):
+                foreign = outside / relative
+                foreign_paths.add(self._create_init_file(foreign, ""))
+                for suffix in c.Infra.PYTHON_SOURCE_SUFFIXES:
+                    module = foreign / f"provider{suffix}"
+                    module.write_text(
+                        "class Foreign: pass\n__all__ = ('Foreign',)\n",
+                        encoding=c.Cli.ENCODING_DEFAULT,
+                    )
+                    foreign_paths.add(module)
+
+            result = FlextInfraCodegenLazyInit(repository_root=repository).plan_files()
+
+            tm.ok(result)
+            planned = {plan.path for plan in result.value.files}
+            tm.that(owned_inits <= planned, eq=True)
+            inputs = {state.path for state in result.value.inputs}
+            tm.that(planned.isdisjoint(foreign_paths), eq=True)
+            tm.that(inputs.isdisjoint(foreign_paths), eq=True)
+
     class TestsEdgeCases:
         """Edge cases for directory scanning."""
 

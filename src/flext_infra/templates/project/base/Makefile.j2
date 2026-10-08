@@ -166,12 +166,22 @@ endif
 # declared credential command when it is installed. Every name gh, uv and mise
 # read carries that same value, so no inherited alias can shadow it. The value
 # stays in the environment and is never printed.
+GITHUB_AUTH_SOURCE := $(if $(strip $(GITHUB_TOKEN)),GITHUB_TOKEN,$(if $(strip $(GH_TOKEN)),GH_TOKEN,$(if $(strip $(MISE_GITHUB_TOKEN)),MISE_GITHUB_TOKEN,none)))
+GITHUB_AUTH_STATUS := not-selected
+GITHUB_AUTH_CI := other
+ifeq ($(strip $({{ make.ci.variable }})),{{ make.ci.value }})
+GITHUB_AUTH_CI := ci
+else ifeq ($(strip $({{ make.ci.variable }})),{{ make.ci.local_value }})
+GITHUB_AUTH_CI := local
+else ifeq ($(strip $({{ make.ci.variable }})),)
+GITHUB_AUTH_CI := unset
+endif
 GITHUB_TOKEN := $(firstword $(GITHUB_TOKEN) $(GH_TOKEN) $(MISE_GITHUB_TOKEN))
 ifeq ($(GITHUB_TOKEN),)
-ifeq ($(strip $({{ make.ci.variable }})),{{ make.ci.local_value }})
+ifneq ($(filter local unset,$(GITHUB_AUTH_CI)),)
+GITHUB_AUTH_SOURCE := gh
 GITHUB_TOKEN := $(shell command -v gh >/dev/null 2>&1 && gh auth token 2>/dev/null)
-else ifeq ($(strip $({{ make.ci.variable }})),)
-GITHUB_TOKEN := $(shell command -v gh >/dev/null 2>&1 && gh auth token 2>/dev/null)
+GITHUB_AUTH_STATUS := $(.SHELLSTATUS)
 endif
 endif
 ifneq ($(GITHUB_TOKEN),)
@@ -182,6 +192,9 @@ else
 unexport GITHUB_TOKEN GH_TOKEN MISE_GITHUB_TOKEN
 endif
 unexport GITHUB_API_TOKEN
+GITHUB_AUTH_PRESENT := $(if $(strip $(GITHUB_TOKEN)),yes,no)
+# Diagnostics expose only producer metadata, never credentials or command stderr.
+GITHUB_AUTH_DIAGNOSTICS = printf 'github-auth source=%s extraction-exit=%s present=%s ci=%s\n' '$(GITHUB_AUTH_SOURCE)' '$(GITHUB_AUTH_STATUS)' '$(GITHUB_AUTH_PRESENT)' '$(GITHUB_AUTH_CI)'
 
 # === SECTION: project identity (managed) ===
 # Source: config:dist / config:make_profile / config:repository_root_rel / config:uv_link_mode
@@ -412,6 +425,21 @@ export FLEXT_INFRA_PYTHON UV_PROJECT UV_PROJECT_ENVIRONMENT VIRTUAL_ENV PATH RUN
 TOOL_BOOTSTRAP_LIFECYCLE := _setup_lifecycle
 TOOL_BOOTSTRAP_RESOLVE :=
 {{ tool_bootstrap_recipe("_bootstrap_setup_tools", "$(PROJECT_ROOT)", mise_selector, mise_install_tools, "$(SELF_MAKE) $(TOOL_BOOTSTRAP_LIFECYCLE)", make) }}
+_bootstrap_setup_tools: _builtin_require_network_auth
+
+.PHONY: _builtin_require_network_auth
+_builtin_require_network_auth:
+	@$(GITHUB_AUTH_DIAGNOSTICS)
+	@if [ "$(GITHUB_AUTH_SOURCE)" = gh ]; then \
+		if [ "$(GITHUB_AUTH_STATUS)" != 0 ]; then \
+			printf 'ERROR: selected gh auth token failed (exit %s); refusing anonymous provisioning\n' '$(GITHUB_AUTH_STATUS)' >&2; \
+			exit "$(GITHUB_AUTH_STATUS)"; \
+		fi; \
+		if [ "$(GITHUB_AUTH_PRESENT)" != yes ]; then \
+			printf 'ERROR: selected gh auth token returned no credential; refusing anonymous provisioning\n' >&2; \
+			exit 2; \
+		fi; \
+	fi
 
 # Every repository evaluates only itself, locally exactly as in CI: a workspace
 # root consumes its members as installed libraries and never fans a verb out
@@ -582,6 +610,9 @@ _activated-{{ verb.name }}: _builtin_require_environment
 {% else %}
 {% if verb.name not in ("help", "clean") %}
 {{ verb.name }}: _builtin_require_workspace
+{% if verb.name == "status" %}
+	@$(GITHUB_AUTH_DIAGNOSTICS)
+{% endif %}
 	+@$(if $(filter {{ make.ci.value }},$({{ make.ci.variable }})),$(SELF_MAKE) _activated-{{ verb.name }},direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-{{ verb.name }})
 
 .PHONY: _activated-{{ verb.name }}
@@ -937,6 +968,7 @@ _builtin-profile-test-report: _builtin_require_environment
 		"$(PROFILE_REPORTS_DIR)/{{ pytest.profile_suite_filename }}" "$(PROFILE_REPORTS_DIR)/{{ pytest.profile_suite_filename }}.json"
 
 _builtin_status_diagnostics: _builtin_require_environment
+	@$(GITHUB_AUTH_DIAGNOSTICS)
 	@printf 'profile=%s\nproject=%s\nruntime=%s\n' \
 		'$(MAKE_PROFILE)' '$(PROJECT_ROOT)' '$(RUNTIME_ROOT)'
 	@$(SHELL) -c 'command -v uv'

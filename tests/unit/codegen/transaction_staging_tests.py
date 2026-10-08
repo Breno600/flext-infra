@@ -27,10 +27,18 @@ class TestsFlextInfraTransactionStaging:
     """Exercise durable staging authority before publishing live destinations."""
 
     @staticmethod
+    @pytest.mark.parametrize(
+        "phase",
+        [
+            c.Infra.CodegenStagedFilePhase.CONFORM,
+            c.Infra.CodegenStagedFilePhase.CONFORM_BOOTSTRAP,
+        ],
+    )
     @pytest.mark.parametrize("content", [b"", b"obsolete generated document\n"])
     def test_planned_deletion_publishes_without_a_success_none_payload(
         tmp_path: Path,
         content: bytes,
+        phase: c.Infra.CodegenStagedFilePhase,
     ) -> None:
         """A journaled deletion has no replacement but a valid result receipt."""
         root = u.Tests.git_repository(tmp_path)
@@ -47,7 +55,7 @@ class TestsFlextInfraTransactionStaging:
                 scope_root,
                 roots,
                 m.Infra.CodegenPhaseAnalysis(
-                    phase=c.Infra.CodegenStagedFilePhase.CONFORM,
+                    phase=phase,
                     inputs=(before,),
                     files=(
                         m.Infra.CodegenFilePlan(
@@ -70,10 +78,18 @@ class TestsFlextInfraTransactionStaging:
         tm.that(target.exists(), eq=False)
 
     @staticmethod
+    @pytest.mark.parametrize(
+        "phase",
+        (
+            c.Infra.CodegenStagedFilePhase.CONFORM,
+            c.Infra.CodegenStagedFilePhase.CONFORM_BOOTSTRAP,
+        ),
+    )
     @pytest.mark.parametrize("scenario", ["valid", "stale-origin", "tampered"])
     def test_staged_package_public_import_precedes_publication(
         tmp_path: Path,
         scenario: str,
+        phase: c.Infra.CodegenStagedFilePhase,
     ) -> None:
         """Consume isolated real modules; reject old origins and changed bytes."""
         root = u.Tests.git_repository(tmp_path)
@@ -128,7 +144,7 @@ class TestsFlextInfraTransactionStaging:
 
         def publish(scope_root: Path) -> p.Result[t.VariadicTuple[Path]]:
             analysis = m.Infra.CodegenPhaseAnalysis(
-                phase=c.Infra.CodegenStagedFilePhase.CONFORM,
+                phase=phase,
                 inputs=states,
                 files=(
                     m.Infra.CodegenFilePlan(
@@ -147,6 +163,7 @@ class TestsFlextInfraTransactionStaging:
                 session: m.Infra.CodegenTransactionSession,
                 publications: t.VariadicTuple[m.Infra.CodegenStagedFile],
             ) -> p.Result[m.Infra.CodegenTransactionSession]:
+                tm.that(publications[0].phase, eq=phase)
                 materialized = owner.materialize_package_view_locked(
                     session, stage_plan, publications[0]
                 )

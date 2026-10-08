@@ -189,17 +189,25 @@ level, the divergence remains a failure.
 
 ## Bootstrap credentials
 
-The GitHub credential is optional and is selected once, in the generated Makefile
-preamble, for every verb: the first non-empty of the caller's `GITHUB_TOKEN`,
-`GH_TOKEN`, `MISE_GITHUB_TOKEN`, then `gh auth token` when gh is installed and
-authenticated. Make exports that one value as `GITHUB_TOKEN`, `GH_TOKEN`, and
-`MISE_GITHUB_TOKEN`, so gh, uv, and mise read the same credential and no inherited
+The GitHub credential is selected in the generated Makefile preamble, for every
+Make entry: the first non-empty of the caller's `GITHUB_TOKEN`, `GH_TOKEN`,
+`MISE_GITHUB_TOKEN`, then the existing `gh auth token` producer in the declared
+local or unset CI context. Make exports that one value as `GITHUB_TOKEN`, `GH_TOKEN`,
+and `MISE_GITHUB_TOKEN`, so gh, uv, and mise read the same credential and no inherited
 alias can shadow it; `GITHUB_API_TOKEN` is unexported. Native Mise inherits those
 exports. The generated Make and direnv owners isolate global/system configuration
 discovery, not all process variables; other caller environment values remain
-inherited. With no token, public
-GitHub requests use the upstream tool's native unauthenticated behavior. The value
-is never printed. An invalid token preserves the backend's native error, without an
+inherited. `status` reports the selected source, extraction exit status, credential
+presence, and CI classification without printing the value or credential-command
+stderr. Its initial entry reports the producer; a recursive entry can report the
+normalized inherited `GITHUB_TOKEN` instead. Caller credentials report extraction
+as `not-selected`, not as a successful credential-command invocation.
+
+Optional credentials do not block offline verbs. In `setup` and `upg`, a selected
+gh producer's failure is reported and its exit status propagated before the first
+Mise lock or install; success with an empty credential also fails before provisioning.
+CI classification and caller precedence are unchanged. An invalid supplied token
+preserves the backend's native error, without an
 anonymous retry or source switch. CI jobs inject `GITHUB_TOKEN`; containers receive
 the variable or a BuildKit secret explicitly.
 
