@@ -140,7 +140,9 @@ class TestsFlextInfraGenRespectsInvocationScope:
             activation_target = f"_activated-{verb.name}"
             expected_route = f"{activation_target}: _builtin_require_environment"
             activation_routes = tuple(
-                line for line in rendered_lines if line.startswith(f"{activation_target}:")
+                line
+                for line in rendered_lines
+                if line.startswith(f"{activation_target}:")
             )
             tm.that(
                 any(expected_route in line for line in activation_routes),
@@ -152,8 +154,7 @@ class TestsFlextInfraGenRespectsInvocationScope:
             )
             if not verb.produces_activation:
                 expected_invocation = (
-                    'direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) '
-                    f"{activation_target}"
+                    f'direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) {activation_target}'
                 )
                 activation_commands = tuple(
                     line.strip()
