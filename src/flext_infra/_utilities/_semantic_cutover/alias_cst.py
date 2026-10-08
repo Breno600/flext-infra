@@ -9,7 +9,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 import libcst as cst
-from libcst.metadata import MetadataWrapper, ParentNodeProvider, QualifiedNameProvider
+from libcst.metadata import (
+    MetadataWrapper,
+    ParentNodeProvider,
+    QualifiedName,
+    QualifiedNameProvider,
+    QualifiedNameSource,
+)
 
 from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
 
@@ -28,6 +34,144 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
         def __init__(self, plan: m.Infra.CompatibilityAliasRewritePlan) -> None:
             self.plan = plan
 
+        def _qualified_names(self, node: cst.CSTNode) -> frozenset[QualifiedName]:
+            """Verify the lexical receiver before trusting dotted import metadata.
+
+            Returns:
+                Qualified identities consistent with the lexical receiver.
+
+            """
+            names = tuple(self.get_metadata(QualifiedNameProvider, node, ()))
+            if isinstance(node, cst.Attribute) and any(
+                name.name in self.plan.qualified_aliases
+                or any(
+                    name.name == alias.rpartition(".")[0]
+                    for alias in self.plan.qualified_aliases
+                )
+                or name.name
+                in {
+                    "builtins.getattr",
+                    "builtins.hasattr",
+                    "builtins.setattr",
+                    "builtins.delattr",
+                }
+                for name in names
+            ):
+                return FlextInfraUtilitiesQualifiedNames.prove_import_root(
+                    names,
+                    tuple(
+                        self.get_metadata(
+                            QualifiedNameProvider,
+                            FlextInfraUtilitiesQualifiedNames.lexical_root(node),
+                            (),
+                        ),
+                    ),
+                )
+            return frozenset(names)
+
+        def _alias_target(self, node: cst.Name | cst.Attribute) -> str | None:
+            """Require all possible bindings to agree before changing a reference.
+
+            Returns:
+                The unique alias destination, or None for an unrelated reference.
+
+            Raises:
+                ValueError: If a retiring binding has competing identities.
+
+            """
+            names = self._qualified_names(node)
+            matched = [
+                name
+                for name in names
+                if name.name in self.plan.qualified_aliases
+                and (
+                    name.source is QualifiedNameSource.IMPORT
+                    or (
+                        isinstance(node, cst.Name)
+                        and name.source is QualifiedNameSource.LOCAL
+                        and name.name in self.plan.local_aliases
+                    )
+                )
+            ]
+            if not matched:
+                return None
+            targets = {self.plan.qualified_aliases[name.name] for name in matched}
+            if len(matched) != len(names) or len(targets) != 1:
+                msg = (
+                    "ambiguous qualified alias bindings: "
+                    f"{sorted(name.name for name in names)}"
+                )
+                raise ValueError(msg)
+            return targets.pop()
+
+        def _require_module_access(self, node: cst.Name | cst.Attribute) -> None:
+            """Refuse opaque escapes of modules whose alias exports are retiring.
+
+            Raises:
+                ValueError: If reflection or an opaque escape prevents closure.
+
+            """
+            retired = {
+                alias.rpartition(".")[2]
+                for name in self._qualified_names(node)
+                if name.source is QualifiedNameSource.IMPORT
+                for alias in self.plan.qualified_aliases
+                if alias.rpartition(".")[0] == name.name
+            }
+            if not retired:
+                return
+            parent = self.get_metadata(ParentNodeProvider, node)
+            if isinstance(parent, cst.ImportAlias | cst.ImportFrom):
+                return
+            if isinstance(parent, cst.Attribute) and parent.value is node:
+                return
+            call = (
+                self.get_metadata(ParentNodeProvider, parent)
+                if isinstance(parent, cst.Arg)
+                else None
+            )
+            if isinstance(call, cst.Call) and call.args[0] is parent:
+                reflectors = self._qualified_names(call.func)
+                if reflectors and all(
+                    name.source
+                    in {
+                        QualifiedNameSource.BUILTIN,
+                        QualifiedNameSource.IMPORT,
+                    }
+                    and name.name
+                    in {
+                        "builtins.getattr",
+                        "builtins.hasattr",
+                        "builtins.setattr",
+                        "builtins.delattr",
+                    }
+                    for name in reflectors
+                ):
+                    attribute = (
+                        call.args[1].value
+                        if len(call.args) > 1 and not call.args[1].star
+                        else None
+                    )
+                    attribute_name = (
+                        attribute.evaluated_value
+                        if isinstance(
+                            attribute,
+                            cst.SimpleString | cst.ConcatenatedString,
+                        )
+                        else None
+                    )
+                    if not isinstance(attribute_name, str):
+                        msg = "unresolved reflective attribute on retiring alias module"
+                        raise ValueError(msg)
+                    if attribute_name in retired:
+                        msg = (
+                            f"reflective alias access blocks cutover: {attribute_name}"
+                        )
+                        raise ValueError(msg)
+                    return
+            msg = "retiring module escape blocks alias cutover"
+            raise ValueError(msg)
+
         @override
         def leave_Name(
             self,
@@ -35,31 +179,15 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
             updated_node: cst.Name,
         ) -> cst.Name:
 
-            targets = {
-                target
-                for qualified_name in self.get_metadata(
-                    QualifiedNameProvider,
-                    original_node,
-                    (),
-                )
-                if (target := self.plan.qualified_aliases.get(qualified_name.name))
-                is not None
-            }
-            if not targets:
-                return updated_node
-            if len(targets) != 1:
-                msg = (
-                    f"ambiguous qualified alias {original_node.value}: "
-                    f"{sorted(targets)}"
-                )
-                raise ValueError(msg)
             parent = self.get_metadata(ParentNodeProvider, original_node)
             if FlextInfraUtilitiesQualifiedNames.rebinds_name_in_place(
                 parent,
                 original_node,
             ):
                 return updated_node
-            return updated_node.with_changes(value=targets.pop())
+            self._require_module_access(original_node)
+            target = self._alias_target(original_node)
+            return updated_node.with_changes(value=target) if target else updated_node
 
         @override
         def leave_Assign(
@@ -132,13 +260,8 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
             updated_node: cst.Attribute,
         ) -> cst.BaseExpression:
 
-            owner = (
-                FlextInfraUtilitiesQualifiedNames.dotted_name(original_node.value) or ""
-            )
-            target = self.plan.attribute_aliases.get((
-                owner,
-                original_node.attr.value,
-            ))
+            self._require_module_access(original_node)
+            target = self._alias_target(original_node)
             return (
                 updated_node.with_changes(attr=cst.Name(target))
                 if target

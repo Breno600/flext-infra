@@ -47,6 +47,7 @@ class FlextInfraWorkspaceCheckGatesMixin:
             fail_fast=ctx.fail_fast,
             ruff_args=ctx.ruff_args,
             pyright_args=ctx.pyright_args,
+            selected_files=ctx.selected_files,
         )
 
     def _run_single_project(
@@ -186,7 +187,7 @@ class FlextInfraWorkspaceCheckGatesMixin:
             if gate_instance is None:
                 msg = f"{gate_id} gate not registered"
                 raise ValueError(msg)
-            if not gate_instance.selected_for(project_dir):
+            if not ctx.selected_files and not gate_instance.selected_for(project_dir):
                 continue
             stages.append(
                 m.Cli.PipelineStageSpec(
@@ -277,6 +278,7 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 fail_fast=ctx.fail_fast,
                 ruff_args=ctx.ruff_args,
                 pyright_args=ctx.pyright_args,
+                selected_files=ctx.selected_files,
             )
             execution = self._execute_gate(gate_instance, project_dir, gate_ctx)
             gates_sink[gate_id] = execution
@@ -322,6 +324,8 @@ class FlextInfraWorkspaceCheckGatesMixin:
             The resulting ``m.Infra.GateExecution``.
 
         """
+        if ctx.selected_files:
+            return gate_instance.check_files(ctx.selected_files, project_dir, ctx)
         if ctx.apply_fixes and (not ctx.check_only) and gate_instance.can_fix:
             return gate_instance.fix(project_dir, ctx)
         return gate_instance.check(project_dir, ctx)
