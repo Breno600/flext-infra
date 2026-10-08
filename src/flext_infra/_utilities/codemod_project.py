@@ -489,6 +489,11 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                     if not isinstance(resource, p.Infra.RopeRoot):
                         msg = f"binding package has no source resource contract: {path}"
                         raise TypeError(msg)
+                    # A directory without an initializer (a namespace package or
+                    # a compiled extension's stub folder) carries no module
+                    # source, so the static import closure has nothing to read.
+                    if not resource.has_child(c.Infra.INIT_PY):
+                        continue
                     resource = resource.get_child(c.Infra.INIT_PY)
                     path = Path(resource.real_path).resolve()
                 if path in visited or not path.is_file() or path.suffix != ".py":

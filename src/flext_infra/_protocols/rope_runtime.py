@@ -29,6 +29,8 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
             name: str,
         ) -> FlextInfraProtocolsRopeRuntime.RopeResource: ...
 
+        def has_child(self, name: str) -> bool: ...
+
     @runtime_checkable
     class RopeResource(Protocol):
         """Rope project resource shape shared by files and folders."""
