@@ -23,6 +23,14 @@ Infra:
       - path: bin/mise-lock-converge.py
         evidence: "Hold broken tool releases inside a ``make upg`` Mise lock stage."
       - mise.version
+      # The prettier projections retired with the npm-free toolchain
+      # (ADR-025: rumdl fmt formats markdown from .markdownlint.json). Neither
+      # carried a generated marker, so each declares the rendered bytes that
+      # prove machine provenance.
+      - path: .prettierrc
+        evidence: '"proseWrap"'
+      - path: .prettierignore
+        evidence: "# @flext-ssot: flext-infra/config/tooling.yaml"
 
     # Fresh import probes are independent subprocesses within one validation.
     fresh_import_workers: 3
@@ -84,57 +92,102 @@ Infra:
         - mypy<2.4.0
       # Moving selectors consumed by generated .mise.toml and CI. Only
       # `make upg` resolves them to the newest release and writes mise.lock;
-      # setup installs exactly what the committed lock pins.
+      # setup installs exactly what the committed lock pins, and only these
+      # declared tools (never the operator's global Mise registry).
       # Override these tool entries only. Never edit .mise.toml. Never pin a
       # SHA. Entry order is the .mise.toml [tools] projection order; form
-      # fixes the rendered shape (scalar | inline | table).
+      # fixes the rendered shape (scalar | table). The fleet toolchain has no
+      # npm backend (ADR-025): every tool comes from a checksum-locked native
+      # owner, and the toolchain model rejects an `npm:` selector at load.
+      # version_probe is the setup reality proof's data: `binary` is resolved
+      # through `mise which` and must live inside the tool's `mise where`
+      # root; `arguments` run it; `pattern` (a regex whose `{version}` is the
+      # escaped mise.lock version) must match its output. lock_checksum false
+      # declares a tool whose upstream release metadata publishes no checksum
+      # (mise.lock then carries the URL only); every other tool's current
+      # platform lock section must carry one.
       tools:
         - name: uv
           version: latest
+          version_probe:
+            binary: uv
+            arguments: [--version]
+            pattern: "^uv {version} "
         - name: kubectl
           version: latest
+          version_probe:
+            binary: kubectl
+            arguments: [version, --client]
+            pattern: "^Client Version: v{version}$"
         - name: helm
           version: latest
+          version_probe:
+            binary: helm
+            arguments: [version, --short]
+            pattern: "^v{version}\\+"
         - name: kind
           version: latest
+          version_probe:
+            binary: kind
+            arguments: [version]
+            pattern: "^kind v{version} "
         - name: direnv
           version: latest
+          version_probe:
+            binary: direnv
+            arguments: [version]
+            pattern: "^{version}$"
+        # The aqua registry entry for tamasfe/taplo declares no checksum, so
+        # mise.lock records the release URL only.
         - name: taplo
           version: latest
-        # The npm CLI publishes a native musl binary; the GitHub CLI release
-        # does not. One selector therefore covers the declared Linux libc
-        # variants. ast-grep's native binary is selected by its npm lifecycle
-        # script; the inline form declares that approved lifecycle (allow_builds
-        # derives from the npm selector in the projection).
+          lock_checksum: false
+          version_probe:
+            binary: taplo
+            arguments: [--version]
+            pattern: "^taplo {version}$"
+        # ast-grep publishes glibc-only native binaries (GitHub release assets
+        # app-{x86_64,aarch64}-unknown-linux-gnu); no channel ships a musl
+        # build, so aqua locks the gnu asset for linux-x64-musl as well.
         - name: ast-grep
-          selector: npm:@ast-grep/cli
+          selector: aqua:ast-grep/ast-grep
           version: latest
-          form: inline
+          version_probe:
+            binary: ast-grep
+            arguments: [--version]
+            pattern: "^ast-grep {version}$"
         - name: gitleaks
           version: latest
+          version_probe:
+            binary: gitleaks
+            arguments: [version]
+            pattern: "^{version}$"
         - name: scc
           selector: aqua:boyter/scc
           version: latest
+          version_probe:
+            binary: scc
+            arguments: [--version]
+            pattern: "^scc version {version}$"
         - name: kubeconform
           version: latest
+          version_probe:
+            binary: kubeconform
+            arguments: [-v]
+            pattern: "^v{version}$"
+        # pyright's PyPI wrapper runs node from PATH.
         - name: node
           version: latest
-        # bun is the npm installer the toolchain declares (above) and a
-        # bootstrap prerequisite: mise does not auto-install the npm backend's
-        # own runtime, and the safe-mode bootstrap runs under env -i.
-        - name: bun
-          version: latest
-        # Prettier is the markdown formatter (markdown-format gate): provisioned
-        # through npm so the fleet binary version is owned by this SSOT alone.
-        # Pinned to 3.5.x: prettier 3.7+ changed markdown formatting (list-
-        # continuation printer, proseWrap) which the markdown-format gate has
-        # not been revalidated against. Only float through `make upg` once the
-        # docs gate is verified.
-        - name: prettier
-          selector: npm:prettier
-          version: 3.5.3
+          version_probe:
+            binary: node
+            arguments: [--version]
+            pattern: "^v{version}$"
         - name: go
           version: latest
+          version_probe:
+            binary: go
+            arguments: [version]
+            pattern: "^go version go{version} "
         # Generated .mise.toml must declare make as a managed
         # mise tool so direnv exec resolves a real installed binary instead of a
         # stale host shim (e.g. a conda-carried make). Every project invokes make
@@ -142,10 +195,18 @@ Infra:
         # resolve from itself, so mise must provision it.
         - name: make
           version: latest
+          version_probe:
+            binary: make
+            arguments: [--version]
+            pattern: "^GNU Make {version}$"
         - name: qlty
           selector: github:qltysh/qlty
           version: latest
           form: table
+          version_probe:
+            binary: qlty
+            arguments: [--version]
+            pattern: "^qlty {version} "
         # Back on `latest` (2026-10-04 re-measurement): the 2026-10-02 hold's
         # premise is gone — every release v5.2.0 through v5.4.0 now ships the
         # full 19-asset platform set (verified via the GitHub releases API),
@@ -156,6 +217,10 @@ Infra:
           selector: github:kucherenko/jscpd
           version: latest
           form: table
+          version_probe:
+            binary: jscpd
+            arguments: [--version]
+            pattern: "^jscpd {version}$"
         # microsoft/waza also publishes azd-extension tags, and GitHub marks
         # one of them latest; the tool's own releases are the `v` tags.
         - name: waza
@@ -163,14 +228,12 @@ Infra:
           version: latest
           version_prefix: v
           form: table
+          version_probe:
+            binary: waza
+            arguments: [--version]
+            pattern: "^waza version {version}$"
       # Pins layered over the tools table by the override files.
       tool_version_pins: {}
-      # bun installs the npm CLIs (operator choice 2026-10-05): faster than
-      # the embedded aube and no aube dependency-graph sidecars — mise.lock
-      # keeps the top-level pin only. The bootstrap carries
-      # MISE_NPM_PACKAGE_MANAGER because mise safe mode ignores project
-      # [settings].
-      npm_package_manager: bun
       # False keeps Python resolution and installation on precompiled builds:
       # compiling from source selected releases ahead of their published
       # builds and stalled the fleet bootstrap (operator 2026-10-01).
@@ -185,8 +248,6 @@ Infra:
       # Projection: .mise.toml [settings] lockfile_platforms. The platforms the
       # CI matrix runs on (ubuntu, macos, windows runners, x64 and arm64);
       # `make upg` resolves these plus the current host, which mise always adds.
-      # The safe bootstrap also passes this policy as MISE_LOCKFILE_PLATFORMS:
-      # mise safe mode ignores project [settings].
       mise_lockfile_platforms:
         - linux-x64
         - linux-x64-musl
@@ -896,11 +957,11 @@ Infra:
           editor.defaultFormatter: charliermarsh.ruff
           editor.formatOnSave: true
           editor.codeActionsOnSave.source.organizeImports: explicit
-        # Prettier owns markdown formatting (markdown-format gate); the editor
-        # parity reads the same generated .prettierrc. Save stays manual: the
-        # canonical mutation surface is `make fmt`.
+        # rumdl owns markdown formatting (markdown-format gate: `rumdl fmt`);
+        # the editor extension reads the same generated .markdownlint.json.
+        # Save stays manual: the canonical mutation surface is `make fmt`.
         "[markdown]":
-          editor.defaultFormatter: esbenp.prettier-vscode
+          editor.defaultFormatter: rvben.rumdl
           editor.formatOnSave: false
       stripped_keys:
       # Pylance emits settingsNotOverridable diagnostics (severity=warning) when
@@ -1181,12 +1242,6 @@ Infra:
         owner: codegen
         policy: full
       - path: .markdownlintignore
-        owner: codegen
-        policy: full
-      - path: .prettierrc
-        owner: codegen
-        policy: full
-      - path: .prettierignore
         owner: codegen
         policy: full
       - path: .pre-commit-config.yaml
@@ -1630,8 +1685,6 @@ Infra:
             - "!codex.md"
             - "!.markdownlint.json"
             - "!.markdownlintignore"
-            - "!.prettierrc"
-            - "!.prettierignore"
             - "!.shellcheckrc"
         - name: "Git configuration"
           profiles: [workspace]
@@ -2124,14 +2177,6 @@ Infra:
           delegate: render
         - source: base/markdownlintignore.j2
           destination: .markdownlintignore
-          profiles: [workspace, standalone]
-          delegate: render
-        - source: base/prettierrc.j2
-          destination: .prettierrc
-          profiles: [workspace, standalone]
-          delegate: render
-        - source: base/prettierignore.j2
-          destination: .prettierignore
           profiles: [workspace, standalone]
           delegate: render
       # Ledger routing config: rendered only for repositories that own a

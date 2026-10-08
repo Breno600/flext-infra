@@ -6,7 +6,7 @@
 - [Environment activation](#environment-activation)
 - [Dependency locks](#dependency-locks)
 - [Runtime environment](#runtime-environment)
-- [Mise self-management](#mise-self-management)
+- [Mise toolchain](#mise-toolchain)
 - [SonarCloud exclusions](#sonarcloud-exclusions)
 - [Bootstrap credentials](#bootstrap-credentials)
 - [Evidence and checkpoints](#evidence-and-checkpoints)
@@ -112,30 +112,51 @@ and common directories identify the linked checkout. The generated Makefile, gen
 `.envrc`, and `runtime_environment_dir` derive the same path. Neither a caller
 variable nor a checkout-local symlink may redirect the environment.
 
-## Mise self-management
+## Mise toolchain
 
-The typed toolchain declares Mise's selector and release in `config/codegen.yaml`.
-Generation renders that declaration into `.mise.toml`; native `make upg` resolves
-its tool requests into `mise.lock`. Native `make setup` installs the lock, verifies
-the installed Mise release against its self-management entry and enters the
-recursive Make lifecycle through that installed release. Separate `mise.version`,
-bootstrap launchers and staged lock-convergence scripts are not lifecycle owners.
+Mise manages itself: the generated `.mise.toml` declares the `toolchain.mise_selector`
+release as a `[tools]` entry, and `mise.lock` pins it like every other tool. One host
+Mise runs `mise install`; every later `mise` resolved through the shims is the pinned
+release, and `_builtin_require_mise` fails when the running Mise differs from the lock.
 
-Only `make upg` writes `mise.lock` and `uv.lock`. It resolves before provisioning,
-updates dependency floors from the installed runtime, generates the manifests,
-relocks those projected manifests, reinstalls and verifies the resulting runtime.
-The declared lock platforms and release cooldown come from the typed toolchain.
-Never edit native lock payloads or substitute manual installation commands.
+`toolchain.tools` in `config/codegen.yaml` declares every fleet tool. Each comes from a
+native, checksum-locked owner (aqua, GitHub releases, conda, or a Mise core backend);
+the toolchain model rejects an `npm:` selector at load (ADR-025). A tool whose upstream
+release metadata publishes no checksum declares `lock_checksum: false`.
 
-Setup checks whether `uv.lock` agrees with the manifests. A matching lock uses
-`--locked`; a drifted lock emits its diagnostic and installs the committed lock
-with `--frozen`, without rewriting it. Drift and any resulting dependency
-incompatibility remain red until `make upg` produces matching locks. A missing
-lock fails with an actionable diagnostic. A failed native resolver or installer
-retains its original failure; no downgrade, retry or disabled lock policy masks it.
+`make setup` and `make upg` pass the explicit declared key list
+(`toolchain.mise_install_keys`) to `mise install`. A bare `mise install` would also
+provision every tool of the operator's global Mise registry, so no generated recipe
+runs one. After the environment is provisioned, `make setup` runs the reality proof
+(`flext-infra codegen mise-proof`) before `post-setup`. For each declared tool, in
+order, it stops at the first defect:
 
-Generation owns one transaction for ordinary projections, lazy exports and docs.
-A planned deletion has no staged replacement, but its successful result still
+1. the `mise.lock` entry exists, names a version the toolchain selector accepts, and
+   carries a checksum for the current platform;
+2. `mise where <key>@<version>` names the install root;
+3. `mise which <binary>`, and every symlink hop it resolves through, stays inside that
+   root;
+4. the tool's declared `version_probe` reports the locked version.
+
+The proof has no fallback, retry, or warning-only mode.
+
+A project `bin/` never enters PATH (shell, `BASH_ENV`, or CI `GITHUB_PATH`): Mise binds
+the shared shims to the first `mise` on PATH. Caches and installations stay out of Git.
+
+Mise reaches GitHub only to install a tool missing from its cache and inside
+`make upg`. Only `make upg` writes `mise.lock` and `uv.lock`; `make setup` never writes
+either. A missing or incompatible lock entry fails with Mise's original diagnostic and
+exit status, without disabling lockfiles or retrying. On the uv side, setup syncs
+`--locked`; when `uv.lock` drifts from `pyproject.toml` it prints a `WARN` and syncs the
+committed lock `--frozen`, which never writes it. The next `make upg` rewrites both
+locks. The platforms declared by `toolchain.mise_lockfile_platforms` compose the lock
+together with the platform of the machine running the upgrade, which Mise always
+includes. Drift remains red until the canonical upgrade produces matching locks;
+only successful resolution, installation and generation establish alignment.
+
+Separate bootstrap launchers and staged lock-convergence scripts are not lifecycle
+owners. Generation owns one transaction for ordinary projections, lazy exports and
+docs. A planned deletion has no staged replacement, but its successful result still
 carries a journal receipt: absence belongs inside the typed receipt, never in
 `r.ok(None)`. Repeated unchanged generation must converge before publication.
 
@@ -148,9 +169,7 @@ non-empty list through the `settings/set` API; an empty list uses
 [`settings/reset`](https://sonarcloud.io/web_api/api/settings/reset) with `component`
 and `keys`. The command rereads `settings/values` and requires the exact effective
 value, including inherited exclusions. If the reset reveals an exclusion from a higher
-level, the divergence remains a failure. A false positive on the native
-`aube-lock.yaml` format requires individual adjudication with frozen-install proof; it
-never authorizes broad exclusions or changes to the native payload.
+level, the divergence remains a failure.
 
 ## Bootstrap credentials
 

@@ -622,7 +622,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
                 env={
                     **active_env,
                     make.ci.variable: make.ci.value,
-                    config.MISE_DATA_DIR_ENV: str(cold_storage),
+                    c.Tests.MISE_DATA_DIR_ENV: str(cold_storage),
                 },
             ),
         )

@@ -504,9 +504,9 @@ class TestsFlextInfraDocsGenerator:
         )
         _ = u.Tests.publish_docs_bundle(generator)
         project = workspace / "flext-a"
-        config_path = project / c.Infra.PRETTIER_CONFIG_FILENAME
+        config_path = project / c.Infra.MARKDOWNLINT_CONFIG_FILENAME
         config_path.write_text(
-            (request.config.rootpath / c.Infra.PRETTIER_CONFIG_FILENAME).read_text(
+            (request.config.rootpath / c.Infra.MARKDOWNLINT_CONFIG_FILENAME).read_text(
                 encoding="utf-8",
             ),
             encoding="utf-8",

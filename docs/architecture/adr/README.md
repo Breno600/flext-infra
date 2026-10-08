@@ -37,9 +37,9 @@ The current implementation supersedes the divergent ADR text on these points:
 - Configuration declares `latest`. Only `make upg` resolves newer releases and writes
   the committed `uv.lock` and `mise.lock`; `make setup`, `make gen` and `make fmt`
   install frozen from those locks.
-- `make upg` is the only writer of `mise.version`, `bin/mise` and `bin/mise.cmd`, which
-  Mise itself generates (`mise generate install-script`) for the resolved release.
-  `make gen`, `make check` and CI only verify them offline.
+- Mise manages itself through the `[tools]` entry `mise.lock` pins. The fleet toolchain
+  has no npm-backed tool; `make setup` installs only the declared tools and proves each
+  one is the self-contained locked release (platform ADR-025).
 
 The [execution context guide](../../guides/execution-context.md) documents the
 operational details.

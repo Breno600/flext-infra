@@ -17,6 +17,7 @@ from flext_infra.codegen.layout import FlextInfraCodegenLayout
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
 from flext_infra.codegen.make_bootstrap import FlextInfraCodegenMakeBootstrap
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+from flext_infra.codegen.mise_toolchain_proof import FlextInfraCodegenMiseToolchainProof
 from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
 from flext_infra.codegen.py_typed import FlextInfraCodegenPyTyped
 from flext_infra.codegen.scaffolder import FlextInfraCodegenScaffolder
@@ -184,6 +185,15 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                             FlextInfraCodegenMiseArtifacts.execute,
                         ),
                         "Mise artifact validation complete",
+                    ),
+                    (
+                        "mise-proof",
+                        "Prove each declared tool is the self-contained locked release",
+                        FlextInfraCodegenMiseToolchainProof,
+                        FlextInfraCliRouteBase.result_handler(
+                            FlextInfraCodegenMiseToolchainProof.execute,
+                        ),
+                        "Mise toolchain reality proof complete",
                     ),
                     (
                         "version-file",
