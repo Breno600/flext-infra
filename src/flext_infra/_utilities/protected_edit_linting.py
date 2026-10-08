@@ -9,6 +9,7 @@ from __future__ import annotations
 import concurrent.futures
 import difflib
 import os
+import sys
 from collections.abc import MutableMapping
 from itertools import islice
 from pathlib import Path
@@ -57,25 +58,26 @@ class FlextInfraUtilitiesProtectedEditLinting:
         )
 
     @staticmethod
-    def _workspace_tool_command(workspace: Path, tool_name: str) -> t.StrSequence:
-        """Resolve one tool from the managed external workspace environment.
+    def _workspace_tool_command(tool_name: str) -> t.StrSequence:
+        """Resolve one fleet lint tool from the active runtime environment.
+
+        The gate protects edits with the fleet's own tools, so it resolves
+        them from the interpreter running the pipeline — never from the lint
+        target, whose environment may not exist (a census target is an
+        arbitrary repository, not necessarily a provisioned workspace).
 
         Returns:
             The resulting ``t.StrSequence``.
 
         Raises:
-            FileNotFoundError: If managed workspace tool is missing.
+            FileNotFoundError: If the active environment lacks the tool.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
-
-        environment = FlextInfraUtilitiesProjectDiscovery.runtime_environment_dir(
-            workspace,
-        )
+        environment = Path(sys.executable).parent
         executable = tool_name + (".exe" if os.name == "nt" else "")
-        tool_path = environment / ("Scripts" if os.name == "nt" else "bin") / executable
+        tool_path = environment / executable
         if not tool_path.is_file():
-            msg = f"managed workspace tool is missing: {tool_path}"
+            msg = f"active runtime environment tool is missing: {tool_path}"
             raise FileNotFoundError(msg)
         return (str(tool_path),)
 

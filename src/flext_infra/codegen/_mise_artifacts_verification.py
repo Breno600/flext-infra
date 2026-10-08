@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m, t, u
+from flext_infra import m, t, u
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
@@ -405,7 +405,7 @@ class FlextInfraMiseArtifactsVerification(
             artifacts = (project.config.before,)
             for expected, required_mode in zip(
                 artifacts,
-                (c.Infra.CONFIG_SPEC[1],),
+                (project.config.replacement_mode,),
                 strict=True,
             ):
                 current = files.read_state(expected.path, required=False)

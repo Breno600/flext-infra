@@ -43,7 +43,7 @@ class FlextInfraMiseArtifactsCandidates:
                 return r[tuple[m.Infra.CodegenStagedFile, ...]].from_failure(
                     replacement,
                 )
-            if replacement.value.mode != before.mode:
+            if replacement.value.mode != project.config.replacement_mode:
                 return r[tuple[m.Infra.CodegenStagedFile, ...]].fail(
                     f"staged Mise artifact mode differs: {stage / before.path.name}",
                 )

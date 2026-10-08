@@ -95,29 +95,22 @@ class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):
             return r[bool].from_failure(layout)
         if layout.value.journal_path != footprint.journal_path:
             return r[bool].fail("generation footprint journal anchor changed")
-        observed = u.Cli.atomic_read_binary_file_state(
-            footprint.journal_path,
-            required=False,
-        )
+        observed = self._inspect_journal(identity.value)
         if observed.failure:
             return r[bool].from_failure(observed)
-        if observed.value != footprint.snapshot:
+        if observed.value.snapshot != footprint.snapshot:
             u.Cli.info(
                 "generation journal changed during footprint inspection; "
                 f"journal-snapshot-before={footprint.model_dump_json()}",
             )
-            after = self._inspect_journal(identity.value)
-            if after.failure:
-                return r[bool].from_failure(after)
-            u.Cli.info(f"journal-snapshot-after={after.value.model_dump_json()}")
-            fields_equal = observed.value.model_dump(
+            u.Cli.info(f"journal-snapshot-after={observed.value.model_dump_json()}")
+            fields_equal = observed.value.snapshot.model_dump(
                 exclude={"content"},
             ) == footprint.snapshot.model_dump(exclude={"content"})
+            bytes_equal = observed.value.snapshot.content == footprint.snapshot.content
             return r[bool].fail(
                 "generation journal changed during footprint inspection; "
-                f"bytes_equal={observed.value.content == footprint.snapshot.content}; "
-                f"normalized_fields_equal={fields_equal}; "
-                f"after_read_equal={after.value.snapshot == observed.value}",
+                f"bytes_equal={bytes_equal}; normalized_fields_equal={fields_equal}",
             )
         if footprint.journal is not None:
             return self._authorize_journal(layout.value, footprint.journal)
@@ -153,7 +146,7 @@ class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):
                     if snapshot.content is not None
                     else None
                 ),
-                journal_version=journal.schema_version if journal is not None else None,
+                journal_version=journal.version if journal is not None else None,
                 transaction_id=journal.transaction_id if journal is not None else None,
                 normalized_journal_sha256=(
                     u.Cli.sha256_bytes(

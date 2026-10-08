@@ -872,12 +872,19 @@ class FlextInfraUtilitiesRopeSourceBases:
                         raise ValueError(message)
                     target = resolve(binding, visiting | {key}, depth + 1)
                 else:
-                    target = external_reference(
-                        target,
-                        tuple(attributes),
-                        visiting,
-                        depth + 1,
-                    )
+                    try:
+                        target = external_reference(
+                            target,
+                            tuple(attributes),
+                            visiting,
+                            depth + 1,
+                        )
+                    except (TypeError, ValueError):
+                        message = (
+                            f"resolving base of {reference.target!r} "
+                            f"(qualified_base={reference.qualified_base!r})"
+                        )
+                        raise ValueError(message) from None
                     attributes.clear()
             for attribute in attributes:
                 target = member(target, attribute, 0, visiting | {key})
@@ -946,6 +953,14 @@ class FlextInfraUtilitiesRopeSourceBases:
             depth: int = 0,
             visiting: frozenset[str] = frozenset(),
         ) -> str:
+            if name == "__base__" and identity in external:
+                value = external[identity]
+                if isinstance(value, p.Infra.RopeBuiltinClass):
+                    return external_identity(
+                        FlextInfraUtilitiesRopeRuntime.native_class_primary_base(
+                            value.builtin,
+                        ),
+                    )
             for ancestor in linearize(identity):
                 if ancestor in definitions:
                     members = definitions[ancestor].members

@@ -96,6 +96,7 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
 
         __module__: str
         __qualname__: str
+        __base__: FlextInfraProtocolsRopeRuntime.NativeClassMetadata | None
         __bases__: tuple[FlextInfraProtocolsRopeRuntime.NativeClassMetadata, ...]
 
     @runtime_checkable
