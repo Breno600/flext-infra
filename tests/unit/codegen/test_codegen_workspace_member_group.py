@@ -50,8 +50,7 @@ class TestsFlextInfraCodegenWorkspaceMemberGroup:
         for member in members:
             tm.that(sources[member.distribution], eq={"workspace": True})
         tm.that(
-            "workspace"
-            in u.Tests.toml_table_at(rendered, c.Infra.DEPENDENCY_GROUPS),
+            "workspace" in u.Tests.toml_table_at(rendered, c.Infra.DEPENDENCY_GROUPS),
             eq=False,
         )
         root_pyproject.write_text(rendered, encoding="utf-8")
