@@ -14,6 +14,7 @@ from flext_infra.codegen import FlextInfraCodegenTransaction
 from flext_infra.codegen._conform.execute_directed import (
     FlextInfraCodegenConformExecuteDirected,
 )
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 
 class FlextInfraCodegenConformExecute(FlextInfraCodegenConformExecuteDirected):
