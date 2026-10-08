@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from tests import c, t, u
+from tests import c, m, t, u
 
 pytestmark = pytest.mark.slow
 
@@ -117,7 +117,7 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
                         "OBSERVED_VENV_DIR",
                     ),
                     cwd=entry,
-                    options=u.Cli.ProcessOptions(
+                    options=m.Cli.ProcessOptions(
                         remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
                     ),
                 ),

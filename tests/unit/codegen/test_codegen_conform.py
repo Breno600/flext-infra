@@ -524,7 +524,7 @@ class TestsFlextInfraCodegenConform:
         process = u.Cli.capture(
             [sys.executable, "-m", package_name, "ping"],
             cwd=root,
-            options=u.Cli.ProcessOptions(env={**os.environ, "PYTHONPATH": pythonpath}),
+            options=m.Cli.ProcessOptions(env={**os.environ, "PYTHONPATH": pythonpath}),
             timeout=c.Infra.TIMEOUT_DEFAULT,
         )
         tm.ok(process)
@@ -545,7 +545,7 @@ class TestsFlextInfraCodegenConform:
         )
         selected = u.Cli.run_raw(
             ["make", "-C", str(root), "--dry-run", "_builtin_status_diagnostics"],
-            options=u.Cli.ProcessOptions(remove_env_keys=("MAKEFLAGS",)),
+            options=m.Cli.ProcessOptions(remove_env_keys=("MAKEFLAGS",)),
         )
 
         selected_process = tm.ok(selected)

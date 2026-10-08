@@ -357,7 +357,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
                 "-c",
                 "from flext_infra import u; u.Infra.mypy_resource_limit()",
             ],
-            options=u.Cli.ProcessOptions(
+            options=m.Cli.ProcessOptions(
                 env={c.Infra.MYPY_MEMORY_LIMIT_MB_ENV: invalid_value},
             ),
         )

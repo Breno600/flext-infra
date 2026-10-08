@@ -118,7 +118,7 @@ class TestsFlextInfraSonarcloudSettingsSync:
                     "--repository-root",
                     str(repository_root),
                 ],
-                options=u.Cli.ProcessOptions(
+                options=m.Cli.ProcessOptions(
                     env={"COLUMNS": "200", **(env or {})},
                     remove_env_keys=() if env else ("SONAR_TOKEN",),
                 ),
