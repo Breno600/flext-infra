@@ -1,11 +1,13 @@
 id: ban-infra-runtime-flext-tests-import
 valid:
   - from flext_infra import u
+  - import flext_tests_like
   - module = importlib.import_module("flext_infra.validate")
   - loader = importlib.util.spec_from_file_location("flext_tests_like", path)
 invalid:
   - import flext_tests
   - import flext_tests.validator
+  - import flext_tests as tests_tier
   - from flext_tests import u
   - from flext_tests.validator import FlextTestsValidator
   - module = importlib.import_module("flext_tests.validator")
