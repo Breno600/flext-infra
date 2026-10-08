@@ -409,7 +409,9 @@ class FlextInfraMiseArtifactsVerification(
                 strict=True,
             ):
                 current = files.read_state(expected.path, required=False)
-                if current.failure or current.value.content is None:
+                if current.failure:
+                    return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(current)
+                if current.value.content is None:
                     return r[tuple[m.Cli.AtomicFileState, ...]].fail(
                         f"published Mise artifact is absent: {expected.path}; "
                         "run make gen",

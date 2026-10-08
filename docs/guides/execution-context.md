@@ -47,10 +47,13 @@ without another writer outside the journal. Initial provisioning remains the
 responsibility of `make setup`. Real commands work without wrapping each call in
 `direnv exec`.
 
-Activation prepends the Mise shims directory to PATH; it never installs tools or
-changes locks. The `.envrc` watches `.mise.toml` and `mise.lock` to reload after
-`make upg`. A missing pin requires `make upg`; a runtime that is not yet installed
-requires `make setup`, whose provisioning happens before activation.
+Activation exposes the native Mise shims and watches `.mise.toml` and `mise.lock`.
+The installed release is selected by the self-management entry in that lock, not
+by a separate launcher or pin file. Make and direnv restrict global and system
+configuration discovery to the elected runtime's `.mise` directory; unrelated
+host tool declarations never belong to project provisioning. A missing pin
+requires `make upg`; missing installed tools require `make setup`, which
+provisions before activation. Activation itself neither installs nor resolves.
 
 When Beads tracking is configured, the generated `.envrc.local` carries its environment:
 `AGENTS_GAS_CITY_ROOT` selects the Gas City root, the Gas City runtime publication
@@ -69,10 +72,14 @@ releases and writes the committed `uv.lock` and `mise.lock`. `make setup` instal
 from committed locks; `make gen` and `make fmt` neither install nor upgrade tools.
 Git dependencies follow their declared integration branches, and `APPLY` stays removed.
 
-One `make upg` run converges. It upgrades `uv.lock`, installs the upgraded generator,
-projects the manifests through `make gen`, and then resolves `uv.lock` again from the
-projected `pyproject.toml` and installs it. A requirement that only the upgraded
-generator declares therefore reaches the lock and the environment in the same run.
+One `make upg` run converges. It resolves the Mise lock before provisioning,
+upgrades `uv.lock`, installs the upgraded generator and conforms dependency floors.
+It runs generation's producer half, relocks the projected manifests, reinstalls
+and verifies the resulting runtime before generation's activation half. A
+requirement or Mise self-management release that only the upgraded generator
+declares therefore reaches the lock and environment in the same run. The declared
+lock platforms and release cooldown come from the typed toolchain; never edit
+native lock payloads or substitute manual installation commands.
 
 Each internal `flext-*` requirement declares its integration line in `pyproject.toml`,
 never a commit: the resolved commit exists only in `uv.lock`, and only `make upg` moves
@@ -113,8 +120,12 @@ variable nor a checkout-local symlink may redirect the environment.
 
 Mise manages itself: the generated `.mise.toml` declares the `toolchain.mise_selector`
 release as a `[tools]` entry, and `mise.lock` pins it like every other tool. One host
-Mise runs `mise install`; every later `mise` resolved through the shims is the pinned
-release, and `_builtin_require_mise` fails when the running Mise differs from the lock.
+Mise capable of reading the committed lock provisions that entry; setup verifies
+the installed release and enters the recursive Make lifecycle through it. Every
+later `mise` resolved through the shims is the pinned release, and
+`_builtin_require_mise` fails when the running Mise differs from the lock.
+Separate `mise.version`, bootstrap launchers and staged lock-convergence scripts
+are not lifecycle owners.
 
 `toolchain.tools` in `config/codegen.yaml` declares every fleet tool. Each comes from a
 native, checksum-locked owner (aqua, GitHub releases, conda, or a Mise core backend);
@@ -129,7 +140,7 @@ runs one. After the environment is provisioned, `make setup` runs the reality pr
 order, it stops at the first defect:
 
 1. the `mise.lock` entry exists, names a version the toolchain selector accepts, and
-   carries a checksum for the current platform;
+   carries a checksum for the current platform when `lock_checksum` requires one;
 2. `mise where <key>@<version>` names the install root;
 3. `mise which <binary>`, and every symlink hop it resolves through, stays inside that
    root;
@@ -140,15 +151,26 @@ The proof has no fallback, retry, or warning-only mode.
 A project `bin/` never enters PATH (shell, `BASH_ENV`, or CI `GITHUB_PATH`): Mise binds
 the shared shims to the first `mise` on PATH. Caches and installations stay out of Git.
 
-Mise reaches GitHub only to install a tool missing from its cache and inside
-`make upg`. Only `make upg` writes `mise.lock` and `uv.lock`; `make setup` never writes
-either. A missing or incompatible lock entry fails with Mise's original diagnostic and
-exit status, without disabling lockfiles or retrying. On the uv side, setup syncs
-`--locked`; when `uv.lock` drifts from `pyproject.toml` it prints a `WARN` and syncs the
-committed lock `--frozen`, which never writes it. The next `make upg` rewrites both
-locks. The platforms declared by `toolchain.mise_lockfile_platforms` compose the lock
+Mise reaches GitHub to install a tool missing from its cache and to resolve
+releases during `make upg`. Only `make upg` writes `mise.lock` and `uv.lock`;
+`make setup` never writes either. A missing or incompatible Mise lock entry fails
+with its original diagnostic and exit status, without disabling lockfiles or
+retrying. Setup checks whether `uv.lock` agrees with the manifests. A matching lock uses
+`--locked`; a drifted lock emits its diagnostic and installs the committed lock
+with `--frozen`, without rewriting it. Drift and any resulting dependency
+incompatibility remain red until `make upg` produces matching locks. A missing
+lock fails with an actionable diagnostic. A failed native resolver or installer
+retains its original failure; no downgrade, retry or disabled lock policy masks it.
+Only successful resolution, installation and generation establish alignment.
+The platforms declared by `toolchain.mise_lockfile_platforms` compose the lock
 together with the platform of the machine running the upgrade, which Mise always
 includes.
+
+Generation owns one transaction for ordinary projections, Mise artifacts, lazy
+exports and docs; no additional writer runs before or after its journal.
+A planned deletion has no staged replacement, but its successful result still
+carries a journal receipt: absence belongs inside the typed receipt, never in
+`r.ok(None)`. Repeated unchanged generation must converge before publication.
 
 ## SonarCloud exclusions
 

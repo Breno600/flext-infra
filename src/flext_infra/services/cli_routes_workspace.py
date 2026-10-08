@@ -16,6 +16,7 @@ from flext_infra.release.orchestrator import FlextInfraReleaseOrchestrator
 from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
 from flext_infra.services.cli_routes_refactor import FlextInfraRefactorRoutes
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+from flext_infra.workspace.environment import FlextInfraWorkspaceEnvironmentMixin
 from flext_infra.workspace.environment_provenance import (
     FlextInfraWorkspaceEnvironmentProvenance,
 )
@@ -54,10 +55,6 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-        from flext_infra.workspace.environment import (
-            FlextInfraWorkspaceEnvironmentMixin,
-        )
-
         request = m.Infra.WorkspaceEnvironmentSyncRequest.model_validate(
             params.model_dump(),
         )
