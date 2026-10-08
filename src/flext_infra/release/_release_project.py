@@ -299,7 +299,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
                 str(stage),
             ],
             timeout=c.Infra.TIMEOUT_LONG,
-            options=u.Cli.ProcessOptions(
+            options=m.Cli.ProcessOptions(
                 env={
                     c.Infra.SOURCE_DATE_EPOCH: str(source_date_epoch),
                     c.Infra.UV_HTTP_CONNECT_TIMEOUT: (

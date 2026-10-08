@@ -96,7 +96,7 @@ class FlextInfraUtilitiesDocsFix:
                 ]
                 fix_outcome = u.Cli.run_raw(
                     (*common, *config.Infra.codegen.make.ruff.lint_fix),
-                    options=u.Cli.ProcessOptions(input_data=body.encode()),
+                    options=m.Cli.ProcessOptions(input_data=body.encode()),
                 )
                 if fix_outcome.failure:
                     raise RuntimeError(
@@ -109,7 +109,7 @@ class FlextInfraUtilitiesDocsFix:
                 fixed_body = fix_outcome.value.stdout
                 verify_outcome = u.Cli.run_raw(
                     common,
-                    options=u.Cli.ProcessOptions(input_data=fixed_body.encode()),
+                    options=m.Cli.ProcessOptions(input_data=fixed_body.encode()),
                 )
                 if verify_outcome.failure:
                     raise RuntimeError(
