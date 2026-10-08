@@ -10,8 +10,7 @@ from pathlib import Path
 
 from git import GitCommandError, Repo
 
-from flext_core import r
-from flext_infra import m, p, t
+from flext_infra import m, p, r, t
 from flext_infra._utilities import FlextInfraUtilitiesGitSemanticRefsMixin
 
 
@@ -104,7 +103,7 @@ class FlextInfraUtilitiesGitWorktreeRemovalMixin(
         source_root: Path,
         worktree_root: Path,
     ) -> p.Result[bool]:
-        """Remove an explicitly selected clean worktree and prune metadata.
+        """Retire only the selected worktree after its shared admission proof.
 
         Returns:
             The resulting ``p.Result[bool]``.

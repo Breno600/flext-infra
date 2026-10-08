@@ -8,9 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_core import r
-from flext_infra import c, m, p, t, u
-from flext_infra._config import config
+from flext_infra import c, config, m, p, r, t, u
 from flext_infra.codegen._conform.existing_plan import (
     FlextInfraCodegenConformExistingPlan,
 )
@@ -396,16 +394,10 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
         """
         result_type = r[t.Pair[m.Infra.CodegenFilePlan, m.Infra.CodegenRenderInputs]]
         root = render_inputs.target.root
-        project = workspace.project
-        if project is None:
-            return result_type.fail(
-                f"scaffold workspace has no project metadata: {workspace.name}",
-            )
         rendered = self._scaffold_rendered_source(
             entry,
             destination,
             workspace,
-            project,
             render_inputs,
             context,
         )

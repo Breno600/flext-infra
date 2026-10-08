@@ -7,11 +7,12 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated, ClassVar, Literal, Self
+from typing import Annotated, ClassVar, Self
 
 from flext_cli import m
 
-from flext_infra import c, p, t
+from flext_infra import p, t
+from flext_infra._constants import FlextInfraConstantsCodegenProject
 from flext_infra._models import (
     FlextInfraConfigModels,
     FlextInfraModelsCodegenFixModels,
@@ -67,14 +68,7 @@ class FlextInfraModelsCodegenPipelineModels:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True, extra="forbid")
 
         phase: Annotated[
-            Literal[
-                c.Infra.CodegenStagedFilePhase.DOCS,
-                c.Infra.CodegenStagedFilePhase.LAZY_INIT,
-                c.Infra.CodegenStagedFilePhase.MOD_TEXT,
-                c.Infra.CodegenStagedFilePhase.SEMANTIC,
-                c.Infra.CodegenStagedFilePhase.CANDIDATE_BOOTSTRAP,
-                c.Infra.CodegenStagedFilePhase.CONFORM_BOOTSTRAP,
-            ],
+            FlextInfraConstantsCodegenProject.CodegenStagedFilePhase,
             m.Field(description="Generation phase that produced this receipt"),
         ]
         files: Annotated[

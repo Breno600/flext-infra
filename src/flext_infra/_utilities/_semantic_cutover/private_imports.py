@@ -10,10 +10,9 @@ import ast
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra import m, t
+from flext_infra import m, r, t
 from flext_infra._utilities import (
-    FlextInfraUtilitiesPrivateImportAncestry,
+    FlextInfraUtilitiesPrivateImportAncestry as ImportAncestry,
     FlextInfraUtilitiesPrivateImportFacades,
     FlextInfraUtilitiesPrivateImportValidation,
     FlextInfraUtilitiesSemanticCutoverEdits,
@@ -84,19 +83,22 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
 
         """
         aliases: set[str] = set()
+        module = node.module
+        if module is None:
+            return aliases
         for imported in node.names:
-            qualified = f"{node.module}.{imported.name}"
-            if imported.name in plan.removals.get(node.module, frozenset()):
+            qualified = f"{module}.{imported.name}"
+            if imported.name in plan.removals.get(module, frozenset()):
                 reference = plan.replacements.get(qualified)
                 if reference is not None:
                     aliases.add(reference.split(".", 1)[0])
             elif imported.name in plan.obsolete_imports.get(
-                node.module,
+                module,
                 frozenset(),
             ):
                 aliases.add(imported.asname or imported.name)
             elif (
-                plan.public_imports.get(imported.name) == node.module
+                plan.public_imports.get(imported.name) == module
                 and imported.asname is None
             ):
                 aliases.add(imported.name)
@@ -191,14 +193,13 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
                 discovery_sources,
             )
         )
+        ancestry = ImportAncestry.FlextInfraUtilitiesPrivateImportAncestry
         return (
             FlextInfraUtilitiesPrivateImportFacades.discover(discovery_sources),
             (
                 export_bindings,
                 declared_exports,
-                FlextInfraUtilitiesPrivateImportAncestry.class_bases(
-                    discovery_sources,
-                ),
+                ancestry.class_bases(discovery_sources),
             ),
         )
 

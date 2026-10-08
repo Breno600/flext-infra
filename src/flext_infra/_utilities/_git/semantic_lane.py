@@ -10,8 +10,7 @@ from typing import TYPE_CHECKING
 
 from flext_cli import u
 
-from flext_core import r
-from flext_infra import c, m
+from flext_infra import c, m, r
 from flext_infra._utilities import FlextInfraUtilitiesGitSemanticWorktreeMixin
 
 if TYPE_CHECKING:

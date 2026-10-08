@@ -12,8 +12,7 @@ from typing import ClassVar
 
 from flext_cli import u
 
-from flext_core import r
-from flext_infra import c, m, p, t
+from flext_infra import c, m, p, r, t
 from flext_infra._utilities import FlextInfraUtilitiesProtectedEditPreview
 
 
@@ -164,7 +163,7 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
                     str(py_file),
                 ],
                 cwd=cls._command_cwd(py_file, workspace),
-                env=cls._command_env(),
+                options=u.Cli.ProcessOptions(env=cls._command_env()),
                 timeout=c.Infra.TIMEOUT_SHORT,
             )
             if compile_result.failure:
@@ -179,7 +178,7 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
                 "-q",
             ],
             cwd=cls._command_cwd(py_file, workspace),
-            env=cls._command_env(),
+            options=u.Cli.ProcessOptions(env=cls._command_env()),
             timeout=c.Infra.TIMEOUT_MEDIUM,
         )
         if run_result.failure:

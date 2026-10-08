@@ -9,8 +9,7 @@ from __future__ import annotations
 import tarfile
 from pathlib import Path
 
-from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, m, p, r, t, u
 from flext_infra.release._release_artifact import FlextInfraReleaseArtifactMixin
 
 
@@ -211,7 +210,9 @@ class FlextInfraReleaseSourceMixin(FlextInfraReleaseArtifactMixin):
             ],
             cwd=gitleaks_config.parent,
             timeout=c.Infra.TIMEOUT_LONG,
-            remove_env_keys=c.Infra.GITLEAKS_POLICY_ENV_KEYS,
+            options=u.Cli.ProcessOptions(
+                remove_env_keys=c.Infra.GITLEAKS_POLICY_ENV_KEYS,
+            ),
         )
         if scan.failure:
             return r[bool].from_failure(scan)

@@ -64,6 +64,9 @@ if TYPE_CHECKING:
     from flext_infra._utilities._git.attestation import (
         FlextInfraUtilitiesGitAttestationMixin,
     )
+    from flext_infra._utilities._git.lane_hygiene import (
+        FlextInfraUtilitiesGitLaneHygieneMixin,
+    )
     from flext_infra._utilities._git.mutation_scope import (
         FlextInfraUtilitiesGitMutationScopeMixin,
     )
@@ -410,6 +413,9 @@ if TYPE_CHECKING:
     from flext_infra._utilities.refactor import FlextInfraUtilitiesRefactor
     from flext_infra._utilities.release import FlextInfraUtilitiesRelease
     from flext_infra._utilities.repository import FlextInfraUtilitiesRepository
+    from flext_infra._utilities.requirement_specs import (
+        FlextInfraUtilitiesRequirementSpecs,
+    )
     from flext_infra._utilities.resource_limits import FlextInfraUtilitiesResourceLimits
     from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
     from flext_infra._utilities.rope_analysis_introspection import (
@@ -511,6 +517,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesDocsValidate",
     "FlextInfraUtilitiesGit",
     "FlextInfraUtilitiesGitAttestationMixin",
+    "FlextInfraUtilitiesGitLaneHygieneMixin",
     "FlextInfraUtilitiesGitMutationScopeMixin",
     "FlextInfraUtilitiesGitRemote",
     "FlextInfraUtilitiesGitRepo",
@@ -588,6 +595,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesRefactorNamespaceMoves",
     "FlextInfraUtilitiesRelease",
     "FlextInfraUtilitiesRepository",
+    "FlextInfraUtilitiesRequirementSpecs",
     "FlextInfraUtilitiesResourceLimits",
     "FlextInfraUtilitiesRopeAnalysis",
     "FlextInfraUtilitiesRopeAnalysisAstHelpers",
@@ -712,6 +720,7 @@ install_lazy_exports(
         "FlextInfraUtilitiesDocsValidate": ".docs_validate",
         "FlextInfraUtilitiesGit": ".git",
         "FlextInfraUtilitiesGitAttestationMixin": "._git.attestation",
+        "FlextInfraUtilitiesGitLaneHygieneMixin": "._git.lane_hygiene",
         "FlextInfraUtilitiesGitMutationScopeMixin": "._git.mutation_scope",
         "FlextInfraUtilitiesGitRemote": "._git.remote",
         "FlextInfraUtilitiesGitRepo": "._git.repo",
@@ -793,6 +802,7 @@ install_lazy_exports(
         "FlextInfraUtilitiesRefactorNamespaceMoves": ".namespace_moves",
         "FlextInfraUtilitiesRelease": ".release",
         "FlextInfraUtilitiesRepository": ".repository",
+        "FlextInfraUtilitiesRequirementSpecs": ".requirement_specs",
         "FlextInfraUtilitiesResourceLimits": ".resource_limits",
         "FlextInfraUtilitiesRopeAnalysis": ".rope_analysis",
         "FlextInfraUtilitiesRopeAnalysisAstHelpers": "._rope_analysis.asthelpers",

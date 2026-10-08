@@ -381,7 +381,9 @@ class TestsFlextInfraRepositoryLocalTopology:
         member = u.Tests.WorktreeFixture.copied_member(
             parent,
             "fixture-parent",
-            identity="parent",
+            workspace="parent-workspace",
+            database="parent-database",
+            issue_prefix="parent-prefix",
         )
         # A composed project follows the workspace ledger through its own
         # declared identity. The ``.beads -> ../.beads`` link that used to

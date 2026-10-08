@@ -10,8 +10,7 @@ from pathlib import Path
 from time import perf_counter
 from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra import c, m, t, u
+from flext_infra import c, m, r, t, u
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -201,7 +200,7 @@ class FlextInfraDocGeneratorBundleMixin:
         aggregate_targets = cls._validate_scope_targets(aggregate.value, output_dir)
         if aggregate_targets.failure:
             return result_type.from_failure(aggregate_targets)
-        return result_type.ok((selected.value, aggregate.value))
+        return result_type.ok((tuple(selected.value), tuple(aggregate.value)))
 
     @classmethod
     def _rendered_scopes(

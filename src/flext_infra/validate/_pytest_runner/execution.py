@@ -15,9 +15,7 @@ from typing import TYPE_CHECKING, override
 
 import pytest
 
-from flext_core import r
-from flext_infra import c, m, t, u
-from flext_infra._config import config
+from flext_infra import c, config, m, r, t, u
 from flext_infra.validate._pytest_runner.command import FlextInfraPytestRunnerCommand
 from flext_infra.validate._pytest_runner.reports import FlextInfraPytestRunnerReports
 from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
@@ -166,8 +164,10 @@ class FlextInfraPytestRunnerExecution(
             command,
             selection_log,
             cwd=self.root,
-            env=self._selection_env(execution_mode=execution_mode),
-            deadline=self._process_deadline(),
+            options=u.Cli.ProcessOptions(
+                env=self._selection_env(execution_mode=execution_mode),
+                deadline=self._process_deadline(),
+            ),
         ).unwrap()
         self._record_process_outcome(
             report_dir,
@@ -305,9 +305,11 @@ class FlextInfraPytestRunnerExecution(
             command,
             report_dir / "pytest.log",
             cwd=self.root,
-            env=self._selection_env(execution_mode=execution_mode),
-            live=True,
-            deadline=self._process_deadline(),
+            options=u.Cli.ProcessOptions(
+                env=self._selection_env(execution_mode=execution_mode),
+                live=True,
+                deadline=self._process_deadline(),
+            ),
         ).unwrap()
         self._record_process_outcome(report_dir, "suite", outcome)
         return outcome
@@ -451,8 +453,8 @@ class FlextInfraPytestRunnerExecution(
             not markdown_complete,
         ))
         accepted_cache_hit = cache_hit and not rejected
-        # The zero-test receipt exits green: the suite owns nothing to execute
-        # and the run published its typed accounting.
+        # A file's empty phase retains pytest's native status so Make can
+        # distinguish it from execution and reject an aggregate zero-run.
         accepted_zero_tests = accounting.owns_no_tests and not rejected
         selected_count = (
             None
@@ -460,8 +462,10 @@ class FlextInfraPytestRunnerExecution(
             else accounting.inventory_count - accounting.deselected_count
         )
         final_exit = (
-            0
-            if (accepted_cache_hit or accepted_zero_tests)
+            int(pytest.ExitCode.NO_TESTS_COLLECTED)
+            if accepted_zero_tests and self.target_file is not None
+            else 0
+            if accepted_cache_hit or accepted_zero_tests
             else raw_return_code or int(rejected)
         )
         # A graceful stop at the suite stop instant publishes the executed
@@ -470,7 +474,9 @@ class FlextInfraPytestRunnerExecution(
         # A graceful stop at the suite stop instant publishes the executed
         # prefix and remains red: the unexecuted remainder is the next run's
         # testmon selection.
-        if final_exit and (
+        if accepted_zero_tests and self.target_file is not None:
+            result = "not_executed"
+        elif final_exit and (
             selected_count is not None
             and accounting.executed_count < selected_count
             and not (diagnostics.failed_count or diagnostics.error_count)
@@ -507,6 +513,13 @@ class FlextInfraPytestRunnerExecution(
         ).unwrap()
         u.Cli.atomic_write_text_file(report_dir / "summary.txt", summary).unwrap()
         sys.stderr.write(f"Reports: {report_dir}\n")
+        if (
+            self.target_file is not None
+            and rejected
+            and final_exit == pytest.ExitCode.NO_TESTS_COLLECTED
+        ):
+            msg = f"empty file phase has rejected evidence: {report_dir}"
+            raise RuntimeError(msg)
         return r.ok(final_exit)
 
     @staticmethod
@@ -537,7 +550,9 @@ class FlextInfraPytestRunnerExecution(
         )
 
     @staticmethod
-    def _phase_warning_lines(phases: t.SequenceOf[t.Pair[str, t.JsonValue]]) -> str:
+    def _phase_warning_lines(
+        phases: t.SequenceOf[t.Pair[str, m.Infra.PytestDiagnostics]],
+    ) -> str:
         """Return one warnings line per phase.
 
         Returns:
@@ -595,7 +610,11 @@ class FlextInfraPytestRunnerExecution(
                 f"pytest slow phase NOT EXECUTED: ci-excluded-markers declares "
                 f"{slow_marker!r}\n",
             )
-            return r.ok(0)
+            return r.ok(
+                int(pytest.ExitCode.NO_TESTS_COLLECTED)
+                if self.target_file is not None
+                else 0,
+            )
         u.Cli.ensure_dir(self.testmon_db.parent).unwrap()
         # Selection, execution, and integrity inspection share one database.
         # Serialize competing worktrees within this invocation's typed deadline.
@@ -741,6 +760,14 @@ class FlextInfraPytestRunnerExecution(
             and not completed_zero_tests
             and not self._completed_failure(outcome)
         ):
+            if (
+                self.target_file is not None
+                and outcome.raw_return_code == pytest.ExitCode.NO_TESTS_COLLECTED
+            ):
+                msg = (
+                    f"file phase exited 5 without a completed empty scope: {report_dir}"
+                )
+                raise RuntimeError(msg)
             return r.ok(outcome.raw_return_code)
         state = self._inspect_cache(digest=pre_digest).unwrap()
         self._record_cache_state(report_dir, "cache-after", state)

@@ -10,8 +10,7 @@ from pathlib import Path
 
 from flext_cli import u as cli_u
 
-from flext_core import r
-from flext_infra import m, p, t
+from flext_infra import m, p, r, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesDocsContract,
     FlextInfraUtilitiesDocsGenerateSourcesMixin,

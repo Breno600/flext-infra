@@ -15,9 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Annotated, ClassVar, override
 
-from flext_core import r
-from flext_infra import c, m, p, t, u
-from flext_infra._config import config
+from flext_infra import c, config, m, p, r, t, u
 from flext_infra._settings import settings
 from flext_infra.base import FlextInfraServiceBase
 
@@ -339,8 +337,7 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                 [str(interpreter), "-B", "-W", "error", "-"],
                 cwd=self.repository_root,
                 timeout=c.Infra.TIMEOUT_SHORT,
-                env=env,
-                input_data=probe.code,
+                options=u.Cli.ProcessOptions(env=env, input_data=probe.code),
             )
 
         with ThreadPoolExecutor(max_workers=workers) as executor:

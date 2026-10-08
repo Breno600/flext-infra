@@ -10,8 +10,7 @@ from collections.abc import MutableMapping
 from operator import itemgetter
 from sys import stdlib_module_names
 
-from flext_infra import c, m, t, u
-from flext_infra._config import config
+from flext_infra import c, config, m, t, u
 from flext_infra.codegen._codegen_generation_renderers import (
     FlextInfraCodegenGenerationRenderersMixin,
 )
@@ -166,10 +165,9 @@ class FlextInfraCodegenGenerationStandardMixin(
     ) -> t.StrSequence:
         """Format one mapping entry exactly as Ruff formats a tuple value.
 
-        An expanded mapping always ends each entry with a comma: Ruff's format
-        keeps the magic trailing comma and its ``missing-trailing-comma`` fix
-        (``make fix``) adds it, so the comma-less single-entry form made
-        ``make gen`` and ``make fix`` rewrite each other forever.
+        An expanded mapping always ends each entry with a comma. Ruff's
+        formatter owns that layout; the generator preserves its magic trailing
+        comma so generation and formatting converge on the same bytes.
 
         Returns:
             The entry lines, compact when they fit the configured width.

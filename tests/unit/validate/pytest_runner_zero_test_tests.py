@@ -219,14 +219,15 @@ class TestsFlextInfraPytestRunnerZeroTest:
     ) -> None:
         """A file whose items are all slow is an empty budgeted scope.
 
-        The phase exits green so the verb can continue into the slow phase.
+        The phase retains rc=5 so Make can compose it with the slow phase.
         A whole-suite budgeted inventory that collects nothing stays a failure.
         """
         project = self._zero_test_project(tmp_path)
         cache = config.Infra.codegen.make.testmon_cache
         relative = Path(cache.target_directory) / "test_slow_only.py"
+        slow_marker = config.Infra.tooling.tools.pytest.slow_marker
         (project / relative).write_text(
-            "import pytest\n\npytestmark = pytest.mark.slow\n\n"
+            f"import pytest\n\npytestmark = pytest.mark.{slow_marker}\n\n"
             "def test_slow_item() -> None:\n    assert True\n",
             encoding="utf-8",
         )
@@ -235,8 +236,9 @@ class TestsFlextInfraPytestRunnerZeroTest:
             self._runner(project, tmp_path, target_file=relative).execute(),
         )
 
-        tm.that(outcome, eq=pytest.ExitCode.OK.value)
+        tm.that(outcome, eq=pytest.ExitCode.NO_TESTS_COLLECTED.value)
         summary = self._latest_summary(project / cache.reports_directory)
+        tm.that(self._read(summary), has="outcome=not_executed\n")
         plan = m.Infra.PytestSelectionPlan.model_validate_json(
             self._read(summary.parent / "selection-plan.json"),
         )

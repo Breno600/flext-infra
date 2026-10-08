@@ -11,8 +11,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_core import r
-from flext_infra import c, m, t, u
+from flext_infra import c, m, r, t, u
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
@@ -310,7 +309,7 @@ class FlextInfraCodegenStaging:
                 replacement = staged_state.value
             publications.append(
                 m.Infra.CodegenStagedFile(
-                    phase=phase,
+                    phase=c.Infra.CodegenStagedFilePhase(phase),
                     project=file_plan.project,
                     before=before,
                     replacement=replacement,

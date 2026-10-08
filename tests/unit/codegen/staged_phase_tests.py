@@ -45,24 +45,11 @@ class TestsFlextInfraCodegenStagedFilePhase:
 
     @staticmethod
     def test_vocabulary_is_the_canonical_publication_set() -> None:
-        """The enum members are exactly the phases the pipeline publishes."""
+        """The journal schema exposes its canonical enum owner, not a copy."""
+        schema = m.Infra.CodegenStagedFile.model_json_schema()
         tm.that(
-            {phase.value for phase in c.Infra.CodegenStagedFilePhase},
-            eq={
-                "candidate-bootstrap",
-                "conform",
-                "conform-bootstrap",
-                "docs",
-                "lazy-init",
-                "layout",
-                "mise",
-                "mod-text",
-                "recovery",
-                "scaffold",
-                "semantic",
-                "transaction",
-                "version-file",
-            },
+            schema["$defs"][c.Infra.CodegenStagedFilePhase.__name__]["enum"],
+            eq=[phase.value for phase in c.Infra.CodegenStagedFilePhase],
         )
 
     @staticmethod
@@ -85,19 +72,12 @@ class TestsFlextInfraCodegenStagedFilePhase:
             )
 
     @staticmethod
-    def test_analysis_subset_accepts_enum_and_wire_roundtrips() -> None:
-        """Analysis receipts retain their subset and canonical wire values."""
-        phases = (
-            c.Infra.CodegenStagedFilePhase.DOCS,
-            c.Infra.CodegenStagedFilePhase.LAZY_INIT,
-            c.Infra.CodegenStagedFilePhase.MOD_TEXT,
-            c.Infra.CodegenStagedFilePhase.SEMANTIC,
-            c.Infra.CodegenStagedFilePhase.CANDIDATE_BOOTSTRAP,
-            c.Infra.CodegenStagedFilePhase.CONFORM_BOOTSTRAP,
-        )
+    def test_analysis_accepts_declared_enum_and_wire_roundtrips() -> None:
+        """Analysis receipts share the current journal owner's wire vocabulary."""
+        phases = tuple(c.Infra.CodegenStagedFilePhase)
         schema = m.Infra.CodegenPhaseAnalysis.model_json_schema()
         tm.that(
-            schema["properties"]["phase"]["enum"],
+            schema["$defs"][c.Infra.CodegenStagedFilePhase.__name__]["enum"],
             eq=[phase.value for phase in phases],
         )
         for phase in phases:
@@ -115,19 +95,11 @@ class TestsFlextInfraCodegenStagedFilePhase:
                 tm.that(restored, eq=analysis)
 
     @staticmethod
-    def test_analysis_rejects_other_journal_phases_and_unknown_values() -> None:
-        """A valid journal phase does not automatically become an analysis phase."""
-        schema = m.Infra.CodegenPhaseAnalysis.model_json_schema()
-        accepted = schema["properties"]["phase"]["enum"]
-        rejected = tuple(
-            phase.value
-            for phase in c.Infra.CodegenStagedFilePhase
-            if phase.value not in accepted
-        )
-        for phase in (*rejected, "bogus-phase"):
-            with pytest.raises(ValidationError):
-                _ = m.Infra.CodegenPhaseAnalysis.model_validate({
-                    "phase": phase,
-                    "files": (),
-                    "inputs": (),
-                })
+    def test_analysis_rejects_unknown_values() -> None:
+        """An unknown wire phase fails at the canonical typed boundary."""
+        with pytest.raises(ValidationError):
+            _ = m.Infra.CodegenPhaseAnalysis.model_validate({
+                "phase": "bogus-phase",
+                "files": (),
+                "inputs": (),
+            })

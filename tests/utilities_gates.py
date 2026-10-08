@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
+from flext_infra import c
 from flext_infra.deps.fix_pyrefly_config import FlextInfraConfigFixer
 from flext_infra.refactor.census import FlextInfraRefactorCensus
 from tests import m, t
@@ -127,6 +128,9 @@ class TestsFlextInfraUtilitiesGatesMixin:
             ),
             issues=tuple(issues or ()),
             raw_output="",
+            outcome=(
+                c.Infra.ToolOutcome.CLEAN if passed else c.Infra.ToolOutcome.ERROR
+            ),
         )
 
     @staticmethod
@@ -222,6 +226,7 @@ class TestsFlextInfraUtilitiesGatesMixin:
         workspace: Path,
         *,
         rules: t.StrSequence,
+        kinds: t.StrSequence | None = None,
         options: CensusOptions | None = None,
     ) -> m.Infra.WorkspaceReport:
         """Execute one refactor census and unwrap its successful report.
@@ -232,6 +237,8 @@ class TestsFlextInfraUtilitiesGatesMixin:
         """
         fixture = TestsFlextInfraUtilitiesGatesMixin
         resolved = fixture.CensusOptions() if options is None else options
+        if kinds is not None:
+            resolved = dataclasses.replace(resolved, kinds=kinds)
         TestsFlextInfraUtilitiesToolingFixtureMixin.provision_checkout(workspace)
         result = FlextInfraRefactorCensus(
             repository_root=workspace,

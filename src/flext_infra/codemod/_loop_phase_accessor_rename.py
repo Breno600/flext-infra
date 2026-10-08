@@ -8,8 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_core import r
-from flext_infra import m, p, u
+from flext_infra import m, p, r, u
 from flext_infra.refactor._accessor_rewrite import (
     FlextInfraAccessorMigrationRewriteMixin,
 )

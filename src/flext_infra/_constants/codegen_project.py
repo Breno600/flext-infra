@@ -59,6 +59,8 @@ class FlextInfraConstantsCodegenProject:
         ALL = "all"
         DEPENDENCIES = "dependencies"
         DOCS_CONFIG = "docs-config"
+        FACADES = "facades"
+        LAZY_INIT = "lazy-init"
         MAKEFILE = "makefile"
         PYPROJECT = "pyproject"
 
@@ -73,9 +75,10 @@ class FlextInfraConstantsCodegenProject:
     class CodegenStagedFilePhase(StrEnum):
         """Generation phase that owns one codegen staged publication.
 
-        The closed vocabulary the journal models accept in ``phase``; every
-        publication site names its owner through this enum instead of a
-        string literal, so staging and journal validation share this owner.
+        The closed vocabulary the journal models and the stager accept in
+        ``phase``: every publication and staging site names its owner
+        through this enum instead of a string literal, so the phase
+        contract is code-owned in one declaration.
         """
 
         CANDIDATE_BOOTSTRAP = "candidate-bootstrap"

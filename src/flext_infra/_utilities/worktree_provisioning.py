@@ -12,8 +12,7 @@ from typing import TYPE_CHECKING
 
 from flext_cli import u
 
-from flext_core import r
-from flext_infra import c, m
+from flext_infra import c, m, r
 from flext_infra._utilities import (
     FlextInfraUtilitiesGitSemanticIdentityMixin,
     FlextInfraUtilitiesGitSemanticIndexMixin,
@@ -155,7 +154,9 @@ class FlextInfraWorktreeProvisioning:
         setup = u.Cli.run_live(
             (c.Infra.MAKE, "setup"),
             cwd=lane,
-            remove_env_keys=c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
+            options=u.Cli.ProcessOptions(
+                remove_env_keys=c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
+            ),
         )
         if setup.failure:
             return r[bool].from_failure(setup)

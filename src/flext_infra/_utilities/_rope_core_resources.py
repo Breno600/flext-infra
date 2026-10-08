@@ -24,7 +24,7 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
     def resolve_resource_from_path(
         rope_project: t.Infra.RopeProject,
         file_path: Path,
-    ) -> t.Infra.RopeResource | None:
+    ) -> t.Infra.RopeFile | None:
         """Return rope File for a filesystem Path, or None if outside project.
 
         ``None`` is the documented "unresolvable" outcome: the path sits
@@ -55,11 +55,11 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
         skip_protected: bool = False,
         skip_settings: bool = False,
         skip_init_py: bool = False,
-    ) -> t.Infra.RopeResource | None:
+    ) -> t.Infra.RopeFile | None:
         """Resolve a Python source as a Rope resource, or None when skipped.
 
         Returns:
-            The resulting ``t.Infra.RopeResource | None``.
+            The resulting ``t.Infra.RopeFile | None``.
 
         """
         if not FlextInfraUtilitiesRopeCoreResourcesMixin._python_resource_allowed(

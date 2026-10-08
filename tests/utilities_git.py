@@ -201,8 +201,10 @@ class TestsFlextInfraUtilitiesGitMixin:
             cli_facade.run_checked(
                 [c.Infra.GIT, *command],
                 cwd=repo_root,
-                env=overrides,
-                remove_env_keys=TestsFlextInfraUtilitiesGitMixin.isolated_git_keys(),
+                options=u.Cli.ProcessOptions(
+                    env=overrides,
+                    remove_env_keys=TestsFlextInfraUtilitiesGitMixin.isolated_git_keys(),
+                ),
             ),
         )
 

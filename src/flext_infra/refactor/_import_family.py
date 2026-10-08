@@ -333,16 +333,6 @@ class FlextInfraImportNormalizationFamilyMixin(
         return names
 
     @staticmethod
-    def module_name_of(leaf: str) -> str:
-        """Return the owning module name of a leaf for comparison.
-
-        Returns:
-            The resulting ``str``.
-
-        """
-        return leaf
-
-    @staticmethod
     def _inside_family(file_path: Path, family_dir: str) -> bool:
         """Return whether one file lives inside the family's own tree.
 
@@ -375,9 +365,7 @@ class FlextInfraImportNormalizationFamilyMixin(
                 else f"{alias.name} as {alias.asname}"
             )
             leaf = leaf_by_name.get(alias.name)
-            # A leaf equal to this file's own module means the name is
-            # defined or re-exported right here: no rewrite can own it.
-            if leaf is None or cls.module_name_of(leaf):
+            if leaf is None:
                 kept_clauses.append(clause)
             else:
                 moved[leaf].append(clause)
@@ -448,7 +436,19 @@ class FlextInfraImportNormalizationFamilyMixin(
         )
         if family_dir is None:
             return ()
-        leaf_by_name = cls._family_leaf_map(project_root, package, family_dir)
+        located = cls._locate(project_root, file_path)
+        if located is None:
+            return ()
+        # Do not turn a declaration owned here into an import of itself.
+        leaf_by_name = {
+            name: leaf
+            for name, leaf in cls._family_leaf_map(
+                project_root,
+                package,
+                family_dir,
+            ).items()
+            if leaf != located[1]
+        }
         if not leaf_by_name:
             return ()
         edits: t.MutableSequenceOf[tuple[int, int, t.StrSequence]] = []

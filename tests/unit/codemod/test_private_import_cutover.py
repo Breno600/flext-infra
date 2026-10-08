@@ -117,7 +117,7 @@ class TestsFlextInfraPrivateImportCutover:
     def _seed_sample_dependency(
         self,
         package: Path,
-        facade_sources: dict[Path, str],
+        facade_sources: t.MappingKV[Path, str],
         *,
         case: str,
         depth: int,
@@ -664,13 +664,10 @@ class TestsFlextInfraPrivateImportCutover:
         """Select the deepest public namespace when the root shares its base."""
         consumer_path, private_import, sources = self._facade_case(
             tmp_path,
-            FacadeNaming.from_family(
-                "utilities",
-                "managers",
-                "Sample",
-                "u",
-            ).model_copy(update={"root_bases": "(FlextSampleUtilitiesManagers)"}),
-            root_bases="(FlextSampleUtilitiesManagers)",
+            dataclasses.replace(
+                FacadeNaming.from_family("utilities", "managers", "Sample", "u"),
+                root_bases="(FlextSampleUtilitiesManagers)",
+            ),
         )
         sources[consumer_path] = (
             f"{private_import}\n\n"

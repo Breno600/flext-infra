@@ -257,90 +257,12 @@ class FlextInfraUtilitiesPyprojectUvSources(
         cls._sync_uv_constraints(uv, resolution)
         cls._sync_uv_environments(uv, resolution)
         cls._sync_uv_excludes(uv, resolution)
-        # Constraints are SSOT-rendered: the declared config value is the only
-        # source, so a removed declaration exterminates the key everywhere and
-        # no orphan cap can survive without an owner.
-        retained_constraints = tuple(
-            requirement
-            for requirement in resolution.constraint_dependencies
-            if FlextInfraUtilitiesDependencies.dep_name(requirement) != "uv"
-        )
-        if retained_constraints:
-            u.Cli.toml_sync_string_list(
-                uv,
-                "constraint-dependencies",
-                retained_constraints,
-            )
-        else:
-            u.Cli.toml_remove_key_if_present(uv, "constraint-dependencies")
-        u.Cli.toml_sync_value(uv, "link-mode", resolution.link_mode)
-        # uv carries no cooldown key: `exclude-newer` (any form) is banned
-        # (operator 2026-09-16). The fleet cooldown lives once in
-        # codegen.toolchain.dependency_cooldown_days and reaches mise and
-        # dependabot (operator 2026-10-01). Removed declarations exterminate
-        # the keys everywhere so no orphan cap survives (flext-gzfd2 class).
-        u.Cli.toml_remove_key_if_present(uv, "exclude-newer")
-        u.Cli.toml_remove_key_if_present(uv, "exclude-newer-package")
-        # Environments come from the fleet toolchain SSOT: an empty declaration
-        # removes the key so uv resolves every environment, and a declared
-        # sequence skips the splits the fleet does not support (win32 resolves
-        # meltano's structlog cap against flext-core's floor and is
-        # unsatisfiable).
-        if resolution.environments:
-            # Declared as list[JsonValue], not list[str]: `list` is invariant,
-            # so the narrower element type is not assignable to the writer's
-            # parameter even though every element is a valid JsonValue.
-            environments: list[t.JsonValue] = list(resolution.environments)
-            u.Cli.toml_sync_value(uv, "environments", environments)
-        else:
-            u.Cli.toml_remove_key_if_present(uv, "environments")
-        # Project is a flext-infra routing key only; uv scoped form is
-        # {package={name, version?}, dependencies=[...]} (uv settings docs).
-        # Emit on every owning pyproject so standalone CI clones resolve;
-        # do not gate on owns_uv_root_policy (that stripped member excludes).
-        exclude_payload = list(
-            t.Cli.JSON_LIST_ADAPTER.validate_python([
-                {
-                    key: value
-                    for key, value in item.model_dump(
-                        mode="json",
-                        exclude_none=True,
-                    ).items()
-                    if key != "project"
-                }
-                for item in resolution.exclude_dependencies
-            ]),
-        )
-        if exclude_payload:
-            u.Cli.toml_sync_value(uv, "exclude-dependencies", exclude_payload)
-        else:
-            u.Cli.toml_remove_key_if_present(uv, "exclude-dependencies")
         cls._sync_uv_workspace(
             uv,
-            document,
             workspace_members,
             owns_workspace_table=owns_workspace_table,
         )
         return r[bool].ok(value=True)
-
-    @classmethod
-    def _wanted_workspace_members(
-        cls,
-        document: t.Cli.TomlDocument,
-        workspace_members: t.StrSequence,
-    ) -> t.VariadicTuple[str]:
-        """Intersect the declared members with the document's requirements.
-
-        Returns:
-            The resulting ``t.VariadicTuple[str]``.
-
-        """
-        required_names = {
-            name
-            for line in cls._document_requirement_lines(document).unwrap()
-            if (name := FlextInfraUtilitiesDependencies.dep_name(line)) is not None
-        }
-        return tuple(sorted(set(workspace_members) & required_names))
 
     @classmethod
     def _sync_member_sources(
@@ -374,7 +296,6 @@ class FlextInfraUtilitiesPyprojectUvSources(
     def _sync_uv_workspace(
         cls,
         uv: Table,
-        document: t.Cli.TomlDocument,
         workspace_members: t.StrSequence,
         *,
         owns_workspace_table: bool,
@@ -383,23 +304,18 @@ class FlextInfraUtilitiesPyprojectUvSources(
 
         The `[tool.uv.workspace]` TABLE is owned by the pyproject template
         alone: only the workspace root's render declares it, so a member
-        manifest never grows a nested workspace (uv rejects nesting). This
-        sync manages the SOURCES identity on that same single gate: only the
-        workspace root's render redirects member requirements through
-        ``[tool.uv.sources] workspace = true`` — that provenance resolves
-        solely inside the root's manifest, so a member or standalone render
-        (which publishes a manifest consumers resolve alone) keeps the inline
-        git+ form and prunes fleet member sources.
+        manifest never grows a nested workspace (uv rejects nesting).
+        Workspace-root sources apply to every member and override a member's
+        direct ``@ git+`` requirement, so only the root redirects fleet
+        members through ``[tool.uv.sources] workspace = true``. A member
+        render is context-independent: attached or standalone, it carries no
+        fleet source and resolves from its declared requirements in a clone.
         """
         if not owns_workspace_table:
             u.Cli.toml_remove_key_if_present(uv, "workspace")
-        if owns_workspace_table and workspace_members:
-            cls._sync_member_sources(
-                uv,
-                cls._wanted_workspace_members(document, workspace_members),
-            )
+            cls._prune_member_sources(uv)
             return
-        cls._prune_member_sources(uv)
+        cls._sync_member_sources(uv, tuple(sorted(workspace_members)))
 
 
 __all__: list[str] = ["FlextInfraUtilitiesPyprojectUvSources"]

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import FlextInfraRopeWorkspace, c, u
+from flext_infra import FlextInfraRopeWorkspace, c, t, u
 from flext_infra._utilities import (
     FlextInfraRopeProject,
     FlextInfraUtilitiesRopeCore,
@@ -70,6 +70,10 @@ class TestsFlextInfraRopeRuntimePymodule:
         external base resolution (``pydantic.BaseModel`` and friends) reads
         attributes through packages, so the validated boundary must accept
         both shapes (fleet gen regression 2026-10-05).
+
+        Raises:
+            ValueError: If fixture modules are missing from the snapshot project.
+
         """
         package_root = tmp_path / "pkg"
         package_root.mkdir()
@@ -86,13 +90,19 @@ class TestsFlextInfraRopeRuntimePymodule:
             sources,
             source_folders=["."],
         )
+        rope_project: t.Infra.RopeProject = project
+        plain_resource = project.find_module("plain")
+        pkg_resource = project.find_module("pkg")
+        if plain_resource is None or pkg_resource is None:
+            msg = "fixture modules missing from the snapshot project"
+            raise ValueError(msg)
         pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
-            project,
-            project.find_module("plain"),
+            rope_project,
+            plain_resource,
         )
         pypackage = FlextInfraUtilitiesRopeCore.resolve_pymodule(
-            project,
-            project.find_module("pkg"),
+            rope_project,
+            pkg_resource,
         )
         assert FlextInfraUtilitiesRopeRuntime.pymodule(pymodule)
         assert FlextInfraUtilitiesRopeRuntime.pymodule(pypackage)

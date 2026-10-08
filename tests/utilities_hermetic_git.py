@@ -71,9 +71,9 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
         """Mirror each locked source's exact commit under its host and path.
 
         Objects come from this checkout or from the Git databases ``make setup``
-        and ``make upg`` fetched into the persistent uv cache of the typed Mise
-        storage contract — not the ambient ``uv cache dir``, which the activated
-        environment leaves to the caller. No source is fetched from its remote;
+        and ``make upg`` fetched into the uv cache the activated environment
+        owns (``UV_CACHE_DIR`` or the ambient ``uv cache dir``). No source is
+        fetched from its remote;
         a commit found nowhere locally fails loudly: ``make setup`` provisions it.
         Each mirror borrows the origin database through ``objects/info/alternates``
         and pins only the branch ref: full history at zero copy cost (git
@@ -87,10 +87,9 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
             FileNotFoundError: If locked Git source is not held locally.
 
         """
-        storage_root = Path(os.environ[c.Infra.MISE_BOOTSTRAP_STORAGE_ROOT_VARIABLE])
-        cache = (
-            storage_root
-            / dict(c.Infra.MISE_BOOTSTRAP_PERSISTENT_ENVIRONMENT)["UV_CACHE_DIR"]
+        ambient_cache_dir = os.environ.get("UV_CACHE_DIR")
+        cache = Path(
+            ambient_cache_dir or tm.ok(u.Cli.capture(["uv", "cache", "dir"])).strip(),
         )
         databases = (project_root, *sorted(cache.glob("git-v*/db/*")))
         mirrored: list[str] = []

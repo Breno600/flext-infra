@@ -84,10 +84,14 @@ class FlextInfraCodegenProtocolModelAnnotations:
     @classmethod
     def render(
         cls,
-        annotation: t.TypeHintSpecifier | None,
+        annotation: object,
         target: ProtocolModelTarget,
     ) -> str:
         """Render one field/property type without exposing a concrete model.
+
+        ``annotation`` accepts any runtime annotation object carried by
+        ``typing.get_args``; unsupported payloads fail loud with
+        ``TypeError``.
 
         Returns:
             The resulting ``str``.
@@ -109,7 +113,7 @@ class FlextInfraCodegenProtocolModelAnnotations:
     @classmethod
     def _render_origin_dispatch(
         cls,
-        annotation: t.TypeHintSpecifier,
+        annotation: object,
         target: ProtocolModelTarget,
     ) -> str:
         """Render an annotation by its generic origin.
@@ -133,7 +137,7 @@ class FlextInfraCodegenProtocolModelAnnotations:
         cls,
         origin: object,
         arguments: tuple[object, ...],
-        annotation: t.TypeHintSpecifier,
+        annotation: object,
         target: ProtocolModelTarget,
     ) -> str:
         """Render a Literal, Callable, generic, or bare annotation.

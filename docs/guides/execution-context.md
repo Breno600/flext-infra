@@ -80,11 +80,14 @@ When the projection carries no line, a hand-written `project.flext_source` in th
 manifest declares it, and a commit in a hand-written source fails. Fix the setup or
 `upg` owner and regenerate through `make gen`; manual installs do not replace the cycle.
 
-A workspace root declares each attached member, of any family, as an inline Git source
-on the workspace's own integration line, the same line the governed `.gitmodules` requires
-of that member. Only `flext-*` dependencies that are not members follow the FLEXT line.
-The root `uv.lock` therefore resolves every member without a `[tool.uv.workspace]`
-overlay.
+A workspace root declares local-member requirements as bare distribution names and
+resolves them through `[tool.uv.sources]` entries with `workspace = true`. The root
+alone owns `[tool.uv.workspace]`; member manifests never declare a nested workspace.
+Publishable members retain their declared inline Git provenance and, while attached,
+redirect local sibling requirements through their own workspace-source overlay.
+Standalone conformance removes that overlay without removing the declared Git
+requirements. Dependencies outside the declared workspace retain their governed
+integration source rather than becoming local members.
 
 ## Runtime environment
 
@@ -223,6 +226,34 @@ collection; validate the transformation through the public interface before wide
 the batch. Structural refactors go through `make mod`.
 
 ## Check gate partitions
+
+`make file-gate FILE=<repository-relative path>` delegates to the existing
+`check run --file` owner, never bare analyzers or a second gate engine. The raw
+Make value travels through an exported environment value, not interpolated shell
+source. Selection rejects empty, absolute, traversal, missing, non-Python and
+symlink-component paths before creating reports or invoking tools. Only the literal
+file reaches each gate's existing `check_files`; no mutation is permitted.
+The Make pre-gate explicitly selects registered lint, format, Pyrefly, Mypy,
+Pyright and codemod gates through the existing typed `RunCommand.gates` owner and
+`resolve_gates`; no separate gate vocabulary or configuration is introduced.
+The public `check run --file` requires explicit `--gates`, never silently falls
+back to whole-project gates, and rejects unknown names before scanner execution.
+Mypy and Pyright findings retain the existing informative SSOT policy; native
+errors, missing tools/configuration and malformed reports remain blocking.
+Codemod uses its elected, staged provider configurations and native report owner.
+
+The former bare `typos` hook existed only in the Make recipe, help and tests,
+always under `|| true`. This branch declares no canonical typos runner,
+configuration or provisioned toolchain capability. Removing that ownerless
+best-effort advertisement removes no supported acceptance capability: it never
+contributed a truthful verdict. Registered rule diagnostics remain unchanged;
+no dictionary, installation, provider or suppression replaces the hook.
+The pre-gate remains bounded; full `make check` is still required acceptance.
+
+Trailing comma layout has one owner: Ruff's formatter. The tooling SSOT records
+the removal of redundant `missing-trailing-comma` (COM812) lint enforcement using
+its official rule name and rationale. This must be regenerated before runtime
+validation; changing the SSOT alone does not update existing projections.
 
 Selected functional gates remain blocking. `make check` fails when the selection
 contains no projects or when a selected project has no `pyproject.toml`; no project is

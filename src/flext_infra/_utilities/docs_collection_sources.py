@@ -326,6 +326,9 @@ class FlextInfraUtilitiesDocsCollectionSources:
 
         """
         canonical, projection = roots
+        if projection is None:
+            msg = f"owned projection artifact has no projection root: {candidate}"
+            raise ValueError(msg)
         if state.content is None:
             msg = f"owned projection artifact disappeared: {candidate}"
             raise ValueError(msg)

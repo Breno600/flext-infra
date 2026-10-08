@@ -72,7 +72,8 @@ class TestsFlextInfraGitFacet:
         repository, _, _ = self._lane_repository(tmp_path)
         before = self._lane_bytes(repository)
         tm.that(
-            main(["workspace", "verify-lane", "--repo-root", str(repository)]), eq=0,
+            main(["workspace", "verify-lane", "--repo-root", str(repository)]),
+            eq=0,
         )
         tm.that(self._lane_bytes(repository), eq=before)
 
@@ -165,7 +166,8 @@ class TestsFlextInfraGitFacet:
         repository, _, _ = self._lane_repository(tmp_path)
         u.Tests.git_run(repository, "branch", "foreign-candidate")
         tm.that(
-            main(["workspace", "verify-lane", "--repo-root", str(repository)]), eq=0,
+            main(["workspace", "verify-lane", "--repo-root", str(repository)]),
+            eq=0,
         )
         _ = capsys.readouterr()
         before = self._lane_bytes(repository)
@@ -229,7 +231,11 @@ class TestsFlextInfraGitFacet:
         lane = u.Tests.git_linked_lane(tmp_path, repository, "retirement-candidate")
         if not integrated:
             u.Tests.git_run(
-                lane, "commit", "--allow-empty", "-m", "test: pending integration",
+                lane,
+                "commit",
+                "--allow-empty",
+                "-m",
+                "test: pending integration",
             )
         before = self._lane_bytes(repository)
         lane_before = self._lane_bytes(lane)
@@ -318,7 +324,8 @@ class TestsFlextInfraGitFacet:
         repository = u.Tests.git_repository(tmp_path)
         before = self._lane_bytes(repository)
         tm.that(
-            main(["workspace", "verify-lane", "--repo-root", str(repository)]), eq=1,
+            main(["workspace", "verify-lane", "--repo-root", str(repository)]),
+            eq=1,
         )
         output = capsys.readouterr()
         tm.that(output.out + output.err, has="typed config/workspace.yaml integration")

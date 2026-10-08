@@ -8,8 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_infra import c, p, u
-from flext_infra._config import config
+from flext_infra import c, config, p, u
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -43,7 +42,7 @@ class FlextInfraRefactorCensusApplyFormattingMixin:
                 "-",
             ],
             cwd=repository_root,
-            input_data=source,
+            options=u.Cli.ProcessOptions(input_data=source),
             timeout=c.Infra.TIMEOUT_SHORT,
         )
         return checked.flat_map(
@@ -57,7 +56,7 @@ class FlextInfraRefactorCensusApplyFormattingMixin:
                     "-",
                 ],
                 cwd=repository_root,
-                input_data=output.stdout,
+                options=u.Cli.ProcessOptions(input_data=output.stdout),
                 timeout=c.Infra.TIMEOUT_SHORT,
             ).map(lambda formatted: formatted.stdout),
         )
