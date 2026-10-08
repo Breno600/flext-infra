@@ -342,7 +342,14 @@ class TestsFlextInfraCodegenPyprojectConform:
         # or standalone, it carries git-sourced floors and no fleet source, so
         # it installs from a clone. Only the workspace root redirects members.
         for name in internal:
-            expected = name if is_root else u.Tests.flext_source(name)
+            expected = (
+                name
+                if is_root
+                else (
+                    f"{name} @ git+{dependency_source.base_url}/{name}.git"
+                    f"@{dependency_source.branch}"
+                )
+            )
             tm.that(expected in dev, eq=True)
             tm.that(name in sources, eq=is_root)
             if is_root:
