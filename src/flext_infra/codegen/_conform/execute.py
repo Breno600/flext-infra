@@ -369,11 +369,13 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             scope_root,
             roots,
             analysis,
-            tuple(sorted({
-                file.path.parent
-                for file in changed
-                if not file.path.parent.is_dir()
-            })),
+            tuple(
+                sorted({
+                    file.path.parent
+                    for file in changed
+                    if not file.path.parent.is_dir()
+                }),
+            ),
             lambda: self._verify_lazy_init(request, analysis),
         )
         if published.failure:

@@ -340,6 +340,7 @@ class TestsFlextInfraFacadeBaseCutover:
     def test_runtime_self_import_still_fails_with_lazy_publication(
         self,
         tmp_path: Path,
+        *,
         after_lazy_map: bool,
     ) -> None:
         """A lazy entry never hides a real module-scope circular binding."""

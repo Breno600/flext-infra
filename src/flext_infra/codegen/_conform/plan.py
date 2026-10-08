@@ -98,13 +98,15 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
         if planned.failure:
             return result_type.from_failure(planned)
         # Support-file retirement is not part of this initializer-only surface.
-        analysis = planned.value.model_copy(update={
-            "files": tuple(
-                file
-                for file in planned.value.files
-                if file.path.name == c.Infra.INIT_PY
-            ),
-        })
+        analysis = planned.value.model_copy(
+            update={
+                "files": tuple(
+                    file
+                    for file in planned.value.files
+                    if file.path.name == c.Infra.INIT_PY
+                ),
+            },
+        )
         plan = m.Infra.CodegenPlan(
             request=request,
             repositories=selected.value,

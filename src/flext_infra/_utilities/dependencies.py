@@ -12,11 +12,13 @@ from importlib.resources import files
 from pathlib import Path
 from types import MappingProxyType
 
+from flext_cli import u
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
 from packaging.version import InvalidVersion, Version
 
 from flext_infra import c, m, p, r, t
+from flext_infra._utilities import FlextInfraUtilitiesPyproject
 
 
 class FlextInfraUtilitiesDependencies:
@@ -32,8 +34,6 @@ class FlextInfraUtilitiesDependencies:
             The resulting ``t.MappingKV[str, t.StrSequence]``.
 
         """
-        from flext_cli import u
-
         project = u.Cli.json_as_mapping(payload.get(c.Infra.PROJECT, None))
         optional = u.Cli.json_as_mapping(
             project.get(c.Infra.OPTIONAL_DEPENDENCIES, None),
@@ -57,8 +57,6 @@ class FlextInfraUtilitiesDependencies:
             The resulting ``t.MappingKV[str, t.StrSequence]``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
         normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
         if not normalized:
             # Keep the empty mapping immutable and fully typed.
@@ -76,8 +74,6 @@ class FlextInfraUtilitiesDependencies:
             The resulting ``t.StrSequence``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
         normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
         if not normalized:
             return ()
@@ -112,8 +108,6 @@ class FlextInfraUtilitiesDependencies:
             The resulting ``t.StrSequence``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
         normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
         if not normalized:
             return ()
@@ -132,8 +126,6 @@ class FlextInfraUtilitiesDependencies:
         """
         # FLEXT dependencies are first-party contracts even
         # when their uv source declaration is owned by an enclosing workspace.
-
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
 
         normalized = FlextInfraUtilitiesPyproject.validate_infra_payload(payload)
         return tuple(
@@ -544,10 +536,6 @@ class FlextInfraUtilitiesDependencies:
             The resulting ``t.SequenceOf[Path]``.
 
         """
-        from flext_cli import u
-
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
         pyproject = project_root / c.PYPROJECT_FILENAME
         payload = u.Cli.toml_read_json(pyproject).unwrap()
         project_name = canonicalize_name(
@@ -645,8 +633,6 @@ class FlextInfraUtilitiesDependencies:
                 Invalid installed distribution name; or if Ambiguous installed version.
 
         """
-        from flext_cli import u
-
         versions: MutableMapping[str, str] = {}
         for distribution in u.installed_distributions():
             if distribution.read_text("direct_url.json") is not None:
@@ -802,8 +788,6 @@ class FlextInfraUtilitiesDependencies:
             Normalized dependency names from one TOML document.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
         normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
         if not normalized:
             return ()

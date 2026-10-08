@@ -534,7 +534,7 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
                 scope,
             )
             return
-        if FlextInfraUtilitiesRopeSourceBindingCollector._is_type_checking_test(
+        if FlextInfraUtilitiesRopeSourceBindingCollector.is_type_checking_test(
             node.test,
         ):
             # A TYPE_CHECKING gate never executes at runtime; its imports and
@@ -655,7 +655,7 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         return False
 
     @staticmethod
-    def _is_type_checking_test(test: ast.expr) -> bool:
+    def is_type_checking_test(test: ast.expr) -> bool:
         """Return whether one condition gate is the TYPE_CHECKING constant.
 
         Returns:
