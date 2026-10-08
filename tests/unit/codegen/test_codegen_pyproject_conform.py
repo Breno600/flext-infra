@@ -204,6 +204,24 @@ class TestsFlextInfraCodegenPyprojectConform:
             eq="sample.plugin:main",
         )
 
+    @pytest.mark.parametrize("invalid_surface", ["rendered", "live"])
+    def test_overlay_retains_native_toml_failure_context(
+        self,
+        invalid_surface: str,
+    ) -> None:
+        """A parse failure identifies its input and retains the native cause."""
+        valid = "[project]\n"
+        invalid = "[project]\nkey =\n"
+        result = u.Infra.overlay_preserved(
+            invalid if invalid_surface == "rendered" else valid,
+            invalid if invalid_surface == "live" else valid,
+        )
+        tm.fail(result, has=f"{invalid_surface} pyproject is not valid TOML")
+        native = tm.not_none(result.exception)
+        tm.that(type(native).__name__, eq="TOMLDecodeError")
+        tm.that(result.error, has=str(native))
+        tm.that(result.error, has=f"line {len(invalid.splitlines())}")
+
     @staticmethod
     def test_overlay_defaults_only_the_omitted_policy() -> None:
         """Explicit empty policies survive default resolution of the other policy."""

@@ -17,8 +17,9 @@ from typing import override
 
 from flext_cli import cli
 
-from flext_infra import p, r, t, u
+from flext_infra import c, p, r, t, u
 from flext_infra.base import FlextInfraServiceBase
+from flext_infra.codemod import FlextInfraModGateEngine, FlextInfraModTextGateEngine
 
 
 class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):

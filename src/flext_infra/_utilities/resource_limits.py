@@ -12,7 +12,14 @@ import sys
 from pathlib import Path
 from typing import ClassVar
 
-from flext_infra import c, config, m, p, t
+from flext_cli import u
+
+from flext_infra import c, config, m, p, settings, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesProcess,
+    FlextInfraUtilitiesProjectDiscovery,
+    FlextInfraUtilitiesPyproject,
+)
 
 
 class FlextInfraUtilitiesResourceLimits:
@@ -72,8 +79,6 @@ class FlextInfraUtilitiesResourceLimits:
             The resulting ``m.Infra.MypyResourceLimit``.
 
         """
-        from flext_cli import u
-
         return m.Infra.MypyResourceLimit(
             memory_limit_mb=FlextInfraUtilitiesResourceLimits._environment_integer(
                 u.Cli.process_env(),
@@ -117,8 +122,6 @@ class FlextInfraUtilitiesResourceLimits:
                 managed workspace checker is missing.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
-
         interpreter = sys.executable
         if invocation.workspace is not None:
             managed_python = FlextInfraUtilitiesProjectDiscovery.runtime_python(
@@ -171,8 +174,6 @@ class FlextInfraUtilitiesResourceLimits:
             ValueError: If ``metadata.failure``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
         metadata = FlextInfraUtilitiesPyproject.read_project_metadata_result(
             project_dir,
         )
@@ -199,8 +200,6 @@ class FlextInfraUtilitiesResourceLimits:
             joined with the spec's FLEXT-owned storage directory.
 
         """
-        from flext_infra._settings import settings
-
         home = settings.env_lookup(str(spec.data_home_environment_variable)) or str(
             Path(settings.env_required(str(spec.user_home_environment_variable)))
             / spec.home_cache_directory,
@@ -315,8 +314,6 @@ class FlextInfraUtilitiesResourceLimits:
                 tooling.yaml level above.
 
         """
-        from flext_cli import u
-
         tooling = project_dir / "config" / "tooling.yaml"
         if not tooling.is_file():
             return None
@@ -388,8 +385,6 @@ class FlextInfraUtilitiesResourceLimits:
             A controlled diagnostic only for timeout or memory exhaustion.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesProcess
-
         validated_limit = limit or cls.mypy_resource_limit()
         combined = f"{output.stdout}\n{output.stderr}".lower()
         classification = FlextInfraUtilitiesProcess.process_exit_classification(

@@ -13,8 +13,7 @@ import tempfile
 from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 
-from flext_infra import c, m, p, r, t, u
-from flext_infra._settings import settings
+from flext_infra import c, m, p, r, settings, t, u
 
 
 class FlextInfraModGateEngine:

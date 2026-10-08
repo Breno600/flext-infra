@@ -9,8 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import c, m, r, t, u
-from flext_infra._settings import settings
+from flext_infra import c, m, r, settings, t, u
 from flext_infra.base import s
 
 if TYPE_CHECKING:

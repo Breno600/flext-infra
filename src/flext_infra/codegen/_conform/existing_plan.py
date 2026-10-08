@@ -214,7 +214,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             The resulting ``p.Result[m.Infra.ToolingRuntimeContext]``.
 
         """
-        from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
+        from flext_infra.deps import FlextInfraPyprojectModernizer
 
         root = target.root
         repository = target.repository
@@ -321,7 +321,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         spec = u.Infra.pyproject_managed_file()
         if spec.failure:
             return result_type.from_failure(spec)
-        modernizer = FlextInfraPyprojectModernizer(
+        modernizer = u.Infra(
             repository_root=root,
             skip_check=True,
         )

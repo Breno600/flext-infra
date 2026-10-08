@@ -15,8 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Annotated, ClassVar, override
 
-from flext_infra import c, config, m, p, r, t, u
-from flext_infra._settings import settings
+from flext_infra import c, config, m, p, r, settings, t, u
 from flext_infra.base import FlextInfraServiceBase
 
 

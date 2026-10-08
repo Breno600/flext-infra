@@ -26,7 +26,7 @@ class FlextInfraUtilitiesDocsGithubLinks:
     @staticmethod
     def _config() -> FlextInfraConfig:
 
-        from flext_infra._config import config
+        from flext_infra import config
 
         return config
 
@@ -38,7 +38,7 @@ class FlextInfraUtilitiesDocsGithubLinks:
             The typed GitHub repo map from make.docs SSOT.
 
         """
-        from flext_infra._config import config
+        from flext_infra import config
 
         return config.Infra.codegen.make.docs.github_repos
 

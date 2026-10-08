@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import override
 
 from flext_infra import m, p, t
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors
 from flext_infra._utilities._semantic_cutover.family_type_references import (
     FlextInfraUtilitiesSemanticFamilyTypeReferences,
 )

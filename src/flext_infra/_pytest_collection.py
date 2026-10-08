@@ -33,6 +33,7 @@ from pytest_markdown_docs.plugin import (
 from xdist.dsession import DSession
 
 from flext_infra import u
+from flext_infra._constants import FlextInfraConstantsCheck, FlextInfraConstantsMake
 from flext_infra._models import FlextInfraModelsCore
 
 
@@ -216,8 +217,6 @@ class FlextInfraPytestCollection:
     @staticmethod
     def pytest_addoption(parser: pytest.Parser) -> None:
         """Require explicit activation by the canonical runner."""
-        from flext_infra._constants import FlextInfraConstantsCheck
-
         parser.addoption(
             FlextInfraConstantsCheck.PYTEST_SELECTED_COLLECTION_OPTION,
             default=None,
@@ -238,8 +237,6 @@ class FlextInfraPytestCollection:
     @staticmethod
     def pytest_configure(config: pytest.Config) -> None:
         """Record warnings once, on the controller or in serial execution."""
-        from flext_infra._constants import FlextInfraConstantsCheck
-
         config.stash[FlextInfraPytestCollection._markdown] = (
             FlextInfraModelsCore.PytestMarkdownCollection()
         )
@@ -269,8 +266,6 @@ class FlextInfraPytestCollection:
                 Runner collection differs from selection.
 
         """
-        from flext_infra._constants import FlextInfraConstantsCheck
-
         selected: str | None = session.config.getoption(
             FlextInfraConstantsCheck.PYTEST_SELECTED_COLLECTION_OPTION,
         )
@@ -380,7 +375,6 @@ class FlextInfraPytestCollection:
             # Owner modules, never the root facades: this plugin loads in every
             # consumer test process, and ``m.Infra`` builds the whole model
             # family (seconds of class construction) to write one JSON line.
-            from flext_infra._constants import FlextInfraConstantsMake
 
             self.report = report_log.with_suffix(
                 FlextInfraConstantsMake.PYTEST_WARNING_EVENTS_SUFFIX,

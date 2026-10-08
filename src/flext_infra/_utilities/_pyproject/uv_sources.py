@@ -9,13 +9,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
-from flext_cli import r
-
-from flext_infra import c, m, p, t
-from flext_infra._utilities._pyproject.requirements import (
+from flext_infra import c, m, p, r, t
+from flext_infra._utilities._pyproject import (
     FlextInfraUtilitiesPyprojectRequirements,
-)
-from flext_infra._utilities._pyproject.session import (
     FlextInfraUtilitiesPyprojectSession,
 )
 

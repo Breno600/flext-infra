@@ -13,6 +13,7 @@ from typing import ClassVar
 from rope.base import exceptions
 
 from flext_infra import t
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeCorePyModuleMixin:

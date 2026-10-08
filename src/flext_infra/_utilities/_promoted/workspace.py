@@ -82,7 +82,7 @@ class FlextInfraUtilitiesPromotedWorkspace:
     @classmethod
     def promoted_ensure_local_python(cls, spec: p.Infra.PromotedWorkspaceSpec) -> None:
         """Fail unless make runs on a virtualenv or the expected local interpreter."""
-        from flext_infra._settings import settings
+        from flext_infra import settings
 
         if sys.prefix != sys.base_prefix:
             return
@@ -117,7 +117,7 @@ class FlextInfraUtilitiesPromotedWorkspace:
                 != str(Path(script_file).resolve())``.
 
         """
-        from flext_infra._settings import settings
+        from flext_infra import settings
 
         if (
             settings.Infra.flext_command_dispatched

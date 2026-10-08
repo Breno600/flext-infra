@@ -10,6 +10,7 @@ import ast
 from collections.abc import Iterator
 
 from flext_infra import c, m, p, t
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeModules
 
 
 class FlextInfraUtilitiesSemanticFamilyTypeReferences:

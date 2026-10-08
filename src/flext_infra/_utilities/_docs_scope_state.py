@@ -9,8 +9,13 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-from flext_infra import c, t
-from flext_infra._models import FlextInfraModelsWorkspace
+from flext_cli import u
+
+from flext_infra import c, m, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDependencies,
+    FlextInfraUtilitiesPyproject,
+)
 from flext_infra._utilities._docs_scope_paths import (
     FlextInfraUtilitiesDocsScopePathsMixin,
 )
@@ -22,7 +27,7 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
     @staticmethod
     def _project_state(
         project_root: Path,
-    ) -> FlextInfraModelsWorkspace.ProjectPyprojectState:
+    ) -> m.Infra.ProjectPyprojectState:
         """Return project state bound to the current authenticated file bytes.
 
         When the pyproject is absent or empty, the returned state carries
@@ -38,8 +43,6 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
             ValueError: If ``snapshot.failure``.
 
         """
-        from flext_cli import u
-
         root = FlextInfraUtilitiesDocsScopeStateMixin.absolute_lexical(project_root)
         pyproject_path = root / c.PYPROJECT_FILENAME
         snapshot = u.Cli.atomic_read_binary_file_state(pyproject_path, required=False)
@@ -59,24 +62,17 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
         root: Path,
         pyproject_path: Path,
         content: bytes | None,
-    ) -> FlextInfraModelsWorkspace.ProjectPyprojectState:
+    ) -> m.Infra.ProjectPyprojectState:
         """Parse once per byte-identical canonical pyproject snapshot.
 
         Returns:
-            The resulting ``FlextInfraModelsWorkspace.ProjectPyprojectState``.
+            The resulting ``m.Infra.ProjectPyprojectState``.
 
         Raises:
             ValueError: If ``recovered.failure``; or if docs pyproject TOML is invalid;
                 or if docs pyproject is not valid UTF-8.
 
         """
-        from flext_cli import u
-
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesDependencies,
-            FlextInfraUtilitiesPyproject,
-        )
-
         if content is None:
             payload: t.JsonMapping = {}
         else:
@@ -105,7 +101,7 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
             ),
         )
         if not payload:
-            return FlextInfraModelsWorkspace.ProjectPyprojectState(
+            return m.Infra.ProjectPyprojectState(
                 project_root=root,
                 pyproject_path=pyproject_path,
                 payload=payload,
@@ -114,7 +110,7 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
                 package_name="",
                 dependency_names=dependency_names,
             )
-        return FlextInfraModelsWorkspace.ProjectPyprojectState(
+        return m.Infra.ProjectPyprojectState(
             project_root=root,
             pyproject_path=pyproject_path,
             payload=payload,
@@ -138,7 +134,7 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
     @staticmethod
     def project_state(
         project_root: Path,
-    ) -> FlextInfraModelsWorkspace.ProjectPyprojectState:
+    ) -> m.Infra.ProjectPyprojectState:
         """Return one fresh state bound to authenticated pyproject bytes.
 
         Returns:
@@ -155,8 +151,6 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
             The declared project name from ``[project].name``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
         return FlextInfraUtilitiesPyproject.project_name_from_payload(entry, payload)
 
     @staticmethod
@@ -179,8 +173,6 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
             The resulting ``t.JsonMapping``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
         return FlextInfraUtilitiesPyproject.docs_meta_from_payload(payload)
 
     @staticmethod
@@ -224,8 +216,6 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
             The primary package name using pre-loaded payload.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesPyproject
-
         return FlextInfraUtilitiesPyproject.package_name_from_payload(
             project_root,
             payload,
