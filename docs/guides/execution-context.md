@@ -272,6 +272,45 @@ zeros; line-only and regionless native locations do not acquire invented coordin
 Point-only diagnostics from other gates remain point-only. The Markdown summary still
 uses the primary location, while the SARIF artifact carries the comparison evidence.
 
+## Census consumer evidence
+
+The public refactor census report retains `Object.all_reference_sites` separately
+from `runtime_reference_sites` and `script_reference_sites`. Each evidence site
+includes the Rope character offset, path, line and surface. Exact path/offset
+identities are deduplicated and sorted deterministically; distinct references on
+the same line remain distinct. Every hit's absolute path and nonnegative character
+offset are validated before definition filtering. Evidence excludes a definition only by
+its exact normalized path/offset; the older line/path fallback remains confined
+to reachability counts. Indexed source, script, test and example consumers and
+static `__init__.py` reexports are retained,
+including occurrences of private names and facade members.
+
+This is report-only migration evidence, not a change to production reachability.
+The existing reachability resource eligibility, line-level deduplication, private
+and facade exclusions, test/example exclusions and reexport exclusions still own
+the old counts and unused/removal classification. All-surface evidence must never
+be interpreted as permission to delete a helper or as a dynamic closure proof.
+
+`reference_evidence_collected` distinguishes an empty collected result from a
+disabled search (`include_references=False`, or census rule selection without
+`unused`). Evidence covers only the active Rope workspace's indexed files and its
+existing name-index candidate selection. Untracked files in indexed wrapper
+surfaces participate; ignored paths, nested ungoverned repositories, files outside
+the workspace, alias-only downstream files without the original identifier, and
+reflection/dynamic imports are not proven covered. Lazy export strings are not
+semantic reexport occurrences. Source and reference-resolution failures propagate;
+definition-token candidates are checked against the inventoried Rope binding using
+the existing Rope identity comparator, not selected by spelling order. Separate
+function/parameter bindings on a declaration line remain separate. If multiple
+tokens on that line resolve to the same binding (for example, a one-line declaration
+and use), the search fails with explicit ambiguity instead of guessing the
+definition. An unlocatable definition identifier or occurrence without an absolute
+path/valid offset fails instead of producing an apparently complete empty report.
+A collected result is therefore bounded static evidence, never a whole-program
+absence proof. Collecting
+private/facade evidence expands reference-resolution work but adds no scanner or
+registry.
+
 ## Bounded Mypy failure status
 
 The Linux Mypy command applies `prlimit` before launching the checker. In the observed
