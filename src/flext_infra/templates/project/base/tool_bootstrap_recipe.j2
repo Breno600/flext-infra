@@ -91,7 +91,7 @@ mise -C "{{ project_root }}" install --yes{% for tool in install_tools %} "{{ to
 		exit 2; \
 	fi; \
 	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
-		"$$mise_bootstrap_bin" -C "$(PROJECT_ROOT)" lock --upgrade --bump; \
+		"$$mise_bootstrap_bin" -C "$(PROJECT_ROOT)" lock --bump; \
 	fi; \
 	"$$mise_bootstrap_bin" -C "$(PROJECT_ROOT)" install --yes{% for tool in install_tools %} "{{ tool }}"{% endfor %}; \
 	"$$mise_bootstrap_bin" reshim; \
