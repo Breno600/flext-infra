@@ -319,6 +319,11 @@ class FlextInfraModelsCheck:
             description="Raw tool output",
             validate_default=True,
         )
+        raw_receipt: Path | None = m.Field(
+            None,
+            description="Durable verbatim native output published by the checker",
+            validate_default=True,
+        )
         outcome: c.Infra.ToolOutcome = m.Field(
             description="Native process/report verdict, independent of findings policy",
         )

@@ -1,6 +1,7 @@
 Infra:
   tooling:
     # Canonical validated tooling and suppression-policy SSOT.
+    raw-check-receipt-suffix: .raw.log
     tools:
       bandit:
         # Each exception exists only with the operator ruling that authorized
