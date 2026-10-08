@@ -1,4 +1,4 @@
-"""Fail-closed validation of workspace editable installation provenance.
+"""Fail-closed validation of local editables and locked CI build provenance.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 from urllib.parse import unquote, urlparse
 from urllib.request import url2pathname
 
-from flext_infra import config, m, r, u
+from flext_infra import c, config, m, r, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraWorkspaceEnvironmentProvenance:
-    """Validate that every declared editable resolves to the live workspace."""
+    """Bind installed packages to live local or immutable CI workspace sources."""
 
     @classmethod
     def execute_request(
@@ -53,14 +53,14 @@ class FlextInfraWorkspaceEnvironmentProvenance:
 
         """
         resolved_root = repository_root.resolve()
+        ci = config.Infra.codegen.make.ci
+        if u.Infra.env_value(ci.variable).strip() == ci.value:
+            return cls.validate_locked(resolved_root, metadata_paths=metadata_paths)
         workspace_result = FlextInfraWorkspaceDetector.load_workspace_spec(
             resolved_root,
         )
         if workspace_result.failure:
             return r[int].from_failure(workspace_result)
-        ci = config.Infra.codegen.make.ci
-        if u.Infra.env_value(ci.variable).strip() == ci.value:
-            return cls.validate_locked(resolved_root)
         repositories = tuple(
             repository
             for repository in workspace_result.value.subprojects
@@ -138,32 +138,73 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         return r[bool].ok(value=True)
 
     @classmethod
-    def validate_locked(cls, repository_root: Path) -> p.Result[int]:
-        """Prove normal installed artifacts match the root's committed lock.
+    def validate_locked(
+        cls,
+        repository_root: Path,
+        *,
+        metadata_paths: t.StrSequence | None = None,
+    ) -> p.Result[int]:
+        """Prove locked artifacts and declared local members match their origins.
 
         Returns:
             The resulting ``p.Result[int]``.
         """
+        repository_root = repository_root.resolve()
         document = u.Cli.toml_read_json(repository_root / "uv.lock")
         if document.failure:
             return r[int].from_failure(document)
         # TOML arrays are wire arrays; JSON mode preserves the strict tuple contract.
         locked = m.Infra.LockedEnvironment.model_validate_json(dumps(document.value))
-        workspace = FlextInfraWorkspaceDetector.load_workspace_spec(
-            repository_root,
-        ).unwrap()
-        required = {
-            repository.distribution
+        manifests = u.Infra.load_workspace_manifest(repository_root)
+        if manifests.failure:
+            return r[int].from_failure(manifests)
+        if len(manifests.value) != 1:
+            return r[int].fail(
+                "locked provenance needs one declared workspace manifest",
+            )
+        manifest = manifests.value[0]
+        workspace = m.Infra.WorkspaceSpec(
+            name=manifest.name,
+            repository=manifest.repository,
+            subprojects=(
+                manifest.members
+                if manifest.repository.role is c.Infra.MakeProfile.WORKSPACE
+                else ()
+            ),
+        )
+        members = {
+            repository.distribution: repository
             for repository in workspace.subprojects
             if repository.package
         }
-        # Every locked VCS dependency participates, including standalone providers.
+        if workspace.repository.package:
+            members[workspace.repository.distribution] = (
+                workspace.repository.model_copy(
+                    update={"path": Path()},
+                )
+            )
+        # Local sources outside the declared member set must fail, not disappear.
+        required = set(members)
         required.update(
-            item.name for item in locked.package if item.source.git is not None
+            item.name
+            for item in locked.package
+            if item.source.git is not None
+            or item.source.editable is not None
+            or item.source.directory is not None
         )
         validated = 0
         for name in sorted(required):
-            provenance = cls._validate_locked_provenance(name, locked)
+            provenance = cls._validate_locked_provenance(
+                name,
+                locked,
+                repository_root,
+                repository=(
+                    members.get(name)
+                    if workspace.repository.role is c.Infra.MakeProfile.WORKSPACE
+                    else None
+                ),
+                metadata_paths=metadata_paths,
+            )
             if provenance.failure:
                 return r[int].from_failure(provenance)
             validated += int(provenance.value)
@@ -174,6 +215,10 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         cls,
         name: str,
         locked: m.Infra.LockedEnvironment,
+        repository_root: Path,
+        *,
+        repository: m.Infra.RepositoryRef | None,
+        metadata_paths: t.StrSequence | None,
     ) -> p.Result[bool]:
         """Prove one locked dependency's installed origin and path containment.
 
@@ -181,7 +226,7 @@ class FlextInfraWorkspaceEnvironmentProvenance:
             The resulting ``p.Result[bool]``.
 
         """
-        distributions = u.installed_distributions(name=name)
+        distributions = u.installed_distributions(name=name, path=metadata_paths)
         if len(distributions) != 1:
             return r[bool].fail(
                 f"locked provenance needs one installed distribution: {name}",
@@ -201,6 +246,16 @@ class FlextInfraWorkspaceEnvironmentProvenance:
             return r[bool].fail(
                 f"installed version differs from committed lock: {name}",
             )
+        item = matches[0]
+        if repository is not None and (
+            item.source.editable is not None or item.source.directory is not None
+        ):
+            return cls._validate_workspace_build(
+                item,
+                repository,
+                repository_root,
+                distribution,
+            )
         origin = cls._locked_origin_verdict(
             name,
             matches[0],
@@ -208,9 +263,179 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         )
         if origin.failure:
             return r[bool].from_failure(origin)
-        paths = cls._locked_pth_verdict(name, distribution)
-        if paths.failure:
-            return r[bool].from_failure(paths)
+        return cls._locked_pth_verdict(name, distribution)
+
+    @classmethod
+    def _validate_workspace_build(
+        cls,
+        item: m.Infra.LockedPackage,
+        repository: m.Infra.RepositoryRef,
+        repository_root: Path,
+        distribution: Distribution,
+    ) -> p.Result[bool]:
+        """Authenticate a workspace checkout before accepting its installed build.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        checkout = cls._workspace_checkout_verdict(item, repository, repository_root)
+        if checkout.failure:
+            return r[bool].from_failure(checkout)
+        origin = cls._workspace_origin_verdict(
+            item.name,
+            distribution.read_text("direct_url.json"),
+            (repository_root / repository.path).resolve(),
+        )
+        if origin.failure:
+            return r[bool].from_failure(origin)
+        return cls._locked_pth_verdict(item.name, distribution)
+
+    @classmethod
+    def _workspace_checkout_verdict(
+        cls,
+        item: m.Infra.LockedPackage,
+        repository: m.Infra.RepositoryRef,
+        repository_root: Path,
+    ) -> p.Result[bool]:
+        """Bind the declared local lock source to a clean, committed checkout.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        expected_root = (repository_root / repository.path).resolve()
+        local_source = (
+            item.source.editable
+            if item.source.editable is not None
+            else item.source.directory
+        )
+        source_kinds = sum(
+            source is not None
+            for source in (
+                item.source.editable,
+                item.source.directory,
+                item.source.git,
+                item.source.registry,
+            )
+        )
+        if (
+            source_kinds != 1
+            or local_source is None
+            or repository.editable != (item.source.editable is not None)
+            or not expected_root.is_relative_to(repository_root)
+        ):
+            return r[bool].fail(
+                f"locked workspace source differs from declaration: {item.name}",
+            )
+        if (
+            Path(local_source) != repository.path
+            or (repository_root / local_source).resolve() != expected_root
+        ):
+            return r[bool].fail(
+                f"locked workspace source differs from declaration: {item.name}",
+            )
+        identity = u.Infra.git_identity(
+            m.Infra.GitRepoRequest(repo_root=expected_root),
+        )
+        if identity.failure:
+            return r[bool].from_failure(identity)
+        if (
+            identity.value.repo_root.resolve() != expected_root
+            or identity.value.dirty
+            or identity.value.origin_remote is None
+            or u.Infra.git_remote_identity(identity.value.origin_remote)
+            != u.Infra.git_remote_identity(repository.url)
+        ):
+            return r[bool].fail(
+                f"workspace checkout identity differs from declaration: {item.name}",
+            )
+        if expected_root == repository_root:
+            return r[bool].ok(value=True)
+        return cls._workspace_gitlink_verdict(
+            repository,
+            repository_root,
+            identity.value.head_oid,
+        )
+
+    @staticmethod
+    def _workspace_gitlink_verdict(
+        repository: m.Infra.RepositoryRef,
+        repository_root: Path,
+        head_oid: str,
+    ) -> p.Result[bool]:
+        """Require the member HEAD, index and committed gitlink to be identical.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        if repository.checkout != c.Infra.CheckoutKind.SUBMODULE:
+            return r[bool].fail(
+                "workspace member has no declared gitlink checkout: "
+                f"{repository.distribution}",
+            )
+        gitlink = u.Infra.git_staged_gitlink_oid(
+            m.Infra.GitRefRequest(
+                repo_root=repository_root,
+                reference=repository.path.as_posix(),
+            ),
+        )
+        if gitlink.failure:
+            return r[bool].from_failure(gitlink)
+        committed = u.Infra.git_rev_parse(
+            m.Infra.GitCommitishRequest(
+                repo_root=repository_root,
+                commitish=f"{c.Infra.GIT_HEAD}:{repository.path.as_posix()}",
+            ),
+        )
+        if committed.failure:
+            return r[bool].from_failure(committed)
+        if head_oid != gitlink.value.oid or gitlink.value.oid != committed.value.oid:
+            return r[bool].fail(
+                "workspace checkout differs from locked gitlink: "
+                f"{repository.distribution}",
+            )
+        return r[bool].ok(value=True)
+
+    @staticmethod
+    def _workspace_origin_verdict(
+        name: str,
+        raw: str | None,
+        expected_root: Path,
+    ) -> p.Result[bool]:
+        """Prove the noneditable build's native local-directory receipt.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        if raw is None:
+            return r[bool].fail(
+                f"locked workspace build lacks PEP 610 provenance: {name}",
+            )
+        receipt = m.Infra.DirectUrlReceipt.model_validate_json(raw)
+        if receipt.dir_info is not None and receipt.dir_info.editable:
+            return r[bool].fail(f"CI dependency is editable: {name}")
+        parsed = urlparse(receipt.url)
+        local_url = (
+            parsed.scheme == "file"
+            and parsed.netloc in {"", "localhost"}
+            and not parsed.query
+            and not parsed.fragment
+        )
+        actual_root = Path(url2pathname(unquote(parsed.path)))
+        if (
+            receipt.dir_info is None
+            or receipt.vcs_info is not None
+            or not local_url
+            or not actual_root.is_absolute()
+            or actual_root.resolve() != expected_root
+        ):
+            return r[bool].fail(
+                f"locked workspace build direct_url mismatch: {name} "
+                f"expected={expected_root} actual={receipt.url}",
+            )
         return r[bool].ok(value=True)
 
     @classmethod
