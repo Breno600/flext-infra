@@ -124,7 +124,7 @@ class TestsFlextInfraCodegenMakeContracts:
         )
         outcome = u.Cli.run_raw(
             ["make", "-C", str(root), "help"],
-            options=u.Cli.ProcessOptions(remove_env_keys=("MAKEFLAGS",)),
+            options=m.Cli.ProcessOptions(remove_env_keys=("MAKEFLAGS",)),
         )
         output = tm.ok(outcome)
         tm.that(output.stderr, eq="")

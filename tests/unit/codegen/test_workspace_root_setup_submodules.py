@@ -15,7 +15,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import config
-from tests import c, p, t, u
+from tests import c, m, p, t, u
 
 pytestmark = pytest.mark.slow
 
@@ -41,7 +41,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
             u.Cli.run_raw(
                 ["make", "_builtin_setup_submodules"],
                 cwd=workspace,
-                options=u.Cli.ProcessOptions(env=env),
+                options=m.Cli.ProcessOptions(env=env),
             ),
         )
 
@@ -468,7 +468,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
             u.Cli.run_raw(
                 ["make", "--no-print-directory", "_builtin_setup_environment"],
                 cwd=workspace,
-                options=u.Cli.ProcessOptions(env=env),
+                options=m.Cli.ProcessOptions(env=env),
             ),
         )
 
