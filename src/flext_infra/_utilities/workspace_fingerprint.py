@@ -192,8 +192,6 @@ class FlextInfraUtilitiesWorkspaceFingerprint:
             The resulting ``p.Result[m.Infra.WorkspaceFingerprint]``.
 
         """
-
-
         root = checkout.resolve()
         inputs = FlextInfraUtilitiesGit.git_fingerprint_inputs(
             m.Infra.GitRepoRequest(repo_root=root),

@@ -71,8 +71,6 @@ class FlextInfraCodegenConformExecuteScaffold(FlextInfraCodegenConformPlan):
             marks plan presence (False means no scaffold chain applies).
 
         """
-
-
         result_type = r[
             t.Pair[
                 t.Pair[m.Infra.WorkspaceSpec | None, m.Infra.ProjectSpec | None],

@@ -21,11 +21,12 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from flext_infra import c
-from flext_infra._utilities import FlextInfraUtilitiesPrivateImportFacades
-from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
-from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
-from flext_infra._utilities import FlextInfraUtilitiesRopeSourceBases
-from flext_infra._utilities import FlextInfraUtilitiesRopeSourceBindingCollector
+from flext_infra._utilities import (
+    FlextInfraUtilitiesPrivateImportFacades,
+    FlextInfraUtilitiesRopeAnalysis,
+    FlextInfraUtilitiesRopeSourceBases,
+    FlextInfraUtilitiesRopeSourceBindingCollector,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -47,11 +48,6 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
             ValueError: If facade package is not importable for derivation.
 
         """
-
-
-
-
-
         modules = FlextInfraUtilitiesPrivateImportFacades.source_modules(
             {},
             (f"from {package} import *",),
@@ -111,8 +107,6 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
                 frozenset()) != resolved``.
 
         """
-
-
         resolved = cls._facade_declared_class(modules, module, letter, frozenset())
         if resolved is None:
             return None
@@ -304,8 +298,6 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
             Published name to absolute provider module.
 
         """
-
-
         path = Path(
             c.Infra.INIT_PY if is_package else f"{module.rpartition('.')[2]}.py",
         )
@@ -330,8 +322,6 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
             Each ``ast.stmt``.
 
         """
-
-
         for node in body:
             if isinstance(node, ast.If):
                 is_static_only = (

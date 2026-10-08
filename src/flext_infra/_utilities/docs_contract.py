@@ -10,11 +10,11 @@ from collections.abc import Mapping
 from html import unescape
 from typing import TYPE_CHECKING
 
+from flext_cli import u
 from markdown import Markdown
 from markdown.extensions.toc import slugify
 
 from flext_infra import c, m, r, t
-from flext_cli import u
 from flext_infra._utilities import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
@@ -211,8 +211,6 @@ class FlextInfraUtilitiesDocsContract:
             TypeError: If docs project metadata is missing.
 
         """
-
-
         payload = FlextInfraUtilitiesDocsScope.project_payload(project_root)
         project_value = payload.get(c.Infra.PROJECT)
         if not isinstance(project_value, Mapping):
@@ -266,8 +264,6 @@ class FlextInfraUtilitiesDocsContract:
             The resulting ``p.Result[m.Infra.CodegenFilePlan]``.
 
         """
-
-
         if (
             not project.is_absolute()
             or not path.is_absolute()

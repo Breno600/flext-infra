@@ -61,8 +61,6 @@ class FlextInfraFreshImportGate(FlextInfraGate):
             The resulting ``m.Infra.GateExecution``.
 
         """
-
-
         _ = ctx
         started = time.monotonic()
         # The runtime is derived from the gated checkout itself (a subproject

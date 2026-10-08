@@ -56,8 +56,6 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             The resulting ``t.SequenceOf[Path]``.
 
         """
-
-
         patterns = FlextInfraMarkdownGateBase.read_ignore_patterns(
             project_dir,
             c.Infra.MARKDOWNLINT_IGNORE_FILENAME,
@@ -188,11 +186,6 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             The resulting ``t.MappingKV[str, t.Pair[str, t.Pair[str, int]]]``.
 
         """
-
-
-
-
-
         markdown_files = self._ignore_filtered(
             project_dir,
             FlextInfraMarkdownGateBase.collect_markdown_files(project_dir),
@@ -294,8 +287,6 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             The resulting ``t.SequenceOf[Path]``.
 
         """
-
-
         rewritten: t.MutableSequenceOf[Path] = []
         for md_path in self._ignore_filtered(
             project_dir,
@@ -318,10 +309,6 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             The rewritten path, or ``None`` when the document stayed identical.
 
         """
-
-
-
-
         content = md_path.read_text(c.Cli.ENCODING_DEFAULT)
         relative_posix = md_path.relative_to(project_dir).as_posix()
         # Preserve indexes across fragments the formatter does not own.
@@ -389,10 +376,6 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             staged source ends the round trip.
 
         """
-
-
-
-
         blocks: t.MutableSequenceOf[str] = []
         for index, _original in staged:
             source = sources_dir / FlextInfraMarkdownCodeSources.source_name(

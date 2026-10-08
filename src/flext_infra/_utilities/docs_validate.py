@@ -9,11 +9,14 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
-from flext_infra import c, r, t
 from flext_cli import u
-from flext_infra._utilities import FlextInfraUtilitiesDocs
-from flext_infra._utilities import FlextInfraUtilitiesDocsApi
-from flext_infra._utilities import FlextInfraUtilitiesDocsScope
+
+from flext_infra import c, r, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDocs,
+    FlextInfraUtilitiesDocsApi,
+    FlextInfraUtilitiesDocsScope,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -84,8 +87,6 @@ class FlextInfraUtilitiesDocsValidate:
             The resulting ``p.Result[t.StrSequence]``.
 
         """
-
-
         settings = repository_root / "docs/architecture/architecture_config.json"
         if not settings.exists():
             return r[t.StrSequence].ok([])
@@ -130,8 +131,6 @@ class FlextInfraUtilitiesDocsValidate:
             Required docs paths that are still missing from one scope.
 
         """
-
-
         if scope.name == c.Infra.RK_ROOT:
             required = [
                 "README.md",
@@ -165,8 +164,6 @@ class FlextInfraUtilitiesDocsValidate:
             Public API contract problems for one governed project scope.
 
         """
-
-
         if scope.name == c.Infra.RK_ROOT or not scope.package_name:
             return []
         messages: t.MutableSequenceOf[str] = []
@@ -219,10 +216,6 @@ class FlextInfraUtilitiesDocsValidate:
         report: m.Infra.DocsPhaseReport,
     ) -> None:
         """Persist the standard validate summary and markdown report."""
-
-
-
-
         _ = u.Cli.json_write(
             scope.report_dir / c.Infra.DOCS_VALIDATE_SUMMARY_FILENAME,
             {c.Infra.RK_SUMMARY: report.model_dump(mode="json")},

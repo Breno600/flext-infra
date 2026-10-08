@@ -24,31 +24,26 @@ from importlib.util import find_spec
 from pathlib import Path
 from types import MappingProxyType
 
-from flext_cli import r
+from flext_cli import r, u
 from packaging.utils import canonicalize_name
 
 from flext_infra import c, config, m, p, t
 from flext_infra._utilities import (
+    FlextInfraUtilitiesBase,
+    FlextInfraUtilitiesCodegenNamespace,
     FlextInfraUtilitiesCodemodRules,
+    FlextInfraUtilitiesPyproject,
+    FlextInfraUtilitiesRopeAnalysisAstHelpers,
+    FlextInfraUtilitiesRopeAnalysisExports,
+    FlextInfraUtilitiesRopeAnalysisImportState,
     FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeImports,
     FlextInfraUtilitiesRopeRuntime,
     FlextInfraUtilitiesRopeRuntimeModules,
     FlextInfraUtilitiesRopeSourceBases,
     FlextInfraUtilitiesSemanticCutoverBindings,
     FlextInfraUtilitiesSemanticFamilyTypeReferences,
 )
-from flext_cli import u
-from flext_infra._utilities import FlextInfraUtilitiesBase
-from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
-from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
-from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisImportState
-from flext_infra._utilities import FlextInfraUtilitiesPyproject
-from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
-from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
-from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisExports
-from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisExports
-from flext_infra._utilities import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities import FlextInfraUtilitiesRopeImports
 
 
 class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
@@ -87,11 +82,6 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         Raises:
             ValueError: If rope could not name module.
         """
-
-
-
-
-
         raw: MutableMapping[str, set[str]] = {}
         modules: MutableMapping[Path, str] = {}
         aliases: MutableMapping[str, str] = {}
@@ -147,8 +137,6 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             The resulting ``t.MappingKV[str, frozenset[str]]``.
 
         """
-
-
         cycles: MutableMapping[str, frozenset[str]] = {}
         for component in FlextInfraUtilitiesBase.strongly_connected_components({
             name: set(targets) for name, targets in graph.items()
@@ -204,11 +192,6 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 absent from the project import graph.
 
         """
-
-
-
-
-
         graph, modules = facts.import_graph, facts.import_modules
         source = modules.get(file_path.resolve())
         if source is None:
@@ -268,11 +251,6 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             Whether ``namespace`` in a facade module composes its family.
 
         """
-
-
-
-
-
         package = facade_file.parent / f"_{facade_file.stem}"
         if not package.is_dir():
             return True
@@ -316,8 +294,6 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             ValueError: If class.
 
         """
-
-
         tree = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(
             facade_file.read_text(encoding=c.Cli.ENCODING_DEFAULT),
         ).get_ast()
@@ -465,7 +441,16 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         source_states: tuple[m.Cli.AtomicFileState, ...] = (),
         modules: t.StrSequence = (),
     ) -> m.Infra.CodemodBindingSnapshot:
-        """Capture Python owners and their static import closure before inference."""
+        """Capture Python owners and their static import closure before inference.
+
+        Returns:
+            The resulting ``m.Infra.CodemodBindingSnapshot``.
+
+        Raises:
+            TypeError: If binding package has no source resource contract.
+            ValueError: If binding source snapshots disagree; or if binding source is
+                absent.
+        """
         states: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
         for state in source_states:
             if states.setdefault(state.path.resolve(), state) != state:
@@ -557,6 +542,14 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         names an expression in the occurrence's lexical scope. Annotation payloads
         are not executable migration candidates. Missing coordinates are a rule
         defect, not permission to resolve at module scope.
+
+        Returns:
+            The resulting ``bool``.
+
+        Raises:
+            ValueError: If binding capture differs from source; or if resolved-symbol
+                requires a module and an expression; or if same-binding requires one
+                lexical expression.
         """
         capture = m.Infra.AstGrepCapture.model_validate(captures[condition.variable])
         sources = {
@@ -723,7 +716,11 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         sources: t.MappingKV[Path, str],
         visited: frozenset[t.Pair[str, str]] = frozenset(),
     ) -> bool:
-        """Reject rebound receivers, intermediate owners, and imported alias chains."""
+        """Reject rebound receivers, intermediate owners, and imported alias chains.
+
+        Returns:
+            The resulting ``bool``.
+        """
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         if isinstance(expression, ast.Attribute):
             if not cls._stable_binding_chain(
@@ -879,7 +876,11 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         offset: int,
         declared_routes: t.StrMapping | None = None,
     ) -> bool:
-        """Prove one unconditional declaration instead of Rope's last assignment."""
+        """Prove one unconditional declaration instead of Rope's last assignment.
+
+        Returns:
+            The resulting ``bool``.
+        """
         tree = ast.parse(source)
         parents = {
             child: parent
@@ -960,10 +961,6 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             ValueError: If project layout is unresolved.
 
         """
-
-
-
-
         if package == own:
             layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
             if layout is None:
@@ -990,8 +987,6 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             ValueError: If the predicate is not one the engine declares.
 
         """
-
-
         predicate = condition.predicate
         declared = isinstance(predicate, c.Infra.CodemodContextPredicate)
         if not declared:
@@ -1082,8 +1077,6 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             ValueError: If project layout is unresolved.
 
         """
-
-
         value, of = captured
         module = cls._top_module(value)
         match predicate:
@@ -1201,8 +1194,6 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             ValueError: If project layout is unresolved.
 
         """
-
-
         layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
         if layout is None:
             msg = f"project layout is unresolved: {root}"
@@ -1266,8 +1257,6 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             The resulting ``frozenset[str]``.
 
         """
-
-
         return frozenset(
             FlextInfraUtilitiesRopeAnalysisExports.public_export_names_source(
                 file_path.read_text(encoding=c.Cli.ENCODING_DEFAULT),
@@ -1379,8 +1368,6 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             ValueError: If project layout is unresolved.
 
         """
-
-
         layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
         if layout is None:
             msg = f"project layout is unresolved: {root}"
@@ -1466,8 +1453,6 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             The resulting ``Path | None``.
 
         """
-
-
         layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
         if layout is None or not file_path.is_relative_to(layout.src_dir):
             return None

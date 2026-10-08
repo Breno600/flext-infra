@@ -8,9 +8,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from flext_cli import u
+
 from flext_core.result import FlextResult as r
 from flext_infra import c, p, t
-from flext_cli import u
 from flext_infra._utilities import FlextInfraUtilitiesGit
 
 
@@ -44,8 +45,6 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
             ValueError: If ``planned.failure``.
 
         """
-
-
         planned = u.Cli.atomic_plan_directory_chain(path)
         if planned.failure:
             raise ValueError(planned.error or f"docs directory is unsafe: {path}")
@@ -62,8 +61,6 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
             ValueError: If ``state.failure``.
 
         """
-
-
         state = u.Cli.atomic_read_binary_file_state(path, required=False)
         if state.failure:
             raise ValueError(state.error or f"docs file is unsafe: {path}")
@@ -154,10 +151,6 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
             The resulting ``p.Result[t.VariadicTuple[Path]]``.
 
         """
-
-
-
-
         manifest_path = root / c.Infra.GITMODULES
         manifest_before = u.Cli.atomic_read_binary_file_state(
             manifest_path,

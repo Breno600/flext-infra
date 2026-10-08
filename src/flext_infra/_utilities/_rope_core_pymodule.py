@@ -96,8 +96,6 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
             The resulting ``bool``.
 
         """
-
-
         if FlextInfraUtilitiesRopeRuntime.file_resource(resource):
             return True
         path = Path(resource.real_path)
@@ -120,8 +118,6 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
             TypeError: If rope project returned non-PyModule.
 
         """
-
-
         if not FlextInfraUtilitiesRopeRuntime.file_resource(resource):
             path = Path(resource.real_path)
             if (
@@ -150,8 +146,6 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
             RuntimeError: If rope module import table unavailable for.
 
         """
-
-
         try:
             module_imports = FlextInfraUtilitiesRopeRuntime.module_imports_for_pymodule(
                 rope_project,

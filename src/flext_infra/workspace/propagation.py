@@ -44,8 +44,6 @@ class FlextInfraWorkspacePropagation(s[bool]):
             The resulting ``p.Result[bool]``.
 
         """
-
-
         root = self.root
         loaded = FlextInfraWorkspaceDetector.load_workspace_spec(root)
         if loaded.failure:
@@ -205,8 +203,6 @@ class FlextInfraWorkspacePropagation(s[bool]):
             The resulting ``p.Result[bool]``.
 
         """
-
-
         member_root = self.root / member.path
         base = u.Infra.resolve_integration_branch(
             member_root,

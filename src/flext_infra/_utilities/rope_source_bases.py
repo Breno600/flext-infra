@@ -35,6 +35,10 @@ class FlextInfraUtilitiesRopeSourceBases:
         Returns:
             The module's explicit lexical bindings, including value shadowing.
 
+        Raises:
+            TypeError: If Rope returned a non-module AST for.
+            ValueError: If Unresolved declared lazy import mapping in; or if Provider
+                does not match captured source.
         """
         if provider is not None:
             resource = provider.get_resource()
@@ -107,7 +111,15 @@ class FlextInfraUtilitiesRopeSourceBases:
         bindings: t.MappingKV[str, m.Infra.SourceClassReference | None],
         module: str,
     ) -> m.Infra.SourceClassReference:
-        """Capture the binding visible when a class base is evaluated."""
+        """Capture the binding visible when a class base is evaluated.
+
+        Returns:
+            The resulting ``m.Infra.SourceClassReference``.
+
+        Raises:
+            TypeError: If Unsupported class reference in.
+            ValueError: If Non-class binding used as a base in.
+        """
         attributes: list[str] = []
         while isinstance(expression, ast.Subscript | ast.Attribute):
             if isinstance(expression, ast.Attribute):
@@ -141,7 +153,11 @@ class FlextInfraUtilitiesRopeSourceBases:
         target: ast.expr,
         bindings: t.MappingKV[str, m.Infra.SourceClassReference | None],
     ) -> bool:
-        """Recognize a subscript store that cannot rebind a live class."""
+        """Recognize a subscript store that cannot rebind a live class.
+
+        Returns:
+            The resulting ``bool``.
+        """
         if not isinstance(target, ast.Subscript):
             return False
         expression = target.value
@@ -165,7 +181,13 @@ class FlextInfraUtilitiesRopeSourceBases:
         bindings: MutableMapping[str, m.Infra.SourceClassReference | None],
         scope: str,
     ) -> None:
-        """Index lexical declarations in order, preserving provider conditionality."""
+        """Index lexical declarations in order, preserving provider conditionality.
+
+        Raises:
+            ValueError: If Relative import escapes package in; or if Star import has no
+                explicit class binding in; or if Unsupported class binding mutation in;
+                or if Conditional exception-backed class bindings in.
+        """
         for node in statements:
             if (
                 spec.required_line is not None

@@ -12,10 +12,11 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import c, m
-from flext_infra._utilities import FlextInfraUtilitiesPromotedInvocation
 from flext_cli import u
+
+from flext_infra import c, m
 from flext_infra._settings import settings
+from flext_infra._utilities import FlextInfraUtilitiesPromotedInvocation
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -39,10 +40,6 @@ class FlextInfraUtilitiesPromotedExecution(FlextInfraUtilitiesPromotedInvocation
             PromotedRegistryError: If ``result.failure``.
 
         """
-
-
-
-
         message, env_name = c.Infra.PromotedMessage, c.Infra.PromotedEnv
         project_root = cls.promoted_find_owner_root(command.path)
         if project_root is None:

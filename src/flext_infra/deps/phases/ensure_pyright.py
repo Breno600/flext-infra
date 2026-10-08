@@ -289,8 +289,6 @@ class FlextInfraEnsurePyrightConfigPhase:
             The complete config-owned Pyright exclude list.
 
         """
-
-
         rules = self._tool_config.tools.pyright.path_rules
         workspace_excludes: t.StrSequence = ()
         if analysis_exclusions is None and project_root is not None:
@@ -367,8 +365,6 @@ class FlextInfraEnsurePyrightConfigPhase:
             The resulting ``t.StrSequence``.
 
         """
-
-
         generated_roots = (
             paths_manager.generated_python_roots if paths_manager is not None else ()
         )

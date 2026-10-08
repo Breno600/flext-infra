@@ -13,8 +13,7 @@ import re
 from pathlib import Path
 
 from flext_infra import c, m, t
-from flext_infra._config import FlextInfraConfig
-from flext_infra._config import config
+from flext_infra._config import FlextInfraConfig, config
 
 # Concrete-owner imports: this module resolves during the root's lazy ``u``
 # export, when the root namespace is still initializing — a root from-import
@@ -27,8 +26,6 @@ class FlextInfraUtilitiesDocsGithubLinks:
     @staticmethod
     def _config() -> FlextInfraConfig:
 
-
-
         return config
 
     @staticmethod
@@ -39,8 +36,6 @@ class FlextInfraUtilitiesDocsGithubLinks:
             The typed GitHub repo map from make.docs SSOT.
 
         """
-
-
         return config.Infra.codegen.make.docs.github_repos
 
     @staticmethod

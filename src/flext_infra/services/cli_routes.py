@@ -31,10 +31,6 @@ class FlextInfraCliRouteService:
             ValueError: If CLI group has no route owner.
 
         """
-
-
-
-
         if group in {
             c.Infra.CLI_GROUP_CHECK,
             c.Infra.CLI_GROUP_CODEGEN,

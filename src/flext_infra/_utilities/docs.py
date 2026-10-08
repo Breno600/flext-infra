@@ -9,13 +9,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 from urllib.parse import urlsplit
 
+from flext_cli import u
+
 from flext_infra import c, m, r, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDocsContract,
+    FlextInfraUtilitiesDocsScope,
+)
 from flext_infra._utilities._docs_scope_build import (
     FlextInfraUtilitiesDocsScopeBuildMixin,
 )
-from flext_cli import u
-from flext_infra._utilities import FlextInfraUtilitiesDocsContract
-from flext_infra._utilities import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -38,8 +41,6 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             ValueError: If insecure documentation URL is prohibited; use HTTPS.
 
         """
-
-
         normalized = u.norm_str(target, case="lower").lstrip("<")
         scheme = urlsplit(normalized).scheme
         if scheme == c.Infra.DOCS_INSECURE_WEB_SCHEME:
@@ -98,8 +99,6 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             The resulting ``t.SequenceOf[Path]``.
 
         """
-
-
         scope_root = scope.path
         files = FlextInfraUtilitiesDocs.iter_markdown_files(scope_root)
         if scope.name == c.Infra.RK_ROOT:
@@ -134,8 +133,6 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             The resulting ``p.Result[bool]``.
 
         """
-
-
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             u.write_file(
@@ -160,8 +157,6 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
         Every table row is one changed file, so the row count is the changed
         file count both reports publish.
         """
-
-
         summary_payload = t.Cli.JSON_MAPPING_ADAPTER.validate_python({
             c.Infra.RK_SUMMARY: {
                 c.Infra.RK_SCOPE: scope.name,
@@ -218,8 +213,6 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             The resulting ``str``.
 
         """
-
-
         return FlextInfraUtilitiesDocsContract.docs_contract_anchorize(text)
 
     @staticmethod
@@ -230,8 +223,6 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             The resulting ``str``.
 
         """
-
-
         return FlextInfraUtilitiesDocsContract.docs_contract_build_toc(content)
 
     @staticmethod
@@ -242,8 +233,6 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             The resulting ``t.StrIntPair``.
 
         """
-
-
         return FlextInfraUtilitiesDocsContract.docs_contract_update_toc(content)
 
     @staticmethod

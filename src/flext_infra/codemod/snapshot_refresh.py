@@ -33,8 +33,6 @@ class FlextInfraCodemodSnapshotRefresh(FlextInfraServiceBase[t.Cli.ResultValue])
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-
-
         planned = u.Infra.codemod_rule_plan(self.repository_root)
         if planned.failure:
             return r[t.Cli.ResultValue].from_failure(planned)

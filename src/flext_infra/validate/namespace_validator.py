@@ -48,8 +48,6 @@ class FlextInfraNamespaceValidator(s[bool]):
             The resulting ``p.Result[m.Infra.ValidationReport]``.
 
         """
-
-
         project_root = self.repository_root.resolve()
         scanned = FlextInfraModGateEngine.scan(project_root, fix=False)
         if scanned.failure:

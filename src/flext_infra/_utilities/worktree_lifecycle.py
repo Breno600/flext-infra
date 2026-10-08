@@ -10,14 +10,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import m, r
-from flext_infra._utilities import FlextInfraUtilitiesGitSemanticPublishMixin
-from flext_infra._utilities import FlextInfraUtilitiesGitSemanticRefsMixin
-from flext_infra._utilities import FlextInfraUtilitiesGitSemanticPublishMixin
-from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeRemovalMixin
-from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeStatusMixin
-from flext_infra._utilities import FlextInfraUtilitiesGitSemanticRefsMixin
-from flext_infra._utilities import FlextInfraUtilitiesGitSemanticRefsMixin
-from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeStatusMixin
+from flext_infra._utilities import (
+    FlextInfraUtilitiesGitSemanticPublishMixin,
+    FlextInfraUtilitiesGitSemanticRefsMixin,
+    FlextInfraUtilitiesGitWorktreeRemovalMixin,
+    FlextInfraUtilitiesGitWorktreeStatusMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -32,12 +30,6 @@ class FlextInfraWorktreeLifecycle:
         created_branch_oid: str | None,
         setup_error: str,
     ) -> p.Result[str]:
-
-
-
-
-
-
 
         status = FlextInfraUtilitiesGitWorktreeStatusMixin.git_status(
             m.Infra.GitStatusRequest(repo_root=lane),
@@ -77,8 +69,6 @@ class FlextInfraWorktreeLifecycle:
             The resulting ``p.Result[str]``.
 
         """
-
-
         preflight = FlextInfraWorktreeLifecycle._validated_lane(
             lane,
             branch,
@@ -103,11 +93,6 @@ class FlextInfraWorktreeLifecycle:
             The resulting ``p.Result[bool]``.
 
         """
-
-
-
-
-
         if not lane.is_dir():
             return r[bool].fail(f"worktree lane does not exist: {lane}")
         refs = FlextInfraUtilitiesGitSemanticRefsMixin
@@ -141,11 +126,6 @@ class FlextInfraWorktreeLifecycle:
             The resulting ``p.Result[str]``.
 
         """
-
-
-
-
-
         contains_base = FlextInfraUtilitiesGitSemanticRefsMixin.git_is_ancestor(
             m.Infra.GitAncestryRequest(repo_root=lane, ancestor=base_oid),
         )

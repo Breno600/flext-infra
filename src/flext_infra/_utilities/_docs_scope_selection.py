@@ -102,8 +102,6 @@ class FlextInfraUtilitiesDocsScopeSelectionMixin:
                 ``roots.failure``.
 
         """
-
-
         relative = Path(name)
         if relative.is_absolute() or ".." in relative.parts:
             msg = f"docs project selector escapes repository: {name}"
@@ -191,8 +189,6 @@ class FlextInfraUtilitiesDocsScopeSelectionMixin:
             The resulting ``m.Infra.DocScope``.
 
         """
-
-
         payload = FlextInfraUtilitiesDocsScope.project_payload(project_root)
         docs_meta = FlextInfraUtilitiesDocsScope.docs_meta_from_payload(payload)
         project_name = FlextInfraUtilitiesDocsScope.project_name_from_payload(

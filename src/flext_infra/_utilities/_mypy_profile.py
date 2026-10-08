@@ -29,8 +29,6 @@ class FlextInfraMypyProfiler:
             ValueError: If Mypy profiling requires an output destination.
 
         """
-
-
         destination = invocation.profile_output
         if destination is None:
             msg = "Mypy profiling requires an output destination"

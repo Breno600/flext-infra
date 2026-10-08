@@ -78,11 +78,6 @@ class FlextInfraRuntimeDevDependencyDetector(
             The resulting ``p.Result[bool]``.
 
         """
-
-
-
-
-
         payload: MutableMapping[str, t.JsonValue] = {
             "repository_root": str(self.root),
             "apply": self.apply_changes,

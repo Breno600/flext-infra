@@ -151,8 +151,6 @@ class FlextInfraFlextBindingService:
             The distributions this worktree can supply to the consumer.
 
         """
-
-
         workspace = FlextInfraWorkspaceDetector.load_workspace_spec(flext_root)
         if workspace.failure:
             return r[t.MappingKV[str, Path]].fail(

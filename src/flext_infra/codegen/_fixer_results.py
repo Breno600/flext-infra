@@ -66,10 +66,6 @@ class FlextInfraCodegenFixerResultsMixin:
             The resulting ``t.SequenceOf[m.Infra.CensusViolation]``.
 
         """
-
-
-
-
         initial_violations_result = u.Infra.parse_namespace_validation(
             FlextInfraNamespaceValidator(repository_root=project_path).build_report(),
             project_path,
@@ -97,10 +93,6 @@ class FlextInfraCodegenFixerResultsMixin:
         initial_violations: t.SequenceOf[m.Infra.CensusViolation],
     ) -> None:
         """Re-run validation and split outstanding violations into fixed vs skipped."""
-
-
-
-
         remaining_result = u.Infra.parse_namespace_validation(
             FlextInfraNamespaceValidator(repository_root=project_path).build_report(),
             project_path,

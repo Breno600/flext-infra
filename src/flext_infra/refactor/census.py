@@ -144,8 +144,6 @@ class FlextInfraRefactorCensus(
             The final report and the pre-apply report the impact map reads.
 
         """
-
-
         started = time.monotonic()
         with FlextInfraRopeWorkspace.open_workspace(
             self.root,

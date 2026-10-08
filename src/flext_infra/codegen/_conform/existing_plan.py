@@ -17,7 +17,9 @@ from flext_infra.codegen._conform.artifact_render import (
 )
 from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
 from flext_infra.services.codegen import FlextInfraCodegen
-from flext_infra.workspace.environment_contracts import FlextInfraWorkspaceEnvironmentContracts
+from flext_infra.workspace.environment_contracts import (
+    FlextInfraWorkspaceEnvironmentContracts,
+)
 
 
 class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRender):
@@ -217,8 +219,6 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             The resulting ``p.Result[m.Infra.ToolingRuntimeContext]``.
 
         """
-
-
         root = target.root
         repository = target.repository
         modernizer = FlextInfraPyprojectModernizer(
@@ -313,7 +313,11 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         self,
         root: Path,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
-        """Project owned policy before consumers require a valid physical TOML file."""
+        """Project owned policy before consumers require a valid physical TOML file.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
+        """
         result_type = r[t.SequenceOf[m.Infra.CodegenFilePlan]]
         live = u.Infra.live_pyproject_text(
             root / c.PYPROJECT_FILENAME,
@@ -1101,8 +1105,6 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             bool]]`` with its presence flag.
 
         """
-
-
         result_type = r[t.Pair[m.Infra.CodegenFilePlan | None, bool]]
         merged = FlextInfraCodegen.render_vscode_settings(root)
         if merged.failure:
@@ -1142,10 +1144,6 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             bool]]`` with its presence flag.
 
         """
-
-
-
-
         result_type = r[t.Pair[m.Infra.CodegenFilePlan | None, bool]]
         normalized = FlextInfraWorkspaceEnvironmentContracts.envrc_local_normalized(
             current,

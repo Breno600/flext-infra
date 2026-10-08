@@ -28,8 +28,6 @@ class FlextInfraUtilitiesGitLaneHygieneMixin:
             Partial or complete native facts with all causal read errors retained.
 
         """
-
-
         errors: list[str] = []
         refs: list[m.Infra.GitLaneRef] = []
         stash_oids: tuple[str, ...] = ()

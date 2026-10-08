@@ -11,8 +11,10 @@ from pathlib import Path
 from flext_cli import u as cli_u
 
 from flext_infra import c, m, p, r, t
-from flext_infra._utilities import FlextInfraUtilitiesCodegenFilePlan
-from flext_infra._utilities import FlextInfraUtilitiesDocsScope
+from flext_infra._utilities import (
+    FlextInfraUtilitiesCodegenFilePlan,
+    FlextInfraUtilitiesDocsScope,
+)
 
 
 class FlextInfraUtilitiesDocsGenerateSourcesMixin:
@@ -77,8 +79,6 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
 
         from flext_cli import u as cli_u
         """
-
-
         roots = FlextInfraUtilitiesDocsScope.docs_repository_roots(
             repository_root,
             extra_roots,
@@ -216,8 +216,6 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
             The resulting ``p.Result[bool]``.
 
         """
-
-
         discovered = FlextInfraUtilitiesDocsGenerateSourcesMixin.docs_source_paths(
             repository_root,
             extra_roots,

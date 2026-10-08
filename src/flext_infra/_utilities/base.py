@@ -42,8 +42,6 @@ class FlextInfraUtilitiesBase:
             One raw environment value through the governed boundary.
 
         """
-
-
         return FlextInfraSettings.env_lookup(name)
 
     @staticmethod
@@ -57,8 +55,6 @@ class FlextInfraUtilitiesBase:
             One stripped dynamic environment value, or the stripped default.
 
         """
-
-
         value = FlextInfraSettings.env_lookup(name)
         return default.strip() if value is None else value.strip()
 

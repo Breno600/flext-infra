@@ -17,20 +17,16 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import ClassVar
 
-from flext_cli import r
+from flext_cli import r, u
 
 from flext_infra import c, config, m, p, t
-from flext_cli import u
-from flext_infra._utilities import FlextInfraUtilitiesDiscovery
-from flext_infra._utilities import FlextInfraUtilitiesDiscovery
-from flext_infra._utilities import FlextInfraUtilitiesDocsScope
-from flext_infra._utilities import FlextInfraUtilitiesDiscovery
-from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
-from flext_infra._utilities import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities import FlextInfraUtilitiesDocsScope
-from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysis
-from flext_infra._utilities import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities import FlextInfraUtilitiesRopeSource
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDiscovery,
+    FlextInfraUtilitiesDocsScope,
+    FlextInfraUtilitiesRopeAnalysis,
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeSource,
+)
 
 
 class FlextInfraUtilitiesCodegenNamespace:
@@ -370,13 +366,6 @@ class FlextInfraUtilitiesCodegenNamespace:
             The canonical project layout contract for one project root.
 
         """
-
-
-
-
-
-
-
         resolved_root = project_root.resolve()
         package_name = (
             project.package_name
@@ -431,12 +420,6 @@ class FlextInfraUtilitiesCodegenNamespace:
             ValueError: If facade source is unavailable to Rope.
 
         """
-
-
-
-
-
-
         family_alias = cls.facade_family_of_directory(file_path.parent.name)
         declared_exports = cls._declared_exports(file_path)
         uppercase_names = tuple(name for name in declared_exports if name[:1].isupper())
@@ -541,8 +524,6 @@ class FlextInfraUtilitiesCodegenNamespace:
             The resulting ``str``.
 
         """
-
-
         project_root = (
             project_layout.project_root
             if project_layout is not None
@@ -706,8 +687,6 @@ class FlextInfraUtilitiesCodegenNamespace:
             The resulting ``m.Infra.NamespaceModulePolicy``.
 
         """
-
-
         package_name = current_pkg or FlextInfraUtilitiesDiscovery.package_name(
             file_path,
         )
@@ -787,12 +766,6 @@ class FlextInfraUtilitiesCodegenNamespace:
             ValueError: If facade source is unavailable to Rope.
 
         """
-
-
-
-
-
-
         policy = cls.publication_policy(
             file_path,
             rope_project=rope_project,
@@ -852,8 +825,6 @@ class FlextInfraUtilitiesCodegenNamespace:
             The resulting ``p.Result[t.SequenceOf[m.Infra.ProjectInfo]]``.
 
         """
-
-
         if projects is None:
             projects_result = FlextInfraUtilitiesDocsScope.discover_projects(
                 repository_root,
@@ -912,8 +883,6 @@ class FlextInfraUtilitiesCodegenNamespace:
         the pass never rebases an already-parented facade onto flext-core, so
         it is idempotent and correct across project boundaries.
         """
-
-
         if not file_path.is_file():
             return
         with FlextInfraUtilitiesRopeCore.open_project(file_path.parent) as rope_project:
@@ -954,8 +923,6 @@ class FlextInfraUtilitiesCodegenNamespace:
             The resulting ``str | None``.
 
         """
-
-
         source = resource.read()
         class_infos = sorted(
             FlextInfraUtilitiesRopeAnalysis.resolve_class_info(
@@ -1020,8 +987,6 @@ class FlextInfraUtilitiesCodegenNamespace:
             The resulting ``str``.
 
         """
-
-
         lines = source.splitlines()
         if import_line in lines:
             return source
@@ -1111,8 +1076,6 @@ class FlextInfraUtilitiesCodegenNamespace:
             The resulting ``m.Infra.ViolationKey``.
 
         """
-
-
         if violation.module not in source_cache:
             source_cache[violation.module] = cls._read_source_lines(
                 project_path,

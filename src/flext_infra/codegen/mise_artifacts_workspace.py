@@ -112,8 +112,6 @@ class FlextInfraMiseWorkspacePlanner:
             The resulting ``p.Result[m.Infra.MiseToolchainWorkspaceLayout]``.
 
         """
-
-
         requested = self._owner.repository_root.expanduser().absolute()
         resolved_scope = (
             self.scope_root() if scope_root is None else r[Path].ok(scope_root)

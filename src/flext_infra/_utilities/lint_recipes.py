@@ -84,8 +84,6 @@ class FlextInfraUtilitiesLintRecipes:
                 identity.
 
         """
-
-
         for candidate in (pkg_dir, *pkg_dir.parents):
             if not (candidate / c.PYPROJECT_FILENAME).is_file():
                 continue

@@ -48,8 +48,6 @@ class FlextInfraPyprojectModernizerDocument:
             The declared kind, classifying member projects on demand.
 
         """
-
-
         if project_kind is not None:
             return project_kind
         if path.parent.resolve() == self.root.resolve():
@@ -252,22 +250,6 @@ class FlextInfraPyprojectModernizerDocument:
             The resulting ``t.StrSequence``.
 
         """
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         path, payload = state.pyproject_path, state.payload
         is_root = path.parent.resolve() == self.root.resolve()
         # Scaffold (pre-write) contexts have no on-disk project root yet: derive
@@ -356,10 +338,6 @@ class FlextInfraPyprojectModernizerDocument:
             The resulting ``p.Result[t.StrSequence]``.
 
         """
-
-
-
-
         path = state.pyproject_path
         doc = u.Cli.toml_document_from_mapping(state.payload)
         self._reorder_document(doc, preferred_first=self.tomlsort_sort_first)

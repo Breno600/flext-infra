@@ -9,10 +9,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_infra import c, t
+from flext_infra._utilities import FlextInfraUtilitiesGit
 from flext_infra._utilities._project_discovery_shape import (
     FlextInfraUtilitiesProjectDiscoveryShapeMixin,
 )
-from flext_infra._utilities import FlextInfraUtilitiesGit
 
 
 class FlextInfraUtilitiesProjectDiscoveryCandidatesMixin(
@@ -36,8 +36,6 @@ class FlextInfraUtilitiesProjectDiscoveryCandidatesMixin(
             ValueError: If ``declared_paths.failure``.
 
         """
-
-
         roots: t.MutableSequenceOf[Path] = []
         effective_scan_dirs = scan_dirs or frozenset()
         declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(

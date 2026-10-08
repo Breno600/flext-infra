@@ -56,9 +56,6 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-
-
-
         planned = u.Infra.codemod_rule_plan(self.repository_root)
         if planned.failure:
             return r[t.Cli.ResultValue].from_failure(planned)
@@ -101,8 +98,6 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-
-
         self.progress.emit("mod: validate ast-grep rule fixtures")
         FlextInfraModGateEngine.validate_rule_fixtures(
             self.repository_root,
@@ -122,8 +117,6 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             The resulting ``p.Result[bool]``.
 
         """
-
-
         current_text = FlextInfraModTextGateEngine.scan(
             root,
             fix=False,
@@ -173,9 +166,6 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             fixed-point check must observe for cross-phase cycle detection.
 
         """
-
-
-
         outcome = r[
             t.Pair[
                 m.Infra.ModScanReport,
@@ -255,8 +245,6 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         never deadlock). Ruff, Pyrefly and Pyright findings are check's alone.
 
         """
-
-
         generated = FlextInfraModReplacements.generator_owned(current.entries)
         if generated:
             self.progress.emit(
@@ -334,10 +322,6 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-
-
-
-
         root = self.repository_root
         rope_workspace = self.rope
         baseline_cycles = self._import_cycles(root)
@@ -436,9 +420,6 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             states the cycle must observe for cross-phase cycle detection.
 
         """
-
-
-
         fingerprint = FlextInfraCodemodSemanticApply.source_fingerprint
         outcome = r[
             t.Pair[

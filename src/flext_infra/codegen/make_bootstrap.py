@@ -60,8 +60,6 @@ class FlextInfraCodegenMakeBootstrap(FlextInfraCodegenExecutionBase[bool]):
             The resulting ``p.Result[bool]``.
 
         """
-
-
         conformed = FlextInfraCodegenConform.execute_request(
             m.Infra.CodegenConformRequest(
                 root=root,

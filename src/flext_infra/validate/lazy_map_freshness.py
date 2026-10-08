@@ -42,8 +42,6 @@ class FlextInfraValidateLazyMapFreshness(FlextInfraProjectSelectionServiceBase[b
             r with ValidationReport listing each stale ``__init__.py`` as a violation.
 
         """
-
-
         planned = FlextInfraCodegenLazyInit(
             repository_root=repository_root,
         ).plan_files()

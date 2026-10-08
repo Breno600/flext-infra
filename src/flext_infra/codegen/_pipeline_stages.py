@@ -84,7 +84,6 @@ class FlextInfraCodegenPipelineStagesMixin:
 
         """
 
-
         def _action() -> m.Infra.CodegenResult:
             dry_run = bool(ctx.settings.get(c.Infra.PIPELINE_KEY_DRY_RUN, False))
             result = FlextInfraCodegenConform.execute_request(
@@ -132,7 +131,6 @@ class FlextInfraCodegenPipelineStagesMixin:
 
         """
 
-
         def _action() -> bool:
             dry_run = bool(ctx.settings.get(c.Infra.PIPELINE_KEY_DRY_RUN, False))
             projects = self._state.discovered_projects
@@ -167,7 +165,6 @@ class FlextInfraCodegenPipelineStagesMixin:
             The resulting ``p.Result[m.Cli.PipelineStageResult]``.
 
         """
-
 
         def _action() -> int:
             py_typed = FlextInfraCodegenPyTyped(repository_root=ctx.repository_root)
@@ -230,7 +227,6 @@ class FlextInfraCodegenPipelineStagesMixin:
 
         """
 
-
         def _action() -> t.SequenceOf[m.Infra.ScaffoldResult]:
             dry_run = bool(ctx.settings.get(c.Infra.PIPELINE_KEY_DRY_RUN, False))
             projects = self._state.discovered_projects
@@ -260,7 +256,6 @@ class FlextInfraCodegenPipelineStagesMixin:
 
         """
 
-
         def _action() -> t.SequenceOf[m.Infra.AutoFixResult]:
             dry_run = bool(ctx.settings.get(c.Infra.PIPELINE_KEY_DRY_RUN, False))
             projects = self._state.discovered_projects
@@ -289,7 +284,6 @@ class FlextInfraCodegenPipelineStagesMixin:
             The resulting ``p.Result[m.Cli.PipelineStageResult]``.
 
         """
-
 
         def _action() -> int:
             analysis = (

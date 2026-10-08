@@ -20,7 +20,11 @@ from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
 
 @pytest.fixture
 def symbolic_workspace(mod_workspace: Path) -> Path:
-    """Provide real Python modules consumed by the native engine and interpreter."""
+    """Provide real Python modules consumed by the native engine and interpreter.
+
+    Returns:
+        The resulting ``Path``.
+    """
     tests = mod_workspace / "tests"
     (tests / "unit" / "codegen").mkdir(parents=True)
     (tests / "__init__.py").write_text(
@@ -47,6 +51,7 @@ class TestsFlextInfraSymbolicBindingPublication:
         symbolic_workspace: Path,
         receiver: str,
     ) -> None:
+        """Test rebound receiver is diagnostic without mutation."""
         root = symbolic_workspace
         consumer = root / "tests" / "unit" / "codegen" / "consumer.py"
         before = (
@@ -115,6 +120,7 @@ class TestsFlextInfraSymbolicBindingPublication:
         symbolic_workspace: Path,
         scope: str,
     ) -> None:
+        """Test rebound outcome receiver is never an enum fixer."""
         root = symbolic_workspace
         consumer = root / "tests" / "unit" / "codegen" / "consumer.py"
         source = (
@@ -177,6 +183,7 @@ class TestsFlextInfraSymbolicBindingPublication:
     def test_dependency_only_drift_refuses_every_candidate_before_writes(
         symbolic_workspace: Path,
     ) -> None:
+        """Test dependency only drift refuses every candidate before writes."""
         root = symbolic_workspace
         consumers = tuple(
             root / "tests" / "unit" / "codegen" / name
@@ -230,6 +237,7 @@ class TestsFlextInfraSymbolicBindingPublication:
     def test_type_alias_payloads_and_legacy_comparisons_remain_visible(
         symbolic_workspace: Path,
     ) -> None:
+        """Test type alias payloads and legacy comparisons remain visible."""
         root = symbolic_workspace
         consumer = root / "tests" / "unit" / "codegen" / "consumer.py"
         source = (

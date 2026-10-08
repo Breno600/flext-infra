@@ -13,7 +13,9 @@ from pathlib import Path
 from flext_cli import cli
 
 from flext_infra import c, config, m, p, r, t, u
-from flext_infra.refactor._census_apply_formatting import FlextInfraRefactorCensusApplyFormattingMixin
+from flext_infra.refactor._census_apply_formatting import (
+    FlextInfraRefactorCensusApplyFormattingMixin,
+)
 from flext_infra.transformers import FlextInfraSemanticPublication
 
 
@@ -535,11 +537,6 @@ class FlextInfraCodemodSemanticApply:
             ValueError: If source changed after semantic preflight.
 
         """
-
-
-
-
-
         semantic_plans: list[m.Infra.SemanticFilePlan] = []
         consumer_first = sorted(changed, key=cls._path_key)
         for path in consumer_first:

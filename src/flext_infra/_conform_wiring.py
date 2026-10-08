@@ -33,8 +33,6 @@ class _FlextInfraConformWiringMixin:
             The resulting ``p.Infra.DocsArtifactPlanner``.
 
         """
-
-
         return FlextInfraDocGenerator(
             repository_root=repository_root,
             projects=projects,
@@ -49,8 +47,6 @@ class _FlextInfraConformWiringMixin:
             The resulting ``p.Infra.MarkdownFormatGate``.
 
         """
-
-
         return FlextInfraMarkdownFormatGate(repository_root)
 
     def codegen_conform_collaborators(self) -> m.Infra.CodegenConformPorts:

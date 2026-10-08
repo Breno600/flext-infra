@@ -222,8 +222,6 @@ class FlextInfraUtilitiesPrivateImportFacades:
                 set[str]]]``.
 
         """
-
-
         bindings: MutableMapping[str, set[str]] = {}
         exports: MutableMapping[str, set[str]] = {}
         for module, (source, is_package) in sorted(sources.items()):

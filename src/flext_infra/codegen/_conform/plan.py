@@ -327,8 +327,6 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
             The public plan and its complete authenticated lazy-init receipt.
 
         """
-
-
         result_type = r[t.Pair[m.Infra.CodegenPlan, m.Infra.CodegenPhaseAnalysis]]
         root = request.root.expanduser().resolve()
         topology = self._planning_workspace(request, root)
@@ -383,8 +381,6 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                 m.Infra.RepositoryConformTarget, m.Infra.RepositoryRef]]``.
 
         """
-
-
         result_type = r[
             t.Triple[
                 m.Infra.WorkspaceSpec,
@@ -536,8 +532,6 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                 m.Infra.RepositoryConformTarget, m.Infra.WorkspaceSpec]]``.
 
         """
-
-
         result_type = r[
             t.Triple[
                 Path,
@@ -626,8 +620,6 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
             The resulting ``p.Result[m.Infra.WorkspaceSpec]``.
 
         """
-
-
         if repository.path != Path():
             declared_member = FlextInfraWorkspaceDetector.load_workspace_spec(
                 repository_root,

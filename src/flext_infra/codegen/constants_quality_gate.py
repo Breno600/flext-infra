@@ -50,9 +50,6 @@ class FlextInfraCodegenQualityGate(s[bool]):
             The resulting ``p.Result[t.JsonMapping]``.
 
         """
-
-
-
         lazy_plans = FlextInfraCodegenLazyInit(
             repository_root=self.repository_root,
         ).plan_files()

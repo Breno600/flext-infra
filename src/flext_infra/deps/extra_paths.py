@@ -262,8 +262,6 @@ class FlextInfraExtraPathsManager(
             The resulting ``t.StrSequence``.
 
         """
-
-
         rules = config.Infra.tooling.tools.pyrefly.path_rules
         # Never reread an on-disk Pyright table while its
         # in-memory payload is being conformed; include only real production roots.

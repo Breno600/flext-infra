@@ -13,8 +13,10 @@ from typing import ClassVar, TypeGuard
 
 from flext_infra import m, p, t
 from flext_infra._settings import settings
-from flext_infra._utilities import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities import (
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeRuntime,
+)
 
 
 class FlextInfraUtilitiesRopeAnalysisAstHelpers:
@@ -59,8 +61,6 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
             The resulting ``t.Triple[str, str, int]``.
 
         """
-
-
         file_path = FlextInfraUtilitiesRopeCore.resource_file_path(
             rope_project,
             resource,
@@ -127,8 +127,6 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
             The resulting ``t.Infra.RopePyModule``.
 
         """
-
-
         rope_project = FlextInfraUtilitiesRopeAnalysisAstHelpers._shared_parse_project()
         result: t.Infra.RopePyModule = (
             FlextInfraUtilitiesRopeRuntime.build_string_module(rope_project, source)
@@ -143,9 +141,6 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
             A process-wide rope project usable for string parsing.
 
         """
-
-
-
         cached = FlextInfraUtilitiesRopeAnalysisAstHelpers._parse_project
         if cached is None:
             # Root-cause fix: the anchor was a hardcoded

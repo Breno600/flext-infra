@@ -82,8 +82,6 @@ class FlextInfraUtilitiesCompatibilityAliasValidation:
             ValueError: If qualified alias residue; or if alias export residue in.
 
         """
-
-
         tree = ast.parse(source, filename=str(file_path))
         for node in tree.body:
             value = FlextInfraUtilitiesCompatibilityAliasValidation._dunder_all_value(

@@ -10,8 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import c, config, m, p, r, t, u
-from flext_infra import FlextInfraWorkspaceDetector
+from flext_infra import FlextInfraWorkspaceDetector, c, config, m, p, r, t, u
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -255,8 +254,6 @@ class FlextInfraGitLanes:
             Bead ownership output from the declared city/rig command only.
 
         """
-
-
         loaded = FlextInfraWorkspaceDetector.load_beads_spec(repo_root)
         if loaded.failure:
             return r[str].from_failure(loaded)

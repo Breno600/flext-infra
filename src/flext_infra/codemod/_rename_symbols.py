@@ -259,8 +259,6 @@ class FlextInfraRenameSymbols:
             ValueError: If Rope input changed after authentication.
 
         """
-
-
         resources: dict[Path, t.Infra.RopeFile] = {}
         for path in ordered_paths:
             resource = project.get_resource(path.relative_to(root).as_posix())

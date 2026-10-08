@@ -81,25 +81,6 @@ class FlextInfraGateRegistry:
             The runtime gate classes registered for workspace checks.
 
         """
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         return (
             FlextInfraRuffLintGate,
             FlextInfraRuffFormatGate,

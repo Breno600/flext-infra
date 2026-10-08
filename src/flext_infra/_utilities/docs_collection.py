@@ -12,10 +12,10 @@ from hashlib import sha256
 from pathlib import Path
 
 from flext_infra import c, m, t
+from flext_infra._utilities import FlextInfraUtilitiesDocsContract
 from flext_infra._utilities.docs_collection_verify import (
     FlextInfraUtilitiesDocsCollectionVerify,
 )
-from flext_infra._utilities import FlextInfraUtilitiesDocsContract
 
 
 class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify):
@@ -295,8 +295,6 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
             The resulting ``m.Infra.PlanCollectionBundle``.
 
         """
-
-
         canonical = state.canonical
         owned_outputs = {
             canonical / "collection-manifest.json",
@@ -423,8 +421,6 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
             The resulting ``str``.
 
         """
-
-
         lines = [
             "# Collected plans",
             "",
@@ -464,8 +460,6 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                 target changed after source read.
 
         """
-
-
         canonical = state.canonical
         projection = state.projection
         state.record_manifest()

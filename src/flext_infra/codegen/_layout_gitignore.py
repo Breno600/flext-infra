@@ -51,11 +51,6 @@ class FlextInfraCodegenLayoutGitignoreMixin:
             The resulting ``p.Result[t.Infra.LayoutStatus]``.
 
         """
-
-
-
-
-
         rendered = u.Infra.render_project_gitignore(
             config.Infra.codegen,
             profile=profile,
@@ -105,10 +100,6 @@ class FlextInfraCodegenLayoutGitignoreMixin:
             The resulting ``p.Result[t.Infra.LayoutStatus]``.
 
         """
-
-
-
-
         gitignore_path = project_dir / c.Infra.GITIGNORE
         current = ""
         if gitignore_path.is_file():
@@ -158,8 +149,6 @@ class FlextInfraCodegenLayoutGitignoreMixin:
             The resulting ``p.Result[c.Infra.MakeProfile | None]``.
 
         """
-
-
         workspace = FlextInfraWorkspaceDetector.load_workspace_spec(
             u.Infra.resolve_repository_root_or_cwd(project_dir),
         )

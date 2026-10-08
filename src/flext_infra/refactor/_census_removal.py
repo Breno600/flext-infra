@@ -11,10 +11,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import m, u
+from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
 from flext_infra.refactor._census_apply_formatting import (
     FlextInfraRefactorCensusApplyFormattingMixin,
 )
-from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -128,8 +128,6 @@ class FlextInfraRefactorCensusRemovalMixin(
             RuntimeError: If removal apply failed for.
 
         """
-
-
         touched_paths: set[Path] = set()
         for candidate in report.removal_candidates:
             apply_result = u.Infra.apply_simple_removal_candidate(

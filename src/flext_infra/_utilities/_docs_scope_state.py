@@ -9,15 +9,17 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
+from flext_cli import u
+
 from flext_infra import c, t
 from flext_infra._models import FlextInfraModelsWorkspace
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDependencies,
+    FlextInfraUtilitiesPyproject,
+)
 from flext_infra._utilities._docs_scope_paths import (
     FlextInfraUtilitiesDocsScopePathsMixin,
 )
-from flext_cli import u
-from flext_infra._utilities import FlextInfraUtilitiesDependencies
-from flext_infra._utilities import FlextInfraUtilitiesPyproject
-from flext_infra._utilities import FlextInfraUtilitiesPyproject
 
 
 class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMixin):
@@ -42,8 +44,6 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
             ValueError: If ``snapshot.failure``.
 
         """
-
-
         root = FlextInfraUtilitiesDocsScopeStateMixin.absolute_lexical(project_root)
         pyproject_path = root / c.PYPROJECT_FILENAME
         snapshot = u.Cli.atomic_read_binary_file_state(pyproject_path, required=False)
@@ -74,13 +74,6 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
                 or if docs pyproject is not valid UTF-8.
 
         """
-
-
-
-
-
-
-
         if content is None:
             payload: t.JsonMapping = {}
         else:
@@ -159,8 +152,6 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
             The declared project name from ``[project].name``.
 
         """
-
-
         return FlextInfraUtilitiesPyproject.project_name_from_payload(entry, payload)
 
     @staticmethod
@@ -183,8 +174,6 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
             The resulting ``t.JsonMapping``.
 
         """
-
-
         return FlextInfraUtilitiesPyproject.docs_meta_from_payload(payload)
 
     @staticmethod
@@ -228,8 +217,6 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
             The primary package name using pre-loaded payload.
 
         """
-
-
         return FlextInfraUtilitiesPyproject.package_name_from_payload(
             project_root,
             payload,

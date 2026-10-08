@@ -17,6 +17,7 @@ import ast
 from typing import TYPE_CHECKING
 
 from flext_infra import m, r, t
+from flext_infra._utilities import FlextInfraUtilitiesPrivateImportFacades
 from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
 )
@@ -26,7 +27,6 @@ from flext_infra._utilities._semantic_cutover.facade_base_cst import (
 from flext_infra._utilities._semantic_cutover.facade_owners import (
     FlextInfraUtilitiesSemanticCutoverFacadeOwners,
 )
-from flext_infra._utilities import FlextInfraUtilitiesPrivateImportFacades
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping
@@ -55,8 +55,6 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
             The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
 
         """
-
-
         selected = frozenset((root / finding.file).resolve() for finding in findings)
         items = tuple(
             item for item in cls._editable_sources(sources) if item[0] in selected

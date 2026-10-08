@@ -95,10 +95,6 @@ class FlextInfraCodegenCensus(s[str]):
             The resulting ``p.Result[t.VariadicTuple[m.Infra.CensusReport]]``.
 
         """
-
-
-
-
         if projects is not None:
             selected_projects = tuple(projects)
         else:

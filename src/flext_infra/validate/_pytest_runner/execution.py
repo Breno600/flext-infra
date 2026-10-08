@@ -41,8 +41,6 @@ class FlextInfraPytestRunnerExecution(
             The resulting ``p.Result[m.Infra.TestmonCacheState]``.
 
         """
-
-
         return FlextInfraTestmonDbInspector(
             repository_root=self.root,
             db_path=self.testmon_db,
@@ -645,8 +643,6 @@ class FlextInfraPytestRunnerExecution(
             ValueError: If the database path contains output delimiters.
 
         """
-
-
         publication = self._cache_publication
         output = self._optional_environment_path("GITHUB_OUTPUT")
         if publication is not None and output is not None:
@@ -683,8 +679,6 @@ class FlextInfraPytestRunnerExecution(
                 cache.
 
         """
-
-
         report_dir = self._report_directory()
         self._write_run_context(
             report_dir,
@@ -812,8 +806,6 @@ class FlextInfraPytestRunnerExecution(
             RuntimeError: If completed testmon run has no checkpointed database.
 
         """
-
-
         accounting = m.Infra.TestmonRunAccounting.model_validate_json(
             (report_dir / "run-accounting.json").read_text(encoding="utf-8"),
         )

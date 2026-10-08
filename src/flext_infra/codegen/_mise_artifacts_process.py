@@ -34,10 +34,6 @@ class FlextInfraMiseArtifactsProcess:
             The resulting ``p.Result[bool]``.
 
         """
-
-
-
-
         if intent is None:
             before = u.Cli.atomic_read_binary_file_state(path, required=False)
             if before.failure:

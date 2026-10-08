@@ -77,8 +77,6 @@ class FlextInfraCodegenLayoutFilesMixin:
             The resulting ``p.Result[t.Pair[t.Infra.LayoutStatus, str]]``.
 
         """
-
-
         spec = config.Infra.codegen.layout
         project_name = FlextInfraCodegenLayoutPlanMixin.layout_project_name(project_dir)
         target = project_dir / spec.archive_root / project_name / rel

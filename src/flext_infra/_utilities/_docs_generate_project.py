@@ -9,14 +9,15 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_infra import c, m, p, r, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDocsApi,
+    FlextInfraUtilitiesDocsContract,
+    FlextInfraUtilitiesDocsGuidesMixin,
+    FlextInfraUtilitiesDocsRender,
+)
 from flext_infra._utilities._docs_generate_plan import (
     FlextInfraUtilitiesDocsGeneratePlanMixin,
 )
-from flext_infra._utilities import FlextInfraUtilitiesDocsApi
-from flext_infra._utilities import FlextInfraUtilitiesDocsContract
-from flext_infra._utilities import FlextInfraUtilitiesDocsGuidesMixin
-from flext_infra._utilities import FlextInfraUtilitiesDocsRender
-from flext_infra._utilities import FlextInfraUtilitiesDocsRender
 
 
 class FlextInfraUtilitiesDocsGenerateProjectMixin(
@@ -53,8 +54,6 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
             The resulting ``list[t.Pair[Path, str]]``.
 
         """
-
-
         module_names = FlextInfraUtilitiesDocsGenerateProjectMixin._module_names(scope)
         api_root = scope.path / "docs/api-reference/generated"
         rendered = [
@@ -98,13 +97,6 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
                 ``p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]``.
 
         """
-
-
-
-
-
-
-
         guides = FlextInfraUtilitiesDocsGuidesMixin.docs_project_guides_artifacts(
             scope,
             repository_root=repository_root,

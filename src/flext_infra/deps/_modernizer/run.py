@@ -308,10 +308,6 @@ class FlextInfraPyprojectModernizerRun:
             The resulting ``int``.
 
         """
-
-
-
-
         try:
             root_project_name = u.Infra.project_name_from_payload(
                 root_state.pyproject_path,

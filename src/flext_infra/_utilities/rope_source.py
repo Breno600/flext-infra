@@ -12,8 +12,10 @@ from operator import itemgetter
 from pathlib import Path
 
 from flext_infra import c, t
-from flext_infra._utilities import FlextInfraUtilitiesDiscovery
-from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDiscovery,
+    FlextInfraUtilitiesRopeRuntime,
+)
 
 
 class FlextInfraUtilitiesRopeSource:
@@ -27,8 +29,6 @@ class FlextInfraUtilitiesRopeSource:
             The resulting ``t.StrSequence``.
 
         """
-
-
         src_dir = project_dir / c.Infra.DEFAULT_SRC_DIR
         return [
             name
@@ -226,8 +226,6 @@ class FlextInfraUtilitiesRopeSource:
             TypeError: If the resource is not a Rope file resource.
 
         """
-
-
         _ = rope_project
         if not FlextInfraUtilitiesRopeRuntime.file_resource(resource):
             msg = f"expected a Rope file resource: {resource.path}"

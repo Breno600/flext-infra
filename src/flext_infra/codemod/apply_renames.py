@@ -27,8 +27,6 @@ class FlextInfraApplyRenames:
         pairs: t.SequenceOf[t.Pair[str, str]],
     ) -> t.Pair[t.VariadicTuple[m.Infra.SemanticFilePlan], int]:
 
-
-
         inventory = FlextInfraRenameSources.inventory(roots, params)
         sources = {
             path: state.content.decode(c.Cli.ENCODING_DEFAULT)
@@ -112,8 +110,6 @@ class FlextInfraApplyRenames:
             changed paths and the residual pending-edit count.
 
         """
-
-
         csv_path, driver = state
         plans, pending = planned
 
@@ -167,8 +163,6 @@ class FlextInfraApplyRenames:
             The resulting ``p.Result[m.Infra.ApplyRenamesReport]``.
 
         """
-
-
         roots = tuple(sorted({Path(value).resolve() for value in params.roots}))
         error = cls._campaign_error(params, roots)
         if error is not None:

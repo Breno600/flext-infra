@@ -35,8 +35,6 @@ class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
             The resulting ``p.Result[m.Infra.FleetGapsReport]``.
 
         """
-
-
         root = self.repository_root
         loaded = FlextInfraWorkspaceDetector.load_workspace_spec(root)
         if loaded.failure:

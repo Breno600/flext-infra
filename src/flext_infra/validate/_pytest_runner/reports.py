@@ -294,8 +294,6 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
             The resulting ``p.Result[m.Infra.PytestDiagnostics]``.
 
         """
-
-
         extractor = FlextInfraPytestDiagExtractor(
             repository_root=self.root,
             junit=report_dir / "junit.xml",
@@ -316,8 +314,6 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
             RuntimeError: If pytest collection contains blocking findings.
 
         """
-
-
         diagnostics = FlextInfraPytestDiagExtractor.extract_report_log(
             report_log,
         ).unwrap()

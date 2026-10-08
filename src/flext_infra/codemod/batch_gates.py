@@ -39,10 +39,6 @@ class FlextInfraModGateEngine:
             The resulting ``p.Result[bool]``.
 
         """
-
-
-
-
         for config_root, owner_rules, owner_is_governed in cls._fixture_owners(
             root,
             rules,
@@ -210,10 +206,6 @@ class FlextInfraModGateEngine:
                 fixture scratch must be outside its source root.
 
         """
-
-
-
-
         governed_roots = tuple(
             project.resolve() for project in u.Infra.governed_project_roots(root)
         )
@@ -254,10 +246,6 @@ class FlextInfraModGateEngine:
             ValueError: If ast-grep fixture must be a regular file or directory.
 
         """
-
-
-
-
         directories = FlextInfraCodemodSnapshotReconciler.fixture_directories(
             config_root,
         )
@@ -340,10 +328,6 @@ class FlextInfraModGateEngine:
                 required id.
 
         """
-
-
-
-
         source_rules = set(owner_rules)
         directories = FlextInfraCodemodSnapshotReconciler.fixture_directories(
             config_root,
@@ -386,10 +370,6 @@ class FlextInfraModGateEngine:
             The resulting ``t.StrSequence``.
 
         """
-
-
-
-
         pattern = f"*{c.Infra.CODEMOD_SNAPSHOT_SUFFIX}"
         changes: list[str] = []
         for test_dir in FlextInfraCodemodSnapshotReconciler.fixture_directories(
@@ -994,8 +974,6 @@ class FlextInfraModGateEngine:
             The resulting ``p.Result[m.Infra.ModScanReport]``.
 
         """
-
-
         planned = u.Infra.codemod_rule_plan(root)
         if planned.failure:
             return r[m.Infra.ModScanReport].from_failure(planned)

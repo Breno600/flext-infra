@@ -139,8 +139,6 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             The absolute dotted module name.
 
         """
-
-
         suffix = FlextInfraUtilitiesQualifiedNames.dotted_name(node.module) or ""
         if not node.relative:
             return suffix
@@ -159,8 +157,6 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             The ``as`` name, else the imported dotted name.
 
         """
-
-
         if imported.asname is not None and isinstance(imported.asname.name, cst.Name):
             return imported.asname.name.value
         return FlextInfraUtilitiesQualifiedNames.dotted_name(imported.name) or ""
@@ -181,8 +177,6 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             nested modules whose members or owner it already imports.
 
         """
-
-
         if isinstance(node.names, cst.ImportStar):
             return {}, frozenset()
         base = cls._imported_module(
@@ -215,8 +209,6 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             Local name to nested module.
 
         """
-
-
         bound: t.MutableStrMapping = {}
         for imported in node.names:
             full = FlextInfraUtilitiesQualifiedNames.dotted_name(imported.name) or ""
@@ -238,8 +230,6 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             use that still needs the module object.
 
         """
-
-
         if FlextInfraUtilitiesQualifiedNames.rebinds_name_in_place(
             parent,
             node,

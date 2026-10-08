@@ -28,9 +28,6 @@ class FlextInfraDocCollector:
             The resulting ``p.Result[bool]``.
 
         """
-
-
-
         authenticated = cls._authenticated_configuration(request)
         if authenticated.failure:
             return r[bool].from_failure(authenticated)

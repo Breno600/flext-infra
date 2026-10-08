@@ -11,16 +11,15 @@ from collections.abc import MutableMapping
 from typing import ClassVar
 
 from flext_infra import c, m, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesRopeAnalysisAstHelpers,
+    FlextInfraUtilitiesRopeAnalysisSourceScan,
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeRuntime,
+)
 from flext_infra._utilities._rope_analysis._exports_binding_inventory import (
     _ExportBindingInventory,
 )
-from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
-from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
-from flext_infra._utilities import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisAstHelpers
-from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
-from flext_infra._utilities import FlextInfraUtilitiesRopeAnalysisSourceScan
-from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeAnalysisExports:
@@ -125,11 +124,6 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             Module-local export names from Rope metadata.
 
         """
-
-
-
-
-
         resolved_export_options = export_options or m.Infra.ExportOptions()
         cache_key = (
             *FlextInfraUtilitiesRopeAnalysisAstHelpers.resource_cache_key(
@@ -175,8 +169,6 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             Module-local exports from one parsed source snapshot.
 
         """
-
-
         resolved_options = export_options or m.Infra.ExportOptions()
         module = ast.parse(source)
         inventory = FlextInfraUtilitiesRopeAnalysisExports._source_binding_inventory(
@@ -281,11 +273,6 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             Locally assigned dunder export names.
 
         """
-
-
-
-
-
         return tuple(
             dict.fromkeys(
                 name
@@ -314,11 +301,6 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             Explicit ``__all__`` export names when declared locally.
 
         """
-
-
-
-
-
         explicit_all_name = attributes.get(c.Infra.DUNDER_ALL)
         if (
             explicit_all_name is None
@@ -350,8 +332,6 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             Implicit export names accepted by the export options.
 
         """
-
-
         guard_spans = FlextInfraUtilitiesRopeAnalysisExports._script_guard_spans(
             pymodule,
         )
@@ -447,8 +427,6 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             Whether one Rope name is exportable under the options.
 
         """
-
-
         if FlextInfraUtilitiesRopeRuntime.imported_name(pyname):
             return False
         if FlextInfraUtilitiesRopeRuntime.assigned_name(pyname):
@@ -502,8 +480,6 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             The explicit public ABI declared by one module source.
 
         """
-
-
         return (
             FlextInfraUtilitiesRopeAnalysisSourceScan.module_assignment_strings_source(
                 source,
@@ -519,8 +495,6 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             Whether ``source`` starts with a module docstring (rope-parsed).
 
         """
-
-
         pymodule = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(source)
         return bool(pymodule.get_doc())
 
@@ -532,8 +506,6 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             The PEP 257 summary line of the module docstring (rope-parsed).
 
         """
-
-
         pymodule = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(source)
         doc = pymodule.get_doc() or ""
         summary = next((line for line in doc.splitlines() if line.strip()), "")
@@ -550,11 +522,6 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             The resulting ``bool``.
 
         """
-
-
-
-
-
         pymodule = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(source)
         pyname = pymodule.get_attributes().get(symbol_name)
         if pyname is None or not FlextInfraUtilitiesRopeRuntime.defined_name(pyname):
@@ -578,8 +545,6 @@ class FlextInfraUtilitiesRopeAnalysisExports:
             Assignment names followed by a string-literal expression (rope-parsed).
 
         """
-
-
         pymodule = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(source)
         module_ast = pymodule.get_ast()
         body = getattr(module_ast, "body", []) or []

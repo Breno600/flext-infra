@@ -73,8 +73,6 @@ class FlextInfraModReplacements:
             The resulting ``p.Result[bool]``.
 
         """
-
-
         allowed = cls.require_authored(
             tuple(finding for finding in report.entries if finding.actionable),
         )
@@ -226,8 +224,6 @@ class FlextInfraModReplacements:
 
         """
         # AST rewrites can also leave imports whose last reference was removed.
-
-
 
         with u.Infra.open_project(root) as rope_project:
             normalized = u.Infra.normalize_imports(

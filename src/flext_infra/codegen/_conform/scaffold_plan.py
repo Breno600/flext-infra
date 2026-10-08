@@ -33,8 +33,6 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
             The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
 
         """
-
-
         project = workspace.project
         if project is None:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
@@ -302,8 +300,6 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
             The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
 
         """
-
-
         result_type = r[t.SequenceOf[m.Infra.CodegenFilePlan]]
         root = render_inputs.target.root
         pyproject_entry = next(

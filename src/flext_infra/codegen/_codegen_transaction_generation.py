@@ -12,21 +12,21 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, t, u
+from flext_infra.codegen._codegen_staging import FlextInfraCodegenStaging
 from flext_infra.codegen._codegen_transaction_recovery import (
     FlextInfraCodegenTransactionRecovery,
 )
 from flext_infra.codegen._mise_artifacts_journal import (
     FlextInfraMiseArtifactsJournal as journal_io,
 )
+from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
+from flext_infra.codegen._mise_artifacts_staging import FlextInfraMiseStaging
 from flext_infra.codegen._mise_artifacts_state import (
     FlextInfraMiseArtifactsState as state,
 )
 from flext_infra.codegen._mise_artifacts_verification import (
     FlextInfraMiseArtifactsVerification as verify,
 )
-from flext_infra.codegen._codegen_staging import FlextInfraCodegenStaging
-from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
-from flext_infra.codegen._mise_artifacts_staging import FlextInfraMiseStaging
 from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
 
 if TYPE_CHECKING:
@@ -38,8 +38,6 @@ class FlextInfraCodegenTransactionGeneration(FlextInfraCodegenTransactionRecover
 
     def __init__(self, owner: p.Infra.MiseArtifactsOwner) -> None:
         """Initialize the transaction with its configured Mise artifact owner."""
-
-
         super().__init__(owner)
         self._owner = owner
         self._mise_staging = FlextInfraMiseStaging()
@@ -164,10 +162,6 @@ class FlextInfraCodegenTransactionGeneration(FlextInfraCodegenTransactionRecover
                 m.Cli.AtomicFileState]]]``.
 
         """
-
-
-
-
         source_states = FlextInfraCodegenPreconditions.phase_sources(
             c.Infra.CodegenStagedFilePhase.CONFORM_BOOTSTRAP,
             file_plans,
@@ -400,8 +394,6 @@ class FlextInfraCodegenTransactionGeneration(FlextInfraCodegenTransactionRecover
             with the complete publication set (conform plus changed Mise files).
 
         """
-
-
         ordinary_staged = FlextInfraCodegenStaging.stage_file_plans(
             layout,
             c.Infra.CodegenStagedFilePhase.CONFORM_BOOTSTRAP,
@@ -507,10 +499,6 @@ class FlextInfraCodegenTransactionGeneration(FlextInfraCodegenTransactionRecover
             files.
 
         """
-
-
-
-
         published = FlextInfraMisePublication.publish(publications)
         if published.failure:
             return r[t.VariadicTuple[Path]].from_failure(

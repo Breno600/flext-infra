@@ -54,8 +54,6 @@ class FlextInfraUtilitiesRopeModulePatch:
             The exported lower-case names bound directly to a class.
 
         """
-
-
         tree = ast.parse(source)
         class_names = {
             node.name for node in tree.body if isinstance(node, ast.ClassDef)
@@ -112,8 +110,6 @@ class FlextInfraUtilitiesRopeModulePatch:
             Source with one published alias letter removed from ``__all__``.
 
         """
-
-
         exports = FlextInfraUtilitiesRopeAnalysisExports.public_export_names_source(
             source,
         )

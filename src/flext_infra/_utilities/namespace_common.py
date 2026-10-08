@@ -51,8 +51,6 @@ class FlextInfraUtilitiesRefactorNamespaceCommon:
             The resulting ``t.StrSequence``.
 
         """
-
-
         if not imports:
             return list(lines)
         insert_idx = (

@@ -40,8 +40,6 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
             The resulting ``m.Infra.GateExecution``.
 
         """
-
-
         _ = ctx
         started = time.monotonic()
         validator = FlextInfraRuntimeCensusValidator.for_project(

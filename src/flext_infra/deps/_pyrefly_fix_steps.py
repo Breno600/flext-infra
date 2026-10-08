@@ -36,8 +36,6 @@ class FlextInfraConfigFixerSteps:
             The resulting ``p.Result[t.StrSequence]``.
 
         """
-
-
         search_raw = pyrefly.get(c.Infra.SEARCH_PATH)
         if not isinstance(search_raw, list):
             return r[t.StrSequence].ok(())
@@ -68,8 +66,6 @@ class FlextInfraConfigFixerSteps:
             The resulting ``p.Result[t.StrSequence]``.
 
         """
-
-
         includes_raw = pyrefly.get(c.Infra.PROJECT_INCLUDES)
         if not isinstance(includes_raw, list):
             return r[t.StrSequence].ok(())

@@ -33,8 +33,6 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
             The resulting ``p.Result[str]``.
 
         """
-
-
         output_lines: t.MutableSequenceOf[str] = (
             ["[DRY-RUN] Scanning...\n"] if self.dry_run else []
         )

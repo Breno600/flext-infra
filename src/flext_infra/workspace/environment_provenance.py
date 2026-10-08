@@ -52,8 +52,6 @@ class FlextInfraWorkspaceEnvironmentProvenance:
             The resulting ``p.Result[int]``.
 
         """
-
-
         resolved_root = repository_root.resolve()
         ci = config.Infra.codegen.make.ci
         if u.Infra.env_value(ci.variable).strip() == ci.value:

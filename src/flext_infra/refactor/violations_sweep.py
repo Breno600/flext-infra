@@ -32,8 +32,6 @@ class FlextInfraRefactorViolationsSweep(s[m.Infra.ViolationsSweepReport]):
             The resulting ``p.Result[m.Infra.ViolationsSweepReport]``.
 
         """
-
-
         root = self.repository_root
         before_scan = FlextInfraModGateEngine.scan(root, fix=False)
         if before_scan.failure:

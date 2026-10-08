@@ -10,8 +10,10 @@ import re
 from typing import TYPE_CHECKING
 
 from flext_infra import c, config, m
-from flext_infra._utilities import FlextInfraUtilitiesDocs
-from flext_infra._utilities import FlextInfraUtilitiesWorkspaceManifest
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDocs,
+    FlextInfraUtilitiesWorkspaceManifest,
+)
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -211,11 +213,6 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
             ValueError: If ``loaded.failure``.
 
         """
-
-
-
-
-
         loaded = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
             scope.path,
         )

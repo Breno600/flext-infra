@@ -34,8 +34,6 @@ class FlextInfraUtilitiesPrivateImportValidation:
                 or if public facade import.
 
         """
-
-
         tree = ast.parse(source, filename=str(file_path))
         for module, symbols in removals.items():
             if any(

@@ -19,7 +19,9 @@ from flext_infra.base import FlextInfraServiceBase
 from flext_infra.codegen._protocol_model_annotations import (
     FlextInfraCodegenProtocolModelAnnotations,
 )
-from flext_infra.codegen._protocol_model_render import FlextInfraCodegenProtocolModelRender
+from flext_infra.codegen._protocol_model_render import (
+    FlextInfraCodegenProtocolModelRender,
+)
 
 
 class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
@@ -33,10 +35,6 @@ class FlextInfraCodegenProtocolModels(FlextInfraServiceBase[t.Cli.ResultValue]):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-
-
-
-
         targeted = self._resolve_target(self.repository_root)
         if targeted.failure:
             return r[t.Cli.ResultValue].from_failure(targeted)

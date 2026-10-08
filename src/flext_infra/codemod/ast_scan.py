@@ -110,9 +110,6 @@ class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-
-
-
         cli.display_text("ast: validate ast-grep rule fixtures")
         FlextInfraModGateEngine.validate_rule_fixtures(root, rules).unwrap()
         current = FlextInfraModGateEngine.scan(root, fix=False).unwrap()

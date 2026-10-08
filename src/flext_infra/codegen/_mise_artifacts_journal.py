@@ -21,7 +21,9 @@ from flext_infra.codegen._mise_artifacts_process import (
 from flext_infra.codegen._mise_artifacts_state import (
     FlextInfraMiseArtifactsState as journal_state,
 )
-from flext_infra.codegen._mise_artifacts_verification import FlextInfraMiseArtifactsVerification
+from flext_infra.codegen._mise_artifacts_verification import (
+    FlextInfraMiseArtifactsVerification,
+)
 
 
 class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
@@ -240,10 +242,6 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
             The resulting ``p.Result[m.Infra.CodegenTransactionJournal]``.
 
         """
-
-
-
-
         finalized: list[m.Infra.CodegenStagingIntent] = []
         for intent in journal.staging_intents:
             observed = files.read_state(intent.before.path, required=False)
@@ -961,10 +959,6 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
             The resulting ``p.Result[bool]``.
 
         """
-
-
-
-
         return FlextInfraMiseArtifactsVerification.journal_topology(
             plan.layout,
             journal,

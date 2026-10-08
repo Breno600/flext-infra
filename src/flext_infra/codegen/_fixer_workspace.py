@@ -78,8 +78,6 @@ class FlextInfraCodegenFixerWorkspaceMixin(FlextInfraCodegenFixerPassesMixin):
             The resulting ``t.SequenceOf[m.Infra.AutoFixResult]``.
 
         """
-
-
         if projects is not None:
             selected_projects = tuple(projects)
         else:

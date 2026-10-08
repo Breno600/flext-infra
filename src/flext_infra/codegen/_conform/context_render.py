@@ -397,10 +397,6 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             The resulting ``p.Result[m.Infra.ProjectRenderContext]``.
 
         """
-
-
-
-
         target = render_inputs.target
         workspace = render_inputs.workspace
         codegen = render_inputs.codegen

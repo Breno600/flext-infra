@@ -141,10 +141,6 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
             The resulting ``p.Result[bool]``.
 
         """
-
-
-
-
         declared = self._validate_config(self.repository_root)
         if declared.failure or self.config_only:
             return declared

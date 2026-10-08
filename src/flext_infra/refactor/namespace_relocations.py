@@ -116,8 +116,6 @@ class FlextInfraNamespaceRelocationCascade:
                 t.Pair[c.Infra.CodemodRelocation, m.Infra.ModScanFinding]]``.
 
         """
-
-
         report = FlextInfraModGateEngine.scan(project_root, fix=False).unwrap()
         return FlextInfraNamespaceRelocationCascade.findings_from_report(
             project_root,

@@ -90,10 +90,6 @@ class FlextInfraAccessorMigrationOrchestrator(
             The resulting ``p.Result[m.Infra.AccessorMigrationReport]``.
 
         """
-
-
-
-
         selected_projects: t.StrSequence = (
             self.project_names if self.project_names is not None else ()
         )
