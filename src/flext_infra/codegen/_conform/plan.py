@@ -181,11 +181,16 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
         rendered = self._render_facade(destination, family, sources)
         if rendered.failure:
             return result_type.from_failure(rendered)
+        mode = states[0].mode
+        if mode is None:
+            return result_type.fail(
+                f"facade input has no authenticated mode: {destination}",
+            )
         file = self.file_plan(
             root,
             destination.relative_to(root).as_posix(),
             rendered.value,
-            mode=states[0].mode,
+            mode=mode,
             source_states=tuple(states),
         )
         if file.failure:

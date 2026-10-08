@@ -288,7 +288,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         spec = u.Infra.pyproject_managed_file()
         if spec.failure:
             return result_type.from_failure(spec)
-        modernizer = FlextInfraPyprojectModernizer(
+        modernizer = u.Infra(
             repository_root=root,
             skip_check=True,
         )
