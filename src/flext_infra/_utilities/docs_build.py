@@ -147,14 +147,12 @@ class FlextInfraUtilitiesDocsBuild:
             The resulting ``m.Infra.DocsPhaseReport``.
 
         """
-        from flext_cli import u
-
         site_dir = (
             scope.path
             / c.Infra.DEFAULT_DOCS_OUTPUT_DIR
             / f"{c.Infra.DIR_SITE}{site_suffix}"
         ).resolve()
-        mkdocs_logger = u.fetch_logger(c.Infra.MKDOCS_LOGGER_NAME)
+        mkdocs_logger = logging.getLogger(c.Infra.MKDOCS_LOGGER_NAME)
         warnings = BufferingHandler(capacity=sys.maxsize)
         warnings.setLevel(logging.WARNING)
         mkdocs_logger.addHandler(warnings)
@@ -178,8 +176,6 @@ class FlextInfraUtilitiesDocsBuild:
     @staticmethod
     def _run_mkdocs_api(settings: Path, site_dir: Path) -> None:
         """Run MkDocs build via the Python API with lazy imports."""
-        from flext_cli import u
-
         mkdocs_build = import_module("mkdocs.commands.build")
         mkdocs_config = import_module("mkdocs.config")
         load = cast(
@@ -191,7 +187,7 @@ class FlextInfraUtilitiesDocsBuild:
             FlextInfraUtilitiesDocsBuild._module_callable(mkdocs_build, "build"),
         )
         site_dir.parent.mkdir(parents=True, exist_ok=True)
-        logger = u.fetch_logger("mkdocs")
+        logger = logging.getLogger("mkdocs")
         diagnostics = logging.StreamHandler()
         diagnostics.setLevel(logging.WARNING)
         logger.addHandler(diagnostics)
