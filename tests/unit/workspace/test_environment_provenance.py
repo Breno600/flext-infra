@@ -420,6 +420,65 @@ class TestsFlextInfraWorkspaceEnvironmentProvenance:
         u.Tests.commit_git_changes(workspace, "declare noneditable local source")
         tm.ok(self._locked_verdict(workspace), eq=len(declared.members))
 
+    def test_locked_accepts_standalone_root_build(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A standalone root authenticates its own noneditable build of the checkout."""
+        root = tmp_path / "standalone"
+        u.Tests.WorktreeFixture.initialize_governed_project(
+            root,
+            "sample-root",
+            beads=u.Tests.BeadsIdentity(
+                workspace="sample-root-workspace",
+                database="sample-root-database",
+                issue_prefix="sample-root-prefix",
+            ),
+        )
+        manifest = tm.ok(u.Infra.load_workspace_manifest(root))[0]
+        tm.ok(
+            u.Cli.yaml_dump(
+                u.Infra.workspace_manifest_path(root),
+                manifest.model_copy(
+                    update={
+                        "repository": manifest.repository.model_copy(
+                            update={"editable": True},
+                        ),
+                    },
+                ).model_dump(mode="json"),
+            ),
+        )
+        (root / "uv.lock").write_text(
+            '[[package]]\nname = "sample-root"\nversion = "1.0"\n'
+            'source = { editable = "." }\n',
+            encoding="utf-8",
+        )
+        u.Tests.commit_git_changes(root, "declare standalone root lock")
+        with TemporaryDirectory(dir=prefix) as temporary:
+            site_packages = Path(temporary) / "site-packages"
+            self._installed_editable(
+                site_packages,
+                "sample-root",
+                direct_root=root,
+                source_root=Path(prefix),
+            )
+            (
+                site_packages / "sample_root-1.0.dist-info" / "direct_url.json"
+            ).write_text(
+                m.Infra.DirectUrlReceipt(
+                    url=root.as_uri(),
+                    dir_info=m.Infra.DirectUrlDirectoryInfo(),
+                ).model_dump_json(),
+                encoding="utf-8",
+            )
+            tm.ok(
+                FlextInfraWorkspaceEnvironmentProvenance.validate_locked(
+                    root,
+                    metadata_paths=(str(site_packages),),
+                ),
+                eq=1,
+            )
+
     @pytest.mark.parametrize(
         ("defect", "diagnostic"),
         [
