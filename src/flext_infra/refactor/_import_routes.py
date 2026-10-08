@@ -9,8 +9,7 @@ from __future__ import annotations
 import ast
 from collections.abc import MutableMapping
 
-from flext_infra import c, m, t
-from flext_infra._utilities.import_law import FlextInfraUtilitiesImportLaw
+from flext_infra import c, m, t, u
 from flext_infra.refactor._import_ast import FlextInfraImportNormalizationAstMixin
 
 
@@ -31,9 +30,8 @@ class FlextInfraImportNormalizationRoutesMixin(
     @classmethod
     def _relative_import_edits(
         cls,
-        tree: ast.Module,
+        state: m.Infra.ImportLawPass,
         lines: t.StrSequence,
-        scope: m.Infra.ImportLawScope,
     ) -> t.SequenceOf[tuple[int, int, t.StrSequence]]:
         """Rewrite relative imports into their absolute form.
 
@@ -41,12 +39,12 @@ class FlextInfraImportNormalizationRoutesMixin(
             The resulting ``t.SequenceOf[tuple[int, int, t.StrSequence]]``.
 
         """
-        parts = scope.module.split(".")
+        parts = state.scope.module.split(".")
         package_parts = (
-            parts if scope.file_path.name == c.Infra.INIT_PY else parts[:-1]
+            parts if state.scope.file_path.name == c.Infra.INIT_PY else parts[:-1]
         )
         edits: t.MutableSequenceOf[tuple[int, int, t.StrSequence]] = []
-        for node in cls._iter_imports(tree):
+        for node in cls._iter_imports(state.tree):
             if not isinstance(node, ast.ImportFrom) or not node.level:
                 continue
             base = package_parts[: len(package_parts) - (node.level - 1)]
@@ -67,9 +65,8 @@ class FlextInfraImportNormalizationRoutesMixin(
     @classmethod
     def _route_edits(
         cls,
-        tree: ast.Module,
+        state: m.Infra.ImportLawPass,
         lines: t.StrSequence,
-        scope: m.Infra.ImportLawScope,
     ) -> t.SequenceOf[tuple[int, int, t.StrSequence]]:
         """Rewrite each ``from`` import onto its canonical lazy source.
 
@@ -77,22 +74,17 @@ class FlextInfraImportNormalizationRoutesMixin(
             The resulting ``t.SequenceOf[tuple[int, int, t.StrSequence]]``.
 
         """
-        root_exports = FlextInfraUtilitiesImportLaw.lazy_exports(
-            scope.namespace_dir,
-            scope.namespace,
-        )
         edits: t.MutableSequenceOf[tuple[int, int, t.StrSequence]] = []
-        for node in cls._iter_imports(tree):
+        for node in cls._iter_imports(state.tree):
             if not isinstance(node, ast.ImportFrom) or node.level or not node.module:
                 continue
             routed: MutableMapping[str, list[str]] = {}
             for alias in node.names:
                 source = cls._root_alias_source(
+                    state,
                     node.module,
                     alias,
-                    scope,
-                    root_exports,
-                ) or cls._lazy_source(node.module, alias.name, scope)
+                ) or cls._lazy_source(state.scope, node.module, alias.name)
                 routed.setdefault(source or node.module, []).append(
                     cls._clause(alias),
                 )
@@ -111,13 +103,11 @@ class FlextInfraImportNormalizationRoutesMixin(
             )
         return edits
 
-    @classmethod
+    @staticmethod
     def _root_alias_source(
-        cls,
+        state: m.Infra.ImportLawPass,
         module: str,
         alias: ast.alias,
-        scope: m.Infra.ImportLawScope,
-        root_exports: t.StrMapping,
     ) -> str | None:
         """Return the namespace root when one binding is a root alias.
 
@@ -130,27 +120,28 @@ class FlextInfraImportNormalizationRoutesMixin(
             The namespace root, or ``None`` when the binding is no root alias.
 
         """
+        scope = state.scope
         bound = alias.asname or alias.name
-        if module == scope.namespace or bound not in root_exports:
+        published = state.root_exports.get(bound)
+        if module == scope.namespace or published is None:
             return None
         aliases = c.Infra.ALIAS_NAMES | c.Infra.IMPORT_LAW_ROOT_SINGLETONS
-        if bound not in aliases and root_exports[bound] != module:
+        if bound not in aliases and published != module:
             return None
-        order = FlextInfraUtilitiesImportLaw.import_layer_order()
+        layer = u.Infra.import_layer_order()[scope.layer]
         if (
             bound in scope.own_exports
             or bound == scope.family_letter
-            or order[scope.layer] in c.Infra.IMPORT_LAW_ROOT_SINGLETONS
+            or layer in c.Infra.IMPORT_LAW_ROOT_SINGLETONS
         ):
             return None
         return scope.namespace
 
-    @classmethod
+    @staticmethod
     def _lazy_source(
-        cls,
+        scope: m.Infra.ImportLawScope,
         module: str,
         name: str,
-        scope: m.Infra.ImportLawScope,
     ) -> str | None:
         """Return the nearest package that lazily publishes one leaf object.
 
@@ -162,14 +153,10 @@ class FlextInfraImportNormalizationRoutesMixin(
         package, _, leaf = module.rpartition(".")
         if not package or module == scope.module:
             return None
-        package_dir = FlextInfraUtilitiesImportLaw.package_dir(
-            scope.project_root,
-            package,
-        )
+        package_dir = u.Infra.import_package_dir(scope.project_root, package)
         if package_dir is None or (package_dir / leaf).is_dir():
             return None
-        exports = FlextInfraUtilitiesImportLaw.lazy_exports(package_dir, package)
-        if exports.get(name) != module:
+        if u.Infra.import_lazy_exports(package_dir, package).get(name) != module:
             return None
         return package
 

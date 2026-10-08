@@ -10,8 +10,7 @@ import ast
 import textwrap
 from collections.abc import MutableMapping
 
-from flext_infra import c, m, t
-from flext_infra._utilities.import_law import FlextInfraUtilitiesImportLaw
+from flext_infra import c, m, t, u
 from flext_infra.refactor._import_ast import FlextInfraImportNormalizationAstMixin
 
 
@@ -43,42 +42,52 @@ class FlextInfraImportNormalizationPlacementMixin(
             The resulting ``t.SequenceOf[tuple[int, int, t.StrSequence]]``.
 
         """
-        edits: t.MutableSequenceOf[tuple[int, int, t.StrSequence]] = []
-        for node in tree.body:
-            if not (
-                isinstance(node, ast.Try)
-                and node.handlers
-                and all(
-                    isinstance(handler.type, ast.Name)
-                    and handler.type.id in {"ImportError", "ModuleNotFoundError"}
-                    for handler in node.handlers
-                )
-                and node.body
-                and all(
-                    isinstance(statement, ast.Import | ast.ImportFrom)
+        return tuple(
+            (
+                node.lineno,
+                cls._end_line(node),
+                tuple(
+                    textwrap.dedent(
+                        "\n".join(
+                            lines[statement.lineno - 1 : cls._end_line(statement)],
+                        ),
+                    )
                     for statement in node.body
-                )
-            ):
-                continue
-            imports = [
-                textwrap.dedent(
-                    "\n".join(
-                        lines[statement.lineno - 1 : cls._end_line(statement)],
-                    ),
-                )
+                ),
+            )
+            for node in tree.body
+            if isinstance(node, ast.Try) and cls._is_import_guard(node)
+        )
+
+    @staticmethod
+    def _is_import_guard(node: ast.Try) -> bool:
+        """Return whether one ``try`` only imports and only catches import errors.
+
+        Returns:
+            Whether the statement is an import guard.
+
+        """
+        return (
+            bool(node.handlers)
+            and all(
+                isinstance(handler.type, ast.Name)
+                and handler.type.id in c.Infra.IMPORT_LAW_GUARD_ERRORS
+                for handler in node.handlers
+            )
+            and bool(node.body)
+            and all(
+                isinstance(statement, ast.Import | ast.ImportFrom)
                 for statement in node.body
-            ]
-            edits.append((node.lineno, cls._end_line(node), tuple(imports)))
-        return edits
+            )
+        )
 
     # -- hoisting and direction ------------------------------------------------------
 
     @classmethod
     def _placement_edits(
         cls,
-        tree: ast.Module,
+        state: m.Infra.ImportLawPass,
         lines: t.StrSequence,
-        scope: m.Infra.ImportLawScope,
     ) -> t.SequenceOf[tuple[int, int, t.StrSequence]]:
         """Hoist inline imports and move typing-only reverse imports.
 
@@ -86,73 +95,65 @@ class FlextInfraImportNormalizationPlacementMixin(
             The resulting ``t.SequenceOf[tuple[int, int, t.StrSequence]]``.
 
         """
-        parents = cls._parent_map(tree)
-        bindings = cls._module_bindings(tree)
-        root_exports = FlextInfraUtilitiesImportLaw.lazy_exports(
-            scope.namespace_dir,
-            scope.namespace,
-        )
-        runtime_lines: list[str] = []
-        typing_lines: list[str] = []
+        placed: MutableMapping[c.Infra.ImportPlacement, list[str]] = {
+            placement: [] for placement in c.Infra.ImportPlacement
+        }
         edits: t.MutableSequenceOf[tuple[int, int, t.StrSequence]] = []
-        for node in cls._iter_imports(tree):
-            if cls._inside_type_checking(node, parents):
-                continue
-            inline = cls._enclosing_scope(node, parents) is not None
-            if inline and cls._sole_body_statement(node, parents):
-                continue
-            kept: list[ast.alias] = []
-            moved = False
-            for alias in node.names:
-                placement = cls._alias_placement(
-                    node,
-                    alias,
-                    scope=scope,
-                    tree=tree,
-                    parents=parents,
-                    bindings=bindings,
-                    root_exports=root_exports,
-                    inline=inline,
-                )
-                match placement:
-                    case c.Infra.ImportPlacement.RUNTIME:
-                        runtime_lines.append(cls._render(node, (alias,)))
-                        moved = True
-                    case c.Infra.ImportPlacement.TYPING:
-                        typing_lines.append(cls._render(node, (alias,)))
-                        moved = True
-                    case c.Infra.ImportPlacement.BOUND:
-                        moved = True
-                    case c.Infra.ImportPlacement.STAY:
-                        kept.append(alias)
-            if not moved:
-                continue
-            indent = cls._line_indent(lines[node.lineno - 1])
-            replacement = (f"{indent}{cls._render(node, kept)}",) if kept else ()
-            edits.append((node.lineno, cls._end_line(node), replacement))
+        for node in cls._iter_imports(state.tree):
+            edit = cls._statement_edit(state, node, lines, placed)
+            if edit is not None:
+                edits.append(edit)
         if not edits:
             return ()
         edits.extend(
             cls._insertion_edits(
-                tree,
-                bindings,
-                cls._unique(runtime_lines),
-                cls._unique(typing_lines),
+                state,
+                tuple(dict.fromkeys(placed[c.Infra.ImportPlacement.RUNTIME])),
+                tuple(dict.fromkeys(placed[c.Infra.ImportPlacement.TYPING])),
             ),
         )
         return edits
 
     @classmethod
+    def _statement_edit(
+        cls,
+        state: m.Infra.ImportLawPass,
+        node: ast.Import | ast.ImportFrom,
+        lines: t.StrSequence,
+        placed: MutableMapping[c.Infra.ImportPlacement, list[str]],
+    ) -> tuple[int, int, t.StrSequence] | None:
+        """Plan one import statement's move, recording where its aliases go.
+
+        Returns:
+            The rewrite of the statement's own lines, or ``None`` when every
+            alias keeps its place.
+
+        """
+        if cls._inside_type_checking(node, state.parents):
+            return None
+        inline = cls._enclosing_scope(node, state.parents) is not None
+        if inline and cls._sole_body_statement(node, state.parents):
+            return None
+        kept: list[ast.alias] = []
+        for alias in node.names:
+            placement = cls._alias_placement(state, node, alias, inline=inline)
+            if placement is c.Infra.ImportPlacement.STAY:
+                kept.append(alias)
+            else:
+                placed[placement].append(cls._render(node, (alias,)))
+        if len(kept) == len(node.names):
+            return None
+        indent = cls._line_indent(lines[node.lineno - 1])
+        replacement = (f"{indent}{cls._render(node, kept)}",) if kept else ()
+        return (node.lineno, cls._end_line(node), replacement)
+
+    @classmethod
     def _alias_placement(
         cls,
+        state: m.Infra.ImportLawPass,
         node: ast.Import | ast.ImportFrom,
         alias: ast.alias,
         *,
-        scope: m.Infra.ImportLawScope,
-        tree: ast.Module,
-        parents: t.MappingKV[int, ast.AST],
-        bindings: t.MappingKV[str, ast.stmt],
-        root_exports: t.StrMapping,
         inline: bool,
     ) -> c.Infra.ImportPlacement:
         """Decide where one imported binding belongs.
@@ -162,28 +163,30 @@ class FlextInfraImportNormalizationPlacementMixin(
 
         """
         bound = alias.asname or alias.name.partition(".")[0]
-        reverse = cls._is_reverse(node, alias, scope, root_exports)
-        if reverse and cls._runtime_uses(tree, bound, parents):
+        reverse = cls._is_reverse(state, node, alias)
+        if reverse and cls._runtime_uses(state.tree, bound, state.parents):
             return c.Infra.ImportPlacement.STAY
-        target = (
-            c.Infra.ImportPlacement.TYPING if reverse else c.Infra.ImportPlacement.RUNTIME
+        if not reverse and not inline:
+            return c.Infra.ImportPlacement.STAY
+        existing = state.bindings.get(bound)
+        if existing is not None and existing is not node:
+            return (
+                c.Infra.ImportPlacement.BOUND
+                if cls._binds_same(existing, node, alias)
+                else c.Infra.ImportPlacement.STAY
+            )
+        return (
+            c.Infra.ImportPlacement.TYPING
+            if reverse
+            else c.Infra.ImportPlacement.RUNTIME
         )
-        if not inline and target is c.Infra.ImportPlacement.RUNTIME:
-            return c.Infra.ImportPlacement.STAY
-        existing = bindings.get(bound)
-        if existing is None or existing is node:
-            return target
-        if cls._binds_same(existing, node, alias):
-            return c.Infra.ImportPlacement.BOUND
-        return c.Infra.ImportPlacement.STAY
 
     @classmethod
     def _is_reverse(
         cls,
+        state: m.Infra.ImportLawPass,
         node: ast.Import | ast.ImportFrom,
         alias: ast.alias,
-        scope: m.Infra.ImportLawScope,
-        root_exports: t.StrMapping,
     ) -> bool:
         """Return whether one binding reaches a later layer of its namespace.
 
@@ -191,24 +194,22 @@ class FlextInfraImportNormalizationPlacementMixin(
             Whether the import binds a module of a later layer.
 
         """
+        scope = state.scope
         if isinstance(node, ast.Import):
             target = alias.name
         elif node.module == scope.namespace:
-            target = root_exports.get(alias.name, scope.namespace)
+            target = state.root_exports.get(alias.name, scope.namespace)
         else:
             target = node.module or ""
-            package_dir = FlextInfraUtilitiesImportLaw.package_dir(
-                scope.project_root,
-                target,
-            )
+            package_dir = u.Infra.import_package_dir(scope.project_root, target)
             if package_dir is not None:
-                target = FlextInfraUtilitiesImportLaw.lazy_exports(
-                    package_dir,
+                target = u.Infra.import_lazy_exports(package_dir, target).get(
+                    alias.name,
                     target,
-                ).get(alias.name, target)
+                )
         if target.split(".")[0] != scope.namespace:
             return False
-        return FlextInfraUtilitiesImportLaw.module_import_layer(target) > scope.layer
+        return u.Infra.module_import_layer(target) > scope.layer
 
     @staticmethod
     def _binds_same(
@@ -222,31 +223,51 @@ class FlextInfraImportNormalizationPlacementMixin(
             Whether ``existing`` imports the same name from the same module.
 
         """
-        if type(existing) is not type(node):
-            return False
-        if isinstance(existing, ast.ImportFrom) and isinstance(node, ast.ImportFrom):
-            if (existing.module, existing.level) != (node.module, node.level):
+        match existing, node:
+            case ast.Import(names=names), ast.Import():
+                pass
+            case ast.ImportFrom(
+                names=names, module=module, level=level
+            ), ast.ImportFrom(
+                module=node_module,
+                level=node_level,
+            ) if (module, level) == (node_module, node_level):
+                pass
+            case _:
                 return False
-        names = existing.names if isinstance(existing, ast.Import | ast.ImportFrom) else []
         return any(
             (other.name, other.asname) == (alias.name, alias.asname) for other in names
         )
 
-    @classmethod
+    @staticmethod
     def _sole_body_statement(
-        cls,
         node: ast.stmt,
         parents: t.MappingKV[int, ast.AST],
     ) -> bool:
         """Return whether moving one import would leave its body empty.
 
         Returns:
-            Whether the import is the only statement past the docstring.
+            Whether the import is the only statement past a docstring.
 
         """
         parent = parents.get(id(node))
-        body = getattr(parent, "body", None)
-        if not isinstance(body, list):
+        if not isinstance(
+            parent,
+            ast.FunctionDef
+            | ast.AsyncFunctionDef
+            | ast.ClassDef
+            | ast.If
+            | ast.For
+            | ast.While
+            | ast.With
+            | ast.Try,
+        ):
+            return False
+        if node in parent.body:
+            body: t.SequenceOf[ast.stmt] = parent.body
+        elif isinstance(parent, ast.If | ast.For | ast.While | ast.Try):
+            body = parent.orelse
+        else:
             return False
         statements = [
             statement
@@ -276,21 +297,10 @@ class FlextInfraImportNormalizationPlacementMixin(
             return f"import {clauses}"
         return f"from {'.' * node.level}{node.module or ''} import {clauses}"
 
-    @staticmethod
-    def _unique(statements: t.StrSequence) -> t.StrSequence:
-        """Return the statements once each, first occurrence first.
-
-        Returns:
-            The de-duplicated statements.
-
-        """
-        return tuple(dict.fromkeys(statements))
-
     @classmethod
     def _insertion_edits(
         cls,
-        tree: ast.Module,
-        bindings: t.MappingKV[str, ast.stmt],
+        state: m.Infra.ImportLawPass,
         runtime_lines: t.StrSequence,
         typing_lines: t.StrSequence,
     ) -> t.SequenceOf[tuple[int, int, t.StrSequence]]:
@@ -300,11 +310,11 @@ class FlextInfraImportNormalizationPlacementMixin(
             The resulting ``t.SequenceOf[tuple[int, int, t.StrSequence]]``.
 
         """
-        anchor = cls._header_end(tree) + 1
+        anchor = cls._header_end(state.tree) + 1
         guard = next(
             (
                 node
-                for node in tree.body
+                for node in state.tree.body
                 if isinstance(node, ast.If) and cls._is_type_checking_test(node.test)
             ),
             None,
@@ -319,7 +329,7 @@ class FlextInfraImportNormalizationPlacementMixin(
             )
         elif typing_lines:
             block = inserts.setdefault(anchor, [])
-            if "TYPE_CHECKING" not in bindings:
+            if "TYPE_CHECKING" not in state.bindings:
                 block.insert(0, "from typing import TYPE_CHECKING")
             block.extend(("", "if TYPE_CHECKING:"))
             block.extend(f"    {line}" for line in typing_lines)

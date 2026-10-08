@@ -9,9 +9,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from flext_infra import c, m, t
-from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
-from flext_infra._utilities.import_law import FlextInfraUtilitiesImportLaw
+from flext_infra import c, m, t, u
 from flext_infra.refactor._import_placement import (
     FlextInfraImportNormalizationPlacementMixin,
 )
@@ -86,38 +84,37 @@ class FlextInfraImportNormalization(
         """
         if file_path.name == c.Infra.INIT_PY:
             return None
-        located = FlextInfraUtilitiesImportLaw.import_namespace(
-            project_root,
-            file_path,
-        )
+        located = u.Infra.import_namespace(project_root, file_path)
         if located is None:
             return None
         namespace_dir, module = located
+        root_exports = u.Infra.import_lazy_exports(namespace_dir, namespace_dir.name)
         current = source
         for _ in range(c.Infra.IMPORT_NORMALIZATION_MAX_PASSES):
             tree = ast.parse(current, filename=str(file_path))
-            scope = m.Infra.ImportLawScope(
-                project_root=project_root.resolve(),
-                file_path=file_path,
-                namespace_dir=namespace_dir,
-                module=module,
-                layer=FlextInfraUtilitiesImportLaw.module_import_layer(module),
-                own_exports=cls._declared_exports(tree),
-                family_letter=cls._family_letter(namespace_dir, file_path),
+            state = m.Infra.ImportLawPass(
+                scope=m.Infra.ImportLawScope(
+                    project_root=project_root.resolve(),
+                    file_path=file_path,
+                    namespace_dir=namespace_dir,
+                    module=module,
+                    layer=u.Infra.module_import_layer(module),
+                    own_exports=cls._declared_exports(tree),
+                    family_letter=cls._family_letter(namespace_dir, file_path),
+                ),
+                tree=tree,
+                parents=cls._parent_map(tree),
+                bindings=cls._module_bindings(tree),
+                root_exports=root_exports,
             )
-            updated = cls._one_pass(tree, current, scope)
+            updated = cls._one_pass(state, current)
             if updated is None:
                 break
             current = updated
         return current if current != source else None
 
     @classmethod
-    def _one_pass(
-        cls,
-        tree: ast.Module,
-        source: str,
-        scope: m.Infra.ImportLawScope,
-    ) -> str | None:
+    def _one_pass(cls, state: m.Infra.ImportLawPass, source: str) -> str | None:
         """Apply the first rewrite category that changes the module.
 
         Every category's edits are computed against the text they mutate, so
@@ -126,13 +123,16 @@ class FlextInfraImportNormalization(
         Returns:
             The rewritten source, or ``None`` when every category is a no-op.
 
+        Raises:
+            ValueError: If one category plans overlapping edits.
+
         """
         lines = source.splitlines()
         builders = (
-            lambda: cls._relative_import_edits(tree, lines, scope),
-            lambda: cls._guard_edits(tree, lines),
-            lambda: cls._placement_edits(tree, lines, scope),
-            lambda: cls._route_edits(tree, lines, scope),
+            lambda: cls._relative_import_edits(state, lines),
+            lambda: cls._guard_edits(state.tree, lines),
+            lambda: cls._placement_edits(state, lines),
+            lambda: cls._route_edits(state, lines),
         )
         for build in builders:
             edits = build()
@@ -140,7 +140,7 @@ class FlextInfraImportNormalization(
                 continue
             applied = cls._apply_edits(source, edits)
             if applied is None:
-                msg = f"{scope.file_path}: overlapping import-law edits {edits}"
+                msg = f"{state.scope.file_path}: overlapping import-law edits {edits}"
                 raise ValueError(msg)
             if applied != source:
                 return applied
@@ -186,9 +186,7 @@ class FlextInfraImportNormalization(
         """
         directories = {
             family.directory: letter
-            for letter, family in (
-                FlextInfraUtilitiesCodegenNamespace.facade_families().items()
-            )
+            for letter, family in u.Infra.facade_families().items()
         }
         relative = file_path.resolve().relative_to(namespace_dir.resolve())
         return next(

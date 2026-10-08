@@ -24,7 +24,9 @@ class TestsFlextInfraRefactorImportNormalization:
     def _lazy_init(package_dir: Path, exports: t.StrMapping) -> None:
         """Write one generated-shape lazy ``__init__`` publishing ``exports``."""
         package_dir.mkdir(parents=True, exist_ok=True)
-        entries = "".join(f"    {name!r}: {module!r},\n" for name, module in exports.items())
+        entries = "".join(
+            f"    {name!r}: {module!r},\n" for name, module in exports.items()
+        )
         (package_dir / "__init__.py").write_text(
             "from flext_core import install_lazy_exports\n"
             "\n"
@@ -102,7 +104,9 @@ class TestsFlextInfraRefactorImportNormalization:
             "    return json.dumps(DemoHelper())\n",
         )
 
-        tm.that(normalized, has="import json\nfrom demo_pkg._utilities import DemoHelper\n")
+        tm.that(
+            normalized, has="import json\nfrom demo_pkg._utilities import DemoHelper\n"
+        )
         tm.that(normalized, lacks="    from demo_pkg._utilities import DemoHelper")
 
     @classmethod
