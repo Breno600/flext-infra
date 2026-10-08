@@ -57,6 +57,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         required_dev_dependencies: t.StrSequence,
         uv_resolution: m.Infra.UvResolutionSpec,
         family_line: str | None = None,
+        required_dependency_source: m.Infra.WorkspaceIntegrationSpec | None = None,
     ) -> p.Result[str]:
         """Return canonical TOML with autonomous dependencies and uv policy.
 
@@ -66,6 +67,9 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         render on the workspace's declared integration line; ``family_line``
         is the detected FLEXT integration branch that re-renders commit residue
         in the other internal requirements. Without a line, both fail loudly.
+        Generated bare dev floors use ``required_dependency_source``, the same
+        detected provider line as the scaffold; CUSTOM requirements never acquire
+        provenance from provider policy unless that dependency is a declared floor.
 
         Returns:
             Canonical TOML with autonomous dependencies and uv policy.
@@ -75,15 +79,9 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         if parsed.failure:
             return r[str].from_failure(parsed)
         source, project_name = parsed.value
-        # Only the workspace root's render owns the workspace identity: it
-        # redirects its declared member requirements through [tool.uv.sources]
-        # workspace = true, which resolves solely inside the root's own
-        # manifest. Every other render — a superproject-attached member (the
-        # detector's single superproject-manifest read) or a true standalone —
-        # carries no member identity at all: its internal requirements render
-        # as inline PEP 508 git pins, the only shape a published manifest
-        # resolves from alone (a bare name plus a workspace source dies in
-        # every standalone consumer's uv).
+        # Only the workspace root normalizes member requirements to bare names.
+        # Attached members retain inline Git provenance for published metadata;
+        # their containing workspace identity is applied separately to uv sources.
         workspace_members = (
             tuple(
                 member.distribution
@@ -106,6 +104,23 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             if workspace.integration is not None
             else {}
         )
+        for requirement in required_dev_dependencies:
+            name = FlextInfraUtilitiesDependencies.dep_name(requirement)
+            if (
+                name is None
+                or name == project_name
+                or name in declared_sources
+                or not name.startswith("flext-")
+                or requirement.strip() != name
+                or required_dependency_source is None
+            ):
+                continue
+            if required_dependency_source.base_url is None:
+                return r[str].fail("detected FLEXT line carries no provider base URL")
+            declared_sources[name] = (
+                f"git+{required_dependency_source.base_url}/{name}.git"
+                f"@{required_dependency_source.branch}"
+            )
         candidate_sources = {
             item.distribution: f"git+{item.url}@{item.commit}"
             for item in workspace.candidate_dependencies
@@ -137,7 +152,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             source,
             uv_resolution=uv_resolution,
             candidate_sources=candidate_sources,
-            workspace_members=workspace_members,
+            workspace_members=workspace_members or workspace.superproject_members,
             workspace=workspace,
         )
         if synced.failure:

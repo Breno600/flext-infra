@@ -40,7 +40,9 @@ class TestsFlextInfraGitFixtureIsolation:
             u.Cli.capture(
                 ["git", "rev-parse", "--show-toplevel"],
                 cwd=target,
-                remove_env_keys=c.Tests.GIT_LOCAL_ENV_KEYS,
+                options=u.Cli.ProcessOptions(
+                    remove_env_keys=c.Tests.GIT_LOCAL_ENV_KEYS,
+                ),
             ),
         )
         tm.that(Path(resolved).resolve(), eq=target.resolve())

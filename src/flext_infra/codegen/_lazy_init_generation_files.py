@@ -10,8 +10,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra import c, m, u
+from flext_infra import c, m, r, u
 from flext_infra.codegen.codegen_generation import FlextInfraCodegenGeneration
 
 if TYPE_CHECKING:
@@ -94,7 +93,7 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
 
     @staticmethod
     def _verify_snapshots(
-        snapshots: MutableMapping[Path, m.Cli.AtomicFileState],
+        snapshots: t.MappingKV[Path, m.Cli.AtomicFileState],
     ) -> p.Result[bool]:
         """Verify the captured source identities through the atomic file owner.
 

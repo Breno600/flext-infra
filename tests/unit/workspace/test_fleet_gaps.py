@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
-from flext_infra import c, m, main
+from flext_infra import c, m, main, t
 from tests import u
 
 if TYPE_CHECKING:
@@ -95,17 +95,11 @@ class TestsFlextInfraWorkspaceFleetGaps:
         """Declare one external consumer whose checkout does not exist."""
         manifest = root / "config" / c.Infra.WORKSPACE_MANIFEST_FILENAME
         loaded = tm.ok(u.Cli.config_load(manifest, expand_env=False))
-        tm.ok(
-            u.Cli.yaml_dump(
-                manifest,
-                loaded.data
-                | {
-                    "external_consumers": [
-                        {"name": "consumer-x", "root": str(consumer_root)},
-                    ],
-                },
-            ),
-        )
+        merged: t.JsonDict = dict(loaded.data)
+        merged["external_consumers"] = [
+            {"name": "consumer-x", "root": str(consumer_root)},
+        ]
+        tm.ok(u.Cli.yaml_dump(manifest, merged))
 
     @staticmethod
     def _recording_gh(bin_dir: Path, script: str) -> Path:

@@ -10,8 +10,7 @@ from typing import override
 
 from flext_cli import cli
 
-from flext_core import r
-from flext_infra import p, t, u
+from flext_infra import p, r, t, u
 from flext_infra.base import FlextInfraServiceBase
 from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 

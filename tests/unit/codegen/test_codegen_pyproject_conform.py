@@ -277,6 +277,143 @@ class TestsFlextInfraCodegenPyprojectConform:
             eq=original["optional-dependencies"],
         )
 
+    @pytest.mark.parametrize(
+        ("role", "attached"),
+        [
+            (c.Infra.MakeProfile.STANDALONE, False),
+            (c.Infra.MakeProfile.STANDALONE, True),
+            (c.Infra.MakeProfile.WORKSPACE, False),
+        ],
+    )
+    def test_generated_dev_floors_follow_publication_topology(
+        self,
+        role: c.Infra.MakeProfile,
+        *,
+        attached: bool,
+    ) -> None:
+        """Members publish inline sources; only the root keeps bare local floors."""
+        provider = u.Tests.provider()
+        branch = u.Tests.provider_branch()
+        floors = tuple(config.Infra.codegen.scaffold.project.dev)
+        internal = tuple(
+            name
+            for floor in floors
+            if (name := u.Infra.dep_name(floor))
+            and name.startswith("flext-")
+            and floor.strip() == name
+        )
+        is_root = role is c.Infra.MakeProfile.WORKSPACE
+        workspace = u.Tests.workspace_spec(
+            self._repository("consumer", role=role, path="."),
+            subprojects=(
+                tuple(
+                    self._repository(
+                        name,
+                        role=c.Infra.MakeProfile.STANDALONE,
+                        path=name,
+                    )
+                    for name in internal
+                )
+                if is_root
+                else ()
+            ),
+        ).model_copy(update={"superproject_members": internal if attached else ()})
+        dependency_source = m.Infra.WorkspaceIntegrationSpec(
+            provider=provider.name,
+            branch=branch,
+            base_url=provider.base_url,
+        )
+        first = tm.ok(
+            u.Infra.pyproject_conform(
+                '[project]\nname = "consumer"\ndependencies = []\n',
+                workspace=workspace,
+                required_dev_dependencies=floors,
+                required_dependency_source=dependency_source,
+                uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
+                family_line=branch,
+            ),
+        )
+        dev = u.Tests.toml_strings_at(first, "dependency-groups", "dev")
+        sources = u.Tests.toml_mapping(
+            u.Tests.toml_table_at(first, "tool", "uv").get("sources", {}),
+        )
+        for name in internal:
+            expected = name if is_root else u.Tests.flext_source(name)
+            tm.that(expected in dev, eq=True)
+            tm.that(
+                name in sources,
+                eq=attached or is_root,
+            )
+            if attached or is_root:
+                tm.that(sources[name], eq={"workspace": True})
+        second = tm.ok(
+            u.Infra.pyproject_conform(
+                first,
+                workspace=workspace,
+                required_dev_dependencies=floors,
+                required_dependency_source=dependency_source,
+                uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
+                family_line=branch,
+            ),
+        )
+        tm.that(second, eq=first)
+
+    def test_generated_floor_source_does_not_source_custom_dependencies(self) -> None:
+        """Provider facts apply only to generated floors, not arbitrary bare deps."""
+        provider = u.Tests.provider()
+        unattached = config.Infra.codegen.infra_repository.distribution
+        result = u.Infra.pyproject_conform(
+            f'[project]\nname = "consumer"\ndependencies = ["{unattached}"]\n',
+            workspace=u.Tests.workspace_spec(
+                self._repository(
+                    "consumer",
+                    role=c.Infra.MakeProfile.STANDALONE,
+                    path=".",
+                ),
+            ),
+            required_dev_dependencies=(),
+            required_dependency_source=m.Infra.WorkspaceIntegrationSpec(
+                provider=provider.name,
+                branch=u.Tests.provider_branch(),
+                base_url=provider.base_url,
+            ),
+            uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
+        )
+        tm.fail(result, has="internal dependency declares no direct git source")
+
+    def test_generated_floor_preserves_existing_inline_source(self) -> None:
+        """A bare floor cannot replace the live dependency's declared Git source."""
+        provider = u.Tests.provider()
+        floor = config.Infra.codegen.infra_repository.distribution
+        declared = (
+            f"{floor} @ git+{provider.base_url}/custom-{floor}.git"
+            f"@{u.Tests.provider_branch()}-custom"
+        )
+        rendered = tm.ok(
+            u.Infra.pyproject_conform(
+                '[project]\nname = "consumer"\ndependencies = []\n'
+                f'[dependency-groups]\ndev = ["{declared}"]\n',
+                workspace=u.Tests.workspace_spec(
+                    self._repository(
+                        "consumer",
+                        role=c.Infra.MakeProfile.STANDALONE,
+                        path=".",
+                    ),
+                ),
+                required_dev_dependencies=(floor,),
+                required_dependency_source=m.Infra.WorkspaceIntegrationSpec(
+                    provider=provider.name,
+                    branch=u.Tests.provider_branch(),
+                    base_url=provider.base_url,
+                ),
+                uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
+            ),
+        )
+        tm.that(
+            u.Tests.toml_strings_at(rendered, "dependency-groups", "dev"),
+            eq=(declared,),
+        )
+
     def test_standalone_requires_declared_git_source(self) -> None:
         """A source-less internal dependency outside the workspace overlay fails.
 

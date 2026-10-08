@@ -15,9 +15,7 @@ from typing import TYPE_CHECKING, override
 
 import pytest
 
-from flext_core import r
-from flext_infra import c, m, t, u
-from flext_infra._config import config
+from flext_infra import c, config, m, r, t, u
 from flext_infra.validate._pytest_runner.command import FlextInfraPytestRunnerCommand
 from flext_infra.validate._pytest_runner.reports import FlextInfraPytestRunnerReports
 from flext_infra.validate.testmon_db import FlextInfraTestmonDbInspector
@@ -166,8 +164,10 @@ class FlextInfraPytestRunnerExecution(
             command,
             selection_log,
             cwd=self.root,
-            env=self._selection_env(execution_mode=execution_mode),
-            deadline=self._process_deadline(),
+            options=u.Cli.ProcessOptions(
+                env=self._selection_env(execution_mode=execution_mode),
+                deadline=self._process_deadline(),
+            ),
         ).unwrap()
         self._record_process_outcome(
             report_dir,
@@ -305,9 +305,11 @@ class FlextInfraPytestRunnerExecution(
             command,
             report_dir / "pytest.log",
             cwd=self.root,
-            env=self._selection_env(execution_mode=execution_mode),
-            live=True,
-            deadline=self._process_deadline(),
+            options=u.Cli.ProcessOptions(
+                env=self._selection_env(execution_mode=execution_mode),
+                live=True,
+                deadline=self._process_deadline(),
+            ),
         ).unwrap()
         self._record_process_outcome(report_dir, "suite", outcome)
         return outcome
@@ -548,7 +550,9 @@ class FlextInfraPytestRunnerExecution(
         )
 
     @staticmethod
-    def _phase_warning_lines(phases: t.SequenceOf[t.Pair[str, t.JsonValue]]) -> str:
+    def _phase_warning_lines(
+        phases: t.SequenceOf[t.Pair[str, m.Infra.PytestDiagnostics]],
+    ) -> str:
         """Return one warnings line per phase.
 
         Returns:

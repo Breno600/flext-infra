@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, m, p, r, t, u
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -142,8 +142,14 @@ class FlextInfraCodegenConsolidatorStepsMixin:
         Returns:
             The resulting ``t.Infra.EditResultWithDescs``.
 
+        Raises:
+            TypeError: If the scanned resource is not a Rope file resource.
+
         """
         resource = scanned.resource
+        if not FlextInfraUtilitiesRopeRuntime.file_resource(resource):
+            msg = f"expected a Rope file resource: {py_file}"
+            raise TypeError(msg)
         original_source = scanned.source
         src_lines = original_source.splitlines(keepends=True)
         rel = py_file.relative_to(workspace)

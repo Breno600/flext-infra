@@ -81,13 +81,15 @@ class TestsFlextInfraDynamicEnvironmentCutover:
         tm.that(remaining, empty=True)
         path.write_text(sources[path], encoding="utf-8")
         key = str(config.Infra.codegen.make.mypy_cache.data_home_environment_variable)
-        environment = {} if value is None else {key: value}
+        environment: dict[str, str] = {} if value is None else {key: value}
         mode = "missing-required" if required and value is None else "value"
         output = tm.ok(
             u.Cli.run_raw(
                 (sys.executable, "-I", str(path), mode),
-                env=environment,
-                remove_env_keys=(key,) if value is None else (),
+                options=u.Cli.ProcessOptions(
+                    env=environment,
+                    remove_env_keys=(key,) if value is None else (),
+                ),
             ),
         )
         tm.that(u.Cli.process_succeeded(output.outcome), eq=True, msg=output.stderr)

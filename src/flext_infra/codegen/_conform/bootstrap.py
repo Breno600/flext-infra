@@ -137,6 +137,16 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
             case c.Infra.CodegenConformSurface.ALL:
                 return m.Infra.CodegenConformSurfaceContract(complete_governed=True)
             case (
+                c.Infra.CodegenConformSurface.LAZY_INIT
+                | c.Infra.CodegenConformSurface.FACADES
+            ):
+                return m.Infra.CodegenConformSurfaceContract(
+                    delegates=False,
+                    pyproject=False,
+                    templates=False,
+                    custom=False,
+                )
+            case (
                 c.Infra.CodegenConformSurface.DEPENDENCIES
                 | c.Infra.CodegenConformSurface.PYPROJECT
             ):

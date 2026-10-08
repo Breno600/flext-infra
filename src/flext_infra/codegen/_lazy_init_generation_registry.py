@@ -10,8 +10,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra import c, m, t, u
+from flext_infra import c, m, r, t, u
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -129,7 +128,7 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
         for path in (*module_paths, *package_paths):
             collected = self._obsolete_support_path_states(path, stale_paths)
             if collected.failure:
-                return collected
+                return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(collected)
         return u.Infra.required_file_states(stale_paths)
 
     def _obsolete_support_path_states(
@@ -274,13 +273,13 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
         for base_dir in sorted(search_dirs):
             sidecars = self._sidecar_directory_states(base_dir, stale_paths)
             if sidecars.failure:
-                return sidecars
+                return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(sidecars)
         constants_check = self._constants_initializer_state(
             plan.context.pkg_dir,
             stale_paths,
         )
         if constants_check.failure:
-            return constants_check
+            return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(constants_check)
         return u.Infra.required_file_states(stale_paths)
 
     def _sidecar_directory_states(

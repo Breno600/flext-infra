@@ -8,8 +8,7 @@ from __future__ import annotations
 
 from git import GitCommandError, Repo
 
-from flext_core import r
-from flext_infra import m, p
+from flext_infra import m, p, r
 from flext_infra._utilities import FlextInfraUtilitiesGitSemanticIndexMixin
 
 
@@ -92,9 +91,17 @@ class FlextInfraUtilitiesGitSemanticWorktreeMixin(
             The resulting ``p.Result[m.Infra.GitBoolReport]``.
 
         """
+        try:
+            cls._force_attach_branch_at_head(request)
+        except (GitCommandError, OSError, ValueError) as exc:
+            return r[m.Infra.GitBoolReport].fail(
+                f"failed to attach {request.branch} at HEAD: {exc}",
+                exception=exc,
+            )
+        return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=True))
 
     @classmethod
-    def _force_attach_branch_at_head(cls, request: m.Infra.GitRepoRequest) -> None:
+    def _force_attach_branch_at_head(cls, request: m.Infra.GitBranchRequest) -> None:
         """Force-create the branch at HEAD and set its upstream when present."""
         repo = cls._repo(request.repo_root)
         repo.git.branch("--quiet", "-f", request.branch, "HEAD")
@@ -107,15 +114,6 @@ class FlextInfraUtilitiesGitSemanticWorktreeMixin(
                 f"origin/{request.branch}",
                 request.branch,
             )
-
-        try:
-            cls._force_attach_branch_at_head(request)
-        except (GitCommandError, OSError, ValueError) as exc:
-            return r[m.Infra.GitBoolReport].fail(
-                f"failed to attach {request.branch} at HEAD: {exc}",
-                exception=exc,
-            )
-        return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=True))
 
 
 __all__: list[str] = ["FlextInfraUtilitiesGitSemanticWorktreeMixin"]

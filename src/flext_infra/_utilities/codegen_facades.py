@@ -26,6 +26,117 @@ from flext_infra._utilities import (
 class FlextInfraUtilitiesCodegenFacades:
     """Project local ``u``, ``p`` and ``m`` owners selected by package consumers."""
 
+    @classmethod
+    def render_type_facade(
+        cls,
+        pkg_dir: Path,
+        facade_path: Path,
+        sources: t.MappingKV[Path, str],
+    ) -> str:
+        """Project a complete exported type owner without duplicating its body.
+
+        Only the existing class/t export contract is supported. Ambiguous owners
+        or extra public declarations fail rather than being silently discarded.
+        """
+        source = sources[facade_path]
+        tree = ast.parse(source, filename=str(facade_path))
+        if ast.get_docstring(tree) is None:
+            msg = f"type facade has no module documentation: {facade_path}"
+            raise ValueError(msg)
+        facade, _namespace = cls._facade_classes(tree, facade_path)
+        if facade.decorator_list or facade.type_params:
+            msg = f"unsupported type facade class: {facade_path}"
+            raise ValueError(msg)
+        exports = tuple(
+            node
+            for node in tree.body
+            if isinstance(node, ast.Assign | ast.AnnAssign)
+            and any(
+                isinstance(target, ast.Name) and target.id == "__all__"
+                for target in (
+                    node.targets if isinstance(node, ast.Assign) else [node.target]
+                )
+            )
+        )
+        if (
+            len(exports) != 1
+            or exports[0].value is None
+            or set(ast.literal_eval(exports[0].value)) != {facade.name, "t"}
+        ):
+            msg = f"unsupported type facade exports: {facade_path}"
+            raise ValueError(msg)
+        bindings = tuple(
+            node
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and len(node.targets) == 1
+            and isinstance(node.targets[0], ast.Name)
+            and node.targets[0].id == "t"
+            and isinstance(node.value, ast.Name)
+            and node.value.id == facade.name
+        )
+        if len(bindings) != 1 or any(
+            not isinstance(node, ast.Import | ast.ImportFrom)
+            and not (
+                isinstance(node, ast.Expr)
+                and isinstance(node.value, ast.Constant)
+                and isinstance(node.value.value, str)
+            )
+            and not (
+                isinstance(node, ast.If)
+                and isinstance(node.test, ast.Name)
+                and node.test.id == "TYPE_CHECKING"
+                and not node.orelse
+                and all(
+                    isinstance(item, ast.Import | ast.ImportFrom) for item in node.body
+                )
+            )
+            and node is not facade
+            and node not in exports
+            and node not in bindings
+            for node in tree.body
+        ):
+            msg = f"unsupported type facade declarations: {facade_path}"
+            raise ValueError(msg)
+        directory = FlextInfraUtilitiesCodegenNamespace.facade_families()["t"].directory
+        owners = tuple(
+            path
+            for path, content in sources.items()
+            if path.is_relative_to(pkg_dir / directory)
+            and path.name != c.Infra.INIT_PY
+            and "t"
+            in FlextInfraUtilitiesRopeModulePatch.facade_letter_names_source(content)
+            and any(
+                isinstance(binding, ast.Assign)
+                and isinstance(binding.value, ast.Name)
+                and binding.value.id == facade.name
+                for binding in FlextInfraUtilitiesRopeModulePatch.runtime_alias_bindings(
+                    content,
+                    alias="t",
+                )
+            )
+            and any(
+                isinstance(node, ast.ClassDef) and node.name == facade.name
+                for node in ast.parse(content, filename=str(path)).body
+            )
+        )
+        if len(owners) != 1:
+            msg = f"expected one full exported type owner: {facade_path}"
+            raise ValueError(msg)
+        module = (
+            owners[0].relative_to(pkg_dir).with_suffix("").as_posix().replace("/", ".")
+        )
+        alias = f"_{facade.name}"
+        return (
+            f"{ast.get_source_segment(source, tree.body[0])}\n\n"
+            f"# Generated type facade; declarations belong to {pkg_dir.name}.{module}.\n"
+            f"from {pkg_dir.name}.{module} import {facade.name} as {alias}\n\n\n"
+            f"class {facade.name}({alias}):\n"
+            f'    """Public type facade inheriting its complete canonical owner."""\n\n\n'
+            f"t = {facade.name}\n\n"
+            f"{ast.get_source_segment(source, exports[0])}\n"
+        )
+
     @staticmethod
     def facade_module_path(pkg_dir: Path, family: str) -> Path | None:
         """Return the package module that declares facade letter ``family``.

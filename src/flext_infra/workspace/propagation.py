@@ -8,9 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Annotated, override
 
-from flext_core import r
-from flext_infra import c, m, p, u
-from flext_infra._config import config
+from flext_infra import c, config, m, p, r, u
 from flext_infra.base import s
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector

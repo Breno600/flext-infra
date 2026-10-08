@@ -1,12 +1,14 @@
 
+      # Why: the cache keeps Mise's installs and downloads but never its shims.
+      # A restored shim points at the Mise binary of an earlier run, which Mise
+      # treats as unmanaged ("not replacing unmanaged file in shims directory",
+      # one warning per tool); Mise regenerates the shims from mise.lock.
       - name: Restore tool caches
         id: tool-cache
         uses: {{ github_actions["cache"].repository }}/restore@{{ github_actions["cache"].version }}
         with:
           path: |
-            {{ make.clean.cache_dirs | join("\n            ") }}
-            ~/.cache/uv
-            ~/.local/share/mise
+{% include "_fragments/toolchain_cache_paths.j2" %}
           key: {% raw %}${{ runner.os }}-{% endraw %}{{ python_version }}{% raw %}-tools-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml') }}{% endraw %}
           restore-keys: |
             {% raw %}${{ runner.os }}-{% endraw %}{{ python_version }}{% raw %}-tools-{% endraw %}

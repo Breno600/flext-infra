@@ -13,8 +13,7 @@ from typing import TYPE_CHECKING
 from flext_cli import u
 from git import GitCommandError
 
-from flext_core import r
-from flext_infra import c, p, t
+from flext_infra import c, p, r, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesGitWorktreeDiscoveryMixin,
     FlextInfraUtilitiesGitWorktreeIO,
@@ -262,7 +261,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
             The resulting ``(patches, deleted paths)`` pair.
 
         """
-        patches = tuple(
+        patches: t.VariadicTuple[bytes] = tuple(
             repo.git.diff(
                 *layer,
                 "--binary",
@@ -278,19 +277,21 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
             ).encode(c.Cli.ENCODING_DEFAULT, errors="surrogateescape")
             for layer in ((), ("--cached",))
         )
-        deleted = {
-            Path(name)
-            for name in repo.git.diff(
-                "--name-only",
-                "--diff-filter=D",
-                "-z",
-                c.Infra.GIT_HEAD,
-                "--",
-                ".",
-                *pathspecs,
-            ).split("\0")
-            if name
-        }
+        deleted = frozenset(
+            {
+                Path(name)
+                for name in repo.git.diff(
+                    "--name-only",
+                    "--diff-filter=D",
+                    "-z",
+                    c.Infra.GIT_HEAD,
+                    "--",
+                    ".",
+                    *pathspecs,
+                ).split("\0")
+                if name
+            },
+        )
         return patches, deleted
 
     @staticmethod

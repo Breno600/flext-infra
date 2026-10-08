@@ -239,7 +239,7 @@ class FlextInfraUtilitiesRefactor:
     @staticmethod
     def publish_refactor_report_evidence(
         root: Path,
-        report: m.ArbitraryTypesModel,
+        report: m.ContractModel | m.ArbitraryTypesModel,
         *,
         relative_path: Path,
     ) -> p.Result[Path]:

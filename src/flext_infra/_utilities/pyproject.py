@@ -13,8 +13,7 @@ from pathlib import Path
 
 from flext_cli import u
 
-from flext_core import r
-from flext_infra import c, m, p, t
+from flext_infra import c, m, p, r, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesGit,
     FlextInfraUtilitiesManagedConflicts,
@@ -355,17 +354,23 @@ class FlextInfraUtilitiesPyproject:
             lock_path.read_text(encoding=c.Cli.ENCODING_DEFAULT),
         )
         if document is None:
-            return r[str].fail(f"{lock_path} is not valid TOML")
+            return r[t.SequenceOf[object]].fail(f"{lock_path} is not valid TOML")
         payload = u.Cli.toml_as_mapping(document)
         if payload is None:
-            return r[str].fail(f"{lock_path} carries no TOML mapping payload")
+            return r[t.SequenceOf[object]].fail(
+                f"{lock_path} carries no TOML mapping payload",
+            )
         tools = payload.get("tools", {})
         if not isinstance(tools, Mapping):
-            return r[str].fail(f"{lock_path} has a malformed [tools] table")
+            return r[t.SequenceOf[object]].fail(
+                f"{lock_path} has a malformed [tools] table",
+            )
         entries = tools.get(tool)
         if not isinstance(entries, list):
-            return r[str].fail(f"{lock_path} pins no [[tools.{tool}]] entry")
-        return r[str].ok(entries)
+            return r[t.SequenceOf[object]].fail(
+                f"{lock_path} pins no [[tools.{tool}]] entry",
+            )
+        return r[t.SequenceOf[object]].ok(entries)
 
     @staticmethod
     def _locked_entry_version(

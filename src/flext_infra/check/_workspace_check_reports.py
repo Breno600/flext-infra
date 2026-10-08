@@ -10,8 +10,7 @@ import operator
 from collections.abc import MutableMapping
 from pathlib import Path
 
-from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, m, p, r, t, u
 from flext_infra.__version__ import FlextInfraVersion
 
 
@@ -60,6 +59,17 @@ class FlextInfraWorkspaceCheckReportsMixin:
                     f"- {gate}: {gate_status} ({len(execution.issues)} issues)",
                 )
                 lines.extend(f"  - {issue.formatted}" for issue in execution.issues)
+                if (
+                    execution.outcome is c.Infra.ToolOutcome.ERROR
+                    and execution.raw_output
+                ):
+                    lines.extend([
+                        "",
+                        f"Native output ({gate}):",
+                        "",
+                        *(f"    {line}" for line in execution.raw_output.split("\n")),
+                        "",
+                    ])
             lines.append("")
         return "\n".join(lines)
 

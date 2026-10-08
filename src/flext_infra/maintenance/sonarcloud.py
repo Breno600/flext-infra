@@ -14,9 +14,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
-from flext_core import r
-from flext_infra import c, m, t, u
-from flext_infra._config import config
+from flext_infra import c, config, m, r, t, u
 from flext_infra.maintenance.sonarcloud_client import FlextInfraSonarcloudClient
 
 if TYPE_CHECKING:
@@ -142,9 +140,11 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
             plan.api_url,
             plan.timeout_seconds,
             token,
-            "GET",
-            c.Infra.SONARCLOUD_API_SETTINGS_VALUES_PATH,
-            (("component", plan.project_key), ("keys", plan.setting_key)),
+            (
+                "GET",
+                c.Infra.SONARCLOUD_API_SETTINGS_VALUES_PATH,
+                (("component", plan.project_key), ("keys", plan.setting_key)),
+            ),
         )
         if body.failure:
             return r[m.Infra.SonarcloudSettingsValues].from_failure(body)
@@ -157,7 +157,7 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
     def _write_settings(
         self,
         plan: m.Infra.SonarcloudSettingsPlan,
-        token: str,
+        token: t.SecretStr,
     ) -> p.Result[bool]:
         """Write the SSOT settings, then prove the server readback holds them.
 
@@ -216,7 +216,7 @@ class FlextInfraSonarcloudSettingsSync(FlextInfraSonarcloudClient[bool]):
     def _authenticate(
         self,
         plan: m.Infra.SonarcloudSettingsPlan,
-        token: str,
+        token: t.SecretStr,
     ) -> p.Result[bool]:
         """Prove the configured token against SonarCloud's auth validate endpoint.
 

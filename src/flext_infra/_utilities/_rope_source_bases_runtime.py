@@ -11,7 +11,6 @@ import importlib
 import importlib.util
 import sys
 from pathlib import Path
-from typing import ClassVar
 
 from flext_infra import c, m, p, t
 from flext_infra._utilities import (
@@ -329,6 +328,9 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
             identity = self._declared_identity_at_line(name, line)
             if identity is None:
                 resource = module.get_resource()
+                if resource is None:
+                    message = f"Module has no declared resource: {name}"
+                    raise ValueError(message)
                 self.inventory(
                     name,
                     (Path(resource.real_path), module.source_code),
@@ -797,14 +799,34 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                     f"{identity}"
                 )
                 raise TypeError(message)
-            builtin_class = FlextInfraUtilitiesRopeRuntime.runtime_type(
+            builtin_class = FlextInfraUtilitiesRopeRuntime._runtime_callable(  # ruff: ignore[private-member-access] - same-runtime internal rope accessor
                 "rope.base.builtins",
                 "BuiltinClass",
             )
             return tuple(
-                self._external_identity(builtin_class(base, {}))
+                self._external_identity(
+                    self._builtin_base_identity(builtin_class(base, {})),
+                )
                 for base in value.builtin.__bases__
             )
+
+        @staticmethod
+        def _builtin_base_identity(
+            value: p.AttributeProbe,
+        ) -> t.Infra.RopePyObject:
+            """Narrow one constructed Rope builtin base to its object shape.
+
+            Returns:
+                The narrowed Rope object value.
+
+            Raises:
+                TypeError: If the constructed base is not a Rope class object.
+
+            """
+            if not FlextInfraUtilitiesRopeRuntime.abstract_class(value):
+                message = "Rope builtin base did not resolve to a class object"
+                raise TypeError(message)
+            return value
 
         def _linearize(self, identity: str) -> t.StrTuple:
             """Return the C3 linearization of one identity's ancestry.
@@ -951,7 +973,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
             self._stdlib_backing_cache[target] = backing or ""
             return backing
 
-        _stdlib_backing_cache: ClassVar[dict[str, str] | None] = None
+        _stdlib_backing_cache: dict[str, str] | None = None
 
     @classmethod
     def runtime_bases(

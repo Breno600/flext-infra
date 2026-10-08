@@ -11,8 +11,7 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, m, t, u
-from flext_infra._config import config
+from flext_infra import c, config, m, t, u
 from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
@@ -295,7 +294,9 @@ class FlextInfraMypyGate(FlextInfraGate):
             if validated.failure:
                 return False, (
                     self._malformed_report_issue(
-                        f"{validated.error}\nstdout: {raw_line}\n"
+                        f"{validated.error}\n"
+                        f"mypy exited with code {result.outcome.raw_return_code}\n"
+                        f"stdout: {result.stdout}\n"
                         f"stderr: {result.stderr}",
                         tool=c.Infra.MYPY,
                         file=str(project_dir),

@@ -10,8 +10,7 @@ import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, m, p, r, t, u
 from flext_infra.release._release_metadata import FlextInfraReleaseMetadataMixin
 
 
@@ -300,15 +299,17 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
                 str(stage),
             ],
             timeout=c.Infra.TIMEOUT_LONG,
-            env={
-                c.Infra.SOURCE_DATE_EPOCH: str(source_date_epoch),
-                c.Infra.UV_HTTP_CONNECT_TIMEOUT: (
-                    c.Infra.UV_RELEASE_HTTP_CONNECT_TIMEOUT
-                ),
-                c.Infra.UV_HTTP_TIMEOUT: c.Infra.UV_RELEASE_HTTP_TIMEOUT,
-                c.Infra.UV_HTTP_RETRIES: c.Infra.UV_RELEASE_HTTP_RETRIES,
-            },
-            remove_env_keys=c.Infra.UV_RELEASE_POLICY_ENV_KEYS,
+            options=u.Cli.ProcessOptions(
+                env={
+                    c.Infra.SOURCE_DATE_EPOCH: str(source_date_epoch),
+                    c.Infra.UV_HTTP_CONNECT_TIMEOUT: (
+                        c.Infra.UV_RELEASE_HTTP_CONNECT_TIMEOUT
+                    ),
+                    c.Infra.UV_HTTP_TIMEOUT: c.Infra.UV_RELEASE_HTTP_TIMEOUT,
+                    c.Infra.UV_HTTP_RETRIES: c.Infra.UV_RELEASE_HTTP_RETRIES,
+                },
+                remove_env_keys=c.Infra.UV_RELEASE_POLICY_ENV_KEYS,
+            ),
         )
 
     @classmethod
