@@ -11,11 +11,12 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m
+from flext_infra import c, config, m, main
 from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 from flext_infra.gates.mypy import FlextInfraMypyGate
 from flext_infra.gates.pyrefly import FlextInfraPyreflyGate
 from flext_infra.gates.pyright import FlextInfraPyrightGate
+from tests import u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -99,6 +100,50 @@ class TestsFlextInfraTypeGates:
         return m.Infra.GateContext(
             repository_root=real_python_package,
             reports_dir=reports,
+        )
+
+    @staticmethod
+    @pytest.mark.slow
+    @pytest.mark.parametrize(
+        "gate",
+        sorted(c.Infra.TYPE_CHECKER_GATES),
+    )
+    def test_public_literal_file_checker_preserves_native_findings_policy(
+        checker_context: m.Infra.GateContext,
+        gate: str,
+    ) -> None:
+        """Native findings survive while acceptance follows the typed SSOT policy."""
+        project = checker_context.repository_root
+        source_root = project / config.Infra.source_scan.roots[0]
+        source_root.mkdir(exist_ok=True)
+        selected = source_root / "literal_file.py"
+        selected.write_text("value: int = 'incorrect'\n", encoding="utf-8")
+        sibling = source_root / "unselected_file.py"
+        sibling.write_text("def :\n", encoding="utf-8")
+        reports = checker_context.reports_dir / "literal-file"
+        code = main([
+            "check",
+            "run",
+            "--repository-root",
+            str(project),
+            "--file",
+            str(selected.relative_to(project)),
+            "--gates",
+            gate,
+            "--reports-dir",
+            str(reports),
+        ])
+        informative = gate in config.Infra.codegen.make.ci.informative_check_gates
+        tm.that(code, eq=0 if informative else 1)
+        findings = tm.ok(u.Infra.check_report_findings(project, reports_dir=reports))
+        tm.that(findings, empty=False)
+        tm.that(
+            any(
+                location.uri.endswith(str(selected.relative_to(project)))
+                for finding in findings
+                for location in finding.locations
+            ),
+            eq=True,
         )
 
     @staticmethod

@@ -224,6 +224,34 @@ the batch. Structural refactors go through `make mod`.
 
 ## Check gate partitions
 
+`make file-gate FILE=<repository-relative path>` delegates to the existing
+`check run --file` owner, never bare analyzers or a second gate engine. The raw
+Make value travels through an exported environment value, not interpolated shell
+source. Selection rejects empty, absolute, traversal, missing, non-Python and
+symlink-component paths before creating reports or invoking tools. Only the literal
+file reaches each gate's existing `check_files`; no mutation is permitted.
+The Make pre-gate explicitly selects registered lint, format, Pyrefly, Mypy,
+Pyright and codemod gates through the existing typed `RunCommand.gates` owner and
+`resolve_gates`; no separate gate vocabulary or configuration is introduced.
+The public `check run --file` requires explicit `--gates`, never silently falls
+back to whole-project gates, and rejects unknown names before scanner execution.
+Mypy and Pyright findings retain the existing informative SSOT policy; native
+errors, missing tools/configuration and malformed reports remain blocking.
+Codemod uses its elected, staged provider configurations and native report owner.
+
+The former bare `typos` hook existed only in the Make recipe, help and tests,
+always under `|| true`. This branch declares no canonical typos runner,
+configuration or provisioned toolchain capability. Removing that ownerless
+best-effort advertisement removes no supported acceptance capability: it never
+contributed a truthful verdict. Registered rule diagnostics remain unchanged;
+no dictionary, installation, provider or suppression replaces the hook.
+The pre-gate remains bounded; full `make check` is still required acceptance.
+
+Trailing comma layout has one owner: Ruff's formatter. The tooling SSOT records
+the removal of redundant `missing-trailing-comma` (COM812) lint enforcement using
+its official rule name and rationale. This must be regenerated before runtime
+validation; changing the SSOT alone does not update existing projections.
+
 Selected functional gates remain blocking. `make check` fails when the selection
 contains no projects or when a selected project has no `pyproject.toml`; no project is
 skipped silently.
