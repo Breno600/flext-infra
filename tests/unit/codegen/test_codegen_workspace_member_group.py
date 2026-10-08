@@ -1,8 +1,10 @@
-"""A workspace root keeps its attached members in its own dependency group.
+"""A workspace root redirects its attached members through native uv sources.
 
-The root environment serves every attached member: setup syncs every group of
-the root lock exactly, so a conform that drops the member group makes that
-sync uninstall the members and every later member import fails.
+The root environment serves every attached member: native uv workspace
+membership plus ``uv sync --all-packages`` provisions them, and the root's
+``[tool.uv.sources]`` redirects each member to the workspace. The retired
+git-pinned ``workspace`` dependency group never comes back: a member declared
+both as a workspace path and as a URL is a uv conflict.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -23,10 +25,10 @@ class TestsFlextInfraCodegenWorkspaceMemberGroup:
     """Tests for ``FlextInfraCodegenWorkspaceMemberGroup``."""
 
     @staticmethod
-    def test_workspace_root_group_survives_conform_at_a_fixed_point(
+    def test_workspace_root_sources_survive_conform_at_a_fixed_point(
         tmp_path: Path,
     ) -> None:
-        """Real root conform declares every attached member and converges."""
+        """Real root conform redirects every attached member and converges."""
         root = tmp_path / "workspace"
         _ = u.Tests.WorktreeFixture.governed_workspace_with_member(root)
         root_pyproject = root / c.PYPROJECT_FILENAME
@@ -42,13 +44,13 @@ class TestsFlextInfraCodegenWorkspaceMemberGroup:
         rendered = u.Tests.codegen_file_text(
             next(item for item in first.files if item.path == root_pyproject),
         )
-        declared = tuple(
-            u.Tests.toml_strings_at(rendered, c.Infra.DEPENDENCY_GROUPS, "workspace"),
+        sources = u.Tests.toml_mapping(
+            u.Tests.toml_table_at(rendered, "tool", "uv").get("sources", {}),
         )
-        tm.that(
-            tuple(u.Infra.dep_name(item) for item in declared),
-            eq=tuple(item.distribution for item in first.workspace.subprojects),
-        )
+        for member in first.workspace.subprojects:
+            tm.that(sources.get(member.distribution), eq={"workspace": True})
+        groups = u.Tests.toml_table_at(rendered, c.Infra.DEPENDENCY_GROUPS)
+        tm.that("workspace" in groups, eq=False)
         root_pyproject.write_text(rendered, encoding="utf-8")
         second = tm.ok(service.plan(request))
         tm.that(
