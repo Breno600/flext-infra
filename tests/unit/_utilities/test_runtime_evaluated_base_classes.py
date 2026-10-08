@@ -299,6 +299,95 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                 self._roots(),
             )
 
+    @pytest.mark.parametrize("name", ["Structure", "Union", "Array"])
+    def test_ctypes_native_private_parents_do_not_require_module_exports(
+        self,
+        tmp_path: Path,
+        name: str,
+    ) -> None:
+        """Real ctypes classes retain their private native ancestry."""
+        body = (
+            "    _length_ = 1\n    _type_ = ctypes.c_byte\n"
+            if name == "Array"
+            else "    _fields_ = ()\n"
+        )
+        source = (
+            "import ctypes\n"
+            f"class Consumer(ctypes.{name}):\n{body}"
+            "class NativeParentConsumer(ctypes.Structure.__base__): pass\n"
+        )
+        tm.that(
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {tmp_path / "src" / "ctypes_contract" / "models.py": source},
+                self._roots(),
+            ),
+            eq=tuple(sorted(self._roots())),
+        )
+
+    def test_ctypes_inherited_alias_obeys_c3_with_shared_native_identity(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Native wrapper identity cannot split the shared diamond ancestor."""
+        source = self._root_import() + (
+            "from ctypes import Structure\n"
+            "class Origin(Structure):\n    class Contract: pass\n"
+            "class Left(Origin): pass\n"
+            "class Right(Origin):\n    class Contract(RuntimeRoot): pass\n"
+            "class Joint(Left, Right): pass\n"
+            "class Consumer(Joint.Contract): pass\n"
+        )
+        tm.that(
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {tmp_path / "src" / "native_diamond" / "models.py": source},
+                self._roots(),
+            ),
+            eq=tuple(sorted((*self._roots(), "native_diamond.models.Joint.Contract"))),
+        )
+
+    def test_shared_private_native_parent_is_still_a_duplicate_base(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Separate provider wrappers cannot invent distinct native classes."""
+        with pytest.raises(ValueError, match="Duplicate class base"):
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {
+                    tmp_path / "src" / "duplicate_native" / "models.py": (
+                        "from ctypes import Structure as First\n"
+                        "import ctypes as provider\n"
+                        "class Invalid(First.__base__, provider.Union.__base__): pass\n"
+                    ),
+                },
+                self._roots(),
+            )
+
+    @pytest.mark.parametrize(
+        ("module", "name"),
+        [("_ctypes", "_CData"), ("ctypes", "MissingNativeClass")],
+    )
+    def test_missing_native_export_keeps_its_original_failure(
+        self,
+        tmp_path: Path,
+        module: str,
+        name: str,
+    ) -> None:
+        """An observed private parent is not an invented module-level export."""
+        with pytest.raises(u.Infra.rope_attribute_not_found_error_types()) as failure:
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {
+                    tmp_path / "src" / "missing_native" / "models.py": (
+                        f"import {module}\nclass Invalid({module}.{name}): pass\n"
+                    ),
+                },
+                self._roots(),
+            )
+        tm.that(str(failure.value), eq=f"Attribute {name} not found")
+
     @pytest.mark.parametrize("name", ["ABC", "ABCMeta"])
     def test_native_abc_provider_metadata_preserves_class_bases(
         self,

@@ -294,11 +294,25 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformExecuteDirected):
             return self._execute_lazy_init(request)
         if surface is c.Infra.CodegenConformSurface.ALL:
             return self._execute_managed(request)
+        if (
+            surface is c.Infra.CodegenConformSurface.MISE_CONFIG
+            and c.Infra.CodegenConformMode(request.mode)
+            is c.Infra.CodegenConformMode.CHECK
+        ):
+            transaction = FlextInfraCodegenTransaction(
+                FlextInfraCodegenMiseArtifacts(repository_root=request.root),
+            )
+            return transaction.run_files_locked(
+                {"@bootstrap-0": request.root.expanduser().resolve()},
+                lambda _scope_root: self._execute_plan(request),
+                prepare=False,
+            )
         if c.Infra.CodegenConformMode(request.mode) is c.Infra.CodegenConformMode.APPLY:
             if surface in {
                 c.Infra.CodegenConformSurface.MAKEFILE,
                 c.Infra.CodegenConformSurface.DOCS_CONFIG,
                 c.Infra.CodegenConformSurface.PYPROJECT,
+                c.Infra.CodegenConformSurface.MISE_CONFIG,
             }:
                 return self._execute_plan(request)
             mise_owner = FlextInfraCodegenMiseArtifacts(repository_root=request.root)
@@ -336,12 +350,19 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformExecuteDirected):
             if changed:
                 paths = ", ".join(str(file.path) for file in changed)
                 return r[m.Infra.CodegenResult].fail(f"codegen drift detected: {paths}")
+            if request.what == c.Infra.CodegenConformSurface.MISE_CONFIG:
+                checked = FlextInfraCodegenMiseArtifacts.validate_config_file(
+                    request.root / c.Infra.MISE_TOML_FILENAME,
+                )
+                if checked.failure:
+                    return r[m.Infra.CodegenResult].from_failure(checked)
             return r[m.Infra.CodegenResult].ok(m.Infra.CodegenResult(plan=plan))
         surface = c.Infra.CodegenConformSurface(request.what)
         if surface not in {
             c.Infra.CodegenConformSurface.MAKEFILE,
             c.Infra.CodegenConformSurface.DOCS_CONFIG,
             c.Infra.CodegenConformSurface.PYPROJECT,
+            c.Infra.CodegenConformSurface.MISE_CONFIG,
         }:
             return r[m.Infra.CodegenResult].fail(
                 "partial codegen apply is prohibited; use the complete all surface",
@@ -437,6 +458,10 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformExecuteDirected):
                 f"bootstrap cannot delete a declared destination for {surface}",
             )
         if not changed:
+            if surface is c.Infra.CodegenConformSurface.MISE_CONFIG:
+                checked = self._verify_bootstrap(request)
+                if checked.failure:
+                    return r[t.VariadicTuple[Path]].from_failure(checked)
             return r[t.VariadicTuple[Path]].ok(())
         inputs = {
             state.path: state for file in plan.files for state in file.source_states
@@ -460,7 +485,33 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformExecuteDirected):
                 ),
                 validator=lambda: self._verify_bootstrap(request),
             ),
+            staged_validator=(
+                self._validate_mise_stage
+                if surface is c.Infra.CodegenConformSurface.MISE_CONFIG
+                else None
+            ),
         )
+
+    @staticmethod
+    def _validate_mise_stage(
+        session: m.Infra.CodegenTransactionSession,
+        publications: t.VariadicTuple[m.Infra.CodegenStagedFile],
+    ) -> p.Result[m.Infra.CodegenTransactionSession]:
+        """Reject invalid staged TOML before the journal publishes its replacement.
+
+        Returns:
+            The unchanged session or the exact declaration failure.
+        """
+        result_type = r[m.Infra.CodegenTransactionSession]
+        if len(publications) != 1 or publications[0].replacement is None:
+            return result_type.fail("mise-config requires one staged replacement")
+        checked = FlextInfraCodegenMiseArtifacts.validate_config_file(
+            publications[0].replacement.path,
+        )
+        if checked.failure:
+            return result_type.from_failure(checked)
+        u.Cli.info("stage=mise-config-staged-validation files=1 installs=0")
+        return result_type.ok(session)
 
     def _verify_bootstrap(
         self,
@@ -474,6 +525,12 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformExecuteDirected):
         planned = self.plan(request)
         if planned.failure:
             return r[bool].from_failure(planned)
+        if request.what == c.Infra.CodegenConformSurface.MISE_CONFIG:
+            checked = FlextInfraCodegenMiseArtifacts.validate_config_file(
+                request.root / c.Infra.MISE_TOML_FILENAME,
+            )
+            if checked.failure:
+                return checked
         return u.Infra.codegen_fixed_point(planned.value.files, subject="bootstrap")
 
     def _execute_managed(

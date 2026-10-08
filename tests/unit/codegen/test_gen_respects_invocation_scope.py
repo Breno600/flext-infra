@@ -131,21 +131,42 @@ class TestsFlextInfraGenRespectsInvocationScope:
             eq=True,
         )
         tm.that(any("codegen conform" in line for line in init_lines), eq=False)
+        rendered_lines = rendered_makefile.splitlines()
         for verb in config.Infra.codegen.make.verbs:
             if verb.name in {"setup", "upg", "help", "clean"} or (
                 verb.profiles and c.Infra.MakeProfile.WORKSPACE not in verb.profiles
             ):
                 continue
+            activation_target = f"_activated-{verb.name}"
+            expected_route = f"{activation_target}: _builtin_require_environment"
+            activation_routes = tuple(
+                line for line in rendered_lines if line.startswith(f"{activation_target}:")
+            )
             tm.that(
-                rendered_makefile,
-                has=f"_activated-{verb.name}: _builtin_require_environment",
+                any(expected_route in line for line in activation_routes),
+                eq=True,
+                msg=(
+                    f"verb={verb.name!r}: expected route {expected_route!r}; "
+                    f"observed routes={activation_routes!r}"
+                ),
             )
             if not verb.produces_activation:
+                expected_invocation = (
+                    'direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) '
+                    f"{activation_target}"
+                )
+                activation_commands = tuple(
+                    line.strip()
+                    for line in rendered_lines
+                    if line.startswith("\t") and activation_target in line
+                )
                 tm.that(
-                    rendered_makefile,
-                    has=(
-                        'direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) '
-                        f"_activated-{verb.name}"
+                    any(expected_invocation in line for line in activation_commands),
+                    eq=True,
+                    msg=(
+                        f"verb={verb.name!r}: expected invocation "
+                        f"{expected_invocation!r}; "
+                        f"observed commands={activation_commands!r}"
                     ),
                 )
         tm.that(rendered_makefile, has="_builtin-initialize: _builtin_gen_init")

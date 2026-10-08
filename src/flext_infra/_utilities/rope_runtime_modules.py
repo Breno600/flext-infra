@@ -21,6 +21,38 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
     """Load Rope project/module/import objects behind protocols."""
 
     @classmethod
+    def native_class(
+        cls,
+        native: p.Infra.NativeClassMetadata,
+    ) -> t.Infra.RopePyObject:
+        """Wrap an observed native class without requiring a module export.
+
+        Returns:
+            Rope's class object retaining the exact native identity.
+
+        Raises:
+            TypeError: If the input is not a class or Rope changes its identity.
+
+        """
+        if not isinstance(native, type):
+            msg = "Rope native class input is not a class"
+            raise TypeError(msg)
+        wrapped = cls._runtime_callable("rope.base.builtins", "BuiltinClass")(
+            native,
+            {},
+        )
+        if not FlextInfraUtilitiesRopeRuntimeTypes.abstract_class(wrapped):
+            msg = "Rope native class factory did not return a class"
+            raise TypeError(msg)
+        if (
+            not isinstance(wrapped, p.Infra.RopeBuiltinClass)
+            or wrapped.builtin is not native
+        ):
+            msg = "Rope native class factory did not preserve native identity"
+            raise TypeError(msg)
+        return wrapped
+
+    @classmethod
     def parse_rope_module(cls, source: str, *, filename: str) -> t.Infra.RopeAstNode:
         """Parse one source snapshot through Rope's canonical syntax boundary.
 

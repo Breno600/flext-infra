@@ -632,7 +632,11 @@ class FlextInfraUtilitiesRopeSourceBases:
                     raise ValueError(message)
                 return identity
             for identity, known in external.items():
-                if known == value:
+                if known == value or (
+                    isinstance(known, p.Infra.RopeBuiltinClass)
+                    and isinstance(value, p.Infra.RopeBuiltinClass)
+                    and known.builtin is value.builtin
+                ):
                     return identity
             identity = f"external:{len(external)}"
             external[identity] = value
@@ -853,14 +857,10 @@ class FlextInfraUtilitiesRopeSourceBases:
             if not isinstance(value, p.Infra.RopeBuiltinClass):
                 message = f"External class has no declared source or native identity: {identity}"
                 raise ValueError(message)
+            # Native ancestry contains actual classes, including private parents
+            # that are not exported under their module/qualified-name metadata.
             return tuple(
-                resolve(
-                    m.Infra.SourceClassReference(
-                        target=base.__module__,
-                        attributes=tuple(base.__qualname__.split(".")),
-                        qualified_base=f"{base.__module__}.{base.__qualname__}",
-                    )
-                )
+                external_identity(FlextInfraUtilitiesRopeRuntime.native_class(base))
                 for base in value.builtin.__bases__
             )
 

@@ -80,10 +80,10 @@ class TestsFlextInfraTransactionStaging:
     @staticmethod
     @pytest.mark.parametrize(
         "phase",
-        (
+        [
             c.Infra.CodegenStagedFilePhase.CONFORM,
             c.Infra.CodegenStagedFilePhase.CONFORM_BOOTSTRAP,
-        ),
+        ],
     )
     @pytest.mark.parametrize("scenario", ["valid", "stale-origin", "tampered"])
     def test_staged_package_public_import_precedes_publication(

@@ -11,7 +11,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import Literal
 
-from flext_infra import c, m, p, r, t, u
+from flext_infra import c, config, m, p, r, t, u
 from flext_infra.codegen._conform.artifact_render import (
     FlextInfraCodegenConformArtifactRender,
 )
@@ -36,11 +36,25 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         """
         root = target.root
         repository = target.repository
+        if contract.destinations == frozenset({c.Infra.MISE_TOML_FILENAME}):
+            context = m.Infra.ToolchainSpec(**{
+                name: value
+                for name, value in codegen.toolchain.model_dump().items()
+                if name in m.Infra.ToolchainSpec.model_fields
+            })
+            planned = self._bootstrap_destination_plan(
+                target,
+                codegen,
+                context,
+                c.Infra.MISE_TOML_FILENAME,
+            )
+            if planned.failure:
+                return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(planned)
+            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].ok((planned.value,))
         if contract.destinations == c.Infra.MAKEFILE_BOOTSTRAP_DESTINATIONS:
             return self._plan_existing_bootstrap(target, workspace, codegen)
         if contract.destinations == frozenset({c.PYPROJECT_FILENAME}):
             return self._plan_existing_pyproject_bootstrap(root)
-        stage_started = time.monotonic()
         u.Cli.info(f"  stage=pyproject repository={repository.name}")
         pyproject = root / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
@@ -271,40 +285,6 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 ),
             ),
         )
-        if tooling_context.failure:
-            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
-                tooling_context,
-            )
-        u.Cli.info(
-            f"  stage=tooling-context repository={repository.name} "
-            f"elapsed={time.monotonic() - stage_started:.2f}s",
-        )
-        render_inputs = self.resolve_render_inputs(
-            target=target,
-            workspace=workspace,
-            codegen=codegen,
-            tooling_runtime=tooling_context.value,
-            managed_artifacts=managed_artifacts.value,
-        )
-        managed_result = self._plan_existing_templates(
-            render_inputs=render_inputs,
-            contract=contract,
-        )
-        if managed_result.failure:
-            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(managed_result)
-        planned = list(managed_result.value)
-        if contract.custom:
-            custom_result = self._plan_existing_custom(
-                root,
-                codegen,
-                profile=target.make_profile.value,
-            )
-            if custom_result.failure:
-                return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
-                    custom_result,
-                )
-            planned.extend(custom_result.value)
-        return r[t.SequenceOf[m.Infra.CodegenFilePlan]].ok(tuple(planned))
 
     def _plan_existing_pyproject_bootstrap(
         self,
@@ -382,7 +362,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         self,
         target: m.Infra.RepositoryConformTarget,
         codegen: m.Infra.CodegenConfigSpec,
-        context: m.Infra.MakefileRenderSpec,
+        context: p.Model,
         destination: str,
     ) -> p.Result[m.Infra.CodegenFilePlan]:
         """Render and plan exactly one bootstrap destination.
@@ -410,8 +390,22 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             return result_type.fail(
                 f"{destination} requires exactly one managed-file declaration",
             )
+        template = u.Infra.codegen_templates_root(codegen) / entries[0].source
+        sources: t.VariadicTuple[m.Cli.AtomicFileState] = ()
+        if destination == c.Infra.MISE_TOML_FILENAME:
+            owner_sources = u.Infra.snapshot_config_sources(
+                config.ssot_config_dir().parent
+            )
+            if owner_sources.failure:
+                return result_type.from_failure(owner_sources)
+            template_state = u.Cli.atomic_read_binary_file_state(
+                template, required=True
+            )
+            if template_state.failure:
+                return result_type.from_failure(template_state)
+            sources = (*owner_sources.value, template_state.value)
         rendered = u.Cli.template_render(
-            u.Infra.codegen_templates_root(codegen) / entries[0].source,
+            template,
             context,
         )
         if rendered.failure:
@@ -422,11 +416,18 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 f"rendered {destination} contains a merge conflict marker: "
                 f"{conflict_marker}",
             )
+        if destination == c.Infra.MISE_TOML_FILENAME:
+            composed = self._composed_mise_overlay(target.root, rendered.value, None)
+            if composed.failure:
+                return result_type.from_failure(composed)
+            rendered = r[str].ok(composed.value.rendered)
+            sources = (*sources, *composed.value.source_states)
         return self.file_plan(
             target.root,
             destination,
             rendered.value,
             mode=managed[0].mode,
+            source_states=sources,
         )
 
     def _plan_existing_docs_config(

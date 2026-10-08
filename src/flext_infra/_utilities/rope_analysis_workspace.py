@@ -500,19 +500,22 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             )
         )
         return tuple(
-            sorted({
-                path
-                for path in source_paths
-                if path.is_relative_to(resolved_root)
-                and path.is_relative_to(rope_root)
-                and not set(path.relative_to(resolved_root).parts)
-                & cls._excluded_parts()
-                and not cls._inside_nested_repository(
-                    path,
-                    resolved_root,
-                    governed_roots=governed_roots,
-                )
-            }, key=Path.as_posix),
+            sorted(
+                {
+                    path
+                    for path in source_paths
+                    if path.is_relative_to(resolved_root)
+                    and path.is_relative_to(rope_root)
+                    and not set(path.relative_to(resolved_root).parts)
+                    & cls._excluded_parts()
+                    and not cls._inside_nested_repository(
+                        path,
+                        resolved_root,
+                        governed_roots=governed_roots,
+                    )
+                },
+                key=Path.as_posix,
+            ),
         )
 
     @classmethod

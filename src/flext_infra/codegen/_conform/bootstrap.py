@@ -188,6 +188,13 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
                     pyproject=False,
                     custom=False,
                 )
+            case c.Infra.CodegenConformSurface.MISE_CONFIG:
+                return m.Infra.CodegenConformSurfaceContract(
+                    destinations=frozenset({c.Infra.MISE_TOML_FILENAME}),
+                    delegates=False,
+                    pyproject=False,
+                    custom=False,
+                )
 
 
 __all__: list[str] = ["FlextInfraCodegenConformBootstrap"]
