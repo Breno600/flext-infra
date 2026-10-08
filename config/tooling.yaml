@@ -18,17 +18,18 @@ Infra:
         rules:
           default: true
           MD001: false
-          # MD013 prose and code lengths are THE markdown line contract: the
-          # prettier projection (printWidth) and the .prettierrc render read
-          # MD013.line_length. Headings use MD013.heading_line_length because
-          # no tool can reflow a heading.
+          # MD013 prose and code lengths are THE markdown line contract for
+          # both rumdl surfaces: `rumdl check` (markdown gate, `make fix`) and
+          # `rumdl fmt` (markdown-format gate, `make fmt`) read this one rule
+          # set through the generated .markdownlint.json. Headings use
+          # MD013.heading_line_length because no tool can reflow a heading.
           #
           # Wrapping is hand-owned, not tool-owned: rumdl's normalize reflow
           # joins a hand-wrapped paragraph into one line and cannot re-split
-          # lines containing inline-code spans. With reflow off, prettier keeps
-          # `prose-wrap: preserve` below, nobody rewrites an author's breaks,
-          # and MD013 stays the check-only line contract: a genuinely long line
-          # is a finding the author fixes by wrapping.
+          # lines containing inline-code spans. With reflow off, nobody
+          # rewrites an author's breaks, and MD013 stays the check-only line
+          # contract: a genuinely long line is a finding the author fixes by
+          # wrapping.
           MD013:
             line_length: 88
             heading_line_length: 200
@@ -51,26 +52,6 @@ Infra:
           MD057: false
           MD060: false
           MD076: false
-          # Prettier is the last writer of the `make docs` cycle (DOCS_ACTIONS
-          # ends at fmt), and its list-continuation printer reindents wrapped
-          # list content to its own column, which MD077's two accepted columns
-          # reject; no canonical repair runs after fmt, so the finding is
-          # unfixable by construction. A dialect rule the canonical formatter
-          # cannot satisfy leaves the rule set; MD013 keeps owning the real line
-          # contract.
-          MD077: false
-        # Prettier formatting policy (markdown-format gate): rendered into the
-        # managed .prettierrc. prettier --write is owned by `make fmt` and
-        # prettier --check by `make check`; `make fix` never runs it.
-        #
-        # `prose-wrap: preserve` (not `always`) so prettier never reflows a
-        # paragraph or a link-reference definition onto a fresh, bracket-less
-        # line — the exact shape rumdl's MD034 (bare URL) flags. Wrapping
-        # ownership stays with the author under the MD013 contract above.
-        prettier:
-          prose-wrap: preserve
-          tab-width: 4
-          md-tab-width: 2
         exclude:
           # AGENTS.md is a tool-managed projection (tracker and agent setup
           # blocks): gating generated output is a projection defect.
@@ -100,7 +81,7 @@ Infra:
           # (operator authorization 2026-10-03).
           - CHANGELOG.md
           # Codegen-managed docs projections (make gen / docs generate): the
-          # renderer's output is canonical as emitted — prettier reformatting
+          # renderer's output is canonical as emitted — a formatter rewriting
           # them fights the codegen fixed point and the conform gate flags
           # the drift both ways (merge-admin 2026-10-07, root evidence).
           - docs/docs_config.json
@@ -136,18 +117,13 @@ Infra:
           - docs/architecture/crg-reports/**
           # Generated api-reference and project-catalog projections (make gen /
           # docs generate): the renderer's output is canonical as emitted, so
-          # prettier never rewrites generated docs and the codegen fixed point
+          # no formatter rewrites generated docs and the codegen fixed point
           # stays stable.
           - docs/api-reference/generated/**
-          # Historical evidence documents (plans, handoffs, drift reports,
-          # frozen law text): their formatting is frozen evidence per operator
-          # law 11 — reformatting rewrites the record, and the runner-side
-          # prettier environment provably disagrees with the pinned-form
-          # output anyway (merge-admin 2026-10-07: triple-independent local
-          # approval vs runner rejection, root runs 37574964338/37579208474/
-          # 37581017843). Frozen as evidence, never re-rendered.
-          - docs/architecture/standardization-phase1-drift-report.md
-          - docs/plans/2026-09-11-conformance-sweep-handoff.md
+          # Historical evidence documents (plans, handoffs, frozen law text):
+          # their formatting is frozen evidence per operator law 11 —
+          # reformatting rewrites the record. Frozen as evidence, never
+          # re-rendered.
           - docs/plans/2026-09-14-stabilization-handoff/previous-handoff-source.md
           - docs/plans/2026-09-22-pipeline-integracao-continua-plano.md
           - docs/plans/2026-09-22-rope-generator-stabilization/02-achados-codegen.md

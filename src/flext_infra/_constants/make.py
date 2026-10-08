@@ -104,9 +104,9 @@ class FlextInfraConstantsMake:
         "markdown",
         "markdown-code",
     )
-    # markdown-format is deliberately absent: prettier is a formatter, so the
-    # gate's mutating side is owned by `make fmt` (check = `prettier --check`),
-    # never by `make fix` — one operation per tool per verb, never repeated.
+    # markdown-format is deliberately absent: `rumdl fmt` is a formatter, so
+    # the gate's mutating side is owned by `make fmt` (check = `rumdl fmt
+    # --check`), never by `make fix` — one operation per tool per verb.
     ORCHESTRATOR_REMOVE_ENV_KEYS: ClassVar[t.StrSequence] = (
         "GNUMAKEFLAGS",
         "MAKEFLAGS",

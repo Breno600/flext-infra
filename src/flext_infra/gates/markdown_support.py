@@ -1,8 +1,9 @@
-"""Shared markdown-gate surface: collection, config, and ignore resolution.
+"""Shared markdown-gate surface: collection, config, and the rumdl invocation.
 
-``markdown`` (rumdl) and ``markdown-format`` (prettier) drive different tools
-over the same governed markdown surface, so the file collection and the
-ignore-projection reader live here exactly once.
+``markdown`` (``rumdl check``) and ``markdown-format`` (``rumdl fmt``) drive
+the same tool over the same governed markdown surface with the same generated
+configuration, so the file collection, the ignore-projection reader, and the
+rumdl invocation contract live here exactly once.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -13,7 +14,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, override
 
-from flext_infra import c, u
+from flext_infra import c, config, u
 from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
@@ -21,7 +22,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraMarkdownGateBase(FlextInfraGate):
-    """Share file selection and empty-surface handling for Markdown tools."""
+    """Share file selection, configuration, and the rumdl invocation."""
 
     @staticmethod
     def collect_markdown_files(project_dir: Path) -> list[Path]:
@@ -68,6 +69,79 @@ class FlextInfraMarkdownGateBase(FlextInfraGate):
                 continue
             patterns.append(stripped)
         return tuple(patterns)
+
+    @staticmethod
+    @override
+    def _findings_exit_codes() -> t.VariadicTuple[int]:
+        """Exit statuses with which rumdl reports its findings.
+
+        Returns:
+            The findings statuses declared for rumdl in the tooling config.
+
+        """
+        return config.Infra.tooling.tools.markdown.findings_exit_codes
+
+    @staticmethod
+    def _resolve_config_args(project_dir: Path) -> t.StrSequence:
+        """Resolve only the repository-local markdown settings owner.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
+        config_path = project_dir / c.Infra.MARKDOWNLINT_CONFIG_FILENAME
+        if not config_path.is_file():
+            return ["--no-config"]
+        return ["--config", str(config_path.resolve())]
+
+    def _resolve_exclude_args(self, project_dir: Path) -> t.StrSequence:
+        """Build ``--exclude`` from .markdownlintignore patterns.
+
+        ``rumdl`` only applies ignore patterns when scanning directories,
+        not when files are passed explicitly on the command line. The gates
+        collect files explicitly, so the generated ignore projection is read
+        once and its patterns are forwarded via ``--exclude`` to replicate
+        standard tool behavior.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
+        patterns = self.read_ignore_patterns(
+            project_dir,
+            c.Infra.MARKDOWNLINT_IGNORE_FILENAME,
+        )
+        if not patterns:
+            return ()
+        return ["--exclude", ",".join(patterns)]
+
+    def _rumdl_command(
+        self,
+        project_dir: Path,
+        subcommand: str,
+        targets: t.StrSequence,
+        *mode_args: str,
+    ) -> t.StrSequence:
+        """Keep every markdown gate on the same rumdl invocation contract.
+
+        Returns:
+            The rumdl ``subcommand`` invocation over ``targets``.
+
+        """
+        return self._python_console_script_command(
+            c.Infra.RUMDL,
+            subcommand,
+            *mode_args,
+            "--no-cache",
+            "--color",
+            "never",
+            "--output-format",
+            "text",
+            "--deny-config-warnings",
+            *self._resolve_config_args(project_dir),
+            *self._resolve_exclude_args(project_dir),
+            *targets,
+        )
 
     @override
     def selected_for(self, project_dir: Path) -> bool:
