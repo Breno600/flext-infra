@@ -215,6 +215,48 @@ class TestsFlextInfraRefactorImportNormalization:
         tm.that(normalized, lacks="demo_pkg._models.record")
 
     @classmethod
+    def test_tier_long_letter_forms_collapse_to_tier_root(
+        cls,
+        tmp_path: Path,
+    ) -> None:
+        """The operator's flext-auth shape: tier letters and helpers bind lazily."""
+        project, _ = cls._project(tmp_path)
+        tier = project / "tests"
+        cls._lazy_init(
+            tier,
+            {"c": ".constants", "m": ".models", "u": ".utilities"},
+        )
+        cls._lazy_init(
+            tier / "unit" / "api_cases",
+            {"DemoApiTestDataHelper": ".support"},
+        )
+        normalized = cls._normalize(
+            project,
+            tier / "unit" / "test_api.py",
+            "from __future__ import annotations\n"
+            "\n"
+            "from tests.constants import TestsDemoConstants as c\n"
+            "from tests.unit.api_cases.support import DemoApiTestDataHelper\n"
+            "from tests.utilities import TestsDemoUtilities as u\n"
+            "from demo_pkg import DemoApi, m\n"
+            "\n"
+            "\n"
+            "def test_api() -> None:\n"
+            "    assert DemoApi(c, m, u, DemoApiTestDataHelper)\n",
+        )
+
+        tm.that(normalized, has="from tests import c\n")
+        tm.that(normalized, has="from tests import u\n")
+        tm.that(normalized, has="from tests import m\n")
+        tm.that(normalized, has="from demo_pkg import DemoApi\n")
+        tm.that(
+            normalized,
+            has="from tests.unit.api_cases import DemoApiTestDataHelper\n",
+        )
+        tm.that(normalized, lacks="TestsDemoConstants")
+        tm.that(normalized, lacks="TestsDemoUtilities")
+
+    @classmethod
     def test_internal_tier_alias_binds_through_tier_root(cls, tmp_path: Path) -> None:
         """An internal tier imports root aliases from its own root."""
         project, _ = cls._project(tmp_path)
