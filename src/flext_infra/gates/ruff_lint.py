@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, config, m, u
 from flext_infra.gates.base_gate import FlextInfraGate
+from flext_infra.refactor import FlextInfraImportNormalization
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -82,34 +83,28 @@ class FlextInfraRuffLintGate(FlextInfraGate):
     def fix(self, project_dir: Path, ctx: m.Infra.GateContext) -> m.Infra.GateExecution:
         """Apply Ruff's own fixes, then the declared recipe of each finding left.
 
-        A recipe that creates a docstring runs before the recipes that extend
-        one, since a new summary exposes the sections its function needs; the
-        static-method recipe edits only signatures and decorators, so it runs
-        in that first phase.
-        Ruff re-reads the tree after each phase; a recipe-owned finding that
-        survives both phases is a recipe defect and raises.
+        The recipe phases are tooling data (``fix-recipe-phases``) applied in
+        order; Ruff re-reads the tree after each phase. A recipe-owned finding
+        that survives every phase is a recipe defect and raises, except for
+        the recipes the tooling declares residual (``fix-recipe-residual``),
+        whose remainder stays a visible check finding.
 
         Returns:
             The gate execution of Ruff's final pass.
 
         """
         execution = super().fix(project_dir, ctx)
-        recipes = config.Infra.tooling.tools.ruff.lint.fix_recipes
+        lint = config.Infra.tooling.tools.ruff.lint
+        recipes = lint.fix_recipes
         overridden = self._project_overrides(project_dir, execution.issues, recipes)
-        for phase in (
-            frozenset({
-                c.Infra.LintFixRecipe.SUMMARY_DOCSTRING,
-                c.Infra.LintFixRecipe.COPYRIGHT_NOTICE,
-                c.Infra.LintFixRecipe.STATIC_METHOD,
-            }),
-            frozenset({
-                c.Infra.LintFixRecipe.RETURNS_SECTION,
-                c.Infra.LintFixRecipe.YIELDS_SECTION,
-                c.Infra.LintFixRecipe.RAISES_SECTION,
-            }),
-        ):
+        for phase in lint.fix_recipe_phases:
             hooks = self._overridden_hooks(execution.issues, recipes, overridden)
-            by_file = self._phase_findings(execution.issues, recipes, phase, hooks)
+            by_file = self._phase_findings(
+                execution.issues,
+                recipes,
+                frozenset(phase),
+                hooks,
+            )
             if by_file:
                 self._apply_phase(project_dir, by_file, recipes)
                 execution = super().fix(project_dir, ctx)
@@ -196,17 +191,70 @@ class FlextInfraRuffLintGate(FlextInfraGate):
                     path,
                     required=True,
                 ).unwrap()
-                planned.append((
-                    before,
-                    u.Infra.apply_lint_recipes(
-                        (before.content or b"").decode(c.Cli.ENCODING_DEFAULT),
-                        issues,
-                        path=path,
-                        recipes=recipes,
-                    ),
-                ))
+                source = (before.content or b"").decode(c.Cli.ENCODING_DEFAULT)
+                repaired = self._repaired_source(
+                    project_dir,
+                    path,
+                    source,
+                    issues,
+                    recipes,
+                )
+                if repaired != source:
+                    planned.append((before, repaired))
             for before, repaired in planned:
                 u.Cli.atomic_write_text_file_guarded(before, repaired).unwrap()
+
+    @staticmethod
+    def _repaired_source(
+        project_dir: Path,
+        path: Path,
+        source: str,
+        issues: t.SequenceOf[m.Infra.Issue],
+        recipes: t.MappingKV[str, c.Infra.LintFixRecipe],
+    ) -> str:
+        """Apply one module's recipes: whole-module rewrites, then planned edits.
+
+        ``normalize-imports`` runs the import-law engine over the module and
+        ``wrap-long-line`` wraps the reported lines; every other recipe is an
+        edit the lint-recipe planner places.
+
+        Returns:
+            The repaired module source.
+
+        """
+        owned = {issue.code: recipes[issue.code] for issue in issues}
+        if c.Infra.LintFixRecipe.NORMALIZE_IMPORTS in owned.values():
+            source = (
+                FlextInfraImportNormalization.normalize_source(
+                    project_root=project_dir,
+                    file_path=path,
+                    source=source,
+                )
+                or source
+            )
+        wrapped = [
+            issue.line
+            for issue in issues
+            if owned[issue.code] is c.Infra.LintFixRecipe.WRAP_LONG_LINE
+        ]
+        if wrapped:
+            source = u.Infra.wrap_long_lines(
+                source,
+                wrapped,
+                limit=config.Infra.tooling.tools.ruff.line_length,
+            )
+        planned = [
+            issue
+            for issue in issues
+            if owned[issue.code]
+            not in {
+                c.Infra.LintFixRecipe.NORMALIZE_IMPORTS,
+                c.Infra.LintFixRecipe.WRAP_LONG_LINE,
+            }
+        ]
+        if not planned:
+            return source
+        return u.Infra.apply_lint_recipes(source, planned, path=path, recipes=recipes)
 
     @staticmethod
     def _reject_recipe_residue(
@@ -226,10 +274,22 @@ class FlextInfraRuffLintGate(FlextInfraGate):
                 f"chain or read their receiver, left to their owner: "
                 f"{', '.join(hooks)}",
             )
+        residual = config.Infra.tooling.tools.ruff.lint.fix_recipe_residual
+        kept = sorted(
+            f"{issue.file}:{issue.line}:{issue.code}"
+            for issue in issues
+            if recipes.get(issue.code) in residual
+        )
+        if kept:
+            u.Cli.info(
+                f"lint: {len(kept)} finding(s) stay for manual repair under the "
+                f"import law or the line budget: {', '.join(kept)}",
+            )
         left = sorted(
             located
             for issue in issues
             if issue.code in recipes
+            and recipes[issue.code] not in residual
             and (located := f"{issue.file}:{issue.line}:{issue.code}") not in hooks
         )
         if left:

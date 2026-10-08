@@ -261,6 +261,28 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 ),
             ),
         ]
+        fix_recipe_phases: Annotated[
+            t.VariadicTuple[t.VariadicTuple[c.Infra.LintFixRecipe]],
+            m.Field(
+                alias="fix-recipe-phases",
+                description=(
+                    "Recipe phases make fix applies in order; Ruff re-reads "
+                    "the tree after each phase so a later phase sees the "
+                    "findings an earlier one created or cured."
+                ),
+            ),
+        ]
+        fix_recipe_residual: Annotated[
+            frozenset[c.Infra.LintFixRecipe],
+            m.Field(
+                alias="fix-recipe-residual",
+                description=(
+                    "Recipes whose findings may survive by law: their "
+                    "remainder stays a visible check finding for manual "
+                    "repair instead of failing make fix."
+                ),
+            ),
+        ]
         isort: FlextInfraModelsDepsToolConfigLinters.RuffIsortConfig = m.Field(
             description="Ruff isort configuration",
         )
