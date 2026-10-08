@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
+from flext_infra import config
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
 from tests import c, u
 
@@ -327,3 +328,71 @@ class TestsFlextInfraCodegenLazyInit:
             tm.that(u.Tests.run_lazy_init(tmp_path / "b"), eq=0)
             content_b = (src_dir_b / "__init__.py").read_text(encoding="utf-8")
             tm.that(content_a, eq=content_b)
+
+    class TestsGeneratedSourceTrees:
+        """A generated source tree is a regular package, never a facade.
+
+        Premise (flext-gknfx): protoc output carries no ``__init__.py``; the
+        fresh-import gate rejected the resulting namespace package because its
+        modules had no origin inside the checkout.
+        """
+
+        _VALID_INIT = (
+            '"""Test package."""\n'
+            "from test_pkg.module import TestClass\n"
+            '__all__: list[str] = ["TestClass"]\n'
+        )
+
+        @classmethod
+        def _generated_tree(cls, project: Path) -> Path:
+            """Create one indexed package holding the declared generated tree.
+
+            Returns:
+                The generated source directory inside ``src/pkg``.
+
+            """
+            names = config.Infra.codegen.generated_sources
+            tm.that(names, empty=False)
+            package = project / "src" / "pkg"
+            package.mkdir(parents=True)
+            (package / "__init__.py").write_text(cls._VALID_INIT, encoding="utf-8")
+            tree = package / names[0]
+            tree.mkdir()
+            return tree
+
+        def test_tree_with_modules_receives_a_static_initializer(
+            self,
+            governed_project: Path,
+        ) -> None:
+            """Generation writes one exportless initializer and then converges."""
+            tree = self._generated_tree(governed_project)
+            (tree / "wire_pb2.py").write_text("DESCRIPTOR = None\n", encoding="utf-8")
+
+            tm.that(u.Tests.run_lazy_init(governed_project), eq=0)
+
+            initializer = (tree / c.Infra.INIT_PY).read_text(encoding="utf-8")
+            tm.that(initializer.startswith(c.Infra.AUTOGEN_HEADERS), eq=True)
+            tm.that(initializer, lacks="wire_pb2")
+            replanned = tm.ok(
+                FlextInfraCodegenLazyInit(repository_root=governed_project).plan_files(),
+            )
+            tm.that(
+                tuple(
+                    plan.path
+                    for plan in replanned.files
+                    if u.Infra.codegen_file_requires_effect(plan)
+                ),
+                eq=(),
+            )
+
+        def test_tree_without_modules_receives_no_initializer(
+            self,
+            governed_project: Path,
+        ) -> None:
+            """A tree holding only protocol sources is not a Python package."""
+            tree = self._generated_tree(governed_project)
+            (tree / "wire.proto").write_text('syntax = "proto3";\n', encoding="utf-8")
+
+            tm.that(u.Tests.run_lazy_init(governed_project), eq=0)
+
+            tm.that((tree / c.Infra.INIT_PY).exists(), eq=False)

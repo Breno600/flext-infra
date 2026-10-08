@@ -163,8 +163,8 @@ class FlextInfraConfigFixerSteps:
                     validated.error,
                 )
             current_excludes = [str(value) for value in validated.value]
-        expected_excludes = sorted(
-            set(config.Infra.tooling.tools.pyrefly.project_exclude_globs),
+        expected_excludes = u.Infra.pyrefly_project_excludes(
+            config.Infra.tooling.tools.pyrefly.project_exclude_globs,
         )
         if current_excludes != expected_excludes:
             pyrefly[c.Infra.PROJECT_EXCLUDES] = u.Cli.toml_array(expected_excludes)

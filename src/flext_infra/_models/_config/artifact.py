@@ -60,6 +60,34 @@ class FlextInfraConfigModelsArtifact:
             bool,
             m.Field(description="Feed source_scan.ignored_resources"),
         ] = False
+        generated_source: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Tracked directory of foreign-generator output (for example "
+                    "protoc modules) that ships and imports as a regular "
+                    "package: never gitignored, ignored by every source scan, "
+                    "excluded by every lint/type/codemod gate, and given a "
+                    "generated package initializer"
+                ),
+            ),
+        ] = False
+
+        @m.model_validator(mode="after")
+        def _validate_generated_source_is_directory(self) -> Self:
+            """Require a generated source tree to be a directory resource.
+
+            Returns:
+                The validated artifact.
+
+            Raises:
+                ValueError: If a file resource is declared a generated source.
+
+            """
+            if self.generated_source and not self.is_dir:
+                msg = f"generated source artifact must be a directory: {self.name}"
+                raise ValueError(msg)
+            return self
 
     class CodegenVscodeSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Fully modeled ``vscode`` section of ``config/codegen.yaml``."""
@@ -303,8 +331,30 @@ class FlextInfraConfigModelsArtifact:
             return tuple(
                 artifact.name
                 for artifact in self.artifacts
-                if artifact.source_scan_ignore
+                if artifact.source_scan_ignore or artifact.generated_source
             )
+
+        @m.computed_field
+        @property
+        def generated_sources(self) -> t.VariadicTuple[str]:
+            """Derived names of the tracked foreign-generator source trees.
+
+            Returns:
+                The resulting ``t.VariadicTuple[str]``.
+            """
+            return tuple(
+                artifact.name for artifact in self.artifacts if artifact.generated_source
+            )
+
+        @m.computed_field
+        @property
+        def generated_source_globs(self) -> t.VariadicTuple[str]:
+            """Derived path globs every analyzer excludes for generated sources.
+
+            Returns:
+                The resulting ``t.VariadicTuple[str]``.
+            """
+            return tuple(f"**/{name}/**" for name in self.generated_sources)
 
         # The canonical .gitignore body is ONE computed
         # projection — the artifact SSOT feeds the Python/build section and the
@@ -398,10 +448,12 @@ class FlextInfraConfigModelsArtifact:
             Returns:
                 The resulting ``t.VariadicTuple[str]``.
             """
+            # A generated source tree is tracked: ignoring it would hide the
+            # modules a regeneration adds from ``git add``.
             return tuple(
                 f"{artifact.name}/" if artifact.is_dir else artifact.name
                 for artifact in self.artifacts
-                if artifact.gitignore
+                if artifact.gitignore and not artifact.generated_source
             )
 
         managed_files: Annotated[

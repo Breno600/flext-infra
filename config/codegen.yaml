@@ -790,9 +790,10 @@ Infra:
       - {name: build, source_scan_ignore: true}
       - {name: dist, source_scan_ignore: true}
       - {name: node_modules, source_scan_ignore: true}
-    # protoc-generated wire-protocol modules ("DO NOT EDIT"): conditional
-    # imports are intrinsic to the generated surface, never first-party code.
-      - {name: protos, source_scan_ignore: true}
+    # protoc-generated wire-protocol modules ("DO NOT EDIT"): tracked and
+    # imported as a regular package, never first-party code. generated_source
+    # is the one key every analyzer exclusion, scan, and init derives from.
+      - {name: protos, generated_source: true}
       - {name: site, watch_exclude: false}
       - {name: target}
       - {name: .pyrefly_cache, vscode_exclude: false, watch_exclude: false, source_scan_ignore: true}

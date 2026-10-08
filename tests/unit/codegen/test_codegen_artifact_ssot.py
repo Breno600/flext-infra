@@ -64,7 +64,7 @@ class TestsFlextInfraCodegenArtifactSsot:
         expected = tuple(
             artifact.name
             for artifact in codegen.artifacts
-            if artifact.source_scan_ignore
+            if artifact.source_scan_ignore or artifact.generated_source
         )
         tm.that(codegen.source_scan_ignored, eq=expected)
         tm.that(len(expected), eq=len(set(expected)))
@@ -77,10 +77,61 @@ class TestsFlextInfraCodegenArtifactSsot:
         expected = tuple(
             f"{artifact.name}/" if artifact.is_dir else artifact.name
             for artifact in codegen.artifacts
-            if artifact.gitignore
+            if artifact.gitignore and not artifact.generated_source
         )
         tm.that(codegen.gitignore_artifact_patterns, eq=expected)
         tm.that(len(expected), eq=len(set(expected)))
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        "profile",
+        [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE],
+    )
+    def test_generated_source_is_tracked_and_excluded_from_analysis(
+        codegen: CodegenSpec,
+        profile: c.Infra.MakeProfile,
+    ) -> None:
+        """One generated_source key keeps a tree tracked yet outside analysis.
+
+        Premise (flext-gknfx): a generated tree that ``.gitignore`` hides while
+        Git tracks it loses every module a regeneration adds, and analyzers
+        that ignore ``.gitignore`` still check it. The key must therefore keep
+        the tree trackable while every scan and analyzer exclusion derives it.
+        """
+        artifact_type = type(codegen.artifacts[0])
+        name = "wire_contracts"
+        declared = codegen.model_copy(
+            update={
+                "artifacts": (
+                    *codegen.artifacts,
+                    artifact_type(name=name, generated_source=True),
+                ),
+            },
+        )
+        rendered = tm.ok(
+            FlextInfraCodegenConform.render_project_gitignore(
+                declared,
+                profile=profile,
+                project_name="fixture-project",
+            ),
+        )
+
+        tm.that(declared.generated_sources, has=name)
+        tm.that(declared.source_scan_ignored, has=name)
+        tm.that(declared.generated_source_globs, has=f"**/{name}/**")
+        tm.that(declared.gitignore_artifact_patterns, lacks=f"{name}/")
+        tm.that(
+            u.Tests.is_tracked_under(rendered, f"src/fixture/{name}/wire_pb2.py"),
+            eq=True,
+        )
+
+    @staticmethod
+    def test_generated_source_must_be_a_directory(codegen: CodegenSpec) -> None:
+        """A generated source names a package tree, never a single file."""
+        artifact_type = type(codegen.artifacts[0])
+
+        with pytest.raises(c.ValidationError, match="must be a directory"):
+            artifact_type(name="wire_pb2.py", is_dir=False, generated_source=True)
 
     @staticmethod
     def test_gitignore_sections_account_for_every_artifact(

@@ -62,6 +62,37 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
         return ".".join(package_parts)
 
     @classmethod
+    def generated_source_packages(cls, project_root: Path) -> t.StrTuple:
+        """Return the import packages of a project's generated source trees.
+
+        The tree names come from the codegen artifact key
+        (``generated_source``); analyzers that take module names rather than
+        path globs exclude exactly these packages.
+
+        Returns:
+            The sorted import packages of every generated source tree.
+
+        """
+        root = project_root.resolve()
+        names = frozenset(config.Infra.codegen.generated_sources)
+        ignored = cls._excluded_parts() - names
+        packages: set[str] = set()
+        for scan_root in config.Infra.source_scan.roots:
+            base = root / scan_root
+            if not base.is_dir():
+                continue
+            for name in names:
+                for directory in base.rglob(name):
+                    package = cls.package_name_for_dir(directory, project_root=root)
+                    if (
+                        directory.is_dir()
+                        and package
+                        and not ignored.intersection(directory.relative_to(root).parts)
+                    ):
+                        packages.add(package)
+        return tuple(sorted(packages))
+
+    @classmethod
     def module_name_for_file(cls, file_path: Path, *, project_root: Path) -> str:
         """Return the module name for a file.
 

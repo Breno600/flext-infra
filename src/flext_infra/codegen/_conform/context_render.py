@@ -465,7 +465,10 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 ruff_per_file_ignores=(
                     config.Infra.tooling.tools.ruff.lint.per_file_ignores
                 ),
-                ruff_extend_exclude=(config.Infra.tooling.tools.ruff_extend_exclude),
+                ruff_extend_exclude=(
+                    *config.Infra.tooling.tools.ruff_extend_exclude,
+                    *codegen.generated_source_globs,
+                ),
                 environment_path_prepends=(codegen.toolchain.environment_path_prepends),
                 beads=workspace.beads,
                 canonical_project_name=target.canonical_project_name,

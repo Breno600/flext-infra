@@ -345,6 +345,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                         if target.make_profile is c.Infra.MakeProfile.WORKSPACE
                         else ()
                     ),
+                    generated_source_globs=codegen.generated_source_globs,
                 ),
             )
         if destination == c.Infra.ENVRC_FILENAME:
@@ -387,10 +388,15 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             c.Infra.MARKDOWNLINT_IGNORE_FILENAME,
             c.Infra.PRETTIER_CONFIG_FILENAME,
             c.Infra.PRETTIER_IGNORE_FILENAME,
-            f"{c.Infra.QLTY_CONFIG_DIRNAME}/{c.Infra.QLTY_CONFIG_FILENAME}",
         }:
             return r[p.Model].ok(
                 m.Infra.MarkdownLintRenderSpec(tooling=config.Infra.tooling),
+            )
+        if destination == f"{c.Infra.QLTY_CONFIG_DIRNAME}/{c.Infra.QLTY_CONFIG_FILENAME}":
+            return r[p.Model].ok(
+                m.Infra.QltyRenderSpec(
+                    generated_source_globs=codegen.generated_source_globs,
+                ),
             )
         if destination in {c.Infra.MISE_TOML_FILENAME, c.Infra.PYTHON_VERSION_FILENAME}:
             # Computed toolchain fields are projections, not inputs: filter the

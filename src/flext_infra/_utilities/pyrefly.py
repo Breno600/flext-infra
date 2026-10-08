@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from flext_cli import u
 
-from flext_infra import c
+from flext_infra import c, config
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -45,6 +45,20 @@ class FlextInfraUtilitiesPyrefly:
             return discovered_dirs
         includes = u.Cli.toml_item_child(pyrefly, c.Infra.PROJECT_INCLUDES)
         return () if includes is not None else discovered_dirs
+
+    @staticmethod
+    def pyrefly_project_excludes(declared_globs: t.StrSequence) -> t.StrSequence:
+        """Compose the declared Pyrefly excludes with the generated-source globs.
+
+        The generated-source trees come from their single codegen artifact
+        key, so every Pyrefly projection excludes exactly the trees the other
+        analyzers exclude.
+
+        Returns:
+            The sorted, deduplicated ``project-excludes`` values.
+
+        """
+        return sorted({*declared_globs, *config.Infra.codegen.generated_source_globs})
 
 
 __all__: list[str] = ["FlextInfraUtilitiesPyrefly"]
