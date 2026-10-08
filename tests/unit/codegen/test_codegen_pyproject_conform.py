@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
+from flext_core import e
 from flext_infra import c, config, m, p
 from tests import t, u
 
@@ -737,6 +738,61 @@ dependencies = []
             u.Tests.scaffold_text(root, c.PYPROJECT_FILENAME, what=surface),
             eq=first,
         )
+
+    @staticmethod
+    @pytest.mark.parametrize("members", [(), ("fixture-member",)])
+    def test_scaffold_pyrefly_policy_matches_ssot_and_converges(
+        tmp_path: Path,
+        members: t.StrSequence,
+    ) -> None:
+        """Both repository roles render each declared diagnostic exactly once."""
+        root = tmp_path / "fixture-project"
+        surface = c.Infra.CodegenConformSurface.PYPROJECT
+        first = u.Tests.scaffold_text(
+            root,
+            c.PYPROJECT_FILENAME,
+            members=members,
+            what=surface,
+        )
+        policy = config.Infra.tooling.tools.pyrefly
+        tm.that(
+            u.Tests.toml_table_at(first, "tool", "pyrefly", "errors"),
+            eq={diagnostic: "error" for diagnostic in policy.strict_errors},
+        )
+        tm.that(
+            u.Tests.scaffold_text(
+                root,
+                c.PYPROJECT_FILENAME,
+                members=members,
+                what=surface,
+            ),
+            eq=first,
+        )
+
+    @staticmethod
+    def test_pyrefly_policy_rejects_duplicate_diagnostic_declarations() -> None:
+        """Ambiguous SSOT input fails before the TOML template can emit it."""
+        payload = config.Infra.tooling.tools.pyrefly.model_dump(by_alias=True)
+        payload["strict-errors"] = ("bad-argument-count", "bad-argument-count")
+        with pytest.raises(e.PydanticValidationError, match="duplicate diagnostic"):
+            m.Infra.PyreflyConfig.model_validate(payload)
+
+    @staticmethod
+    @pytest.mark.parametrize("selection", ["reordered", "subset", "empty"])
+    def test_pyrefly_policy_preserves_valid_diagnostic_selections(selection: str) -> None:
+        """Validation does not freeze the selected diagnostic set or its order."""
+        policy = config.Infra.tooling.tools.pyrefly
+        errors = tuple(policy.strict_errors)
+        if selection == "reordered":
+            selected = tuple(reversed(errors))
+        elif selection == "subset":
+            selected = errors[::2]
+        else:
+            selected = ()
+        payload = policy.model_dump(by_alias=True)
+        payload["strict-errors"] = selected
+        validated = m.Infra.PyreflyConfig.model_validate(payload)
+        tm.that(tuple(validated.strict_errors), eq=selected)
 
     @staticmethod
     def _assert_unmanaged_tool_tables_survive(
