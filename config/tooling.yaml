@@ -182,16 +182,6 @@ Infra:
           - complex-structure
           - suspicious-subprocess-import
           - subprocess-without-shell-equals-true
-          - too-many-arguments
-          - too-many-positional-arguments
-          - too-many-locals
-          - too-many-return-statements
-          - too-many-branches
-          - too-many-public-methods
-          - too-many-statements
-          - complex-structure
-          - suspicious-subprocess-import
-          - subprocess-without-shell-equals-true
         line-length: 88
         preview: true
         respect-gitignore: true
@@ -207,7 +197,6 @@ Infra:
         lint:
           select:
             - ALL
-            - ALL
           # make fix never deletes information. The lint
           # repair applies safe fixes only (make.ruff.lint_fix rejects
           # --unsafe-fixes), and these rules are never auto-fixed at all,
@@ -217,15 +206,6 @@ Infra:
           # script and turned its failures silent). Ruff keeps reporting them;
           # the author decides. Also guards direct and IDE Ruff runs.
           unfixable:
-            - duplicate-value
-            - multi-value-repeated-key-literal
-            - multi-value-repeated-key-variable
-            - outdated-version-block
-            - p-print
-            - print
-            - pytest-duplicate-parametrize-test-cases
-            - redefined-while-unused
-            - unused-variable
             - duplicate-value
             - multi-value-repeated-key-literal
             - multi-value-repeated-key-variable
@@ -246,9 +226,6 @@ Infra:
           # `unfixable` above — that is rule selection, never disabling the
           # mandatory unsafe channel.
           extend-safe-fixes:
-            - relative-imports
-            - typing-only-first-party-import
-            - camelcase-imported-as-lowercase
             - relative-imports
             - typing-only-first-party-import
             - camelcase-imported-as-lowercase
@@ -285,7 +262,6 @@ Infra:
           # runtime-evaluated-base-classes (tooling_runtime), never a list here.
           flake8-type-checking:
             runtime-evaluated-roots:
-              - pydantic.BaseModel
               - pydantic.BaseModel
           # Banned API messages are policy data, never template literals.
           banned-api:
@@ -655,25 +631,6 @@ Infra:
             - "**/site-packages/**"
             - "**/dist-packages"
             - "**/dist-packages/**"
-            - "**/node_modules"
-            - "**/__pycache__"
-            - "**/__pyrefly_virtual__/**"
-            - "**/.mypy_cache"
-            - "**/.ruff_cache"
-            - "**/.pytest_cache"
-            - "**/.*"
-            - .git
-            - .reports
-            - vendor
-            - .venv
-            - "**/.venv"
-            - "**/.venv/**"
-            - "**/venv"
-            - "**/venv/**"
-            - "**/site-packages"
-            - "**/site-packages/**"
-            - "**/dist-packages"
-            - "**/dist-packages/**"
           root-typings-paths: []
           project-typings-paths: []
           ignored-diagnostic-globs: []
@@ -690,14 +647,7 @@ Infra:
           - "if _t.TYPE_CHECKING:"
           - "if TYPE_CHECKING:"
           - "if typing.TYPE_CHECKING:"
-          - "if _t.TYPE_CHECKING:"
-          - "if TYPE_CHECKING:"
-          - "if typing.TYPE_CHECKING:"
         omit:
-          - "*/dependency_injector/providers.pyx"
-          # Declaration-layer Protocol facades have no runtime behavior to cover.
-          - "*/protocols.py"
-          - "*/_protocols/*"
           - "*/dependency_injector/providers.pyx"
           # Declaration-layer Protocol facades have no runtime behavior to cover.
           - "*/protocols.py"
@@ -711,87 +661,6 @@ Infra:
         # repositories resolve does not know the code and rejects it as an
         # unknown variant, so a pyrefly-side suspension cannot be fleet-wide.
         strict-errors:
-          # --- type safety ---
-          - bad-argument-count
-          - bad-argument-type
-          - bad-assignment
-          - bad-class-definition
-          - bad-context-manager
-          - bad-dunder-all
-          - bad-function-definition
-          - bad-index
-          - bad-instantiation
-          - bad-keyword-argument
-          - bad-match
-          - bad-param-name-override
-          - bad-raise
-          - bad-return
-          - bad-specialization
-          - bad-typed-dict
-          - bad-typed-dict-key
-          - bad-unpacking
-          - deprecated
-          - implicit-abstract-class
-          - implicit-any
-          - implicit-import
-          - implicitly-defined-attribute
-          - inconsistent-inheritance
-          - inconsistent-overload
-          - invalid-annotation
-          - invalid-argument
-          - invalid-decorator
-          - invalid-inheritance
-          - invalid-literal
-          - invalid-overload
-          - invalid-param-spec
-          - invalid-pattern
-          - invalid-self-type
-          - invalid-super-call
-          - invalid-type-alias
-          - invalid-type-var
-          - invalid-type-var-tuple
-          - invalid-variance
-          - invalid-yield
-          - missing-argument
-          - missing-attribute
-          - missing-import
-          - missing-module-attribute
-          - missing-override-decorator
-          - missing-source
-          - missing-source-for-stubs
-          - no-access
-          - no-matching-overload
-          - not-a-type
-          - not-async
-          - not-callable
-          - not-iterable
-          - not-required-key-access
-          - open-unpacking
-          - protocol-implicitly-defined-attribute
-          - read-only
-          - redefinition
-          - redundant-cast
-          - redundant-condition
-          - unannotated-attribute
-          - unannotated-parameter
-          - unannotated-return
-          - unbound-name
-          - unexpected-keyword
-          - unexpected-positional-argument
-          - unknown-name
-          - unnecessary-comparison
-          - unnecessary-type-conversion
-          - unreachable
-          - unresolvable-dunder-all
-          - unsafe-overlap
-          - unsupported
-          - unsupported-delete
-          - unsupported-operation
-          - untyped-import
-          - unused-coroutine
-          - unused-ignore
-          - variance-mismatch
-          - inconsistent-overload-default
           # --- type safety ---
           - bad-argument-count
           - bad-argument-type
@@ -1043,22 +912,6 @@ Infra:
           - "discovery: catalog and stream discovery tests"
           - "singer: Singer protocol contract tests"
           - "requires_engine: native check engine required by this test"
-          - "smoke: public-interface smoke tests"
-          - "unit: unit tests"
-          - "integration: integration tests"
-          - "functional: functional behavior tests"
-          - "performance: performance and benchmark tests"
-          - "slow: slow-running tests"
-          - "docker: tests requiring Docker"
-          - "oracle: tests requiring the shared Oracle database"
-          - "remote: tests requiring remote/external network services"
-          - "e2e: end-to-end integration tests"
-          - "edge_cases: edge case tests"
-          - "stress: stress tests"
-          - "resilience: resilience tests"
-          - "discovery: catalog and stream discovery tests"
-          - "singer: Singer protocol contract tests"
-          - "requires_engine: native check engine required by this test"
         # External-token gates never run inside
         # offline verification (`make test`); the runner records their exclusion.
         # `make test-full` first completes that incremental phase, then executes
@@ -1073,12 +926,6 @@ Infra:
         ci-excluded-fixtures:
           [resolved_make_templates, detector_project, mod_workspace, smells_project, _clear_make_ci_token]
         standard-addopts:
-          - --benchmark-disable
-          - --strict-markers
-          - --markdown-docs
-          - --durations=10
-          # --timeout/--session-timeout are runner-owned and derived
-          # from case-timeout-seconds/run-timeout-seconds; never restate them here.
           - --benchmark-disable
           - --strict-markers
           - --markdown-docs
@@ -1113,17 +960,6 @@ Infra:
       # within package); reverse (higher) imports are emitted under
       # ``if TYPE_CHECKING:`` per ``reverse_import_mode``.
       import-layer-order:
-        - settings
-        - config
-        - c
-        - t
-        - p
-        - m
-        - u
-        - base
-        - services
-        - api
-        - cli
         - settings
         - config
         - c

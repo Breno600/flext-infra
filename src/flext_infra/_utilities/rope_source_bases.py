@@ -258,6 +258,22 @@ class FlextInfraUtilitiesRopeSourceBases:
                         for target in targets
                     ):
                         continue
+                    # A literal written to a dunder of a bound class (e.g. the
+                    # stdlib ``ABCMeta.__module__ = 'abc'``) relabels metadata;
+                    # it binds no class and changes no base.
+                    if (
+                        spec.allow_conditional
+                        and isinstance(node.value, ast.Constant)
+                        and all(
+                            isinstance(target, ast.Attribute)
+                            and isinstance(target.value, ast.Name)
+                            and target.value.id in bindings
+                            and target.attr.startswith("__")
+                            and target.attr.endswith("__")
+                            for target in targets
+                        )
+                    ):
+                        continue
                     if all(
                         cls._module_table_target(target, bindings) for target in targets
                     ):
