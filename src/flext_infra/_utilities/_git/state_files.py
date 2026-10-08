@@ -8,9 +8,13 @@ from __future__ import annotations
 
 import os
 import stat
+import tempfile
 from pathlib import Path
 
+from flext_cli import u
+
 from flext_infra import m, t
+from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
 from flext_infra._utilities._git.state_publication import (
     FlextInfraUtilitiesGitStatePublicationMixin,
 )
@@ -54,8 +58,6 @@ class FlextInfraUtilitiesGitStateFilesMixin(
         owned: t.SequenceOf[Path],
     ) -> None:
 
-        from flext_cli import u
-
         manifest = u.Cli.atomic_inventory_physical_tree(root / path).unwrap()
         for entry in manifest.entries:
             relative = entry.path.relative_to(root)
@@ -74,8 +76,6 @@ class FlextInfraUtilitiesGitStateFilesMixin(
             TypeError: If hash-object returned a non-text object identifier.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGitWorktreeIO
-
         with FlextInfraUtilitiesGitWorktreeIO.git_stdin(content) as stream:
             oid = cls._repo(root).git.hash_object("--stdin", istream=stream)
         if not isinstance(oid, str):
@@ -113,15 +113,66 @@ class FlextInfraUtilitiesGitStateFilesMixin(
 
     @staticmethod
     def _state_write_symlink(destination: Path, target: str) -> None:
-        """Atomically point ``destination`` at the raw ``target`` text."""
-        staged = destination.parent / f".{destination.name}.symlink-{os.getpid()}"
-        # The staged path is this process's own scratch name (pid-scoped),
-        # never a real tree: unlink covers both fresh and stale states,
-        # including a broken symlink left by a killed predecessor.
-        if staged.is_symlink() or staged.exists():
-            staged.unlink()
-        staged.symlink_to(target)
-        staged.replace(destination)
+        """Replace one link under the writer lease using exclusive private staging.
+
+        Raises:
+            ValueError: If staging identity changed before cleanup.
+
+        """
+        directory = Path(tempfile.mkdtemp(dir=destination.parent))
+        directory_identity = directory.lstat()
+        staged = directory / destination.name
+        staged_identity: os.stat_result | None = None
+        descriptor: int | None = None
+        published = False
+        try:
+            descriptor = os.open(
+                directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+            )
+            opened = os.fstat(descriptor)
+            if (opened.st_dev, opened.st_ino) != (
+                directory_identity.st_dev,
+                directory_identity.st_ino,
+            ):
+                msg = f"symlink staging directory changed: {directory}"
+                raise ValueError(msg)
+            os.symlink(target, staged.name, dir_fd=descriptor)
+            staged_identity = os.stat(
+                staged.name,
+                dir_fd=descriptor,
+                follow_symlinks=False,
+            )
+            os.replace(staged.name, destination, src_dir_fd=descriptor)
+            published = True
+        finally:
+            try:
+                # Never recurse or adopt an entry that replaced our private staging.
+                if (
+                    not published
+                    and staged_identity is not None
+                    and descriptor is not None
+                ):
+                    current = os.stat(
+                        staged.name, dir_fd=descriptor, follow_symlinks=False,
+                    )
+                    if (current.st_dev, current.st_ino) != (
+                        staged_identity.st_dev,
+                        staged_identity.st_ino,
+                    ):
+                        msg = f"symlink staging entry changed: {staged}"
+                        raise ValueError(msg)
+                    os.unlink(staged.name, dir_fd=descriptor)
+                current_directory = directory.lstat()
+                if (current_directory.st_dev, current_directory.st_ino) != (
+                    directory_identity.st_dev,
+                    directory_identity.st_ino,
+                ):
+                    msg = f"symlink staging directory changed: {directory}"
+                    raise ValueError(msg)
+                directory.rmdir()
+            finally:
+                if descriptor is not None:
+                    os.close(descriptor)
 
     @classmethod
     def _state_effect_file(
@@ -131,8 +182,6 @@ class FlextInfraUtilitiesGitStateFilesMixin(
         desired: m.Infra.GitWorktreeFileState | None,
         allowed: t.SequenceOf[m.Infra.GitWorktreeFileState | None],
     ) -> None:
-
-        from flext_cli import u
 
         destination = root / path
         if destination.is_symlink():
@@ -199,8 +248,6 @@ class FlextInfraUtilitiesGitStateFilesMixin(
 
     @staticmethod
     def _state_remove_empty_tree(path: Path) -> None:
-
-        from flext_cli import u
 
         manifest = u.Cli.atomic_inventory_physical_tree(path).unwrap()
         if any(entry.kind != "directory" for entry in manifest.entries):

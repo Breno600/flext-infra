@@ -11,9 +11,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c, config, m, r, u
-from flext_infra.codegen._mise_artifacts_files import (
-    FlextInfraMiseArtifactsFiles as files,
-)
+from flext_infra.codegen._mise_artifacts_files import FlextInfraMiseArtifactsFiles
+from flext_infra.workspace import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -111,8 +110,6 @@ class FlextInfraMiseWorkspacePlanner:
             The resulting ``p.Result[m.Infra.MiseToolchainWorkspaceLayout]``.
 
         """
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
         requested = self._owner.repository_root.expanduser().absolute()
         resolved_scope = (
             self.scope_root() if scope_root is None else r[Path].ok(scope_root)
@@ -195,7 +192,7 @@ class FlextInfraMiseWorkspacePlanner:
         for selector, root in sorted(roots.items()):
             if not root.is_absolute() or ".." in root.parts or root.resolve() != root:
                 return result_type.fail(f"file capability root is not physical: {root}")
-            physical = files.physical_directory_identity(root)
+            physical = FlextInfraMiseArtifactsFiles.physical_directory_identity(root)
             if physical.failure:
                 return result_type.from_failure(physical)
             staging = self._state_root(root)
@@ -414,7 +411,7 @@ class FlextInfraMiseWorkspacePlanner:
         layout: m.Infra.MiseToolchainProjectLayout,
         config_plan: m.Infra.CodegenFilePlan | None,
     ) -> p.Result[m.Infra.MiseToolchainProjectState]:
-        config_state = files.read_state(
+        config_state = FlextInfraMiseArtifactsFiles.read_state(
             layout.config,
             required=config_plan is None,
         )

@@ -192,7 +192,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
         for py_file in paths:
             output = u.Cli.run_raw(
                 [
-                    *cls._workspace_tool_command(workspace, "ruff"),
+                    *cls._workspace_tool_command("ruff"),
                     c.Infra.CHECK,
                     "--fix",
                     str(py_file),
@@ -292,7 +292,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
                 ),
             )
         command: t.StrSequence = (
-            *cls._workspace_tool_command(workspace, template[0]),
+            *cls._workspace_tool_command(template[0]),
             *(item.replace("{file}", str(py_file)) for item in template[1:]),
         )
         if (

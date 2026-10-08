@@ -13,10 +13,11 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m, u
+from flext_infra import c, m, t
 from flext_infra.codemod import FlextInfraModTextGateEngine
 from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
+from tests import u
 
 
 class TestsFlextInfraSymbolicTextCutover:
@@ -63,7 +64,7 @@ class TestsFlextInfraSymbolicTextCutover:
             (source.rindex("Public"), False),
         ):
             start_byte = len(source[:start].encode("utf-8"))
-            capture = {
+            capture: t.JsonMapping = {
                 "OWNER": {
                     "text": "Public",
                     "range": {

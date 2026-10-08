@@ -872,19 +872,12 @@ class FlextInfraUtilitiesRopeSourceBases:
                         raise ValueError(message)
                     target = resolve(binding, visiting | {key}, depth + 1)
                 else:
-                    try:
-                        target = external_reference(
-                            target,
-                            tuple(attributes),
-                            visiting,
-                            depth + 1,
-                        )
-                    except (TypeError, ValueError):
-                        message = (
-                            f"resolving base of {reference.target!r} "
-                            f"(qualified_base={reference.qualified_base!r})"
-                        )
-                        raise ValueError(message) from None
+                    target = external_reference(
+                        target,
+                        tuple(attributes),
+                        visiting,
+                        depth + 1,
+                    )
                     attributes.clear()
             for attribute in attributes:
                 target = member(target, attribute, 0, visiting | {key})
