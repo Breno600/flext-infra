@@ -257,6 +257,32 @@ class TestsFlextInfraRefactorImportNormalization:
         tm.that(normalized, lacks="TestsDemoUtilities")
 
     @classmethod
+    def test_settings_config_modules_keep_direct_imports(
+        cls,
+        tmp_path: Path,
+    ) -> None:
+        """Settings/config modules import each other directly, never via a root."""
+        project, package = cls._project(tmp_path)
+        result = FlextInfraImportNormalization.normalize_source(
+            project_root=project,
+            file_path=package / "_config.py",
+            source=(
+                "from __future__ import annotations\n"
+                "\n"
+                "from flext_core import r\n"
+                "from demo_pkg._settings import DemoSettings\n"
+                "from demo_pkg._models.base import DemoModelsBase\n"
+                "\n"
+                "\n"
+                "class DemoConfig(DemoModelsBase):\n"
+                "    settings: DemoSettings\n"
+                "    result: r[str]\n"
+            ),
+        )
+
+        tm.that(result, eq=None)
+
+    @classmethod
     def test_internal_tier_alias_binds_through_tier_root(cls, tmp_path: Path) -> None:
         """An internal tier imports root aliases from its own root."""
         project, _ = cls._project(tmp_path)

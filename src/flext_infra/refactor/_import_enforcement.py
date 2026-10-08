@@ -101,6 +101,10 @@ class FlextInfraImportNormalization(
                     layer=u.Infra.module_import_layer(module),
                     own_exports=cls._declared_exports(tree),
                     family_letter=cls._family_letter(namespace_dir, file_path),
+                    direct_imports=u.Infra.import_direct_module(
+                        namespace_dir,
+                        file_path,
+                    ),
                 ),
                 tree=tree,
                 parents=cls._parent_map(tree),
