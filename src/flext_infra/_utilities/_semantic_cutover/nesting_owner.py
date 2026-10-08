@@ -77,6 +77,22 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
         )
 
     @classmethod
+    def _is_pure_reference(cls, value: ast.expr) -> bool:
+        """Whether ``value`` only names another binding (``A`` or ``A.B.C``).
+
+        A pure reference is a compatibility alias the compat-alias phase owns
+        (inline every consumer, then delete it); nesting it under the facade
+        owner would publish the alias instead of removing it.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
+        if isinstance(value, ast.Attribute):
+            return cls._is_pure_reference(value.value)
+        return isinstance(value, ast.Name)
+
+    @classmethod
     def _loose_value_name(cls, node: ast.stmt) -> str | None:
         """Return the bound name when ``node`` is a loose module value binding.
 
@@ -93,7 +109,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
         loose = (
             isinstance(target, ast.Name)
             and not (target.id.startswith("__") and target.id.endswith("__"))
-            and not isinstance(value, ast.Name)
+            and not cls._is_pure_reference(value)
             and not cls._is_typing_declaration(value, annotation)
         )
         return target.id if loose and isinstance(target, ast.Name) else None
