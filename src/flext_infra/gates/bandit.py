@@ -156,13 +156,12 @@ class FlextInfraBanditGate(FlextInfraGate):
     ) -> t.SequenceOf[t.Pair[t.StrSequence, t.StrSequence]]:
         """Resolve each authorized exception to its owner modules under targets.
 
+        Native path resolution rejects unavailable owners and paths outside
+        the physical project root before any exception is granted.
+
         Returns:
             One ``(tests, files)`` pair per exception that owns a file under
             ``targets``; files are project-relative POSIX paths.
-
-        Raises:
-            ValueError: If an owner path resolves outside the project root.
-            OSError: If the selected owner or project root cannot be resolved.
 
         """
         roots = tuple(PurePosixPath(target) for target in targets)

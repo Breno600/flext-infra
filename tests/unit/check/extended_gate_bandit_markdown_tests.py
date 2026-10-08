@@ -113,11 +113,12 @@ class TestsFlextInfraBanditAndMarkdownGates:
         # A literal Bandit exclusion for the owner also matches this filename;
         # the consumer must instead remain in the exact unowned partition.
         consumer = f"{c.Infra.DEFAULT_SRC_DIR}/consumer/{owner}_extra.py"
+        entries = config.Infra.tooling.tools.bandit.authorized_exceptions
         tm.that(PurePosixPath(owner).full_match(pattern), eq=True)
         tm.that(
             any(
                 PurePosixPath(consumer).full_match(authorized)
-                for configured in config.Infra.tooling.tools.bandit.authorized_exceptions
+                for configured in entries
                 for authorized in configured.files
             ),
             eq=False,
@@ -206,8 +207,56 @@ class TestsFlextInfraBanditAndMarkdownGates:
         source.parent.mkdir(parents=True)
         source.symlink_to(external)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="is not in the subpath of"):
             u.Tests.run_gate_check(FlextInfraBanditGate, tmp_path, project)
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        "report",
+        [
+            "{}",
+            '{"errors":[]}',
+            '{"results":[]}',
+            '{"results":null,"errors":[]}',
+            '{"results":[],"errors":null}',
+            '{"results":{},"errors":[]}',
+            '{"results":[],"errors":{}}',
+            '{"results":[{}],"errors":[]}',
+            '{"results":[],"errors":[{}]}',
+            '{"results":[],"errors":[{"filename":"source.py","reason":7}]}',
+            (
+                '{"results":[{"filename":"source.py","line_number":"1",'
+                '"test_id":"B101","issue_text":"assert used"}],"errors":[]}'
+            ),
+        ],
+    )
+    def test_bandit_report_rejects_missing_or_malformed_native_arrays(
+        report: str,
+    ) -> None:
+        """The public typed boundary rejects unauditable native report shapes."""
+        result = u.validate_value(
+            m.Infra.BanditReport,
+            report,
+            from_json=True,
+            strict=True,
+        )
+
+        tm.that(result.failure, eq=True)
+
+    @staticmethod
+    def test_bandit_report_accepts_explicit_clean_native_arrays() -> None:
+        """Two explicit empty native arrays represent a clean report."""
+        result = u.validate_value(
+            m.Infra.BanditReport,
+            '{"results":[],"errors":[]}',
+            from_json=True,
+            strict=True,
+        )
+
+        tm.that(result.success, eq=True)
+        report = result.unwrap()
+        tm.that(report.results, empty=True)
+        tm.that(report.errors, empty=True)
 
     @staticmethod
     def test_bandit_without_source_tree_has_no_audit_surface(
