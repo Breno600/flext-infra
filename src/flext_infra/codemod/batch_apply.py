@@ -17,7 +17,6 @@ from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
 from flext_infra.codemod.semantic_apply import FlextInfraCodemodSemanticApply
 from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
-from flext_infra.utilities import FlextInfraUtilitiesCodemodProject
 
 
 class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
@@ -392,12 +391,12 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         for project_root in u.Infra.governed_project_roots(root):
             if not u.Infra.namespace_enabled(project_root):
                 continue
-            graph, _modules = FlextInfraUtilitiesCodemodProject.project_import_graph(
+            graph, _modules = u.Infra.project_import_graph(
                 project_root,
             )
             cycles.update(
                 frozenset(members)
-                for members in FlextInfraUtilitiesCodemodProject.project_import_cycles(
+                for members in u.Infra.project_import_cycles(
                     graph,
                 ).values()
             )
