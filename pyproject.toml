@@ -211,12 +211,11 @@ warn_required_dynamic_aliases = true
 [tool.pyrefly]
 disable-project-excludes-heuristics = true
 project-excludes = [
-  "**/*_pb2*.py",
-  "**/*_pb2_grpc*.py",
   "**/.venv/**",
   "**/__pycache__",
   "**/__pyrefly_virtual__/**",
   "**/node_modules",
+  "**/protos/**",
   "**/site-packages/**",
   "**/typings/**",
   "**/vendor/**",
@@ -325,6 +324,7 @@ exclude = [
   "**/dist-packages",
   "**/dist-packages/**",
   "**/node_modules",
+  "**/protos/**",
   "**/site-packages",
   "**/site-packages/**",
   "**/venv",
@@ -405,12 +405,12 @@ testpaths = ["tests"]
 [tool.ruff]
 extend-exclude = [
   "**/.archive/**",
-  "**/protos/**",
   "**/.agents/aihub-hooks/**",
   "**/.claude/aihub-hooks/**",
   "**/.codex/aihub-hooks/**",
   "**/.cursor/aihub-hooks/**",
   "**/.gemini/aihub-hooks/**",
+  "**/protos/**",
 ]
 fix = false
 line-length = 88
@@ -499,6 +499,7 @@ runtime-evaluated-base-classes = [
   "flext_infra.codegen._conform.bootstrap.FlextInfraCodegenConformBootstrap",
   "flext_infra.codegen._conform.context_render.FlextInfraCodegenConformContextRender",
   "flext_infra.codegen._conform.docs_ownership.FlextInfraCodegenConformDocsOwnership",
+  "flext_infra.codegen._conform.execute_scaffold.FlextInfraCodegenConformExecuteScaffold",
   "flext_infra.codegen._conform.existing_plan.FlextInfraCodegenConformExistingPlan",
   "flext_infra.codegen._conform.file_plans.FlextInfraCodegenConformFilePlans",
   "flext_infra.codegen._conform.gitignore.FlextInfraCodegenConformGitignore",

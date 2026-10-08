@@ -6,8 +6,11 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import logging
+import sys
 from collections.abc import MutableMapping
 from importlib import import_module
+from logging.handlers import BufferingHandler
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -138,9 +141,10 @@ class FlextInfraUtilitiesDocsBuild:
     ) -> m.Infra.DocsPhaseReport:
         """Build one MkDocs config file into a site directory.
 
-        A MkDocs failure becomes the phase's ``FAIL`` report — the phase
-        result, not a raised exception, is the reporting contract every
-        caller (``execute`` above all) consumes.
+        A MkDocs failure escapes with its own exception and traceback; the
+        warnings MkDocs logged before aborting (a strict build fails on them)
+        are attached to that exception as notes, never translated into a
+        report.
 
         Returns:
             The resulting ``m.Infra.DocsPhaseReport``.
@@ -151,17 +155,18 @@ class FlextInfraUtilitiesDocsBuild:
             / c.Infra.DEFAULT_DOCS_OUTPUT_DIR
             / f"{c.Infra.DIR_SITE}{site_suffix}"
         ).resolve()
+        mkdocs_logger = logging.getLogger(c.Infra.MKDOCS_LOGGER_NAME)
+        warnings = BufferingHandler(capacity=sys.maxsize)
+        warnings.setLevel(logging.WARNING)
+        mkdocs_logger.addHandler(warnings)
         try:
             FlextInfraUtilitiesDocsBuild._run_mkdocs_api(settings, site_dir)
-        except Exception as exc:  # ruff: ignore[blind-except] - reported, not swallowed
-            return m.Infra.DocsPhaseReport(
-                phase="build",
-                scope=scope.name,
-                result=c.Infra.ResultStatus.FAIL,
-                reason=f"build failed ({settings.name}): {exc}",
-                site_dir="",
-                passed=False,
-            )
+        except Exception as exc:
+            for record in warnings.buffer:
+                exc.add_note(f"{record.levelname}: {record.getMessage()}")
+            raise
+        finally:
+            mkdocs_logger.removeHandler(warnings)
         return m.Infra.DocsPhaseReport(
             phase="build",
             scope=scope.name,

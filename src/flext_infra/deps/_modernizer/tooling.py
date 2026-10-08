@@ -199,6 +199,11 @@ class FlextInfraPyprojectModernizerTooling:
                     project_dir,
                     {},
                 ),
+                "mypy_generated_source_modules": tuple(
+                    pattern
+                    for package in u.Infra.generated_source_packages(project_dir)
+                    for pattern in (package, f"{package}.*")
+                ),
                 "ruff_runtime_evaluated_base_classes": (
                     u.Infra.runtime_evaluated_base_classes(
                         project_dir,
@@ -212,6 +217,9 @@ class FlextInfraPyprojectModernizerTooling:
                     else tools.pyrefly_search_path or derived_search_path
                 ),
                 "pyrefly_project_includes": declared_pyrefly_includes,
+                "pyrefly_project_excludes": u.Infra.pyrefly_project_excludes(
+                    config.Infra.tooling.tools.pyrefly.project_exclude_globs,
+                ),
                 "pyright_exclude": tools.pyright.get(c.Infra.EXCLUDE, ()),
                 "pyright_ignore": tools.pyright.get(c.Infra.IGNORE, ()),
                 "pyright_include": (

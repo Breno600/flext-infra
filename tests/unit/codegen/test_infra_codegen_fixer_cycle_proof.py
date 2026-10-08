@@ -16,12 +16,11 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_core import c, m
 from flext_infra.codegen.fixer import FlextInfraCodegenFixer
 from flext_infra.refactor.namespace_relocations import (
     FlextInfraNamespaceRelocationCascade,
 )
-from tests import u
+from tests import c, m, u
 
 
 def _finding(

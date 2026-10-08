@@ -118,7 +118,10 @@ class TestsFlextInfraFileGateAndReconcileMakefile:
             tm.that(
                 body,
                 has=[
-                    '$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)"',
+                    (
+                        "$(PROJECT_FLEXT_INFRA) check run"
+                        ' --repository-root "$(PROJECT_ROOT)"'
+                    ),
                     ' --gates "',
                     ' --file "$$FLEXT_FILE_GATE_FILE"',
                 ],
@@ -140,7 +143,12 @@ class TestsFlextInfraFileGateAndReconcileMakefile:
         tm.ok(u.Tests.create_python_environment(root))
         process = tm.ok(
             u.Cli.run_raw(
-                [c.Infra.MAKE, "--no-print-directory", "file-gate", f"FILE={selection}"],
+                [
+                    c.Infra.MAKE,
+                    "--no-print-directory",
+                    "file-gate",
+                    f"FILE={selection}",
+                ],
                 cwd=root,
                 remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
             ),

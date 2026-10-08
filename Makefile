@@ -448,16 +448,29 @@ define RUN_PUBLIC_POST
 	$(if $(filter post-$(1),$(CUSTOM_DECLARED_TARGETS)),+@$(SELF_MAKE) post-$(1))
 endef
 
-define RUN_PUBLIC
+# A public verb is its producer half (pre hook plus handler) followed by its
+# activation half. An activation producer re-enters the environment its
+# producer just rendered; `upg` runs the two halves apart so the toolchain
+# lock is resolved from that rendered manifest before activation demands it.
+define RUN_PUBLIC_PRODUCE
 	$(if $(filter pre-$(1),$(CUSTOM_DECLARED_TARGETS)),+@$(SELF_MAKE) pre-$(1))
 	$(if $(filter _custom-$(1),$(CUSTOM_DECLARED_TARGETS)),+@$(SELF_MAKE) _custom-$(1),+@$(SELF_MAKE) _builtin-$(1))
-	$(if $(2),+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-$(1),$(call RUN_PUBLIC_POST,$(1)))
+endef
+
+define RUN_PUBLIC_ACTIVATE
+	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-$(1)
+endef
+
+define RUN_PUBLIC
+$(call RUN_PUBLIC_PRODUCE,$(1))
+	$(if $(2),$(call RUN_PUBLIC_ACTIVATE,$(1)),$(call RUN_PUBLIC_POST,$(1)))
 endef
 
 
 
 # `make upg` is the only verb that writes uv.lock (`uv lock --upgrade
-# --refresh`, then `uv lock --check`). Setup never writes it (lock law above).
+# --refresh`, then `uv lock` of the manifest `gen` projected and `uv lock
+# --check`). Setup never writes it (lock law above).
 
 .PHONY: $(PUBLIC_VERBS) $(addprefix _builtin-,$(PUBLIC_VERBS))
 .PHONY: _builtin_gen_init _builtin_gen_all
@@ -962,7 +975,7 @@ status:
 	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make status to execute it.'
 
 verify-clean:
-	@printf '  %-16s %s\n' 'verify-clean' 'Verify that managed artifacts and generated documentation match their sources and leave no unstaged change to a tracked file.'
+	@printf '  %-16s %s\n' 'verify-clean' 'Verify managed artifacts and generated documentation against their sources, then reject staged, unstaged, untracked changes and stash entries through the public Git service.'
 	@printf '%s\n' 'OPTIONS=Y displays this contract without effects; run make verify-clean to execute it.'
 
 docs:
@@ -1099,7 +1112,7 @@ _builtin-help:
 
 	@printf '  %-16s %s\n' 'status' 'Report the resolved runtime and repository state.';
 
-	@printf '  %-16s %s\n' 'verify-clean' 'Verify that managed artifacts and generated documentation match their sources and leave no unstaged change to a tracked file.';
+	@printf '  %-16s %s\n' 'verify-clean' 'Verify managed artifacts and generated documentation against their sources, then reject staged, unstaged, untracked changes and stash entries through the public Git service.';
 
 	@printf '  %-16s %s\n' 'docs' 'Generate, fix, format, and check documentation.';
 
@@ -1412,9 +1425,19 @@ endif
 # carries the generator itself), provisions the environment frozen from it,
 # and conforms dependency floors. The floors land in the codegen SSOT, so
 # `gen` projects them into every pyproject and renders the managed tool
-# manifests (.mise.toml) of the upgraded generator. A second frozen install
-# then proves the committed mise.lock still satisfies that regenerated
-# manifest (mise has no `lock --check`: the locked install IS the
+# manifests (.mise.toml) of the upgraded generator. Only the producer half of
+# `gen` runs before the relock: its activation half demands the Mise release
+# the lock pins (`_builtin_require_environment`), and the lock still reflects
+# the manifest the generator was provisioned with until it is resolved from
+# the rendered one, so activation runs after the relock and its install. A
+# rendered manifest that moves the Mise self-pin therefore converges in one
+# run. The upgraded generator may also project requirements the first uv
+# resolution never saw (a runtime dependency its codegen SSOT declares), so
+# uv.lock is resolved again from the projected pyproject and the environment
+# reinstalled from it right after the producer half: one run converges for
+# both locks, never a second `make upg`. Resolve that regenerated
+# manifest before the second frozen install proves the committed mise.lock
+# satisfies it (mise has no `lock --check`: the locked install IS the
 # satisfaction check), `_builtin_require_mise` re-proves the pinned release,
 # and the convergence fixed point plus every active gate must be green before
 # the upgrade publishes. Branch-tracked git dependencies are moving sources by
@@ -1429,18 +1452,18 @@ _upg_lifecycle: _builtin_setup_submodules
 		*" pre-upg "*) $(SELF_MAKE) pre-upg ;; \
 	esac
 	@$(UV) lock --project "$(PROJECT_ROOT)" --upgrade --refresh
-	@$(UV) lock --check --project "$(PROJECT_ROOT)"
 	@$(SELF_MAKE) _builtin_setup_environment
 	@$(PROJECT_FLEXT_INFRA) deps modernize --repository-root "$(PROJECT_ROOT)" \
 		--apply --rewrite-constraints --projects .
-	@$(SELF_MAKE) gen
-	@set -eu; \
-	if [ -d .mise/locks ]; then \
-		git add -- .mise/locks; \
-		printf 'INFO: staged the .mise/locks sidecars written by mise lock (declared tracked by the generated .gitignore; commit them with the relock)\n'; \
-	fi
+	@$(SELF_MAKE) _builtin_require_environment
+	$(call RUN_PUBLIC_PRODUCE,gen)
+	@$(UV) lock --project "$(PROJECT_ROOT)"
+	@$(UV) lock --check --project "$(PROJECT_ROOT)"
+	@$(SELF_MAKE) _builtin_setup_environment
+	@mise -C "$(PROJECT_ROOT)" lock --bump
 	@mise -C "$(PROJECT_ROOT)" install --yes
 	@$(SELF_MAKE) _builtin_require_mise
+	$(call RUN_PUBLIC_ACTIVATE,gen)
 	@set -eu; \
 	before="$$(git -C "$(PROJECT_ROOT)" status --porcelain --untracked-files=all --ignore-submodules=none | sort)"; \
 	$(SELF_MAKE) gen; \
@@ -1477,11 +1500,11 @@ _builtin_check_all: _builtin_require_environment
 	@set -eu; \
 		gates="lint,security,markdown,markdown-format,markdown-code,duplication,pyrefly,mypy,pyright,loc-cap,runtime-census,fresh-import,index-declarations,codemod,layout,direnv"; \
 		if [ "$(strip $(CI))" = "Y" ]; then \
-			gates="lint,security,markdown,markdown-format,markdown-code,duplication,loc-cap,runtime-census,fresh-import,index-declarations,layout,direnv"; \
-			printf 'INFO: CI=Y runs check gates: lint security markdown markdown-format markdown-code duplication loc-cap runtime-census fresh-import index-declarations layout direnv\n'; \
+			gates="lint,security,markdown,markdown-format,markdown-code,duplication,loc-cap,runtime-census,fresh-import,index-declarations,layout"; \
+			printf 'INFO: CI=Y runs check gates: lint security markdown markdown-format markdown-code duplication loc-cap runtime-census fresh-import index-declarations layout\n'; \
 		elif [ "$(strip $(CI))" = "N" ]; then \
-			gates="pyrefly,mypy,pyright,codemod"; \
-			printf 'INFO: CI=N runs check gates: pyrefly mypy pyright codemod\n'; \
+			gates="pyrefly,mypy,pyright,codemod,direnv"; \
+			printf 'INFO: CI=N runs check gates: pyrefly mypy pyright codemod direnv\n'; \
 		else \
 			printf 'INFO: default context runs check gates: lint security markdown markdown-format markdown-code duplication pyrefly mypy pyright loc-cap runtime-census fresh-import index-declarations codemod layout direnv\n'; \
 		fi; \
@@ -1803,7 +1826,7 @@ _builtin-status: _builtin_status_diagnostics
 _builtin-verify-clean: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode check
 	@$(PROJECT_FLEXT_INFRA) docs audit --repository-root "$(PROJECT_ROOT)" --output-dir ".reports/docs" --projects .
-	@git -C "$(PROJECT_ROOT)" diff --exit-code
+	@$(PROJECT_FLEXT_INFRA) workspace verify-clean --repo-root "$(PROJECT_ROOT)"
 _builtin-docs: _builtin_docs_all
 _builtin-clean: _builtin_clean_generated
 _builtin-release-plan: _builtin_release_plan

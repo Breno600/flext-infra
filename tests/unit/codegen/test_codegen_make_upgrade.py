@@ -16,14 +16,13 @@ from flext_tests import tm
 from flext_infra import config
 from tests import c, t, u
 
-pytestmark = pytest.mark.slow
-
 
 class TestsFlextInfraCodegenMakeUpgrade:
     """Prove only ``upg`` resolves locks and publishes them transactionally."""
 
     @staticmethod
     @pytest.mark.remote
+    @pytest.mark.slow
     def test_upg_replaces_newer_lock_revision_before_older_mise_reads_it(
         tmp_path: Path,
         resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
@@ -60,6 +59,7 @@ class TestsFlextInfraCodegenMakeUpgrade:
 
     @staticmethod
     @pytest.mark.remote
+    @pytest.mark.slow
     def test_failed_upg_lock_preserves_runtime_and_retires_own_stage(
         tmp_path: Path,
         resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
@@ -128,9 +128,10 @@ class TestsFlextInfraCodegenMakeUpgrade:
         """Operator law 2026-09-24: only `upg` resolves and writes the locks.
 
         The generated Makefile confines every uv upgrade to the `upg`
-        lifecycle and every `mise lock --bump` to the shared bootstrap gated by
-        a switch that only `upg` sets; `setup` syncs `--locked`, and the
-        generated `.mise.toml` makes mise install exactly what the lock pins.
+        lifecycle and every `mise lock --bump` to that lifecycle or its shared
+        bootstrap gated by a switch that only `upg` sets; `setup` syncs
+        `--locked`, and the generated `.mise.toml` makes mise install exactly
+        what the lock pins.
         """
         project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
@@ -147,11 +148,9 @@ class TestsFlextInfraCodegenMakeUpgrade:
         )
         tm.that(
             self._recipe_targets_containing(makefile, "lock --bump"),
-            eq={"_bootstrap_setup_tools"},
+            eq={"_bootstrap_setup_tools", "_upg_lifecycle"},
         )
         toolchain = config.Infra.codegen.toolchain
-        lock_invocations = re.findall(r"lock --bump([^;]*);", makefile)
-        tm.that(tuple(arguments.strip() for arguments in lock_invocations), eq=("",))
         # Setup never locks (operator 2026-10-02): no reconcile or relock path
         # survives, and a lock that no longer satisfies the manifest stops.
         tm.that(
@@ -207,16 +206,16 @@ class TestsFlextInfraCodegenMakeUpgrade:
             eq=list(toolchain.mise_lockfile_platforms),
         )
 
-    @staticmethod
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
     def test_generated_dependency_upgrade_projects_lock_floors(
         self,
         tmp_path: Path,
+        profile: c.Infra.MakeProfile,
     ) -> None:
         """`upg` owns lock upgrade, open-floor projection, and final resolution."""
         project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
-            c.Infra.MakeProfile.STANDALONE,
+            profile,
         )
         makefile = (project_root / "Makefile").read_text(encoding="utf-8")
 
@@ -234,9 +233,59 @@ class TestsFlextInfraCodegenMakeUpgrade:
                 makefile,
                 '$(UV) lock --check --project "$(PROJECT_ROOT)"',
             ),
-            eq={"_upg_converge"},
+            eq={"_upg_lifecycle"},
         )
         tm.that(makefile, lacks="--constraint-policy")
+
+    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
+    def test_upg_relocks_the_manifest_gen_projected_before_installing(
+        self,
+        tmp_path: Path,
+        profile: c.Infra.MakeProfile,
+    ) -> None:
+        """One `make upg` resolves the requirements its own `gen` projects.
+
+        Premise (flext-5kqsx): the upgraded generator projected a declared
+        runtime dependency into pyproject.toml after uv.lock was written, so
+        the lock and the environment lacked it until a second `make upg`.
+        """
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path,
+            profile,
+            bootstrap=True,
+        )
+        makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding="utf-8",
+        )
+        steps = (
+            makefile
+            .split("_upg_lifecycle: _builtin_setup_submodules\n", 1)[1]
+            .split("\n\n", 1)[0]
+            .splitlines()
+        )
+
+        def after(start: int, needle: str) -> int:
+            return next(
+                index
+                for index, step in enumerate(steps)
+                if index > start and needle in step
+            )
+
+        upgraded = after(-1, "lock --project")
+        projected = after(upgraded, "$(call RUN_PUBLIC_PRODUCE,gen)")
+        relocked = after(projected, "lock --project")
+        checked = after(relocked, "lock --check")
+        installed = after(checked, "_builtin_setup_environment")
+        bumped = after(installed, "lock --bump")
+        activated = after(bumped, "$(call RUN_PUBLIC_ACTIVATE,gen)")
+
+        tm.that(steps[upgraded], has="--upgrade")
+        tm.that(steps[relocked], lacks="--upgrade")
+        tm.that(
+            upgraded < projected < relocked < checked < installed < bumped,
+            eq=True,
+        )
+        tm.that(bumped < activated, eq=True)
 
     def test_upg_converge_verifies_the_cycle_it_upgraded(self, tmp_path: Path) -> None:
         """An upgrade publishes only after gen converges and every gate passes."""
@@ -249,7 +298,95 @@ class TestsFlextInfraCodegenMakeUpgrade:
 
         tm.that(makefile, has="make upg did not converge")
         tm.that(
-            "_upg_converge"
+            "_upg_lifecycle"
             in self._recipe_targets_containing(makefile, "$(SELF_MAKE) check"),
             eq=True,
+        )
+
+    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
+    def test_upg_activates_gen_only_after_relocking_the_rendered_manifest(
+        self,
+        tmp_path: Path,
+        profile: c.Infra.MakeProfile,
+    ) -> None:
+        """One `make upg` converges when `gen` moves the Mise self-pin.
+
+        `gen` renders the managed `.mise.toml`; its activation half demands
+        the Mise release the lock pins. Activation must therefore re-enter
+        the environment only after `mise lock --bump` resolved that rendered
+        manifest and `mise install` provisioned it, or the first upgrade of a
+        project whose manifest gains or moves the self-pin stops on a lock
+        resolved from the previous manifest.
+        """
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path,
+            profile,
+            bootstrap=True,
+        )
+        makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding="utf-8",
+        )
+        steps = (
+            makefile
+            .split("_upg_lifecycle: _builtin_setup_submodules\n", 1)[1]
+            .split("\n\n", 1)[0]
+            .splitlines()
+        )
+        order = [
+            next(i for i, step in enumerate(steps) if needle in step)
+            for needle in (
+                "$(SELF_MAKE) _builtin_require_environment",
+                "$(call RUN_PUBLIC_PRODUCE,gen)",
+                "lock --bump",
+                "install --yes",
+                "$(SELF_MAKE) _builtin_require_mise",
+                "$(call RUN_PUBLIC_ACTIVATE,gen)",
+                "$(SELF_MAKE) gen;",
+            )
+        ]
+        tm.that(order, eq=sorted(set(order)))
+        # The upgrade writes files; staging belongs to the committer. No
+        # generated recipe touches the Git index (a directory-scoped add would
+        # also stage deletions of retired lock sidecars).
+        tm.that(self._recipe_targets_containing(makefile, "git add"), eq=set[str]())
+        tm.that(makefile, has="_activated-gen: _builtin_require_environment")
+        tm.that(
+            makefile,
+            has="_builtin_require_environment: _builtin_require_workspace "
+            "_builtin_require_mise",
+        )
+
+        # GNU Make itself expands the canned halves: the producer half never
+        # re-enters the environment, the activation half does, and the public
+        # verb is exactly the producer half followed by the activation half.
+        probe = (
+            "probe_upg_halves: ; @: "
+            "$(info PRODUCE=$(strip $(call RUN_PUBLIC_PRODUCE,gen))) "
+            "$(info ACTIVATE=$(strip $(call RUN_PUBLIC_ACTIVATE,gen))) "
+            "$(info PUBLIC=$(strip $(call RUN_PUBLIC,gen,1)))"
+        )
+        expanded = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", f"--eval={probe}", "probe_upg_halves"],
+                cwd=project_root,
+            ),
+        )
+        tm.that(
+            u.Cli.process_succeeded(expanded.outcome),
+            eq=True,
+            msg=expanded.stdout + expanded.stderr,
+        )
+        halves = {
+            name: value
+            for name, _, value in (
+                line.partition("=") for line in expanded.stdout.splitlines()
+            )
+            if name in {"PRODUCE", "ACTIVATE", "PUBLIC"}
+        }
+        tm.that(halves["PRODUCE"], has="_builtin-gen")
+        tm.that(halves["PRODUCE"], lacks="_activated-gen")
+        tm.that(halves["ACTIVATE"], has=["direnv exec", "_activated-gen"])
+        tm.that(
+            halves["PUBLIC"].split(),
+            eq=[*halves["PRODUCE"].split(), *halves["ACTIVATE"].split()],
         )

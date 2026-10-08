@@ -6,6 +6,8 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import os
+import sys
 from pathlib import Path
 
 from flext_tests import tm
@@ -39,8 +41,8 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         """Render the fleet Ruff policy as a pyproject fragment.
 
         Reads the same typed SSOT production reads (P0): fixture
-        workspaces carry the real policy — select, preview and the
-        per-file-ignores map — never a hand-rolled fragment.
+        workspaces carry the real policy — select, the global ignore table,
+        preview and the per-file-ignores map — never a hand-rolled fragment.
 
         Returns:
             The resulting ``str``.
@@ -48,6 +50,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         """
         ruff_cfg = config.Infra.tooling.tools.ruff
         select = ", ".join(f'"{rule}"' for rule in sorted(ruff_cfg.lint.select))
+        ignore = ", ".join(f'"{rule}"' for rule in sorted(ruff_cfg.lint.ignore))
         quoted_rules = {
             pattern: ", ".join(f'"{rule}"' for rule in rules)
             for pattern, rules in sorted(ruff_cfg.lint.per_file_ignores.items())
@@ -64,7 +67,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         return (
             f"[tool.ruff]\nsrc = [{src}]\n"
             f"preview = {str(ruff_cfg.preview).lower()}\n\n"
-            f"[tool.ruff.lint]\nselect = [{select}]\n\n"
+            f"[tool.ruff.lint]\nselect = [{select}]\nignore = [{ignore}]\n\n"
             "[tool.ruff.lint.isort]\n"
             f"combine-as-imports = {str(isort.combine_as_imports).lower()}\n"
             f"force-single-line = {str(isort.force_single_line).lower()}\n"
@@ -139,12 +142,15 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         root: Path,
         *,
         members: t.StrSequence = (),
+        what: c.Infra.CodegenConformSurface = c.Infra.CodegenConformSurface.ALL,
     ) -> m.Infra.CodegenPlan:
-        """Plan every artifact conform renders for a fresh repository scaffold.
+        """Plan the artifacts conform renders for a fresh repository scaffold.
 
         Without members the fixture repository is standalone; each member
         makes it a workspace composing that project, so generated surfaces
         are observed exactly as the public codegen owner renders them.
+        ``what`` selects the conform surface, so a scenario about one surface
+        never pays for planning every template.
 
         Returns:
             The resulting ``m.Infra.CodegenPlan``.
@@ -171,6 +177,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
                     fixture.repository_ref(name, path=Path(name)) for name in members
                 ),
             ),
+            what=what,
         )
 
     @staticmethod
@@ -179,6 +186,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         destination: str,
         *,
         members: t.StrSequence = (),
+        what: c.Infra.CodegenConformSurface = c.Infra.CodegenConformSurface.ALL,
     ) -> str:
         """Return one rendered scaffold artifact, failing when it is not planned.
 
@@ -191,6 +199,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
                 TestsFlextInfraUtilitiesCodegenMixin.scaffold_plan(
                     root,
                     members=members,
+                    what=what,
                 ),
                 destination,
             ),
@@ -329,6 +338,33 @@ class TestsFlextInfraUtilitiesCodegenMixin:
             ('__version__ = "0.1.0"\n__version_info__ = (0, 1, 0)\n'),
             encoding=c.Infra.ENCODING_DEFAULT,
         )
+
+    @staticmethod
+    def run_lazy_init_probe(
+        probe: str,
+        *,
+        python_paths: t.StrSequence,
+        cwd: Path | None = None,
+    ) -> t.StrSequence:
+        """Run ``probe`` in a fresh interpreter importing generated packages.
+
+        The probe observes generated initializers through Python's real import
+        machinery, isolated from the test process's already imported modules.
+
+        Returns:
+            The probe's standard output lines.
+
+        """
+        probe_env = dict(os.environ)
+        probe_env["PYTHONPATH"] = os.pathsep.join(python_paths)
+        result = tm.ok(
+            u.Cli.run(
+                [sys.executable, "-c", probe],
+                options=u.Cli.ProcessOptions(env=probe_env),
+                cwd=cwd,
+            ),
+        )
+        return result.stdout.splitlines()
 
     @staticmethod
     def run_lazy_init(repository_root: Path, *, check_only: bool = False) -> int:

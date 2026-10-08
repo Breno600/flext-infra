@@ -151,15 +151,15 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
                 receiver.
 
         """
-        if not isinstance(guard, ast.If):
-            msg = "model field rejection must be an if statement"
-            raise TypeError(msg)
         if not cls._rejecting_guard(guard, target.id):
             msg = (
                 f"untrusted model_fields access lacks a rejecting "
                 f"guard in {path}:{statement.lineno}"
             )
             raise ValueError(msg)
+        if not isinstance(guard, ast.If):
+            msg = "model field rejection must be an if statement"
+            raise TypeError(msg)
         uses = {
             node
             for node in ast.walk(function)
@@ -185,8 +185,9 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
                 f"statements in {path}:{statement.lineno}"
             )
             raise ValueError(msg)
+        receiver = cls._field_receiver(statement)
         if any(
-            target.id in cls._bound_identifiers(node)
+            receiver in cls._bound_identifiers(node)
             for body in function.body
             for node in ast.walk(body)
         ):

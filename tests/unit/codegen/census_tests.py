@@ -61,6 +61,10 @@ class TestsFlextInfraCodegenCensus:
             "first(1)\nthird(2)\n",
             encoding="utf-8",
         )
+        # A governed project carries its Mise declaration: the census runs
+        # ast-grep from the project, and the shim resolves the pinned tool
+        # from that declaration, never from a developer's global config.
+        u.Tests.copy_tracked_mise_seeds(project)
         return project
 
     def test_report_violations_carry_rule_location_and_fixability(

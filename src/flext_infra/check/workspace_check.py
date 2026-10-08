@@ -97,42 +97,10 @@ class FlextInfraWorkspaceChecker(
             The resulting ``p.Result[bool]``.
 
         """
-        selected_files: t.VariadicTuple[Path] = ()
-        if params.file is not None:
-            if not params.gates:
-                return r[bool].fail("--file requires explicit canonical --gates selection")
-            if (
-                params.apply
-                or params.ruff_args is not None
-                or params.pyright_args is not None
-                or (params.project_names and tuple(params.project_names) != (".",))
-            ):
-                return r[bool].fail(
-                    "file-gate requires read-only local selection without tool overrides",
-                )
-            raw = params.file
-            relative = Path(raw)
-            if (
-                not raw
-                or raw != raw.strip()
-                or relative.is_absolute()
-                or any(part in {"", ".", ".."} for part in raw.split("/"))
-            ):
-                return r[bool].fail(f"invalid literal repository-relative FILE: {raw!r}")
-            root = params.repository_root.resolve(strict=True)
-            selected = root / relative
-            current = root
-            for part in relative.parts:
-                current /= part
-                if current.is_symlink():
-                    return r[bool].fail(f"FILE has a symlink component: {current}")
-            if (
-                not selected.is_file()
-                or not selected.resolve(strict=True).is_relative_to(root)
-                or selected.suffix not in {".py", ".pyi"}
-            ):
-                return r[bool].fail(f"FILE is not an existing repository file: {selected}")
-            selected_files = (selected,)
+        selected_files_result = self._resolve_selected_files(params)
+        if selected_files_result.failure:
+            return r[bool].from_failure(selected_files_result)
+        selected_files = selected_files_result.value
         project_targets_result = self._resolve_project_targets(params)
         if project_targets_result.failure:
             return r[bool].from_failure(project_targets_result)
@@ -164,14 +132,93 @@ class FlextInfraWorkspaceChecker(
         )
         if run_result.failure:
             return r[bool].from_failure(run_result)
-        if len(run_result.value) != len(project_targets):
+        return self._summarize_project_results(run_result.value, project_targets)
+
+    @classmethod
+    def _resolve_selected_files(
+        cls,
+        params: m.Infra.RunCommand,
+    ) -> p.Result[t.VariadicTuple[Path]]:
+        """Resolve the optional ``--file`` selection into one repository file.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[Path]]``.
+
+        """
+        if params.file is None:
+            return r[t.VariadicTuple[Path]].ok(())
+        if not params.gates:
+            return r[t.VariadicTuple[Path]].fail(
+                "--file requires explicit canonical --gates selection"
+            )
+        if (
+            params.apply
+            or params.ruff_args is not None
+            or params.pyright_args is not None
+            or (params.project_names and tuple(params.project_names) != (".",))
+        ):
+            return r[t.VariadicTuple[Path]].fail(
+                "file-gate requires read-only local selection without tool overrides",
+            )
+        return cls._resolve_repository_file(params.repository_root, params.file)
+
+    @staticmethod
+    def _resolve_repository_file(
+        repository_root: Path,
+        raw: str,
+    ) -> p.Result[t.VariadicTuple[Path]]:
+        """Resolve a literal repository-relative source file without symlinks.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[Path]]``.
+
+        """
+        relative = Path(raw)
+        if (
+            not raw
+            or raw != raw.strip()
+            or relative.is_absolute()
+            or any(part in {"", ".", ".."} for part in raw.split("/"))
+        ):
+            return r[t.VariadicTuple[Path]].fail(
+                f"invalid literal repository-relative FILE: {raw!r}"
+            )
+        root = repository_root.resolve(strict=True)
+        selected = root / relative
+        current = root
+        for part in relative.parts:
+            current /= part
+            if current.is_symlink():
+                return r[t.VariadicTuple[Path]].fail(
+                    f"FILE has a symlink component: {current}"
+                )
+        if (
+            not selected.is_file()
+            or not selected.resolve(strict=True).is_relative_to(root)
+            or selected.suffix not in {".py", ".pyi"}
+        ):
+            return r[t.VariadicTuple[Path]].fail(
+                f"FILE is not an existing repository file: {selected}"
+            )
+        return r[t.VariadicTuple[Path]].ok((selected,))
+
+    @staticmethod
+    def _summarize_project_results(
+        results: t.SequenceOf[m.Infra.ProjectResult],
+        project_targets: t.SequenceOf[m.Infra.CheckProjectTarget],
+    ) -> p.Result[bool]:
+        """Fail unless every requested project executed and passed.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        if len(results) != len(project_targets):
             return r[bool].fail(
                 "quality checks did not execute every requested project: "
-                f"{len(run_result.value)}/{len(project_targets)}",
+                f"{len(results)}/{len(project_targets)}",
             )
-        failed_projects = [
-            project for project in run_result.value if not project.passed
-        ]
+        failed_projects = [project for project in results if not project.passed]
         if failed_projects:
             failed_names = ", ".join(project.project for project in failed_projects)
             total_findings = sum(

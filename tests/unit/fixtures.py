@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -66,6 +67,27 @@ def deptry_report_payload() -> t.JsonPayload:
     parsed = tm.not_none(parsed)
     tm.ok(parsed)
     return parsed.value
+
+
+@pytest.fixture(autouse=True)
+def runner_ci_context_cleared() -> Iterator[None]:
+    """Keep the runner's CI context out of every test body.
+
+    The approval path runs the suite under ``CI=Y``: collection reads it to
+    deselect CI-excluded tests, but a test body must behave identically on a
+    runner and on a workstation. Inherited ``CI`` silently selected CI-only
+    contracts (the CI member identity, the CI resolution guard) in local
+    scenarios; a scenario that exercises a CI contract passes the configured
+    variable explicitly.
+
+    Yields:
+        Control inside the scoped environment.
+
+    """
+    with u.Tests.env_vars_context(
+        vars_to_clear=(config.Infra.codegen.make.ci.variable,),
+    ):
+        yield
 
 
 @pytest.fixture

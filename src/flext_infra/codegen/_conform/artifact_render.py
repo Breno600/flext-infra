@@ -300,7 +300,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         render_inputs: m.Infra.CodegenRenderInputs,
         destination: str,
     ) -> p.Result[p.Model] | None:
-        """Resolve the repository-shaped config specs (gitignore/sonar/envrc).
+        """Resolve the repository-shaped config specs (gitignore/sonar/qlty/envrc).
 
         Returns:
             The resulting ``p.Result[p.Model] | None`` where None marks a
@@ -345,6 +345,17 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                         if target.make_profile is c.Infra.MakeProfile.WORKSPACE
                         else ()
                     ),
+                    generated_source_globs=codegen.generated_source_globs,
+                ),
+            )
+        if destination == (
+            f"{c.Infra.QLTY_CONFIG_DIRNAME}/{c.Infra.QLTY_CONFIG_FILENAME}"
+        ):
+            # Generated source trees are tracked, so Git ignore rules no
+            # longer keep them out of the smells scan.
+            return r[p.Model].ok(
+                m.Infra.QltyRenderSpec(
+                    generated_source_globs=codegen.generated_source_globs,
                 ),
             )
         if destination == c.Infra.ENVRC_FILENAME:
@@ -387,7 +398,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             c.Infra.MARKDOWNLINT_IGNORE_FILENAME,
             c.Infra.PRETTIER_CONFIG_FILENAME,
             c.Infra.PRETTIER_IGNORE_FILENAME,
-            f"{c.Infra.QLTY_CONFIG_DIRNAME}/{c.Infra.QLTY_CONFIG_FILENAME}",
         }:
             return r[p.Model].ok(
                 m.Infra.MarkdownLintRenderSpec(tooling=config.Infra.tooling),

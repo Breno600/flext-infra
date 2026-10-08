@@ -175,6 +175,7 @@ class TestsFlextInfraCheckReportContract:
     @pytest.mark.parametrize("parent_link", [False, True])
     def test_file_selection_refuses_symlink_ambiguity(
         tmp_path: Path,
+        *,
         parent_link: bool,
     ) -> None:
         """Even in-repository symlink aliases fail before a scanner can run."""
@@ -205,6 +206,7 @@ class TestsFlextInfraCheckReportContract:
     @pytest.mark.parametrize("broken", [False, True])
     def test_public_file_check_uses_literal_scope_and_native_verdict(
         tmp_path: Path,
+        *,
         broken: bool,
     ) -> None:
         """A real configured formatter checks the selected file, not its sibling."""

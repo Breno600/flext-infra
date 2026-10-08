@@ -764,7 +764,9 @@ class FlextInfraPytestRunnerExecution(
                 self.target_file is not None
                 and outcome.raw_return_code == pytest.ExitCode.NO_TESTS_COLLECTED
             ):
-                msg = f"file phase exited 5 without a completed empty scope: {report_dir}"
+                msg = (
+                    f"file phase exited 5 without a completed empty scope: {report_dir}"
+                )
                 raise RuntimeError(msg)
             return r.ok(outcome.raw_return_code)
         state = self._inspect_cache(digest=pre_digest).unwrap()

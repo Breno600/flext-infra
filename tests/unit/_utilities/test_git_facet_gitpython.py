@@ -273,6 +273,116 @@ class TestsFlextInfraGitFacet:
         tm.that(output.out + output.err, has=changed_path.name)
 
     @staticmethod
+    @pytest.mark.parametrize("entries", [1, 2])
+    @pytest.mark.parametrize("linked", [False, True])
+    def test_verify_clean_rejects_recovery_stash_objects_without_mutation(
+        real_git_repo: Path,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+        entries: int,
+        *,
+        linked: bool,
+    ) -> None:
+        """Real recovery refs fail the service and CLI without any stash operation."""
+        repository = (
+            u.Tests.git_linked_lane(tmp_path, real_git_repo, "owned-lane")
+            if linked
+            else real_git_repo
+        )
+        request = m.Infra.GitStatusRequest(repo_root=repository)
+        tm.ok(FlextInfraGitService.verify_clean(request))
+        head = u.Tests.git_capture(real_git_repo, "rev-parse", c.Infra.GIT_HEAD)
+        tree = u.Tests.git_capture(real_git_repo, "rev-parse", f"{head}^{{tree}}")
+        index_parent = u.Tests.git_capture(
+            real_git_repo,
+            "commit-tree",
+            tree,
+            "-p",
+            head,
+            "-m",
+            "recovery index",
+        )
+        oids = []
+        for entry in range(entries):
+            oid = u.Tests.git_capture(
+                real_git_repo,
+                "commit-tree",
+                tree,
+                "-p",
+                head,
+                "-p",
+                index_parent,
+                "-m",
+                f"recovery worktree {entry}",
+            )
+            u.Tests.git_run(
+                real_git_repo,
+                "update-ref",
+                "--create-reflog",
+                "refs/stash",
+                oid,
+            )
+            oids.append(oid)
+        tm.that(
+            tm.ok(FlextInfraGitService(repository_root=repository).execute()).dirty,
+            eq=False,
+        )
+
+        result = FlextInfraGitService.verify_clean(request)
+
+        tm.fail(result, has="stash recovery required")
+        tm.that(
+            main(["workspace", "verify-clean", "--repo-root", str(repository)]),
+            eq=1,
+        )
+        output = capsys.readouterr()
+        for oid in oids:
+            tm.that(result.error, has=oid)
+            tm.that(output.out + output.err, has=oid)
+        remaining = tm.ok(
+            u.Infra.git_stash_oids(m.Infra.GitRepoRequest(repo_root=repository)),
+        ).oids
+        tm.that(tuple(remaining), eq=tuple(reversed(oids)))
+        tm.that(
+            u.Tests.git_capture(real_git_repo, "rev-parse", c.Infra.GIT_HEAD),
+            eq=head,
+        )
+        tm.that(tm.ok(u.Infra.git_status(request)).dirty, eq=False)
+
+    @staticmethod
+    def test_verify_clean_propagates_stash_probe_failure(
+        real_git_repo: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """A corrupt recovery ref is not normalized to an empty stash inventory."""
+        head = u.Tests.git_capture(real_git_repo, "rev-parse", c.Infra.GIT_HEAD)
+        (real_git_repo / ".git" / "refs" / "stash").write_text(
+            "f" * len(head) + "\n",
+            encoding="utf-8",
+        )
+        request = m.Infra.GitStatusRequest(repo_root=real_git_repo)
+        tm.that(tm.ok(u.Infra.git_status(request)).dirty, eq=False)
+        probe = u.Infra.git_stash_oids(
+            m.Infra.GitRepoRequest(repo_root=real_git_repo),
+        )
+        tm.fail(probe)
+
+        result = FlextInfraGitService.verify_clean(request)
+
+        tm.fail(result)
+        tm.that(result.error, eq=probe.error)
+        tm.that(result.error_code, eq=probe.error_code)
+        tm.that(result.error_data, eq=probe.error_data)
+        tm.not_none(result.exception)
+        tm.that(type(result.exception), eq=type(probe.exception))
+        tm.that(
+            main(["workspace", "verify-clean", "--repo-root", str(real_git_repo)]),
+            eq=1,
+        )
+        output = capsys.readouterr()
+        tm.that(output.out + output.err, has=tm.not_none(probe.error))
+
+    @staticmethod
     def test_git_changed_paths_reports_tracked_and_untracked_files(
         real_git_repo: Path,
     ) -> None:
