@@ -30,16 +30,14 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
             The resulting ``p.Result[m.Infra.CodegenPlan]``.
 
         """
-        if request.what is c.Infra.CodegenConformSurface.LAZY_INIT:
-            lazy = self._plan_lazy_init(request)
-            if lazy.failure:
-                return r[m.Infra.CodegenPlan].from_failure(lazy)
-            return r[m.Infra.CodegenPlan].ok(lazy.value[0])
-        if request.what == c.Infra.CodegenConformSurface.FACADES:
-            facades = self._plan_type_facade(request)
-            if facades.failure:
-                return r[m.Infra.CodegenPlan].from_failure(facades)
-            return r[m.Infra.CodegenPlan].ok(facades.value[0])
+        if request.what in {
+            c.Infra.CodegenConformSurface.LAZY_INIT,
+            c.Infra.CodegenConformSurface.FACADES,
+        }:
+            planned = self._plan_single_surface(request)
+            if planned.failure:
+                return r[m.Infra.CodegenPlan].from_failure(planned)
+            return r[m.Infra.CodegenPlan].ok(planned.value[0])
         config_spec = config.Infra.codegen
         root = request.root.expanduser().resolve()
         targets = self._planning_workspace(request, root)
@@ -76,6 +74,20 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
             ),
         )
 
+    def _plan_single_surface(
+        self,
+        request: m.Infra.CodegenConformRequest,
+    ) -> p.Result[t.Pair[m.Infra.CodegenPlan, m.Infra.CodegenPhaseAnalysis]]:
+        """Plan the type-facade or lazy-init surface of one repository.
+
+        Returns:
+            The public plan and its complete authenticated phase analysis.
+
+        """
+        if request.what == c.Infra.CodegenConformSurface.FACADES:
+            return self._plan_type_facade(request)
+        return self._plan_lazy_init(request)
+
     def _plan_type_facade(
         self,
         request: m.Infra.CodegenConformRequest,
@@ -83,52 +95,29 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
         """Plan one existing type facade from authenticated private owner bytes.
 
         Args:
-            request: The code generation conform request containing the root and module information.
+            request: The conform request naming the root and destination module.
 
         Returns:
-            A result containing a pair of the planned code generation plan and the phase analysis, or a failure if planning was unsuccessful.
+            The public plan and its complete authenticated phase analysis.
+
         """
         result_type = r[t.Pair[m.Infra.CodegenPlan, m.Infra.CodegenPhaseAnalysis]]
         root = request.root.expanduser().resolve()
         topology = self._planning_workspace(request, root)
         if topology.failure:
             return result_type.from_failure(topology)
-        workspace, _target, repository = topology.value
-        layout = u.Infra.layout(root)
-        if layout is None or request.module is None:
-            return result_type.fail(
-                "facades requires an existing package and destination",
-            )
-        parts = request.module.split(".")
-        if (
-            len(parts) != 2
-            or parts[0] != layout.package_dir.name
-            or not all(part.isidentifier() for part in parts)
-        ):
-            return result_type.fail(
-                "facades --module must name a direct package module",
-            )
-        destination = layout.package_dir / f"{parts[1]}{c.Infra.EXT_PYTHON}"
-        directory = u.Infra.facade_families()["t"].directory
-        states: list[m.Cli.AtomicFileState] = []
-        sources: dict[Path, str] = {}
-        for path in (
-            destination,
-            *sorted((layout.package_dir / directory).rglob(c.Infra.EXT_PYTHON_GLOB)),
-        ):
-            if not path.resolve().is_relative_to(root):
-                return result_type.fail(f"type facade input escapes repository: {path}")
-            snapshot = u.Cli.atomic_read_binary_file_state(path, required=True)
-            if snapshot.failure:
-                return result_type.from_failure(snapshot)
-            state = snapshot.value
-            if state.content is None:
-                return result_type.fail(f"type facade input is absent: {path}")
-            states.append(state)
-            sources[path] = state.content.decode(c.Cli.ENCODING_DEFAULT)
+        workspace, repository = topology.value[0], topology.value[2]
+        selected = self._type_facade_destination(request, root)
+        if selected.failure:
+            return result_type.from_failure(selected)
+        destination = selected.value
+        inputs = self._type_facade_inputs(root, destination)
+        if inputs.failure:
+            return result_type.from_failure(inputs)
+        states, sources = inputs.value
         if "t" not in u.Infra.facade_letter_names_source(sources[destination]):
             return result_type.fail("selected facade destination does not declare t")
-        rendered = u.Infra.render_type_facade(layout.package_dir, destination, sources)
+        rendered = u.Infra.render_type_facade(destination.parent, destination, sources)
         file = self.file_plan(
             root,
             destination.relative_to(root).as_posix(),
@@ -152,6 +141,64 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
             files=analysis.files,
         )
         return result_type.ok((plan, analysis))
+
+    @staticmethod
+    def _type_facade_destination(
+        request: m.Infra.CodegenConformRequest,
+        root: Path,
+    ) -> p.Result[Path]:
+        """Resolve the direct package module a type facade is rendered into.
+
+        Returns:
+            The destination module path inside the repository package.
+
+        """
+        layout = u.Infra.layout(root)
+        if layout is None or request.module is None:
+            return r[Path].fail("facades requires an existing package and destination")
+        package, separator, module = request.module.partition(".")
+        if (
+            not separator
+            or package != layout.package_dir.name
+            or not all(part.isidentifier() for part in (package, module))
+        ):
+            return r[Path].fail("facades --module must name a direct package module")
+        return r[Path].ok(layout.package_dir / f"{module}{c.Infra.EXT_PYTHON}")
+
+    @staticmethod
+    def _type_facade_inputs(
+        root: Path,
+        destination: Path,
+    ) -> p.Result[
+        t.Pair[t.VariadicTuple[m.Cli.AtomicFileState], t.MappingKV[Path, str]]
+    ]:
+        """Read the destination and every type-family owner as authenticated bytes.
+
+        Returns:
+            The authenticated input states and their decoded sources by path.
+
+        """
+        result_type = r[
+            t.Pair[t.VariadicTuple[m.Cli.AtomicFileState], t.MappingKV[Path, str]]
+        ]
+        directory = u.Infra.facade_families()["t"].directory
+        states: list[m.Cli.AtomicFileState] = []
+        sources: dict[Path, str] = {}
+        for path in (
+            destination,
+            *sorted((destination.parent / directory).rglob(c.Infra.EXT_PYTHON_GLOB)),
+        ):
+            if not path.resolve().is_relative_to(root):
+                return result_type.fail(f"type facade input escapes repository: {path}")
+            snapshot = u.Cli.atomic_read_binary_file_state(path, required=True)
+            if snapshot.failure:
+                return result_type.from_failure(snapshot)
+            state = snapshot.value
+            if state.content is None:
+                return result_type.fail(f"type facade input is absent: {path}")
+            states.append(state)
+            sources[path] = state.content.decode(c.Cli.ENCODING_DEFAULT)
+        return result_type.ok((tuple(states), sources))
 
     def _plan_lazy_init(
         self,

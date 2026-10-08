@@ -6,6 +6,8 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import os
+import sys
 from pathlib import Path
 
 from flext_tests import tm
@@ -349,6 +351,34 @@ class TestsFlextInfraUtilitiesCodegenMixin:
             service,
         )
         return 0 if materialized.success else 1
+
+    @staticmethod
+    def lazy_init_probe_lines(
+        probe: str,
+        *,
+        import_roots: t.StrSequence,
+        cwd: Path | None = None,
+    ) -> t.StrSequence:
+        """Run one import probe in a fresh interpreter over generated packages.
+
+        The probe imports through ``import_roots`` (``PYTHONPATH``) so the
+        generated initializers are exercised by a real interpreter, never by
+        the planning process that wrote them.
+
+        Returns:
+            The probe's standard output lines.
+
+        """
+        probe_env = dict(os.environ)
+        probe_env["PYTHONPATH"] = os.pathsep.join(import_roots)
+        result = tm.ok(
+            u.Cli.run(
+                [sys.executable, "-c", probe],
+                options=u.Cli.ProcessOptions(env=probe_env),
+                cwd=cwd,
+            ),
+        )
+        return result.stdout.splitlines()
 
     @staticmethod
     def plan_lazy_init(repository_root: Path) -> p.Result[m.Infra.CodegenPhaseAnalysis]:

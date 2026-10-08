@@ -26,10 +26,14 @@ from flext_infra import t
 class FlextInfraRopeProject(Project):
     """Rope project with the upstream self-warning initializer repaired."""
 
-    @override
-    def get_resource(self, resource_name: str) -> File | Folder:
-        """Return the resource at ``resource_name`` under the Rope contract."""
-        return super().get_resource(resource_name)
+    def resolve_resource(self, resource_name: str) -> File | Folder:
+        """Resolve the resource at ``resource_name`` under the Rope contract.
+
+        Returns:
+            The Rope file or folder resource at ``resource_name``.
+
+        """
+        return self.get_resource(resource_name)
 
     class SnapshotFiles:
         """Closed, read-only input inventory for a semantic planning project.
@@ -109,7 +113,7 @@ class FlextInfraRopeProject(Project):
             )
             raise ValueError(msg)
         for path in source_folders:
-            self._custom_source_folders.append(self.get_resource(path))
+            self._custom_source_folders.append(self.resolve_resource(path))
 
 
 __all__: list[str] = ["FlextInfraRopeProject"]

@@ -37,6 +37,15 @@ class FlextInfraUtilitiesCodegenFacades:
 
         Only the existing class/t export contract is supported. Ambiguous owners
         or extra public declarations fail rather than being silently discarded.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            ValueError: If type facade has no module documentation; or if unsupported
+                type facade class; or if unsupported type facade exports; or if
+                unsupported type facade declarations; or if expected one full exported
+                type owner.
         """
         source = sources[facade_path]
         tree = ast.parse(source, filename=str(facade_path))
@@ -99,21 +108,18 @@ class FlextInfraUtilitiesCodegenFacades:
             msg = f"unsupported type facade declarations: {facade_path}"
             raise ValueError(msg)
         directory = FlextInfraUtilitiesCodegenNamespace.facade_families()["t"].directory
+        module_patch = FlextInfraUtilitiesRopeModulePatch
         owners = tuple(
             path
             for path, content in sources.items()
             if path.is_relative_to(pkg_dir / directory)
             and path.name != c.Infra.INIT_PY
-            and "t"
-            in FlextInfraUtilitiesRopeModulePatch.facade_letter_names_source(content)
+            and "t" in module_patch.facade_letter_names_source(content)
             and any(
                 isinstance(binding, ast.Assign)
                 and isinstance(binding.value, ast.Name)
                 and binding.value.id == facade.name
-                for binding in FlextInfraUtilitiesRopeModulePatch.runtime_alias_bindings(
-                    content,
-                    alias="t",
-                )
+                for binding in module_patch.runtime_alias_bindings(content, alias="t")
             )
             and any(
                 isinstance(node, ast.ClassDef) and node.name == facade.name
@@ -129,10 +135,12 @@ class FlextInfraUtilitiesCodegenFacades:
         alias = f"_{facade.name}"
         return (
             f"{ast.get_source_segment(source, tree.body[0])}\n\n"
-            f"# Generated type facade; declarations belong to {pkg_dir.name}.{module}.\n"
+            "# Generated type facade; declarations belong to "
+            f"{pkg_dir.name}.{module}.\n"
             f"from {pkg_dir.name}.{module} import {facade.name} as {alias}\n\n\n"
             f"class {facade.name}({alias}):\n"
-            f'    """Public type facade inheriting its complete canonical owner."""\n\n\n'
+            '    """Public type facade inheriting its complete canonical owner."""'
+            "\n\n\n"
             f"t = {facade.name}\n\n"
             f"{ast.get_source_segment(source, exports[0])}\n"
         )

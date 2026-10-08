@@ -503,6 +503,7 @@ runtime-evaluated-base-classes = [
   "flext_infra.codegen._conform.gitignore.FlextInfraCodegenConformGitignore",
   "flext_infra.codegen._conform.plan.FlextInfraCodegenConformPlan",
   "flext_infra.codegen._conform.pyproject_policy.FlextInfraCodegenConformPyprojectPolicy",
+  "flext_infra.codegen._conform.scaffold_directories.FlextInfraCodegenConformScaffoldDirectories",
   "flext_infra.codegen._conform.scaffold_plan.FlextInfraCodegenConformScaffoldPlan",
   "flext_infra.codegen._execution.FlextInfraCodegenExecutionBase",
   "flext_infra.deps._modernizer.base.FlextInfraPyprojectModernizerBase",

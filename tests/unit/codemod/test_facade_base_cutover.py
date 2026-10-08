@@ -182,6 +182,7 @@ class TestsFlextInfraFacadeBaseCutover:
         parent = tmp_path / "parent/src/parent_pkg"
         second = tmp_path / "second/src/second_pkg"
         child = tmp_path / "child/src/child_pkg/protocols.py"
+        second_owner = "SecondDeclaredProtocols"
         sources = {
             parent / "__init__.py": (
                 "from typing import TYPE_CHECKING\n"
@@ -200,7 +201,7 @@ class TestsFlextInfraFacadeBaseCutover:
                 "from typing import TYPE_CHECKING\n"
                 "if TYPE_CHECKING:\n"
                 "    from .protocols import SecondDeclaredProtocols, p\n"
-                f"{self._lazy_publication('.protocols', 'SecondDeclaredProtocols', 'p')}"
+                f"{self._lazy_publication('.protocols', second_owner, 'p')}"
                 "__all__ = ['SecondDeclaredProtocols', 'p']\n"
             ),
             second / "protocols.py": (

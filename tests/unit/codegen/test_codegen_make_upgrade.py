@@ -207,8 +207,6 @@ class TestsFlextInfraCodegenMakeUpgrade:
             eq=list(toolchain.mise_lockfile_platforms),
         )
 
-    @staticmethod
-    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
     def test_generated_dependency_upgrade_projects_lock_floors(
         self,
         tmp_path: Path,

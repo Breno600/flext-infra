@@ -7,7 +7,6 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import importlib
-import os
 import sys
 from pathlib import Path
 
@@ -133,8 +132,6 @@ class TestsFlextInfraLazyInitRuntime:
             encoding=c.Cli.ENCODING_DEFAULT,
         )
         tm.that(u.Tests.run_lazy_init(repository), eq=0)
-        probe_env = dict(os.environ)
-        probe_env["PYTHONPATH"] = str(repository / c.Infra.DEFAULT_SRC_DIR)
         probe = (
             "import sys\n"
             "from flext_core import FlextModels, e\n"
@@ -153,13 +150,13 @@ class TestsFlextInfraLazyInitRuntime:
             "    print('count' in str(error))\n"
             "print(dir(package) == list(package.__all__))\n"
         )
-        result = tm.ok(
-            u.Cli.run(
-                [sys.executable, "-c", probe],
-                options=u.Cli.ProcessOptions(env=probe_env),
+        tm.that(
+            u.Tests.lazy_init_probe_lines(
+                probe,
+                import_roots=(str(repository / c.Infra.DEFAULT_SRC_DIR),),
             ),
+            eq=["True"] * 7,
         )
-        tm.that(result.stdout.splitlines(), eq=["True"] * 7)
 
     @staticmethod
     @pytest.mark.parametrize("same_named_export", [False, True])
@@ -191,21 +188,19 @@ class TestsFlextInfraLazyInitRuntime:
                 u.Tests.run_lazy_init(repository)
             return
         tm.that(u.Tests.run_lazy_init(repository), eq=0)
-        probe_env = dict(os.environ)
-        probe_env["PYTHONPATH"] = str(repository / c.Infra.DEFAULT_SRC_DIR)
         probe = (
             "import flext_child_runtime as package\n"
             "import flext_child_runtime.child as child\n"
             "print(package.child is child)\n"
             "print(package.PublishedChild is child.PublishedChild)\n"
         )
-        result = tm.ok(
-            u.Cli.run(
-                [sys.executable, "-c", probe],
-                options=u.Cli.ProcessOptions(env=probe_env),
+        tm.that(
+            u.Tests.lazy_init_probe_lines(
+                probe,
+                import_roots=(str(repository / c.Infra.DEFAULT_SRC_DIR),),
             ),
+            eq=["True", "True"],
         )
-        tm.that(result.stdout.splitlines(), eq=["True", "True"])
 
     @staticmethod
     def test_empty_package_preserves_its_unmanaged_initializer(tmp_path: Path) -> None:
@@ -223,8 +218,6 @@ class TestsFlextInfraLazyInitRuntime:
         original = initializer.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         tm.that(u.Tests.run_lazy_init(repository), eq=0)
         tm.that(initializer.read_text(encoding=c.Cli.ENCODING_DEFAULT), eq=original)
-        probe_env = dict(os.environ)
-        probe_env["PYTHONPATH"] = str(repository / c.Infra.DEFAULT_SRC_DIR)
         probe = (
             "import flext_empty_runtime as package\n"
             "print(not hasattr(package, '__all__'))\n"
@@ -233,13 +226,13 @@ class TestsFlextInfraLazyInitRuntime:
             "except AttributeError as error:\n"
             "    print('undeclared' in str(error))\n"
         )
-        result = tm.ok(
-            u.Cli.run(
-                [sys.executable, "-c", probe],
-                options=u.Cli.ProcessOptions(env=probe_env),
+        tm.that(
+            u.Tests.lazy_init_probe_lines(
+                probe,
+                import_roots=(str(repository / c.Infra.DEFAULT_SRC_DIR),),
             ),
+            eq=["True", "True"],
         )
-        tm.that(result.stdout.splitlines(), eq=["True", "True"])
 
     @staticmethod
     def test_generated_root_preserves_import_failures(tmp_path: Path) -> None:
@@ -348,12 +341,6 @@ class TestsFlextInfraLazyInitRuntime:
             examples.joinpath("__init__.py").read_text(encoding=c.Cli.ENCODING_DEFAULT),
         )
         tm.that("c" in exports, eq=True)
-        probe_env = dict(os.environ)
-        probe_env["PYTHONPATH"] = os.pathsep.join([
-            str(repository),
-            str(repository / c.Infra.DEFAULT_SRC_DIR),
-            *sys.path,
-        ])
         probe = (
             "import examples as generated\n"
             "import examples.constants as local\n"
@@ -364,14 +351,15 @@ class TestsFlextInfraLazyInitRuntime:
             "print(generated.c is local.Local)\n"
             "print(all(hasattr(generated, name) for name in generated.__all__))\n"
         )
-        result = tm.ok(
-            u.Cli.run(
-                [sys.executable, "-c", probe],
-                options=u.Cli.ProcessOptions(env=probe_env),
+        tm.that(
+            u.Tests.lazy_init_probe_lines(
+                probe,
+                import_roots=(
+                    str(repository),
+                    str(repository / c.Infra.DEFAULT_SRC_DIR),
+                    *sys.path,
+                ),
                 cwd=repository,
             ),
-        )
-        tm.that(
-            result.stdout.splitlines(),
             eq=["True", "True", "True", "False", "True"],
         )
