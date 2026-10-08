@@ -15,6 +15,8 @@ from flext_infra import c, m, p, t
 from flext_infra._utilities import FlextInfraUtilitiesDependencies
 from flext_infra._utilities._pyproject.requirements import (
     FlextInfraUtilitiesPyprojectRequirements,
+)
+from flext_infra._utilities._pyproject.session import (
     FlextInfraUtilitiesPyprojectSession,
 )
 
