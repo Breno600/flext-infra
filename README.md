@@ -58,7 +58,7 @@ verification).
   classes listed under Module Map above.
 - Public extensions exposed by this project: `FlextInfra`,
   `FlextInfraAccessorMigrationOrchestrator`, `FlextInfraAccessorRenamePhase`,
-  `FlextInfraApplyRenames`, `FlextInfraBanditGate`, `FlextInfraCProfileReport` (+141
+  `FlextInfraApplyRenames`, `FlextInfraBanditGate`, `FlextInfraCProfileReport` (+143
   more).
 - Library abstraction boundaries: see AGENTS.md §2.7.
 

@@ -78,6 +78,7 @@ if TYPE_CHECKING:
     from flext_infra.codegen.protocol_models import FlextInfraCodegenProtocolModels
     from flext_infra.codegen.py_typed import FlextInfraCodegenPyTyped
     from flext_infra.codegen.scaffolder import FlextInfraCodegenScaffolder
+    from flext_infra.codegen.staged_package import FlextInfraStagedPackage
     from flext_infra.codegen.version_file import FlextInfraCodegenVersionFile
     from flext_infra.codemod.apply_renames import FlextInfraApplyRenames
     from flext_infra.codemod.ast_scan import FlextInfraCodemodAstScan
@@ -151,6 +152,7 @@ if TYPE_CHECKING:
     from flext_infra.gates.scanner_gate import FlextInfraScannerGateMixin
     from flext_infra.gates.smells import FlextInfraSmellsGate
     from flext_infra.git import FlextInfraGitService
+    from flext_infra.git_lanes import FlextInfraGitLanes
     from flext_infra.maintenance.clean import FlextInfraCleanService
     from flext_infra.maintenance.python_version import FlextInfraPythonVersionEnforcer
     from flext_infra.maintenance.sonarcloud import FlextInfraSonarcloudSettingsSync
@@ -292,6 +294,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraFreshImportGate",
     "FlextInfraGate",
     "FlextInfraGateRegistry",
+    "FlextInfraGitLanes",
     "FlextInfraGitService",
     "FlextInfraImportNormalizationPhase",
     "FlextInfraIndexDeclarationsGate",
@@ -349,6 +352,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraSonarcloudClient",
     "FlextInfraSonarcloudIssues",
     "FlextInfraSonarcloudSettingsSync",
+    "FlextInfraStagedPackage",
     "FlextInfraStubSupplyChain",
     "FlextInfraTestmonDbInspector",
     "FlextInfraTextPatternScanner",
@@ -481,6 +485,7 @@ install_lazy_exports(
         "FlextInfraFreshImportGate": ".gates.fresh_import",
         "FlextInfraGate": ".gates.base_gate",
         "FlextInfraGateRegistry": ".check.gate_registry",
+        "FlextInfraGitLanes": ".git_lanes",
         "FlextInfraGitService": ".git",
         "FlextInfraImportNormalizationPhase": ".codemod.loop_phases",
         "FlextInfraIndexDeclarationsGate": ".gates.index_declarations",
@@ -538,6 +543,7 @@ install_lazy_exports(
         "FlextInfraSonarcloudClient": ".maintenance.sonarcloud_client",
         "FlextInfraSonarcloudIssues": ".maintenance.sonarcloud_issues",
         "FlextInfraSonarcloudSettingsSync": ".maintenance.sonarcloud",
+        "FlextInfraStagedPackage": ".codegen.staged_package",
         "FlextInfraStubSupplyChain": ".validate.stub_chain",
         "FlextInfraTestmonDbInspector": ".validate.testmon_db",
         "FlextInfraTextPatternScanner": ".validate.scanner",
