@@ -336,14 +336,14 @@ class TestsFlextInfraCodegenPyprojectConform:
         sources = u.Tests.toml_mapping(
             u.Tests.toml_table_at(first, "tool", "uv").get("sources", {}),
         )
+        # A member render is context-independent: attached to a superproject
+        # or standalone, it carries git-sourced floors and no fleet source, so
+        # it installs from a clone. Only the workspace root redirects members.
         for name in internal:
             expected = name if is_root else u.Tests.flext_source(name)
             tm.that(expected in dev, eq=True)
-            tm.that(
-                name in sources,
-                eq=attached or is_root,
-            )
-            if attached or is_root:
+            tm.that(name in sources, eq=is_root)
+            if is_root:
                 tm.that(sources[name], eq={"workspace": True})
         second = tm.ok(
             u.Infra.pyproject_conform(
@@ -429,7 +429,7 @@ class TestsFlextInfraCodegenPyprojectConform:
 
     def test_standalone_canonicalizes_the_declared_git_source(self) -> None:
         """The declared requirement line is the only URL and branch authority."""
-        workspace = self._workspace()
+        workspace = self._workspace(role=c.Infra.MakeProfile.STANDALONE)
         member = workspace.subprojects[0]
         declared = (
             f"{member.distribution} @ git+{member.url}@{u.Tests.provider_branch()}"
@@ -497,7 +497,7 @@ constraint-dependencies = ["uv>=0"]
 
     def test_full_conformance_is_idempotent_without_uv_version_pin(self) -> None:
         """Test full conformance is idempotent without uv version pin."""
-        workspace = self._workspace()
+        workspace = self._workspace(role=c.Infra.MakeProfile.STANDALONE)
         toolchain = config.Infra.codegen.toolchain.model_copy(
             update={"uv_link_mode": "copy"},
         )
