@@ -8,27 +8,27 @@ from __future__ import annotations
 
 import ast
 from collections.abc import MutableMapping
+from importlib.util import resolve_name
 from pathlib import Path
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities._rope_source_bases_aliases import (
-    FlextInfraUtilitiesRopeSourceBasesAliases,
-)
-from flext_infra._utilities._rope_source_bases_inventory import (
-    FlextInfraUtilitiesRopeSourceBasesInventory,
+from flext_infra._utilities._rope_analysis.sourcescan import (
+    FlextInfraUtilitiesRopeAnalysisSourceScan,
 )
 from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
 from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeSourceBases:
-    """Source-bases composite facade over the inventory, aliases, and runtime parts."""
+    """Index captured lexical bindings and resolve their qualified runtime bases."""
 
     @classmethod
     def inventory(
         cls,
         request: m.Infra.SourceBindingInventoryRequest,
         definitions: MutableMapping[str, m.Infra.SourceClassDefinition],
+        *,
+        provider: t.Infra.RopePyModule | None = None,
     ) -> t.MappingKV[str, m.Infra.SourceClassReference | None]:
         """Index lexical bindings without installing a cross-module Rope overlay.
 
@@ -36,12 +36,359 @@ class FlextInfraUtilitiesRopeSourceBases:
             The module's explicit lexical bindings, including value shadowing.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeSourceBasesInventory
-
-        return FlextInfraUtilitiesRopeSourceBasesInventory.inventory(
-            request,
-            definitions,
+        if provider is not None:
+            resource = provider.get_resource()
+            if (
+                resource is None
+                or resource.real_path != str(request.path)
+                or provider.source_code != request.source
+            ):
+                message = f"Provider does not match captured source: {request.path}"
+                raise ValueError(message)
+            parsed = provider.get_ast()
+        else:
+            resource = (
+                FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
+                    request.project,
+                    request.path,
+                )
+                if request.path.is_file()
+                else None
+            )
+            parsed = FlextInfraUtilitiesRopeRuntime.build_string_module(
+                request.project,
+                request.source,
+                resource=resource,
+            ).get_ast()
+        if not isinstance(parsed, ast.Module):
+            message = f"Rope returned a non-module AST for {request.path}"
+            raise TypeError(message)
+        package = (
+            request.module
+            if request.path.name == "__init__.py"
+            else request.module.rpartition(".")[0]
         )
+        bindings: MutableMapping[str, m.Infra.SourceClassReference | None] = {}
+        spec = m.Infra.SourceBindingCollectorSpec(
+            module=request.module,
+            package=package,
+            required_line=request.required_line,
+            allow_conditional=request.allow_conditional,
+            definitions=definitions,
+            lexical=bindings,
+        )
+        cls._collect(spec, parsed.body, bindings, "")
+        targets, references = (
+            FlextInfraUtilitiesRopeAnalysisSourceScan.lazy_import_mapping_source(
+                request.source,
+            )
+        )
+        if references and not request.module.startswith("tests."):
+            message = (
+                f"Unresolved declared lazy import mapping in {request.module}: "
+                f"{references}"
+            )
+            raise ValueError(message)
+        for target, exports in targets:
+            destination = (
+                resolve_name(target, package) if target.startswith(".") else target
+            )
+            for name in exports:
+                bindings[name] = m.Infra.SourceClassReference(
+                    target=destination,
+                    attributes=(name,),
+                    qualified_base=f"{request.module}.{name}",
+                )
+        return bindings
+
+    @staticmethod
+    def _reference(
+        expression: ast.expr,
+        bindings: t.MappingKV[str, m.Infra.SourceClassReference | None],
+        module: str,
+    ) -> m.Infra.SourceClassReference:
+        """Capture the binding visible when a class base is evaluated."""
+        attributes: list[str] = []
+        while isinstance(expression, ast.Subscript | ast.Attribute):
+            if isinstance(expression, ast.Attribute):
+                attributes.insert(0, expression.attr)
+            expression = expression.value
+        if not isinstance(expression, ast.Name):
+            message = (
+                f"Unsupported class reference in {module}: {ast.unparse(expression)}"
+            )
+            raise TypeError(message)
+        name = expression.id
+        if name in bindings:
+            binding = bindings[name]
+            if binding is None:
+                message = f"Non-class binding used as a base in {module}: {name}"
+                raise ValueError(message)
+        else:
+            binding = m.Infra.SourceClassReference(
+                target="builtins",
+                attributes=(name,),
+                qualified_base=f"{module}.{name}",
+            )
+        return m.Infra.SourceClassReference(
+            target=binding.target,
+            attributes=(*binding.attributes, *attributes),
+            qualified_base=".".join((binding.qualified_base, *attributes)),
+        )
+
+    @staticmethod
+    def _module_table_target(
+        target: ast.expr,
+        bindings: t.MappingKV[str, m.Infra.SourceClassReference | None],
+    ) -> bool:
+        """Recognize a subscript store that cannot rebind a live class."""
+        if not isinstance(target, ast.Subscript):
+            return False
+        expression = target.value
+        attributes: list[str] = []
+        while isinstance(expression, ast.Attribute):
+            attributes.insert(0, expression.attr)
+            expression = expression.value
+        if not isinstance(expression, ast.Name):
+            return False
+        rebind = m.Infra.SubscriptRebind(
+            root_name=expression.id,
+            attribute=".".join(attributes) if attributes else None,
+        )
+        return (
+            rebind.is_module_table_mutation
+            or bindings.get(rebind.root_name) is None
+        )
+
+    @classmethod
+    def _collect(
+        cls,
+        spec: m.Infra.SourceBindingCollectorSpec,
+        statements: t.SequenceOf[ast.stmt],
+        bindings: MutableMapping[str, m.Infra.SourceClassReference | None],
+        scope: str,
+    ) -> None:
+        """Index lexical declarations in order, preserving provider conditionality."""
+        for node in statements:
+            if (
+                spec.required_line is not None
+                and not scope
+                and node.lineno > spec.required_line
+            ):
+                break
+            if isinstance(node, ast.ClassDef):
+                if spec.required_line is not None and not scope and not (
+                    node.lineno <= spec.required_line <= (node.end_lineno or node.lineno)
+                ):
+                    bindings[node.name] = m.Infra.SourceClassReference(
+                        target=spec.module,
+                        attributes=tuple(f"{scope}{node.name}".split(".")),
+                        qualified_base=f"{spec.module}.{scope}{node.name}",
+                    )
+                    continue
+                visible = {**spec.lexical, **bindings}
+                bases = tuple(
+                    cls._reference(base, visible, spec.module) for base in node.bases
+                )
+                if node.type_params:
+                    bases = (
+                        *bases,
+                        m.Infra.SourceClassReference(
+                            target="typing",
+                            attributes=("Generic",),
+                            qualified_base="typing.Generic",
+                        ),
+                    )
+                identity = f"{spec.module}:{scope}{node.name}:{node.lineno}"
+                members: MutableMapping[str, m.Infra.SourceClassReference | None] = {}
+                # Nested bases see class locals; nested bodies retain module lexical scope.
+                cls._collect(spec, node.body, members, f"{scope}{node.name}.")
+                spec.definitions[identity] = m.Infra.SourceClassDefinition(
+                    identity=identity,
+                    bases=bases,
+                    members=members,
+                )
+                bindings[node.name] = m.Infra.SourceClassReference(
+                    target=identity,
+                    qualified_base=f"{spec.module}.{node.name}",
+                )
+            elif isinstance(node, ast.ImportFrom):
+                parts = spec.package.split(".") if spec.package else []
+                if node.level:
+                    if node.level > len(parts):
+                        message = f"Relative import escapes package in {spec.module}"
+                        raise ValueError(message)
+                    prefix = ".".join(parts[: len(parts) - node.level + 1])
+                    imported = ".".join(part for part in (prefix, node.module) if part)
+                else:
+                    imported = node.module or ""
+                for alias in node.names:
+                    if alias.name == "*":
+                        if spec.allow_conditional:
+                            continue
+                        message = (
+                            f"Star import has no explicit class binding in {spec.module}"
+                        )
+                        raise ValueError(message)
+                    bindings[alias.asname or alias.name] = m.Infra.SourceClassReference(
+                        target=imported,
+                        attributes=(alias.name,),
+                        qualified_base=f"{imported}.{alias.name}",
+                    )
+            elif isinstance(node, ast.Import):
+                for alias in node.names:
+                    target = (
+                        alias.name if alias.asname else alias.name.partition(".")[0]
+                    )
+                    bindings[alias.asname or target] = m.Infra.SourceClassReference(
+                        target=target,
+                        qualified_base=target,
+                    )
+            elif isinstance(node, ast.Assign | ast.AnnAssign):
+                targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+                if any(not isinstance(target, ast.Name) for target in targets):
+                    if spec.allow_conditional and all(
+                        isinstance(target, ast.Attribute)
+                        and isinstance(target.value, ast.Name)
+                        and target.value.id in bindings
+                        and bindings[target.value.id] is None
+                        for target in targets
+                    ):
+                        continue
+                    if all(
+                        cls._module_table_target(target, bindings) for target in targets
+                    ):
+                        continue
+                    value = node.value
+                    target = targets[0]
+                    if (
+                        spec.allow_conditional
+                        and len(targets) == 1
+                        and isinstance(value, ast.Name)
+                        and isinstance(target, ast.Attribute)
+                        and isinstance(target.value, ast.Name)
+                        and target.value.id in bindings
+                        and bindings[target.value.id] is not None
+                    ):
+                        visible = {**spec.lexical, **bindings}
+                        if value.id in visible and visible[value.id] is not None:
+                            reference = cls._reference(value, visible, spec.module)
+                            bindings[target.attr] = reference.model_copy(
+                                update={"qualified_base": f"{spec.module}.{target.attr}"},
+                            )
+                        continue
+                    message = (
+                        f"Unsupported class binding mutation in {spec.module}: "
+                        f"{ast.unparse(node)}"
+                    )
+                    raise ValueError(message)
+                value = node.value
+                if value is None:
+                    continue
+                visible = {**spec.lexical, **bindings}
+                head = value
+                while isinstance(head, ast.Attribute | ast.Subscript):
+                    head = head.value
+                reference = (
+                    cls._reference(value, visible, spec.module)
+                    if isinstance(head, ast.Name)
+                    and isinstance(value, ast.Name | ast.Attribute | ast.Subscript)
+                    and not (head.id in visible and visible[head.id] is None)
+                    else None
+                )
+                for target in targets:
+                    if isinstance(target, ast.Name):
+                        bindings[target.id] = (
+                            reference.model_copy(
+                                update={"qualified_base": f"{spec.module}.{target.id}"},
+                            )
+                            if reference is not None
+                            else None
+                        )
+            elif isinstance(node, ast.AugAssign | ast.Delete):
+                if not spec.allow_conditional:
+                    message = (
+                        f"Unsupported class binding mutation in {spec.module}: "
+                        f"{ast.unparse(node)}"
+                    )
+                    raise ValueError(message)
+                if isinstance(node, ast.AugAssign):
+                    if isinstance(node.target, ast.Name):
+                        bindings[node.target.id] = None
+                elif all(isinstance(target, ast.Name) for target in node.targets):
+                    for target in node.targets:
+                        if isinstance(target, ast.Name):
+                            bindings.pop(target.id, None)
+            elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+                bindings[node.name] = None
+            elif isinstance(node, ast.If):
+                match node.test:
+                    case ast.Compare(
+                        left=ast.Name(id="__name__"),
+                        ops=[ast.Eq()],
+                        comparators=[ast.Constant(value="__main__")],
+                    ):
+                        cls._collect(
+                            spec,
+                            node.body if spec.module == "__main__" else node.orelse,
+                            bindings,
+                            scope,
+                        )
+                        continue
+                    case ast.Constant(value=bool(value)):
+                        cls._collect(
+                            spec,
+                            node.body if value else node.orelse,
+                            bindings,
+                            scope,
+                        )
+                        continue
+                    case _:
+                        pass
+                if (
+                    isinstance(node.test, ast.Name) and node.test.id == "TYPE_CHECKING"
+                ) or (
+                    isinstance(node.test, ast.Attribute)
+                    and node.test.attr == "TYPE_CHECKING"
+                    and isinstance(node.test.value, ast.Name)
+                    and node.test.value.id in {"typing", "typing_extensions"}
+                ):
+                    cls._collect(spec, node.body, bindings, scope)
+                    continue
+                conditional = {
+                    child.name
+                    for statement in (*node.body, *node.orelse)
+                    for child in ast.walk(statement)
+                    if isinstance(child, ast.ClassDef)
+                }
+                left = dict(bindings)
+                right = dict(bindings)
+                for name in conditional:
+                    left[name] = None
+                    right[name] = None
+                cls._collect(spec, node.body, left, scope)
+                cls._collect(spec, node.orelse, right, scope)
+                for name in left.keys() | right.keys():
+                    bindings[name] = (
+                        left[name]
+                        if name in left and name in right and left[name] == right[name]
+                        else None
+                    )
+            elif isinstance(node, ast.Try | ast.TryStar):
+                if not spec.allow_conditional:
+                    message = (
+                        f"Conditional exception-backed class bindings in {spec.module}"
+                    )
+                    raise ValueError(message)
+                conditional_bindings: MutableMapping[
+                    str, m.Infra.SourceClassReference | None
+                ] = {}
+                cls._collect(spec, node.body, conditional_bindings, scope)
+                cls._collect(spec, node.orelse, conditional_bindings, scope)
+                for handler in node.handlers:
+                    cls._collect(spec, handler.body, conditional_bindings, scope)
+                for name in conditional_bindings:
+                    bindings[name] = None
 
     @classmethod
     def lazy_module_aliases(
@@ -56,13 +403,54 @@ class FlextInfraUtilitiesRopeSourceBases:
             The module's facade alias names routed to their lazy module paths.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeSourceBasesAliases
-
-        return FlextInfraUtilitiesRopeSourceBasesAliases.lazy_module_aliases(
-            module,
-            path,
-            source,
-        )
+        parsed = ast.parse(source, filename=str(path))
+        package = module if path.name == "__init__.py" else module.rpartition(".")[0]
+        aliases: dict[str, str] = {}
+        for node in ast.walk(parsed):
+            if not (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == "install_lazy_exports"
+            ):
+                continue
+            mapping = next(
+                (
+                    arg
+                    for arg in (
+                        *node.args, *(keyword.value for keyword in node.keywords)
+                    )
+                    if isinstance(arg, ast.Dict)
+                    or (
+                        isinstance(arg, ast.Call)
+                        and isinstance(arg.func, ast.Name)
+                        and arg.func.id == "MappingProxyType"
+                    )
+                ),
+                None,
+            )
+            if isinstance(mapping, ast.Call):
+                mapping = mapping.args[0] if mapping.args else None
+            if not isinstance(mapping, ast.Dict):
+                continue
+            for key_node, value_node in zip(mapping.keys, mapping.values, strict=False):
+                if not (
+                    isinstance(key_node, ast.Constant)
+                    and isinstance(key_node.value, str)
+                    and isinstance(value_node, ast.Constant)
+                    and isinstance(value_node.value, str)
+                ):
+                    continue
+                value = value_node.value
+                if value.startswith("."):
+                    parts = package.split(".") if package else []
+                    depth = len(value) - len(value.lstrip("."))
+                    remainder = value.lstrip(".")
+                    if depth > len(parts):
+                        continue
+                    base = ".".join(parts[: len(parts) - depth + 1])
+                    value = ".".join(part for part in (base, remainder) if part)
+                aliases[key_node.value] = value
+        return aliases
 
     @classmethod
     def runtime_bases(
@@ -186,6 +574,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                             allow_conditional=True,
                         ),
                         definitions,
+                        provider=module,
                     )
                     identity = next(
                         (
