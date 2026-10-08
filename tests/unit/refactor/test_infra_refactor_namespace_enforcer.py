@@ -330,10 +330,15 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(published["projects"], empty=False)
 
     @staticmethod
-    def test_namespace_enforcer_report_mode_never_fails_on_findings(
+    def test_namespace_enforcer_report_mode_fails_on_findings_after_publishing(
         tmp_path: Path,
     ) -> None:
-        """The report verdict returns findings; only tool failures fail."""
+        """Remaining relocation findings fail the verdict; the receipt is published.
+
+        A gate fails on every finding it counts: the report pass publishes the
+        structured receipt first, then returns the failure naming the
+        violations instead of a green verdict carrying them.
+        """
         workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path)
         _ = (pkg / "service.py").write_text(
             "from __future__ import annotations\n"
@@ -352,15 +357,22 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             m.Infra.RefactorNamespaceEnforceInput(repository_root=workspace),
         )
 
-        tm.that(result.failure, eq=False)
-        tm.that(result.value.projects[0].relocation_findings > 0, eq=True)
-        tm.that(result.value.has_violations, eq=True)
+        tm.fail(result, has="Namespace violations found")
+        receipt = (workspace / c.Infra.NAMESPACE_ENFORCE_REPORT_RELATIVE_PATH).resolve()
+        published = json.loads(receipt.read_text(encoding="utf-8"))
+        tm.that(published["projects"][0]["relocation_findings"] > 0, eq=True)
+        tm.that(published["has_violations"], eq=True)
 
     @staticmethod
-    def test_namespace_enforcer_surfaces_detection_only_findings_as_warnings(
+    def test_namespace_enforcer_leaves_detection_only_findings_to_their_owner(
         tmp_path: Path,
     ) -> None:
-        """Detection-only findings count as warnings, never as residue."""
+        """Detection-only findings are never relocation residue.
+
+        The enforcer owns the rope relocations its rules declare; findings no
+        relocation repairs stay with the rule catalog's own gate (``make mod``)
+        and never inflate the enforcer's residue.
+        """
         workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path)
         _ = (pkg / "service.py").write_text(
             "from __future__ import annotations\n"
@@ -382,13 +394,13 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         )
 
         tm.that(report.projects[0].relocation_findings, eq=0)
-        tm.that(report.projects[0].warnings > 0, eq=True)
+        tm.that((pkg / "protocols.py").exists(), eq=True)
 
     @staticmethod
-    def test_namespace_enforcer_counts_applied_relocations(
+    def test_namespace_enforcer_apply_clears_the_pending_relocations(
         tmp_path: Path,
     ) -> None:
-        """The apply pass reports how many relocations it performed."""
+        """The apply pass performs the relocations the report pass counted."""
         workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path)
         _ = (pkg / "service.py").write_text(
             "from __future__ import annotations\n"
@@ -409,13 +421,17 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
 
         tm.that(pending.projects[0].relocation_findings > 0, eq=True)
         tm.that(applied.projects[0].relocation_findings, eq=0)
-        tm.that(applied.projects[0].applied_relocations > 0, eq=True)
+        tm.that((pkg / "protocols.py").exists(), eq=True)
 
     @staticmethod
-    def test_namespace_enforcer_isolates_one_failed_project(
+    def test_namespace_enforcer_invalid_declaration_fails_before_any_effect(
         tmp_path: Path,
     ) -> None:
-        """A project that fails enforcement is reported; the sweep continues."""
+        """An invalid namespace declaration escapes loud; no project is touched.
+
+        Project resolution validates every declaration before the first
+        relocation, so the healthy project keeps its source untouched.
+        """
         workspace = tmp_path / "workspace"
         _healthy, healthy_pkg = u.Tests.demo_project(workspace, name="healthy-proj")
         _ = (healthy_pkg / "service.py").write_text(
@@ -438,16 +454,10 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         u.Tests.declare_workspace_projects(workspace, ("healthy-proj", "broken-proj"))
         u.Tests.provision_checkout(workspace)
 
-        report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
-            apply=True,
-        )
+        with pytest.raises(TypeError, match="must be a boolean"):
+            FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(apply=True)
 
-        tm.that(report.has_errors, eq=True)
-        by_name = {project.project: project for project in report.projects}
-        tm.that(by_name["broken-proj"].error, has="must be a boolean")
-        tm.that(by_name["healthy-proj"].error, eq=None)
-        tm.that(by_name["healthy-proj"].relocation_findings, eq=0)
-        tm.that((healthy_pkg / "protocols.py").exists(), eq=True)
+        tm.that((healthy_pkg / "protocols.py").exists(), eq=False)
 
     @staticmethod
     def test_namespace_enforcer_render_text_reports_the_totals(
@@ -475,8 +485,6 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         )
         rendered = FlextInfraNamespaceEnforcer.render_text(report)
 
-        tm.that(rendered, has="Violations:")
-        tm.that(rendered, has="Relocations applied:")
-        tm.that(rendered, has="Warnings:")
-        tm.that(rendered, has="Files scanned:")
-        tm.that(rendered, has="failed passes:")
+        tm.that(rendered, has="Violations: NO")
+        tm.that(rendered, has="Relocation findings: 0")
+        tm.that(rendered, has=f"Files scanned: {report.projects[0].files_scanned}")
