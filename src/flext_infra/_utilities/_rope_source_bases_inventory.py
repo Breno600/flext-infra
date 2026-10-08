@@ -20,11 +20,6 @@ from flext_infra._utilities import (
 )
 
 
-# The dedicated owner of the source-binding collector: the rope facade
-# (rope_source_bases) and the runtime module both import it from here, so
-# exactly one definition exists (q0oyc consolidation contract).
-
-
 class FlextInfraUtilitiesRopeSourceBasesInventory:
     """Captured-source inventory part of the source-bases composite."""
 

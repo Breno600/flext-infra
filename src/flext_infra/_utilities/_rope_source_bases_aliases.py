@@ -10,15 +10,9 @@ import ast
 import importlib.util
 from pathlib import Path
 
-from flext_infra import m, t
-
 
 class FlextInfraUtilitiesRopeSourceBasesAliases:
     """Alias and lazy-module resolution part of the source-bases composite."""
-
-    @staticmethod
-
-    @staticmethod
 
     @classmethod
     def _stdlib_backing_module(cls, target: str) -> str | None:
@@ -121,5 +115,3 @@ class FlextInfraUtilitiesRopeSourceBasesAliases:
                     value = ".".join(part for part in (base, remainder) if part)
                 aliases[key_node.value] = value
         return aliases
-
-    @staticmethod
