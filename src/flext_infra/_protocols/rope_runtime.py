@@ -86,6 +86,8 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
             self,
         ) -> t.SequenceOf[FlextInfraProtocolsRopeRuntime.RopePyObject]: ...
 
+        def get_type(self) -> FlextInfraProtocolsRopeRuntime.RopePyObject: ...
+
     @runtime_checkable
     class NativeClassMetadata(Protocol):
         """CPython class metadata published by Rope's builtin class object."""

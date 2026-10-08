@@ -3,6 +3,7 @@
 <!-- TOC START -->
 
 - [Contract](#contract)
+- [Mandatory Mypy policy](#mandatory-mypy-policy)
 - [List-typed registries](#list-typed-registries)
 - [Example](#example)
 - [Local dependency binding](#local-dependency-binding)

@@ -77,7 +77,7 @@ class TestsFlextInfraModRuleFixtureSnapshots:
             u.Tests.commit_git_changes(root, "Declare the demo rule catalog")
         else:
             u.Tests.initialize_git_repo(root)
-        u.Tests.git_bootstrap(root, ("add", c.Infra.CODEMOD_CONFIG_RELPATH.as_posix()))
+        u.Tests.git_bootstrap(root, ("add", str(c.Infra.CODEMOD_CONFIG_RELPATH)))
         return rule
 
     @classmethod

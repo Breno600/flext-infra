@@ -161,6 +161,51 @@ class FlextInfraNamespaceRelocationCascade:
         rope_project.validate(rope_project.root)
         return len(self.scan_findings(project_root, py_files))
 
+    @classmethod
+    def import_relocation_targets(
+        cls,
+        project_root: Path,
+        findings: t.SequenceOf[
+            t.Pair[c.Infra.CodemodRelocation, m.Infra.ModScanFinding]
+        ],
+    ) -> t.MappingKV[Path, t.MappingKV[t.StrPair, set[str]]]:
+        """Map each file's import moves: ``(source module, target module)`` to aliases.
+
+        An own-package symbol always rebinds to the own package's root. A
+        package-root finding whose source module lies under a foreign
+        top-level package is not this project's finding: it stays residue
+        and keeps the verb loud instead of binding the alias into the
+        foreign package — the defect that rewrote own-package
+        ``from flext_infra import u`` bindings to ``from flext_cli import u``.
+
+        Returns:
+            The resulting mapping of file paths to import moves.
+
+        """
+        own_package = u.Infra.project_package_name(project_root)
+        targets: MutableMapping[Path, MutableMapping[t.StrPair, set[str]]] = (
+            defaultdict(lambda: defaultdict(set))
+        )
+        for relocation, finding in findings:
+            if relocation not in {
+                c.Infra.CodemodRelocation.PACKAGE_ROOT_IMPORT,
+                c.Infra.CodemodRelocation.OWN_PACKAGE_IMPORT,
+            }:
+                continue
+            module = cls._captured(
+                finding,
+                c.Infra.CODEMOD_RULE_MODULE_METAVARIABLE,
+            )
+            if (
+                relocation is c.Infra.CodemodRelocation.PACKAGE_ROOT_IMPORT
+                and module.split(".", maxsplit=1)[0] != own_package
+            ):
+                continue
+            targets[project_root / finding.file][module, own_package].add(
+                cls._captured(finding, c.Infra.CODEMOD_RULE_NAME_METAVARIABLE),
+            )
+        return targets
+
     def _grouped_targets(
         self,
         project_root: Path,
@@ -191,7 +236,6 @@ class FlextInfraNamespaceRelocationCascade:
             defaultdict(lambda: defaultdict(set))
         )
         classes: list[tuple[Path, str, str, int]] = []
-        own_package = u.Infra.project_package_name(project_root)
         for relocation, finding in findings:
             file_path = project_root / finding.file
             match relocation:
@@ -199,22 +243,14 @@ class FlextInfraNamespaceRelocationCascade:
                     spans[file_path].append(self._finding_lines(finding))
                 case c.Infra.CodemodRelocation.FUTURE_ANNOTATIONS:
                     names[relocation].setdefault(file_path, set())
-                case c.Infra.CodemodRelocation.PACKAGE_ROOT_IMPORT:
-                    module = self._captured(
-                        finding,
-                        c.Infra.CODEMOD_RULE_MODULE_METAVARIABLE,
-                    )
-                    imports[file_path][module, module.split(".", maxsplit=1)[0]].add(
-                        self._captured(finding, c.Infra.CODEMOD_RULE_NAME_METAVARIABLE),
-                    )
-                case c.Infra.CodemodRelocation.OWN_PACKAGE_IMPORT:
-                    module = self._captured(
-                        finding,
-                        c.Infra.CODEMOD_RULE_MODULE_METAVARIABLE,
-                    )
-                    imports[file_path][module, own_package].add(
-                        self._captured(finding, c.Infra.CODEMOD_RULE_NAME_METAVARIABLE),
-                    )
+                case (
+                    c.Infra.CodemodRelocation.PACKAGE_ROOT_IMPORT
+                    | c.Infra.CodemodRelocation.OWN_PACKAGE_IMPORT
+                ):
+                    # Grouped by the public import_relocation_targets owner,
+                    # which binds own-package symbols to the own package and
+                    # leaves foreign-package findings as residue.
+                    pass
                 case c.Infra.CodemodRelocation.FACADE_CLASS:
                     classes.append((
                         file_path,
@@ -229,6 +265,12 @@ class FlextInfraNamespaceRelocationCascade:
                     names[relocation][file_path].add(
                         self._captured(finding, c.Infra.CODEMOD_RULE_NAME_METAVARIABLE),
                     )
+        for file_path, moves in self.import_relocation_targets(
+            project_root,
+            findings,
+        ).items():
+            for (source_module, target_module), aliases in moves.items():
+                imports[file_path][source_module, target_module].update(aliases)
         return names, spans, imports, classes
 
     @staticmethod

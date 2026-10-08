@@ -31,6 +31,25 @@ class FlextInfraModelsCodegenRender:
             m.Field(description="Canonical validated tooling policy."),
         ]
 
+    class QltyRenderSpec(m.ContractModel):
+        """Validated context for the generated qlty repository configuration."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
+            extra="forbid",
+            frozen=True,
+            strict=True,
+        )
+
+        generated_source_globs: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                description=(
+                    "Tracked generated-source trees excluded from the smells "
+                    "scan, derived from the codegen artifact key."
+                ),
+            ),
+        ] = ()
+
     # Keep the module-skeleton template boundary model-backed and immutable.
     class ModuleSkeletonRenderContext(m.ContractModel):
         """Validated context for one generated module skeleton."""

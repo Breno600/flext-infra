@@ -513,7 +513,12 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                     visiting,
                     depth,
                 )
-            identity = self._external_identity(binding.get_object())
+            value = binding.get_object()
+            if remaining and FlextInfraUtilitiesRopeRuntime.instance_object(value):
+                # Attribute access on a facade instance (``meltano.Tap``)
+                # reaches the class attribute through the instance's type.
+                value = value.get_type()
+            identity = self._external_identity(value)
             for attribute in remaining:
                 identity = self._member(identity, attribute, depth + 1, visiting)
             return identity

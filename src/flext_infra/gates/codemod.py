@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, m, u
+from flext_infra import c, config, m, u
 from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
@@ -268,8 +268,15 @@ class FlextInfraCodemodGate(FlextInfraGate):
             The resulting ``t.StrSequence``.
 
         """
+        # The gate scans the same inventory `make mod` rewrites: trees the
+        # codegen artifact SSOT ignores for source scans (generated sources
+        # included) stay outside it even when Git tracks them.
         globs: t.StrSequence = tuple(
-            f"!{dir_name}/" for dir_name in c.Infra.CHECK_EXCLUDED_DIRS
+            f"!{dir_name}/"
+            for dir_name in sorted({
+                *c.Infra.CHECK_EXCLUDED_DIRS,
+                *config.Infra.codegen.source_scan_ignored,
+            })
         )
         cmd: list[str] = [
             c.Infra.SG,

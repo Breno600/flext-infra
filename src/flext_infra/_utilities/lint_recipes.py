@@ -156,7 +156,10 @@ class FlextInfraUtilitiesLintRecipes:
         )
         edits = list(cls._static_method_plan(source, tree, issues, path, recipes))
         edits.extend(cls._docstring_section_edits(lines, sections, path))
-        edits.extend(cls._summary_edits(lines, summaries))
+        edits.extend(
+            cls._summary_edit(lines, definition, text)
+            for definition, text in summaries.items()
+        )
         if wants_notice:
             edits.append(cls._notice_edit(lines, tree, path))
         return cls._applied_edits(source, edits)
@@ -249,37 +252,6 @@ class FlextInfraUtilitiesLintRecipes:
                 end,
                 cls._with_sections(raw, " " * docstring.col_offset, wanted),
             ))
-        return edits
-
-    @classmethod
-    def _summary_edits(
-        cls,
-        lines: t.SequenceOf[str],
-        summaries: t.MappingKV[
-            ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
-            str,
-        ],
-    ) -> list[t.Triple[int, int, str]]:
-        """Build the synthetic-docstring edits for undocumented definitions.
-
-        Returns:
-            The resulting ``list[t.Triple[int, int, str]]``.
-
-        """
-        edits: list[t.Triple[int, int, str]] = []
-        for definition, text in summaries.items():
-            first = definition.body[0]
-            decorators: list[ast.expr] = (
-                first.decorator_list
-                if isinstance(
-                    first,
-                    ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
-                )
-                else []
-            )
-            first_line = min((first.lineno, *(item.lineno for item in decorators)))
-            offset = cls._offset(lines, first_line, 0)
-            edits.append((offset, offset, f'{" " * first.col_offset}"""{text}"""\n'))
         return edits
 
     @classmethod
