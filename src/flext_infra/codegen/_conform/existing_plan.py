@@ -613,7 +613,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         result_type = r[t.Pair[m.Infra.CodegenRenderInputs, m.Infra.CodegenFilePlan]]
         root = render_inputs.target.root
         rendered = (
-            result_type.fail(
+            r[str].fail(
                 f"managed render entry has no template source: {entry.destination}",
             )
             if entry.source is None
@@ -706,16 +706,16 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         self,
         root: Path,
         policy: m.Infra.CustomHandlerPolicy,
-    ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan, bool]]:
+    ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan | None, bool]]:
         """Validate and plan the existing custom Make content under its policy.
 
         Returns:
-            The resulting ``p.Result[t.Pair[m.Infra.CodegenFilePlan, bool]]``
-            where the boolean marks plan presence (False: an absent custom
-            Make file).
+            The resulting ``p.Result[t.Pair[m.Infra.CodegenFilePlan | None,
+            bool]]`` where the boolean marks plan presence (False: an absent
+            custom Make file).
 
         """
-        result_type = r[t.Pair[m.Infra.CodegenFilePlan, bool]]
+        result_type = r[t.Pair[m.Infra.CodegenFilePlan | None, bool]]
         path = root / policy.filename
         if path.exists() and not path.is_file():
             return result_type.fail(
@@ -739,19 +739,19 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         root: Path,
         layout: m.Infra.RopeProjectLayout,
         family: Literal["u", "p", "m"],
-    ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan, bool]]:
+    ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan | None, bool]]:
         """Plan one projected facade for the discovered package layout.
 
         Returns:
-            The resulting ``p.Result[t.Pair[m.Infra.CodegenFilePlan, bool]]``
-            where the boolean marks plan presence (False: a family with no
-            rendered facade).
+            The resulting ``p.Result[t.Pair[m.Infra.CodegenFilePlan | None,
+            bool]]`` where the boolean marks plan presence (False: a family
+            with no rendered facade).
 
         Raises:
             ValueError: If a rendered facade has no declaring package module.
 
         """
-        result_type = r[t.Pair[m.Infra.CodegenFilePlan, bool]]
+        result_type = r[t.Pair[m.Infra.CodegenFilePlan | None, bool]]
         rendered = u.Infra.render_utility_facade(
             layout.package_dir,
             family=family,
