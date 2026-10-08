@@ -1022,8 +1022,11 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         match predicate:
             case c.Infra.CodemodContextPredicate.PAYLOAD_DECLARATION:
                 with FlextInfraUtilitiesRopeCore.open_project(root) as project:
-                    resource = project.get_resource(
-                        file_path.relative_to(root).as_posix(),
+                    resource = FlextInfraUtilitiesRopeRuntime.require_file_resource(
+                        project.get_resource(
+                            file_path.relative_to(root).as_posix(),
+                        ),
+                        file_path,
                     )
                     declarations = tuple(
                         node
@@ -1084,6 +1087,17 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                     file_path,
                     facts,
                 )
+            case (
+                c.Infra.CodemodContextPredicate.RESOLVED_SYMBOL
+                | c.Infra.CodemodContextPredicate.SAME_BINDING
+                | c.Infra.CodemodContextPredicate.EXECUTABLE_OCCURRENCE
+                | c.Infra.CodemodContextPredicate.UNREFERENCED_IMPORT
+            ):
+                msg = (
+                    "semantic predicate is owned by the occurrence evaluator, "
+                    f"never the project-fact evaluator: {predicate}"
+                )
+                raise ValueError(msg)
 
     @classmethod
     def _context_package_holds(

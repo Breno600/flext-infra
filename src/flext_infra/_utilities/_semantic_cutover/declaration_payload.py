@@ -54,8 +54,11 @@ class FlextInfraUtilitiesDeclarationPayload:
         ):
             return None
         runtime = FlextInfraUtilitiesRopeRuntimeModules
-        resource = project.get_resource(
-            path.relative_to(Path(project.root.real_path)).as_posix(),
+        resource = FlextInfraUtilitiesRopeRuntimeTypes.require_file_resource(
+            project.get_resource(
+                path.relative_to(Path(project.root.real_path)).as_posix(),
+            ),
+            path,
         )
         module = project.get_pymodule(resource)
         scope = runtime.scope_at(

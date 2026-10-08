@@ -215,6 +215,9 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
         """Rope project shape used by flext-infra."""
 
         @property
+        def address(self) -> str: ...
+
+        @property
         def root(self) -> FlextInfraProtocolsRopeRuntime.RopeRoot: ...
 
         def get_resource(
