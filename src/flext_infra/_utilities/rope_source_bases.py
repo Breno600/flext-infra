@@ -216,7 +216,7 @@ class FlextInfraUtilitiesRopeSourceBases:
                 return imported.module_name
             declaring = imported.importing_module.get_module()
             source = declaring.get_resource() if declaring is not None else None
-            if imported.module_name is None or declaring is None or source is None:
+            if declaring is None or source is None:
                 message = "Import has no declared module location"
                 raise ValueError(message)
             name = imported.module_name
