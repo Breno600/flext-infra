@@ -114,6 +114,57 @@ class TestsFlextInfraRopeAnalysis:
         tm.that(bases, eq=())
 
     @staticmethod
+    def test_base_through_external_facade_instance_resolves_to_its_class(
+        tmp_path: Path,
+    ) -> None:
+        """A base read through a provider's module-level facade instance resolves.
+
+        Consumer facades publish their bases as nested classes of the facade
+        type and expose one module-level instance (``meltano.Tap`` on
+        ``meltano: FlextMeltano``). Attribute access on that instance reaches
+        the class attribute through the instance's type, so the planner walks
+        the type's MRO instead of rejecting the instance as a non-class base.
+        """
+        (tmp_path / "src").mkdir()
+        (tmp_path / "flext-core").mkdir()
+        _, provider = u.Tests.demo_project(tmp_path, name="provider-project")
+        (provider / "bases.py").write_text(
+            "class ProviderBases:\n    class Tap:\n        pass\n",
+            encoding="utf-8",
+        )
+        (provider / "api.py").write_text(
+            "from provider_project.bases import ProviderBases\n"
+            "\n"
+            "\n"
+            "class ProviderFacade(ProviderBases):\n"
+            "    pass\n"
+            "\n"
+            "\n"
+            "facade: ProviderFacade = ProviderFacade()\n",
+            encoding="utf-8",
+        )
+        (provider / "__init__.py").write_text(
+            "from provider_project.api import ProviderFacade, facade\n",
+            encoding="utf-8",
+        )
+        project, package = u.Tests.demo_project(tmp_path, name="consumer-project")
+        consumer = package / "api.py"
+        consumer.write_text(
+            "from provider_project import facade\n"
+            "\n"
+            "\n"
+            "class Consumer(facade.Tap):\n"
+            "    pass\n",
+            encoding="utf-8",
+        )
+        bases = u.Infra.runtime_evaluated_base_classes(
+            project,
+            {consumer: consumer.read_text(encoding="utf-8")},
+            ("provider_project.bases.ProviderBases.Tap",),
+        )
+        tm.that(bases, has="provider_project.facade.Tap")
+
+    @staticmethod
     def test_missing_planned_class_binding_fails_at_the_required_base(
         tmp_path: Path,
     ) -> None:

@@ -404,7 +404,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 return imported.module_name
             declaring = imported.importing_module.get_module()
             source = declaring.get_resource() if declaring is not None else None
-            if imported.module_name is None or declaring is None or source is None:
+            if declaring is None or source is None:
                 message = "Import has no declared module location"
                 raise ValueError(message)
             name = imported.module_name
@@ -507,7 +507,12 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                     visiting,
                     depth,
                 )
-            identity = self._external_identity(binding.get_object())
+            value = binding.get_object()
+            if remaining and FlextInfraUtilitiesRopeRuntime.instance_object(value):
+                # Attribute access on a facade instance (``meltano.Tap``)
+                # reaches the class attribute through the instance's type.
+                value = value.get_type()
+            identity = self._external_identity(value)
             for attribute in remaining:
                 identity = self._member(identity, attribute, depth + 1, visiting)
             return identity

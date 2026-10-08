@@ -67,9 +67,11 @@ class TestsFlextInfraCodegenDocsWorkflowProfile:
         """
         app_id_setting = "CI_DEPENDENCIES_APP_ID"
         signing_setting = "CI_DEPENDENCIES_APP_PRIVATE_KEY"
+        granted = ("example-private-a", "example-private-b")
         auth = m.Infra.CiPrivateDependencyAuthSpec.model_validate({
             "app_id_secret": app_id_setting,
             "private_key_secret": signing_setting,
+            "repositories": granted,
         })
         template = (
             Path(__file__).resolve().parents[3]
@@ -101,5 +103,6 @@ class TestsFlextInfraCodegenDocsWorkflowProfile:
             tm.that(job, has=f"uses: {action.repository}@{action.version}")
             tm.that(job, has=f"client-id: ${{{{ secrets.{app_id_setting} }}}}")
             tm.that(job, lacks="app-id:")
+            tm.that(job, has=f"repositories: {','.join(granted)}")
             tm.that(job, has=marker)
             tm.that(job.index(marker) < job.index("run: make setup"), eq=True)

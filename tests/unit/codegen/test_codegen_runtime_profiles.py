@@ -21,16 +21,6 @@ class TestsFlextInfraCodegenRuntimeProfiles:
     """Tests for ``FlextInfraCodegenRuntimeProfiles``."""
 
     @staticmethod
-    @pytest.mark.parametrize(
-        "upstream",
-        tuple(
-            item.upstream
-            for item in config.Infra.codegen.scaffold.project.dependency_profiles
-            if item.project is None
-        ),
-    )
-    @pytest.mark.parametrize("composed", [False, True])
-    @staticmethod
     def _seed_member_workspace(
         tmp_path: Path,
         upstream: str,
@@ -219,6 +209,15 @@ class TestsFlextInfraCodegenRuntimeProfiles:
         )
         return rendered
 
+    @pytest.mark.parametrize(
+        "upstream",
+        tuple(
+            item.upstream
+            for item in config.Infra.codegen.scaffold.project.dependency_profiles
+            if item.project is None
+        ),
+    )
+    @pytest.mark.parametrize("composed", [False, True])
     def test_declared_profile_restores_runtime_and_preserves_custom_specs(
         self,
         tmp_path: Path,

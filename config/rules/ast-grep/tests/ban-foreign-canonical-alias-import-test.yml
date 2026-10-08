@@ -1,18 +1,18 @@
 # Shape only: the context is the same as ban-foreign-namespace-source's.
 id: ban-foreign-canonical-alias-import
 valid:
-- from flext_core import c
-- |
-  def run():
-      if TYPE_CHECKING:
-          from flext_core import c
-- |
-  def run():
-      from flext_core import c
+  - from flext_core import c
+  - |
+    def run():
+        if TYPE_CHECKING:
+            from flext_core import c
+  - |
+    def run():
+        from flext_core.constants import c
 invalid:
-- |
-  def run():
-      from flext_core import c
-- |
-  class Holder:
-      from flext_core import m
+  - |
+    def run():
+        from flext_core import c
+  - |
+    class Holder:
+        from flext_core import m

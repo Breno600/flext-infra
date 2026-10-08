@@ -353,11 +353,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformExecuteScaffold):
             The initializer result, retaining any planner or transaction failure.
 
         """
-        planned = (
-            self._plan_type_facade(request)
-            if request.what == c.Infra.CodegenConformSurface.FACADES
-            else self._plan_lazy_init(request)
-        )
+        planned = self._plan_single_surface(request)
         if planned.failure:
             return r[m.Infra.CodegenResult].from_failure(planned)
         plan, analysis = planned.value
@@ -410,11 +406,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformExecuteScaffold):
         receipt = FlextInfraCodegenTransaction.validate_phase_analysis_locked(analysis)
         if receipt.failure:
             return receipt
-        planned = (
-            self._plan_type_facade(request)
-            if request.what == c.Infra.CodegenConformSurface.FACADES
-            else self._plan_lazy_init(request)
-        )
+        planned = self._plan_single_surface(request)
         if planned.failure:
             return r[bool].from_failure(planned)
         return u.Infra.codegen_fixed_point(
