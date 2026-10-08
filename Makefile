@@ -1113,7 +1113,7 @@ _bootstrap_setup_tools: _builtin_require_workspace
 
 # Execute the interpreter provisioned by setup without discovering a project
 # workspace or creating a dependency-resolution file during a runtime command.
-override UV_RUN := env -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u PROJECT_ROOT PYTHONPATH="$(PROJECT_ROOT)/src" $(UV) run --no-project --python "$(RUNTIME_PYTHON)"
+override UV_RUN := env -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u PROJECT_ROOT PYTHONPATH="$(PROJECT_ROOT)/src" $(UV) run --directory "$(PROJECT_ROOT)" --no-project --python "$(RUNTIME_PYTHON)"
 # The checked-out flext-infra lane owns every lifecycle verb: a workspace
 # runs the generator it carries (the submodule src), so a broken published
 # dependency tip can never block the local recovery cycle. A checkout without
@@ -2272,11 +2272,11 @@ _builtin_check_all: _builtin_require_environment
 	@set -eu; \
 		gates="lint,security,markdown,markdown-format,markdown-code,duplication,pyrefly,mypy,pyright,loc-cap,runtime-census,fresh-import,index-declarations,codemod,layout,direnv"; \
 		if [ "$(strip $(CI))" = "Y" ]; then \
-			gates="lint,security,markdown,markdown-format,markdown-code,duplication,loc-cap,runtime-census,fresh-import,index-declarations,layout,direnv"; \
-			printf 'INFO: CI=Y runs check gates: lint security markdown markdown-format markdown-code duplication loc-cap runtime-census fresh-import index-declarations layout direnv\n'; \
+			gates="security,markdown,markdown-format,markdown-code,duplication,loc-cap,runtime-census,fresh-import,index-declarations,layout,direnv"; \
+			printf 'INFO: CI=Y runs check gates: security markdown markdown-format markdown-code duplication loc-cap runtime-census fresh-import index-declarations layout direnv\n'; \
 		elif [ "$(strip $(CI))" = "N" ]; then \
-			gates="pyrefly,mypy,pyright,codemod"; \
-			printf 'INFO: CI=N runs check gates: pyrefly mypy pyright codemod\n'; \
+			gates="lint,pyrefly,mypy,pyright,codemod"; \
+			printf 'INFO: CI=N runs check gates: lint pyrefly mypy pyright codemod\n'; \
 		else \
 			printf 'INFO: default context runs check gates: lint security markdown markdown-format markdown-code duplication pyrefly mypy pyright loc-cap runtime-census fresh-import index-declarations codemod layout direnv\n'; \
 		fi; \

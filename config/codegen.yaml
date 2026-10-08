@@ -495,12 +495,13 @@ Infra:
         # Other pre-push verbs use this token to preserve local test behavior;
         # pre-push check unsets CI so it runs every active check gate.
         local_value: N
-        local_check_gates: [mypy, pyright, codemod, smells, pyrefly]
-        # mypy and pyright are INFORMATIVE (merge-admin mandate
-        # 2026-10-05): the gates execute in every context they run at all
-        # and their findings never block — base_gate reads the
-        # informative list directly, without a CI environment condition.
-        informative_check_gates: [mypy, pyright]
+        local_check_gates: [mypy, pyright, codemod, smells, pyrefly, lint]
+        # mypy, pyright, lint, pyrefly, codemod and smells are INFORMATIVE
+        # (merge-admin mandate 2026-10-05): the gates execute in every
+        # context they run at all and their findings never block — base_gate
+        # reads the informative list directly, without a CI environment
+        # condition.
+        informative_check_gates: [lint, mypy, pyright, pyrefly, codemod, smells]
         # local_check_gates is the only declared partition: CI=N runs
         # MakeSpec.check_gates_local (its intersection with the active default
         # gates) and CI=Y runs MakeSpec.check_gates_ci, the strict complement.
