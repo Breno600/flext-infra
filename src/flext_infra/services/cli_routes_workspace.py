@@ -76,6 +76,15 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
         ),
         c.Infra.CLI_GROUP_WORKSPACE: (
             m.Cli.ResultCommandRoute(
+                name="verify-lanes",
+                help_text="Read-only lane inventory and fresh integration admission",
+                model_cls=m.Infra.GitLaneVerificationRequest,
+                handler=FlextInfraCliRouteBase.result_handler(
+                    FlextInfraGitService.verify_lanes,
+                ),
+                success_message="workspace lane hygiene verified",
+            ),
+            m.Cli.ResultCommandRoute(
                 name="identity",
                 help_text="Report canonical Git checkout identity",
                 model_cls=m.Infra.GitRepoRequest,
@@ -85,13 +94,15 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
             m.Cli.ResultCommandRoute(
                 name="verify-clean",
                 help_text=(
-                    "Fail if a Git worktree has staged, unstaged, or untracked changes"
+                    "Reject staged, unstaged, untracked changes and stash entries"
                 ),
                 model_cls=m.Infra.GitStatusRequest,
                 handler=FlextInfraCliRouteBase.result_handler(
                     FlextInfraGitService.verify_clean,
                 ),
-                success_message="workspace Git worktree is clean",
+                success_message=(
+                    "workspace Git worktree is clean and has no stash entries"
+                ),
             ),
             m.Cli.ResultCommandRoute(
                 name="verify-environment",

@@ -328,9 +328,11 @@ class TestsFlextInfraCodegenPyprojectConform:
                 '[project]\nname = "consumer"\ndependencies = []\n',
                 workspace=workspace,
                 required_dev_dependencies=floors,
-                required_dependency_source=dependency_source,
                 uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
-                family_line=branch,
+                options=u.Infra.PyprojectConformOptions(
+                    family_line=branch,
+                    required_dependency_source=dependency_source,
+                ),
             ),
         )
         dev = u.Tests.toml_strings_at(first, "dependency-groups", "dev")
@@ -351,9 +353,11 @@ class TestsFlextInfraCodegenPyprojectConform:
                 first,
                 workspace=workspace,
                 required_dev_dependencies=floors,
-                required_dependency_source=dependency_source,
                 uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
-                family_line=branch,
+                options=u.Infra.PyprojectConformOptions(
+                    family_line=branch,
+                    required_dependency_source=dependency_source,
+                ),
             ),
         )
         tm.that(second, eq=first)
@@ -372,10 +376,12 @@ class TestsFlextInfraCodegenPyprojectConform:
                 ),
             ),
             required_dev_dependencies=(),
-            required_dependency_source=m.Infra.WorkspaceIntegrationSpec(
-                provider=provider.name,
-                branch=u.Tests.provider_branch(),
-                base_url=provider.base_url,
+            options=u.Infra.PyprojectConformOptions(
+                required_dependency_source=m.Infra.WorkspaceIntegrationSpec(
+                    provider=provider.name,
+                    branch=u.Tests.provider_branch(),
+                    base_url=provider.base_url,
+                ),
             ),
             uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
         )
@@ -401,10 +407,12 @@ class TestsFlextInfraCodegenPyprojectConform:
                     ),
                 ),
                 required_dev_dependencies=(floor,),
-                required_dependency_source=m.Infra.WorkspaceIntegrationSpec(
-                    provider=provider.name,
-                    branch=u.Tests.provider_branch(),
-                    base_url=provider.base_url,
+                options=u.Infra.PyprojectConformOptions(
+                    required_dependency_source=m.Infra.WorkspaceIntegrationSpec(
+                        provider=provider.name,
+                        branch=u.Tests.provider_branch(),
+                        base_url=provider.base_url,
+                    ),
                 ),
                 uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
             ),

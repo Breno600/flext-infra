@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from tests import c, u
+from tests import c, m, u
 
 
 class TestsFlextInfraLazyInitAliasInheritance:
@@ -90,7 +90,7 @@ class TestsFlextInfraLazyInitAliasInheritance:
         result = tm.ok(
             u.Cli.run(
                 [sys.executable, "-c", probe],
-                options=u.Cli.ProcessOptions(env=probe_env),
+                options=m.Cli.ProcessOptions(env=probe_env),
                 cwd=repository,
             ),
         )

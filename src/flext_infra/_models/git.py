@@ -7,7 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated, ClassVar
+from typing import Annotated, ClassVar, Self
 
 from flext_cli import m
 
@@ -17,9 +17,12 @@ from flext_infra._models import (
     FlextInfraModelsGitWorktreeFacts,
     FlextInfraModelsGitWorktreeState,
 )
+from flext_infra._models.git_lane_inputs import FlextInfraModelsGitLaneInputs
+from flext_infra._models.git_lane_ownership import FlextInfraModelsGitLaneOwnership
 
 
 class FlextInfraModelsGit(
+    FlextInfraModelsGitLaneOwnership,
     FlextInfraModelsGitIdentity,
     FlextInfraModelsGitWorktreeFacts,
     FlextInfraModelsGitWorktreeState,
@@ -35,6 +38,88 @@ class FlextInfraModelsGit(
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
         repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
+
+    class GitLaneVerificationRequest(GitRepoRequest):
+        """Read-only lane census, optionally consuming coordinator evidence."""
+
+        declared: Annotated[
+            str | None,
+            m.Field(description="Governing integration declaration"),
+        ] = None
+        evidence_file: Annotated[
+            Path | None,
+            m.Field(description="Typed Bead/PR evidence captured by the coordinator"),
+        ] = None
+        governance_file: Annotated[
+            Path | None,
+            m.Field(description="Global coordination governance SSOT"),
+        ] = None
+        read_pull_requests: Annotated[
+            bool,
+            m.Field(description="Explicitly authorize public PR ownership reads"),
+        ] = False
+        read_beads: Annotated[
+            bool,
+            m.Field(description="Explicitly authorize declared Beads ownership reads"),
+        ] = False
+
+        @m.model_validator(mode="after")
+        def _validate_ownership_selection(self) -> Self:
+            """Reject competing evidence sources instead of ignoring selection.
+
+            Returns:
+                The uniquely selected ownership request.
+
+            Raises:
+                ValueError: If receipt and live ownership are both selected.
+
+            """
+            if self.evidence_file is not None and (
+                self.read_pull_requests or self.read_beads
+            ):
+                msg = "select either an ownership receipt or authorized live sources"
+                raise ValueError(msg)
+            return self
+
+    class GitLaneEvidence(m.ContractModel):
+        """Repository-bound coordinator receipt, never a cleanup instruction."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+        repo_root: Annotated[Path, m.Field(description="Receipt repository identity")]
+        captured_at: Annotated[
+            t.AwareDatetime,
+            m.Field(description="Receipt capture time"),
+        ]
+        pull_requests: Annotated[
+            tuple[FlextInfraModelsGitLaneInputs.GitLanePullRequest, ...] | None,
+            m.Field(description="Observed PRs; None means not selected/unknown"),
+        ] = None
+        beads: Annotated[
+            tuple[FlextInfraModelsGitLaneOwnership.GitLaneBead, ...] | None,
+            m.Field(description="Observed Beads; None means not selected/unknown"),
+        ] = None
+
+    class GitLaneReport(m.ContractModel):
+        """Full read-only inventory and all refusals from one invocation."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+        repo_root: Annotated[Path, m.Field(description="Inspected repository")]
+        integration_branch: Annotated[
+            str,
+            m.Field(description="Resolved integration branch"),
+        ] = ""
+        integration_oid: Annotated[
+            str,
+            m.Field(description="Proven live integration tip"),
+        ] = ""
+        inventory: Annotated[
+            tuple[str, ...],
+            m.Field(description="Full exact Git artifact inventory"),
+        ] = ()
+        findings: Annotated[
+            tuple[str, ...],
+            m.Field(description="All refusals and inconclusive evidence"),
+        ] = ()
 
     class GitStatusRequest(m.ContractModel):
         """Request porcelain status for one repository."""

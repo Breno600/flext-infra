@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from collections.abc import Mapping
+from typing import Annotated
 
 from flext_cli import r, u
 
@@ -19,6 +20,20 @@ from flext_infra._utilities import (
 
 class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources):
     """Render root workspace and autonomous library metadata deterministically."""
+
+    class PyprojectConformOptions(m.ImmutableValueModel):
+        """Detected integration provenance for internal requirements and dev floors."""
+
+        family_line: Annotated[
+            str | None,
+            m.Field(
+                description="Detected integration branch for internal requirements",
+            ),
+        ] = None
+        required_dependency_source: Annotated[
+            m.Infra.WorkspaceIntegrationSpec | None,
+            m.Field(description="Detected provider source for generated dev floors"),
+        ] = None
 
     @classmethod
     def _parsed_pyproject(
@@ -56,18 +71,17 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         workspace: m.Infra.WorkspaceSpec,
         required_dev_dependencies: t.StrSequence,
         uv_resolution: m.Infra.UvResolutionSpec,
-        family_line: str | None = None,
-        required_dependency_source: m.Infra.WorkspaceIntegrationSpec | None = None,
+        options: PyprojectConformOptions | None = None,
     ) -> p.Result[str]:
         """Return canonical TOML with autonomous dependencies and uv policy.
 
         The workspace manifest owns the topology facts, including the
         namespace production scope its project declares and the members a
         workspace root environment serves. Attached members, of any family,
-        render on the workspace's declared integration line; ``family_line``
+        render on the workspace's declared integration line; ``options.family_line``
         is the detected FLEXT integration branch that re-renders commit residue
         in the other internal requirements. Without a line, both fail loudly.
-        Generated bare dev floors use ``required_dependency_source``, the same
+        Generated bare dev floors use ``options.required_dependency_source``, the same
         detected provider line as the scaffold; CUSTOM requirements never acquire
         provenance from provider policy unless that dependency is a declared floor.
 
@@ -79,6 +93,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         if parsed.failure:
             return r[str].from_failure(parsed)
         source, project_name = parsed.value
+        provenance = options if options is not None else cls.PyprojectConformOptions()
         # Only the workspace root normalizes member requirements to bare names.
         # Attached members retain inline Git provenance for published metadata;
         # their containing workspace identity is applied separately to uv sources.
@@ -96,31 +111,14 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             project_name=project_name,
             required_dev_dependencies=required_dev_dependencies,
         )
-        declared_sources = (
-            {
-                member.distribution: f"git+{member.url}@{workspace.integration.branch}"
-                for member in workspace.subprojects
-            }
-            if workspace.integration is not None
-            else {}
+        declared_sources = cls._declared_floor_sources(
+            workspace,
+            project_name=project_name,
+            requirements=required_dev_dependencies,
+            dependency_source=provenance.required_dependency_source,
         )
-        for requirement in required_dev_dependencies:
-            name = FlextInfraUtilitiesDependencies.dep_name(requirement)
-            if (
-                name is None
-                or name == project_name
-                or name in declared_sources
-                or not name.startswith("flext-")
-                or requirement.strip() != name
-                or required_dependency_source is None
-            ):
-                continue
-            if required_dependency_source.base_url is None:
-                return r[str].fail("detected FLEXT line carries no provider base URL")
-            declared_sources[name] = (
-                f"git+{required_dependency_source.base_url}/{name}.git"
-                f"@{required_dependency_source.branch}"
-            )
+        if declared_sources.failure:
+            return r[str].from_failure(declared_sources)
         candidate_sources = {
             item.distribution: f"git+{item.url}@{item.commit}"
             for item in workspace.candidate_dependencies
@@ -140,9 +138,9 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             )
         normalized = cls._normalize_requirements(
             source,
-            declared_sources=declared_sources,
+            declared_sources=declared_sources.value,
             candidate_sources=candidate_sources,
-            family_line=family_line,
+            family_line=provenance.family_line,
             workspace_members=workspace_members,
         )
         if normalized.failure:
@@ -157,6 +155,60 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         )
         if synced.failure:
             return r[str].from_failure(synced)
+        return cls._render_pyproject(source)
+
+    @staticmethod
+    def _declared_floor_sources(
+        workspace: m.Infra.WorkspaceSpec,
+        *,
+        project_name: str,
+        requirements: t.StrSequence,
+        dependency_source: m.Infra.WorkspaceIntegrationSpec | None,
+    ) -> p.Result[t.StrMapping]:
+        """Derive member sources and provider provenance only for generated floors.
+
+        Returns:
+            Declared sources, or the missing provider URL failure.
+
+        """
+        declared_sources = (
+            {
+                member.distribution: f"git+{member.url}@{workspace.integration.branch}"
+                for member in workspace.subprojects
+            }
+            if workspace.integration is not None
+            else {}
+        )
+        for requirement in requirements:
+            name = FlextInfraUtilitiesDependencies.dep_name(requirement)
+            if (
+                name is None
+                or name == project_name
+                or name in declared_sources
+                or not name.startswith("flext-")
+                or requirement.strip() != name
+            ):
+                continue
+            if dependency_source is None:
+                continue
+            if dependency_source.base_url is None:
+                return r[t.StrMapping].fail(
+                    "detected FLEXT line carries no provider base URL",
+                )
+            declared_sources[name] = (
+                f"git+{dependency_source.base_url}/{name}.git"
+                f"@{dependency_source.branch}"
+            )
+        return r[t.StrMapping].ok(declared_sources)
+
+    @staticmethod
+    def _render_pyproject(source: t.Cli.TomlDocument) -> p.Result[str]:
+        """Serialize the conformed document and validate the rendered TOML.
+
+        Returns:
+            Rendered TOML, or the original invalid-render failure.
+
+        """
         rendered = u.Cli.toml_dumps(source)
         if u.Cli.toml_parse_text(rendered) is None:
             return r[str].fail("canonical pyproject rendering produced invalid TOML")

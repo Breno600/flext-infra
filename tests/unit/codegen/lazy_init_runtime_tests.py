@@ -15,7 +15,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import infra
-from tests import c, t, u
+from tests import c, m, t, u
 
 
 class TestsFlextInfraLazyInitRuntime:
@@ -156,7 +156,7 @@ class TestsFlextInfraLazyInitRuntime:
         result = tm.ok(
             u.Cli.run(
                 [sys.executable, "-c", probe],
-                options=u.Cli.ProcessOptions(env=probe_env),
+                options=m.Cli.ProcessOptions(env=probe_env),
             ),
         )
         tm.that(result.stdout.splitlines(), eq=["True"] * 7)
@@ -202,7 +202,7 @@ class TestsFlextInfraLazyInitRuntime:
         result = tm.ok(
             u.Cli.run(
                 [sys.executable, "-c", probe],
-                options=u.Cli.ProcessOptions(env=probe_env),
+                options=m.Cli.ProcessOptions(env=probe_env),
             ),
         )
         tm.that(result.stdout.splitlines(), eq=["True", "True"])
@@ -236,7 +236,7 @@ class TestsFlextInfraLazyInitRuntime:
         result = tm.ok(
             u.Cli.run(
                 [sys.executable, "-c", probe],
-                options=u.Cli.ProcessOptions(env=probe_env),
+                options=m.Cli.ProcessOptions(env=probe_env),
             ),
         )
         tm.that(result.stdout.splitlines(), eq=["True", "True"])
@@ -367,7 +367,7 @@ class TestsFlextInfraLazyInitRuntime:
         result = tm.ok(
             u.Cli.run(
                 [sys.executable, "-c", probe],
-                options=u.Cli.ProcessOptions(env=probe_env),
+                options=m.Cli.ProcessOptions(env=probe_env),
                 cwd=repository,
             ),
         )

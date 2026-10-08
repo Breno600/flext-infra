@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
+from typing import Literal
 
 from flext_infra import c, config, m, p, r, t, u
 from flext_infra.codegen._conform.scaffold_plan import (
@@ -36,10 +37,22 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                 return r[m.Infra.CodegenPlan].from_failure(lazy)
             return r[m.Infra.CodegenPlan].ok(lazy.value[0])
         if request.what == c.Infra.CodegenConformSurface.FACADES:
-            facades = self._plan_type_facade(request)
+            facades = self._plan_facade(request)
             if facades.failure:
                 return r[m.Infra.CodegenPlan].from_failure(facades)
             return r[m.Infra.CodegenPlan].ok(facades.value[0])
+        return self._plan_repositories(request)
+
+    def _plan_repositories(
+        self,
+        request: m.Infra.CodegenConformRequest,
+    ) -> p.Result[m.Infra.CodegenPlan]:
+        """Build the governed plans for the selected repository topology.
+
+        Returns:
+            The complete repository plan or its first planning failure.
+
+        """
         config_spec = config.Infra.codegen
         root = request.root.expanduser().resolve()
         targets = self._planning_workspace(request, root)
@@ -76,17 +89,17 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
             ),
         )
 
-    def _plan_type_facade(
+    def _plan_facade(
         self,
         request: m.Infra.CodegenConformRequest,
     ) -> p.Result[t.Pair[m.Infra.CodegenPlan, m.Infra.CodegenPhaseAnalysis]]:
-        """Plan one existing type facade from authenticated private owner bytes.
+        """Plan one declared facade through its canonical family renderer.
 
         Args:
-            request: The code generation conform request containing the root and module information.
+            request: The conform request containing the root and destination module.
 
         Returns:
-            A result containing a pair of the planned code generation plan and the phase analysis, or a failure if planning was unsuccessful.
+            The plan and authenticated phase analysis, or the first failure.
         """
         result_type = r[t.Pair[m.Infra.CodegenPlan, m.Infra.CodegenPhaseAnalysis]]
         root = request.root.expanduser().resolve()
@@ -94,55 +107,14 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
         if topology.failure:
             return result_type.from_failure(topology)
         workspace, _target, repository = topology.value
-        layout = u.Infra.layout(root)
-        if layout is None or request.module is None:
-            return result_type.fail(
-                "facades requires an existing package and destination",
-            )
-        parts = request.module.split(".")
-        if (
-            len(parts) != 2
-            or parts[0] != layout.package_dir.name
-            or not all(part.isidentifier() for part in parts)
-        ):
-            return result_type.fail(
-                "facades --module must name a direct package module",
-            )
-        destination = layout.package_dir / f"{parts[1]}{c.Infra.EXT_PYTHON}"
-        directory = u.Infra.facade_families()["t"].directory
-        states: list[m.Cli.AtomicFileState] = []
-        sources: dict[Path, str] = {}
-        for path in (
-            destination,
-            *sorted((layout.package_dir / directory).rglob(c.Infra.EXT_PYTHON_GLOB)),
-        ):
-            if not path.resolve().is_relative_to(root):
-                return result_type.fail(f"type facade input escapes repository: {path}")
-            snapshot = u.Cli.atomic_read_binary_file_state(path, required=True)
-            if snapshot.failure:
-                return result_type.from_failure(snapshot)
-            state = snapshot.value
-            if state.content is None:
-                return result_type.fail(f"type facade input is absent: {path}")
-            states.append(state)
-            sources[path] = state.content.decode(c.Cli.ENCODING_DEFAULT)
-        if "t" not in u.Infra.facade_letter_names_source(sources[destination]):
-            return result_type.fail("selected facade destination does not declare t")
-        rendered = u.Infra.render_type_facade(layout.package_dir, destination, sources)
-        file = self.file_plan(
-            root,
-            destination.relative_to(root).as_posix(),
-            rendered,
-            mode=states[0].mode,
-            source_states=tuple(states),
-        )
-        if file.failure:
-            return result_type.from_failure(file)
-        analysis = m.Infra.CodegenPhaseAnalysis(
-            phase=c.Infra.CodegenStagedFilePhase.CONFORM,
-            files=(file.value,),
-            inputs=tuple(states),
-        )
+        destination_result = self._facade_destination(root, request.module)
+        if destination_result.failure:
+            return result_type.from_failure(destination_result)
+        destination = destination_result.value
+        analyzed = self._facade_analysis(root, destination)
+        if analyzed.failure:
+            return result_type.from_failure(analyzed)
+        analysis = analyzed.value
         plan = m.Infra.CodegenPlan(
             request=request,
             repositories=(repository,),
@@ -152,6 +124,186 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
             files=analysis.files,
         )
         return result_type.ok((plan, analysis))
+
+    @staticmethod
+    def _facade_destination(root: Path, module: str | None) -> p.Result[Path]:
+        """Validate a direct module destination in the existing package.
+
+        Returns:
+            The destination path or the original destination diagnostic.
+
+        """
+        layout = u.Infra.layout(root)
+        if layout is None or module is None:
+            return r[Path].fail(
+                "facades requires an existing package and destination",
+            )
+        package_name, separator, module_name = module.partition(".")
+        if (
+            not separator
+            or package_name != layout.package_dir.name
+            or not package_name.isidentifier()
+            or not module_name.isidentifier()
+        ):
+            return r[Path].fail(
+                "facades --module must name a direct package module",
+            )
+        return r[Path].ok(layout.package_dir / f"{module_name}{c.Infra.EXT_PYTHON}")
+
+    def _facade_analysis(
+        self,
+        root: Path,
+        destination: Path,
+    ) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
+        """Render and stage exactly one facade with its authenticated inputs.
+
+        Returns:
+            The selected file analysis or its first planning failure.
+
+        """
+        result_type = r[m.Infra.CodegenPhaseAnalysis]
+        snapshots = self._facade_sources(root, destination)
+        if snapshots.failure:
+            return result_type.from_failure(snapshots)
+        family, states, sources = snapshots.value
+        rendered = self._render_facade(destination, family, sources)
+        if rendered.failure:
+            return result_type.from_failure(rendered)
+        file = self.file_plan(
+            root,
+            destination.relative_to(root).as_posix(),
+            rendered.value,
+            mode=states[0].mode,
+            source_states=tuple(states),
+        )
+        if file.failure:
+            return result_type.from_failure(file)
+        return result_type.ok(
+            m.Infra.CodegenPhaseAnalysis(
+                phase=c.Infra.CodegenStagedFilePhase.CONFORM,
+                files=(file.value,),
+                inputs=tuple(states),
+            ),
+        )
+
+    @staticmethod
+    def _facade_family(source: str) -> p.Result[Literal["t", "u", "p", "m"]]:
+        """Identify the selected renderer from the module's published declaration.
+
+        Returns:
+            The unique supported facade family or a declaration failure.
+
+        """
+        result_type = r[Literal["t", "u", "p", "m"]]
+        match tuple(sorted(u.Infra.facade_letter_names_source(source))):
+            case ("t",):
+                return result_type.ok("t")
+            case ("u",):
+                return result_type.ok("u")
+            case ("p",):
+                return result_type.ok("p")
+            case ("m",):
+                return result_type.ok("m")
+            case _:
+                return result_type.fail(
+                    "selected facade destination must declare one supported family",
+                )
+
+    @classmethod
+    def _facade_sources(
+        cls,
+        root: Path,
+        destination: Path,
+    ) -> p.Result[
+        t.Triple[
+            Literal["t", "u", "p", "m"],
+            list[m.Cli.AtomicFileState],
+            dict[Path, str],
+        ]
+    ]:
+        """Authenticate owners and consumers before family rendering.
+
+        Returns:
+            The family, ordered source states and decoded source, or a failure.
+
+        """
+        result_type = r[
+            t.Triple[
+                Literal["t", "u", "p", "m"],
+                list[m.Cli.AtomicFileState],
+                dict[Path, str],
+            ]
+        ]
+        selected = cls._facade_source_state(root, destination)
+        if selected.failure:
+            return result_type.from_failure(selected)
+        state, source = selected.value
+        declared = cls._facade_family(source)
+        if declared.failure:
+            return result_type.from_failure(declared)
+        family = declared.value
+        states = [state]
+        sources = {destination: source}
+        # Type projection reads only its private family; the other renderers
+        # also resolve executable consumers throughout the selected package.
+        scan_root = destination.parent
+        if family == "t":
+            scan_root /= u.Infra.facade_families()[family].directory
+        for path in sorted(scan_root.rglob(c.Infra.EXT_PYTHON_GLOB)):
+            if path == destination:
+                continue
+            snapshot = cls._facade_source_state(root, path)
+            if snapshot.failure:
+                return result_type.from_failure(snapshot)
+            state, source = snapshot.value
+            states.append(state)
+            sources[path] = source
+        return result_type.ok((family, states, sources))
+
+    @staticmethod
+    def _facade_source_state(
+        root: Path,
+        path: Path,
+    ) -> p.Result[t.Pair[m.Cli.AtomicFileState, str]]:
+        """Read one required source without escaping the selected repository.
+
+        Returns:
+            Its authenticated state and decoded source, or the first failure.
+
+        """
+        result_type = r[t.Pair[m.Cli.AtomicFileState, str]]
+        if not path.resolve().is_relative_to(root):
+            return result_type.fail(f"facade input escapes repository: {path}")
+        snapshot = u.Cli.atomic_read_binary_file_state(path, required=True)
+        if snapshot.failure:
+            return result_type.from_failure(snapshot)
+        state = snapshot.value
+        if state.content is None:
+            return result_type.fail(f"facade input is absent: {path}")
+        return result_type.ok((state, state.content.decode(c.Cli.ENCODING_DEFAULT)))
+
+    @staticmethod
+    def _render_facade(
+        destination: Path,
+        family: Literal["t", "u", "p", "m"],
+        sources: t.MappingKV[Path, str],
+    ) -> p.Result[str]:
+        """Reuse the canonical renderer without selecting a different destination.
+
+        Returns:
+            Rendered source for exactly the requested declaring module.
+
+        """
+        if family == "t":
+            return r[str].ok(
+                u.Infra.render_type_facade(destination.parent, destination, sources),
+            )
+        if u.Infra.facade_module_path(destination.parent, family) != destination:
+            return r[str].fail("selected facade differs from its declaring module")
+        rendered = u.Infra.render_utility_facade(destination.parent, family=family)
+        if rendered is None:
+            return r[str].fail(f"selected facade has no private {family} owners")
+        return r[str].ok(rendered)
 
     def _plan_lazy_init(
         self,

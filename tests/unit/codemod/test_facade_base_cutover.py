@@ -200,7 +200,13 @@ class TestsFlextInfraFacadeBaseCutover:
                 "from typing import TYPE_CHECKING\n"
                 "if TYPE_CHECKING:\n"
                 "    from .protocols import SecondDeclaredProtocols, p\n"
-                f"{self._lazy_publication('.protocols', 'SecondDeclaredProtocols', 'p')}"
+                f"{
+                    self._lazy_publication(
+                        '.protocols',
+                        'SecondDeclaredProtocols',
+                        'p',
+                    )
+                }"
                 "__all__ = ['SecondDeclaredProtocols', 'p']\n"
             ),
             second / "protocols.py": (

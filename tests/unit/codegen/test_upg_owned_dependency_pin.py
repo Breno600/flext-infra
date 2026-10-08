@@ -97,7 +97,7 @@ class TestsFlextInfraUpgOwnedDependencyPin:
                 exclude_dependencies=(),
                 environments=tuple(toolchain.uv_environments),
             ),
-            family_line=family_line,
+            options=u.Infra.PyprojectConformOptions(family_line=family_line),
         )
 
     def test_generation_keeps_the_line_and_drops_override_pins(

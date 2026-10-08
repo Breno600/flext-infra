@@ -345,6 +345,11 @@ Infra:
     # Nothing here catalogs organizations, and nothing resolves a provider by
     # matching a Git origin against configured rows.
     branch_policy:
+      lane_remote: origin
+      lane_pr_limit: 1000
+      lane_governance_file: ~/agents/config/governance.json
+      lane_temporary_roots:
+        - /tmp
       # Pushes to these branches trigger the generated CI workflow. The renderer
       # adds the repository's own integration branch to this list; it never
       # hardcodes a fleet branch name.
@@ -665,7 +670,7 @@ Infra:
         - name: status
           description: Report the resolved runtime and repository state.
         - name: verify-clean
-          description: Verify that managed artifacts and generated documentation match their sources and leave no unstaged change to a tracked file.
+          description: Verify managed artifacts and generated documentation against their sources, then reject staged, unstaged, untracked changes and stash entries through the public Git service.
         - name: docs
           description: Generate, fix, format, and check documentation.
         - name: clean

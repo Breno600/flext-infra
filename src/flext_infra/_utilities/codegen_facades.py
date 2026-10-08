@@ -37,6 +37,12 @@ class FlextInfraUtilitiesCodegenFacades:
 
         Only the existing class/t export contract is supported. Ambiguous owners
         or extra public declarations fail rather than being silently discarded.
+
+        Returns:
+            Generated facade source inheriting its complete declared type owner.
+
+        Raises:
+            ValueError: If documentation, declarations, or ownership are invalid.
         """
         source = sources[facade_path]
         tree = ast.parse(source, filename=str(facade_path))
@@ -110,9 +116,11 @@ class FlextInfraUtilitiesCodegenFacades:
                 isinstance(binding, ast.Assign)
                 and isinstance(binding.value, ast.Name)
                 and binding.value.id == facade.name
-                for binding in FlextInfraUtilitiesRopeModulePatch.runtime_alias_bindings(
-                    content,
-                    alias="t",
+                for binding in (
+                    FlextInfraUtilitiesRopeModulePatch.runtime_alias_bindings(
+                        content,
+                        alias="t",
+                    )
                 )
             )
             and any(
@@ -129,10 +137,12 @@ class FlextInfraUtilitiesCodegenFacades:
         alias = f"_{facade.name}"
         return (
             f"{ast.get_source_segment(source, tree.body[0])}\n\n"
-            f"# Generated type facade; declarations belong to {pkg_dir.name}.{module}.\n"
+            "# Generated type facade; declarations belong to "
+            f"{pkg_dir.name}.{module}.\n"
             f"from {pkg_dir.name}.{module} import {facade.name} as {alias}\n\n\n"
             f"class {facade.name}({alias}):\n"
-            f'    """Public type facade inheriting its complete canonical owner."""\n\n\n'
+            '    """Public type facade inheriting its '
+            'complete canonical owner."""\n\n\n'
             f"t = {facade.name}\n\n"
             f"{ast.get_source_segment(source, exports[0])}\n"
         )

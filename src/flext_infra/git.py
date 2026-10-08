@@ -11,13 +11,14 @@ from typing import TYPE_CHECKING, Annotated, override
 
 from flext_infra import m, r, u
 from flext_infra.base import s
+from flext_infra.git_lanes import FlextInfraGitLanes
 
 if TYPE_CHECKING:
     from flext_infra import p
 
 
-class FlextInfraGitService(s[m.Infra.GitStatusReport]):
-    """Thin Git status and cleanliness use cases over ``u.Infra.git_status``."""
+class FlextInfraGitService(FlextInfraGitLanes, s[m.Infra.GitStatusReport]):
+    """Thin Git status and cleanliness use cases over the public Git utilities."""
 
     repository: Annotated[
         Path | None,
@@ -48,7 +49,10 @@ class FlextInfraGitService(s[m.Infra.GitStatusReport]):
         cls,
         request: m.Infra.GitStatusRequest,
     ) -> p.Result[m.Infra.GitStatusReport]:
-        """Fail when the selected repository has staged, unstaged, or untracked work.
+        """Reject staged, unstaged, untracked work and unresolved stash entries.
+
+        This detection-only gate preserves every ref and recovery object. It does
+        not prove live integration-tip alignment or enforce direct Git commands.
 
         Returns:
             The resulting ``p.Result[m.Infra.GitStatusReport]``.
@@ -60,6 +64,16 @@ class FlextInfraGitService(s[m.Infra.GitStatusReport]):
         if report.value.dirty:
             return r[m.Infra.GitStatusReport].fail(
                 f"dirty repository: {report.value.repo_root}\n{report.value.porcelain}",
+            )
+        stashes = u.Infra.git_stash_oids(
+            m.Infra.GitRepoRequest(repo_root=report.value.repo_root),
+        )
+        if stashes.failure:
+            return r[m.Infra.GitStatusReport].from_failure(stashes)
+        if stashes.value.oids:
+            return r[m.Infra.GitStatusReport].fail(
+                f"stash recovery required: {report.value.repo_root}\n"
+                + "\n".join(stashes.value.oids),
             )
         return report
 

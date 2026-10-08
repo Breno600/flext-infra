@@ -54,6 +54,27 @@ class TestsFlextInfraCodegenRepositoryRootScope:
             tm.that(section.count(f"approval: {verb} COMPLETE"), eq=1)
         tm.that(rendered, lacks=["DEBUG1 scratch=", "DEBUG2 scratch="])
 
+    def test_verify_clean_projection_uses_the_public_git_service(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """The rendered recipe retains audits and propagates the public CLI exit."""
+        root = self._render_root_makefile(tmp_path)
+        rendered = (root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding=c.Infra.ENCODING_DEFAULT,
+        )
+        recipe = rendered.split("\n_builtin-verify-clean:", 1)[1].split(
+            "\n_builtin-docs:",
+            1,
+        )[0]
+        tm.that(recipe, has=["codegen conform", "docs audit"])
+        tm.that(
+            recipe.splitlines()[-1],
+            eq=f"\t@$(PROJECT_FLEXT_INFRA) {c.Infra.CLI_GROUP_WORKSPACE} "
+            'verify-clean --repo-root "$(PROJECT_ROOT)"',
+        )
+        tm.that(recipe, lacks=["diff --exit-code", "||", "\t-", "\t@-"])
+
     def test_normal_test_verbs_admit_only_incremental_execution(
         self,
         tmp_path: Path,
@@ -140,7 +161,7 @@ class TestsFlextInfraCodegenRepositoryRootScope:
                 u.Cli.run_raw(
                     [c.Infra.MAKE, "--dry-run", f"_builtin-{verb}"],
                     cwd=repository_root,
-                    options=u.Cli.ProcessOptions(remove_env_keys=("MAKEFLAGS",)),
+                    options=m.Cli.ProcessOptions(remove_env_keys=("MAKEFLAGS",)),
                 ),
             )
             tm.that(u.Cli.process_succeeded(execution.outcome), eq=True)
@@ -155,7 +176,7 @@ class TestsFlextInfraCodegenRepositoryRootScope:
             u.Cli.run_raw(
                 [c.Infra.MAKE, "--dry-run", "_builtin-propagate"],
                 cwd=repository_root,
-                options=u.Cli.ProcessOptions(remove_env_keys=("MAKEFLAGS",)),
+                options=m.Cli.ProcessOptions(remove_env_keys=("MAKEFLAGS",)),
             ),
         )
         tm.that(u.Cli.process_succeeded(execution.outcome), eq=True)

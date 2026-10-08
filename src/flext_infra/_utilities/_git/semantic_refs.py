@@ -32,6 +32,7 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
         try:
             repo = cls._repo(repo_root)
             porcelain = repo.git.worktree("list", "--porcelain")
+            entries = cls._worktree_registry(repo, porcelain)
         except GitCommandError as exc:
             return r[m.Infra.GitWorktreeListReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
@@ -42,7 +43,7 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
         return r[m.Infra.GitWorktreeListReport].ok(
             m.Infra.GitWorktreeListReport(
                 root=repo_root,
-                entries=cls._registered_worktree_entries(porcelain),
+                entries=entries,
                 porcelain=porcelain,
             ),
         )
@@ -350,6 +351,39 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
         )
 
     @classmethod
+    def git_unique_patch_oids(
+        cls,
+        request: m.Infra.GitMergeProbeRequest,
+    ) -> p.Result[m.Infra.GitOidListReport]:
+        """List commits whose patch identity is not represented in the baseline.
+
+        Returns:
+            Real unique patch OIDs from read-only git cherry, without merge-tree writes.
+
+        """
+        try:
+            text = cls._repo(request.repo_root).git.cherry(
+                request.base,
+                request.commitish,
+            )
+        except GitCommandError as exc:
+            return r[m.Infra.GitOidListReport].fail(str(exc), exception=exc)
+        except (OSError, ValueError) as exc:
+            return r[m.Infra.GitOidListReport].fail(
+                f"failed to inspect unique patches: {exc}",
+                exception=exc,
+            )
+        return r[m.Infra.GitOidListReport].ok(
+            m.Infra.GitOidListReport(
+                oids=tuple(
+                    line.removeprefix("+ ")
+                    for line in text.splitlines()
+                    if line.startswith("+ ")
+                ),
+            ),
+        )
+
+    @classmethod
     def git_merge_is_noop(
         cls,
         request: m.Infra.GitMergeProbeRequest,
@@ -399,15 +433,32 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             The resulting ``p.Result[m.Infra.GitTimestampReport]``.
 
         """
+        return cls.git_ref_last_activity(
+            m.Infra.GitCommitishRequest(repo_root=request.repo_root, commitish="HEAD"),
+        )
+
+    @classmethod
+    def git_ref_last_activity(
+        cls,
+        request: m.Infra.GitCommitishRequest,
+    ) -> p.Result[m.Infra.GitTimestampReport]:
+        """Read the newest commit/ref movement for one explicit reference.
+
+        Returns:
+            Activity evidence, never an ownership or abandonment decision.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
-            committed = int(repo.git.log("-1", "--format=%ct", "HEAD").strip())
+            committed = int(
+                repo.git.log("-1", "--format=%ct", request.commitish).strip(),
+            )
             moved = repo.git.log(
                 "--walk-reflogs",
                 "-1",
                 "--date=unix",
                 "--format=%gd",
-                "HEAD",
+                request.commitish,
             ).strip()
         except GitCommandError as exc:
             return r[m.Infra.GitTimestampReport].fail(str(exc), exception=exc)
