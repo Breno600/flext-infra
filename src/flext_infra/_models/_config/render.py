@@ -356,6 +356,15 @@ class FlextInfraConfigModelsRender:
                 ),
             ),
         ] = ()
+        generated_source_globs: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                description=(
+                    "Tracked generated-source trees derived from the codegen "
+                    "artifact key; never governed source"
+                ),
+            ),
+        ] = ()
 
     class UvPackageSelectorSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Package selector for one official uv scoped dependency exclusion."""

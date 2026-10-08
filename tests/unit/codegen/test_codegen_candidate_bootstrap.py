@@ -163,10 +163,16 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         )
 
     @staticmethod
+    @pytest.mark.slow
     def test_docs_config_conflict_recovers_from_declared_template(
         tmp_path: Path,
     ) -> None:
-        """A conflicted docs projection is repaired before generation parses."""
+        """A conflicted docs projection is repaired before generation parses.
+
+        Renders two real Make environments and runs two real bootstraps,
+        like its slow-phase sibling below: alone it takes ~9s of the 10s
+        bounded-phase item budget, so it belongs to the declared slow phase.
+        """
         source, _ = u.Tests.render_make_environment(
             tmp_path / "source",
             c.Infra.MakeProfile.STANDALONE,

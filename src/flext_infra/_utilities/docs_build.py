@@ -141,9 +141,10 @@ class FlextInfraUtilitiesDocsBuild:
     ) -> m.Infra.DocsPhaseReport:
         """Build one MkDocs config file into a site directory.
 
-        A MkDocs failure becomes the phase's ``FAIL`` report — the phase
-        result, not a raised exception, is the reporting contract every
-        caller (``execute`` above all) consumes.
+        A MkDocs failure escapes with its own exception and traceback; the
+        warnings MkDocs logged before aborting (a strict build fails on them)
+        are attached to that exception as notes, never translated into a
+        report.
 
         Returns:
             The resulting ``m.Infra.DocsPhaseReport``.
@@ -160,19 +161,10 @@ class FlextInfraUtilitiesDocsBuild:
         mkdocs_logger.addHandler(warnings)
         try:
             FlextInfraUtilitiesDocsBuild._run_mkdocs_api(settings, site_dir)
-        except Exception as exc:  # ruff: ignore[blind-except] - reported, not swallowed
-            causes = "".join(
-                f"\n  {record.levelname}: {record.getMessage()}"
-                for record in warnings.buffer
-            )
-            return m.Infra.DocsPhaseReport(
-                phase="build",
-                scope=scope.name,
-                result=c.Infra.ResultStatus.FAIL,
-                reason=f"build failed ({settings.name}): {exc}{causes}",
-                site_dir="",
-                passed=False,
-            )
+        except Exception as exc:
+            for record in warnings.buffer:
+                exc.add_note(f"{record.levelname}: {record.getMessage()}")
+            raise
         finally:
             mkdocs_logger.removeHandler(warnings)
         return m.Infra.DocsPhaseReport(

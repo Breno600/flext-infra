@@ -119,7 +119,9 @@ class FlextInfraEnsurePyreflyConfigPhase:
                 ),
                 toml.ListOp(
                     key=c.Infra.PROJECT_EXCLUDES,
-                    values=sorted(set(pyrefly_rules.project_exclude_globs)),
+                    values=u.Infra.pyrefly_project_excludes(
+                        pyrefly_rules.project_exclude_globs,
+                    ),
                 ),
             ),
             nested_tables=(

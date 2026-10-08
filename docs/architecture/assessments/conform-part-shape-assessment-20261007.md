@@ -1,5 +1,13 @@
 # Assessment: `codegen/_conform` part-class chain vs the ADR-014 part shape
 
+<!-- TOC START -->
+
+- [The chain](#the-chain)
+- [Verdicts](#verdicts)
+- [Recommendation](#recommendation)
+
+<!-- TOC END -->
+
 Bead `flext-ypswb` (épico `flext-ewba4`, slice S8). Date: 2026-10-07.
 Scope: assessment only — no rewrite proposed for landing; normalization
 candidates are recorded for the slices that already touch those files.
