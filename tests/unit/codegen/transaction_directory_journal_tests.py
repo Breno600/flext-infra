@@ -131,6 +131,42 @@ class TestsFlextInfraTransactionDirectoryJournal:
         tm.that(layout.state_root.exists(), eq=False)
 
     @staticmethod
+    def test_later_phase_backs_up_originals_beside_earlier_phase(
+        tmp_path: Path,
+    ) -> None:
+        """Each phase that replaces an existing file owns a distinct backup."""
+        root = u.Tests.git_repository(tmp_path)
+        owner = transaction.FlextInfraCodegenTransaction(
+            FlextInfraCodegenMiseArtifacts(repository_root=root),
+        )
+        roots = {"@docs-0": root}
+        targets = {"conform": root / "first.md", "lazy-init": root / "second.md"}
+        for phase, target in targets.items():
+            target.write_bytes(f"{phase} original\n".encode())
+
+        def two_phases(scope: Path) -> p.Result[t.VariadicTuple[Path]]:
+            session = tm.ok(owner.begin_files_locked(scope, roots, ()))
+            for phase, target in targets.items():
+                plan = m.Infra.CodegenFilePlan(
+                    project=root,
+                    path=target,
+                    before=tm.ok(
+                        u.Cli.atomic_read_binary_file_state(target, required=True),
+                    ),
+                    desired_content=f"{phase} generated\n".encode(),
+                    desired_mode=session.journal_state.mode,
+                    owner=phase,
+                )
+                session = tm.ok(owner.append_phase_locked(session, phase, (plan,)))
+            backups = [entry.original_backup for entry in session.journal.entries]
+            tm.that(len(set(backups)), eq=len(targets))
+            return owner.commit_locked(session, lambda: r[bool].ok(value=True))
+
+        tm.ok(owner.run_files_locked(roots, two_phases))
+        for phase, target in targets.items():
+            tm.that(target.read_bytes(), eq=f"{phase} generated\n".encode())
+
+    @staticmethod
     @pytest.mark.parametrize("foreign_change", [False, True])
     def test_duplicate_phase_recovers_only_its_new_generated_files(
         tmp_path: Path,

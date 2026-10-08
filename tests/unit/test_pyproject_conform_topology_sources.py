@@ -1,8 +1,8 @@
 """Tests for canonical dependency source selection by topology role.
 
 Workspace roots use bare local-member requirements with native uv sources.
-Publishable members keep declared direct Git provenance; attached manifests
-add local workspace sources and standalone conformance removes that overlay.
+Members keep declared direct Git provenance and render identically attached
+or standalone: only the workspace root redirects fleet members to itself.
 
 Copyright (c) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -307,8 +307,12 @@ class TestsFlextInfraPyprojectConformTopologySources:
         )
         tm.that(not uv_sources, eq=True)
 
-    def test_attached_sources_follow_requirements_and_prune_on_detachment(self) -> None:
-        """Attached sources cover runtime and dev requirements without nesting."""
+    def test_member_render_is_context_independent(self) -> None:
+        """A member renders identically attached or standalone, without nesting.
+
+        Workspace-root sources redirect every fleet member, so an attached
+        member carries no fleet source and its stale ones are pruned.
+        """
         runtime = self._member_ref("flext-web", "flext-web")
         dev = self._member_ref("flext-tests", "flext-tests")
         unused = self._member_ref("flext-unused", "flext-unused")
@@ -342,18 +346,18 @@ class TestsFlextInfraPyprojectConformTopologySources:
         parsed = u.Tests.toml_mapping(u.Cli.toml_parse_text(rendered))
         uv = u.Tests.toml_mapping(u.Tests.toml_mapping(parsed.get("tool")).get("uv"))
         tm.that("workspace" not in uv, eq=True)
-        tm.that(
-            u.Tests.toml_mapping(uv.get("sources")),
-            eq={ref.distribution: {"workspace": True} for ref in (runtime, dev)},
+        tm.that("sources" not in uv, eq=True)
+        self._assert_direct_source(rendered, runtime)
+        detached = tm.ok(
+            u.Infra.pyproject_conform(
+                rendered,
+                workspace=standalone,
+                required_dev_dependencies=(),
+                uv_resolution=self._toolchain_resolution(),
+                family_line=u.Tests.provider_branch(),
+            ),
         )
-        tm.that(
-            u.Tests.toml_strings_at(rendered, "project", "dependencies"),
-            eq=(self._inline_requirement(runtime),),
-        )
-        tm.that(
-            u.Tests.toml_strings_at(rendered, "dependency-groups", "dev"),
-            eq=(self._inline_requirement(dev),),
-        )
+        tm.that(detached, eq=rendered)
         tm.that(
             tm.ok(
                 u.Infra.pyproject_conform(
@@ -366,16 +370,6 @@ class TestsFlextInfraPyprojectConformTopologySources:
             ),
             eq=rendered,
         )
-        detached = tm.ok(
-            u.Infra.pyproject_conform(
-                rendered,
-                workspace=standalone,
-                required_dev_dependencies=(),
-                uv_resolution=self._toolchain_resolution(),
-                family_line=u.Tests.provider_branch(),
-            ),
-        )
-        self._assert_direct_source(detached, runtime)
 
     def test_external_consumer_keeps_direct_git_requirement(self) -> None:
         """Test external consumer keeps direct git requirement."""

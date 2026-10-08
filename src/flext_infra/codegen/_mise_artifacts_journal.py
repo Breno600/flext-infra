@@ -153,7 +153,7 @@ class FlextInfraMiseArtifactsJournal:
         existing_paths = {entry.path for entry in journal.entries}
         entries: list[m.Infra.CodegenJournalEntry] = []
         recovery_roots: set[Path] = set()
-        for offset, publication in enumerate(publications, start=len(entries)):
+        for offset, publication in enumerate(publications, start=len(journal.entries)):
             target = files.transaction_relative(plan.layout, publication.before.path)
             if target.failure:
                 return result_type.from_failure(target)
