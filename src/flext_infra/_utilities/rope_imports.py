@@ -176,6 +176,7 @@ class FlextInfraUtilitiesRopeImports:
         name: str,
         definition_path: Path,
         dependent_import_targets: t.StrSequence = (),
+        include_reexports: bool = False,
     ) -> t.VariadicTuple[t.Infra.RopeResource]:
         """Build the minimal Rope resource set for semantic occurrence searches.
 
@@ -183,6 +184,8 @@ class FlextInfraUtilitiesRopeImports:
         files that contain ``name`` textually. This helper converts that cheap
         index into concrete Rope resources so callers can still rely on Rope's
         semantic identity checks without scanning the full project.
+        Report-only callers may include package reexports; the default preserves
+        the existing reachability and removal-planning resource set.
 
         Returns:
             The resulting ``t.VariadicTuple[t.Infra.RopeResource]``.
@@ -206,7 +209,9 @@ class FlextInfraUtilitiesRopeImports:
         resources: list[t.Infra.RopeResource] = [resource]
         for path, _surface, _lines in occurrences:
             resolved_path = path.resolve()
-            if resolved_path == resolved_definition or path.name == c.Infra.INIT_PY:
+            if resolved_path == resolved_definition or (
+                not include_reexports and path.name == c.Infra.INIT_PY
+            ):
                 continue
             cache_key = str(resolved_path)
             if dependent_paths is not None and cache_key not in dependent_paths:

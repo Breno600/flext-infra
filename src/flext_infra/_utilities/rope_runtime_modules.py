@@ -128,12 +128,16 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         cls,
         pymodule: t.Infra.RopePyModule,
         offset: int,
+        *,
+        expected_binding: p.Infra.RopePyName | None = None,
     ) -> str | None:
         """Resolve the defining module's on-disk path of the name at ``offset``.
 
         Imported chains (``ImportedName``/``ImportedModule``) resolve through
         to their foreign definition; a builtin, dynamic, or unresolvable name
         resolves to ``None`` so callers can refuse unsafe rewrites.
+        When supplied, ``expected_binding`` must match through Rope's existing
+        name-identity comparator before the defining path is returned.
 
         Returns:
             The resulting ``str | None``.
@@ -142,6 +146,11 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         resolver = cls._runtime_callable("rope.base.evaluate", "eval_location")
         result = resolver(pymodule, offset)
         if not isinstance(result, p.Infra.RopePyName):
+            return None
+        if expected_binding is not None and not cls.same_name(
+            expected_binding,
+            result,
+        ):
             return None
         holder, _lineno = result.get_definition_location()
         if holder is None:
