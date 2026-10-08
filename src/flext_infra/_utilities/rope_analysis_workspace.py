@@ -235,18 +235,25 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
         # import sibling fleet packages (tests fixtures import flext_tests,
         # src modules import flext_core), and a member-only rope path raises
         # ModuleNotFoundError for every cross-member base resolution.
+        # An unpublished project root (planned bytes only) is never created:
+        # Rope parses from its nearest existing ancestor, which is always one
+        # of the project roots so planned sources need no folder on disk.
+        parse_root = next(path for path in (root, *root.parents) if path.is_dir())
         workspace_root = next(
             (
                 parent
-                for parent in (root, *root.parents)
+                for parent in (parse_root, *parse_root.parents)
                 if (parent / "src").is_dir() and (parent / "flext-core").is_dir()
             ),
-            root,
+            parse_root,
         )
         project_roots = [
-            member
-            for member in (root, *sorted(workspace_root.iterdir()))
-            if member.is_dir() and (member / "src").is_dir()
+            parse_root,
+            *(
+                member
+                for member in sorted(workspace_root.iterdir())
+                if member.is_dir() and (member / "src").is_dir()
+            ),
         ]
         with FlextInfraUtilitiesRopeCore.open_project(
             workspace_root,
