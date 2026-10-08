@@ -13,8 +13,8 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import config
-from tests import c, m, u
+from flext_infra import c, config
+from tests import m, u
 
 
 class TestsFlextInfraBindingInstall:
