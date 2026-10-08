@@ -13,6 +13,7 @@ from functools import lru_cache
 from importlib.metadata import Distribution
 from importlib.util import find_spec
 from pathlib import Path
+from types import MappingProxyType
 
 from flext_cli import r, u
 from packaging.requirements import Requirement
@@ -139,13 +140,40 @@ class FlextInfraUtilitiesCodemodRules:
         ))
 
     @staticmethod
-    def codemod_distributions() -> MutableMapping[str, Distribution]:
+    def codemod_distributions() -> t.MappingKV[str, Distribution]:
+        """Index the installed distributions visible on the current import path.
 
-        indexed: MutableMapping[str, Distribution] = {}
+        Installed metadata is a fact of the interpreter environment for the
+        import path in force, so one path is indexed once per process and every
+        rule plan of the invocation reuses it; a changed ``sys.path`` is a new
+        key.
+
+        Returns:
+            Canonical distribution name to its installed distribution.
+
+        """
         # Import search paths may repeat the same physical directory. Query each
         # directory once; distinct installations with the same name still fail.
-        paths = list(dict.fromkeys(str(Path(path).resolve()) for path in sys.path))
-        for installed in u.installed_distributions(path=paths):
+        return FlextInfraUtilitiesCodemodRules._indexed_distributions(
+            tuple(dict.fromkeys(str(Path(path).resolve()) for path in sys.path)),
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=8)
+    def _indexed_distributions(
+        paths: t.VariadicTuple[str],
+    ) -> t.MappingKV[str, Distribution]:
+        """Read every distribution's metadata on ``paths`` exactly once.
+
+        Returns:
+            A read-only canonical-name index of the installed distributions.
+
+        Raises:
+            ValueError: If two installations declare the same distribution.
+
+        """
+        indexed: MutableMapping[str, Distribution] = {}
+        for installed in u.installed_distributions(path=list(paths)):
             raw_name = installed.metadata.get("Name")
             if not isinstance(raw_name, str) or not raw_name.strip():
                 continue
@@ -159,7 +187,7 @@ class FlextInfraUtilitiesCodemodRules:
                 )
                 raise ValueError(msg)
             indexed[name] = installed
-        return indexed
+        return MappingProxyType(indexed)
 
     @classmethod
     def codemod_runtime_closure(
