@@ -37,18 +37,23 @@ class TestsFlextInfraSymbolicTextCutover:
         )
         consumer.write_text(source, encoding="utf-8")
         rule = m.Infra.CodemodRule(
-            id="binding-probe", digest="probe", provider="probe",
-            resource=Path("probe.yml"), fixable=True,
+            id="binding-probe",
+            digest="probe",
+            provider="probe",
+            resource=Path("probe.yml"),
+            fixable=True,
             context=(
                 m.Infra.CodemodContextCondition(
                     variable="OWNER",
                     predicate=c.Infra.CodemodContextPredicate.RESOLVED_SYMBOL,
-                    arg=("definer", "Public"), holds=True,
+                    arg=("definer", "Public"),
+                    holds=True,
                 ),
                 m.Infra.CodemodContextCondition(
                     variable="OWNER",
                     predicate=c.Infra.CodemodContextPredicate.SAME_BINDING,
-                    arg=("u",), holds=True,
+                    arg=("u",),
+                    holds=True,
                 ),
             ),
         )
@@ -61,13 +66,22 @@ class TestsFlextInfraSymbolicTextCutover:
             capture = {
                 "OWNER": {
                     "text": "Public",
-                    "range": {"byteOffset": {"start": start_byte, "end": start_byte + len("Public")}},
+                    "range": {
+                        "byteOffset": {
+                            "start": start_byte,
+                            "end": start_byte + len("Public"),
+                        }
+                    },
                 },
             }
             for _ in range(2):
                 tm.that(
                     u.Infra.codemod_context_admits(
-                        mod_workspace, rule, consumer, capture, facts,
+                        mod_workspace,
+                        rule,
+                        consumer,
+                        capture,
+                        facts,
                     ),
                     eq=expected,
                 )
@@ -79,38 +93,77 @@ class TestsFlextInfraSymbolicTextCutover:
         )
         start = source.index("Public", source.index("value ="))
         start_byte = len(source[:start].encode("utf-8"))
-        positive = {"OWNER": {"text": "Public", "range": {"byteOffset": {
-            "start": start_byte, "end": start_byte + len("Public"),
-        }}}}
+        positive = {
+            "OWNER": {
+                "text": "Public",
+                "range": {
+                    "byteOffset": {
+                        "start": start_byte,
+                        "end": start_byte + len("Public"),
+                    }
+                },
+            }
+        }
         owner.write_text(
             "class Public:\n    pass\nclass Independent:\n    pass\nu = Independent\n",
             encoding="utf-8",
         )
-        tm.that(u.Infra.codemod_context_admits(
-            mod_workspace, rule, consumer, positive, facts, closed,
-        ), eq=True)
-        tm.that(u.Infra.codemod_context_admits(
-            mod_workspace, rule, consumer, positive, facts,
-        ), eq=False)
+        tm.that(
+            u.Infra.codemod_context_admits(
+                mod_workspace,
+                rule,
+                consumer,
+                positive,
+                facts,
+                closed,
+            ),
+            eq=True,
+        )
+        tm.that(
+            u.Infra.codemod_context_admits(
+                mod_workspace,
+                rule,
+                consumer,
+                positive,
+                facts,
+            ),
+            eq=False,
+        )
         tm.that(consumer.read_text(encoding="utf-8"), eq=source)
 
     @staticmethod
-    def test_binding_receipt_cannot_resolve_another_occurrence(mod_workspace: Path) -> None:
+    def test_binding_receipt_cannot_resolve_another_occurrence(
+        mod_workspace: Path,
+    ) -> None:
         """A stale span is rejected instead of falling back to another same name."""
         consumer = mod_workspace / "consumer.py"
         consumer.write_text("value = 1\n", encoding="utf-8")
         rule = m.Infra.CodemodRule(
-            id="binding-probe", digest="probe", provider="probe",
-            resource=Path("probe.yml"), fixable=True,
-            context=(m.Infra.CodemodContextCondition(
-                variable="OWNER", predicate=c.Infra.CodemodContextPredicate.SAME_BINDING,
-                arg=("value",), holds=True,
-            ),),
+            id="binding-probe",
+            digest="probe",
+            provider="probe",
+            resource=Path("probe.yml"),
+            fixable=True,
+            context=(
+                m.Infra.CodemodContextCondition(
+                    variable="OWNER",
+                    predicate=c.Infra.CodemodContextPredicate.SAME_BINDING,
+                    arg=("value",),
+                    holds=True,
+                ),
+            ),
         )
         with pytest.raises(ValueError, match="binding capture differs from source"):
             u.Infra.codemod_context_admits(
-                mod_workspace, rule, consumer,
-                {"OWNER": {"text": "other", "range": {"byteOffset": {"start": 0, "end": 5}}}},
+                mod_workspace,
+                rule,
+                consumer,
+                {
+                    "OWNER": {
+                        "text": "other",
+                        "range": {"byteOffset": {"start": 0, "end": 5}},
+                    }
+                },
                 u.Infra.codemod_project_facts(mod_workspace, (rule,)),
             )
         tm.that(consumer.read_text(encoding="utf-8"), eq="value = 1\n")
@@ -159,9 +212,9 @@ class TestsFlextInfraSymbolicTextCutover:
             'spelling = "utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci"\n'
             'tag: Literal["utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci"]\n'
             'meta: Annotated[str, "utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci"]\n'
-            'identity_metadata: Annotated[str, utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci]\n'
+            "identity_metadata: Annotated[str, utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci]\n"
             "owned = utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.value\n"
-            "outcome = c.Infra.ToolOutcome.ERROR == \"TOOL_ERROR\"\n"
+            'outcome = c.Infra.ToolOutcome.ERROR == "TOOL_ERROR"\n'
             "class Other:\n"
             "    class TestsFlextInfraUtilities:\n"
             "        class CodegenTestSupport:\n"
@@ -175,14 +228,15 @@ class TestsFlextInfraSymbolicTextCutover:
         u.Tests.git_bootstrap(mod_workspace, ("add", "tests"))
         scanned = tm.ok(FlextInfraModGateEngine.scan(mod_workspace, fix=False))
         ids = {"codegen-test-public-utility-namespace", "gate-tool-error-typed-code"}
-        selected = FlextInfraModGateEngine.recounted(tuple(
-            entry for entry in scanned.entries if entry.rule_id in ids
-        ))
+        selected = FlextInfraModGateEngine.recounted(
+            tuple(entry for entry in scanned.entries if entry.rule_id in ids)
+        )
         # The provider's c lives outside this synthetic closed project. Its
         # NoProject inference is explicitly unsupported, never a guessed fixer.
         tm.that(selected.actionable, eq=1 if binding == "same" else 0)
         binding_findings = tuple(
-            entry for entry in scanned.entries
+            entry
+            for entry in scanned.entries
             if entry.rule_id == "codegen-test-public-utility-binding-required"
         )
         tm.that(len(binding_findings), eq=0 if binding == "same" else 1)
@@ -190,16 +244,22 @@ class TestsFlextInfraSymbolicTextCutover:
         tm.that(consumer.read_text(encoding="utf-8"), eq=source)
         tm.ok(FlextInfraModReplacements.publish(mod_workspace, selected))
         published = consumer.read_bytes()
-        output = tm.ok(u.Cli.run(
-            (sys.executable, "-m", "tests.unit.codegen.consumer"), cwd=mod_workspace,
-        ))
+        output = tm.ok(
+            u.Cli.run(
+                (sys.executable, "-m", "tests.unit.codegen.consumer"),
+                cwd=mod_workspace,
+            )
+        )
         observed = json.loads(output.stdout)
         tm.that(observed[0], eq={"status": "TOOL_ERROR"})
         tm.that(observed[1:3], eq=["owned", "independent"])
         tm.that(observed[3], eq=observed[4])
         tm.that(observed[5], eq=c.Infra.ToolOutcome.ERROR == "TOOL_ERROR")
         remaining = tm.ok(FlextInfraModGateEngine.scan(mod_workspace, fix=False))
-        tm.that(tuple(entry for entry in remaining.entries if entry.rule_id in ids), empty=True)
+        tm.that(
+            tuple(entry for entry in remaining.entries if entry.rule_id in ids),
+            empty=True,
+        )
         tm.that(consumer.read_bytes(), eq=published)
 
     @staticmethod
@@ -209,7 +269,9 @@ class TestsFlextInfraSymbolicTextCutover:
         """Python syntax is insufficient: the actual consumer must still parse JSON."""
         project = mod_workspace / c.PYPROJECT_FILENAME
         project.write_text(
-            project.read_text(encoding="utf-8").replace('name = "mod-workspace"', 'name = "flext-infra"'),
+            project.read_text(encoding="utf-8").replace(
+                'name = "mod-workspace"', 'name = "flext-infra"'
+            ),
             encoding="utf-8",
         )
         guide = mod_workspace / "docs" / "guides" / "testing.md"

@@ -16,7 +16,6 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import ast
-import ast
 import sys
 from collections.abc import Mapping, MutableMapping
 from functools import cache, lru_cache
@@ -107,7 +106,9 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             # Requesting a lazy export loads its elected provider module. Merely
             # installing the map does not load every provider in the package.
             provider_aliases = FlextInfraUtilitiesRopeSourceBases.lazy_module_aliases(
-                name, path, resource.read(),
+                name,
+                path,
+                resource.read(),
             )
             aliases.update({
                 f"{name}.{export}": provider
@@ -394,11 +395,21 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             }:
                 closed = snapshot or cls.codemod_binding_snapshot(
                     root,
-                    (u.Cli.atomic_read_binary_file_state(source, required=True).unwrap(),),
-                    tuple(item.arg[0] for item in rule.context
-                          if item.predicate is c.Infra.CodemodContextPredicate.RESOLVED_SYMBOL),
+                    (
+                        u.Cli.atomic_read_binary_file_state(
+                            source, required=True
+                        ).unwrap(),
+                    ),
+                    tuple(
+                        item.arg[0]
+                        for item in rule.context
+                        if item.predicate
+                        is c.Infra.CodemodContextPredicate.RESOLVED_SYMBOL
+                    ),
                 )
-                holds = cls._occurrence_binding_holds(root, source, condition, captures, closed)
+                holds = cls._occurrence_binding_holds(
+                    root, source, condition, captures, closed
+                )
                 if holds is not condition.holds:
                     return False
                 continue
@@ -437,9 +448,13 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 msg = f"binding source snapshots disagree: {state.path}"
                 raise ValueError(msg)
         with FlextInfraUtilitiesRopeCore.open_project(root) as project:
-            pending = [project.get_resource(path.relative_to(root.resolve()).as_posix()) for path in states]
+            pending = [
+                project.get_resource(path.relative_to(root.resolve()).as_posix())
+                for path in states
+            ]
             pending.extend(
-                resource for name in modules
+                resource
+                for name in modules
                 if (resource := project.find_module(name)) is not None
             )
             visited: set[Path] = set()
@@ -457,7 +472,9 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 visited.add(path)
                 state = states.get(path)
                 if state is None:
-                    state = u.Cli.atomic_read_binary_file_state(path, required=True).unwrap()
+                    state = u.Cli.atomic_read_binary_file_state(
+                        path, required=True
+                    ).unwrap()
                     states[path] = state
                 if state.content is None:
                     msg = f"binding source is absent: {path}"
@@ -473,7 +490,9 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                     )
                     for name in imports:
                         imported = (
-                            project.find_relative_module(name, resource.parent, node.level)
+                            project.find_relative_module(
+                                name, resource.parent, node.level
+                            )
                             if isinstance(node, ast.ImportFrom) and node.level
                             else project.find_module(name, resource.parent)
                         )
@@ -483,10 +502,17 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                             for alias in node.names:
                                 if alias.name == "*":
                                     continue
-                                qualified = f"{node.module}.{alias.name}" if node.module else alias.name
+                                qualified = (
+                                    f"{node.module}.{alias.name}"
+                                    if node.module
+                                    else alias.name
+                                )
                                 child = (
-                                    project.find_relative_module(qualified, resource.parent, node.level)
-                                    if node.level else project.find_module(qualified, resource.parent)
+                                    project.find_relative_module(
+                                        qualified, resource.parent, node.level
+                                    )
+                                    if node.level
+                                    else project.find_module(qualified, resource.parent)
                                 )
                                 if child is not None:
                                     pending.append(child)
@@ -511,11 +537,13 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         capture = m.Infra.AstGrepCapture.model_validate(captures[condition.variable])
         sources = {
             state.path.resolve(): state.content.decode("utf-8")
-            for state in snapshot.states if state.content is not None
+            for state in snapshot.states
+            if state.content is not None
         }
         content = sources[source].encode("utf-8")
         if not (0 <= capture.start_byte < capture.end_byte <= len(content)) or (
-            content[capture.start_byte : capture.end_byte] != capture.text.encode("utf-8")
+            content[capture.start_byte : capture.end_byte]
+            != capture.text.encode("utf-8")
         ):
             msg = f"binding capture differs from source: {source}"
             raise ValueError(msg)
@@ -532,24 +560,36 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             return False
         if condition.predicate is c.Infra.CodemodContextPredicate.UNREFERENCED_IMPORT:
             declarations = ast.parse(capture.text).body
-            if len(declarations) != 1 or not isinstance(declarations[0], ast.Import | ast.ImportFrom):
+            if len(declarations) != 1 or not isinstance(
+                declarations[0], ast.Import | ast.ImportFrom
+            ):
                 return False
-            names = FlextInfraUtilitiesSemanticCutoverBindings._bound_identifiers(declarations[0])
+            names = FlextInfraUtilitiesSemanticCutoverBindings._bound_identifiers(
+                declarations[0]
+            )
             return not any(
-                isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load) and node.id in names
+                isinstance(node, ast.Name)
+                and isinstance(node.ctx, ast.Load)
+                and node.id in names
                 for node in ast.walk(tree)
             )
         expression = ast.parse(capture.text, mode="eval").body
         with FlextInfraUtilitiesRopeCore.open_project(root) as live:
-            project = FlextInfraUtilitiesRopeRuntimeModules.snapshot_project(live, sources, captured=snapshot)
+            project = FlextInfraUtilitiesRopeRuntimeModules.snapshot_project(
+                live, sources, captured=snapshot
+            )
         try:
-            resource = project.get_resource(source.relative_to(root.resolve()).as_posix())
+            resource = project.get_resource(
+                source.relative_to(root.resolve()).as_posix()
+            )
             module = project.get_pymodule(resource)
             scope = FlextInfraUtilitiesRopeRuntimeModules.scope_at(module, start)
             if any(
                 left <= start < end <= right
                 for left, right in FlextInfraUtilitiesSemanticFamilyTypeReferences.type_payload_ranges(
-                    text, project, module,
+                    text,
+                    project,
+                    module,
                 )
             ):
                 return False
@@ -560,21 +600,33 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 for node in ast.walk(tree):
                     if not isinstance(node, ast.Subscript):
                         continue
-                    left, right = FlextInfraUtilitiesSemanticFamilyTypeReferences._expression_range(text, node)
+                    left, right = (
+                        FlextInfraUtilitiesSemanticFamilyTypeReferences._expression_range(
+                            text, node
+                        )
+                    )
                     if left <= start < end <= right and not cls._stable_binding_chain(
-                        project, module,
+                        project,
+                        module,
                         FlextInfraUtilitiesRopeRuntimeModules.scope_at(module, left),
-                        node.value, left, sources,
+                        node.value,
+                        left,
+                        sources,
                     ):
                         # A rebound/opaque wrapper can be a typing payload even
                         # when scope-wide inference currently calls it something
                         # else. Refuse the fixer rather than reinterpret its data.
                         return False
-            if condition.predicate is c.Infra.CodemodContextPredicate.EXECUTABLE_OCCURRENCE:
+            if (
+                condition.predicate
+                is c.Infra.CodemodContextPredicate.EXECUTABLE_OCCURRENCE
+            ):
                 return True
             if not isinstance(expression, ast.Name | ast.Attribute):
                 return False
-            actual = FlextInfraUtilitiesRopeRuntimeModules.resolve_symbol(scope, expression)
+            actual = FlextInfraUtilitiesRopeRuntimeModules.resolve_symbol(
+                scope, expression
+            )
             if condition.predicate is c.Infra.CodemodContextPredicate.RESOLVED_SYMBOL:
                 if len(condition.arg) != 2:
                     msg = "resolved-symbol requires a module and an expression"
@@ -588,10 +640,17 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                     msg = "same-binding requires one lexical expression"
                     raise ValueError(msg)
                 target = condition.arg[0]
-                if not cls._stable_binding_chain(project, module, scope, expression, start, sources):
+                if not cls._stable_binding_chain(
+                    project, module, scope, expression, start, sources
+                ):
                     return False
                 if not cls._stable_binding_chain(
-                    project, module, scope, ast.parse(target, mode="eval").body, start, sources,
+                    project,
+                    module,
+                    scope,
+                    ast.parse(target, mode="eval").body,
+                    start,
+                    sources,
                 ):
                     return False
                 primary = ast.parse(target, mode="eval").body
@@ -607,11 +666,15 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                     # facade even when Rope infers its current value as a class.
                     return False
             expected = FlextInfraUtilitiesRopeRuntimeModules.resolve_symbol(
-                scope, ast.parse(target, mode="eval").body,
+                scope,
+                ast.parse(target, mode="eval").body,
             )
             if expected is None or actual is None:
                 return False
-            if isinstance(expected, p.Infra.RopeAssignedName) and len(expected.assignments) != 1:
+            if (
+                isinstance(expected, p.Infra.RopeAssignedName)
+                and len(expected.assignments) != 1
+            ):
                 return False
             if FlextInfraUtilitiesRopeRuntimeModules.same_name(expected, actual):
                 return True
@@ -639,7 +702,9 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         """Reject rebound receivers, intermediate owners, and imported alias chains."""
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         if isinstance(expression, ast.Attribute):
-            if not cls._stable_binding_chain(project, module, scope, expression.value, offset, sources, visited):
+            if not cls._stable_binding_chain(
+                project, module, scope, expression.value, offset, sources, visited
+            ):
                 return False
         elif not isinstance(expression, ast.Name):
             return False
@@ -651,7 +716,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             return False
         path = Path(resource.real_path).resolve()
         if path.is_dir():
-            path = path / c.Infra.INIT_PY
+            path /= c.Infra.INIT_PY
         if not path.is_relative_to(Path(project.root.real_path).resolve()):
             # NoProject-backed foreign modules can read disk outside the closed
             # project's filesystem commands. Their receipts guard publication,
@@ -660,18 +725,25 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         text = sources.get(path)
         if text is None:
             return False
-        routes = FlextInfraUtilitiesRopeSourceBases.lazy_module_aliases(module.get_name(), path, text)
+        routes = FlextInfraUtilitiesRopeSourceBases.lazy_module_aliases(
+            module.get_name(), path, text
+        )
         if not cls._single_reaching_binding(text, scope, expression, offset, routes):
             return False
         if isinstance(expression, ast.Name) and expression.id in routes:
             route = project.get_module(routes[expression.id])
             target = route.get_attribute(expression.id)
-            if not FlextInfraUtilitiesRopeRuntimeModules.same_name(target, binding) and (
+            if not FlextInfraUtilitiesRopeRuntimeModules.same_name(
+                target, binding
+            ) and (
                 not FlextInfraUtilitiesRopeRuntime.abstract_class(target.get_object())
                 or target.get_object() is not binding.get_object()
             ):
                 return False
-        if isinstance(binding, p.Infra.RopeAssignedName) and len(binding.assignments) != 1:
+        if (
+            isinstance(binding, p.Infra.RopeAssignedName)
+            and len(binding.assignments) != 1
+        ):
             return False
         if isinstance(binding, p.Infra.RopeImportedName):
             imported = binding.imported_module.get_object()
@@ -686,7 +758,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 return False
             imported_path = Path(imported_resource.real_path).resolve()
             if imported_path.is_dir():
-                imported_path = imported_path / c.Infra.INIT_PY
+                imported_path /= c.Infra.INIT_PY
             imported_text = sources.get(imported_path)
             if imported_text is None:
                 return False
@@ -698,16 +770,26 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 # its package initializer. Any package-level rebind makes that
                 # implicit route unproven.
                 if any(
-                    binding.imported_name in FlextInfraUtilitiesSemanticCutoverBindings._bound_identifiers(node)
+                    binding.imported_name
+                    in FlextInfraUtilitiesSemanticCutoverBindings._bound_identifiers(
+                        node
+                    )
                     for node in ast.walk(ast.parse(imported_text))
                 ):
                     return False
                 value_resource = value.get_resource()
-                return value_resource is not None and Path(value_resource.real_path).resolve() in sources
+                return (
+                    value_resource is not None
+                    and Path(value_resource.real_path).resolve() in sources
+                )
             return cls._stable_binding_chain(
-                project, imported, imported_scope,
-                ast.Name(id=binding.imported_name, ctx=ast.Load()), len(imported_text),
-                sources, visited | {key},
+                project,
+                imported,
+                imported_scope,
+                ast.Name(id=binding.imported_name, ctx=ast.Load()),
+                len(imported_text),
+                sources,
+                visited | {key},
             )
         holder, line = binding.get_definition_location()
         holder_resource = None if holder is None else holder.get_resource()
@@ -715,7 +797,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             return False
         holder_path = Path(holder_resource.real_path).resolve()
         if holder_path.is_dir():
-            holder_path = holder_path / c.Infra.INIT_PY
+            holder_path /= c.Infra.INIT_PY
         if not holder_path.is_relative_to(Path(project.root.real_path).resolve()):
             return False
         holder_text = sources.get(holder_path)
@@ -723,27 +805,44 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             return False
         if isinstance(binding, p.Infra.RopeImportedModule):
             return True
-        declaration = next((
-            node for node in ast.walk(ast.parse(holder_text))
-            if isinstance(node, ast.stmt) and node.lineno == line
-        ), None)
+        declaration = next(
+            (
+                node
+                for node in ast.walk(ast.parse(holder_text))
+                if isinstance(node, ast.stmt) and node.lineno == line
+            ),
+            None,
+        )
         if declaration is None:
             return False
         holder_offset = runtime.source_offset(holder_text, declaration)
         holder_scope = runtime.scope_at(holder, holder_offset, declaration_line=line)
-        name = expression.attr if isinstance(expression, ast.Attribute) else expression.id
+        name = (
+            expression.attr if isinstance(expression, ast.Attribute) else expression.id
+        )
         if not cls._single_reaching_binding(
-            holder_text, holder_scope, ast.Name(id=name, ctx=ast.Load()), len(holder_text),
+            holder_text,
+            holder_scope,
+            ast.Name(id=name, ctx=ast.Load()),
+            len(holder_text),
         ):
             return False
-        if isinstance(binding, p.Infra.RopeAssignedName) and isinstance(declaration, ast.Assign | ast.AnnAssign):
+        if isinstance(binding, p.Infra.RopeAssignedName) and isinstance(
+            declaration, ast.Assign | ast.AnnAssign
+        ):
             value = declaration.value
             if isinstance(value, ast.Name | ast.Attribute):
                 key = (holder.get_name(), name)
                 if key in visited:
                     return False
                 return cls._stable_binding_chain(
-                    project, holder, holder_scope, value, holder_offset, sources, visited | {key},
+                    project,
+                    holder,
+                    holder_scope,
+                    value,
+                    holder_offset,
+                    sources,
+                    visited | {key},
                 )
             return isinstance(value, ast.Constant)
         return True
@@ -758,14 +857,28 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
     ) -> bool:
         """Prove one unconditional declaration instead of Rope's last assignment."""
         tree = ast.parse(source)
-        parents = {child: parent for parent in ast.walk(tree) for child in ast.iter_child_nodes(parent)}
-        frames = (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)
+        parents = {
+            child: parent
+            for parent in ast.walk(tree)
+            for child in ast.iter_child_nodes(parent)
+        }
+        frames = (
+            ast.Module,
+            ast.FunctionDef,
+            ast.AsyncFunctionDef,
+            ast.ClassDef,
+            ast.Lambda,
+        )
         spelling = ast.unparse(expression)
         declarations: list[ast.AST] = []
         for node in ast.walk(tree):
             names = FlextInfraUtilitiesSemanticCutoverBindings._bound_identifiers(node)
-            attribute = isinstance(node, ast.Attribute) and isinstance(node.ctx, ast.Store | ast.Del)
-            if spelling not in names and not (attribute and ast.unparse(node) == spelling):
+            attribute = isinstance(node, ast.Attribute) and isinstance(
+                node.ctx, ast.Store | ast.Del
+            )
+            if spelling not in names and not (
+                attribute and ast.unparse(node) == spelling
+            ):
                 continue
             parent = parents.get(node)
             while parent is not None and not isinstance(parent, frames):
@@ -788,7 +901,8 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         while parent is not None and not isinstance(parent, frames):
             if isinstance(parent, ast.If | ast.Try | ast.For | ast.While | ast.With):
                 if not (
-                    isinstance(parent, ast.If) and declared_routes is not None
+                    isinstance(parent, ast.If)
+                    and declared_routes is not None
                     and spelling in declared_routes
                 ):
                     return False

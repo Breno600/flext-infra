@@ -727,11 +727,13 @@ class FlextInfraUtilitiesRopeInventory:
                 name,
             )
         )
-        search_resources = FlextInfraUtilitiesRopeInventory._occurrence_search_resources(
-            options,
-            definition_path,
-            name,
-            all_surfaces=True,
+        search_resources = (
+            FlextInfraUtilitiesRopeInventory._occurrence_search_resources(
+                options,
+                definition_path,
+                name,
+                all_surfaces=True,
+            )
         )
         hits = FlextInfraUtilitiesRopeImports.find_occurrences(
             options.rope_project,
@@ -754,7 +756,8 @@ class FlextInfraUtilitiesRopeInventory:
                                 options.rope_project,
                                 resource,
                             )
-                        ) is not None
+                        )
+                        is not None
                     )
                     if reachability_resources is not None
                     else None

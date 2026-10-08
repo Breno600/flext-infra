@@ -75,7 +75,8 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
                         pymodule,
                         offset,
                         expected_binding=pyname,
-                    ) is not None
+                    )
+                    is not None
                 ):
                     matching_offsets.append(offset)
         if len(matching_offsets) > 1:

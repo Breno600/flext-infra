@@ -65,13 +65,18 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
             ValueError: If Rope proposed source is outside its input inventory.
 
         """
-        inventory = {
-            Path(resource.real_path).resolve(): resource.read()
-            for resource in project.get_python_files()
-        } if captured is None else {
-            state.path.resolve(): state.content.decode("utf-8")
-            for state in captured.states if state.content is not None
-        }
+        inventory = (
+            {
+                Path(resource.real_path).resolve(): resource.read()
+                for resource in project.get_python_files()
+            }
+            if captured is None
+            else {
+                state.path.resolve(): state.content.decode("utf-8")
+                for state in captured.states
+                if state.content is not None
+            }
+        )
         root = Path(project.root.real_path).resolve()
         for path, source in sources.items():
             resolved = path.resolve()

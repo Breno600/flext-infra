@@ -62,7 +62,9 @@ class TestsFlextInfraIntegrationInfraIntegration:
             c.Infra.DIR_TESTS,
             c.Infra.DIR_EXAMPLES,
         ):
-            directory = package if surface == c.Infra.DEFAULT_SRC_DIR else root / surface
+            directory = (
+                package if surface == c.Infra.DEFAULT_SRC_DIR else root / surface
+            )
             directory.mkdir(parents=True, exist_ok=True)
             consumer = directory / "consumer.py"
             consumer.write_text(consumer_source, encoding="utf-8")
@@ -239,21 +241,17 @@ class TestsFlextInfraIntegrationInfraIntegration:
         alias = tm.not_none(convention.module_policy.expected_alias)
         consumer = package / "consumer.py"
         consumer.write_text(
-            f"from {convention.module_name} import {alias}\n"
-            f"uses = {alias}\n",
+            f"from {convention.module_name} import {alias}\nuses = {alias}\n",
             encoding="utf-8",
         )
         with infra.rope_workspace(root) as rope:
-            item = next(
-                item
-                for item in rope.objects(definition)
-                if item.name == alias
-            )
+            item = next(item for item in rope.objects(definition) if item.name == alias)
         tm.that(item.is_facade_member, eq=True)
         tm.that(item.reference_evidence_collected, eq=True)
         tm.that(
             {
-                site.line for site in item.all_reference_sites
+                site.line
+                for site in item.all_reference_sites
                 if site.file_path == str(consumer.resolve())
             },
             eq={1, 2},
@@ -297,11 +295,13 @@ class TestsFlextInfraIntegrationInfraIntegration:
                 (site.file_path, site.line, site.offset)
                 for site in parameter.all_reference_sites
             ],
-            eq=[(
-                str(definition.resolve()),
-                2,
-                source.index("_helper", source.index("return")),
-            )],
+            eq=[
+                (
+                    str(definition.resolve()),
+                    2,
+                    source.index("_helper", source.index("return")),
+                )
+            ],
         )
 
     @staticmethod
@@ -319,12 +319,14 @@ class TestsFlextInfraIntegrationInfraIntegration:
             "def _helper(_helper): return _helper\nuse = _helper\n",
             encoding="utf-8",
         )
-        with infra.rope_workspace(root) as rope:
-            with pytest.raises(
+        with (
+            infra.rope_workspace(root) as rope,
+            pytest.raises(
                 RuntimeError,
                 match="definition binding token is ambiguous",
-            ):
-                rope.objects(definition, include_local_scopes=True)
+            ),
+        ):
+            rope.objects(definition, include_local_scopes=True)
 
     @staticmethod
     @pytest.mark.integration

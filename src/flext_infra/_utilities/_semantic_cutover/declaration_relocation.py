@@ -288,7 +288,8 @@ class FlextInfraUtilitiesSemanticDeclarationRelocation(
                     start=start,
                     end=end,
                     text=cls._checked_type_reference(
-                        runtime.scope_at(module, start), expression,
+                        runtime.scope_at(module, start),
+                        expression,
                     ),
                 ),
             )

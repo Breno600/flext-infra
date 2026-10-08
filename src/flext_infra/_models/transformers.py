@@ -62,7 +62,10 @@ class FlextInfraModelsTransformers:
         ]
         source_states: Annotated[
             tuple[m.Cli.AtomicFileState, ...],
-            m.Field(default_factory=tuple, description="Read-only semantic dependency inputs"),
+            m.Field(
+                default_factory=tuple,
+                description="Read-only semantic dependency inputs",
+            ),
         ]
 
     class SemanticMigrationEdit(m.ContractModel):

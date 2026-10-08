@@ -93,14 +93,14 @@ class FlextInfraModelsCensus:
         script_reference_sites: t.VariadicTuple[
             FlextInfraModelsCensus.ReferenceSite
         ] = m.Field(default_factory=tuple, description="Script reference sites")
-        all_reference_sites: t.VariadicTuple[
-            FlextInfraModelsCensus.ReferenceSite
-        ] = m.Field(
-            default_factory=tuple,
-            description=(
-                "Qualified indexed occurrences on all surfaces, including reexports; "
-                "not reachability"
-            ),
+        all_reference_sites: t.VariadicTuple[FlextInfraModelsCensus.ReferenceSite] = (
+            m.Field(
+                default_factory=tuple,
+                description=(
+                    "Qualified indexed occurrences on all surfaces, including reexports; "
+                    "not reachability"
+                ),
+            )
         )
         reference_evidence_collected: Annotated[
             bool,

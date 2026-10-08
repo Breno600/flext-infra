@@ -175,8 +175,10 @@ class TestsFlextInfraDeclarationRelocation:
         ("body", "base"),
         [
             (
-                "value: str = 'data'\n        def run(self):\n"
-                "            return self.value",
+                (
+                    "value: str = 'data'\n        def run(self):\n"
+                    "            return self.value"
+                ),
                 "PayloadBase",
             ),
             ("value: str = 'data'", "BaseSettings"),

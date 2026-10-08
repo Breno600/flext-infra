@@ -401,9 +401,7 @@ class FlextInfraUtilitiesDependencies(FlextInfraUtilitiesDependencyRequirements)
                 "dependency graph references names outside the graph: "
                 + ", ".join(unknown),
             )
-        pending: dict[str, set[str]] = {
-            name: set(deps) for name, deps in edges.items()
-        }
+        pending: dict[str, set[str]] = {name: set(deps) for name, deps in edges.items()}
         waves: list[t.StrSequence] = []
         while pending:
             ready = frozenset(name for name, deps in pending.items() if not deps)

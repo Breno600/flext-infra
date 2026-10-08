@@ -561,27 +561,44 @@ class FlextInfraModGateEngine:
             tuple(rules_by_id[entry.rule_id] for entry in report.entries),
         )
         occurrence_rules = tuple(
-            rule for rule in rules_by_id.values()
-            if any(condition.predicate in {
-                c.Infra.CodemodContextPredicate.RESOLVED_SYMBOL,
-                c.Infra.CodemodContextPredicate.SAME_BINDING,
-                c.Infra.CodemodContextPredicate.EXECUTABLE_OCCURRENCE,
-                c.Infra.CodemodContextPredicate.UNREFERENCED_IMPORT,
-            } for condition in rule.context)
+            rule
+            for rule in rules_by_id.values()
+            if any(
+                condition.predicate
+                in {
+                    c.Infra.CodemodContextPredicate.RESOLVED_SYMBOL,
+                    c.Infra.CodemodContextPredicate.SAME_BINDING,
+                    c.Infra.CodemodContextPredicate.EXECUTABLE_OCCURRENCE,
+                    c.Infra.CodemodContextPredicate.UNREFERENCED_IMPORT,
+                }
+                for condition in rule.context
+            )
         )
         selected_ids = {rule.id for rule in occurrence_rules}
         states = tuple(
-            entry.source_state for entry in report.entries
+            entry.source_state
+            for entry in report.entries
             if entry.rule_id in selected_ids and entry.source_state is not None
         )
-        snapshot = u.Infra.codemod_binding_snapshot(
-            root, states,
-            tuple(condition.arg[0] for rule in occurrence_rules for condition in rule.context
-                  if condition.predicate is c.Infra.CodemodContextPredicate.RESOLVED_SYMBOL),
-        ) if states else None
+        snapshot = (
+            u.Infra.codemod_binding_snapshot(
+                root,
+                states,
+                tuple(
+                    condition.arg[0]
+                    for rule in occurrence_rules
+                    for condition in rule.context
+                    if condition.predicate
+                    is c.Infra.CodemodContextPredicate.RESOLVED_SYMBOL
+                ),
+            )
+            if states
+            else None
+        )
         entries = tuple(
             entry.model_copy(update={"binding_states": snapshot.states})
-            if snapshot is not None and entry.rule_id in selected_ids else entry
+            if snapshot is not None and entry.rule_id in selected_ids
+            else entry
             for entry in report.entries
             if u.Infra.codemod_context_admits(
                 root,

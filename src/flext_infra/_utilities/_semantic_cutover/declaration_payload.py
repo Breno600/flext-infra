@@ -91,7 +91,9 @@ class FlextInfraUtilitiesDeclarationPayload:
 
     @staticmethod
     def _payload_field(
-        project: p.Infra.RopeProject, scope: p.Infra.RopeScope, node: ast.stmt,
+        project: p.Infra.RopeProject,
+        scope: p.Infra.RopeScope,
+        node: ast.stmt,
     ) -> bool:
         if not isinstance(node, ast.AnnAssign) or not isinstance(node.target, ast.Name):
             return False
@@ -101,7 +103,8 @@ class FlextInfraUtilitiesDeclarationPayload:
             else node.annotation
         )
         qualifier = FlextInfraUtilitiesRopeRuntimeModules.resolve_symbol(
-            scope, annotation,
+            scope,
+            annotation,
         )
         return node.target.id != "model_config" and not any(
             FlextInfraUtilitiesRopeRuntimeModules.same_name(
@@ -113,13 +116,17 @@ class FlextInfraUtilitiesDeclarationPayload:
 
     @classmethod
     def _payload_statement(
-        cls, project: p.Infra.RopeProject, scope: p.Infra.RopeScope, node: ast.stmt,
+        cls,
+        project: p.Infra.RopeProject,
+        scope: p.Infra.RopeScope,
+        node: ast.stmt,
     ) -> bool:
         if isinstance(node, ast.AnnAssign | ast.Assign | ast.Pass):
             return True
         if isinstance(node, ast.Expr):
             return isinstance(node.value, ast.Constant) and isinstance(
-                node.value.value, str,
+                node.value.value,
+                str,
             )
         if not isinstance(node, ast.FunctionDef):
             return False
@@ -129,7 +136,8 @@ class FlextInfraUtilitiesDeclarationPayload:
                 decorator.func if isinstance(decorator, ast.Call) else decorator
             )
             identity = FlextInfraUtilitiesRopeRuntimeModules.resolve_symbol(
-                scope, expression,
+                scope,
+                expression,
             )
             if any(
                 FlextInfraUtilitiesRopeRuntimeModules.same_name(
