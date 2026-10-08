@@ -59,6 +59,7 @@ def _phase_fixture(tmp_path: Path) -> tuple[Path, Path, Path, Path, Path]:
         tmp_path,
         package_name="flext_core",
     )
+    u.Tests.copy_tracked_mise_seeds(project)
     service_file = pkg / "service.py"
     _ = service_file.write_text(
         "from __future__ import annotations\n"

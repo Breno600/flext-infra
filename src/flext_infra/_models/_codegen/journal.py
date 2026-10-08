@@ -12,7 +12,7 @@ from typing import Annotated, ClassVar, Literal, Self
 
 from flext_cli import m
 
-from flext_infra import c, t
+from flext_infra import t
 
 
 class FlextInfraModelsCodegenJournalModels:
@@ -24,7 +24,7 @@ class FlextInfraModelsCodegenJournalModels:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True, extra="forbid")
 
         phase: Annotated[
-            c.Infra.CodegenStagedFilePhase,
+            t.NonEmptyStr,
             m.Field(description="Generation phase that owns this publication"),
         ]
         project: Annotated[
@@ -102,7 +102,7 @@ class FlextInfraModelsCodegenJournalModels:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True, extra="forbid")
 
         phase: Annotated[
-            c.Infra.CodegenStagedFilePhase,
+            t.NonEmptyStr,
             m.Field(description="Generation phase that owns the directory"),
         ]
         project: Annotated[
