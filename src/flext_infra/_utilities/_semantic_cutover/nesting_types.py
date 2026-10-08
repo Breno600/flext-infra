@@ -81,7 +81,13 @@ class FlextInfraUtilitiesSemanticNestingTypes(
         return FlextInfraUtilitiesRopeRuntimeRefactors.content_change(
             resource,
             source,
-            cls._quoted_type_rewrites(project, resource, source, replacement, protected=protected),
+            cls._quoted_type_rewrites(
+                project,
+                resource,
+                source,
+                replacement,
+                protected=protected,
+            ),
         ).new_contents
 
     @classmethod
@@ -237,7 +243,7 @@ class FlextInfraUtilitiesSemanticNestingTypes(
     def _module_source(module: p.Infra.RopePyModule) -> str:
         resource = getattr(module, "resource", None)
         if resource is not None:
-            return Path(resource.real_path).read_text(encoding="utf-8")
+            return resource.read()
         return module.source_code
 
     @staticmethod

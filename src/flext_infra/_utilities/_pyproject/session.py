@@ -75,8 +75,7 @@ class FlextInfraUtilitiesPyprojectSession:
             if FlextInfraUtilitiesDependencies.dep_name(item) not in selected
         )
         override_names = frozenset(
-            FlextInfraUtilitiesDependencies.dep_name(item)
-            for item in active_overrides
+            FlextInfraUtilitiesDependencies.dep_name(item) for item in active_overrides
         )
         declared_constraints = (
             u.Cli.toml_as_string_list(uv.get("constraint-dependencies"))
@@ -102,14 +101,12 @@ class FlextInfraUtilitiesPyprojectSession:
                     *(
                         item
                         for item in active_overrides
-                        if FlextInfraUtilitiesDependencies.dep_name(item)
-                        in selected
+                        if FlextInfraUtilitiesDependencies.dep_name(item) in selected
                     ),
                     *declared_constraints,
                 )
                 if (
-                    parsed
-                    := FlextInfraUtilitiesDependencies.active_requirement(
+                    parsed := FlextInfraUtilitiesDependencies.active_requirement(
                         item,
                         environment=environment,
                     )

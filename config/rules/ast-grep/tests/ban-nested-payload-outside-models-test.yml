@@ -1,0 +1,20 @@
+# Shape tests only; Rope admission proves ancestry and declaration role.
+id: ban-nested-payload-outside-models
+valid:
+  - |
+    class Payload(BaseModel):
+        value: str
+  - |
+    class Utilities:
+        class Engine(BaseModel):
+            def run(self):
+                return True
+invalid:
+  - |
+    class Utilities:
+        class Payload(BaseModel):
+            value: str
+  - |
+    class Utilities:
+        class Payload(AliasedPreset[str]):
+            value: str = Field(default="payload")

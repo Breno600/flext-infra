@@ -205,6 +205,9 @@ class FlextInfraConstantsRefactor:
         NOTICE_LAST = "notice-last"
 
     SEMANTIC_CUTOVER_RULE_IDS: ClassVar[t.MappingKV[str, str]] = MappingProxyType({
+        SemanticCutoverPhase.DECLARATION_RELOCATION: (
+            "ban-nested-payload-outside-models"
+        ),
         SemanticCutoverPhase.COMPAT_ALIAS: "ban-compat-alias",
         SemanticCutoverPhase.PRIVATE_IMPORT: "ban-private-import",
         SemanticCutoverPhase.FACADE_BASE: "facade-base-by-class-name",
