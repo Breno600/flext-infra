@@ -280,6 +280,16 @@ class FlextInfraUtilitiesCodemodRules:
 
     @staticmethod
     def _config_scope(config: Path) -> p.Result[str]:
+        """Read one provider config's declared scope.
+
+        The ``config`` parameter is the provider's config PATH: the
+        flext-infra config facade import some lanes re-insert here shadows
+        it and crashes the provider scope read.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+        """
+        from flext_cli import u
 
         parsed = u.Cli.yaml_parse(config.read_text(encoding=c.Cli.ENCODING_DEFAULT))
         if parsed.failure:

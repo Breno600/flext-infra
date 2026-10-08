@@ -142,6 +142,34 @@ class FlextInfraConfigModelsArtifact:
             ),
         ]
 
+    class CodegenModesSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Filesystem modes the codegen pipeline emits (the mode SSOT)."""
+
+        file_default: Annotated[
+            int,
+            m.Field(
+                ge=0,
+                le=0o7777,
+                description="Rendered artifacts without a managed mode",
+            ),
+        ]
+        file_private: Annotated[
+            int,
+            m.Field(ge=0, le=0o7777, description="Engine-private lock and mutex files"),
+        ]
+        directory_private: Annotated[
+            int,
+            m.Field(ge=0, le=0o7777, description="Engine-only state and staging trees"),
+        ]
+        directory_generated: Annotated[
+            int,
+            m.Field(
+                ge=0,
+                le=0o7777,
+                description="Generated directory trees in consumers",
+            ),
+        ]
+
     class CodegenConfigSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Fully modeled content of ``config/codegen.yaml``."""
 
@@ -164,6 +192,10 @@ class FlextInfraConfigModelsArtifact:
         loc_cap: Annotated[
             FlextInfraConfigModelsArtifact.CodegenLocCapSpec,
             m.Field(description="Per-module code-LOC ceiling policy"),
+        ]
+        modes: Annotated[
+            FlextInfraConfigModelsArtifact.CodegenModesSpec,
+            m.Field(description="Filesystem modes the pipeline emits (the mode SSOT)"),
         ]
         toolchain: Annotated[
             FlextInfraModelsMiseToolchain.ToolchainSpec,
