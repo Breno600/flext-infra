@@ -36,6 +36,7 @@ class FlextInfraCodegenStaging:
         plans: t.VariadicTuple[m.Infra.CodegenFilePlan],
         *,
         directories: t.VariadicTuple[m.Cli.AtomicDirectoryState] = (),
+        intents: t.VariadicTuple[m.Infra.CodegenStagingIntent] = (),
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile]]:
         """Stage one exact phase without changing any live destination.
 
@@ -53,7 +54,10 @@ class FlextInfraCodegenStaging:
         if len(set(paths)) != len(paths):
             return result_type.fail(f"duplicate {phase} generation destination")
         verified = cls.plan_file_staging(
-            layout, phase, changed, directories=directories,
+            layout,
+            phase,
+            changed,
+            directories=directories,
         )
         if verified.failure:
             return result_type.from_failure(verified)
@@ -70,7 +74,7 @@ class FlextInfraCodegenStaging:
             )
             if created.failure:
                 return result_type.from_failure(created)
-        return cls._write_staged_publications(phase, prepared)
+        return cls._write_staged_publications(phase, prepared, intents=intents)
 
     @classmethod
     def plan_file_staging(
@@ -272,7 +276,10 @@ class FlextInfraCodegenStaging:
             )
             if phase_root_before.failure:
                 return result_type.from_failure(phase_root_before)
-            if phase_root_before.value.exists and phase_root_before.value not in directories:
+            if (
+                phase_root_before.value.exists
+                and phase_root_before.value not in directories
+            ):
                 return result_type.fail(
                     f"{phase} staging root already exists: {phase_root}",
                 )
@@ -293,6 +300,8 @@ class FlextInfraCodegenStaging:
                 bool,
             ]
         ],
+        *,
+        intents: t.VariadicTuple[m.Infra.CodegenStagingIntent] = (),
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile]]:
         """Write every staged replacement and bind the staged-file models.
 
@@ -310,7 +319,15 @@ class FlextInfraCodegenStaging:
             if staged_present:
                 phase_root, desired_content, desired_mode = replacement_input
                 staged_path = phase_root / f"{index:06d}.replacement"
-                staged = process.write_new(staged_path, desired_content, desired_mode)
+                intent = next(
+                    (item for item in intents if item.before.path == staged_path),
+                    None,
+                )
+                if intents and intent is None:
+                    return result_type.fail(f"replacement has no durable intention: {staged_path}")
+                staged = process.write_new(
+                    staged_path, desired_content, desired_mode, intent=intent,
+                )
                 if staged.failure:
                     return result_type.from_failure(staged)
                 staged_state = files.read_state(staged_path, required=True)
