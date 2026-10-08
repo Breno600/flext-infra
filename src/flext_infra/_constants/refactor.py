@@ -61,13 +61,15 @@ class FlextInfraConstantsRefactor:
         "Help: Scan succeeded and found error level diagnostics in the codebase."
     )
     "Exact second stderr line emitted for error-severity JSONL findings."
-    IMPORT_NORMALIZATION_LETTER_ORDER: ClassVar[t.MappingKV[str, int]] = {
-        "c": 2,
-        "t": 3,
-        "p": 4,
-        "m": 5,
-        "u": 6,
-    }
+    IMPORT_NORMALIZATION_LETTER_ORDER: ClassVar[t.MappingKV[str, int]] = (
+        MappingProxyType({
+            "c": 2,
+            "t": 3,
+            "p": 4,
+            "m": 5,
+            "u": 6,
+        })
+    )
     "Facade-letter ordering ranks for import normalization."
     IMPORT_NORMALIZATION_LETTER_RENDER_ORDER: ClassVar[t.StrSequence] = (
         "c",
@@ -77,26 +79,32 @@ class FlextInfraConstantsRefactor:
         "u",
     )
     "Facade-letter render order for import normalization."
-    IMPORT_NORMALIZATION_FAMILY_LETTER: ClassVar[t.MappingKV[str, str]] = {
-        "constants": "c",
-        "typings": "t",
-        "protocols": "p",
-        "models": "m",
-        "utilities": "u",
-    }
+    IMPORT_NORMALIZATION_FAMILY_LETTER: ClassVar[t.MappingKV[str, str]] = (
+        MappingProxyType({
+            "constants": "c",
+            "typings": "t",
+            "protocols": "p",
+            "models": "m",
+            "utilities": "u",
+        })
+    )
     "Family-name to facade-letter mapping for import normalization."
-    IMPORT_NORMALIZATION_FAMILY_RANK: ClassVar[t.MappingKV[str, int]] = {
-        "constants": 2,
-        "typings": 3,
-        "protocols": 4,
-        "models": 5,
-        "utilities": 6,
-    }
+    IMPORT_NORMALIZATION_FAMILY_RANK: ClassVar[t.MappingKV[str, int]] = (
+        MappingProxyType({
+            "constants": 2,
+            "typings": 3,
+            "protocols": 4,
+            "models": 5,
+            "utilities": 6,
+        })
+    )
     "Family-name to layer rank mapping for import normalization."
-    IMPORT_NORMALIZATION_FACADE_RANK: ClassVar[t.MappingKV[str, int]] = {
-        "api": 10,
-        "cli": 11,
-    }
+    IMPORT_NORMALIZATION_FACADE_RANK: ClassVar[t.MappingKV[str, int]] = (
+        MappingProxyType({
+            "api": 10,
+            "cli": 11,
+        })
+    )
     "Facade-module rank for import normalization."
     IMPORT_NORMALIZATION_MAX_PASSES: ClassVar[int] = 24
     "Fixed-point pass ceiling for import normalization."

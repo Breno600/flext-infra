@@ -394,7 +394,7 @@ class FlextInfraUtilitiesDependenciesFamily:
             profiles: t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec],
             *,
             distribution: str,
-            runtime_names: t.StrSet,
+            runtime_names: t.Infra.StrSet,
         ) -> t.StrSequence:
             """Return the most specific shared profile upstreams one project selects.
 

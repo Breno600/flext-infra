@@ -27,8 +27,6 @@ dependencies = [
   "dependency-injector>=4.49.1",
   "flext-cli @ git+https://github.com/flext-sh/flext-cli.git@0.12.0-dev",
   "flext-core @ git+https://github.com/flext-sh/flext-core.git@0.12.0-dev",
-  "flext-cli @ git+https://github.com/flext-sh/flext-cli.git@0.12.0-dev",
-  "flext-core @ git+https://github.com/flext-sh/flext-core.git@0.12.0-dev",
   "GitPython>=3.2.0",
   "jinja2>=3.1.6",
   "libcst>=1.9.0",
@@ -78,7 +76,6 @@ dev = [
   "bandit>=1.9.4",
   "deptry",
   "editables>=0.6",
-  "flext-tests @ git+https://github.com/flext-sh/flext-tests.git@0.12.0-dev",
   "flext-tests @ git+https://github.com/flext-sh/flext-tests.git@0.12.0-dev",
   "hypothesis",
   "mkdocs",
@@ -421,7 +418,7 @@ namespace-packages = ["tests", "examples", "scripts"]
 preview = true
 respect-gitignore = true
 show-fixes = true
-src = ["src", "tests"]
+src = ["scripts", "src", "tests"]
 target-version = "py313"
 
 [tool.ruff.format]
@@ -521,6 +518,7 @@ runtime-evaluated-base-classes = [
   "flext_infra.release._release_project.FlextInfraReleaseProjectMixin",
   "flext_infra.release._release_publish.FlextInfraReleasePublishMixin",
   "flext_infra.release._release_source.FlextInfraReleaseSourceMixin",
+  "flext_infra.s",
   "flext_infra.services.cli_dispatch.FlextInfraCliDispatchService",
   "flext_infra.validate._pytest_runner.base.FlextInfraPytestRunnerBase",
   "flext_infra.validate._pytest_runner.command.FlextInfraPytestRunnerCommand",
@@ -583,6 +581,11 @@ split-on-trailing-comma = false
 ]
 "**/docx.py" = ["import-outside-top-level"]
 "**/file_test_helpers.py" = ["line-too-long"]
+"**/flext_core/_models/pydantic.py" = [
+  "any-type",
+  "builtin-argument-shadowing",
+  "too-many-arguments",
+]
 "**/flextcliutilitiesfiletesthelpersmixin_part_03.py" = ["line-too-long"]
 "**/framework.py" = ["banned-api", "import-outside-top-level"]
 "**/pptx.py" = ["import-outside-top-level"]
@@ -698,7 +701,6 @@ dependencies = ["flext-infra"]
 
 [tool.uv.exclude-dependencies.package]
 name = "flext-tests"
-
 [tool.interrogate]
 fail-under = 70
 ignore-init-method = true
