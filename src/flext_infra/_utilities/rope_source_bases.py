@@ -747,12 +747,13 @@ class FlextInfraUtilitiesRopeSourceBases:
                 raise ValueError(message)
             target = reference.target
             attributes = list(reference.attributes)
-            if attributes:
+            if target in module_aliases:
+                attributes.insert(0, target.rpartition(".")[2])
+                target = module_aliases[target]
+            elif attributes:
                 qualified_head = f"{target}.{attributes[0]}"
                 if qualified_head in module_aliases:
                     target = module_aliases[qualified_head]
-                    attributes.pop(0)
-            target = module_aliases.get(target, target)
             key = ".".join((target, *attributes))
             if key in visiting:
                 message = f"Cyclic class alias: {key}"
@@ -781,7 +782,12 @@ class FlextInfraUtilitiesRopeSourceBases:
                         raise ValueError(message)
                     binding = modules[module].get(name)
                     if binding is None:
-                        message = f"Unresolved planned base: {module}.{name}"
+                        message = (
+                            f"Unresolved planned base: {module}.{name} "
+                            f"(reference={reference.qualified_base!r}, "
+                            f"target={reference.target!r}, "
+                            f"attributes={reference.attributes!r})"
+                        )
                         raise ValueError(message)
                     target = resolve(binding, visiting | {key}, depth + 1)
                 else:

@@ -291,7 +291,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         The lazy publication IS a binding statement: every name the
         ``install_lazy_exports`` map lists resolves through its provider
         module, exactly as it resolves at runtime. The map has one reader
-        (``FlextInfraUtilitiesRopeSourceBasesAliases.lazy_module_aliases``),
+        (``FlextInfraUtilitiesRopeSourceBases.lazy_module_aliases``),
         which understands the generated shape; the key is the exact source
         text, so an edited module is a new key.
 
@@ -299,13 +299,13 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
             Published name to absolute provider module.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeSourceBasesAliases
+        from flext_infra._utilities import FlextInfraUtilitiesRopeSourceBases
 
         path = Path(
             c.Infra.INIT_PY if is_package else f"{module.rpartition('.')[2]}.py",
         )
         return MappingProxyType(
-            FlextInfraUtilitiesRopeSourceBasesAliases.lazy_module_aliases(
+            FlextInfraUtilitiesRopeSourceBases.lazy_module_aliases(
                 module,
                 path,
                 source,

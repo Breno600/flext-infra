@@ -11,6 +11,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_infra import c, m, p, r, t, u
+from flext_infra.__version__ import FlextInfraVersion
 
 
 class FlextInfraWorkspaceCheckReportsMixin:
@@ -81,8 +82,6 @@ class FlextInfraWorkspaceCheckReportsMixin:
             The resulting ``m.Infra.SarifReport``.
 
         """
-        from flext_infra.__version__ import FlextInfraVersion
-
         rules_by_id: MutableMapping[str, m.Infra.SarifRule] = {}
         sarif_results: list[m.Infra.SarifResult] = []
         for project in results:
