@@ -191,9 +191,9 @@ class TestsFlextInfraBanditAndMarkdownGates:
     @staticmethod
     @pytest.mark.parametrize(
         ("pattern", "owner"),
-        (
+        [
             (pattern, owner) for _, pattern, owner in BANDIT_OWNER_CASES
-        ),
+        ],
     )
     def test_bandit_owner_cannot_alias_a_source_outside_the_project(
         tmp_path: Path,
