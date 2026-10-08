@@ -94,12 +94,18 @@ class TestsFlextInfraCodemodGate:
 
     @staticmethod
     def _rule_files(
-        execution: m.Infra.GateExecution,
+        project: Path,
         rule_id: str,
+        tmp_path: Path,
     ) -> t.StrSequence:
-        """Project-relative files the bundled rule ``rule_id`` reported."""
+        """Project-relative files the bundled rule ``rule_id`` reports.
+
+        Returns:
+            The sorted project-relative files the real scan reported.
+        """
+        execution = u.Tests.run_gate_check(FlextInfraCodemodGate, tmp_path, project)
         return sorted(
-            issue.file.rsplit("scanner-contract/", 1)[-1]
+            (project / issue.file).resolve().relative_to(project.resolve()).as_posix()
             for issue in execution.issues
             if issue.code == rule_id
         )
@@ -120,10 +126,8 @@ class TestsFlextInfraCodemodGate:
             module.parent.mkdir(parents=True)
             module.write_text("import flext_tests\n", encoding="utf-8")
 
-        execution = u.Tests.run_gate_check(FlextInfraCodemodGate, tmp_path, project)
-
         tm.that(
-            self._rule_files(execution, "ban-infra-runtime-flext-tests-import"),
+            self._rule_files(project, "ban-infra-runtime-flext-tests-import", tmp_path),
             eq=["src/flext_infra/leak.py"],
         )
 
@@ -148,10 +152,8 @@ class TestsFlextInfraCodemodGate:
             module.parent.mkdir(parents=True, exist_ok=True)
             module.write_text("import subprocess\n", encoding="utf-8")
 
-        execution = u.Tests.run_gate_check(FlextInfraCodemodGate, tmp_path, project)
-
         tm.that(
-            self._rule_files(execution, "ban-subprocess-outside-run-owner"),
+            self._rule_files(project, "ban-subprocess-outside-run-owner", tmp_path),
             eq=[consumer],
         )
 
