@@ -232,6 +232,7 @@ class FlextInfraConstantsRefactor:
         PACKAGE_LAYERS = "package-layers"
         PACKAGE_ROOT_INIT = "package-root-init"
         FAMILY_BASE = "family-base"
+        PAYLOAD_DECLARATION = "payload-declaration"
         RESOLVED_SYMBOL = "resolved-symbol"
         SAME_BINDING = "same-binding"
         EXECUTABLE_OCCURRENCE = "executable-occurrence"
@@ -249,6 +250,7 @@ class FlextInfraConstantsRefactor:
     class SemanticCutoverPhase(StrEnum):
         """Semantic ``make mod`` cutovers planned by ``u.Infra``."""
 
+        DECLARATION_RELOCATION = "declaration-relocation"
         CLASS_NESTING = "class-nesting"
         COMPAT_ALIAS = "compat-alias"
         PRIVATE_IMPORT = "private-import"
@@ -260,6 +262,9 @@ class FlextInfraConstantsRefactor:
         NOTICE_LAST = "notice-last"
 
     SEMANTIC_CUTOVER_RULE_IDS: ClassVar[t.MappingKV[str, str]] = MappingProxyType({
+        SemanticCutoverPhase.DECLARATION_RELOCATION: (
+            "ban-nested-payload-outside-models"
+        ),
         SemanticCutoverPhase.COMPAT_ALIAS: "ban-compat-alias",
         SemanticCutoverPhase.PRIVATE_IMPORT: "ban-private-import",
         SemanticCutoverPhase.FACADE_BASE: "facade-base-by-class-name",

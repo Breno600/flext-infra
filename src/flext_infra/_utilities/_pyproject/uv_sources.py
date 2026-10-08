@@ -265,6 +265,25 @@ class FlextInfraUtilitiesPyprojectUvSources(
         return r[bool].ok(value=True)
 
     @classmethod
+    def _wanted_workspace_members(
+        cls,
+        document: t.Cli.TomlDocument,
+        workspace_members: t.StrSequence,
+    ) -> t.VariadicTuple[str]:
+        """Intersect the declared members with the document's requirements.
+
+        Returns:
+            The resulting ``t.VariadicTuple[str]``.
+
+        """
+        required_names = {
+            name
+            for line in cls._document_requirement_lines(document).unwrap()
+            if (name := FlextInfraUtilitiesDependencies.dep_name(line)) is not None
+        }
+        return tuple(sorted(set(workspace_members) & required_names))
+
+    @classmethod
     def _sync_member_sources(
         cls,
         uv: Table,

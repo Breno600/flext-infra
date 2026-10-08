@@ -91,6 +91,24 @@ those dependencies and the validated campaign inputs by constructor. `infra.appl
 offers the same real runner for an explicit `m.Infra.ApplyRenamesInput`. The CLI route
 renders progress and rename reports; the runner itself only returns typed results.
 
+Before class nesting, `make mod` plans nested payload relocation against an immutable
+Rope snapshot. The nested-payload rule admits data-only declarations by resolved
+Pydantic ancestry, not the spelling of an imported base. The planner requires exactly
+one existing authored model-family owner already composed by the public `m` facade;
+missing, competing, occupied, or generated destinations are not created or guessed.
+Bases, field/default expressions, configuration and docstrings move unchanged through
+CST. There is no automatic raw-model-to-preset conversion. Behavior-bearing bodies,
+settings subclasses, unknown class decorators, unresolved dependencies and test
+fixtures are not automatic payload movers. Executable references and quoted type
+positions follow Rope identity; ordinary strings, `Literal` values and `Annotated`
+metadata remain payloads. Proposed runtime imports include only requested lazy-export
+providers, and a new cycle rejects the entire plan before publication. Model owners
+that already depend on the source utility must have that prerequisite repaired first.
+Resolved Pydantic validators and computed fields retain their declaration semantics;
+ordinary methods do not establish a DTO role. Quoted field types participate in import
+dependency discovery, and a local binding capturing the elected facade refuses the
+cutover instead of rewriting through that unrelated binding.
+
 `bindings` maps CSV expression prefixes to current public Rope identities. An empty
 prefix describes member names relative to an owner; a nonempty prefix describes
 qualified CSV expressions. Rope resolves aliases and class inheritance against those

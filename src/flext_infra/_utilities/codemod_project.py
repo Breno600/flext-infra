@@ -16,6 +16,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import ast
+import ast
 import sys
 from collections.abc import Mapping, MutableMapping
 from functools import cache, lru_cache
@@ -64,42 +65,61 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         Returns:
             The runtime import graph and the module name of each file.
 
+        """
+        with FlextInfraUtilitiesRopeCore.open_project(root) as project:
+            return cls.snapshot_import_graph(project)
+
+    @classmethod
+    def snapshot_import_graph(
+        cls,
+        project: p.Infra.RopeProject,
+    ) -> t.Pair[t.MappingKV[str, frozenset[str]], t.MappingKV[Path, str]]:
+        """Read runtime imports from an immutable proposed-source Rope graph.
+
+        Returns:
+            The resulting ``t.Pair[t.MappingKV[str, frozenset[str]], t.MappingKV[Path,
+                str]]``.
+
         Raises:
             ValueError: If rope could not name module.
-
         """
         raw: MutableMapping[str, set[str]] = {}
         modules: MutableMapping[Path, str] = {}
-        with FlextInfraUtilitiesRopeCore.open_project(root) as project:
-            for resource in FlextInfraUtilitiesRopeCore.python_resources(project):
-                pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
-                    project,
-                    resource,
-                )
-                name = pymodule.get_name()
-                if not name:
-                    msg = f"rope could not name module {resource.path}"
-                    raise ValueError(msg)
-                path = Path(resource.real_path).resolve()
-                modules[path] = name
-                package = (
-                    name if path.name == c.Infra.INIT_PY else name.rpartition(".")[0]
-                )
-                raw[name] = set(
-                    FlextInfraUtilitiesRopeImports.imported_module_paths(
-                        FlextInfraUtilitiesRopeCore.resolve_module_imports(
-                            project,
-                            resource,
-                        ),
-                        current_package=package,
+        aliases: MutableMapping[str, str] = {}
+        for resource in FlextInfraUtilitiesRopeCore.python_resources(project):
+            pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(project, resource)
+            name = pymodule.get_name()
+            if not name:
+                msg = f"rope could not name module {resource.path}"
+                raise ValueError(msg)
+            path = Path(resource.real_path).resolve()
+            modules[path] = name
+            package = name if path.name == c.Infra.INIT_PY else name.rpartition(".")[0]
+            raw[name] = set(
+                FlextInfraUtilitiesRopeImports.imported_module_paths(
+                    FlextInfraUtilitiesRopeCore.resolve_module_imports(
+                        project,
+                        resource,
                     ),
-                )
+                    current_package=package,
+                ),
+            )
+            # Requesting a lazy export loads its elected provider module. Merely
+            # installing the map does not load every provider in the package.
+            provider_aliases = FlextInfraUtilitiesRopeSourceBases.lazy_module_aliases(
+                name, path, resource.read(),
+            )
+            aliases.update({
+                f"{name}.{export}": provider
+                for export, provider in provider_aliases.items()
+            })
         known = frozenset(raw)
         graph = {
             name: frozenset(
                 target
                 for imported in targets
-                if (target := cls._known_prefix(imported, known)) is not None
+                if (target := cls._known_prefix(aliases.get(imported, imported), known))
+                is not None
                 and target != name
             )
             for name, targets in raw.items()
@@ -835,6 +855,25 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             raise ValueError(message)
         own = FlextInfraUtilitiesPyproject.project_package_name(root)
         match predicate:
+            case c.Infra.CodemodContextPredicate.PAYLOAD_DECLARATION:
+                with FlextInfraUtilitiesRopeCore.open_project(root) as project:
+                    resource = project.get_resource(
+                        file_path.relative_to(root).as_posix(),
+                    )
+                    declarations = tuple(
+                        node
+                        for node in ast.walk(ast.parse(resource.read()))
+                        if isinstance(node, ast.ClassDef) and node.name == captured[0]
+                    )
+                    return (
+                        len(declarations) == 1
+                        and FlextInfraUtilitiesDeclarationPayload.payload_declaration(
+                            project,
+                            file_path,
+                            declarations[0],
+                        )
+                        is not None
+                    )
             case (
                 c.Infra.CodemodContextPredicate.STDLIB_MODULE
                 | c.Infra.CodemodContextPredicate.OWN_PACKAGE
