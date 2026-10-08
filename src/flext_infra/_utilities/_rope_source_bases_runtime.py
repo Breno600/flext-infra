@@ -329,6 +329,9 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
             identity = self._declared_identity_at_line(name, line)
             if identity is None:
                 resource = module.get_resource()
+                if resource is None:
+                    message = f"Module has no declared resource: {name}"
+                    raise ValueError(message)
                 self.inventory(
                     name,
                     (Path(resource.real_path), module.source_code),
@@ -968,7 +971,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
             self._stdlib_backing_cache[target] = backing or ""
             return backing
 
-        _stdlib_backing_cache: ClassVar[dict[str, str] | None] = None
+        _stdlib_backing_cache: dict[str, str] | None = None
 
     @classmethod
     def runtime_bases(

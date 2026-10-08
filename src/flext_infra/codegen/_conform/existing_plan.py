@@ -83,7 +83,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
 
         Returns:
             The resulting ``p.Result[t.Pair[m.Infra.ProjectSpec,
-                m.Infra.ProjectMetadataModel]]``.
+                p.ProjectMetadata]]``.
 
         """
         result_type = r[t.Pair[m.Infra.ProjectSpec, p.ProjectMetadata]]
@@ -203,7 +203,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         self,
         target: m.Infra.RepositoryConformTarget,
         project: m.Infra.ProjectSpec,
-        metadata: m.Infra.ProjectMetadataModel,
+        metadata: p.ProjectMetadata,
         codegen: m.Infra.CodegenConfigSpec,
         managed_resolution: m.Infra.ProjectManagedArtifactsResolution,
     ) -> p.Result[m.Infra.ToolingRuntimeContext]:
@@ -437,7 +437,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             if resolved.failure:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(resolved)
             (entry, path), present = resolved.value
-            if not present:
+            if not present or entry is None or path is None:
                 continue
             if profile not in entry.profiles or (
                 entry.requires_release_protocol and not target.publishes_release
@@ -449,9 +449,10 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                     return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
                         orphan,
                     )
-                if orphan.value[1]:
+                orphan_plan = orphan.value[0]
+                if orphan.value[1] and orphan_plan is not None:
                     planned.append(
-                        orphan.value[0].model_copy(
+                        orphan_plan.model_copy(
                             update={"owner": managed.owner, "policy": managed.policy},
                         ),
                     )
@@ -500,16 +501,19 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         workspace: m.Infra.WorkspaceSpec,
         root: Path,
         managed: m.Infra.ManagedFileSpec,
-    ) -> p.Result[t.Pair[t.Pair[m.Infra.TemplateEntrySpec, Path], bool]]:
+    ) -> p.Result[t.Pair[t.Pair[m.Infra.TemplateEntrySpec | None, Path | None], bool]]:
         """Resolve the single render template entry and its physical target path.
 
         Returns:
-            The resulting ``p.Result[t.Pair[t.Pair[m.Infra.TemplateEntrySpec,
-            Path], bool]]`` where the boolean marks entry presence (False:
-            the managed file declares no render entry for this topology).
+            The resulting ``p.Result[t.Pair[t.Pair[m.Infra.TemplateEntrySpec |
+            None, Path | None], bool]]`` where the boolean marks entry
+            presence (False: the managed file declares no render entry for
+            this topology).
 
         """
-        result_type = r[t.Pair[t.Pair[m.Infra.TemplateEntrySpec, Path], bool]]
+        result_type = r[
+            t.Pair[t.Pair[m.Infra.TemplateEntrySpec | None, Path | None], bool]
+        ]
         entries = tuple(
             entry
             for entry in codegen.templates.entries
@@ -562,7 +566,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         render_inputs: m.Infra.CodegenRenderInputs,
         managed: m.Infra.ManagedFileSpec,
         path: Path,
-    ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan, bool]]:
+    ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan | None, bool]]:
         """Plan retirement of a profile-excluded generated workflow orphan.
 
         A managed destination does not establish authorship of its current
@@ -570,12 +574,12 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         survive profile changes.
 
         Returns:
-            The resulting ``p.Result[t.Pair[m.Infra.CodegenFilePlan, bool]]``
-            where the boolean marks orphan presence (False: a
+            The resulting ``p.Result[t.Pair[m.Infra.CodegenFilePlan | None,
+            bool]]`` where the boolean marks orphan presence (False: a
             repository-owned workflow survives).
 
         """
-        result_type = r[t.Pair[m.Infra.CodegenFilePlan, bool]]
+        result_type = r[t.Pair[m.Infra.CodegenFilePlan | None, bool]]
         if not (managed.path.parts[:2] == (".github", "workflows") and path.is_file()):
             return result_type.ok((None, False))
         # Keep the typed read result distinct from its string payload.
@@ -608,12 +612,18 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         """
         result_type = r[t.Pair[m.Infra.CodegenRenderInputs, m.Infra.CodegenFilePlan]]
         root = render_inputs.target.root
-        rendered = self._rendered_artifact_source(
-            render_inputs,
-            template_relpath=entry.source,
-            destination=entry.destination,
-            failure_prefix="",
-            project_context=None,
+        rendered = (
+            result_type.fail(
+                f"managed render entry has no template source: {entry.destination}",
+            )
+            if entry.source is None
+            else self._rendered_artifact_source(
+                render_inputs,
+                template_relpath=entry.source,
+                destination=entry.destination,
+                failure_prefix="",
+                project_context=None,
+            )
         )
         if rendered.failure:
             return result_type.from_failure(rendered)
@@ -884,7 +894,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             if decided.failure:
                 return r[bool].from_failure(decided)
             decided_value, decided_present = decided.value
-            if decided_present:
+            if decided_present and decided_value is not None:
                 completed.append(decided_value)
         return r[bool].ok(value=True)
 
@@ -935,12 +945,12 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         relative: Path,
         governed: m.Infra.ManagedFileSpec,
         current: str,
-    ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan, bool]]:
+    ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan | None, bool]]:
         """Decide the representing plan: owner merge first, plain content next.
 
         Returns:
-            The resulting ``p.Result[t.Pair[m.Infra.CodegenFilePlan, bool]]``
-            with its presence flag.
+            The resulting ``p.Result[t.Pair[m.Infra.CodegenFilePlan | None,
+            bool]]`` with its presence flag.
 
         """
         special = cls._special_governed_plan(root, path, relative, governed, current)
@@ -948,6 +958,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             return special
         if special.value[1]:
             return special
+        result_type = r[t.Pair[m.Infra.CodegenFilePlan | None, bool]]
         current_plan = cls.file_plan(
             root,
             relative.as_posix(),
@@ -955,7 +966,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             mode=governed.mode,
         )
         if current_plan.failure:
-            return current_plan
+            return result_type.from_failure(current_plan)
         return r[t.Pair[m.Infra.CodegenFilePlan, bool]].ok(
             (
                 current_plan.value.model_copy(
@@ -973,13 +984,13 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         relative: Path,
         governed: m.Infra.ManagedFileSpec,
         current: str,
-    ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan, bool]]:
+    ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan | None, bool]]:
         """Plan owner-specific merge behavior for special governed artifacts.
 
         Returns:
-            The resulting ``p.Result[t.Pair[m.Infra.CodegenFilePlan, bool]]``
-            where the boolean marks plan presence (False falls through to the
-            plain current-content plan).
+            The resulting ``p.Result[t.Pair[m.Infra.CodegenFilePlan | None,
+            bool]]`` where the boolean marks plan presence (False falls
+            through to the plain current-content plan).
 
         """
         vscode_merge = governed.policy == "merge" and (
@@ -1005,15 +1016,15 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         relative: Path,
         governed: m.Infra.ManagedFileSpec,
         current: str,
-    ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan, bool]]:
+    ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan | None, bool]]:
         """Render the canonical vscode settings merge when it diverges.
 
         Returns:
-            The resulting ``p.Result[t.Pair[m.Infra.CodegenFilePlan, bool]]``
-            with its presence flag.
+            The resulting ``p.Result[t.Pair[m.Infra.CodegenFilePlan | None,
+            bool]]`` with its presence flag.
 
         """
-        result_type = r[t.Pair[m.Infra.CodegenFilePlan, bool]]
+        result_type = r[t.Pair[m.Infra.CodegenFilePlan | None, bool]]
         merged = FlextInfraCodegen.render_vscode_settings(root)
         if merged.failure:
             return result_type.from_failure(merged)
@@ -1044,15 +1055,15 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         relative: Path,
         governed: m.Infra.ManagedFileSpec,
         current: str,
-    ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan, bool]]:
+    ) -> p.Result[t.Pair[m.Infra.CodegenFilePlan | None, bool]]:
         """Normalize the local envrc overrides or plan the file's deletion.
 
         Returns:
-            The resulting ``p.Result[t.Pair[m.Infra.CodegenFilePlan, bool]]``
-            with its presence flag.
+            The resulting ``p.Result[t.Pair[m.Infra.CodegenFilePlan | None,
+            bool]]`` with its presence flag.
 
         """
-        result_type = r[t.Pair[m.Infra.CodegenFilePlan, bool]]
+        result_type = r[t.Pair[m.Infra.CodegenFilePlan | None, bool]]
         normalized = FlextInfraWorkspaceEnvironmentContracts.envrc_local_normalized(
             current,
         )
