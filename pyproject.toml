@@ -518,6 +518,7 @@ runtime-evaluated-base-classes = [
   "flext_infra.release._release_project.FlextInfraReleaseProjectMixin",
   "flext_infra.release._release_publish.FlextInfraReleasePublishMixin",
   "flext_infra.release._release_source.FlextInfraReleaseSourceMixin",
+  "flext_infra.s",
   "flext_infra.services.cli_dispatch.FlextInfraCliDispatchService",
   "flext_infra.validate._pytest_runner.base.FlextInfraPytestRunnerBase",
   "flext_infra.validate._pytest_runner.command.FlextInfraPytestRunnerCommand",
@@ -580,6 +581,11 @@ split-on-trailing-comma = false
 ]
 "**/docx.py" = ["import-outside-top-level"]
 "**/file_test_helpers.py" = ["line-too-long"]
+"**/flext_core/_models/pydantic.py" = [
+  "any-type",
+  "builtin-argument-shadowing",
+  "too-many-arguments",
+]
 "**/flextcliutilitiesfiletesthelpersmixin_part_03.py" = ["line-too-long"]
 "**/framework.py" = ["banned-api", "import-outside-top-level"]
 "**/pptx.py" = ["import-outside-top-level"]
