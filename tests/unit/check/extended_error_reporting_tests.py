@@ -139,9 +139,7 @@ class TestsFlextInfraGateErrorReporting:
         """Native source excerpts stay in the receipt while issues remain public."""
         project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
         source_dir = (
-            project_dir
-            / c.Infra.DEFAULT_SRC_DIR
-            / project_dir.name.replace("-", "_")
+            project_dir / c.Infra.DEFAULT_SRC_DIR / project_dir.name.replace("-", "_")
         )
         source_marker = "native_receipt_source_marker"
         (source_dir / "finding.py").write_text(
@@ -167,9 +165,9 @@ class TestsFlextInfraGateErrorReporting:
         assert execution.raw_receipt is not None
         tm.that(
             execution.raw_receipt,
-            eq=reports_dir / project_dir.name / (
-                f"{c.Infra.SECURITY}{config.Infra.tooling.raw_check_receipt_suffix}"
-            ),
+            eq=reports_dir
+            / project_dir.name
+            / (f"{c.Infra.SECURITY}{config.Infra.tooling.raw_check_receipt_suffix}"),
         )
         receipt = execution.raw_receipt.read_bytes().decode("utf-8")
         tm.that(receipt, eq=execution.raw_output, has=source_marker)
@@ -215,8 +213,10 @@ class TestsFlextInfraGateErrorReporting:
         )
         u.Tests.initialize_git_repo(project_dir)
         reports_dir = tmp_path / "reports"
-        blocked_receipt = reports_dir / project_dir.name / (
-            f"{c.Infra.SECURITY}{config.Infra.tooling.raw_check_receipt_suffix}"
+        blocked_receipt = (
+            reports_dir
+            / project_dir.name
+            / (f"{c.Infra.SECURITY}{config.Infra.tooling.raw_check_receipt_suffix}")
         )
         blocked_receipt.mkdir(parents=True)
 
