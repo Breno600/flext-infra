@@ -400,6 +400,38 @@ class TestsFlextInfraCodegenMakeUpgrade:
             eq=[*halves["PRODUCE"].split(), *halves["ACTIVATE"].split()],
         )
 
+    def test_ci_setup_refuses_a_drifted_lock(
+        self,
+        generated_make_template: t.Pair[c.Infra.MakeProfile, Path],
+    ) -> None:
+        """Law 14: under CI a lock that no longer satisfies its manifests is RED.
+
+        Locally the drift is reported and the committed lock installs
+        ``--frozen``; under the CI contract the same drift exits before any
+        sync, so CI never installs the old pins green.
+        """
+        _profile, project_root = generated_make_template
+        makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding="utf-8",
+        )
+        setup_recipe = makefile.split("SETUP_ENVIRONMENT_RECIPE = ", 1)[1].split(
+            "\n\n",
+            1,
+        )[0]
+        drift = setup_recipe.split("lock --check", 1)[1].split(
+            "uv_lock_mode=--frozen",
+            1,
+        )[0]
+        ci = config.Infra.codegen.make.ci
+        tm.that(
+            drift,
+            has=[
+                f'if [ "$(strip $({ci.variable}))" = "{ci.value}" ]; then',
+                "ERROR[setup]",
+                "exit 2",
+            ],
+        )
+
     @pytest.mark.parametrize(
         "generated_make_template",
         [c.Infra.MakeProfile.STANDALONE],
