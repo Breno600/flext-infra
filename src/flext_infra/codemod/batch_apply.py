@@ -12,7 +12,6 @@ from typing import override
 
 from flext_core import r
 from flext_infra import m, p, t, u
-from flext_infra._utilities import FlextInfraUtilitiesCodemodProject
 from flext_infra.base import FlextInfraServiceBase
 from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
@@ -392,12 +391,12 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         for project_root in u.Infra.governed_project_roots(root):
             if not u.Infra.namespace_enabled(project_root):
                 continue
-            graph, _modules = FlextInfraUtilitiesCodemodProject.project_import_graph(
+            graph, _modules = u.Infra.project_import_graph(
                 project_root,
             )
             cycles.update(
                 frozenset(members)
-                for members in FlextInfraUtilitiesCodemodProject.project_import_cycles(
+                for members in u.Infra.project_import_cycles(
                     graph,
                 ).values()
             )

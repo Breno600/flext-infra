@@ -15,7 +15,6 @@ from flext_cli import cli
 from flext_core import r
 from flext_infra import c, m, p, t, u
 from flext_infra._config import config
-from flext_infra._utilities import FlextInfraUtilitiesCodegenPathCutover
 from flext_infra.refactor._census_apply_formatting import (
     FlextInfraRefactorCensusApplyFormattingMixin,
 )
@@ -57,7 +56,7 @@ class FlextInfraCodemodSemanticApply:
         """
         original = cls._source_inventory(root, preflight)
 
-        return FlextInfraUtilitiesCodegenPathCutover.plan_transaction_path_cutover(
+        return u.Infra.plan_transaction_path_cutover(
             rope_workspace=rope_workspace,
             sources=original,
         )
