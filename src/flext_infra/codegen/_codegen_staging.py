@@ -79,7 +79,8 @@ class FlextInfraCodegenStaging:
                 tuple[
                     m.Infra.CodegenFilePlan,
                     m.Cli.AtomicFileState,
-                    tuple[Path, bytes, int] | None,
+                    tuple[Path, bytes, int],
+                    bool,
                 ]
             ],
             t.MappingKV[Path, m.Cli.AtomicDirectoryState],
@@ -90,7 +91,7 @@ class FlextInfraCodegenStaging:
         Returns:
             The resulting ``p.Result[t.Pair[t.VariadicTuple[tuple[
                 m.Infra.CodegenFilePlan, m.Cli.AtomicFileState, tuple[Path,
-                bytes, int] | None]], t.MappingKV[Path,
+                bytes, int] | None, bool]], t.MappingKV[Path,
                 m.Cli.AtomicDirectoryState]]]``.
 
         """
@@ -100,7 +101,8 @@ class FlextInfraCodegenStaging:
                     tuple[
                         m.Infra.CodegenFilePlan,
                         m.Cli.AtomicFileState,
-                        tuple[Path, bytes, int] | None,
+                        tuple[Path, bytes, int],
+                        bool,
                     ]
                 ],
                 t.MappingKV[Path, m.Cli.AtomicDirectoryState],
@@ -110,7 +112,8 @@ class FlextInfraCodegenStaging:
             tuple[
                 m.Infra.CodegenFilePlan,
                 m.Cli.AtomicFileState,
-                tuple[Path, bytes, int] | None,
+                tuple[Path, bytes, int],
+                bool,
             ]
         ] = []
         phase_roots: MutableMapping[Path, m.Cli.AtomicDirectoryState] = {}
@@ -149,7 +152,12 @@ class FlextInfraCodegenStaging:
             )
             if replacement_input.failure:
                 return result_type.from_failure(replacement_input)
-            prepared.append((file_plan, before, replacement_input.value))
+            prepared.append((
+                file_plan,
+                before,
+                replacement_input.value[0],
+                replacement_input.value[1],
+            ))
         return result_type.ok((tuple(prepared), phase_roots))
 
     @staticmethod
@@ -229,16 +237,16 @@ class FlextInfraCodegenStaging:
         file_plan: m.Infra.CodegenFilePlan,
         transaction_root: Path,
         phase_roots: MutableMapping[Path, m.Cli.AtomicDirectoryState],
-    ) -> p.Result[t.Pair[tuple[Path, bytes, int] | None, bool]]:
+    ) -> p.Result[t.Pair[tuple[Path, bytes, int], bool]]:
         """Reserve the phase staging root for a content-bearing plan.
 
         Returns:
-            The resulting ``p.Result[t.Pair[tuple[Path, bytes, int] | None,
+            The resulting ``p.Result[t.Pair[tuple[Path, bytes, int],
             bool]]`` where the boolean marks staging presence (False marks a
             deletion-only plan).
 
         """
-        result_type = r[t.Pair[tuple[Path, bytes, int] | None, bool]]
+        result_type = r[t.Pair[tuple[Path, bytes, int], bool]]
         desired_mode = file_plan.desired_mode
         if file_plan.desired_content is None:
             return result_type.ok(((Path(), b"", 0), False))
@@ -272,7 +280,8 @@ class FlextInfraCodegenStaging:
             tuple[
                 m.Infra.CodegenFilePlan,
                 m.Cli.AtomicFileState,
-                tuple[Path, bytes, int] | None,
+                tuple[Path, bytes, int],
+                bool,
             ]
         ],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile]]:
@@ -285,9 +294,10 @@ class FlextInfraCodegenStaging:
         """
         result_type = r[tuple[m.Infra.CodegenStagedFile, ...]]
         publications: list[m.Infra.CodegenStagedFile] = []
-        for index, (file_plan, before, staged_input) in enumerate(prepared):
+        for index, (file_plan, before, replacement_input, staged_present) in enumerate(
+            prepared,
+        ):
             replacement: m.Cli.AtomicFileState | None = None
-            replacement_input, staged_present = staged_input
             if staged_present:
                 phase_root, desired_content, desired_mode = replacement_input
                 staged_path = phase_root / f"{index:06d}.replacement"
