@@ -268,7 +268,8 @@ class TestsFlextInfraCodegenMakeUpgrade:
             encoding="utf-8",
         )
         steps = (
-            makefile.split("_upg_lifecycle: _builtin_setup_submodules\n", 1)[1]
+            makefile
+            .split("_upg_lifecycle: _builtin_setup_submodules\n", 1)[1]
             .split("\n\n", 1)[0]
             .splitlines()
         )

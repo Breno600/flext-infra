@@ -343,7 +343,9 @@ class FlextInfraConfigModelsArtifact:
                 The resulting ``t.VariadicTuple[str]``.
             """
             return tuple(
-                artifact.name for artifact in self.artifacts if artifact.generated_source
+                artifact.name
+                for artifact in self.artifacts
+                if artifact.generated_source
             )
 
         @m.computed_field

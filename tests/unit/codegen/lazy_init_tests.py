@@ -374,7 +374,9 @@ class TestsFlextInfraCodegenLazyInit:
             tm.that(initializer.startswith(c.Infra.AUTOGEN_HEADERS), eq=True)
             tm.that(initializer, lacks="wire_pb2")
             replanned = tm.ok(
-                FlextInfraCodegenLazyInit(repository_root=governed_project).plan_files(),
+                FlextInfraCodegenLazyInit(
+                    repository_root=governed_project
+                ).plan_files(),
             )
             tm.that(
                 tuple(
