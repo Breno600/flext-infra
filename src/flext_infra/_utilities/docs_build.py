@@ -6,8 +6,11 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import logging
+import sys
 from collections.abc import MutableMapping
 from importlib import import_module
+from logging.handlers import BufferingHandler
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
@@ -151,17 +154,27 @@ class FlextInfraUtilitiesDocsBuild:
             / c.Infra.DEFAULT_DOCS_OUTPUT_DIR
             / f"{c.Infra.DIR_SITE}{site_suffix}"
         ).resolve()
+        mkdocs_logger = logging.getLogger(c.Infra.MKDOCS_LOGGER_NAME)
+        warnings = BufferingHandler(capacity=sys.maxsize)
+        warnings.setLevel(logging.WARNING)
+        mkdocs_logger.addHandler(warnings)
         try:
             FlextInfraUtilitiesDocsBuild._run_mkdocs_api(settings, site_dir)
         except Exception as exc:  # ruff: ignore[blind-except] - reported, not swallowed
+            causes = "".join(
+                f"\n  {record.levelname}: {record.getMessage()}"
+                for record in warnings.buffer
+            )
             return m.Infra.DocsPhaseReport(
                 phase="build",
                 scope=scope.name,
                 result=c.Infra.ResultStatus.FAIL,
-                reason=f"build failed ({settings.name}): {exc}",
+                reason=f"build failed ({settings.name}): {exc}{causes}",
                 site_dir="",
                 passed=False,
             )
+        finally:
+            mkdocs_logger.removeHandler(warnings)
         return m.Infra.DocsPhaseReport(
             phase="build",
             scope=scope.name,

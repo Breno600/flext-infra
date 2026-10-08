@@ -17,6 +17,9 @@ class FlextInfraConstantsDocs:
     """Docs infrastructure constants."""
 
     DEFAULT_DOCS_OUTPUT_DIR: ClassVar[str] = ".reports/docs"
+    # MkDocs logs every strict-mode warning to this logger before it aborts
+    # with only a count; the build captures it so a failure carries its cause.
+    MKDOCS_LOGGER_NAME: ClassVar[str] = "mkdocs"
     # Registered docs CLI action names; make.docs.actions must stay inside this
     # surface so the generated Makefile loop can never dispatch a missing verb.
     DOCS_ACTION_IDS: ClassVar[frozenset[str]] = frozenset({
