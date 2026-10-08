@@ -12,10 +12,9 @@ from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
-from flext_infra import c
 from flext_infra.deps.fix_pyrefly_config import FlextInfraConfigFixer
 from flext_infra.refactor.census import FlextInfraRefactorCensus
-from tests import m, t
+from tests import c, m, t
 from tests.utilities_fixture_tooling import TestsFlextInfraUtilitiesToolingFixtureMixin
 
 if TYPE_CHECKING:
@@ -114,22 +113,27 @@ class TestsFlextInfraUtilitiesGatesMixin:
     ) -> m.Infra.GateExecution:
         """Create a typed quality-gate execution fixture.
 
+        The native outcome follows the findings, as a completed tool run
+        reports it: findings when issues exist, clean otherwise. A failed
+        gate lists every finding in its errors.
+
         Returns:
             The resulting ``m.Infra.GateExecution``.
 
         """
+        findings = tuple(issues or ())
         return m.Infra.GateExecution(
             result=m.Infra.GateResult(
                 gate=gate,
                 project=project,
                 passed=passed,
-                errors=(),
+                errors=() if passed else tuple(item.formatted for item in findings),
                 duration=0.0,
             ),
-            issues=tuple(issues or ()),
+            issues=findings,
             raw_output="",
             outcome=(
-                c.Infra.ToolOutcome.CLEAN if passed else c.Infra.ToolOutcome.ERROR
+                c.Infra.ToolOutcome.FINDINGS if findings else c.Infra.ToolOutcome.CLEAN
             ),
         )
 
