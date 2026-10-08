@@ -247,16 +247,18 @@ class TestsFlextInfraCodegenCiMatrix:
     ) -> None:
         """CI selects through testmon and hands its database to the next run.
 
-        The database directory is restored before ``make test`` and saved on
-        every outcome after it; the full verb never renders into CI.
+        The database directory is restored before the approval step (whose
+        test stage is ``make test``) and saved on every outcome after it; the
+        full verb never renders into CI.
         """
         workflow = (rendered_project / ".github" / "workflows" / "ci.yml").read_text(
             encoding="utf-8",
         )
         make = config.Infra.codegen.make
         cache = make.testmon_cache
-        test_run = f"run: {make.ci.variable}={make.ci.value} make test\n"
+        test_run = f"run: {make.ci.variable}={make.ci.value} make pre-commit\n"
         tm.that(workflow, has=test_run)
+        tm.that(c.Infra.VERB_TEST in make.approval_verbs, eq=True)
         tm.that(workflow, lacks="make test-full")
         path = (
             f"path: ~/{cache.home_cache_directory}/{cache.external_storage_directory}"

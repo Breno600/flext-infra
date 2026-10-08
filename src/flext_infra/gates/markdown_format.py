@@ -61,11 +61,15 @@ class FlextInfraMarkdownFormatGate(FlextInfraMarkdownGateBase):
     def _binary_args(self) -> t.StrSequence:
         """Anchor the invocation to the mise-provisioned binary on PATH.
 
+        ``--no-color`` keeps the report parseable in every context: with a
+        ``CI`` variable set, prettier's color detection wraps ``[warn]`` in ANSI
+        codes and the finding parser would see only a failed run.
+
         Returns:
             The resulting ``t.StrSequence``.
 
         """
-        return (self._resolve_binary() or c.Infra.PRETTIER_BINARY,)
+        return (self._resolve_binary() or c.Infra.PRETTIER_BINARY, "--no-color")
 
     @override
     def check(
