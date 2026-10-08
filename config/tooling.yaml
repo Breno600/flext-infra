@@ -3,6 +3,10 @@ Infra:
     # Canonical validated tooling and suppression-policy SSOT.
     raw-check-receipt-suffix: .raw.log
     tools:
+      bandit:
+        # Populated only by an operator ruling that names a real owner scope;
+        # every other module spawns processes through the u.Cli process family.
+        authorized-exceptions: []
       codespell:
         check-filenames: true
         ignore-words-list: crate,nd
