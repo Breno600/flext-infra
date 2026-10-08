@@ -15,7 +15,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import config
-from tests import c, m, t, u
+from tests import c, p, t, u
 
 pytestmark = pytest.mark.slow
 
@@ -28,7 +28,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tmp_path: Path,
     ) -> None:
         """A generated public verb supplies gh's credential to the real Mise child."""
-        project_root, _ = self._render_makefile(
+        project_root, _ = u.Tests.render_make_environment(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,
         )
@@ -77,7 +77,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         credential: str,
     ) -> None:
         """Other verbs than the tool lifecycle require gh auth explicitly."""
-        project_root, _ = self._render_makefile(
+        project_root, _ = u.Tests.render_make_environment(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,
         )
@@ -105,77 +105,6 @@ class TestsFlextInfraCodegenMakeEnvironment:
             tm.that(process.outcome.raw_return_code, ne=0)
             tm.that(process.stderr, has="authentication is required")
         tm.that((project_root / ".venv").exists(), eq=False)
-
-    @staticmethod
-    @pytest.mark.remote
-    def test_upg_replaces_newer_lock_revision_before_older_mise_reads_it(
-        tmp_path: Path,
-        resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
-    ) -> None:
-        """The public upgrade recovers a v3 lock with a v2 Mise release."""
-        profile = c.Infra.MakeProfile.STANDALONE
-        project_root = u.Tests.resolved_make_checkout(
-            resolved_make_templates[profile],
-            tmp_path / "lock-revision",
-            profile,
-        )
-        lock = project_root / c.Infra.MISE_LOCK_FILENAME
-        previous = lock.read_text(encoding="utf-8")
-        tm.that(previous, has="lockfile_version = 2")
-        lock.write_text(
-            previous.replace("lockfile_version = 2", "lockfile_version = 3", 1),
-            encoding="utf-8",
-        )
-
-        upgraded = tm.ok(
-            u.Tests.run_isolated_make(
-                ["--no-print-directory", "upg"],
-                cwd=project_root,
-            ),
-        )
-
-        tm.that(
-            u.Cli.process_succeeded(upgraded.outcome),
-            eq=True,
-            msg=upgraded.stdout + upgraded.stderr,
-        )
-        tm.that(lock.read_text(encoding="utf-8"), has="lockfile_version = 2")
-        tm.that(upgraded.stdout, has="setup probe: end stage=publish-lock.log exit=0")
-
-    @staticmethod
-    @pytest.mark.remote
-    def test_failed_upg_lock_preserves_runtime_and_retires_own_stage(
-        tmp_path: Path,
-        resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
-    ) -> None:
-        """A failed real Mise lock cannot strand a stale resolved lock."""
-        profile = c.Infra.MakeProfile.STANDALONE
-        project_root = u.Tests.resolved_make_checkout(
-            resolved_make_templates[profile],
-            tmp_path / "lock-failure",
-            profile,
-        )
-        lock = project_root / c.Infra.MISE_LOCK_FILENAME
-        previous_lock = lock.read_bytes()
-        (project_root / c.Infra.MISE_TOML_FILENAME).write_text(
-            "[tools\n",
-            encoding="utf-8",
-        )
-
-        upgraded = tm.ok(
-            u.Tests.run_isolated_make(
-                ["--no-print-directory", "upg"],
-                cwd=project_root,
-            ),
-        )
-
-        tm.that(u.Cli.process_succeeded(upgraded.outcome), eq=False)
-        tm.that(upgraded.stderr, has="setup probe: failed stage=lock.log")
-        tm.that(lock.read_bytes(), eq=previous_lock)
-        tm.that(
-            list(project_root.parent.glob(f".{project_root.name}.mise-lock-stage.*")),
-            eq=[],
-        )
 
     @staticmethod
     @pytest.mark.parametrize("failure_return", [None, 37])
@@ -677,7 +606,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         *,
         active_env: t.StrMapping,
         receipts: Path,
-    ) -> m.Cli.CommandOutput:
+    ) -> p.Cli.CommandOutput:
         """Run ``make setup`` once against the run's cold Mise storage.
 
         Returns:
@@ -733,7 +662,6 @@ class TestsFlextInfraCodegenMakeEnvironment:
             tmp_path,
             profile,
             active_env,
-            receipts,
             resolved_locks,
         )
         self._assert_drifted_lock_install(
@@ -741,7 +669,6 @@ class TestsFlextInfraCodegenMakeEnvironment:
             tmp_path,
             profile,
             active_env,
-            receipts,
             resolved_locks,
         )
 

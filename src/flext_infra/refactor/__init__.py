@@ -42,7 +42,14 @@ if TYPE_CHECKING:
         FlextInfraRefactorCensusRemovalMixin,
     )
     from flext_infra.refactor._census_render import FlextInfraRefactorCensusRenderMixin
+    from flext_infra.refactor._import_ast import FlextInfraImportNormalizationAstMixin
+    from flext_infra.refactor._import_demotion import (
+        FlextInfraImportNormalizationDemotionMixin,
+    )
     from flext_infra.refactor._import_enforcement import FlextInfraImportNormalization
+    from flext_infra.refactor._import_family import (
+        FlextInfraImportNormalizationFamilyMixin,
+    )
     from flext_infra.refactor._namespace_enforcer_project import (
         FlextInfraNamespaceEnforcerProjectMixin,
     )
@@ -76,6 +83,9 @@ __all__: tuple[str, ...] = (
     "FlextInfraAccessorMigrationRewriteMixin",
     "FlextInfraAccessorOriginResolver",
     "FlextInfraImportNormalization",
+    "FlextInfraImportNormalizationAstMixin",
+    "FlextInfraImportNormalizationDemotionMixin",
+    "FlextInfraImportNormalizationFamilyMixin",
     "FlextInfraNamespaceEnforcer",
     "FlextInfraNamespaceEnforcerProjectMixin",
     "FlextInfraNamespaceRelocationCascade",
@@ -105,6 +115,9 @@ install_lazy_exports(
         "FlextInfraAccessorMigrationRewriteMixin": "._accessor_rewrite",
         "FlextInfraAccessorOriginResolver": "._accessor_origin",
         "FlextInfraImportNormalization": "._import_enforcement",
+        "FlextInfraImportNormalizationAstMixin": "._import_ast",
+        "FlextInfraImportNormalizationDemotionMixin": "._import_demotion",
+        "FlextInfraImportNormalizationFamilyMixin": "._import_family",
         "FlextInfraNamespaceEnforcer": ".namespace_enforcer",
         "FlextInfraNamespaceEnforcerProjectMixin": "._namespace_enforcer_project",
         "FlextInfraNamespaceRelocationCascade": ".namespace_relocations",

@@ -36,6 +36,12 @@ if TYPE_CHECKING:
         FlextInfraCodegenGenerationTypeCheckingMixin,
     )
     from flext_infra.codegen._codegen_staging import FlextInfraCodegenStaging
+    from flext_infra.codegen._codegen_transaction_generation import (
+        FlextInfraCodegenTransactionGeneration,
+    )
+    from flext_infra.codegen._codegen_transaction_phases import (
+        FlextInfraCodegenTransactionPhases,
+    )
     from flext_infra.codegen._conform.artifact_render import (
         FlextInfraCodegenConformArtifactRender,
     )
@@ -105,6 +111,12 @@ if TYPE_CHECKING:
     from flext_infra.codegen._mise_artifacts_state import FlextInfraMiseArtifactsState
     from flext_infra.codegen._mise_artifacts_verification import (
         FlextInfraMiseArtifactsVerification,
+    )
+    from flext_infra.codegen._mise_artifacts_verification_manifest import (
+        FlextInfraMiseArtifactsVerificationManifest,
+    )
+    from flext_infra.codegen._mise_artifacts_verification_topology import (
+        FlextInfraMiseArtifactsVerificationTopology,
     )
     from flext_infra.codegen._protocol_model_annotations import (
         FlextInfraCodegenProtocolModelAnnotations,
@@ -198,6 +210,8 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenScaffolder",
     "FlextInfraCodegenStaging",
     "FlextInfraCodegenTransaction",
+    "FlextInfraCodegenTransactionGeneration",
+    "FlextInfraCodegenTransactionPhases",
     "FlextInfraCodegenVersionFile",
     "FlextInfraMiseArtifactsCandidates",
     "FlextInfraMiseArtifactsFiles",
@@ -205,6 +219,8 @@ __all__: tuple[str, ...] = (
     "FlextInfraMiseArtifactsProcess",
     "FlextInfraMiseArtifactsState",
     "FlextInfraMiseArtifactsVerification",
+    "FlextInfraMiseArtifactsVerificationManifest",
+    "FlextInfraMiseArtifactsVerificationTopology",
     "FlextInfraMisePublication",
     "FlextInfraMiseRecovery",
     "FlextInfraMiseStaging",
@@ -283,6 +299,8 @@ install_lazy_exports(
         "FlextInfraCodegenScaffolder": ".scaffolder",
         "FlextInfraCodegenStaging": "._codegen_staging",
         "FlextInfraCodegenTransaction": ".codegen_transaction",
+        "FlextInfraCodegenTransactionGeneration": "._codegen_transaction_generation",
+        "FlextInfraCodegenTransactionPhases": "._codegen_transaction_phases",
         "FlextInfraCodegenVersionFile": ".version_file",
         "FlextInfraMiseArtifactsCandidates": "._mise_artifacts_candidates",
         "FlextInfraMiseArtifactsFiles": ".pipeline",
@@ -290,6 +308,12 @@ install_lazy_exports(
         "FlextInfraMiseArtifactsProcess": "._mise_artifacts_process",
         "FlextInfraMiseArtifactsState": "._mise_artifacts_state",
         "FlextInfraMiseArtifactsVerification": "._mise_artifacts_verification",
+        "FlextInfraMiseArtifactsVerificationManifest": (
+            "._mise_artifacts_verification_manifest"
+        ),
+        "FlextInfraMiseArtifactsVerificationTopology": (
+            "._mise_artifacts_verification_topology"
+        ),
         "FlextInfraMisePublication": ".pipeline",
         "FlextInfraMiseRecovery": "._mise_artifacts_recovery",
         "FlextInfraMiseStaging": "._mise_artifacts_staging",

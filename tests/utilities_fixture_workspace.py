@@ -887,6 +887,25 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             return root
 
         @classmethod
+        def self_named_project(cls, root: Path, name: str) -> Path:
+            """Initialize one governed repository with a name-derived Beads identity.
+
+            Returns:
+                The initialized repository root.
+
+            """
+            _ = cls.initialize_governed_project(
+                root,
+                name,
+                beads=TestsFlextInfraUtilitiesWorkspaceFixtureMixin.BeadsIdentity(
+                    workspace=f"{name}-workspace",
+                    database=f"{name}-database",
+                    issue_prefix=f"{name}-prefix",
+                ),
+            )
+            return root
+
+        @classmethod
         def governed_workspace_with_member(
             cls,
             root: Path,

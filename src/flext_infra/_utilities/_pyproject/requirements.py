@@ -473,8 +473,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
         required_dev = tuple(
             requirement
             for requirement in required_dev_dependencies
-            if FlextInfraUtilitiesDependencies.dep_name(requirement)
-            != project_name
+            if FlextInfraUtilitiesDependencies.dep_name(requirement) != project_name
             and not cls._floor_yields_to_declared_source(
                 requirement,
                 sourced_live_names,

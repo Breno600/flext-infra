@@ -346,8 +346,7 @@ class FlextInfraUtilitiesRopeSourceBindingCollector:
         return all(
             isinstance(target, ast.Subscript)
             and (
-                rebind
-                := collector.subscript_rebind_target(
+                rebind := collector.subscript_rebind_target(
                     target,
                 )
             )
