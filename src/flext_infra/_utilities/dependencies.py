@@ -35,7 +35,7 @@ class _DependencyRequirements:
             values: list[str] = []
             for group in raw.values():
                 values.extend(
-                    FlextInfraUtilitiesDependencies.raw_requirement_values(group)
+                    FlextInfraUtilitiesDependencies.raw_requirement_values(group),
                 )
             return values
         if isinstance(raw, (list, tuple)):

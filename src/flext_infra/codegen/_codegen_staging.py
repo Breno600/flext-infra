@@ -324,9 +324,14 @@ class FlextInfraCodegenStaging:
                     None,
                 )
                 if intents and intent is None:
-                    return result_type.fail(f"replacement has no durable intention: {staged_path}")
+                    return result_type.fail(
+                        f"replacement has no durable intention: {staged_path}",
+                    )
                 staged = process.write_new(
-                    staged_path, desired_content, desired_mode, intent=intent,
+                    staged_path,
+                    desired_content,
+                    desired_mode,
+                    intent=intent,
                 )
                 if staged.failure:
                     return result_type.from_failure(staged)
