@@ -228,12 +228,13 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         self,
         tmp_path: Path,
     ) -> None:
-        """One ``make upg`` lifecycle relocks the tools after ``gen``.
+        """One ``make upg`` lifecycle relocks the tools between gen's halves.
 
-        ``gen`` renders the tool manifests of the upgraded generator, so the
-        single ``_upg_lifecycle`` re-resolves mise.lock from that rendered
-        manifest (``mise lock --bump``) before the frozen ``mise install``
-        proves the lock satisfies it, and checks uv.lock before post-upg.
+        The render half of ``gen`` writes the tool manifests of the upgraded
+        generator; the single ``_upg_lifecycle`` re-resolves mise.lock from
+        that rendered manifest (``mise lock --bump``) and installs it before
+        gen's activation half demands the pinned Mise release, then checks
+        uv.lock before post-upg.
         """
         repository_root = self._render_root_makefile(tmp_path)
         handoff = {
@@ -258,9 +259,10 @@ class TestsFlextInfraCodegenRepositoryRootScope:
             for needle in (
                 "--upgrade --refresh",
                 "deps modernize",
-                " gen",
+                "_builtin-gen",
                 "lock --bump",
                 "install --yes",
+                "_activated-gen",
             )
         ]
         tm.that(positions, eq=sorted(positions))
