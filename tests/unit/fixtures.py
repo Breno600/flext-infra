@@ -317,7 +317,7 @@ def _provision_make_template(run_root: Path, profile: c.Infra.MakeProfile) -> No
             env={
                 **u.Tests.hostile_uv_environment(hostile_venv),
                 make.ci.variable: make.ci.value,
-                config.MISE_DATA_DIR_ENV: str(parent / c.Tests.COLD_MISE_STORAGE),
+                c.Tests.MISE_DATA_DIR_ENV: str(parent / c.Tests.COLD_MISE_STORAGE),
             },
         ),
     )

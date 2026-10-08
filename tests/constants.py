@@ -83,6 +83,9 @@ class TestsFlextInfraConstants(FlextTestsConstants, FlextInfraConstants):
         COLD_MISE_STORAGE: ClassVar[str] = "cold-mise-storage"
         """Mise storage that starts empty, so every tool and lookup is fetched."""
 
+        MISE_DATA_DIR_ENV: ClassVar[str] = "MISE_DATA_DIR"
+        """Mise's own storage-root variable the cold-storage scenarios set."""
+
         MAKE_TEMPLATE_CI_CHECKOUT: ClassVar[str] = "ci"
         """Home of the template checkout set up once in cold CI storage."""
 
