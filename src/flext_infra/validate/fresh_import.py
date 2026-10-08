@@ -70,7 +70,8 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
         "                .is_relative_to(Path(directory))\n"
         "            ):\n"
         "                raise ImportError(\n"
-        "                    f'{loaded_name}: origin {origin!r} not in {directory}'\n"
+        "                    f'{loaded_name}: origin {origin!r} '\n"
+        "                    f'is outside {directory}'\n"
         "                )\n"
     )
 
