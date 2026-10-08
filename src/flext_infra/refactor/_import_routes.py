@@ -80,11 +80,14 @@ class FlextInfraImportNormalizationRoutesMixin(
                 continue
             routed: MutableMapping[str, list[str]] = {}
             for alias in node.names:
-                source = cls._root_alias_source(
-                    state,
-                    node.module,
-                    alias,
-                ) or cls._lazy_source(state.scope, node.module, alias.name)
+                root = cls._root_alias_source(state, node.module, alias)
+                if root is not None:
+                    # The root publishes the alias under its bound name, so the
+                    # long class spelling (``TestsFooConstants as c``) collapses
+                    # to the published letter.
+                    routed.setdefault(root, []).append(alias.asname or alias.name)
+                    continue
+                source = cls._lazy_source(state.scope, node.module, alias.name)
                 routed.setdefault(source or node.module, []).append(
                     cls._clause(alias),
                 )
