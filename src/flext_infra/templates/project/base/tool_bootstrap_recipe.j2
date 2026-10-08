@@ -29,8 +29,8 @@ awk -v section="[tools.\"{{ mise_selector }}\".\"platforms.$${mise_platform}\"]"
 	'$$0 == section { inside = 1; next } inside && substr($$0, 1, 1) == "[" { exit } inside && $$1 == key { gsub(/"/, "", $$3); print $$3; exit }' "{{ project_root }}/mise.lock"
 {%- endmacro %}
 
-{% macro mise_install_command(project_root, install_tools) -%}
-mise -C "{{ project_root }}" install --yes{% for tool in install_tools %} "{{ tool }}"{% endfor %}
+{% macro mise_install_command(mise_bin, project_root, install_tools) -%}
+"{{ mise_bin }}" -C "{{ project_root }}" install --yes{% for tool in install_tools %} "{{ tool }}"{% endfor %}
 {%- endmacro %}
 
 {% macro tool_bootstrap_recipe(target, project_root, mise_selector, install_tools, lifecycle, make) -%}
@@ -93,7 +93,7 @@ mise -C "{{ project_root }}" install --yes{% for tool in install_tools %} "{{ to
 	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
 		"$$mise_bootstrap_bin" -C "$(PROJECT_ROOT)" lock --bump; \
 	fi; \
-	"$$mise_bootstrap_bin" -C "$(PROJECT_ROOT)" install --yes{% for tool in install_tools %} "{{ tool }}"{% endfor %}; \
+	{{ mise_install_command("$$mise_bootstrap_bin", project_root, install_tools) }}; \
 	"$$mise_bootstrap_bin" reshim; \
 	printf 'setup: mise %s provisioned from mise.lock\n' "$$mise_receipt"; \
 	printf 'setup: entering lifecycle (submodules, environment, hooks) make=%s\n' "$(SELF_MAKE_EXECUTABLE)"; \
