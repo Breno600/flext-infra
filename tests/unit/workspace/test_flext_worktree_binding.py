@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING
 from flext_tests import tm
 
 from flext_infra import FlextInfraFlextBindingService, c, config
-from tests import t, u
+from tests import m, t, u
 
 if TYPE_CHECKING:
     from flext_core import p as core_p
@@ -277,7 +277,7 @@ class TestsFlextInfraWorktreeBinding:
                     "--python",
                     str(tmp_path / "python"),
                 ),
-                options=u.Cli.ProcessOptions(env={ci.variable: ci.value}),
+                options=m.Cli.ProcessOptions(env={ci.variable: ci.value}),
             ),
         )
         tm.that(result.outcome.raw_return_code != 0, eq=True)

@@ -164,7 +164,7 @@ class FlextInfraPytestRunnerExecution(
             command,
             selection_log,
             cwd=self.root,
-            options=u.Cli.ProcessOptions(
+            options=m.Cli.ProcessOptions(
                 env=self._selection_env(execution_mode=execution_mode),
                 deadline=self._process_deadline(),
             ),
@@ -305,7 +305,7 @@ class FlextInfraPytestRunnerExecution(
             command,
             report_dir / "pytest.log",
             cwd=self.root,
-            options=u.Cli.ProcessOptions(
+            options=m.Cli.ProcessOptions(
                 env=self._selection_env(execution_mode=execution_mode),
                 live=True,
                 deadline=self._process_deadline(),

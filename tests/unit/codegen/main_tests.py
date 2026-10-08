@@ -356,7 +356,7 @@ class TestsFlextInfraCodegenMain:
             # the message, not the terminal the suite happens to run in.
             result = u.Cli.run_raw(
                 [sys.executable, "-m", "flext_infra", "codegen", "unknown-command"],
-                options=u.Cli.ProcessOptions(env={"COLUMNS": "200"}),
+                options=m.Cli.ProcessOptions(env={"COLUMNS": "200"}),
             )
 
             tm.ok(result)

@@ -118,7 +118,7 @@ def profile_parent(runner: FlextInfraPytestRunner, output: Path) -> int:
             (sys.executable, "-m", "flext_infra._pytest_entry", "profile", str(output)),
             log,
             cwd=runner.root,
-            options=u.Cli.ProcessOptions(
+            options=m.Cli.ProcessOptions(
                 env=u.Cli.process_env(
                     overrides={
                         c.Infra.PYTEST_ENV_TARGET: str(runner.target),
