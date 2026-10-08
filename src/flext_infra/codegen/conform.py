@@ -6,13 +6,10 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from flext_infra import c, m, p, r, t, u
 from flext_infra.codegen._conform import FlextInfraCodegenConformExecute
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
@@ -33,7 +30,10 @@ class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
 
         Conform settles ``pyproject.toml`` and every rendered projection first,
         so the lock resolves against them; it upgrades nothing (only ``upg``
-        resolves the newest releases). ``refresh_git_peers`` refreshes the
+        resolves the newest releases). The lock is ``root``'s own: a checkout
+        uv resolves as a member of an enclosing uv workspace fails before any
+        effect, because ``uv lock`` there rewrites the enclosing lock and never
+        this one. ``refresh_git_peers`` refreshes the
         metadata of the dependencies declared through git only — moving
         sources by declaration — because a peer that moved on the
         integration branch carries stale cached requires-dist a retaining
@@ -45,6 +45,9 @@ class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
             The resulting ``p.Result[bool]``.
 
         """
+        owned = cls.require_own_lock(root)
+        if owned.failure:
+            return r[bool].from_failure(owned)
         conformed = cls.execute_request(
             m.Infra.CodegenConformRequest(
                 root=root,
@@ -59,6 +62,37 @@ class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
         for name in cls._git_dependency_names(root) if refresh_git_peers else ():
             command.extend(("--refresh-package", name))
         return u.Cli.run_checked(command, cwd=root)
+
+    @staticmethod
+    def require_own_lock(root: Path) -> p.Result[Path]:
+        """Return ``root`` when uv resolves it as the owner of its own lock.
+
+        uv owns workspace discovery: ``uv workspace dir`` names the root whose
+        ``uv.lock`` a ``uv lock --project root`` writes. A checkout attached
+        inside an enclosing uv workspace resolves to that workspace, so locking
+        it would rewrite the enclosing lock and leave its own stale; that is a
+        failure here, never a silent relock of another repository.
+
+        Returns:
+            ``root`` when it owns its lock, otherwise the failure naming the
+            enclosing uv workspace and the right way.
+
+        """
+        resolved = u.Cli.capture(
+            [c.Infra.UV, "workspace", "dir", "--project", str(root)],
+            cwd=root,
+        )
+        if resolved.failure:
+            return r[Path].from_failure(resolved)
+        owner = Path(resolved.value.strip()).resolve()
+        if owner == root.resolve():
+            return r[Path].ok(root)
+        return r[Path].fail(
+            f"uv resolves {root} as a member of the uv workspace {owner}: "
+            f"`uv lock` there rewrites {owner}/uv.lock, never {root}/uv.lock. "
+            f"Lock {root.name} from a linked worktree of it outside {owner}, "
+            "where uv resolves it alone.",
+        )
 
     @staticmethod
     def _git_dependency_names(root: Path) -> t.StrSequence:
