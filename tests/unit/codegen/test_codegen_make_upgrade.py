@@ -115,9 +115,7 @@ class TestsFlextInfraCodegenMakeUpgrade:
                     current is not None
                     and not line.lstrip().startswith("#")
                     and (
-                        re.search(needle, line) is not None
-                        if regex
-                        else needle in line
+                        re.search(needle, line) is not None if regex else needle in line
                     )
                 ):
                     targets.add(current)

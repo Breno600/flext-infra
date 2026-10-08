@@ -106,9 +106,7 @@ class FlextInfraDocGenerator(
                 analysis,
                 m.Infra.CodegenPhasePublicationPolicy(
                     directories=tuple(
-                        path
-                        for path in directories.value
-                        if path not in roots.values()
+                        path for path in directories.value if path not in roots.values()
                     ),
                     validator=lambda: self._verify_generated(
                         request,
