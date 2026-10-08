@@ -94,10 +94,6 @@ def _phase_fixture(tmp_path: Path) -> tuple[Path, Path, Path, Path, Path]:
         encoding="utf-8",
     )
     u.Tests.provision_checkout(workspace)
-    # The scan resolves ast-grep through the scanned repository's own pinned
-    # Mise lock, as every governed repository carries one; a bare fixture
-    # resolved it only through a host-global install, absent on CI runners.
-    u.Tests.copy_tracked_mise_seeds(project)
     return workspace, project, service_file, legacy_file, foreign_file
 
 
