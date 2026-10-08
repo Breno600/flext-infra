@@ -247,6 +247,53 @@ class TestsFlextInfraCodegenMakeUpgrade:
         )
         tm.that(makefile, lacks="--constraint-policy")
 
+    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
+    def test_upg_relocks_the_manifest_gen_projected_before_installing(
+        self,
+        tmp_path: Path,
+        profile: c.Infra.MakeProfile,
+    ) -> None:
+        """One `make upg` resolves the requirements its own `gen` projects.
+
+        Premise (flext-5kqsx): the upgraded generator projected a declared
+        runtime dependency into pyproject.toml after uv.lock was written, so
+        the lock and the environment lacked it until a second `make upg`.
+        """
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path,
+            profile,
+            bootstrap=True,
+        )
+        makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding="utf-8",
+        )
+        steps = (
+            makefile.split("_upg_lifecycle: _builtin_setup_submodules\n", 1)[1]
+            .split("\n\n", 1)[0]
+            .splitlines()
+        )
+
+        def after(start: int, needle: str) -> int:
+            return next(
+                index
+                for index, step in enumerate(steps)
+                if index > start and needle in step
+            )
+
+        upgraded = after(-1, "lock --project")
+        projected = after(upgraded, "$(SELF_MAKE) gen")
+        relocked = after(projected, "lock --project")
+        checked = after(relocked, "lock --check")
+        installed = after(checked, "_builtin_setup_environment")
+        bumped = after(installed, "lock --bump")
+
+        tm.that(steps[upgraded], has="--upgrade")
+        tm.that(steps[relocked], lacks="--upgrade")
+        tm.that(
+            upgraded < projected < relocked < checked < installed < bumped,
+            eq=True,
+        )
+
     def test_upg_converge_verifies_the_cycle_it_upgraded(self, tmp_path: Path) -> None:
         """An upgrade publishes only after gen converges and every gate passes."""
         project_root, _repository_root = u.Tests.render_make_environment(
