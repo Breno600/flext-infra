@@ -45,6 +45,8 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         cls,
         project: p.Infra.RopeProject,
         sources: t.MappingKV[Path, str],
+        *,
+        captured: m.Infra.CodemodBindingSnapshot | None = None,
     ) -> p.Infra.RopeProject:
         """Capture a complete identity graph with proposed sources authoritative.
 
@@ -66,6 +68,9 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         inventory = {
             Path(resource.real_path).resolve(): resource.read()
             for resource in project.get_python_files()
+        } if captured is None else {
+            state.path.resolve(): state.content.decode("utf-8")
+            for state in captured.states if state.content is not None
         }
         root = Path(project.root.real_path).resolve()
         for path, source in sources.items():

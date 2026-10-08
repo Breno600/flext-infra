@@ -33,6 +33,39 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
         )
 
     @classmethod
+    def type_payload_ranges(
+        cls,
+        source: str,
+        project: p.Infra.RopeProject,
+        module: p.Infra.RopePyModule,
+    ) -> frozenset[t.Pair[int, int]]:
+        """Protect Literal values and Annotated metadata in every alias form.
+
+        Selection uses the same resolved typing identities as quoted rewrites;
+        an ordinary runtime assignment is not implicitly a type declaration.
+        """
+        protected: set[t.Pair[int, int]] = set()
+        runtime = FlextInfraUtilitiesRopeRuntimeModules
+        nodes = tuple(node for node in ast.walk(ast.parse(source)) if isinstance(node, ast.Subscript))
+        if not nodes:
+            return frozenset()
+        typing = project.get_module("typing")
+        for node in nodes:
+            offset, _end = cls._expression_range(source, node)
+            scope = runtime.scope_at(module, offset)
+            selected = tuple(cls._type_nodes(node, project, scope))
+            arguments = node.slice.elts if isinstance(node.slice, ast.Tuple) else [node.slice]
+            binding = runtime.resolve_symbol(scope, node.value)
+            if runtime.same_name(typing.get_attribute("Literal"), binding):
+                protected.update(cls._expression_range(source, argument) for argument in arguments)
+            elif runtime.same_name(typing.get_attribute("Annotated"), binding):
+                protected.update(
+                    cls._expression_range(source, argument)
+                    for argument in arguments if argument not in selected
+                )
+        return frozenset(protected)
+
+    @classmethod
     def _family_quoted_rewrites(
         cls,
         resource: p.Infra.RopeResource,

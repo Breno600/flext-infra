@@ -34,6 +34,40 @@ using the same managed-conflict recovery and typed TOML validation as project
 metadata. That snapshot remains a transaction input through publication, so a
 concurrent identity change rejects the complete text batch.
 
+Python identity migrations are not Sed rules. Native ast-grep captures carry
+authenticated UTF-8 byte ranges; `resolved-symbol` binds that exact expression
+to the module and expression declared in `arg`, and `same-binding` proves the
+replacement expression in the occurrence's lexical scope. Neither predicate
+resolves another same-spelling occurrence or uses a module-level binding for a
+shadowed function parameter. Admission refuses rebound source and replacement
+roots, intermediate attributes and ambiguous imported aliases rather than using
+Rope's inferred last assignment as a reaching-definition proof. Its immutable
+source graph carries descriptor-authenticated Python import-owner receipts into
+the guarded semantic publisher. All read-only dependency states must still match
+at the existing source barrier before any candidate is staged or written.
+Strings, docstrings, `Literal` values and `Annotated` metadata retain their
+contents, including PEP 695 and assignment-style aliases. Actual type operands
+remain distinct from metadata; unrelated runtime assignments are not annotations.
+Foreign NoProject-backed binding owners cannot establish an immutable identity
+graph through the closed project's filesystem. They remain unsupported with no
+fixer even when their read-only file receipts exist; receipts are not permission
+to infer from opaque or mutable third-party state.
+
+The codegen helper migration only fixes references when `u` already binds the
+same canonical utilities class. A missing or different binding leaves a visible
+non-fixable finding for the semantic import owner; the AST phase never invents
+an import or overwrites a homonym. Its existing Rope import cleanup retires
+imports only after their executable references have actually migrated.
+The tool-error literal migration only fixes comparisons with a resolved canonical
+outcome and an equivalent local `c` binding. The retired regex's other contexts
+(including expected data and untyped issue-code comparisons) have no declared
+consumer identity and are not eligible for automatic enum conversion. Executable
+legacy comparisons retain non-fixable findings in either direction and for unequal
+comparisons, without guessing a schema from the other operand's name. Unreferenced
+legacy module imports likewise retain a semantic-adjudication finding. JSON
+payloads are data, not code, even when a text replacement would leave Python
+syntax valid. These bounded AST rules run through `make mod`, not `mod-text`.
+
 The public `make mod` circuit reads `Infra.refactor_csv_campaigns` from the packaged
 configuration. Each campaign keeps one `old,new` CSV as its rename source. Consumer
 repositories, including repositories outside the FLEXT superproject, consume that same
