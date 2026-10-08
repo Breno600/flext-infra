@@ -16,9 +16,6 @@ from flext_infra._utilities._rope_source_bases_aliases import (
 from flext_infra._utilities._rope_source_bases_inventory import (
     FlextInfraUtilitiesRopeSourceBasesInventory,
 )
-from flext_infra._utilities._rope_source_bases_runtime import (
-    FlextInfraUtilitiesRopeSourceBasesRuntime,
-)
 
 
 class FlextInfraUtilitiesRopeSourceBases:
@@ -108,7 +105,8 @@ class FlextInfraUtilitiesRopeSourceBases:
             if isinstance(
                 value,
                 FlextInfraUtilitiesRopeRuntime.runtime_type(
-                    "rope.base.pyobjectsdef", "PyClass",
+                    "rope.base.pyobjectsdef",
+                    "PyClass",
                 ),
             ):
                 module = value.get_module()
@@ -135,10 +133,13 @@ class FlextInfraUtilitiesRopeSourceBases:
                     if not path or path.rsplit(".", 1)[-1] != value.get_name():
                         message = f"Missing external class declaration: {name}:{line}"
                         raise ValueError(message)
-                    return resolve(m.Infra.SourceClassReference(
-                        target=name, attributes=tuple(path.split(".")),
-                        qualified_base=f"{name}.{path}",
-                    ))
+                    return resolve(
+                        m.Infra.SourceClassReference(
+                            target=name,
+                            attributes=tuple(path.split(".")),
+                            qualified_base=f"{name}.{path}",
+                        )
+                    )
                 identity = next(
                     (
                         identity
@@ -186,7 +187,8 @@ class FlextInfraUtilitiesRopeSourceBases:
                     message = "Import has no declared module location"
                     raise ValueError(message)
                 return FlextInfraUtilitiesRopeCore.resolve_pymodule(
-                    project, imported.resource,
+                    project,
+                    imported.resource,
                 ).get_name()
             if not imported.level:
                 return imported.module_name
@@ -236,8 +238,7 @@ class FlextInfraUtilitiesRopeSourceBases:
         ) -> str:
             if depth > c.Infra.ROPE_WALK_DEPTH_BUDGET:
                 message = (
-                    f"Unresolved external base: {module.get_name()} "
-                    f"at depth {depth}"
+                    f"Unresolved external base: {module.get_name()} at depth {depth}"
                 )
                 raise ValueError(message)
             if not attributes:
@@ -258,13 +259,15 @@ class FlextInfraUtilitiesRopeSourceBases:
                             attributes=(binding.imported_name, *remaining),
                             qualified_base=target,
                         ),
-                        visiting | {target}, depth + 1,
+                        visiting | {target},
+                        depth + 1,
                     )
                 imported = provider_module(binding.imported_module)
                 return provider_reference(
                     imported,
                     (binding.imported_name, *remaining),
-                    visiting | {target}, depth + 1,
+                    visiting | {target},
+                    depth + 1,
                 )
             if isinstance(binding, p.Infra.RopeImportedModule):
                 imported_name = provider_module_name(binding)
@@ -275,11 +278,15 @@ class FlextInfraUtilitiesRopeSourceBases:
                             attributes=tuple(remaining),
                             qualified_base=target,
                         ),
-                        visiting | {target}, depth + 1,
+                        visiting | {target},
+                        depth + 1,
                     )
                 imported = provider_module(binding)
                 return provider_reference(
-                    imported, tuple(remaining), visiting | {target}, depth + 1,
+                    imported,
+                    tuple(remaining),
+                    visiting | {target},
+                    depth + 1,
                 )
             identity = external_identity(binding.get_object())
             for attribute in remaining:
@@ -376,11 +383,13 @@ class FlextInfraUtilitiesRopeSourceBases:
                 message = f"External class has no declared source or native identity: {identity}"
                 raise ValueError(message)
             return tuple(
-                resolve(m.Infra.SourceClassReference(
-                    target=base.__module__,
-                    attributes=tuple(base.__qualname__.split(".")),
-                    qualified_base=f"{base.__module__}.{base.__qualname__}",
-                ))
+                resolve(
+                    m.Infra.SourceClassReference(
+                        target=base.__module__,
+                        attributes=tuple(base.__qualname__.split(".")),
+                        qualified_base=f"{base.__module__}.{base.__qualname__}",
+                    )
+                )
                 for base in value.builtin.__bases__
             )
 
@@ -456,7 +465,8 @@ class FlextInfraUtilitiesRopeSourceBases:
                 1,
             )
             return m.Infra.SourceClassReference(
-                target=".".join(parts[:index]), attributes=tuple(parts[index:]),
+                target=".".join(parts[:index]),
+                attributes=tuple(parts[index:]),
                 qualified_base=root,
             )
 

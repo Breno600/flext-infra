@@ -9,7 +9,6 @@ the conflicting counterpart.
 from __future__ import annotations
 
 import importlib
-import inspect
 import traceback
 
 STEMS: list[str] = [
@@ -118,7 +117,7 @@ def main() -> None:
             base_cls = resolved[STEMS[0]]
             for acc in accumulated:
                 try:
-                    type(f"P", (resolved[acc], resolved[name]), {})
+                    type("P", (resolved[acc], resolved[name]), {})
                     print(f"  {acc} + {name}: OK")
                 except TypeError:
                     print(f"  {acc} + {name}: CONFLICT  <-- conflicting pair")
