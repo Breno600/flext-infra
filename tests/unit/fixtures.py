@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -66,6 +67,24 @@ def deptry_report_payload() -> t.JsonPayload:
     parsed = tm.not_none(parsed)
     tm.ok(parsed)
     return parsed.value
+
+
+@pytest.fixture
+def local_context() -> Iterator[None]:
+    """Scope a scenario to the local (non-CI) context it specifies.
+
+    The runner's CI context (CI=Y under the approval path) selects CI-only
+    contracts such as the CI member identity; a local scenario clears the
+    configured CI variable for its duration.
+
+    Yields:
+        Control inside the scoped environment.
+
+    """
+    with u.Tests.env_vars_context(
+        vars_to_clear=(config.Infra.codegen.make.ci.variable,),
+    ):
+        yield
 
 
 @pytest.fixture
