@@ -28,19 +28,39 @@ class FlextInfraUtilitiesPyrefly:
     ) -> t.StrSequence:
         """Preserve explicit files; use configured includes for discovered roots.
 
+        Pyrefly ignores the configured ``project-excludes`` whenever files are
+        passed on the command line and reads them only from
+        ``--project-excludes``. Explicit targets therefore carry the project's
+        configured excludes, so a generated or vendored tree inside a target
+        directory stays excluded exactly as in project-checking mode.
+
         Returns:
             The resulting ``t.StrSequence``.
 
         """
-        if any((project_dir / target).is_file() for target in discovered_dirs):
-            return discovered_dirs
         document = u.Cli.toml_read(project_dir / c.PYPROJECT_FILENAME)
-        if document is None:
-            return discovered_dirs
-        tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
+        tool = (
+            None if document is None else u.Cli.toml_table_child(document, c.Infra.TOOL)
+        )
         pyrefly = (
             None if tool is None else u.Cli.toml_table_child(tool, c.Infra.PYREFLY)
         )
+        if any((project_dir / target).is_file() for target in discovered_dirs):
+            excludes = (
+                ()
+                if pyrefly is None
+                else u.Cli.toml_as_string_list(
+                    u.Cli.toml_item_child(pyrefly, c.Infra.PROJECT_EXCLUDES),
+                )
+            )
+            return (
+                *discovered_dirs,
+                *(
+                    argument
+                    for glob in excludes
+                    for argument in (c.Infra.PYREFLY_PROJECT_EXCLUDES_FLAG, glob)
+                ),
+            )
         if pyrefly is None:
             return discovered_dirs
         includes = u.Cli.toml_item_child(pyrefly, c.Infra.PROJECT_INCLUDES)
