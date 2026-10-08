@@ -8,8 +8,12 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from flext_infra import c, config, m, p, r, t, u
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 class FlextInfraGitLanes:
@@ -777,10 +781,10 @@ class FlextInfraGitLanes:
         evidence: p.Result[m.Infra.GitLaneEvidence],
         entry: m.Infra.GitWorktreeEntry,
         findings: list[str],
-    ) -> tuple[m.Infra.GitLaneViolation, ...]:
+    ) -> Iterator[m.Infra.GitLaneViolation]:
         """Classify one registered worktree as orphaned or unowned temporary.
 
-        Returns:
+        Yields:
             The registration violation for the entry, if any.
 
         """
@@ -789,20 +793,21 @@ class FlextInfraGitLanes:
             entry.path.is_relative_to(root)
             for root in config.Infra.codegen.branch_policy.lane_temporary_roots
         )
-        owned = cls._worktree_owned(evidence, entry)
         if not entry.path.is_dir():
             findings.append(
                 f"orphan worktree registration: {entry.path} head={entry.head}",
             )
-            return (cls._violation(kind.MISSING_WORKTREE, str(entry.path)),)
-        if (temporary or entry.detached) and not owned:
+            yield cls._violation(kind.MISSING_WORKTREE, str(entry.path))
+        elif (temporary or entry.detached) and not cls._worktree_owned(
+            evidence,
+            entry,
+        ):
             findings.append(
                 "inconclusive unowned temporary/detached worktree: "
                 f"{entry.path} head={entry.head}",
             )
             violation_kind = kind.TEMP_WORKTREE if temporary else kind.DETACHED_WORKTREE
-            return (cls._violation(violation_kind, str(entry.path)),)
-        return ()
+            yield cls._violation(violation_kind, str(entry.path))
 
     @classmethod
     def _merged_worktree_violations(
@@ -811,10 +816,10 @@ class FlextInfraGitLanes:
         entry: m.Infra.GitWorktreeEntry,
         integration: tuple[str, str],
         findings: list[str],
-    ) -> tuple[m.Infra.GitLaneViolation, ...]:
+    ) -> Iterator[m.Infra.GitLaneViolation]:
         """Classify one existing worktree as fully integrated and clean.
 
-        Returns:
+        Yields:
             The merged-worktree violation for the entry, if any.
 
         """
@@ -823,17 +828,15 @@ class FlextInfraGitLanes:
             findings.append(
                 f"merged worktree read error: {entry.path}: {merged.error}",
             )
-            return ()
-        if not merged.value:
-            return ()
-        violation = cls._violation(
-            c.Infra.LaneViolationKind.MERGED_WORKTREE,
-            str(entry.path),
-        )
-        findings.append(
-            f"merged clean worktree still registered: {entry.path} head={entry.head}",
-        )
-        return (violation,)
+        elif merged.value:
+            findings.append(
+                "merged clean worktree still registered: "
+                f"{entry.path} head={entry.head}",
+            )
+            yield cls._violation(
+                c.Infra.LaneViolationKind.MERGED_WORKTREE,
+                str(entry.path),
+            )
 
     @classmethod
     def _worktree_owned(
