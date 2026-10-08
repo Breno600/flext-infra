@@ -154,7 +154,7 @@ class FlextInfraWorktreeProvisioning:
         setup = u.Cli.run_live(
             (c.Infra.MAKE, "setup"),
             cwd=lane,
-            options=u.Cli.ProcessOptions(
+            options=m.Cli.ProcessOptions(
                 remove_env_keys=c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
             ),
         )

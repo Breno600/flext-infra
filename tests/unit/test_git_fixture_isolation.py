@@ -10,7 +10,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from tests import c, u
+from tests import c, m, u
 
 
 class TestsFlextInfraGitFixtureIsolation:
@@ -40,7 +40,7 @@ class TestsFlextInfraGitFixtureIsolation:
             u.Cli.capture(
                 ["git", "rev-parse", "--show-toplevel"],
                 cwd=target,
-                options=u.Cli.ProcessOptions(
+                options=m.Cli.ProcessOptions(
                     remove_env_keys=c.Tests.GIT_LOCAL_ENV_KEYS,
                 ),
             ),

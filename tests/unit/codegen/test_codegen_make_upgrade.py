@@ -296,7 +296,7 @@ class TestsFlextInfraCodegenMakeUpgrade:
         tm.that(bumped < activated, eq=True)
 
     def test_upg_converge_verifies_the_cycle_it_upgraded(self, tmp_path: Path) -> None:
-        """An upgrade publishes only after gen converges and every gate passes."""
+        """An upgrade publishes after gen converges; gates stay with `make check`."""
         project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
             c.Infra.MakeProfile.WORKSPACE,
@@ -308,7 +308,7 @@ class TestsFlextInfraCodegenMakeUpgrade:
         tm.that(
             "_upg_lifecycle"
             in self._recipe_targets_containing(makefile, "$(SELF_MAKE) check"),
-            eq=True,
+            eq=False,
         )
 
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
