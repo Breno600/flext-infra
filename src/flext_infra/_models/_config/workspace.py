@@ -445,10 +445,10 @@ class FlextInfraConfigModelsWorkspace:
                     "Distribution names of the sibling members a superproject's "
                     "[tool.uv.workspace] declares when this checkout is one of "
                     "its members; empty for workspace roots and true standalones. "
-                    "Membership informs fleet tooling only: a published member "
-                    "manifest renders internal references as inline git+ URLs, "
-                    "never through [tool.uv.sources] workspace = true — that "
-                    "provenance resolves solely inside the root's manifest."
+                    "Attached manifests redirect sibling dependencies through "
+                    "[tool.uv.sources] workspace = true while retaining inline "
+                    "Git provenance for publication; standalone renders remove "
+                    "the containing workspace source overlay."
                 ),
             ),
         ] = ()

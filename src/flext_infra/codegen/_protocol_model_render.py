@@ -10,8 +10,7 @@ from collections.abc import MutableMapping
 from inspect import getattr_static
 from types import FunctionType
 
-from flext_infra import c, m, t
-from flext_infra._config import config
+from flext_infra import c, config, m, t
 from flext_infra.codegen._protocol_model_annotations import (
     FlextInfraCodegenProtocolModelAnnotations,
 )

@@ -81,6 +81,10 @@ jobs:
       # Why: the same pair keeps the locked Mise tool storage, so
       # a cold runner never re-downloads the pinned tarballs, where a network
       # blip failed setup.
+      # Why: the cache keeps Mise's installs and downloads but never its shims.
+      # A restored shim points at the Mise binary of an earlier run, which Mise
+      # treats as unmanaged ("not replacing unmanaged file in shims directory",
+      # one warning per tool); Mise regenerates the shims from mise.lock.
       - name: Restore tool caches
         id: tool-cache
         uses: actions/cache/restore@v6
@@ -95,6 +99,7 @@ jobs:
             .hypothesis
             ~/.cache/uv
             ~/.local/share/mise
+            !~/.local/share/mise/shims
           key: ${{ runner.os }}-3.13-tools-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-3.13-tools-
@@ -204,6 +209,7 @@ jobs:
             .hypothesis
             ~/.cache/uv
             ~/.local/share/mise
+            !~/.local/share/mise/shims
           key: ${{ runner.os }}-3.13-tools-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml') }}
 
   # End SECTION: ci job

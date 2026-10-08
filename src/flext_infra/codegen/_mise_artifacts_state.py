@@ -12,8 +12,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-from flext_core import r
-from flext_infra import c, m, t, u
+from flext_infra import c, m, r, t, u
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
@@ -285,7 +284,7 @@ class FlextInfraMiseArtifactsState:
         phase: str,
         disposition: Literal["temporary", "generated"],
         chain: m.Cli.AtomicDirectoryChainPlan,
-    ) -> p.Result[None]:
+    ) -> p.Result[bool]:
         """Plan every directory of one chain into the shared planned map.
 
         Returns:
@@ -313,11 +312,15 @@ class FlextInfraMiseArtifactsState:
                 return result_type.from_failure(before)
             before_value, before_present = before.value
             entry = m.Infra.CodegenJournalDirectory(
-                phase=phase,
+                phase=c.Infra.CodegenStagedFilePhase(phase),
                 project=owner.selector,
                 path=relative.value,
                 disposition=disposition,
-                before=before_value if before_present else None,
+                before=(
+                    before_value
+                    if before_present and before_value is not None
+                    else None
+                ),
             )
             previous = planned.get(directory)
             if previous is not None and (
@@ -336,28 +339,29 @@ class FlextInfraMiseArtifactsState:
     @staticmethod
     def _anchor_witness(
         directory: Path,
-        chain: m.Cli.PlannedDirectoryChain,
-    ) -> p.Result[t.Pair[m.Cli.AtomicDirectoryState, bool]]:
+        chain: m.Cli.AtomicDirectoryChainPlan,
+    ) -> p.Result[t.Pair[m.Cli.AtomicDirectoryState | None, bool]]:
         """Observe the anchor-bound parent state when a directory sits on it.
 
         Returns:
-            The resulting ``p.Result[t.Pair[m.Cli.AtomicDirectoryState,
-            bool]]`` where the boolean marks witness presence.
+            The resulting ``p.Result[t.Pair[m.Cli.AtomicDirectoryState |
+            None, bool]]`` where the boolean marks witness presence.
 
         """
+        result_type = r[t.Pair[m.Cli.AtomicDirectoryState | None, bool]]
         if directory.parent != chain.anchor_path:
-            return r[t.Pair[m.Cli.AtomicDirectoryState, bool]].ok((None, False))
+            return result_type.ok((None, False))
         observed = u.Cli.atomic_read_empty_directory_state(directory, required=False)
         if observed.failure:
-            return r[t.Pair[m.Cli.AtomicDirectoryState, bool]].from_failure(observed)
+            return result_type.from_failure(observed)
         if observed.value.exists or (
             observed.value.parent_device,
             observed.value.parent_inode,
         ) != (chain.anchor_device, chain.anchor_inode):
-            return r[t.Pair[m.Cli.AtomicDirectoryState, bool]].fail(
+            return result_type.fail(
                 f"{directory} anchor changed during planning",
             )
-        return r[t.Pair[m.Cli.AtomicDirectoryState, bool]].ok((observed.value, True))
+        return result_type.ok((observed.value, True))
 
     @classmethod
     def create_journaled_directory(
@@ -492,7 +496,6 @@ class FlextInfraMiseArtifactsState:
             "validate created directory identity",
             validated.error,
         )
-        return result_type.ok(validated.value)
 
     @classmethod
     def compensate_created_directory(
@@ -651,9 +654,9 @@ class FlextInfraMiseArtifactsState:
                     return result_type.from_failure(observed)
                 removed = u.Cli.atomic_cleanup_physical_tree_guarded(observed.value)
             if removed.failure:
-                return removed
+                return result_type.from_failure(removed)
             removed_temporary_roots.add(entry.path)
-        return result_type.ok(removed_temporary_roots)
+        return result_type.ok(frozenset(removed_temporary_roots))
 
     @classmethod
     def _removed_removable_directories(
@@ -662,7 +665,7 @@ class FlextInfraMiseArtifactsState:
         journal: m.Infra.CodegenTransactionJournal,
         *,
         include_generated: bool,
-        removed_temporary_roots: t.AbstractSet[str],
+        removed_temporary_roots: frozenset[str],
     ) -> p.Result[bool]:
         """Delete remaining empty journaled directories, deepest first.
 
@@ -725,8 +728,8 @@ class FlextInfraMiseArtifactsState:
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         target: Path,
         *,
-        journaled: t.AbstractSet[str],
-        preserved: t.AbstractSet[str],
+        journaled: set[str],
+        preserved: set[str],
     ) -> p.Result[bool]:
         """Prove every resident of an undeletable directory is journal-owned.
 
@@ -830,7 +833,7 @@ class FlextInfraMiseArtifactsState:
         cls,
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         journal: m.Infra.CodegenTransactionJournal,
-        project: m.Infra.MiseToolchainProjectLayout,
+        project: (m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant),
     ) -> p.Result[bool]:
         """Authenticate one project's staging root against its journal receipt.
 
@@ -878,7 +881,10 @@ class FlextInfraMiseArtifactsState:
 
         """
         if recorded.manifest is not None:
-            return verify.authorized_cleanup_manifest(layout, journal, recorded)
+            authorized = verify.authorized_cleanup_manifest(layout, journal, recorded)
+            if authorized.failure:
+                return r[bool].from_failure(authorized)
+            return r[bool].ok(value=True)
         empty = u.Cli.atomic_read_empty_directory_state(transaction_root, required=True)
         if empty.failure:
             return r[bool].from_failure(empty)
@@ -886,16 +892,6 @@ class FlextInfraMiseArtifactsState:
             return r[bool].fail(
                 (f"unmanifested transaction root identity changed: {recorded.path}"),
             )
-        return r[bool].ok(value=True)
-        # Foreign residents inside recorded temporary trees never block the
-        # restore itself. The journal receipt authenticates the destinations;
-        # staging residue revokes only the cleanup, which still fails closed
-        # after the rollback (guarded deletion refuses unmanifested or
-        # non-empty trees), so a mixed recovery retains the journal and the
-        # foreign bytes instead of stranding published destinations behind
-        # them. Pre-restore authentication of every recorded tree and resident
-        # aborted the rollback before it started, which replaced the tested
-        # mixed outcome with a lost publication.
         return r[bool].ok(value=True)
 
     @classmethod

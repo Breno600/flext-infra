@@ -80,11 +80,14 @@ When the projection carries no line, a hand-written `project.flext_source` in th
 manifest declares it, and a commit in a hand-written source fails. Fix the setup or
 `upg` owner and regenerate through `make gen`; manual installs do not replace the cycle.
 
-A workspace root declares each attached member, of any family, as an inline Git source
-on the workspace's own integration line, the same line the governed `.gitmodules` requires
-of that member. Only `flext-*` dependencies that are not members follow the FLEXT line.
-The root `uv.lock` therefore resolves every member without a `[tool.uv.workspace]`
-overlay.
+A workspace root declares local-member requirements as bare distribution names and
+resolves them through `[tool.uv.sources]` entries with `workspace = true`. The root
+alone owns `[tool.uv.workspace]`; member manifests never declare a nested workspace.
+Publishable members retain their declared inline Git provenance and, while attached,
+redirect local sibling requirements through their own workspace-source overlay.
+Standalone conformance removes that overlay without removing the declared Git
+requirements. Dependencies outside the declared workspace retain their governed
+integration source rather than becoming local members.
 
 ## Runtime environment
 

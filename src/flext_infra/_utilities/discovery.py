@@ -11,8 +11,7 @@ from importlib import util as importlib_util
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_core import r
-from flext_infra import c, t
+from flext_infra import c, r, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesNamespaceConfig,
     FlextInfraUtilitiesProjectDiscovery,

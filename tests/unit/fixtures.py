@@ -870,7 +870,7 @@ def semantic_rope_workspace(tmp_path: Path) -> t.Pair[t.Infra.RopeProject, Path]
 @pytest.fixture
 def models_resource(
     semantic_rope_workspace: t.Pair[t.Infra.RopeProject, Path],
-) -> t.Infra.RopeResource:
+) -> t.Infra.RopeFile:
     """Return the Rope resource for the semantic models fixture module.
 
     Returns:
@@ -882,14 +882,13 @@ def models_resource(
         rope_project,
         repository_root / "src" / "rope_demo" / "models.py",
     )
-    validated: t.Infra.RopeResource = tm.not_none(resource)
-    return validated
+    return tm.not_none(resource)
 
 
 @pytest.fixture
 def services_resource(
     semantic_rope_workspace: t.Pair[t.Infra.RopeProject, Path],
-) -> t.Infra.RopeResource:
+) -> t.Infra.RopeFile:
     """Return the Rope resource for the semantic services fixture module.
 
     Returns:
@@ -901,5 +900,4 @@ def services_resource(
         rope_project,
         repository_root / "src" / "rope_demo" / "services.py",
     )
-    validated: t.Infra.RopeResource = tm.not_none(resource)
-    return validated
+    return tm.not_none(resource)

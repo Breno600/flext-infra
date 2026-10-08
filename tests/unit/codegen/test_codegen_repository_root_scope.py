@@ -58,7 +58,15 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         self,
         tmp_path: Path,
     ) -> None:
-        """Normal public recipes retain testmon without appending slow or full."""
+        """`make test` stays one incremental phase; `test-file` runs its file whole.
+
+        `make test` runs in CI and pre-commit, so slow-marked items stay out of
+        it (operator 2026-10-01: nothing slow in CI or pre-commit). `test-file`
+        is the sole single-file path and runs only locally, so the declared
+        file passes through its budgeted phase and then its slow phase; a file
+        whose items are all slow-marked never ends the verb with zero executed
+        tests. Neither recipe appends the full suite.
+        """
         root = self._render_root_makefile(tmp_path)
         rendered = (root / c.Infra.MAKEFILE_FILENAME).read_text(
             encoding=c.Infra.ENCODING_DEFAULT,
@@ -137,7 +145,7 @@ class TestsFlextInfraCodegenRepositoryRootScope:
                 u.Cli.run_raw(
                     [c.Infra.MAKE, "--dry-run", f"_builtin-{verb}"],
                     cwd=repository_root,
-                    remove_env_keys=("MAKEFLAGS",),
+                    options=u.Cli.ProcessOptions(remove_env_keys=("MAKEFLAGS",)),
                 ),
             )
             tm.that(u.Cli.process_succeeded(execution.outcome), eq=True)
@@ -152,7 +160,7 @@ class TestsFlextInfraCodegenRepositoryRootScope:
             u.Cli.run_raw(
                 [c.Infra.MAKE, "--dry-run", "_builtin-propagate"],
                 cwd=repository_root,
-                remove_env_keys=("MAKEFLAGS",),
+                options=u.Cli.ProcessOptions(remove_env_keys=("MAKEFLAGS",)),
             ),
         )
         tm.that(u.Cli.process_succeeded(execution.outcome), eq=True)

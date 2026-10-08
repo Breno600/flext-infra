@@ -461,6 +461,17 @@ Infra:
         external_storage_directory: flext/infra/testmon
         target_directory: tests
         reports_directory: .reports/tests
+      # Storage law (operator 2026-09-12): every pytest verb declares its
+      # TMPDIR/basetemp under $HOME/tmp/.flext-runtime<absolute checkout>/scratch
+      # — never /tmp and never inside a versioned tree. A workspace member's
+      # parent directory is the superproject checkout, so a scratch "beside the
+      # checkout" landed inside another repository and Git refused every test
+      # fixture repository created there.
+      pytest_scratch:
+        user_home_environment_variable: HOME
+        home_relative_directory: tmp
+        state_directory_name: .flext-runtime
+        namespace: scratch
       # Actions-cache policy for the shared testmon database: two-phase
       # generations, a per-repository byte budget with an ascending quota
       # ladder, and the refs allowed to publish (never pull requests).

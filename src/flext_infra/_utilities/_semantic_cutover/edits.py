@@ -10,8 +10,7 @@ import ast
 from functools import partial
 from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra import c, m, t
+from flext_infra import c, m, r, t
 
 if TYPE_CHECKING:
     from collections.abc import Callable

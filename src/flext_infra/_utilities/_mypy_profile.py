@@ -34,11 +34,14 @@ class FlextInfraMypyProfiler:
             msg = "Mypy profiling requires an output destination"
             raise ValueError(msg)
         profile = cProfile.Profile()
-        stdout, stderr, status = profile.runcall(
-            api.run,
-            list(FlextInfraUtilitiesResourceLimits.mypy_arguments(invocation)),
-        )
-        profile.dump_stats(str(destination.resolve()))
+        try:
+            stdout, stderr, status = profile.runcall(
+                api.run,
+                list(FlextInfraUtilitiesResourceLimits.mypy_arguments(invocation)),
+            )
+        finally:
+            # Preserve partial evidence when the bounded checker is interrupted.
+            profile.dump_stats(str(destination.resolve()))
         sys.stdout.write(stdout)
         sys.stderr.write(stderr)
         return status

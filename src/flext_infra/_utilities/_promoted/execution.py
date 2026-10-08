@@ -82,8 +82,10 @@ class FlextInfraUtilitiesPromotedExecution(FlextInfraUtilitiesPromotedInvocation
         result = u.Cli.run_raw(
             (*interpreter, str(command.path)),
             cwd=project_root,
-            env=env,
-            remove_env_keys=(c.Infra.ORCHESTRATOR_ENV_PYTHONPATH,),
+            options=u.Cli.ProcessOptions(
+                env=env,
+                remove_env_keys=(c.Infra.ORCHESTRATOR_ENV_PYTHONPATH,),
+            ),
             capture=False,
         )
         if result.failure:

@@ -9,8 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, override
 
-from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, m, p, r, t, u
 from flext_infra.base import s
 from flext_infra.codegen._consolidator_steps import (
     FlextInfraCodegenConsolidatorStepsMixin,
@@ -69,20 +68,20 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
         rope: p.Infra.RopeWorkspaceDsl,
         selected_projects: t.SequenceOf[p.Infra.ProjectInfo],
     ) -> p.Result[
-        t.Tuple[int, int, int, t.SequenceOf[m.Infra.ConsolidatorFileResult], list[str]]
+        tuple[int, int, int, t.SequenceOf[m.Infra.ConsolidatorFileResult], list[str]]
     ]:
         """Scan every selected project, applying when not in dry-run.
 
         Returns:
-            The resulting ``p.Result[t.Tuple[int, int, int,
+            The resulting ``p.Result[tuple[int, int, int,
                 t.SequenceOf[m.Infra.ConsolidatorFileResult], list[str]]]``
             with the found/applied/failed counters, the per-file results, and
             the rendered scan lines.
 
         """
         found = applied = failed = 0
-        file_results: t.MutableSequenceOf[m.Infra.ConsolidatorFileResult] = []
-        output_lines: t.MutableSequenceOf[str] = []
+        file_results: list[m.Infra.ConsolidatorFileResult] = []
+        output_lines: list[str] = []
         for project in selected_projects:
             project_layout = u.Infra.layout(project.path)
             if project_layout is None or not project_layout.init_path.is_file():
@@ -91,7 +90,7 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
             value_map_result = self._build_value_map_from_constants_file(constants_file)
             if value_map_result.failure:
                 return r[
-                    t.Tuple[
+                    tuple[
                         int,
                         int,
                         int,
@@ -105,7 +104,7 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
             project_files = self._project_python_files(rope, project.path)
             if project_files.failure:
                 return r[
-                    t.Tuple[
+                    tuple[
                         int,
                         int,
                         int,
@@ -148,14 +147,14 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
                 else:
                     failed += 1
         return r[
-            t.Tuple[
+            tuple[
                 int,
                 int,
                 int,
                 t.SequenceOf[m.Infra.ConsolidatorFileResult],
                 list[str],
             ]
-        ].ok((found, applied, failed, file_results, output_lines))
+        ].ok((found, applied, failed, tuple(file_results), output_lines))
 
     @staticmethod
     def _project_python_files(

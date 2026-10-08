@@ -54,7 +54,7 @@ class TestsFlextInfraCodegenMakeVerbContract:
         before = sorted(path.relative_to(root) for path in root.rglob("*"))
         outcome = u.Cli.run_raw(
             ["make", "-C", str(root), verb, selector],
-            remove_env_keys=("MAKEFLAGS",),
+            options=u.Cli.ProcessOptions(remove_env_keys=("MAKEFLAGS",)),
         )
         output = tm.ok(outcome)
         tm.that(
@@ -74,7 +74,7 @@ class TestsFlextInfraCodegenMakeVerbContract:
         TestsFlextInfraCodegenMakeVerbContract._scaffold(root)
         outcome = u.Cli.run_raw(
             ["make", "-C", str(root), "check", "OPTIONS=N"],
-            remove_env_keys=("MAKEFLAGS",),
+            options=u.Cli.ProcessOptions(remove_env_keys=("MAKEFLAGS",)),
         )
         output = tm.ok(outcome)
         tm.that(u.Cli.process_succeeded(output.outcome), eq=False)

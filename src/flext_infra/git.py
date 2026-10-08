@@ -9,8 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, override
 
-from flext_core import r
-from flext_infra import m, u
+from flext_infra import m, r, u
 from flext_infra.base import s
 
 if TYPE_CHECKING:
@@ -63,6 +62,29 @@ class FlextInfraGitService(s[m.Infra.GitStatusReport]):
                 f"dirty repository: {report.value.repo_root}\n{report.value.porcelain}",
             )
         return report
+
+    @classmethod
+    def verify_lanes(
+        cls,
+        request: m.Infra.GitStatusRequest,
+    ) -> p.Result[m.Infra.GitLaneHygieneReport]:
+        """Fail on stashes, merged-but-alive branches and orphan or merged worktrees.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitLaneHygieneReport]``.
+
+        """
+        report = u.Infra.git_lane_hygiene(request)
+        if report.failure or not report.value.violations:
+            return report
+        listing = "\n".join(
+            f"{violation.kind}: {violation.ref}: {violation.detail}"
+            for violation in report.value.violations
+        )
+        return r[m.Infra.GitLaneHygieneReport].fail(
+            f"lane accumulation in {report.value.repo_root}"
+            f" (integration base {report.value.integration_base}):\n{listing}",
+        )
 
 
 __all__: list[str] = ["FlextInfraGitService"]

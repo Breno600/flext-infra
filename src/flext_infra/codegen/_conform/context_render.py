@@ -9,9 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from pathlib import Path
 
-from flext_core import r
-from flext_infra import c, m, p, t, u
-from flext_infra._config import config
+from flext_infra import c, config, m, p, r, t, u
 from flext_infra.codegen._conform.pyproject_policy import (
     FlextInfraCodegenConformPyprojectPolicy,
 )
@@ -302,37 +300,47 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
     def _validated_scaffold_project(
         project: m.Infra.ProjectSpec,
         render_inputs: m.Infra.CodegenRenderInputs,
-    ) -> p.Result[t.Pair[m.Infra.ProjectSpec, str]]:
+    ) -> p.Result[t.Pair[m.Infra.ProjectSpec, m.Infra.ScaffoldDependencyProfileSpec]]:
         """Validate the project's upstream and license against the scaffold.
 
         Returns:
-            The resulting ``p.Result[t.Pair[m.Infra.ProjectSpec, str]]`` with
-            the composed dependency profile.
+            The resulting ``p.Result[t.Pair[m.Infra.ProjectSpec,
+            m.Infra.ScaffoldDependencyProfileSpec]]`` with the composed
+            dependency profile.
 
         """
         codegen = render_inputs.codegen
+        result_type = r[
+            t.Pair[m.Infra.ProjectSpec, m.Infra.ScaffoldDependencyProfileSpec]
+        ]
         dependency_profile = u.Infra.composed_dependency_profile(
             codegen.scaffold.project.dependency_profiles,
             upstream=project.upstream,
             distribution=render_inputs.target.repository.distribution,
         )
         if dependency_profile is None:
-            return r[t.Pair[m.Infra.ProjectSpec, str]].fail(
+            return result_type.fail(
                 f"unsupported scaffold upstream: {project.upstream}",
             )
         if project.license not in codegen.scaffold.project.supported_licenses:
             supported = ", ".join(codegen.scaffold.project.supported_licenses)
-            return r[t.Pair[m.Infra.ProjectSpec, str]].fail(
+            return result_type.fail(
                 f"unsupported scaffold license: {project.license}; "
                 f"supported licenses: {supported}",
             )
-        return r[t.Pair[m.Infra.ProjectSpec, str]].ok((project, dependency_profile))
+        return result_type.ok((project, dependency_profile))
 
     @classmethod
     def _integration_facts(
         cls,
         render_inputs: m.Infra.CodegenRenderInputs,
-    ) -> p.Result[t.Triple[str, str, m.Infra.WorkspaceIntegrationSpec]]:
+    ) -> p.Result[
+        t.Triple[
+            m.Infra.ProviderIdentitySpec,
+            str,
+            t.Pair[str, str],
+        ]
+    ]:
         """Resolve the provider, integration branch, and FLEXT base URL.
 
         Internal flext-* floors render from the FLEXT line the checkout
@@ -341,11 +349,12 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         otherwise renders a mixed family and uv rejects conflicting URLs.
 
         Returns:
-            The resulting ``p.Result[t.Triple[str, str,
-                m.Infra.WorkspaceIntegrationSpec]]``.
+            The resulting ``p.Result[t.Triple[m.Infra.ProviderIdentitySpec,
+                str, t.Pair[str, str]]]`` where the pair carries the FLEXT
+                base URL and branch.
 
         """
-        result_type = r[t.Triple[str, str, m.Infra.WorkspaceIntegrationSpec]]
+        result_type = r[t.Triple[m.Infra.ProviderIdentitySpec, str, t.Pair[str, str]]]
         repository_provider = u.Infra.repository_provider(
             render_inputs.target.repository,
         )
@@ -373,7 +382,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         return result_type.ok((
             repository_provider.value,
             integration_branch.value,
-            flext_line.value,
+            (flext_git_base_url, flext_line.value.branch),
         ))
 
     def _project_render_context(
@@ -506,8 +515,8 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 repository=project.homepage,
                 homepage=project.homepage,
                 documentation=project.documentation,
-                flext_git_base_url=integration.value[2].base_url,
-                flext_git_branch=integration.value[2].branch,
+                flext_git_base_url=integration.value[2][0],
+                flext_git_branch=integration.value[2][1],
                 repository_provider=repository.provider,
                 repository_git_url=repository.url,
                 repository_branch=integration.value[1],

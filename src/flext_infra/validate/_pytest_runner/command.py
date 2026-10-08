@@ -12,8 +12,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import ClassVar
 
-from flext_infra import c, m, t, u
-from flext_infra._config import config
+from flext_infra import c, config, m, t, u
 from flext_infra._pytest_collection import FlextInfraPytestCollection
 from flext_infra.validate._pytest_runner.base import FlextInfraPytestRunnerBase
 

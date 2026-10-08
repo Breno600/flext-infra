@@ -239,7 +239,7 @@ class FlextInfraUtilitiesDocsGithubLinks:
         root: Path,
         repo: m.Infra.DocsGithubRepoSpec,
         repository: str,
-        path: Path,
+        path: str,
     ) -> Path:
         """Join one local checkout root with its governed relative path.
 

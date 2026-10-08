@@ -9,8 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra import m, u
+from flext_infra import m, r, u
 from flext_infra.refactor._import_enforcement import FlextInfraImportNormalization
 from flext_infra.refactor.namespace_relocations import (
     FlextInfraNamespaceRelocationCascade,

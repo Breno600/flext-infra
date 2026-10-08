@@ -181,7 +181,11 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
             nodes.append(node)
             if isinstance(node, ast.Call):
                 continue
-            stack.extend(ast.iter_child_nodes(node))
+            stack.extend(
+                child
+                for child in ast.iter_child_nodes(node)
+                if isinstance(child, ast.expr)
+            )
         return tuple(nodes)
 
     @classmethod

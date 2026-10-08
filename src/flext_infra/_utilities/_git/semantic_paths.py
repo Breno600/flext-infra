@@ -8,8 +8,7 @@ from __future__ import annotations
 
 from git import GitCommandError, HookExecutionError, InvalidGitRepositoryError, Repo
 
-from flext_core import r
-from flext_infra import m, p
+from flext_infra import m, p, r
 from flext_infra._utilities import FlextInfraUtilitiesGitSemanticPublishMixin
 
 
