@@ -338,7 +338,7 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                 [str(interpreter), "-B", "-W", "error", "-"],
                 cwd=self.repository_root,
                 timeout=c.Infra.TIMEOUT_SHORT,
-                options=u.Cli.ProcessOptions(env=env, input_data=probe.code),
+                options=m.Cli.ProcessOptions(env=env, input_data=probe.code),
             )
 
         with ThreadPoolExecutor(max_workers=workers) as executor:
