@@ -15,6 +15,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
+from flext_infra import infra
 from flext_infra.codegen.fixer import FlextInfraCodegenFixer
 from flext_infra.refactor.namespace_relocations import (
     FlextInfraNamespaceRelocationCascade,
