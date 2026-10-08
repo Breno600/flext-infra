@@ -98,7 +98,6 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
             source,
             workspace=workspace,
             required_dev_dependencies=codegen.scaffold.project.dev,
-            required_dependency_source=flext_line.value,
             uv_resolution=m.Infra.UvResolutionSpec(
                 link_mode=cls.link_mode(target.repository, codegen.toolchain),
                 constraint_dependencies=tuple(
@@ -107,7 +106,7 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
                 exclude_dependencies=cls.routed_uv_exclude_dependencies(render_inputs),
                 environments=tuple(codegen.toolchain.uv_environments),
             ),
-            family_line=flext_line.value.branch,
+            flext_line=flext_line.value,
         )
 
     @staticmethod
