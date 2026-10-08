@@ -26,6 +26,16 @@ severity, and reports each finding with its native severity. Failed rule discove
 incomplete scans, invalid diagnostics, and other native scanner failures also block,
 with their own failure diagnostics.
 
+The standalone `refactor ast` mechanical circuit remains full-corpus only. Until
+both mechanical inventories, publication preconditions, and expected-count receipts
+share an exact resolved target scope, `--module`, `--namespace`, and project filters
+fail before rule planning or scanning. Non-text `--output-format` requests also fail
+before scanning rather than returning a text report mislabeled as JSON. This is a
+safety boundary, not implemented bounded selection or structured reporting.
+`--dry-run` and `--check` take precedence over `--apply`: they report findings without
+applying either cascade. Scan evidence publication remains part of the scan contract;
+read-only source mode does not mean an artifact-free invocation.
+
 The same semantic pipeline resolves elected self-facade imports before deferring them
 into function bodies. Module/class execution, decorators, defaults and other eager uses
 remain errors. Import identity comes from matched source and qualified bindings, not
