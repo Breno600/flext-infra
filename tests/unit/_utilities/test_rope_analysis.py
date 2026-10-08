@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from tests import u
+from tests import c, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -20,6 +20,81 @@ if TYPE_CHECKING:
 
 class TestsFlextInfraRopeAnalysis:
     """Behavior contract for Rope-backed semantic analysis."""
+
+    @staticmethod
+    def test_installed_pydantic_root_and_alias_are_not_reexport_cycles(
+        tmp_path: Path,
+    ) -> None:
+        """A provider handoff is not an edge back to the same provider."""
+        project, package = u.Tests.demo_project(tmp_path)
+        source = package / "consumer.py"
+        content = (
+            "from pydantic import BaseModel\n"
+            "from pydantic import BaseModel as Parent\n"
+            "class Direct(BaseModel):\n    pass\n"
+            "class Aliased(Parent):\n    pass\n"
+        )
+        source.write_text(content, encoding="utf-8")
+        required = ("pydantic.BaseModel",)
+
+        discovered = u.Infra.runtime_evaluated_base_classes(
+            project,
+            {source: content},
+            required,
+        )
+
+        tm.that(discovered, has=required[0])
+        tm.that(discovered, has="BaseModel")
+        tm.that(discovered, has="Parent")
+
+    @staticmethod
+    def test_external_provider_reexport_cycle_remains_an_error(
+        tmp_path: Path,
+    ) -> None:
+        """Real provider edges retain cycle detection without importing the consumer."""
+        project, package = u.Tests.demo_project(tmp_path)
+        provider = package.parent / "external_provider"
+        provider.mkdir()
+        (provider / "__init__.py").write_text("", encoding="utf-8")
+        (provider / "first.py").write_text(
+            "from .second import Base\n",
+            encoding="utf-8",
+        )
+        (provider / "second.py").write_text(
+            "from .first import Base\n",
+            encoding="utf-8",
+        )
+        source = package / "consumer.py"
+        content = "from external_provider.first import Base\nclass Consumer(Base):\n    pass\n"
+        source.write_text(content, encoding="utf-8")
+
+        with pytest.raises(ValueError, match="Cyclic provider reexport"):
+            u.Infra.runtime_evaluated_base_classes(project, {source: content}, ())
+
+    @staticmethod
+    @pytest.mark.slow
+    def test_external_provider_chain_obeys_declared_depth_budget(
+        tmp_path: Path,
+    ) -> None:
+        """A handoff cannot remove the typed owner's reference-depth bound."""
+        project, package = u.Tests.demo_project(tmp_path)
+        provider = package.parent / "external_provider"
+        provider.mkdir()
+        (provider / "__init__.py").write_text("", encoding="utf-8")
+        count = c.Infra.ROPE_WALK_DEPTH_BUDGET + 2
+        for index in range(count):
+            content = (
+                f"from .layer_{index + 1} import Base\n"
+                if index + 1 < count
+                else "class Base:\n    pass\n"
+            )
+            (provider / f"layer_{index}.py").write_text(content, encoding="utf-8")
+        source = package / "consumer.py"
+        content = "from external_provider.layer_0 import Base\nclass Consumer(Base):\n    pass\n"
+        source.write_text(content, encoding="utf-8")
+
+        with pytest.raises(ValueError, match="Unresolved external base.*at depth"):
+            u.Infra.runtime_evaluated_base_classes(project, {source: content}, ())
 
     @staticmethod
     @pytest.mark.parametrize(
