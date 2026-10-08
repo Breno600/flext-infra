@@ -2,14 +2,14 @@
 # package and $NAME an alias the own package binds outside its own family.
 id: ban-foreign-namespace-source
 valid:
-- from flext_core import c
-- |
-  def run():
-      from flext_cli import c
-- |
-  if TYPE_CHECKING:
-      from flext_cli import c
-- from flext_cli import c as cli_c
+  - from flext_cli.constants import c
+  - |
+    def run():
+        from flext_cli import c
+  - |
+    if TYPE_CHECKING:
+        from flext_cli import c
+  - from flext_cli import c as cli_c
 invalid:
-- from flext_cli import c
-- from flext_cli import FlextCli, m
+  - from flext_cli import c
+  - from flext_cli import FlextCli, m

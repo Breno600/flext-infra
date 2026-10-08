@@ -10,7 +10,7 @@ snapshots:
       style: secondary
       start: 5
       end: 24
-    - source: from flext_core import c
+    - source: from flext_cli.constants import c
       style: secondary
       start: 0
       end: 33
