@@ -6,7 +6,6 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import ast
 from collections import defaultdict
 from collections.abc import MutableMapping, MutableSequence, MutableSet
 from pathlib import Path
@@ -369,27 +368,43 @@ class FlextInfraModelsRefactor(
             m.Field(description="Parsed PyObject module representation"),
         ]
 
-    class ImportDemotionScan(m.ArbitraryTypesModel):
-        """Immutable per-pass context of one lazy import-demotion scan."""
+    class ImportLawScope(m.ArbitraryTypesModel):
+        """Immutable facts one import-law pass decides a module's imports on."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
-        tree: Annotated[ast.Module, m.Field(description="Module being normalized")]
-        parents: Annotated[
-            t.MappingKV[int, ast.AST],
-            m.Field(description="Child node id to parent node map"),
-        ]
-        frozen: Annotated[
-            frozenset[int],
-            m.Field(description="Node ids pinned eager by structural use"),
-        ]
-        package: Annotated[str, m.Field(description="Owning top-level package")]
-        module_rank: Annotated[int, m.Field(description="Module's own layer rank")]
+        project_root: Annotated[Path, m.Field(description="Governed project root")]
         file_path: Annotated[Path, m.Field(description="Normalized module path")]
-        family_exports: Annotated[
-            t.FrozensetMapping,
-            m.Field(description="Exports per facade family module"),
+        namespace_dir: Annotated[
+            Path,
+            m.Field(description="Directory of the namespace owning the module"),
         ]
+        module: Annotated[str, m.Field(description="Dotted name of the module")]
+        layer: Annotated[int, m.Field(description="Module's import-layer rank")]
+        own_exports: Annotated[
+            frozenset[str],
+            m.Field(description="Names the module declares in its own __all__"),
+        ]
+        family_letter: Annotated[
+            str | None,
+            m.Field(
+                description=(
+                    "Facade letter of the family package holding the module, "
+                    "or None outside every family package"
+                ),
+            ),
+        ] = None
+
+        @m.computed_field
+        @property
+        def namespace(self) -> str:
+            """Top-level package name of the owning namespace.
+
+            Returns:
+                The namespace package name.
+
+            """
+            return self.namespace_dir.name
 
 
 __all__: list[str] = ["FlextInfraModelsRefactor"]

@@ -96,6 +96,23 @@ class FlextInfraUtilitiesImportLaw:
                 return order.index(layer)
         return order.index(c.Infra.IMPORT_LAW_OTHER_LAYER)
 
+    @staticmethod
+    def package_dir(project_root: Path, package: str) -> Path | None:
+        """Return the directory of one dotted package the project owns.
+
+        Returns:
+            The package directory, or ``None`` for a module, a missing path or
+            a package of another project.
+
+        """
+        top, *rest = package.split(".")
+        for base in (project_root / c.Infra.DEFAULT_SRC_DIR, project_root):
+            if not (base / top / c.Infra.INIT_PY).is_file():
+                continue
+            candidate = base.joinpath(top, *rest)
+            return candidate if (candidate / c.Infra.INIT_PY).is_file() else None
+        return None
+
     @classmethod
     def lazy_exports(cls, package_dir: Path, package: str) -> t.StrMapping:
         """Map each name one package ``__init__`` publishes to its module.
