@@ -6,16 +6,19 @@ SPDX-License-Identifier: MIT.
 
 from __future__ import annotations
 
+import ast
 from collections.abc import MutableMapping
 from pathlib import Path
 
-from flext_infra import m, t
+from flext_infra import c, m, p, t
 from flext_infra._utilities._rope_source_bases_aliases import (
     FlextInfraUtilitiesRopeSourceBasesAliases,
 )
 from flext_infra._utilities._rope_source_bases_inventory import (
     FlextInfraUtilitiesRopeSourceBasesInventory,
 )
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeSourceBases:
@@ -84,7 +87,15 @@ class FlextInfraUtilitiesRopeSourceBases:
         """
         definitions: MutableMapping[str, m.Infra.SourceClassDefinition] = {}
         modules = {
-            module: cls._inventory(project, module, path, source, definitions)
+            module: cls.inventory(
+                m.Infra.SourceBindingInventoryRequest(
+                    project=project,
+                    module=module,
+                    path=path,
+                    source=source,
+                ),
+                definitions,
+            )
             for module, (path, source) in sources.items()
         }
         namespaces = {
@@ -150,14 +161,16 @@ class FlextInfraUtilitiesRopeSourceBases:
                     None,
                 )
                 if identity is None:
-                    cls._inventory(
-                        project,
-                        name,
-                        Path(resource.real_path),
-                        module.source_code,
+                    cls.inventory(
+                        m.Infra.SourceBindingInventoryRequest(
+                            project=project,
+                            module=name,
+                            path=Path(resource.real_path),
+                            source=module.source_code,
+                            required_line=line,
+                            allow_conditional=True,
+                        ),
                         definitions,
-                        required_line=line,
-                        allow_conditional=True,
                     )
                     identity = next(
                         (
