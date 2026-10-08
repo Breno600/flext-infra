@@ -320,6 +320,13 @@ Infra:
           # Pydantic runtime-evaluation is protected by the
           # runtime-evaluated-roots projection, not by disabling the rules.
           authorized-exceptions:
+            - rules: [missing-trailing-comma]
+              authority: operator-file-gate-verdict-mandate-2026-10-08
+              reason: >-
+                Ruff's formatter owns trailing comma layout. The official COM812
+                documentation recommends removing this redundant lint rule when
+                using the formatter; enabling both emits a configuration conflict.
+                https://docs.astral.sh/ruff/rules/missing-trailing-comma/
             - files: "**/_utilities/credential.py"
               rules: [suspicious-subprocess-import, subprocess-without-shell-equals-true]
               authority: operator-relocation-mandate-2026-10-07-keyring-credential

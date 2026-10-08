@@ -647,7 +647,7 @@ Infra:
         - name: test-file
           description: Run one declared test file through the budgeted and slow phases with the same persistent testmon cache (FILE=<repository-relative path>).
         - name: file-gate
-          description: Run the fast per-file gates (ruff check, ruff format --check, pyrefly, pyright, ast-grep scan, typos) on FILE=<repository-relative path>; empty FILE fails loud.
+          description: Run configured canonical read-only gates on one literal FILE=<repository-relative path>; invalid selection and missing gate owners fail loud.
         - name: profile-test
           description: Profile the canonical pytest entry and its collection children on the same persistent testmon database, without the outer bounded-gate wrapper.
         - name: profile-test-report
