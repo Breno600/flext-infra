@@ -83,10 +83,13 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
         """Plan one existing type facade from authenticated private owner bytes.
 
         Args:
-            request: The code generation conform request containing the root and module information.
+            request: The code generation conform request containing the root
+                and module information.
 
         Returns:
-            A result containing a pair of the planned code generation plan and the phase analysis, or a failure if planning was unsuccessful.
+            A result containing a pair of the planned code generation plan and
+            the phase analysis, or a failure if planning was unsuccessful.
+
         """
         result_type = r[t.Pair[m.Infra.CodegenPlan, m.Infra.CodegenPhaseAnalysis]]
         root = request.root.expanduser().resolve()
@@ -101,7 +104,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
             )
         parts = request.module.split(".")
         if (
-            len(parts) != 2
+            len(parts) != c.Infra.FACADE_MODULE_PARTS
             or parts[0] != layout.package_dir.name
             or not all(part.isidentifier() for part in parts)
         ):

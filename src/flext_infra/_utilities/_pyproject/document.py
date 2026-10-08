@@ -108,8 +108,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             name = FlextInfraUtilitiesDependencies.dep_name(requirement)
             if (
                 name is None
-                or name == project_name
-                or name in declared_sources
+                or name in {project_name, *declared_sources}
                 or not name.startswith("flext-")
                 or requirement.strip() != name
                 or required_dependency_source is None

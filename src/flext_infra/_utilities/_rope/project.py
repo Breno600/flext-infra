@@ -18,18 +18,12 @@ from pathlib import Path
 from typing import Self, override
 
 from rope.base.project import Project
-from rope.base.resources import File, Folder
 
 from flext_infra import t
 
 
 class FlextInfraRopeProject(Project):
     """Rope project with the upstream self-warning initializer repaired."""
-
-    @override
-    def get_resource(self, resource_name: str) -> File | Folder:
-        """Return the resource at ``resource_name`` under the Rope contract."""
-        return super().get_resource(resource_name)
 
     class SnapshotFiles:
         """Closed, read-only input inventory for a semantic planning project.
