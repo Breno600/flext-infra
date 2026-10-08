@@ -64,17 +64,34 @@ class TestsFlextInfraCodegenRepositoryRootScope:
             encoding=c.Infra.ENCODING_DEFAULT,
         )
         cache = config.Infra.codegen.make.testmon_cache
-        for target in ("_builtin_test_all:", "_builtin_test_file_all:"):
-            recipe = rendered.split(target, 1)[1].split("\n\n", 1)[0]
-            tm.that(recipe.count("-m flext_infra._pytest_entry"), eq=1)
-            tm.that(
-                recipe,
-                lacks=["_pytest_entry slow", "file-slow", "_pytest_entry full"],
-            )
-            tm.that(
-                recipe,
-                has=f'{cache.database_environment_variable}="$$database"',
-            )
+        recipe = rendered.split("_builtin_test_all:", 1)[1].split("\n\n", 1)[0]
+        tm.that(recipe.count("-m flext_infra._pytest_entry"), eq=1)
+        tm.that(
+            recipe,
+            lacks=["_pytest_entry slow", "file-slow", "_pytest_entry full"],
+        )
+        tm.that(
+            recipe,
+            has=f'{cache.database_environment_variable}="$$database"',
+        )
+
+    def test_file_verb_composes_both_phases_on_one_cache(self, tmp_path: Path) -> None:
+        """Requested files retain one guard and scratch across independent entries."""
+        root = self._render_root_makefile(tmp_path)
+        rendered = (root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding=c.Infra.ENCODING_DEFAULT,
+        )
+        recipe = rendered.split("_builtin_test_file_all:", 1)[1].split("\n\n", 1)[0]
+        cache = config.Infra.codegen.make.testmon_cache
+        tm.that(recipe.count("-m flext_infra._pytest_entry"), eq=2)
+        tm.that(recipe, has=["_pytest_entry file;", "_pytest_entry file-slow;"])
+        tm.that(
+            recipe.count(f'{cache.database_environment_variable}="$$database"'),
+            eq=2,
+        )
+        tm.that(recipe.count("set -eu;"), eq=1)
+        tm.that(recipe.count("' EXIT;"), eq=1)
+        tm.that(recipe, lacks="_pytest_entry full")
 
     @staticmethod
     def test_conform_owns_repository_root_makefile() -> None:
