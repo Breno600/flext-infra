@@ -15,6 +15,8 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import ast
+
 import sys
 from collections.abc import Mapping, MutableMapping
 from functools import cache, lru_cache
@@ -38,6 +40,9 @@ from flext_infra._utilities import (
     FlextInfraUtilitiesRopeAnalysisImportState,
     FlextInfraUtilitiesRopeCore,
     FlextInfraUtilitiesRopeImports,
+)
+from flext_infra._utilities._semantic_cutover.declaration_payload import (
+    FlextInfraUtilitiesDeclarationPayload,
 )
 
 
@@ -66,7 +71,17 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         raw: MutableMapping[str, set[str]] = {}
         modules: MutableMapping[Path, str] = {}
         with FlextInfraUtilitiesRopeCore.open_project(root) as project:
-            for resource in FlextInfraUtilitiesRopeCore.python_resources(project):
+            return cls.snapshot_import_graph(project)
+
+    @classmethod
+    def snapshot_import_graph(
+        cls,
+        project: p.Infra.RopeProject,
+    ) -> t.Pair[t.MappingKV[str, frozenset[str]], t.MappingKV[Path, str]]:
+        """Read runtime imports from an immutable proposed-source Rope graph."""
+        raw: MutableMapping[str, set[str]] = {}
+        modules: MutableMapping[Path, str] = {}
+        for resource in FlextInfraUtilitiesRopeCore.python_resources(project):
                 pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
                     project,
                     resource,
@@ -89,6 +104,14 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                         current_package=package,
                     ),
                 )
+                scope = pymodule.get_scope()
+                if scope is not None:
+                    for binding in scope.get_names().values():
+                        if not isinstance(binding, p.Infra.RopeImportedName):
+                            continue
+                        holder, _ = binding.get_definition_location()
+                        if holder is not None:
+                            raw[name].add(holder.get_name())
         known = frozenset(raw)
         graph = {
             name: frozenset(
@@ -438,6 +461,14 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         predicate = condition.predicate
         own = FlextInfraUtilitiesPyproject.project_package_name(root)
         match predicate:
+            case c.Infra.CodemodContextPredicate.PAYLOAD_DECLARATION:
+                with FlextInfraUtilitiesRopeCore.open_project(root) as project:
+                    resource = project.get_resource(file_path.relative_to(root).as_posix())
+                    declarations = tuple(node for node in ast.walk(ast.parse(resource.read()))
+                                         if isinstance(node, ast.ClassDef) and node.name == captured[0])
+                    return len(declarations) == 1 and FlextInfraUtilitiesDeclarationPayload.payload_declaration(
+                        project, file_path, declarations[0],
+                    ) is not None
             case (
                 c.Infra.CodemodContextPredicate.STDLIB_MODULE
                 | c.Infra.CodemodContextPredicate.OWN_PACKAGE

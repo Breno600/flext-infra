@@ -179,6 +179,7 @@ class FlextInfraConstantsRefactor:
         PACKAGE_LAYERS = "package-layers"
         PACKAGE_ROOT_INIT = "package-root-init"
         FAMILY_BASE = "family-base"
+        PAYLOAD_DECLARATION = "payload-declaration"
 
     CODEMOD_RUNTIME_CLOSURE_PREDICATES: ClassVar[frozenset[CodemodContextPredicate]] = (
         frozenset({
@@ -192,6 +193,7 @@ class FlextInfraConstantsRefactor:
     class SemanticCutoverPhase(StrEnum):
         """Semantic ``make mod`` cutovers planned by ``u.Infra``."""
 
+        DECLARATION_RELOCATION = "declaration-relocation"
         CLASS_NESTING = "class-nesting"
         COMPAT_ALIAS = "compat-alias"
         PRIVATE_IMPORT = "private-import"
