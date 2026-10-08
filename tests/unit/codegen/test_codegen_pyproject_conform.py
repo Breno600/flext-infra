@@ -757,7 +757,7 @@ dependencies = []
         policy = config.Infra.tooling.tools.pyrefly
         tm.that(
             u.Tests.toml_table_at(first, "tool", "pyrefly", "errors"),
-            eq={diagnostic: "error" for diagnostic in policy.strict_errors},
+            eq=dict.fromkeys(policy.strict_errors, "error"),
         )
         tm.that(
             u.Tests.scaffold_text(
@@ -779,7 +779,9 @@ dependencies = []
 
     @staticmethod
     @pytest.mark.parametrize("selection", ["reordered", "subset", "empty"])
-    def test_pyrefly_policy_preserves_valid_diagnostic_selections(selection: str) -> None:
+    def test_pyrefly_policy_preserves_valid_diagnostic_selections(
+        selection: str,
+    ) -> None:
         """Validation does not freeze the selected diagnostic set or its order."""
         policy = config.Infra.tooling.tools.pyrefly
         errors = tuple(policy.strict_errors)
