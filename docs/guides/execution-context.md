@@ -166,6 +166,10 @@ The platforms declared by `toolchain.mise_lockfile_platforms` compose the lock
 together with the platform of the machine running the upgrade, which Mise always
 includes.
 
+The default `make gen` handler passes explicit `--scope all` to conform at
+`PROJECT_ROOT`: a workspace invocation covers its root and every declared member,
+while a standalone repository has only itself. The request model's default remains
+`SELF` for callers that do not select a scope, including file-only surfaces.
 Generation owns one transaction for ordinary projections, Mise artifacts, lazy
 exports and docs; no additional writer runs before or after its journal.
 A planned deletion has no staged replacement, but its successful result still

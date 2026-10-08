@@ -1,21 +1,8 @@
-"""Every command in one verb recipe writes to the same root.
+"""Generation uses one root and one owner for the complete declared composition.
 
-Scope is the invocation point's own repository: every repository, the
-workspace root included, works on itself alone (operator ruling 2026-09-29).
-
-The ``gen`` recipe broke that by mixing two criteria in the same body:
-``codegen conform`` received ``PROJECT_ROOT`` while dependency stages received
-``REPOSITORY_ROOT``. A ``gen`` invoked inside one
-member therefore rewrote the ``pyproject.toml`` of every sibling -- measured as
-"INFO: Updated <sibling>/pyproject.toml" for ~30 repositories, leaving each one
-dirty without the caller ever touching it.
-
-The damage compounds: ``gen`` runs inside ``check``, and ``check`` runs in the
-pre-commit hook, so a single commit in any lane dirties every sibling.
-
-At the workspace root ``PROJECT_ROOT`` is the root repository itself, so one
-rule keeps every verb on its own repository everywhere. No flag is needed --
-one rule, applied consistently.
+The conform owner receives ``PROJECT_ROOT`` with explicit ``ALL`` scope so root
+generation includes every declared member. Other writers must not independently
+escalate to ``REPOSITORY_ROOT`` or duplicate the conform transaction.
 
 Every contract is asserted on the Makefile the public conform owner renders
 for a workspace fixture composing one member.
@@ -41,7 +28,7 @@ _MEMBER = "fixture-member"
 
 
 class TestsFlextInfraGenRespectsInvocationScope:
-    """`gen` recipes write to exactly one root per invocation."""
+    """`gen` delegates the complete composition through exactly one root."""
 
     @staticmethod
     @pytest.fixture
@@ -88,8 +75,8 @@ class TestsFlextInfraGenRespectsInvocationScope:
     ) -> None:
         """One rendered recipe never writes to two different roots.
 
-        A command that escalates to ``REPOSITORY_ROOT`` beside one scoped to
-        ``PROJECT_ROOT`` mutates siblings the caller never asked for.
+        Conform owns member discovery; a second writer must not independently
+        escalate from ``PROJECT_ROOT`` to ``REPOSITORY_ROOT``.
         """
         bodies = self._recipe_bodies(rendered_makefile)
         project_scoped = {
@@ -103,7 +90,7 @@ class TestsFlextInfraGenRespectsInvocationScope:
             if any("$(REPOSITORY_ROOT)" in line for line in bodies[target])
         }
 
-        # The rendered gen recipe is project-scoped, so the invariant below is
+        # The gen recipe is PROJECT_ROOT-anchored, so the invariant below is
         # never satisfied vacuously by an unparsed Makefile.
         tm.that(project_scoped, has="_builtin_gen_all")
         tm.that(mixed, eq={})
@@ -121,7 +108,10 @@ class TestsFlextInfraGenRespectsInvocationScope:
         tm.that(len(conform_lines), eq=1)
         tm.that(conform_lines[0], has="--mode apply")
         tm.that(conform_lines[0], has='--root "$(PROJECT_ROOT)"')
-        tm.that(conform_lines[0], lacks="--scope")
+        tm.that(
+            conform_lines[0],
+            has=f"--scope {c.Infra.CodegenConformScope.ALL.value}",
+        )
         tm.that(any("deps modernize" in line for line in body), eq=False)
         tm.that(any("deps extra-paths" in line for line in body), eq=False)
 
