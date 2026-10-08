@@ -41,8 +41,8 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         """Render the fleet Ruff policy as a pyproject fragment.
 
         Reads the same typed SSOT production reads (P0): fixture
-        workspaces carry the real policy — select, preview and the
-        per-file-ignores map — never a hand-rolled fragment.
+        workspaces carry the real policy — select, the global ignore table,
+        preview and the per-file-ignores map — never a hand-rolled fragment.
 
         Returns:
             The resulting ``str``.
