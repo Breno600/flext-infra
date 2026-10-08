@@ -19,8 +19,7 @@ from typing import ClassVar
 
 from flext_cli import r, u
 
-from flext_infra import c, m, p, t
-from flext_infra._config import config
+from flext_infra import c, config, m, p, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesDiscovery,
     FlextInfraUtilitiesDocsScope,
@@ -887,11 +886,9 @@ class FlextInfraUtilitiesCodegenNamespace:
         if not file_path.is_file():
             return
         with FlextInfraUtilitiesRopeCore.open_project(file_path.parent) as rope_project:
-            resource: t.Infra.RopeResource | None = (
-                FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
-                    rope_project,
-                    file_path,
-                )
+            resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
+                rope_project,
+                file_path,
             )
             if resource is None:
                 return
@@ -916,7 +913,7 @@ class FlextInfraUtilitiesCodegenNamespace:
     def _rebased_facade_source(
         cls,
         rope_project: t.Infra.RopeProject,
-        resource: t.Infra.RopeResource,
+        resource: t.Infra.RopeFile,
         base_import: str,
         base_name: str,
     ) -> str | None:

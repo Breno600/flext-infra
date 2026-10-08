@@ -10,8 +10,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-from flext_core import r
-from flext_infra import c, m, t, u
+from flext_infra import c, m, r, t, u
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
@@ -146,10 +145,6 @@ class FlextInfraMiseArtifactsVerification:
             # its created receipt is the only authorization. Inventory the
             # live root and register that inventory as the manifest; the
             # authorized and observed manifests coincide on the first cycle.
-            if directory.created is None:
-                return result_type.fail(
-                    f"temporary tree has no created identity: {directory.path}",
-                )
             seeded = u.Cli.atomic_inventory_physical_tree(directory.created.path)
             if seeded.failure:
                 return result_type.from_failure(seeded)
@@ -252,7 +247,7 @@ class FlextInfraMiseArtifactsVerification:
             return identifiers
         by_selector = cls._verified_recorded_identities(layout, journal)
         if by_selector.failure:
-            return by_selector
+            return r[bool].from_failure(by_selector)
         directory_targets = cls._resolved_directory_targets(layout, journal)
         if directory_targets.failure:
             return r[bool].from_failure(directory_targets)
@@ -327,12 +322,18 @@ class FlextInfraMiseArtifactsVerification:
         cls,
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         journal: m.Infra.CodegenTransactionJournal,
-    ) -> p.Result[t.MappingKV[str, m.Infra.MiseToolchainProjectLayout]]:
+    ) -> p.Result[
+        t.MappingKV[
+            str,
+            m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
+        ]
+    ]:
         """Prove every recorded project and participant kept its physical identity.
 
         Returns:
             The resulting ``p.Result[t.MappingKV[str,
-                m.Infra.MiseToolchainProjectLayout]]`` keyed by selector.
+                m.Infra.MiseToolchainProjectLayout |
+                m.Infra.CodegenFileParticipant]]`` keyed by selector.
 
         """
         by_selector = {
@@ -344,19 +345,35 @@ class FlextInfraMiseArtifactsVerification:
             identity = files.physical_directory_identity(project.root)
             if identity.failure:
                 return r[
-                    t.MappingKV[str, m.Infra.MiseToolchainProjectLayout]
+                    t.MappingKV[
+                        str,
+                        m.Infra.MiseToolchainProjectLayout
+                        | m.Infra.CodegenFileParticipant,
+                    ]
                 ].from_failure(identity)
             if identity.value != (recorded.device, recorded.inode):
-                return r[t.MappingKV[str, m.Infra.MiseToolchainProjectLayout]].fail(
-                    f"generation project identity changed: {recorded.selector}",
-                )
-        return r[t.MappingKV[str, m.Infra.MiseToolchainProjectLayout]].ok(by_selector)
+                return r[
+                    t.MappingKV[
+                        str,
+                        m.Infra.MiseToolchainProjectLayout
+                        | m.Infra.CodegenFileParticipant,
+                    ]
+                ].fail(f"generation project identity changed: {recorded.selector}")
+        return r[
+            t.MappingKV[
+                str,
+                m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
+            ]
+        ].ok(by_selector)
 
     @classmethod
     def _verified_directory_bindings(
         cls,
         journal: m.Infra.CodegenTransactionJournal,
-        by_selector: t.MappingKV[str, m.Infra.MiseToolchainProjectLayout],
+        by_selector: t.MappingKV[
+            str,
+            m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
+        ],
         directory_targets: t.MappingKV[Path, m.Infra.CodegenJournalDirectory],
     ) -> p.Result[bool]:
         """Bind every journaled directory to its project and parent identity.
@@ -378,7 +395,10 @@ class FlextInfraMiseArtifactsVerification:
     @classmethod
     def _verified_directory_binding(
         cls,
-        by_selector: t.MappingKV[str, m.Infra.MiseToolchainProjectLayout],
+        by_selector: t.MappingKV[
+            str,
+            m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
+        ],
         directory_targets: t.MappingKV[Path, m.Infra.CodegenJournalDirectory],
         directory: m.Infra.CodegenJournalDirectory,
     ) -> p.Result[bool]:
@@ -436,7 +456,12 @@ class FlextInfraMiseArtifactsVerification:
             The resulting ``p.Result[bool]``.
 
         """
-        if directory.created.path != resolved_target:
+        created = directory.created
+        if created is None:
+            return r[bool].fail(
+                f"generation created directory is absent: {directory.path}",
+            )
+        if created.path != resolved_target:
             return r[bool].fail(
                 f"generation created directory path differs: {directory.path}",
             )
@@ -452,8 +477,7 @@ class FlextInfraMiseArtifactsVerification:
         )
         if (
             expected_parent is None
-            or (directory.created.parent_device, directory.created.parent_inode)
-            != expected_parent
+            or (created.parent_device, created.parent_inode) != expected_parent
         ):
             return r[bool].fail(
                 (f"generation directory parent binding differs: {directory.path}"),
@@ -465,7 +489,10 @@ class FlextInfraMiseArtifactsVerification:
         cls,
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         journal: m.Infra.CodegenTransactionJournal,
-        by_selector: t.MappingKV[str, m.Infra.MiseToolchainProjectLayout],
+        by_selector: t.MappingKV[
+            str,
+            m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
+        ],
     ) -> p.Result[bool]:
         """Bind every journal entry and its staging paths to the transaction root.
 
@@ -694,15 +721,16 @@ class FlextInfraMiseArtifactsVerification:
         if ancestry.failure:
             return result.from_failure(ancestry)
         observed = current.value
-        if observed.directories or observed.anchor_ancestry != tuple(ancestry):
+        ancestry_value = ancestry.value
+        if observed.directories or observed.anchor_ancestry != tuple(ancestry_value):
             return result.fail(
                 f"generation source parent identity changed: {expected.path}",
             )
         return result.ok(
             expected.model_copy(
                 update={
-                    "parent_device": ancestry[-1][0],
-                    "parent_inode": ancestry[-1][1],
+                    "parent_device": ancestry_value[-1][0],
+                    "parent_inode": ancestry_value[-1][1],
                 },
             ),
         )
@@ -711,7 +739,7 @@ class FlextInfraMiseArtifactsVerification:
     def _verified_parent_ancestry(
         cls,
         journal: m.Infra.CodegenTransactionJournal,
-        witness: m.Cli.AtomicDirectoryState,
+        witness: m.Cli.AtomicDirectoryChainPlan,
     ) -> p.Result[t.VariadicTuple[t.Pair[int, int]]]:
         """Rebuild the parent ancestry chain from journal-created directories.
 
@@ -1023,7 +1051,7 @@ class FlextInfraMiseArtifactsVerification:
         cls,
         expected: t.MappingKV[Path, m.Cli.AtomicPhysicalTreeEntry],
         current: t.MappingKV[Path, m.Cli.AtomicPhysicalTreeEntry],
-        consumable: t.AbstractSet[Path],
+        consumable: set[Path],
     ) -> p.Result[bool]:
         """Prove every authorized entry survived with a stable identity.
 
@@ -1054,7 +1082,10 @@ class FlextInfraMiseArtifactsVerification:
         authorized: m.Cli.AtomicPhysicalTreeManifest,
         expected: t.MappingKV[Path, m.Cli.AtomicPhysicalTreeEntry],
         current: t.MappingKV[Path, m.Cli.AtomicPhysicalTreeEntry],
-        file_specs: t.MappingKV[Path, t.Pair[str, m.Infra.CodegenJournalEntry]],
+        file_specs: t.MappingKV[
+            Path,
+            t.Pair[_JournalFileRole, m.Infra.CodegenJournalEntry],
+        ],
         created_by_path: t.MappingKV[
             Path,
             m.Cli.AtomicFileState | m.Cli.AtomicDirectoryState,
@@ -1310,7 +1341,7 @@ class FlextInfraMiseArtifactsVerification:
     def _artifact_snapshot(
         cls,
         plan: m.Infra.MiseToolchainWorkspacePlan,
-        replacements: MutableMapping[Path, t.Pair[bytes, int | None]],
+        replacements: t.MappingKV[Path, t.Pair[bytes, int | None]],
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
         states: list[m.Cli.AtomicFileState] = []
         for project in plan.projects:

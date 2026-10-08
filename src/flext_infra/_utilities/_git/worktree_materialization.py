@@ -13,8 +13,7 @@ from typing import TYPE_CHECKING
 from flext_cli import u
 from git import GitCommandError
 
-from flext_core import r
-from flext_infra import c, p, t
+from flext_infra import c, p, r, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesGitWorktreeDiscoveryMixin,
     FlextInfraUtilitiesGitWorktreeIO,

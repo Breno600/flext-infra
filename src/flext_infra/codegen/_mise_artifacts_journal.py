@@ -8,8 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, m, p, r, t, u
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
@@ -261,7 +260,7 @@ class FlextInfraMiseArtifactsJournal:
         for previous, current in zip(journal.directories, directories, strict=True):
             compared = cls._validated_recorded_directory(previous, current)
             if compared.failure:
-                return compared
+                return result_type.from_failure(compared)
         validated: p.Result[m.Infra.CodegenTransactionJournal] = u.validate_value(
             m.Infra.CodegenTransactionJournal,
             {
@@ -707,7 +706,9 @@ class FlextInfraMiseArtifactsJournal:
                 current_root,
             )
             if relocated_before.failure:
-                return relocated_before
+                return r[m.Infra.CodegenJournalDirectory].from_failure(
+                    relocated_before,
+                )
             before = relocated_before.value
         created: m.Cli.AtomicDirectoryState | None = None
         if directory.created is not None:
@@ -717,7 +718,9 @@ class FlextInfraMiseArtifactsJournal:
                 current_root,
             )
             if relocated_created.failure:
-                return relocated_created
+                return r[m.Infra.CodegenJournalDirectory].from_failure(
+                    relocated_created,
+                )
             created = relocated_created.value
         manifest: m.Cli.AtomicPhysicalTreeManifest | None = None
         if directory.manifest is not None:
@@ -727,7 +730,9 @@ class FlextInfraMiseArtifactsJournal:
                 current_root,
             )
             if relocated_manifest.failure:
-                return relocated_manifest
+                return r[m.Infra.CodegenJournalDirectory].from_failure(
+                    relocated_manifest,
+                )
             manifest = relocated_manifest.value
         return u.validate_value(
             m.Infra.CodegenJournalDirectory,
@@ -971,7 +976,8 @@ class FlextInfraMiseArtifactsJournal:
             (
                 item
                 for item in files.transaction_participants(plan.layout)
-                if item.root == publication.project
+                if isinstance(item, m.Infra.MiseToolchainProjectLayout)
+                and item.root == publication.project
             ),
             None,
         )
@@ -1004,7 +1010,8 @@ class FlextInfraMiseArtifactsJournal:
 
         """
         if (
-            before.mode is None
+            before.content is None
+            or before.mode is None
             or before.device is None
             or before.inode is None
             or before.link_count != 1
@@ -1041,6 +1048,10 @@ class FlextInfraMiseArtifactsJournal:
             The resulting ``p.Result[Path]``.
 
         """
+        if project.transaction_root is None:
+            return r[Path].fail(
+                f"transaction participant has no transaction root: {project.root}",
+            )
         recovery_root = project.transaction_root / "recovery"
         if recovery_root in recovery_roots:
             return r[Path].ok(recovery_root)
@@ -1074,6 +1085,10 @@ class FlextInfraMiseArtifactsJournal:
         recovery_roots: set[Path],
     ) -> p.Result[m.Infra.CodegenJournalEntry]:
         before = publication.before
+        if before.parent_device is None or before.parent_inode is None:
+            return r[m.Infra.CodegenJournalEntry].fail(
+                f"generation destination parent identity is incomplete: {before.path}",
+            )
         located = cls._entry_project(plan, publication)
         if located.failure:
             return r[m.Infra.CodegenJournalEntry].from_failure(located)

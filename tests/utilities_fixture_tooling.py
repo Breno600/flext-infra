@@ -225,17 +225,19 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         return u.Cli.run_raw(
             [c.Infra.MAKE, *args],
             cwd=cwd,
-            env={
-                "GH_CONFIG_DIR": os.devnull,
-                "DBUS_SESSION_BUS_ADDRESS": "disabled:",
-                **(env or {}),
-            },
-            capture=capture,
-            remove_env_keys=tuple(
-                key
-                for key in c.Tests.MAKE_ISOLATION_ENV_KEYS
-                if env is None or key not in env
+            options=u.Cli.ProcessOptions(
+                env={
+                    "GH_CONFIG_DIR": os.devnull,
+                    "DBUS_SESSION_BUS_ADDRESS": "disabled:",
+                    **(env or {}),
+                },
+                remove_env_keys=tuple(
+                    key
+                    for key in c.Tests.MAKE_ISOLATION_ENV_KEYS
+                    if env is None or key not in env
+                ),
             ),
+            capture=capture,
         )
 
     @staticmethod

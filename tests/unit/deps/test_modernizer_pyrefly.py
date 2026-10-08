@@ -275,20 +275,22 @@ class TestsFlextInfraModernizerPyrefly:
                 repository_root=tmp_path,
                 skip_check=True,
             ).resolve_tooling_context(
-                project_name="flext-consumer",
-                package_name="flext_consumer",
-                path=project_dir / c.PYPROJECT_FILENAME,
-                scaffold_project=scaffold_project,
-                upstream=next(
-                    profile.upstream
-                    for profile in scaffold_project.dependency_profiles
-                    if profile.project is None
-                ),
-                runtime_dependency_overlay=(),
-                declared_project_dependencies=(),
-                topology=m.Infra.PyprojectDeclaredTopology(
-                    declared_python_dirs=(source_dir,),
-                    declared_python_dirs_are_complete=True,
+                m.Infra.ToolingContextRequest(
+                    project_name="flext-consumer",
+                    package_name="flext_consumer",
+                    path=project_dir / c.PYPROJECT_FILENAME,
+                    scaffold_project=scaffold_project,
+                    upstream=next(
+                        profile.upstream
+                        for profile in scaffold_project.dependency_profiles
+                        if profile.project is None
+                    ),
+                    runtime_dependency_overlay=(),
+                    declared_project_dependencies=(),
+                    topology=m.Infra.PyprojectDeclaredTopology(
+                        declared_python_dirs=(source_dir,),
+                        declared_python_dirs_are_complete=True,
+                    ),
                 ),
             ),
         )

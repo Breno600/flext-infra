@@ -13,8 +13,7 @@ from pathlib import Path
 
 from flext_cli import u
 
-from flext_core import r
-from flext_infra import c, m, p, t
+from flext_infra import c, m, p, r, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesGit,
     FlextInfraUtilitiesManagedConflicts,
@@ -242,7 +241,9 @@ class FlextInfraUtilitiesPyproject:
         result = u.Cli.run_bytes(
             command,
             cwd=execution_root,
-            input_data=source.encode(c.Cli.ENCODING_DEFAULT),
+            options=u.Cli.ProcessOptions(
+                input_data=source.encode(c.Cli.ENCODING_DEFAULT),
+            ),
             timeout=process_timeout_seconds,
         )
         if result.failure:

@@ -9,8 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, m, p, r, t, u
 from flext_infra.codegen._conform import FlextInfraCodegenConformExecute
 
 if TYPE_CHECKING:
@@ -78,11 +77,13 @@ class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
         project = payload.get("project")
         if not isinstance(project, Mapping):
             return ()
-        declared = project
+        declared = project.get("dependencies")
+        if not isinstance(declared, list):
+            return ()
         return tuple(
             spec.split(" @ ", 1)[0].strip()
-            for spec in declared.dependencies
-            if "git+" in spec and " @ " in spec
+            for spec in declared
+            if isinstance(spec, str) and "git+" in spec and " @ " in spec
         )
 
 

@@ -20,8 +20,7 @@ from collections.abc import MutableMapping
 from fnmatch import fnmatch
 from pathlib import Path
 
-from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, m, p, r, t, u
 from flext_infra._config import FlextInfraConfig
 from flext_infra.codegen import (
     FlextInfraCodegenMiseArtifacts,
@@ -382,14 +381,14 @@ class FlextInfraModTextGateEngine:
     @staticmethod
     def _captures_failure(
         source: Path,
-    ) -> p.Result[tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]]:
+    ) -> p.Result[t.MappingKV[str, str]]:
         """Report invalid capture maps with the canonical message.
 
         Returns:
             The resulting failure for one invalid capture_equals mapping.
 
         """
-        return r[tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]].fail(
+        return r[t.MappingKV[str, str]].fail(
             f"text rule capture_equals must map captures to strings in {source}",
         )
 

@@ -127,6 +127,9 @@ class FlextInfraUtilitiesSemanticCutoverBase(
         Returns:
             The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
 
+        Raises:
+            ValueError: When the phase is not finding-selected.
+
         """
         root = rope_workspace.repository_root
         match phase:
@@ -156,6 +159,9 @@ class FlextInfraUtilitiesSemanticCutoverBase(
 
         Returns:
             The resulting ``p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]``.
+
+        Raises:
+            ValueError: When the phase is not order-driven.
 
         """
         match phase:

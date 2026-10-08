@@ -2,8 +2,8 @@
 
 Every project keeps its declared direct Git requirement — the requirement line
 is the only URL and ref authority — so the same package metadata resolves
-standalone, and conformance drops workspace-scoped ``[tool.uv.sources]``
-entries instead of carrying a root overlay.
+standalone. Attached members also declare workspace-scoped ``[tool.uv.sources]``
+entries; standalone conformance removes that overlay.
 
 Copyright (c) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -314,6 +314,76 @@ class TestsFlextInfraPyprojectConformTopologySources:
             else None
         )
         tm.that(not uv_sources, eq=True)
+
+    def test_attached_sources_follow_requirements_and_prune_on_detachment(self) -> None:
+        """Attached sources cover runtime and dev requirements without nesting."""
+        runtime = self._member_ref("flext-web", "flext-web")
+        dev = self._member_ref("flext-tests", "flext-tests")
+        unused = self._member_ref("flext-unused", "flext-unused")
+        consumer = self._member_ref("flext-api", "flext-api")
+        standalone = u.Tests.workspace_spec(consumer)
+        attached = standalone.model_copy(
+            update={
+                "superproject_members": tuple(
+                    ref.distribution for ref in (consumer, runtime, dev, unused)
+                ),
+            },
+        )
+        source = (
+            f'[project]\nname = "{consumer.distribution}"\nversion = "0.1.0"\n'
+            f'dependencies = ["{self._inline_requirement(runtime)}"]\n'
+            "\n[dependency-groups]\n"
+            f'dev = ["{self._inline_requirement(dev)}"]\n'
+            "\n[tool.uv.workspace]\nmembers = []\n"
+            "\n[tool.uv.sources]\n"
+            f"{unused.distribution} = {{workspace = true}}\n"
+        )
+        rendered = tm.ok(
+            u.Infra.pyproject_conform(
+                source,
+                workspace=attached,
+                required_dev_dependencies=(),
+                uv_resolution=self._toolchain_resolution(),
+                family_line=u.Tests.provider_branch(),
+            ),
+        )
+        parsed = u.Tests.toml_mapping(u.Cli.toml_parse_text(rendered))
+        uv = u.Tests.toml_mapping(u.Tests.toml_mapping(parsed.get("tool")).get("uv"))
+        tm.that("workspace" not in uv, eq=True)
+        tm.that(
+            u.Tests.toml_mapping(uv.get("sources")),
+            eq={ref.distribution: {"workspace": True} for ref in (runtime, dev)},
+        )
+        tm.that(
+            u.Tests.toml_strings_at(rendered, "project", "dependencies"),
+            eq=(self._inline_requirement(runtime),),
+        )
+        tm.that(
+            u.Tests.toml_strings_at(rendered, "dependency-groups", "dev"),
+            eq=(self._inline_requirement(dev),),
+        )
+        tm.that(
+            tm.ok(
+                u.Infra.pyproject_conform(
+                    rendered,
+                    workspace=attached,
+                    required_dev_dependencies=(),
+                    uv_resolution=self._toolchain_resolution(),
+                    family_line=u.Tests.provider_branch(),
+                ),
+            ),
+            eq=rendered,
+        )
+        detached = tm.ok(
+            u.Infra.pyproject_conform(
+                rendered,
+                workspace=standalone,
+                required_dev_dependencies=(),
+                uv_resolution=self._toolchain_resolution(),
+                family_line=u.Tests.provider_branch(),
+            ),
+        )
+        self._assert_direct_source(detached, runtime)
 
     def test_external_consumer_keeps_direct_git_requirement(self) -> None:
         """Test external consumer keeps direct git requirement."""

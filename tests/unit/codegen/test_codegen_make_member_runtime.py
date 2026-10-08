@@ -117,7 +117,9 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
                         "OBSERVED_VENV_DIR",
                     ),
                     cwd=entry,
-                    remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
+                    options=u.Cli.ProcessOptions(
+                        remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
+                    ),
                 ),
             )
         finally:

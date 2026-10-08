@@ -10,8 +10,7 @@ import stat
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
-from flext_core import r
-from flext_infra import c, m, t
+from flext_infra import c, m, r, t
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
@@ -74,7 +73,7 @@ class FlextInfraMiseRecovery:
             return authority
         terminal = self._terminal_state_cleanup(layout, journal, journal_state)
         if terminal.failure:
-            return terminal
+            return r[bool].from_failure(terminal)
         terminal_value, terminal_reached = terminal.value
         if terminal_reached:
             return r[bool].ok(terminal_value)
@@ -90,7 +89,7 @@ class FlextInfraMiseRecovery:
         journal, journal_state, classified_value = advanced.value
         restored = self._restored_and_verified(layout, journal, classified_value)
         if restored.failure:
-            return restored
+            return r[bool].from_failure(restored)
         return journal_io.cleanup(layout, journal, journal_state)
 
     @classmethod
@@ -116,7 +115,7 @@ class FlextInfraMiseRecovery:
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         journal: m.Infra.CodegenTransactionJournal,
         journal_state: m.Cli.AtomicFileState,
-    ) -> p.Result[p.Result[bool] | None]:
+    ) -> p.Result[t.Pair[bool, bool]]:
         """Clean up directly when the journal is already staging or committed.
 
         Returns:
@@ -181,7 +180,7 @@ class FlextInfraMiseRecovery:
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         journal: m.Infra.CodegenTransactionJournal,
         journal_state: m.Cli.AtomicFileState,
-        prepared: t.VariadicTuple[m.Infra.RecoveryCandidate],
+        prepared: t.VariadicTuple[m.Infra.CodegenStagedFile | None],
     ) -> p.Result[
         t.Triple[
             m.Infra.CodegenTransactionJournal,
@@ -477,6 +476,10 @@ class FlextInfraMiseRecovery:
 
         """
         result_type = r[m.Cli.AtomicFileState]
+        if entry.original_backup is None:
+            return result_type.fail(
+                f"generation recovery entry has no backup: {entry.path}",
+            )
         backup_path = files.resolve_transaction(
             layout,
             entry.original_backup,
@@ -512,6 +515,10 @@ class FlextInfraMiseRecovery:
 
         """
         result_type = r[m.Cli.AtomicFileState]
+        if entry.original_backup is None:
+            return result_type.fail(
+                f"generation recovery entry has no backup: {entry.path}",
+            )
         backup_path = files.resolve_transaction(
             layout,
             entry.original_backup,
@@ -524,16 +531,10 @@ class FlextInfraMiseRecovery:
         if candidate.failure:
             return result_type.from_failure(candidate)
         if candidate.value.content is None:
-            created = process.write_new(
-                candidate_path,
-                backup.content,
-                entry.original_mode,
-            )
-            if created.failure:
-                return result_type.from_failure(created)
-            candidate = files.read_state(candidate_path, required=True)
-            if candidate.failure:
-                return result_type.from_failure(candidate)
+            written = cls._written_restore_candidate(candidate_path, entry, backup)
+            if written.failure:
+                return result_type.from_failure(written)
+            candidate = written
         if (
             candidate.value.content != backup.content
             or candidate.value.mode != entry.original_mode
@@ -541,6 +542,35 @@ class FlextInfraMiseRecovery:
             return result_type.fail(
                 f"generation restore candidate differs: {entry.path}",
             )
+        return result_type.ok(candidate.value)
+
+    @staticmethod
+    def _written_restore_candidate(
+        candidate_path: Path,
+        entry: m.Infra.CodegenJournalEntry,
+        backup: m.Cli.AtomicFileState,
+    ) -> p.Result[m.Cli.AtomicFileState]:
+        """Write and re-read one fresh restore candidate beside its backup.
+
+        Returns:
+            The resulting ``p.Result[m.Cli.AtomicFileState]``.
+
+        """
+        result_type = r[m.Cli.AtomicFileState]
+        if backup.content is None or entry.original_mode is None:
+            return result_type.fail(
+                f"generation recovery backup identity is incomplete: {entry.path}",
+            )
+        created = process.write_new(
+            candidate_path,
+            backup.content,
+            entry.original_mode,
+        )
+        if created.failure:
+            return result_type.from_failure(created)
+        candidate = files.read_state(candidate_path, required=True)
+        if candidate.failure:
+            return result_type.from_failure(candidate)
         return result_type.ok(candidate.value)
 
     def _load_restore_candidates(
@@ -608,7 +638,7 @@ class FlextInfraMiseRecovery:
         """
         candidates = self._prepare_restore_candidates(layout, actions)
         if candidates.failure:
-            return candidates
+            return r[bool].from_failure(candidates)
         restored = FlextInfraMiseRecovery._restore(actions, candidates.value)
         if restored.failure:
             return restored

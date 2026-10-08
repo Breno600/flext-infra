@@ -12,8 +12,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_core import r
-from flext_infra import m, p
+from flext_infra import m, p, r
 from flext_infra.codegen import (
     FlextInfraMiseArtifactsJournal,
     codegen_transaction as transaction,

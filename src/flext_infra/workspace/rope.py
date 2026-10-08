@@ -13,8 +13,7 @@ from time import perf_counter
 from types import TracebackType
 from typing import Annotated, ClassVar, Self, override
 
-from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, m, p, r, t, u
 from flext_infra.base import s
 from flext_infra.workspace._rope_query import FlextInfraRopeQueryMixin
 
@@ -59,7 +58,7 @@ class FlextInfraRopeWorkspace(
         t.Triple[str, bool, bool],
         t.VariadicTuple[m.Infra.Object],
     ] = u.PrivateAttr(default_factory=dict)
-    _resource_cache: MutableMapping[str, t.Infra.RopeResource | None] = u.PrivateAttr(
+    _resource_cache: MutableMapping[str, t.Infra.RopeFile | None] = u.PrivateAttr(
         default_factory=dict,
     )
     _name_index: (
@@ -105,11 +104,13 @@ class FlextInfraRopeWorkspace(
         return workspace
 
     @property
+    @override
     def rope_repository_root(self) -> Path:
         """Canonical root used for the shared Rope project."""
         return self._rope_repository_root
 
     @property
+    @override
     def rope_project(self) -> t.Infra.RopeProject:
         """Shared Rope project, opening it lazily once."""
         rope_project = self._rope_project
@@ -125,6 +126,7 @@ class FlextInfraRopeWorkspace(
         return rope_project
 
     @property
+    @override
     def workspace_index(self) -> m.Infra.RopeWorkspaceIndex:
         """Cached workspace index for the shared Rope project."""
         workspace_index = self._workspace_index
@@ -170,6 +172,7 @@ class FlextInfraRopeWorkspace(
             workspace_index=self.workspace_index,
         )
 
+    @override
     def refresh(
         self,
         *,
@@ -199,6 +202,7 @@ class FlextInfraRopeWorkspace(
             self._import_dependents_index = None
         return self.session_snapshot()
 
+    @override
     def reload(self) -> m.Infra.RopeWorkspaceSession:
         """Reopen the shared Rope project and drop all transient caches.
 
@@ -210,6 +214,7 @@ class FlextInfraRopeWorkspace(
         _ = self.rope_project
         return self.session_snapshot()
 
+    @override
     def projects(self) -> t.SequenceOf[p.Infra.ProjectInfo]:
         """Return the canonical codegen project selection for this workspace.
 
@@ -228,6 +233,7 @@ class FlextInfraRopeWorkspace(
                 self._codegen_projects = tuple(discovered_projects)
         return self._codegen_projects
 
+    @override
     def layout(self, project_root: Path) -> m.Infra.RopeProjectLayout | None:
         """Return one centralized project layout contract for codegen pipelines.
 
@@ -251,6 +257,7 @@ class FlextInfraRopeWorkspace(
         self._project_layout_cache[cache_key] = layout
         return layout
 
+    @override
     def package_context(self, package_dir: Path) -> m.Infra.LazyInitPackageContext:
         """Return one centralized lazy-init package context for a package dir.
 
@@ -285,6 +292,7 @@ class FlextInfraRopeWorkspace(
         self._package_context_cache[cache_key] = context
         return context
 
+    @override
     def policy(
         self,
         file_path: Path,
@@ -315,6 +323,7 @@ class FlextInfraRopeWorkspace(
         self._module_policy_cache[cache_key] = policy
         return policy
 
+    @override
     def convention(
         self,
         file_path: Path,
@@ -372,6 +381,7 @@ class FlextInfraRopeWorkspace(
         self._module_convention_cache[cache_key] = convention
         return convention
 
+    @override
     def semantic(self, file_path: Path) -> m.Infra.ModuleSemanticState:
         """Return one cached semantic snapshot for a module path.
 
@@ -385,6 +395,7 @@ class FlextInfraRopeWorkspace(
         )
         return state
 
+    @override
     def exports(
         self,
         file_path: Path,
@@ -404,6 +415,7 @@ class FlextInfraRopeWorkspace(
             export_options=resolved_export_options,
         )
 
+    @override
     def close(self) -> None:
         """Close the shared Rope project and clear transient caches."""
         if self._rope_project is not None:
@@ -420,6 +432,7 @@ class FlextInfraRopeWorkspace(
         self._name_index = None
         self._import_dependents_index = None
 
+    @override
     def __enter__(self) -> Self:
         """Open the Rope project on context-manager entry.
 
@@ -430,6 +443,7 @@ class FlextInfraRopeWorkspace(
         _ = self.rope_project
         return self
 
+    @override
     def __exit__(
         self,
         _exc_type: type[BaseException] | None,
@@ -439,7 +453,8 @@ class FlextInfraRopeWorkspace(
         """Close the Rope project on context-manager exit."""
         self.close()
 
-    def _resource_for(self, file_path: Path) -> t.Infra.RopeResource:
+    @override
+    def _resource_for(self, file_path: Path) -> t.Infra.RopeFile:
         """Require a resource inside the active Rope workspace.
 
         Returns:

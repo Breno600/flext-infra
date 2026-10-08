@@ -20,6 +20,7 @@ class FlextInfraTypesRope:
 
     type RopeProject = FlextInfraProtocolsRopeRuntime.RopeProject
     type RopeResource = FlextInfraProtocolsRopeRuntime.RopeResource
+    type RopeFile = FlextInfraProtocolsRopeRuntime.RopeFile
     type RopeLocation = FlextInfraProtocolsRopeRuntime.RopeLocation
     type RopePyModule = FlextInfraProtocolsRopeRuntime.RopePyModule
     type RopePyName = FlextInfraProtocolsRopeRuntime.RopePyName

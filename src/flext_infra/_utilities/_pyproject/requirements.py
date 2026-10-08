@@ -580,7 +580,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             dependency_name = FlextInfraUtilitiesDependenciesProfiles.dep_name(
                 requirement,
             )
-            if dependency_name not in member_names:
+            if dependency_name is None or dependency_name not in member_names:
                 continue
             provenance = FlextInfraUtilitiesPyprojectRequirements._member_provenance(
                 dependency_name,

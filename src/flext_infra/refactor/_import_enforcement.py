@@ -22,7 +22,7 @@ class _DemotionScan:
 
     tree: ast.Module
     parents: t.MappingKV[int, ast.AST]
-    frozen: t.Infra.StrSet
+    frozen: set[int]
     package: str
     module_rank: int
     file_path: Path
@@ -304,7 +304,7 @@ class FlextInfraImportNormalization:
         if len(names) == 1 and names[0] == package:
             root_form = True
         elif (
-            len(names) == FlextInfraImportNormalization.FAMILY_PATH_DEPTH
+            len(names) == c.Infra.IMPORT_NORMALIZATION_FAMILY_PATH_DEPTH
             and names[0] == package
             and names[1].lstrip("_") in c.Infra.IMPORT_NORMALIZATION_FAMILY_LETTER
         ):
@@ -689,7 +689,11 @@ class FlextInfraImportNormalization:
         ] = defaultdict(lambda: defaultdict(set))
         edits: t.MutableSequenceOf[tuple[int, int, t.StrSequence]] = []
         for node in cls._iter_imports(tree):
-            if not cls._demotion_scope(node, package, scan.parents):
+            if not isinstance(node, ast.ImportFrom) or not cls._demotion_scope(
+                node,
+                package,
+                scan.parents,
+            ):
                 continue
             cls._collect_demotion_edits(scan, node, insertions, edits)
         guard_edits = cls._guard_cleanup_edits(
@@ -730,7 +734,7 @@ class FlextInfraImportNormalization:
     def _collect_demotion_edits(
         cls,
         scan: _DemotionScan,
-        node: ast.stmt,
+        node: ast.ImportFrom,
         insertions: MutableMapping[int, MutableMapping[str, t.Infra.StrSet]],
         edits: t.MutableSequenceOf[tuple[int, int, t.StrSequence]],
     ) -> None:
@@ -742,6 +746,8 @@ class FlextInfraImportNormalization:
             if not demotes:
                 if bound is not None:
                     kept.append(bound)
+                continue
+            if bound is None:
                 continue
             demotable.append((alias.name, bound))
         if not demotable:
@@ -789,7 +795,7 @@ class FlextInfraImportNormalization:
         if not all(cls._demotable(site, scan.parents, scan.frozen) for site in sites):
             return False, bound
         target_module = cls._canonical_lazy_module(
-            node.module,
+            node.module or "",
             alias.name,
             scan.package,
             scan.family_exports,
@@ -805,7 +811,7 @@ class FlextInfraImportNormalization:
     @classmethod
     def _append_demotion_edit(
         cls,
-        node: ast.stmt,
+        node: ast.ImportFrom,
         kept: t.SequenceOf[str],
         edits: t.MutableSequenceOf[tuple[int, int, t.StrSequence]],
     ) -> None:
@@ -822,7 +828,7 @@ class FlextInfraImportNormalization:
             (
                 node.lineno,
                 cls._end_line(node),
-                (f"from {node.module} import {clauses}",),
+                (f"from {node.module or ''} import {clauses}",),
             ),
         )
 
@@ -979,7 +985,7 @@ class FlextInfraImportNormalization:
         tree: ast.Module,
         node: ast.Try,
         parents: t.MappingKV[int, ast.AST],
-        frozen: t.Infra.StrSet,
+        frozen: set[int],
         insertions: MutableMapping[int, MutableMapping[str, t.Infra.StrSet]],
     ) -> tuple[
         tuple[int, int, t.StrSequence] | None,
@@ -1018,7 +1024,7 @@ class FlextInfraImportNormalization:
         tree: ast.Module,
         lines: t.StrSequence,
         parents: t.MappingKV[int, ast.AST],
-        frozen: t.Infra.StrSet,
+        frozen: set[int],
         insertions: MutableMapping[int, MutableMapping[str, t.Infra.StrSet]],
     ) -> t.SequenceOf[tuple[int, int, t.StrSequence]]:
         """Remove ``try/except ImportError`` import guards; rebind at use.
@@ -1032,7 +1038,7 @@ class FlextInfraImportNormalization:
         """
         edits: t.MutableSequenceOf[tuple[int, int, t.StrSequence]] = []
         for node in tree.body:
-            if not cls._is_import_guard(node):
+            if not isinstance(node, ast.Try) or not cls._is_import_guard(node):
                 continue
             removal, fallbacks = cls._cleanup_import_guard(
                 tree,
@@ -1094,7 +1100,7 @@ class FlextInfraImportNormalization:
         cls,
         site: ast.Name,
         parents: t.MappingKV[int, ast.AST],
-        frozen: t.Infra.StrSet,
+        frozen: set[int],
     ) -> bool:
         """Return whether one use site can move inside its using function.
 
@@ -1113,7 +1119,7 @@ class FlextInfraImportNormalization:
 
     @staticmethod
     def _freeze_function_decorators(
-        frozen: t.Infra.StrSet,
+        frozen: set[int],
         node: ast.FunctionDef | ast.AsyncFunctionDef,
     ) -> None:
         """Freeze one function's decorators, defaults, and annotations."""
@@ -1133,7 +1139,7 @@ class FlextInfraImportNormalization:
                 frozen.update(id(sub) for sub in ast.walk(argument.annotation))
 
     @classmethod
-    def _frozen_node_ids(cls, tree: ast.Module) -> t.Infra.StrSet:
+    def _frozen_node_ids(cls, tree: ast.Module) -> set[int]:
         """Mark every subtree that must stay at module definition time.
 
         Class bases and keywords, decorators, signature defaults and
@@ -1144,7 +1150,7 @@ class FlextInfraImportNormalization:
             The resulting ``t.Infra.StrSet``.
 
         """
-        frozen: t.Infra.StrSet = set()
+        frozen: set[int] = set()
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef):
                 for base in node.bases:
@@ -1167,7 +1173,7 @@ class FlextInfraImportNormalization:
             The resulting ``list[int]``.
 
         """
-        anchors: t.Infra.StrSet = set()
+        anchors: set[int] = set()
         for site in sites:
             outermost: ast.FunctionDef | ast.AsyncFunctionDef | None = None
             node: ast.AST | None = site
@@ -1335,7 +1341,8 @@ class FlextInfraImportNormalization:
             if not letters or len(letters) != len(node.names):
                 continue
             indent = cls._line_indent(lines[node.lineno - 1])
-            ordered = sorted(letters, key=c.Infra.IMPORT_NORMALIZATION_LETTER_ORDER.get)
+            order = c.Infra.IMPORT_NORMALIZATION_LETTER_ORDER
+            ordered = sorted(letters, key=order.__getitem__)
             edits.append(
                 (
                     node.lineno,

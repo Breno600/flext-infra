@@ -41,7 +41,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
             u.Cli.run_raw(
                 ["make", "_builtin_setup_submodules"],
                 cwd=workspace,
-                env=env,
+                options=u.Cli.ProcessOptions(env=env),
             ),
         )
 
@@ -465,7 +465,7 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
             u.Cli.run_raw(
                 ["make", "--no-print-directory", "_builtin_setup_environment"],
                 cwd=workspace,
-                env=env,
+                options=u.Cli.ProcessOptions(env=env),
             ),
         )
 

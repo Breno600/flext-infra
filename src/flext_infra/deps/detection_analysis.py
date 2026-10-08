@@ -11,8 +11,7 @@ from pathlib import Path
 from typing import override
 
 from flext_core import c as core_c, r
-from flext_infra import c, m, p, t, u
-from flext_infra._config import config
+from flext_infra import c, config, m, p, t, u
 from flext_infra.deps._detection_runners import (
     FlextInfraDependencyDetectionRunnersMixin,
 )

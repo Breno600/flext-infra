@@ -10,9 +10,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, override
 
-from flext_core import r
-from flext_infra import c, m, t, u
-from flext_infra._config import config
+from flext_infra import c, config, m, r, t, u
 from flext_infra.base import s
 from flext_infra.workspace._governance import FlextInfraWorkspaceGovernanceMixin
 
@@ -570,11 +568,16 @@ class FlextInfraWorkspaceDetector(
         )
         if beads_route.failure:
             return result_type.from_failure(beads_route)
-        return cls._composed_member(
+        composed = cls._composed_member(
             path,
             subproject_root,
             declared_url=declared_url,
             workspace_beads=context.workspace_beads,
+        )
+        return (
+            result_type.from_failure(composed)
+            if composed.failure
+            else result_type.ok(composed.value)
         )
 
     @classmethod
@@ -1035,7 +1038,7 @@ class FlextInfraWorkspaceDetector(
         cls,
         resolved_root: Path,
         overlay: m.Infra.RepositoryPolicyOverlaySpec | None,
-    ) -> p.Result[t.Pair[m.Infra.BeadsProjectSpec, bool]]:
+    ) -> p.Result[t.Pair[m.Infra.BeadsProjectSpec | None, bool]]:
         """Resolve the declared Beads ledger under the repository policy.
 
         Returns:
@@ -1046,14 +1049,18 @@ class FlextInfraWorkspaceDetector(
         beads_enabled = overlay is None or overlay.beads_enabled
         if not beads_enabled:
             if overlay is not None and overlay.gascity_enabled:
-                return r[t.Pair[m.Infra.BeadsProjectSpec, bool]].fail(
+                return r[t.Pair[m.Infra.BeadsProjectSpec | None, bool]].fail(
                     "Gas City requires Beads participation in the repository policy",
                 )
-            return r[t.Pair[m.Infra.BeadsProjectSpec, bool]].ok((None, False))
+            return r[t.Pair[m.Infra.BeadsProjectSpec | None, bool]].ok((None, False))
         beads_result = cls.load_beads_spec(resolved_root)
         if beads_result.failure:
-            return r[t.Pair[m.Infra.BeadsProjectSpec, bool]].from_failure(beads_result)
-        return r[t.Pair[m.Infra.BeadsProjectSpec, bool]].ok((beads_result.value, True))
+            return r[t.Pair[m.Infra.BeadsProjectSpec | None, bool]].from_failure(
+                beads_result,
+            )
+        return r[t.Pair[m.Infra.BeadsProjectSpec | None, bool]].ok(
+            (beads_result.value, True),
+        )
 
     @classmethod
     def _effective_workspace_beads(
@@ -1165,7 +1172,7 @@ class FlextInfraWorkspaceDetector(
                 loaded_member.error
                 or f"Git submodule is not a declared governed project: {member_root}",
             )
-        return result_type.ok(inherited_beads.value)
+        return result_type.ok((inherited_beads.value, loaded_member.value))
 
     @classmethod
     def _resolved_workspace_refs(

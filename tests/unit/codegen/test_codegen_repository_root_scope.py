@@ -120,7 +120,7 @@ class TestsFlextInfraCodegenRepositoryRootScope:
                 u.Cli.run_raw(
                     [c.Infra.MAKE, "--dry-run", f"_builtin-{verb}"],
                     cwd=repository_root,
-                    remove_env_keys=("MAKEFLAGS",),
+                    options=u.Cli.ProcessOptions(remove_env_keys=("MAKEFLAGS",)),
                 ),
             )
             tm.that(u.Cli.process_succeeded(execution.outcome), eq=True)
@@ -135,7 +135,7 @@ class TestsFlextInfraCodegenRepositoryRootScope:
             u.Cli.run_raw(
                 [c.Infra.MAKE, "--dry-run", "_builtin-propagate"],
                 cwd=repository_root,
-                remove_env_keys=("MAKEFLAGS",),
+                options=u.Cli.ProcessOptions(remove_env_keys=("MAKEFLAGS",)),
             ),
         )
         tm.that(u.Cli.process_succeeded(execution.outcome), eq=True)

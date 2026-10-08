@@ -13,9 +13,7 @@ from pathlib import Path
 from time import perf_counter
 from typing import TYPE_CHECKING, Annotated, override
 
-from flext_core import r
-from flext_infra import c, m, t, u
-from flext_infra._config import config
+from flext_infra import c, config, m, r, t, u
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
 from flext_infra.codegen._lazy_init_generation import (
     FlextInfraCodegenLazyInitGenerationMixin,
@@ -329,15 +327,15 @@ class FlextInfraCodegenLazyInit(
         self,
         workspace_index: m.Infra.RopeWorkspaceIndex,
         indexed_package_dirs: t.VariadicTuple[Path],
-    ) -> p.Result[t.Pair[Path, bool]]:
+    ) -> p.Result[t.Pair[Path | None, bool]]:
         """Resolve the single target package dir when a target module is set.
 
         Returns:
-            The resulting ``p.Result[t.Pair[Path, bool]]`` where the boolean
-            marks resolution (False: no target module is set).
+            The resulting ``p.Result[t.Pair[Path | None, bool]]`` where the
+            boolean marks resolution (False: no target module is set).
 
         """
-        result_type = r[t.Pair[Path, bool]]
+        result_type = r[t.Pair[Path | None, bool]]
         if not self.target_module:
             return result_type.ok((None, False))
         sorted_target_dirs = self._target_package_dirs(
@@ -357,7 +355,7 @@ class FlextInfraCodegenLazyInit(
             return result_type.fail(
                 f"lazy-init target belongs to retired support: {self.target_module}",
             )
-        return result_type.ok(target_package_dir)
+        return result_type.ok((target_package_dir, True))
 
     def _analyzed_workspace(
         self,

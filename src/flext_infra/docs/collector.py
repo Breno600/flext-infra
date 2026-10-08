@@ -9,8 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra import m, t, u
+from flext_infra import m, r, t, u
 from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 
@@ -173,7 +172,7 @@ class FlextInfraDocCollector:
 
     @staticmethod
     def _prune_bundle_directories(
-        bundle: m.Infra.DocsCollectedBundle,
+        bundle: m.Infra.PlanCollectionBundle,
     ) -> p.Result[bool]:
         """Delete the bundle's empty prunable directories.
 

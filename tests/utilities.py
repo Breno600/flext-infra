@@ -13,8 +13,7 @@ from pathlib import Path
 
 from flext_tests import FlextTestsUtilities, tm
 
-from flext_core import r
-from flext_infra import FlextInfraUtilities, config
+from flext_infra import FlextInfraUtilities, config, r
 from flext_infra.codegen import FlextInfraCodegenConform
 from tests import c, m, p, t
 from tests.utilities_codegen import TestsFlextInfraUtilitiesCodegenMixin

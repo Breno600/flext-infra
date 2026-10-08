@@ -78,6 +78,9 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
         Returns:
             The resulting ``t.SequenceOf[t.Triple[int, int, str]]``.
 
+        Raises:
+            ValueError: If a model field guard has no complete source span.
+
         """
         untrusted = {
             arg.arg
@@ -113,9 +116,16 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
                 f"{indent}    or not {receiver}.model_fields\n"
                 f"{indent}):\n"
             )
+            test_end = guard.test.end_lineno
+            if test_end is None:
+                msg = (
+                    f"model field guard has no complete source span in "
+                    f"{path}:{statement.lineno}"
+                )
+                raise ValueError(msg)
             replacements.append((
                 statement.lineno - 1,
-                guard.test.end_lineno,
+                test_end,
                 comments + condition,
             ))
         return replacements

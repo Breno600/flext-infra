@@ -11,7 +11,6 @@ import importlib
 import importlib.util
 import sys
 from pathlib import Path
-from typing import ClassVar
 
 from flext_infra import c, m, p, t
 from flext_infra._utilities import (
@@ -800,7 +799,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                     f"{identity}"
                 )
                 raise TypeError(message)
-            builtin_class = FlextInfraUtilitiesRopeRuntime._runtime_callable(
+            builtin_class = FlextInfraUtilitiesRopeRuntime._runtime_callable(  # ruff: ignore[private-member-access] - same-runtime internal rope accessor
                 "rope.base.builtins",
                 "BuiltinClass",
             )
@@ -816,6 +815,9 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
             value: p.AttributeProbe,
         ) -> t.Infra.RopePyObject:
             """Narrow one constructed Rope builtin base to its object shape.
+
+            Returns:
+                The narrowed Rope object value.
 
             Raises:
                 TypeError: If the constructed base is not a Rope class object.

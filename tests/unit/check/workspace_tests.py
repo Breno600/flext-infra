@@ -12,8 +12,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_core import r
-from flext_infra import c, main
+from flext_infra import c, main, r
 from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 from tests import u
 

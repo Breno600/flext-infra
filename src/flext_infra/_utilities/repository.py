@@ -17,8 +17,7 @@ from urllib.parse import urlparse
 
 from flext_cli import u
 
-from flext_core import r
-from flext_infra import c, m, p, t
+from flext_infra import c, m, p, r, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesDependenciesProfiles,
     FlextInfraUtilitiesGitSemanticPublishMixin,
@@ -483,9 +482,7 @@ class FlextInfraUtilitiesRepository:
         tool = payload.get("tool")
         uv = tool.get("uv") if isinstance(tool, dict) else None
         raw_sources = uv.get("sources") if isinstance(uv, dict) else None
-        sources: t.JsonMapping = (
-            raw_sources if isinstance(raw_sources, dict) else {}
-        )
+        sources: t.JsonMapping = raw_sources if isinstance(raw_sources, dict) else {}
         entry = sources.get(distribution)
         if isinstance(entry, dict) and entry.get("workspace") is True:
             for requirement in cls._dependency_requirements(payload):

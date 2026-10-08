@@ -11,8 +11,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import Literal
 
-from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, m, p, r, t, u
 from flext_infra.codegen._conform.artifact_render import (
     FlextInfraCodegenConformArtifactRender,
 )

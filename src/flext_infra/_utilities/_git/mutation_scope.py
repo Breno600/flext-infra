@@ -11,8 +11,7 @@ from pathlib import Path
 from git import GitError, Repo
 from git.repo.fun import is_git_dir
 
-from flext_core import r
-from flext_infra import c, m, p
+from flext_infra import c, m, p, r
 
 
 class FlextInfraUtilitiesGitMutationScopeMixin:

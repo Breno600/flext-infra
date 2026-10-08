@@ -118,19 +118,21 @@ def profile_parent(runner: FlextInfraPytestRunner, output: Path) -> int:
             (sys.executable, "-m", "flext_infra._pytest_entry", "profile", str(output)),
             log,
             cwd=runner.root,
-            env=u.Cli.process_env(
-                overrides={
-                    c.Infra.PYTEST_ENV_TARGET: str(runner.target),
-                    c.Infra.PYTEST_ENV_TARGET_FILE: str(runner.target_file or ""),
-                    c.Infra.PYTEST_ENV_REPORTS: str(runner.reports),
-                    cache.database_environment_variable: str(runner.testmon_db),
-                },
-            ),
-            deadline=m.Cli.ProcessDeadline(
-                expires_at_monotonic=(
-                    runner.started_at_monotonic + policy.run_timeout_seconds
+            options=u.Cli.ProcessOptions(
+                env=u.Cli.process_env(
+                    overrides={
+                        c.Infra.PYTEST_ENV_TARGET: str(runner.target),
+                        c.Infra.PYTEST_ENV_TARGET_FILE: str(runner.target_file or ""),
+                        c.Infra.PYTEST_ENV_REPORTS: str(runner.reports),
+                        cache.database_environment_variable: str(runner.testmon_db),
+                    },
                 ),
-                termination_grace_seconds=policy.termination_grace_seconds,
+                deadline=m.Cli.ProcessDeadline(
+                    expires_at_monotonic=(
+                        runner.started_at_monotonic + policy.run_timeout_seconds
+                    ),
+                    termination_grace_seconds=policy.termination_grace_seconds,
+                ),
             ),
         ),
     )

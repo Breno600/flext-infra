@@ -10,9 +10,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra import c, m, t, u
-from flext_infra._config import config
+from flext_infra import c, config, m, r, t, u
 from flext_infra.codegen import (
     FlextInfraCodegenMiseArtifacts,
     FlextInfraCodegenTransaction,
@@ -49,7 +47,7 @@ class FlextInfraSemanticPublication:
         if not files.value:
             return r[tuple[Path, ...]].ok(())
         analysis = m.Infra.CodegenPhaseAnalysis(
-            phase=c.Infra.CodegenStagedFilePhase.SEMANTIC,
+            phase="semantic",
             files=tuple(files.value),
             inputs=tuple(plan.before for plan in plans),
         )

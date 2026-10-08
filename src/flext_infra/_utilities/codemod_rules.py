@@ -18,8 +18,7 @@ from flext_cli import r, u
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
-from flext_infra import c, m, p, t
-from flext_infra._config import config
+from flext_infra import c, config, m, p, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesDependenciesProfiles,
     FlextInfraUtilitiesResourceLimits,
