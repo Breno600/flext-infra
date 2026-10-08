@@ -198,11 +198,7 @@ class FlextInfraWorkspaceEnvironmentProvenance:
                 name,
                 locked,
                 repository_root,
-                repository=(
-                    members.get(name)
-                    if workspace.repository.role is c.Infra.MakeProfile.WORKSPACE
-                    else None
-                ),
+                repository=members.get(name),
                 metadata_paths=metadata_paths,
             )
             if provenance.failure:
