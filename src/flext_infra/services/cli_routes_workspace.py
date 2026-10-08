@@ -20,6 +20,7 @@ from flext_infra.workspace.environment_provenance import (
     FlextInfraWorkspaceEnvironmentProvenance,
 )
 from flext_infra.workspace.fleet_gaps import FlextInfraWorkspaceFleetGaps
+from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
 from flext_infra.workspace.lifecycle import FlextInfraWorkspaceLifecycle
 from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
 
@@ -37,8 +38,6 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
-        from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
-
         return FlextInfraFlextBindingService.apply(
             consumer_root=params.repository_root,
             flext_root=params.flext_root,

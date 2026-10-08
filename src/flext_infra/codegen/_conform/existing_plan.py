@@ -36,8 +36,6 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         """
         root = target.root
         repository = target.repository
-        if contract.destinations == frozenset(c.Infra.ARTIFACT_NAMES):
-            return FlextInfraMiseColdStart.candidate_plans(root)
         if contract.destinations == c.Infra.MAKEFILE_BOOTSTRAP_DESTINATIONS:
             return self._plan_existing_bootstrap(target, workspace, codegen)
         if contract.destinations == frozenset({c.PYPROJECT_FILENAME}):

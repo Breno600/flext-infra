@@ -201,6 +201,61 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
         )
         tm.that("generated_contract" in sys.modules, eq=False)
 
+    @pytest.mark.parametrize("qualified", [False, True])
+    def test_generated_lazy_member_keeps_the_export_binding(
+        self,
+        tmp_path: Path,
+        *,
+        qualified: bool,
+    ) -> None:
+        """Provider members resolve through the exported class, not its module."""
+        package = tmp_path / "src" / "flext"
+        package.mkdir(parents=True)
+        (package / "__init__.py").write_text(
+            c.Infra.AUTOGEN_HEADERS[0]
+            + "\nfrom types import MappingProxyType\n"
+            + "from typing import TYPE_CHECKING\n"
+            + "from flext_core import install_lazy_exports\n"
+            + "if TYPE_CHECKING:\n    from .models import m\n"
+            + "install_lazy_exports(__name__, __file__, "
+            'MappingProxyType({"m": ".models"}), public_exports=("m",))\n'
+            + 'raise RuntimeError("This package must not be imported")\n',
+            encoding="utf-8",
+        )
+        source = (
+            "import flext\nclass Consumer(flext.m.BaseModel): pass\n"
+            if qualified
+            else "from flext import m\nclass Consumer(m.BaseModel): pass\n"
+        )
+        planned = {
+            package / "models.py": self._root_import()
+            + "class Contract(RuntimeRoot): pass\n"
+            + "class Facade:\n    BaseModel = Contract\nm = Facade\n",
+            package / "consumer.py": source,
+        }
+        was_imported = "flext" in sys.modules
+        tm.that(
+            u.Infra.runtime_evaluated_base_classes(tmp_path, planned, self._roots()),
+            eq=tuple(sorted({*self._roots(), "flext.m.BaseModel"})),
+        )
+        tm.that("flext" in sys.modules, eq=was_imported)
+
+    def test_missing_direct_package_base_is_not_invented(self, tmp_path: Path) -> None:
+        """An available provider class does not imply a package-level export."""
+        package = tmp_path / "src" / "flext"
+        planned = {
+            package / "__init__.py": "",
+            package / "models.py": self._root_import()
+            + "class BaseModel(RuntimeRoot): pass\n",
+            package / "consumer.py": (
+                "import flext\nclass Invalid(flext.BaseModel): pass\n"
+            ),
+        }
+        with pytest.raises(
+            ValueError, match=r"Unresolved planned base: flext\.BaseModel"
+        ):
+            u.Infra.runtime_evaluated_base_classes(tmp_path, planned, self._roots())
+
     def test_native_stdlib_aliases_preserve_the_same_qualified_bases(
         self,
         tmp_path: Path,
