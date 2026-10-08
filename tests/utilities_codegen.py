@@ -360,7 +360,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         result = tm.ok(
             u.Cli.run(
                 [sys.executable, "-c", probe],
-                options=u.Cli.ProcessOptions(env=probe_env),
+                options=m.Cli.ProcessOptions(env=probe_env),
                 cwd=cwd,
             ),
         )
