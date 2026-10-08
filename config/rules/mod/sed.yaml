@@ -314,18 +314,6 @@ rules:
       u.Cli.ProcessOptions exists, so every construction names the model.
     find: '\bu\.Cli\.ProcessOptions\('
     replace: 'm.Cli.ProcessOptions('
-  - id: promoted-execution-import-cli-models
-    distributions: [flext-infra]
-    description: The promoted executor builds m.Cli.ProcessOptions, so it imports the flext-cli models facade.
-    include: [src/flext_infra/_utilities/_promoted/execution.py]
-    find: '(?m)^from flext_cli import u$'
-    replace: 'from flext_cli import m, u'
-  - id: census-formatting-import-models
-    distributions: [flext-infra]
-    description: The census formatter builds m.Cli.ProcessOptions, so it imports the models facade.
-    include: [src/flext_infra/refactor/_census_apply_formatting.py]
-    find: '(?m)^from flext_infra import c, config, p, u$'
-    replace: 'from flext_infra import c, config, m, p, u'
   - id: process-options-tests-import-models-c-u
     distributions: [flext-infra]
     description: Tests that build m.Cli.ProcessOptions import the models facade from the tests namespace.
