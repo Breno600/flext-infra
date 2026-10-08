@@ -299,7 +299,7 @@ class TestsFlextInfraCodegenMakeUpgrade:
         self,
         generated_make_template: t.Pair[c.Infra.MakeProfile, Path],
     ) -> None:
-        """An upgrade publishes only after gen converges and every gate passes."""
+        """An upgrade publishes after gen converges; gates stay with make check."""
         _profile, project_root = generated_make_template
         makefile = (project_root / "Makefile").read_text(encoding="utf-8")
 
