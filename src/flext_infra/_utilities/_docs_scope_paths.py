@@ -171,12 +171,12 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
             return r[t.VariadicTuple[Path]].fail(
                 f"docs repository topology changed during discovery: {manifest_path}",
             )
-        return r[t.VariadicTuple[Path]].ok(declared.value)
+        return r[t.VariadicTuple[Path]].ok(tuple(declared.value))
 
     @staticmethod
     def _declared_root_candidates(
         root: Path,
-        declared_paths: t.SequenceOf[str],
+        declared_paths: t.SequenceOf[Path],
     ) -> p.Result[t.VariadicTuple[Path]]:
         """Compose repository-root candidates from declared submodule paths.
 
@@ -186,7 +186,7 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
         """
         candidates: list[Path] = [root]
         for declared_path in declared_paths:
-            selector = Path(declared_path)
+            selector = declared_path
             if selector.is_absolute() or ".." in selector.parts:
                 return r[t.VariadicTuple[Path]].fail(
                     f"invalid docs composed project path: {selector}",

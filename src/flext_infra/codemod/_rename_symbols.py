@@ -11,6 +11,7 @@ from difflib import SequenceMatcher
 from pathlib import Path
 
 from flext_infra import m, p, t, u
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraRenameSymbols:
@@ -247,24 +248,27 @@ class FlextInfraRenameSymbols:
         sources: t.MappingKV[Path, str],
         ordered_paths: t.SequenceOf[Path],
         root: Path,
-    ) -> t.MappingKV[Path, t.Infra.RopeResource]:
+    ) -> t.MappingKV[Path, t.Infra.RopeFile]:
         """Authenticate every planned source against its live Rope resource.
 
         Returns:
             The authenticated ``path -> resource`` inventory.
 
         Raises:
+            TypeError: If a planned source is not a Rope file resource.
             ValueError: If Rope input changed after authentication.
 
         """
-        resources = {
-            path: project.get_resource(path.relative_to(root).as_posix())
-            for path in ordered_paths
-        }
-        for path, resource in resources.items():
+        resources: dict[Path, t.Infra.RopeFile] = {}
+        for path in ordered_paths:
+            resource = project.get_resource(path.relative_to(root).as_posix())
+            if not FlextInfraUtilitiesRopeRuntime.file_resource(resource):
+                msg = f"expected a Rope file resource: {path}"
+                raise TypeError(msg)
             if resource.read() != sources[path]:
                 msg = f"Rope input changed after authentication: {path}"
                 raise ValueError(msg)
+            resources[path] = resource
         return resources
 
     @classmethod
@@ -340,7 +344,7 @@ class FlextInfraRenameSymbols:
     @classmethod
     def _record_campaign_change(
         cls,
-        change: p.Infra.RopeChangeContents,
+        change: p.AttributeProbe,
         *,
         project: t.Infra.RopeProject,
         sources: t.MappingKV[Path, str],

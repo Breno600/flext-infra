@@ -47,6 +47,10 @@ jobs:
       # cache is content-addressed by the committed locks, so a warm cache is
       # always valid for the same lock and can never hide a finding; it only
       # removes the cold download of the pinned tarballs.
+      # Why: the cache keeps Mise's installs and downloads but never its shims.
+      # A restored shim points at the Mise binary of an earlier run, which Mise
+      # treats as unmanaged ("not replacing unmanaged file in shims directory",
+      # one warning per tool); Mise regenerates the shims from mise.lock.
       - name: Restore tool caches
         id: tool-cache
         uses: actions/cache/restore@v6
@@ -61,6 +65,7 @@ jobs:
             .hypothesis
             ~/.cache/uv
             ~/.local/share/mise
+            !~/.local/share/mise/shims
           key: ${{ runner.os }}-3.13-tools-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-3.13-tools-
@@ -95,6 +100,7 @@ jobs:
             .hypothesis
             ~/.cache/uv
             ~/.local/share/mise
+            !~/.local/share/mise/shims
           key: ${{ runner.os }}-3.13-tools-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml') }}
 
 
@@ -174,6 +180,10 @@ jobs:
           fetch-depth: 0
 
       # Why: same cold-download protection as the docs-quality job.
+      # Why: the cache keeps Mise's installs and downloads but never its shims.
+      # A restored shim points at the Mise binary of an earlier run, which Mise
+      # treats as unmanaged ("not replacing unmanaged file in shims directory",
+      # one warning per tool); Mise regenerates the shims from mise.lock.
       - name: Restore tool caches
         id: tool-cache
         uses: actions/cache/restore@v6
@@ -188,6 +198,7 @@ jobs:
             .hypothesis
             ~/.cache/uv
             ~/.local/share/mise
+            !~/.local/share/mise/shims
           key: ${{ runner.os }}-3.13-tools-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-3.13-tools-
@@ -219,6 +230,7 @@ jobs:
             .hypothesis
             ~/.cache/uv
             ~/.local/share/mise
+            !~/.local/share/mise/shims
           key: ${{ runner.os }}-3.13-tools-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml') }}
 
 

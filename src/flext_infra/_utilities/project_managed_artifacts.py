@@ -13,8 +13,7 @@ from pathlib import Path
 
 from flext_cli import u
 
-from flext_core import r
-from flext_infra import c, m, p, t
+from flext_infra import c, m, p, r, t
 from flext_infra._utilities import FlextInfraUtilitiesGit
 
 
@@ -57,6 +56,8 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         identity = cls._config_directory_identity(config_dir)
         if identity.failure:
             return quad.from_failure(identity)
+        if not identity.value:
+            return quad.ok((config_dir, project_identity.value, (), ()))
         paths = cls._config_yaml_paths(config_dir, identity.value)
         if paths.failure:
             return quad.from_failure(paths)

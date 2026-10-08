@@ -58,19 +58,39 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         self,
         tmp_path: Path,
     ) -> None:
-        """Normal public recipes retain testmon without appending slow or full."""
+        """`make test` stays one incremental phase; `test-file` runs its file whole.
+
+        `make test` runs in CI and pre-commit, so slow-marked items stay out of
+        it (operator 2026-10-01: nothing slow in CI or pre-commit). `test-file`
+        is the sole single-file path and runs only locally, so the declared
+        file passes through its budgeted phase and then its slow phase; a file
+        whose items are all slow-marked never ends the verb with zero executed
+        tests. Neither recipe appends the full suite.
+        """
         root = self._render_root_makefile(tmp_path)
         rendered = (root / c.Infra.MAKEFILE_FILENAME).read_text(
             encoding=c.Infra.ENCODING_DEFAULT,
         )
         cache = config.Infra.codegen.make.testmon_cache
-        for target in ("_builtin_test_all:", "_builtin_test_file_all:"):
-            recipe = rendered.split(target, 1)[1].split("\n\n", 1)[0]
-            tm.that(recipe.count("-m flext_infra._pytest_entry"), eq=1)
-            tm.that(
-                recipe,
-                lacks=["_pytest_entry slow", "file-slow", "_pytest_entry full"],
-            )
+        recipes = {
+            target: rendered.split(target, 1)[1].split("\n\n", 1)[0]
+            for target in ("_builtin_test_all:", "_builtin_test_file_all:")
+        }
+        test_recipe = recipes["_builtin_test_all:"]
+        tm.that(test_recipe.count("-m flext_infra._pytest_entry"), eq=1)
+        tm.that(
+            test_recipe,
+            lacks=["_pytest_entry slow", "file-slow", "_pytest_entry full"],
+        )
+        file_recipe = recipes["_builtin_test_file_all:"]
+        tm.that(file_recipe.count("-m flext_infra._pytest_entry"), eq=2)
+        tm.that(
+            file_recipe.index("_pytest_entry file;")
+            < file_recipe.index("_pytest_entry file-slow"),
+            eq=True,
+        )
+        tm.that(file_recipe, lacks=["_pytest_entry slow", "_pytest_entry full"])
+        for recipe in recipes.values():
             tm.that(
                 recipe,
                 has=f'{cache.database_environment_variable}="$$database"',
@@ -120,7 +140,7 @@ class TestsFlextInfraCodegenRepositoryRootScope:
                 u.Cli.run_raw(
                     [c.Infra.MAKE, "--dry-run", f"_builtin-{verb}"],
                     cwd=repository_root,
-                    remove_env_keys=("MAKEFLAGS",),
+                    options=u.Cli.ProcessOptions(remove_env_keys=("MAKEFLAGS",)),
                 ),
             )
             tm.that(u.Cli.process_succeeded(execution.outcome), eq=True)
@@ -135,7 +155,7 @@ class TestsFlextInfraCodegenRepositoryRootScope:
             u.Cli.run_raw(
                 [c.Infra.MAKE, "--dry-run", "_builtin-propagate"],
                 cwd=repository_root,
-                remove_env_keys=("MAKEFLAGS",),
+                options=u.Cli.ProcessOptions(remove_env_keys=("MAKEFLAGS",)),
             ),
         )
         tm.that(u.Cli.process_succeeded(execution.outcome), eq=True)

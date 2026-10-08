@@ -10,8 +10,7 @@ from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 from typing import override
 
-from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, m, p, r, t, u
 from flext_infra.base import FlextInfraServiceBase
 from flext_infra.deps._pyrefly_fix_steps import FlextInfraConfigFixerSteps
 
@@ -75,7 +74,7 @@ class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bo
         if table.failure:
             return r[t.StrSequence].from_failure(table)
         pyrefly_table, table_present = table.value
-        if not table_present:
+        if not table_present or pyrefly_table is None:
             return r[t.StrSequence].ok(())
         pyrefly: MutableMapping[str, t.JsonValue] = pyrefly_table
         original_pyrefly: t.JsonMapping = dict(pyrefly)
@@ -97,7 +96,7 @@ class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bo
     def _validated_pyrefly_table(
         path: Path,
         doc_data: t.MappingKV[str, t.JsonValue],
-    ) -> p.Result[t.Pair[t.MutableJsonMapping, bool]]:
+    ) -> p.Result[t.Pair[t.MutableJsonMapping | None, bool]]:
         """Validate the ``[tool.pyrefly]`` table of one parsed document.
 
         Returns:
@@ -108,29 +107,31 @@ class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bo
         """
         tool_data = doc_data.get(c.Infra.TOOL)
         if not isinstance(tool_data, Mapping):
-            return r[t.Pair[t.MutableJsonMapping, bool]].ok((None, False))
+            return r[t.Pair[t.MutableJsonMapping | None, bool]].ok((None, False))
         typed_tool_data: p.Result[t.MutableJsonMapping] = u.validate_value(
             t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER,
             tool_data,
         )
         if typed_tool_data.failure:
-            return r[t.Pair[t.MutableJsonMapping, bool]].fail_op(
+            return r[t.Pair[t.MutableJsonMapping | None, bool]].fail_op(
                 f"validate {path} [tool]",
                 typed_tool_data.error,
             )
         pyrefly_data = typed_tool_data.value.get(c.Infra.PYREFLY)
         if not isinstance(pyrefly_data, Mapping):
-            return r[t.Pair[t.MutableJsonMapping, bool]].ok((None, False))
+            return r[t.Pair[t.MutableJsonMapping | None, bool]].ok((None, False))
         validated_pyrefly: p.Result[t.MutableJsonMapping] = u.validate_value(
             t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER,
             pyrefly_data,
         )
         if validated_pyrefly.failure:
-            return r[t.Pair[t.MutableJsonMapping, bool]].fail_op(
+            return r[t.Pair[t.MutableJsonMapping | None, bool]].fail_op(
                 f"validate {path} [tool.pyrefly]",
                 validated_pyrefly.error,
             )
-        return r[t.Pair[t.MutableJsonMapping, bool]].ok((validated_pyrefly.value, True))
+        return r[t.Pair[t.MutableJsonMapping | None, bool]].ok(
+            (validated_pyrefly.value, True),
+        )
 
     def _sync_pyrefly_fixes(
         self,

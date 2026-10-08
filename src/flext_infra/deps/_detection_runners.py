@@ -9,8 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra import c, m, t, u
+from flext_infra import c, m, r, t, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -227,7 +226,7 @@ class FlextInfraDependencyDetectionRunnersMixin:
             [str(pip), c.Infra.VERB_CHECK],
             cwd=repository_root,
             timeout=c.Infra.TIMEOUT_SHORT,
-            env=env,
+            options=u.Cli.ProcessOptions(env=env),
         )
         if result.failure:
             return r[t.Pair[t.StrSequence, int]].from_failure(result)

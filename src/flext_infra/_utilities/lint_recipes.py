@@ -23,8 +23,7 @@ from collections.abc import Iterable, MutableMapping
 from operator import itemgetter
 from pathlib import Path
 
-from flext_infra import c, m, t
-from flext_infra._config import config
+from flext_infra import c, config, m, t
 from flext_infra._utilities import FlextInfraUtilitiesPyproject
 
 

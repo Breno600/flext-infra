@@ -9,6 +9,7 @@ from __future__ import annotations
 import pytest
 from flext_tests import tm
 
+from flext_infra import c
 from tests import m, t, u
 
 
@@ -179,8 +180,18 @@ class TestsFlextInfraModels:
             result=gate1,
             issues=(issue1, issue2),
             raw_output="",
+            outcome=(
+                c.Infra.ToolOutcome.CLEAN if gate1.passed else c.Infra.ToolOutcome.ERROR
+            ),
         )
-        exec2 = m.Infra.GateExecution(result=gate2, issues=(issue3,), raw_output="")
+        exec2 = m.Infra.GateExecution(
+            result=gate2,
+            issues=issue3,
+            raw_output="",
+            outcome=(
+                c.Infra.ToolOutcome.CLEAN if gate2.passed else c.Infra.ToolOutcome.ERROR
+            ),
+        )
         project = m.Infra.ProjectResult(
             project="p",
             gates={"lint": exec1, "format": exec2},
@@ -209,7 +220,14 @@ class TestsFlextInfraModels:
             errors=[warning.formatted],
             duration=0.0,
         )
-        execution = m.Infra.GateExecution(result=gate, issues=(warning,), raw_output="")
+        execution = m.Infra.GateExecution(
+            result=gate,
+            issues=warning,
+            raw_output="",
+            outcome=(
+                c.Infra.ToolOutcome.CLEAN if gate.passed else c.Infra.ToolOutcome.ERROR
+            ),
+        )
         project = m.Infra.ProjectResult(project="p", gates={"pyright": execution})
 
         tm.that(execution.finding_count, eq=1)
@@ -233,8 +251,22 @@ class TestsFlextInfraModels:
             errors=[],
             duration=0.0,
         )
-        exec1 = m.Infra.GateExecution(result=gate1, issues=(), raw_output="")
-        exec2 = m.Infra.GateExecution(result=gate2, issues=(), raw_output="")
+        exec1 = m.Infra.GateExecution(
+            result=gate1,
+            issues=(),
+            raw_output="",
+            outcome=(
+                c.Infra.ToolOutcome.CLEAN if gate1.passed else c.Infra.ToolOutcome.ERROR
+            ),
+        )
+        exec2 = m.Infra.GateExecution(
+            result=gate2,
+            issues=(),
+            raw_output="",
+            outcome=(
+                c.Infra.ToolOutcome.CLEAN if gate2.passed else c.Infra.ToolOutcome.ERROR
+            ),
+        )
         project = m.Infra.ProjectResult(
             project="p",
             gates={"lint": exec1, "format": exec2},
@@ -258,8 +290,22 @@ class TestsFlextInfraModels:
             errors=[],
             duration=0.0,
         )
-        exec1 = m.Infra.GateExecution(result=gate1, issues=(), raw_output="")
-        exec2 = m.Infra.GateExecution(result=gate2, issues=(), raw_output="")
+        exec1 = m.Infra.GateExecution(
+            result=gate1,
+            issues=(),
+            raw_output="",
+            outcome=(
+                c.Infra.ToolOutcome.CLEAN if gate1.passed else c.Infra.ToolOutcome.ERROR
+            ),
+        )
+        exec2 = m.Infra.GateExecution(
+            result=gate2,
+            issues=(),
+            raw_output="",
+            outcome=(
+                c.Infra.ToolOutcome.CLEAN if gate2.passed else c.Infra.ToolOutcome.ERROR
+            ),
+        )
         project = m.Infra.ProjectResult(
             project="p",
             gates={"lint": exec1, "format": exec2},
@@ -287,8 +333,18 @@ class TestsFlextInfraModels:
             result=gate1,
             issues=(issue1, issue2),
             raw_output="",
+            outcome=(
+                c.Infra.ToolOutcome.CLEAN if gate1.passed else c.Infra.ToolOutcome.ERROR
+            ),
         )
-        exec2 = m.Infra.GateExecution(result=gate2, issues=(issue3,), raw_output="")
+        exec2 = m.Infra.GateExecution(
+            result=gate2,
+            issues=issue3,
+            raw_output="",
+            outcome=(
+                c.Infra.ToolOutcome.CLEAN if gate2.passed else c.Infra.ToolOutcome.ERROR
+            ),
+        )
         proj1 = m.Infra.ProjectResult(project="proj1", gates={"lint": exec1})
         proj2 = m.Infra.ProjectResult(project="proj2", gates={"format": exec2})
         tm.that(proj1.total_findings, eq=2)

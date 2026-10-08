@@ -14,8 +14,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra import c, m, u
-from flext_infra._config import config
+from flext_infra import c, config, m, u
 from flext_infra.codegen.file_leases import FlextInfraCodegenFileLeases
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
@@ -200,6 +199,22 @@ class FlextInfraGate:
         """
         return shutil.which(cls.scanner_binary)
 
+    def _native_error_issue(self, _project_dir: Path, stderr: str) -> m.Infra.Issue:
+        """Report native checker stderr as one gate execution error.
+
+        Returns:
+            The resulting ``m.Infra.Issue``.
+
+        """
+        return m.Infra.Issue(
+            file=c.PYPROJECT_FILENAME,
+            line=1,
+            column=1,
+            code=f"{self.gate_id}-exec",
+            message=stderr.strip(),
+            severity=c.Infra.ERROR,
+        )
+
     def _tool_failure_issue(self, scan: p.Cli.CommandOutput) -> m.Infra.Issue:
         """Scanner absence/crash must never read as a clean pass.
 
@@ -361,7 +376,10 @@ class FlextInfraGate:
         """
         passed, issues = self._parse_check_output(result, project_dir, ctx)
         if self.gate_id == c.Infra.LINT and result.stderr.strip():
-            issues.append(self._native_error_issue(project_dir, result.stderr))
+            issues = (
+                *issues,
+                self._native_error_issue(project_dir, result.stderr),
+            )
             passed = False
         policy = config.Infra.codegen.make.ci
         # The SSOT informative list decides by itself: a gate declared
@@ -916,8 +934,7 @@ class FlextInfraGate:
             cmd,
             cwd=cwd,
             timeout=timeout,
-            env=env,
-            remove_env_keys=remove_env_keys,
+            options=u.Cli.ProcessOptions(env=env, remove_env_keys=remove_env_keys),
         )
         if result.failure:
             # A failed Result here means the tool never ran -- it could not be

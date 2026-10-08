@@ -8,8 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, m, p, r, t, u
 
 
 class FlextInfraCandidateBootstrapService:
@@ -122,7 +121,7 @@ class FlextInfraCandidateBootstrapService:
                     inputs[state.path] = state
         return r[m.Infra.CodegenPhaseAnalysis].ok(
             m.Infra.CodegenPhaseAnalysis(
-                phase="candidate-bootstrap",
+                phase=c.Infra.CodegenStagedFilePhase.CANDIDATE_BOOTSTRAP,
                 files=tuple(files),
                 inputs=tuple(inputs.values()),
             ),

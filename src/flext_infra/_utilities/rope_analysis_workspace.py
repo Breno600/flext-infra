@@ -12,13 +12,13 @@ from collections.abc import MutableMapping
 from functools import lru_cache
 from pathlib import Path
 
-from flext_infra import c, m, t
-from flext_infra._config import config
+from flext_infra import c, config, m, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesIterationWorkspace,
     FlextInfraUtilitiesProjectDiscovery,
     FlextInfraUtilitiesRopeCore,
     FlextInfraUtilitiesRopeSourceBases,
+    FlextInfraUtilitiesRopeSourceBasesAliases,
 )
 
 
@@ -204,6 +204,11 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             for path, source in cls._project_sources(root, planned_sources).items()
             if cls.module_name_for_file(path, project_root=root)
         }
+        if not sources:
+            # No captured declaration (e.g. a scaffold planned before its
+            # sources exist): nothing derives beyond the declared roots, so no
+            # Rope project is opened and no workspace tree is walked.
+            return tuple(sorted(roots))
         # Generated package inits are projections excluded from the class
         # inventory, yet their install_lazy_exports maps own the namespace
         # aliases (m, p, t and siblings) that facade-qualified bases resolve
@@ -221,7 +226,7 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             for (
                 alias,
                 absolute,
-            ) in FlextInfraUtilitiesRopeSourceBases.lazy_module_aliases(
+            ) in FlextInfraUtilitiesRopeSourceBasesAliases.lazy_module_aliases(
                 init_module,
                 init_path,
                 init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT),

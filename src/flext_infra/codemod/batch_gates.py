@@ -13,8 +13,7 @@ import tempfile
 from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 
-from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, m, p, r, t, u
 from flext_infra._settings import settings
 from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
 from flext_infra.codemod.snapshot_reconciler import FlextInfraCodemodSnapshotReconciler
@@ -778,6 +777,10 @@ class FlextInfraModGateEngine:
         if authenticated.failure:
             return r[m.Infra.ModScanFinding].from_failure(authenticated)
         file_path, snapshot = authenticated.value
+        if snapshot.content is None:
+            return r[m.Infra.ModScanFinding].fail(
+                f"authenticated snapshot has no content: {file_path}",
+            )
         raw_replacement = finding.get("replacement")
         replacement = raw_replacement if isinstance(raw_replacement, str) else None
         classified = cls._classified_finding(

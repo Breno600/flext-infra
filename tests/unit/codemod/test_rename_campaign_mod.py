@@ -67,7 +67,9 @@ class TestsFlextInfraRenameCampaignMod:
                     str(mod_workspace),
                     *(("--apply",) if apply else ()),
                 ),
-                env={"FLEXT_INFRA_CONFIG_DIR": str(config_dir)},
+                options=u.Cli.ProcessOptions(
+                    env={"FLEXT_INFRA_CONFIG_DIR": str(config_dir)},
+                ),
             ),
         )
         tm.that(u.Cli.process_succeeded(result.outcome), eq=apply, msg=result.stderr)
@@ -175,7 +177,9 @@ class TestsFlextInfraRenameCampaignMod:
                     str(mod_workspace),
                     "--apply",
                 ),
-                env={"FLEXT_INFRA_CONFIG_DIR": str(config_dir)},
+                options=u.Cli.ProcessOptions(
+                    env={"FLEXT_INFRA_CONFIG_DIR": str(config_dir)},
+                ),
             ),
         )
         tm.that(u.Cli.process_succeeded(result.outcome), eq=False)
@@ -228,7 +232,9 @@ class TestsFlextInfraRenameCampaignMod:
                     str(mod_workspace),
                     "--apply",
                 ),
-                env={"FLEXT_INFRA_CONFIG_DIR": str(config_dir)},
+                options=u.Cli.ProcessOptions(
+                    env={"FLEXT_INFRA_CONFIG_DIR": str(config_dir)},
+                ),
             ),
         )
         tm.that(u.Cli.process_succeeded(result.outcome), eq=False)

@@ -277,7 +277,7 @@ class TestsFlextInfraWorktreeBinding:
                     "--python",
                     str(tmp_path / "python"),
                 ),
-                env={ci.variable: ci.value},
+                options=u.Cli.ProcessOptions(env={ci.variable: ci.value}),
             ),
         )
         tm.that(result.outcome.raw_return_code != 0, eq=True)

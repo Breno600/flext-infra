@@ -12,8 +12,7 @@ from typing import TYPE_CHECKING
 
 from flext_cli import u
 
-from flext_core import r
-from flext_infra import t
+from flext_infra import r, t
 from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
 
 if TYPE_CHECKING:
@@ -235,7 +234,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
     def _creation_bound(
         cls,
         tree: ast.Module,
-        nodes_by_member: t.StrMapping[ast.stmt],
+        nodes_by_member: t.MappingKV[str, ast.stmt],
         selected: frozenset[str],
         owner: str,
     ) -> set[str]:

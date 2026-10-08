@@ -221,7 +221,7 @@ class TestsFlextInfraBindingInstall:
                     "--python",
                     str(python),
                 ),
-                env={ci.variable: ci.local_value},
+                options=u.Cli.ProcessOptions(env={ci.variable: ci.local_value}),
             ),
         )
         output = f"{outcome.stdout}{outcome.stderr}"

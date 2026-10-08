@@ -12,8 +12,7 @@ import os
 import sys
 from pathlib import Path
 
-from flext_infra import c, m, u
-from flext_infra._config import config
+from flext_infra import c, config, m, u
 
 
 class FlextInfraPytestProfile:

@@ -9,9 +9,7 @@ from __future__ import annotations
 from collections.abc import Mapping, MutableMapping
 from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra import c, t, u
-from flext_infra._config import config
+from flext_infra import c, config, r, t, u
 from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
 
 if TYPE_CHECKING:

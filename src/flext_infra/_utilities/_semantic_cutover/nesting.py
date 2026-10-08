@@ -11,8 +11,7 @@ import traceback
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra import m, t
+from flext_infra import m, r, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesCodegenNamespace,
     FlextInfraUtilitiesRopeRuntimeModules,
