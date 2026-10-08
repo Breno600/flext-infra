@@ -105,6 +105,17 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
                 ),
             ),
             m.Cli.ResultCommandRoute(
+                name="verify-lanes",
+                help_text=(
+                    "Fail on stashes, merged-but-alive branches and orphan worktrees"
+                ),
+                model_cls=m.Infra.GitStatusRequest,
+                handler=FlextInfraCliRouteBase.result_handler(
+                    FlextInfraGitService.verify_lanes,
+                ),
+                success_message="workspace lanes are clean",
+            ),
+            m.Cli.ResultCommandRoute(
                 name="verify-environment",
                 help_text="Verify live workspace editable provenance",
                 model_cls=m.Infra.WorkspaceEnvironmentRequest,

@@ -6,14 +6,13 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
-from tests import c, m, u
+from tests import c, u
 
 
 class TestsFlextInfraLazyInitAliasInheritance:
@@ -73,11 +72,6 @@ class TestsFlextInfraLazyInitAliasInheritance:
         first = (child / c.Infra.INIT_PY).read_bytes()
         tm.that(u.Tests.run_lazy_init(repository), eq=0)
         tm.that((child / c.Infra.INIT_PY).read_bytes(), eq=first)
-        probe_env = dict(os.environ)
-        probe_env["PYTHONPATH"] = os.pathsep.join([
-            str(repository / c.Infra.DEFAULT_SRC_DIR),
-            *sys.path,
-        ])
         probe = (
             "from flext_bootstrap_child.consumer import execute\n"
             "import flext_bootstrap_child as generated\n"
@@ -87,15 +81,12 @@ class TestsFlextInfraLazyInitAliasInheritance:
             "print('compile' in generated.__all__)\n"
             "print(execute().value)\n"
         )
-        result = tm.ok(
-            u.Cli.run(
-                [sys.executable, "-c", probe],
-                options=m.Cli.ProcessOptions(env=probe_env),
+        tm.that(
+            u.Tests.run_lazy_init_probe(
+                probe,
+                python_paths=(str(repository / c.Infra.DEFAULT_SRC_DIR), *sys.path),
                 cwd=repository,
             ),
-        )
-        tm.that(
-            result.stdout.splitlines(),
             eq=["True", "True", "False", "bootstrap-ready"],
         )
 

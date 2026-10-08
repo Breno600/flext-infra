@@ -10,7 +10,8 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import c, m, r, t, u
+from flext_core import r
+from flext_infra import c, m, t, u
 from flext_infra.codegen._mise_artifacts_files import (
     FlextInfraMiseArtifactsFiles as files,
 )
@@ -116,16 +117,15 @@ class FlextInfraMiseArtifactsVerification(
         if ancestry.failure:
             return result.from_failure(ancestry)
         observed = current.value
-        ancestry_value = ancestry.value
-        if observed.directories or observed.anchor_ancestry != tuple(ancestry_value):
+        if observed.directories or observed.anchor_ancestry != tuple(ancestry):
             return result.fail(
                 f"generation source parent identity changed: {expected.path}",
             )
         return result.ok(
             expected.model_copy(
                 update={
-                    "parent_device": ancestry_value[-1][0],
-                    "parent_inode": ancestry_value[-1][1],
+                    "parent_device": ancestry[-1][0],
+                    "parent_inode": ancestry[-1][1],
                 },
             ),
         )
@@ -134,7 +134,7 @@ class FlextInfraMiseArtifactsVerification(
     def _verified_parent_ancestry(
         cls,
         journal: m.Infra.CodegenTransactionJournal,
-        witness: m.Cli.AtomicDirectoryChainPlan,
+        witness: m.Cli.AtomicDirectoryState,
     ) -> p.Result[t.VariadicTuple[t.Pair[int, int]]]:
         """Rebuild the parent ancestry chain from journal-created directories.
 
@@ -398,7 +398,7 @@ class FlextInfraMiseArtifactsVerification(
     def _artifact_snapshot(
         cls,
         plan: m.Infra.MiseToolchainWorkspacePlan,
-        replacements: t.MappingKV[Path, t.Pair[bytes, int | None]],
+        replacements: MutableMapping[Path, t.Pair[bytes, int | None]],
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
         states: list[m.Cli.AtomicFileState] = []
         for project in plan.projects:

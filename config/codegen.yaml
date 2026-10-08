@@ -519,7 +519,11 @@ Infra:
         # Other pre-push verbs use this token to preserve local test behavior;
         # pre-push check unsets CI so it runs every active check gate.
         local_value: N
-        local_check_gates: [mypy, pyright, codemod, smells, pyrefly]
+        # direnv proves the developer's own activation (`direnv exec` needs the
+        # `direnv allow` that setup grants only outside CI), so it is local-only:
+        # under CI=Y the checkout's .envrc is never allowed and the smoke can
+        # only report "blocked".
+        local_check_gates: [mypy, pyright, codemod, smells, pyrefly, direnv]
         # mypy and pyright are INFORMATIVE (merge-admin mandate
         # 2026-10-05): the gates execute in every context they run at all
         # and their findings never block — base_gate reads the
@@ -652,7 +656,7 @@ Infra:
         - name: test-file
           description: Run one declared test file through the budgeted and slow phases with the same persistent testmon cache (FILE=<repository-relative path>).
         - name: file-gate
-          description: Run the fast per-file gates (ruff check, ruff format --check, pyrefly, pyright, ast-grep scan, typos) on FILE=<repository-relative path>; empty FILE fails loud.
+          description: Run configured canonical read-only gates on one literal FILE=<repository-relative path>; invalid selection and missing gate owners fail loud.
         - name: profile-test
           description: Profile the canonical pytest entry and its collection children on the same persistent testmon database, without the outer bounded-gate wrapper.
         - name: profile-test-report
@@ -1414,7 +1418,7 @@ Infra:
             runtime: [flext-cli, flext-web, flext-api, fastmcp>=4.0.11, requests>=2.34.2, aiohttp>=3.14.4, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
           - upstream: flext_cli
             project: flext-web
-            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.142.2, starlette>=1.7.0, werkzeug>=3.1.9]
+            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.142.4, starlette>=1.7.0, werkzeug>=3.1.9]
           - upstream: flext_cli
             project: flext-db-oracle
             runtime: [flext-cli, oracledb>=26.0.1, sqlalchemy>=2.0.54]

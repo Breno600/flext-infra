@@ -9,7 +9,6 @@ from __future__ import annotations
 import pytest
 from flext_tests import tm
 
-from flext_infra import c
 from tests import m, t, u
 
 
@@ -161,37 +160,9 @@ class TestsFlextInfraModels:
 
     def test_total_findings_multiple_gates(self) -> None:
         """Every gate's findings add to the project total."""
-        gate1 = m.Infra.GateResult(
-            gate="lint",
-            project="p",
-            passed=True,
-            errors=[],
-            duration=0.0,
-        )
-        gate2 = m.Infra.GateResult(
-            gate="format",
-            project="p",
-            passed=True,
-            errors=[],
-            duration=0.0,
-        )
         issue1, issue2, issue3 = self._sample_issues()
-        exec1 = m.Infra.GateExecution(
-            result=gate1,
-            issues=(issue1, issue2),
-            raw_output="",
-            outcome=(
-                c.Infra.ToolOutcome.CLEAN if gate1.passed else c.Infra.ToolOutcome.ERROR
-            ),
-        )
-        exec2 = m.Infra.GateExecution(
-            result=gate2,
-            issues=issue3,
-            raw_output="",
-            outcome=(
-                c.Infra.ToolOutcome.CLEAN if gate2.passed else c.Infra.ToolOutcome.ERROR
-            ),
-        )
+        exec1 = u.Tests.create_gate_execution("lint", issues=(issue1, issue2))
+        exec2 = u.Tests.create_gate_execution("format", issues=(issue3,))
         project = m.Infra.ProjectResult(
             project="p",
             gates={"lint": exec1, "format": exec2},
@@ -213,20 +184,10 @@ class TestsFlextInfraModels:
             message="warning",
             severity="warning",
         )
-        gate = m.Infra.GateResult(
-            gate="pyright",
-            project="p",
+        execution = u.Tests.create_gate_execution(
+            "pyright",
             passed=False,
-            errors=[warning.formatted],
-            duration=0.0,
-        )
-        execution = m.Infra.GateExecution(
-            result=gate,
-            issues=warning,
-            raw_output="",
-            outcome=(
-                c.Infra.ToolOutcome.CLEAN if gate.passed else c.Infra.ToolOutcome.ERROR
-            ),
+            issues=(warning,),
         )
         project = m.Infra.ProjectResult(project="p", gates={"pyright": execution})
 
@@ -237,36 +198,8 @@ class TestsFlextInfraModels:
     @staticmethod
     def test_passed_all_gates_pass() -> None:
         """Test _ProjectResult.passed when all gates pass."""
-        gate1 = m.Infra.GateResult(
-            gate="lint",
-            project="p",
-            passed=True,
-            errors=[],
-            duration=0.0,
-        )
-        gate2 = m.Infra.GateResult(
-            gate="format",
-            project="p",
-            passed=True,
-            errors=[],
-            duration=0.0,
-        )
-        exec1 = m.Infra.GateExecution(
-            result=gate1,
-            issues=(),
-            raw_output="",
-            outcome=(
-                c.Infra.ToolOutcome.CLEAN if gate1.passed else c.Infra.ToolOutcome.ERROR
-            ),
-        )
-        exec2 = m.Infra.GateExecution(
-            result=gate2,
-            issues=(),
-            raw_output="",
-            outcome=(
-                c.Infra.ToolOutcome.CLEAN if gate2.passed else c.Infra.ToolOutcome.ERROR
-            ),
-        )
+        exec1 = u.Tests.create_gate_execution("lint")
+        exec2 = u.Tests.create_gate_execution("format")
         project = m.Infra.ProjectResult(
             project="p",
             gates={"lint": exec1, "format": exec2},
@@ -276,36 +209,8 @@ class TestsFlextInfraModels:
     @staticmethod
     def test_passed_one_gate_fails() -> None:
         """Test _ProjectResult.passed when one gate fails."""
-        gate1 = m.Infra.GateResult(
-            gate="lint",
-            project="p",
-            passed=True,
-            errors=[],
-            duration=0.0,
-        )
-        gate2 = m.Infra.GateResult(
-            gate="format",
-            project="p",
-            passed=False,
-            errors=[],
-            duration=0.0,
-        )
-        exec1 = m.Infra.GateExecution(
-            result=gate1,
-            issues=(),
-            raw_output="",
-            outcome=(
-                c.Infra.ToolOutcome.CLEAN if gate1.passed else c.Infra.ToolOutcome.ERROR
-            ),
-        )
-        exec2 = m.Infra.GateExecution(
-            result=gate2,
-            issues=(),
-            raw_output="",
-            outcome=(
-                c.Infra.ToolOutcome.CLEAN if gate2.passed else c.Infra.ToolOutcome.ERROR
-            ),
-        )
+        exec1 = u.Tests.create_gate_execution("lint")
+        exec2 = u.Tests.create_gate_execution("format", passed=False)
         project = m.Infra.ProjectResult(
             project="p",
             gates={"lint": exec1, "format": exec2},
@@ -315,36 +220,8 @@ class TestsFlextInfraModels:
     def test_error_summary_with_multiple_projects_and_gates(self) -> None:
         """Test error summary reporting across multiple projects and gates."""
         issue1, issue2, issue3 = self._sample_issues()
-        gate1 = m.Infra.GateResult(
-            gate="lint",
-            project="p",
-            passed=True,
-            errors=[],
-            duration=0.0,
-        )
-        gate2 = m.Infra.GateResult(
-            gate="lint",
-            project="p",
-            passed=True,
-            errors=[],
-            duration=0.0,
-        )
-        exec1 = m.Infra.GateExecution(
-            result=gate1,
-            issues=(issue1, issue2),
-            raw_output="",
-            outcome=(
-                c.Infra.ToolOutcome.CLEAN if gate1.passed else c.Infra.ToolOutcome.ERROR
-            ),
-        )
-        exec2 = m.Infra.GateExecution(
-            result=gate2,
-            issues=issue3,
-            raw_output="",
-            outcome=(
-                c.Infra.ToolOutcome.CLEAN if gate2.passed else c.Infra.ToolOutcome.ERROR
-            ),
-        )
+        exec1 = u.Tests.create_gate_execution("lint", issues=(issue1, issue2))
+        exec2 = u.Tests.create_gate_execution("lint", issues=(issue3,))
         proj1 = m.Infra.ProjectResult(project="proj1", gates={"lint": exec1})
         proj2 = m.Infra.ProjectResult(project="proj2", gates={"format": exec2})
         tm.that(proj1.total_findings, eq=2)

@@ -84,7 +84,10 @@ class TestsFlextInfraUpgOwnedDependencyPin:
         return source
 
     @staticmethod
-    def _conform(source: str, family_line: str | None = None) -> p.Result[str]:
+    def _conform(
+        source: str,
+        flext_line: m.Infra.WorkspaceIntegrationSpec | None = None,
+    ) -> p.Result[str]:
         toolchain = config.Infra.codegen.toolchain
         workspace = u.Tests.workspace_spec(u.Tests.repository_ref("consumer"))
         return u.Infra.pyproject_conform(
@@ -97,7 +100,10 @@ class TestsFlextInfraUpgOwnedDependencyPin:
                 exclude_dependencies=(),
                 environments=tuple(toolchain.uv_environments),
             ),
-            options=u.Infra.PyprojectConformOptions(family_line=family_line),
+            options=u.Infra.PyprojectConformOptions(
+                family_line=None if flext_line is None else flext_line.branch,
+                required_dependency_source=flext_line,
+            ),
         )
 
     def test_generation_keeps_the_line_and_drops_override_pins(
@@ -131,10 +137,15 @@ class TestsFlextInfraUpgOwnedDependencyPin:
     ) -> None:
         """A retired pin left in the projection never survives generation."""
         source = self._consumer(tmp_path, self.COMMIT, self.COMMIT)
-        rendered = tm.ok(self._conform(source, self.LINE))
+        line = m.Infra.WorkspaceIntegrationSpec(
+            provider=u.Tests.provider().name,
+            branch=self.LINE,
+            base_url=self.PROVIDER,
+        )
+        rendered = tm.ok(self._conform(source, line))
         tm.that(rendered, lacks=self.COMMIT)
         tm.that(rendered, has=self._requirement("flext-core", self.LINE))
-        tm.that(tm.ok(self._conform(rendered, self.LINE)), eq=rendered)
+        tm.that(tm.ok(self._conform(rendered, line)), eq=rendered)
         tm.fail(self._conform(source), has="only `make upg` moves it")
 
     def test_a_fully_pinned_projection_takes_the_line_from_the_manifest(

@@ -31,17 +31,29 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
             The resulting ``p.Result[m.Infra.CodegenPlan]``.
 
         """
-        if request.what is c.Infra.CodegenConformSurface.LAZY_INIT:
-            lazy = self._plan_lazy_init(request)
-            if lazy.failure:
-                return r[m.Infra.CodegenPlan].from_failure(lazy)
-            return r[m.Infra.CodegenPlan].ok(lazy.value[0])
-        if request.what == c.Infra.CodegenConformSurface.FACADES:
-            facades = self._plan_facade(request)
-            if facades.failure:
-                return r[m.Infra.CodegenPlan].from_failure(facades)
-            return r[m.Infra.CodegenPlan].ok(facades.value[0])
+        if request.what in {
+            c.Infra.CodegenConformSurface.LAZY_INIT,
+            c.Infra.CodegenConformSurface.FACADES,
+        }:
+            planned = self._plan_single_surface(request)
+            if planned.failure:
+                return r[m.Infra.CodegenPlan].from_failure(planned)
+            return r[m.Infra.CodegenPlan].ok(planned.value[0])
         return self._plan_repositories(request)
+
+    def _plan_single_surface(
+        self,
+        request: m.Infra.CodegenConformRequest,
+    ) -> p.Result[t.Pair[m.Infra.CodegenPlan, m.Infra.CodegenPhaseAnalysis]]:
+        """Plan the declared facade or lazy-init surface of one repository.
+
+        Returns:
+            The public plan and its complete authenticated phase analysis.
+
+        """
+        if request.what == c.Infra.CodegenConformSurface.FACADES:
+            return self._plan_facade(request)
+        return self._plan_lazy_init(request)
 
     def _plan_repositories(
         self,

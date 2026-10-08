@@ -6,6 +6,8 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import os
+import sys
 from pathlib import Path
 
 from flext_tests import tm
@@ -329,6 +331,33 @@ class TestsFlextInfraUtilitiesCodegenMixin:
             ('__version__ = "0.1.0"\n__version_info__ = (0, 1, 0)\n'),
             encoding=c.Infra.ENCODING_DEFAULT,
         )
+
+    @staticmethod
+    def run_lazy_init_probe(
+        probe: str,
+        *,
+        python_paths: t.StrSequence,
+        cwd: Path | None = None,
+    ) -> t.StrSequence:
+        """Run ``probe`` in a fresh interpreter importing generated packages.
+
+        The probe observes generated initializers through Python's real import
+        machinery, isolated from the test process's already imported modules.
+
+        Returns:
+            The probe's standard output lines.
+
+        """
+        probe_env = dict(os.environ)
+        probe_env["PYTHONPATH"] = os.pathsep.join(python_paths)
+        result = tm.ok(
+            u.Cli.run(
+                [sys.executable, "-c", probe],
+                options=m.Cli.ProcessOptions(env=probe_env),
+                cwd=cwd,
+            ),
+        )
+        return result.stdout.splitlines()
 
     @staticmethod
     def run_lazy_init(repository_root: Path, *, check_only: bool = False) -> int:

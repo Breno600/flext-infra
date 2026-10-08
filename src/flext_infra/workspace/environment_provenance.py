@@ -447,6 +447,10 @@ class FlextInfraWorkspaceEnvironmentProvenance:
     ) -> p.Result[bool]:
         """Prove one locked dependency's PEP 610 origin against the lock entry.
 
+        Declared local members are authenticated by ``_validate_workspace_build``
+        before this artifact-only boundary. Undeclared local lock sources cannot
+        bypass checkout, gitlink, and noneditable receipt authentication.
+
         Returns:
             The resulting ``p.Result[bool]``.
 

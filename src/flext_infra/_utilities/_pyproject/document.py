@@ -111,34 +111,19 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             project_name=project_name,
             required_dev_dependencies=required_dev_dependencies,
         )
-        declared_sources = cls._declared_floor_sources(
-            workspace,
+        requirement_sources = cls._declared_requirement_sources(
+            source,
             project_name=project_name,
-            requirements=required_dev_dependencies,
+            workspace=workspace,
+            required_dev_dependencies=required_dev_dependencies,
             dependency_source=provenance.required_dependency_source,
         )
-        if declared_sources.failure:
-            return r[str].from_failure(declared_sources)
-        candidate_sources = {
-            item.distribution: f"git+{item.url}@{item.commit}"
-            for item in workspace.candidate_dependencies
-        }
-        unused_candidates = sorted(
-            candidate_sources.keys()
-            - set(
-                FlextInfraUtilitiesDependencies.declared_dependency_names(
-                    source,
-                ),
-            ),
-        )
-        if unused_candidates:
-            return r[str].fail(
-                "candidate dependencies are not declared requirements: "
-                + ", ".join(unused_candidates),
-            )
+        if requirement_sources.failure:
+            return r[str].from_failure(requirement_sources)
+        declared_sources, candidate_sources = requirement_sources.value
         normalized = cls._normalize_requirements(
             source,
-            declared_sources=declared_sources.value,
+            declared_sources=declared_sources,
             candidate_sources=candidate_sources,
             family_line=provenance.family_line,
             workspace_members=workspace_members,
@@ -213,6 +198,52 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         if u.Cli.toml_parse_text(rendered) is None:
             return r[str].fail("canonical pyproject rendering produced invalid TOML")
         return r[str].ok(rendered)
+
+    @classmethod
+    def _declared_requirement_sources(
+        cls,
+        source: t.Cli.TomlDocument,
+        *,
+        project_name: str,
+        workspace: m.Infra.WorkspaceSpec,
+        required_dev_dependencies: t.StrSequence,
+        dependency_source: m.Infra.WorkspaceIntegrationSpec | None,
+    ) -> p.Result[t.Pair[t.StrMapping, t.StrMapping]]:
+        """Return the declared and candidate Git sources of internal requirements.
+
+        Workspace members render on the declared integration line; generated
+        bare ``flext-*`` dev floors render on the detected FLEXT line; candidate
+        dependencies must be declared requirements.
+
+        Returns:
+            The declared and candidate requirement sources.
+
+        """
+        declared = cls._declared_floor_sources(
+            workspace,
+            project_name=project_name,
+            requirements=required_dev_dependencies,
+            dependency_source=dependency_source,
+        )
+        if declared.failure:
+            return r[t.Pair[t.StrMapping, t.StrMapping]].from_failure(declared)
+        declared_sources = declared.value
+        candidate_sources = {
+            item.distribution: f"git+{item.url}@{item.commit}"
+            for item in workspace.candidate_dependencies
+        }
+        unused_candidates = sorted(
+            candidate_sources.keys()
+            - set(FlextInfraUtilitiesDependencies.declared_dependency_names(source)),
+        )
+        if unused_candidates:
+            return r[t.Pair[t.StrMapping, t.StrMapping]].fail(
+                "candidate dependencies are not declared requirements: "
+                + ", ".join(unused_candidates),
+            )
+        return r[t.Pair[t.StrMapping, t.StrMapping]].ok(
+            (declared_sources, candidate_sources),
+        )
 
     @classmethod
     def _synced_conform_tables(
