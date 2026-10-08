@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m, main
+from flext_infra import c, config, m, main, t
 from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 from flext_infra.gates.codemod import FlextInfraCodemodGate
 from tests import u
@@ -91,6 +91,69 @@ class TestsFlextInfraCodemodGate:
         tm.that(execution.result.passed, eq=True)
         tm.that(execution.issues, empty=True)
         tm.that(execution.raw_output, has="exit=0")
+
+    @staticmethod
+    def _rule_files(
+        execution: m.Infra.GateExecution,
+        rule_id: str,
+    ) -> t.StrSequence:
+        """Project-relative files the bundled rule ``rule_id`` reported."""
+        return sorted(
+            issue.file.rsplit("scanner-contract/", 1)[-1]
+            for issue in execution.issues
+            if issue.code == rule_id
+        )
+
+    def test_flext_tests_import_is_banned_only_in_the_infra_package(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """The project-root scan reports flext_tests only inside flext_infra.
+
+        Premise (operator-ruling-2026-10-08-subprocess-test-imports, item 2):
+        the rule fires when flext-infra scans itself (``src/...`` paths), not
+        only from the workspace root, and never binds another package.
+        """
+        project = self._project(tmp_path)
+        for relative in ("src/flext_infra/leak.py", "src/flext_tests/tier.py"):
+            module = project / relative
+            module.parent.mkdir(parents=True)
+            module.write_text("import flext_tests\n", encoding="utf-8")
+
+        execution = u.Tests.run_gate_check(FlextInfraCodemodGate, tmp_path, project)
+
+        tm.that(
+            self._rule_files(execution, "ban-infra-runtime-flext-tests-import"),
+            eq=["src/flext_infra/leak.py"],
+        )
+
+    def test_subprocess_is_banned_outside_the_run_owner_scope(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Only the Bandit-authorized owner modules may import subprocess.
+
+        Premise (operator-ruling-2026-10-08-subprocess-test-imports, item 1):
+        the codemod rule and the Bandit authorized exception share one owner
+        scope; every other module runs processes through u.Cli.run.
+        """
+        project = self._project(tmp_path)
+        entry = config.Infra.tooling.tools.bandit.authorized_exceptions[0]
+        owners = tuple(
+            pattern.replace("**/", "").replace("*", "spawn") for pattern in entry.files
+        )
+        consumer = "src/consumer/spawn.py"
+        for relative in (*owners, consumer):
+            module = project / relative
+            module.parent.mkdir(parents=True, exist_ok=True)
+            module.write_text("import subprocess\n", encoding="utf-8")
+
+        execution = u.Tests.run_gate_check(FlextInfraCodemodGate, tmp_path, project)
+
+        tm.that(
+            self._rule_files(execution, "ban-subprocess-outside-run-owner"),
+            eq=[consumer],
+        )
 
     def test_generated_source_tree_is_outside_the_scan(self, tmp_path: Path) -> None:
         """A tracked generated-source module never reaches the policy scan.

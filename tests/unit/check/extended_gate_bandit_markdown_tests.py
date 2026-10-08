@@ -81,6 +81,58 @@ class TestsFlextInfraBanditAndMarkdownGates:
         tm.that(result.issues[0].file, has="main.py")
 
     @staticmethod
+    def test_bandit_owner_scope_skips_only_its_authorized_tests(
+        tmp_path: Path,
+    ) -> None:
+        """An authorized owner module drops only its tests; others keep all.
+
+        Premise (operator-ruling-2026-10-08-subprocess-test-imports): Bandit
+        has no per-path exception, so the gate audits the owner modules in
+        their own run that skips only the authorized tests.
+        """
+        entry = config.Infra.tooling.tools.bandit.authorized_exceptions[0]
+        owner = next(pattern for pattern in entry.files if "*" not in pattern)
+        consumer = f"{c.Infra.DEFAULT_SRC_DIR}/consumer/spawn.py"
+        project_dir = u.Tests.mk_project(tmp_path, "bandit-owner-project")
+        for relative in (owner, consumer):
+            module = project_dir / relative
+            module.parent.mkdir(parents=True, exist_ok=True)
+            module.write_text(
+                "import subprocess\n\n\ndef spawn(argv):\n"
+                "    assert argv\n    return subprocess.run(argv, check=True)\n",
+                encoding="utf-8",
+            )
+
+        result = u.Tests.run_gate_check(FlextInfraBanditGate, tmp_path, project_dir)
+
+        codes = {
+            relative: {issue.code for issue in result.issues if issue.file == relative}
+            for relative in (owner, consumer)
+        }
+        tm.that(result.result.passed, eq=False)
+        tm.that(codes[owner], eq={"B101"})
+        tm.that(codes[consumer], eq={"B101", *entry.tests})
+
+    @staticmethod
+    def test_bandit_owner_scope_alone_passes(tmp_path: Path) -> None:
+        """A project whose only process spawn lives in its owner module passes."""
+        entry = config.Infra.tooling.tools.bandit.authorized_exceptions[0]
+        owner = next(pattern for pattern in entry.files if "*" not in pattern)
+        project_dir = u.Tests.mk_project(tmp_path, "bandit-owner-only")
+        module = project_dir / owner
+        module.parent.mkdir(parents=True)
+        module.write_text(
+            "import subprocess\n\n\ndef spawn(argv):\n"
+            "    return subprocess.run(argv, check=True)\n",
+            encoding="utf-8",
+        )
+
+        result = u.Tests.run_gate_check(FlextInfraBanditGate, tmp_path, project_dir)
+
+        tm.that(result.result.passed, eq=True, msg=str(result.issues))
+        tm.that(result.issues, eq=())
+
+    @staticmethod
     def test_bandit_without_source_tree_has_no_audit_surface(
         tmp_path: Path,
     ) -> None:

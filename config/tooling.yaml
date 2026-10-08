@@ -2,6 +2,25 @@ Infra:
   tooling:
     # Canonical validated tooling and suppression-policy SSOT.
     tools:
+      bandit:
+        # Each exception exists only with the operator ruling that authorized
+        # it and its reason. Bandit reads no per-path exception, so the
+        # security gate audits the files an entry matches in their own
+        # invocation that skips only the entry's tests; every other file keeps
+        # every test. Repositories declare no exception of their own.
+        authorized-exceptions:
+          - tests: [B404, B603]
+            files:
+              - src/flext_cli/_utilities/processes.py
+              - src/flext_cli/_utilities/runtime.py
+              - src/flext_core/**/*.py
+            authority: operator-ruling-2026-10-08-subprocess-test-imports
+            reason: >-
+              Only the u.Cli.run process owner in flext-cli and the flext-core
+              source may import and spawn subprocess; every other module runs
+              processes through u.Cli.run. The codemod rule
+              ban-subprocess-outside-run-owner bans subprocess everywhere
+              else, with the same owner scope.
       codespell:
         check-filenames: true
         ignore-words-list: crate,nd
