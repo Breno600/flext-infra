@@ -21,14 +21,22 @@ class FlextInfraModelsCodemod:
     class AstGrepCapture(m.ContractModel):
         """Authenticate an occurrence against native UTF-8 capture coordinates."""
 
-        text: str
+        text: Annotated[str, m.Field(description="Exact captured source text")]
         start_byte: Annotated[
             int,
-            m.Field(ge=0, validation_alias=m.AliasPath("range", "byteOffset", "start")),
+            m.Field(
+                ge=0,
+                validation_alias=m.AliasPath("range", "byteOffset", "start"),
+                description="Inclusive UTF-8 byte offset",
+            ),
         ]
         end_byte: Annotated[
             int,
-            m.Field(ge=0, validation_alias=m.AliasPath("range", "byteOffset", "end")),
+            m.Field(
+                ge=0,
+                validation_alias=m.AliasPath("range", "byteOffset", "end"),
+                description="Exclusive UTF-8 byte offset",
+            ),
         ]
 
     class CodemodBindingSnapshot(m.ArbitraryTypesModel):

@@ -70,9 +70,9 @@ class FlextInfraModelsScan:
 
         file_path: Annotated[Path, m.Field(description="Path to the scanned file")]
         violations: Annotated[
-            list[FlextInfraModelsScan.ScanViolation],
+            t.SequenceOf[FlextInfraModelsScan.ScanViolation],
             m.Field(description="Violations found in the file"),
-        ] = m.Field(default_factory=list)
+        ] = m.Field(default_factory=tuple)
         detector_name: Annotated[
             str,
             m.Field(description="Name of the detector that produced this result"),

@@ -136,12 +136,19 @@ class TestsFlextInfraCodegenFixerCycleProof:
     def test_package_root_import_preserves_foreign_package_identity(
         tmp_path: Path,
     ) -> None:
-        """Rebinding a foreign source must not invent a local declaring package."""
+        """A foreign-package finding stays residue instead of being rebound.
+
+        Binding it into the foreign top-level package is exactly the defect
+        that rewrote ``from flext_infra import u`` to ``from flext_cli import u``
+        in own-package files, so the consumer keeps its exact source binding.
+
+        """
+        source = "from flext_cli.utilities import u\n"
         project = u.Tests.create_codegen_project(
             tmp_path=tmp_path,
             name="foreign-proj",
             pkg_name="foreign_pkg",
-            files={"consumer.py": "from flext_cli.utilities import u\n"},
+            files={"consumer.py": source},
         )
         path = project / "src" / "foreign_pkg" / "consumer.py"
         original = path.read_text(encoding="utf-8")
