@@ -196,7 +196,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
             (
                 export_bindings,
                 declared_exports,
-                FlextInfraUtilitiesPrivateImportAncestry.class_bases(
+                FlextInfraUtilitiesPrivateImportAncestry.FlextInfraUtilitiesPrivateImportAncestry.class_bases(
                     discovery_sources,
                 ),
             ),

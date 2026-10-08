@@ -134,7 +134,6 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
         Returns:
             The validated rejecting guard statement.
 
-
         Raises:
             TypeError: If the model field rejection is not an if statement.
             ValueError: If the boundary lacks a rejecting guard, carries
