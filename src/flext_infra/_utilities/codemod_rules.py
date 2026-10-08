@@ -13,12 +13,17 @@ from functools import lru_cache
 from importlib.metadata import Distribution
 from importlib.util import find_spec
 from pathlib import Path
+from types import MappingProxyType
 
-from flext_cli import r
+from flext_cli import r, u
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
 from flext_infra import c, config, m, p, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDependencies,
+    FlextInfraUtilitiesResourceLimits,
+)
 
 
 class FlextInfraUtilitiesCodemodRules:
@@ -92,8 +97,6 @@ class FlextInfraUtilitiesCodemodRules:
         root: Path,
     ) -> p.Result[t.Pair[str, t.StrSequence]]:
 
-        from flext_cli import u
-
         pyproject = root / c.PYPROJECT_FILENAME
         document = u.Cli.toml_read_document(pyproject)
         if document.failure:
@@ -137,15 +140,40 @@ class FlextInfraUtilitiesCodemodRules:
         ))
 
     @staticmethod
-    def codemod_distributions() -> MutableMapping[str, Distribution]:
+    def codemod_distributions() -> t.MappingKV[str, Distribution]:
+        """Index the installed distributions visible on the current import path.
 
-        from flext_cli import u
+        Installed metadata is a fact of the interpreter environment for the
+        import path in force, so one path is indexed once per process and every
+        rule plan of the invocation reuses it; a changed ``sys.path`` is a new
+        key.
 
-        indexed: MutableMapping[str, Distribution] = {}
+        Returns:
+            Canonical distribution name to its installed distribution.
+
+        """
         # Import search paths may repeat the same physical directory. Query each
         # directory once; distinct installations with the same name still fail.
-        paths = list(dict.fromkeys(str(Path(path).resolve()) for path in sys.path))
-        for installed in u.installed_distributions(path=paths):
+        return FlextInfraUtilitiesCodemodRules._indexed_distributions(
+            tuple(dict.fromkeys(str(Path(path).resolve()) for path in sys.path)),
+        )
+
+    @staticmethod
+    @lru_cache(maxsize=8)
+    def _indexed_distributions(
+        paths: t.VariadicTuple[str],
+    ) -> t.MappingKV[str, Distribution]:
+        """Read every distribution's metadata on ``paths`` exactly once.
+
+        Returns:
+            A read-only canonical-name index of the installed distributions.
+
+        Raises:
+            ValueError: If two installations declare the same distribution.
+
+        """
+        indexed: MutableMapping[str, Distribution] = {}
+        for installed in u.installed_distributions(path=list(paths)):
             raw_name = installed.metadata.get("Name")
             if not isinstance(raw_name, str) or not raw_name.strip():
                 continue
@@ -159,7 +187,7 @@ class FlextInfraUtilitiesCodemodRules:
                 )
                 raise ValueError(msg)
             indexed[name] = installed
-        return indexed
+        return MappingProxyType(indexed)
 
     @classmethod
     def codemod_runtime_closure(
@@ -226,8 +254,6 @@ class FlextInfraUtilitiesCodemodRules:
         indexed: t.MappingKV[str, Distribution],
     ) -> p.Result[t.StrSequence]:
 
-        from flext_infra._utilities import FlextInfraUtilitiesDependencies
-
         selected = frozenset(providers)
         edges = {
             name: tuple(
@@ -291,8 +317,6 @@ class FlextInfraUtilitiesCodemodRules:
         Returns:
             The resulting ``p.Result[str]``.
         """
-        from flext_cli import u
-
         parsed = u.Cli.yaml_parse(config.read_text(encoding=c.Cli.ENCODING_DEFAULT))
         if parsed.failure:
             return r[str].from_failure(parsed)
@@ -449,8 +473,6 @@ class FlextInfraUtilitiesCodemodRules:
         config: Path,
     ) -> p.Result[t.SequenceOf[m.Infra.CodemodRule]]:
 
-        from flext_cli import u
-
         parsed_config = u.Cli.yaml_parse(
             config.read_text(encoding=c.Cli.ENCODING_DEFAULT),
         )
@@ -497,8 +519,6 @@ class FlextInfraUtilitiesCodemodRules:
             The resulting ``p.Result[t.SequenceOf[m.Infra.CodemodRule]] | None``.
 
         """
-        from flext_cli import u
-
         if not cache_file.is_file():
             return None
         loaded = u.Cli.json_loads(
@@ -525,8 +545,6 @@ class FlextInfraUtilitiesCodemodRules:
             The resulting ``p.Result[t.SequenceOf[m.Infra.CodemodRule]]``.
 
         """
-        from flext_cli import u
-
         if parsed.failure:
             return parsed
         payload = u.Cli.json_dumps([
@@ -559,10 +577,6 @@ class FlextInfraUtilitiesCodemodRules:
             The provider's validated rules, in resource and document order.
 
         """
-        from flext_cli import u
-
-        from flext_infra._utilities import FlextInfraUtilitiesResourceLimits
-
         identity = u.Cli.json_dumps([
             provider,
             Path(__file__).read_text(encoding=c.Cli.ENCODING_DEFAULT),
@@ -595,8 +609,6 @@ class FlextInfraUtilitiesCodemodRules:
             The resulting ``p.Result[str]``.
 
         """
-        from flext_cli import u
-
         body = u.Cli.json_dumps({
             key: value
             for key, value in parsed_rule.items()
@@ -630,8 +642,6 @@ class FlextInfraUtilitiesCodemodRules:
             The resulting ``p.Result[m.Infra.CodemodRule]``.
 
         """
-        from flext_cli import u
-
         rule_id = parsed_rule.get("id")
         if not isinstance(rule_id, str) or not rule_id.strip():
             return r[m.Infra.CodemodRule].fail(
@@ -692,8 +702,6 @@ class FlextInfraUtilitiesCodemodRules:
             The resulting ``p.Result[t.SequenceOf[m.Infra.CodemodRule]]``.
 
         """
-        from flext_cli import u
-
         if not any(
             line.strip() and not line.lstrip().startswith("#")
             for line in raw_document.splitlines()

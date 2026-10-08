@@ -704,6 +704,9 @@ class FlextInfraModelsDepsToolConfig(
     class ToolConfigTools(m.ArbitraryTypesModel):
         """Tool map loaded from YAML."""
 
+        bandit: FlextInfraModelsDepsToolConfig.BanditConfig = m.Field(
+            description="Bandit security gate settings",
+        )
         codespell: FlextInfraModelsDepsToolConfig.CodespellConfig = m.Field(
             description="Codespell settings",
         )

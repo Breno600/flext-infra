@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from flext_infra import config, m, p, r
+from flext_infra._utilities import FlextInfraUtilitiesGitSemanticRefsMixin
 
 
 class FlextInfraUtilitiesGitLaneHygieneMixin:
@@ -27,8 +28,6 @@ class FlextInfraUtilitiesGitLaneHygieneMixin:
             Partial or complete native facts with all causal read errors retained.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesGitSemanticRefsMixin
-
         errors: list[str] = []
         refs: list[m.Infra.GitLaneRef] = []
         stash_oids: tuple[str, ...] = ()

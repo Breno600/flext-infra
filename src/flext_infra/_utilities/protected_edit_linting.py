@@ -14,7 +14,14 @@ from itertools import islice
 from pathlib import Path
 from typing import ClassVar
 
+from flext_cli import u
+
 from flext_infra import c, config, m, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDiscovery,
+    FlextInfraUtilitiesProjectDiscovery,
+    FlextInfraUtilitiesResourceLimits,
+)
 
 
 class FlextInfraUtilitiesProtectedEditLinting:
@@ -67,8 +74,6 @@ class FlextInfraUtilitiesProtectedEditLinting:
             FileNotFoundError: If managed workspace tool is missing.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
-
         environment = FlextInfraUtilitiesProjectDiscovery.runtime_environment_dir(
             workspace,
         )
@@ -185,8 +190,6 @@ class FlextInfraUtilitiesProtectedEditLinting:
             RuntimeError: If ruff normalization failed for.
 
         """
-        from flext_cli import u
-
         for py_file in paths:
             output = u.Cli.run_raw(
                 [
@@ -238,8 +241,6 @@ class FlextInfraUtilitiesProtectedEditLinting:
             The resulting ``Path``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesDiscovery
-
         resolved_workspace = workspace.resolve()
         project_root: Path | None = FlextInfraUtilitiesDiscovery.project_root(py_file)
         if project_root is None:
@@ -280,8 +281,6 @@ class FlextInfraUtilitiesProtectedEditLinting:
             The resulting ``t.StrSequence``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesResourceLimits
-
         if tool_name == c.Infra.MYPY:
             return FlextInfraUtilitiesResourceLimits.mypy_limited_command(
                 m.Infra.MypyInvocation(
@@ -374,8 +373,6 @@ class FlextInfraUtilitiesProtectedEditLinting:
             The resulting ``t.Triple[str, str, t.StrSequence] | None``.
 
         """
-        from flext_cli import u
-
         raw_bytes = py_file.read_bytes()
         return (str(py_file.resolve()), u.Cli.sha256_bytes(raw_bytes), gate_key)
 
@@ -455,8 +452,6 @@ class FlextInfraUtilitiesProtectedEditLinting:
             The one declared deadline for a lint gate subprocess.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesResourceLimits
-
         if tool_name == c.Infra.MYPY:
             return FlextInfraUtilitiesResourceLimits.mypy_runner_timeout()
         return max(5, min(15, c.Infra.TIMEOUT_SHORT))
@@ -477,10 +472,6 @@ class FlextInfraUtilitiesProtectedEditLinting:
             The resulting ``m.Infra.LintGateResult``.
 
         """
-        from flext_cli import u
-
-        from flext_infra._utilities import FlextInfraUtilitiesResourceLimits
-
         cmd = cls._lint_command(
             py_file,
             workspace,

@@ -10,6 +10,7 @@ import ast
 from pathlib import Path
 
 from flext_infra import c, m, p, r, u
+from flext_infra.workspace import FlextInfraWorkspaceDetector
 
 
 class FlextInfraStagedPackage:
@@ -66,7 +67,6 @@ class FlextInfraStagedPackage:
     def _workspace_layouts(
         workspace: Path,
     ) -> p.Result[dict[str, m.Infra.RopeProjectLayout]]:
-        from flext_infra.workspace import FlextInfraWorkspaceDetector
 
         spec = FlextInfraWorkspaceDetector.load_workspace_spec(workspace)
         if spec.failure:

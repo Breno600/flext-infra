@@ -243,6 +243,12 @@ if TYPE_CHECKING:
     from flext_infra._utilities._semantic_cutover.class_scope import (
         FlextInfraUtilitiesSemanticCutoverClassScope,
     )
+    from flext_infra._utilities._semantic_cutover.declaration_payload import (
+        FlextInfraUtilitiesDeclarationPayload,
+    )
+    from flext_infra._utilities._semantic_cutover.declaration_relocation import (
+        FlextInfraUtilitiesSemanticDeclarationRelocation,
+    )
     from flext_infra._utilities._semantic_cutover.dynamic_environment import (
         FlextInfraUtilitiesSemanticCutoverDynamicEnvironment,
     )
@@ -485,6 +491,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesCodemodProject",
     "FlextInfraUtilitiesCodemodRules",
     "FlextInfraUtilitiesCompatibilityAliasValidation",
+    "FlextInfraUtilitiesDeclarationPayload",
     "FlextInfraUtilitiesDeferredSelfReferenceRewrite",
     "FlextInfraUtilitiesDependencies",
     "FlextInfraUtilitiesDependencyRequirements",
@@ -648,6 +655,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesSemanticCutoverPrivateImportCst",
     "FlextInfraUtilitiesSemanticCutoverPrivateImports",
     "FlextInfraUtilitiesSemanticCutoverSelfFacade",
+    "FlextInfraUtilitiesSemanticDeclarationRelocation",
     "FlextInfraUtilitiesSemanticFamilyFlatten",
     "FlextInfraUtilitiesSemanticFamilyReferences",
     "FlextInfraUtilitiesSemanticFamilyTypeReferences",
@@ -685,6 +693,9 @@ install_lazy_exports(
         "FlextInfraUtilitiesCodemodRules": ".codemod_rules",
         "FlextInfraUtilitiesCompatibilityAliasValidation": (
             ".compatibility_alias_validation"
+        ),
+        "FlextInfraUtilitiesDeclarationPayload": (
+            "._semantic_cutover.declaration_payload"
         ),
         "FlextInfraUtilitiesDeferredSelfReferenceRewrite": (
             ".deferred_self_reference_rewrite"
@@ -886,6 +897,9 @@ install_lazy_exports(
         ),
         "FlextInfraUtilitiesSemanticCutoverSelfFacade": (
             "._semantic_cutover.self_facade"
+        ),
+        "FlextInfraUtilitiesSemanticDeclarationRelocation": (
+            "._semantic_cutover.declaration_relocation"
         ),
         "FlextInfraUtilitiesSemanticFamilyFlatten": "._semantic_cutover.family_flatten",
         "FlextInfraUtilitiesSemanticFamilyReferences": (

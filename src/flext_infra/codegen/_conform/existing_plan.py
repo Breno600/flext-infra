@@ -15,6 +15,11 @@ from flext_infra import c, m, p, r, t, u
 from flext_infra.codegen._conform.artifact_render import (
     FlextInfraCodegenConformArtifactRender,
 )
+from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
+from flext_infra.services.codegen import FlextInfraCodegen
+from flext_infra.workspace.environment_contracts import (
+    FlextInfraWorkspaceEnvironmentContracts,
+)
 
 
 class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRender):
@@ -35,13 +40,10 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
 
         """
         root = target.root
-        repository = target.repository
         if contract.destinations == c.Infra.MAKEFILE_BOOTSTRAP_DESTINATIONS:
             return self._plan_existing_bootstrap(target, workspace, codegen)
         if contract.destinations == frozenset({c.PYPROJECT_FILENAME}):
             return self._plan_existing_pyproject_bootstrap(root)
-        stage_started = time.monotonic()
-        u.Cli.info(f"  stage=pyproject repository={repository.name}")
         pyproject = root / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
@@ -59,16 +61,13 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         )
         if surface_plans is not None:
             return surface_plans
-        managed = self._plan_existing_managed(
+        return self._plan_existing_managed(
             target,
             workspace,
             codegen,
             contract,
             identity.value,
         )
-        if managed.failure:
-            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(managed)
-        return r[t.SequenceOf[m.Infra.CodegenFilePlan]].ok(managed.value)
 
     def _validated_existing_identity(
         self,
@@ -214,8 +213,6 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             The resulting ``p.Result[m.Infra.ToolingRuntimeContext]``.
 
         """
-        from flext_infra.deps import FlextInfraPyprojectModernizer
-
         root = target.root
         repository = target.repository
         modernizer = FlextInfraPyprojectModernizer(
@@ -271,40 +268,6 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 ),
             ),
         )
-        if tooling_context.failure:
-            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
-                tooling_context,
-            )
-        u.Cli.info(
-            f"  stage=tooling-context repository={repository.name} "
-            f"elapsed={time.monotonic() - stage_started:.2f}s",
-        )
-        render_inputs = self.resolve_render_inputs(
-            target=target,
-            workspace=workspace,
-            codegen=codegen,
-            tooling_runtime=tooling_context.value,
-            managed_artifacts=managed_artifacts.value,
-        )
-        managed_result = self._plan_existing_templates(
-            render_inputs=render_inputs,
-            contract=contract,
-        )
-        if managed_result.failure:
-            return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(managed_result)
-        planned = list(managed_result.value)
-        if contract.custom:
-            custom_result = self._plan_existing_custom(
-                root,
-                codegen,
-                profile=target.make_profile.value,
-            )
-            if custom_result.failure:
-                return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
-                    custom_result,
-                )
-            planned.extend(custom_result.value)
-        return r[t.SequenceOf[m.Infra.CodegenFilePlan]].ok(tuple(planned))
 
     def _plan_existing_pyproject_bootstrap(
         self,
@@ -1102,8 +1065,6 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             bool]]`` with its presence flag.
 
         """
-        from flext_infra.services.codegen import FlextInfraCodegen
-
         result_type = r[t.Pair[m.Infra.CodegenFilePlan | None, bool]]
         merged = FlextInfraCodegen.render_vscode_settings(root)
         if merged.failure:
@@ -1143,10 +1104,6 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             bool]]`` with its presence flag.
 
         """
-        from flext_infra.workspace.environment_contracts import (
-            FlextInfraWorkspaceEnvironmentContracts,
-        )
-
         result_type = r[t.Pair[m.Infra.CodegenFilePlan | None, bool]]
         normalized = FlextInfraWorkspaceEnvironmentContracts.envrc_local_normalized(
             current,
