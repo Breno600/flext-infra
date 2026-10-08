@@ -152,10 +152,9 @@ class FlextInfraConfigModelsWorkspace:
         file_extensions: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                default_factory=tuple,
                 description="Allowed file extensions (empty = all by pattern)",
             ),
-        ]
+        ] = m.Field(default_factory=tuple)
 
     class WorkspaceManifestSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Complete versioned input contract for ``config/workspace.yaml``."""
@@ -172,10 +171,11 @@ class FlextInfraConfigModelsWorkspace:
         docs_audit: Annotated[
             FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
             m.Field(
-                default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
                 description="Repository-owned documentation audit declarations",
             ),
-        ]
+        ] = m.Field(
+            default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+        )
         namespace_scan_dirs: Annotated[
             t.StrSequence,
             m.Field(
@@ -370,10 +370,11 @@ class FlextInfraConfigModelsWorkspace:
         docs_audit: Annotated[
             FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
             m.Field(
-                default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
                 description="Validated local documentation audit declarations",
             ),
-        ]
+        ] = m.Field(
+            default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+        )
         beads: Annotated[
             FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
             m.Field(description="Repository-local Beads identity when enabled"),

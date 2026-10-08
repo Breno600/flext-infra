@@ -36,13 +36,14 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
     runtime_root: Annotated[
         Path | None,
         m.Field(
-            default_factory=lambda: type(settings).fetch_global().Infra.runtime_root,
             description=(
                 "Declared runtime root whose environment runs the probes; "
                 "undeclared, the target checkout's own environment"
             ),
         ),
-    ]
+    ] = m.Field(
+        default_factory=lambda: type(settings).fetch_global().Infra.runtime_root,
+    )
 
     _PRELUDE: ClassVar[str] = (
         "import importlib, sys\n"

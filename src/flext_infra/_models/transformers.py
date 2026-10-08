@@ -58,8 +58,8 @@ class FlextInfraModelsTransformers:
         ]
         changes: Annotated[
             t.VariadicTuple[str],
-            m.Field(default_factory=tuple, description="Recorded migration operations"),
-        ]
+            m.Field(description="Recorded migration operations"),
+        ] = m.Field(default_factory=tuple)
 
     class SemanticMigrationEdit(m.ContractModel):
         """One validated in-memory semantic source rewrite."""

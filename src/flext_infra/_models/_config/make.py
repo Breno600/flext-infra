@@ -270,38 +270,33 @@ class FlextInfraConfigModelsMake(
         cache_environment_variable: Annotated[
             c.Infra.MypyCacheEnvironment,
             m.Field(
-                default=c.Infra.MypyCacheEnvironment.CACHE_DIR,
                 description="Mypy's cache-directory environment variable",
             ),
-        ]
+        ] = m.Field(default=c.Infra.MypyCacheEnvironment.CACHE_DIR)
         data_home_environment_variable: Annotated[
             c.Infra.MypyCacheEnvironment,
             m.Field(
-                default=c.Infra.MypyCacheEnvironment.DATA_HOME,
                 description="XDG persistent cache-home variable",
             ),
-        ]
+        ] = m.Field(default=c.Infra.MypyCacheEnvironment.DATA_HOME)
         user_home_environment_variable: Annotated[
             c.Infra.MypyCacheEnvironment,
             m.Field(
-                default=c.Infra.MypyCacheEnvironment.USER_HOME,
                 description="User home variable for the XDG default",
             ),
-        ]
+        ] = m.Field(default=c.Infra.MypyCacheEnvironment.USER_HOME)
         home_cache_directory: Annotated[
             Path,
             m.Field(
-                default=Path(".cache"),
                 description="Standard cache directory below the user home",
             ),
-        ]
+        ] = m.Field(default=Path(".cache"))
         external_storage_directory: Annotated[
             Path,
             m.Field(
-                default=Path("flext/infra/mypy"),
                 description="FLEXT-owned directory below the cache home",
             ),
-        ]
+        ] = m.Field(default=Path("flext/infra/mypy"))
 
         @m.model_validator(mode="after")
         def require_external_cache_contract(self) -> Self:

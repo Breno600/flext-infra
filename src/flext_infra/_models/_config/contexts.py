@@ -259,10 +259,11 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
         docs_audit: Annotated[
             FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
             m.Field(
-                default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
                 description="Repository-owned documentation audit declarations",
             ),
-        ]
+        ] = m.Field(
+            default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+        )
         namespace_scan_dirs: Annotated[
             t.StrSequence,
             m.Field(

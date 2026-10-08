@@ -95,10 +95,9 @@ class FlextInfraModelsWorkspace:
         declared_member: Annotated[
             FlextInfraConfigModelsContexts.RepositoryRef | None,
             m.Field(
-                default=None,
                 description="Catalog-declared member reference for this entry",
             ),
-        ]
+        ] = m.Field(default=None)
 
     class EnvironmentContractViolation(
         FlextInfraModelsMixins.PositiveLineMixin,
