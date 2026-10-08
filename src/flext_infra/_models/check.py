@@ -18,6 +18,44 @@ from flext_infra._models.mixins import FlextInfraModelsMixins
 class FlextInfraModelsCheck:
     """Quality-gate check domain models."""
 
+    class BanditFinding(m.ContractModel):
+        """Required fields consumed from one native Bandit finding."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore")
+
+        filename: Annotated[t.NonEmptyStr, m.Field(description="Audited source path")]
+        line_number: Annotated[
+            t.NonNegativeInt,
+            m.Field(description="Native finding line"),
+        ]
+        test_id: Annotated[t.NonEmptyStr, m.Field(description="Bandit test identifier")]
+        issue_text: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Native security diagnostic"),
+        ]
+
+    class BanditScanError(m.ContractModel):
+        """A source file Bandit could not audit."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore")
+
+        filename: Annotated[t.NonEmptyStr, m.Field(description="Unaudited source path")]
+        reason: Annotated[t.NonEmptyStr, m.Field(description="Native scan failure")]
+
+    class BanditReport(m.ContractModel):
+        """Required Bandit JSON arrays, including a clean pair of empty arrays."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore")
+
+        results: Annotated[
+            t.SequenceOf[FlextInfraModelsCheck.BanditFinding],
+            m.Field(description="Native security findings"),
+        ]
+        errors: Annotated[
+            t.SequenceOf[FlextInfraModelsCheck.BanditScanError],
+            m.Field(description="Source files that were not audited"),
+        ]
+
     class RunCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra check run``.
 
