@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Annotated, ClassVar, Self
 
 from flext_cli import m
@@ -64,6 +65,22 @@ class FlextInfraConfigModelsProvider:
     class BranchPolicySpec(FlextInfraConfigModelsContract.ConfigContract):
         """Global branch policy shared by every provider."""
 
+        lane_remote: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Remote whose live integration tip governs lanes"),
+        ]
+        lane_temporary_roots: Annotated[
+            tuple[Path, ...],
+            m.Field(description="Temporary roots requiring registered ownership"),
+        ]
+        lane_pr_limit: Annotated[
+            int,
+            m.Field(gt=0, description="PR page bound; saturation fails the inventory"),
+        ]
+        lane_governance_file: Annotated[
+            Path,
+            m.Field(description="Global coordination SSOT, consumed without copying"),
+        ]
         ci_trigger_branches: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(

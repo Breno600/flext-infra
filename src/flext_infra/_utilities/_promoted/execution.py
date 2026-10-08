@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_cli import u
+from flext_cli import m, u
 
 from flext_infra import c
 from flext_infra._settings import settings
@@ -82,7 +82,7 @@ class FlextInfraUtilitiesPromotedExecution(FlextInfraUtilitiesPromotedInvocation
         result = u.Cli.run_raw(
             (*interpreter, str(command.path)),
             cwd=project_root,
-            options=u.Cli.ProcessOptions(
+            options=m.Cli.ProcessOptions(
                 env=env,
                 remove_env_keys=(c.Infra.ORCHESTRATOR_ENV_PYTHONPATH,),
             ),

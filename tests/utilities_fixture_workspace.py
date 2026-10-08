@@ -637,6 +637,24 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 encoding="utf-8",
             )
             TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(repository)
+            remote = tmp_path / "integration.git"
+            git = TestsFlextInfraUtilitiesGitMixin
+            git.git_bootstrap(tmp_path, ("init", "--bare", str(remote)))
+            policy = config.Infra.codegen.branch_policy
+            action = "set-url" if policy.lane_remote == c.Infra.GIT_ORIGIN else "add"
+            git.git_bootstrap(
+                repository,
+                ("remote", action, policy.lane_remote, str(remote)),
+            )
+            git.git_bootstrap(
+                repository,
+                (
+                    "push",
+                    policy.lane_remote,
+                    "HEAD:refs/heads/"
+                    + TestsFlextInfraUtilitiesProjectFixtureMixin.provider_branch(),
+                ),
+            )
             return repository
 
         @staticmethod
@@ -652,6 +670,15 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 u.Cli.run_checked(
                     [c.Infra.GIT, "commit", "-m", message],
                     cwd=repository,
+                ),
+            )
+            TestsFlextInfraUtilitiesGitMixin.git_bootstrap(
+                repository,
+                (
+                    "push",
+                    config.Infra.codegen.branch_policy.lane_remote,
+                    "HEAD:refs/heads/"
+                    + TestsFlextInfraUtilitiesProjectFixtureMixin.provider_branch(),
                 ),
             )
 

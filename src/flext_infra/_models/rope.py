@@ -13,7 +13,9 @@ from typing import Annotated, ClassVar
 from flext_cli import m
 
 from flext_infra import c, p, t
-from flext_infra._models import FlextInfraCodegen, FlextInfraModelsMixins
+from flext_infra._models import FlextInfraModelsMixins
+from flext_infra._models._codegen.fix import FlextInfraModelsCodegenFixModels
+from flext_infra._models._codegen.lazy_init import FlextInfraModelsCodegenLazyInitModels
 
 
 class FlextInfraModelsRope:
@@ -526,11 +528,11 @@ class FlextInfraModelsRope:
             m.Field(description="Resolved package directory containing the module"),
         ]
         package_context: Annotated[
-            FlextInfraCodegen.LazyInitPackageContext,
+            FlextInfraModelsCodegenLazyInitModels.LazyInitPackageContext,
             m.Field(description="Resolved lazy-init package context for the module"),
         ]
         module_policy: Annotated[
-            FlextInfraCodegen.NamespaceModulePolicy,
+            FlextInfraModelsCodegenFixModels.NamespaceModulePolicy,
             m.Field(description="Canonical module policy derived for the module"),
         ]
         project_layout: Annotated[

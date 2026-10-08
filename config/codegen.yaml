@@ -345,6 +345,11 @@ Infra:
     # Nothing here catalogs organizations, and nothing resolves a provider by
     # matching a Git origin against configured rows.
     branch_policy:
+      lane_remote: origin
+      lane_pr_limit: 1000
+      lane_governance_file: ~/agents/config/governance.json
+      lane_temporary_roots:
+        - /tmp
       # Pushes to these branches trigger the generated CI workflow. The renderer
       # adds the repository's own integration branch to this list; it never
       # hardcodes a fleet branch name.
@@ -1369,7 +1374,7 @@ Infra:
               - beartype>=0.22.9
               - dependency-injector>=4.49.1
               - packaging>=26.3
-              - pydantic>=2.13.5,<3
+              - pydantic>=2.14.0,<3
               - pydantic-settings>=2.15.0
               - pyyaml>=6.0.3
               - structlog>=26.1.0
@@ -1379,7 +1384,7 @@ Infra:
             runtime:
               - flext-cli
               - flext-core
-              - pydantic>=2.13.5,<3
+              - pydantic>=2.14.0,<3
               - pydantic-settings>=2.15.0
             codegen: [flext-infra]
         # Project-scoped requirements extend the shared profile without

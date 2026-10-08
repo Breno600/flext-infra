@@ -127,6 +127,9 @@ class TestsFlextInfraFileGateAndReconcileMakefile:
                 ],
             )
             tm.that(rendered, has="export FLEXT_FILE_GATE_FILE := $(value FILE)")
+            selection = body.split(' --gates "', 1)[1].split('"', 1)[0]
+            tm.that(len(selection.split(",")), gt=1)
+            tm.that(selection, lacks=" ")
             tm.that(body, lacks=["|| true", "-m ruff", "ast-grep scan", 'typos "'])
 
     @staticmethod
@@ -150,7 +153,9 @@ class TestsFlextInfraFileGateAndReconcileMakefile:
                     f"FILE={selection}",
                 ],
                 cwd=root,
-                remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
+                options=m.Cli.ProcessOptions(
+                    remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
+                ),
             ),
         )
         tm.that(process.outcome.raw_return_code, ne=0)

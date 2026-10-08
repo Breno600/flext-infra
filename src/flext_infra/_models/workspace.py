@@ -133,7 +133,7 @@ class FlextInfraModelsWorkspace:
         editable: Annotated[
             bool,
             m.Field(description="Distribution is installed as editable"),
-        ]
+        ] = False
 
     class DirectUrlVcsInfo(m.ContractModel):
         """Native PEP 610 VCS identity, independent of a moving requested ref."""

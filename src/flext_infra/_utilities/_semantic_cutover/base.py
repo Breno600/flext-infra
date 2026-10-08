@@ -86,6 +86,10 @@ class FlextInfraUtilitiesSemanticCutoverBase(
         sources: t.MappingKV[Path, str],
         findings: t.SequenceOf[m.Infra.ModScanFinding] = (),
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
+        supported = isinstance(phase, c.Infra.SemanticCutoverPhase)
+        if not supported:
+            message = f"unsupported semantic cutover phase: {phase}"
+            raise ValueError(message)
         root = rope_workspace.repository_root
         rule_id = c.Infra.SEMANTIC_CUTOVER_RULE_IDS.get(phase)
         selected = tuple(finding for finding in findings if finding.rule_id == rule_id)
@@ -110,9 +114,6 @@ class FlextInfraUtilitiesSemanticCutoverBase(
                 | c.Infra.SemanticCutoverPhase.NOTICE_LAST
             ):
                 return cls._plan_ordered_phase(phase, root, sources, selected)
-            case _:
-                message = f"unsupported semantic cutover phase: {phase}"
-                raise ValueError(message)
 
     @classmethod
     def _plan_selected_phase(

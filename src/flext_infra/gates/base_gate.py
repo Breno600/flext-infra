@@ -934,7 +934,7 @@ class FlextInfraGate:
             cmd,
             cwd=cwd,
             timeout=timeout,
-            options=u.Cli.ProcessOptions(env=env, remove_env_keys=remove_env_keys),
+            options=m.Cli.ProcessOptions(env=env, remove_env_keys=remove_env_keys),
         )
         if result.failure:
             # A failed Result here means the tool never ran -- it could not be

@@ -191,7 +191,7 @@ class TestsFlextInfraCodegenHookConformance:
             u.Cli.run_raw(
                 shlex.split(entry),
                 cwd=root,
-                options=u.Cli.ProcessOptions(
+                options=m.Cli.ProcessOptions(
                     env={
                         policy.ci.variable: (
                             policy.ci.value

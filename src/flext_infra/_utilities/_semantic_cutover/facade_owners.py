@@ -324,9 +324,12 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         """
         for node in body:
             if isinstance(node, ast.If):
-                if not FlextInfraUtilitiesRopeSourceBindingCollector.type_checking_test(
-                    node.test,
-                ):
+                is_static_only = (
+                    FlextInfraUtilitiesRopeSourceBindingCollector.type_checking_test(
+                        node.test,
+                    )
+                )
+                if not is_static_only:
                     yield from cls._facade_ordered_statements(node.body)
                 yield from cls._facade_ordered_statements(node.orelse)
             else:

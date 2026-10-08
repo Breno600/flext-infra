@@ -198,7 +198,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
         return aliases, frozenset(owner_imports)
 
     @classmethod
-    def _import_bindings(
+    def _nested_import_bindings(
         cls,
         node: cst.Import,
         bindings_by_module: t.MappingKV[str, t.StrMapping],
@@ -264,7 +264,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingModuleAliases:
             bindings_by_module=bindings_by_module,
             classifiers=(
                 cls._from_import_bindings,
-                cls._import_bindings,
+                cls._nested_import_bindings,
                 cls._reads_moved_member,
             ),
         )

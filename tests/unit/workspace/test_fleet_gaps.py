@@ -18,8 +18,8 @@ from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
-from flext_infra import c, m, main, t
-from tests import u
+from flext_infra import main
+from tests import c, m, t, u
 
 if TYPE_CHECKING:
     from collections.abc import Generator

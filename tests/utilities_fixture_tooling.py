@@ -225,7 +225,7 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         return u.Cli.run_raw(
             [c.Infra.MAKE, *args],
             cwd=cwd,
-            options=u.Cli.ProcessOptions(
+            options=m.Cli.ProcessOptions(
                 env={
                     "GH_CONFIG_DIR": os.devnull,
                     "DBUS_SESSION_BUS_ADDRESS": "disabled:",

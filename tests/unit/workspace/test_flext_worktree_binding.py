@@ -22,11 +22,11 @@ from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
-from flext_infra import FlextInfraFlextBindingService, c, config
-from tests import t, u
+from flext_infra import FlextInfraFlextBindingService, config
+from tests import c, m, t, u
 
 if TYPE_CHECKING:
-    from flext_core import p as core_p
+    from flext_cli import p
 
 
 class TestsFlextInfraWorktreeBinding:
@@ -136,7 +136,7 @@ class TestsFlextInfraWorktreeBinding:
         """Only declared flext deps present in the worktree are rebound."""
         consumer = self._consumer(tmp_path)
 
-        planned: core_p.Result[t.VariadicTuple[str]] = (
+        planned: p.Result[t.VariadicTuple[str]] = (
             FlextInfraFlextBindingService.plan_targets(
                 consumer_root=consumer,
                 flext_root=self._flext_workspace(tmp_path),
@@ -277,7 +277,7 @@ class TestsFlextInfraWorktreeBinding:
                     "--python",
                     str(tmp_path / "python"),
                 ),
-                options=u.Cli.ProcessOptions(env={ci.variable: ci.value}),
+                options=m.Cli.ProcessOptions(env={ci.variable: ci.value}),
             ),
         )
         tm.that(result.outcome.raw_return_code != 0, eq=True)

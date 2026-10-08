@@ -13,7 +13,9 @@ from pathlib import Path
 from git import GitCommandError, GitConfigParser
 
 from flext_infra import c, m, p, r, t
-from flext_infra._utilities import FlextInfraUtilitiesGitSemanticIdentityMixin
+from flext_infra._utilities._git.semantic_identity import (
+    FlextInfraUtilitiesGitSemanticIdentityMixin,
+)
 
 
 class FlextInfraUtilitiesGitSemanticSubmoduleMixin(

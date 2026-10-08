@@ -28,6 +28,8 @@ class FlextInfraUtilitiesRopeSourceBasesInventory:
         cls,
         request: m.Infra.SourceBindingInventoryRequest,
         definitions: MutableMapping[str, m.Infra.SourceClassDefinition],
+        *,
+        provider: t.Infra.RopePyModule | None = None,
     ) -> t.MappingKV[str, m.Infra.SourceClassReference | None]:
         """Index lexical bindings without installing a cross-module Rope overlay.
 
@@ -43,19 +45,30 @@ class FlextInfraUtilitiesRopeSourceBasesInventory:
             ValueError: If a required binding has unsupported source semantics.
 
         """
-        resource = (
-            FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
-                request.project,
-                request.path,
+        if provider is not None:
+            resource = provider.get_resource()
+            if (
+                resource is None
+                or resource.real_path != str(request.path)
+                or provider.source_code != request.source
+            ):
+                message = f"Provider does not match captured source: {request.path}"
+                raise ValueError(message)
+            parsed = provider.get_ast()
+        else:
+            resource = (
+                FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
+                    request.project,
+                    request.path,
+                )
+                if request.path.is_file()
+                else None
             )
-            if request.path.is_file()
-            else None
-        )
-        parsed = FlextInfraUtilitiesRopeRuntime.build_string_module(
-            request.project,
-            request.source,
-            resource=resource,
-        ).get_ast()
+            parsed = FlextInfraUtilitiesRopeRuntime.build_string_module(
+                request.project,
+                request.source,
+                resource=resource,
+            ).get_ast()
         if not isinstance(parsed, ast.Module):
             message = f"Rope returned a non-module AST for {request.path}"
             raise TypeError(message)

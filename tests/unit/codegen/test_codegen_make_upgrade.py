@@ -94,7 +94,12 @@ class TestsFlextInfraCodegenMakeUpgrade:
         )
 
     @staticmethod
-    def _recipe_targets_containing(makefile: str, needle: str) -> set[str]:
+    def _recipe_targets_containing(
+        makefile: str,
+        needle: str,
+        *,
+        regex: bool = False,
+    ) -> set[str]:
         """Return every rule target whose recipe (not comments) carries *needle*.
 
         Returns:
@@ -109,7 +114,9 @@ class TestsFlextInfraCodegenMakeUpgrade:
                 if (
                     current is not None
                     and not line.lstrip().startswith("#")
-                    and needle in line
+                    and (
+                        re.search(needle, line) is not None if regex else needle in line
+                    )
                 ):
                     targets.add(current)
                 continued = line.endswith("\\")
@@ -143,11 +150,19 @@ class TestsFlextInfraCodegenMakeUpgrade:
         )
 
         tm.that(
-            self._recipe_targets_containing(makefile, "--upgrade"),
+            self._recipe_targets_containing(
+                makefile,
+                r"\$\(UV\)\s+lock\b[^\n]*--upgrade\b",
+                regex=True,
+            ),
             eq={"_upg_lifecycle"},
         )
         tm.that(
-            self._recipe_targets_containing(makefile, "lock --bump"),
+            self._recipe_targets_containing(
+                makefile,
+                r"\bmise\b[^\n]*\block\b[^\n]*--bump\b",
+                regex=True,
+            ),
             eq={"_bootstrap_setup_tools", "_upg_lifecycle"},
         )
         toolchain = config.Infra.codegen.toolchain

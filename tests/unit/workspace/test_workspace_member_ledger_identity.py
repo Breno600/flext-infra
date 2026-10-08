@@ -11,9 +11,8 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m
 from flext_infra.workspace import FlextInfraWorkspaceDetector
-from tests import t, u
+from tests import c, m, t, u
 
 
 class TestsFlextInfraWorkspaceMemberLedgerIdentity:

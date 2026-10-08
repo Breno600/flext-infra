@@ -9,6 +9,7 @@ from __future__ import annotations
 import difflib
 import errno
 import os
+import sys
 import time
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -19,17 +20,12 @@ from flext_cli import m as cli_m, u
 
 from flext_infra import c, m, p, r, t
 
-if os.name == "nt":
+if sys.platform == "win32":
     import msvcrt
 else:
     import fcntl
 
 if TYPE_CHECKING:
-    # Both lock backends are declared for the checker: typeshed publishes
-    # msvcrt only for the win32 platform, so the nt branch stays verifiable
-    # while the checker runs on POSIX.
-    import fcntl
-    import msvcrt
     from pathlib import Path
 
 
@@ -85,7 +81,7 @@ class FlextInfraUtilitiesCodegenFilePlan:
             deadline = time.monotonic() + wait_seconds
             while True:
                 try:
-                    if os.name == "nt":
+                    if sys.platform == "win32":
                         os.lseek(descriptor, 0, os.SEEK_SET)
                         msvcrt.locking(descriptor, msvcrt.LK_NBLCK, 1)
                     else:
@@ -108,7 +104,7 @@ class FlextInfraUtilitiesCodegenFilePlan:
             yield
         finally:
             try:
-                if acquired and os.name == "nt":
+                if sys.platform == "win32" and acquired:
                     os.lseek(descriptor, 0, os.SEEK_SET)
                     msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
             finally:

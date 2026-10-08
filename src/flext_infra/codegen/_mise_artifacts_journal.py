@@ -129,6 +129,7 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
                 "sources": encoded_sources.value,
                 "directories": journal.directories,
                 "entries": tuple(entries),
+                "staging_intents": journal.staging_intents,
             },
         )
         if validated.failure:
@@ -169,6 +170,7 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
                 publication,
                 index=offset,
                 recovery_roots=recovery_roots,
+                staging_intents=journal.staging_intents,
             )
             if entry.failure:
                 return result_type.from_failure(entry)
@@ -214,6 +216,7 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
                 "sources": journal.sources,
                 "directories": (*journal.directories, *directories),
                 "entries": journal.entries,
+                "staging_intents": journal.staging_intents,
             },
         )
         if validated.failure:
@@ -239,6 +242,51 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
             The resulting ``p.Result[m.Infra.CodegenTransactionJournal]``.
 
         """
+        finalized: list[m.Infra.CodegenStagingIntent] = []
+        for intent in journal.staging_intents:
+            observed = files.read_state(intent.before.path, required=False)
+            if observed.failure:
+                return r[m.Infra.CodegenTransactionJournal].from_failure(observed)
+            current = observed.value
+            if current.content is None:
+                finalized.append(intent)
+                continue
+            if (
+                current.parent_device != intent.before.parent_device
+                or current.parent_inode != intent.before.parent_inode
+                or current.mode != intent.mode
+                or files.digest(current.content) != intent.sha256
+            ):
+                return r[m.Infra.CodegenTransactionJournal].fail(
+                    f"staging bytes differ from durable intention: {current.path}",
+                )
+            inventory = u.Cli.atomic_inventory_physical_tree(current.path.parent)
+            if inventory.failure:
+                return r[m.Infra.CodegenTransactionJournal].from_failure(inventory)
+            receipt = next(
+                (
+                    entry
+                    for entry in inventory.value.entries
+                    if entry.path == current.path
+                ),
+                None,
+            )
+            if receipt is None or (
+                intent.created is not None and receipt != intent.created
+            ):
+                return r[m.Infra.CodegenTransactionJournal].fail(
+                    f"staging physical identity changed: {current.path}",
+                )
+            finalized.append(
+                m.Infra.CodegenStagingIntent.model_validate({
+                    **intent.model_dump(),
+                    "created": receipt,
+                }),
+            )
+        journal = m.Infra.CodegenTransactionJournal.model_validate({
+            **journal.model_dump(),
+            "staging_intents": tuple(finalized),
+        })
         registered = FlextInfraMiseArtifactsVerification.register_transaction_manifests(
             layout,
             journal,
@@ -282,6 +330,7 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
                 "sources": journal.sources,
                 "directories": directories,
                 "entries": journal.entries,
+                "staging_intents": journal.staging_intents,
             },
         )
         if validated.failure:
@@ -359,6 +408,7 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
                 "sources": journal.sources,
                 "directories": journal.directories,
                 "entries": journal.entries,
+                "staging_intents": journal.staging_intents,
             },
         )
         if validated.failure:
@@ -448,6 +498,7 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
                 "sources": journal.sources,
                 "directories": journal.directories,
                 "entries": tuple(entries),
+                "staging_intents": journal.staging_intents,
             },
         )
         if validated.failure:
@@ -555,7 +606,7 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
         return r[bool].ok(value=True)
 
     @classmethod
-    def _journal_source(
+    def source_record(
         cls,
         phase: str,
         source: m.Cli.AtomicFileState,
@@ -612,7 +663,7 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
         for phase, source in sources:
             key = (phase, source.path)
             previous = by_key.get(key)
-            encoded = cls._journal_source(phase, source, previous)
+            encoded = cls.source_record(phase, source, previous)
             if encoded.failure:
                 return result_type.from_failure(encoded)
             if previous is not None and previous != encoded.value:
@@ -674,17 +725,15 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
 
     @staticmethod
     def _backup_original(
-        plan: m.Infra.MiseToolchainWorkspacePlan | m.Infra.CodegenFileSessionPlan,
         project: m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant,
         before: m.Cli.AtomicFileState,
         index: int,
         recovery_roots: set[Path],
-    ) -> p.Result[t.Pair[str, str]]:
-        """Back up one original file into its project recovery root.
+    ) -> p.Result[t.Pair[Path, bytes]]:
+        """Authenticate one original and prepare its project recovery root.
 
         Returns:
-            The resulting ``p.Result[t.Pair[str, str]]`` with the backup
-            selector and the original digest.
+            The backup path and original bytes, with their identity proven.
 
         """
         if (
@@ -694,7 +743,7 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
             or before.inode is None
             or before.link_count != 1
         ):
-            return r[t.Pair[str, str]].fail(
+            return r[t.Pair[Path, bytes]].fail(
                 f"generation original identity is incomplete: {before.path}",
             )
         recovery_root = FlextInfraMiseArtifactsJournal._prepared_recovery_root(
@@ -702,17 +751,45 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
             recovery_roots,
         )
         if recovery_root.failure:
-            return r[t.Pair[str, str]].from_failure(recovery_root)
+            return r[t.Pair[Path, bytes]].from_failure(recovery_root)
         backup = recovery_root.value / f"{index:06d}.original"
-        written = process.write_new(backup, before.content, c.Infra.JOURNAL_MODE)
+        return r[t.Pair[Path, bytes]].ok((backup, before.content))
+
+    @staticmethod
+    def _write_original_backup(
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
+        prepared: t.Pair[Path, bytes],
+        staging_intents: t.VariadicTuple[m.Infra.CodegenStagingIntent],
+    ) -> p.Result[t.Pair[str, str]]:
+        """Guard the backup write with its durable intention, then encode it.
+
+        Returns:
+            The backup selector and original digest after the guarded write.
+
+        """
+        backup, content = prepared
+        intent = next(
+            (item for item in staging_intents if item.before.path == backup),
+            None,
+        )
+        if staging_intents and intent is None:
+            return r[t.Pair[str, str]].fail(
+                f"backup has no durable intention: {backup}",
+            )
+        written = process.write_new(
+            backup,
+            content,
+            c.Infra.JOURNAL_MODE,
+            intent=intent,
+        )
         if written.failure:
             return r[t.Pair[str, str]].from_failure(written)
-        relative_backup = files.transaction_relative(plan.layout, backup)
+        relative_backup = files.transaction_relative(layout, backup)
         if relative_backup.failure:
             return r[t.Pair[str, str]].from_failure(relative_backup)
         return r[t.Pair[str, str]].ok((
             relative_backup.value,
-            files.digest(before.content),
+            files.digest(content),
         ))
 
     @staticmethod
@@ -754,6 +831,37 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
         return r[Path].ok(recovery_root)
 
     @classmethod
+    def _desired_staging_selector(
+        cls,
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
+        replacement: m.Cli.AtomicFileState | None,
+        destination: Path,
+    ) -> p.Result[str | None]:
+        """Prove a replacement's complete identity before encoding its path.
+
+        Returns:
+            The staging selector, or None for a planned deletion.
+
+        """
+        incomplete = replacement is not None and any((
+            replacement.content is None,
+            replacement.mode is None,
+            replacement.device is None,
+            replacement.inode is None,
+            replacement.link_count != 1,
+        ))
+        if incomplete:
+            return r[str | None].fail(
+                f"generation staged identity is incomplete: {destination}",
+            )
+        if replacement is None:
+            return r[str | None].ok(None)
+        relative_staging = files.transaction_relative(layout, replacement.path)
+        if relative_staging.failure:
+            return r[str | None].from_failure(relative_staging)
+        return r[str | None].ok(relative_staging.value)
+
+    @classmethod
     def _journal_entry(
         cls,
         plan: m.Infra.MiseToolchainWorkspacePlan | m.Infra.CodegenFileSessionPlan,
@@ -761,6 +869,7 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
         *,
         index: int,
         recovery_roots: set[Path],
+        staging_intents: t.VariadicTuple[m.Infra.CodegenStagingIntent] = (),
     ) -> p.Result[m.Infra.CodegenJournalEntry]:
         before = publication.before
         if before.parent_device is None or before.parent_inode is None:
@@ -774,35 +883,37 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
         backup_selector: str | None = None
         original_sha: str | None = None
         if before.content is not None:
-            backup = cls._backup_original(plan, project, before, index, recovery_roots)
+            backup = cls._backup_original(
+                project,
+                before,
+                index,
+                recovery_roots,
+            )
             if backup.failure:
                 return r[m.Infra.CodegenJournalEntry].from_failure(backup)
-            backup_selector, original_sha = backup.value
+            written_backup = cls._write_original_backup(
+                plan.layout,
+                backup.value,
+                staging_intents,
+            )
+            if written_backup.failure:
+                return r[m.Infra.CodegenJournalEntry].from_failure(written_backup)
+            backup_selector, original_sha = written_backup.value
         replacement = publication.replacement
         desired_exists = replacement is not None
-        incomplete_replacement = replacement is not None and any((
-            replacement.content is None,
-            replacement.mode is None,
-            replacement.device is None,
-            replacement.inode is None,
-            replacement.link_count != 1,
-        ))
-        if incomplete_replacement:
-            return r[m.Infra.CodegenJournalEntry].fail(
-                f"generation staged identity is incomplete: {before.path}",
-            )
-        desired_staging: str | None = None
-        if replacement is not None:
-            relative_staging = files.transaction_relative(plan.layout, replacement.path)
-            if relative_staging.failure:
-                return r[m.Infra.CodegenJournalEntry].from_failure(relative_staging)
-            desired_staging = relative_staging.value
+        desired_staging = cls._desired_staging_selector(
+            plan.layout,
+            replacement,
+            before.path,
+        )
+        if desired_staging.failure:
+            return r[m.Infra.CodegenJournalEntry].from_failure(desired_staging)
         return r[m.Infra.CodegenJournalEntry].ok(
             m.Infra.CodegenJournalEntry(
                 phase=publication.phase,
                 project=project.selector,
                 path=selector,
-                desired_staging=desired_staging,
+                desired_staging=desired_staging.value,
                 original_exists=before.content is not None,
                 original_parent_device=before.parent_device,
                 original_parent_inode=before.parent_inode,

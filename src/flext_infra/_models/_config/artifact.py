@@ -31,6 +31,7 @@ from flext_infra._models import (
     FlextInfraModelsDepsToolConfig,
     FlextInfraModelsDepsToolConfigProjectArtifacts,
     FlextInfraModelsLayout,
+    FlextInfraModelsMiseToolchain,
 )
 
 
@@ -165,7 +166,7 @@ class FlextInfraConfigModelsArtifact:
             m.Field(description="Per-module code-LOC ceiling policy"),
         ]
         toolchain: Annotated[
-            FlextInfraConfigModelsContract.ToolchainSpec,
+            FlextInfraModelsMiseToolchain.ToolchainSpec,
             m.Field(description="Exact generated toolchain"),
         ]
         github_actions: Annotated[

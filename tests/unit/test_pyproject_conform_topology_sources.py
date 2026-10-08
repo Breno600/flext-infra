@@ -105,7 +105,9 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 workspace=workspace,
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
-                flext_line=u.Tests.integration(),
+                options=u.Infra.PyprojectConformOptions(
+                    flext_line=u.Tests.integration(),
+                ),
             ),
         )
         expected = {ref.distribution for ref in workspace.subprojects} | {
@@ -129,7 +131,9 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 workspace=workspace,
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
-                flext_line=u.Tests.integration(),
+                options=u.Infra.PyprojectConformOptions(
+                    flext_line=u.Tests.integration(),
+                ),
             ),
         )
         tm.that(second, eq=rendered)
@@ -160,7 +164,9 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 workspace=workspace,
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
-                flext_line=u.Tests.integration(),
+                options=u.Infra.PyprojectConformOptions(
+                    flext_line=u.Tests.integration(),
+                ),
             ),
         )
         dependencies = set(
@@ -184,7 +190,9 @@ class TestsFlextInfraPyprojectConformTopologySources:
                     workspace=workspace,
                     required_dev_dependencies=(),
                     uv_resolution=self._toolchain_resolution(),
-                    flext_line=u.Tests.integration(),
+                    options=u.Infra.PyprojectConformOptions(
+                        flext_line=u.Tests.integration(),
+                    ),
                 ),
             ),
             eq=rendered,
@@ -214,7 +222,9 @@ class TestsFlextInfraPyprojectConformTopologySources:
             workspace=workspace,
             required_dev_dependencies=(),
             uv_resolution=self._toolchain_resolution(),
-            flext_line=u.Tests.integration(),
+            options=u.Infra.PyprojectConformOptions(
+                flext_line=u.Tests.integration(),
+            ),
         )
         tm.that(result.failure, eq=True)
         tm.that(result.error or "", contains="candidate dependency Git URL differs")
@@ -241,7 +251,9 @@ class TestsFlextInfraPyprojectConformTopologySources:
             workspace=workspace,
             required_dev_dependencies=(),
             uv_resolution=self._toolchain_resolution(),
-            flext_line=u.Tests.integration(),
+            options=u.Infra.PyprojectConformOptions(
+                flext_line=u.Tests.integration(),
+            ),
         )
         tm.that(result.failure, eq=True)
         tm.that(result.error or "", contains="no declared Git provenance")
@@ -265,7 +277,9 @@ class TestsFlextInfraPyprojectConformTopologySources:
             workspace=workspace,
             required_dev_dependencies=(),
             uv_resolution=self._toolchain_resolution(),
-            flext_line=u.Tests.integration(),
+            options=u.Infra.PyprojectConformOptions(
+                flext_line=u.Tests.integration(),
+            ),
         )
         tm.that(result.failure, eq=True)
         tm.that(result.error or "", contains="not declared requirements: flext-cli")
@@ -286,7 +300,9 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 workspace=self._workspace(infra, role=self._ROLE.STANDALONE),
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
-                flext_line=u.Tests.integration(),
+                options=u.Infra.PyprojectConformOptions(
+                    flext_line=u.Tests.integration(),
+                ),
             ),
         )
         parsed = u.Tests.toml_mapping(u.Cli.toml_parse_text(rendered))
@@ -340,7 +356,9 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 workspace=attached,
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
-                flext_line=u.Tests.integration(),
+                options=u.Infra.PyprojectConformOptions(
+                    flext_line=u.Tests.integration(),
+                ),
             ),
         )
         parsed = u.Tests.toml_mapping(u.Cli.toml_parse_text(rendered))
@@ -354,7 +372,9 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 workspace=standalone,
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
-                flext_line=u.Tests.integration(),
+                options=u.Infra.PyprojectConformOptions(
+                    flext_line=u.Tests.integration(),
+                ),
             ),
         )
         tm.that(detached, eq=rendered)
@@ -365,7 +385,9 @@ class TestsFlextInfraPyprojectConformTopologySources:
                     workspace=attached,
                     required_dev_dependencies=(),
                     uv_resolution=self._toolchain_resolution(),
-                    flext_line=u.Tests.integration(),
+                    options=u.Infra.PyprojectConformOptions(
+                        flext_line=u.Tests.integration(),
+                    ),
                 ),
             ),
             eq=rendered,

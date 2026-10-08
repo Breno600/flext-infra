@@ -197,7 +197,7 @@ class TestsFlextInfraCodegenMakeVerbs:
             u.Cli.run_raw(
                 [c.Infra.MAKE, "--no-print-directory", "help"],
                 cwd=project_root,
-                options=u.Cli.ProcessOptions(
+                options=m.Cli.ProcessOptions(
                     remove_env_keys=c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
                 ),
             ),
@@ -233,7 +233,7 @@ class TestsFlextInfraCodegenMakeVerbs:
             u.Cli.run_raw(
                 [c.Infra.MAKE, "--no-print-directory", "help"],
                 cwd=project_root,
-                options=u.Cli.ProcessOptions(
+                options=m.Cli.ProcessOptions(
                     env=hostile_env,
                     remove_env_keys=tuple(
                         key
@@ -305,7 +305,7 @@ class TestsFlextInfraCodegenMakeVerbs:
             u.Cli.run_raw(
                 [c.Infra.MAKE, "--no-print-directory", "help", "FOO=bar"],
                 cwd=project_root,
-                options=u.Cli.ProcessOptions(
+                options=m.Cli.ProcessOptions(
                     remove_env_keys=c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
                 ),
             ),

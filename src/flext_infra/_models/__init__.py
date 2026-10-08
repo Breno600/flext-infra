@@ -40,6 +40,7 @@ if TYPE_CHECKING:
         FlextInfraExternalCacheDirectorySpec,
     )
     from flext_infra._models._config.make import FlextInfraConfigModelsMake
+    from flext_infra._models._config.make_clean import FlextInfraConfigModelsMakeClean
     from flext_infra._models._config.make_docs import FlextInfraConfigModelsMakeDocs
     from flext_infra._models._config.provider import FlextInfraConfigModelsProvider
     from flext_infra._models._config.release import FlextInfraConfigModelsRelease
@@ -86,6 +87,8 @@ if TYPE_CHECKING:
     from flext_infra._models.duplication import FlextInfraModelsDuplication
     from flext_infra._models.gates import FlextInfraModelsGates
     from flext_infra._models.git import FlextInfraModelsGit
+    from flext_infra._models.git_lane_inputs import FlextInfraModelsGitLaneInputs
+    from flext_infra._models.git_lane_ownership import FlextInfraModelsGitLaneOwnership
     from flext_infra._models.layout import FlextInfraModelsLayout
     from flext_infra._models.mise_toolchain import FlextInfraModelsMiseToolchain
     from flext_infra._models.mise_toolchain_base import (
@@ -119,6 +122,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraConfigModelsContexts",
     "FlextInfraConfigModelsContract",
     "FlextInfraConfigModelsMake",
+    "FlextInfraConfigModelsMakeClean",
     "FlextInfraConfigModelsMakeDocs",
     "FlextInfraConfigModelsProvider",
     "FlextInfraConfigModelsRelease",
@@ -159,6 +163,8 @@ __all__: tuple[str, ...] = (
     "FlextInfraModelsGates",
     "FlextInfraModelsGit",
     "FlextInfraModelsGitIdentity",
+    "FlextInfraModelsGitLaneInputs",
+    "FlextInfraModelsGitLaneOwnership",
     "FlextInfraModelsGitWorktreeFacts",
     "FlextInfraModelsGitWorktreeState",
     "FlextInfraModelsLayout",
@@ -195,6 +201,7 @@ install_lazy_exports(
         "FlextInfraConfigModelsContexts": "._config.contexts",
         "FlextInfraConfigModelsContract": "._config.contract",
         "FlextInfraConfigModelsMake": "._config.make",
+        "FlextInfraConfigModelsMakeClean": "._config.make_clean",
         "FlextInfraConfigModelsMakeDocs": "._config.make_docs",
         "FlextInfraConfigModelsProvider": "._config.provider",
         "FlextInfraConfigModelsRelease": "._config.release",
@@ -239,6 +246,8 @@ install_lazy_exports(
         "FlextInfraModelsGates": ".gates",
         "FlextInfraModelsGit": ".git",
         "FlextInfraModelsGitIdentity": "._git.identity",
+        "FlextInfraModelsGitLaneInputs": ".git_lane_inputs",
+        "FlextInfraModelsGitLaneOwnership": ".git_lane_ownership",
         "FlextInfraModelsGitWorktreeFacts": "._git.worktree_facts",
         "FlextInfraModelsGitWorktreeState": "._git.worktree_state",
         "FlextInfraModelsLayout": ".layout",
