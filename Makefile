@@ -448,10 +448,22 @@ define RUN_PUBLIC_POST
 	$(if $(filter post-$(1),$(CUSTOM_DECLARED_TARGETS)),+@$(SELF_MAKE) post-$(1))
 endef
 
-define RUN_PUBLIC
+# A public verb is its producer half (pre hook plus handler) followed by its
+# activation half. An activation producer re-enters the environment its
+# producer just rendered; `upg` runs the two halves apart so the toolchain
+# lock is resolved from that rendered manifest before activation demands it.
+define RUN_PUBLIC_PRODUCE
 	$(if $(filter pre-$(1),$(CUSTOM_DECLARED_TARGETS)),+@$(SELF_MAKE) pre-$(1))
 	$(if $(filter _custom-$(1),$(CUSTOM_DECLARED_TARGETS)),+@$(SELF_MAKE) _custom-$(1),+@$(SELF_MAKE) _builtin-$(1))
-	$(if $(2),+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-$(1),$(call RUN_PUBLIC_POST,$(1)))
+endef
+
+define RUN_PUBLIC_ACTIVATE
+	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-$(1)
+endef
+
+define RUN_PUBLIC
+$(call RUN_PUBLIC_PRODUCE,$(1))
+	$(if $(2),$(call RUN_PUBLIC_ACTIVATE,$(1)),$(call RUN_PUBLIC_POST,$(1)))
 endef
 
 
@@ -1412,7 +1424,13 @@ endif
 # carries the generator itself), provisions the environment frozen from it,
 # and conforms dependency floors. The floors land in the codegen SSOT, so
 # `gen` projects them into every pyproject and renders the managed tool
-# manifests (.mise.toml) of the upgraded generator. Resolve that regenerated
+# manifests (.mise.toml) of the upgraded generator. Only the producer half of
+# `gen` runs before the relock: its activation half demands the Mise release
+# the lock pins (`_builtin_require_environment`), and the lock still reflects
+# the manifest the generator was provisioned with until it is resolved from
+# the rendered one, so activation runs after the relock and its install. A
+# rendered manifest that moves the Mise self-pin therefore converges in one
+# run. Resolve that regenerated
 # manifest before the second frozen install proves the committed mise.lock
 # satisfies it (mise has no `lock --check`: the locked install IS the
 # satisfaction check), `_builtin_require_mise` re-proves the pinned release,
@@ -1433,15 +1451,12 @@ _upg_lifecycle: _builtin_setup_submodules
 	@$(SELF_MAKE) _builtin_setup_environment
 	@$(PROJECT_FLEXT_INFRA) deps modernize --repository-root "$(PROJECT_ROOT)" \
 		--apply --rewrite-constraints --projects .
-	@$(SELF_MAKE) gen
+	@$(SELF_MAKE) _builtin_require_environment
+	$(call RUN_PUBLIC_PRODUCE,gen)
 	@mise -C "$(PROJECT_ROOT)" lock --bump
-	@set -eu; \
-	if [ -d .mise/locks ]; then \
-		git add -- .mise/locks; \
-		printf 'INFO: staged the .mise/locks sidecars written by mise lock (declared tracked by the generated .gitignore; commit them with the relock)\n'; \
-	fi
 	@mise -C "$(PROJECT_ROOT)" install --yes
 	@$(SELF_MAKE) _builtin_require_mise
+	$(call RUN_PUBLIC_ACTIVATE,gen)
 	@set -eu; \
 	before="$$(git -C "$(PROJECT_ROOT)" status --porcelain --untracked-files=all --ignore-submodules=none | sort)"; \
 	$(SELF_MAKE) gen; \

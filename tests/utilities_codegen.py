@@ -142,12 +142,15 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         root: Path,
         *,
         members: t.StrSequence = (),
+        what: c.Infra.CodegenConformSurface = c.Infra.CodegenConformSurface.ALL,
     ) -> m.Infra.CodegenPlan:
-        """Plan every artifact conform renders for a fresh repository scaffold.
+        """Plan the artifacts conform renders for a fresh repository scaffold.
 
         Without members the fixture repository is standalone; each member
         makes it a workspace composing that project, so generated surfaces
         are observed exactly as the public codegen owner renders them.
+        ``what`` selects the conform surface, so a scenario about one surface
+        never pays for planning every template.
 
         Returns:
             The resulting ``m.Infra.CodegenPlan``.
@@ -174,6 +177,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
                     fixture.repository_ref(name, path=Path(name)) for name in members
                 ),
             ),
+            what=what,
         )
 
     @staticmethod
@@ -182,6 +186,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         destination: str,
         *,
         members: t.StrSequence = (),
+        what: c.Infra.CodegenConformSurface = c.Infra.CodegenConformSurface.ALL,
     ) -> str:
         """Return one rendered scaffold artifact, failing when it is not planned.
 
@@ -194,6 +199,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
                 TestsFlextInfraUtilitiesCodegenMixin.scaffold_plan(
                     root,
                     members=members,
+                    what=what,
                 ),
                 destination,
             ),

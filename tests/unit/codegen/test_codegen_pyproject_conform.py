@@ -682,7 +682,8 @@ dependencies = []
     def test_scaffold_mypy_policy_matches_ssot_and_converges(tmp_path: Path) -> None:
         """The actual Jinja scaffold preserves typed policy on repeated rendering."""
         root = tmp_path / "fixture-project"
-        first = u.Tests.scaffold_text(root, c.PYPROJECT_FILENAME)
+        surface = c.Infra.CodegenConformSurface.PYPROJECT
+        first = u.Tests.scaffold_text(root, c.PYPROJECT_FILENAME, what=surface)
         mypy = u.Tests.toml_table_at(first, "tool", "mypy")
         policy = config.Infra.tooling.tools.mypy
         tm.that(
@@ -699,7 +700,10 @@ dependencies = []
             u.Tests.toml_table_at(first, "tool", "pydantic-mypy"),
             eq=config.Infra.tooling.tools.pydantic_mypy.model_dump(),
         )
-        tm.that(u.Tests.scaffold_text(root, c.PYPROJECT_FILENAME), eq=first)
+        tm.that(
+            u.Tests.scaffold_text(root, c.PYPROJECT_FILENAME, what=surface),
+            eq=first,
+        )
 
     @staticmethod
     def _assert_unmanaged_tool_tables_survive(
