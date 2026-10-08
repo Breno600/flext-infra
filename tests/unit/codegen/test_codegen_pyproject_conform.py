@@ -423,15 +423,19 @@ class TestsFlextInfraCodegenPyprojectConform:
         unattached = config.Infra.codegen.infra_repository.distribution
         result = u.Infra.pyproject_conform(
             f'[project]\nname = "external-consumer"\ndependencies = ["{unattached}"]\n',
-            workspace=self._workspace(),
+            workspace=self._workspace(role=c.Infra.MakeProfile.STANDALONE),
             required_dev_dependencies=(),
             uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
         )
         tm.fail(result, has="internal dependency declares no direct git source")
 
     def test_standalone_canonicalizes_the_declared_git_source(self) -> None:
-        """The declared requirement line is the only URL and branch authority."""
-        workspace = self._workspace()
+        """The declared requirement line is the only URL and branch authority.
+
+        Only a workspace-root render strips members to bare names; a
+        standalone render keeps the declared inline git pin.
+        """
+        workspace = self._workspace(role=c.Infra.MakeProfile.STANDALONE)
         member = workspace.subprojects[0]
         declared = (
             f"{member.distribution} @ git+{member.url}@{u.Tests.provider_branch()}"
@@ -499,7 +503,7 @@ constraint-dependencies = ["uv>=0"]
 
     def test_full_conformance_is_idempotent_without_uv_version_pin(self) -> None:
         """Test full conformance is idempotent without uv version pin."""
-        workspace = self._workspace()
+        workspace = self._workspace(role=c.Infra.MakeProfile.STANDALONE)
         toolchain = config.Infra.codegen.toolchain.model_copy(
             update={"uv_link_mode": "copy"},
         )
