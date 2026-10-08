@@ -359,6 +359,10 @@ _bootstrap_setup_tools:
 # behavior): [tool.uv.workspace] makes every declared member a workspace
 # member and `uv sync --all-packages` provisions them as editables; CI's
 # --no-editable keeps the frozen builds.
+# The .envrc files are managed projections: setup approves their hash in EVERY
+# context. A CI runner never runs an interactive allow, and the direnv check
+# gate (CI=Y included) activates through `direnv exec`, which refuses a blocked
+# .envrc. direnv re-blocks on any later content change through its own hash.
 SETUP_ENVIRONMENT_RECIPE = set -eu; \
 	trap 'if [ -n "$${FLEXT_SETUP_CREDENTIAL_STORE:-}" ]; then rm -f "$$FLEXT_SETUP_CREDENTIAL_STORE"; fi' EXIT; \
 	$(REQUIRE_WORKSPACE_ENVIRONMENT); \
@@ -376,14 +380,12 @@ SETUP_ENVIRONMENT_RECIPE = set -eu; \
 		uv_lock_mode=--frozen; \
 	fi; \
 	$$credential_env $(UV) sync --project "$(UV_PROJECT)" --python "3.13" $(UV_SYNC_FLAGS) $$uv_lock_mode --link-mode "$(UV_LINK_MODE)"; \
-	if [ "$(strip $(CI))" != "Y" ]; then \
-		direnv allow "$(PROJECT_ROOT)"; \
-		for member in $(WORKSPACE_SUBPROJECTS); do \
-			if [ -f "$(PROJECT_ROOT)/$$member/.envrc" ]; then \
-				direnv allow "$(PROJECT_ROOT)/$$member"; \
-			fi; \
-		done; \
-	fi
+	direnv allow "$(PROJECT_ROOT)"; \
+	for member in $(WORKSPACE_SUBPROJECTS); do \
+		if [ -f "$(PROJECT_ROOT)/$$member/.envrc" ]; then \
+			direnv allow "$(PROJECT_ROOT)/$$member"; \
+		fi; \
+	done
 
 # Reject borrowed environments before bootstrap, activation or custom hooks.
 # Members may use their containing workspace, never an unrelated checkout.
