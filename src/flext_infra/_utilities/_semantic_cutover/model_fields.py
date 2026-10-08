@@ -106,6 +106,7 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
                 statement,
                 guard,
                 target,
+                receiver,
             )
             indent = lines[statement.lineno - 1][: statement.col_offset]
             comments = "".join(lines[statement.end_lineno : guard.lineno - 1])
@@ -138,6 +139,7 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
         statement: ast.Assign,
         guard: ast.stmt | None,
         target: ast.Name,
+        receiver: str,
     ) -> ast.If:
         """Require one complete, guarded, singly used model-fields boundary.
 
@@ -151,15 +153,15 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
                 receiver.
 
         """
-        if not isinstance(guard, ast.If):
-            msg = "model field rejection must be an if statement"
-            raise TypeError(msg)
         if not cls._rejecting_guard(guard, target.id):
             msg = (
                 f"untrusted model_fields access lacks a rejecting "
                 f"guard in {path}:{statement.lineno}"
             )
             raise ValueError(msg)
+        if not isinstance(guard, ast.If):
+            msg = "model field rejection must be an if statement"
+            raise TypeError(msg)
         uses = {
             node
             for node in ast.walk(function)
@@ -186,7 +188,7 @@ class FlextInfraUtilitiesSemanticCutoverModelFields(
             )
             raise ValueError(msg)
         if any(
-            target.id in cls._bound_identifiers(node)
+            receiver in cls._bound_identifiers(node)
             for body in function.body
             for node in ast.walk(body)
         ):
