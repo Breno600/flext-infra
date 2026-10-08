@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import FlextInfraGitService, c, m, main, t
+from flext_infra import FlextInfraGitService, FlextInfraWorktreeService, c, m, main, t
 from tests import u
 
 
@@ -109,6 +109,10 @@ class TestsFlextInfraGitFacet:
             "moved": "tip changed before effect",
         }[boundary]
         tm.that(output.out + output.err, has=diagnostic)
+        tm.fail(u.Infra.git_push_upstream(m.Infra.GitPushRequest(
+            repo_root=repository,
+            branch="publication-candidate",
+        )), has=("stale integration cache" if boundary == "stale" else "has not absorbed"))
         tm.that(self._lane_bytes(repository), eq=before)
         tm.that(self._lane_bytes(remote), eq=remote_before)
 
@@ -133,6 +137,13 @@ class TestsFlextInfraGitFacet:
         tm.fail(u.Infra.git_add_lane_worktree(m.Infra.GitWorktreeAddRequest(
             repo_root=repository, lane=lane, branch="second-candidate", base="HEAD",
         )), has="authoritative Beads ownership")
+        tm.fail(FlextInfraWorktreeService(
+            repository_root=repository,
+            operation=c.Infra.WorktreeOperation.ADD,
+            branch="second-candidate",
+            base="HEAD",
+            apply_changes=True,
+        ).execute(), has="authoritative Beads ownership")
         tm.that(lane.exists(), eq=False)
         tm.that(self._lane_bytes(repository), eq=before)
 
@@ -154,6 +165,19 @@ class TestsFlextInfraGitFacet:
         diagnostic = "published preservation" if integrated else "unintegrated candidate"
         tm.that(output.out + output.err, has=diagnostic)
         tm.fail(u.Infra.git_remove_clean_worktree(repository, lane), has=diagnostic)
+        candidate = tm.ok(u.Infra.git_repository_head(
+            m.Infra.GitRepoRequest(repo_root=lane),
+        )).oid
+        tm.fail(u.Infra.git_delete_ref(m.Infra.GitDeleteRefRequest(
+            repo_root=lane,
+            reference=f"{c.Infra.GIT_REFS_HEADS}retirement-candidate",
+            expected_oid=candidate,
+        )), has=diagnostic)
+        tm.fail(u.Infra.git_delete_remote_branch(m.Infra.GitRemoteBranchRequest(
+            repo_root=lane,
+            branch="retirement-candidate",
+            expected_oid=candidate,
+        )), has=diagnostic)
         tm.that(self._lane_bytes(repository), eq=before)
         tm.that(self._lane_bytes(lane), eq=lane_before)
 

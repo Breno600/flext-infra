@@ -110,6 +110,15 @@ class FlextInfraUtilitiesGitSemanticPublishMixin(
             The resulting ``p.Result[m.Infra.GitTextReport]``.
 
         """
+        admitted = cls.git_verify_lane(
+            m.Infra.GitLaneVerificationRequest(
+                repo_root=request.repo_root,
+                remote=request.remote,
+                candidate=request.source,
+            ),
+        )
+        if admitted.failure:
+            return r[m.Infra.GitTextReport].from_failure(admitted)
         try:
             repo = cls._repo(request.repo_root)
             text = repo.git.push(

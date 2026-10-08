@@ -140,15 +140,8 @@ class TestsFlextInfraUtilitiesGitMixin:
         # The checkout carries the provider-declared integration branch, so the
         # bare origin publishes that same line as its default target.
         branch = TestsFlextInfraUtilitiesGitMixin.integration_branch(repo_root)
-        tm.ok(
-            u.Infra.git_push_upstream(
-                m.Infra.GitPushRequest(
-                    repo_root=repo_root,
-                    remote=c.Infra.GIT_ORIGIN,
-                    branch=branch,
-                ),
-            ),
-        )
+        # Initial remote construction is fixture bootstrap, not lane admission.
+        bootstrap(repo_root, ("push", "-u", c.Infra.GIT_ORIGIN, branch))
         bootstrap(
             bare_remote,
             ("symbolic-ref", c.Infra.GIT_HEAD, f"refs/heads/{branch}"),
