@@ -16,11 +16,13 @@ from flext_infra._utilities import (
     FlextInfraUtilitiesGitSemanticSubmoduleMixin,
     FlextInfraUtilitiesGitStateCaptureMixin,
     FlextInfraUtilitiesGitWorktreeFactsMixin,
+    FlextInfraUtilitiesGitWorktreeMixin,
 )
 
 
 class FlextInfraUtilitiesGit(
     FlextInfraUtilitiesGitMutationScopeMixin,
+    FlextInfraUtilitiesGitWorktreeMixin,
     FlextInfraUtilitiesGitAttestationMixin,
     FlextInfraUtilitiesGitScopeMixin,
     FlextInfraUtilitiesGitSemanticSubmoduleMixin,

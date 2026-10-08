@@ -76,6 +76,18 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
         ),
         c.Infra.CLI_GROUP_WORKSPACE: (
             m.Cli.ResultCommandRoute(
+                name="verify-lane",
+                help_text=(
+                    "Verify stash absence and declared live integration ancestry "
+                    "without effects"
+                ),
+                model_cls=m.Infra.GitLaneVerificationRequest,
+                handler=FlextInfraCliRouteBase.result_handler(
+                    FlextInfraGitService.verify_lane,
+                ),
+                success_message="lane stash and live integration ancestry verified",
+            ),
+            m.Cli.ResultCommandRoute(
                 name="identity",
                 help_text="Report canonical Git checkout identity",
                 model_cls=m.Infra.GitRepoRequest,

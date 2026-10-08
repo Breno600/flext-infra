@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraGitService(s[m.Infra.GitStatusReport]):
-    """Thin Git status and cleanliness use cases over ``u.Infra.git_status``."""
+    """Thin public status, cleanliness, and lane admission use cases."""
 
     repository: Annotated[
         Path | None,
@@ -63,6 +63,18 @@ class FlextInfraGitService(s[m.Infra.GitStatusReport]):
                 f"dirty repository: {report.value.repo_root}\n{report.value.porcelain}",
             )
         return report
+
+    @staticmethod
+    def verify_lane(
+        request: m.Infra.GitLaneVerificationRequest,
+    ) -> p.Result[m.Infra.GitOidReport]:
+        """Run the shared, effect-free lane admission owner.
+
+        Returns:
+            Live integration identity or the original admission failure.
+
+        """
+        return u.Infra.git_verify_lane(request)
 
 
 __all__: list[str] = ["FlextInfraGitService"]

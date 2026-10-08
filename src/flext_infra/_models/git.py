@@ -7,7 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated, ClassVar
+from typing import Annotated, ClassVar, Literal
 
 from flext_cli import m
 
@@ -260,6 +260,22 @@ class FlextInfraModelsGit(
         expected_oid: Annotated[
             t.NonEmptyStr | None,
             m.Field(description="Remote tip the mutation is leased on"),
+        ] = None
+
+    class GitLaneVerificationRequest(GitRemoteRequest):
+        """Read-only lane admission against the declared live integration tip."""
+
+        operation: Annotated[
+            Literal["verify", "create", "retire"],
+            m.Field(description="Boundary being verified, never an effect selector"),
+        ] = "verify"
+        candidate: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Commit whose integration ancestry must be proved"),
+        ] = "HEAD"
+        expected_tip: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(description="Previously observed tip; drift refuses admission"),
         ] = None
 
     class GitRefHeadsRequest(m.ContractModel):

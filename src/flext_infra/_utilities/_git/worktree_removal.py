@@ -11,12 +11,12 @@ from pathlib import Path
 from git import GitCommandError, Repo
 
 from flext_core import r
-from flext_infra import p, t
-from flext_infra._utilities import FlextInfraUtilitiesGitWorktreePatchMixin
+from flext_infra import m, p, t
+from flext_infra._utilities import FlextInfraUtilitiesGitSemanticRefsMixin
 
 
 class FlextInfraUtilitiesGitWorktreeRemovalMixin(
-    FlextInfraUtilitiesGitWorktreePatchMixin,
+    FlextInfraUtilitiesGitSemanticRefsMixin,
 ):
     """Own worktree removal operations."""
 
@@ -53,8 +53,11 @@ class FlextInfraUtilitiesGitWorktreeRemovalMixin(
                 None,
             )
             worktree_repo = cls._repo(worktree_root)
-            dirty = cls._nested_submodule_changes(worktree_repo)
-            porcelain = worktree_repo.git.status("--porcelain", "--untracked-files=all")
+            with worktree_repo.git.custom_environment(GIT_OPTIONAL_LOCKS="0"):
+                dirty = cls._nested_submodule_changes(worktree_repo)
+                porcelain = worktree_repo.git.status(
+                    "--porcelain", "--untracked-files=all",
+                )
         except GitCommandError as exc:
             return r[Repo].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
@@ -62,7 +65,9 @@ class FlextInfraUtilitiesGitWorktreeRemovalMixin(
                 f"failed to inspect clean worktree: {exc}",
                 exception=exc,
             )
-        if entry is not None and entry.locked:
+        if entry is None:
+            return r[Repo].fail(f"unregistered worktree: {worktree_root}")
+        if entry.locked:
             return r[Repo].fail(f"locked worktree: {worktree_root}")
         if dirty:
             return r[Repo].fail(
@@ -87,9 +92,16 @@ class FlextInfraUtilitiesGitWorktreeRemovalMixin(
         preflight = cls._preflight_clean_worktree(source_root, worktree_root)
         if preflight.failure:
             return r[bool].from_failure(preflight)
+        admitted = cls.git_verify_lane(
+            m.Infra.GitLaneVerificationRequest(
+                repo_root=worktree_root,
+                operation="retire",
+            ),
+        )
+        if admitted.failure:
+            return r[bool].from_failure(admitted)
         try:
-            preflight.value.git.worktree("remove", "--force", str(worktree_root))
-            preflight.value.git.worktree("prune")
+            preflight.value.git.worktree("remove", str(worktree_root))
         except GitCommandError as exc:
             return r[bool].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
