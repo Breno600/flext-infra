@@ -106,7 +106,7 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         expected_root = (resolved_root / repository.path).resolve()
         direct_url_result = cls._validate_direct_url(
             repository.distribution,
-            distribution.read_text("direct_url.json"),
+            distribution.read_text(c.Infra.DISTRIBUTION_DIRECT_URL_FILE),
             expected_root,
         )
         if direct_url_result.failure:
@@ -255,7 +255,7 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         origin = cls._locked_origin_verdict(
             name,
             matches[0],
-            distribution.read_text("direct_url.json"),
+            distribution.read_text(c.Infra.DISTRIBUTION_DIRECT_URL_FILE),
         )
         if origin.failure:
             return r[bool].from_failure(origin)
@@ -280,7 +280,7 @@ class FlextInfraWorkspaceEnvironmentProvenance:
             return r[bool].from_failure(checkout)
         origin = cls._workspace_origin_verdict(
             item.name,
-            distribution.read_text("direct_url.json"),
+            distribution.read_text(c.Infra.DISTRIBUTION_DIRECT_URL_FILE),
             (repository_root / repository.path).resolve(),
         )
         if origin.failure:

@@ -46,9 +46,9 @@ class FlextInfraUtilitiesGitStateCheckpointMixin(FlextInfraUtilitiesGitStateTree
         cls._state_require_original(snapshot)
         repo = cls._repo(snapshot.repo_root)
         if not checkpoint_ref.startswith("refs/") or checkpoint_ref.startswith((
-            "refs/heads/",
-            "refs/tags/",
-            "refs/remotes/",
+            c.Infra.GIT_REFS_HEADS,
+            c.Infra.GIT_REFS_TAGS,
+            c.Infra.GIT_REFS_REMOTES,
         )):
             msg = "checkpoint requires a dedicated non-branch Git reference"
             raise ValueError(msg)

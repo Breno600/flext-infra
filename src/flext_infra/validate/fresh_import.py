@@ -410,16 +410,30 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                 )
             if not root.is_dir():
                 continue
-            for path in root.rglob("*"):
-                if "__pycache__" in path.parts:
-                    continue
-                if path.is_symlink():
-                    return r[set[Path]].fail(
-                        f"candidate original path became a symlink: {path}",
-                    )
-                if path.is_file():
-                    actual.add(path)
+            files = FlextInfraValidateFreshImport._stage_root_files(root)
+            if files.failure:
+                return files
+            actual.update(files.value)
         return r[set[Path]].ok(actual)
+
+    @staticmethod
+    def _stage_root_files(root: Path) -> p.Result[set[Path]]:
+        """Collect one source directory's physical files, refusing any symlink.
+
+        Returns:
+            The directory's files outside bytecode caches, or the first symlink.
+        """
+        files: set[Path] = set()
+        for path in root.rglob("*"):
+            if "__pycache__" in path.parts:
+                continue
+            if path.is_symlink():
+                return r[set[Path]].fail(
+                    f"candidate original path became a symlink: {path}",
+                )
+            if path.is_file():
+                files.add(path)
+        return r[set[Path]].ok(files)
 
     @staticmethod
     def _project_layouts(
