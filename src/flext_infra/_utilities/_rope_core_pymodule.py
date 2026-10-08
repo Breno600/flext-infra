@@ -10,6 +10,8 @@ import re
 from pathlib import Path
 from typing import ClassVar
 
+from rope.base import exceptions
+
 from flext_infra import t
 from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
 
@@ -127,7 +129,10 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
                 ),
             )
         except (
-            *FlextInfraUtilitiesRopeRuntime.rope_runtime_errors(),
+            exceptions.RefactoringError,
+            exceptions.ResourceNotFoundError,
+            exceptions.ModuleNotFoundError,
+            AttributeError,
             TypeError,
         ) as exc:
             msg = (

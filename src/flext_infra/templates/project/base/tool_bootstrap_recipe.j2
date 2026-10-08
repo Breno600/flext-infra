@@ -20,7 +20,7 @@ awk 'index($$0, "[[tools.\"{{ mise_selector }}\"]]") == 1 { inside = 1; next } i
 		exit 2; \
 	fi; \
 	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
-		mise -C "$(PROJECT_ROOT)" lock --bump; \
+		mise -C "$(PROJECT_ROOT)" lock --upgrade --bump; \
 	fi; \
 	mise -C "$(PROJECT_ROOT)" install --yes; \
 	mise_pin="$$( {{ mise_lock_pin_reader(project_root, mise_selector) }} )"; \

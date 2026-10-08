@@ -24,15 +24,11 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
     class PyprojectConformOptions(m.ImmutableValueModel):
         """Detected integration provenance for internal requirements and dev floors."""
 
-        family_line: Annotated[
-            str | None,
-            m.Field(
-                description="Detected integration branch for internal requirements",
-            ),
-        ] = None
-        required_dependency_source: Annotated[
+        flext_line: Annotated[
             m.Infra.WorkspaceIntegrationSpec | None,
-            m.Field(description="Detected provider source for generated dev floors"),
+            m.Field(
+                description="Detected provider and branch for internal requirements",
+            ),
         ] = None
 
     @classmethod
@@ -78,12 +74,12 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         The workspace manifest owns the topology facts, including the
         namespace production scope its project declares and the members a
         workspace root environment serves. Attached members, of any family,
-        render on the workspace's declared integration line; ``options.family_line``
-        is the detected FLEXT integration branch that re-renders commit residue
-        in the other internal requirements. Without a line, both fail loudly.
-        Generated bare dev floors use ``options.required_dependency_source``, the same
-        detected provider line as the scaffold; CUSTOM requirements never acquire
-        provenance from provider policy unless that dependency is a declared floor.
+        render on the workspace's declared integration line; ``options.flext_line``
+        is the detected FLEXT integration line whose branch re-renders commit
+        residue in the other internal requirements. Without a line, both fail
+        loudly. Generated bare dev floors use the same detected provider line as
+        the scaffold; CUSTOM requirements never acquire provenance from provider
+        policy unless that dependency is a declared floor.
 
         Returns:
             Canonical TOML with autonomous dependencies and uv policy.
@@ -116,7 +112,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             project_name=project_name,
             workspace=workspace,
             required_dev_dependencies=required_dev_dependencies,
-            dependency_source=provenance.required_dependency_source,
+            flext_line=provenance.flext_line,
         )
         if requirement_sources.failure:
             return r[str].from_failure(requirement_sources)
@@ -125,7 +121,9 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             source,
             declared_sources=declared_sources,
             candidate_sources=candidate_sources,
-            family_line=provenance.family_line,
+            family_line=(
+                None if provenance.flext_line is None else provenance.flext_line.branch
+            ),
             workspace_members=workspace_members,
         )
         if normalized.failure:
@@ -148,7 +146,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         *,
         project_name: str,
         requirements: t.StrSequence,
-        dependency_source: m.Infra.WorkspaceIntegrationSpec | None,
+        flext_line: m.Infra.WorkspaceIntegrationSpec | None,
     ) -> p.Result[t.StrMapping]:
         """Derive member sources and provider provenance only for generated floors.
 
@@ -164,26 +162,23 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             if workspace.integration is not None
             else {}
         )
-        for requirement in requirements:
-            name = FlextInfraUtilitiesDependencies.dep_name(requirement)
-            if (
-                name is None
-                or name == project_name
-                or name in declared_sources
-                or not name.startswith("flext-")
-                or requirement.strip() != name
-            ):
-                continue
-            if dependency_source is None:
-                continue
-            if dependency_source.base_url is None:
+        if flext_line is not None:
+            floors = {
+                name
+                for requirement in requirements
+                if (name := FlextInfraUtilitiesDependencies.dep_name(requirement))
+                and name not in {project_name, *declared_sources}
+                and name.startswith("flext-")
+                and requirement.strip() == name
+            }
+            if floors and flext_line.base_url is None:
                 return r[t.StrMapping].fail(
                     "detected FLEXT line carries no provider base URL",
                 )
-            declared_sources[name] = (
-                f"git+{dependency_source.base_url}/{name}.git"
-                f"@{dependency_source.branch}"
-            )
+            declared_sources.update({
+                name: f"git+{flext_line.base_url}/{name}.git@{flext_line.branch}"
+                for name in floors
+            })
         return r[t.StrMapping].ok(declared_sources)
 
     @staticmethod
@@ -207,7 +202,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         project_name: str,
         workspace: m.Infra.WorkspaceSpec,
         required_dev_dependencies: t.StrSequence,
-        dependency_source: m.Infra.WorkspaceIntegrationSpec | None,
+        flext_line: m.Infra.WorkspaceIntegrationSpec | None,
     ) -> p.Result[t.Pair[t.StrMapping, t.StrMapping]]:
         """Return the declared and candidate Git sources of internal requirements.
 
@@ -223,7 +218,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             workspace,
             project_name=project_name,
             requirements=required_dev_dependencies,
-            dependency_source=dependency_source,
+            flext_line=flext_line,
         )
         if declared.failure:
             return r[t.Pair[t.StrMapping, t.StrMapping]].from_failure(declared)

@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING
 from flext_infra import c, config, m, u
 
 if TYPE_CHECKING:
+    from ruamel.yaml.comments import CommentedMap
+
     from flext_infra import t
 
 
@@ -105,7 +107,7 @@ class FlextInfraDepsFloorProfileWriter:
         return changes
 
     @staticmethod
-    def _loaded_document(ssot_path: Path) -> t.MappingKV[str, t.JsonValue]:
+    def _loaded_document(ssot_path: Path) -> CommentedMap:
         """Round-trip load the dependency floor owner document.
 
         Returns:

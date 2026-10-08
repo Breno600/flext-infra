@@ -104,8 +104,18 @@ class FlextInfraDocGenerator(
                 scope_root,
                 roots,
                 analysis,
-                tuple(path for path in directories.value if path not in roots.values()),
-                lambda: self._verify_generated(request, current.value, plans.value),
+                m.Infra.CodegenPhasePublicationPolicy(
+                    directories=tuple(
+                        path
+                        for path in directories.value
+                        if path not in roots.values()
+                    ),
+                    validator=lambda: self._verify_generated(
+                        request,
+                        current.value,
+                        plans.value,
+                    ),
+                ),
             )
             if written.failure:
                 return r[t.SequenceOf[m.Infra.DocsPhaseReport]].from_failure(written)

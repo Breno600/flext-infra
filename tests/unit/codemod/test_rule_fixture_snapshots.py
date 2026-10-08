@@ -49,6 +49,7 @@ class TestsFlextInfraModRuleFixtureSnapshots:
         catalog = cls._catalog(root)
         for directory in (root / "src", catalog / "rules", catalog / "tests"):
             tm.ok(u.Cli.ensure_dir(directory))
+        u.Tests.copy_tracked_mise_seeds(root)
         tm.ok(
             u.Cli.atomic_write_text_file(
                 root / c.Infra.CODEMOD_CONFIG_RELPATH,
@@ -76,7 +77,7 @@ class TestsFlextInfraModRuleFixtureSnapshots:
             u.Tests.commit_git_changes(root, "Declare the demo rule catalog")
         else:
             u.Tests.initialize_git_repo(root)
-        u.Tests.git_bootstrap(root, ("add", c.Infra.CODEMOD_CONFIG_FILENAME))
+        u.Tests.git_bootstrap(root, ("add", c.Infra.CODEMOD_CONFIG_RELPATH.as_posix()))
         return rule
 
     @classmethod

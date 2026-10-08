@@ -101,8 +101,7 @@ class TestsFlextInfraUpgOwnedDependencyPin:
                 environments=tuple(toolchain.uv_environments),
             ),
             options=u.Infra.PyprojectConformOptions(
-                family_line=None if flext_line is None else flext_line.branch,
-                required_dependency_source=flext_line,
+                flext_line=flext_line,
             ),
         )
 

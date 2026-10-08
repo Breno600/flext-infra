@@ -99,8 +99,8 @@ class FlextInfraWorkspaceDetector(
                 external_consumers=(
                     declared_manifest[0].external_consumers if declared_manifest else ()
                 ),
-                subprojects=subprojects,
-                external_dependency_paths=external,
+                subprojects=tuple(subprojects),
+                external_dependency_paths=tuple(external),
                 superproject_members=superproject_members,
             ),
         )

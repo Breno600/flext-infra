@@ -106,7 +106,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
                 options=u.Infra.PyprojectConformOptions(
-                    family_line=u.Tests.provider_branch(),
+                    flext_line=u.Tests.integration(),
                 ),
             ),
         )
@@ -132,7 +132,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
                 options=u.Infra.PyprojectConformOptions(
-                    family_line=u.Tests.provider_branch(),
+                    flext_line=u.Tests.integration(),
                 ),
             ),
         )
@@ -165,7 +165,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
                 options=u.Infra.PyprojectConformOptions(
-                    family_line=u.Tests.provider_branch(),
+                    flext_line=u.Tests.integration(),
                 ),
             ),
         )
@@ -191,7 +191,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                     required_dev_dependencies=(),
                     uv_resolution=self._toolchain_resolution(),
                     options=u.Infra.PyprojectConformOptions(
-                        family_line=u.Tests.provider_branch(),
+                        flext_line=u.Tests.integration(),
                     ),
                 ),
             ),
@@ -223,7 +223,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
             required_dev_dependencies=(),
             uv_resolution=self._toolchain_resolution(),
             options=u.Infra.PyprojectConformOptions(
-                family_line=u.Tests.provider_branch(),
+                flext_line=u.Tests.integration(),
             ),
         )
         tm.that(result.failure, eq=True)
@@ -252,7 +252,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
             required_dev_dependencies=(),
             uv_resolution=self._toolchain_resolution(),
             options=u.Infra.PyprojectConformOptions(
-                family_line=u.Tests.provider_branch(),
+                flext_line=u.Tests.integration(),
             ),
         )
         tm.that(result.failure, eq=True)
@@ -278,7 +278,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
             required_dev_dependencies=(),
             uv_resolution=self._toolchain_resolution(),
             options=u.Infra.PyprojectConformOptions(
-                family_line=u.Tests.provider_branch(),
+                flext_line=u.Tests.integration(),
             ),
         )
         tm.that(result.failure, eq=True)
@@ -301,7 +301,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
                 options=u.Infra.PyprojectConformOptions(
-                    family_line=u.Tests.provider_branch(),
+                    flext_line=u.Tests.integration(),
                 ),
             ),
         )
@@ -357,7 +357,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
                 options=u.Infra.PyprojectConformOptions(
-                    family_line=u.Tests.provider_branch(),
+                    flext_line=u.Tests.integration(),
                 ),
             ),
         )
@@ -373,7 +373,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
                 options=u.Infra.PyprojectConformOptions(
-                    family_line=u.Tests.provider_branch(),
+                    flext_line=u.Tests.integration(),
                 ),
             ),
         )
@@ -386,7 +386,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                     required_dev_dependencies=(),
                     uv_resolution=self._toolchain_resolution(),
                     options=u.Infra.PyprojectConformOptions(
-                        family_line=u.Tests.provider_branch(),
+                        flext_line=u.Tests.integration(),
                     ),
                 ),
             ),

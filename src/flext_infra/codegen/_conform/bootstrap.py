@@ -8,10 +8,13 @@ from __future__ import annotations
 
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 from flext_infra import c, m, t
 from flext_infra.base import s
+
+if TYPE_CHECKING:
+    from flext_infra import p
 
 
 class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
@@ -53,7 +56,7 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
     @staticmethod
     def link_mode(
         repository: m.Infra.RepositoryRef,
-        toolchain: m.Infra.ToolchainSpec,
+        toolchain: p.Infra.ToolchainSpec,
     ) -> str:
         """Resolve the repository override through one codegen authority.
 
@@ -133,6 +136,19 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
         cls,
         surface: c.Infra.CodegenConformSurface,
     ) -> m.Infra.CodegenConformSurfaceContract:
+        """Resolve a declared surface without defaulting an invalid input.
+
+        Returns:
+            The contract owned by the declared conformance surface.
+
+        Raises:
+            ValueError: If the surface is not a declared conformance surface.
+
+        """
+        supported = isinstance(surface, c.Infra.CodegenConformSurface)
+        if not supported:
+            message = f"unsupported codegen conform surface: {surface}"
+            raise ValueError(message)
         match surface:
             case c.Infra.CodegenConformSurface.ALL:
                 return m.Infra.CodegenConformSurfaceContract(complete_governed=True)
@@ -170,12 +186,6 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
                 return m.Infra.CodegenConformSurfaceContract(
                     destinations=frozenset({destination}),
                     pyproject=False,
-                    custom=False,
-                )
-            case _:
-                return m.Infra.CodegenConformSurfaceContract(
-                    destinations=frozenset({c.PYPROJECT_FILENAME}),
-                    delegates=False,
                     custom=False,
                 )
 

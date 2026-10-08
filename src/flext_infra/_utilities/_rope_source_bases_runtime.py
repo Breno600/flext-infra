@@ -12,6 +12,8 @@ import importlib.util
 import sys
 from pathlib import Path
 
+from rope.base import exceptions
+
 from flext_infra import c, m, p, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesRopeCore,
@@ -164,6 +166,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
             *,
             required_line: int | None = None,
             allow_conditional: bool = False,
+            provider: t.Infra.RopePyModule | None = None,
         ) -> t.MappingKV[str, m.Infra.SourceClassReference | None]:
             """Index lexical bindings without installing a cross-module overlay.
 
@@ -177,6 +180,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 captured: The module's path and captured source text.
                 required_line: When set, index only bindings visible at the line.
                 allow_conditional: Whether conditional bindings may degrade.
+                provider: Existing Rope module owning the same captured source.
 
             Returns:
                 The module's explicit lexical bindings, including value
@@ -194,6 +198,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
             return FlextInfraUtilitiesRopeSourceBasesInventory.inventory(
                 request,
                 self._definitions,
+                provider=provider,
             )
 
         def _external_identity(self, value: t.Infra.RopePyObject) -> str:
@@ -336,6 +341,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                     (Path(resource.real_path), module.source_code),
                     required_line=line,
                     allow_conditional=True,
+                    provider=module,
                 )
                 self._register_module_definitions(name)
                 identity = self._declared_identity_at_line(name, line)
@@ -404,7 +410,7 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 return imported.module_name
             declaring = imported.importing_module.get_module()
             source = declaring.get_resource() if declaring is not None else None
-            if imported.module_name is None or declaring is None or source is None:
+            if declaring is None or source is None:
                 message = "Import has no declared module location"
                 raise ValueError(message)
             name = imported.module_name
@@ -598,12 +604,18 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
 
             Raises:
                 ModuleNotFoundError: If the target has no virtual stdlib backing.
+                RefactoringError: If Rope cannot resolve the target or its backing.
+                ResourceNotFoundError: If Rope cannot locate the required resource.
+                AttributeError: If the provider lacks a required module attribute.
 
             """
             try:
                 module = self._project.get_module(target)
             except (
-                *FlextInfraUtilitiesRopeRuntime.rope_runtime_errors(),
+                exceptions.RefactoringError,
+                exceptions.ResourceNotFoundError,
+                exceptions.ModuleNotFoundError,
+                AttributeError,
                 ModuleNotFoundError,
             ):
                 real = self._stdlib_backing_module(target)

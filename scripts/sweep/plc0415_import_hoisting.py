@@ -16,8 +16,23 @@ import argparse
 import ast
 from pathlib import Path
 
+from flext_core import m, t
+
 _REPORT_ONLY = "report"
 _APPLY = "apply"
+
+
+class _HoistingPlan(m.ImmutableValueModel):
+    """Immutable edits and source identity for one import-hoisting candidate."""
+
+    path: Path = m.Field(description="Source file receiving the planned edits")
+    deletions: t.VariadicTuple[t.Pair[int, int]] = m.Field(
+        description="Inclusive source line spans to remove in discovery order",
+    )
+    hoists: t.VariadicTuple[str] = m.Field(
+        description="Sorted unique import statements to insert after the header",
+    )
+    header_end: int = m.Field(description="Last source line in the module header")
 
 
 def _lazy_map_of(init: Path) -> dict[str, str]:
@@ -126,7 +141,7 @@ def _hoist_plain_import(node: ast.Import, hoists: set[str]) -> None:
         hoists.add(statement)
 
 
-def _plan(root: Path, path: Path) -> dict[str, object] | None:
+def _plan(root: Path, path: Path) -> _HoistingPlan | None:
     """Plan the hoisting edits for one file without touching it.
 
     Returns:
@@ -167,12 +182,12 @@ def _plan(root: Path, path: Path) -> dict[str, object] | None:
             deletions.append(span)
     if not deletions:
         return None
-    return {
-        "path": path,
-        "deletions": deletions,
-        "hoists": sorted(hoists),
-        "header_end": _header_end(tree),
-    }
+    return _HoistingPlan(
+        path=path,
+        deletions=tuple(deletions),
+        hoists=tuple(sorted(hoists)),
+        header_end=_header_end(tree),
+    )
 
 
 def main() -> int:
@@ -189,22 +204,22 @@ def main() -> int:
     root = Path(args.root).resolve()
     src = root / "src"
     plans = [p for path in sorted(src.rglob("*.py")) if (p := _plan(root, path))]
-    total_deletions = sum(len(p["deletions"]) for p in plans)
-    total_hoists = sum(len(p["hoists"]) for p in plans)
+    total_deletions = sum(len(p.deletions) for p in plans)
+    total_hoists = sum(len(p.hoists) for p in plans)
     print(f"files={len(plans)} mid-imports={total_deletions} hoisted={total_hoists}")
     if args.mode == _REPORT_ONLY:
         for plan in plans[:5]:
-            rel = plan["path"].relative_to(root)
-            print(f"  {rel}: -{len(plan['deletions'])} mid, +{len(plan['hoists'])} top")
+            rel = plan.path.relative_to(root)
+            print(f"  {rel}: -{len(plan.deletions)} mid, +{len(plan.hoists)} top")
         return 0
     for plan in plans:
-        lines = plan["path"].read_text().splitlines()
-        for start, end in plan["deletions"]:
+        lines = plan.path.read_text().splitlines()
+        for start, end in plan.deletions:
             for lineno in range(start, end + 1):
                 lines[lineno - 1] = ""
-        if plan["hoists"]:
-            lines.insert(plan["header_end"], "\n".join(plan["hoists"]))
-        plan["path"].write_text("\n".join(lines) + "\n")
+        if plan.hoists:
+            lines.insert(plan.header_end, "\n".join(plan.hoists))
+        plan.path.write_text("\n".join(lines) + "\n")
     print("applied")
     return 0
 

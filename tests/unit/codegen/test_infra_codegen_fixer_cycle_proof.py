@@ -1,9 +1,8 @@
 """Tests for the fixer pipeline's import-cycle proof and import rebinding.
 
 Validates that the auto-fix pass proves the post-fix tree cycle-free through
-the existing codemod project-facts detector, and that the relocation engine's
-public import-target owner binds an own-package symbol to the own package —
-never to the source module's foreign top-level package.
+the existing codemod project-facts detector, and that the public relocation
+cascade preserves the declaring package when rebinding a deep import.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -16,7 +15,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_core import c, m
+from flext_infra import c, infra, m
 from flext_infra.codegen.fixer import FlextInfraCodegenFixer
 from flext_infra.refactor.namespace_relocations import (
     FlextInfraNamespaceRelocationCascade,
@@ -140,24 +139,21 @@ class TestsFlextInfraCodegenFixerCycleProof:
             module="bind_pkg.models",
             name="u",
         )
-        targets = FlextInfraNamespaceRelocationCascade.import_relocation_targets(
-            project,
-            [(c.Infra.CodemodRelocation.PACKAGE_ROOT_IMPORT, finding)],
-        )
-        moves = targets[project / "src" / "bind_pkg" / "consumer.py"]
-        tm.that(list(moves), eq=[("bind_pkg.models", "bind_pkg")])
+        consumer = project / finding.file
+        with infra.rope_workspace(project) as workspace:
+            FlextInfraNamespaceRelocationCascade().run(
+                project_root=project,
+                rope_project=workspace.rope_project,
+                findings=((c.Infra.CodemodRelocation.PACKAGE_ROOT_IMPORT, finding),),
+                py_files=(consumer,),
+            )
+        tm.that(consumer.read_text(encoding="utf-8"), eq="from bind_pkg import u\n")
 
     @staticmethod
-    def test_package_root_import_never_binds_into_a_foreign_package(
+    def test_package_root_import_preserves_foreign_package_identity(
         tmp_path: Path,
     ) -> None:
-        """A foreign-package finding stays residue instead of being rebound.
-
-        Binding it into the foreign top-level package is exactly the defect
-        that rewrote ``from flext_infra import u`` to
-        ``from flext_cli import u`` in own-package files.
-
-        """
+        """Rebinding a foreign source must not invent a local declaring package."""
         project = u.Tests.create_codegen_project(
             tmp_path=tmp_path,
             name="foreign-proj",
@@ -169,8 +165,12 @@ class TestsFlextInfraCodegenFixerCycleProof:
             module="flext_cli.utilities",
             name="u",
         )
-        targets = FlextInfraNamespaceRelocationCascade.import_relocation_targets(
-            project,
-            [(c.Infra.CodemodRelocation.PACKAGE_ROOT_IMPORT, finding)],
-        )
-        tm.that(list(targets), eq=[])
+        consumer = project / finding.file
+        with infra.rope_workspace(project) as workspace:
+            FlextInfraNamespaceRelocationCascade().run(
+                project_root=project,
+                rope_project=workspace.rope_project,
+                findings=((c.Infra.CodemodRelocation.PACKAGE_ROOT_IMPORT, finding),),
+                py_files=(consumer,),
+            )
+        tm.that(consumer.read_text(encoding="utf-8"), eq="from flext_cli import u\n")

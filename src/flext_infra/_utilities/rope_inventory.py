@@ -9,6 +9,8 @@ from __future__ import annotations
 from operator import itemgetter
 from pathlib import Path
 
+from rope.base import exceptions
+
 from flext_infra import c, m, p, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesCodegenNamespace,
@@ -63,7 +65,7 @@ class FlextInfraUtilitiesRopeInventory:
             RecursionError,
             SyntaxError,
             ValueError,
-            *FlextInfraUtilitiesRopeRuntime.rope_error_types(),
+            exceptions.RopeError,
         ) as exc:
             msg = (
                 "rope inventory failed to load "

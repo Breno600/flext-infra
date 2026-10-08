@@ -74,20 +74,18 @@ class FlextInfraUtilitiesPyprojectOverlay:
         owned_names = {
             FlextInfraUtilitiesDependencies.dep_name(item) for item in required
         }
-        return list[t.JsonValue](
-            sorted(
-                dict.fromkeys((
-                    *required,
-                    *(
-                        item
-                        for item in custom
-                        if FlextInfraUtilitiesDependencies.dep_name(item)
-                        not in owned_names
-                    ),
-                )),
-                key=FlextInfraUtilitiesPyprojectRequirements.dependency_order_key,
-            ),
+        merged: list[str] = sorted(
+            dict.fromkeys((
+                *required,
+                *(
+                    item
+                    for item in custom
+                    if FlextInfraUtilitiesDependencies.dep_name(item) not in owned_names
+                ),
+            )),
+            key=FlextInfraUtilitiesPyprojectRequirements.dependency_order_key,
         )
+        return list[t.JsonValue](merged)
 
     @classmethod
     def _overlay_project_surface(

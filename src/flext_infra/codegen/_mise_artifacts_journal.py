@@ -606,7 +606,7 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
         return r[bool].ok(value=True)
 
     @classmethod
-    def _journal_source(
+    def source_record(
         cls,
         phase: str,
         source: m.Cli.AtomicFileState,
@@ -663,7 +663,7 @@ class FlextInfraMiseArtifactsJournal(FlextInfraMiseArtifactsJournalRelocation):
         for phase, source in sources:
             key = (phase, source.path)
             previous = by_key.get(key)
-            encoded = cls._journal_source(phase, source, previous)
+            encoded = cls.source_record(phase, source, previous)
             if encoded.failure:
                 return result_type.from_failure(encoded)
             if previous is not None and previous != encoded.value:

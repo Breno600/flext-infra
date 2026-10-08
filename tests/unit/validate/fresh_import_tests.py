@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra.validate.fresh_import import FlextInfraValidateFreshImport
+from flext_infra.validate import FlextInfraValidateFreshImport
 from tests import c, m, u
 
 if TYPE_CHECKING:
@@ -494,7 +494,9 @@ class TestsFlextInfraFreshImport:
             ),
         )
         tm.that(report.passed, eq=False)
-        tm.that(report.violations[0], has="is outside")
+        tm.that(report.violations[0], has="ImportError")
+        tm.that(report.violations[0], has=f"{package.name}.dependency")
+        tm.that(report.violations[0], has=str(package))
         tm.that(report.violations[0], has=str(foreign))
 
     @staticmethod
@@ -549,7 +551,9 @@ class TestsFlextInfraFreshImport:
             ),
         )
         tm.that(report.passed, eq=False)
-        tm.that(report.violations[0], has="is outside")
+        tm.that(report.violations[0], has="ImportError")
+        tm.that(report.violations[0], has=f"{package.name}.dependency")
+        tm.that(report.violations[0], has=str(package))
         tm.that(report.violations[0], has=str(foreign))
         tm.that(report.violations[0], lacks="has no attribute")
 

@@ -87,25 +87,25 @@ class TestsFlextInfraCheckReportContract:
                     tool_name="flext-infra-check",
                     information_uri="https://example.invalid/tool",
                     rules=(
-                        m.Infra.SarifRule(
-                            id="unused-import",
-                            short_description="Ruff Linter (lint) issue",
-                            helpUri="https://example.invalid/rule",
-                        ),
+                        m.Infra.SarifRule.model_validate({
+                            "id": "unused-import",
+                            "shortDescription": {"text": "Ruff Linter (lint) issue"},
+                            "helpUri": "https://example.invalid/rule",
+                        }),
                     ),
                     results=(
-                        m.Infra.SarifResult(
-                            ruleId="unused-import",
-                            level="error",
-                            message="`os` imported but unused",
-                            locations=[
+                        m.Infra.SarifResult.model_validate({
+                            "ruleId": "unused-import",
+                            "level": "error",
+                            "message": {"text": "`os` imported but unused"},
+                            "locations": [
                                 m.Infra.SarifLocation(
                                     uri="src/p1/module.py",
                                     start_line=3,
                                     start_column=8,
                                 ),
                             ],
-                        ),
+                        }),
                     ),
                 ),
             ),
@@ -252,6 +252,49 @@ class TestsFlextInfraCheckReportContract:
             ne=0,
         )
         tm.that(reports.exists(), eq=False)
+
+    def test_file_selection_uses_declared_member_context(
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """A workspace file uses its member's configuration and report identity."""
+        root = u.Tests.mk_project(
+            tmp_path,
+            "workspace-root",
+            pyproject=(
+                '[project]\nname = "workspace-root"\nversion = "0.1.0"\n'
+                '[tool.ruff.format]\nquote-style = "single"\n'
+            ),
+            with_src=True,
+        )
+        member = self._project(root)
+        pyproject = member / c.PYPROJECT_FILENAME
+        pyproject.write_text(
+            pyproject.read_text(encoding="utf-8")
+            + '[tool.ruff.format]\nquote-style = "double"\n',
+            encoding="utf-8",
+        )
+        (root / c.Infra.GITMODULES).write_text(
+            f'[submodule "{member.name}"]\n'
+            f"\tpath = {member.name}\n"
+            "\turl = https://example.invalid/member.git\n",
+            encoding="utf-8",
+        )
+        selected = member / "src" / member.name / "literal.py"
+        selected.write_text('"""Fixture."""\n\nvalue = "member"\n', encoding="utf-8")
+        before = selected.read_bytes()
+        code = self._check_run(
+            root,
+            tmp_path / "reports",
+            gate=c.Infra.FORMAT,
+            file=str(selected.relative_to(root)),
+        )
+        output = capsys.readouterr().out
+        tm.that(code, eq=0)
+        tm.that(output, has=f"[1/1] {member.name} check")
+        tm.that(output, lacks=f"[1/1] {root.name} check")
+        tm.that(selected.read_bytes(), eq=before)
 
     @staticmethod
     @pytest.mark.parametrize(

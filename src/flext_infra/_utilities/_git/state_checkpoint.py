@@ -11,10 +11,10 @@ from pathlib import Path
 from git import GitCommandError
 
 from flext_infra import c, m, p, r
-from flext_infra._utilities import (
+from flext_infra._utilities._git.state_trees import (
     FlextInfraUtilitiesGitStateTreesMixin,
-    FlextInfraUtilitiesGitWorktreeIO,
 )
+from flext_infra._utilities._git.worktree_io import FlextInfraUtilitiesGitWorktreeIO
 
 
 class FlextInfraUtilitiesGitStateCheckpointMixin(FlextInfraUtilitiesGitStateTreesMixin):

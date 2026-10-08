@@ -15,9 +15,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import c
-from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-from tests import u
+from flext_infra.workspace import FlextInfraWorkspaceDetector
+from tests import c, u
 
 
 class TestsFlextInfraProviderResolutionAcceptsSshRemotes:

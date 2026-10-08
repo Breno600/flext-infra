@@ -450,14 +450,16 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformExecuteDirected):
             scope_root,
             roots,
             analysis,
-            tuple(
-                sorted({
-                    file.path.parent
-                    for file in changed
-                    if not file.path.parent.is_dir()
-                }),
+            m.Infra.CodegenPhasePublicationPolicy(
+                directories=tuple(
+                    sorted({
+                        file.path.parent
+                        for file in changed
+                        if not file.path.parent.is_dir()
+                    }),
+                ),
+                validator=lambda: self._verify_bootstrap(request),
             ),
-            lambda: self._verify_bootstrap(request),
         )
 
     def _verify_bootstrap(

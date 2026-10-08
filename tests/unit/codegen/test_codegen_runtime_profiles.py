@@ -21,16 +21,6 @@ class TestsFlextInfraCodegenRuntimeProfiles:
     """Tests for ``FlextInfraCodegenRuntimeProfiles``."""
 
     @staticmethod
-    @pytest.mark.parametrize(
-        "upstream",
-        tuple(
-            item.upstream
-            for item in config.Infra.codegen.scaffold.project.dependency_profiles
-            if item.project is None
-        ),
-    )
-    @pytest.mark.parametrize("composed", [False, True])
-    @staticmethod
     def _seed_member_workspace(
         tmp_path: Path,
         upstream: str,
@@ -75,6 +65,7 @@ class TestsFlextInfraCodegenRuntimeProfiles:
         manifest = m.Infra.WorkspaceManifestSpec(
             version=c.Infra.WORKSPACE_MANIFEST_VERSION,
             name=observed.repository.name,
+            docs_audit=observed.docs_audit,
             repository=observed.repository,
             project=project,
             members=(
@@ -148,7 +139,7 @@ class TestsFlextInfraCodegenRuntimeProfiles:
         member: Path,
         *,
         composed: bool,
-    ) -> tuple[m.Infra.WorkspaceSpec, dict[Path, bytes]]:
+    ) -> tuple[m.Infra.WorkspaceSpec, t.MappingKV[Path, bytes]]:
         """Snapshot the baseline workspace and the bytes conform must preserve.
 
         Returns:
@@ -166,10 +157,9 @@ class TestsFlextInfraCodegenRuntimeProfiles:
         }
         return before, protected
 
-    def _assert_plan_restores_profile(
+    def _assert_render_restores_profile(
         self,
-        first: m.Infra.CodegenConformPlan,
-        pyproject: Path,
+        rendered: str,
         member: Path,
         profile: m.Infra.ScaffoldDependencyProfileSpec,
         custom: t.VariadicTuple[str],
@@ -180,9 +170,6 @@ class TestsFlextInfraCodegenRuntimeProfiles:
             The rendered pyproject text the second plan must reproduce.
 
         """
-        rendered = u.Tests.codegen_file_text(
-            next(item for item in first.files if item.path == pyproject),
-        )
         rendered_dependencies = set(
             u.Tests.toml_strings_at(rendered, "project", "dependencies"),
         )
@@ -219,6 +206,15 @@ class TestsFlextInfraCodegenRuntimeProfiles:
         )
         return rendered
 
+    @pytest.mark.parametrize(
+        "upstream",
+        tuple(
+            item.upstream
+            for item in config.Infra.codegen.scaffold.project.dependency_profiles
+            if item.project is None
+        ),
+    )
+    @pytest.mark.parametrize("composed", [False, True])
     def test_declared_profile_restores_runtime_and_preserves_custom_specs(
         self,
         tmp_path: Path,
@@ -254,9 +250,10 @@ class TestsFlextInfraCodegenRuntimeProfiles:
             request=request,
         )
         first = tm.ok(service.plan(request))
-        rendered = self._assert_plan_restores_profile(
-            first,
-            pyproject,
+        rendered = self._assert_render_restores_profile(
+            u.Tests.codegen_file_text(
+                next(item for item in first.files if item.path == pyproject),
+            ),
             member,
             profile,
             custom,

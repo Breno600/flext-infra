@@ -210,7 +210,7 @@ class FlextInfraReleaseSourceMixin(FlextInfraReleaseArtifactMixin):
             ],
             cwd=gitleaks_config.parent,
             timeout=c.Infra.TIMEOUT_LONG,
-            options=u.Cli.ProcessOptions(
+            options=m.Cli.ProcessOptions(
                 remove_env_keys=c.Infra.GITLEAKS_POLICY_ENV_KEYS,
             ),
         )

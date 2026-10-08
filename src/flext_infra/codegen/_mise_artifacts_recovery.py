@@ -273,35 +273,6 @@ class FlextInfraMiseRecovery:
             reparse_tag=getattr(leaf, "st_reparse_tag", None),
         )
 
-    @staticmethod
-    def _plain_resource_state(path: Path) -> m.Cli.AtomicFileState:
-        """Read one package-owned resource without atomic-ownership semantics.
-
-        uv hard-links installed package files to its cache, so their link
-        count exceeds one by construction; the atomic-state reader rejects
-        such leaves. Package resources are immutable data read as bytes, and
-        their physical identities still come from lstat for the action log.
-
-        Returns:
-            The resulting ``m.Cli.AtomicFileState``.
-
-        """
-        content = path.read_bytes()
-        leaf = path.lstat()
-        parent = path.parent.lstat()
-        return m.Cli.AtomicFileState(
-            path=path,
-            parent_device=parent.st_dev,
-            parent_inode=parent.st_ino,
-            content=content,
-            mode=stat.S_IMODE(leaf.st_mode),
-            device=leaf.st_dev,
-            inode=leaf.st_ino,
-            link_count=leaf.st_nlink,
-            file_attributes=getattr(leaf, "st_file_attributes", None),
-            reparse_tag=getattr(leaf, "st_reparse_tag", None),
-        )
-
     @classmethod
     def _classify(
         cls,
@@ -351,7 +322,7 @@ class FlextInfraMiseRecovery:
                 or identity == original
                 or (journal.state == "recovering" and identity == rollback)
             ):
-                operation = "noop"
+                operation: Literal["noop", "delete", "restore"] = "noop"
             elif identity == desired:
                 operation = "restore" if entry.original_exists else "delete"
             else:

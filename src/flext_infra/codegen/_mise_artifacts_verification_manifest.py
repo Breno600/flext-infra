@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from collections.abc import MutableMapping
+from collections.abc import MutableMapping, Set as AbstractSet
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
@@ -146,10 +146,6 @@ class FlextInfraMiseArtifactsVerificationManifest:
             # its created receipt is the only authorization. Inventory the
             # live root and register that inventory as the manifest; the
             # authorized and observed manifests coincide on the first cycle.
-            if directory.created is None:
-                return result_type.fail(
-                    f"temporary tree has no created identity: {directory.path}",
-                )
             seeded = u.Cli.atomic_inventory_physical_tree(directory.created.path)
             if seeded.failure:
                 return result_type.from_failure(seeded)
@@ -274,20 +270,100 @@ class FlextInfraMiseArtifactsVerificationManifest:
         if expected_check.failure:
             return expected_check
         created_by_path = {receipt.path: receipt for receipt in created}
+        for directory in journal.directories:
+            receipt = directory.created
+            if (
+                receipt is not None
+                and receipt.path in current
+                and receipt.path not in expected
+            ):
+                created_by_path[receipt.path] = receipt
+        registered = cls._registered_staging_intents(
+            layout,
+            journal,
+            expected,
+            current,
+        )
+        if registered.failure:
+            return r[bool].from_failure(registered)
         return cls._verified_tree_additions(
             authorized,
             expected,
-            current,
+            registered.value,
             file_specs.value,
             created_by_path,
         )
+
+    @classmethod
+    def _registered_staging_intents(
+        cls,
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
+        journal: m.Infra.CodegenTransactionJournal,
+        expected: t.MappingKV[Path, m.Cli.AtomicPhysicalTreeEntry],
+        current: t.MappingKV[Path, m.Cli.AtomicPhysicalTreeEntry],
+    ) -> p.Result[t.MappingKV[Path, m.Cli.AtomicPhysicalTreeEntry]]:
+        """Authenticate staging intentions before admitting tree additions.
+
+        Returns:
+            The observed entries excluding authenticated pending intentions.
+
+        """
+        result_type = r[t.MappingKV[Path, m.Cli.AtomicPhysicalTreeEntry]]
+        for intent in journal.staging_intents:
+            path = intent.before.path
+            participant = next(
+                (
+                    item
+                    for item in files.transaction_participants(layout)
+                    if item.transaction_root is not None
+                    and path != item.transaction_root
+                    and path.is_relative_to(item.transaction_root)
+                ),
+                None,
+            )
+            if participant is None:
+                return result_type.fail(
+                    f"staging intention escapes transaction root: {path}",
+                )
+            entry = current.get(path)
+            if entry is None or path in expected:
+                continue
+            if intent.created is not None:
+                if entry != intent.created:
+                    return result_type.fail(
+                        f"finalized staging identity changed: {path}",
+                    )
+                current = {key: value for key, value in current.items() if key != path}
+            elif (
+                entry.kind,
+                entry.sha256,
+                entry.mode,
+                entry.parent_device,
+                entry.parent_inode,
+                entry.link_count,
+            ) != (
+                "file",
+                intent.sha256,
+                intent.mode,
+                intent.before.parent_device,
+                intent.before.parent_inode,
+                1,
+            ):
+                return result_type.fail(
+                    f"pending staging identity differs from intention: {path}",
+                )
+            else:
+                # These exact bytes were authorized before creation; recovery
+                # must not pretend a finalized physical receipt already exists.
+                current = {key: value for key, value in current.items() if key != path}
+        return result_type.ok(current)
 
     @classmethod
     def _verified_expected_entries(
         cls,
         expected: t.MappingKV[Path, m.Cli.AtomicPhysicalTreeEntry],
         current: t.MappingKV[Path, m.Cli.AtomicPhysicalTreeEntry],
-        consumable: t.AbstractSet[Path],
+        consumable: AbstractSet[Path],
     ) -> p.Result[bool]:
         """Prove every authorized entry survived with a stable identity.
 
@@ -318,7 +394,10 @@ class FlextInfraMiseArtifactsVerificationManifest:
         authorized: m.Cli.AtomicPhysicalTreeManifest,
         expected: t.MappingKV[Path, m.Cli.AtomicPhysicalTreeEntry],
         current: t.MappingKV[Path, m.Cli.AtomicPhysicalTreeEntry],
-        file_specs: t.MappingKV[Path, t.Pair[str, m.Infra.CodegenJournalEntry]],
+        file_specs: t.MappingKV[
+            Path,
+            t.Pair[_JournalFileRole, m.Infra.CodegenJournalEntry],
+        ],
         created_by_path: t.MappingKV[
             Path,
             m.Cli.AtomicFileState | m.Cli.AtomicDirectoryState,

@@ -10,6 +10,8 @@ import ast
 from collections.abc import MutableMapping
 from pathlib import Path
 
+from rope.base import exceptions
+
 from flext_core import u as core_u
 from flext_infra import c, m, t
 from flext_infra._utilities import (
@@ -19,7 +21,6 @@ from flext_infra._utilities import (
     FlextInfraUtilitiesRopeAnalysisAstHelpers,
     FlextInfraUtilitiesRopeCore,
     FlextInfraUtilitiesRopeImports,
-    FlextInfraUtilitiesRopeRuntime,
     FlextInfraUtilitiesRopeSource,
     FlextInfraUtilitiesTransformerHeader,
 )
@@ -934,8 +935,12 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                         target_resource,
                     ).get_name()
                 except (
-                    *FlextInfraUtilitiesRopeRuntime.rope_runtime_errors(),
-                    *FlextInfraUtilitiesRopeRuntime.rope_syntax_errors(),
+                    exceptions.RefactoringError,
+                    exceptions.ResourceNotFoundError,
+                    exceptions.ModuleNotFoundError,
+                    AttributeError,
+                    SyntaxError,
+                    exceptions.ModuleSyntaxError,
                     TypeError,
                 ) as exc:
                     msg = (

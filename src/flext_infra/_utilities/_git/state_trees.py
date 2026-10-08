@@ -10,10 +10,10 @@ import tempfile
 from pathlib import Path
 
 from flext_infra import m, t
-from flext_infra._utilities import (
+from flext_infra._utilities._git.state_snapshot import (
     FlextInfraUtilitiesGitStateSnapshotMixin,
-    FlextInfraUtilitiesGitWorktreeIO,
 )
+from flext_infra._utilities._git.worktree_io import FlextInfraUtilitiesGitWorktreeIO
 
 
 class FlextInfraUtilitiesGitStateTreesMixin(FlextInfraUtilitiesGitStateSnapshotMixin):
@@ -78,6 +78,15 @@ class FlextInfraUtilitiesGitStateTreesMixin(FlextInfraUtilitiesGitStateSnapshotM
         snapshot: m.Infra.GitWorktreeStateSnapshot,
         entries: t.SequenceOf[m.Infra.GitWorktreeIndexEntry],
     ) -> str:
+        """Write the captured tree through an isolated index and return its OID.
+
+        Returns:
+            The native Git object identifier without conversion.
+
+        Raises:
+            TypeError: If write-tree returned a non-text object identifier.
+
+        """
         repo = cls._repo(snapshot.repo_root)
         with tempfile.TemporaryDirectory(dir=repo.common_dir) as staging:
             index_path = str(Path(staging) / "index")
@@ -102,7 +111,11 @@ class FlextInfraUtilitiesGitStateTreesMixin(FlextInfraUtilitiesGitStateSnapshotM
                     entries,
                     index_file=Path(index_path),
                 )
-                return repo.git.write_tree()
+                oid = repo.git.write_tree()
+                if not isinstance(oid, str):
+                    msg = "write-tree returned a non-text object identifier"
+                    raise TypeError(msg)
+                return oid
 
     @classmethod
     def _state_working_entries(

@@ -17,6 +17,10 @@ from flext_infra.codegen import (
     FlextInfraMiseArtifactsJournal,
     codegen_transaction as transaction,
 )
+from flext_infra.codegen._mise_artifacts_state import FlextInfraMiseArtifactsState
+from flext_infra.codegen._mise_artifacts_verification import (
+    FlextInfraMiseArtifactsVerification,
+)
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
 from tests import t, u
@@ -26,6 +30,58 @@ class TestsFlextInfraTransactionDirectoryJournal:
     """Exercise creation and cleanup against real physical filesystem state."""
 
     _TRANSACTION_ID = "a" * 32
+
+    @staticmethod
+    @pytest.mark.parametrize("pending", [False, True])
+    def test_read_only_file_readiness_never_recovers_a_pending_journal(
+        tmp_path: Path,
+        *,
+        pending: bool,
+    ) -> None:
+        """Readiness proves current state without promoting or removing history."""
+        root = u.Tests.git_repository(tmp_path)
+        owner = transaction.FlextInfraCodegenTransaction(
+            FlextInfraCodegenMiseArtifacts(repository_root=root),
+        )
+        roots = {"@readiness-0": root}
+        if pending:
+            session = tm.ok(
+                owner.run_files_locked(
+                    roots,
+                    lambda scope: owner.begin_files_locked(scope, roots, ()),
+                )
+            )
+            before = tm.ok(
+                u.Cli.atomic_read_binary_file_state(
+                    session.plan.layout.journal_path,
+                    required=True,
+                )
+            )
+            tm.fail(
+                owner.run_files_locked(
+                    roots,
+                    lambda _scope: r[bool].ok(value=True),
+                    prepare=False,
+                ),
+                has="pending",
+            )
+            tm.that(
+                tm.ok(
+                    u.Cli.atomic_read_binary_file_state(
+                        session.plan.layout.journal_path,
+                        required=True,
+                    )
+                ),
+                eq=before,
+            )
+        else:
+            tm.ok(
+                owner.run_files_locked(
+                    roots,
+                    lambda _scope: r[bool].ok(value=True),
+                    prepare=False,
+                )
+            )
 
     def test_generation_source_accepts_authenticated_hardlink(
         self,
@@ -615,7 +671,11 @@ class TestsFlextInfraTransactionDirectoryJournal:
         current = directories
         for intent in directories:
             created = tm.ok(
-                transaction.state.create_journaled_directory(layout, current, intent),
+                FlextInfraMiseArtifactsState.create_journaled_directory(
+                    layout,
+                    current,
+                    intent,
+                ),
             )
             current = tuple(
                 created if entry.path == intent.path else entry for entry in current
@@ -630,7 +690,10 @@ class TestsFlextInfraTransactionDirectoryJournal:
     ) -> m.Infra.CodegenTransactionJournal:
         journal = cls._journal(layout, directories)
         registered = tm.ok(
-            transaction.verify.register_transaction_manifests(layout, journal),
+            FlextInfraMiseArtifactsVerification.register_transaction_manifests(
+                layout,
+                journal,
+            ),
         )
         recorded: m.Infra.CodegenTransactionJournal = tm.ok(
             FlextInfraMiseArtifactsJournal.record_directories(journal, registered),
@@ -644,7 +707,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
         """Remove arbitrary regular staging files and every newly created parent."""
         layout = self._layout(tmp_path / "repository")
 
-        planned = transaction.state.plan_transaction_directories(layout)
+        planned = FlextInfraMiseArtifactsState.plan_transaction_directories(layout)
 
         directories = tm.ok(planned)
         tm.that((layout.scope_root / ".state").exists(), eq=False)
@@ -654,7 +717,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
         (transaction_root / "partial-download").write_bytes(b"owned staging bytes")
         journal = self._register_manifest(layout, directories)
 
-        cleaned = transaction.state.cleanup_journaled_directories(
+        cleaned = FlextInfraMiseArtifactsState.cleanup_journaled_directories(
             layout,
             journal,
             include_generated=True,
@@ -671,7 +734,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
         """Never infer ownership for an unexpected file in a live generated path."""
         layout = self._layout(tmp_path / "repository")
         target = layout.scope_root / "docs" / "generated"
-        planned = transaction.state.plan_directories(
+        planned = FlextInfraMiseArtifactsState.plan_directories(
             layout,
             phase="docs",
             requested=(target,),
@@ -682,7 +745,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
         foreign = target / "foreign.txt"
         foreign.write_text("not journaled", encoding="utf-8")
 
-        cleaned = transaction.state.cleanup_journaled_directories(
+        cleaned = FlextInfraMiseArtifactsState.cleanup_journaled_directories(
             layout,
             self._journal(layout, directories),
             include_generated=True,
@@ -698,14 +761,16 @@ class TestsFlextInfraTransactionDirectoryJournal:
     ) -> None:
         """Reject a transaction tree whose topology contains an alias."""
         layout = self._layout(tmp_path / "repository")
-        directories = tm.ok(transaction.state.plan_transaction_directories(layout))
+        directories = tm.ok(
+            FlextInfraMiseArtifactsState.plan_transaction_directories(layout),
+        )
         directories = self._materialize(layout, directories)
         transaction_root = layout.projects[0].transaction_root
         assert transaction_root is not None
         journal = self._register_manifest(layout, directories)
         (transaction_root / "alias").symlink_to(layout.scope_root)
 
-        cleaned = transaction.state.cleanup_journaled_directories(
+        cleaned = FlextInfraMiseArtifactsState.cleanup_journaled_directories(
             layout,
             journal,
             include_generated=True,
@@ -722,7 +787,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
         layout = self._layout(tmp_path / "repository")
         target = layout.scope_root / "docs" / "generated"
         directories = tm.ok(
-            transaction.state.plan_directories(
+            FlextInfraMiseArtifactsState.plan_directories(
                 layout,
                 phase="docs",
                 requested=(target,),
@@ -734,7 +799,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
         target.rename(original)
         target.mkdir()
 
-        cleaned = transaction.state.cleanup_journaled_directories(
+        cleaned = FlextInfraMiseArtifactsState.cleanup_journaled_directories(
             layout,
             self._journal(layout, directories),
             include_generated=True,
@@ -752,7 +817,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
         layout = self._layout(tmp_path / "repository")
         directories = self._materialize(
             layout,
-            tm.ok(transaction.state.plan_transaction_directories(layout)),
+            tm.ok(FlextInfraMiseArtifactsState.plan_transaction_directories(layout)),
         )
         journal = self._register_manifest(layout, directories)
         transaction_root = layout.projects[0].transaction_root
@@ -760,7 +825,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
         foreign = transaction_root / "foreign.bin"
         foreign.write_bytes(b"foreign")
 
-        cleaned = transaction.state.cleanup_journaled_directories(
+        cleaned = FlextInfraMiseArtifactsState.cleanup_journaled_directories(
             layout,
             journal,
             include_generated=True,
@@ -777,7 +842,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
         layout = self._layout(tmp_path / "repository")
         directories = self._materialize(
             layout,
-            tm.ok(transaction.state.plan_transaction_directories(layout)),
+            tm.ok(FlextInfraMiseArtifactsState.plan_transaction_directories(layout)),
         )
         transaction_root = layout.projects[0].transaction_root
         assert transaction_root is not None
@@ -786,7 +851,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
         journal = self._register_manifest(layout, directories)
         payload.unlink()
 
-        cleaned = transaction.state.cleanup_journaled_directories(
+        cleaned = FlextInfraMiseArtifactsState.cleanup_journaled_directories(
             layout,
             journal,
             include_generated=True,
@@ -801,14 +866,16 @@ class TestsFlextInfraTransactionDirectoryJournal:
     ) -> None:
         """Never infer ownership from a pathname after the creation crash window."""
         layout = self._layout(tmp_path / "repository")
-        directories = tm.ok(transaction.state.plan_transaction_directories(layout))
+        directories = tm.ok(
+            FlextInfraMiseArtifactsState.plan_transaction_directories(layout),
+        )
         transaction_root = layout.projects[0].transaction_root
         assert transaction_root is not None
         transaction_root.mkdir(parents=True)
         marker = transaction_root / "unknown-owner.bin"
         marker.write_bytes(b"preserve")
 
-        cleaned = transaction.state.cleanup_journaled_directories(
+        cleaned = FlextInfraMiseArtifactsState.cleanup_journaled_directories(
             layout,
             self._journal(layout, directories),
             include_generated=True,

@@ -13,8 +13,8 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config
-from tests import u
+from flext_infra import config
+from tests import c, m, u
 
 
 class TestsFlextInfraBindingInstall:
@@ -221,7 +221,7 @@ class TestsFlextInfraBindingInstall:
                     "--python",
                     str(python),
                 ),
-                options=u.Cli.ProcessOptions(env={ci.variable: ci.local_value}),
+                options=m.Cli.ProcessOptions(env={ci.variable: ci.local_value}),
             ),
         )
         output = f"{outcome.stdout}{outcome.stderr}"

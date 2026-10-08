@@ -77,28 +77,5 @@ class FlextInfraGitService(FlextInfraGitLanes, s[m.Infra.GitStatusReport]):
             )
         return report
 
-    @classmethod
-    def verify_lanes(
-        cls,
-        request: m.Infra.GitStatusRequest,
-    ) -> p.Result[m.Infra.GitLaneHygieneReport]:
-        """Fail on stashes, merged-but-alive branches and orphan or merged worktrees.
-
-        Returns:
-            The resulting ``p.Result[m.Infra.GitLaneHygieneReport]``.
-
-        """
-        report = u.Infra.git_lane_hygiene(request)
-        if report.failure or not report.value.violations:
-            return report
-        listing = "\n".join(
-            f"{violation.kind}: {violation.ref}: {violation.detail}"
-            for violation in report.value.violations
-        )
-        return r[m.Infra.GitLaneHygieneReport].fail(
-            f"lane accumulation in {report.value.repo_root}"
-            f" (integration base {report.value.integration_base}):\n{listing}",
-        )
-
 
 __all__: list[str] = ["FlextInfraGitService"]

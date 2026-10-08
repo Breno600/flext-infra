@@ -266,7 +266,7 @@ class TestsVerifyLanes:
         )
         updated = evidence.model_copy(
             update={
-                "beads": (*evidence.beads, active),
+                "beads": (*tm.not_none(evidence.beads), active),
                 "pull_requests": (
                     m.Infra.GitLanePullRequest.model_validate({
                         "number": 1,
@@ -496,7 +496,9 @@ class TestsVerifyLanes:
             updated_at=old,
             metadata=m.Infra.GitLaneBeadMetadata(branch=branch, work_dir=str(repo)),
         )
-        measured = evidence.model_copy(update={"beads": (*evidence.beads, owner)})
+        measured = evidence.model_copy(
+            update={"beads": (*tm.not_none(evidence.beads), owner)},
+        )
         evidence_file.write_text(
             measured.model_dump_json(by_alias=True),
             encoding="utf-8",

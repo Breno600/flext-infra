@@ -435,6 +435,10 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
 
         """
         predicate = condition.predicate
+        declared = isinstance(predicate, c.Infra.CodemodContextPredicate)
+        if not declared:
+            message = f"predicate is not declared: {predicate}"
+            raise ValueError(message)
         own = FlextInfraUtilitiesPyproject.project_package_name(root)
         match predicate:
             case (
@@ -482,8 +486,6 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                     file_path,
                     facts,
                 )
-        message = f"predicate is not declared: {predicate}"
-        raise ValueError(message)
 
     @classmethod
     def _context_package_holds(
@@ -531,8 +533,9 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                     msg = f"project layout is unresolved: {root}"
                     raise ValueError(msg)
                 return value in layout.runtime_aliases
-        message = f"predicate is not package-scoped: {predicate}"
-        raise ValueError(message)
+            case _:
+                message = f"predicate is not package-scoped: {predicate}"
+                raise ValueError(message)
 
     @classmethod
     def _context_module_holds(
@@ -572,8 +575,9 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 return cls._later_layer(root, file_path, value, condition)
             case c.Infra.CodemodContextPredicate.CLASS_STEM:
                 return cls._has_class_stem(root, file_path, value)
-        message = f"predicate is not module-scoped: {predicate}"
-        raise ValueError(message)
+            case _:
+                message = f"predicate is not module-scoped: {predicate}"
+                raise ValueError(message)
 
     @classmethod
     def _context_project_holds(
@@ -603,8 +607,9 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 return cls.import_closes_cycle(root, file_path, value, of, facts)
             case c.Infra.CodemodContextPredicate.COMPOSES_FAMILY:
                 return cls.composes_family_package(file_path, value)
-        message = f"predicate is not project-scoped: {predicate}"
-        raise ValueError(message)
+            case _:
+                message = f"predicate is not project-scoped: {predicate}"
+                raise ValueError(message)
 
     @staticmethod
     def _context_root_init_holds(root: Path, file_path: Path) -> bool:

@@ -70,8 +70,10 @@ class FlextInfraCandidateBootstrapService:
                 scope_root,
                 roots,
                 analysis,
-                (),
-                lambda: self._verify(roots, targets, manifest_state),
+                m.Infra.CodegenPhasePublicationPolicy(
+                    directories=(),
+                    validator=lambda: self._verify(roots, targets, manifest_state),
+                ),
             )
             if committed.failure:
                 return r[bool].from_failure(committed)

@@ -374,7 +374,7 @@ class TestsFlextInfraGitFacet:
         tm.that(result.error_code, eq=probe.error_code)
         tm.that(result.error_data, eq=probe.error_data)
         tm.not_none(result.exception)
-        tm.that(type(result.exception), eq=type(probe.exception))
+        assert type(result.exception) is type(probe.exception)
         tm.that(
             main(["workspace", "verify-clean", "--repo-root", str(real_git_repo)]),
             eq=1,

@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m
+from flext_infra import c, config, m, p
 from tests import t, u
 
 
@@ -59,7 +59,7 @@ class TestsFlextInfraCodegenPyprojectConform:
 
     @staticmethod
     def _uv_resolution(
-        toolchain: m.Infra.ToolchainSpec,
+        toolchain: p.Infra.ToolchainSpec,
         exclusions: t.VariadicTuple[m.Infra.UvScopedDependencyExclusionSpec] = (),
     ) -> m.Infra.UvResolutionSpec:
         """Route the toolchain's uv resolver keys the way conform declares them.
@@ -330,8 +330,7 @@ class TestsFlextInfraCodegenPyprojectConform:
                 required_dev_dependencies=floors,
                 uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
                 options=u.Infra.PyprojectConformOptions(
-                    family_line=branch,
-                    required_dependency_source=dependency_source,
+                    flext_line=dependency_source,
                 ),
             ),
         )
@@ -339,15 +338,26 @@ class TestsFlextInfraCodegenPyprojectConform:
         sources = u.Tests.toml_mapping(
             u.Tests.toml_table_at(first, "tool", "uv").get("sources", {}),
         )
+        expected_sources = (
+            {
+                member.distribution: {"workspace": True}
+                for member in workspace.subprojects
+                if member.package
+            }
+            if is_root
+            else {}
+        )
+        tm.that(sources, eq=expected_sources)
         for name in internal:
-            expected = name if is_root else u.Tests.flext_source(name)
-            tm.that(expected in dev, eq=True)
-            tm.that(
-                name in sources,
-                eq=attached or is_root,
+            expected = (
+                name
+                if is_root
+                else (
+                    f"{name} @ git+{dependency_source.base_url}/{name}.git"
+                    f"@{dependency_source.branch}"
+                )
             )
-            if attached or is_root:
-                tm.that(sources[name], eq={"workspace": True})
+            tm.that(expected in dev, eq=True)
         second = tm.ok(
             u.Infra.pyproject_conform(
                 first,
@@ -355,8 +365,7 @@ class TestsFlextInfraCodegenPyprojectConform:
                 required_dev_dependencies=floors,
                 uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
                 options=u.Infra.PyprojectConformOptions(
-                    family_line=branch,
-                    required_dependency_source=dependency_source,
+                    flext_line=dependency_source,
                 ),
             ),
         )
@@ -377,7 +386,7 @@ class TestsFlextInfraCodegenPyprojectConform:
             ),
             required_dev_dependencies=(),
             options=u.Infra.PyprojectConformOptions(
-                required_dependency_source=m.Infra.WorkspaceIntegrationSpec(
+                flext_line=m.Infra.WorkspaceIntegrationSpec(
                     provider=provider.name,
                     branch=u.Tests.provider_branch(),
                     base_url=provider.base_url,
@@ -408,7 +417,7 @@ class TestsFlextInfraCodegenPyprojectConform:
                 ),
                 required_dev_dependencies=(floor,),
                 options=u.Infra.PyprojectConformOptions(
-                    required_dependency_source=m.Infra.WorkspaceIntegrationSpec(
+                    flext_line=m.Infra.WorkspaceIntegrationSpec(
                         provider=provider.name,
                         branch=u.Tests.provider_branch(),
                         base_url=provider.base_url,
@@ -431,7 +440,7 @@ class TestsFlextInfraCodegenPyprojectConform:
         unattached = config.Infra.codegen.infra_repository.distribution
         result = u.Infra.pyproject_conform(
             f'[project]\nname = "external-consumer"\ndependencies = ["{unattached}"]\n',
-            workspace=self._workspace(),
+            workspace=self._workspace(role=c.Infra.MakeProfile.STANDALONE),
             required_dev_dependencies=(),
             uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
         )
@@ -439,7 +448,7 @@ class TestsFlextInfraCodegenPyprojectConform:
 
     def test_standalone_canonicalizes_the_declared_git_source(self) -> None:
         """The declared requirement line is the only URL and branch authority."""
-        workspace = self._workspace()
+        workspace = self._workspace(role=c.Infra.MakeProfile.STANDALONE)
         member = workspace.subprojects[0]
         declared = (
             f"{member.distribution} @ git+{member.url}@{u.Tests.provider_branch()}"
@@ -483,7 +492,7 @@ constraint-dependencies = ["uv>=0"]
 
     def test_standalone_rejects_non_https_manifest_provenance(self) -> None:
         """Test standalone rejects non https manifest provenance."""
-        workspace = self._workspace()
+        workspace = self._workspace(role=c.Infra.MakeProfile.STANDALONE)
         member = workspace.subprojects[0]
         declared = (
             f"{member.distribution} @ git+{member.url}@{u.Tests.provider_branch()}"
@@ -507,7 +516,7 @@ constraint-dependencies = ["uv>=0"]
 
     def test_full_conformance_is_idempotent_without_uv_version_pin(self) -> None:
         """Test full conformance is idempotent without uv version pin."""
-        workspace = self._workspace()
+        workspace = self._workspace(role=c.Infra.MakeProfile.STANDALONE)
         toolchain = config.Infra.codegen.toolchain.model_copy(
             update={"uv_link_mode": "copy"},
         )
@@ -629,7 +638,7 @@ dev = ["rumdl>=0.2.46", "custom-tool>=1"]
 
     def test_exclude_dependencies_emit_for_standalone_without_project_key(self) -> None:
         """Standalone member CI needs scoped excludes without the routing key."""
-        workspace = self._workspace()
+        workspace = self._workspace(role=c.Infra.MakeProfile.STANDALONE)
         exclusion = m.Infra.UvScopedDependencyExclusionSpec(
             project="flext-infra",
             package=m.Infra.UvPackageSelectorSpec(name="flext-tests"),

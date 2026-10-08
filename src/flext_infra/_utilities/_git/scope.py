@@ -9,8 +9,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_infra import c, m, t
-from flext_infra._utilities import (
+from flext_infra._utilities._git.semantic_identity import (
     FlextInfraUtilitiesGitSemanticIdentityMixin,
+)
+from flext_infra._utilities._git.semantic_index import (
     FlextInfraUtilitiesGitSemanticIndexMixin,
 )
 

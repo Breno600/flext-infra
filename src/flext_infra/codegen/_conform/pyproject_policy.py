@@ -107,8 +107,7 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
                 environments=tuple(codegen.toolchain.uv_environments),
             ),
             options=u.Infra.PyprojectConformOptions(
-                family_line=flext_line.value.branch,
-                required_dependency_source=flext_line.value,
+                flext_line=flext_line.value,
             ),
         )
 

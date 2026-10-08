@@ -1,4 +1,4 @@
-"""Public lane hygiene census and ``workspace verify-lanes`` against real Git.
+"""Native lane facts and the one public evaluator against real local Git.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -6,116 +6,134 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import shutil
-import tempfile
 from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
-from flext_infra import FlextInfraGitService, c, m, main
+from flext_infra import FlextInfraGitService, c, config, m, main
 from tests import u
 
 
 class TestsFlextInfraGitLaneHygiene:
-    """Prove the lane hygiene census through the public facade and CLI."""
+    """Preserve incoming census intents under the canonical fresh-base contract."""
 
     @staticmethod
-    def _declared_base(tmp_path: Path) -> Path:
-        """Seed a repository whose ``origin/HEAD`` names its integration branch.
+    def _declared_base(tmp_path: Path) -> m.Infra.GitLaneVerificationRequest:
+        """Create a real remote whose integration is available and demonstrably live.
 
         Returns:
-            The repository root.
+            The typed request with a fixture-owned integration declaration.
 
         """
         repository = u.Tests.git_repository(tmp_path)
         integration = u.Tests.integration_branch(repository)
-        remotes = f"refs/remotes/{c.Infra.GIT_ORIGIN}"
-        _ = u.Tests.git_run(
-            repository,
-            "symbolic-ref",
-            f"{remotes}/{c.Infra.GIT_HEAD}",
-            f"{remotes}/{integration}",
+        u.Tests.git_run(repository, "branch", "-m", integration)
+        remote = tmp_path / "integration.git"
+        u.Tests.git_bootstrap(tmp_path, ("init", "--bare", str(remote)))
+        policy = config.Infra.codegen.branch_policy
+        action = "set-url" if policy.lane_remote == c.Infra.GIT_ORIGIN else "add"
+        u.Tests.git_run(repository, "remote", action, policy.lane_remote, str(remote))
+        u.Tests.git_run(repository, "push", "-u", policy.lane_remote, integration)
+        return m.Infra.GitLaneVerificationRequest(
+            repo_root=repository,
+            declared=integration,
         )
-        return repository
 
+    @classmethod
     def test_clean_repository_passes(
-        self,
+        cls,
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """No stash, merged branch or linked worktree yields an empty census."""
-        repository = self._declared_base(tmp_path)
-        request = m.Infra.GitStatusRequest(repo_root=repository)
-
+        """Only the declared integration remains; dormant sources are not probed."""
+        request = cls._declared_base(tmp_path)
+        facts = tm.ok(u.Infra.git_lane_facts(request))
+        tm.that(facts.stash_oids, eq=())
+        tm.that(facts.read_errors, eq=())
         report = tm.ok(FlextInfraGitService.verify_lanes(request))
-
         tm.that(report.violations, eq=())
+        tm.that(report.findings, eq=())
+        tm.that(report.integration_branch, eq=request.declared)
         tm.that(
-            report.integration_base,
-            eq=f"{c.Infra.GIT_ORIGIN}/{u.Tests.integration_branch(repository)}",
+            main([
+                "workspace",
+                "verify-lanes",
+                "--repo-root",
+                str(request.repo_root),
+                "--declared",
+                str(request.declared),
+            ]),
+            eq=0,
         )
-        argv = ["workspace", "verify-lanes", "--repo-root", str(repository)]
-        tm.that(main(argv), eq=0)
         _ = capsys.readouterr()
 
-    @staticmethod
-    def test_missing_integration_base_fails_loud(tmp_path: Path) -> None:
-        """Without an ``origin/HEAD`` symbolic ref the census refuses to guess."""
-        repository = u.Tests.git_repository(tmp_path)
-
-        result = FlextInfraGitService.verify_lanes(
-            m.Infra.GitStatusRequest(repo_root=repository),
-        )
-
+    @classmethod
+    def test_missing_integration_base_fails_loud(cls, tmp_path: Path) -> None:
+        """An explicit missing authority cannot silently choose a healthy branch."""
+        request = cls._declared_base(tmp_path)
+        missing = request.model_copy(update={"declared": "fixture/missing-authority"})
+        result = FlextInfraGitService.verify_lanes(missing)
         tm.fail(result)
-        tm.that(str(result.error), has="integration base unresolved")
+        tm.that(str(result.error), has="integration branch is absent remotely")
 
+    @classmethod
     def test_every_violation_class_is_listed(
-        self,
+        cls,
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """Stash, merged branch, temp, missing and merged worktrees all surface."""
-        repository = self._declared_base(tmp_path / "primary")
-        readme = repository / "README.md"
-        readme.write_text("# Lane\n", encoding="utf-8")
+        """Stashes, all merged refs, orphans and clean linked lanes surface."""
+        request = cls._declared_base(tmp_path / "primary")
+        repository = request.repo_root
+        (repository / "README.md").write_text("# Lane\n", encoding="utf-8")
         u.Tests.commit_git_changes(repository, "seed tracked file")
-        _ = u.Tests.git_run(
+        policy = config.Infra.codegen.branch_policy
+        u.Tests.git_run(repository, "push", policy.lane_remote)
+        head = u.Tests.git_capture(repository, "rev-parse", "HEAD")
+        u.Tests.git_run(
             repository,
             "update-ref",
-            f"refs/remotes/{c.Infra.GIT_ORIGIN}/"
-            f"{u.Tests.integration_branch(repository)}",
-            c.Infra.GIT_HEAD,
+            "--create-reflog",
+            "-m",
+            "recovery fixture",
+            "refs/stash",
+            head,
         )
-        readme.write_text("# Hidden work\n", encoding="utf-8")
-        stashed = u.Tests.git_capture(repository, "stash", "create").strip()
-        _ = u.Tests.git_run(repository, "stash", "store", "-m", "fixture", stashed)
-        readme.write_text("# Lane\n", encoding="utf-8")
-        _ = u.Tests.git_run(repository, "branch", "merged-lane")
-        lanes = tmp_path / "lanes"
-        merged = u.Tests.git_linked_lane(lanes, repository, "merged-worktree").resolve()
-        gone = u.Tests.git_linked_lane(lanes, repository, "gone-worktree").resolve()
-        shutil.rmtree(gone)
-        tm.that(merged.is_relative_to(Path(tempfile.gettempdir()).resolve()), eq=True)
+        u.Tests.git_run(repository, "branch", "merged-lane")
+        merged = u.Tests.git_linked_lane(
+            tmp_path / "lanes", repository, "merged-worktree"
+        )
+        gone = u.Tests.git_linked_lane(tmp_path / "lanes", repository, "gone-worktree")
+        gone.rename(tmp_path / "preserved-worktree")
+        facts = tm.ok(u.Infra.git_lane_facts(request))
+        tm.that(facts.stash_oids, eq=(head,))
+        result = FlextInfraGitService.verify_lanes(request)
+        tm.fail(result)
+        report = m.Infra.GitLaneReport.model_validate_json(tm.not_none(result.error))
         kind = c.Infra.LaneViolationKind
-
-        census = tm.ok(
-            u.Infra.git_lane_hygiene(m.Infra.GitStatusRequest(repo_root=repository)),
-        )
-
+        expected = {
+            (kind.STASH, head),
+            (kind.MERGED_BRANCH, "refs/heads/merged-lane"),
+            (kind.MERGED_BRANCH, "refs/heads/merged-worktree"),
+            (kind.MERGED_BRANCH, "refs/heads/gone-worktree"),
+            (kind.MERGED_WORKTREE, str(merged)),
+            (kind.MISSING_WORKTREE, str(gone)),
+        }
+        if any(merged.is_relative_to(root) for root in policy.lane_temporary_roots):
+            expected.add((kind.TEMP_WORKTREE, str(merged)))
+        tm.that({(entry.kind, entry.ref) for entry in report.violations}, eq=expected)
         tm.that(
-            {(violation.kind, violation.ref) for violation in census.violations},
-            eq={
-                (kind.STASH, "stash@{0}"),
-                (kind.MERGED_BRANCH, "merged-lane"),
-                (kind.TEMP_WORKTREE, str(merged)),
-                (kind.MERGED_WORKTREE, str(merged)),
-                (kind.MISSING_WORKTREE, str(gone)),
-            },
+            main([
+                "workspace",
+                "verify-lanes",
+                "--repo-root",
+                str(repository),
+                "--declared",
+                str(request.declared),
+            ]),
+            eq=1,
         )
-        argv = ["workspace", "verify-lanes", "--repo-root", str(repository)]
-        tm.that(main(argv), eq=1)
         output = capsys.readouterr()
-        for expected in ("stash@{0}", "merged-lane", str(merged), str(gone)):
-            tm.that(output.out + output.err, has=expected)
+        for ref in (head, "refs/heads/merged-lane", str(merged), str(gone)):
+            tm.that(output.out + output.err, has=ref)

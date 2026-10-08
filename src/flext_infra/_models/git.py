@@ -11,7 +11,7 @@ from typing import Annotated, ClassVar, Self
 
 from flext_cli import m
 
-from flext_infra import c, t
+from flext_infra import t
 from flext_infra._models import (
     FlextInfraModelsGitIdentity,
     FlextInfraModelsGitWorktreeFacts,
@@ -120,6 +120,28 @@ class FlextInfraModelsGit(
             tuple[str, ...],
             m.Field(description="All refusals and inconclusive evidence"),
         ] = ()
+        violations: Annotated[
+            tuple[FlextInfraModelsGitLaneInputs.GitLaneViolation, ...],
+            m.Field(description="Classified violations from the single evaluator"),
+        ] = ()
+
+    class GitLaneFacts(m.ContractModel):
+        """Native stash/ref observations; no base selection or classification."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+        repo_root: Annotated[Path, m.Field(description="Inspected Git repository")]
+        stash_oids: Annotated[
+            tuple[t.NonEmptyStr, ...],
+            m.Field(description="All stash commit identities"),
+        ] = ()
+        refs: Annotated[
+            tuple[FlextInfraModelsGitLaneInputs.GitLaneRef, ...],
+            m.Field(description="All observed local and configured remote references"),
+        ] = ()
+        read_errors: Annotated[
+            tuple[str, ...],
+            m.Field(description="Exact first failures per native read"),
+        ] = ()
 
     class GitStatusRequest(m.ContractModel):
         """Request porcelain status for one repository."""
@@ -139,39 +161,6 @@ class FlextInfraModelsGit(
             m.Field(description="Raw git status --porcelain output"),
         ]
         dirty: Annotated[bool, m.Field(description="Whether the worktree is dirty")]
-
-    class GitLaneViolation(m.ContractModel):
-        """One lane accumulation offence with the instruction that cures it."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
-
-        kind: Annotated[
-            c.Infra.LaneViolationKind,
-            m.Field(description="Violation class"),
-        ]
-        ref: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Offending stash, branch, or worktree path"),
-        ]
-        detail: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="The canonical way to fix the violation"),
-        ]
-
-    class GitLaneHygieneReport(m.ContractModel):
-        """Lane accumulation census of one repository against its integration base."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
-
-        repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
-        integration_base: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Remote integration base, as origin/HEAD resolves"),
-        ]
-        violations: Annotated[
-            t.VariadicTuple[FlextInfraModelsGit.GitLaneViolation],
-            m.Field(description="Every lane accumulation violation found"),
-        ] = ()
 
     class GitPrimaryRootReport(m.ContractModel):
         """Resolved primary worktree root."""

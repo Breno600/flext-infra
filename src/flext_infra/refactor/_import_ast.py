@@ -328,7 +328,7 @@ class FlextInfraImportNormalizationAstMixin:
             The resulting ``int``.
 
         """
-        return getattr(node, "end_lineno", None) or getattr(node, "lineno", 1)
+        return node.end_lineno or node.lineno
 
     @staticmethod
     def _line_indent(line: str) -> str:

@@ -11,8 +11,8 @@ from pathlib import Path
 from git import GitCommandError
 
 from flext_infra import c, m, p, r
-from flext_infra._utilities import (
-    FlextInfraUtilitiesGitRemote,
+from flext_infra._utilities._git.remote import FlextInfraUtilitiesGitRemote
+from flext_infra._utilities._git.state_checkpoint import (
     FlextInfraUtilitiesGitStateCheckpointMixin,
 )
 
@@ -29,7 +29,7 @@ class FlextInfraUtilitiesGitStatePublicationMixin(
         fetch = repo.git.remote("get-url", "--all", remote).splitlines()
         push = repo.git.remote("get-url", "--push", "--all", remote).splitlines()
         match fetch, push:
-            case [url], [push_url] if url == push_url:
+            case [str() as url], [str() as push_url] if url == push_url:
                 if FlextInfraUtilitiesGitRemote.redact_origin_remote(url) != url:
                     msg = "checkpoint remote must not embed credentials"
                     raise ValueError(msg)

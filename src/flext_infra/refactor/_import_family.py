@@ -10,9 +10,13 @@ import ast
 from collections import defaultdict
 from collections.abc import MutableMapping
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from flext_infra import c, t
 from flext_infra.refactor._import_ast import FlextInfraImportNormalizationAstMixin
+
+if TYPE_CHECKING:
+    from collections.abc import Set as AbstractSet
 
 
 class FlextInfraImportNormalizationFamilyMixin(
@@ -175,7 +179,7 @@ class FlextInfraImportNormalizationFamilyMixin(
     @staticmethod
     def _partition_clauses(
         aliases: t.SequenceOf[ast.alias],
-        exported: t.Infra.StrSet,
+        exported: AbstractSet[str],
     ) -> tuple[list[str], list[str]]:
         """Split one statement's aliases into family-exported and kept clauses.
 
