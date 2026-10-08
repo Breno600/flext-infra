@@ -52,6 +52,8 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
                 are ambiguous on its definition line.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         if line < 1 or line > len(lines):
             return None
         line_start = sum(len(item) for item in lines[: line - 1])

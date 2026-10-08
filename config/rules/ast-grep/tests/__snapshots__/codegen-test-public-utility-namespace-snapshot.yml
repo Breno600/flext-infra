@@ -1,0 +1,16 @@
+id: codegen-test-public-utility-namespace
+snapshots:
+  tests.utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci:
+    fixed: u.CodegenTestSupport.Ci
+    labels:
+    - source: tests.utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci
+      style: primary
+      start: 0
+      end: 62
+  utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci:
+    fixed: u.CodegenTestSupport.Ci
+    labels:
+    - source: utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci
+      style: primary
+      start: 0
+      end: 56

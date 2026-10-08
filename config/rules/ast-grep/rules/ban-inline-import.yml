@@ -104,3 +104,49 @@ rule:
 message: >-
   A standard-library import inside a function body belongs to the module
   import block; the engine hoists it.
+---
+# Repair of ban-inline-import for one-name `from X import Y` imports of any
+# package: a function-local import is not an edge of the runtime import graph,
+# so the engine admits the finding only when the edge X -> Y, placed at module
+# level, closes no runtime import cycle (context import-cycle, `not`). Such an
+# import moves to the module import block (relocation module-import); an import
+# that would close a cycle stays at its point of use. Imports under an
+# `if TYPE_CHECKING:` guard and relative imports are out of scope.
+id: hoist-inline-acyclic-import
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/__init__.py"
+  - "**/flext_core/lazy.py"
+  - "**/beartype/**"
+metadata:
+  relocation: module-import
+  context:
+    MODULE:
+      not: import-cycle
+      of: NAME
+rule:
+  all:
+    - kind: import_from_statement
+    - has:
+        field: module_name
+        kind: dotted_name
+        pattern: $MODULE
+    - has:
+        field: name
+        kind: dotted_name
+        pattern: $NAME
+    - not:
+        has:
+          nthChild: 3
+          pattern: $_
+    - inside:
+        kind: function_definition
+        stopBy: end
+    - not:
+        matches: inside-type-checking-guard
+message: >-
+  A function-local import that closes no runtime import cycle belongs to the
+  module import block; the engine hoists it.

@@ -1,0 +1,32 @@
+id: gate-tool-error-typed-binding-required
+snapshots:
+  '"TOOL_ERROR" == result.code':
+    labels:
+    - source: '"TOOL_ERROR"'
+      style: primary
+      start: 0
+      end: 12
+    - source: '"TOOL_ERROR" == result.code'
+      style: secondary
+      start: 0
+      end: 27
+  outcome == "TOOL_ERROR":
+    labels:
+    - source: '"TOOL_ERROR"'
+      style: primary
+      start: 11
+      end: 23
+    - source: outcome == "TOOL_ERROR"
+      style: secondary
+      start: 0
+      end: 23
+  result.code != "TOOL_ERROR":
+    labels:
+    - source: '"TOOL_ERROR"'
+      style: primary
+      start: 15
+      end: 27
+    - source: result.code != "TOOL_ERROR"
+      style: secondary
+      start: 0
+      end: 27

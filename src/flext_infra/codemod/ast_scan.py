@@ -34,6 +34,10 @@ class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):
             The resulting ``p.Result[t.Cli.ResultValue]``.
 
         """
+        from flext_infra import c
+        from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
+        from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
+
         # The engines currently own full-corpus inventories and count receipts.
         # Refuse narrower requests before either engine can scan or publish.
         if any(

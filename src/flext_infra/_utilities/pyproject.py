@@ -58,6 +58,8 @@ class FlextInfraUtilitiesPyproject:
 
     @staticmethod
     def _managed_mise_path(name: str, owner_root: Path) -> p.Result[Path]:
+        from flext_cli import u
+
         located = u.Cli.run_raw(
             (c.Infra.MISE, "-C", str(owner_root), "which", name),
             cwd=owner_root,
@@ -78,6 +80,8 @@ class FlextInfraUtilitiesPyproject:
         pinned: str,
         owner_root: Path,
     ) -> p.Result[Path]:
+        from flext_cli import u
+
         identified = u.Cli.run_raw(
             (str(binary), "--version"),
             cwd=owner_root,

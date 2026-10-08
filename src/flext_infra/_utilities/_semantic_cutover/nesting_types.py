@@ -80,6 +80,8 @@ class FlextInfraUtilitiesSemanticNestingTypes(
         *,
         protected: t.Pair[int, int] | None = None,
     ) -> str:
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors
+
         return FlextInfraUtilitiesRopeRuntimeRefactors.content_change(
             resource,
             source,
