@@ -226,6 +226,10 @@ class FlextInfraMiseArtifactsJournal:
         cls,
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         journal: m.Infra.CodegenTransactionJournal,
+        *,
+        created: t.VariadicTuple[
+            m.Cli.AtomicFileState | m.Cli.AtomicDirectoryState
+        ] = (),
     ) -> p.Result[m.Infra.CodegenTransactionJournal]:
         """Validate physical manifests and retain them in the transaction journal.
 
@@ -236,6 +240,7 @@ class FlextInfraMiseArtifactsJournal:
         registered = FlextInfraMiseArtifactsVerification.register_transaction_manifests(
             layout,
             journal,
+            created=created,
         )
         if registered.failure:
             return r[m.Infra.CodegenTransactionJournal].from_failure(registered)

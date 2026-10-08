@@ -237,10 +237,7 @@ class FlextInfraMiseRecovery:
         result_type = r[
             t.Pair[m.Infra.CodegenTransactionJournal, m.Cli.AtomicFileState]
         ]
-        manifests = verify.register_transaction_manifests(layout, recovering)
-        if manifests.failure:
-            return result_type.from_failure(manifests)
-        recorded = journal_io.record_directories(recovering, manifests.value)
+        recorded = journal_io.record_transaction_manifests(layout, recovering)
         if recorded.failure:
             return result_type.from_failure(recorded)
         persisted = journal_io.write(layout, recorded.value, expected=journal_state)

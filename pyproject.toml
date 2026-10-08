@@ -225,7 +225,7 @@ project-excludes = [
   "typings/**",
   "vendor/**",
 ]
-project-includes = ["src/**/*.py*", "tests/**/*.py*"]
+project-includes = ["scripts/**/*.py*", "src/**/*.py*", "tests/**/*.py*"]
 python-version = "3.13"
 search-path = ["src", "."]
 use-ignore-files = false
@@ -418,7 +418,7 @@ namespace-packages = ["tests", "examples", "scripts"]
 preview = true
 respect-gitignore = true
 show-fixes = true
-src = ["src", "tests"]
+src = ["scripts", "src", "tests"]
 target-version = "py313"
 
 [tool.ruff.format]
