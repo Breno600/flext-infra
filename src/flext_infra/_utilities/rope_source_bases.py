@@ -588,7 +588,13 @@ class FlextInfraUtilitiesRopeSourceBases:
             if not FlextInfraUtilitiesRopeRuntime.abstract_class(value):
                 message = "Rope did not resolve a required base to a class"
                 raise TypeError(message)
-            if FlextInfraUtilitiesRopeRuntime.py_class(value):
+            if isinstance(
+                value,
+                FlextInfraUtilitiesRopeRuntime.runtime_type(
+                    "rope.base.pyobjectsdef",
+                    "PyClass",
+                ),
+            ):
                 module = value.get_module()
                 scope = value.get_scope()
                 resource = module.get_resource() if module is not None else None
