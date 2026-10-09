@@ -131,6 +131,22 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             ),
         ]
 
+    class RuffTypeCheckingConfig(m.ArbitraryTypesModel):
+        """Ruff flake8-type-checking settings loaded from YAML."""
+
+        runtime_evaluated_roots: Annotated[
+            t.SequenceOf[t.NonEmptyStr],
+            m.Field(
+                alias="runtime-evaluated-roots",
+                min_length=1,
+                description=(
+                    "Qualified base classes whose subclasses evaluate their "
+                    "annotations at runtime; codegen derives every project "
+                    "base inheriting one into runtime-evaluated-base-classes."
+                ),
+            ),
+        ]
+
     class RuffAuthorizedException(m.ArbitraryTypesModel):
         """One operator-authorized Ruff exception, recorded with its authority.
 

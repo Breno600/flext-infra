@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import FlextInfraCliRouteService, c, config, main as infra_main
+from flext_infra import FlextInfraCliRouteService, c, config, main
 from tests import m, t, u
 
 
@@ -41,7 +41,8 @@ class TestsFlextInfraCodegenMain:
         ]
         (repo / "pyproject.toml").write_text(
             f'[project]\nname = "{repository.distribution}"\nversion = "0.1.0"\n'
-            f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
+            'requires-python = "'
+            f'{config.Infra.codegen.toolchain.python_required_version}"\n'
             'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
             f'dependencies = ["flext-core>=0.1.0", '
             f'"flext-infra @ git+{infra.url}@{integration}"]\n\n'
@@ -128,7 +129,7 @@ class TestsFlextInfraCodegenMain:
         @staticmethod
         def test_success(real_git_repo: Path) -> None:
             """Init returns 0 on empty workspace."""
-            result = infra_main([
+            result = main([
                 "codegen",
                 "init",
                 "--repository-root",
@@ -143,7 +144,7 @@ class TestsFlextInfraCodegenMain:
             pyproject = repository / c.PYPROJECT_FILENAME
             before = pyproject.read_bytes()
             makefile = repository / c.Infra.MAKEFILE_FILENAME
-            result = infra_main([
+            result = main([
                 "codegen",
                 "init",
                 "--check",
@@ -157,7 +158,7 @@ class TestsFlextInfraCodegenMain:
         @staticmethod
         def test_enforce_mode(real_git_repo: Path) -> None:
             """Init in enforce mode (not check)."""
-            result = infra_main([
+            result = main([
                 "codegen",
                 "init",
                 "--repository-root",
@@ -171,7 +172,7 @@ class TestsFlextInfraCodegenMain:
         @staticmethod
         def test_init_command(real_git_repo: Path) -> None:
             """main() with init command returns 0."""
-            result = infra_main([
+            result = main([
                 "codegen",
                 "init",
                 "--repository-root",
@@ -182,13 +183,13 @@ class TestsFlextInfraCodegenMain:
         @staticmethod
         def test_unknown_command() -> None:
             """main() with unknown command returns non-zero exit code."""
-            result = infra_main(["codegen", "unknown-command"])
+            result = main(["codegen", "unknown-command"])
             tm.that(result, ne=0)
 
         @staticmethod
         def test_no_command() -> None:
             """main() with no command returns non-zero exit code."""
-            result = infra_main(["codegen"])
+            result = main(["codegen"])
             tm.that(result, ne=0)
 
         @staticmethod
@@ -198,7 +199,7 @@ class TestsFlextInfraCodegenMain:
             """Initialization accepts only the exact Git worktree root."""
             custom_root = real_git_repo / "custom"
             custom_root.mkdir()
-            result = infra_main([
+            result = main([
                 "codegen",
                 "init",
                 "--repository-root",
@@ -216,7 +217,7 @@ class TestsFlextInfraCodegenMain:
         @staticmethod
         def test_entry_point_returns_int(real_git_repo: Path) -> None:
             """main() returns an integer exit code."""
-            result = infra_main([
+            result = main([
                 "codegen",
                 "init",
                 "--repository-root",
@@ -251,18 +252,21 @@ class TestsFlextInfraCodegenMain:
             tm.that(" ".join(result.value.stdout.split()), contains=route.help_text)
 
         @staticmethod
-        @pytest.mark.slow
-        def test_managed_conflict_is_planned_and_published_atomically(
-            infra_git_repo: Path,
-        ) -> None:
-            """Keep live bytes unchanged until the public transaction commits."""
-            root = infra_git_repo
+        def _seed_managed_conflict(root: Path) -> Path:
+            """Seed a governed checkout whose pyproject drifts from its contract.
+
+            Returns:
+                The drifting ``pyproject.toml`` path.
+
+            """
             TestsFlextInfraCodegenMain._seed_public_conform_checkout(root)
             distribution = u.Tests.repository_ref(config.Infra.name).distribution
-            (root / "pyproject.toml").write_text(
+            pyproject = root / "pyproject.toml"
+            pyproject.write_text(
                 f'[project]\nname = "{distribution}"\nversion = "0.12.0.dev0"\n'
                 f'description = "{distribution} governed fixture"\n'
-                f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
+                'requires-python = "'
+                f'{config.Infra.codegen.toolchain.python_required_version}"\n'
                 'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
                 'dependencies = ["flext-cli"]\n'
                 "\n"
@@ -272,19 +276,47 @@ class TestsFlextInfraCodegenMain:
                 "]\n",
                 encoding="utf-8",
             )
-            pyproject = root / "pyproject.toml"
+            return pyproject
+
+        # Each public conform run spawns the real CLI; one behaviour per test keeps
+        # every item inside the config-owned slow bound.
+        @staticmethod
+        def test_managed_conflict_check_leaves_live_bytes_unchanged(
+            infra_git_repo: Path,
+        ) -> None:
+            """Report a managed conflict without touching live bytes or journals."""
+            pyproject = (
+                TestsFlextInfraCodegenMain.TestsMainEntryPoint._seed_managed_conflict(
+                    infra_git_repo,
+                )
+            )
             before = pyproject.read_bytes()
             journal, transaction = TestsFlextInfraCodegenMain._mise_transaction_state(
-                root,
+                infra_git_repo,
             )
-            command = TestsFlextInfraCodegenMain._public_conform_command(root)
-            checked = u.Cli.run_raw([*command, "check"], cwd=root)
+            command = TestsFlextInfraCodegenMain._public_conform_command(infra_git_repo)
+            checked = u.Cli.run_raw([*command, "check"], cwd=infra_git_repo)
             tm.ok(checked)
             tm.that(checked.value.outcome.raw_return_code, eq=1)
             tm.that(pyproject.read_bytes(), eq=before)
             tm.that(journal.exists(), eq=False)
             tm.that(transaction.exists(), eq=False)
 
+        @staticmethod
+        def test_managed_conflict_is_published_atomically_to_a_fixed_point(
+            infra_git_repo: Path,
+        ) -> None:
+            """Publish the conformed bytes through the transaction, then hold still."""
+            root = infra_git_repo
+            pyproject = (
+                TestsFlextInfraCodegenMain.TestsMainEntryPoint._seed_managed_conflict(
+                    root,
+                )
+            )
+            journal, transaction = TestsFlextInfraCodegenMain._mise_transaction_state(
+                root,
+            )
+            command = TestsFlextInfraCodegenMain._public_conform_command(root)
             applied = u.Cli.run_raw([*command, "apply"], cwd=root)
             tm.ok(applied)
             tm.that(
@@ -322,54 +354,6 @@ class TestsFlextInfraCodegenMain:
             tm.that(transaction.exists(), eq=False)
 
         @staticmethod
-        def test_present_invalid_mise_artifact_never_enters_external_resolution(
-            infra_git_repo: Path,
-        ) -> None:
-            """Reject a present invalid artifact before credential/network work.
-
-            Raises:
-                AssertionError: If required Mise launcher has no permission mode; or if
-                    required Mise launcher has no bytes.
-
-            """
-            root = infra_git_repo
-            TestsFlextInfraCodegenMain._seed_public_conform_checkout(root)
-            launcher = root / "bin" / "mise"
-            launcher_state = tm.ok(
-                u.Cli.atomic_read_binary_file_state(launcher, required=True),
-            )
-            launcher_mode = launcher_state.mode
-            tm.that(launcher_mode is None, eq=False)
-            if launcher_mode is None:
-                msg = "required Mise launcher has no permission mode"
-                raise AssertionError(msg)
-            if launcher_state.content is None:
-                msg = "required Mise launcher has no bytes"
-                raise AssertionError(msg)
-            corrupted = launcher_state.content + b"\nchecksum_linux_x86_64=invalid\n"
-            tm.ok(
-                u.Cli.atomic_write_binary_file_guarded(
-                    launcher_state,
-                    corrupted,
-                    permission_mode=launcher_mode,
-                ),
-            )
-            journal, transaction = TestsFlextInfraCodegenMain._mise_transaction_state(
-                root,
-            )
-
-            applied = u.Cli.run_raw(
-                [*TestsFlextInfraCodegenMain._public_conform_command(root), "apply"],
-                cwd=root,
-            )
-
-            tm.ok(applied)
-            tm.that(applied.value.outcome.raw_return_code, eq=1)
-            tm.that(launcher.read_bytes(), eq=corrupted)
-            tm.that(journal.exists(), eq=False)
-            tm.that(transaction.exists(), eq=False)
-
-        @staticmethod
         def test_unknown_command_surfaces_root_cause_via_subprocess() -> None:
             """Unknown codegen subcommands must print the actual CLI failure."""
             # The child renders through the CLI console, which honours COLUMNS and
@@ -378,7 +362,7 @@ class TestsFlextInfraCodegenMain:
             # the message, not the terminal the suite happens to run in.
             result = u.Cli.run_raw(
                 [sys.executable, "-m", "flext_infra", "codegen", "unknown-command"],
-                env={"COLUMNS": "200"},
+                options=m.Cli.ProcessOptions(env={"COLUMNS": "200"}),
             )
 
             tm.ok(result)

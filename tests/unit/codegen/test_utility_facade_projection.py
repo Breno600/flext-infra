@@ -7,12 +7,13 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import ast
+import sys
 from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, u
+from flext_infra import c, m, u
 
 
 class TestsFlextInfraUtilityFacadeProjection:
@@ -275,3 +276,137 @@ class TestsFlextInfraUtilityFacadeProjection:
         tm.that(facade.read_text(), eq=original)
         self._write(facade, updated)
         tm.that(u.Infra.render_utility_facade(package, family="p"), eq=updated)
+
+    @pytest.mark.parametrize("multiline", [False, True])
+    def test_protocol_owner_precedes_terminal_protocol_base(
+        self,
+        tmp_path: Path,
+        *,
+        multiline: bool,
+    ) -> None:
+        """A projected owner keeps ``Protocol`` as the namespace's last base."""
+        package = tmp_path / "src" / "flext_sample"
+        self._write(package / "__init__.py", "")
+        self._write(
+            package / "_models" / "payload.py",
+            "from flext_sample import p\n"
+            "def consume(value: p.Sample.Payload) -> None:\n    pass\n",
+        )
+        self._write(
+            package / "_protocols" / "payload.py",
+            "from typing import Protocol\n\n"
+            "class PayloadOwner(Protocol):\n"
+            "    class Payload(Protocol):\n        pass\n",
+        )
+        facade = package / "protocols.py"
+        header = (
+            "    class Sample(\n        p,\n        Protocol,\n    ):\n"
+            if multiline
+            else "    class Sample(p, Protocol):\n"
+        )
+        self._write(
+            facade,
+            "from typing import Protocol\n\nfrom upstream import p\n\n"
+            "class FlextSampleProtocols(p):\n"
+            + header
+            + "        pass\n\np = FlextSampleProtocols\n\n"
+            + '__all__ = ["FlextSampleProtocols", "p"]\n',
+        )
+
+        updated = u.Infra.render_utility_facade(package, family="p")
+
+        assert updated is not None
+        facade_class = next(
+            node for node in ast.parse(updated).body if isinstance(node, ast.ClassDef)
+        )
+        namespace = next(
+            node for node in facade_class.body if isinstance(node, ast.ClassDef)
+        )
+        tm.that(
+            [ast.unparse(base) for base in namespace.bases],
+            eq=["p", "PayloadOwner", "Protocol"],
+        )
+        self._write(facade, updated)
+        tm.that(u.Infra.render_utility_facade(package, family="p"), eq=updated)
+
+    @staticmethod
+    def test_codegen_models_are_usable_through_the_composed_facade() -> None:
+        """Consume both codegen families through the actual generated namespace."""
+        context = m.Infra.ModuleSkeletonRenderContext(
+            class_name="GeneratedPayload",
+            base_class="PayloadBase",
+            base_module="fixture_base",
+            docstring="Generated payload fixture.",
+        )
+        tm.that(
+            m.Infra.ModuleSkeletonRenderContext.model_validate(context.model_dump()),
+            eq=context,
+        )
+
+    @staticmethod
+    def test_process_options_is_usable_through_the_inherited_public_model() -> None:
+        """The real process producer exposes its payload through the model MRO."""
+        payload = b"  process input\n"
+        environment = {"FLEXT_PROCESS_FIXTURE": "child value"}
+        options = m.Cli.ProcessOptions(env=environment, input_data=payload)
+
+        tm.that(options.input_data, eq=payload)
+        tm.that(options.env, eq=environment)
+        tm.that(
+            m.Cli.ProcessOptions.model_validate(options.model_dump()),
+            eq=options,
+        )
+
+    def test_model_projection_preserves_inherited_family_order_at_runtime(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """An aggregate supplies its families once before a newly projected owner."""
+        package = tmp_path / "flext_sample"
+        self._write(package / "__init__.py", "from .models import m\n")
+        for module, owner, payload in (
+            ("render", "RenderOwner", "RenderPayload"),
+            ("toolchain", "ToolchainOwner", "ToolchainPayload"),
+            ("extra", "ExtraOwner", "ExtraPayload"),
+        ):
+            self._write(
+                package / "_models" / f"{module}.py",
+                f"class {owner}:\n    class {payload}:\n        pass\n",
+            )
+        self._write(
+            package / "_models" / "_codegen" / "base.py",
+            "from ..render import RenderOwner\n"
+            "from ..toolchain import ToolchainOwner\n"
+            "class CodegenOwner(ToolchainOwner, RenderOwner):\n    pass\n",
+        )
+        facade = package / "models.py"
+        self._write(
+            facade,
+            "from ._models._codegen.base import CodegenOwner\n"
+            "class Facade:\n    class Sample(CodegenOwner):\n        pass\n"
+            "m = Facade\n__all__ = ['Facade', 'm']\n",
+        )
+        consumer = package / "consumer.py"
+        self._write(
+            consumer,
+            "from flext_sample import m\n"
+            "m.Sample.RenderPayload()\n"
+            "m.Sample.ToolchainPayload()\n"
+            "m.Sample.ExtraPayload()\n"
+            "completed = True\n",
+        )
+        rendered = u.Infra.render_utility_facade(package, family="m")
+        assert rendered is not None
+        self._write(facade, rendered)
+        entrypoint = tmp_path / "consume.py"
+        self._write(
+            entrypoint,
+            "from flext_sample.consumer import completed\nassert completed\n",
+        )
+        result = tm.ok(u.Cli.run_raw([sys.executable, str(entrypoint)], cwd=tmp_path))
+        tm.that(
+            u.Cli.process_succeeded(result.outcome),
+            eq=True,
+            msg=result.stderr or result.stdout,
+        )
+        tm.that(u.Infra.render_utility_facade(package, family="m"), eq=rendered)

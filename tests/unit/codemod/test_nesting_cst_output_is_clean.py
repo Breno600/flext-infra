@@ -65,7 +65,7 @@ class TestsFlextInfraNestingCutoverOutput:
         emitted = self._planned_source(tmp_path)
 
         indented_blanks = [
-            line for line in emitted.splitlines() if line.strip() == "" and line != ""
+            line for line in emitted.splitlines() if not line.strip() and line
         ]
 
         tm.that(indented_blanks, empty=True)

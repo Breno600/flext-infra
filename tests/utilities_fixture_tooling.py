@@ -12,6 +12,8 @@ import sys
 from pathlib import Path
 from textwrap import indent
 
+from flext_tests import tm
+
 from flext_infra import config, u
 from tests import c, m, p, t
 from tests.utilities_git import TestsFlextInfraUtilitiesGitMixin
@@ -156,33 +158,13 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         path.chmod(0o444)
 
     @staticmethod
-    def isolated_mise_bootstrap_storage(project_root: Path) -> Path:
-        """Provision one hermetic Mise bootstrap storage for a fixture run.
-
-        The product contract (``u.Infra.mise_bootstrap_environment``) names
-        ``MISE_DATA_DIR`` the storage root variable; a fixture that passes it
-        makes the real bootstrap hermetic instead of racing the shared
-        operator storage, and only a cold storage exercises the credential
-        boundaries a warm install silently skips. The directory sits beside
-        — never inside — the fixture checkout the generated Make rejects as
-        storage, and inside the pytest-managed tree so teardown reclaims it.
-
-        Returns:
-            The resulting ``Path``.
-
-        """
-        storage = project_root.parent / "mise-data"
-        storage.mkdir(parents=True, exist_ok=True)
-        return storage
-
-    @staticmethod
     def copy_tracked_mise_seeds(root: Path, *, source_root: Path | None = None) -> None:
         """Copy declared Mise inputs from this checkout or a native upgrade seed.
 
-        A governed repository carries the declaration, launchers, runtime pin,
-        and dependency lock together. Native dependency graphs referenced by
-        the lock must travel with it so frozen setup never resolves replacements.
-        Conform renders declarations; only ``make upg`` resolves new versions.
+        A governed repository carries the declaration and the dependency lock
+        together. Native dependency graphs referenced by the lock must travel
+        with it so frozen setup never resolves replacements. Conform renders
+        declarations; only ``make upg`` resolves new versions.
         """
         source_root = (
             Path(__file__).resolve().parents[1] if source_root is None else source_root
@@ -190,20 +172,11 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         for relative in (
             c.Infra.MISE_TOML_FILENAME,
             c.Infra.MISE_LOCK_FILENAME,
-            *c.Infra.ARTIFACT_NAMES,
         ):
             source = source_root / relative
             destination = root / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             _ = shutil.copy2(source, destination)
-        sidecars = Path(".mise/locks")
-        if (source_root / sidecars).is_dir():
-            _ = shutil.copytree(
-                source_root / sidecars,
-                root / sidecars,
-                dirs_exist_ok=True,
-                ignore=shutil.ignore_patterns("mise*.local"),
-            )
 
     @staticmethod
     def write_executable(path: Path, body: str) -> None:
@@ -211,6 +184,24 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(body, encoding=c.Cli.ENCODING_DEFAULT)
         path.chmod(0o755)
+
+    @staticmethod
+    def declare_codemod_rules(root: Path, rules: t.StrMapping) -> None:
+        """Point ``root`` at a local ast-grep catalog holding exactly ``rules``.
+
+        Each key names one rule file and each value is its YAML body.
+        """
+        config_path = root / c.Infra.CODEMOD_CONFIG_RELPATH
+        rules_root = config_path.parent / c.Cli.RULES_DIR_NAME
+        tm.ok(u.Cli.ensure_dir(rules_root))
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                config_path,
+                f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n",
+            ),
+        )
+        for name, body in rules.items():
+            tm.ok(u.Cli.atomic_write_text_file(rules_root / f"{name}.yml", body))
 
     @staticmethod
     def run_isolated_make(
@@ -234,17 +225,19 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         return u.Cli.run_raw(
             [c.Infra.MAKE, *args],
             cwd=cwd,
-            env={
-                "GH_CONFIG_DIR": os.devnull,
-                "DBUS_SESSION_BUS_ADDRESS": "disabled:",
-                **(env or {}),
-            },
-            capture=capture,
-            remove_env_keys=tuple(
-                key
-                for key in c.Tests.MAKE_ISOLATION_ENV_KEYS
-                if env is None or key not in env
+            options=m.Cli.ProcessOptions(
+                env={
+                    "GH_CONFIG_DIR": os.devnull,
+                    "DBUS_SESSION_BUS_ADDRESS": "disabled:",
+                    **(env or {}),
+                },
+                remove_env_keys=tuple(
+                    key
+                    for key in c.Tests.MAKE_ISOLATION_ENV_KEYS
+                    if env is None or key not in env
+                ),
             ),
+            capture=capture,
         )
 
     @staticmethod
@@ -259,7 +252,7 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
 
     @staticmethod
     def cli_shim(bin_dir: Path, name: str) -> Path:
-        """Provide an executable that records its arguments instead of reaching a service.
+        """Provide an executable that records its arguments, not a service.
 
         ``gh`` and ``uv publish`` talk to GitHub and to a package index; a
         unit test proves the protocol's command contract against a recorded

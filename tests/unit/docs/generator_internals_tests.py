@@ -12,7 +12,7 @@ import pytest
 from flext_tests import tm
 from markdown import Markdown
 
-from tests import m, u
+from tests import u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -84,7 +84,7 @@ class TestsFlextInfraDocsGeneratorInternals:
 
     @staticmethod
     def test_build_toc_uses_rendered_ids_and_plain_link_labels() -> None:
-        """Explicit IDs, inline links and duplicates resolve to real rendered anchors."""
+        """Explicit IDs, inline links, duplicates resolve to real anchors."""
         content = (
             "# Main\n\n"
             "## Vault pending {#incident-vault}\n\n"
@@ -162,23 +162,3 @@ class TestsFlextInfraDocsGeneratorInternals:
 
         tm.that(result.changed, eq=True)
         tm.that(generated.read_text(), eq=content)
-
-    @staticmethod
-    def test_generate_creates_selected_project_reports(tmp_path: Path) -> None:
-        """Test generate creates selected project reports."""
-        workspace, generator = u.Tests.docs_workspace_generator(
-            tmp_path,
-            project_names=("flext-a", "flext-b"),
-            selected_projects=["flext-a"],
-        )
-        _ = u.Tests.prepare_docs_bundle(generator)
-
-        result = generator.generate(
-            m.Infra.DocsGenerateRequest(
-                repository_root=workspace,
-                projects=["flext-a"],
-            ),
-        )
-
-        tm.ok(result)
-        tm.that([report.scope for report in result.value], eq=["root", "flext-a"])

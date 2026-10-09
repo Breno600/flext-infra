@@ -1,13 +1,12 @@
-"""make fix never deletes information: the lint repair applies safe fixes only.
+"""make fix always applies the mandatory unsafe repair channel (2026-10-05 law).
 
-Ruff's unsafe fixes delete code: the T201 fix removed
-``print(..., file=sys.stderr)`` from a consumer script and turned its failures
-silent. The typed Make contract refuses the unsafe-fix flag, and every
-generated pyproject carries the fix-safety policy of the tooling SSOT, so a
-direct or IDE Ruff run follows the same policy as ``make fix``.
+The unsafe-fix flag is OBLIGATORY in every lint_fix configuration and must never
+be disabled again: a configuration without it is unrepresentable, the SSOT
+carries it, and every generated pyproject follows the same fix policy as
+``make fix`` for direct or IDE Ruff runs.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
+SPDX-License-Identifier: MIT.
 """
 
 from __future__ import annotations
@@ -25,19 +24,29 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraCodegenMakeLintFixSafety:
-    """The lint repair contract and its projection preserve information."""
+    """The mandatory unsafe lint-repair contract and its projection."""
 
     @staticmethod
-    def test_lint_fix_rejects_the_unsafe_fix_flag() -> None:
-        """An information-destroying lint repair is unrepresentable."""
+    def test_lint_fix_requires_the_unsafe_fix_flag() -> None:
+        """Disabling the mandatory unsafe channel is unrepresentable."""
         ruff = config.Infra.codegen.make.ruff
+        tm.that(c.Infra.RUFF_UNSAFE_FIXES_FLAG in ruff.lint_fix, eq=True)
         payload = ruff.model_dump()
-        payload["lint_fix"] = (*ruff.lint_fix, c.Infra.RUFF_UNSAFE_FIXES_FLAG)
+        payload["lint_fix"] = tuple(
+            flag for flag in ruff.lint_fix if flag != c.Infra.RUFF_UNSAFE_FIXES_FLAG
+        )
 
         with pytest.raises(m.ValidationError) as failure:
             _ = m.Infra.MakeRuffSpec.model_validate(payload)
 
         tm.that(str(failure.value), has=c.Infra.RUFF_UNSAFE_FIXES_FLAG)
+        tm.that(str(failure.value), has="operator law 2026-10-05")
+
+    @staticmethod
+    def test_ssot_lint_fix_carries_the_mandatory_channel() -> None:
+        """The config SSOT itself runs the mandatory unsafe repair surface."""
+        ruff = config.Infra.codegen.make.ruff
+        tm.that(list(ruff.lint_fix), eq=["--preview", "--fix", "--unsafe-fixes"])
 
     @staticmethod
     @pytest.mark.slow
@@ -126,5 +135,7 @@ class TestsFlextInfraCodegenMakeLintFixSafety:
 
         tm.that(checked.outcome.raw_return_code, eq=1)
         tm.that(checked.stdout, has="__basse__")
-        for name in config.Infra.tooling.tools.ruff.lint.pylint.allow_dunder_method_names:
+        for (
+            name
+        ) in config.Infra.tooling.tools.ruff.lint.pylint.allow_dunder_method_names:
             tm.that(checked.stdout, lacks=name)

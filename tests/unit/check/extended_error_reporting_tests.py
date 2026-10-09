@@ -95,7 +95,7 @@ class TestsFlextInfraGateErrorReporting:
         tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
-        """A real formatter configuration error remains visible without issues."""
+        """A formatter error without issues remains available in its raw receipt."""
         project_dir = u.Tests.mk_project(
             tmp_path,
             "p1",
@@ -121,6 +121,11 @@ class TestsFlextInfraGateErrorReporting:
         tm.that(bool(execution.issues), eq=False)
         tm.that(bool(execution.result.errors), eq=False)
         tm.that(execution.raw_output, has="invalid-line-length")
+        assert execution.raw_receipt is not None
+        tm.that(
+            execution.raw_receipt.read_bytes().decode("utf-8"),
+            eq=execution.raw_output,
+        )
         captured = capsys.readouterr()
         tm.that(
             f"{captured.out}\n{captured.err}",

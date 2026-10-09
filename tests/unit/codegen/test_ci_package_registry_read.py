@@ -30,12 +30,14 @@ class TestsFlextInfraCiPackageRegistryRead:
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="develop",
             ci_trigger_branches=("develop", "main"),
-            packages_read=packages_read,
+            overrides=u.CodegenTestSupport.Ci.WorkflowRenderOverrides(
+                packages_read=packages_read,
+            ),
         )
         rendered = tm.ok(u.Cli.template_render(cls.ci_template, spec))
         jobs = tm.ok(u.Cli.yaml_parse(rendered))["jobs"]
         assert isinstance(jobs, Mapping)
-        permissions: dict[str, t.JsonValue] = {}
+        permissions: t.MutableJsonMapping = {}
         for name, job in jobs.items():
             assert isinstance(job, Mapping)
             permissions[name] = job["permissions"]

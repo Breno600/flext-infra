@@ -75,13 +75,13 @@ class TestsFlextInfraTransactionDirectoryJournal:
                 owner.run_files_locked(
                     roots,
                     lambda scope: owner.begin_files_locked(scope, roots, ()),
-                ),
+                )
             )
             before = tm.ok(
                 u.Cli.atomic_read_binary_file_state(
                     session.plan.layout.journal_path,
                     required=True,
-                ),
+                )
             )
             tm.fail(
                 owner.run_files_locked(
@@ -96,7 +96,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
                     u.Cli.atomic_read_binary_file_state(
                         session.plan.layout.journal_path,
                         required=True,
-                    ),
+                    )
                 ),
                 eq=before,
             )
@@ -106,7 +106,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
                     roots,
                     lambda _scope: r[bool].ok(value=True),
                     prepare=False,
-                ),
+                )
             )
 
     def test_generation_source_accepts_authenticated_hardlink(

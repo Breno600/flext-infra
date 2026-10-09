@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
+from flext_infra import config
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
 from tests import c, u
 
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def governed_project(tmp_path: Path) -> Path:
     """Provide the project manifest every scanned package belongs to.
 
@@ -41,6 +42,7 @@ def governed_project(tmp_path: Path) -> Path:
     return tmp_path
 
 
+@pytest.mark.usefixtures("governed_project")
 class TestsFlextInfraCodegenLazyInit:
     """Test suite for FlextInfraCodegenLazyInit directory scanning behavior."""
 
@@ -246,6 +248,56 @@ class TestsFlextInfraCodegenLazyInit:
             for init_file in generated:
                 tm.that(planned, lacks=init_file)
 
+        def test_declared_sources_do_not_include_foreign_runtime_trees(
+            self,
+            tmp_path: Path,
+        ) -> None:
+            """Only governed source roots supply packages and snapshot inputs."""
+            repository, package = u.Tests.create_lazy_init_workspace(tmp_path)
+            u.Tests.write_lazy_init_namespace_module(
+                package / "models.py",
+                class_name="FlextScopedModels",
+                alias="m",
+                docstring="Owned models.",
+            )
+            owned_inits = {package / c.Infra.INIT_PY}
+            source_roots = config.Infra.source_scan.roots
+            for source_root in source_roots:
+                if source_root == c.Infra.DEFAULT_SRC_DIR:
+                    continue
+                owned = repository / source_root / "owned_package"
+                owned_init = self._create_init_file(owned, "")
+                (owned / "provider.py").write_text(
+                    "class Owned: pass\n__all__ = ('Owned',)\n",
+                    encoding=c.Cli.ENCODING_DEFAULT,
+                )
+                owned_inits.add(owned_init)
+            outside = repository / ("off_scope_" + "_".join(source_roots))
+            foreign_paths: set[Path] = set()
+            for relative in (
+                "worktrees/member/.venv/python/bin",
+                "skills/provider/scripts",
+                "scratch/demos/examples",
+            ):
+                foreign = outside / relative
+                foreign_paths.add(self._create_init_file(foreign, ""))
+                for suffix in c.Infra.PYTHON_SOURCE_SUFFIXES:
+                    module = foreign / f"provider{suffix}"
+                    module.write_text(
+                        "class Foreign: pass\n__all__ = ('Foreign',)\n",
+                        encoding=c.Cli.ENCODING_DEFAULT,
+                    )
+                    foreign_paths.add(module)
+
+            result = FlextInfraCodegenLazyInit(repository_root=repository).plan_files()
+
+            tm.ok(result)
+            planned = {plan.path for plan in result.value.files}
+            tm.that(owned_inits <= planned, eq=True)
+            inputs = {state.path for state in result.value.inputs}
+            tm.that(planned.isdisjoint(foreign_paths), eq=True)
+            tm.that(inputs.isdisjoint(foreign_paths), eq=True)
+
     class TestsEdgeCases:
         """Edge cases for directory scanning."""
 
@@ -326,3 +378,73 @@ class TestsFlextInfraCodegenLazyInit:
             tm.that(u.Tests.run_lazy_init(tmp_path / "b"), eq=0)
             content_b = (src_dir_b / "__init__.py").read_text(encoding="utf-8")
             tm.that(content_a, eq=content_b)
+
+    class TestsGeneratedSourceTrees:
+        """A generated source tree is a regular package, never a facade.
+
+        Premise (flext-gknfx): protoc output carries no ``__init__.py``; the
+        fresh-import gate rejected the resulting namespace package because its
+        modules had no origin inside the checkout.
+        """
+
+        _VALID_INIT = (
+            '"""Test package."""\n'
+            "from test_pkg.module import TestClass\n"
+            '__all__: list[str] = ["TestClass"]\n'
+        )
+
+        @classmethod
+        def _generated_tree(cls, project: Path) -> Path:
+            """Create one indexed package holding the declared generated tree.
+
+            Returns:
+                The generated source directory inside ``src/pkg``.
+
+            """
+            names = config.Infra.codegen.generated_sources
+            tm.that(names, empty=False)
+            package = project / "src" / "pkg"
+            package.mkdir(parents=True)
+            (package / "__init__.py").write_text(cls._VALID_INIT, encoding="utf-8")
+            tree = package / names[0]
+            tree.mkdir()
+            return tree
+
+        def test_tree_with_modules_receives_a_static_initializer(
+            self,
+            governed_project: Path,
+        ) -> None:
+            """Generation writes one exportless initializer and then converges."""
+            tree = self._generated_tree(governed_project)
+            (tree / "wire_pb2.py").write_text("DESCRIPTOR = None\n", encoding="utf-8")
+
+            tm.that(u.Tests.run_lazy_init(governed_project), eq=0)
+
+            initializer = (tree / c.Infra.INIT_PY).read_text(encoding="utf-8")
+            tm.that(initializer.startswith(c.Infra.AUTOGEN_HEADERS), eq=True)
+            tm.that(initializer, lacks="wire_pb2")
+            replanned = tm.ok(
+                FlextInfraCodegenLazyInit(
+                    repository_root=governed_project
+                ).plan_files(),
+            )
+            tm.that(
+                tuple(
+                    plan.path
+                    for plan in replanned.files
+                    if u.Infra.codegen_file_requires_effect(plan)
+                ),
+                eq=(),
+            )
+
+        def test_tree_without_modules_receives_no_initializer(
+            self,
+            governed_project: Path,
+        ) -> None:
+            """A tree holding only protocol sources is not a Python package."""
+            tree = self._generated_tree(governed_project)
+            (tree / "wire.proto").write_text('syntax = "proto3";\n', encoding="utf-8")
+
+            tm.that(u.Tests.run_lazy_init(governed_project), eq=0)
+
+            tm.that((tree / c.Infra.INIT_PY).exists(), eq=False)

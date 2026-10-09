@@ -6,15 +6,13 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m
 from flext_infra.workspace import FlextInfraWorkspaceDetector
-from tests import t, u
+from tests import c, m, t, u
 
 
 class TestsFlextInfraWorkspaceMemberLedgerIdentity:
@@ -100,25 +98,14 @@ class TestsFlextInfraWorkspaceMemberLedgerIdentity:
             The resulting ``t.Pair[Path, Path]``.
 
         """
-        child_source = tmp_path / "child-source"
-        u.Tests.WorktreeFixture.initialize_governed_project(
-            child_source,
-            "fixture-member",
-            workspace="member-workspace",
-            database="member-database",
-            issue_prefix="member-prefix",
-            beads_owner=False,
-        )
         parent = tmp_path / "workspace"
-        u.Tests.WorktreeFixture.initialize_governed_project(
+        member = u.Tests.WorktreeFixture.copied_member(
             parent,
             "fixture-workspace",
             workspace="root-workspace",
             database="root-database",
             issue_prefix="root-prefix",
         )
-        member = parent / "apps" / "member"
-        shutil.copytree(child_source, member)
         u.Tests.WorktreeFixture.link_member_beads(
             member,
             parent,

@@ -32,9 +32,11 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
         primary_pyproject = u.Tests.WorktreeFixture.initialize_governed_project(
             primary,
             "fixture-project",
-            workspace="primary-workspace",
-            database="primary-database",
-            issue_prefix="primary-prefix",
+            beads=u.Tests.BeadsIdentity(
+                workspace="primary-workspace",
+                database="primary-database",
+                issue_prefix="primary-prefix",
+            ),
         )
         lane = tmp_path / "lane"
         tm.ok(
@@ -125,9 +127,11 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             "fixture-project",
-            workspace="fixture-workspace",
-            database="fixture-database",
-            issue_prefix="fixture-prefix",
+            beads=u.Tests.BeadsIdentity(
+                workspace="fixture-workspace",
+                database="fixture-database",
+                issue_prefix="fixture-prefix",
+            ),
         )
         beads_path = root / "config" / "beads.yaml"
         if beads_content is None:
@@ -156,18 +160,22 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             "fixture-workspace",
-            workspace="root-workspace",
-            database="root-database",
-            issue_prefix="root-prefix",
+            beads=u.Tests.BeadsIdentity(
+                workspace="root-workspace",
+                database="root-database",
+                issue_prefix="root-prefix",
+            ),
         )
         project_names = ("fixture-alpha", "fixture-beta")
         for project_name in project_names:
             u.Tests.WorktreeFixture.initialize_governed_project(
                 root / project_name,
                 project_name,
-                workspace="root-workspace",
-                database="root-database",
-                issue_prefix="root-prefix",
+                beads=u.Tests.BeadsIdentity(
+                    workspace="root-workspace",
+                    database="root-database",
+                    issue_prefix="root-prefix",
+                ),
             )
         gitmodules = u.Tests.WorktreeFixture.write_gitmodules(root, project_names)
         u.Tests.git_bootstrap(root, ("add", c.Infra.GITMODULES, *project_names))
@@ -229,16 +237,20 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             "fixture-workspace",
-            workspace="root-workspace",
-            database="root-database",
-            issue_prefix="root-prefix",
+            beads=u.Tests.BeadsIdentity(
+                workspace="root-workspace",
+                database="root-database",
+                issue_prefix="root-prefix",
+            ),
         )
         u.Tests.WorktreeFixture.initialize_governed_project(
             outside,
             "linked-project",
-            workspace="outside-workspace",
-            database="outside-database",
-            issue_prefix="outside-prefix",
+            beads=u.Tests.BeadsIdentity(
+                workspace="outside-workspace",
+                database="outside-database",
+                issue_prefix="outside-prefix",
+            ),
         )
         (root / "linked-project").symlink_to(outside, target_is_directory=True)
         u.Tests.WorktreeFixture.write_gitmodules(root, ("linked-project",))

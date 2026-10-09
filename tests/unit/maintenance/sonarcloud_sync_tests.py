@@ -97,7 +97,6 @@ class TestsFlextInfraSonarcloudSettingsSync:
 
     @staticmethod
     def _cli(
-        self,
         repository_root: Path,
         env: t.StrMapping | None = None,
         *,
@@ -119,8 +118,10 @@ class TestsFlextInfraSonarcloudSettingsSync:
                     "--repository-root",
                     str(repository_root),
                 ],
-                env={"COLUMNS": "200", **(env or {})},
-                remove_env_keys=() if env else ("SONAR_TOKEN",),
+                options=m.Cli.ProcessOptions(
+                    env={"COLUMNS": "200", **(env or {})},
+                    remove_env_keys=() if env else ("SONAR_TOKEN",),
+                ),
             ),
         )
         return result.outcome.raw_return_code, result.stdout + result.stderr
@@ -235,14 +236,22 @@ class TestsFlextInfraSonarcloudSettingsSync:
         )
         tm.that(FlextInfraSonarcloudSettingsSync.in_sync_with(plan, current), eq=False)
 
-    def test_absent_token_fails_before_any_effect(self, tmp_path: Path) -> None:
-        """Without SONAR_TOKEN the verb fails first, before reading origin or API."""
+    def test_absent_token_skips_green_before_any_effect(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Without SONAR_TOKEN the verb skips green before reading origin or API.
+
+        Operator ruling 2026-10-08 (run-if-available-else-skip): the token is
+        provisioned by the ai-hub credential ingress; its absence is the
+        declared skip, never a failure.
+        """
         u.Tests.initialize_git_repo(tmp_path)
 
         code, output = self._cli(tmp_path)
 
-        tm.that(code, ne=0)
-        tm.that(output, has="SONAR_TOKEN is required")
+        tm.that(code, eq=0)
+        tm.that(output, has="SKIP: sonarcloud-sync")
 
     def test_whitespace_token_is_refused(self, tmp_path: Path) -> None:
         """A whitespace-only token is absent, never trimmed into a request."""
@@ -253,12 +262,12 @@ class TestsFlextInfraSonarcloudSettingsSync:
         tm.that(code, ne=0)
         tm.that(output, has="SONAR_TOKEN is required")
 
-    def test_issue_search_requires_token_before_network(self, tmp_path: Path) -> None:
-        """The read-only public route stops before Git or HTTP without a token."""
+    def test_issue_search_skips_green_without_token(self, tmp_path: Path) -> None:
+        """The read-only public route skips green before Git or HTTP, no token."""
         code, output = self._cli(tmp_path, verb=c.Infra.VERB_SONARCLOUD_ISSUES)
 
-        tm.that(code, ne=0)
-        tm.that(output, has="SONAR_TOKEN is required")
+        tm.that(code, eq=0)
+        tm.that(output, has="SKIP: sonarcloud-issues")
 
     @staticmethod
     def test_issue_search_response_parses_published_page_contract() -> None:

@@ -16,7 +16,10 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import FlextInfraPytestRunner, config, m
-from tests.unit.validate.pytest_runner_support import runner_for
+from tests.unit.validate.pytest_runner_support import (
+    declared_project_runner,
+    runner_for,
+)
 
 
 @pytest.mark.unit
@@ -86,8 +89,6 @@ class TestsFlextInfraPytestWorkerCeiling:
     @staticmethod
     def test_declared_overrides_come_from_the_typed_ssot() -> None:
         """The tooling SSOT carries validated ceilings of either form."""
-        from flext_infra import config
-
         overrides = config.Infra.tooling.tools.pytest.parallel_worker_overrides
         tm.that(len(overrides) > 0, eq=True)
         for declared in overrides.values():
@@ -113,13 +114,7 @@ class TestsFlextInfraPytestWorkerCeiling:
         policy = config.Infra.tooling.tools.pytest
         assert policy.parallel_worker_overrides
         declared_name = next(iter(policy.parallel_worker_overrides))
-        pyproject = cached_runner_project / "pyproject.toml"
-        pyproject.write_text(
-            pyproject.read_text(encoding="utf-8")
-            + f'\n[project]\nname = "{declared_name}"\nversion = "0.1.0"\n',
-            encoding="utf-8",
-        )
-        runner = runner_for(cached_runner_project)
+        runner = declared_project_runner(cached_runner_project, declared_name)
         report = (
             cached_runner_project
             / config.Infra.codegen.make.testmon_cache.reports_directory

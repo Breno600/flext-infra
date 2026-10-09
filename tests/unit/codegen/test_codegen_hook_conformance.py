@@ -13,9 +13,9 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, infra, m, t, u
+from flext_infra import config, infra, m, t
 from flext_infra.codegen.conform import FlextInfraCodegenConform
-from tests import c as test_c, u as test_u
+from tests import c, u
 
 pytestmark = pytest.mark.slow
 
@@ -44,7 +44,7 @@ class TestsFlextInfraCodegenHookConformance:
             The resulting ``m.Infra.WorkspaceSpec``.
 
         """
-        return test_u.Tests.standalone_workspace(root)
+        return u.Tests.standalone_workspace(root)
 
     @staticmethod
     def _render_hooks(root: Path) -> str:
@@ -72,7 +72,7 @@ class TestsFlextInfraCodegenHookConformance:
         workspace: m.Infra.WorkspaceSpec,
     ) -> p.Result[m.Infra.CodegenResult]:
         return infra.codegen_conform(
-            test_u.Tests.conform_request(
+            u.Tests.conform_request(
                 root,
                 what=c.Infra.CodegenConformSurface.MAKEFILE,
                 scope=c.Infra.CodegenConformScope.SELF,
@@ -102,7 +102,7 @@ class TestsFlextInfraCodegenHookConformance:
         hooks_dir = root / ".git" / "hooks"
 
         infra.codegen_conform(
-            test_u.Tests.conform_request(
+            u.Tests.conform_request(
                 root,
                 what=c.Infra.CodegenConformSurface.MAKEFILE,
                 scope=c.Infra.CodegenConformScope.SELF,
@@ -152,11 +152,11 @@ class TestsFlextInfraCodegenHookConformance:
         inherited: str,
     ) -> None:
         """Execute the generated hook entry without replacing any runtime owner."""
-        root, _ = test_u.Tests.render_make_environment(
+        root, _ = u.Tests.render_make_environment(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,
         )
-        tm.ok(test_u.Tests.create_python_environment(root))
+        tm.ok(u.Tests.create_python_environment(root))
         policy = config.Infra.codegen.make
         make = m.Infra.MakeSpec.model_validate({
             **policy.model_dump(exclude_computed_fields=True),
@@ -191,12 +191,16 @@ class TestsFlextInfraCodegenHookConformance:
             u.Cli.run_raw(
                 shlex.split(entry),
                 cwd=root,
-                env={
-                    policy.ci.variable: (
-                        policy.ci.value if inherited == "ci" else policy.ci.local_value
-                    ),
-                },
-                remove_env_keys=test_c.Tests.MAKE_ISOLATION_ENV_KEYS,
+                options=m.Cli.ProcessOptions(
+                    env={
+                        policy.ci.variable: (
+                            policy.ci.value
+                            if inherited == "ci"
+                            else policy.ci.local_value
+                        ),
+                    },
+                    remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
+                ),
             ),
         )
 
@@ -232,7 +236,7 @@ class TestsFlextInfraCodegenHookConformance:
 
         self._check(root, workspace)
         infra.codegen_conform(
-            test_u.Tests.conform_request(
+            u.Tests.conform_request(
                 root,
                 what=c.Infra.CodegenConformSurface.MAKEFILE,
                 scope=c.Infra.CodegenConformScope.SELF,

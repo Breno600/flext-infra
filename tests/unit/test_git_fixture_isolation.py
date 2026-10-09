@@ -10,8 +10,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import u
-from tests import c, u as test_u
+from tests import c, m, u
 
 
 class TestsFlextInfraGitFixtureIsolation:
@@ -34,14 +33,16 @@ class TestsFlextInfraGitFixtureIsolation:
             "GIT_COMMON_DIR": str(poison / ".git"),
         }
         with tm.scope(env=poisoned_environment):
-            test_u.Tests.initialize_git_repo(target)
+            u.Tests.initialize_git_repo(target)
 
         tm.that((target / ".git").is_dir(), eq=True)
         resolved = tm.ok(
             u.Cli.capture(
                 ["git", "rev-parse", "--show-toplevel"],
                 cwd=target,
-                remove_env_keys=c.Tests.GIT_LOCAL_ENV_KEYS,
+                options=m.Cli.ProcessOptions(
+                    remove_env_keys=c.Tests.GIT_LOCAL_ENV_KEYS,
+                ),
             ),
         )
         tm.that(Path(resolved).resolve(), eq=target.resolve())

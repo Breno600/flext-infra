@@ -11,12 +11,12 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, main as infra_main, u
+from flext_infra import c, main, u
 from flext_infra.codemod import FlextInfraModGateEngine
 
 
 @pytest.mark.slow
-class TestsJointModFixedPoint:
+class TestsFlextInfraJointModFixedPoint:
     """Exercise real configured rules through the public refactor CLI."""
 
     @staticmethod
@@ -27,7 +27,7 @@ class TestsJointModFixedPoint:
             The resulting ``int``.
 
         """
-        return infra_main([
+        return main([
             "refactor",
             "mod",
             "--repository-root",
@@ -152,7 +152,8 @@ class TestsJointModFixedPoint:
         sample = mod_workspace / "sample.py"
         u.Cli.atomic_write_text_file(
             sample,
-            '"""Cross-phase source."""\nfrom __future__ import annotations\n\nmarker = list()\n',
+            '"""Cross-phase source."""\nfrom __future__ import annotations\n\n'
+            "marker = list()\n",
         ).unwrap()
 
         tm.that(self._run(mod_workspace), eq=0)
@@ -176,7 +177,8 @@ class TestsJointModFixedPoint:
         sample = mod_workspace / "sample.py"
         u.Cli.atomic_write_text_file(
             sample,
-            '"""Cyclic source."""\nfrom __future__ import annotations\n\nmarker = dict()\n',
+            '"""Cyclic source."""\nfrom __future__ import annotations\n\n'
+            "marker = dict()\n",
         ).unwrap()
 
         tm.that(self._run(mod_workspace), ne=0)
@@ -185,3 +187,96 @@ class TestsJointModFixedPoint:
         console = capture.out + capture.err
         tm.that(console, has="cross-phase cycle")
         tm.that(console, lacks="fixed point verified")
+
+    @pytest.mark.parametrize("read_only_option", ["--dry-run", "--check"])
+    def test_ast_apply_read_only_preserves_both_physical_sources(
+        self,
+        mod_workspace: Path,
+        capsys: pytest.CaptureFixture[str],
+        read_only_option: str,
+    ) -> None:
+        """Read-only mode wins over apply before either mechanical cascade writes."""
+        self._rules(mod_workspace, cycle=False)
+        sample = mod_workspace / "sample.py"
+        unrelated = mod_workspace / "unrelated.py"
+        for source in (sample, unrelated):
+            constructor = "list" if source == sample else "dict"
+            tm.ok(
+                u.Cli.atomic_write_text_file(
+                    source,
+                    '"""Read-only source."""\n'
+                    "from __future__ import annotations\n\n"
+                    f"marker = {constructor}()\n",
+                ),
+            )
+        before = tuple(
+            (source.read_bytes(), source.stat().st_ino, source.stat().st_mode)
+            for source in (sample, unrelated)
+        )
+
+        result = main([
+            "refactor",
+            "ast",
+            "--repository-root",
+            str(mod_workspace),
+            "--apply",
+            read_only_option,
+        ])
+
+        tm.that(result, ne=0)
+        tm.that(
+            tuple(
+                (source.read_bytes(), source.stat().st_ino, source.stat().st_mode)
+                for source in (sample, unrelated)
+            ),
+            eq=before,
+        )
+        capture = capsys.readouterr()
+        console = capture.out + capture.err
+        tm.that(console, has="joint-ast")
+        tm.that(console, has="sed: joint-text")
+        tm.that(console, lacks="ast: apply iteration")
+        tm.that(console, lacks="ast: apply sed-by-list cascade")
+        tm.that(console, lacks="mechanical fixed point verified")
+
+    @pytest.mark.parametrize(
+        ("option", "value"),
+        [
+            ("--module", "missing.module"),
+            ("--module", "sample"),
+            ("--namespace", "u"),
+            ("--namespace", "u.Sample"),
+            ("--output-format", c.Cli.OutputFormats.JSON),
+        ],
+    )
+    def test_ast_unimplemented_request_fails_before_full_corpus_effects(
+        self,
+        mod_workspace: Path,
+        capsys: pytest.CaptureFixture[str],
+        option: str,
+        value: str,
+    ) -> None:
+        """Never substitute a full-corpus text run for an unsupported request."""
+        source = mod_workspace / "sample.py"
+        unrelated = mod_workspace / "unrelated.py"
+        tm.ok(u.Cli.atomic_write_text_file(unrelated, "marker = dict()\n"))
+        before = (source.read_bytes(), unrelated.read_bytes())
+
+        result = main([
+            "refactor",
+            "ast",
+            "--repository-root",
+            str(mod_workspace),
+            "--apply",
+            option,
+            value,
+        ])
+
+        tm.that(result, ne=0)
+        tm.that((source.read_bytes(), unrelated.read_bytes()), eq=before)
+        capture = capsys.readouterr()
+        console = capture.out + capture.err
+        tm.that(console, has="no scan or rewrite executed")
+        tm.that(console, lacks="mod: ast-grep")
+        tm.that(console, lacks="mod: start")
+        tm.that(console, lacks="mechanical fixed point verified")

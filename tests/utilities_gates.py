@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -13,7 +14,7 @@ from flext_tests import tm
 
 from flext_infra.deps.fix_pyrefly_config import FlextInfraConfigFixer
 from flext_infra.refactor.census import FlextInfraRefactorCensus
-from tests import m, t
+from tests import c, m, t
 from tests.utilities_fixture_tooling import TestsFlextInfraUtilitiesToolingFixtureMixin
 
 if TYPE_CHECKING:
@@ -22,6 +23,16 @@ if TYPE_CHECKING:
 
 class TestsFlextInfraUtilitiesGatesMixin:
     """Typed quality-gate execution and enforcement fixture helpers."""
+
+    @dataclasses.dataclass(frozen=True)
+    class CensusOptions:
+        """Optional refactor-census knobs grouped into one contract."""
+
+        kinds: t.StrSequence | None = None
+        include_local_scopes: bool = False
+        impact_map_output: str | None = None
+        apply_changes: bool = False
+        dry_run: bool = False
 
     @staticmethod
     def detector_context(
@@ -102,20 +113,28 @@ class TestsFlextInfraUtilitiesGatesMixin:
     ) -> m.Infra.GateExecution:
         """Create a typed quality-gate execution fixture.
 
+        The native outcome follows the findings, as a completed tool run
+        reports it: findings when issues exist, clean otherwise. A failed
+        gate lists every finding in its errors.
+
         Returns:
             The resulting ``m.Infra.GateExecution``.
 
         """
+        findings = tuple(issues or ())
         return m.Infra.GateExecution(
             result=m.Infra.GateResult(
                 gate=gate,
                 project=project,
                 passed=passed,
-                errors=(),
+                errors=() if passed else tuple(item.formatted for item in findings),
                 duration=0.0,
             ),
-            issues=tuple(issues or ()),
+            issues=findings,
             raw_output="",
+            outcome=(
+                c.Infra.ToolOutcome.FINDINGS if findings else c.Infra.ToolOutcome.CLEAN
+            ),
         )
 
     @staticmethod
@@ -212,10 +231,7 @@ class TestsFlextInfraUtilitiesGatesMixin:
         *,
         rules: t.StrSequence,
         kinds: t.StrSequence | None = None,
-        include_local_scopes: bool = False,
-        impact_map_output: str | None = None,
-        apply_changes: bool = False,
-        dry_run: bool = False,
+        options: CensusOptions | None = None,
     ) -> m.Infra.WorkspaceReport:
         """Execute one refactor census and unwrap its successful report.
 
@@ -223,14 +239,18 @@ class TestsFlextInfraUtilitiesGatesMixin:
             The resulting ``m.Infra.WorkspaceReport``.
 
         """
+        fixture = TestsFlextInfraUtilitiesGatesMixin
+        resolved = fixture.CensusOptions() if options is None else options
+        if kinds is not None:
+            resolved = dataclasses.replace(resolved, kinds=kinds)
         TestsFlextInfraUtilitiesToolingFixtureMixin.provision_checkout(workspace)
         result = FlextInfraRefactorCensus(
             repository_root=workspace,
-            apply_changes=apply_changes,
-            dry_run=dry_run,
-            impact_map_output=impact_map_output,
-            include_local_scopes=include_local_scopes,
-            kinds=kinds,
+            apply_changes=resolved.apply_changes,
+            dry_run=resolved.dry_run,
+            impact_map_output=resolved.impact_map_output,
+            include_local_scopes=resolved.include_local_scopes,
+            kinds=resolved.kinds,
             rules=rules,
         ).execute()
         tm.ok(result)
