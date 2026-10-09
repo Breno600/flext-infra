@@ -66,11 +66,10 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         force_color: str,
     ) -> None:
         """The real formatter's plain and colored findings name the same file."""
-        project_dir = u.Tests.mk_project(tmp_path, "markdown-format-project")
-        (project_dir / "README.md").write_text(self.LONG_PROSE, encoding="utf-8")
-        (project_dir / c.Infra.PRETTIER_CONFIG_FILENAME).write_text(
-            self.PROSE_CONFIG,
-            encoding="utf-8",
+        project_dir = self._project(
+            tmp_path,
+            "markdown-format-project",
+            self.UNFORMATTED_LIST,
         )
 
         with tm.scope(env={"FORCE_COLOR": force_color}):

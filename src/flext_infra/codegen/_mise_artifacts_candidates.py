@@ -10,9 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m, r
-from flext_infra.codegen._mise_artifacts_files import (
-    FlextInfraMiseArtifactsFiles as files,
-)
+from flext_infra.codegen._mise_artifacts_files import FlextInfraMiseArtifactsFiles
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -35,7 +33,7 @@ class FlextInfraMiseArtifactsCandidates:
         publications: list[m.Infra.CodegenStagedFile] = []
         for project, stage in zip(projects, stages, strict=True):
             before = project.config.before
-            replacement = files.read_state(
+            replacement = FlextInfraMiseArtifactsFiles.read_state(
                 stage / before.path.name,
                 required=True,
             )
@@ -43,7 +41,7 @@ class FlextInfraMiseArtifactsCandidates:
                 return r[tuple[m.Infra.CodegenStagedFile, ...]].from_failure(
                     replacement,
                 )
-            if replacement.value.mode != before.mode:
+            if replacement.value.mode != project.config.replacement_mode:
                 return r[tuple[m.Infra.CodegenStagedFile, ...]].fail(
                     f"staged Mise artifact mode differs: {stage / before.path.name}",
                 )

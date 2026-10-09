@@ -403,6 +403,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                         c.Infra.CodegenConformSurface.MAKEFILE,
                         c.Infra.CodegenConformSurface.DOCS_CONFIG,
                         c.Infra.CodegenConformSurface.PYPROJECT,
+                        c.Infra.CodegenConformSurface.MISE_CONFIG,
                     }
                 ),
             )
@@ -413,6 +414,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
         if self.initial_workspace is None and request.what not in {
             c.Infra.CodegenConformSurface.MAKEFILE,
             c.Infra.CodegenConformSurface.PYPROJECT,
+            c.Infra.CodegenConformSurface.MISE_CONFIG,
         }:
             current_target_result = FlextInfraWorkspaceDetector.conform_target(
                 root,

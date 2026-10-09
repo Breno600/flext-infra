@@ -27,10 +27,175 @@ class TestsFlextInfraTransactionStaging:
     """Exercise durable staging authority before publishing live destinations."""
 
     @staticmethod
+    @pytest.mark.parametrize("inside", [False, True])
+    @pytest.mark.parametrize("boundary", ["managed", "file"])
+    @pytest.mark.parametrize(
+        "state", ["staging", "prepared", "recovering", "committed"]
+    )
+    def test_request_authorization_preserves_foreign_pending_journal(
+        tmp_path: Path,
+        boundary: str,
+        state: str,
+        *,
+        inside: bool,
+    ) -> None:
+        """Reject undeclared capabilities before scope or destination leases exist."""
+        root = u.Tests.git_repository(tmp_path / "source")
+        foreign = root / "undeclared" if inside else tmp_path / "foreign"
+        foreign.mkdir()
+        marker = foreign / "unknown-wip.bin"
+        marker.write_bytes(b"preserve unrelated work")
+        marker_before = tm.ok(
+            u.Cli.atomic_read_binary_file_state(marker, required=True)
+        )
+        mise_owner = FlextInfraCodegenMiseArtifacts(repository_root=root)
+        planner = FlextInfraMiseWorkspacePlanner(mise_owner)
+        layout = tm.ok(
+            planner.file_layout(root, {"@foreign-0": foreign}, transaction_id="d" * 32),
+        )
+        journal = tm.ok(
+            FlextInfraMiseArtifactsJournal.begin(
+                m.Infra.CodegenFileSessionPlan(layout=layout),
+                transaction_id=tm.not_none(layout.transaction_id),
+            ),
+        )
+        recorded = m.Infra.CodegenTransactionJournal.model_validate({
+            **journal.model_dump(),
+            "state": state,
+        })
+        before = tm.ok(
+            FlextInfraMiseArtifactsJournal.write(
+                layout,
+                recorded,
+                expected=tm.ok(
+                    u.Cli.atomic_read_binary_file_state(
+                        layout.journal_path,
+                        required=False,
+                    ),
+                ),
+            ),
+        )
+        owner = transaction.FlextInfraCodegenTransaction(
+            mise_owner,
+            participant_policy=m.Infra.CodegenParticipantPolicy(
+                scope_root=root,
+                roots=(tm.ok(u.Cli.atomic_plan_directory_chain(root)),),
+            ),
+        )
+        observed = tm.ok(owner.inspect_journal())
+        tm.that(observed.pending_roots, eq=(foreign,))
+        tm.that(observed.journal_state, eq=state)
+
+        if boundary == "managed":
+            result = owner.run_locked(
+                prepare=True,
+                operation=lambda _scope: r[bool].ok(value=True),
+            )
+        else:
+            result = owner.run_files_locked(
+                {"@current-0": root},
+                lambda _scope: r[bool].ok(value=True),
+            )
+
+        tm.fail(result, has="outside authorized roots")
+        tm.that(
+            tm.ok(
+                u.Cli.atomic_read_binary_file_state(
+                    layout.journal_path,
+                    required=True,
+                ),
+            ),
+            eq=before,
+        )
+        tm.that(
+            tm.ok(u.Cli.atomic_read_binary_file_state(marker, required=True)),
+            eq=marker_before,
+        )
+        tm.that(
+            layout.journal_path.with_name(f"{layout.journal_path.name}.lock").exists(),
+            eq=False,
+        )
+        tm.that((foreign / c.Infra.TRANSACTION_STATE_DIRNAME).exists(), eq=False)
+        tm.that((root / c.Infra.TRANSACTION_STATE_DIRNAME).exists(), eq=False)
+
+    @staticmethod
+    def test_effect_free_inspection_preserves_corrupt_journal(tmp_path: Path) -> None:
+        """Preserve the original parser failure without creating recovery state."""
+        root = u.Tests.git_repository(tmp_path)
+        owner = transaction.FlextInfraCodegenTransaction(
+            FlextInfraCodegenMiseArtifacts(repository_root=root),
+        )
+        absent = tm.ok(owner.inspect_journal())
+        tm.that(absent.journal_state, eq="absent")
+        tm.that(absent.journal_path.exists(), eq=False)
+        tm.ok(
+            u.Cli.atomic_write_binary_file_guarded(
+                absent.snapshot,
+                b"invalid journal",
+                permission_mode=c.Infra.JOURNAL_MODE,
+            ),
+        )
+        corrupted = tm.ok(
+            u.Cli.atomic_read_binary_file_state(absent.journal_path, required=True),
+        )
+        with pytest.raises(ValueError):
+            owner.inspect_journal()
+        tm.that(
+            tm.ok(
+                u.Cli.atomic_read_binary_file_state(
+                    absent.journal_path,
+                    required=True,
+                ),
+            ),
+            eq=corrupted,
+        )
+        tm.that(
+            absent.journal_path.with_name(f"{absent.journal_path.name}.lock").exists(),
+            eq=False,
+        )
+        tm.that((root / c.Infra.TRANSACTION_STATE_DIRNAME).exists(), eq=False)
+
+    @staticmethod
+    def test_injected_root_authorization_permits_owned_recovery(
+        tmp_path: Path,
+    ) -> None:
+        """The bound permits a genuine requested-root journal and cleanup."""
+        root = u.Tests.git_repository(tmp_path)
+        owner = transaction.FlextInfraCodegenTransaction(
+            FlextInfraCodegenMiseArtifacts(repository_root=root),
+            participant_policy=m.Infra.CodegenParticipantPolicy(
+                scope_root=root,
+                roots=(tm.ok(u.Cli.atomic_plan_directory_chain(root)),),
+            ),
+        )
+        roots = {"@current-0": root}
+        session = tm.ok(
+            owner.run_files_locked(
+                roots,
+                lambda scope: owner.begin_files_locked(scope, roots, ()),
+            ),
+        )
+        tm.ok(
+            owner.run_locked(
+                prepare=True,
+                operation=lambda _scope: r[bool].ok(value=True),
+            ),
+        )
+        tm.that(session.plan.layout.journal_path.exists(), eq=False)
+
+    @staticmethod
+    @pytest.mark.parametrize(
+        "phase",
+        [
+            c.Infra.CodegenStagedFilePhase.CONFORM,
+            c.Infra.CodegenStagedFilePhase.CONFORM_BOOTSTRAP,
+        ],
+    )
     @pytest.mark.parametrize("content", [b"", b"obsolete generated document\n"])
     def test_planned_deletion_publishes_without_a_success_none_payload(
         tmp_path: Path,
         content: bytes,
+        phase: c.Infra.CodegenStagedFilePhase,
     ) -> None:
         """A journaled deletion has no replacement but a valid result receipt."""
         root = u.Tests.git_repository(tmp_path)
@@ -39,6 +204,10 @@ class TestsFlextInfraTransactionStaging:
         before = tm.ok(u.Cli.atomic_read_binary_file_state(target, required=True))
         owner = transaction.FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root),
+            participant_policy=m.Infra.CodegenParticipantPolicy(
+                scope_root=root,
+                roots=(tm.ok(u.Cli.atomic_plan_directory_chain(root)),),
+            ),
         )
         roots = {"@docs-0": root}
 
@@ -47,7 +216,7 @@ class TestsFlextInfraTransactionStaging:
                 scope_root,
                 roots,
                 m.Infra.CodegenPhaseAnalysis(
-                    phase=c.Infra.CodegenStagedFilePhase.CONFORM,
+                    phase=phase,
                     inputs=(before,),
                     files=(
                         m.Infra.CodegenFilePlan(
@@ -70,10 +239,18 @@ class TestsFlextInfraTransactionStaging:
         tm.that(target.exists(), eq=False)
 
     @staticmethod
+    @pytest.mark.parametrize(
+        "phase",
+        [
+            c.Infra.CodegenStagedFilePhase.CONFORM,
+            c.Infra.CodegenStagedFilePhase.CONFORM_BOOTSTRAP,
+        ],
+    )
     @pytest.mark.parametrize("scenario", ["valid", "stale-origin", "tampered"])
     def test_staged_package_public_import_precedes_publication(
         tmp_path: Path,
         scenario: str,
+        phase: c.Infra.CodegenStagedFilePhase,
     ) -> None:
         """Consume isolated real modules; reject old origins and changed bytes."""
         root = u.Tests.git_repository(tmp_path)
@@ -128,7 +305,7 @@ class TestsFlextInfraTransactionStaging:
 
         def publish(scope_root: Path) -> p.Result[t.VariadicTuple[Path]]:
             analysis = m.Infra.CodegenPhaseAnalysis(
-                phase=c.Infra.CodegenStagedFilePhase.CONFORM,
+                phase=phase,
                 inputs=states,
                 files=(
                     m.Infra.CodegenFilePlan(
@@ -147,6 +324,7 @@ class TestsFlextInfraTransactionStaging:
                 session: m.Infra.CodegenTransactionSession,
                 publications: t.VariadicTuple[m.Infra.CodegenStagedFile],
             ) -> p.Result[m.Infra.CodegenTransactionSession]:
+                tm.that(publications[0].phase, eq=phase)
                 materialized = owner.materialize_package_view_locked(
                     session, stage_plan, publications[0]
                 )

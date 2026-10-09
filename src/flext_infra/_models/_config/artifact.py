@@ -647,6 +647,14 @@ class FlextInfraConfigModelsArtifact:
             ):
                 msg = "file-only surfaces require the self repository scope"
                 raise ValueError(msg)
+            if (
+                self.what
+                == FlextInfraConstantsCodegenProject.CodegenConformSurface.MISE_CONFIG
+                and self.scope
+                != FlextInfraConstantsCodegenProject.CodegenConformScope.SELF
+            ):
+                msg = "mise-config requires the self repository scope"
+                raise ValueError(msg)
             return self
 
     class CodegenArtifactComposition(FlextInfraConfigModelsContract.ConfigContract):

@@ -96,6 +96,7 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
 
         __module__: str
         __qualname__: str
+        __base__: FlextInfraProtocolsRopeRuntime.NativeClassMetadata | None
         __bases__: tuple[FlextInfraProtocolsRopeRuntime.NativeClassMetadata, ...]
 
     @runtime_checkable
@@ -213,6 +214,9 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
     @runtime_checkable
     class RopeProject(Protocol):
         """Rope project shape used by flext-infra."""
+
+        @property
+        def address(self) -> str: ...
 
         @property
         def root(self) -> FlextInfraProtocolsRopeRuntime.RopeRoot: ...
