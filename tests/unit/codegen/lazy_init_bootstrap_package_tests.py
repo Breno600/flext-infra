@@ -109,14 +109,19 @@ class TestsFlextInfraLazyInitBootstrapPackage:
         tm.that(rendered, lacks="install_lazy_exports")
 
     @staticmethod
-    def _helpers_import(module: str) -> str:
+    def _helpers_import(module: str, *, bootstrap_root: bool = False) -> str:
         """Return the helpers import line a generated initializer opens with.
 
         Returns:
             The resulting ``str``.
 
         """
-        return f"from {module} import {', '.join(c.Infra.LAZY_BOOTSTRAP_HELPERS)}"
+        helpers = (
+            c.Infra.LAZY_BOOTSTRAP_HELPERS
+            if bootstrap_root
+            else ("install_lazy_exports",)
+        )
+        return f"from {module} import {', '.join(helpers)}"
 
     def test_other_distributions_import_the_helpers_from_the_bootstrap_root(
         self,
@@ -174,7 +179,10 @@ class TestsFlextInfraLazyInitBootstrapPackage:
             )
             tm.that(
                 init_content,
-                contains=self._helpers_import(c.Infra.LAZY_BOOTSTRAP_MODULE),
+                contains=self._helpers_import(
+                    c.Infra.LAZY_BOOTSTRAP_MODULE,
+                    bootstrap_root=package_dir == package_root,
+                ),
             )
             tm.that(
                 init_content,

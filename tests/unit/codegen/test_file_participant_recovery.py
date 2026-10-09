@@ -11,11 +11,11 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m, p, r, t, u
+from flext_infra import c, m, p, r, t
 from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 from flext_infra.validate import FlextInfraValidateFreshImport
-from tests import u as test_u
+from tests import u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -31,7 +31,7 @@ class TestsFlextInfraFileParticipantRecovery:
         invalid_later_plan: str,
     ) -> None:
         """A rejected phase cannot strand earlier replacements outside its journal."""
-        root = test_u.Tests.git_repository(tmp_path)
+        root = u.Tests.git_repository(tmp_path)
         nested = root / "unregistered"
         nested.mkdir()
         first = root / "first.md"
@@ -81,14 +81,14 @@ class TestsFlextInfraFileParticipantRecovery:
             tm.that(second.exists(), eq=False)
         # A fresh public transaction entry authenticates and reconciles the tree;
         # the previous implementation refuses its unregistered phase directory.
-        tm.ok(owner.run_files_locked(roots, lambda _scope: r[bool].ok(True)))
+        tm.ok(owner.run_files_locked(roots, lambda _scope: r[bool].ok(value=True)))
 
     @staticmethod
     def test_fresh_import_failure_restores_published_initializer(
         tmp_path: Path,
     ) -> None:
         """Test fresh import failure restores published initializer."""
-        root = test_u.Tests.git_repository(tmp_path)
+        root = u.Tests.git_repository(tmp_path)
         package = root / c.Infra.DEFAULT_SRC_DIR / "flext_import_probe"
         package.mkdir(parents=True)
         initializer = package / c.Infra.INIT_PY
@@ -127,12 +127,12 @@ class TestsFlextInfraFileParticipantRecovery:
         )
         tm.that(restored.content, eq=before.content)
         tm.that(restored.mode, eq=before.mode)
-        tm.ok(owner.run_files_locked(roots, lambda _scope: r[bool].ok(True)))
+        tm.ok(owner.run_files_locked(roots, lambda _scope: r[bool].ok(value=True)))
 
     @staticmethod
     def test_recovers_external_only_prepared_journal(tmp_path: Path) -> None:
         """Test recovers external only prepared journal."""
-        workspace = test_u.Tests.create_docs_workspace(tmp_path, project_names=())
+        workspace = u.Tests.create_docs_workspace(tmp_path, project_names=())
         docs_root = tmp_path / "published-docs"
         docs_root.mkdir()
         roots = {"@docs-0": docs_root}
@@ -155,7 +155,7 @@ class TestsFlextInfraFileParticipantRecovery:
 
         recovered = transaction.run_files_locked(
             roots,
-            lambda _scope_root: r[bool].ok(True),
+            lambda _scope_root: r[bool].ok(value=True),
         )
 
         tm.ok(recovered)
@@ -168,7 +168,7 @@ class TestsFlextInfraFileParticipantRecovery:
         foreign_change: str,
     ) -> None:
         """Recover owned publications, but retain foreign trees and their evidence."""
-        root = test_u.Tests.git_repository(tmp_path)
+        root = u.Tests.git_repository(tmp_path)
         owner = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
@@ -198,7 +198,7 @@ class TestsFlextInfraFileParticipantRecovery:
         if foreign_change != "none":
             (staging / "foreign.bin").write_bytes(b"preserve")
 
-        recovered = owner.run_files_locked(roots, lambda _scope: r[bool].ok(True))
+        recovered = owner.run_files_locked(roots, lambda _scope: r[bool].ok(value=True))
 
         if foreign_change == "none":
             tm.ok(recovered)
@@ -221,7 +221,7 @@ class TestsFlextInfraFileParticipantRecovery:
         with_foreign_file: bool,
     ) -> None:
         """A pre-manifest crash receipt permits only exact empty-directory cleanup."""
-        root = test_u.Tests.git_repository(tmp_path)
+        root = u.Tests.git_repository(tmp_path)
         owner = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
@@ -251,7 +251,7 @@ class TestsFlextInfraFileParticipantRecovery:
         if with_foreign_file:
             (staging / "foreign.bin").write_bytes(b"not journaled")
 
-        recovered = owner.run_files_locked(roots, lambda _scope: r[bool].ok(True))
+        recovered = owner.run_files_locked(roots, lambda _scope: r[bool].ok(value=True))
 
         if with_foreign_file:
             tm.fail(recovered)
@@ -271,7 +271,7 @@ class TestsFlextInfraFileParticipantRecovery:
         journal_change: str,
     ) -> None:
         """Retain the causal failure and publications when journal authority changes."""
-        root = test_u.Tests.git_repository(tmp_path)
+        root = u.Tests.git_repository(tmp_path)
         owner = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
@@ -342,6 +342,6 @@ class TestsFlextInfraFileParticipantRecovery:
                     tm.ok(u.Cli.atomic_read_binary_file_state(target, required=True)),
                     eq=before,
                 )
-            return r[bool].ok(True)
+            return r[bool].ok(value=True)
 
         tm.ok(owner.run_files_locked(roots, fail_session))

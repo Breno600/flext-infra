@@ -16,7 +16,7 @@ from flext_infra import m, u
 from flext_infra.codemod import FlextInfraApplyRenames
 
 
-class TestsRenamePreflight:
+class TestsFlextInfraRenamePreflight:
     """Observe real native rename events without replacing publication owners."""
 
     @staticmethod
@@ -31,7 +31,10 @@ class TestsRenamePreflight:
             encoding="utf-8",
         )
         consumer = mod_workspace / "consumer.py"
-        original = "from definer import Public\nclass Derived(Public):\n    New = 99\nvalue = Derived.Old\n"
+        original = (
+            "from definer import Public\nclass Derived(Public):\n    New = 99\n"
+            "value = Derived.Old\n"
+        )
         consumer.write_text(original, encoding="utf-8")
         guide = mod_workspace / "guide.md"
         guide.write_text("Old\n", encoding="utf-8")
@@ -67,7 +70,8 @@ class TestsRenamePreflight:
             "from flext_infra.codemod import FlextInfraApplyRenames\n"
             "root = Path(sys.argv[1])\neffects = []\n"
             "def observe(event, args):\n"
-            "    if event == 'os.rename' and Path(str(args[1])).name in {'guide.md', 'syntax.py'}:\n"
+            "    if event == 'os.rename' and Path(str(args[1])).name"
+            " in {'guide.md', 'syntax.py'}:\n"
             "        effects.append(event)\n"
             "sys.addaudithook(observe)\n"
             "with pytest.raises(SyntaxError):\n"

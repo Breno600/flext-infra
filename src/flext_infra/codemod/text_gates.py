@@ -117,6 +117,7 @@ class FlextInfraModTextGateEngine:
         """
         # The packaged rules live at the same sub-path of whichever SSOT
         # config directory is active, including a declared relocation.
+
         provider = FlextInfraConfig.ssot_config_dir() / (
             c.Infra.CODEMOD_TEXT_RULES_RELPATH.relative_to(c.CONFIG_DIR_NAME)
         )
@@ -148,7 +149,7 @@ class FlextInfraModTextGateEngine:
 
         """
         rules: list[m.Infra.ModTextRule] = []
-        owners: dict[str, Path] = {}
+        owners: t.MutableMappingKV[str, Path] = {}
         for snapshot in snapshots:
             parsed = cls._rules_from_state(snapshot)
             if parsed.failure:
@@ -201,18 +202,18 @@ class FlextInfraModTextGateEngine:
         return r[t.VariadicTuple[m.Infra.ModTextRule]].ok(tuple(rules))
 
     @staticmethod
-    def _build_rule(
-        raw: p.AttributeProbe,
+    def _validated_entry(
+        raw: t.JsonValue,
         source: Path,
-    ) -> p.Result[m.Infra.ModTextRule]:
-        """Validate one raw list entry into a frozen text rule.
+    ) -> p.Result[t.MappingKV[str, t.JsonValue]]:
+        """Require one catalogue entry to be a mapping with only known keys.
 
         Returns:
-            The resulting ``p.Result[m.Infra.ModTextRule]``.
+            The resulting ``p.Result[t.MappingKV[str, t.JsonValue]]``.
 
         """
         if not isinstance(raw, dict):
-            return r[m.Infra.ModTextRule].fail(
+            return r[t.MappingKV[str, t.JsonValue]].fail(
                 f"text rule entry must be a mapping in {source}: {raw!r}",
             )
         unknown = set(raw).difference((
@@ -228,75 +229,224 @@ class FlextInfraModTextGateEngine:
             c.Infra.CODEMOD_TEXT_KEY_DISTRIBUTIONS,
         ))
         if unknown:
-            return r[m.Infra.ModTextRule].fail(
+            return r[t.MappingKV[str, t.JsonValue]].fail(
                 f"unknown text rule keys {sorted(unknown)} in {source}",
             )
+        return r[t.MappingKV[str, t.JsonValue]].ok(raw)
+
+    @staticmethod
+    def _entry_sequence(
+        entry: t.MappingKV[str, t.JsonValue],
+        key: str,
+    ) -> tuple[t.JsonValue, ...]:
+        """Read one entry field as a JSON sequence under bare iteration semantics.
+
+        Returns:
+            The declared sequence contents; a mapping contributes its keys and
+            scalar or absent values contribute nothing.
+
+        """
+        declared = entry.get(key, ())
+        if isinstance(declared, (list, tuple, str, dict)):
+            return tuple(declared)
+        return ()
+
+    @staticmethod
+    def _validated_pattern_fields(
+        entry: t.MappingKV[str, t.JsonValue],
+        source: Path,
+    ) -> p.Result[tuple[str, t.VariadicTuple[str], re.Pattern[str]]]:
+        """Validate the find regex and its declared flag names.
+
+        Returns:
+            The resulting validated ``(find, flags, compiled)`` pattern triple.
+
+        """
         flag_names = tuple(
-            str(flag) for flag in raw.get(c.Infra.CODEMOD_TEXT_KEY_FLAGS, ())
+            str(flag)
+            for flag in FlextInfraModTextGateEngine._entry_sequence(
+                entry,
+                c.Infra.CODEMOD_TEXT_KEY_FLAGS,
+            )
         )
         unknown_flags = set(flag_names).difference(c.Infra.CODEMOD_TEXT_FLAG_NAMES)
         if unknown_flags:
-            return r[m.Infra.ModTextRule].fail(
+            return r[tuple[str, t.VariadicTuple[str], re.Pattern[str]]].fail(
                 f"unknown regex flag names {sorted(unknown_flags)} in {source}",
             )
-        find = raw.get(c.Infra.CODEMOD_TEXT_KEY_FIND)
+        find = entry.get(c.Infra.CODEMOD_TEXT_KEY_FIND)
         if not isinstance(find, str) or not find:
-            return r[m.Infra.ModTextRule].fail(
+            return r[tuple[str, t.VariadicTuple[str], re.Pattern[str]]].fail(
                 f"text rule requires a non-empty find regex in {source}",
-            )
-        expected = raw.get(c.Infra.CODEMOD_TEXT_KEY_EXPECTED)
-        if expected is not None and (
-            not isinstance(expected, int) or isinstance(expected, bool) or expected < 0
-        ):
-            return r[m.Infra.ModTextRule].fail(
-                f"text rule expected receipt must be non-negative in {source}",
-            )
-        capture_equals = raw.get(c.Infra.CODEMOD_TEXT_KEY_CAPTURE_EQUALS, {})
-        distributions = raw.get(c.Infra.CODEMOD_TEXT_KEY_DISTRIBUTIONS, ())
-        if (
-            not isinstance(distributions, (list, tuple))
-            or any(
-                not isinstance(name, str) or not name.strip() or name != name.strip()
-                for name in distributions
-            )
-            or len(set(distributions)) != len(distributions)
-        ):
-            return r[m.Infra.ModTextRule].fail(
-                f"text rule distributions must be unique non-empty names in {source}",
-            )
-        if not isinstance(capture_equals, dict) or any(
-            not isinstance(name, str) or not isinstance(value, str)
-            for name, value in capture_equals.items()
-        ):
-            return r[m.Infra.ModTextRule].fail(
-                f"text rule capture_equals must map captures to strings in {source}",
             )
         try:
             compiled = re.compile(find)
         except re.error as error:
-            return r[m.Infra.ModTextRule].fail(
+            return r[tuple[str, t.VariadicTuple[str], re.Pattern[str]]].fail(
                 f"invalid find regex in {source}: {error}",
             )
-        unknown_captures = set(capture_equals).difference(compiled.groupindex)
+        return r[tuple[str, t.VariadicTuple[str], re.Pattern[str]]].ok(
+            (find, flag_names, compiled),
+        )
+
+    @staticmethod
+    def _validated_captures(
+        entry: t.MappingKV[str, t.JsonValue],
+        source: Path,
+        compiled: re.Pattern[str],
+    ) -> p.Result[t.MappingKV[str, str]]:
+        """Validate the capture_equals map against the compiled pattern groups.
+
+        Returns:
+            The resulting ``p.Result[t.MappingKV[str, str]]``.
+
+        """
+        raw_captures = entry.get(c.Infra.CODEMOD_TEXT_KEY_CAPTURE_EQUALS, {})
+        if not isinstance(raw_captures, dict):
+            return FlextInfraModTextGateEngine._captures_failure(source)
+        captures: dict[str, str] = {}
+        for name, value in raw_captures.items():
+            if not isinstance(value, str):
+                return FlextInfraModTextGateEngine._captures_failure(source)
+            captures[name] = value
+        unknown_captures = set(captures).difference(compiled.groupindex)
         if unknown_captures:
-            return r[m.Infra.ModTextRule].fail(
+            return r[t.MappingKV[str, str]].fail(
                 f"unknown regex captures {sorted(unknown_captures)} in {source}",
             )
+        return r[t.MappingKV[str, str]].ok(captures)
+
+    @staticmethod
+    def _validated_selector_fields(
+        entry: t.MappingKV[str, t.JsonValue],
+        source: Path,
+        compiled: re.Pattern[str],
+    ) -> p.Result[tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]]:
+        """Validate distributions, the capture map, and the expected receipt.
+
+        Returns:
+            The resulting validated ``(distributions, captures, expected)`` triple.
+
+        """
+        raw_declared = entry.get(c.Infra.CODEMOD_TEXT_KEY_DISTRIBUTIONS, ())
+        declared = FlextInfraModTextGateEngine._entry_sequence(
+            entry,
+            c.Infra.CODEMOD_TEXT_KEY_DISTRIBUTIONS,
+        )
+        if not isinstance(raw_declared, (list, tuple)) or any(
+            not isinstance(name, str) or not name.strip() or name != name.strip()
+            for name in declared
+        ):
+            return FlextInfraModTextGateEngine._selector_failure(source)
+        distributions = tuple(name for name in declared if isinstance(name, str))
+        if len(set(distributions)) != len(distributions):
+            return FlextInfraModTextGateEngine._selector_failure(source)
+        captures = FlextInfraModTextGateEngine._validated_captures(
+            entry,
+            source,
+            compiled,
+        )
+        if captures.failure:
+            return r[
+                tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]
+            ].from_failure(captures)
+        expected = entry.get(c.Infra.CODEMOD_TEXT_KEY_EXPECTED)
+        if expected is not None and (
+            not isinstance(expected, int) or isinstance(expected, bool) or expected < 0
+        ):
+            return r[
+                tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]
+            ].fail(
+                f"text rule expected receipt must be non-negative in {source}",
+            )
+        return r[tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]].ok((
+            distributions,
+            captures.value,
+            expected,
+        ))
+
+    @staticmethod
+    def _selector_failure(
+        source: Path,
+    ) -> p.Result[tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]]:
+        """Report invalid distribution declarations with the canonical message.
+
+        Returns:
+            The resulting failure for one invalid distributions declaration.
+
+        """
+        return r[tuple[t.VariadicTuple[str], t.MappingKV[str, str], int | None]].fail(
+            f"text rule distributions must be unique non-empty names in {source}",
+        )
+
+    @staticmethod
+    def _captures_failure(
+        source: Path,
+    ) -> p.Result[t.MappingKV[str, str]]:
+        """Report invalid capture maps with the canonical message.
+
+        Returns:
+            The resulting failure for one invalid capture_equals mapping.
+
+        """
+        return r[t.MappingKV[str, str]].fail(
+            f"text rule capture_equals must map captures to strings in {source}",
+        )
+
+    @staticmethod
+    def _build_rule(
+        raw: t.JsonValue,
+        source: Path,
+    ) -> p.Result[m.Infra.ModTextRule]:
+        """Validate one raw list entry into a frozen text rule.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ModTextRule]``.
+
+        """
+        entry = FlextInfraModTextGateEngine._validated_entry(raw, source)
+        if entry.failure:
+            return r[m.Infra.ModTextRule].from_failure(entry)
+        pattern = FlextInfraModTextGateEngine._validated_pattern_fields(
+            entry.value,
+            source,
+        )
+        if pattern.failure:
+            return r[m.Infra.ModTextRule].from_failure(pattern)
+        find, flags, compiled = pattern.value
+        selector = FlextInfraModTextGateEngine._validated_selector_fields(
+            entry.value,
+            source,
+            compiled,
+        )
+        if selector.failure:
+            return r[m.Infra.ModTextRule].from_failure(selector)
+        distributions, captures, expected = selector.value
+        scopes: t.MutableMappingKV[str, t.VariadicTuple[str]] = {}
+        for key in (
+            c.Infra.CODEMOD_TEXT_KEY_INCLUDE,
+            c.Infra.CODEMOD_TEXT_KEY_EXCLUDE,
+        ):
+            if key not in entry.value:
+                continue
+            declared = entry.value[key]
+            if not isinstance(declared, (list, tuple)) or any(
+                not isinstance(glob, str) or not glob.strip() for glob in declared
+            ):
+                return r[m.Infra.ModTextRule].fail(
+                    f"text rule {key} must be a list of non-empty strings in {source}",
+                )
+            scopes[key] = tuple(glob for glob in declared if isinstance(glob, str))
         rule = m.Infra.ModTextRule(
-            rule_id=str(raw.get(c.Infra.CODEMOD_TEXT_KEY_ID, "")),
-            description=str(raw.get(c.Infra.CODEMOD_TEXT_KEY_DESCRIPTION, "")),
-            include=tuple(
-                str(glob) for glob in raw.get(c.Infra.CODEMOD_TEXT_KEY_INCLUDE, ())
-            ),
-            exclude=tuple(
-                str(glob) for glob in raw.get(c.Infra.CODEMOD_TEXT_KEY_EXCLUDE, ())
-            ),
-            distributions=tuple(distributions),
+            rule_id=str(entry.value.get(c.Infra.CODEMOD_TEXT_KEY_ID, "")),
+            description=str(entry.value.get(c.Infra.CODEMOD_TEXT_KEY_DESCRIPTION, "")),
+            distributions=distributions,
             find=find,
-            replace=str(raw.get(c.Infra.CODEMOD_TEXT_KEY_REPLACE, "")),
-            flags=flag_names,
-            capture_equals=capture_equals,
+            replace=str(entry.value.get(c.Infra.CODEMOD_TEXT_KEY_REPLACE, "")),
+            flags=flags,
+            capture_equals=captures,
             expected=expected,
+            **scopes,
         )
         if not rule.rule_id:
             return r[m.Infra.ModTextRule].fail(
@@ -350,6 +500,199 @@ class FlextInfraModTextGateEngine:
         return r[t.VariadicTuple[Path]].ok(tuple(sorted(paths)))
 
     @classmethod
+    def _elected_rules(
+        cls,
+        root: Path,
+    ) -> p.Result[
+        t.Triple[
+            t.VariadicTuple[m.Cli.AtomicFileState],
+            m.Cli.AtomicFileState,
+            t.VariadicTuple[m.Infra.ModTextRule],
+        ]
+    ]:
+        """Authenticate the catalogues and the project identity, then elect rules.
+
+        Returns:
+            The resulting authenticated ``(catalogues, identity, rules)`` triple.
+
+        """
+        catalogues = cls._catalogue_states(root)
+        if catalogues.failure:
+            return r[
+                t.Triple[
+                    t.VariadicTuple[m.Cli.AtomicFileState],
+                    m.Cli.AtomicFileState,
+                    t.VariadicTuple[m.Infra.ModTextRule],
+                ]
+            ].from_failure(catalogues)
+        loaded = cls._rules_from_states(catalogues.value)
+        if loaded.failure:
+            return r[
+                t.Triple[
+                    t.VariadicTuple[m.Cli.AtomicFileState],
+                    m.Cli.AtomicFileState,
+                    t.VariadicTuple[m.Infra.ModTextRule],
+                ]
+            ].from_failure(loaded)
+        identity = u.Cli.atomic_read_binary_file_state(
+            root / c.PYPROJECT_FILENAME,
+            required=True,
+        )
+        if identity.failure:
+            return r[
+                t.Triple[
+                    t.VariadicTuple[m.Cli.AtomicFileState],
+                    m.Cli.AtomicFileState,
+                    t.VariadicTuple[m.Infra.ModTextRule],
+                ]
+            ].from_failure(identity)
+        selected = cls._selected_rules(identity.value, loaded.value)
+        if selected.failure:
+            return r[
+                t.Triple[
+                    t.VariadicTuple[m.Cli.AtomicFileState],
+                    m.Cli.AtomicFileState,
+                    t.VariadicTuple[m.Infra.ModTextRule],
+                ]
+            ].from_failure(selected)
+        return r[
+            t.Triple[
+                t.VariadicTuple[m.Cli.AtomicFileState],
+                m.Cli.AtomicFileState,
+                t.VariadicTuple[m.Infra.ModTextRule],
+            ]
+        ].ok((catalogues.value, identity.value, selected.value))
+
+    @staticmethod
+    def _authenticated_source(
+        root: Path,
+        path: Path,
+    ) -> p.Result[t.Triple[m.Cli.AtomicFileState, str, str]]:
+        """Read one source's authenticated bytes with its repository-relative name.
+
+        Returns:
+            The resulting ``(state, text, relative)`` triple.
+
+        """
+        relative = path.relative_to(root).as_posix()
+        captured = u.Cli.atomic_read_binary_file_state(path, required=True)
+        if captured.failure:
+            return r[t.Triple[m.Cli.AtomicFileState, str, str]].from_failure(captured)
+        before = captured.value
+        if before.content is None:
+            return r[t.Triple[m.Cli.AtomicFileState, str, str]].fail(
+                f"text source disappeared during inventory: {path}",
+            )
+        return r[t.Triple[m.Cli.AtomicFileState, str, str]].ok((
+            before,
+            before.content.decode(c.Cli.ENCODING_DEFAULT),
+            relative,
+        ))
+
+    @staticmethod
+    def _rewrite_plan(
+        root: Path,
+        path: Path,
+        before: m.Cli.AtomicFileState,
+        updated: str,
+        base_states: t.VariadicTuple[m.Cli.AtomicFileState],
+    ) -> m.Infra.CodegenFilePlan:
+        """Build one authenticated publication plan for a rewritten source.
+
+        Returns:
+            The resulting ``m.Infra.CodegenFilePlan``.
+
+        """
+        return m.Infra.CodegenFilePlan(
+            project=root,
+            path=path,
+            before=before,
+            desired_content=updated.encode(c.Cli.ENCODING_DEFAULT),
+            desired_mode=before.mode,
+            source_states=(*base_states, before),
+            owner="mod-text",
+        )
+
+    @classmethod
+    def _scan_paths(
+        cls,
+        root: Path,
+        sources: t.SequenceOf[Path],
+        rules: t.VariadicTuple[m.Infra.ModTextRule],
+        base_states: t.VariadicTuple[m.Cli.AtomicFileState],
+        *,
+        fix: bool,
+    ) -> p.Result[
+        t.Triple[
+            m.Infra.ModTextReport,
+            t.VariadicTuple[m.Infra.CodegenFilePlan],
+            t.VariadicTuple[m.Cli.AtomicFileState],
+        ]
+    ]:
+        """Rewrite every elected source and collect the report and fix plans.
+
+        Returns:
+            The resulting ``(report, plans, inputs)`` triple.
+
+        """
+        entries: list[m.Infra.ModTextFinding] = []
+        files: set[Path] = set()
+        actionable = 0
+        inputs = [*base_states]
+        plans: list[m.Infra.CodegenFilePlan] = []
+        for path in sources:
+            prepared = cls._authenticated_source(root, path)
+            if prepared.failure:
+                return r[
+                    t.Triple[
+                        m.Infra.ModTextReport,
+                        t.VariadicTuple[m.Infra.CodegenFilePlan],
+                        t.VariadicTuple[m.Cli.AtomicFileState],
+                    ]
+                ].from_failure(prepared)
+            before, source, relative = prepared.value
+            inputs.append(before)
+            updated, target_entries, target_actionable = cls._rewrite_source(
+                source,
+                relative,
+                rules,
+            )
+            entries.extend(target_entries)
+            actionable += target_actionable
+            if target_entries:
+                files.add(Path(relative))
+            if fix and updated != source:
+                if source.startswith(c.Infra.AUTOGEN_HEADERS):
+                    return r[
+                        t.Triple[
+                            m.Infra.ModTextReport,
+                            t.VariadicTuple[m.Infra.CodegenFilePlan],
+                            t.VariadicTuple[m.Cli.AtomicFileState],
+                        ]
+                    ].fail(
+                        "generated findings require canonical generator repair: "
+                        f"{path}",
+                    )
+                if path.suffix == c.Infra.EXT_PYTHON:
+                    ast.parse(updated, filename=str(path))
+                plans.append(
+                    cls._rewrite_plan(root, path, before, updated, base_states),
+                )
+        report = m.Infra.ModTextReport(
+            findings=len(entries),
+            actionable=actionable,
+            files=frozenset(files),
+            entries=tuple(entries),
+        )
+        return r[
+            t.Triple[
+                m.Infra.ModTextReport,
+                t.VariadicTuple[m.Infra.CodegenFilePlan],
+                t.VariadicTuple[m.Cli.AtomicFileState],
+            ]
+        ].ok((report, tuple(plans), tuple(inputs)))
+
+    @classmethod
     def scan(
         cls,
         root: Path,
@@ -364,82 +707,60 @@ class FlextInfraModTextGateEngine:
 
         """
         root = root.absolute()
-        catalogues = cls._catalogue_states(root)
-        if catalogues.failure:
-            return r[m.Infra.ModTextReport].from_failure(catalogues)
-        loaded = cls._rules_from_states(catalogues.value)
-        if loaded.failure:
-            return r[m.Infra.ModTextReport].from_failure(loaded)
-        identity = u.Cli.atomic_read_binary_file_state(
-            root / c.PYPROJECT_FILENAME,
-            required=True,
-        )
-        if identity.failure:
-            return r[m.Infra.ModTextReport].from_failure(identity)
-        selected = cls._selected_rules(identity.value, loaded.value)
-        if selected.failure:
-            return r[m.Infra.ModTextReport].from_failure(selected)
-        rules = selected.value
+        context = cls._elected_rules(root)
+        if context.failure:
+            return r[m.Infra.ModTextReport].from_failure(context)
+        catalogues, identity, rules = context.value
         sources = cls._source_paths(root, rules)
         if sources.failure:
             return r[m.Infra.ModTextReport].from_failure(sources)
-        entries: list[m.Infra.ModTextFinding] = []
-        files: set[Path] = set()
-        actionable = 0
-        inputs = [*catalogues.value, identity.value]
-        plans: list[m.Infra.CodegenFilePlan] = []
-        for path in sources.value:
-            relative = path.relative_to(root).as_posix()
-            captured = u.Cli.atomic_read_binary_file_state(path, required=True)
-            if captured.failure:
-                return r[m.Infra.ModTextReport].from_failure(captured)
-            before = captured.value
-            if before.content is None:
-                return r[m.Infra.ModTextReport].fail(
-                    f"text source disappeared during inventory: {path}",
-                )
-            inputs.append(before)
-            source = before.content.decode(c.Cli.ENCODING_DEFAULT)
-            updated, target_entries, target_actionable = cls._rewrite_source(
-                source,
-                relative,
-                rules,
-            )
-            entries.extend(target_entries)
-            actionable += target_actionable
-            if target_entries:
-                files.add(Path(relative))
-            if fix and updated != source:
-                if source.startswith(c.Infra.AUTOGEN_HEADERS):
-                    return r[m.Infra.ModTextReport].fail(
-                        f"generated findings require generator repair: {path}",
-                    )
-                if path.suffix == c.Infra.EXT_PYTHON:
-                    ast.parse(updated, filename=str(path))
-                plans.append(
-                    m.Infra.CodegenFilePlan(
-                        project=root,
-                        path=path,
-                        before=before,
-                        desired_content=updated.encode(c.Cli.ENCODING_DEFAULT),
-                        desired_mode=before.mode,
-                        source_states=(*catalogues.value, identity.value, before),
-                        owner="mod-text",
-                    ),
-                )
-        report = m.Infra.ModTextReport(
-            findings=len(entries),
-            actionable=actionable,
-            files=frozenset(files),
-            entries=tuple(entries),
+        scanned = cls._scan_paths(
+            root,
+            sources.value,
+            rules,
+            (*catalogues, identity),
+            fix=fix,
         )
+        if scanned.failure:
+            return r[m.Infra.ModTextReport].from_failure(scanned)
+        report, plans, inputs = scanned.value
         if validate_receipts:
             cls._validate_expected_receipts(rules, report)
         if fix and plans:
-            published = cls._publish(root, tuple(plans), tuple(inputs), rules)
+            published = cls._publish(root, plans, inputs, rules)
             if published.failure:
                 return r[m.Infra.ModTextReport].from_failure(published)
         return r[m.Infra.ModTextReport].ok(report)
+
+    @classmethod
+    def _validate_inventory(
+        cls,
+        root: Path,
+        inputs: t.VariadicTuple[m.Cli.AtomicFileState],
+        rules: t.VariadicTuple[m.Infra.ModTextRule],
+    ) -> p.Result[bool]:
+        """Require the source inventory to be unchanged since the scan.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        catalogue_states = cls._catalogue_states(root)
+        if catalogue_states.failure:
+            return r[bool].from_failure(catalogue_states)
+        catalogues = {state.path for state in catalogue_states.value}
+        identity_path = root / c.PYPROJECT_FILENAME
+        expected = {
+            state.path
+            for state in inputs
+            if state.path not in catalogues and state.path != identity_path
+        }
+        observed = cls._source_paths(root, rules)
+        if observed.failure:
+            return r[bool].from_failure(observed)
+        if set(observed.value) != expected:
+            return r[bool].fail("text source inventory changed before publication")
+        return r[bool].ok(value=True)
 
     @classmethod
     def _publish(
@@ -459,29 +780,14 @@ class FlextInfraModTextGateEngine:
             FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
         roots = {"@mod-text": root}
-        identity_path = root / c.PYPROJECT_FILENAME
         analysis = m.Infra.CodegenPhaseAnalysis(
-            phase="mod-text",
+            phase=c.Infra.CodegenStagedFilePhase.MOD_TEXT,
             files=plans,
             inputs=inputs,
         )
 
         def validate_inventory() -> p.Result[bool]:
-            catalogue_states = cls._catalogue_states(root)
-            if catalogue_states.failure:
-                return r[bool].from_failure(catalogue_states)
-            catalogues = {state.path for state in catalogue_states.value}
-            expected = {
-                state.path
-                for state in inputs
-                if state.path not in catalogues and state.path != identity_path
-            }
-            observed = cls._source_paths(root, rules)
-            if observed.failure:
-                return r[bool].from_failure(observed)
-            if set(observed.value) != expected:
-                return r[bool].fail("text source inventory changed before publication")
-            return r[bool].ok(value=True)
+            return cls._validate_inventory(root, inputs, rules)
 
         def validate_published() -> p.Result[bool]:
             inventory = validate_inventory()

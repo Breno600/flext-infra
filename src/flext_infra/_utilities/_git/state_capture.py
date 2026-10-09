@@ -6,47 +6,18 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from collections.abc import Generator
-from contextlib import ExitStack, contextmanager
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-from flext_cli import u
 from git import GitCommandError
 
-from flext_infra import c, m, r, t
-from flext_infra._utilities._git.state_transition import (
-    FlextInfraUtilitiesGitStateTransitionMixin,
-)
-from flext_infra._utilities.codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
-
-if TYPE_CHECKING:
-    from flext_infra import p
+from flext_infra import m, p, r
+from flext_infra._utilities import FlextInfraUtilitiesGitStateTransitionMixin
 
 
 class FlextInfraUtilitiesGitStateCaptureMixin(
     FlextInfraUtilitiesGitStateTransitionMixin,
 ):
     """Use the existing Git-root writer leases and physical file preconditions."""
-
-    @classmethod
-    @contextmanager
-    def _state_leases(cls, roots: t.SequenceOf[Path]) -> Generator[None]:
-        journals = {
-            Path(cls._repo(root).git_dir) / c.Infra.JOURNAL_NAME for root in roots
-        }
-        with ExitStack() as stack:
-            for journal in sorted(journals):
-                u.Cli.atomic_read_binary_file_state(
-                    journal.with_name(f"{journal.name}.lock"),
-                    required=False,
-                ).unwrap()
-                stack.enter_context(
-                    FlextInfraUtilitiesCodegenFilePlan.codegen_transaction_lease(
-                        journal,
-                    ),
-                )
-            yield
 
     @classmethod
     def _state_apply(

@@ -76,7 +76,8 @@ class TestsFlextInfraSharedHelperPromotion:
             "ORDINARY = 'Shared'\n\n"
             "def echo(value: 'Shared') -> 'Shared':\n"
             "    return value\n\n"
-            "def annotated(value: \"Annotated[Shared, 'Shared']\") -> \"Literal['Shared']\":\n"
+            "def annotated(value: \"Annotated[Shared, 'Shared']\")"
+            " -> \"Literal['Shared']\":\n"
             "    return 'Shared'\n",
             encoding="utf-8",
         )
@@ -99,8 +100,39 @@ class TestsFlextInfraSharedHelperPromotion:
     def _run(root: Path, probe: str) -> str:
         env = os.environ.copy()
         env["PYTHONPATH"] = os.pathsep.join([str(root), *sys.path])
-        outcome = tm.ok(u.Cli.run([sys.executable, "-c", probe], cwd=root, env=env))
+        outcome = tm.ok(
+            u.Cli.run(
+                [sys.executable, "-c", probe],
+                cwd=root,
+                options=m.Cli.ProcessOptions(env=env),
+            ),
+        )
         return outcome.stdout.strip()
+
+    @staticmethod
+    def _seed_quoted_collision(root: Path, helper: str) -> None:
+        """Append a colliding quoted annotation binding to the quoted module."""
+        quoted = root / c.Infra.DIR_TESTS / "unit" / "quoted.py"
+        with infra.rope_workspace(root) as rope:
+            resource = rope.resource(quoted)
+            assert resource is not None
+            _, binding = u.Infra.import_binding(
+                rope.rope_project,
+                rope.rope_project.get_pymodule(resource),
+                rope.convention(
+                    root / c.Infra.DIR_TESTS / c.Infra.UTILITIES_PY,
+                ).module_name,
+                helper,
+            )
+        primary = ast.parse(binding, mode="eval").body
+        while isinstance(primary, ast.Attribute):
+            primary = primary.value
+        assert isinstance(primary, ast.Name)
+        quoted.write_text(
+            quoted.read_text(encoding="utf-8")
+            + f"\nclass Local:\n    {primary.id} = str\n    value: 'Shared'\n",
+            encoding="utf-8",
+        )
 
     @pytest.mark.parametrize("reexport", [False, True])
     @pytest.mark.parametrize("quoted_only", [False, True])
@@ -118,27 +150,7 @@ class TestsFlextInfraSharedHelperPromotion:
         if quoted_only:
             (root / c.Infra.DIR_TESTS / "unit" / "consumer.py").unlink()
         if lexical_collision:
-            quoted = root / c.Infra.DIR_TESTS / "unit" / "quoted.py"
-            with infra.rope_workspace(root) as rope:
-                resource = rope.resource(quoted)
-                assert resource is not None
-                _, binding = u.Infra.import_binding(
-                    rope.rope_project,
-                    rope.rope_project.get_pymodule(resource),
-                    rope.convention(
-                        root / c.Infra.DIR_TESTS / c.Infra.UTILITIES_PY,
-                    ).module_name,
-                    helper,
-                )
-            primary = ast.parse(binding, mode="eval").body
-            while isinstance(primary, ast.Attribute):
-                primary = primary.value
-            assert isinstance(primary, ast.Name)
-            quoted.write_text(
-                quoted.read_text(encoding="utf-8")
-                + f"\nclass Local:\n    {primary.id} = str\n    value: 'Shared'\n",
-                encoding="utf-8",
-            )
+            self._seed_quoted_collision(root, helper)
         probe = (
             "from typing import get_args, get_type_hints\n"
             "from tests.unit.quoted import ORDINARY, annotated, echo\n"
@@ -373,6 +385,78 @@ class TestsFlextInfraSharedHelperPromotion:
         with (
             infra.rope_workspace(root) as rope,
             pytest.raises(ValueError, match="requires one utilities facade"),
+        ):
+            u.Infra.plan_semantic_cutover(
+                c.Infra.SemanticCutoverPhase.CLASS_NESTING,
+                rope_workspace=rope,
+                sources=sources,
+            )
+        for path, original in sources.items():
+            tm.that(path.read_text(encoding="utf-8"), eq=original)
+
+    def test_destination_import_of_the_moving_helper_is_replaced(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Test a destination import of the helper is replaced by the move."""
+        root, source, helper = self._workspace(tmp_path, reexport=False)
+        utilities = root / c.Infra.DIR_TESTS / c.Infra.UTILITIES_PY
+        imported = f"from tests.unit._fixtures.behavior import {helper}\n"
+        utilities.write_text(
+            imported + "\n" + utilities.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        sources = {
+            path: path.read_text(encoding="utf-8") for path in root.rglob("*.py")
+        }
+        with infra.rope_workspace(root) as rope:
+            edits = tm.ok(
+                u.Infra.plan_semantic_cutover(
+                    c.Infra.SemanticCutoverPhase.CLASS_NESTING,
+                    rope_workspace=rope,
+                    sources=sources,
+                ),
+            )
+            proposed = dict(sources)
+            proposed.update({edit.file_path: edit.updated_source for edit in edits})
+            tm.that(
+                proposed[utilities],
+                has=f"class {helper}",
+                lacks=imported.strip(),
+            )
+            tm.that(proposed[source], lacks=f"class {helper}")
+            tm.that(
+                tm.ok(
+                    u.Infra.plan_semantic_cutover(
+                        c.Infra.SemanticCutoverPhase.CLASS_NESTING,
+                        rope_workspace=rope,
+                        sources=proposed,
+                    ),
+                ),
+                empty=True,
+            )
+        for path, original in sources.items():
+            tm.that(path.read_text(encoding="utf-8"), eq=original)
+
+    def test_destination_homonym_still_rejects_the_move(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Test a different object with the same name still rejects the move."""
+        root, _, helper = self._workspace(tmp_path, reexport=False)
+        utilities = root / c.Infra.DIR_TESTS / c.Infra.UTILITIES_PY
+        utilities.write_text(
+            f"class {helper}:\n"
+            "    def value(self) -> str:\n"
+            "        return 'other'\n\n" + utilities.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
+        sources = {
+            path: path.read_text(encoding="utf-8") for path in root.rglob("*.py")
+        }
+        with (
+            infra.rope_workspace(root) as rope,
+            pytest.raises(ValueError, match="already binds"),
         ):
             u.Infra.plan_semantic_cutover(
                 c.Infra.SemanticCutoverPhase.CLASS_NESTING,

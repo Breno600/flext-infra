@@ -20,12 +20,12 @@ class FlextInfraModelsMixins:
     Structure (flat — no sub-namespaces): CLI parameter mixins, field
     contract mixins, violation/detail mixins, release mixins, github
     mixins, and project-name variants. All exposed directly under
-    ``mm.<Mixin>`` for consumers.
+    ``FlextInfraModelsMixins.<Mixin>`` for consumers.
     """
 
     # ═══════════════════ CLI PARAMETER MIXINS ═══════════════════
 
-    class ScopeMixin:
+    class ScopeMixin(m.BaseModel):
         """Canonical CLI scope contract — workspace + project selection.
 
         Consolidates the former ``BaseMixin`` and ``ProjectMixin``
@@ -161,12 +161,16 @@ class FlextInfraModelsMixins:
         @m.computed_field
         @property
         def dry_run(self) -> bool:
-            """Whether writes are disabled (inverse of apply)."""
+            """Whether writes are disabled (inverse of apply).
+
+            Returns:
+                The resulting ``bool``.
+            """
             return not self.apply
 
     # ═══════════════════ RELEASE MIXINS ═══════════════════
 
-    class VersionTagMixin:
+    class VersionTagMixin(m.BaseModel):
         """Shared release identity fields."""
 
         version: Annotated[str, m.Field(description="Version string")] = ""
@@ -174,32 +178,32 @@ class FlextInfraModelsMixins:
 
     # ═══════════════════ FIELD CONTRACT MIXINS ═══════════════════
 
-    class FilePathMixin:
+    class FilePathMixin(m.BaseModel):
         """Shared required file path field."""
 
         file: Annotated[t.NonEmptyStr, m.Field(description="File path")]
 
-    class AbsoluteFilePathTextMixin:
+    class AbsoluteFilePathTextMixin(m.BaseModel):
         """Shared absolute file-path text field."""
 
         file_path: Annotated[t.NonEmptyStr, m.Field(description="Absolute file path")]
 
-    class PositiveLineMixin:
+    class PositiveLineMixin(m.BaseModel):
         """Shared positive line-number field."""
 
         line: Annotated[t.PositiveInt, m.Field(description="Line number")]
 
-    class RequiredNonNegativeLineMixin:
+    class RequiredNonNegativeLineMixin(m.BaseModel):
         """Shared required non-negative line-number field."""
 
         line: Annotated[t.NonNegativeInt, m.Field(description="Line number")]
 
-    class NonNegativeLineMixin:
+    class NonNegativeLineMixin(m.BaseModel):
         """Shared non-negative line-number field with default zero."""
 
         line: Annotated[t.NonNegativeInt, m.Field(description="Line number")] = 0
 
-    class NestedClassPathMixin:
+    class NestedClassPathMixin(m.BaseModel):
         """Shared optional nested class-path field."""
 
         class_path: Annotated[str, m.Field(description="Nested class path")] = ""
@@ -207,41 +211,41 @@ class FlextInfraModelsMixins:
     class FileLineViolationMixin(FilePathMixin, PositiveLineMixin):
         """Shared file plus positive line fields for violations."""
 
-    class CurrentImportMixin:
+    class CurrentImportMixin(m.BaseModel):
         """Shared current import statement field."""
 
         current_import: Annotated[str, m.Field(description="Current import statement")]
 
     # ═══════════════════ VIOLATION/DETAIL MIXINS ═══════════════════
 
-    class ViolationDetailMixin:
+    class ViolationDetailMixin(m.BaseModel):
         """Shared violation detail field."""
 
         detail: Annotated[str, m.Field(description="Violation detail")] = ""
 
-    class ErrorDetailMixin:
+    class ErrorDetailMixin(m.BaseModel):
         """Shared error detail field."""
 
         detail: Annotated[str, m.Field(description="Error detail")] = ""
 
     # ═══════════════════ PROJECT NAME / PATH VARIANTS ═══════════════════
 
-    class ProjectNameMixin:
+    class ProjectNameMixin(m.BaseModel):
         """Shared required project-name field."""
 
         project: Annotated[t.NonEmptyStr, m.Field(description="Project name")]
 
-    class ProjectEntryNameMixin:
+    class ProjectEntryNameMixin(m.BaseModel):
         """Shared required project entry name field."""
 
         name: Annotated[t.NonEmptyStr, m.Field(description="Project name")]
 
-    class RepositoryRootPathMixin:
+    class RepositoryRootPathMixin(m.BaseModel):
         """Shared repository root path field."""
 
         repository_root: Annotated[Path, m.Field(description="Repository root path")]
 
-    class ProjectNamesOptionalMixin:
+    class ProjectNamesOptionalMixin(m.BaseModel):
         """Shared optional project-name collection."""
 
         project_names: Annotated[
@@ -249,7 +253,7 @@ class FlextInfraModelsMixins:
             m.Field(description="Project names"),
         ] = None
 
-    class ProjectNamesListMixin:
+    class ProjectNamesListMixin(m.BaseModel):
         """Shared concrete project-name collection."""
 
         project_names: Annotated[t.StrSequence, m.Field(default_factory=tuple)] = (

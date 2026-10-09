@@ -8,9 +8,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from flext_tests import tm
 
-from tests import c, m, u
+from flext_infra import c, m
+from tests import u
 
 
 class TestsFlextInfraGitSweepSemantics:
@@ -28,7 +30,62 @@ class TestsFlextInfraGitSweepSemantics:
         _ = u.Tests.configure_local_origin(repository, tmp_path / "remote")
         integration = u.Tests.integration_branch(repository)
         _ = u.Tests.git_run(repository, "switch", integration)
+        manifest = tm.ok(
+            u.Infra.load_workspace_manifest(
+                Path(__file__).resolve().parents[3],
+            )
+        )[0]
+        declared = manifest.model_copy(
+            update={
+                "integration": m.Infra.WorkspaceIntegrationSpec(
+                    provider=manifest.repository.provider,
+                    branch=integration,
+                ),
+            }
+        )
+        u.Infra.workspace_manifest_path(repository).parent.mkdir(exist_ok=True)
+        tm.ok(
+            u.Cli.yaml_dump(
+                u.Infra.workspace_manifest_path(repository),
+                declared.model_dump(mode="json"),
+            )
+        )
+        u.Tests.commit_git_changes(repository, "declare fixture integration")
+        u.Tests.git_run(repository, "push", c.Infra.GIT_ORIGIN, integration)
         return repository, integration
+
+    @staticmethod
+    def _retained(
+        repository: Path,
+    ) -> tuple[
+        m.Infra.GitWorktreeStateCheckpoint, m.Infra.GitWorktreeCheckpointPublication
+    ]:
+        """Capture and publish actual index/working layers through their owner.
+
+        Returns:
+            Real retained state and its independently verified live publication.
+        """
+        snapshot = tm.ok(
+            u.Infra.git_snapshot_worktree_state(
+                m.Infra.GitWorktreeStateRequest(
+                    repo_root=repository,
+                    paths=(Path("README.md"), Path("dirty.txt")),
+                ),
+            )
+        )
+        checkpoint = tm.ok(
+            u.Infra.git_checkpoint_worktree_state(
+                snapshot,
+                "refs/checkpoints/fixture-state",
+            )
+        )
+        publication = tm.ok(
+            u.Infra.git_publish_worktree_checkpoint(
+                checkpoint,
+                c.Infra.GIT_ORIGIN,
+            )
+        )
+        return checkpoint, publication
 
     @staticmethod
     def _commit_file(repository: Path, name: str, text: str) -> str:
@@ -72,38 +129,61 @@ class TestsFlextInfraGitSweepSemantics:
         tm.that(remote.heads[integration], eq=head)
         tm.that(c.Infra.GIT_HEAD in remote.heads, eq=False)
 
-    def test_stash_drop_removes_exactly_the_named_entry(self, tmp_path: Path) -> None:
-        """Dropping by commit oid keeps every other stash entry intact."""
-        repository = u.Tests.git_repository(tmp_path)
-        _ = self._commit_file(repository, "tracked.txt", "base\n")
-        tracked = repository / "tracked.txt"
-        for text in ("first\n", "second\n"):
-            tracked.write_text(text, encoding="utf-8")
-            _ = u.Tests.git_run(repository, "stash", "push", "--message", text)
-        request = m.Infra.GitRepoRequest(repo_root=repository)
-        newest, oldest = tm.ok(u.Infra.git_stash_oids(request)).oids
-
-        tm.ok(
-            u.Infra.git_stash_drop(
-                m.Infra.GitStashDropRequest(repo_root=repository, oid=oldest),
+    def test_legacy_stash_ref_does_not_block_durable_recovery(
+        self, tmp_path: Path
+    ) -> None:
+        """An incident ref is retained; recovery uses no stash operation."""
+        repository, _ = self._published(tmp_path)
+        (repository / "dirty.txt").write_text("retained\n", encoding="utf-8")
+        checkpoint, publication = self._retained(repository)
+        u.Tests.git_run(
+            repository,
+            "update-ref",
+            "--create-reflog",
+            "refs/stash",
+            checkpoint.worktree_commit,
+        )
+        tm.fail(
+            u.Infra.git_create_branch(
+                m.Infra.GitBranchCreateRequest(
+                    repo_root=repository,
+                    branch="unsafe",
+                )
             ),
+            has="existing stash state",
         )
-        missing = u.Infra.git_stash_drop(
-            m.Infra.GitStashDropRequest(repo_root=repository, oid=oldest),
+        tm.ok(
+            u.Infra.git_verify_worktree_checkpoint_publication(checkpoint, publication)
         )
-
-        tm.that(tuple(tm.ok(u.Infra.git_stash_oids(request)).oids), eq=(newest,))
-        tm.that(missing.failure, eq=True)
+        tm.ok(u.Infra.git_create_checkpoint_branch(checkpoint, publication, "recovery"))
+        tm.that(
+            u.Tests.git_capture(repository, "rev-parse", "refs/stash"),
+            eq=checkpoint.worktree_commit,
+        )
 
     @staticmethod
     def test_create_branch_switch_carries_changes_and_refuses_duplicates(
         tmp_path: Path,
     ) -> None:
-        """A switched new branch keeps the dirty tree; an existing name fails."""
-        repository = u.Tests.git_repository(tmp_path)
+        """Unsafe lane switching refuses WIP; a published recovery alias is valid."""
+        repository, _ = TestsFlextInfraGitSweepSemantics._published(tmp_path)
+        readme = repository / "README.md"
+        readme.write_text("index layer\n", encoding="utf-8")
+        u.Tests.git_run(repository, "add", "--", readme.name)
+        readme.write_text("working layer\n", encoding="utf-8")
         (repository / "dirty.txt").write_text("kept\n", encoding="utf-8")
-
-        tm.ok(
+        checkpoint, publication = TestsFlextInfraGitSweepSemantics._retained(repository)
+        index = repository / u.Tests.git_capture(
+            repository,
+            "rev-parse",
+            "--git-path",
+            "index",
+        )
+        before = index.read_bytes()
+        original = tm.ok(
+            u.Infra.git_current_branch(m.Infra.GitRepoRequest(repo_root=repository))
+        ).text
+        tm.fail(
             u.Infra.git_create_branch(
                 m.Infra.GitBranchCreateRequest(
                     repo_root=repository,
@@ -111,17 +191,25 @@ class TestsFlextInfraGitSweepSemantics:
                     switch=True,
                 ),
             ),
+            has="authoritative Beads ownership",
         )
-        duplicate = u.Infra.git_create_branch(
-            m.Infra.GitBranchCreateRequest(repo_root=repository, branch="preserve"),
+        tm.ok(u.Infra.git_create_checkpoint_branch(checkpoint, publication, "preserve"))
+        duplicate = u.Infra.git_create_checkpoint_branch(
+            checkpoint, publication, "preserve"
         )
         branch = tm.ok(
             u.Infra.git_current_branch(m.Infra.GitRepoRequest(repo_root=repository)),
         )
 
-        tm.that(branch.text, eq="preserve")
+        tm.that(branch.text, eq=original)
+        tm.that(index.read_bytes(), eq=before)
+        tm.that(readme.read_text(encoding="utf-8"), eq="working layer\n")
         tm.that((repository / "dirty.txt").read_text(encoding="utf-8"), eq="kept\n")
         tm.that(duplicate.failure, eq=True)
+        tm.that(
+            u.Tests.git_capture(repository, "rev-parse", "refs/heads/preserve"),
+            eq=checkpoint.worktree_commit,
+        )
 
     @staticmethod
     def test_switch_branch_moves_to_an_existing_branch(tmp_path: Path) -> None:
@@ -148,34 +236,22 @@ class TestsFlextInfraGitSweepSemantics:
         self,
         tmp_path: Path,
     ) -> None:
-        """A pushed branch is visible remotely; a stale lease cannot delete it."""
+        """A retained recovery alias is published and removed only on its lease."""
         repository, _ = self._published(tmp_path)
-        tm.ok(
-            u.Infra.git_create_branch(
-                m.Infra.GitBranchCreateRequest(repo_root=repository, branch="lane"),
-            ),
-        )
+        (repository / "dirty.txt").write_text("retained\n", encoding="utf-8")
+        checkpoint, publication = self._retained(repository)
+        tm.ok(u.Infra.git_create_checkpoint_branch(checkpoint, publication, "lane"))
         oid = u.Tests.git_capture(repository, "rev-parse", "refs/heads/lane")
         remote = m.Infra.GitRemoteBranchRequest(repo_root=repository, branch="lane")
 
         absent = tm.ok(u.Infra.git_remote_branch_oid(remote))
-        tm.ok(
-            u.Infra.git_push_upstream(
-                m.Infra.GitPushRequest(
-                    repo_root=repository,
-                    branch="lane",
-                    source="refs/heads/lane",
-                ),
-            ),
-        )
+        tm.ok(u.Infra.git_publish_checkpoint_branch(checkpoint, publication, "lane"))
         published = tm.ok(u.Infra.git_remote_branch_oid(remote))
-        stale = u.Infra.git_delete_remote_branch(
-            remote.model_copy(update={"expected_oid": "0" * 40}),
+        stale = u.Infra.git_delete_checkpoint_branch(
+            checkpoint, publication, "lane", "0" * len(oid)
         )
         tm.ok(
-            u.Infra.git_delete_remote_branch(
-                remote.model_copy(update={"expected_oid": oid}),
-            ),
+            u.Infra.git_delete_checkpoint_branch(checkpoint, publication, "lane", oid),
         )
         deleted = tm.ok(u.Infra.git_remote_branch_oid(remote))
 
@@ -183,6 +259,55 @@ class TestsFlextInfraGitSweepSemantics:
         tm.that(published.text, eq=oid)
         tm.that(stale.failure, eq=True)
         tm.that(deleted.text, eq="")
+        tm.ok(
+            u.Infra.git_verify_worktree_checkpoint_publication(checkpoint, publication)
+        )
+
+    @pytest.mark.parametrize("changed", ["source", "receipt", "remote"])
+    def test_recovery_alias_refuses_changed_evidence_without_source_effects(
+        self,
+        tmp_path: Path,
+        changed: str,
+    ) -> None:
+        """No name or caller receipt substitutes for live capture and retention."""
+        repository, _ = self._published(tmp_path)
+        dirty = repository / "dirty.txt"
+        dirty.write_text("captured\n", encoding="utf-8")
+        checkpoint, publication = self._retained(repository)
+        if changed == "source":
+            dirty.write_text("new WIP\n", encoding="utf-8")
+        elif changed == "receipt":
+            publication = publication.model_copy(
+                update={
+                    "checkpoint_oid": checkpoint.snapshot.head,
+                }
+            )
+        else:
+            u.Tests.git_run(
+                repository,
+                "push",
+                c.Infra.GIT_ORIGIN,
+                f":{checkpoint.checkpoint_ref}",
+            )
+        index = repository / u.Tests.git_capture(
+            repository,
+            "rev-parse",
+            "--git-path",
+            "index",
+        )
+        before = index.read_bytes()
+        content = dirty.read_bytes()
+        refs = u.Tests.git_capture(repository, "show-ref")
+        head = u.Tests.git_capture(repository, "rev-parse", "HEAD")
+
+        tm.fail(
+            u.Infra.git_create_checkpoint_branch(checkpoint, publication, "recovery")
+        )
+
+        tm.that(index.read_bytes(), eq=before)
+        tm.that(dirty.read_bytes(), eq=content)
+        tm.that(u.Tests.git_capture(repository, "show-ref"), eq=refs)
+        tm.that(u.Tests.git_capture(repository, "rev-parse", "HEAD"), eq=head)
 
     def test_merge_probe_detects_squash_merged_and_pending_work(
         self,

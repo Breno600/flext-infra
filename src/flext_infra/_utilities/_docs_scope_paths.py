@@ -7,16 +7,12 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from flext_cli import u
 
 from flext_core.result import FlextResult as r
-from flext_infra import c, t
-from flext_infra._utilities.git import FlextInfraUtilitiesGit
-
-if TYPE_CHECKING:
-    from flext_infra import p
+from flext_infra import c, p, t
+from flext_infra._utilities import FlextInfraUtilitiesGit
 
 
 class FlextInfraUtilitiesDocsScopePathsMixin:
@@ -102,40 +98,29 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
         Returns:
             The resulting ``p.Result[t.VariadicTuple[Path]]``.
 
+        from flext_core.result import FlextResult as r
         """
         root = FlextInfraUtilitiesDocsScopePathsMixin.absolute_lexical(repository_root)
         if not FlextInfraUtilitiesDocsScopePathsMixin.physical_directory_exists(root):
             return r[t.VariadicTuple[Path]].fail(
                 f"docs repository root is missing: {root}",
             )
-        manifest_path = root / c.Infra.GITMODULES
-        manifest_before = u.Cli.atomic_read_binary_file_state(
-            manifest_path,
-            required=False,
+        declared = (
+            FlextInfraUtilitiesDocsScopePathsMixin._attested_declared_submodule_paths(
+                root,
+            )
         )
-        if manifest_before.failure:
-            return r[t.VariadicTuple[Path]].from_failure(manifest_before)
-        declared = FlextInfraUtilitiesGit.git_declared_submodule_paths(root)
         if declared.failure:
             return r[t.VariadicTuple[Path]].from_failure(declared)
-        manifest_after = u.Cli.atomic_read_binary_file_state(
-            manifest_path,
-            required=False,
-        )
-        if manifest_after.failure:
-            return r[t.VariadicTuple[Path]].from_failure(manifest_after)
-        if manifest_after.value != manifest_before.value:
-            return r[t.VariadicTuple[Path]].fail(
-                f"docs repository topology changed during discovery: {manifest_path}",
+        candidates_result = (
+            FlextInfraUtilitiesDocsScopePathsMixin._declared_root_candidates(
+                root,
+                declared.value,
             )
-        candidates = [root]
-        for declared_path in declared.value:
-            selector = Path(declared_path)
-            if selector.is_absolute() or ".." in selector.parts:
-                return r[t.VariadicTuple[Path]].fail(
-                    f"invalid docs composed project path: {selector}",
-                )
-            candidates.append(root / selector)
+        )
+        if candidates_result.failure:
+            return r[t.VariadicTuple[Path]].from_failure(candidates_result)
+        candidates = list(candidates_result.value)
         for candidate in extra_roots:
             lexical = FlextInfraUtilitiesDocsScopePathsMixin.absolute_lexical(candidate)
             if not lexical.is_relative_to(root):
@@ -151,6 +136,63 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
             )
         ]
         return r[t.VariadicTuple[Path]].ok(tuple(roots))
+
+    @staticmethod
+    def _attested_declared_submodule_paths(
+        root: Path,
+    ) -> p.Result[t.VariadicTuple[Path]]:
+        """Read declared submodule paths under a stable manifest topology.
+
+        The ``.gitmodules`` bytes are read before and after the declaration
+        walk; a changed manifest fails the discovery instead of composing
+        candidates from a tree that moved underneath it.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[Path]]``.
+
+        """
+        manifest_path = root / c.Infra.GITMODULES
+        manifest_before = u.Cli.atomic_read_binary_file_state(
+            manifest_path,
+            required=False,
+        )
+        if manifest_before.failure:
+            return r[t.VariadicTuple[Path]].from_failure(manifest_before)
+        declared = FlextInfraUtilitiesGit.git_submodule_declarations(root)
+        if declared.failure:
+            return r[t.VariadicTuple[Path]].from_failure(declared)
+        manifest_after = u.Cli.atomic_read_binary_file_state(
+            manifest_path,
+            required=False,
+        )
+        if manifest_after.failure:
+            return r[t.VariadicTuple[Path]].from_failure(manifest_after)
+        if manifest_after.value != manifest_before.value:
+            return r[t.VariadicTuple[Path]].fail(
+                f"docs repository topology changed during discovery: {manifest_path}",
+            )
+        return r[t.VariadicTuple[Path]].ok(tuple(item.path for item in declared.value))
+
+    @staticmethod
+    def _declared_root_candidates(
+        root: Path,
+        declared_paths: t.SequenceOf[Path],
+    ) -> p.Result[t.VariadicTuple[Path]]:
+        """Compose repository-root candidates from declared submodule paths.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[Path]]``.
+
+        """
+        candidates: list[Path] = [root]
+        for declared_path in declared_paths:
+            selector = declared_path
+            if selector.is_absolute() or ".." in selector.parts:
+                return r[t.VariadicTuple[Path]].fail(
+                    f"invalid docs composed project path: {selector}",
+                )
+            candidates.append(root / selector)
+        return r[t.VariadicTuple[Path]].ok(tuple(candidates))
 
 
 __all__: list[str] = ["FlextInfraUtilitiesDocsScopePathsMixin"]

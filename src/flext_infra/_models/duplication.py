@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, ClassVar, Self
 
-from flext_core import m, u
+from flext_core import m
 from flext_infra import c, t
 
 
@@ -63,28 +63,28 @@ class FlextInfraModelsDuplication:
         )
 
         absolute: Annotated[t.StrictBool, m.Field(description="Emit absolute paths")]
-        formats_exts: Annotated[
-            t.MappingKV[str, t.StrSequence],
-            m.Field(alias="formatsExts", description="Extensions by parser format"),
-        ]
+        formats_exts: t.MappingKV[str, t.StrSequence] = m.Field(
+            alias="formatsExts",
+            description="Extensions by parser format",
+        )
         ignore: Annotated[t.StrSequence, m.Field(description="Ignored path patterns")]
-        min_lines: Annotated[
-            t.PositiveInt,
-            m.Field(alias="minLines", description="Minimum duplicated line count"),
-        ]
-        min_tokens: Annotated[
-            t.PositiveInt,
-            m.Field(alias="minTokens", description="Minimum duplicated token count"),
-        ]
+        min_lines: t.PositiveInt = m.Field(
+            alias="minLines",
+            description="Minimum duplicated line count",
+        )
+        min_tokens: t.PositiveInt = m.Field(
+            alias="minTokens",
+            description="Minimum duplicated token count",
+        )
         mode: Annotated[t.NonEmptyStr, m.Field(description="jscpd detection mode")]
-        no_colors: Annotated[
-            t.StrictBool,
-            m.Field(alias="noColors", description="Disable color output"),
-        ]
-        no_tips: Annotated[
-            t.StrictBool,
-            m.Field(alias="noTips", description="Disable tip output"),
-        ]
+        no_colors: t.StrictBool = m.Field(
+            alias="noColors",
+            description="Disable color output",
+        )
+        no_tips: t.StrictBool = m.Field(
+            alias="noTips",
+            description="Disable tip output",
+        )
         reporters: Annotated[
             t.StrSequence,
             m.Field(description="Required report formats"),
@@ -266,7 +266,7 @@ class FlextInfraModelsDuplication:
             m.Field(description="Validated scan statistics"),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_complete_report(self) -> Self:
             format_summaries = tuple(self.statistics.formats.values())
             if not format_summaries or self.statistics.total.sources == 0:

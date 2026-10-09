@@ -10,10 +10,8 @@ import ast
 from collections.abc import Iterator
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities.rope_runtime_modules import (
+from flext_infra._utilities import (
     FlextInfraUtilitiesRopeRuntimeModules,
-)
-from flext_infra._utilities.rope_runtime_refactors import (
     FlextInfraUtilitiesRopeRuntimeRefactors,
 )
 
@@ -89,6 +87,7 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
         *,
         flatten: m.Infra.FamilyWrapperFlatten,
     ) -> t.Pair[bool, t.VariadicTuple[m.Infra.SourceRewrite]]:
+
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         module = flatten.project.get_pymodule(resource)
         edits: list[m.Infra.SourceRewrite] = []
@@ -125,6 +124,7 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
         *,
         flatten: m.Infra.FamilyWrapperFlatten,
     ) -> t.Pair[bool, str]:
+
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         nodes = tuple(
             cls._type_nodes(
@@ -303,6 +303,7 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
         project: p.Infra.RopeProject,
         scope: p.Infra.RopeScope,
     ) -> Iterator[ast.expr]:
+
         yield node
         if isinstance(node, ast.Subscript):
             yield from cls._type_nodes(node.value, project, scope)

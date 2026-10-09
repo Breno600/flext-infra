@@ -70,8 +70,10 @@ class FlextInfraCandidateBootstrapService:
                 scope_root,
                 roots,
                 analysis,
-                (),
-                lambda: self._verify(roots, targets, manifest_state),
+                m.Infra.CodegenPhasePublicationPolicy(
+                    directories=(),
+                    validator=lambda: self._verify(roots, targets, manifest_state),
+                ),
             )
             if committed.failure:
                 return r[bool].from_failure(committed)
@@ -121,7 +123,7 @@ class FlextInfraCandidateBootstrapService:
                     inputs[state.path] = state
         return r[m.Infra.CodegenPhaseAnalysis].ok(
             m.Infra.CodegenPhaseAnalysis(
-                phase="candidate-bootstrap",
+                phase=c.Infra.CodegenStagedFilePhase.CANDIDATE_BOOTSTRAP,
                 files=tuple(files),
                 inputs=tuple(inputs.values()),
             ),
@@ -152,17 +154,10 @@ class FlextInfraCandidateBootstrapService:
         planned = self._plan(roots, targets, manifest_state)
         if planned.failure:
             return r[bool].from_failure(planned)
-        residual = tuple(
-            file
-            for file in planned.value.files
-            if u.Infra.codegen_file_requires_effect(file)
+        return u.Infra.codegen_fixed_point(
+            planned.value.files,
+            subject="candidate bootstrap",
         )
-        if residual:
-            return r[bool].fail(
-                "candidate bootstrap did not reach a fixed point: "
-                + ", ".join(str(file.path) for file in residual),
-            )
-        return r[bool].ok(value=True)
 
 
 __all__: list[str] = ["FlextInfraCandidateBootstrapService"]

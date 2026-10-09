@@ -7,18 +7,16 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from collections.abc import Callable, MutableMapping
-from typing import TYPE_CHECKING, override
+from typing import override
 
 import libcst as cst
 from libcst.metadata import MetadataWrapper, ParentNodeProvider, QualifiedNameProvider
 
+from flext_infra import m, t
+from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
 from flext_infra._utilities._semantic_cutover.nesting_module_aliases import (
     FlextInfraUtilitiesSemanticCutoverNestingModuleAliases,
 )
-from flext_infra._utilities.qualified_names import FlextInfraUtilitiesQualifiedNames
-
-if TYPE_CHECKING:
-    from flext_infra import m, t
 
 
 class FlextInfraUtilitiesSemanticCutoverNestingReferences(
@@ -34,8 +32,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
         def __init__(
             self,
             *,
-            module_name: str,
-            is_package_init: bool,
+            scope: t.Pair[str, bool],
             bindings_by_module: t.MappingKV[str, t.StrMapping],
             definitions: t.StrMapping,
             scan: m.Infra.NestingModuleAliasScan,
@@ -47,6 +44,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
         ) -> None:
             self.imported_module, self.resolved_relative, self.member_name = resolvers
             self.scan = scan
+            self.module_name, self.is_package_init = scope
             # A nested module has exactly one owner (the planner rejects a
             # file with several), so its bindings name it once.
             self.owners_by_module = {
@@ -59,8 +57,6 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
                 for local, module in scan.aliases.items()
                 if module in self.owners_by_module
             }
-            self.module_name = module_name
-            self.is_package_init = is_package_init
             self.bindings_by_module = bindings_by_module
             self.definitions = definitions
             self.qualified = {
@@ -123,6 +119,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
 
         @override
         def visit_ImportFrom(self, node: cst.ImportFrom) -> None:
+
             bindings = self.bindings_by_module.get(self._import_module(node), {})
             if not bindings or isinstance(node.names, cst.ImportStar):
                 return
@@ -142,29 +139,42 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
             """Report whether a moved class stays reachable by its bare name here.
 
             References are rewritten before the structural move, so the current
-            tree cannot answer this; the plan can. After nesting, the owner's
-            class body holds every moved class as a sibling, and a class body
-            reaches its siblings by bare name while it is executing. A method
-            body does not: the enclosing class scope is invisible from inside a
-            function, so there the qualified form is the only one that resolves.
-            Walking outward, a function boundary therefore means qualify, and a
-            class that is the owner or is itself being moved under the owner
-            means the reference will land in that shared class scope.
+            tree cannot answer this; the plan can. A nested class suite looks
+            names up in the module globals, and the owner name is not bound
+            until that class statement finishes, so the planner leaves both
+            ends of an immediate suite reference at module level. A method body
+            does not see the owner scope either, so there the qualified form is
+            the one that resolves when the method later runs. A class header
+            belongs to the suite around the class, so only a class body decides
+            the name; a nested model's decorator in the owner body keeps the
+            bare name of a member that moved above it. An annotation
+            inside a class that is itself being nested does not resolve as a
+            bare name: the undefined-name gate rejects it, including the
+            class's own annotations. An annotation directly on the owner still
+            sees those siblings. Walking outward, a function body therefore
+            means qualify, an annotation inside a moved class means qualify,
+            and any other reference that lands in the owner body keeps the
+            bare name.
 
             Returns:
                 The resulting ``bool``.
 
             """
             child: cst.CSTNode = node
+            in_annotation = False
             current: cst.CSTNode | None = self.get_metadata(
                 ParentNodeProvider,
                 node,
                 None,
             )
             while current is not None:
-                if isinstance(current, cst.FunctionDef | cst.Lambda):
-                    # Decorators, defaults and annotations run in the
-                    # enclosing scope; only the body is a function scope.
+                if isinstance(current, cst.Annotation):
+                    in_annotation = True
+                elif isinstance(current, cst.FunctionDef | cst.Lambda):
+                    # Decorators and defaults run in the enclosing scope; only
+                    # the body is a function scope. Annotations are tracked
+                    # separately because a nested class does not bind its name
+                    # for the undefined-name gate.
                     if child is current.body:
                         return False
                 elif isinstance(
@@ -172,8 +182,10 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
                     cst.ListComp | cst.SetComp | cst.DictComp | cst.GeneratorExp,
                 ):
                     return False
-                elif isinstance(current, cst.ClassDef):
+                elif isinstance(current, cst.ClassDef) and child is current.body:
                     name = current.name.value
+                    if in_annotation and name in self.definitions:
+                        return False
                     return name in self.definitions or name in set(
                         self.definitions.values(),
                     )
@@ -232,6 +244,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
             original_node: cst.Name,
             updated_node: cst.Name,
         ) -> cst.BaseExpression:
+
             bound = self._single_binding(original_node, ambiguity="binding")
             if bound is None:
                 return updated_node
@@ -292,6 +305,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
             original_node: cst.ImportFrom,
             updated_node: cst.ImportFrom,
         ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
+
             if not isinstance(updated_node.names, cst.ImportStar):
                 kept = tuple(
                     imported
@@ -359,6 +373,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
             original_node: cst.Import,
             updated_node: cst.Import,
         ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
+
             kept = tuple(
                 imported
                 for imported in updated_node.names
@@ -441,6 +456,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
             original_node: cst.Assign,
             updated_node: cst.Assign,
         ) -> cst.BaseSmallStatement:
+
             return FlextInfraUtilitiesQualifiedNames.filter_exports(
                 updated_node,
                 self.definitions,
@@ -452,6 +468,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
             original_node: cst.AnnAssign,
             updated_node: cst.AnnAssign,
         ) -> cst.BaseSmallStatement:
+
             return FlextInfraUtilitiesQualifiedNames.filter_exports(
                 updated_node,
                 self.definitions,
@@ -522,8 +539,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences(
             MetadataWrapper(cst.parse_module(source))
             .visit(
                 cls._NestingTransformer(
-                    module_name=module_name,
-                    is_package_init=is_package_init,
+                    scope=(module_name, is_package_init),
                     bindings_by_module=bindings_by_module,
                     definitions=definitions,
                     scan=scan,

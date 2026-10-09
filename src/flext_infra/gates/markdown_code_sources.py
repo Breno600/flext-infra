@@ -109,6 +109,12 @@ class FlextInfraMarkdownCodeSources:
             relative_parts = py_path.relative_to(project_dir).parts
             if any(part in c.Infra.CHECK_EXCLUDED_DIRS for part in relative_parts):
                 continue
+            if ".github" in relative_parts and any(
+                part in c.Infra.GITHUB_AGENT_PROJECTION_DIRS for part in relative_parts
+            ):
+                # Agent-toolhome projections under .github are regenerated
+                # distributions, never governed source.
+                continue
             tree = ast.parse(py_path.read_text(c.Cli.ENCODING_DEFAULT))
             for node in ast.walk(tree):
                 # Only these carry docstrings; ast.walk also yields expression

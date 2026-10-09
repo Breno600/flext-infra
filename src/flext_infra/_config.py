@@ -11,8 +11,8 @@ from typing import override
 
 from flext_cli.config import FlextCliConfig
 
-from flext_infra._constants.codegen_project import FlextInfraConstantsCodegenProject
-from flext_infra._models._config.base import FlextInfraConfigModels
+from flext_infra._constants import FlextInfraConstantsCodegenProject
+from flext_infra._models import FlextInfraConfigModels
 
 
 class FlextInfraConfig(FlextCliConfig):

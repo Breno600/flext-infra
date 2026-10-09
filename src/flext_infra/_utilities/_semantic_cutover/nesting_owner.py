@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 from flext_cli import u
 
 from flext_infra import r, t
-from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -77,6 +77,22 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
         )
 
     @classmethod
+    def _is_pure_reference(cls, value: ast.expr) -> bool:
+        """Whether ``value`` only names another binding (``A`` or ``A.B.C``).
+
+        A pure reference is a compatibility alias the compat-alias phase owns
+        (inline every consumer, then delete it); nesting it under the facade
+        owner would publish the alias instead of removing it.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
+        if isinstance(value, ast.Attribute):
+            return cls._is_pure_reference(value.value)
+        return isinstance(value, ast.Name)
+
+    @classmethod
     def _loose_value_name(cls, node: ast.stmt) -> str | None:
         """Return the bound name when ``node`` is a loose module value binding.
 
@@ -93,7 +109,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
         loose = (
             isinstance(target, ast.Name)
             and not (target.id.startswith("__") and target.id.endswith("__"))
-            and not isinstance(value, ast.Name)
+            and not cls._is_pure_reference(value)
             and not cls._is_typing_declaration(value, annotation)
         )
         return target.id if loose and isinstance(target, ast.Name) else None
@@ -187,9 +203,14 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
         A member that reads the owner while it is being defined (an alias of
         an owner member, a decorator or default built from it) cannot live in
         the owner's body, exactly like a class bound to the owner by
-        inheritance: it stays at module level. A function rebinding module
-        state through ``global`` would lose that state as a static method, so
-        it fails the plan naming the module and the member.
+        inheritance: it stays at module level. A member the owner reads while
+        ITSELF is being created (a base, or a ``metaclass=`` factory call)
+        stays module level too: the owner does not exist while its creation
+        expressions evaluate. Every member such a bound member references in
+        its body stays module level as well, so the bound member's bare-name
+        resolution keeps resolving at module scope. A function rebinding
+        module state through ``global`` would lose that state as a static
+        method, so it fails the plan naming the module and the member.
 
         Returns:
             The movable members, or a failure naming the module and member.
@@ -197,14 +218,23 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
         """
         checked = r[t.VariadicTuple[str]]
         selected = frozenset(members)
-        bound: set[str] = set()
+        nodes_by_member: dict[str, ast.stmt] = {}
         for node in tree.body:
             name = (
                 node.name
                 if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
                 else cls._loose_value_name(node)
             )
-            if name is None or name not in selected:
+            if name is not None and name in selected:
+                nodes_by_member[name] = node
+        bound: set[str] = cls._creation_bound(tree, nodes_by_member, selected, owner)
+        for node in tree.body:
+            name = (
+                node.name
+                if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+                else cls._loose_value_name(node)
+            )
+            if name is None or name not in selected or name in bound:
                 continue
             if owner in cls._definition_time_names(node):
                 bound.add(name)
@@ -215,6 +245,74 @@ class FlextInfraUtilitiesSemanticCutoverNestingOwner:
                     f"{owner}: it rebinds module state through global",
                 )
         return checked.ok(tuple(name for name in members if name not in bound))
+
+    @classmethod
+    def _creation_bound(
+        cls,
+        tree: ast.Module,
+        nodes_by_member: t.MappingKV[str, ast.stmt],
+        selected: frozenset[str],
+        owner: str,
+    ) -> set[str]:
+        """Members the owner creation expressions and their closure read.
+
+        The seed binds every selected member the owner reads while being
+        created (a base, or a ``metaclass=`` factory call); the closure keeps
+        every member such a bound member loads, so the bound member's
+        bare-name resolution keeps resolving at module scope.
+
+        Returns:
+            The members that must stay at module level.
+
+        """
+        owner_node = next(
+            (
+                node
+                for node in tree.body
+                if isinstance(node, ast.ClassDef) and node.name == owner
+            ),
+            None,
+        )
+        bound: set[str] = set()
+        if owner_node is not None:
+            creation_roots: tuple[ast.AST, ...] = (
+                *owner_node.decorator_list,
+                *owner_node.bases,
+                *owner_node.keywords,
+            )
+            creation_reads = frozenset(
+                name.id
+                for root in creation_roots
+                for name in ast.walk(root)
+                if isinstance(name, ast.Name)
+            )
+            bound.update(creation_reads & selected)
+        while True:
+            loaded_by_bound: set[str] = set()
+            for name in bound:
+                member_node = nodes_by_member.get(name)
+                if member_node is not None:
+                    loaded_by_bound |= cls._body_load_names(member_node)
+            newly_bound = (loaded_by_bound & selected) - bound
+            if not newly_bound:
+                break
+            bound.update(newly_bound)
+        return bound
+
+    @staticmethod
+    def _body_load_names(node: ast.stmt) -> frozenset[str]:
+        """Names a member's whole body loads.
+
+        Returns:
+            Every identifier read anywhere inside the member, including the
+            definition-time reads (decorators, defaults, bound values).
+
+        """
+        return frozenset(
+            name.id
+            for name in ast.walk(node)
+            if isinstance(name, ast.Name) and isinstance(name.ctx, ast.Load)
+        )
 
     @staticmethod
     def _module_owner(

@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
+from flext_infra import config
 from flext_infra.docs.auditor import FlextInfraDocAuditor
 from tests import c, m, u
 
@@ -272,7 +273,8 @@ class TestsFlextInfraAuditorScope:
         (plans / "new-plan.md").write_text("run at /home/someone/flext\n")
         (tmp_path / "docs" / "live.md").write_text("see /home/someone/flext\n")
         (tmp_path / "docs" / "docs_config.json").write_text(
-            '{"audit": {"historical_evidence_files": ["docs/plans/2026-01-01-run.md"]}}',
+            '{"audit": {"historical_evidence_files": '
+            '["docs/plans/2026-01-01-run.md"]}}',
         )
         scope = m.Infra.DocScope(
             name="root",
@@ -307,6 +309,46 @@ class TestsFlextInfraAuditorScope:
         issues = auditor.placeholder_issues(scope)
         tm.that(len(issues), eq=1)
         tm.that(issues[0].file, eq="docs/guide.md")
+
+    @staticmethod
+    def test_shipped_policy_flags_open_markers_not_prose_or_declared_verbs(
+        tmp_path: Path,
+    ) -> None:
+        """The rendered fleet policy keeps lexical markers and manifest overrides.
+
+        Why: Make verb validity is owned by the command-contract check against
+        the config SSOT, so the lexical policy forbids no ``make <verb>`` term.
+        """
+        workspace = u.Tests.standalone_workspace(tmp_path)
+        template = (
+            u.Infra.codegen_templates_root(config.Infra.codegen)
+            / "base/docs/docs_config.json.j2"
+        )
+        docs = tmp_path / "docs"
+        docs.mkdir(exist_ok=True)
+        (docs / "docs_config.json").write_text(
+            tm.ok(u.Cli.template_render(template, workspace)),
+        )
+        (docs / "guide.md").write_text(
+            "TODOS os pods.\nSee `scripts/TODO.md`.\nUse placeholders `<x>`.\n"
+            "Run `make sync`.\n",
+        )
+        scope = m.Infra.DocScope(
+            name="root",
+            path=tmp_path,
+            report_dir=tmp_path / "reports",
+        )
+        auditor = FlextInfraDocAuditor()
+        tm.that(auditor.placeholder_issues(scope), eq=[])
+        tm.that(auditor.forbidden_term_issues(scope), eq=[])
+        (docs / "guide.md").write_text("TODO: finish me.\n")
+        tm.that(len(auditor.placeholder_issues(scope)), eq=1)
+        policy = u.Infra.docs_audit_policy(scope)
+        tm.that(policy.stale_symbols, eq=workspace.docs_audit.stale_symbols)
+        tm.that(
+            policy.historical_evidence_files,
+            eq=workspace.docs_audit.historical_evidence_files,
+        )
 
     @staticmethod
     def test_invalid_audit_policy_fails_public_boundary(tmp_path: Path) -> None:

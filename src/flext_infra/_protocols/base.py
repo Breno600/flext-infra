@@ -39,6 +39,25 @@ class FlextInfraProtocolsBase(Protocol):
         def emit_rename(self, report: m.Infra.ApplyRenamesReport) -> None: ...
 
     @runtime_checkable
+    class ModLoopPhase(Protocol):
+        """One repair phase the mod loop invokes as a callback.
+
+        A phase receives the loop's current scan state and the shared Rope
+        workspace, applies its own repairs, and returns whether it changed
+        sources — the loop then refreshes Rope, rescans, and continues toward
+        the joint fixed point.
+        """
+
+        name: str
+
+        def apply(
+            self,
+            root: Path,
+            preflight: m.Infra.ModScanReport,
+            rope_workspace: p.Infra.RopeWorkspaceDsl,
+        ) -> p.Result[bool]: ...
+
+    @runtime_checkable
     class OutputStream(Protocol):
         """Minimal text stream contract used by infrastructure output backends."""
 
@@ -106,7 +125,18 @@ class FlextInfraProtocolsBase(Protocol):
             project_root: Path,
             runtime_root: Path,
         ) -> p.Result[bool]:
-            """Validate one project's Mise declaration, pin, and launchers."""
+            """Validate one project's generated Mise declaration."""
+            ...
+
+    @runtime_checkable
+    class CodegenParticipantPolicyFactory(Protocol):
+        """Composition-root authorization for one generation request."""
+
+        def __call__(
+            self,
+            root: Path,
+        ) -> p.Result[m.Infra.CodegenParticipantPolicy]:
+            """Read the request's physical topology without acquiring a lease."""
             ...
 
     @runtime_checkable
@@ -211,8 +241,7 @@ class FlextInfraProtocolsBase(Protocol):
             scope_root: Path,
             roots: t.MappingKV[str, Path],
             analysis: m.Infra.CodegenPhaseAnalysis,
-            directories: t.VariadicTuple[Path],
-            validator: Callable[[], p.Result[bool]],
+            policy: m.Infra.CodegenPhasePublicationPolicy,
         ) -> p.Result[t.VariadicTuple[Path]]:
             """Publish one recoverable multi-root phase and verify before commit."""
             ...
@@ -575,73 +604,23 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
         @property
-        def kubectl_version(self) -> str:
-            """Exact kubectl version."""
-            ...
-
-        @property
-        def helm_version(self) -> str:
-            """Exact Helm version."""
-            ...
-
-        @property
-        def kind_version(self) -> str:
-            """Exact kind version."""
-            ...
-
-        @property
         def environment_path_prepends(self) -> t.SequenceOf[str]:
             """Extra directories prepended to PATH by shell activation."""
             ...
 
         @property
-        def taplo_version(self) -> str:
-            """Exact Taplo formatter version."""
+        def tool_versions(self) -> t.MappingKV[str, str]:
+            """Effective release selector per tool: pins layered over entries."""
             ...
 
         @property
-        def ast_grep_selector(self) -> str:
-            """Mise selector for the ast-grep CLI."""
+        def tool_selectors(self) -> t.MappingKV[str, str]:
+            """Declared Mise selector of every selector-bearing fleet tool."""
             ...
 
         @property
-        def ast_grep_version(self) -> str:
-            """Exact ast-grep analyzer version."""
-            ...
-
-        @property
-        def gitleaks_version(self) -> str:
-            """Exact Gitleaks scanner version."""
-            ...
-
-        @property
-        def scc_version(self) -> str:
-            """Exact scc code-counter version."""
-            ...
-
-        @property
-        def kubeconform_version(self) -> str:
-            """Compatible kubeconform minor line."""
-            ...
-
-        @property
-        def qlty_version(self) -> str:
-            """Exact qlty code-smell scanner version."""
-            ...
-
-        @property
-        def uv_version(self) -> str:
-            """Compatible uv major.minor line."""
-            ...
-
-        @property
-        def go_version(self) -> str:
-            """Exact Go runtime version backing go: mise selectors."""
-            ...
-
-        @property
-        def make_version(self) -> str:
-            """Moving Make release selector provisioned by mise."""
+        def tool_version_prefixes(self) -> t.MappingKV[str, str]:
+            """Declared release tag prefix of every prefix-bearing tool."""
             ...
 
     @runtime_checkable

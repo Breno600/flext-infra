@@ -15,7 +15,7 @@ from markdown import Markdown
 from markdown.extensions.toc import slugify
 
 from flext_infra import c, m, r, t
-from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
+from flext_infra._utilities import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -42,7 +42,7 @@ class FlextInfraUtilitiesDocsContract:
         return 0
 
     @staticmethod
-    def _docs_contract_strip_invented_toc_before_frontmatter(content: str) -> str:
+    def docs_contract_strip_invented_toc_before_frontmatter(content: str) -> str:
         """Undo H1+TOC wrongly prepended ahead of YAML frontmatter.
 
         Returns:
@@ -61,8 +61,8 @@ class FlextInfraUtilitiesDocsContract:
             return content
         return after_toc
 
-    @staticmethod
-    def docs_contract_update_toc(content: str) -> t.StrIntPair:
+    @classmethod
+    def docs_contract_update_toc(cls, content: str) -> t.StrIntPair:
         """Normalize the managed table of contents in Markdown content.
 
         Returns:
@@ -70,7 +70,8 @@ class FlextInfraUtilitiesDocsContract:
 
         """
         original = content
-        strip_toc = FlextInfraUtilitiesDocsContract._docs_contract_strip_invented_toc_before_frontmatter
+        docs_contract = FlextInfraUtilitiesDocsContract
+        strip_toc = docs_contract.docs_contract_strip_invented_toc_before_frontmatter
         content = strip_toc(
             content,
         )
@@ -156,7 +157,8 @@ class FlextInfraUtilitiesDocsContract:
             items,
         )
         if not items:
-            items = ["- No sections found"]
+            # An honest empty TOC block: no fake bullet, no sentinel text.
+            return f"{c.Infra.TOC_START}\n\n{c.Infra.TOC_END}"
         return f"{c.Infra.TOC_START}\n\n" + "\n".join(items) + f"\n\n{c.Infra.TOC_END}"
 
     @staticmethod

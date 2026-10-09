@@ -84,8 +84,7 @@ class FlextInfraCodegenLayoutGitignoreMixin:
             policy="full",
         )
         written = FlextInfraMisePublication.publish_file_plan(
-            planned,
-            phase=c.Infra.CodegenStagedFilePhase.LAYOUT,
+            planned, phase=c.Infra.CodegenStagedFilePhase.LAYOUT
         )
         if written.failure:
             return r[t.Infra.LayoutStatus].from_failure(written)
@@ -139,8 +138,7 @@ class FlextInfraCodegenLayoutGitignoreMixin:
             policy="merge",
         )
         written = FlextInfraMisePublication.publish_file_plan(
-            planned,
-            phase=c.Infra.CodegenStagedFilePhase.LAYOUT,
+            planned, phase=c.Infra.CodegenStagedFilePhase.LAYOUT
         )
         if written.failure:
             return r[t.Infra.LayoutStatus].from_failure(written)

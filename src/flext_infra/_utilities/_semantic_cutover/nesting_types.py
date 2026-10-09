@@ -12,14 +12,12 @@ from pathlib import Path
 from typing import override
 
 from flext_infra import m, p, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesRopeRuntimeModules,
+    FlextInfraUtilitiesRopeRuntimeRefactors,
+)
 from flext_infra._utilities._semantic_cutover.family_type_references import (
     FlextInfraUtilitiesSemanticFamilyTypeReferences,
-)
-from flext_infra._utilities.rope_runtime_modules import (
-    FlextInfraUtilitiesRopeRuntimeModules,
-)
-from flext_infra._utilities.rope_runtime_refactors import (
-    FlextInfraUtilitiesRopeRuntimeRefactors,
 )
 
 
@@ -27,6 +25,50 @@ class FlextInfraUtilitiesSemanticNestingTypes(
     FlextInfraUtilitiesSemanticFamilyTypeReferences,
 ):
     """Share the canonical type-position selector and original Rope scope."""
+
+    class _CapturedNamesVisitor(ast.NodeVisitor):
+        """Collect identifiers bound inside any nested scope."""
+
+        def __init__(self) -> None:
+            self.depth = 0
+            self.captured: set[str] = set()
+
+        def bind(self, name: str) -> None:
+            if self.depth:
+                self.captured.add(name)
+
+        @override
+        def visit_Name(self, node: ast.Name) -> None:
+            if isinstance(node.ctx, (ast.Store, ast.Del)):
+                self.bind(node.id)
+
+        def _visit_scoped(
+            self,
+            node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
+        ) -> None:
+            self.bind(node.name)
+            self.depth += 1
+            for stmt in node.body:
+                self.visit(stmt)
+            self.depth -= 1
+
+        @override
+        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+            self._visit_scoped(node)
+
+        @override
+        def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+            self._visit_scoped(node)
+
+        @override
+        def visit_ClassDef(self, node: ast.ClassDef) -> None:
+            self._visit_scoped(node)
+
+        @override
+        def visit_Lambda(self, node: ast.Lambda) -> None:
+            self.depth += 1
+            self.visit(node.body)
+            self.depth -= 1
 
     @classmethod
     def _rewrite_quoted_types(
@@ -38,6 +80,31 @@ class FlextInfraUtilitiesSemanticNestingTypes(
         *,
         protected: t.Pair[int, int] | None = None,
     ) -> str:
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors
+
+        return FlextInfraUtilitiesRopeRuntimeRefactors.content_change(
+            resource,
+            source,
+            cls._quoted_type_rewrites(
+                project,
+                resource,
+                source,
+                replacement,
+                protected=protected,
+            ),
+        ).new_contents
+
+    @classmethod
+    def _quoted_type_rewrites(
+        cls,
+        project: p.Infra.RopeProject,
+        resource: p.Infra.RopeResource,
+        source: str,
+        replacement: Callable[[p.Infra.RopeScope, ast.expr], str | None],
+        *,
+        protected: t.Pair[int, int] | None = None,
+    ) -> t.VariadicTuple[m.Infra.SourceRewrite]:
+
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         module = project.get_pymodule(resource)
         edits: list[m.Infra.SourceRewrite] = []
@@ -67,11 +134,7 @@ class FlextInfraUtilitiesSemanticNestingTypes(
                     edits.append(
                         m.Infra.SourceRewrite(start=start, end=end, text=repr(updated)),
                     )
-        return FlextInfraUtilitiesRopeRuntimeRefactors.content_change(
-            resource,
-            source,
-            edits,
-        ).new_contents
+        return tuple(edits)
 
     @classmethod
     def _quoted_replacement(
@@ -82,6 +145,7 @@ class FlextInfraUtilitiesSemanticNestingTypes(
         source: str,
         replacement: Callable[[p.Infra.RopeScope, ast.expr], str | None],
     ) -> str:
+
         edits: list[m.Infra.SourceRewrite] = []
         for node in cls._type_nodes(
             ast.parse(source, mode="eval").body,
@@ -117,6 +181,7 @@ class FlextInfraUtilitiesSemanticNestingTypes(
         sources: t.MappingKV[Path, str],
         definitions: t.MappingKV[Path, t.StrMapping],
     ) -> t.MappingKV[Path, str]:
+
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         root = Path(project.root.real_path)
         bindings = tuple(
@@ -174,56 +239,15 @@ class FlextInfraUtilitiesSemanticNestingTypes(
             The resulting ``frozenset[str]``.
 
         """
-        captured: set[str] = set()
-
-        class Visitor(ast.NodeVisitor):
-            depth = 0
-
-            def bind(self, name: str) -> None:
-                if self.depth:
-                    captured.add(name)
-
-            @override
-            def visit_Name(self, node: ast.Name) -> None:
-                if isinstance(node.ctx, (ast.Store, ast.Del)):
-                    self.bind(node.id)
-
-            def _visit_scoped(
-                self,
-                node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
-            ) -> None:
-                self.bind(node.name)
-                self.depth += 1
-                for stmt in node.body:
-                    self.visit(stmt)
-                self.depth -= 1
-
-            @override
-            def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-                self._visit_scoped(node)
-
-            @override
-            def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
-                self._visit_scoped(node)
-
-            @override
-            def visit_ClassDef(self, node: ast.ClassDef) -> None:
-                self._visit_scoped(node)
-
-            @override
-            def visit_Lambda(self, node: ast.Lambda) -> None:
-                self.depth += 1
-                self.visit(node.body)
-                self.depth -= 1
-
-        Visitor().visit(ast.parse(cls._module_source(module)))
-        return frozenset(captured)
+        visitor = cls._CapturedNamesVisitor()
+        visitor.visit(ast.parse(cls._module_source(module)))
+        return frozenset(visitor.captured)
 
     @staticmethod
     def _module_source(module: p.Infra.RopePyModule) -> str:
         resource = getattr(module, "resource", None)
         if resource is not None:
-            return Path(resource.real_path).read_text(encoding="utf-8")
+            return resource.read()
         return module.source_code
 
     @staticmethod

@@ -13,13 +13,16 @@ from typing import Annotated, ClassVar
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._models import FlextInfraModelsMixins as mm
+from flext_infra._models.mixins import FlextInfraModelsMixins
 
 
 class FlextInfraModelsCodegenScaffoldModels:
     """Census and scaffold models for the codegen pipeline."""
 
-    class CensusViolation(mm.RequiredNonNegativeLineMixin, m.ArbitraryTypesModel):
+    class CensusViolation(
+        FlextInfraModelsMixins.RequiredNonNegativeLineMixin,
+        m.ArbitraryTypesModel,
+    ):
         """A single namespace violation detected by the census service."""
 
         module: t.NonEmptyStr = m.Field(description="Module file path")
@@ -27,20 +30,23 @@ class FlextInfraModelsCodegenScaffoldModels:
         message: t.NonEmptyStr = m.Field(description="Human-readable violation message")
         fixable: bool = m.Field(description="Whether this violation can be auto-fixed")
 
-    class CensusReport(mm.ProjectNameMixin, m.ArbitraryTypesModel):
+    class CensusReport(FlextInfraModelsMixins.ProjectNameMixin, m.ArbitraryTypesModel):
         """Aggregated census report for a single project."""
 
         violations: Annotated[
             Sequence[FlextInfraModelsCodegenScaffoldModels.CensusViolation],
-            m.Field(default_factory=list, description="Detected violations"),
-        ]
+            m.Field(description="Detected violations"),
+        ] = m.Field(default_factory=tuple)
         total: Annotated[t.NonNegativeInt, m.Field(description="Total violation count")]
         fixable: Annotated[
             t.NonNegativeInt,
             m.Field(description="Count of auto-fixable violations"),
         ]
 
-    class ScaffoldResult(mm.ProjectNameMixin, m.ArbitraryTypesModel):
+    class ScaffoldResult(
+        FlextInfraModelsMixins.ProjectNameMixin,
+        m.ArbitraryTypesModel,
+    ):
         """Result of scaffolding base modules for a project.
 
         Enforcement exemption: internal tooling model with intentional

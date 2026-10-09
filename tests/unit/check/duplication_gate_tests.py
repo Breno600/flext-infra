@@ -69,9 +69,11 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             "fixture-duplication",
-            workspace="duplication-workspace",
-            database="duplication-database",
-            issue_prefix="duplication-prefix",
+            beads=u.Tests.BeadsIdentity(
+                workspace="duplication-workspace",
+                database="duplication-database",
+                issue_prefix="duplication-prefix",
+            ),
         )
         package = root / "src" / "fixture_duplication"
         package.mkdir(parents=True, exist_ok=True)
@@ -94,6 +96,7 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
             manifest = root / "config" / "workspace.yaml"
             manifest.parent.mkdir(parents=True, exist_ok=True)
             provider = u.Tests.provider()
+            url = u.Tests.WorktreeFixture.governed_repository_url("fixture-duplication")
             manifest.write_text(
                 "version: 3\n"
                 "name: duplication-workspace\n"
@@ -101,7 +104,7 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
                 "  name: fixture-duplication\n"
                 "  distribution: fixture-duplication\n"
                 f"  provider: {provider.name}\n"
-                f"  url: {u.Tests.WorktreeFixture.governed_repository_url('fixture-duplication')}\n"
+                f"  url: {url}\n"
                 "  path: .\n"
                 "  role: standalone\n"
                 "  state: active\n"
@@ -164,9 +167,11 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
             u.Tests.WorktreeFixture.initialize_governed_project(
                 member,
                 name,
-                workspace="sibling-workspace",
-                database="sibling_workspace",
-                issue_prefix="sibling",
+                beads=u.Tests.BeadsIdentity(
+                    workspace="sibling-workspace",
+                    database="sibling_workspace",
+                    issue_prefix="sibling",
+                ),
             )
             package = member / "src" / name.replace("-", "_")
             package.mkdir(parents=True, exist_ok=True)

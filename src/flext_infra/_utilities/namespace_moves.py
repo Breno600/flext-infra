@@ -6,22 +6,24 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import ast
 from collections.abc import MutableMapping
 from pathlib import Path
 
+from rope.base import exceptions
+
+from flext_core import u as core_u
 from flext_infra import c, m, t
-from flext_infra._utilities._rope_analysis.asthelpers import (
-    FlextInfraUtilitiesRopeAnalysisAstHelpers,
-)
-from flext_infra._utilities.namespace_common import (
+from flext_infra._utilities import (
+    FlextInfraUtilitiesProtectedEdit,
     FlextInfraUtilitiesRefactorNamespaceCommon,
+    FlextInfraUtilitiesRopeAnalysis,
+    FlextInfraUtilitiesRopeAnalysisAstHelpers,
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeImports,
+    FlextInfraUtilitiesRopeSource,
+    FlextInfraUtilitiesTransformerHeader,
 )
-from flext_infra._utilities.protected_edit import FlextInfraUtilitiesProtectedEdit
-from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
-from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities.rope_imports import FlextInfraUtilitiesRopeImports
-from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
-from flext_infra._utilities.rope_source import FlextInfraUtilitiesRopeSource
 
 
 class FlextInfraUtilitiesRefactorNamespaceMoves:
@@ -94,6 +96,91 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             )
 
     @staticmethod
+    def _moved_block_facts(
+        lines: t.SequenceOf[str],
+        names: t.Infra.StrSet,
+    ) -> t.Triple[
+        t.MutableSequenceOf[str],
+        t.MutableSequenceOf[t.IntPair],
+        t.MutableSequenceOf[str],
+    ]:
+        """Collect the block texts, line ranges, and names that exist.
+
+        Returns:
+            The resulting ``(blocks, ranges, moved names)`` triple.
+
+        """
+        blocks: t.MutableSequenceOf[str] = []
+        ranges: t.MutableSequenceOf[t.IntPair] = []
+        moved: t.MutableSequenceOf[str] = []
+        for name in sorted(names):
+            found = FlextInfraUtilitiesRefactorNamespaceCommon.find_top_level_block(
+                lines=lines,
+                header=f"class {name}",
+            )
+            if found is None:
+                continue
+            start, end = found
+            blocks.append("\n".join(lines[start:end]))
+            ranges.append((start, end))
+            moved.append(name)
+        return blocks, ranges, moved
+
+    @staticmethod
+    def _prepared_target(
+        target_file: Path,
+        source: str,
+        blocks: t.SequenceOf[str],
+    ) -> t.Pair[str, str | None]:
+        """Build the target module text with imports and moved blocks appended.
+
+        Returns:
+            The resulting ``(updated target source, expected target source)`` pair.
+
+        """
+        expected_target_source = (
+            target_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+            if target_file.is_file()
+            else None
+        )
+        target_source = (
+            expected_target_source
+            if expected_target_source is not None
+            else f"{c.Infra.FUTURE_ANNOTATIONS}\n"
+        )
+        target_lines: t.StrSequence = target_source.splitlines()
+        target_lines = FlextInfraUtilitiesRefactorNamespaceCommon.insert_import_lines(
+            lines=target_lines,
+            imports=(
+                FlextInfraUtilitiesRefactorNamespaceMoves._collect_required_import_lines(
+                    source=source,
+                    blocks=blocks,
+                )
+            ),
+        )
+        updated_target = "\n".join(target_lines).rstrip()
+        for block in blocks:
+            if block.splitlines()[0] not in updated_target:
+                updated_target += f"\n\n{block}"
+        return updated_target, expected_target_source
+
+    @staticmethod
+    def _lines_without_ranges(
+        lines: t.SequenceOf[str],
+        ranges: t.SequenceOf[t.IntPair],
+    ) -> list[str]:
+        """Delete every collected line range from the source lines.
+
+        Returns:
+            The resulting ``list[str]``.
+
+        """
+        filtered_lines = list(lines)
+        for start, end in sorted(ranges, reverse=True):
+            del filtered_lines[start:end]
+        return filtered_lines
+
+    @staticmethod
     def _move_protocol_blocks(
         *,
         project_root: Path,
@@ -111,21 +198,12 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
 
         """
         source = source_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-        lines = source.splitlines()
-        blocks: t.MutableSequenceOf[str] = []
-        ranges: t.MutableSequenceOf[t.IntPair] = []
-        moved: t.MutableSequenceOf[str] = []
-        for name in sorted(names):
-            found = FlextInfraUtilitiesRefactorNamespaceCommon.find_top_level_block(
-                lines=lines,
-                header=f"class {name}",
+        blocks, ranges, moved = (
+            FlextInfraUtilitiesRefactorNamespaceMoves._moved_block_facts(
+                source.splitlines(),
+                names,
             )
-            if found is None:
-                continue
-            start, end = found
-            blocks.append("\n".join(lines[start:end]))
-            ranges.append((start, end))
-            moved.append(name)
+        )
         if not blocks:
             return None
         target_file = FlextInfraUtilitiesRefactorNamespaceCommon.canonical_target_file(
@@ -133,34 +211,19 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             source_file=source_file,
             filename=c.Infra.PROTOCOLS_PY,
         )
-        required_imports = (
-            FlextInfraUtilitiesRefactorNamespaceMoves._collect_required_import_lines(
-                source=source,
-                blocks=blocks,
+        updated_target, expected_target_source = (
+            FlextInfraUtilitiesRefactorNamespaceMoves._prepared_target(
+                target_file,
+                source,
+                blocks,
             )
         )
-        expected_target_source = (
-            target_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-            if target_file.is_file()
-            else None
+        filtered_lines = (
+            FlextInfraUtilitiesRefactorNamespaceMoves._lines_without_ranges(
+                source.splitlines(),
+                ranges,
+            )
         )
-        target_source = (
-            expected_target_source
-            if expected_target_source is not None
-            else f"{c.Infra.FUTURE_ANNOTATIONS}\n"
-        )
-        target_lines: t.StrSequence = target_source.splitlines()
-        target_lines = FlextInfraUtilitiesRefactorNamespaceCommon.insert_import_lines(
-            lines=target_lines,
-            imports=required_imports,
-        )
-        updated_target = "\n".join(target_lines).rstrip()
-        for block in blocks:
-            if block.splitlines()[0] not in updated_target:
-                updated_target += f"\n\n{block}"
-        filtered_lines = list(lines)
-        for start, end in sorted(ranges, reverse=True):
-            del filtered_lines[start:end]
 
         ok, reports = FlextInfraUtilitiesProtectedEdit.protected_source_writes(
             {
@@ -279,7 +342,268 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         return source
 
     @staticmethod
+    def _bracket_delta(line: str) -> int:
+        """Return the net bracket depth one source line opens.
+
+        Returns:
+            The resulting ``int``.
+
+        """
+        return (
+            line.count("(")
+            - line.count(")")
+            + line.count("[")
+            - line.count("]")
+            + line.count("{")
+            - line.count("}")
+        )
+
+    @staticmethod
+    def _moved_alias_line(
+        stripped: str,
+        line: str,
+        public_alias_names: t.Infra.StrSet,
+    ) -> str | None:
+        """Return the moved statement text for one alias line, else ``None``.
+
+        Returns:
+            The resulting ``str | None``.
+
+        """
+        typing_match = c.Infra.TYPING_FACTORY_ASSIGN_RE.match(stripped)
+        typing_name = typing_match.group(1) if typing_match is not None else ""
+        legacy_alias_match = c.Infra.LEGACY_TYPEALIAS_RE.match(stripped)
+        should_move = any(
+            stripped.startswith((f"type {name} =", f"{name}: TypeAlias ="))
+            or typing_name == name
+            for name in public_alias_names
+        )
+        if not should_move:
+            return None
+        return (
+            f"type {legacy_alias_match.group(1)} = {legacy_alias_match.group(2)}"
+            if legacy_alias_match is not None
+            else line
+        )
+
+    @classmethod
+    def _split_alias_lines(
+        cls,
+        lines: t.SequenceOf[str],
+        public_alias_names: t.Infra.StrSet,
+    ) -> t.Triple[list[str], list[str], int]:
+        """Partition source lines into moved alias statements and kept lines.
+
+        Returns:
+            The resulting ``(moved lines, kept lines, first moved line
+            number)`` triple.
+
+        """
+        moved_lines: t.MutableSequenceOf[str] = []
+        moved_line_numbers: t.MutableSequenceOf[int] = []
+        kept_lines: t.MutableSequenceOf[str] = []
+        open_brackets = 0
+        for line_number, line in enumerate(lines, start=1):
+            stripped = line.strip()
+            if open_brackets > 0:
+                # The moved statement opened brackets it has not closed yet:
+                # this line is a continuation of the same statement and must
+                # move with it, or the kept source keeps orphan fragments that
+                # no longer parse. The continuation joins its statement entry
+                # so every downstream consumer parses whole statements.
+                if moved_lines:
+                    moved_lines[-1] = f"{moved_lines[-1]}\n{line}"
+                moved_line_numbers.append(line_number)
+                open_brackets += cls._bracket_delta(line)
+                continue
+            moved = cls._moved_alias_line(stripped, line, public_alias_names)
+            if moved is not None:
+                moved_lines.append(moved)
+                moved_line_numbers.append(line_number)
+                open_brackets = cls._bracket_delta(line)
+            else:
+                kept_lines.append(line)
+        return (
+            list(moved_lines),
+            list(kept_lines),
+            min(moved_line_numbers) if moved_line_numbers else 0,
+        )
+
+    @staticmethod
+    def _import_bound_names(import_line: str) -> t.Infra.StrSet:
+        """Return the names one import line binds.
+
+        Returns:
+            The resulting ``t.Infra.StrSet``.
+
+        """
+        return {
+            bound
+            for _name, bound in FlextInfraUtilitiesRopeSource.parse_import_names(
+                import_line.partition(" import ")[2],
+            )
+        }
+
+    @classmethod
+    def _imports_unresolvable(
+        cls,
+        required_imports: t.SequenceOf[str],
+        target_bindings: t.MappingKV[str, str],
+    ) -> bool:
+        """Report imports the destination module cannot legally accept.
+
+        The destination may already bind a required name to a DIFFERENT
+        module: `m` is `flext_core`'s facade there and `flext_infra`'s here.
+        Adding the second import redefines the name (ruff F811) and dropping
+        it silently re-points the moved alias at the wrong facade, so the
+        move is not mechanically resolvable and is abandoned instead.
+        A facade module may not import a later layer at runtime: the declared
+        order is c -> t -> p -> m -> u, and the move target here is always a
+        typings module. Carrying `from <pkg> import m` into it is both a
+        reverse import and, for the package's own typings module, an import
+        cycle -- observed as `ImportError: cannot import name 'm'`.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
+        later_layers = {"p", "m", "u"}
+        for import_line in required_imports:
+            for _name, bound in FlextInfraUtilitiesRopeSource.parse_import_names(
+                import_line.partition(" import ")[2],
+            ):
+                if bound in later_layers:
+                    return True
+                existing = target_bindings.get(bound)
+                if existing is not None and existing != import_line:
+                    return True
+        return False
+
+    @staticmethod
+    def _deduplicated_imports(import_lines: t.SequenceOf[str]) -> list[str]:
+        """Deduplicate import lines by the names they bind, first emitter wins.
+
+        Three collectors contribute imports and they can name the same alias
+        from different modules -- `m` is both flext_core's and flext_infra's
+        facade. Emitting both redefines the name (ruff F811), so the list is
+        deduplicated by the name each line BINDS, not by its text. The source
+        module's own imports come first and win, because they are by
+        construction the ones the moved declaration resolved against.
+
+        Returns:
+            The resulting ``list[str]``.
+
+        """
+        seen_bindings: t.Infra.StrSet = set()
+        candidate_imports: t.MutableSequenceOf[str] = []
+        for import_line in import_lines:
+            bound_names = FlextInfraUtilitiesRefactorNamespaceMoves._import_bound_names(
+                import_line,
+            )
+            if bound_names & seen_bindings:
+                continue
+            seen_bindings |= bound_names
+            candidate_imports.append(import_line)
+        return list(candidate_imports)
+
+    @classmethod
+    def _missing_target_imports(
+        cls,
+        candidate_imports: t.SequenceOf[str],
+        target_source: str,
+    ) -> list[str]:
+        """Filter import lines the destination module does not already have.
+
+        Returns:
+            The resulting ``list[str]``.
+
+        """
+        target_lines = target_source.splitlines()
+        return [
+            filtered
+            for import_line in candidate_imports
+            if import_line not in target_lines
+            if (
+                filtered := cls._strip_self_bound_aliases(
+                    import_line=import_line,
+                    target_source=target_source,
+                )
+            )
+        ]
+
+    @staticmethod
+    def _prepared_target_text(
+        target_lines: t.StrSequence,
+        moved_lines: t.SequenceOf[str],
+        missing_imports: t.SequenceOf[str],
+    ) -> str:
+        """Insert missing imports and append every moved alias statement.
+
+        Returns:
+            The resulting ``str``.
+
+        """
+        lines = FlextInfraUtilitiesRefactorNamespaceCommon.insert_import_lines(
+            lines=target_lines,
+            imports=missing_imports,
+        )
+        updated_target = "\n".join(lines).rstrip()
+        for moved_line in moved_lines:
+            if moved_line not in lines:
+                updated_target += f"\n\n{moved_line}"
+        return updated_target
+
+    @staticmethod
+    def _moved_sources_parse(
+        updated_target: str,
+        kept_lines: t.SequenceOf[str],
+    ) -> bool:
+        """Report whether both rewritten sources still parse.
+
+        The line-based move cannot see string literals and comments that
+        contain bracket characters, so a carried multi-line statement can
+        still assemble invalid text. A move that does not parse is
+        abandoned, exactly like the conflicting-binding cases above: mod
+        skips this one rewrite instead of crashing the whole verb.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
+        try:
+            ast.parse(updated_target)
+            ast.parse("\n".join(kept_lines))
+        except SyntaxError:
+            return False
+        return True
+
+    @staticmethod
+    def _write_alias_move(
+        *,
+        project_root: Path,
+        gates: t.StrSequence | None,
+        writes: t.MappingKV[Path, str],
+        expected_sources: t.MappingKV[Path, str | None],
+    ) -> None:
+        """Publish the move through the protected-write boundary.
+
+        The gates revert the write atomically (for example a reverse-layer
+        reference the typings module cannot legally import); the rewrite is
+        unmovable this pass, so mod skips it like any other abandoned move
+        instead of failing the verb.
+        """
+        FlextInfraUtilitiesProtectedEdit.protected_source_writes(
+            dict(writes),
+            request=m.Infra.ProtectedSourceWritesRequest(
+                workspace=project_root,
+                expected_sources=dict(expected_sources),
+                gates=gates,
+            ),
+        )
+
+    @classmethod
     def _move_typing_alias_lines(
+        cls,
         *,
         project_root: Path,
         source_file: Path,
@@ -293,64 +617,29 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         published: pyright then rejects every consumer with
         ``reportPrivateUsage`` and ruff reports the alias as unused at its new
         home, so the whole move validates red and is reverted. Filtering here
-        rather than at each caller keeps one owner for the rule.
-
-        Raises:
-            RuntimeError: If ``not ok``.
+        rather than at each caller keeps one owner for the rule. The gate
+        check propagates the ``RuntimeError`` its verifier raises when the
+        move does not hold.
 
         """
         public_alias_names = {name for name in alias_names if not name.startswith("_")}
         if not public_alias_names:
             return
         source = source_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-        lines = source.splitlines()
-        moved_lines: t.MutableSequenceOf[str] = []
-        moved_line_numbers: t.MutableSequenceOf[int] = []
-        kept_lines: t.MutableSequenceOf[str] = []
-        for line_number, line in enumerate(lines, start=1):
-            stripped = line.strip()
-            typing_match = c.Infra.TYPING_FACTORY_ASSIGN_RE.match(stripped)
-            typing_name = typing_match.group(1) if typing_match is not None else ""
-            legacy_alias_match = c.Infra.LEGACY_TYPEALIAS_RE.match(stripped)
-            legacy_alias_name = (
-                legacy_alias_match.group(1) if legacy_alias_match is not None else ""
-            )
-            should_move = any(
-                stripped.startswith((f"type {name} =", f"{name}: TypeAlias ="))
-                or typing_name == name
-                for name in public_alias_names
-            )
-            if should_move:
-                moved_lines.append(
-                    f"type {legacy_alias_name} = {legacy_alias_match.group(2)}"
-                    if legacy_alias_match is not None
-                    else line,
-                )
-                moved_line_numbers.append(line_number)
-            else:
-                kept_lines.append(line)
+        moved_lines, kept_lines, first_moved_line = cls._split_alias_lines(
+            source.splitlines(),
+            public_alias_names,
+        )
         if not moved_lines:
             return
-        kept_source = "\n".join(kept_lines)
-        kept_source = (
-            FlextInfraUtilitiesRefactorNamespaceMoves._drop_moved_alias_exports(
-                source=kept_source,
-                alias_names=public_alias_names,
-            )
+        kept_source = cls._drop_moved_alias_exports(
+            source="\n".join(kept_lines),
+            alias_names=public_alias_names,
         )
         kept_lines = kept_source.splitlines()
-        required_imports = (
-            FlextInfraUtilitiesRefactorNamespaceMoves._collect_required_import_lines(
-                source=source,
-                blocks=moved_lines,
-            )
-        )
-        orphaned_imports = (
-            FlextInfraUtilitiesRefactorNamespaceMoves._collect_orphaned_import_lines(
-                source=source,
-                kept_source=kept_source,
-                max_line=min(moved_line_numbers),
-            )
+        required_imports = cls._collect_required_import_lines(
+            source=source,
+            blocks=moved_lines,
         )
         target_file = FlextInfraUtilitiesRefactorNamespaceCommon.canonical_target_file(
             project_root=project_root,
@@ -367,89 +656,38 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             if expected_target_source is not None
             else f"{c.Infra.FUTURE_ANNOTATIONS}\n"
         )
-        # The destination may already bind a required name to a DIFFERENT
-        # module: `m` is `flext_core`'s facade there and `flext_infra`'s here.
-        # Adding the second import redefines the name (ruff F811) and dropping
-        # it silently re-points the moved alias at the wrong facade, so the
-        # move is not mechanically resolvable and is abandoned instead.
-        # A facade module may not import a later layer at runtime: the declared
-        # order is c -> t -> p -> m -> u, and the move target here is always a
-        # typings module. Carrying `from <pkg> import m` into it is both a
-        # reverse import and, for the package's own typings module, an import
-        # cycle -- observed as `ImportError: cannot import name 'm'`.
-        later_layers = {"p", "m", "u"}
-        for import_line in required_imports:
-            for _name, bound in FlextInfraUtilitiesRopeSource.parse_import_names(
-                import_line.partition(" import ")[2],
-            ):
-                if bound in later_layers:
-                    return
-        target_bindings = FlextInfraUtilitiesRefactorNamespaceMoves._import_bindings(
-            target_source,
-        )
-        for import_line in required_imports:
-            for _name, bound in FlextInfraUtilitiesRopeSource.parse_import_names(
-                import_line.partition(" import ")[2],
-            ):
-                existing = target_bindings.get(bound)
-                if existing is not None and existing != import_line:
-                    return
-        collect_missing = FlextInfraUtilitiesRefactorNamespaceMoves._collect_missing_runtime_alias_imports
-        fallback_runtime_imports = collect_missing(
-            target_source=target_source,
-            blocks=moved_lines,
-        )
-        target_lines: t.StrSequence = target_source.splitlines()
-        # Three collectors contribute imports and they can name the same alias
-        # from different modules -- `m` is both flext_core's and flext_infra's
-        # facade. Emitting both redefines the name (ruff F811), so the list is
-        # deduplicated by the name each line BINDS, not by its text. The source
-        # module's own imports come first and win, because they are by
-        # construction the ones the moved declaration resolved against.
-        seen_bindings: t.Infra.StrSet = set()
-        candidate_imports: t.MutableSequenceOf[str] = []
-        for import_line in (
-            *required_imports,
-            *orphaned_imports,
-            *fallback_runtime_imports,
+        if cls._imports_unresolvable(
+            required_imports,
+            cls._import_bindings(target_source),
         ):
-            bound_names = {
-                bound
-                for _name, bound in FlextInfraUtilitiesRopeSource.parse_import_names(
-                    import_line.partition(" import ")[2],
-                )
-            }
-            if bound_names & seen_bindings:
-                continue
-            seen_bindings |= bound_names
-            candidate_imports.append(import_line)
-        missing_imports = [
-            filtered
-            for import_line in candidate_imports
-            if import_line not in target_lines
-            if (
-                filtered
-                := FlextInfraUtilitiesRefactorNamespaceMoves._strip_self_bound_aliases(
-                    import_line=import_line,
-                    target_source=target_source,
-                )
-            )
-        ]
-        target_lines = FlextInfraUtilitiesRefactorNamespaceCommon.insert_import_lines(
-            lines=target_lines,
-            imports=missing_imports,
+            return
+        namespace_moves = FlextInfraUtilitiesRefactorNamespaceMoves
+        updated_target = cls._prepared_target_text(
+            target_source.splitlines(),
+            moved_lines,
+            cls._missing_target_imports(
+                cls._deduplicated_imports((
+                    *required_imports,
+                    *cls._collect_orphaned_import_lines(
+                        source=source,
+                        kept_source=kept_source,
+                        max_line=first_moved_line,
+                    ),
+                    *namespace_moves.collect_missing_runtime_alias_imports(
+                        target_source=target_source,
+                        blocks=moved_lines,
+                    ),
+                )),
+                target_source,
+            ),
         )
-        updated_target = "\n".join(target_lines).rstrip()
-        for moved_line in moved_lines:
-            if moved_line not in target_lines:
-                updated_target += f"\n\n{moved_line}"
-        source_imports = (
-            FlextInfraUtilitiesRefactorNamespaceMoves._typing_alias_source_imports(
-                project_root=project_root,
-                target_file=target_file,
-                kept_source=kept_source,
-                alias_names=alias_names,
-            )
+        if not cls._moved_sources_parse(updated_target, kept_lines):
+            return
+        source_imports = cls._typing_alias_source_imports(
+            project_root=project_root,
+            target_file=target_file,
+            kept_source=kept_source,
+            alias_names=alias_names,
         )
         if source_imports is None:
             return
@@ -461,24 +699,15 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             if source_imports
             else kept_lines
         )
-
-        ok, reports = FlextInfraUtilitiesProtectedEdit.protected_source_writes(
-            {
+        cls._write_alias_move(
+            project_root=project_root,
+            gates=gates,
+            writes={
                 target_file: updated_target + "\n",
                 source_file: "\n".join(updated_source_lines).rstrip() + "\n",
             },
-            request=m.Infra.ProtectedSourceWritesRequest(
-                workspace=project_root,
-                expected_sources={
-                    target_file: expected_target_source,
-                    source_file: source,
-                },
-                gates=gates,
-            ),
+            expected_sources={target_file: expected_target_source, source_file: source},
         )
-        if not ok:
-            msg = "typing alias move failed validation: " + "; ".join(reports)
-            raise RuntimeError(msg)
 
     @staticmethod
     def _typing_alias_source_imports(
@@ -543,8 +772,6 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             The resulting ``str``.
 
         """
-        from flext_infra import u
-
         prefix, separator, names_part = import_line.partition(" import ")
         if not separator:
             return import_line
@@ -553,14 +780,17 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             for name, bound in FlextInfraUtilitiesRopeSource.parse_import_names(
                 names_part,
             )
-            if not u.Infra.alias_locally_bound(target_source, bound)
+            if not FlextInfraUtilitiesTransformerHeader.alias_locally_bound(
+                target_source,
+                bound,
+            )
         ]
         if not kept:
             return ""
         return f"{prefix} import {', '.join(kept)}"
 
     @staticmethod
-    def _collect_missing_runtime_alias_imports(
+    def collect_missing_runtime_alias_imports(
         *,
         target_source: str,
         blocks: t.StrSequence,
@@ -571,8 +801,6 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             The resulting ``t.StrSequence``.
 
         """
-        from flext_infra import u
-
         moved_source = "\n".join(blocks)
         moved_pymodule = FlextInfraUtilitiesRopeAnalysis.parse_string_module(
             moved_source,
@@ -580,7 +808,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         moved_ast = FlextInfraUtilitiesRopeAnalysis.ensure_ast_node(
             moved_pymodule.get_ast(),
         )
-        runtime_aliases = u.runtime_alias_names(c.Infra.PKG_INFRA_UNDERSCORE)
+        runtime_aliases = core_u.runtime_alias_names(c.Infra.PKG_INFRA_UNDERSCORE)
         moved_ast = moved_pymodule.get_ast()
         if not FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(moved_ast):
             return ()
@@ -707,8 +935,12 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                         target_resource,
                     ).get_name()
                 except (
-                    *FlextInfraUtilitiesRopeRuntime.rope_runtime_errors(),
-                    *FlextInfraUtilitiesRopeRuntime.rope_syntax_errors(),
+                    exceptions.RefactoringError,
+                    exceptions.ResourceNotFoundError,
+                    exceptions.ModuleNotFoundError,
+                    AttributeError,
+                    SyntaxError,
+                    exceptions.ModuleSyntaxError,
                     TypeError,
                 ) as exc:
                     msg = (

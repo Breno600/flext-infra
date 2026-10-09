@@ -19,11 +19,113 @@ from flext_tests import tm
 
 from flext_infra import c, config, m
 from flext_infra.codegen.conform import FlextInfraCodegenConform
-from tests import u, u as test_u
+from tests import u
 
 
 class TestsFlextInfraCodegenRepositoryRootScope:
     """Tests for ``FlextInfraCodegenRepositoryRootScope``."""
+
+    def test_approval_recipe_keeps_one_fail_closed_shell(self, tmp_path: Path) -> None:
+        """Configured approval stages share their error policy and cleanup trap."""
+        root = self._render_root_makefile(tmp_path)
+        rendered = (root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding=c.Infra.ENCODING_DEFAULT,
+        )
+        section = rendered.split("\npre-commit:", 1)[1].split(
+            "\n_builtin-pre-commit:",
+            1,
+        )[0]
+        lines = section.splitlines()
+        indices = tuple(
+            index for index, line in enumerate(lines) if line.startswith("\t")
+        )
+        recipe = lines[indices[0] : indices[-1] + 1]
+        tm.that(
+            all(line.startswith("\t") for line in recipe),
+            eq=True,
+            msg="\n".join(recipe),
+        )
+        tm.that(all(line.endswith("\\") for line in recipe[:-1]), eq=True)
+        tm.that(recipe[-1].endswith("\\"), eq=False)
+        tm.that(section.count("set -eu;"), eq=1)
+        tm.that(section.count("' EXIT;"), eq=1)
+        for verb in config.Infra.codegen.make.approval_verbs:
+            tm.that(section.count(f"approval: {verb} START"), eq=1)
+            tm.that(section.count(f"approval: {verb} COMPLETE"), eq=1)
+        tm.that(rendered, lacks=["DEBUG1 scratch=", "DEBUG2 scratch="])
+
+    def test_verify_clean_projection_uses_the_public_git_service(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """The rendered recipe retains audits and propagates the public CLI exit."""
+        root = self._render_root_makefile(tmp_path)
+        rendered = (root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding=c.Infra.ENCODING_DEFAULT,
+        )
+        recipe = rendered.split("\n_builtin-verify-clean:", 1)[1].split(
+            "\n_builtin-docs:",
+            1,
+        )[0]
+        tm.that(recipe, has=["codegen conform", "docs audit"])
+        tm.that(
+            recipe.splitlines()[-1],
+            eq=f"\t@$(PROJECT_FLEXT_INFRA) {c.Infra.CLI_GROUP_WORKSPACE} "
+            'verify-clean --repo-root "$(PROJECT_ROOT)"',
+        )
+        tm.that(recipe, lacks=["diff --exit-code", "||", "\t-", "\t@-"])
+
+    def test_normal_test_verbs_admit_only_incremental_execution(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """`make test` stays one incremental phase; `test-file` runs its file whole.
+
+        `make test` runs in CI and pre-commit, so slow-marked items stay out of
+        it (operator 2026-10-01: nothing slow in CI or pre-commit). `test-file`
+        is the sole single-file path and runs only locally, so the declared
+        file passes through its budgeted phase and then its slow phase; a file
+        whose items are all slow-marked never ends the verb with zero executed
+        tests. Neither recipe appends the full suite.
+        """
+        root = self._render_root_makefile(tmp_path)
+        rendered = (root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding=c.Infra.ENCODING_DEFAULT,
+        )
+        cache = config.Infra.codegen.make.testmon_cache
+        recipe = rendered.split("_builtin_test_all:", 1)[1].split("\n\n", 1)[0]
+        tm.that(recipe.count("-m flext_infra._pytest_entry"), eq=1)
+        tm.that(
+            recipe,
+            lacks=["_pytest_entry slow", "file-slow", "_pytest_entry full"],
+        )
+        tm.that(
+            recipe,
+            has=f'{cache.database_environment_variable}="$$database"',
+        )
+
+    def test_file_verb_composes_both_phases_on_one_cache(self, tmp_path: Path) -> None:
+        """Requested files retain one guard and scratch across independent entries."""
+        root = self._render_root_makefile(tmp_path)
+        rendered = (root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding=c.Infra.ENCODING_DEFAULT,
+        )
+        recipe = rendered.split("_builtin_test_file_all:", 1)[1].split("\n\n", 1)[0]
+        cache = config.Infra.codegen.make.testmon_cache
+        tm.that(recipe.count("-m flext_infra._pytest_entry"), eq=2)
+        tm.that(recipe, has=["_pytest_entry file;", "_pytest_entry file-slow;"])
+        tm.that(
+            recipe.index("_pytest_entry file;")
+            < recipe.index("_pytest_entry file-slow"),
+            eq=True,
+        )
+        tm.that(
+            recipe.count(f'{cache.database_environment_variable}="$$database"'),
+            eq=2,
+        )
+        tm.that(recipe.count("set -eu;"), eq=1)
+        tm.that(recipe.count("' EXIT;"), eq=1)
+        tm.that(recipe, lacks=["_pytest_entry slow", "_pytest_entry full"])
 
     @staticmethod
     def test_conform_owns_repository_root_makefile() -> None:
@@ -66,10 +168,10 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         }
         for verb, local_body in expected.items():
             execution = tm.ok(
-                test_u.Cli.run_raw(
+                u.Cli.run_raw(
                     [c.Infra.MAKE, "--dry-run", f"_builtin-{verb}"],
                     cwd=repository_root,
-                    remove_env_keys=("MAKEFLAGS",),
+                    options=m.Cli.ProcessOptions(remove_env_keys=("MAKEFLAGS",)),
                 ),
             )
             tm.that(u.Cli.process_succeeded(execution.outcome), eq=True)
@@ -81,10 +183,10 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         """The workspace profile declares propagate through the workspace CLI."""
         repository_root = self._render_root_makefile(tmp_path)
         execution = tm.ok(
-            test_u.Cli.run_raw(
+            u.Cli.run_raw(
                 [c.Infra.MAKE, "--dry-run", "_builtin-propagate"],
                 cwd=repository_root,
-                remove_env_keys=("MAKEFLAGS",),
+                options=m.Cli.ProcessOptions(remove_env_keys=("MAKEFLAGS",)),
             ),
         )
         tm.that(u.Cli.process_succeeded(execution.outcome), eq=True)
@@ -131,53 +233,59 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         self,
         tmp_path: Path,
     ) -> None:
-        """One ``make upg`` converges: every final lock follows ``gen``.
+        """One ``make upg`` lifecycle relocks the tools between gen's halves.
 
-        ``gen`` renders the tool manifests of the upgraded generator, so the
-        first half ends at ``gen`` and hands off to a fresh make invocation of
-        the regenerated Makefile. That second half locks the tools again from
-        the rendered manifest (without re-resolving the Mise release), then
-        re-resolves, reprovisions and checks uv.lock before post-upg.
+        The render half of ``gen`` writes the tool manifests of the upgraded
+        generator; the single ``_upg_lifecycle`` re-resolves mise.lock from
+        that rendered manifest (``mise lock --bump``) and installs it before
+        gen's activation half demands the pinned Mise release, then checks
+        uv.lock before post-upg.
         """
         repository_root = self._render_root_makefile(tmp_path)
         handoff = {
             "SETUP_DIRENV": tm.not_none(shutil.which("direnv")),
             "SETUP_DIRENV_XDG_DATA_HOME": str(tmp_path / "direnv-data"),
         }
-        first, second = (
-            tm.ok(
-                u.Tests.run_isolated_make(arguments, cwd=repository_root, env=handoff),
-            )
-            for arguments in (
+        execution = tm.ok(
+            u.Tests.run_isolated_make(
                 ["--dry-run", "_upg_lifecycle"],
-                ["--dry-run", "_upg_converge"],
-            )
+                cwd=repository_root,
+                env=handoff,
+            ),
         )
-        for execution in (first, second):
-            tm.that(
-                u.Cli.process_succeeded(execution.outcome),
-                eq=True,
-                msg=execution.stdout + execution.stderr,
-            )
-        steps = first.stdout.splitlines()
+        tm.that(
+            u.Cli.process_succeeded(execution.outcome),
+            eq=True,
+            msg=execution.stdout + execution.stderr,
+        )
+        steps = execution.stdout.splitlines()
         positions = [
             next(i for i, step in enumerate(steps) if needle in step)
             for needle in (
                 "--upgrade --refresh",
                 "deps modernize",
-                " gen",
-                "_upg_relock",
+                "_builtin-gen",
+                "lock --bump",
+                "install --yes",
+                "_activated-gen",
             )
         ]
         tm.that(positions, eq=sorted(positions))
-        tm.that(sum("lock --project" in step for step in steps), eq=1)
-        converge = second.stdout.splitlines()
-        final_lock = next(i for i, s in enumerate(converge) if "lock --project" in s)
-        # The staged lock step verifies its own mirror; the final check is the
-        # separate step that validates the published uv.lock after it.
-        lock_check = max(i for i, s in enumerate(converge) if "lock --check" in s)
-        tm.that(final_lock < lock_check, eq=True)
-        tm.that(second.stdout + second.stderr, has="_upg_activated")
+        # uv.lock resolves twice (flext-5kqsx): the upgrade selects the newest
+        # generator, and the relock resolves the pyproject that generator's
+        # render half projected, so a requirement only the upgraded generator
+        # declares reaches the lock in the same run. The check follows the
+        # final resolution and precedes the tool relock.
+        locks = [i for i, step in enumerate(steps) if "lock --project" in step]
+        tm.that(len(locks), eq=2)
+        upgrade_lock, final_lock = locks
+        tm.that(steps[upgrade_lock], has="--upgrade")
+        tm.that(steps[final_lock], lacks="--upgrade")
+        rendered = next(i for i, s in enumerate(steps) if "_builtin-gen" in s)
+        lock_check = max(i for i, s in enumerate(steps) if "lock --check" in s)
+        tool_lock = next(i for i, s in enumerate(steps) if "lock --bump" in s)
+        tm.that(rendered < final_lock < lock_check < tool_lock, eq=True)
+        tm.that(execution.stdout + execution.stderr, has="_upg_activated")
 
     @staticmethod
     def _render_root_makefile(tmp_path: Path) -> Path:

@@ -11,8 +11,8 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import FlextInfraWorktreeService, c, m, p, u
-from tests import u as test_u
+from flext_infra import FlextInfraWorktreeService
+from tests import c, m, p, u
 
 
 class TestsFlextInfraWorktreeSecurityBoundaries:
@@ -31,7 +31,7 @@ class TestsFlextInfraWorktreeSecurityBoundaries:
             ".PHONY: setup\nsetup:\n\t@printf 'setup\\n'\n",
             encoding="utf-8",
         )
-        test_u.Tests.initialize_git_repo(repository)
+        u.Tests.initialize_git_repo(repository)
         return repository
 
     @staticmethod

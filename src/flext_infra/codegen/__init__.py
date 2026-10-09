@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core import build_lazy_import_map, install_lazy_exports
+from flext_core import install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_infra.codegen import _conform
@@ -36,6 +36,12 @@ if TYPE_CHECKING:
         FlextInfraCodegenGenerationTypeCheckingMixin,
     )
     from flext_infra.codegen._codegen_staging import FlextInfraCodegenStaging
+    from flext_infra.codegen._codegen_transaction_generation import (
+        FlextInfraCodegenTransactionGeneration,
+    )
+    from flext_infra.codegen._codegen_transaction_phases import (
+        FlextInfraCodegenTransactionPhases,
+    )
     from flext_infra.codegen._conform.artifact_render import (
         FlextInfraCodegenConformArtifactRender,
     )
@@ -50,6 +56,12 @@ if TYPE_CHECKING:
         FlextInfraCodegenConformDocsOwnership,
     )
     from flext_infra.codegen._conform.execute import FlextInfraCodegenConformExecute
+    from flext_infra.codegen._conform.execute_directed import (
+        FlextInfraCodegenConformExecuteDirected,
+    )
+    from flext_infra.codegen._conform.execute_scaffold import (
+        FlextInfraCodegenConformExecuteScaffold,
+    )
     from flext_infra.codegen._conform.existing_plan import (
         FlextInfraCodegenConformExistingPlan,
     )
@@ -79,6 +91,9 @@ if TYPE_CHECKING:
         FlextInfraCodegenLayoutGitignoreMixin,
     )
     from flext_infra.codegen._layout_plan import FlextInfraCodegenLayoutPlanMixin
+    from flext_infra.codegen._lazy_init_generation import (
+        FlextInfraCodegenLazyInitGenerationMixin,
+    )
     from flext_infra.codegen._lazy_init_generation_files import (
         FlextInfraCodegenLazyInitGenerationFilePlanMixin,
     )
@@ -94,21 +109,33 @@ if TYPE_CHECKING:
     from flext_infra.codegen._mise_artifacts_candidates import (
         FlextInfraMiseArtifactsCandidates,
     )
-    from flext_infra.codegen._mise_artifacts_cold_start import FlextInfraMiseColdStart
-    from flext_infra.codegen._mise_artifacts_derivation import (
-        FlextInfraMiseArtifactsDerivation,
-    )
+    from flext_infra.codegen._mise_artifacts_files import FlextInfraMiseArtifactsFiles
     from flext_infra.codegen._mise_artifacts_journal import (
         FlextInfraMiseArtifactsJournal,
     )
+    from flext_infra.codegen._mise_artifacts_journal_relocation import (
+        FlextInfraMiseArtifactsJournalRelocation,
+    )
     from flext_infra.codegen._mise_artifacts_process import (
         FlextInfraMiseArtifactsProcess,
+    )
+    from flext_infra.codegen._mise_artifacts_publication import (
+        FlextInfraMisePublication,
     )
     from flext_infra.codegen._mise_artifacts_recovery import FlextInfraMiseRecovery
     from flext_infra.codegen._mise_artifacts_staging import FlextInfraMiseStaging
     from flext_infra.codegen._mise_artifacts_state import FlextInfraMiseArtifactsState
     from flext_infra.codegen._mise_artifacts_verification import (
         FlextInfraMiseArtifactsVerification,
+    )
+    from flext_infra.codegen._mise_artifacts_verification_manifest import (
+        FlextInfraMiseArtifactsVerificationManifest,
+    )
+    from flext_infra.codegen._mise_artifacts_verification_topology import (
+        FlextInfraMiseArtifactsVerificationTopology,
+    )
+    from flext_infra.codegen._pipeline_stages import (
+        FlextInfraCodegenPipelineStagesMixin,
     )
     from flext_infra.codegen._protocol_model_annotations import (
         FlextInfraCodegenProtocolModelAnnotations,
@@ -132,17 +159,15 @@ if TYPE_CHECKING:
     from flext_infra.codegen.mise_artifacts_workspace import (
         FlextInfraMiseWorkspacePlanner,
     )
-    from flext_infra.codegen.pipeline import (
-        FlextInfraCodegenLazyInitGenerationMixin,
-        FlextInfraCodegenPipeline,
-        FlextInfraCodegenPipelineStagesMixin,
-        FlextInfraMiseArtifactsFiles,
-        FlextInfraMisePublication,
+    from flext_infra.codegen.mise_toolchain_proof import (
+        FlextInfraCodegenMiseToolchainProof,
     )
+    from flext_infra.codegen.pipeline import FlextInfraCodegenPipeline
     from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
     from flext_infra.codegen.protocol_models import FlextInfraCodegenProtocolModels
     from flext_infra.codegen.py_typed import FlextInfraCodegenPyTyped
     from flext_infra.codegen.scaffolder import FlextInfraCodegenScaffolder
+    from flext_infra.codegen.staged_package import FlextInfraStagedPackage
     from flext_infra.codegen.version_file import FlextInfraCodegenVersionFile
 
 
@@ -155,6 +180,8 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenConformContextRender",
     "FlextInfraCodegenConformDocsOwnership",
     "FlextInfraCodegenConformExecute",
+    "FlextInfraCodegenConformExecuteDirected",
+    "FlextInfraCodegenConformExecuteScaffold",
     "FlextInfraCodegenConformExistingPlan",
     "FlextInfraCodegenConformFilePlans",
     "FlextInfraCodegenConformGitignore",
@@ -191,6 +218,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenLazyInitProjectionManifest",
     "FlextInfraCodegenMakeBootstrap",
     "FlextInfraCodegenMiseArtifacts",
+    "FlextInfraCodegenMiseToolchainProof",
     "FlextInfraCodegenPipeline",
     "FlextInfraCodegenPipelineStagesMixin",
     "FlextInfraCodegenProjectNew",
@@ -202,120 +230,124 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenScaffolder",
     "FlextInfraCodegenStaging",
     "FlextInfraCodegenTransaction",
+    "FlextInfraCodegenTransactionGeneration",
+    "FlextInfraCodegenTransactionPhases",
     "FlextInfraCodegenVersionFile",
     "FlextInfraMiseArtifactsCandidates",
-    "FlextInfraMiseArtifactsDerivation",
     "FlextInfraMiseArtifactsFiles",
     "FlextInfraMiseArtifactsJournal",
+    "FlextInfraMiseArtifactsJournalRelocation",
     "FlextInfraMiseArtifactsProcess",
     "FlextInfraMiseArtifactsState",
     "FlextInfraMiseArtifactsVerification",
-    "FlextInfraMiseColdStart",
+    "FlextInfraMiseArtifactsVerificationManifest",
+    "FlextInfraMiseArtifactsVerificationTopology",
     "FlextInfraMisePublication",
     "FlextInfraMiseRecovery",
     "FlextInfraMiseStaging",
     "FlextInfraMiseWorkspacePlanner",
+    "FlextInfraStagedPackage",
     "_conform",
 )
 
-_LAZY_IMPORTS = MappingProxyType(
-    build_lazy_import_map(
-        MappingProxyType({
-            "._codegen_generation_file": ("FlextInfraCodegenGenerationFileMixin",),
-            "._codegen_generation_imports": (
-                "FlextInfraCodegenGenerationImportsMixin",
-            ),
-            "._codegen_generation_lazy_entries": (
-                "FlextInfraCodegenGenerationLazyEntriesMixin",
-            ),
-            "._codegen_generation_paths": ("FlextInfraCodegenGenerationPathsMixin",),
-            "._codegen_generation_renderers": (
-                "FlextInfraCodegenGenerationRenderersMixin",
-            ),
-            "._codegen_generation_standard": (
-                "FlextInfraCodegenGenerationStandardMixin",
-            ),
-            "._codegen_generation_type_checking": (
-                "FlextInfraCodegenGenerationTypeCheckingMixin",
-            ),
-            "._codegen_staging": ("FlextInfraCodegenStaging",),
-            "._conform": ("_conform",),
-            "._conform.artifact_render": ("FlextInfraCodegenConformArtifactRender",),
-            "._conform.beads_routes": ("FlextInfraCodegenConformBeadsRoutes",),
-            "._conform.bootstrap": ("FlextInfraCodegenConformBootstrap",),
-            "._conform.context_render": ("FlextInfraCodegenConformContextRender",),
-            "._conform.docs_ownership": ("FlextInfraCodegenConformDocsOwnership",),
-            "._conform.execute": ("FlextInfraCodegenConformExecute",),
-            "._conform.existing_plan": ("FlextInfraCodegenConformExistingPlan",),
-            "._conform.file_plans": ("FlextInfraCodegenConformFilePlans",),
-            "._conform.gitignore": ("FlextInfraCodegenConformGitignore",),
-            "._conform.plan": ("FlextInfraCodegenConformPlan",),
-            "._conform.pyproject_policy": ("FlextInfraCodegenConformPyprojectPolicy",),
-            "._conform.scaffold_plan": ("FlextInfraCodegenConformScaffoldPlan",),
-            "._consolidator_steps": ("FlextInfraCodegenConsolidatorStepsMixin",),
-            "._execution": ("FlextInfraCodegenExecutionBase",),
-            "._fixer_passes": ("FlextInfraCodegenFixerPassesMixin",),
-            "._fixer_results": ("FlextInfraCodegenFixerResultsMixin",),
-            "._fixer_workspace": ("FlextInfraCodegenFixerWorkspaceMixin",),
-            "._layout_apply": ("FlextInfraCodegenLayoutApplyMixin",),
-            "._layout_files": ("FlextInfraCodegenLayoutFilesMixin",),
-            "._layout_gitignore": ("FlextInfraCodegenLayoutGitignoreMixin",),
-            "._layout_plan": ("FlextInfraCodegenLayoutPlanMixin",),
-            "._lazy_init_generation_files": (
-                "FlextInfraCodegenLazyInitGenerationFilePlanMixin",
-            ),
-            "._lazy_init_generation_registry": (
-                "FlextInfraCodegenLazyInitGenerationRegistryMixin",
-            ),
-            "._lazy_init_planner_public_root": (
-                "FlextInfraCodegenLazyInitPlannerPublicRootMixin",
-            ),
-            "._lazy_init_projection_manifest": (
-                "FlextInfraCodegenLazyInitProjectionManifest",
-            ),
-            "._mise_artifacts_candidates": ("FlextInfraMiseArtifactsCandidates",),
-            "._mise_artifacts_cold_start": ("FlextInfraMiseColdStart",),
-            "._mise_artifacts_derivation": ("FlextInfraMiseArtifactsDerivation",),
-            "._mise_artifacts_journal": ("FlextInfraMiseArtifactsJournal",),
-            "._mise_artifacts_process": ("FlextInfraMiseArtifactsProcess",),
-            "._mise_artifacts_recovery": ("FlextInfraMiseRecovery",),
-            "._mise_artifacts_staging": ("FlextInfraMiseStaging",),
-            "._mise_artifacts_state": ("FlextInfraMiseArtifactsState",),
-            "._mise_artifacts_verification": ("FlextInfraMiseArtifactsVerification",),
-            "._protocol_model_annotations": (
-                "FlextInfraCodegenProtocolModelAnnotations",
-            ),
-            "._protocol_model_render": ("FlextInfraCodegenProtocolModelRender",),
-            ".census": ("FlextInfraCodegenCensus",),
-            ".codegen_generation": ("FlextInfraCodegenGeneration",),
-            ".codegen_transaction": ("FlextInfraCodegenTransaction",),
-            ".conform": ("FlextInfraCodegenConform",),
-            ".consolidator": ("FlextInfraCodegenConsolidator",),
-            ".constants_quality_gate": ("FlextInfraCodegenQualityGate",),
-            ".file_leases": ("FlextInfraCodegenFileLeases",),
-            ".fixer": ("FlextInfraCodegenFixer",),
-            ".layout": ("FlextInfraCodegenLayout",),
-            ".lazy_init": ("FlextInfraCodegenLazyInit",),
-            ".lazy_init_planner": ("FlextInfraCodegenLazyInitPlanner",),
-            ".make_bootstrap": ("FlextInfraCodegenMakeBootstrap",),
-            ".mise_artifacts": ("FlextInfraCodegenMiseArtifacts",),
-            ".mise_artifacts_workspace": ("FlextInfraMiseWorkspacePlanner",),
-            ".pipeline": (
-                "FlextInfraCodegenLazyInitGenerationMixin",
-                "FlextInfraCodegenPipeline",
-                "FlextInfraCodegenPipelineStagesMixin",
-                "FlextInfraMiseArtifactsFiles",
-                "FlextInfraMisePublication",
-            ),
-            ".project_new": ("FlextInfraCodegenProjectNew",),
-            ".protocol_models": ("FlextInfraCodegenProtocolModels",),
-            ".py_typed": ("FlextInfraCodegenPyTyped",),
-            ".scaffolder": ("FlextInfraCodegenScaffolder",),
-            ".version_file": ("FlextInfraCodegenVersionFile",),
-        }),
-        alias_groups=MappingProxyType({}),
-        sort_keys=False,
-    ),
+install_lazy_exports(
+    __name__,
+    globals(),
+    MappingProxyType({
+        "FlextInfraCodegenCensus": ".census",
+        "FlextInfraCodegenConform": ".conform",
+        "FlextInfraCodegenConformArtifactRender": "._conform.artifact_render",
+        "FlextInfraCodegenConformBeadsRoutes": "._conform.beads_routes",
+        "FlextInfraCodegenConformBootstrap": "._conform.bootstrap",
+        "FlextInfraCodegenConformContextRender": "._conform.context_render",
+        "FlextInfraCodegenConformDocsOwnership": "._conform.docs_ownership",
+        "FlextInfraCodegenConformExecute": "._conform.execute",
+        "FlextInfraCodegenConformExecuteDirected": "._conform.execute_directed",
+        "FlextInfraCodegenConformExecuteScaffold": "._conform.execute_scaffold",
+        "FlextInfraCodegenConformExistingPlan": "._conform.existing_plan",
+        "FlextInfraCodegenConformFilePlans": "._conform.file_plans",
+        "FlextInfraCodegenConformGitignore": "._conform.gitignore",
+        "FlextInfraCodegenConformPlan": "._conform.plan",
+        "FlextInfraCodegenConformPyprojectPolicy": "._conform.pyproject_policy",
+        "FlextInfraCodegenConformScaffoldPlan": "._conform.scaffold_plan",
+        "FlextInfraCodegenConsolidator": ".consolidator",
+        "FlextInfraCodegenConsolidatorStepsMixin": "._consolidator_steps",
+        "FlextInfraCodegenExecutionBase": "._execution",
+        "FlextInfraCodegenFileLeases": ".file_leases",
+        "FlextInfraCodegenFixer": ".fixer",
+        "FlextInfraCodegenFixerPassesMixin": "._fixer_passes",
+        "FlextInfraCodegenFixerResultsMixin": "._fixer_results",
+        "FlextInfraCodegenFixerWorkspaceMixin": "._fixer_workspace",
+        "FlextInfraCodegenGeneration": ".codegen_generation",
+        "FlextInfraCodegenGenerationFileMixin": "._codegen_generation_file",
+        "FlextInfraCodegenGenerationImportsMixin": "._codegen_generation_imports",
+        "FlextInfraCodegenGenerationLazyEntriesMixin": (
+            "._codegen_generation_lazy_entries"
+        ),
+        "FlextInfraCodegenGenerationPathsMixin": "._codegen_generation_paths",
+        "FlextInfraCodegenGenerationRenderersMixin": "._codegen_generation_renderers",
+        "FlextInfraCodegenGenerationStandardMixin": "._codegen_generation_standard",
+        "FlextInfraCodegenGenerationTypeCheckingMixin": (
+            "._codegen_generation_type_checking"
+        ),
+        "FlextInfraCodegenLayout": ".layout",
+        "FlextInfraCodegenLayoutApplyMixin": "._layout_apply",
+        "FlextInfraCodegenLayoutFilesMixin": "._layout_files",
+        "FlextInfraCodegenLayoutGitignoreMixin": "._layout_gitignore",
+        "FlextInfraCodegenLayoutPlanMixin": "._layout_plan",
+        "FlextInfraCodegenLazyInit": ".lazy_init",
+        "FlextInfraCodegenLazyInitGenerationFilePlanMixin": (
+            "._lazy_init_generation_files"
+        ),
+        "FlextInfraCodegenLazyInitGenerationMixin": "._lazy_init_generation",
+        "FlextInfraCodegenLazyInitGenerationRegistryMixin": (
+            "._lazy_init_generation_registry"
+        ),
+        "FlextInfraCodegenLazyInitPlanner": ".lazy_init_planner",
+        "FlextInfraCodegenLazyInitPlannerPublicRootMixin": (
+            "._lazy_init_planner_public_root"
+        ),
+        "FlextInfraCodegenLazyInitProjectionManifest": (
+            "._lazy_init_projection_manifest"
+        ),
+        "FlextInfraCodegenMakeBootstrap": ".make_bootstrap",
+        "FlextInfraCodegenMiseArtifacts": ".mise_artifacts",
+        "FlextInfraCodegenMiseToolchainProof": ".mise_toolchain_proof",
+        "FlextInfraCodegenPipeline": ".pipeline",
+        "FlextInfraCodegenPipelineStagesMixin": "._pipeline_stages",
+        "FlextInfraCodegenProjectNew": ".project_new",
+        "FlextInfraCodegenProtocolModelAnnotations": "._protocol_model_annotations",
+        "FlextInfraCodegenProtocolModelRender": "._protocol_model_render",
+        "FlextInfraCodegenProtocolModels": ".protocol_models",
+        "FlextInfraCodegenPyTyped": ".py_typed",
+        "FlextInfraCodegenQualityGate": ".constants_quality_gate",
+        "FlextInfraCodegenScaffolder": ".scaffolder",
+        "FlextInfraCodegenStaging": "._codegen_staging",
+        "FlextInfraCodegenTransaction": ".codegen_transaction",
+        "FlextInfraCodegenTransactionGeneration": "._codegen_transaction_generation",
+        "FlextInfraCodegenTransactionPhases": "._codegen_transaction_phases",
+        "FlextInfraCodegenVersionFile": ".version_file",
+        "FlextInfraMiseArtifactsCandidates": "._mise_artifacts_candidates",
+        "FlextInfraMiseArtifactsFiles": "._mise_artifacts_files",
+        "FlextInfraMiseArtifactsJournal": "._mise_artifacts_journal",
+        "FlextInfraMiseArtifactsJournalRelocation": (
+            "._mise_artifacts_journal_relocation"
+        ),
+        "FlextInfraMiseArtifactsProcess": "._mise_artifacts_process",
+        "FlextInfraMiseArtifactsState": "._mise_artifacts_state",
+        "FlextInfraMiseArtifactsVerification": "._mise_artifacts_verification",
+        "FlextInfraMiseArtifactsVerificationManifest": (
+            "._mise_artifacts_verification_manifest"
+        ),
+        "FlextInfraMiseArtifactsVerificationTopology": (
+            "._mise_artifacts_verification_topology"
+        ),
+        "FlextInfraMisePublication": "._mise_artifacts_publication",
+        "FlextInfraMiseRecovery": "._mise_artifacts_recovery",
+        "FlextInfraMiseStaging": "._mise_artifacts_staging",
+        "FlextInfraMiseWorkspacePlanner": ".mise_artifacts_workspace",
+        "FlextInfraStagedPackage": ".staged_package",
+        "_conform": "._conform",
+    }),
+    public_exports=__all__,
 )
-
-install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

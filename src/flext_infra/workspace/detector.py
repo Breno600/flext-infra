@@ -6,10 +6,12 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, override
 
-from flext_infra import c, config, m, r, t, u
+from flext_core import r
+from flext_infra import c, config, m, t, u
 from flext_infra.base import s
 from flext_infra.workspace._governance import FlextInfraWorkspaceGovernanceMixin
 
@@ -22,6 +24,55 @@ class FlextInfraWorkspaceDetector(
     s[c.Infra.MakeProfile],
 ):
     """Classify a repository only from files and Git facts inside that checkout."""
+
+    @staticmethod
+    def _policy_overlay(
+        manifest: m.Infra.WorkspaceManifestSpec | None,
+    ) -> m.Infra.RepositoryPolicyOverlaySpec | None:
+        """Return the repository's own policy overlay, when declared.
+
+        Returns:
+            The overlay declared for the repository distribution, else ``None``.
+
+        """
+        return (
+            next(
+                (
+                    item
+                    for item in manifest.repository_policy_overlays
+                    if item.project == manifest.repository.distribution
+                ),
+                None,
+            )
+            if manifest is not None
+            else None
+        )
+
+    @classmethod
+    def _resolved_beads(
+        cls,
+        resolved_root: Path,
+        overlay: m.Infra.RepositoryPolicyOverlaySpec | None,
+    ) -> p.Result[t.Pair[m.Infra.BeadsProjectSpec | None, bool]]:
+        """Resolve the declared Beads ledger under the repository policy.
+
+        Returns:
+            The resulting workspace Beads specification with a presence flag
+            (False when the repository policy opts out).
+
+        """
+        result_type = r[t.Pair[m.Infra.BeadsProjectSpec | None, bool]]
+        beads_enabled = overlay is None or overlay.beads_enabled
+        if not beads_enabled:
+            if overlay is not None and overlay.gascity_enabled:
+                return result_type.fail(
+                    "Gas City requires Beads participation in the repository policy",
+                )
+            return result_type.ok((None, False))
+        beads_result = cls.load_beads_spec(resolved_root)
+        if beads_result.failure:
+            return result_type.from_failure(beads_result)
+        return result_type.ok((beads_result.value, True))
 
     @staticmethod
     def _beads_path(repository_root: Path) -> Path:
@@ -337,27 +388,6 @@ class FlextInfraWorkspaceDetector(
             manifest.project,
         ))
 
-    @staticmethod
-    def _gitmodule_contract(
-        repository_root: Path,
-        subproject_path: Path,
-    ) -> p.Result[t.Pair[str, str]]:
-        """Read one exact URL/branch pair from the local ``.gitmodules``.
-
-        Returns:
-            The resulting ``p.Result[t.Pair[str, str]]``.
-
-        """
-        contract = u.Infra.gitmodule_contract(
-            m.Infra.GitSubmoduleContractRequest(
-                repo_root=repository_root,
-                member_path=subproject_path.as_posix(),
-            ),
-        )
-        if contract.failure:
-            return r[tuple[str, str]].from_failure(contract)
-        return r[tuple[str, str]].ok((contract.value.url, contract.value.branch))
-
     @classmethod
     def _local_repository_ref(
         cls,
@@ -366,16 +396,21 @@ class FlextInfraWorkspaceDetector(
         path: Path = Path(),
         composed: bool = False,
         declared_url: str | None = None,
+        declared_repository: m.Infra.RepositoryRef | None = None,
     ) -> p.Result[m.Infra.RepositoryRef]:
-        """Build repository policy from local metadata and an immutable Git URL.
+        """Build identity from declared recovery topology or validated live metadata.
 
         Returns:
             The resulting ``p.Result[m.Infra.RepositoryRef]``.
 
         """
-        metadata = u.Infra.read_project_metadata_result(repository_root)
-        if metadata.failure:
-            return r[m.Infra.RepositoryRef].from_failure(metadata)
+        if declared_repository is None:
+            metadata = u.Infra.read_project_metadata_result(repository_root)
+            if metadata.failure:
+                return r[m.Infra.RepositoryRef].from_failure(metadata)
+            project_name = metadata.value.project.name
+        else:
+            project_name = declared_repository.distribution
         origin = cls._git_origin_url(repository_root)
         if origin.failure:
             return r[m.Infra.RepositoryRef].from_failure(origin)
@@ -398,7 +433,6 @@ class FlextInfraWorkspaceDetector(
             if (repository_root / c.Infra.GITMODULES).is_file()
             else c.Infra.MakeProfile.STANDALONE
         )
-        project_name = metadata.value.project.name
         _, separator, repository_name = u.Infra.git_remote_identity(
             origin.value,
         ).partition("/")
@@ -426,7 +460,11 @@ class FlextInfraWorkspaceDetector(
                 provider=provider_result.value,
                 kind=c.Infra.ProjectKind.INTERNAL_FLEXT,
                 codegen=c.Infra.CodegenKind.CONFORM,
-                package=u.Infra.layout(repository_root) is not None,
+                package=(
+                    declared_repository.package
+                    if declared_repository is not None
+                    else u.Infra.layout(repository_root) is not None
+                ),
                 editable=composed,
                 read_only=False,
             ),
@@ -449,7 +487,7 @@ class FlextInfraWorkspaceDetector(
                 t.VariadicTuple[Path]]]``.
 
         """
-        declared = u.Infra.git_declared_submodule_paths(repository_root)
+        declared = u.Infra.git_submodule_declarations(repository_root)
         result_type = r[tuple[tuple[m.Infra.RepositoryRef, ...], t.VariadicTuple[Path]]]
         if declared.failure:
             return result_type.from_failure(declared)
@@ -458,7 +496,6 @@ class FlextInfraWorkspaceDetector(
             return result_type.from_failure(members)
         subprojects: list[m.Infra.RepositoryRef] = []
         external: list[Path] = []
-        seen: set[Path] = set()
         # The workspace-declared preference owns the baseline order: a fleet
         # integrating on a versioned release line (0.12.0-dev) is not covered
         # by the provider's conventional fallback names alone.
@@ -473,16 +510,11 @@ class FlextInfraWorkspaceDetector(
             workspace_beads=workspace_beads,
             allow_unprovisioned_members=allow_unprovisioned_members,
         )
-        for path in declared.value:
-            if path in seen:
-                return result_type.fail(
-                    f"duplicate .gitmodules path: {path.as_posix()}",
-                )
-            seen.add(path)
+        for declaration in declared.value:
             loaded = cls._load_subproject(
                 repository_root,
-                path,
-                declared_member=members.value.get(path),
+                declaration.path,
+                declared_member=members.value.get(declaration.path),
                 context=context,
             )
             if loaded.failure:
@@ -539,68 +571,19 @@ class FlextInfraWorkspaceDetector(
         """
         workspace_beads = context.workspace_beads
         result_type = r[m.Infra.RepositoryRef | Path]
-        entry = cls._admitted_subproject_entry(
-            repository_root,
-            path,
-            integration_branch=context.integration_branch,
+        contract = u.Infra.git_submodule_declaration(
+            m.Infra.GitSubmoduleContractRequest(
+                repo_root=repository_root,
+                member_path=path.as_posix(),
+            ),
         )
-        if entry.failure:
-            return result_type.from_failure(entry)
-        if isinstance(entry.value, Path):
-            return result_type.ok(entry.value)
-        subproject_root = cls._validated_subproject_root(repository_root, path)
-        if subproject_root.failure:
-            return result_type.from_failure(subproject_root)
-        if declared_member is not None:
-            member = cls._declared_member_result(
-                subproject_root.value,
-                path,
-                declared_member=declared_member,
-                declared_url=entry.value[0],
-                allow_unprovisioned_members=context.allow_unprovisioned_members,
-            )
-            if member is not None:
-                return member
-        if not subproject_root.value.is_dir():
-            return cls._indexed_gitlink_result(repository_root, path)
-        return cls._governed_member_result(
-            subproject_root.value,
-            path,
-            declared_url=entry.value[0],
-            workspace_beads=workspace_beads,
-        )
-
-    @classmethod
-    def _admitted_subproject_entry(
-        cls,
-        repository_root: Path,
-        path: Path,
-        *,
-        integration_branch: str | None,
-    ) -> p.Result[t.Pair[str, str] | Path]:
-        """Admit one ``.gitmodules`` entry or classify it as external.
-
-        Returns:
-            The declared URL/branch pair, or the entry path when the checkout
-            is an unmanaged external submodule.
-
-        """
-        result_type = r[t.Pair[str, str] | Path]
-        if path.is_absolute() or not path.parts or ".." in path.parts:
-            return result_type.fail(f"invalid .gitmodules path: {path.as_posix()}")
-        contract = cls._gitmodule_contract(repository_root, path)
         if contract.failure:
             return result_type.from_failure(contract)
-        declared_branch = contract.value[1]
-        unmanaged = u.Infra.git_unmanaged_submodule_paths(
-            m.Infra.GitRepoRequest(repo_root=repository_root),
-        )
-        if unmanaged.failure:
-            return result_type.from_failure(unmanaged)
-        if path in unmanaged.value:
+        declared_url = contract.value.url
+        if contract.value.managed is False:
             return result_type.ok(path)
         if not u.Infra.gitmodule_branch_is_governed(
-            declared_branch,
+            contract.value.branch,
             integration_branch=context.integration_branch,
         ):
             return result_type.fail(
@@ -839,109 +822,311 @@ class FlextInfraWorkspaceDetector(
         """
         del project_metadata
         resolved_root = repository_root.expanduser().resolve()
+        authenticated = cls._authenticated_identity(resolved_root)
+        if authenticated.failure:
+            return r[m.Infra.WorkspaceSpec].from_failure(authenticated)
+        identity, declared_manifest = authenticated.value
+        manifest = declared_manifest[0] if declared_manifest else None
+        superproject_members = cls._superproject_workspace_members(
+            identity.superproject_root,
+        )
+        beads = cls._effective_workspace_beads(resolved_root, identity, manifest)
+        if beads.failure:
+            return r[m.Infra.WorkspaceSpec].from_failure(beads)
+        workspace_beads = beads.value[0] if beads.value else None
+        refs = cls._resolved_workspace_refs(
+            resolved_root,
+            workspace_beads,
+            composed=identity.is_attached_submodule,
+            allow_unprovisioned_members=allow_unprovisioned_members,
+        )
+        if refs.failure:
+            return r[m.Infra.WorkspaceSpec].from_failure(refs)
+        (repository_ref, gascity_enabled, declared_project), (subprojects, external) = (
+            refs.value
+        )
+        named = cls._workspace_name(workspace_beads, manifest)
+        if named.failure:
+            return r[m.Infra.WorkspaceSpec].from_failure(named)
+        return r[m.Infra.WorkspaceSpec].ok(
+            m.Infra.WorkspaceSpec(
+                name=named.value,
+                beads=workspace_beads,
+                gascity_enabled=gascity_enabled,
+                repository=repository_ref,
+                project=declared_project,
+                namespace_scan_dirs=(
+                    declared_manifest[0].namespace_scan_dirs
+                    if declared_manifest
+                    else ()
+                ),
+                integration=(
+                    declared_manifest[0].integration if declared_manifest else None
+                ),
+                candidate_dependencies=(
+                    declared_manifest[0].candidate_dependencies
+                    if declared_manifest
+                    else ()
+                ),
+                candidate_bootstrap_targets=(
+                    declared_manifest[0].candidate_bootstrap_targets
+                    if declared_manifest
+                    else ()
+                ),
+                external_consumers=(
+                    declared_manifest[0].external_consumers if declared_manifest else ()
+                ),
+                subprojects=tuple(subprojects),
+                external_dependency_paths=tuple(external),
+                superproject_members=superproject_members,
+            ),
+        )
+
+    @classmethod
+    def _superproject_workspace_members(
+        cls,
+        superproject_root: Path | None,
+    ) -> tuple[str, ...]:
+        """Read the sibling member names a superproject's uv workspace declares.
+
+        Single source of truth: the superproject's own committed pyproject
+        ``[tool.uv.workspace]``. Member paths map to distribution names by
+        reading each member's ``[project] name`` (this fleet keeps them equal,
+        and the read never assumes it). Any absence — no superproject, no
+        workspace table, no member manifest — resolves to an empty tuple, the
+        standalone shape.
+
+        Returns:
+            The resulting ``tuple[str, ...]``.
+
+        """
+        if superproject_root is None:
+            return ()
+        workspace_pyproject = superproject_root / c.PYPROJECT_FILENAME
+        if not workspace_pyproject.is_file():
+            return ()
+        document = u.Cli.toml_read_document(workspace_pyproject)
+        if document.failure:
+            return ()
+        payload = u.Cli.toml_as_mapping(document.value)
+        if payload is None:
+            return ()
+        tool = payload.get(c.Infra.TOOL)
+        uv_table = tool.get("uv") if isinstance(tool, Mapping) else None
+        workspace_table = (
+            uv_table.get("workspace") if isinstance(uv_table, Mapping) else None
+        )
+        raw_members = (
+            workspace_table.get("members")
+            if isinstance(workspace_table, Mapping)
+            else None
+        )
+        if not isinstance(raw_members, list):
+            return ()
+        members: list[str] = []
+        for raw_member in raw_members:
+            member_path = superproject_root / str(raw_member)
+            member_pyproject = member_path / c.PYPROJECT_FILENAME
+            if not member_pyproject.is_file():
+                continue
+            member_document = u.Cli.toml_read_document(member_pyproject)
+            if member_document.failure:
+                continue
+            member_payload = u.Cli.toml_as_mapping(member_document.value)
+            project = (
+                member_payload.get(c.Infra.PROJECT)
+                if isinstance(member_payload, Mapping)
+                else None
+            )
+            name = project.get(c.Infra.NAME) if isinstance(project, Mapping) else None
+            if isinstance(name, str) and name.strip():
+                members.append(name.strip().strip('"').strip("'").strip())
+        return tuple(sorted(set(members)))
+
+    @classmethod
+    def _authenticated_identity(
+        cls,
+        resolved_root: Path,
+    ) -> p.Result[
+        t.Pair[m.Infra.GitIdentityReport, t.SequenceOf[m.Infra.WorkspaceManifestSpec]]
+    ]:
+        """Authenticate the repository root, its Git identity, and its manifest.
+
+        Returns:
+            The resulting ``(identity, manifest)`` pair.
+
+        """
+        result_type = r[
+            t.Pair[
+                m.Infra.GitIdentityReport,
+                t.SequenceOf[m.Infra.WorkspaceManifestSpec],
+            ]
+        ]
         if not resolved_root.is_dir():
-            return r[m.Infra.WorkspaceSpec].fail(
+            return result_type.fail(
                 f"repository root is not a directory: {resolved_root}",
             )
         identity = u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=resolved_root))
         if identity.failure:
-            return r[m.Infra.WorkspaceSpec].from_failure(identity)
+            return result_type.from_failure(identity)
         declared_manifest = u.Infra.load_workspace_manifest(resolved_root)
         if declared_manifest.failure:
-            return r[m.Infra.WorkspaceSpec].from_failure(declared_manifest)
-        manifest = declared_manifest.value[0] if declared_manifest.value else None
-        overlay = (
-            next(
-                (
-                    item
-                    for item in manifest.repository_policy_overlays
-                    if item.project == manifest.repository.distribution
-                ),
-                None,
-            )
-            if manifest is not None
-            else None
+            return result_type.from_failure(declared_manifest)
+        return result_type.ok((identity.value, declared_manifest.value))
+
+    @classmethod
+    def _effective_workspace_beads(
+        cls,
+        resolved_root: Path,
+        identity: m.Infra.GitIdentityReport,
+        manifest: m.Infra.WorkspaceManifestSpec | None,
+    ) -> p.Result[t.VariadicTuple[m.Infra.BeadsProjectSpec]]:
+        """Resolve the effective Beads ledger from the declared policy overlay.
+
+        Returns:
+            The effective ledger as a 0-or-1 tuple; a Beads-free repository is
+            the empty tuple, never a ``None`` success payload.
+
+        """
+        resolved_beads = cls._resolved_beads(
+            resolved_root,
+            cls._policy_overlay(manifest),
         )
-        beads_enabled = overlay is None or overlay.beads_enabled
-        if not beads_enabled and overlay is not None and overlay.gascity_enabled:
-            return r[m.Infra.WorkspaceSpec].fail(
-                "Gas City requires Beads participation in the repository policy",
+        if resolved_beads.failure:
+            return r[t.VariadicTuple[m.Infra.BeadsProjectSpec]].from_failure(
+                resolved_beads,
             )
-        beads: m.Infra.BeadsProjectSpec | None = None
-        if beads_enabled:
-            beads_result = cls.load_beads_spec(resolved_root)
-            if beads_result.failure:
-                return r[m.Infra.WorkspaceSpec].from_failure(beads_result)
-            beads = beads_result.value
-        member_root = identity.value.primary_root
+        return cls._effective_beads(
+            resolved_root,
+            identity,
+            resolved_beads.value[0],
+        )
+
+    @classmethod
+    def _effective_beads(
+        cls,
+        resolved_root: Path,
+        identity: m.Infra.GitIdentityReport,
+        beads: m.Infra.BeadsProjectSpec | None,
+    ) -> p.Result[t.VariadicTuple[m.Infra.BeadsProjectSpec]]:
+        """Resolve the effective Beads ledger, inheriting through submodules.
+
+        Returns:
+            The effective workspace Beads specification as a 0-or-1 tuple.
+
+        """
+        result_type = r[t.VariadicTuple[m.Infra.BeadsProjectSpec]]
+        member_root = identity.primary_root
         member_beads = member_root / c.Infra.BEADS_DIRNAME
-        if (
-            beads_enabled
-            and identity.value.is_attached_submodule
+        if not (
+            beads is not None
+            and identity.is_attached_submodule
             and member_beads.is_symlink()
         ):
-            superproject_root = identity.value.superproject_root
-            if superproject_root is None:
-                return r[m.Infra.WorkspaceSpec].fail(
-                    f"Git submodule has no superproject: {resolved_root}",
-                )
-            inherited_beads = cls.load_beads_spec(superproject_root)
-            if inherited_beads.failure:
-                return r[m.Infra.WorkspaceSpec].from_failure(inherited_beads)
-            if not member_root.is_relative_to(superproject_root):
-                return r[m.Infra.WorkspaceSpec].fail(
-                    f"Git submodule escapes its superproject: {member_root}",
-                )
-            member_path = member_root.relative_to(superproject_root)
-            # Same owner as the parent load: the declared preference resolves a
-            # versioned integration line the provider fallback names miss.
-            baseline = u.Infra.repository_baseline_branch(
-                superproject_root,
-                preference=(
-                    config.Infra.codegen.branch_policy.integration_branch_preference
-                ),
+            return result_type.ok(() if beads is None else (beads,))
+        superproject_root = identity.superproject_root
+        if superproject_root is None:
+            return result_type.fail(
+                f"Git submodule has no superproject: {resolved_root}",
             )
-            superproject_members = cls._declared_members(superproject_root)
-            if superproject_members.failure:
-                return r[m.Infra.WorkspaceSpec].from_failure(superproject_members)
-            loaded_member = cls._load_subproject(
-                superproject_root,
-                member_path,
-                declared_member=superproject_members.value.get(member_path),
-                context=m.Infra.SubprojectLoadContext(
-                    integration_branch=(baseline.value if baseline.success else None),
-                    workspace_beads=inherited_beads.value,
-                ),
+        inherited = cls._inherited_member_beads(superproject_root, member_root)
+        if inherited.failure:
+            return result_type.from_failure(inherited)
+        inherited_beads, _loaded_member = inherited.value
+        route_error = cls._composed_beads_identity_error(resolved_root, inherited_beads)
+        if route_error is not None:
+            return result_type.fail(
+                "composed project must follow the workspace Beads ledger: "
+                f"{route_error}",
             )
-            if loaded_member.failure or isinstance(loaded_member.value, Path):
-                return r[m.Infra.WorkspaceSpec].fail(
-                    loaded_member.error
-                    or "Git submodule is not a declared governed project: "
-                    f"{resolved_root}",
-                )
-            route_error = cls._composed_beads_identity_error(
-                resolved_root,
-                inherited_beads.value,
+        return result_type.ok((inherited_beads,))
+
+    @classmethod
+    def _inherited_member_beads(
+        cls,
+        superproject_root: Path,
+        member_root: Path,
+    ) -> p.Result[t.Pair[m.Infra.BeadsProjectSpec, m.Infra.RepositoryRef]]:
+        """Load the superproject's Beads ledger and the member's governed ref.
+
+        Returns:
+            The resulting ``(inherited_beads, loaded_member)`` pair.
+
+        """
+        result_type = r[t.Pair[m.Infra.BeadsProjectSpec, m.Infra.RepositoryRef]]
+        inherited_beads = cls.load_beads_spec(superproject_root)
+        if inherited_beads.failure:
+            return result_type.from_failure(inherited_beads)
+        if not member_root.is_relative_to(superproject_root):
+            return result_type.fail(
+                f"Git submodule escapes its superproject: {member_root}",
             )
-            if route_error is not None:
-                return r[m.Infra.WorkspaceSpec].fail(
-                    "composed project must follow the workspace Beads ledger: "
-                    f"{route_error}",
-                )
-            beads = inherited_beads.value
-        repository = cls._local_repository_ref(
-            resolved_root,
-            composed=identity.value.is_attached_submodule,
+        member_path = member_root.relative_to(superproject_root)
+        # Same owner as the parent load: the declared preference resolves a
+        # versioned integration line the provider fallback names miss.
+        baseline = u.Infra.repository_baseline_branch(
+            superproject_root,
+            preference=(
+                config.Infra.codegen.branch_policy.integration_branch_preference
+            ),
         )
+        superproject_members = cls._declared_members(superproject_root)
+        if superproject_members.failure:
+            return result_type.from_failure(superproject_members)
+        loaded_member = cls._load_subproject(
+            superproject_root,
+            member_path,
+            declared_member=superproject_members.value.get(member_path),
+            context=m.Infra.SubprojectLoadContext(
+                integration_branch=(baseline.value if baseline.success else None),
+                workspace_beads=inherited_beads.value,
+            ),
+        )
+        undeclared = f"Git submodule is not a declared governed project: {member_root}"
+        if loaded_member.failure:
+            return result_type.fail(loaded_member.error or undeclared)
+        member_ref = loaded_member.value
+        if isinstance(member_ref, Path):
+            return result_type.fail(undeclared)
+        return result_type.ok((inherited_beads.value, member_ref))
+
+    @classmethod
+    def _resolved_workspace_refs(
+        cls,
+        resolved_root: Path,
+        beads: m.Infra.BeadsProjectSpec | None,
+        *,
+        composed: bool,
+        allow_unprovisioned_members: bool,
+    ) -> p.Result[
+        t.Pair[
+            t.Triple[m.Infra.RepositoryRef, bool, m.Infra.ProjectSpec | None],
+            t.Pair[t.SequenceOf[m.Infra.RepositoryRef], t.SequenceOf[Path]],
+        ]
+    ]:
+        """Resolve the repository ref and the composed subproject topology.
+
+        Returns:
+            The resulting ``((repository_ref, gascity_enabled, declared_project),
+            (subprojects, external))`` pair pair.
+
+        """
+        result_type = r[
+            t.Pair[
+                t.Triple[m.Infra.RepositoryRef, bool, m.Infra.ProjectSpec | None],
+                t.Pair[t.SequenceOf[m.Infra.RepositoryRef], t.SequenceOf[Path]],
+            ]
+        ]
+        repository = cls._local_repository_ref(resolved_root, composed=composed)
         if repository.failure:
-            return r[m.Infra.WorkspaceSpec].from_failure(repository)
+            return result_type.from_failure(repository)
         topology = cls._load_subprojects(
             resolved_root,
             workspace_beads=beads,
             allow_unprovisioned_members=allow_unprovisioned_members,
         )
         if topology.failure:
-            return r[m.Infra.WorkspaceSpec].from_failure(topology)
+            return result_type.from_failure(topology)
         subprojects, external = topology.value
         observed_repository = repository.value.model_copy(
             update={
@@ -958,47 +1143,27 @@ class FlextInfraWorkspaceDetector(
             beads=beads,
         )
         if declared_repository.failure:
-            return r[m.Infra.WorkspaceSpec].from_failure(declared_repository)
-        repository_ref, gascity_enabled, declared_project = declared_repository.value
+            return result_type.from_failure(declared_repository)
+        return result_type.ok((declared_repository.value, (subprojects, external)))
+
+    @staticmethod
+    def _workspace_name(
+        beads: m.Infra.BeadsProjectSpec | None,
+        manifest: m.Infra.WorkspaceManifestSpec | None,
+    ) -> p.Result[str]:
+        """Resolve the workspace name from Beads or the declared manifest.
+
+        Returns:
+            The resulting workspace name.
+
+        """
         if beads is not None:
-            workspace_name = beads.workspace
-        else:
-            if manifest is None:
-                return r[m.Infra.WorkspaceSpec].fail(
-                    "workspace identity requires a manifest or Beads configuration",
-                )
-            workspace_name = manifest.name
-        return r[m.Infra.WorkspaceSpec].ok(
-            m.Infra.WorkspaceSpec(
-                name=workspace_name,
-                beads=beads,
-                gascity_enabled=gascity_enabled,
-                repository=repository_ref,
-                project=declared_project,
-                namespace_scan_dirs=(
-                    declared_manifest.value[0].namespace_scan_dirs
-                    if declared_manifest.value
-                    else ()
-                ),
-                integration=(
-                    declared_manifest.value[0].integration
-                    if declared_manifest.value
-                    else None
-                ),
-                candidate_dependencies=(
-                    declared_manifest.value[0].candidate_dependencies
-                    if declared_manifest.value
-                    else ()
-                ),
-                candidate_bootstrap_targets=(
-                    declared_manifest.value[0].candidate_bootstrap_targets
-                    if declared_manifest.value
-                    else ()
-                ),
-                subprojects=subprojects,
-                external_dependency_paths=external,
-            ),
-        )
+            return r[str].ok(beads.workspace)
+        if manifest is None:
+            return r[str].fail(
+                "workspace identity requires a manifest or Beads configuration",
+            )
+        return r[str].ok(manifest.name)
 
     @classmethod
     def conform_target(

@@ -247,16 +247,18 @@ class TestsFlextInfraCodegenCiMatrix:
     ) -> None:
         """CI selects through testmon and hands its database to the next run.
 
-        The database directory is restored before ``make test`` and saved on
-        every outcome after it; the full verb never renders into CI.
+        The database directory is restored before the approval step (whose
+        test stage is ``make test``) and saved on every outcome after it; the
+        full verb never renders into CI.
         """
         workflow = (rendered_project / ".github" / "workflows" / "ci.yml").read_text(
             encoding="utf-8",
         )
         make = config.Infra.codegen.make
         cache = make.testmon_cache
-        test_run = f"run: {make.ci.variable}={make.ci.value} make test\n"
+        test_run = f"run: {make.ci.variable}={make.ci.value} make pre-commit\n"
         tm.that(workflow, has=test_run)
+        tm.that(c.Infra.VERB_TEST in make.approval_verbs, eq=True)
         tm.that(workflow, lacks="make test-full")
         path = (
             f"path: ~/{cache.home_cache_directory}/{cache.external_storage_directory}"
@@ -432,7 +434,8 @@ class TestsFlextInfraCodegenCiMatrix:
             workflow,
             lacks=(
                 'rm -f "$key_path"\n\n\n'
-                "      # Why: GitHub runners expose umask 002, so git checkout materializes"
+                "      # Why: GitHub runners expose umask 002, "
+                "so git checkout materializes"
             ),
         )
         # Included fragments start on their own line: a rationale comment is
@@ -551,8 +554,10 @@ class TestsFlextInfraCodegenCiMatrix:
             ci_trigger_branches=u.CodegenTestSupport.Ci.ci_trigger_branches(
                 "develop",
             ),
-            has_devcontainer=True,
-            cooldown_excluded_dependencies=excluded,
+            overrides=u.CodegenTestSupport.Ci.WorkflowRenderOverrides(
+                has_devcontainer=True,
+                cooldown_excluded_dependencies=excluded,
+            ),
         )
         days = config.Infra.codegen.toolchain.dependency_cooldown_days
         template = (
@@ -801,13 +806,7 @@ class TestsFlextInfraCodegenCiMatrix:
     def test_docs_failure_upload_keeps_audit_failure_and_scopes_hidden_reports(
         rendered_project: Path,
     ) -> None:
-        """A generated Docs job fails on audit findings and retains safe reports.
-
-        Raises:
-            TypeError: If Docs workflow steps must be a sequence; or if Docs report
-                paths must be text.
-
-        """
+        """A generated Docs job fails on audit findings and retains safe reports."""
         workflow = u.Cli.yaml_load_mapping(
             rendered_project / ".github" / "workflows" / "docs.yml",
         )
@@ -1013,7 +1012,7 @@ class TestsFlextInfraCodegenCiMatrix:
 
     @staticmethod
     def test_root_dockerignore_reincludes_bootstrap_surface() -> None:
-        """Root hand-maintained .dockerignore lets clean-machine bootstrap files into the context."""
+        """Hand-maintained root .dockerignore admits clean-machine bootstrap files."""
         root = Path(__file__).resolve().parents[3]
         dockerignore = root / ".dockerignore"
         tm.that(dockerignore.is_file(), eq=True)

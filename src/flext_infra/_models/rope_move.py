@@ -12,13 +12,16 @@ from typing import Annotated, ClassVar
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._models import FlextInfraModelsMixins as mm
+from flext_infra._models.mixins import FlextInfraModelsMixins
 
 
 class FlextInfraModelsRopeMove:
     """Data-only contracts for semantic class relocation."""
 
-    class ClassMoveRequest(mm.PositiveLineMixin, m.ArbitraryTypesModel):
+    class ClassMoveRequest(
+        FlextInfraModelsMixins.PositiveLineMixin,
+        m.ArbitraryTypesModel,
+    ):
         """One exact, prevalidated Rope class-move request."""
 
         rope_project: Annotated[

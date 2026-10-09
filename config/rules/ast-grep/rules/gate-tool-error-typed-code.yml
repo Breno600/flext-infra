@@ -1,0 +1,45 @@
+# The retired text rule had no consumer contract. Only a comparison whose
+# other operand resolves to the canonical outcome is eligible here. Literal
+# payloads and unrelated code comparisons are not enum-conversion instructions.
+id: gate-tool-error-typed-code
+language: python
+severity: error
+files:
+  - "tests/**/*.py"
+constraints:
+  VALUE:
+    regex: '^(["\x27])TOOL_ERROR(["\x27])$'
+metadata:
+  context:
+    OUTCOME:
+      - is: resolved-symbol
+        arg: flext_infra._constants.check FlextInfraConstantsCheck.ToolOutcome.ERROR
+      - is: same-binding
+        arg: c.Infra.ToolOutcome.ERROR
+rule:
+  pattern: $OUTCOME == $VALUE
+fix: $OUTCOME == c.Infra.ToolOutcome.ERROR
+message: Compare the resolved outcome with its canonical typed member.
+---
+id: gate-tool-error-typed-binding-required
+language: python
+severity: error
+files:
+  - "tests/**/*.py"
+constraints:
+  VALUE:
+    regex: '^(["\x27])TOOL_ERROR(["\x27])$'
+metadata:
+  context:
+    VALUE:
+      is: executable-occurrence
+rule:
+  all:
+    - kind: string
+    - pattern: $VALUE
+    - inside:
+        kind: comparison_operator
+message: >-
+  This executable legacy comparison has no proven enum-consumer contract.
+  Preserve it until its owner establishes one; no fixer is inferred from the
+  spelling of the other operand, comparison direction, or operator.

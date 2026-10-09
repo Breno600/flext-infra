@@ -19,7 +19,7 @@ from tests.unit.codegen.test_ci_integration_branch_triggers import (
 
 
 class TestsFlextInfraCodegenMakeCheckPartition:
-    """CI and pre-commit run only external gates; the rest block locally."""
+    """CI runs the complement of the declared local partition."""
 
     @staticmethod
     def test_registry_declares_one_kind_per_gate() -> None:
@@ -40,41 +40,62 @@ class TestsFlextInfraCodegenMakeCheckPartition:
         )
 
     @staticmethod
-    def test_fast_partition_holds_only_active_external_gates() -> None:
-        """CI=Y is exactly the active external gates; CI=N is the complement."""
+    def test_partitions_derive_from_the_declared_local_set() -> None:
+        """CI=N is the declared local set; CI=Y is its strict complement."""
         make = config.Infra.codegen.make
-        external = c.Infra.GateKind.EXTERNAL
+        declared = set(make.ci.local_check_gates)
         tm.that(
-            make.check_gates_ci,
-            eq=tuple(
-                gate
-                for gate in make.check_gates_default
-                if c.Infra.GATE_KINDS.get(gate) is external
-            ),
+            make.check_gates_local,
+            eq=tuple(gate for gate in make.check_gates_default if gate in declared),
         )
-        tm.that(set(make.check_gates_ci) & set(make.check_gates_local), eq=set())
+        tm.that(set(make.check_gates_ci).isdisjoint(make.check_gates_local), eq=True)
         tm.that(
             set(make.check_gates_ci) | set(make.check_gates_local),
             eq=set(make.check_gates_default),
         )
-        for gate in make.check_gates_local:
-            tm.that(c.Infra.GATE_KINDS.get(gate) is external, eq=False)
 
     @staticmethod
-    def test_project_declared_gates_never_join_the_fast_partition() -> None:
-        """A gate the registry does not classify as external stays local."""
+    def test_ci_partition_runs_the_non_local_type_checkers() -> None:
+        """Active type checkers follow the declared partition for any value.
+
+        The informative (local-only) set is config-owned: a checker declared
+        in ``ci.local_check_gates`` stays out of CI, and every checker outside
+        the declared local set surfaces in the CI partition.
+        """
+        make = config.Infra.codegen.make
+        active_type_checkers = c.Infra.TYPE_CHECKER_GATES & set(
+            make.check_gates_default,
+        )
+        tm.that(bool(active_type_checkers), eq=True)
+        local = frozenset(make.ci.local_check_gates)
+        tm.that(
+            active_type_checkers & local <= set(make.check_gates_local),
+            eq=True,
+        )
+        tm.that(
+            active_type_checkers - local <= set(make.check_gates_ci),
+            eq=True,
+        )
+
+    @staticmethod
+    def test_project_declared_gates_follow_the_declared_partition() -> None:
+        """A project gate absent from the local set runs in the CI partition."""
         payload = config.Infra.codegen.make.model_dump(exclude_computed_fields=True)
         payload["project_check_gates"] = ("fixture-project-gate",)
 
         active = m.Infra.MakeSpec.model_validate(payload)
 
         tm.that(active.check_gates_default, has="fixture-project-gate")
-        tm.that(active.check_gates_local, has="fixture-project-gate")
-        tm.that("fixture-project-gate" in active.check_gates_ci, eq=False)
+        tm.that(active.check_gates_ci, has="fixture-project-gate")
+        tm.that("fixture-project-gate" in active.check_gates_local, eq=False)
 
     @staticmethod
-    def test_ci_workflow_runs_only_the_fast_partition() -> None:
-        """The rendered CI job never runs the local check partition."""
+    def test_ci_workflow_runs_only_the_ci_partition() -> None:
+        """The CI job runs the CI-partition approval once, never the local partition.
+
+        Check runs inside the single ``CI=Y make pre-commit`` approval step,
+        which owns setup -> audit -> check -> test.
+        """
         make = config.Infra.codegen.make
         steps = u.CodegenTestSupport.Ci.ci_job_steps(
             TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
@@ -82,9 +103,10 @@ class TestsFlextInfraCodegenMakeCheckPartition:
             ),
         )
         commands = [str(step.get("run", "")) for step in steps]
-        fast = f"{make.ci.variable}={make.ci.value} make {c.Infra.VERB_CHECK}"
-        local = f"{make.ci.variable}={make.ci.local_value} make {c.Infra.VERB_CHECK}"
-        tm.that(sum(fast in command for command in commands), eq=1)
+        approval = f"{make.ci.variable}={make.ci.value} make pre-commit"
+        local = f"{make.ci.variable}={make.ci.local_value} make"
+        tm.that(sum(approval in command for command in commands), eq=1)
+        tm.that(c.Infra.VERB_CHECK in make.approval_verbs, eq=True)
         tm.that(any(local in command for command in commands), eq=False)
 
     @staticmethod
@@ -118,10 +140,12 @@ class TestsFlextInfraCodegenMakeCheckPartition:
             u.Cli.run_raw(
                 [c.Infra.MAKE, "--no-print-directory", "check"],
                 cwd=root,
-                env=environment,
-                remove_env_keys=(
-                    *c.Tests.MAKE_ISOLATION_ENV_KEYS,
-                    *((policy.ci.variable,) if context == "all" else ()),
+                options=m.Cli.ProcessOptions(
+                    env=environment,
+                    remove_env_keys=(
+                        *c.Tests.MAKE_ISOLATION_ENV_KEYS,
+                        *((policy.ci.variable,) if context == "all" else ()),
+                    ),
                 ),
             ),
         )

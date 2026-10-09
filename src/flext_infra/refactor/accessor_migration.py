@@ -1,22 +1,26 @@
 """Accessor migration orchestration for get_/set_/is_ modernization.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
+SPDX-License-Identifier: MIT.
 """
 
 from __future__ import annotations
 
 from collections.abc import MutableMapping
-from typing import Annotated, override
+from typing import TYPE_CHECKING, Annotated, override
 
 from flext_cli import cli
 
-from flext_infra import m, p, r, t, u
+from flext_infra import c, m, p, r, t, u
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
 from flext_infra.refactor._accessor_report import FlextInfraAccessorMigrationReportMixin
 from flext_infra.refactor._accessor_rewrite import (
     FlextInfraAccessorMigrationRewriteMixin,
 )
+from flext_infra.refactor._import_enforcement import FlextInfraImportNormalization
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class FlextInfraAccessorMigrationOrchestrator(
@@ -52,6 +56,32 @@ class FlextInfraAccessorMigrationOrchestrator(
         """Selected lint tool names resolved from gate names."""
         return u.Infra.selected_lint_tool_names(self.gate_names)
 
+    def _scope_selected(
+        self,
+        py_files: t.SequenceOf[Path],
+    ) -> t.SequenceOf[Path]:
+        """Apply the declared ``--module``/``--namespace`` file filters.
+
+        ``namespace`` keeps files under a package directory of that name;
+        ``module`` keeps files whose path contains the dotted module rendered
+        as path segments. Empty filters keep every file.
+
+        Returns:
+            The resulting ``t.SequenceOf[Path]``.
+
+        """
+        namespace = (self.target_namespace or "").strip()
+        module = (self.target_module or "").strip()
+        if not namespace and not module:
+            return py_files
+        module_segments = module.replace(".", "/")
+        return tuple(
+            path
+            for path in py_files
+            if (not namespace or f"/{namespace}/" in path.as_posix())
+            and (not module or module_segments in path.as_posix())
+        )
+
     @override
     def execute(self) -> p.Result[m.Infra.AccessorMigrationReport]:
         """Execute.
@@ -73,6 +103,15 @@ class FlextInfraAccessorMigrationOrchestrator(
         )
         if iter_result.failure:
             return r[m.Infra.AccessorMigrationReport].from_failure(iter_result)
+        scoped_files = self._scope_selected(iter_result.value)
+        if not self.effective_dry_run:
+            # The same canonical import-form pass fix-namespace and the mod
+            # loop own: a migrated accessor lands in a file whose imports
+            # already hold the canonical forms.
+            FlextInfraImportNormalization.apply_files(
+                self.repository_root,
+                scoped_files,
+            )
         previews: t.MutableSequenceOf[m.Infra.AccessorMigrationFile] = []
         files_with_changes = 0
         automated_change_count = 0
@@ -81,7 +120,7 @@ class FlextInfraAccessorMigrationOrchestrator(
         lint_after_totals: MutableMapping[str, int] = {}
         new_lint_error_totals: MutableMapping[str, int] = {}
         with u.Infra.open_project(self.repository_root) as rope_project:
-            for py_file in iter_result.value:
+            for py_file in scoped_files:
                 read = u.Cli.files_read_text(py_file)
                 if read.failure:
                     return r[m.Infra.AccessorMigrationReport].from_failure(read)
@@ -108,21 +147,27 @@ class FlextInfraAccessorMigrationOrchestrator(
                     new_lint_error_totals,
                     file_report.new_lint_errors,
                 )
-        return r[m.Infra.AccessorMigrationReport].ok(
-            m.Infra.AccessorMigrationReport(
-                workspace=str(self.repository_root),
-                dry_run=self.dry_run,
-                files_scanned=len(iter_result.value),
-                files_with_changes=files_with_changes,
-                automated_change_count=automated_change_count,
-                warning_count=warning_count,
-                lint_tools=tuple(self.lint_tool_names),
-                lint_before_totals=lint_before_totals,
-                lint_after_totals=lint_after_totals,
-                new_lint_error_totals=new_lint_error_totals,
-                files=tuple(previews),
-            ),
+        report = m.Infra.AccessorMigrationReport(
+            workspace=str(self.repository_root),
+            dry_run=self.effective_dry_run,
+            files_scanned=len(scoped_files),
+            files_with_changes=files_with_changes,
+            automated_change_count=automated_change_count,
+            warning_count=warning_count,
+            lint_tools=tuple(self.lint_tool_names),
+            lint_before_totals=lint_before_totals,
+            lint_after_totals=lint_after_totals,
+            new_lint_error_totals=new_lint_error_totals,
+            files=tuple(previews),
         )
+        published = u.Infra.publish_refactor_report_evidence(
+            self.repository_root,
+            report,
+            relative_path=c.Infra.ACCESSOR_MIGRATION_REPORT_RELATIVE_PATH,
+        )
+        if published.failure:
+            return r[m.Infra.AccessorMigrationReport].from_failure(published)
+        return r[m.Infra.AccessorMigrationReport].ok(report)
 
     @classmethod
     def execute_payload(

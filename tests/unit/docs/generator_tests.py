@@ -88,15 +88,16 @@ class TestsFlextInfraDocsGenerator:
         tm.that(all(plan.owner == "docs" for plan in plans), eq=True)
 
     @staticmethod
-    @pytest.mark.slow
-    @pytest.mark.parametrize("selected_projects", [None, (".",), ("flext-a",)])
-    @pytest.mark.parametrize("project_name", ["workspace", config.Infra.name])
-    def test_workspace_package_api_and_member_docs_share_one_transaction(
+    def _seed_runtime_package(
         tmp_path: Path,
-        selected_projects: t.StrSequence | None,
         project_name: str,
-    ) -> None:
-        """Publish root API and member aggregates together for every selection."""
+    ) -> tuple[Path, Path, t.StrTuple]:
+        """Seed the docs workspace with its runtime package and modules.
+
+        Returns:
+            The workspace root, the runtime package, and the declared modules.
+
+        """
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
         (workspace / "pyproject.toml").write_text(
             f'[project]\nname = "{project_name}"\nversion = "0.1.0"\n',
@@ -113,6 +114,21 @@ class TestsFlextInfraDocsGenerator:
             source = package / f"{module.replace('.', '/')}.py"
             source.parent.mkdir(parents=True, exist_ok=True)
             source.write_text('"""Public fixture module."""\n', encoding="utf-8")
+        return workspace, package, declared
+
+    @staticmethod
+    @pytest.mark.slow
+    @pytest.mark.parametrize("selected_projects", [None, (".",), ("flext-a",)])
+    @pytest.mark.parametrize("project_name", ["workspace", config.Infra.name])
+    def test_workspace_package_api_and_member_docs_share_one_transaction(
+        tmp_path: Path,
+        selected_projects: t.StrSequence | None,
+        project_name: str,
+    ) -> None:
+        """Publish root API and member aggregates together for every selection."""
+        workspace, package, declared = (
+            TestsFlextInfraDocsGenerator._seed_runtime_package(tmp_path, project_name)
+        )
         request = m.Infra.DocsGenerateRequest(
             repository_root=workspace,
             projects=selected_projects,
@@ -488,9 +504,9 @@ class TestsFlextInfraDocsGenerator:
         )
         _ = u.Tests.publish_docs_bundle(generator)
         project = workspace / "flext-a"
-        config_path = project / c.Infra.PRETTIER_CONFIG_FILENAME
+        config_path = project / c.Infra.MARKDOWNLINT_CONFIG_FILENAME
         config_path.write_text(
-            (request.config.rootpath / c.Infra.PRETTIER_CONFIG_FILENAME).read_text(
+            (request.config.rootpath / c.Infra.MARKDOWNLINT_CONFIG_FILENAME).read_text(
                 encoding="utf-8",
             ),
             encoding="utf-8",
@@ -576,7 +592,7 @@ class TestsFlextInfraDocsGenerator:
     def test_stale_generated_file_drift_converges_through_file_plans(
         tmp_path: Path,
     ) -> None:
-        """Plan stale removal, publish it through the transaction adapter, and converge."""
+        """Plan stale removal, publish it via the transaction adapter, and converge."""
         workspace, generator = u.Tests.docs_workspace_generator(
             tmp_path,
             project_names=("flext-a",),

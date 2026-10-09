@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, main as infra_main
+from flext_infra import c, main
 from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 from tests import t, u
 
@@ -49,6 +49,7 @@ class TestsFlextInfraModRuleFixtureSnapshots:
         catalog = cls._catalog(root)
         for directory in (root / "src", catalog / "rules", catalog / "tests"):
             tm.ok(u.Cli.ensure_dir(directory))
+        u.Tests.copy_tracked_mise_seeds(root)
         tm.ok(
             u.Cli.atomic_write_text_file(
                 root / c.Infra.CODEMOD_CONFIG_RELPATH,
@@ -70,12 +71,17 @@ class TestsFlextInfraModRuleFixtureSnapshots:
                 f"id: demo\nvalid:\n  - baz(1)\ninvalid:\n{cases}",
             ),
         )
+        # The rule engine runs ast-grep through the owner's pinned Mise lock,
+        # which every governed repository carries; without it a host-global
+        # binary (or none, on CI runners) answered instead.
+        u.Tests.copy_tracked_mise_seeds(root)
         # A bare root becomes a checkout through its initial commit; an
         # existing checkout commits the catalog it now declares.
         if (root / c.Infra.GIT_DIR).exists():
             u.Tests.commit_git_changes(root, "Declare the demo rule catalog")
         else:
             u.Tests.initialize_git_repo(root)
+        u.Tests.git_bootstrap(root, ("add", str(c.Infra.CODEMOD_CONFIG_RELPATH)))
         u.Tests.git_bootstrap(root, ("add", c.Infra.CODEMOD_CONFIG_FILENAME))
         return rule
 
@@ -219,8 +225,8 @@ class TestsFlextInfraModRuleFixtureSnapshots:
         snapshot = self._snapshot(mod_workspace)
         route = ["refactor", "mod-snapshots", "--repository-root", str(mod_workspace)]
 
-        tm.that(infra_main(route), ne=0)
+        tm.that(main(route), ne=0)
         tm.that(snapshot.exists(), eq=False)
-        tm.that(infra_main([*route, "--apply"]), eq=0)
+        tm.that(main([*route, "--apply"]), eq=0)
         tm.that(snapshot.exists(), eq=True)
-        tm.that(infra_main(route), eq=0)
+        tm.that(main(route), eq=0)

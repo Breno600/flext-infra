@@ -31,6 +31,32 @@ class FlextInfraConfigModelsRender:
         """Typed input consumed by generated GitHub workflow templates."""
 
         dist: Annotated[t.NonEmptyStr, m.Field(description="Distribution name")]
+        owns_workspace_manifest: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Whether this repository owns the fleet workspace manifest; "
+                    "standalone members materialize the fleet root in CI"
+                ),
+            ),
+        ] = False
+        fleet_root_repository: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Fleet superproject slug the standalone member CI "
+                    "materializes as the enclosing uv workspace"
+                ),
+            ),
+        ] = "flext-sh/flext"
+        fleet_root_branch: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Fleet integration branch the materialized root checks out"
+                ),
+            ),
+        ] = "0.12.0-dev"
         docs_report_filenames: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(description="Structured docs reports CI dumps and uploads"),
@@ -73,13 +99,12 @@ class FlextInfraConfigModelsRender:
         workspace_repositories: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsContexts.RepositoryRef],
             m.Field(
-                default=(),
                 description=(
                     "Governed subproject repositories consumed by workspace-scoped "
                     "workflow templates (docs paths, dependabot directories)"
                 ),
             ),
-        ]
+        ] = ()
         ci_trigger_branches: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
@@ -215,10 +240,6 @@ class FlextInfraConfigModelsRender:
             FlextInfraConfigModelsMake.MakeSpec,
             m.Field(description="Canonical Make CI token contract for ENV CI=Y"),
         ]
-        mise_bootstrap: Annotated[
-            FlextInfraConfigModelsContract.MiseBootstrapEnvironmentSpec,
-            m.Field(description="Strict Mise environment projected into containers"),
-        ]
 
     class EnvrcRenderSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Typed input consumed only by the generated project ``.envrc``."""
@@ -231,10 +252,6 @@ class FlextInfraConfigModelsRender:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(description="Project-relative executable paths"),
         ]
-        mise_bootstrap: Annotated[
-            FlextInfraConfigModelsContract.MiseBootstrapEnvironmentSpec,
-            m.Field(description="Strict persistent Mise storage contract"),
-        ]
         environment_directory: Annotated[
             t.NonEmptyStr,
             m.Field(description="Runtime-root-local development environment"),
@@ -242,7 +259,9 @@ class FlextInfraConfigModelsRender:
         worktree_environment_directory: Annotated[
             t.NonEmptyStr,
             m.Field(
-                description="Declared sibling directory for linked worktree environments",
+                description=(
+                    "Declared sibling directory for linked worktree environments"
+                ),
             ),
         ]
 
@@ -331,6 +350,15 @@ class FlextInfraConfigModelsRender:
                     "root; each member is its own repository with its own "
                     "SonarCloud project, so the root scope excludes them. "
                     "Empty for a standalone repository"
+                ),
+            ),
+        ] = ()
+        generated_source_globs: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                description=(
+                    "Tracked generated-source trees derived from the codegen "
+                    "artifact key; never governed source"
                 ),
             ),
         ] = ()

@@ -10,19 +10,21 @@ import sys
 from functools import lru_cache
 from operator import attrgetter
 from pathlib import Path
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from flext_cli import u
 
-from flext_core import c, m, t
-from flext_infra import config
+from flext_infra import c, config, m
 from flext_infra._utilities import (
     FlextInfraUtilitiesGit,
-    FlextInfraUtilitiesProjectDiscoveryCandidatesMixin,
-)
-from flext_infra._utilities.workspace_manifest import (
     FlextInfraUtilitiesWorkspaceManifest,
 )
+from flext_infra._utilities._project_discovery_candidates import (
+    FlextInfraUtilitiesProjectDiscoveryCandidatesMixin,
+)
+
+if TYPE_CHECKING:
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesProjectDiscovery(
@@ -186,15 +188,13 @@ class FlextInfraUtilitiesProjectDiscovery(
             Project roots sorted by their ``.gitmodules`` declaration order.
 
         Raises:
-            ValueError: If ``declared_paths.failure``.
+            ValueError: If ``declared.failure``.
 
         """
-        declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(
-            repository_root,
-        )
-        if declared_paths.failure:
-            raise ValueError(declared_paths.error or "invalid .gitmodules")
-        configured_projects = tuple(path.as_posix() for path in declared_paths.value)
+        declared = FlextInfraUtilitiesGit.git_submodule_declarations(repository_root)
+        if declared.failure:
+            raise ValueError(declared.error or "invalid .gitmodules")
+        configured_projects = tuple(item.path.as_posix() for item in declared.value)
         candidates = cls.discover_project_candidates(
             repository_root,
             scan_dirs=scan_dirs,
@@ -241,13 +241,13 @@ class FlextInfraUtilitiesProjectDiscovery(
 
         """
         resolved_root = repository_root.resolve()
-        declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(
+        declared_paths = FlextInfraUtilitiesGit.git_submodule_declarations(
             resolved_root,
         )
         if declared_paths.failure:
             raise ValueError(declared_paths.error or "invalid .gitmodules")
         submodules = frozenset(
-            (resolved_root / path).resolve() for path in declared_paths.value
+            (resolved_root / item.path).resolve() for item in declared_paths.value
         )
         declared = cls.discover_project_candidates(resolved_root)
         nonparticipants = cls.manifest_nonparticipant_paths(resolved_root)
@@ -294,14 +294,35 @@ class FlextInfraUtilitiesProjectDiscovery(
                 # Recursively scan configured directories for Python sources:
                 # modules and the stubs the catalog rules also govern.
                 for directory in scan_dirs:
-                    scan_dir = project / directory
-                    if scan_dir.exists():
-                        for target in scan_dir.rglob(f"*{suffix}"):
-                            if target.is_file():
-                                targets.add(
-                                    target.relative_to(resolved_root).as_posix(),
-                                )
+                    cls._collect_scan_dir_targets(
+                        project / directory,
+                        f"*{suffix}",
+                        resolved_root,
+                        targets,
+                    )
         return tuple(sorted(targets))
+
+    @staticmethod
+    def _collect_scan_dir_targets(
+        scan_dir: Path,
+        pattern: str,
+        resolved_root: Path,
+        targets: set[str],
+    ) -> None:
+        """Add every Python file under one configured scan directory.
+
+        Trees the codegen artifact SSOT ignores for source scans (generated
+        sources included) are outside the inventory the semantic phases
+        index, so they never become scan or rewrite targets either.
+        """
+        if not scan_dir.exists():
+            return
+        ignored = frozenset(config.Infra.codegen.source_scan_ignored)
+        for target in scan_dir.rglob(pattern):
+            if target.is_file() and not ignored.intersection(
+                target.relative_to(scan_dir).parts,
+            ):
+                targets.add(target.relative_to(resolved_root).as_posix())
 
     @classmethod
     def governed_project_roots(cls, repository_root: Path) -> t.SequenceOf[Path]:

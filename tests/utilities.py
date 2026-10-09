@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import dataclasses
 import os
 import shutil
 from pathlib import Path
@@ -40,6 +41,17 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
 
         class Ci:
             """Construct GitHub workflow render contracts from canonical config."""
+
+            @dataclasses.dataclass(frozen=True)
+            class WorkflowRenderOverrides:
+                """Optional workflow render knobs grouped into one contract."""
+
+                system_packages: t.VariadicTuple[t.NonEmptyStr] = ()
+                packages_read: bool = False
+                custom_steps: str = ""
+                has_devcontainer: bool = False
+                workspace_repositories: t.VariadicTuple[m.Infra.RepositoryRef] = ()
+                cooldown_excluded_dependencies: t.VariadicTuple[t.NonEmptyStr] = ()
 
             @staticmethod
             def ci_trigger_branches(repository_branch: str) -> t.VariadicTuple[str]:
@@ -88,12 +100,7 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                 make_profile: c.Infra.MakeProfile,
                 repository_branch: t.NonEmptyStr,
                 ci_trigger_branches: t.VariadicTuple[t.NonEmptyStr],
-                system_packages: t.VariadicTuple[t.NonEmptyStr] = (),
-                packages_read: bool = False,
-                custom_steps: str = "",
-                has_devcontainer: bool = False,
-                workspace_repositories: t.VariadicTuple[m.Infra.RepositoryRef] = (),
-                cooldown_excluded_dependencies: t.VariadicTuple[t.NonEmptyStr] = (),
+                overrides: WorkflowRenderOverrides | None = None,
             ) -> m.Infra.GithubWorkflowRenderSpec:
                 """Build the common strictly typed workflow rendering contract.
 
@@ -101,23 +108,30 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                     The resulting ``m.Infra.GithubWorkflowRenderSpec``.
 
                 """
+                overrides = (
+                    u.CodegenTestSupport.Ci.WorkflowRenderOverrides()
+                    if overrides is None
+                    else overrides
+                )
                 codegen = config.Infra.codegen
                 return m.Infra.GithubWorkflowRenderSpec(
                     dist=dist,
                     make_profile=make_profile,
                     repository_branch=repository_branch,
                     ci_trigger_branches=ci_trigger_branches,
-                    system_packages=system_packages,
-                    packages_read=packages_read,
+                    system_packages=overrides.system_packages,
+                    packages_read=overrides.packages_read,
                     python_version=codegen.toolchain.python_version,
                     github_actions=codegen.github_actions,
                     make=codegen.make,
-                    workspace_repositories=workspace_repositories,
+                    workspace_repositories=overrides.workspace_repositories,
                     checkout_submodules=codegen.checkout_submodules,
-                    custom_steps=custom_steps,
-                    has_devcontainer=has_devcontainer,
+                    custom_steps=overrides.custom_steps,
+                    has_devcontainer=overrides.has_devcontainer,
                     dependency_cooldown_days=codegen.toolchain.dependency_cooldown_days,
-                    cooldown_excluded_dependencies=cooldown_excluded_dependencies,
+                    cooldown_excluded_dependencies=(
+                        overrides.cooldown_excluded_dependencies
+                    ),
                 )
 
             @staticmethod
@@ -215,15 +229,21 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                 raise ValueError(msg)
             return parsed
 
+        @dataclasses.dataclass(frozen=True)
+        class MakeEnvironmentShape:
+            """Repository-shape knobs for the generated Make fixture."""
+
+            package: bool = True
+            extra_verbs: t.VariadicTuple[m.Infra.MakeVerbSpec] = ()
+            script_dispatch: m.Infra.ScriptDispatchSpec | None = None
+
         @staticmethod
         def render_make_environment(
             tmp_path: Path,
             profile: c.Infra.MakeProfile,
             *,
             bootstrap: bool = False,
-            package: bool = True,
-            extra_verbs: t.VariadicTuple[m.Infra.MakeVerbSpec] = (),
-            script_dispatch: m.Infra.ScriptDispatchSpec | None = None,
+            shape: MakeEnvironmentShape | None = None,
         ) -> t.Pair[Path, Path]:
             """Build the generated Make and activation fixture consumed by real verbs.
 
@@ -231,6 +251,7 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                 The resulting ``t.Pair[Path, Path]``.
 
             """
+            shape = u.Tests.MakeEnvironmentShape() if shape is None else shape
             role = c.Infra.MakeProfile(profile.value)
             repository = u.Tests.repository_ref(
                 "fixture-project",
@@ -238,9 +259,9 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             ).model_copy(
                 update={
                     "editable": True,
-                    "package": package,
-                    "extra_verbs": extra_verbs,
-                    "script_dispatch": script_dispatch,
+                    "package": shape.package,
+                    "extra_verbs": shape.extra_verbs,
+                    "script_dispatch": shape.script_dispatch,
                 },
             )
             project_root = tmp_path / profile.value / "fixture-project"
@@ -307,13 +328,12 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                 ).plan(request),
             )
             # Materialize the complete activation contract through its guarded
-            # publisher, including Beads metadata consumed by the generated .envrc
-            # and the Mise lock publisher the generated upg recipe runs.
+            # publisher, including Beads metadata consumed by the generated
+            # .envrc. The Mise lock publisher scripts retired with Mise
+            # self-management (config/codegen.yaml retired_projections).
             paths = {
                 project_root / c.Infra.MAKEFILE_FILENAME,
                 project_root / ".envrc",
-                project_root / "bin" / "mise-lock-transaction.py",
-                project_root / "bin" / "mise-lock-converge.py",
             }
             if bootstrap:
                 paths.update(

@@ -10,6 +10,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
@@ -41,7 +42,21 @@ class FlextInfraLocCapGate(FlextInfraGate):
 
         """
         _ = project_dir, ctx
-        return [c.Infra.SCC_BINARY, "--format", "json", "--by-file", *check_dirs]
+        # Generated source trees are tracked, so Git ignore rules no longer
+        # hide them; scc drops them by exact directory name instead.
+        generated = tuple(
+            argument
+            for name in config.Infra.codegen.generated_sources
+            for argument in ("--not-match", f"^{re.escape(name)}$")
+        )
+        return [
+            c.Infra.SCC_BINARY,
+            "--format",
+            "json",
+            "--by-file",
+            *generated,
+            *check_dirs,
+        ]
 
     @override
     def _parse_check_output(

@@ -1,4 +1,4 @@
-"""Shared contract base and root aliases for config models.
+"""Shared config contract base and inherited toolchain declarations.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -10,15 +10,14 @@ import re
 from pathlib import Path
 from typing import Annotated, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
-from flext_infra import t
-from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
+from flext_infra import c, t
 from flext_infra._models.mise_toolchain import FlextInfraModelsMiseToolchain
 
 
-class FlextInfraConfigModelsContract:
-    """Shared contract base and root aliases for config models."""
+class FlextInfraConfigModelsContract(FlextInfraModelsMiseToolchain):
+    """Shared config contract base and inherited toolchain declarations."""
 
     class ConfigContract(m.ContractModel):
         """Public declarative base for schema-loaded codegen records."""
@@ -50,7 +49,7 @@ class FlextInfraConfigModelsContract:
             ),
         ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_evidence_files(self) -> Self:
             files = self.historical_evidence_files
             if len(set(files)) != len(files):
@@ -61,7 +60,7 @@ class FlextInfraConfigModelsContract:
                     path.is_absolute()
                     or ".." in path.parts
                     or not path.parts
-                    or path.parts[0] != FlextInfraConstantsSharedInfra.DIR_DOCS
+                    or path.parts[0] != c.Infra.DIR_DOCS
                     or path.suffix != ".md"
                 ):
                     msg = (
@@ -83,15 +82,8 @@ class FlextInfraConfigModelsContract:
             m.Field(description="Literal terms forbidden in current documentation"),
         ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_patterns(self) -> Self:
             for pattern in self.placeholder_patterns:
                 re.compile(pattern)
             return self
-
-    BeadsEndpointSpec = FlextInfraModelsMiseToolchain.BeadsEndpointSpec
-    BeadsToolSpec = FlextInfraModelsMiseToolchain.BeadsToolSpec
-    MiseBootstrapEnvironmentSpec = (
-        FlextInfraModelsMiseToolchain.MiseBootstrapEnvironmentSpec
-    )
-    ToolchainSpec = FlextInfraModelsMiseToolchain.ToolchainSpec

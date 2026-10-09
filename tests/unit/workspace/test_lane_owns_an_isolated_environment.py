@@ -10,8 +10,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import FlextInfraWorktreeService, c, config, u as infra_u
-from tests import u
+from flext_infra import FlextInfraWorktreeService, config
+from tests import c, u
 
 
 class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
@@ -89,7 +89,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         """Test setup runs in lane and creates a real sibling environment."""
         repository = self._repository(tmp_path)
         primary_sentinel = (
-            infra_u.Infra.runtime_environment_dir(repository) / "primary-sentinel"
+            u.Infra.runtime_environment_dir(repository) / "primary-sentinel"
         )
         primary_sentinel.parent.mkdir(parents=True, exist_ok=True)
         primary_sentinel.write_text("untouched\n", encoding="utf-8")
@@ -103,7 +103,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         ):
             tm.ok(FlextInfraWorktreeService.setup_lane(lane))
 
-        lane_venv = infra_u.Infra.runtime_environment_dir(lane)
+        lane_venv = u.Infra.runtime_environment_dir(lane)
         assert lane_venv.is_dir()
         assert not lane_venv.is_symlink()
         assert not (lane / c.Infra.ENVIRONMENT_DIRECTORY).exists()
@@ -123,7 +123,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         target.mkdir()
         sentinel = target / "sentinel"
         sentinel.write_text("protected\n", encoding="utf-8")
-        lane_venv = infra_u.Infra.runtime_environment_dir(lane)
+        lane_venv = u.Infra.runtime_environment_dir(lane)
         lane_venv.parent.mkdir(parents=True, exist_ok=True)
         lane_venv.symlink_to(target, target_is_directory=True)
 
@@ -156,7 +156,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         """Test existing real lane environment is preserved."""
         repository = self._repository(tmp_path)
         lane = self._lane(repository, "feature/preserve-local")
-        sentinel = infra_u.Infra.runtime_environment_dir(lane) / "sentinel"
+        sentinel = u.Infra.runtime_environment_dir(lane) / "sentinel"
         sentinel.parent.mkdir(parents=True, exist_ok=True)
         sentinel.write_text("local\n", encoding="utf-8")
 
@@ -171,5 +171,5 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         lane = self._lane(repository, "feature/git-only")
 
         assert lane.is_dir()
-        assert not infra_u.Infra.runtime_environment_dir(lane).exists()
+        assert not u.Infra.runtime_environment_dir(lane).exists()
         assert not (lane / "setup-runs.log").exists()

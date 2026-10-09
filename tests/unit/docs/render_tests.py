@@ -34,7 +34,7 @@ class TestsFlextInfraDocsRender:
     def test_project_navigation_discovers_maintained_pages(
         tmp_path: Path,
     ) -> None:
-        """The real MkDocs navigation includes manual guides beyond generated indexes."""
+        """The real MkDocs navigation has manual guides beyond generated indexes."""
         scope = m.Infra.DocScope(
             name="flext-demo",
             path=tmp_path,
@@ -151,13 +151,20 @@ class TestsFlextInfraDocsRender:
             rendered,
             has=(
                 "  - git-revision-date-localized:\n"
-                "      # Why: enable_creation_date resolves via 'git log --diff-filter=Ar', which returns\n"
-                "      # EMPTY for pages whose only add-commit is a merge commit. The plugin then falls back\n"
-                "      # to time.time() (build clock), making first_revision > last_revision always true,\n"
-                "      # which logs a warning that mkdocs --strict turns into a build failure. Revision date\n"
-                "      # from the last commit touching the page is the intended and robust behavior.\n"
-                "      # enable_git_follow is off for the same reason: following renames re-reads\n"
-                "      # history per page and reintroduces the same empty-result fallback.\n"
+                "      # Why: enable_creation_date resolves via"
+                " 'git log --diff-filter=Ar', which returns\n"
+                "      # EMPTY for pages whose only add-commit is a merge commit."
+                " The plugin then falls back\n"
+                "      # to time.time() (build clock), making first_revision >"
+                " last_revision always true,\n"
+                "      # which logs a warning that mkdocs --strict turns into a"
+                " build failure. Revision date\n"
+                "      # from the last commit touching the page is the intended and"
+                " robust behavior.\n"
+                "      # enable_git_follow is off for the same reason: following"
+                " renames re-reads\n"
+                "      # history per page and reintroduces the same empty-result"
+                " fallback.\n"
                 "      enable_creation_date: false\n"
                 "      enable_git_follow: false\n"
                 "      type: date\n"

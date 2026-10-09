@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from flext_tests import tm
 
 from flext_infra import infra
@@ -21,7 +22,8 @@ class TestsFlextInfraFacadeEnvironmentSync:
     def _write_pyproject(root: Path) -> None:
         root.mkdir(parents=True, exist_ok=True)
         _ = (root / "pyproject.toml").write_text(
-            '[project]\nname = "workspace"\nversion = "0.1.0"\nrequires-python = ">=3.13"\n',
+            '[project]\nname = "workspace"\nversion = "0.1.0"\n'
+            'requires-python = ">=3.13"\n',
             encoding="utf-8",
         )
 
@@ -53,16 +55,20 @@ class TestsFlextInfraFacadeEnvironmentSync:
             u.Cli.run_checked(
                 ["direnv", "allow", str(workspace)],
                 cwd=workspace,
-                env=activation_env,
-                remove_env_keys=isolation,
+                options=m.Cli.ProcessOptions(
+                    env=activation_env,
+                    remove_env_keys=isolation,
+                ),
             ),
         )
         return tm.ok(
             u.Cli.capture(
                 ["direnv", "exec", str(workspace), "printenv", name],
                 cwd=workspace,
-                env=activation_env,
-                remove_env_keys=isolation,
+                options=m.Cli.ProcessOptions(
+                    env=activation_env,
+                    remove_env_keys=isolation,
+                ),
             ),
         )
 
@@ -129,17 +135,46 @@ class TestsFlextInfraFacadeEnvironmentSync:
         tm.that('PROJECT_ROOT="$(find_up pyproject.toml)"' in envrc, eq=True)
         tm.that((workspace / ".mise.toml").exists(), eq=False)
 
-    def test_sync_preserves_custom_envrc_without_force(self, tmp_path: Path) -> None:
-        """Test sync preserves custom envrc without force."""
+    @pytest.mark.parametrize("allow_direnv", [False, True])
+    def test_sync_preserves_custom_envrc_without_force(
+        self,
+        tmp_path: Path,
+        *,
+        allow_direnv: bool,
+    ) -> None:
+        """Custom bytes survive sync, but they cannot acquire owner approval."""
         workspace = tmp_path / "workspace"
         self._write_pyproject(workspace)
         custom = workspace / ".envrc"
         _ = custom.write_text("PATH_add bin\n", encoding="utf-8")
         result = infra.sync_environment_files(
+            m.Infra.WorkspaceEnvironmentSyncRequest(
+                repository_root=workspace,
+                allow_direnv=allow_direnv,
+            ),
+        )
+        if allow_direnv:
+            tm.fail(result, has="not produced by its owner")
+        else:
+            tm.ok(result)
+        tm.that(custom.read_text(encoding="utf-8"), eq="PATH_add bin\n")
+
+    def test_sync_refuses_to_authorize_symlinked_envrc(self, tmp_path: Path) -> None:
+        """An external environment cannot become approved through a root symlink."""
+        workspace = tmp_path / "workspace"
+        self._write_pyproject(workspace)
+        external = tmp_path / "external-envrc"
+        external.write_text("PATH_add foreign\n", encoding="utf-8")
+        envrc = workspace / c.Infra.ENVRC_FILENAME
+        envrc.symlink_to(external)
+
+        result = infra.sync_environment_files(
             m.Infra.WorkspaceEnvironmentSyncRequest(repository_root=workspace),
         )
-        tm.ok(result)
-        tm.that(custom.read_text(encoding="utf-8"), eq="PATH_add bin\n")
+
+        tm.fail(result, has="symlinked environment")
+        tm.that(envrc.is_symlink(), eq=True)
+        tm.that(external.read_text(encoding="utf-8"), eq="PATH_add foreign\n")
 
     def test_sync_force_converts_custom_envrc_to_generated(
         self,

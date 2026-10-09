@@ -9,15 +9,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m, t, u
-from flext_infra.codegen import (
-    FlextInfraCodegenCensus,
-    FlextInfraCodegenConform,
-    FlextInfraCodegenFixer,
-    FlextInfraCodegenLazyInit,
-    FlextInfraCodegenPyTyped,
-    FlextInfraCodegenScaffolder,
-)
-from flext_infra.deps import FlextInfraRuntimeDevDependencyDetector
+from flext_infra.codegen import FlextInfraCodegenCensus
+from flext_infra.codegen.conform import FlextInfraCodegenConform
+from flext_infra.codegen.fixer import FlextInfraCodegenFixer
+from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
+from flext_infra.codegen.py_typed import FlextInfraCodegenPyTyped
+from flext_infra.codegen.scaffolder import FlextInfraCodegenScaffolder
+from flext_infra.deps.detector import FlextInfraRuntimeDevDependencyDetector
 
 if TYPE_CHECKING:
     from collections.abc import Callable

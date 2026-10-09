@@ -71,7 +71,7 @@ class TestsFlextInfraUtilitiesDepsMixin:
                 *arguments,
             ],
             cwd=root,
-            env=environment,
+            options=m.Cli.ProcessOptions(env=environment),
         )
         if result.success:
             TestsFlextInfraUtilitiesDepsMixin.record_dependency_command_output(

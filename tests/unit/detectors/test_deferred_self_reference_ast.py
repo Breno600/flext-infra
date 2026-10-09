@@ -167,3 +167,35 @@ class TestsFlextInfraDeferredSelfReferenceNormalizer:
 
         with pytest.raises(ValueError, match="ambiguous self-qualified annotation"):
             u.Infra.normalize_deferred_self_references(source)
+
+    @staticmethod
+    def test_public_normalizer_keeps_call_value_positions_bare() -> None:
+        """Names inside nested call arguments are runtime values, not types.
+
+        A field factory reference (``u.Field(default_factory=...)``) resolves
+        through the parent-frame locals at deferred-evaluation time and static
+        checkers read it in the class-body scope, where the owner class is not
+        yet bound: qualifying it through the owner produced
+        ``reportUndefinedVariable`` on every consumer.
+
+        """
+        source = (
+            "from __future__ import annotations\n"
+            "from typing import Annotated\n\n"
+            "class Models:\n"
+            "    class Dependency:\n"
+            "        pass\n"
+            "    class Consumer:\n"
+            "        dependency: Annotated[\n"
+            "            Models.Dependency,\n"
+            "            Field(default_factory=Models.Dependency, alias='dep'),\n"
+            "        ]\n"
+        )
+        normalized = u.Infra.normalize_deferred_self_references(source)
+
+        tm.that(normalized, has="Models.Dependency,\n")
+        tm.that(
+            normalized,
+            has="Field(default_factory=Dependency, alias='dep')",
+        )
+        tm.that(u.Infra.normalize_deferred_self_references(normalized), eq=normalized)

@@ -12,12 +12,12 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_infra import m, p, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesRopeClassMove,
+    FlextInfraUtilitiesRopeRuntimeModules,
+)
 from flext_infra._utilities._semantic_cutover.nesting_types import (
     FlextInfraUtilitiesSemanticNestingTypes,
-)
-from flext_infra._utilities.rope_class_move import FlextInfraUtilitiesRopeClassMove
-from flext_infra._utilities.rope_runtime_modules import (
-    FlextInfraUtilitiesRopeRuntimeModules,
 )
 
 
@@ -27,13 +27,55 @@ class FlextInfraUtilitiesSemanticHelperReferences(
     """Plan quoted references while the declaration still has its original identity."""
 
     @classmethod
+    def _prepared_helper_source(
+        cls,
+        move: m.Infra.ResolvedClassMove,
+        project: p.Infra.RopeProject,
+        path: Path,
+        source: str,
+        *,
+        protected: t.Pair[int, int] | None,
+    ) -> t.Pair[str, str | None]:
+        """Return one file's helper-prepared source and its quoted binding.
+
+        Returns:
+            The resulting ``(prepared source, quoted expression)`` pair.
+
+        Raises:
+            ValueError: If quoted helper import changed its elected binding.
+
+        """
+        runtime = FlextInfraUtilitiesRopeRuntimeModules
+        root = Path(project.root.real_path)
+        resource = project.get_resource(path.relative_to(root).as_posix())
+        module = project.get_pymodule(resource)
+        updated, expression = cls._moved_quoted_source(
+            move,
+            resource,
+            source,
+            protected=protected,
+        )
+        if expression is not None and path != move.request.target_file:
+            changed = runtime.build_string_module(project, updated, resource=resource)
+            updated, binding = runtime.import_binding(
+                project,
+                changed,
+                move.target_module,
+                move.request.class_name,
+            )
+            if binding != expression:
+                msg = f"quoted helper import changed its elected binding: {path}"
+                raise ValueError(msg)
+        return cls._original_helper_imports(move, resource, updated, module), expression
+
+    @classmethod
     def _helper_move_plan(
         cls,
         request: m.Infra.ClassMoveRequest,
         *,
         sources: t.MappingKV[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
-        runtime = FlextInfraUtilitiesRopeRuntimeModules
+
         project = request.rope_project
         root = Path(project.root.real_path)
         origin = project.get_pymodule(
@@ -60,38 +102,18 @@ class FlextInfraUtilitiesSemanticHelperReferences(
         prepared = dict(sources)
         quoted_imports: MutableMapping[Path, str] = {}
         for path, source in sources.items():
-            resource = project.get_resource(path.relative_to(root).as_posix())
-            module = project.get_pymodule(resource)
-            updated, expression = cls._moved_quoted_source(
+            updated, expression = cls._prepared_helper_source(
                 move,
-                resource,
+                project,
+                path,
                 source,
                 protected=(declaration.lineno, declaration.end_lineno)
                 if path == request.source_file
                 else None,
             )
             if expression is not None and path != request.target_file:
-                changed = runtime.build_string_module(
-                    project,
-                    updated,
-                    resource=resource,
-                )
-                updated, binding = runtime.import_binding(
-                    project,
-                    changed,
-                    move.target_module,
-                    request.class_name,
-                )
-                if binding != expression:
-                    msg = f"quoted helper import changed its elected binding: {path}"
-                    raise ValueError(msg)
                 quoted_imports[path] = expression
-            prepared[path] = cls._original_helper_imports(
-                move,
-                resource,
-                updated,
-                module,
-            )
+            prepared[path] = updated
         cls._move_prepared_helper(move, prepared, quoted_imports)
         return tuple(
             m.Infra.SemanticMigrationEdit(
@@ -297,6 +319,7 @@ class FlextInfraUtilitiesSemanticHelperReferences(
         *,
         protected: t.Pair[int, int] | None,
     ) -> t.Pair[str, str | None]:
+
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         request = move.request
         project = request.rope_project
