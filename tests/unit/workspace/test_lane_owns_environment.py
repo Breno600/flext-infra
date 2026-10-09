@@ -1,7 +1,8 @@
-"""Lane provisioning uses the environment of its primary worktree.
+"""Lane provisioning gives every linked worktree its own environment.
 
-Premise (operator ruling 2026-10-09): a linked worktree uses the environment
-its primary worktree uses, located through Git wherever the lane lives.
+Premise (tracker key operator-ruling-2026-10-09-worktree-own-venv): a linked
+worktree owns an exclusive physical environment beside itself at
+``<parent>/<environment>/<lane>``; it never uses its primary's or a sibling's.
 
 Copyright (c) 2026 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -17,8 +18,8 @@ from flext_infra import FlextInfraWorktreeService
 from tests import c, u
 
 
-class TestsFlextInfraLaneUsesPrimaryEnvironment:
-    """Lane provisioning resolves the primary worktree's physical environment."""
+class TestsFlextInfraLaneOwnsEnvironment:
+    """Lane provisioning resolves the lane's own physical environment."""
 
     @staticmethod
     def _repository(tmp_path: Path) -> Path:
@@ -32,9 +33,8 @@ class TestsFlextInfraLaneUsesPrimaryEnvironment:
         (repository / "Makefile").write_text(
             "PROJECT_ROOT := $(CURDIR)\n"
             "RUNTIME_ROOT := $(PROJECT_ROOT)\n"
-            'RUNTIME_VENV := $(word 2,$(shell git -C "$(RUNTIME_ROOT)" '
-            "worktree list --porcelain))/"
-            f"{c.Infra.ENVIRONMENT_DIRECTORY}\n"
+            "RUNTIME_VENV := $(abspath $(RUNTIME_ROOT)/../"
+            f"{c.Infra.ENVIRONMENT_DIRECTORY}/$(notdir $(RUNTIME_ROOT)))\n"
             ".PHONY: setup\n"
             "setup:\n"
             '\t@test "$(RUNTIME_ROOT)" = "$(PROJECT_ROOT)"\n'
@@ -94,24 +94,28 @@ class TestsFlextInfraLaneUsesPrimaryEnvironment:
         )
         return lane.resolve()
 
-    def test_lane_environment_is_the_primary_worktree_environment(
+    def test_lane_environment_is_its_own_beside_the_lane(
         self,
         tmp_path: Path,
     ) -> None:
-        """The lane resolves its primary worktree's .venv, wherever it lives."""
+        """The lane resolves its own environment, never the primary's."""
         repository = self._repository(tmp_path)
-        lane = self._lane(repository, "feature/primary-environment")
+        lane = self._lane(repository, "feature/own-environment")
 
         tm.that(
             u.Infra.runtime_environment_dir(lane),
-            eq=repository.resolve() / c.Infra.ENVIRONMENT_DIRECTORY,
+            eq=lane.parent / c.Infra.ENVIRONMENT_DIRECTORY / lane.name,
+        )
+        tm.that(
+            u.Infra.runtime_environment_dir(lane),
+            ne=u.Infra.runtime_environment_dir(repository),
         )
 
-    def test_setup_runs_in_lane_and_provisions_primary_environment(
+    def test_setup_runs_in_lane_and_provisions_lane_environment(
         self,
         tmp_path: Path,
     ) -> None:
-        """Setup runs in the lane and provisions the primary's real environment."""
+        """Setup runs in the lane and provisions only the lane's environment."""
         repository = self._repository(tmp_path)
         lane = self._lane(repository, "feature/lane-setup")
         with tm.scope(
@@ -123,11 +127,10 @@ class TestsFlextInfraLaneUsesPrimaryEnvironment:
         ):
             tm.ok(FlextInfraWorktreeService.setup_lane(lane))
 
-        primary_venv = u.Infra.runtime_environment_dir(repository)
-        assert u.Infra.runtime_environment_dir(lane) == primary_venv
-        assert primary_venv.is_dir()
-        assert not primary_venv.is_symlink()
-        assert not (lane / c.Infra.ENVIRONMENT_DIRECTORY).exists()
+        lane_venv = u.Infra.runtime_environment_dir(lane)
+        assert lane_venv.is_dir()
+        assert not lane_venv.is_symlink()
+        assert not u.Infra.runtime_environment_dir(repository).exists()
         assert (lane / "setup-runs.log").read_text(encoding="utf-8") == (
             f"{lane.resolve()}|unset|unset|unset\n"
         )
@@ -171,17 +174,17 @@ class TestsFlextInfraLaneUsesPrimaryEnvironment:
         assert (lane / "member" / ".git").exists()
         assert not (repository / "member" / ".git").exists()
 
-    def test_existing_primary_environment_is_preserved(self, tmp_path: Path) -> None:
-        """An existing primary environment keeps its content across lane setup."""
+    def test_existing_lane_environment_is_preserved(self, tmp_path: Path) -> None:
+        """An existing lane environment keeps its content across lane setup."""
         repository = self._repository(tmp_path)
-        lane = self._lane(repository, "feature/preserve-primary")
+        lane = self._lane(repository, "feature/preserve-lane")
         sentinel = u.Infra.runtime_environment_dir(lane) / "sentinel"
         sentinel.parent.mkdir(parents=True, exist_ok=True)
-        sentinel.write_text("primary\n", encoding="utf-8")
+        sentinel.write_text("lane\n", encoding="utf-8")
 
         tm.ok(FlextInfraWorktreeService.setup_lane(lane))
 
-        assert sentinel.read_text(encoding="utf-8") == "primary\n"
+        assert sentinel.read_text(encoding="utf-8") == "lane\n"
 
     def test_add_only_creates_git_lane_without_setup(self, tmp_path: Path) -> None:
         """Adding a lane creates the Git lane without provisioning anything."""
