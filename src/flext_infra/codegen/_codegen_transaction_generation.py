@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, t, u
-from flext_infra.codegen import FlextInfraMiseStaging
+from flext_infra.codegen._codegen_staging import FlextInfraCodegenStaging
 from flext_infra.codegen._codegen_transaction_recovery import (
     FlextInfraCodegenTransactionRecovery,
 )

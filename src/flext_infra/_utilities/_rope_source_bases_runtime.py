@@ -923,6 +923,14 @@ class FlextInfraUtilitiesRopeSourceBasesRuntime:
                 ValueError: If no ancestor declares the member as a class.
 
             """
+            if name == "__base__" and identity in self._external:
+                value = self._external[identity]
+                if isinstance(value, p.Infra.RopeBuiltinClass):
+                    return self._external_identity(
+                        FlextInfraUtilitiesRopeRuntime.native_class_primary_base(
+                            value.builtin,
+                        ),
+                    )
             for ancestor in self._linearize(identity):
                 if ancestor in self._definitions:
                     members = self._definitions[ancestor].members
