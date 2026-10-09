@@ -1,4 +1,4 @@
-# flext_infra.git
+# flext_infra.git_lanes
 
 <!-- TOC START -->
 
@@ -6,7 +6,7 @@
 
 <!-- AUTO-GENERATED — DO NOT EDIT MANUALLY -->
 
-::: flext_infra.git
+::: flext_infra.git_lanes
 
     options:
       show_root_heading: true
