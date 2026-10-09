@@ -1411,6 +1411,7 @@ Infra:
           - types-grpcio
           - types-jsonschema>=4.26.0.20260518
           - types-ldap3>=2.9.13.20260827
+          - msgpack-types
           - types-protobuf>=7.35.1.20260827
           - types-psutil>=7.2.2.20260827
           - types-psycopg2>=2.9.21.20260724
