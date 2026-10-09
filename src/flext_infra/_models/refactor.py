@@ -369,26 +369,75 @@ class FlextInfraModelsRefactor(
             m.Field(description="Parsed PyObject module representation"),
         ]
 
-    class ImportDemotionScan(m.ArbitraryTypesModel):
-        """Immutable per-pass context of one lazy import-demotion scan."""
+    class ImportLawScope(m.ArbitraryTypesModel):
+        """Immutable facts one import-law pass decides a module's imports on."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
-        tree: Annotated[ast.Module, m.Field(description="Module being normalized")]
+        project_root: Annotated[Path, m.Field(description="Governed project root")]
+        file_path: Annotated[Path, m.Field(description="Normalized module path")]
+        namespace_dir: Annotated[
+            Path,
+            m.Field(description="Directory of the namespace owning the module"),
+        ]
+        module: Annotated[str, m.Field(description="Dotted name of the module")]
+        layer: Annotated[int, m.Field(description="Module's import-layer rank")]
+        own_exports: Annotated[
+            frozenset[str],
+            m.Field(description="Names the module declares in its own __all__"),
+        ]
+        family_letter: Annotated[
+            str | None,
+            m.Field(
+                description=(
+                    "Facade letter of the family package holding the module, "
+                    "or None outside every family package"
+                ),
+            ),
+        ] = None
+        direct_imports: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Whether the module keeps direct leaf imports: a "
+                    "settings/config module or a family base.py, which must "
+                    "never route through the namespace root or a lazy package"
+                ),
+            ),
+        ] = False
+
+        @m.computed_field
+        @property
+        def namespace(self) -> str:
+            """Top-level package name of the owning namespace.
+
+            Returns:
+                The namespace package name.
+
+            """
+            return self.namespace_dir.name
+
+    class ImportLawPass(m.ArbitraryTypesModel):
+        """One parsed module and the facts one import-law pass reads from it."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        scope: Annotated[
+            FlextInfraModelsRefactor.ImportLawScope,
+            m.Field(description="Module facts of the pass"),
+        ]
+        tree: Annotated[ast.Module, m.Field(description="Parsed module")]
         parents: Annotated[
             t.MappingKV[int, ast.AST],
             m.Field(description="Child node id to parent node map"),
         ]
-        frozen: Annotated[
-            frozenset[int],
-            m.Field(description="Node ids pinned eager by structural use"),
+        bindings: Annotated[
+            t.MappingKV[str, ast.stmt],
+            m.Field(description="Module-level statement binding each top name"),
         ]
-        package: Annotated[str, m.Field(description="Owning top-level package")]
-        module_rank: Annotated[int, m.Field(description="Module's own layer rank")]
-        file_path: Annotated[Path, m.Field(description="Normalized module path")]
-        family_exports: Annotated[
-            t.FrozensetMapping,
-            m.Field(description="Exports per facade family module"),
+        root_exports: Annotated[
+            t.StrMapping,
+            m.Field(description="Names the namespace root publishes lazily"),
         ]
 
 
