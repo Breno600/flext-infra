@@ -12,6 +12,7 @@ import sys
 from mypy import api
 
 from flext_infra import m
+from flext_infra._utilities import FlextInfraUtilitiesResourceLimits
 
 
 class FlextInfraMypyProfiler:
@@ -28,18 +29,19 @@ class FlextInfraMypyProfiler:
             ValueError: If Mypy profiling requires an output destination.
 
         """
-        from flext_infra import u
-
         destination = invocation.profile_output
         if destination is None:
             msg = "Mypy profiling requires an output destination"
             raise ValueError(msg)
         profile = cProfile.Profile()
-        stdout, stderr, status = profile.runcall(
-            api.run,
-            list(u.Infra.mypy_arguments(invocation)),
-        )
-        profile.dump_stats(str(destination.resolve()))
+        try:
+            stdout, stderr, status = profile.runcall(
+                api.run,
+                list(FlextInfraUtilitiesResourceLimits.mypy_arguments(invocation)),
+            )
+        finally:
+            # Preserve partial evidence when the bounded checker is interrupted.
+            profile.dump_stats(str(destination.resolve()))
         sys.stdout.write(stdout)
         sys.stderr.write(stderr)
         return status

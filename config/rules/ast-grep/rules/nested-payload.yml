@@ -1,0 +1,37 @@
+id: ban-nested-payload-outside-models
+language: python
+severity: error
+files:
+  - "**/_utilities/**/*.py"
+  - "**/_constants/**/*.py"
+  - "**/_typings/**/*.py"
+  - "**/_protocols/**/*.py"
+ignores:
+  - "**/__init__.py"
+  - "**/tests/**"
+metadata:
+  context:
+    NAME:
+      is: payload-declaration
+rule:
+  kind: class_definition
+  all:
+    - has:
+        field: name
+        pattern: $NAME
+    - has:
+        field: body
+        has:
+          kind: expression_statement
+          has:
+            kind: assignment
+            has:
+              field: type
+              kind: type
+  inside:
+    kind: block
+    inside:
+      kind: class_definition
+message: >-
+  Nested payload `$NAME` belongs to its composed model family; relocate its
+  declaration and bound references through the immutable semantic planner.

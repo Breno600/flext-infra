@@ -7,13 +7,9 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-from flext_infra import c
-from flext_infra._utilities.rope_source import FlextInfraUtilitiesRopeSource
-
-if TYPE_CHECKING:
-    from flext_infra import t
+from flext_infra import c, t
+from flext_infra._utilities import FlextInfraUtilitiesRopeSource
 
 
 class FlextInfraUtilitiesRefactorNamespaceCommon:
@@ -99,14 +95,21 @@ class FlextInfraUtilitiesRefactorNamespaceCommon:
 
         """
         start_idx = -1
+        header_idx = -1
         for idx, line in enumerate(lines):
             if line.startswith(header):
+                header_idx = idx
                 start_idx = idx
                 break
         if start_idx < 0:
             return None
+        # A decorated block owns its decorators: a move that leaves a
+        # @runtime_checkable-style decorator behind orphans it over a blank
+        # body (invalid syntax) and drops it from the relocated copy.
+        while start_idx > 0 and lines[start_idx - 1].startswith("@"):
+            start_idx -= 1
         end_idx = len(lines)
-        for idx in range(start_idx + 1, len(lines)):
+        for idx in range(header_idx + 1, len(lines)):
             line = lines[idx]
             if line and not line.startswith((" ", "\t")) and not line.startswith("#"):
                 end_idx = idx

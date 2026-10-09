@@ -19,8 +19,15 @@ import signal
 import sys
 import time
 from types import FrameType
+from typing import TYPE_CHECKING
+
+from flext_cli import u
 
 from flext_infra import c, m, t
+from flext_infra._utilities import FlextInfraUtilitiesResourceLimits
+
+if TYPE_CHECKING:
+    from flext_cli import s
 
 
 class FlextInfraMypyDarwinSupervisor:
@@ -56,7 +63,6 @@ class FlextInfraMypyDarwinSupervisor:
 
     @staticmethod
     def _usage(pid: int) -> t.Pair[int, bool]:
-        from flext_infra import u
 
         snapshot = u.Cli.run(
             ("/bin/ps", "-axo", "pgid=,rss=,stat="),
@@ -71,36 +77,46 @@ class FlextInfraMypyDarwinSupervisor:
                 alive = True
         return total_kib * c.Infra.BYTES_PER_KIB, alive
 
+    @staticmethod
+    def _ask_group_exit(
+        child: s.ManagedProcess,
+        received_signal: int,
+        kill_after: int,
+    ) -> None:
+        """Ask the live group to exit and wait through the kill-after grace."""
+        if FlextInfraMypyDarwinSupervisor._usage(child.pid)[1]:
+            FlextInfraMypyDarwinSupervisor._signal_group(
+                child.pid,
+                received_signal or signal.SIGTERM,
+            )
+        end = time.monotonic() + kill_after
+        while time.monotonic() < end:
+            child.poll()
+            if not FlextInfraMypyDarwinSupervisor._usage(child.pid)[1]:
+                break
+            time.sleep(c.Infra.MYPY_SUPERVISOR_SHUTDOWN_POLL_SECONDS)
+
     @classmethod
-    def run(
+    def _kill_group(cls, child: s.ManagedProcess) -> None:
+        """Hard-kill a still-live group and reap the leader."""
+        if cls._usage(child.pid)[1]:
+            cls._signal_group(child.pid, signal.SIGKILL)
+        child.wait().unwrap()
+
+    @classmethod
+    def _supervised_exit_code(
         cls,
-        invocation: m.Infra.MypyInvocation,
+        child: s.ManagedProcess,
+        deadline: float,
         memory_bytes: int,
-        timeout: int,
         kill_after: int,
     ) -> int:
-        """Run the owned checker with inherited streams and bounded group lifetime.
+        """Relay signals, enforce limits, and clean the group before returning.
 
         Returns:
             The resulting ``int``.
 
-        Raises:
-            ValueError: If positive memory, timeout and kill-after are required.
-
         """
-        from flext_infra import u
-
-        if min(memory_bytes, timeout, kill_after) <= 0:
-            msg = "positive memory, timeout and kill-after are required"
-            raise ValueError(msg)
-        # Probe the native accounting boundary before launching any workload.
-        cls._usage(os.getpgrp())
-        deadline = time.monotonic() + timeout
-        child = u.Cli.process_start(
-            u.Infra.mypy_command(invocation),
-            capture=False,
-            start_new_session=True,
-        ).unwrap()
         received_signal: int = 0
 
         def receive_signal(signum: int, _frame: FrameType | None) -> None:
@@ -129,22 +145,43 @@ class FlextInfraMypyDarwinSupervisor:
             # absence out of the cleanup path entirely — no suppression, no
             # sentinel; a race between proof and signal propagates visibly.
             try:
-                if cls._usage(child.pid)[1]:
-                    cls._signal_group(child.pid, received_signal or signal.SIGTERM)
-                end = time.monotonic() + kill_after
-                while time.monotonic() < end:
-                    child.poll()
-                    if not cls._usage(child.pid)[1]:
-                        break
-                    time.sleep(c.Infra.MYPY_SUPERVISOR_SHUTDOWN_POLL_SECONDS)
+                cls._ask_group_exit(child, received_signal, kill_after)
             finally:
                 try:
-                    if cls._usage(child.pid)[1]:
-                        cls._signal_group(child.pid, signal.SIGKILL)
-                    child.wait().unwrap()
+                    cls._kill_group(child)
                 finally:
                     for signum, handler in previous.items():
                         signal.signal(signum, handler)
+
+    @classmethod
+    def run(
+        cls,
+        invocation: m.Infra.MypyInvocation,
+        memory_bytes: int,
+        timeout: int,
+        kill_after: int,
+    ) -> int:
+        """Run the owned checker with inherited streams and bounded group lifetime.
+
+        Returns:
+            The resulting ``int``.
+
+        Raises:
+            ValueError: If positive memory, timeout and kill-after are required.
+
+        """
+        if min(memory_bytes, timeout, kill_after) <= 0:
+            msg = "positive memory, timeout and kill-after are required"
+            raise ValueError(msg)
+        # Probe the native accounting boundary before launching any workload.
+        cls._usage(os.getpgrp())
+        deadline = time.monotonic() + timeout
+        child = u.Cli.process_start(
+            FlextInfraUtilitiesResourceLimits.mypy_command(invocation),
+            capture=False,
+            start_new_session=True,
+        ).unwrap()
+        return cls._supervised_exit_code(child, deadline, memory_bytes, kill_after)
 
 
 if __name__ == "__main__":

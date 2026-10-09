@@ -6,9 +6,10 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Annotated, override
 
-from flext_infra import c, m, p, r, u
+from flext_infra import c, m, p, r, t, u
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from flext_infra.release._release_plan import FlextInfraReleasePlanMixin
 
@@ -35,14 +36,13 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
     conform_collaborators: Annotated[
         m.Infra.CodegenConformPorts | None,
         m.Field(
-            default=None,
             exclude=True,
             description=(
                 "Docs port bound by the FlextInfra facade; the settling "
                 "conform fails before any effect without it"
             ),
         ),
-    ]
+    ] = None
 
     @override
     def execute(self) -> p.Result[bool]:
@@ -95,8 +95,7 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
             return r[bool].from_failure(plan)
         if not plan.value.releasable:
             self.logger.info("release_version_none", current=ctx.version)
-            return r[bool].ok(value=True)
-        if ctx.dry_run:
+        if not plan.value.releasable or ctx.dry_run:
             return r[bool].ok(value=True)
         exists = u.Cli.capture([c.Infra.GIT, "tag", "-l", plan.value.tag], cwd=root)
         if exists.failure:
@@ -164,8 +163,8 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
             return generated
         return u.Infra.update_changelog(root, plan.next, plan.tag, notes)
 
-    @staticmethod
-    def phase_tag(ctx: m.Infra.ReleasePhaseDispatchConfig) -> p.Result[bool]:
+    @classmethod
+    def phase_tag(cls, ctx: m.Infra.ReleasePhaseDispatchConfig) -> p.Result[bool]:
         """Tag the merged release commit; idempotent when the tag already points here.
 
         Returns:
@@ -179,34 +178,11 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
         )
         if head.failure:
             return r[bool].from_failure(head)
-        subject, _, oid = head.value.strip().partition("\n")
-        if not u.Infra.release_subject(subject, ctx.version):
-            # A hot integration lane keeps landing after the release commit:
-            # the contract is to tag the MERGED release commit wherever it now
-            # sits, not to demand the lane stop. Locate it in history and fail
-            # loud only when it truly is not there.
-            expected = c.Infra.RELEASE_COMMIT_SUBJECT.format(version=ctx.version)
-            located = u.Cli.capture(
-                [
-                    c.Infra.GIT,
-                    "log",
-                    f"--grep={expected}",
-                    "-n",
-                    "1",
-                    "--format=%H",
-                    c.Infra.GIT_HEAD,
-                ],
-                cwd=root,
-            )
-            if located.failure:
-                return r[bool].from_failure(located)
-            located_oid = located.value.strip()
-            if not located_oid:
-                return r[bool].fail(
-                    f"release tag requires the release commit {expected!r} in "
-                    f"history, found head subject {subject!r}",
-                )
-            oid = located_oid
+        subject, _, head_oid = head.value.strip().partition("\n")
+        located = cls._release_commit_oid(root, ctx.version, subject, head_oid)
+        if located.failure:
+            return r[bool].from_failure(located)
+        subject, oid = located.value
         if ctx.dry_run:
             return r[bool].ok(value=True)
         existing = u.Cli.capture(
@@ -237,6 +213,50 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
             [c.Infra.GIT, "push", c.Infra.GIT_ORIGIN, ctx.tag],
             cwd=root,
         )
+
+    @staticmethod
+    def _release_commit_oid(
+        root: Path,
+        version: str,
+        subject: str,
+        head_oid: str,
+    ) -> p.Result[t.Pair[str, str]]:
+        """Locate the merged release commit, or fail loud when it is absent.
+
+        A hot integration lane keeps landing after the release commit: the
+        contract is to tag the MERGED release commit wherever it now sits,
+        not to demand the lane stop. Locate it in history and fail loud only
+        when it truly is not there.
+
+        Returns:
+            The resulting ``(subject, oid)`` pair of the release commit.
+
+        """
+        result_type = r[t.Pair[str, str]]
+        if u.Infra.release_subject(subject, version):
+            return result_type.ok((subject, head_oid))
+        expected = c.Infra.RELEASE_COMMIT_SUBJECT.format(version=version)
+        located = u.Cli.capture(
+            [
+                c.Infra.GIT,
+                "log",
+                f"--grep={expected}",
+                "-n",
+                "1",
+                "--format=%H",
+                c.Infra.GIT_HEAD,
+            ],
+            cwd=root,
+        )
+        if located.failure:
+            return result_type.from_failure(located)
+        located_oid = located.value.strip()
+        if not located_oid:
+            return result_type.fail(
+                f"release tag requires the release commit {expected!r} in "
+                f"history, found head subject {subject!r}",
+            )
+        return result_type.ok((subject, located_oid))
 
 
 __all__: list[str] = ["FlextInfraReleaseOrchestrator"]

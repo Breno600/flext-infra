@@ -11,11 +11,11 @@ from pathlib import Path
 from flext_cli import u
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities._rope_core_pymodule import (
+from flext_infra._utilities import (
+    FlextInfraUtilitiesCodegenNamespace,
     FlextInfraUtilitiesRopeCorePyModuleMixin,
+    FlextInfraUtilitiesRopeRuntime,
 )
-from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
-from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeClassMove:
@@ -123,8 +123,7 @@ class FlextInfraUtilitiesRopeClassMove:
             The resulting ``t.Pair[Path, p.Infra.RopeMoveGlobal]``.
 
         Raises:
-            FileNotFoundError: If ``not source_file.is_file()``; or if ``not
-                target_file.parent.is_dir()``.
+            FileNotFoundError: If ``not source_file.is_file()``.
             ValueError: If class move source and target are identical; or if class.
 
         """
@@ -136,8 +135,10 @@ class FlextInfraUtilitiesRopeClassMove:
             raise ValueError(msg)
         if not source_file.is_file():
             raise FileNotFoundError(source_file)
-        if not target_file.parent.is_dir():
-            raise FileNotFoundError(target_file.parent)
+        # A relocation into a family establishes it: the move already
+        # bootstraps a missing target file, so a missing family directory is
+        # created the same way instead of failing the verb.
+        target_file.parent.mkdir(parents=True, exist_ok=True)
 
         source_resource = cls._resource(request.rope_project, root, source_file)
         source = source_resource.read()
@@ -204,9 +205,14 @@ class FlextInfraUtilitiesRopeClassMove:
         rope_project: t.Infra.RopeProject,
         root: Path,
         file_path: Path,
-    ) -> t.Infra.RopeResource:
+    ) -> t.Infra.RopeFile:
+
         relative_path = file_path.relative_to(root).as_posix()
-        return rope_project.get_resource(relative_path)
+        resource = rope_project.get_resource(relative_path)
+        if not FlextInfraUtilitiesRopeRuntime.file_resource(resource):
+            msg = f"expected a Rope file resource: {file_path}"
+            raise TypeError(msg)
+        return resource
 
 
 __all__: list[str] = ["FlextInfraUtilitiesRopeClassMove"]

@@ -13,7 +13,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, m, r, t, u
+from flext_infra import c, config, m, r, t, u
 from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
@@ -82,7 +82,7 @@ class FlextInfraDuplicationGate(FlextInfraGate):
                 stdout="",
                 stderr=(
                     f"{c.Infra.JSCPD_BINARY} not found on PATH; `make setup` "
-                    "provisions it from codegen.toolchain.jscpd_version"
+                    "provisions it from codegen.toolchain.tools entry 'jscpd'"
                 ),
                 # jscpd itself exits 1 when it finds clones, so an absent binary
                 # must not borrow that code or the gate would read it as a scan.
@@ -270,13 +270,16 @@ class FlextInfraDuplicationGate(FlextInfraGate):
             return r[Path].from_failure(project_config)
         overrides = project_config.value
 
-        config = m.Infra.JscpdConfig(
+        jscpd_config = m.Infra.JscpdConfig(
             absolute=True,
             formatsExts={
                 name: tuple(extensions)
                 for name, extensions in c.Infra.JSCPD_FORMAT_EXTENSIONS.items()
             },
-            ignore=tuple(c.Infra.JSCPD_IGNORE_PATTERNS),
+            ignore=(
+                *c.Infra.JSCPD_IGNORE_PATTERNS,
+                *config.Infra.codegen.generated_source_globs,
+            ),
             minLines=overrides.min_lines,
             minTokens=overrides.min_tokens,
             mode=overrides.mode,
@@ -291,7 +294,7 @@ class FlextInfraDuplicationGate(FlextInfraGate):
             / c.Infra.JSCPD_CONFIG_FILENAME
         )
         u.Cli.ensure_dir(config_path.parent).unwrap()
-        rendered = config.model_dump_json(by_alias=True)
+        rendered = jscpd_config.model_dump_json(by_alias=True)
         u.Cli.atomic_write_text_file(config_path, rendered).unwrap()
         return r[Path].ok(config_path)
 

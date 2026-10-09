@@ -6,12 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from flext_infra import c
-
-if TYPE_CHECKING:
-    from flext_infra import p, t
+from flext_infra import c, p, t
 
 
 class FlextInfraUtilitiesProcess:

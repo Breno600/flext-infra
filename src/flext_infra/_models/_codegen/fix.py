@@ -12,27 +12,26 @@ from typing import Annotated, ClassVar, Literal
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._models import FlextInfraModelsMixins as mm
 from flext_infra._models._codegen.scaffold import FlextInfraModelsCodegenScaffoldModels
+from flext_infra._models.mixins import FlextInfraModelsMixins
 
 
 class FlextInfraModelsCodegenFixModels:
     """Auto-fix, consolidation, and namespace policy models."""
 
-    class AutoFixResult(mm.ProjectNameMixin, m.ArbitraryTypesModel):
+    class AutoFixResult(FlextInfraModelsMixins.ProjectNameMixin, m.ArbitraryTypesModel):
         """Result of auto-fixing namespace violations for a project."""
 
         violations_fixed: Annotated[
             t.MutableSequenceOf[FlextInfraModelsCodegenScaffoldModels.CensusViolation],
-            m.Field(default_factory=list, description="Fixed violations"),
-        ]
+            m.Field(description="Fixed violations"),
+        ] = m.Field(default_factory=list)
         violations_skipped: Annotated[
             t.MutableSequenceOf[FlextInfraModelsCodegenScaffoldModels.CensusViolation],
             m.Field(
-                default_factory=list,
                 description="Skipped violations (not auto-fixable)",
             ),
-        ]
+        ] = m.Field(default_factory=list)
         files_modified: t.StrSequence = m.Field(
             default_factory=tuple,
             description="Modified file paths",
@@ -50,9 +49,8 @@ class FlextInfraModelsCodegenFixModels:
             m.Field(description="File processing status"),
         ]
         changes: Annotated[
-            t.StrSequence,
-            m.Field(default_factory=tuple, description="Applied replacements"),
-        ]
+            t.StrSequence, m.Field(description="Applied replacements")
+        ] = m.Field(default_factory=tuple)
 
     class ConsolidatorReport(m.ContractModel):
         """JSON report emitted by the constants consolidator."""
@@ -71,8 +69,8 @@ class FlextInfraModelsCodegenFixModels:
         ] = 0
         files: Annotated[
             t.SequenceOf[FlextInfraModelsCodegenFixModels.ConsolidatorFileResult],
-            m.Field(default_factory=tuple, description="Per-file processing results"),
-        ]
+            m.Field(description="Per-file processing results"),
+        ] = m.Field(default_factory=tuple)
 
     class FacadeFamily(m.ContractModel):
         """One facade family the core package declares (c, t, p, m, u)."""
@@ -93,19 +91,31 @@ class FlextInfraModelsCodegenFixModels:
         @m.computed_field
         @property
         def directory(self) -> str:
-            """Private family package beside the facade module."""
+            """Private family package beside the facade module.
+
+            Returns:
+                The resulting ``str``.
+            """
             return f"_{self.module}"
 
         @m.computed_field
         @property
         def directories(self) -> frozenset[str]:
-            """Public and private family package directory names."""
+            """Public and private family package directory names.
+
+            Returns:
+                The resulting ``frozenset[str]``.
+            """
             return frozenset({self.module, f"_{self.module}"})
 
         @m.computed_field
         @property
         def file_names(self) -> frozenset[str]:
-            """Public and private facade module file names."""
+            """Public and private facade module file names.
+
+            Returns:
+                The resulting ``frozenset[str]``.
+            """
             return frozenset({f"{self.module}.py", f"_{self.module}.py"})
 
     class NamespaceModulePolicy(m.ArbitraryTypesModel):
@@ -176,15 +186,19 @@ class FlextInfraModelsCodegenFixModels:
         )
 
     class BulkFixItem(
-        mm.AbsoluteFilePathTextMixin,
-        mm.PositiveLineMixin,
+        FlextInfraModelsMixins.AbsoluteFilePathTextMixin,
+        FlextInfraModelsMixins.PositiveLineMixin,
         m.ArbitraryTypesModel,
     ):
         """Shared line-addressable item used by bulk codegen fixes."""
 
         name: Annotated[t.NonEmptyStr, m.Field(description="Item identifier")]
 
-    class ConstantDefinition(mm.ProjectNameMixin, mm.NestedClassPathMixin, BulkFixItem):
+    class ConstantDefinition(
+        FlextInfraModelsMixins.ProjectNameMixin,
+        FlextInfraModelsMixins.NestedClassPathMixin,
+        BulkFixItem,
+    ):
         """A single constant extracted from a constants.py file."""
 
         value_repr: Annotated[
@@ -209,7 +223,10 @@ class FlextInfraModelsCodegenFixModels:
             m.Field(description="Canonical parent reference"),
         ] = ""
 
-    class DirectConstantRef(mm.ProjectNameMixin, m.ArbitraryTypesModel):
+    class DirectConstantRef(
+        FlextInfraModelsMixins.ProjectNameMixin,
+        m.ArbitraryTypesModel,
+    ):
         """Direct FlextXConstants.Y.Z reference that should use c.* alias."""
 
         full_ref: Annotated[
@@ -237,31 +254,35 @@ class FlextInfraModelsCodegenFixModels:
         violations_fixed: Annotated[
             t.MutableSequenceOf[FlextInfraModelsCodegenScaffoldModels.CensusViolation],
             m.Field(
-                default_factory=list,
+                default_factory=list[
+                    FlextInfraModelsCodegenScaffoldModels.CensusViolation
+                ],
                 description="List of violations that were fixed",
             ),
         ] = m.Field(
-            default_factory=list,
+            default_factory=list[FlextInfraModelsCodegenScaffoldModels.CensusViolation],
             description="List of violations that were fixed",
         )
         violations_skipped: Annotated[
             t.MutableSequenceOf[FlextInfraModelsCodegenScaffoldModels.CensusViolation],
             m.Field(
-                default_factory=list,
+                default_factory=list[
+                    FlextInfraModelsCodegenScaffoldModels.CensusViolation
+                ],
                 description="List of violations that were skipped",
             ),
         ] = m.Field(
-            default_factory=list,
+            default_factory=list[FlextInfraModelsCodegenScaffoldModels.CensusViolation],
             description="List of violations that were skipped",
         )
         files_modified: Annotated[
             MutableSet[str],
             m.Field(
-                default_factory=set,
+                default_factory=set[str],
                 description="Set of unique modified file paths",
             ),
         ] = m.Field(
-            default_factory=set,
+            default_factory=set[str],
             description="Set of unique modified file paths",
         )
 

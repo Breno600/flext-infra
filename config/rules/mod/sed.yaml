@@ -135,33 +135,6 @@ rules:
       - tests/unit/codegen/test_template_formatter_fixed_point.py
     find: '(?P<prefix>repository_branch="(?P<branch>[^"]+)",\n[ \t]+ci_trigger_branches=)(?P<owner>(?:tests\.)?utilities\.TestsFlextInfraUtilities\.CodegenTestSupport\.Ci)\.CI_TRIGGER_BASELINE_BRANCHES'
     replace: '\g<prefix>\g<owner>.ci_trigger_branches("\g<branch>")'
-  - id: codegen-test-public-utility-namespace
-    distributions: [flext-infra]
-    description: Consume the promoted codegen helper through the canonical test utilities facade.
-    include: [tests/unit/codegen/*.py]
-    find: '(?<![\w.])(?:tests\.)?utilities\.TestsFlextInfraUtilities\.CodegenTestSupport\.Ci'
-    replace: 'u.CodegenTestSupport.Ci'
-  - id: codegen-test-public-utility-import
-    distributions: [flext-infra]
-    description: Replace concrete test-utilities module imports with the public lazy alias.
-    include: [tests/unit/codegen/*.py]
-    find: '^import tests\.utilities$'
-    replace: 'from tests import u'
-    flags: [MULTILINE]
-  - id: codegen-test-public-utility-import-existing-alias
-    distributions: [flext-infra]
-    description: Retire the redundant concrete import where u is already present.
-    include: [tests/unit/codegen/*.py]
-    find: '^(from tests import [^\n]*\bu), utilities$'
-    replace: '\g<1>'
-    flags: [MULTILINE]
-  - id: codegen-test-public-utility-import-new-alias
-    distributions: [flext-infra]
-    description: Add u to an existing test facade import that only carried utilities.
-    include: [tests/unit/codegen/*.py]
-    find: '^(from tests import [^\n]*), utilities$'
-    replace: '\g<1>, u'
-    flags: [MULTILINE]
   - id: codegen-test-retire-shadowed-facade-imports
     distributions: [flext-infra]
     description: Keep the test c/m/t facades after Rope moves their shared helper.
@@ -169,12 +142,6 @@ rules:
     find: '^from flext_infra import FlextInfraUtilities, c, config, m, t$'
     replace: 'from flext_infra import FlextInfraUtilities, config'
     flags: [MULTILINE]
-  - id: gate-tool-error-typed-code
-    distributions: [flext-infra]
-    description: Read the tool-error issue code from the typed outcome instead of the retired literal.
-    include: ["tests/**/*.py"]
-    find: '"TOOL_ERROR"'
-    replace: 'c.Infra.ToolOutcome.ERROR'
   - id: codegen-test-retire-shadowed-utility-import
     distributions: [flext-infra]
     description: Let the test u facade supply inherited production utilities.
@@ -295,14 +262,6 @@ rules:
     find: '"dependencies = \[\]\\n"'
     replace: |-
       f'dependencies = ["{u.Tests.flext_source(project.upstream)}"]\\n'
-  - id: snapshot-fixture-track-owner
-    distributions: [flext-infra]
-    description: Register the ast-grep fixture config with Git so its public ownership contract is observable.
-    include: [tests/unit/codemod/test_rule_fixture_snapshots.py]
-    find: '(?m)(?<!        u\.Tests\.git_bootstrap\(root, \("add", c\.Infra\.CODEMOD_CONFIG_FILENAME\)\)\n)^        return rule$'
-    replace: |2-
-              u.Tests.git_bootstrap(root, ("add", c.Infra.CODEMOD_CONFIG_FILENAME))
-              return rule
   - id: bootstrap-source-document-declared-surface
     distributions: [flext-infra]
     description: Describe the declared multi-file Make bootstrap instead of a retired single-file contract.
@@ -315,3 +274,42 @@ rules:
     include: [src/flext_infra/services/candidate_bootstrap.py]
     find: 'candidate bootstrap must plan exactly one Makefile:'
     replace: 'candidate bootstrap has no declared destinations:'
+  - id: cli-process-options-model-owner
+    description: >-
+      flext-cli declares the process launch options as the model
+      m.Cli.ProcessOptions (and the protocol p.Cli.ProcessOptions); no
+      u.Cli.ProcessOptions exists, so every construction names the model.
+    find: '\bu\.Cli\.ProcessOptions\('
+    replace: 'm.Cli.ProcessOptions('
+  - id: process-options-tests-import-models-c-u
+    distributions: [flext-infra]
+    description: Tests that build m.Cli.ProcessOptions import the models facade from the tests namespace.
+    include:
+      - tests/unit/codegen/test_codegen_make_verb_contract.py
+      - tests/unit/test_git_fixture_isolation.py
+    find: '(?m)^from tests import c, u$'
+    replace: 'from tests import c, m, u'
+  - id: process-options-tests-import-models-c-t-u
+    distributions: [flext-infra]
+    description: Tests that build m.Cli.ProcessOptions import the models facade from the tests namespace.
+    include: [tests/unit/codegen/test_codegen_make_member_runtime.py]
+    find: '(?m)^from tests import c, t, u$'
+    replace: 'from tests import c, m, t, u'
+  - id: process-options-tests-import-models-c-p-t-u
+    distributions: [flext-infra]
+    description: Tests that build m.Cli.ProcessOptions import the models facade from the tests namespace.
+    include: [tests/unit/codegen/test_workspace_root_setup_submodules.py]
+    find: '(?m)^from tests import c, p, t, u$'
+    replace: 'from tests import c, m, p, t, u'
+  - id: process-options-tests-import-models-u
+    distributions: [flext-infra]
+    description: Tests that build m.Cli.ProcessOptions import the models facade from the tests namespace.
+    include: [tests/unit/workspace/test_binding_install.py]
+    find: '(?m)^from tests import u$'
+    replace: 'from tests import m, u'
+  - id: process-options-tests-import-models-t-u
+    distributions: [flext-infra]
+    description: Tests that build m.Cli.ProcessOptions import the models facade from the tests namespace.
+    include: [tests/unit/workspace/test_flext_worktree_binding.py]
+    find: '(?m)^from tests import t, u$'
+    replace: 'from tests import m, t, u'

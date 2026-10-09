@@ -36,67 +36,16 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
         output_lines: t.MutableSequenceOf[str] = (
             ["[DRY-RUN] Scanning...\n"] if self.dry_run else []
         )
-        found = applied = failed = 0
-        file_results: t.MutableSequenceOf[m.Infra.ConsolidatorFileResult] = []
-
         with FlextInfraRopeWorkspace.open_workspace(self.repository_root) as rope:
             projects_result = self._selected_projects(rope)
             if projects_result.failure:
                 return r[str].fail("Failed to discover projects")
             selected_projects = projects_result.unwrap()
-
-            for project in selected_projects:
-                project_layout = u.Infra.layout(project.path)
-                if project_layout is None or not project_layout.init_path.is_file():
-                    continue
-
-                constants_file = project_layout.package_dir / c.Infra.CONSTANTS_PY
-                value_map_result = self._build_value_map_from_constants_file(
-                    constants_file,
-                )
-                if value_map_result.failure:
-                    return r[str].from_failure(value_map_result)
-                value_map = value_map_result.value
-                if not value_map:
-                    continue
-
-                project_files = self._project_python_files(rope, project.path)
-                if project_files.failure:
-                    return r[str].from_failure(project_files)
-                for python_file in project_files.value:
-                    scanned = self._scan_file(rope.rope_project, python_file, value_map)
-                    if scanned is None:
-                        continue
-                    found += len(scanned.matches)
-                    rel_path = python_file.relative_to(self.repository_root)
-                    if self.dry_run:
-                        output_lines.extend(
-                            (
-                                f"  {rel_path}:{symbol.line}  {symbol.name} = "
-                                f"{value} -> {ref}"
-                            )
-                            for symbol, ref, value in scanned.matches
-                        )
-                        continue
-                    ok, changes, lines = self._apply_and_validate(
-                        rope.rope_project,
-                        scanned,
-                        python_file,
-                        self.repository_root,
-                        project_layout.package_name,
-                    )
-                    output_lines.extend(lines)
-                    file_results.append(
-                        m.Infra.ConsolidatorFileResult(
-                            file=str(rel_path),
-                            status="applied" if ok else "reverted",
-                            changes=tuple(changes),
-                        ),
-                    )
-                    if ok:
-                        applied += len(changes)
-                    else:
-                        failed += 1
+            scanned_run = self._scanned_project_run(rope, selected_projects)
+            if scanned_run.failure:
+                return r[str].from_failure(scanned_run)
+            found, applied, failed, file_results, scan_lines = scanned_run.value
+            output_lines.extend(scan_lines)
 
         summary = (
             f"Found {found} canonical matches across {len(selected_projects)} projects"
@@ -113,6 +62,99 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
             )
             return r[str].ok(report.model_dump_json())
         return r[str].ok("\n".join(output_lines))
+
+    def _scanned_project_run(
+        self,
+        rope: p.Infra.RopeWorkspaceDsl,
+        selected_projects: t.SequenceOf[p.Infra.ProjectInfo],
+    ) -> p.Result[
+        tuple[int, int, int, t.SequenceOf[m.Infra.ConsolidatorFileResult], list[str]]
+    ]:
+        """Scan every selected project, applying when not in dry-run.
+
+        Returns:
+            The resulting ``p.Result[tuple[int, int, int,
+                t.SequenceOf[m.Infra.ConsolidatorFileResult], list[str]]]``
+            with the found/applied/failed counters, the per-file results, and
+            the rendered scan lines.
+
+        """
+        found = applied = failed = 0
+        file_results: list[m.Infra.ConsolidatorFileResult] = []
+        output_lines: list[str] = []
+        for project in selected_projects:
+            project_layout = u.Infra.layout(project.path)
+            if project_layout is None or not project_layout.init_path.is_file():
+                continue
+            constants_file = project_layout.package_dir / c.Infra.CONSTANTS_PY
+            value_map_result = self._build_value_map_from_constants_file(constants_file)
+            if value_map_result.failure:
+                return r[
+                    tuple[
+                        int,
+                        int,
+                        int,
+                        t.SequenceOf[m.Infra.ConsolidatorFileResult],
+                        list[str],
+                    ]
+                ].from_failure(value_map_result)
+            value_map = value_map_result.value
+            if not value_map:
+                continue
+            project_files = self._project_python_files(rope, project.path)
+            if project_files.failure:
+                return r[
+                    tuple[
+                        int,
+                        int,
+                        int,
+                        t.SequenceOf[m.Infra.ConsolidatorFileResult],
+                        list[str],
+                    ]
+                ].from_failure(project_files)
+            for python_file in project_files.value:
+                scanned = self._scan_file(rope.rope_project, python_file, value_map)
+                if scanned is None:
+                    continue
+                found += len(scanned.matches)
+                rel_path = python_file.relative_to(self.repository_root)
+                if self.dry_run:
+                    output_lines.extend(
+                        (
+                            f"  {rel_path}:{symbol.line}  {symbol.name} = "
+                            f"{value} -> {ref}"
+                        )
+                        for symbol, ref, value in scanned.matches
+                    )
+                    continue
+                ok, changes, lines = self._apply_and_validate(
+                    rope.rope_project,
+                    scanned,
+                    python_file,
+                    self.repository_root,
+                    project_layout.package_name,
+                )
+                output_lines.extend(lines)
+                file_results.append(
+                    m.Infra.ConsolidatorFileResult(
+                        file=str(rel_path),
+                        status="applied" if ok else "reverted",
+                        changes=tuple(changes),
+                    ),
+                )
+                if ok:
+                    applied += len(changes)
+                else:
+                    failed += 1
+        return r[
+            tuple[
+                int,
+                int,
+                int,
+                t.SequenceOf[m.Infra.ConsolidatorFileResult],
+                list[str],
+            ]
+        ].ok((found, applied, failed, tuple(file_results), output_lines))
 
     @staticmethod
     def _project_python_files(

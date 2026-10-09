@@ -54,7 +54,7 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
         projects_report: MutableMapping[str, MutableMapping[str, t.JsonValue]] = {}
         report_model = m.Infra.WorkspaceDependencyReport(
             workspace=str(root),
-            projects=projects_report,
+            projects={},
             pip_check=None,
             dependency_limits=None,
         )
@@ -72,10 +72,38 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
             )
             if project_result.failure:
                 return r[bool].from_failure(project_result)
+        report_model.projects = {
+            project_name: m.Infra.ProjectRuntimeReport.model_validate(project_payload)
+            for project_name, project_payload in projects_report.items()
+        }
         pip_check_result = self._run_pip_check(root, venv_bin, params, report_model)
         if pip_check_result.failure:
             return r[bool].from_failure(pip_check_result)
         pip_ok = pip_check_result.value
+        return self._finalize_run(
+            (params, root),
+            report_model,
+            projects_report,
+            projects,
+            pip_ok=pip_ok,
+        )
+
+    def _finalize_run(
+        self,
+        scope: t.Pair[m.Infra.DetectCommand, Path],
+        report_model: p.Infra.WorkspaceReport,
+        projects_report: Mapping[str, Mapping[str, t.JsonValue]],
+        projects: t.SequenceOf[Path],
+        *,
+        pip_ok: bool,
+    ) -> p.Result[bool]:
+        """Persist and summarize the workspace report unless JSON-silent.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        params, root = scope
         if params.output_format == c.Cli.OutputFormats.JSON:
             return r[bool].ok(value=True)
         write_result = self._write_workspace_report(

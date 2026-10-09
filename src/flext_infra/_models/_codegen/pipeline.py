@@ -7,22 +7,23 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated, ClassVar, Literal, Self
+from typing import Annotated, ClassVar, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import p, t
+from flext_infra._constants import FlextInfraConstantsCodegenProject
 from flext_infra._models._codegen.fix import FlextInfraModelsCodegenFixModels
 from flext_infra._models._codegen.lazy_init import FlextInfraModelsCodegenLazyInitModels
 from flext_infra._models._codegen.scaffold import FlextInfraModelsCodegenScaffoldModels
 from flext_infra._models._config.base import FlextInfraConfigModels
-from flext_infra._models.mixins import FlextInfraModelsMixins as mm
+from flext_infra._models.mixins import FlextInfraModelsMixins
 
 
 class FlextInfraModelsCodegenPipelineModels:
     """Phase analysis and pipeline state models."""
 
-    class CodegenCommand(mm.WriteMixin, m.ContractModel):
+    class CodegenCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
         """CLI request shared by Rope-backed codegen operations."""
 
         check_only: Annotated[bool, m.Field(description="Validate without writing")] = (
@@ -65,14 +66,7 @@ class FlextInfraModelsCodegenPipelineModels:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True, extra="forbid")
 
         phase: Annotated[
-            Literal[
-                "docs",
-                "lazy-init",
-                "mod-text",
-                "semantic",
-                "candidate-bootstrap",
-                "conform-bootstrap",
-            ],
+            FlextInfraConstantsCodegenProject.CodegenStagedFilePhase,
             m.Field(description="Generation phase that produced this receipt"),
         ]
         files: Annotated[
@@ -88,7 +82,7 @@ class FlextInfraModelsCodegenPipelineModels:
             m.Field(description="Resolved export contracts verified before commit"),
         ] = ()
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_unique_paths(self) -> Self:
             """Reject ambiguous receipts with competing path authorities.
 
@@ -114,7 +108,8 @@ class FlextInfraModelsCodegenPipelineModels:
         """Collaborators the complete conform crosses into, wired by the facade.
 
         Docs rendering is another service family; the composition root binds
-        its implementation once and conform only consumes this port.
+        its implementation once and conform only consumes this port. Participant
+        authorization is likewise supplied before any journal lease or recovery.
         """
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
@@ -127,6 +122,9 @@ class FlextInfraModelsCodegenPipelineModels:
             p.Infra.DocsArtifactPlannerFactory,
             m.Field(description="Builds the docs planner for one conform scope"),
         ]
+        participant_policy: p.Infra.CodegenParticipantPolicyFactory = m.Field(
+            description="Authorizes physical generation participants before recovery",
+        )
 
     class CodegenPipelineState(m.ArbitraryTypesModel):
         """Typed inter-stage state for the codegen pipeline — Pydantic v2 model."""

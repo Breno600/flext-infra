@@ -10,9 +10,11 @@ import operator
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import c, m
-from flext_infra._utilities.discovery import FlextInfraUtilitiesDiscovery
-from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra._utilities import (
+    FlextInfraUtilitiesDiscovery,
+    FlextInfraUtilitiesRopeCore,
+    FlextInfraUtilitiesRopeRuntime,
+)
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping

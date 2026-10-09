@@ -113,11 +113,44 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
                 msg = f"duplicate pytest phase: {event.nodeid} {event.when}"
                 raise ValueError(msg)
             phases[event.when] = event.outcome
+            if event.when == "call":
+                FlextInfraPytestDiagExtractor._record_markdown_properties(event, diag)
         elif event.report_type == "CollectReport":
             if event.outcome == "failed":
                 diag.collection_failed_cases.append(event.nodeid)
             elif event.outcome == "skipped":
                 diag.collection_skip_cases.append(event.nodeid)
+
+    @staticmethod
+    def _record_markdown_properties(
+        event: m.Infra.PytestReportEvent,
+        diag: m.Infra.DiagResult,
+    ) -> None:
+        """Validate public properties once at their typed ingress boundary.
+
+        Raises:
+            TypeError: If Markdown evidence does not contain typed JSON text.
+            ValueError: If Markdown origin differs from reported node; or if
+                Markdown attempt proof differs from reported node.
+        """
+        for name, value in event.user_properties:
+            if name not in {"flext_markdown_origin", "flext_markdown_attempt"}:
+                continue
+            if not isinstance(value, str):
+                msg = "Markdown evidence must contain typed JSON text"
+                raise TypeError(msg)
+            if name == "flext_markdown_origin":
+                item = m.Infra.PytestMarkdownItem.model_validate_json(value)
+                if item.node_id != event.nodeid:
+                    msg = "Markdown origin differs from reported node"
+                    raise ValueError(msg)
+                diag.markdown_items.append(item)
+            else:
+                proof = m.Infra.PytestMarkdownAttempt.model_validate_json(value)
+                if proof.node_id != event.nodeid:
+                    msg = "Markdown attempt proof differs from reported node"
+                    raise ValueError(msg)
+                diag.markdown_attempts.append(proof)
 
     @staticmethod
     def _record_warning(
@@ -203,6 +236,17 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
             collection_failed_cases=tuple(diag.collection_failed_cases),
             collection_skip_cases=tuple(diag.collection_skip_cases),
             reported_node_ids=tuple(sorted(diag.reported_phases)),
+            phase_outcomes=tuple(
+                m.Infra.PytestPhaseOutcome.model_validate({
+                    "node_id": node_id,
+                    "phase": phase,
+                    "outcome": outcome,
+                })
+                for node_id, phases in sorted(diag.reported_phases.items())
+                for phase, outcome in phases.items()
+            ),
+            markdown_attempts=tuple(diag.markdown_attempts),
+            markdown_items=tuple(diag.markdown_items),
             failed_cases=diag.failed_cases,
             error_traces=diag.error_traces,
             warning_lines=diag.warning_lines,

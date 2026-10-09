@@ -15,7 +15,7 @@ from tempfile import TemporaryDirectory
 from flext_cli import r, u
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
+from flext_infra._utilities import FlextInfraUtilitiesDependencies
 
 
 class FlextInfraUtilitiesRelease:
@@ -52,24 +52,10 @@ class FlextInfraUtilitiesRelease:
             The resulting ``p.Result[bool]``.
 
         """
-        try:
-            members = tuple(archive.getmembers())
-        except tarfile.TarError as exc:
-            return r[bool].fail_op("read release archive members", exc)
-        validated_members: list[t.Pair[tarfile.TarInfo, Path]] = []
-        for member in members:
-            path_result = FlextInfraUtilitiesRelease.archive_member_path(member.name)
-            if path_result.failure:
-                return r[bool].from_failure(path_result)
-            if member.issym() or member.islnk():
-                return r[bool].fail(
-                    f"release archive contains symbolic or hard link: {member.name}",
-                )
-            if not member.isdir() and not member.isfile():
-                return r[bool].fail(
-                    f"release archive contains unsupported member: {member.name}",
-                )
-            validated_members.append((member, path_result.value))
+        members = FlextInfraUtilitiesRelease._validated_tar_members(archive)
+        if members.failure:
+            return r[bool].from_failure(members)
+        validated_members = members.value
         if destination.exists():
             return r[bool].fail(
                 f"release stage directory already exists: {destination}",
@@ -101,6 +87,43 @@ class FlextInfraUtilitiesRelease:
                 exc,
             )
         return r[bool].ok(value=True)
+
+    @staticmethod
+    def _validated_tar_members(
+        archive: tarfile.TarFile,
+    ) -> p.Result[t.VariadicTuple[t.Pair[tarfile.TarInfo, Path]]]:
+        """Validate every archive member name and kind for safe materialization.
+
+        Returns:
+            The resulting ``p.Result`` of member and relative path pairs.
+
+        """
+        try:
+            members = tuple(archive.getmembers())
+        except tarfile.TarError as exc:
+            return r[t.VariadicTuple[t.Pair[tarfile.TarInfo, Path]]].fail_op(
+                "read release archive members",
+                exc,
+            )
+        validated_members: list[t.Pair[tarfile.TarInfo, Path]] = []
+        for member in members:
+            path_result = FlextInfraUtilitiesRelease.archive_member_path(member.name)
+            if path_result.failure:
+                return r[t.VariadicTuple[t.Pair[tarfile.TarInfo, Path]]].from_failure(
+                    path_result,
+                )
+            if member.issym() or member.islnk():
+                return r[t.VariadicTuple[t.Pair[tarfile.TarInfo, Path]]].fail(
+                    f"release archive contains symbolic or hard link: {member.name}",
+                )
+            if not member.isdir() and not member.isfile():
+                return r[t.VariadicTuple[t.Pair[tarfile.TarInfo, Path]]].fail(
+                    f"release archive contains unsupported member: {member.name}",
+                )
+            validated_members.append((member, path_result.value))
+        return r[t.VariadicTuple[t.Pair[tarfile.TarInfo, Path]]].ok(
+            tuple(validated_members),
+        )
 
     @staticmethod
     def _write_validated_tar_tree(
@@ -446,7 +469,11 @@ class FlextInfraUtilitiesRelease:
                     name
                     for requirement in requirements
                     if isinstance(requirement, str)
-                    and (name := FlextInfraUtilitiesDependencies.dep_name(requirement))
+                    and (
+                        name := FlextInfraUtilitiesDependencies.dep_name(
+                            requirement,
+                        )
+                    )
                     is not None
                 }),
             ),

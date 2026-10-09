@@ -6,8 +6,8 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import operator
 from collections.abc import MutableMapping
+from operator import itemgetter
 from sys import stdlib_module_names
 
 from flext_infra import c, config, m, t, u
@@ -121,11 +121,17 @@ class FlextInfraCodegenGenerationStandardMixin(
         )
         statements.append((
             cls._type_checking_sort_key(lazy_module, root_names),
-            cls._format_import("", lazy_module, c.Infra.LAZY_BOOTSTRAP_HELPERS),
+            cls._format_import(
+                "",
+                lazy_module,
+                c.Infra.LAZY_BOOTSTRAP_HELPERS
+                if current_pkg == c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
+                else ("install_lazy_exports",),
+            ),
         ))
         lines: t.MutableSequenceOf[str] = []
         previous_section: str | None = None
-        for (section, _), statement in sorted(statements, key=operator.itemgetter(0)):
+        for (section, _), statement in sorted(statements, key=itemgetter(0)):
             if previous_section is not None and section != previous_section:
                 lines.append("")
             lines.extend(statement)
@@ -133,66 +139,57 @@ class FlextInfraCodegenGenerationStandardMixin(
         return "\n".join(lines)
 
     @classmethod
-    def _lazy_groups(
+    def _lazy_export_map(
         cls,
         plan: m.Infra.LazyInitPlan,
-    ) -> t.Triple[
-        t.SequenceOf[t.StrSequencePair],
-        t.SequenceOf[t.StrPairSequencePair],
-        t.LazyAliasMap,
-    ]:
-        """Build owned lazy metadata groups and their filtered public map.
+    ) -> t.LazyAliasMap:
+        """Compact the elected public targets without a second grouping contract.
 
         Returns:
-            The resulting ``t.Triple[t.SequenceOf[t.StrSequencePair],
-                t.SequenceOf[t.StrPairSequencePair], t.LazyAliasMap]``.
+            The flat export map consumed by both publication and installation.
 
         """
         current_pkg = plan.context.current_pkg
-        public_names = frozenset(plan.exports)
-        lazy_map = {
-            name: target
-            for name, target in plan.lazy_map.items()
-            if name in public_names
-            and name not in c.Infra.ROOT_TEMPLATE_BINDINGS
-            and not cls._is_stdlib_import(target)
-        }
+        lazy_map = cls._type_checking_filtered(plan)
         lazy_entries = cls._build_lazy_entries(
             tuple(lazy_map),
             lazy_map,
             (current_pkg, frozenset(plan.child_packages_for_lazy), True),
         )
-        lazy_module_groups, lazy_alias_groups = cls._group_lazy_entries(lazy_entries)
-        return lazy_module_groups, lazy_alias_groups, lazy_map
+        return {name: (module, attr) for name, module, attr in lazy_entries}
 
-    @classmethod
-    def _format_lazy_group_entry(
-        cls,
-        module: str,
-        values: t.StrSequence,
-        *,
-        indent: str = "            ",
+    @staticmethod
+    def _format_lazy_export_entry(
+        name: str,
+        values: t.StrPair,
     ) -> t.StrSequence:
         """Format one mapping entry exactly as Ruff formats a tuple value.
 
-        An expanded mapping always ends each entry with a comma: Ruff's format
-        keeps the magic trailing comma and its ``missing-trailing-comma`` fix
-        (``make fix``) adds it, so the comma-less single-entry form made
-        ``make gen`` and ``make fix`` rewrite each other forever.
+        An expanded mapping always ends each entry with a comma. Ruff's
+        formatter owns that layout; the generator preserves its magic trailing
+        comma so generation and formatting converge on the same bytes.
 
         Returns:
             The entry lines, compact when they fit the configured width.
 
         """
+        indent = "        "
+        if values[1] in {f'"{name}"', '""'}:
+            compact = f'{indent}"{name}": {values[0]},'
+            if len(compact) <= config.Infra.tooling.tools.ruff.line_length:
+                return (compact,)
+            return (
+                f'{indent}"{name}": (',
+                f"{indent}    {values[0]}",
+                f"{indent}),",
+            )
         inner = ", ".join(values)
-        if len(values) == 1:
-            inner = f"{inner},"
-        compact = f'{indent}"{module}": ({inner}),'
+        compact = f'{indent}"{name}": ({inner}),'
         if len(compact) <= config.Infra.tooling.tools.ruff.line_length:
             return (compact,)
         value_indent = f"{indent}    "
         return (
-            f'{indent}"{module}": (',
+            f'{indent}"{name}": (',
             *(f"{value_indent}{value}," for value in values),
             f"{indent}),",
         )
@@ -222,95 +219,33 @@ class FlextInfraCodegenGenerationStandardMixin(
         wrapped = ",\n    ".join(f'"{name}"' for name in exports)
         return "(\n    " + wrapped + ",\n)"
 
-    @staticmethod
-    def _lazy_module_argument_inline(groups: t.SequenceOf[t.StrSequencePair]) -> str:
-        """Render the module mapping as one indent-free call argument.
-
-        The caller keeps the inline form only when its line fits; it carries no
-        trailing comma inside the braces, so Ruff keeps it joined.
-
-        Returns:
-            The resulting ``str``.
-
-        """
-        entries: t.MutableSequenceOf[str] = []
-        for module, names in groups:
-            inner = ", ".join(f'"{name}"' for name in names)
-            if len(names) == 1:
-                inner = f"{inner},"
-            entries.append(f'"{module}": ({inner})')
-        return f"MappingProxyType({{{', '.join(entries)}}})"
-
-    @staticmethod
-    def _lazy_alias_argument_inline(groups: t.SequenceOf[t.StrPairSequencePair]) -> str:
-        """Render the alias mapping as one indent-free call argument.
-
-        Returns:
-            The resulting ``str``.
-
-        """
-        entries: t.MutableSequenceOf[str] = []
-        for module, pairs in groups:
-            values = tuple(
-                f'("{export_name}", "{attr_name}")' for export_name, attr_name in pairs
-            )
-            inner = ", ".join(values)
-            if len(values) == 1:
-                inner = f"{inner},"
-            entries.append(f'"{module}": ({inner})')
-        return f"alias_groups=MappingProxyType({{{', '.join(entries)}}})"
-
     @classmethod
-    def _format_lazy_module_mapping(
-        cls,
-        groups: t.SequenceOf[t.StrSequencePair],
-    ) -> str:
-        """Render the immutable module mapping without a formatter subprocess.
+    def _format_lazy_export_mapping(cls, lazy_map: t.LazyAliasMap) -> str:
+        """Render the existing installer's immutable flat mapping argument.
 
         Returns:
-            The resulting ``str``.
+            The mapping argument in its formatter fixed-point form.
 
         """
-        compact = f"        {cls._lazy_module_argument_inline(groups)},"
+        entries = tuple(
+            (name, lazy_map[name])
+            for name in sorted(lazy_map, key=cls._public_export_order_key)
+        )
+        inner = ", ".join(
+            f'"{name}": "{module}"'
+            if name == attr or not attr
+            else f'"{name}": ("{module}", "{attr}")'
+            for name, (module, attr) in entries
+        )
+        compact = f"    MappingProxyType({{{inner}}}),"
         if len(compact) <= config.Infra.tooling.tools.ruff.line_length:
             return compact
-        lines: t.MutableSequenceOf[str] = ["        MappingProxyType({"]
-        for module, names in groups:
+        lines: t.MutableSequenceOf[str] = ["    MappingProxyType({"]
+        for name, (module, attr) in entries:
             lines.extend(
-                cls._format_lazy_group_entry(
-                    module,
-                    tuple(f'"{name}"' for name in names),
-                ),
+                cls._format_lazy_export_entry(name, (f'"{module}"', f'"{attr}"')),
             )
-        lines.append("        }),")
-        return "\n".join(lines)
-
-    @classmethod
-    def _format_lazy_alias_mapping(
-        cls,
-        groups: t.SequenceOf[t.StrPairSequencePair],
-    ) -> str:
-        """Render the immutable alias mapping without a formatter subprocess.
-
-        Returns:
-            The resulting ``str``.
-
-        """
-        compact = f"        {cls._lazy_alias_argument_inline(groups)},"
-        if len(compact) <= config.Infra.tooling.tools.ruff.line_length:
-            return compact
-        lines: t.MutableSequenceOf[str] = ["        alias_groups=MappingProxyType({"]
-        for module, pairs in groups:
-            lines.extend(
-                cls._format_lazy_group_entry(
-                    module,
-                    tuple(
-                        f'("{export_name}", "{attr_name}")'
-                        for export_name, attr_name in pairs
-                    ),
-                ),
-            )
-        lines.append("        }),")
+        lines.append("    }),")
         return "\n".join(lines)
 
     @classmethod
@@ -321,7 +256,7 @@ class FlextInfraCodegenGenerationStandardMixin(
             Validated template data for the generated root initializer.
 
         """
-        lazy_module_groups, lazy_alias_groups, lazy_map = cls._lazy_groups(plan)
+        lazy_map = cls._lazy_export_map(plan)
         current_pkg = plan.context.current_pkg
         public_type_checking_imports = cls._type_checking_filtered(plan)
         # The generated blocks rank imports by the project's ruff isort
@@ -378,8 +313,7 @@ class FlextInfraCodegenGenerationStandardMixin(
                     lazy_map,
                 ),
             ),
-            lazy_module_mapping=cls._format_lazy_module_mapping(lazy_module_groups),
-            lazy_alias_mapping=cls._format_lazy_alias_mapping(lazy_alias_groups),
+            lazy_export_mapping=cls._format_lazy_export_mapping(lazy_map),
         )
 
     @classmethod

@@ -1,0 +1,36 @@
+id: rewire-staged-file-phase-literal
+language: python
+severity: error
+files:
+  - "src/flext_infra/**"
+ignores:
+  - "**/tests/**"
+  - "**/__init__.py"
+rule:
+  kind: string
+  pattern: $VAL
+  regex: "^\"(candidate-bootstrap|conform|conform-bootstrap|lazy-init|docs|layout|mise|mod-text|recovery|scaffold|semantic|transaction|version-file)\"$"
+  inside:
+    kind: keyword_argument
+    has:
+      field: name
+      pattern: phase
+transform:
+  PHASE_NAME:
+    substring:
+      source: $VAL
+      startChar: 1
+      endChar: -1
+  PHASE_KEY:
+    replace:
+      source: $PHASE_NAME
+      replace: "-"
+      by: "_"
+  PHASE:
+    convert:
+      source: $PHASE_KEY
+      toCase: upperCase
+fix: c.Infra.CodegenStagedFilePhase.$PHASE
+message: >-
+  The journal phase contract is code-owned: name the publication owner
+  through c.Infra.CodegenStagedFilePhase instead of a string literal.

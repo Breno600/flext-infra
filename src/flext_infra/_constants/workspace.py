@@ -7,9 +7,12 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from enum import StrEnum, unique
-from typing import TYPE_CHECKING, ClassVar
+from pathlib import Path
+from typing import TYPE_CHECKING, ClassVar, Literal
 
+from flext_infra._constants.base import FlextInfraConstantsBase as cb
 from flext_infra._constants.codegen_project import FlextInfraConstantsCodegenProject
+from flext_infra._constants.validate import FlextInfraConstantsSharedInfra
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -17,6 +20,16 @@ if TYPE_CHECKING:
 
 class FlextInfraConstantsWorkspace:
     """Workspace infrastructure constants."""
+
+    @unique
+    class BeadIssueStatus(StrEnum):
+        """Beads issue status values."""
+
+        OPEN = "open"
+        IN_PROGRESS = "in_progress"
+        BLOCKED = "blocked"
+        DEFERRED = "deferred"
+        CLOSED = "closed"
 
     @unique
     class WorktreeOperation(StrEnum):
@@ -89,6 +102,8 @@ class FlextInfraConstantsWorkspace:
     "Python environment directory owned by the runtime checkout (D-VENV)."
     ENVIRONMENT_METADATA: ClassVar[str] = "pyvenv.cfg"
     "Interpreter metadata identifying a provisioned virtual environment."
+    DISTRIBUTION_DIRECT_URL_FILE: ClassVar[str] = "direct_url.json"
+    "PEP 610 installer receipt recording a distribution's direct-reference origin."
     BINDING_RESOLUTION_FILES: ClassVar[t.VariadicTuple[t.StrPair]] = (
         ("--overrides", "overrides.txt"),
         ("--constraints", "constraints.txt"),
@@ -116,6 +131,11 @@ print(json.dumps({
 """
     "Standard-library probe for complete PEP 508 marker facts and environment identity."
 
+    SCRATCH_IDENTITY_SEGMENT_ALIASES: ClassVar[t.VariadicTuple[t.StrPair]] = (
+        (FlextInfraConstantsSharedInfra.GIT_DIR, "_git"),
+    )
+    "Checkout path segments renamed when mirrored into the scratch identity."
+
     PROPAGATION_BRANCH: ClassVar[str] = "propagation/flext-infra"
     "One lane per member carries the workspace's flext-infra projections."
     PROPAGATION_COMMIT_SUBJECT: ClassVar[str] = (
@@ -123,6 +143,38 @@ print(json.dumps({
     )
     PROPAGATION_REPORT_KEY: ClassVar[str] = "propagation"
     "Report directory holding each member lane's pull-request body."
+
+    FLEET_GAPS_ROUTE_NAME: ClassVar[str] = "fleet-gaps"
+    "Canonical workspace CLI verb that reports per-repository fleet gaps."
+    LIFECYCLE_VERBS: ClassVar[t.StrSequence] = (
+        "setup",
+        "gen",
+        "upg",
+        "setup",
+        "gen",
+        "gen",
+    )
+    "Fixed serial lifecycle, including the post-upgrade generation fixed point."
+    LIFECYCLE_REPORT_RELATIVE_PATH: ClassVar[Path] = (
+        Path(cb.REPORTS_DIR_NAME) / "validate-lifecycle.json"
+    )
+    "Typed receipts for the invoking workspace root and governed members."
+    FLEET_GAPS_REPORT_RELATIVE_PATH: ClassVar[Path] = (
+        Path(cb.REPORTS_DIR_NAME) / "fleet-gaps.json"
+    )
+    "Canonical single-file receipt for the latest fleet-gaps report."
+    FLEET_GAPS_REPORT_SCHEMA_VERSION: ClassVar[Literal[1]] = 1
+    "Exact structured fleet-gaps report schema version."
+    AGENTS_DOC_FILENAME: ClassVar[str] = "AGENTS.md"
+    "Repository-local governance law file every governed checkout declares."
+    SKILLS_STAMP_RELPATH: ClassVar[Path] = (
+        Path(".agents") / "skills" / ".flext-stamp.json"
+    )
+    "Repository-local skills provisioning stamp observed by the gaps report."
+    SKILLS_STAMP_DISTRIBUTION_VERSION_KEY: ClassVar[str] = "distribution_version"
+    "Stamp field carrying the provisioned skills distribution version."
+    BEADS_RUNTIME_CONFIG_RELPATH: ClassVar[Path] = Path(".beads") / "config.yaml"
+    "Repository-local Beads runtime identity every participating checkout holds."
 
 
 __all__: list[str] = ["FlextInfraConstantsWorkspace"]

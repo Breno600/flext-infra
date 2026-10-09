@@ -1,0 +1,9 @@
+id: gate-tool-error-typed-code
+valid:
+  - "payload = '{\"status\": \"TOOL_ERROR\"}'"
+  - 'payload = "TOOL_ERROR"'
+  - 'kind: Literal["TOOL_ERROR"]'
+  - 'kind: Annotated[str, "TOOL_ERROR"]'
+  - c.Infra.ToolOutcome.ERROR == c.Infra.ToolOutcome.ERROR
+invalid:
+  - 'c.Infra.ToolOutcome.ERROR == "TOOL_ERROR"'

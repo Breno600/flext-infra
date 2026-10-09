@@ -8,13 +8,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, config, m, r, u
+from flext_infra import c, config, m, r, t, u
 from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p, t
+    from flext_infra import p
 
 
 class FlextInfraRuffFormatGate(FlextInfraGate):
@@ -51,10 +51,10 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
-        """Get check dirs.
+        """Format every project-owned Python root, or the project itself.
 
         Returns:
-            The resulting ``t.StrSequence``.
+            The owned Python roots, falling back to the project directory.
 
         """
         _ = ctx
@@ -67,10 +67,10 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Parse check output.
+        """Report each file Ruff would reformat once, from its check listing.
 
         Returns:
-            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+            The run's verdict and one finding per file left unformatted.
 
         """
         _ = project_dir, ctx

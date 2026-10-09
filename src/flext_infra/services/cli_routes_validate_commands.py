@@ -8,7 +8,8 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from flext_infra import infra, m, p, r, t
+from flext_infra import m, p, r, t
+from flext_infra.api import infra
 from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
 from flext_infra.validate.cprofile_report import FlextInfraCProfileReport
 from flext_infra.validate.fresh_import import FlextInfraValidateFreshImport

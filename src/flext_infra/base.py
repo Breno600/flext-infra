@@ -14,7 +14,7 @@ from flext_infra import c, m, p, settings, t, u
 from flext_infra._base_payload import FlextInfraCommandPayloadMixin
 
 
-class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
+class FlextInfraServiceBase[TDomainResult](
     FlextService[TDomainResult],
     FlextInfraCommandPayloadMixin,
 ):
@@ -129,7 +129,11 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
     @m.computed_field
     @property
     def root(self) -> Path:
-        """Canonical normalized repository root."""
+        """Canonical normalized repository root.
+
+        Returns:
+            The resulting ``Path``.
+        """
         return self.repository_root
 
     @property
@@ -140,7 +144,11 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
     @m.computed_field
     @property
     def effective_dry_run(self) -> bool:
-        """Normalized write-mode decision for CLI services."""
+        """Normalized write-mode decision for CLI services.
+
+        Returns:
+            The resulting ``bool``.
+        """
         return self.dry_run or self.check_only or (not self.apply_changes)
 
     def _filtered_projects(

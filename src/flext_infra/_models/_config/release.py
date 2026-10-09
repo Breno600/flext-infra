@@ -10,11 +10,10 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Annotated, ClassVar, Self
 
-from flext_cli import m, u
+from flext_cli import m
 
 from flext_infra import t
 from flext_infra._constants import FlextInfraConstantsRelease
-from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
 from flext_infra._models._config.contract import FlextInfraConfigModelsContract
 
 
@@ -96,7 +95,7 @@ class FlextInfraConfigModelsRelease:
             m.Field(description="Per-distribution deviations from the shared contract"),
         ]
 
-        @u.model_validator(mode="after")
+        @m.model_validator(mode="after")
         def _validate_anchors(self) -> Self:
             """Every anchor must name a target, or the tool rewrites nothing.
 
@@ -141,31 +140,30 @@ class FlextInfraConfigModelsRelease:
         publishable_prefixes: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                default=(),
                 description=(
                     "Distribution-name prefixes eligible for build/publish. "
                     "Empty means every resolved project is eligible."
                 ),
             ),
-        ]
+        ] = ()
         bump_types: Annotated[
             Mapping[t.NonEmptyStr, FlextInfraConstantsRelease.VersionBump],
             m.Field(
-                default_factory=lambda: {
-                    "feat": FlextInfraConstantsRelease.VersionBump.MINOR,
-                    "fix": FlextInfraConstantsRelease.VersionBump.PATCH,
-                    "perf": FlextInfraConstantsRelease.VersionBump.PATCH,
-                },
                 description="Conventional Commits type -> semantic version bump",
             ),
-        ]
+        ] = m.Field(
+            default_factory=lambda: {
+                "feat": FlextInfraConstantsRelease.VersionBump.MINOR,
+                "fix": FlextInfraConstantsRelease.VersionBump.PATCH,
+                "perf": FlextInfraConstantsRelease.VersionBump.PATCH,
+            }
+        )
         publish_url: Annotated[
             t.NonEmptyStr,
             m.Field(
-                default=FlextInfraConstantsRelease.PYPI_UPLOAD_URL,
                 description="Package index upload endpoint for verified artifacts",
             ),
-        ]
+        ] = FlextInfraConstantsRelease.PYPI_UPLOAD_URL
         build_constraints: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsRelease.BuildConstraintSpec],
             m.Field(
@@ -203,7 +201,3 @@ class FlextInfraConfigModelsRelease:
             t.VariadicTuple[str],
             m.Field(description="Ordered dependency groups synchronized by setup"),
         ]
-        editable_repositories: Annotated[
-            t.VariadicTuple[FlextInfraConfigModelsContexts.RepositoryRef],
-            m.Field(description="Local repositories installed by setup"),
-        ] = ()

@@ -20,6 +20,15 @@ ignores:
   - "**/_typings/**"
 metadata:
   relocation: typing-alias
+# A module-private declaration stays where it is: the relocation owner
+# (namespace_moves) never promotes underscore-prefixed aliases to the shared
+# typings module, because publishing a name its own declaration marks private
+# fails every consumer with reportPrivateUsage. The rule matches that
+# capability: only public declarations are findings, so every finding is
+# repairable and the namespace verb cannot strand permanent residue.
+constraints:
+  NAME:
+    regex: "^[^_]"
 rule:
   inside:
     kind: module

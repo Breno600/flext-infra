@@ -2,9 +2,9 @@
 # and $NAME one of its runtime aliases.
 id: ban-noncanonical-alias-import
 valid:
-- from flext_cli import c
-- from flext_core import m
-- from . import c
+  - from flext_cli import c
+  - from flext_cli._models import m
+  - from . import c
 invalid:
-- from flext_core import c
-- from flext_cli.models import Other, m
+  - from flext_cli.constants import c
+  - from flext_cli.models import Other, m
