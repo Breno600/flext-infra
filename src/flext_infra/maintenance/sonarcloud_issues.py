@@ -41,9 +41,23 @@ class FlextInfraSonarcloudIssues(FlextInfraSonarcloudClient[bool]):
     def execute(self) -> p.Result[bool]:
         """Read every page, then print findings only after complete accounting.
 
+        A missing ``SONAR_TOKEN`` is the operator-ruled declared skip
+        (run-if-available-else-skip, 2026-10-08): loud, green, and never a
+        failure; a present but malformed token still fails.
+
         Returns:
             The resulting ``p.Result[bool]``.
         """
+        token_result = self.optional_token()
+        if token_result.failure:
+            return r[bool].from_failure(token_result)
+        if not token_result.value.get_secret_value():
+            u.Cli.info(
+                "SKIP: sonarcloud-issues — SONAR_TOKEN not available "
+                "(ai-hub credential ingress); operator ruling 2026-10-08 "
+                "run-if-available-else-skip",
+            )
+            return r[bool].ok(value=False)
         authenticated = self._authenticated_scope()
         if authenticated.failure:
             return r[bool].from_failure(authenticated)

@@ -13,12 +13,12 @@ from typing import TYPE_CHECKING
 from flext_cli import u
 
 from flext_infra import c, m, r
-from flext_infra._utilities import FlextInfraUtilitiesProjectDiscovery
-from flext_infra._utilities._git import (
+from flext_infra._utilities import (
     FlextInfraUtilitiesGitSemanticIdentityMixin,
     FlextInfraUtilitiesGitSemanticIndexMixin,
     FlextInfraUtilitiesGitSemanticSubmoduleMixin,
     FlextInfraUtilitiesGitWorktreeDiscoveryMixin,
+    FlextInfraUtilitiesProjectDiscovery,
 )
 
 if TYPE_CHECKING:
@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 class FlextInfraWorktreeProvisioning:
     @staticmethod
     def _ensure_gitlink_checkout(lane: Path, member_path: Path) -> p.Result[bool]:
+
         reference = member_path.as_posix()
         git_marker = lane / member_path / ".git"
         if git_marker.is_symlink() or (
@@ -52,6 +53,7 @@ class FlextInfraWorktreeProvisioning:
         declared_url: str,
         recorded_oid: str,
     ) -> p.Result[bool]:
+
         reference = member_path.as_posix()
         identity = FlextInfraUtilitiesGitSemanticIdentityMixin.git_identity(
             m.Infra.GitRepoRequest(repo_root=lane / member_path),
@@ -78,6 +80,7 @@ class FlextInfraWorktreeProvisioning:
         lane: Path,
         member_path: Path,
     ) -> p.Result[bool]:
+
         reference = member_path.as_posix()
         submodule = FlextInfraUtilitiesGitSemanticSubmoduleMixin
         contract = submodule.git_submodule_declaration(
@@ -102,8 +105,9 @@ class FlextInfraWorktreeProvisioning:
 
     @classmethod
     def _prepare_governed_gitlinks(cls, lane: Path) -> p.Result[bool]:
-        submodule = FlextInfraUtilitiesGitSemanticSubmoduleMixin
-        declared = submodule.git_submodule_declarations(lane)
+
+        discovery = FlextInfraUtilitiesGitWorktreeDiscoveryMixin
+        declared = discovery.git_declared_submodule_paths(lane)
         if declared.failure:
             return r[bool].from_failure(declared)
         for declaration in declared.value:
@@ -117,6 +121,7 @@ class FlextInfraWorktreeProvisioning:
 
     @classmethod
     def setup_lane(cls, lane: Path) -> p.Result[bool]:
+
         gitlinks = cls._prepare_governed_gitlinks(lane)
         if gitlinks.failure:
             return gitlinks

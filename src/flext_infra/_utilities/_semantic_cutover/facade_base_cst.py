@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, override
 
 import libcst as cst
 
+from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
+
 if TYPE_CHECKING:
     from flext_infra import t
 
@@ -90,8 +92,6 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBaseCst:
             updated_node: cst.ImportFrom,
         ) -> cst.ImportFrom | cst.RemovalSentinel:
 
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
-
             if (
                 self.depth
                 or original_node.relative
@@ -124,8 +124,6 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBaseCst:
                 The aliases retained in the rewritten ``from`` import.
 
             """
-            from flext_infra._utilities import FlextInfraUtilitiesQualifiedNames
-
             retained: list[cst.ImportAlias] = []
             if isinstance(
                 original_node.names,

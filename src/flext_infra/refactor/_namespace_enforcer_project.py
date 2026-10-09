@@ -10,6 +10,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import m
+from flext_infra.refactor.namespace_relocations import (
+    FlextInfraNamespaceRelocationCascade,
+)
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -65,10 +68,6 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             The resulting ``t.SequenceOf[Path]``.
 
         """
-        from flext_infra.refactor.namespace_relocations import (
-            FlextInfraNamespaceRelocationCascade,
-        )
-
         return FlextInfraNamespaceRelocationCascade.scoped_py_files(project_root)
 
     def _relocate_rule_findings(
@@ -88,10 +87,6 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             The resulting ``t.NonNegativeInt``.
 
         """
-        from flext_infra.refactor.namespace_relocations import (
-            FlextInfraNamespaceRelocationCascade,
-        )
-
         cascade = FlextInfraNamespaceRelocationCascade()
         findings = cascade.scan_findings(project_root, py_files)
         if not (apply and findings):

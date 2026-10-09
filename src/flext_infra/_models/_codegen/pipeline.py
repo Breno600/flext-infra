@@ -108,7 +108,8 @@ class FlextInfraModelsCodegenPipelineModels:
         """Collaborators the complete conform crosses into, wired by the facade.
 
         Docs rendering is another service family; the composition root binds
-        its implementation once and conform only consumes this port.
+        its implementation once and conform only consumes this port. Participant
+        authorization is likewise supplied before any journal lease or recovery.
         """
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
@@ -121,6 +122,9 @@ class FlextInfraModelsCodegenPipelineModels:
             p.Infra.DocsArtifactPlannerFactory,
             m.Field(description="Builds the docs planner for one conform scope"),
         ]
+        participant_policy: p.Infra.CodegenParticipantPolicyFactory = m.Field(
+            description="Authorizes physical generation participants before recovery",
+        )
 
     class CodegenPipelineState(m.ArbitraryTypesModel):
         """Typed inter-stage state for the codegen pipeline — Pydantic v2 model."""

@@ -109,8 +109,8 @@ checkout's Git root; a declaration without an interpreter fails.
 
 The environment belongs to the `RUNTIME_ROOT`. A member attached as a submodule uses
 its containing Git superproject's environment. A primary standalone checkout keeps
-`<RUNTIME_ROOT>/.venv`. A linked Git worktree owns a physical sibling environment at
-`<RUNTIME_ROOT>/../<toolchain.worktree_environment_directory>/<worktree-name>`.
+`<RUNTIME_ROOT>/.venv`. A linked Git worktree must use the sibling environment at
+`<RUNTIME_ROOT>/../.venv>`.
 The directory component is declared in `config/codegen.yaml`; Git's distinct worktree
 and common directories identify the linked checkout. The generated Makefile, generated
 `.envrc`, and `runtime_environment_dir` derive the same path. Neither a caller

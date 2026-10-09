@@ -170,7 +170,10 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                 "class Derived(Alias): pass\n",
             ),
         )
-        with pytest.raises(ValueError) as failure:
+        with pytest.raises(
+            ValueError,
+            match="Unsupported class binding mutation",
+        ) as failure:
             u.Infra.runtime_evaluated_base_classes(
                 tmp_path,
                 {
@@ -605,7 +608,10 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
         package = tmp_path / "src" / "missing_submodule_class"
         with pytest.raises(
             ValueError,
-            match=r"Unresolved planned base: missing_submodule_class\.parts\.document\.Missing",
+            match=(
+                r"Unresolved planned base: missing_submodule_class\.parts"
+                r"\.document\.Missing"
+            ),
         ):
             u.Infra.runtime_evaluated_base_classes(
                 tmp_path,
@@ -806,7 +812,10 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                 f"{mutation}\nclass Derived(Contract): pass\n",
             ),
         )
-        with pytest.raises(ValueError) as failure:
+        with pytest.raises(
+            ValueError,
+            match="Unsupported class binding mutation",
+        ) as failure:
             u.Infra.runtime_evaluated_base_classes(
                 tmp_path,
                 {

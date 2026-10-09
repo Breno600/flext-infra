@@ -149,6 +149,9 @@ if TYPE_CHECKING:
     from flext_infra.codegen.mise_artifacts_workspace import (
         FlextInfraMiseWorkspacePlanner,
     )
+    from flext_infra.codegen.mise_toolchain_proof import (
+        FlextInfraCodegenMiseToolchainProof,
+    )
     from flext_infra.codegen.pipeline import (
         FlextInfraCodegenLazyInitGenerationMixin,
         FlextInfraCodegenPipeline,
@@ -211,6 +214,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenLazyInitProjectionManifest",
     "FlextInfraCodegenMakeBootstrap",
     "FlextInfraCodegenMiseArtifacts",
+    "FlextInfraCodegenMiseToolchainProof",
     "FlextInfraCodegenPipeline",
     "FlextInfraCodegenPipelineStagesMixin",
     "FlextInfraCodegenProjectNew",
@@ -291,7 +295,7 @@ install_lazy_exports(
         "FlextInfraCodegenLazyInitGenerationFilePlanMixin": (
             "._lazy_init_generation_files"
         ),
-        "FlextInfraCodegenLazyInitGenerationMixin": ".pipeline",
+        "FlextInfraCodegenLazyInitGenerationMixin": "._lazy_init_generation",
         "FlextInfraCodegenLazyInitGenerationRegistryMixin": (
             "._lazy_init_generation_registry"
         ),
@@ -304,8 +308,9 @@ install_lazy_exports(
         ),
         "FlextInfraCodegenMakeBootstrap": ".make_bootstrap",
         "FlextInfraCodegenMiseArtifacts": ".mise_artifacts",
+        "FlextInfraCodegenMiseToolchainProof": ".mise_toolchain_proof",
         "FlextInfraCodegenPipeline": ".pipeline",
-        "FlextInfraCodegenPipelineStagesMixin": ".pipeline",
+        "FlextInfraCodegenPipelineStagesMixin": "._pipeline_stages",
         "FlextInfraCodegenProjectNew": ".project_new",
         "FlextInfraCodegenProtocolModelAnnotations": "._protocol_model_annotations",
         "FlextInfraCodegenProtocolModelRender": "._protocol_model_render",
@@ -319,7 +324,7 @@ install_lazy_exports(
         "FlextInfraCodegenTransactionPhases": "._codegen_transaction_phases",
         "FlextInfraCodegenVersionFile": ".version_file",
         "FlextInfraMiseArtifactsCandidates": "._mise_artifacts_candidates",
-        "FlextInfraMiseArtifactsFiles": ".pipeline",
+        "FlextInfraMiseArtifactsFiles": "._mise_artifacts_files",
         "FlextInfraMiseArtifactsJournal": "._mise_artifacts_journal",
         "FlextInfraMiseArtifactsJournalRelocation": (
             "._mise_artifacts_journal_relocation"
@@ -333,7 +338,7 @@ install_lazy_exports(
         "FlextInfraMiseArtifactsVerificationTopology": (
             "._mise_artifacts_verification_topology"
         ),
-        "FlextInfraMisePublication": ".pipeline",
+        "FlextInfraMisePublication": "._mise_artifacts_publication",
         "FlextInfraMiseRecovery": "._mise_artifacts_recovery",
         "FlextInfraMiseStaging": "._mise_artifacts_staging",
         "FlextInfraMiseWorkspacePlanner": ".mise_artifacts_workspace",

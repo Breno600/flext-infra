@@ -18,6 +18,7 @@ from flext_infra._utilities import (
     FlextInfraUtilitiesCodegenNamespace,
     FlextInfraUtilitiesRopeRuntimeModules,
     FlextInfraUtilitiesRopeRuntimeRefactors,
+    FlextInfraUtilitiesRopeRuntimeTypes,
     FlextInfraUtilitiesRopeSourceBases,
     FlextInfraUtilitiesSemanticCutoverNestingCst,
     FlextInfraUtilitiesSemanticNestingTypes,
@@ -168,7 +169,10 @@ class FlextInfraUtilitiesSemanticDeclarationRelocation(
         exports = FlextInfraUtilitiesRopeSourceBases.lazy_module_aliases(
             project.get_pymodule(resource).get_name(),
             initializer,
-            resource.read(),
+            FlextInfraUtilitiesRopeRuntimeTypes.require_file_resource(
+                resource,
+                initializer,
+            ).read(),
         )
         if exports.get("m") != facade.get_name():
             msg = (
@@ -418,7 +422,10 @@ class FlextInfraUtilitiesSemanticDeclarationRelocation(
     ) -> t.VariadicTuple[cst.BaseStatement]:
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         root = Path(project.root.real_path)
-        source = project.get_resource(origin.relative_to(root).as_posix()).read()
+        source = FlextInfraUtilitiesRopeRuntimeTypes.require_file_resource(
+            project.get_resource(origin.relative_to(root).as_posix()),
+            origin,
+        ).read()
         target_resource = project.get_resource(target.relative_to(root).as_posix())
         destination = project.get_pymodule(target_resource).get_scope()
         imports: dict[str, ast.Import | ast.ImportFrom] = {}
@@ -478,7 +485,11 @@ class FlextInfraUtilitiesSemanticDeclarationRelocation(
         source: str,
     ) -> set[str]:
         runtime = FlextInfraUtilitiesRopeRuntimeModules
-        bound = {parameter.name for parameter in node.type_params} | {
+        bound = {
+            parameter.name
+            for parameter in node.type_params
+            if isinstance(parameter, ast.TypeVar | ast.ParamSpec | ast.TypeVarTuple)
+        } | {
             statement.target.id
             for statement in node.body
             if isinstance(statement, ast.AnnAssign)

@@ -1,0 +1,20 @@
+id: ban-dynamic-import
+valid:
+  - |
+    import json
+
+    def load() -> object:
+        return json.loads("{}")
+  - |
+    def load() -> object:
+        import json
+        return json.loads("{}")
+invalid:
+  - |
+    module = importlib.import_module("json")
+  - |
+    import importlib as loader
+    module = loader.import_module("json")
+  - |
+    from importlib import import_module
+    module = import_module("json")

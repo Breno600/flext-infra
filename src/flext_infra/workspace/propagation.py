@@ -11,6 +11,8 @@ from typing import Annotated, override
 
 from flext_infra import c, config, m, p, r, u
 from flext_infra.base import s
+from flext_infra.codegen.conform import FlextInfraCodegenConform
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 
 class FlextInfraWorkspacePropagation(s[bool]):
@@ -42,8 +44,6 @@ class FlextInfraWorkspacePropagation(s[bool]):
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
         root = self.root
         loaded = FlextInfraWorkspaceDetector.load_workspace_spec(root)
         if loaded.failure:
@@ -54,27 +54,48 @@ class FlextInfraWorkspacePropagation(s[bool]):
         revision = u.Cli.capture([c.Infra.GIT, "rev-parse", c.Infra.GIT_HEAD], cwd=root)
         if revision.failure:
             return r[bool].from_failure(revision)
-        for member in workspace.subprojects:
-            # Generation rewrites only mutable internal FLEXT repositories.
-            if (
-                member.kind is not c.Infra.ProjectKind.INTERNAL_FLEXT
-                or member.codegen is c.Infra.CodegenKind.NONE
-                or member.read_only
-            ):
-                continue
-            propagated = self._propagate_member(
-                workspace,
-                member,
-                revision.value.strip(),
-            )
-            if propagated.failure:
-                return propagated
+        propagated = self._propagate_members(workspace, revision.value.strip())
+        if propagated.failure:
+            return propagated
         for consumer in workspace.external_consumers:
             propagated = self._propagate_external_consumer(
                 workspace,
                 consumer,
                 revision.value.strip(),
             )
+            if propagated.failure:
+                return propagated
+        return r[bool].ok(value=True)
+
+    def _propagate_members(
+        self,
+        workspace: m.Infra.WorkspaceSpec,
+        revision: str,
+    ) -> p.Result[bool]:
+        """Preflight every generated member's lock owner, then propagate each.
+
+        Generation rewrites only mutable internal FLEXT repositories. Before
+        the first lane opens, every one of them must own its lock: a member uv
+        resolves inside an enclosing uv workspace would settle by rewriting the
+        workspace lock instead of its own, so the run stops before any effect.
+
+        Returns:
+            True when every member propagated, else the first failure.
+
+        """
+        members = tuple(
+            member
+            for member in workspace.subprojects
+            if member.kind is c.Infra.ProjectKind.INTERNAL_FLEXT
+            and member.codegen is not c.Infra.CodegenKind.NONE
+            and not member.read_only
+        )
+        for member in members:
+            owned = FlextInfraCodegenConform.require_own_lock(self.root / member.path)
+            if owned.failure:
+                return r[bool].from_failure(owned)
+        for member in members:
+            propagated = self._propagate_member(workspace, member, revision)
             if propagated.failure:
                 return propagated
         return r[bool].ok(value=True)
@@ -203,8 +224,6 @@ class FlextInfraWorkspacePropagation(s[bool]):
             The resulting ``p.Result[bool]``.
 
         """
-        from flext_infra.codegen.conform import FlextInfraCodegenConform
-
         member_root = self.root / member.path
         base = u.Infra.resolve_integration_branch(
             member_root,

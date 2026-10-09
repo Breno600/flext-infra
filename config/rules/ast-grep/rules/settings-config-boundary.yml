@@ -1,0 +1,113 @@
+# Settings/config import boundary (operator-ruling-2026-10-08-settings-config-imports
+# and operator-ruling-2026-10-08-settings-config-boundary).
+#
+# A settings/config module is any module whose path has a segment starting with
+# `settings` or `config` (with or without a leading underscore): the root
+# `_settings.py`/`_config.py`, each family's `settings*.py`/`config*.py` part,
+# and config subpackages such as `_models/_config/`. Inside its own namespace it
+# imports only other settings/config modules and the families' `base.py`; it
+# never imports its own namespace's c/t/p/m/u letters nor other family classes.
+# Anything from another namespace is allowed (the own-package context decides
+# which namespace is the module's own). The family internals of c/t/p/m/u may
+# import settings/config, which is why settings/config stay below them. A family
+# `base.py` is a leaf: it imports no other module of its own namespace except its
+# own split parts, and never settings/config.
+#
+# Detection only: moving a declaration to the settings/config graph or to a base
+# is a semantic relocation owned by the make mod declaration-relocation phase.
+id: ban-settings-config-own-facade-import
+language: python
+severity: error
+files:
+  - "**/_settings*.py"
+  - "**/_config*.py"
+  - "**/settings*.py"
+  - "**/config*.py"
+  - "**/_settings*/**/*.py"
+  - "**/_config*/**/*.py"
+ignores:
+  - "**/__init__.py"
+metadata:
+  context:
+    MODULE:
+      is: own-package
+rule:
+  all:
+    - kind: dotted_name
+    - not:
+        regex: "^(config|settings)$"
+    - not:
+        inside:
+          kind: import_from_statement
+          field: module_name
+    - inside:
+        kind: import_from_statement
+        has:
+          field: module_name
+          kind: dotted_name
+          pattern: $MODULE
+          not:
+            regex: "\\."
+    - not:
+        matches: inside-type-checking-guard
+message: >-
+  Settings/config module imports a name other than config/settings from
+  `$MODULE`: it never imports its own namespace's c/t/p/m/u; use another
+  settings/config module, a family base.py, or another namespace.
+---
+id: ban-settings-config-own-module-import
+language: python
+severity: error
+files:
+  - "**/_settings*.py"
+  - "**/_config*.py"
+  - "**/settings*.py"
+  - "**/config*.py"
+  - "**/_settings*/**/*.py"
+  - "**/_config*/**/*.py"
+ignores:
+  - "**/__init__.py"
+metadata:
+  context:
+    MODULE:
+      is: own-package
+rule:
+  all:
+    - kind: import_from_statement
+    - has:
+        field: module_name
+        kind: dotted_name
+        pattern: $MODULE
+        all:
+          - regex: "\\."
+          - not:
+              regex: "\\._?(settings|config)[A-Za-z0-9_]*(\\.|$)|\\._[a-z]+\\.base$"
+    - not:
+        matches: inside-type-checking-guard
+message: >-
+  Settings/config module imports `$MODULE`: inside its own namespace it may
+  import only settings/config modules and family base.py modules.
+---
+id: ban-family-base-own-import
+language: python
+severity: error
+files:
+  - "**/_*/base.py"
+metadata:
+  context:
+    MODULE:
+      is: own-package
+rule:
+  all:
+    - kind: import_from_statement
+    - has:
+        field: module_name
+        kind: dotted_name
+        pattern: $MODULE
+        not:
+          regex: "\\._[a-z]+\\._base_parts(\\.|$)"
+    - not:
+        matches: inside-type-checking-guard
+message: >-
+  Family base.py imports `$MODULE` from its own namespace: a family base is a
+  leaf and imports neither other own modules nor settings/config.

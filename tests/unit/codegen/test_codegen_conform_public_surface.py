@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import shutil
+import stat
 from pathlib import Path
 
 import pytest
@@ -25,27 +26,41 @@ class TestsFlextInfraCodegenConformPublicSurface:
     """The conform public surface: docs bootstrap, CLI routing, dependency scope."""
 
     @staticmethod
+    @pytest.mark.parametrize("initial_state", ["invalid", "absent", "wrong-mode"])
     def test_mise_config_repairs_invalid_toml_without_touching_other_surfaces(
         infra_git_repo: Path,
+        initial_state: str,
     ) -> None:
-        """Recover one malformed declaration through the leased file transaction."""
+        """Repair bytes and mode through the leased transaction, then converge."""
         root = infra_git_repo
         TestsFlextInfraConformSupport.seed_infra_package_tree(root)
         destination = root / c.Infra.MISE_TOML_FILENAME
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                destination, '[tools]\npython="a"\npython="b"\n'
-            )
+        desired_mode = next(
+            item.mode
+            for item in config.Infra.codegen.managed_files
+            if item.path == Path(destination.name)
         )
-        before = TestsFlextInfraConformSupport.project_tree(root)
         request = u.Tests.conform_request(
             root,
             what=c.Infra.CodegenConformSurface.MISE_CONFIG,
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.APPLY,
         )
+        if initial_state == "invalid":
+            tm.ok(
+                u.Cli.atomic_write_text_file(
+                    destination, '[tools]\npython="a"\npython="b"\n'
+                )
+            )
+        elif initial_state == "absent" and destination.exists():
+            destination.unlink()
+        if initial_state == "wrong-mode":
+            tm.ok(infra.codegen_conform(request))
+            destination.chmod(desired_mode ^ stat.S_IWGRP)
+        before = TestsFlextInfraConformSupport.project_tree(root)
         result = tm.ok(infra.codegen_conform(request))
         tm.that(result.written_files, eq=(destination,))
+        tm.that(stat.S_IMODE(destination.stat().st_mode), eq=desired_mode)
         payload = u.Cli.toml_mapping_from_text(destination.read_text(encoding="utf-8"))
         tm.that(payload is not None, eq=True)
         tools = u.Tests.toml_table_at(destination.read_text(encoding="utf-8"), "tools")
@@ -63,6 +78,7 @@ class TestsFlextInfraCodegenConformPublicSurface:
             eq=tuple(item for item in before if item[0] != destination.name),
         )
         tm.that(tm.ok(infra.codegen_conform(request)).written_files, eq=())
+        tm.that(stat.S_IMODE(destination.stat().st_mode), eq=desired_mode)
 
     @staticmethod
     def test_workspace_uv_plan_owns_root_environment_and_native_member_sources(

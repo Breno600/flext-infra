@@ -11,6 +11,9 @@ from os.path import commonpath
 from pathlib import Path
 
 from flext_infra import c, m, p, r, t, u
+from flext_infra.codemod._rename_sources import FlextInfraRenameSources
+from flext_infra.codemod._rename_symbols import FlextInfraRenameSymbols
+from flext_infra.transformers import FlextInfraSemanticPublication
 
 
 class FlextInfraApplyRenames:
@@ -23,8 +26,6 @@ class FlextInfraApplyRenames:
         roots: t.SequenceOf[Path],
         pairs: t.SequenceOf[t.Pair[str, str]],
     ) -> t.Pair[t.VariadicTuple[m.Infra.SemanticFilePlan], int]:
-        from flext_infra.codemod._rename_sources import FlextInfraRenameSources
-        from flext_infra.codemod._rename_symbols import FlextInfraRenameSymbols
 
         inventory = FlextInfraRenameSources.inventory(roots, params)
         sources = {
@@ -109,8 +110,6 @@ class FlextInfraApplyRenames:
             changed paths and the residual pending-edit count.
 
         """
-        from flext_infra.transformers import FlextInfraSemanticPublication
-
         csv_path, driver = state
         plans, pending = planned
 
@@ -164,8 +163,6 @@ class FlextInfraApplyRenames:
             The resulting ``p.Result[m.Infra.ApplyRenamesReport]``.
 
         """
-        from flext_infra.codemod._rename_sources import FlextInfraRenameSources
-
         roots = tuple(sorted({Path(value).resolve() for value in params.roots}))
         error = cls._campaign_error(params, roots)
         if error is not None:
