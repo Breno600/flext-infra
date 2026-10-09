@@ -18,14 +18,12 @@ from flext_infra._constants import (
     FlextInfraConstantsPromoted,
     FlextInfraConstantsWorkspace,
 )
-from flext_infra._models import (
-    FlextInfraConfigModelsBeads,
-    FlextInfraConfigModelsContract,
-    FlextInfraConfigModelsMake,
-    FlextInfraConfigModelsRepository,
-    FlextInfraConfigModelsScaffold,
-    FlextInfraModelsDepsToolConfig,
-)
+from flext_infra._models._config.beads import FlextInfraConfigModelsBeads
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
+from flext_infra._models._config.make import FlextInfraConfigModelsMake
+from flext_infra._models._config.repository import FlextInfraConfigModelsRepository
+from flext_infra._models._config.scaffold import FlextInfraConfigModelsScaffold
+from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
 
 
 class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
@@ -262,7 +260,7 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
                 description="Repository-owned documentation audit declarations",
             ),
         ] = m.Field(
-            default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+            default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec
         )
         namespace_scan_dirs: Annotated[
             t.StrSequence,
@@ -567,10 +565,9 @@ class FlextInfraConfigModelsContexts(FlextInfraConfigModelsRepository):
         test_dirs: Annotated[
             t.VariadicTuple[str],
             m.Field(
-                default=(),
                 description="Directories holding rule fixtures and snapshots",
             ),
-        ]
+        ] = ()
 
     class ProfileSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Execution semantics for one generated Make profile."""

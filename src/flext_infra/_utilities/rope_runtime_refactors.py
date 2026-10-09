@@ -11,7 +11,7 @@ from collections.abc import Sequence
 from flext_cli import u
 
 from flext_infra import m, p, t
-from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeBase
+from flext_infra._utilities.rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
 
 
 class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase):

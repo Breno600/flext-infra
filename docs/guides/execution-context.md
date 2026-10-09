@@ -109,8 +109,8 @@ checkout's Git root; a declaration without an interpreter fails.
 
 The environment belongs to the `RUNTIME_ROOT`. A member attached as a submodule uses
 its containing Git superproject's environment. A primary standalone checkout keeps
-`<RUNTIME_ROOT>/.venv`. A linked Git worktree owns a physical sibling environment at
-`<RUNTIME_ROOT>/../<toolchain.worktree_environment_directory>/<worktree-name>`.
+`<RUNTIME_ROOT>/.venv`. A linked Git worktree must use the sibling environment at
+`<RUNTIME_ROOT>/../.venv>`.
 The directory component is declared in `config/codegen.yaml`; Git's distinct worktree
 and common directories identify the linked checkout. The generated Makefile, generated
 `.envrc`, and `runtime_environment_dir` derive the same path. Neither a caller
@@ -166,6 +166,10 @@ The platforms declared by `toolchain.mise_lockfile_platforms` compose the lock
 together with the platform of the machine running the upgrade, which Mise always
 includes.
 
+The default `make gen` handler passes explicit `--scope all` to conform at
+`PROJECT_ROOT`: a workspace invocation covers its root and every declared member,
+while a standalone repository has only itself. The request model's default remains
+`SELF` for callers that do not select a scope, including file-only surfaces.
 Generation owns one transaction for ordinary projections, Mise artifacts, lazy
 exports and docs; no additional writer runs before or after its journal.
 A planned deletion has no staged replacement, but its successful result still
@@ -185,17 +189,25 @@ level, the divergence remains a failure.
 
 ## Bootstrap credentials
 
-The GitHub credential is optional and is selected once, in the generated Makefile
-preamble, for every verb: the first non-empty of the caller's `GITHUB_TOKEN`,
-`GH_TOKEN`, `MISE_GITHUB_TOKEN`, then `gh auth token` when gh is installed and
-authenticated. Make exports that one value as `GITHUB_TOKEN`, `GH_TOKEN`, and
-`MISE_GITHUB_TOKEN`, so gh, uv, and mise read the same credential and no inherited
+The GitHub credential is selected in the generated Makefile preamble, for every
+Make entry: the first non-empty of the caller's `GITHUB_TOKEN`, `GH_TOKEN`,
+`MISE_GITHUB_TOKEN`, then the existing `gh auth token` producer in the declared
+local or unset CI context. Make exports that one value as `GITHUB_TOKEN`, `GH_TOKEN`,
+and `MISE_GITHUB_TOKEN`, so gh, uv, and mise read the same credential and no inherited
 alias can shadow it; `GITHUB_API_TOKEN` is unexported. Native Mise inherits those
 exports. The generated Make and direnv owners isolate global/system configuration
 discovery, not all process variables; other caller environment values remain
-inherited. With no token, public
-GitHub requests use the upstream tool's native unauthenticated behavior. The value
-is never printed. An invalid token preserves the backend's native error, without an
+inherited. `status` reports the selected source, extraction exit status, credential
+presence, and CI classification without printing the value or credential-command
+stderr. Its initial entry reports the producer; a recursive entry can report the
+normalized inherited `GITHUB_TOKEN` instead. Caller credentials report extraction
+as `not-selected`, not as a successful credential-command invocation.
+
+Optional credentials do not block offline verbs. In `setup` and `upg`, a selected
+gh producer's failure is reported and its exit status propagated before the first
+Mise lock or install; success with an empty credential also fails before provisioning.
+CI classification and caller precedence are unchanged. An invalid supplied token
+preserves the backend's native error, without an
 anonymous retry or source switch. CI jobs inject `GITHUB_TOKEN`; containers receive
 the variable or a BuildKit secret explicitly.
 
@@ -290,6 +302,45 @@ project. Coordinates are emitted only when the scanner supplies them, including 
 zeros; line-only and regionless native locations do not acquire invented coordinates.
 Point-only diagnostics from other gates remain point-only. The Markdown summary still
 uses the primary location, while the SARIF artifact carries the comparison evidence.
+
+## Census consumer evidence
+
+The public refactor census report retains `Object.all_reference_sites` separately
+from `runtime_reference_sites` and `script_reference_sites`. Each evidence site
+includes the Rope character offset, path, line and surface. Exact path/offset
+identities are deduplicated and sorted deterministically; distinct references on
+the same line remain distinct. Every hit's absolute path and nonnegative character
+offset are validated before definition filtering. Evidence excludes a definition only by
+its exact normalized path/offset; the older line/path fallback remains confined
+to reachability counts. Indexed source, script, test and example consumers and
+static `__init__.py` reexports are retained,
+including occurrences of private names and facade members.
+
+This is report-only migration evidence, not a change to production reachability.
+The existing reachability resource eligibility, line-level deduplication, private
+and facade exclusions, test/example exclusions and reexport exclusions still own
+the old counts and unused/removal classification. All-surface evidence must never
+be interpreted as permission to delete a helper or as a dynamic closure proof.
+
+`reference_evidence_collected` distinguishes an empty collected result from a
+disabled search (`include_references=False`, or census rule selection without
+`unused`). Evidence covers only the active Rope workspace's indexed files and its
+existing name-index candidate selection. Untracked files in indexed wrapper
+surfaces participate; ignored paths, nested ungoverned repositories, files outside
+the workspace, alias-only downstream files without the original identifier, and
+reflection/dynamic imports are not proven covered. Lazy export strings are not
+semantic reexport occurrences. Source and reference-resolution failures propagate;
+definition-token candidates are checked against the inventoried Rope binding using
+the existing Rope identity comparator, not selected by spelling order. Separate
+function/parameter bindings on a declaration line remain separate. If multiple
+tokens on that line resolve to the same binding (for example, a one-line declaration
+and use), the search fails with explicit ambiguity instead of guessing the
+definition. An unlocatable definition identifier or occurrence without an absolute
+path/valid offset fails instead of producing an apparently complete empty report.
+A collected result is therefore bounded static evidence, never a whole-program
+absence proof. Collecting
+private/facade evidence expands reference-resolution work but adds no scanner or
+registry.
 
 ## Bounded Mypy failure status
 

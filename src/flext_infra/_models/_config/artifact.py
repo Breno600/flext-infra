@@ -14,25 +14,22 @@ from typing import Annotated, Literal, Self
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._constants import (
-    FlextInfraConstantsCodegenProject,
-    FlextInfraConstantsSharedInfra,
-)
-from flext_infra._models import (
-    FlextInfraConfigModelsContexts,
-    FlextInfraConfigModelsContract,
-    FlextInfraConfigModelsMake,
-    FlextInfraConfigModelsProvider,
-    FlextInfraConfigModelsRelease,
-    FlextInfraConfigModelsRender,
-    FlextInfraConfigModelsScaffold,
-    FlextInfraConfigModelsTemplates,
-    FlextInfraConfigModelsWorkspace,
-    FlextInfraModelsDepsToolConfig,
+from flext_infra._constants import FlextInfraConstantsCodegenProject
+from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
+from flext_infra._models._config.make import FlextInfraConfigModelsMake
+from flext_infra._models._config.provider import FlextInfraConfigModelsProvider
+from flext_infra._models._config.release import FlextInfraConfigModelsRelease
+from flext_infra._models._config.render import FlextInfraConfigModelsRender
+from flext_infra._models._config.scaffold import FlextInfraConfigModelsScaffold
+from flext_infra._models._config.templates import FlextInfraConfigModelsTemplates
+from flext_infra._models._config.workspace import FlextInfraConfigModelsWorkspace
+from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
+from flext_infra._models.deps_tool_config_project_artifacts import (
     FlextInfraModelsDepsToolConfigProjectArtifacts,
-    FlextInfraModelsLayout,
-    FlextInfraModelsMiseToolchain,
 )
+from flext_infra._models.layout import FlextInfraModelsLayout
+from flext_infra._models.mise_toolchain import FlextInfraModelsMiseToolchain
 
 
 class FlextInfraConfigModelsArtifact:
@@ -108,14 +105,13 @@ class FlextInfraConfigModelsArtifact:
         stripped_keys: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                default=(),
                 description=(
                     "VS Code keys actively stripped from the settings projection "
                     "because they conflict with a pyrightconfig.json/pyproject.toml "
                     "owner (Pylance settingsNotOverridable)."
                 ),
             ),
-        ]
+        ] = ()
 
     class CodegenLocCapSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Per-module logical-LOC ceiling policy (scc code lines)."""
@@ -142,6 +138,34 @@ class FlextInfraConfigModelsArtifact:
             ),
         ]
 
+    class CodegenModesSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Filesystem modes the codegen pipeline emits (the mode SSOT)."""
+
+        file_default: Annotated[
+            int,
+            m.Field(
+                ge=0,
+                le=0o7777,
+                description="Rendered artifacts without a managed mode",
+            ),
+        ]
+        file_private: Annotated[
+            int,
+            m.Field(ge=0, le=0o7777, description="Engine-private lock and mutex files"),
+        ]
+        directory_private: Annotated[
+            int,
+            m.Field(ge=0, le=0o7777, description="Engine-only state and staging trees"),
+        ]
+        directory_generated: Annotated[
+            int,
+            m.Field(
+                ge=0,
+                le=0o7777,
+                description="Generated directory trees in consumers",
+            ),
+        ]
+
     class CodegenConfigSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Fully modeled content of ``config/codegen.yaml``."""
 
@@ -164,6 +188,10 @@ class FlextInfraConfigModelsArtifact:
         loc_cap: Annotated[
             FlextInfraConfigModelsArtifact.CodegenLocCapSpec,
             m.Field(description="Per-module code-LOC ceiling policy"),
+        ]
+        modes: Annotated[
+            FlextInfraConfigModelsArtifact.CodegenModesSpec,
+            m.Field(description="Filesystem modes the pipeline emits (the mode SSOT)"),
         ]
         toolchain: Annotated[
             FlextInfraModelsMiseToolchain.ToolchainSpec,
@@ -385,6 +413,8 @@ class FlextInfraConfigModelsArtifact:
                 The resulting
                     ``t.VariadicTuple[FlextInfraConfigModelsScaffold.ScaffoldGitignoreSectionSpec]``.
             """
+            from flext_infra._constants import FlextInfraConstantsSharedInfra
+
             scaffold_sections = self.scaffold.gitignore_sections
             # A declared section may already govern a derived artifact, in
             # either direction: a whitelist re-allows `.agents/` with `!`, so
@@ -488,6 +518,8 @@ class FlextInfraConfigModelsArtifact:
                     if GitHub artifacts must be full-managed.
 
             """
+            from flext_infra._constants import FlextInfraConstantsSharedInfra
+
             github_templates = tuple(
                 Path(entry.destination)
                 for entry in self.templates.entries
@@ -615,6 +647,14 @@ class FlextInfraConfigModelsArtifact:
                 self.scope != FlextInfraConstantsCodegenProject.CodegenConformScope.SELF
             ):
                 msg = "file-only surfaces require the self repository scope"
+                raise ValueError(msg)
+            if (
+                self.what
+                == FlextInfraConstantsCodegenProject.CodegenConformSurface.MISE_CONFIG
+                and self.scope
+                != FlextInfraConstantsCodegenProject.CodegenConformScope.SELF
+            ):
+                msg = "mise-config requires the self repository scope"
                 raise ValueError(msg)
             return self
 
@@ -841,40 +881,36 @@ class FlextInfraConfigModelsArtifact:
         bindings: Annotated[
             t.MappingKV[str, t.StrSequence],
             m.Field(
-                default_factory=lambda: MappingProxyType[str, t.StrSequence]({}),
                 description=(
                     "CSV expression prefixes mapped "
                     "to current public Rope owner identities"
                 ),
             ),
-        ]
+        ] = m.Field(default_factory=lambda: MappingProxyType[str, t.StrSequence]({}))
         text_globs: Annotated[
             t.StrSequence,
             m.Field(
-                default=(),
                 description=(
                     "Explicit root-relative non-Python "
                     "documentation and configuration text surfaces"
                 ),
             ),
-        ]
+        ] = ()
         python_documentation: Annotated[
             bool,
             m.Field(
-                default=False,
                 description=(
                     "Rename comments and actual Python docstrings "
                     "without changing executable strings"
                 ),
             ),
-        ]
+        ] = False
         exclude_globs: Annotated[
             t.StrSequence,
             m.Field(
-                default=(),
                 description="Generated projections excluded from campaign targets",
             ),
-        ]
+        ] = ()
 
         @staticmethod
         def _is_escaping_path(value: str) -> bool:
@@ -927,9 +963,8 @@ class FlextInfraConfigModelsArtifact:
         pattern: Annotated[t.NonEmptyStr, m.Field(description="Regex source to match")]
         replacement: Annotated[str, m.Field(description="Literal replacement text")]
         file_glob: Annotated[
-            t.NonEmptyStr | None,
-            m.Field(default=None, description="Optional file glob filter"),
-        ]
+            t.NonEmptyStr | None, m.Field(description="Optional file glob filter")
+        ] = None
         flags: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(

@@ -7,16 +7,14 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated, ClassVar, Self
+from typing import Annotated, ClassVar, Literal, Self
 
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._models import (
-    FlextInfraModelsGitIdentity,
-    FlextInfraModelsGitWorktreeFacts,
-    FlextInfraModelsGitWorktreeState,
-)
+from flext_infra._models._git.identity import FlextInfraModelsGitIdentity
+from flext_infra._models._git.worktree_facts import FlextInfraModelsGitWorktreeFacts
+from flext_infra._models._git.worktree_state import FlextInfraModelsGitWorktreeState
 from flext_infra._models.git_lane_inputs import FlextInfraModelsGitLaneInputs
 from flext_infra._models.git_lane_ownership import FlextInfraModelsGitLaneOwnership
 
@@ -40,8 +38,32 @@ class FlextInfraModelsGit(
         repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
 
     class GitLaneVerificationRequest(GitRepoRequest):
-        """Read-only lane census, optionally consuming coordinator evidence."""
+        """One read-only lane admission and census request over a repository.
 
+        A single owner carries the whole lane contract: the declared
+        integration authority and the explicitly selected ownership sources
+        for the census evaluator, plus the verified boundary, candidate and
+        expected tip for the native admission evaluator. It extends
+        ``GitRepoRequest`` so the native facts read accepts it wherever a
+        repository-scoped query is required.
+        """
+
+        remote: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Lane remote the integration tip is verified on"),
+        ] = "origin"
+        operation: Annotated[
+            Literal["verify", "create", "retire"],
+            m.Field(description="Boundary being verified, never an effect selector"),
+        ] = "verify"
+        candidate: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Commit whose integration ancestry must be proved"),
+        ] = "HEAD"
+        expected_tip: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(description="Previously observed tip; drift refuses admission"),
+        ] = None
         declared: Annotated[
             str | None,
             m.Field(description="Governing integration declaration"),

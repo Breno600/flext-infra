@@ -9,7 +9,6 @@ from __future__ import annotations
 from typing import ClassVar
 
 from flext_infra import m, p, r, t
-from flext_infra.api import infra
 from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
 from flext_infra.validate.cprofile_report import FlextInfraCProfileReport
 from flext_infra.validate.fresh_import import FlextInfraValidateFreshImport
@@ -35,6 +34,8 @@ class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
             The resulting ``p.Result[m.Infra.ValidationReport]``.
 
         """
+        from flext_infra.api import infra
+
         result = infra.validate_namespace(request)
         if result.failure:
             return r[m.Infra.ValidationReport].from_failure(result)

@@ -290,9 +290,7 @@ class FlextInfraBanditGate(FlextInfraGate):
 
         Bandit fails its run on every reported result, so each one is a
         blocking gate finding; Bandit's own LOW/MEDIUM/HIGH rating is not the
-        gate severity vocabulary and stays in the raw report. Bandit names a
-        file given on its command line ``./<path>`` and a discovered one
-        ``<path>``; the issue carries the one project-relative spelling.
+        gate severity vocabulary and stays in the raw report.
 
         Returns:
             The resulting ``t.SequenceOf[m.Infra.Issue]``.
@@ -300,7 +298,7 @@ class FlextInfraBanditGate(FlextInfraGate):
         """
         return tuple(
             m.Infra.Issue(
-                file=str(PurePosixPath(finding.filename)),
+                file=finding.filename,
                 line=finding.line_number,
                 column=0,
                 code=finding.test_id,

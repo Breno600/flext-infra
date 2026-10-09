@@ -10,12 +10,6 @@ from typing import TYPE_CHECKING
 
 from flext_infra import c, m, t, u
 from flext_infra.codegen import FlextInfraCodegenCensus
-from flext_infra.codegen.conform import FlextInfraCodegenConform
-from flext_infra.codegen.fixer import FlextInfraCodegenFixer
-from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
-from flext_infra.codegen.py_typed import FlextInfraCodegenPyTyped
-from flext_infra.codegen.scaffolder import FlextInfraCodegenScaffolder
-from flext_infra.deps.detector import FlextInfraRuntimeDevDependencyDetector
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -83,6 +77,7 @@ class FlextInfraCodegenPipelineStagesMixin:
             The resulting ``p.Result[m.Cli.PipelineStageResult]``.
 
         """
+        from flext_infra.codegen.conform import FlextInfraCodegenConform
 
         def _action() -> m.Infra.CodegenResult:
             dry_run = bool(ctx.settings.get(c.Infra.PIPELINE_KEY_DRY_RUN, False))
@@ -130,6 +125,7 @@ class FlextInfraCodegenPipelineStagesMixin:
             The resulting ``p.Result[m.Cli.PipelineStageResult]``.
 
         """
+        from flext_infra.deps.detector import FlextInfraRuntimeDevDependencyDetector
 
         def _action() -> bool:
             dry_run = bool(ctx.settings.get(c.Infra.PIPELINE_KEY_DRY_RUN, False))
@@ -165,6 +161,7 @@ class FlextInfraCodegenPipelineStagesMixin:
             The resulting ``p.Result[m.Cli.PipelineStageResult]``.
 
         """
+        from flext_infra.codegen.py_typed import FlextInfraCodegenPyTyped
 
         def _action() -> int:
             py_typed = FlextInfraCodegenPyTyped(repository_root=ctx.repository_root)
@@ -226,6 +223,7 @@ class FlextInfraCodegenPipelineStagesMixin:
             The resulting ``p.Result[m.Cli.PipelineStageResult]``.
 
         """
+        from flext_infra.codegen.scaffolder import FlextInfraCodegenScaffolder
 
         def _action() -> t.SequenceOf[m.Infra.ScaffoldResult]:
             dry_run = bool(ctx.settings.get(c.Infra.PIPELINE_KEY_DRY_RUN, False))
@@ -255,6 +253,7 @@ class FlextInfraCodegenPipelineStagesMixin:
             The resulting ``p.Result[m.Cli.PipelineStageResult]``.
 
         """
+        from flext_infra.codegen.fixer import FlextInfraCodegenFixer
 
         def _action() -> t.SequenceOf[m.Infra.AutoFixResult]:
             dry_run = bool(ctx.settings.get(c.Infra.PIPELINE_KEY_DRY_RUN, False))
@@ -284,6 +283,7 @@ class FlextInfraCodegenPipelineStagesMixin:
             The resulting ``p.Result[m.Cli.PipelineStageResult]``.
 
         """
+        from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
 
         def _action() -> int:
             analysis = (

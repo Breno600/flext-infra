@@ -74,7 +74,7 @@ mise -C "{{ project_root }}" install --yes{% for tool in install_tools %} "{{ to
 		mise_stage="$$mise_bootstrap_root/$$mise_pin/stage"; \
 		rm -rf "$$mise_stage"; \
 		mkdir -p "$$mise_stage" "$$(dirname "$$mise_bootstrap_bin")"; \
-		curl --proto '=https' --tlsv1.2 -fsSL -o "$$mise_stage/archive" "$$mise_url"; \
+		curl --proto '=https' --tlsv1.2 -fsSL --retry 3 -o "$$mise_stage/archive" "$$mise_url"; \
 		if command -v sha256sum >/dev/null 2>&1; then \
 			echo "$$mise_sha256  $$mise_stage/archive" | sha256sum -c -; \
 		else \
@@ -91,7 +91,7 @@ mise -C "{{ project_root }}" install --yes{% for tool in install_tools %} "{{ to
 		exit 2; \
 	fi; \
 	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
-		"$$mise_bootstrap_bin" -C "$(PROJECT_ROOT)" lock --bump; \
+		"$$mise_bootstrap_bin" -C "$(PROJECT_ROOT)" lock --upgrade --bump; \
 	fi; \
 	"$$mise_bootstrap_bin" -C "$(PROJECT_ROOT)" install --yes{% for tool in install_tools %} "{{ tool }}"{% endfor %}; \
 	"$$mise_bootstrap_bin" reshim; \

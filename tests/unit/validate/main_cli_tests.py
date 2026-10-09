@@ -85,6 +85,8 @@ class TestsFlextInfraValidateCli:
             '"""Namespace contract fixture."""\n\n'
             "from __future__ import annotations\n\nVALUE = 1\n",
         )
+        # The consumer cannot select a Mise shim; resolution belongs to Make.
+        tm.that((project / c.Infra.MISE_TOML_FILENAME).exists(), eq=False)
 
         exit_code = main([
             "validate",

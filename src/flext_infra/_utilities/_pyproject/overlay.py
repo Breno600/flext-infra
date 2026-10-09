@@ -6,14 +6,9 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_cli import r, u
+from flext_cli import r
 
 from flext_infra import c, p, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesDependencies,
-    FlextInfraUtilitiesManagedConflicts,
-    FlextInfraUtilitiesPyprojectRequirements,
-)
 
 
 class FlextInfraUtilitiesPyprojectOverlay:
@@ -31,6 +26,8 @@ class FlextInfraUtilitiesPyprojectOverlay:
             The resulting ``(required, custom)`` requirement lists.
 
         """
+        from flext_cli import u
+
         validated_required: p.Result[t.StrSequence] = u.validate_value(
             t.Infra.STR_SEQ_ADAPTER,
             project.get(key, []),
@@ -71,21 +68,30 @@ class FlextInfraUtilitiesPyprojectOverlay:
             The resulting ``list[t.JsonValue]``.
 
         """
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesDependencies,
+            FlextInfraUtilitiesPyprojectRequirements,
+        )
+
         owned_names = {
             FlextInfraUtilitiesDependencies.dep_name(item) for item in required
         }
-        merged: list[str] = sorted(
-            dict.fromkeys((
-                *required,
-                *(
-                    item
-                    for item in custom
-                    if FlextInfraUtilitiesDependencies.dep_name(item) not in owned_names
-                ),
-            )),
-            key=FlextInfraUtilitiesPyprojectRequirements.dependency_order_key,
-        )
-        return list[t.JsonValue](merged)
+        # The list display widens the sorted ``str`` items to the JSON value
+        # list the caller stores, in the single pass that materializes them.
+        return [
+            *sorted(
+                dict.fromkeys((
+                    *required,
+                    *(
+                        item
+                        for item in custom
+                        if FlextInfraUtilitiesDependencies.dep_name(item)
+                        not in owned_names
+                    ),
+                )),
+                key=FlextInfraUtilitiesPyprojectRequirements.dependency_order_key,
+            ),
+        ]
 
     @classmethod
     def _overlay_project_surface(
@@ -100,6 +106,8 @@ class FlextInfraUtilitiesPyprojectOverlay:
             The resulting ``p.Result[t.JsonDict]``.
 
         """
+        from flext_cli import u
+
         project = dict(u.Cli.toml_mapping_child(merged, c.Infra.PROJECT) or {})
         live_project = u.Cli.toml_mapping_child(live_payload, c.Infra.PROJECT) or {}
         for key in project_keys:
@@ -125,6 +133,8 @@ class FlextInfraUtilitiesPyprojectOverlay:
         live_payload: t.JsonMapping,
     ) -> None:
         """Preserve the live project dev additions before conformance floors."""
+        from flext_cli import u
+
         groups = dict(u.Cli.toml_mapping_child(merged, c.Infra.DEPENDENCY_GROUPS) or {})
         live_groups = (
             u.Cli.toml_mapping_child(live_payload, c.Infra.DEPENDENCY_GROUPS) or {}
@@ -140,6 +150,8 @@ class FlextInfraUtilitiesPyprojectOverlay:
         tool_tables: t.StrSequence,
     ) -> None:
         """Copy every live tool table the fleet does not manage."""
+        from flext_cli import u
+
         tool = dict(u.Cli.toml_mapping_child(merged, c.Infra.TOOL) or {})
         live_tool = u.Cli.toml_mapping_child(live_payload, c.Infra.TOOL) or {}
         managed = frozenset(tool_tables)
@@ -163,6 +175,10 @@ class FlextInfraUtilitiesPyprojectOverlay:
             The resulting ``p.Result[str]``.
 
         """
+        from flext_cli import u
+
+        from flext_infra._utilities import FlextInfraUtilitiesManagedConflicts
+
         spec = FlextInfraUtilitiesManagedConflicts.pyproject_managed_file()
         if spec.failure:
             return r[str].from_failure(spec)
@@ -176,25 +192,37 @@ class FlextInfraUtilitiesPyprojectOverlay:
             if managed_tool_tables is None
             else managed_tool_tables
         )
-        rendered_payload = u.Cli.toml_mapping_from_text(rendered)
+        rendered_payload = u.Cli.toml_mapping_from_text_result(rendered)
         # An absent live file takes the same canonicalization path as a present
         # one: the projection is the parse-merge-dump form, so first publication
         # and every later conform produce byte-identical output (fixed point).
         empty_payload: t.JsonMapping = {}
         live_payload = (
-            u.Cli.toml_mapping_from_text(live) if live is not None else empty_payload
+            u.Cli.toml_mapping_from_text_result(live)
+            if live is not None
+            else r[t.JsonMapping].ok(empty_payload)
         )
-        if rendered_payload is None:
-            return r[str].fail("rendered pyproject is not valid TOML")
-        if live_payload is None:
-            return r[str].fail("live pyproject is not valid TOML")
-        merged = dict(rendered_payload)
-        project = cls._overlay_project_surface(merged, live_payload, project_keys)
+        if rendered_payload.failure:
+            return r[str].fail(
+                f"rendered pyproject is not valid TOML: {rendered_payload.error}",
+                error_code=rendered_payload.error_code,
+                error_data=rendered_payload.error_data,
+                exception=rendered_payload.exception,
+            )
+        if live_payload.failure:
+            return r[str].fail(
+                f"live pyproject is not valid TOML: {live_payload.error}",
+                error_code=live_payload.error_code,
+                error_data=live_payload.error_data,
+                exception=live_payload.exception,
+            )
+        merged = dict(rendered_payload.value)
+        project = cls._overlay_project_surface(merged, live_payload.value, project_keys)
         if project.failure:
             return r[str].from_failure(project)
         merged[c.Infra.PROJECT] = project.value
-        cls._overlay_dev_group(merged, live_payload)
-        cls._overlay_tool_tables(merged, live_payload, tool_tables)
+        cls._overlay_dev_group(merged, live_payload.value)
+        cls._overlay_tool_tables(merged, live_payload.value, tool_tables)
         return r[str].ok(u.Cli.toml_dumps(u.Cli.toml_document_from_mapping(merged)))
 
 

@@ -15,15 +15,8 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Annotated, ClassVar, override
 
-from flext_infra import c, config, m, p, r, t, u
-from flext_infra._settings import settings
+from flext_infra import c, config, m, p, r, settings, t, u
 from flext_infra.base import FlextInfraServiceBase
-from flext_infra.codegen._mise_artifacts_files import FlextInfraMiseArtifactsFiles
-from flext_infra.codegen._mise_artifacts_journal import FlextInfraMiseArtifactsJournal
-from flext_infra.codegen._mise_artifacts_verification import (
-    FlextInfraMiseArtifactsVerification,
-)
-from flext_infra.codegen.codegen_preconditions import FlextInfraCodegenPreconditions
 
 
 class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
@@ -42,7 +35,7 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
             ),
         ),
     ] = m.Field(
-        default_factory=lambda: type(settings).fetch_global().Infra.runtime_root,
+        default_factory=lambda: type(settings).fetch_global().Infra.runtime_root
     )
 
     _PRELUDE: ClassVar[str] = (
@@ -130,6 +123,13 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
         Returns:
             The destination proof or the first journal authority failure.
         """
+        from flext_infra.codegen._mise_artifacts_verification import (
+            FlextInfraMiseArtifactsVerification,
+        )
+        from flext_infra.codegen.codegen_preconditions import (
+            FlextInfraCodegenPreconditions,
+        )
+
         authority = FlextInfraCodegenPreconditions.unchanged_journal(
             session, "staged view journal authority changed"
         )
@@ -171,6 +171,10 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
         Returns:
             Success only for the matching destination journal entry.
         """
+        from flext_infra.codegen._mise_artifacts_files import (
+            FlextInfraMiseArtifactsFiles,
+        )
+
         original_layout = next(
             (
                 layout
@@ -213,6 +217,10 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
         Returns:
             Success or the first missing, unreadable or changed source authority.
         """
+        from flext_infra.codegen._mise_artifacts_journal import (
+            FlextInfraMiseArtifactsJournal,
+        )
+
         for source in plan.inputs:
             previous = next(
                 (item for item in session.journal.sources if item.path == source.path),
@@ -354,6 +362,10 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
         Returns:
             Success only if the consumer changed none of its authenticated inputs.
         """
+        from flext_infra.codegen.codegen_preconditions import (
+            FlextInfraCodegenPreconditions,
+        )
+
         after = u.Cli.atomic_inventory_physical_tree(view.root)
         if after.failure:
             return r[bool].from_failure(after)
@@ -373,6 +385,10 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
         Returns:
             Success only when source states and every inventory remain pinned.
         """
+        from flext_infra.codegen._mise_artifacts_verification import (
+            FlextInfraMiseArtifactsVerification,
+        )
+
         states = FlextInfraMiseArtifactsVerification.states_current(plan.inputs)
         if states.failure:
             return states
@@ -411,16 +427,30 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                 )
             if not root.is_dir():
                 continue
-            for path in root.rglob("*"):
-                if "__pycache__" in path.parts:
-                    continue
-                if path.is_symlink():
-                    return r[set[Path]].fail(
-                        f"candidate original path became a symlink: {path}",
-                    )
-                if path.is_file():
-                    actual.add(path)
+            files = FlextInfraValidateFreshImport._stage_root_files(root)
+            if files.failure:
+                return files
+            actual.update(files.value)
         return r[set[Path]].ok(actual)
+
+    @staticmethod
+    def _stage_root_files(root: Path) -> p.Result[set[Path]]:
+        """Collect one source directory's physical files, refusing any symlink.
+
+        Returns:
+            The directory's files outside bytecode caches, or the first symlink.
+        """
+        files: set[Path] = set()
+        for path in root.rglob("*"):
+            if "__pycache__" in path.parts:
+                continue
+            if path.is_symlink():
+                return r[set[Path]].fail(
+                    f"candidate original path became a symlink: {path}",
+                )
+            if path.is_file():
+                files.add(path)
+        return r[set[Path]].ok(files)
 
     @staticmethod
     def _project_layouts(

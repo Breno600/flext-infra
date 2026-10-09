@@ -1,0 +1,26 @@
+id: pydantic-annotated-field-sole-default-assignment
+# `valid` MUST NOT match: the default is assigned, the metadata carries more
+# than the default, or the construct is text.
+valid:
+  - |
+    class Spec:
+        project_id: t.NonEmptyStr | None = None
+  - |
+    class Spec:
+        roots: Annotated[t.StrSequence, m.Field(default=(), description="d")]
+  - |
+    class Spec:
+        project_id: Annotated[t.NonEmptyStr | None, m.Field(default=None)] = None
+  - |
+    """A docstring mentioning x: Annotated[X, m.Field(default=None)]."""
+# `invalid` MUST match: the default is the whole Annotated metadata.
+invalid:
+  - |
+    class Spec:
+        project_id: Annotated[t.NonEmptyStr | None, m.Field(default=None)]
+  - |
+    class Spec:
+        flags: Annotated[
+            t.StrSequence,
+            m.Field(default=()),
+        ]

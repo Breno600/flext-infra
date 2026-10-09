@@ -23,7 +23,6 @@ from typing import ClassVar
 from warnings import WarningMessage
 
 import pytest
-from flext_cli import u
 from pytest_markdown_docs.definitions import FenceTestDefinition
 from pytest_markdown_docs.plugin import (
     FenceSyntax,
@@ -33,6 +32,7 @@ from pytest_markdown_docs.plugin import (
 )
 from xdist.dsession import DSession
 
+from flext_infra import u
 from flext_infra._constants import FlextInfraConstantsCheck, FlextInfraConstantsMake
 from flext_infra._models import FlextInfraModelsCore
 
@@ -375,6 +375,7 @@ class FlextInfraPytestCollection:
             # Owner modules, never the root facades: this plugin loads in every
             # consumer test process, and ``m.Infra`` builds the whole model
             # family (seconds of class construction) to write one JSON line.
+
             self.report = report_log.with_suffix(
                 FlextInfraConstantsMake.PYTEST_WARNING_EVENTS_SUFFIX,
             )

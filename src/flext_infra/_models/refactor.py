@@ -16,14 +16,14 @@ from typing import TYPE_CHECKING, Annotated, ClassVar
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._models import (
-    FlextInfraModelsMixins,
+from flext_infra._models.mixins import FlextInfraModelsMixins
+from flext_infra._models.refactor_ast_grep import FlextInfraModelsRefactorGrep
+from flext_infra._models.refactor_namespace_enforcer import (
     FlextInfraModelsNamespaceEnforcer,
-    FlextInfraModelsRefactorGrep,
 )
 
 if TYPE_CHECKING:
-    from flext_infra._models import FlextInfraModelsScan
+    from flext_infra._models.scan import FlextInfraModelsScan
 
 
 class FlextInfraModelsRefactor(
@@ -304,9 +304,7 @@ class FlextInfraModelsRefactor(
                     " public Rope owner identities"
                 ),
             ),
-        ] = m.Field(
-            default_factory=lambda: MappingProxyType[str, t.StrSequence]({}),
-        )
+        ] = m.Field(default_factory=lambda: MappingProxyType[str, t.StrSequence]({}))
         text_globs: Annotated[
             t.StrSequence,
             m.Field(
@@ -315,7 +313,7 @@ class FlextInfraModelsRefactor(
                     " and configuration text surfaces"
                 ),
             ),
-        ] = m.Field(default=())
+        ] = ()
         python_documentation: Annotated[
             bool,
             m.Field(
@@ -324,7 +322,7 @@ class FlextInfraModelsRefactor(
                     " preserving executable string payloads"
                 ),
             ),
-        ] = m.Field(default=False)
+        ] = False
         exclude_globs: Annotated[
             t.StrSequence,
             m.Field(
@@ -332,7 +330,7 @@ class FlextInfraModelsRefactor(
                     "Declared generated projections excluded from campaign targets"
                 ),
             ),
-        ] = m.Field(default=())
+        ] = ()
 
     class ApplyRenamesReport(m.ArbitraryTypesModel):
         """Summary of one CSV-driven rename pass."""

@@ -14,8 +14,6 @@ from flext_infra import c, config, m, p, r, t, u
 from flext_infra.codegen._conform.scaffold_plan import (
     FlextInfraCodegenConformScaffoldPlan,
 )
-from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
-from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 
 class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
@@ -181,11 +179,16 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
         rendered = self._render_facade(destination, family, sources)
         if rendered.failure:
             return result_type.from_failure(rendered)
+        mode = states[0].mode
+        if mode is None:
+            return result_type.fail(
+                f"facade input has no authenticated mode: {destination}",
+            )
         file = self.file_plan(
             root,
             destination.relative_to(root).as_posix(),
             rendered.value,
-            mode=states[0].mode,
+            mode=mode,
             source_states=tuple(states),
         )
         if file.failure:
@@ -327,6 +330,8 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
             The public plan and its complete authenticated lazy-init receipt.
 
         """
+        from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
+
         result_type = r[t.Pair[m.Infra.CodegenPlan, m.Infra.CodegenPhaseAnalysis]]
         root = request.root.expanduser().resolve()
         topology = self._planning_workspace(request, root)
@@ -381,6 +386,8 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                 m.Infra.RepositoryConformTarget, m.Infra.RepositoryRef]]``.
 
         """
+        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
         result_type = r[
             t.Triple[
                 m.Infra.WorkspaceSpec,
@@ -398,6 +405,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                         c.Infra.CodegenConformSurface.MAKEFILE,
                         c.Infra.CodegenConformSurface.DOCS_CONFIG,
                         c.Infra.CodegenConformSurface.PYPROJECT,
+                        c.Infra.CodegenConformSurface.MISE_CONFIG,
                     }
                 ),
             )
@@ -405,7 +413,11 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                 return result_type.from_failure(workspace_result)
             workspace = workspace_result.value
         current_repository = workspace.repository
-        if self.initial_workspace is None:
+        if self.initial_workspace is None and request.what not in {
+            c.Infra.CodegenConformSurface.MAKEFILE,
+            c.Infra.CodegenConformSurface.PYPROJECT,
+            c.Infra.CodegenConformSurface.MISE_CONFIG,
+        }:
             current_target_result = FlextInfraWorkspaceDetector.conform_target(
                 root,
                 workspace,
@@ -529,6 +541,8 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                 m.Infra.RepositoryConformTarget, m.Infra.WorkspaceSpec]]``.
 
         """
+        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
         result_type = r[
             t.Triple[
                 Path,
@@ -617,6 +631,8 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
             The resulting ``p.Result[m.Infra.WorkspaceSpec]``.
 
         """
+        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
         if repository.path != Path():
             declared_member = FlextInfraWorkspaceDetector.load_workspace_spec(
                 repository_root,

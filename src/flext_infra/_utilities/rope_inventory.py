@@ -12,12 +12,6 @@ from pathlib import Path
 from rope.base import exceptions
 
 from flext_infra import c, m, p, t
-from flext_infra._utilities import (
-    FlextInfraUtilitiesCodegenNamespace,
-    FlextInfraUtilitiesRopeCore,
-    FlextInfraUtilitiesRopeImports,
-    FlextInfraUtilitiesRopeRuntime,
-)
 
 
 class FlextInfraUtilitiesRopeInventory:
@@ -43,6 +37,11 @@ class FlextInfraUtilitiesRopeInventory:
             ValueError: If path is outside the active rope workspace.
 
         """
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeCore,
+            FlextInfraUtilitiesRopeRuntime,
+        )
+
         rope_project = rope_workspace.rope_project
         resource = rope_workspace.resource(file_path)
         if resource is None:
@@ -263,6 +262,8 @@ class FlextInfraUtilitiesRopeInventory:
             The resulting ``t.VariadicTuple[t.Pair[str, t.Infra.RopePyName]]``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         candidates: list[t.Triple[int, str, t.Infra.RopePyName]] = []
         for name, pyname in names.items():
             if FlextInfraUtilitiesRopeRuntime.imported_name(pyname):
@@ -309,16 +310,14 @@ class FlextInfraUtilitiesRopeInventory:
             name=options.name,
             scope_chain=options.scope_chain,
         )
-        if (
-            include_references
-            and not is_facade_member
-            and not options.name.startswith("_")
-        ):
-            runtime_reference_sites, script_reference_sites = cls._reference_sites(
-                options,
-                line=line,
+        all_reference_sites: t.VariadicTuple[m.Infra.ReferenceSite] = ()
+        runtime_reference_sites: t.VariadicTuple[m.Infra.ReferenceSite] = ()
+        script_reference_sites: t.VariadicTuple[m.Infra.ReferenceSite] = ()
+        if include_references:
+            runtime_reference_sites, script_reference_sites, all_reference_sites = (
+                cls._reference_sites(options, line=line)
             )
-        else:
+        if is_facade_member or options.name.startswith("_"):
             runtime_reference_sites = ()
             script_reference_sites = ()
         references_count = len(runtime_reference_sites) + len(script_reference_sites)
@@ -345,6 +344,8 @@ class FlextInfraUtilitiesRopeInventory:
             script_references_count=len(script_reference_sites),
             runtime_reference_sites=runtime_reference_sites,
             script_reference_sites=script_reference_sites,
+            all_reference_sites=all_reference_sites,
+            reference_evidence_collected=include_references,
             fingerprint=cls._fingerprint(
                 options.source,
                 name=options.name,
@@ -383,6 +384,8 @@ class FlextInfraUtilitiesRopeInventory:
             The resulting ``p.Infra.RopeScopeDsl | None``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         location = pyname.get_definition_location()
         _, line = location
         if line is None:
@@ -458,6 +461,8 @@ class FlextInfraUtilitiesRopeInventory:
             The resulting ``str``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         obj = pyname.get_object()
         if FlextInfraUtilitiesRopeRuntime.abstract_class(obj):
             return "class"
@@ -489,6 +494,8 @@ class FlextInfraUtilitiesRopeInventory:
             The resulting ``str``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
+
         if FlextInfraUtilitiesRopeRuntime.parameter_name(pyname):
             return "parameter"
         if FlextInfraUtilitiesRopeRuntime.assigned_name(pyname):
@@ -509,6 +516,8 @@ class FlextInfraUtilitiesRopeInventory:
         options: m.Infra.RopeInventoryRecordInput,
         definition_path: Path | None,
         name: str,
+        *,
+        all_surfaces: bool = False,
     ) -> t.VariadicTuple[t.Infra.RopeResource] | None:
         """Scope the occurrence search resources, or ``None`` to search everywhere.
 
@@ -516,12 +525,15 @@ class FlextInfraUtilitiesRopeInventory:
             The resulting ``t.VariadicTuple[t.Infra.RopeResource] | None``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeImports
+
         if definition_path is None:
             return None
         module_name = options.module_name
         dependent_import_targets = (
             (module_name, f"{module_name}.{name}")
             if module_name
+            and not all_surfaces
             and FlextInfraUtilitiesRopeInventory._reference_surface(definition_path)
             != c.Infra.DEFAULT_SRC_DIR
             else ()
@@ -532,6 +544,7 @@ class FlextInfraUtilitiesRopeInventory:
             name=name,
             definition_path=definition_path,
             dependent_import_targets=dependent_import_targets,
+            include_reexports=all_surfaces,
         )
 
     @staticmethod
@@ -560,25 +573,63 @@ class FlextInfraUtilitiesRopeInventory:
         definition_path: Path | None,
         line: int,
         offset: int,
-    ) -> t.Triple[
+        reachability_paths: frozenset[str] | None,
+    ) -> tuple[
+        list[m.Infra.ReferenceSite],
         list[m.Infra.ReferenceSite],
         list[m.Infra.ReferenceSite],
         bool,
     ]:
-        """Split occurrence hits into runtime and script sites, skipping tests.
+        """Retain exact all-surface evidence separately from reachability sites.
 
         Returns:
-            The resulting ``(runtime sites, script sites, definition skipped)``.
+            Runtime sites, script sites, all-surface sites, definition skipped.
+
+        Raises:
+            RuntimeError: If an occurrence lacks an absolute path or valid offset.
 
         """
         runtime_reference_sites: list[m.Infra.ReferenceSite] = []
         script_reference_sites: list[m.Infra.ReferenceSite] = []
+        all_reference_sites: list[m.Infra.ReferenceSite] = []
         seen_sites: set[t.Triple[str, int, str]] = set()
+        seen_occurrences: set[t.Pair[str, int]] = set()
         skipped_definition = False
+        definition_key = (
+            (
+                FlextInfraUtilitiesRopeInventory._normalize_file_path(definition_path),
+                offset,
+            )
+            if definition_path is not None
+            else None
+        )
         for hit in hits:
+            reference_site = FlextInfraUtilitiesRopeInventory._reference_site(hit)
+            occurrence_offset = getattr(hit, "offset", None)
             if (
-                not skipped_definition
-                and FlextInfraUtilitiesRopeInventory._is_definition_occurrence(
+                reference_site is None
+                or not Path(reference_site.file_path).is_absolute()
+                or not isinstance(occurrence_offset, int)
+                or isinstance(occurrence_offset, bool)
+                or occurrence_offset < 0
+            ):
+                msg = (
+                    "rope census occurrence lacks an absolute file path "
+                    "or nonnegative character offset"
+                )
+                raise RuntimeError(msg)
+            occurrence_key = (reference_site.file_path, occurrence_offset)
+            if (
+                occurrence_key != definition_key
+                and occurrence_key not in seen_occurrences
+            ):
+                seen_occurrences.add(occurrence_key)
+                all_reference_sites.append(
+                    reference_site.model_copy(update={"offset": occurrence_offset}),
+                )
+            # Only legacy counts use the existing line/path fallback semantics.
+            if not skipped_definition and (
+                FlextInfraUtilitiesRopeInventory._is_definition_occurrence(
                     hit,
                     definition_path=definition_path,
                     line=line,
@@ -587,8 +638,13 @@ class FlextInfraUtilitiesRopeInventory:
             ):
                 skipped_definition = True
                 continue
-            reference_site = FlextInfraUtilitiesRopeInventory._reference_site(hit)
-            if reference_site is None or not (
+            # Evidence must not widen the original reachability resource set.
+            if (
+                reachability_paths is not None
+                and reference_site.file_path not in reachability_paths
+            ):
+                continue
+            if not (
                 FlextInfraUtilitiesRopeInventory._new_deduped_site(
                     reference_site,
                     seen_sites,
@@ -602,7 +658,13 @@ class FlextInfraUtilitiesRopeInventory:
                 script_reference_sites.append(reference_site)
                 continue
             runtime_reference_sites.append(reference_site)
-        return runtime_reference_sites, script_reference_sites, skipped_definition
+        all_reference_sites.sort(key=lambda site: (site.file_path, site.offset))
+        return (
+            runtime_reference_sites,
+            script_reference_sites,
+            all_reference_sites,
+            skipped_definition,
+        )
 
     @staticmethod
     def _discard_unreferenced_definition(
@@ -632,35 +694,59 @@ class FlextInfraUtilitiesRopeInventory:
         options: m.Infra.RopeInventoryRecordInput,
         *,
         line: int,
-    ) -> t.Pair[
+    ) -> t.Triple[
+        t.VariadicTuple[m.Infra.ReferenceSite],
         t.VariadicTuple[m.Infra.ReferenceSite],
         t.VariadicTuple[m.Infra.ReferenceSite],
     ]:
         """Collect the reference sites for the symbol one record describes.
 
         Returns:
-            The resulting ``t.Pair[t.VariadicTuple[m.Infra.ReferenceSite],
-                t.VariadicTuple[m.Infra.ReferenceSite]]``.
+            Runtime/source sites, script sites and exact all-surface evidence.
+
+        Raises:
+            RuntimeError: If the definition identifier or path cannot be located.
 
         """
+        from flext_infra._utilities import (
+            FlextInfraUtilitiesRopeCore,
+            FlextInfraUtilitiesRopeImports,
+        )
+
         name = options.name
         lines = options.source.splitlines(keepends=True)
         offset = FlextInfraUtilitiesRopeCore.find_identifier_offset_in_lines(
             lines,
             line=line,
             symbol=name,
+            pyname=options.pyname,
         )
         if offset is None:
-            return ((), ())
+            msg = (
+                "rope census definition identifier unavailable: "
+                f"{options.resource.path}:{line}:{name}"
+            )
+            raise RuntimeError(msg)
         definition_path = FlextInfraUtilitiesRopeCore.resource_file_path(
             options.rope_project,
             options.resource,
+        )
+        if definition_path is None:
+            msg = f"rope census definition path unavailable: {options.resource.path}"
+            raise RuntimeError(msg)
+        reachability_resources = (
+            FlextInfraUtilitiesRopeInventory._occurrence_search_resources(
+                options,
+                definition_path,
+                name,
+            )
         )
         search_resources = (
             FlextInfraUtilitiesRopeInventory._occurrence_search_resources(
                 options,
                 definition_path,
                 name,
+                all_surfaces=True,
             )
         )
         hits = FlextInfraUtilitiesRopeImports.find_occurrences(
@@ -669,12 +755,27 @@ class FlextInfraUtilitiesRopeInventory:
             offset,
             resources=search_resources,
         )
-        runtime_sites, script_sites, skipped_definition = (
+        runtime_sites, script_sites, all_sites, skipped_definition = (
             FlextInfraUtilitiesRopeInventory._classified_occurrence_sites(
                 hits,
                 definition_path=definition_path,
                 line=line,
                 offset=offset,
+                reachability_paths=(
+                    frozenset(
+                        str(path)
+                        for resource in reachability_resources
+                        if (
+                            path := FlextInfraUtilitiesRopeCore.resource_file_path(
+                                options.rope_project,
+                                resource,
+                            )
+                        )
+                        is not None
+                    )
+                    if reachability_resources is not None
+                    else None
+                ),
             )
         )
         if not skipped_definition and definition_path is not None:
@@ -684,7 +785,7 @@ class FlextInfraUtilitiesRopeInventory:
                 definition_path=definition_path,
                 line=line,
             )
-        return (tuple(runtime_sites), tuple(script_sites))
+        return (tuple(runtime_sites), tuple(script_sites), tuple(all_sites))
 
     @staticmethod
     def _location_file_path(location: t.Infra.RopeLocation) -> Path | None:
@@ -694,6 +795,8 @@ class FlextInfraUtilitiesRopeInventory:
             The resulting ``Path | None``.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeImports
+
         return FlextInfraUtilitiesRopeImports.location_file_path(location)
 
     @staticmethod
@@ -859,6 +962,8 @@ class FlextInfraUtilitiesRopeInventory:
             The expected tier for a module convention.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesCodegenNamespace
+
         expected: str = convention.module_policy.expected_family or ""
         if expected:
             return expected

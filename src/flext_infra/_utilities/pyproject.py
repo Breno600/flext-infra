@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import re
 import shutil
 from collections.abc import Mapping, Sequence
 from functools import cache, lru_cache
@@ -13,7 +14,7 @@ from pathlib import Path
 
 from flext_cli import u
 
-from flext_infra import c, m, p, r, t
+from flext_infra import c, config, m, p, r, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesGit,
     FlextInfraUtilitiesManagedConflicts,
@@ -22,6 +23,157 @@ from flext_infra._utilities import (
 
 class FlextInfraUtilitiesPyproject:
     """Static helpers for reading and normalizing ``pyproject.toml`` payloads."""
+
+    @staticmethod
+    def managed_mise_binary(
+        name: str,
+        owner_root: Path,
+        *,
+        timeout_seconds: int = c.Infra.TIMEOUT_SHORT,
+    ) -> p.Result[Path]:
+        """Resolve a locked managed executable before entering a consumer cwd.
+
+        Returns:
+            An authenticated absolute binary, never a PATH shim or global default.
+        """
+        tool = next(
+            (
+                item
+                for item in config.Infra.codegen.toolchain.tools
+                if item.name == name
+            ),
+            None,
+        )
+        if tool is None:
+            return r[Path].fail(f"tool is not declared by the toolchain owner: {name}")
+        pinned = FlextInfraUtilitiesPyproject._locked_mise_version(
+            owner_root,
+            tool.selector or tool.name,
+            config.Infra.codegen.toolchain.tool_versions[name],
+        )
+        if pinned.failure:
+            return r[Path].from_failure(pinned)
+        reader = FlextInfraUtilitiesPyproject.managed_mise_self(owner_root)
+        if reader.failure:
+            return reader
+        located = FlextInfraUtilitiesPyproject._managed_mise_path(
+            tool.version_probe.binary, owner_root, reader.value
+        )
+        if located.failure:
+            return located
+        return FlextInfraUtilitiesPyproject._managed_binary_identity(
+            located.value,
+            pinned.value,
+            owner_root,
+            tool.version_probe,
+            timeout_seconds,
+        )
+
+    @staticmethod
+    def managed_mise_self(owner_root: Path) -> p.Result[Path]:
+        """Qualify the physical Mise reader before it loads project locks.
+
+        Returns:
+            The installed self-managed executable, never a tool shim.
+        """
+        toolchain = config.Infra.codegen.toolchain
+        pinned = FlextInfraUtilitiesPyproject._locked_mise_version(
+            owner_root, toolchain.mise_selector, toolchain.mise_version
+        )
+        if pinned.failure:
+            return r[Path].from_failure(pinned)
+        selected = shutil.which(c.Infra.MISE)
+        if selected is None:
+            return r[Path].fail("Mise executable is absent; run make setup")
+        reader = FlextInfraUtilitiesPyproject._mise_self_identity(
+            Path(selected), pinned.value, owner_root
+        )
+        if reader.failure:
+            return reader
+        installed = FlextInfraUtilitiesPyproject._managed_mise_path(
+            c.Infra.MISE, owner_root, reader.value
+        )
+        if installed.failure:
+            return installed
+        return FlextInfraUtilitiesPyproject._mise_self_identity(
+            installed.value, pinned.value, owner_root
+        )
+
+    @staticmethod
+    def _mise_self_identity(
+        binary: Path, pinned: str, owner_root: Path
+    ) -> p.Result[Path]:
+        """Check the physical reader without invoking a lock-consuming command.
+
+        Returns:
+            The physical executable matching the committed self pin.
+        """
+        binary = binary.resolve(strict=True)
+        identity = u.Cli.run_raw(
+            (str(binary), "--version"),
+            cwd=owner_root,
+            timeout=c.Infra.TIMEOUT_SHORT,
+        )
+        if identity.failure:
+            return r[Path].from_failure(identity)
+        output = identity.value
+        if not u.Cli.process_succeeded(output.outcome) or output.stderr.strip():
+            return r[Path].fail(output.stderr or output.stdout)
+        if output.stdout.split()[:1] != [pinned]:
+            return r[Path].fail(
+                f"Mise reader {binary} differs from lock: expected={pinned} "
+                f"observed={output.stdout.strip()}; run make setup"
+            )
+        return r[Path].ok(binary)
+
+    @staticmethod
+    def _managed_mise_path(name: str, owner_root: Path, reader: Path) -> p.Result[Path]:
+        located = u.Cli.run_raw(
+            (str(reader), "-C", str(owner_root), "which", name),
+            cwd=owner_root,
+            timeout=c.Infra.TIMEOUT_SHORT,
+        )
+        if located.failure:
+            return r[Path].from_failure(located)
+        if (
+            not u.Cli.process_succeeded(located.value.outcome)
+            or located.value.stderr.strip()
+        ):
+            return r[Path].fail(located.value.stderr or located.value.stdout)
+        binary = Path(located.value.stdout.strip())
+        if not binary.is_absolute() or not binary.is_file():
+            return r[Path].fail(f"managed executable is not an absolute file: {binary}")
+        return r[Path].ok(binary.resolve(strict=True))
+
+    @staticmethod
+    def _managed_binary_identity(
+        binary: Path,
+        pinned: str,
+        owner_root: Path,
+        probe: m.Infra.MiseToolVersionProbe,
+        timeout_seconds: int,
+    ) -> p.Result[Path]:
+        identified = u.Cli.run_raw(
+            (str(binary), *probe.arguments),
+            cwd=owner_root,
+            timeout=timeout_seconds,
+        )
+        if identified.failure:
+            return r[Path].from_failure(identified)
+        if (
+            not u.Cli.process_succeeded(identified.value.outcome)
+            or identified.value.stderr.strip()
+        ):
+            return r[Path].fail(identified.value.stderr or identified.value.stdout)
+        pattern = probe.pattern.replace(
+            c.Infra.MISE_VERSION_PLACEHOLDER, re.escape(pinned)
+        )
+        if re.search(pattern, identified.value.stdout, re.MULTILINE) is None:
+            return r[Path].fail(
+                f"managed executable differs from lock: expected={pinned} "
+                f"observed={identified.value.stdout.strip()}",
+            )
+        return r[Path].ok(binary)
 
     @staticmethod
     def recover_live_pyproject_text(raw: str) -> p.Result[str]:
@@ -47,7 +199,11 @@ class FlextInfraUtilitiesPyproject:
         )
 
     @staticmethod
-    def live_pyproject_text(pyproject_path: Path) -> p.Result[str]:
+    def live_pyproject_text(
+        pyproject_path: Path,
+        *,
+        regenerate_managed_tools: bool = False,
+    ) -> p.Result[str]:
         """Read one live pyproject and resolve managed merge conflicts.
 
         Returns:
@@ -60,8 +216,13 @@ class FlextInfraUtilitiesPyproject:
         content = raw.value.content
         if content is None:
             return r[str].fail(f"pyproject is absent: {pyproject_path}")
-        return FlextInfraUtilitiesPyproject.recover_live_pyproject_text(
+        live = FlextInfraUtilitiesPyproject.recover_live_pyproject_text(
             content.decode(c.Cli.ENCODING_DEFAULT),
+        )
+        if live.failure or not regenerate_managed_tools:
+            return live
+        return FlextInfraUtilitiesManagedConflicts.pyproject_regeneration_source(
+            live.value,
         )
 
     @staticmethod
@@ -345,39 +506,34 @@ class FlextInfraUtilitiesPyproject:
         lock_path: Path,
         *,
         tool: str,
-    ) -> p.Result[t.SequenceOf[object]]:
+    ) -> p.Result[t.SequenceOf[t.JsonValue]]:
         """Read one tool's lock entries from the committed mise.lock.
 
         Returns:
-            The resulting ``p.Result[t.SequenceOf[object]]``.
+            The resulting ``p.Result[t.SequenceOf[t.JsonValue]]``.
 
         """
-        document = u.Cli.toml_parse_text(
+        payload = u.Cli.toml_mapping_from_text(
             lock_path.read_text(encoding=c.Cli.ENCODING_DEFAULT),
         )
-        if document is None:
-            return r[t.SequenceOf[object]].fail(f"{lock_path} is not valid TOML")
-        payload = u.Cli.toml_as_mapping(document)
         if payload is None:
-            return r[t.SequenceOf[object]].fail(
-                f"{lock_path} carries no TOML mapping payload",
-            )
+            return r[t.SequenceOf[t.JsonValue]].fail(f"{lock_path} is not valid TOML")
         tools = payload.get("tools", {})
         if not isinstance(tools, Mapping):
-            return r[t.SequenceOf[object]].fail(
+            return r[t.SequenceOf[t.JsonValue]].fail(
                 f"{lock_path} has a malformed [tools] table",
             )
         entries = tools.get(tool)
         if not isinstance(entries, list):
-            return r[t.SequenceOf[object]].fail(
+            return r[t.SequenceOf[t.JsonValue]].fail(
                 f"{lock_path} pins no [[tools.{tool}]] entry",
             )
-        return r[t.SequenceOf[object]].ok(entries)
+        return r[t.SequenceOf[t.JsonValue]].ok(entries)
 
     @staticmethod
     def _locked_entry_version(
-        entry: object,
-    ) -> t.Pair[str, t.SequenceOf[object]] | None:
+        entry: t.JsonValue,
+    ) -> t.Pair[str, t.SequenceOf[t.JsonValue]] | None:
         """Return one lock entry's pinned version and specifiers when wellformed.
 
         Returns:
@@ -393,7 +549,6 @@ class FlextInfraUtilitiesPyproject:
         return pinned, specifiers
 
     @staticmethod
-    @cache
     def _taplo_binary(
         taplo_version: str,
         process_timeout_seconds: int,
@@ -417,48 +572,11 @@ class FlextInfraUtilitiesPyproject:
         if pinned.failure:
             return r[Path].from_failure(pinned)
         u.Cli.info(f"pyproject-tooling: resolve taplo={pinned.value} (mise.lock)")
-        resolved = shutil.which("taplo")
-        if resolved is None:
-            return r[Path].fail(
-                "Taplo executable is absent from the Make-provisioned PATH",
-            )
-        # Mise shims are executable symlinks whose basename selects the tool.
-        # Resolving the link turns ``taplo`` into the Mise binary and changes
-        # the invoked program, so preserve the absolute shim path.
-        binary = Path(resolved).absolute()
-        # Probe where the tool will actually run. A version-managed shim
-        # resolves its tool from the working directory's declared toolchain, so
-        # probing in the shim's own directory asks for a version nothing there
-        # declares: on a runner that provisions taplo per project the probe
-        # exits non-zero and the identity check rejects a perfectly good
-        # binary. The format call below uses execution_root; so does this.
-        identified = u.Cli.run_raw(
-            (str(binary), "--version"),
-            cwd=execution_root,
-            timeout=process_timeout_seconds,
+        return FlextInfraUtilitiesPyproject.managed_mise_binary(
+            c.Infra.TAPLO_MISE_TOOL_NAME,
+            execution_root,
+            timeout_seconds=process_timeout_seconds,
         )
-        if identified.failure:
-            return r[Path].fail(
-                f"Taplo identity check could not run: {binary}: {identified.error}",
-            )
-        if not u.Cli.process_succeeded(identified.value.outcome):
-            # The cause belongs in the message: a shim that resolves but cannot
-            # execute reports the same generic text as a genuine version
-            # mismatch, and the two need opposite repairs.
-            detail = identified.value.stderr.strip() or identified.value.stdout.strip()
-            return r[Path].fail(
-                f"Taplo identity check failed: {binary} exited "
-                f"{identified.value.outcome.raw_return_code}: "
-                f"{detail or 'no diagnostic output'}",
-            )
-        observed = identified.value.stdout.strip()
-        identity_matches = pinned.value in observed
-        if not identity_matches:
-            return r[Path].fail(
-                "resolved Taplo executable version differs from the mise.lock "
-                f"pin: expected={pinned.value} observed={observed}",
-            )
-        return r[Path].ok(binary)
 
     @staticmethod
     def pyproject_payload(pyproject_path: Path) -> t.JsonMapping:

@@ -1,0 +1,8 @@
+id: codegen-test-public-utility-binding-required
+snapshots:
+  utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci:
+    labels:
+    - source: utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci
+      style: primary
+      start: 0
+      end: 56

@@ -1,0 +1,32 @@
+id: pydantic-annotated-field-default-assignment
+# `valid` MUST NOT match: the default is already assigned, the field is
+# required, the metadata carries no default, or the construct is text.
+valid:
+  - |
+    class Spec:
+        roots: Annotated[t.StrSequence, m.Field(description="d")] = ()
+  - |
+    class Spec:
+        name: Annotated[t.NonEmptyStr, m.Field(description="d")]
+  - |
+    class Spec:
+        roots: Annotated[t.StrSequence, m.Field(default=(), description="d")] = ()
+  - |
+    class Spec:
+        project_id: Annotated[t.NonEmptyStr | None, m.Field(default=None)]
+  - |
+    """A docstring mentioning roots: Annotated[X, m.Field(default=())]."""
+# `invalid` MUST match: the default lives inside the Annotated metadata.
+invalid:
+  - |
+    class Spec:
+        roots: Annotated[t.StrSequence, m.Field(default=(), description="d")]
+  - |
+    class Spec:
+        home_cache_directory: Annotated[
+            Path,
+            m.Field(
+                default=Path(".cache"),
+                description="Cache directory below the home root",
+            ),
+        ]

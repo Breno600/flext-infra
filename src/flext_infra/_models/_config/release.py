@@ -14,7 +14,7 @@ from flext_cli import m
 
 from flext_infra import t
 from flext_infra._constants import FlextInfraConstantsRelease
-from flext_infra._models import FlextInfraConfigModelsContract
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
 
 
 class FlextInfraConfigModelsRelease:
@@ -145,7 +145,7 @@ class FlextInfraConfigModelsRelease:
                     "Empty means every resolved project is eligible."
                 ),
             ),
-        ] = m.Field(default=())
+        ] = ()
         bump_types: Annotated[
             Mapping[t.NonEmptyStr, FlextInfraConstantsRelease.VersionBump],
             m.Field(
@@ -156,14 +156,14 @@ class FlextInfraConfigModelsRelease:
                 "feat": FlextInfraConstantsRelease.VersionBump.MINOR,
                 "fix": FlextInfraConstantsRelease.VersionBump.PATCH,
                 "perf": FlextInfraConstantsRelease.VersionBump.PATCH,
-            },
+            }
         )
         publish_url: Annotated[
             t.NonEmptyStr,
             m.Field(
                 description="Package index upload endpoint for verified artifacts",
             ),
-        ] = m.Field(default=FlextInfraConstantsRelease.PYPI_UPLOAD_URL)
+        ] = FlextInfraConstantsRelease.PYPI_UPLOAD_URL
         build_constraints: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsRelease.BuildConstraintSpec],
             m.Field(

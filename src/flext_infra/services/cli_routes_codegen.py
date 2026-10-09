@@ -72,6 +72,12 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                 handler=infra.codegen_conform,
                 success_message="project conformance complete",
             ),
+            m.Cli.ResultCommandRoute(
+                name="footprint",
+                help_text="Read the actual generation journal and plan without effects",
+                model_cls=m.Infra.CodegenConformRequest,
+                handler=FlextInfraCliRouteBase.result_handler(infra.codegen_footprint),
+            ),
             *(
                 m.Cli.ResultCommandRoute(
                     name=route_name,

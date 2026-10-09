@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
+from flext_core import e
 from flext_infra import c, config, m, p
 from tests import t, u
 
@@ -203,6 +204,24 @@ class TestsFlextInfraCodegenPyprojectConform:
             )["sample"],
             eq="sample.plugin:main",
         )
+
+    @pytest.mark.parametrize("invalid_surface", ["rendered", "live"])
+    def test_overlay_retains_native_toml_failure_context(
+        self,
+        invalid_surface: str,
+    ) -> None:
+        """A parse failure identifies its input and retains the native cause."""
+        valid = "[project]\n"
+        invalid = "[project]\nkey =\n"
+        result = u.Infra.overlay_preserved(
+            invalid if invalid_surface == "rendered" else valid,
+            invalid if invalid_surface == "live" else valid,
+        )
+        tm.fail(result, has=f"{invalid_surface} pyproject is not valid TOML")
+        native = tm.not_none(result.exception)
+        tm.that(type(native).__name__, eq="TOMLDecodeError")
+        tm.that(result.error, has=str(native))
+        tm.that(result.error, has=f"line {len(invalid.splitlines())}")
 
     @staticmethod
     def test_overlay_defaults_only_the_omitted_policy() -> None:
@@ -719,6 +738,63 @@ dependencies = []
             u.Tests.scaffold_text(root, c.PYPROJECT_FILENAME, what=surface),
             eq=first,
         )
+
+    @staticmethod
+    @pytest.mark.parametrize("members", [(), ("fixture-member",)])
+    def test_scaffold_pyrefly_policy_matches_ssot_and_converges(
+        tmp_path: Path,
+        members: t.StrSequence,
+    ) -> None:
+        """Both repository roles render each declared diagnostic exactly once."""
+        root = tmp_path / "fixture-project"
+        surface = c.Infra.CodegenConformSurface.PYPROJECT
+        first = u.Tests.scaffold_text(
+            root,
+            c.PYPROJECT_FILENAME,
+            members=members,
+            what=surface,
+        )
+        policy = config.Infra.tooling.tools.pyrefly
+        tm.that(
+            u.Tests.toml_table_at(first, "tool", "pyrefly", "errors"),
+            eq=dict.fromkeys(policy.strict_errors, "error"),
+        )
+        tm.that(
+            u.Tests.scaffold_text(
+                root,
+                c.PYPROJECT_FILENAME,
+                members=members,
+                what=surface,
+            ),
+            eq=first,
+        )
+
+    @staticmethod
+    def test_pyrefly_policy_rejects_duplicate_diagnostic_declarations() -> None:
+        """Ambiguous SSOT input fails before the TOML template can emit it."""
+        payload = config.Infra.tooling.tools.pyrefly.model_dump(by_alias=True)
+        payload["strict-errors"] = ("bad-argument-count", "bad-argument-count")
+        with pytest.raises(e.PydanticValidationError, match="duplicate diagnostic"):
+            m.Infra.PyreflyConfig.model_validate(payload)
+
+    @staticmethod
+    @pytest.mark.parametrize("selection", ["reordered", "subset", "empty"])
+    def test_pyrefly_policy_preserves_valid_diagnostic_selections(
+        selection: str,
+    ) -> None:
+        """Validation does not freeze the selected diagnostic set or its order."""
+        policy = config.Infra.tooling.tools.pyrefly
+        errors = tuple(policy.strict_errors)
+        if selection == "reordered":
+            selected = tuple(reversed(errors))
+        elif selection == "subset":
+            selected = errors[::2]
+        else:
+            selected = ()
+        payload = policy.model_dump(by_alias=True)
+        payload["strict-errors"] = selected
+        validated = m.Infra.PyreflyConfig.model_validate(payload)
+        tm.that(tuple(validated.strict_errors), eq=selected)
 
     @staticmethod
     def _assert_unmanaged_tool_tables_survive(

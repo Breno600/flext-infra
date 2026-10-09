@@ -8,8 +8,12 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from flext_infra import FlextInfraWorkspaceDetector, c, config, m, p, r, t, u
+from flext_infra import c, config, m, p, r, t, u
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 class FlextInfraGitLanes:
@@ -112,7 +116,7 @@ class FlextInfraGitLanes:
         integrated = u.Infra.git_is_ancestor(
             m.Infra.GitAncestryRequest(
                 repo_root=repo_root,
-                ancestor=f"refs/heads/{branch}",
+                ancestor=f"{c.Infra.GIT_REFS_HEADS}{branch}",
                 descendant=fresh.value,
             ),
         )
@@ -120,7 +124,8 @@ class FlextInfraGitLanes:
             return r[bool].from_failure(integrated)
         if not integrated.value.value:
             return r[bool].fail(
-                f"retirement refuses unintegrated lane: refs/heads/{branch}",
+                "retirement refuses unintegrated lane: "
+                f"{c.Infra.GIT_REFS_HEADS}{branch}",
             )
         return r[bool].ok(value=True)
 
@@ -154,7 +159,9 @@ class FlextInfraGitLanes:
         local = u.Infra.git_resolve_commit(
             m.Infra.GitCommitishRequest(
                 repo_root=request.repo_root,
-                commitish=f"refs/remotes/{policy.lane_remote}/{base.value}",
+                commitish=(
+                    f"{c.Infra.GIT_REFS_REMOTES}{policy.lane_remote}/{base.value}"
+                ),
             ),
         )
         if local.failure:
@@ -247,6 +254,8 @@ class FlextInfraGitLanes:
             Bead ownership output from the declared city/rig command only.
 
         """
+        from flext_infra import FlextInfraWorkspaceDetector
+
         loaded = FlextInfraWorkspaceDetector.load_beads_spec(repo_root)
         if loaded.failure:
             return r[str].from_failure(loaded)
@@ -357,6 +366,19 @@ class FlextInfraGitLanes:
             )
         )
 
+    @staticmethod
+    def _lane_branch(reference: str) -> str:
+        """Strip the local or lane-remote namespace from one lane reference.
+
+        Returns:
+            The bare branch name the reference designates.
+
+        """
+        remote = config.Infra.codegen.branch_policy.lane_remote
+        return reference.removeprefix(c.Infra.GIT_REFS_HEADS).removeprefix(
+            f"{c.Infra.GIT_REFS_REMOTES}{remote}/",
+        )
+
     @classmethod
     def _unique_ref(
         cls,
@@ -371,9 +393,7 @@ class FlextInfraGitLanes:
             An exact refusal, or None for a legitimate declared lane/open PR.
 
         """
-        branch = reference.removeprefix("refs/heads/").removeprefix(
-            f"refs/remotes/{config.Infra.codegen.branch_policy.lane_remote}/",
-        )
+        branch = cls._lane_branch(reference)
         if evidence.pull_requests is None:
             return (
                 f"inconclusive unique ref: {reference} oid={oid}; "
@@ -405,9 +425,7 @@ class FlextInfraGitLanes:
                 f"inconclusive unique ref: {reference} oid={oid}; "
                 "Beads ownership evidence NOT EXECUTED (not selected)"
             )
-        branch = reference.removeprefix("refs/heads/").removeprefix(
-            f"refs/remotes/{config.Infra.codegen.branch_policy.lane_remote}/",
-        )
+        branch = cls._lane_branch(reference)
         owners = cls._ownership(evidence, branch, None)
         worktrees = u.Infra.git_list_worktrees(
             m.Infra.GitRepoRequest(repo_root=request.repo_root),
@@ -514,10 +532,8 @@ class FlextInfraGitLanes:
         )
         if worktrees.failure:
             return f"read error: {reference}: {worktrees.error}"
+        branch = FlextInfraGitLanes._lane_branch(reference)
         for entry in worktrees.value.entries:
-            branch = reference.removeprefix("refs/heads/").removeprefix(
-                f"refs/remotes/{config.Infra.codegen.branch_policy.lane_remote}/",
-            )
             if entry.branch == branch:
                 status = u.Infra.git_status(
                     m.Infra.GitStatusRequest(repo_root=entry.path),
@@ -618,18 +634,7 @@ class FlextInfraGitLanes:
         findings: list[str] = []
         inventory: list[str] = []
         violations: list[m.Infra.GitLaneViolation] = []
-        repo_request = m.Infra.GitRepoRequest(repo_root=request.repo_root)
-        facts = u.Infra.git_lane_facts(repo_request)
-        refs: list[tuple[str, str]] = []
-        if facts.failure:
-            findings.append(f"native lane facts read error: {facts.error}")
-        else:
-            findings.extend(facts.value.read_errors)
-            refs.extend((ref.name, ref.oid) for ref in facts.value.refs)
-            for oid in facts.value.stash_oids:
-                findings.append(f"forbidden stash: {oid}")
-                inventory.append(f"refs/stash: {oid}")
-                violations.append(cls._violation(c.Infra.LaneViolationKind.STASH, oid))
+        refs = cls._collect_lane_facts(request, inventory, findings, violations)
         base = u.Infra.resolve_integration_branch(
             request.repo_root,
             preference=config.Infra.codegen.branch_policy.integration_branch_preference,
@@ -639,25 +644,7 @@ class FlextInfraGitLanes:
         if fresh.failure:
             findings.append(f"integration read error: {fresh.error}")
         inventory.extend(f"{ref}: {oid}" for ref, oid in refs)
-        try:
-            evidence = cls._evidence(request)
-        except (OSError, ValueError) as exc:
-            evidence = r[m.Infra.GitLaneEvidence].fail(str(exc), exception=exc)
-        if evidence.failure:
-            findings.append(f"ownership read error: {evidence.error}")
-        else:
-            for name, observed in (
-                ("PR", evidence.value.pull_requests is not None),
-                ("Beads", evidence.value.beads is not None),
-            ):
-                inventory.append(
-                    f"{name} ownership evidence: "
-                    + (
-                        "observed"
-                        if observed
-                        else "NOT EXECUTED (not selected/unknown)"
-                    ),
-                )
+        evidence = cls._collect_evidence(request, inventory, findings)
         integration = (
             (base.value, fresh.value) if base.success and fresh.success else None
         )
@@ -691,6 +678,63 @@ class FlextInfraGitLanes:
         )
 
     @classmethod
+    def _collect_lane_facts(
+        cls,
+        request: m.Infra.GitLaneVerificationRequest,
+        inventory: list[str],
+        findings: list[str],
+        violations: list[m.Infra.GitLaneViolation],
+    ) -> list[tuple[str, str]]:
+        """Read native refs and stashes, recording every stash as a violation.
+
+        Returns:
+            The observed ``(ref, oid)`` pairs; a read failure stays in findings.
+
+        """
+        facts = u.Infra.git_lane_facts(
+            m.Infra.GitRepoRequest(repo_root=request.repo_root),
+        )
+        if facts.failure:
+            findings.append(f"native lane facts read error: {facts.error}")
+            return []
+        findings.extend(facts.value.read_errors)
+        for oid in facts.value.stash_oids:
+            findings.append(f"forbidden stash: {oid}")
+            inventory.append(f"refs/stash: {oid}")
+            violations.append(cls._violation(c.Infra.LaneViolationKind.STASH, oid))
+        return [(ref.name, ref.oid) for ref in facts.value.refs]
+
+    @classmethod
+    def _collect_evidence(
+        cls,
+        request: m.Infra.GitLaneVerificationRequest,
+        inventory: list[str],
+        findings: list[str],
+    ) -> p.Result[m.Infra.GitLaneEvidence]:
+        """Read ownership evidence and inventory which sources were observed.
+
+        Returns:
+            The ownership evidence result; a read failure stays in findings.
+
+        """
+        try:
+            evidence = cls._evidence(request)
+        except (OSError, ValueError) as exc:
+            evidence = r[m.Infra.GitLaneEvidence].fail(str(exc), exception=exc)
+        if evidence.failure:
+            findings.append(f"ownership read error: {evidence.error}")
+            return evidence
+        for name, observed in (
+            ("PR", evidence.value.pull_requests is not None),
+            ("Beads", evidence.value.beads is not None),
+        ):
+            inventory.append(
+                f"{name} ownership evidence: "
+                + ("observed" if observed else "NOT EXECUTED (not selected/unknown)"),
+            )
+        return evidence
+
+    @classmethod
     def _verify_worktrees(
         cls,
         request: m.Infra.GitLaneVerificationRequest,
@@ -705,56 +749,94 @@ class FlextInfraGitLanes:
             Structured registry violations; all read failures stay in findings.
 
         """
-        violations: list[m.Infra.GitLaneViolation] = []
-        kind = c.Infra.LaneViolationKind
         worktrees = u.Infra.git_list_worktrees(
             m.Infra.GitRepoRequest(repo_root=request.repo_root),
         )
         if worktrees.failure:
             findings.append(f"worktree read error: {worktrees.error}")
-        else:
-            for entry in worktrees.value.entries:
-                inventory.append(
-                    f"worktree: {entry.path} head={entry.head} "
-                    f"branch={entry.branch} locked={entry.locked}",
+            return ()
+        violations: list[m.Infra.GitLaneViolation] = []
+        for entry in worktrees.value.entries:
+            inventory.append(
+                f"worktree: {entry.path} head={entry.head} "
+                f"branch={entry.branch} locked={entry.locked}",
+            )
+            violations.extend(
+                cls._worktree_violations(evidence, entry, findings),
+            )
+            if entry.path.is_dir() and integration is not None:
+                violations.extend(
+                    cls._merged_worktree_violations(
+                        request,
+                        entry,
+                        integration,
+                        findings,
+                    ),
                 )
-                temporary = any(
-                    entry.path.is_relative_to(root)
-                    for root in config.Infra.codegen.branch_policy.lane_temporary_roots
-                )
-                owned = cls._worktree_owned(evidence, entry)
-                if not entry.path.is_dir():
-                    findings.append(
-                        f"orphan worktree registration: {entry.path} head={entry.head}",
-                    )
-                    violations.append(
-                        cls._violation(kind.MISSING_WORKTREE, str(entry.path))
-                    )
-                elif (temporary or entry.detached) and not owned:
-                    findings.append(
-                        "inconclusive unowned temporary/detached worktree: "
-                        f"{entry.path} head={entry.head}",
-                    )
-                    violation_kind = (
-                        kind.TEMP_WORKTREE if temporary else kind.DETACHED_WORKTREE
-                    )
-                    violations.append(cls._violation(violation_kind, str(entry.path)))
-                if entry.path.is_dir() and integration is not None:
-                    merged = cls._merged_worktree(request, entry, integration)
-                    if merged.failure:
-                        findings.append(
-                            f"merged worktree read error: {entry.path}: {merged.error}"
-                        )
-                    elif merged.value:
-                        violation = cls._violation(
-                            kind.MERGED_WORKTREE, str(entry.path)
-                        )
-                        violations.append(violation)
-                        findings.append(
-                            f"merged clean worktree still registered: {entry.path} "
-                            f"head={entry.head}",
-                        )
         return tuple(violations)
+
+    @classmethod
+    def _worktree_violations(
+        cls,
+        evidence: p.Result[m.Infra.GitLaneEvidence],
+        entry: m.Infra.GitWorktreeEntry,
+        findings: list[str],
+    ) -> Iterator[m.Infra.GitLaneViolation]:
+        """Classify one registered worktree as orphaned or unowned temporary.
+
+        Yields:
+            The registration violation for the entry, if any.
+
+        """
+        kind = c.Infra.LaneViolationKind
+        temporary = any(
+            entry.path.is_relative_to(root)
+            for root in config.Infra.codegen.branch_policy.lane_temporary_roots
+        )
+        if not entry.path.is_dir():
+            findings.append(
+                f"orphan worktree registration: {entry.path} head={entry.head}",
+            )
+            yield cls._violation(kind.MISSING_WORKTREE, str(entry.path))
+        elif (temporary or entry.detached) and not cls._worktree_owned(
+            evidence,
+            entry,
+        ):
+            findings.append(
+                "inconclusive unowned temporary/detached worktree: "
+                f"{entry.path} head={entry.head}",
+            )
+            violation_kind = kind.TEMP_WORKTREE if temporary else kind.DETACHED_WORKTREE
+            yield cls._violation(violation_kind, str(entry.path))
+
+    @classmethod
+    def _merged_worktree_violations(
+        cls,
+        request: m.Infra.GitLaneVerificationRequest,
+        entry: m.Infra.GitWorktreeEntry,
+        integration: tuple[str, str],
+        findings: list[str],
+    ) -> Iterator[m.Infra.GitLaneViolation]:
+        """Classify one existing worktree as fully integrated and clean.
+
+        Yields:
+            The merged-worktree violation for the entry, if any.
+
+        """
+        merged = cls._merged_worktree(request, entry, integration)
+        if merged.failure:
+            findings.append(
+                f"merged worktree read error: {entry.path}: {merged.error}",
+            )
+        elif merged.value:
+            findings.append(
+                "merged clean worktree still registered: "
+                f"{entry.path} head={entry.head}",
+            )
+            yield cls._violation(
+                c.Infra.LaneViolationKind.MERGED_WORKTREE,
+                str(entry.path),
+            )
 
     @classmethod
     def _worktree_owned(
@@ -850,7 +932,10 @@ class FlextInfraGitLanes:
         violations: list[m.Infra.GitLaneViolation] = []
         remote = config.Infra.codegen.branch_policy.lane_remote
         for reference, oid in refs:
-            if reference in {f"refs/heads/{base}", f"refs/remotes/{remote}/{base}"}:
+            if reference in {
+                f"{c.Infra.GIT_REFS_HEADS}{base}",
+                f"{c.Infra.GIT_REFS_REMOTES}{remote}/{base}",
+            }:
                 continue
             remote_failure = cls._remote_ref_failure(request.repo_root, reference, oid)
             if remote_failure is not None:
@@ -966,7 +1051,7 @@ class FlextInfraGitLanes:
 
         """
         remote = config.Infra.codegen.branch_policy.lane_remote
-        prefix = f"refs/remotes/{remote}/"
+        prefix = f"{c.Infra.GIT_REFS_REMOTES}{remote}/"
         if not reference.startswith(prefix):
             return None
         live = u.Infra.git_remote_branch_oid(

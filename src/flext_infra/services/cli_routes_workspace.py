@@ -90,9 +90,9 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
                 help_text="Read-only lane inventory and fresh integration admission",
                 model_cls=m.Infra.GitLaneVerificationRequest,
                 handler=FlextInfraCliRouteBase.result_handler(
-                    FlextInfraGitService.verify_lanes,
+                    FlextInfraGitService.verify_lane,
                 ),
-                success_message="workspace lane hygiene verified",
+                success_message="lane stash and live integration ancestry verified",
             ),
             m.Cli.ResultCommandRoute(
                 name="identity",

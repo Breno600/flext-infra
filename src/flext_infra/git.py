@@ -17,8 +17,8 @@ if TYPE_CHECKING:
     from flext_infra import p
 
 
-class FlextInfraGitService(FlextInfraGitLanes, s[m.Infra.GitStatusReport]):
-    """Thin Git status and cleanliness use cases over the public Git utilities."""
+class FlextInfraGitService(s[m.Infra.GitStatusReport]):
+    """Thin public status, cleanliness, and lane admission use cases."""
 
     repository: Annotated[
         Path | None,
@@ -76,6 +76,33 @@ class FlextInfraGitService(FlextInfraGitLanes, s[m.Infra.GitStatusReport]):
                 + "\n".join(stashes.value.oids),
             )
         return report
+
+    @staticmethod
+    def verify_lane(
+        request: m.Infra.GitLaneVerificationRequest,
+    ) -> p.Result[m.Infra.GitOidReport]:
+        """Run the shared, effect-free lane admission owner.
+
+        Returns:
+            Live integration identity or the original admission failure.
+
+        """
+        return u.Infra.git_verify_lane(request)
+
+    @classmethod
+    def verify_lanes(
+        cls,
+        request: m.Infra.GitLaneVerificationRequest,
+    ) -> p.Result[m.Infra.GitLaneReport]:
+        """Fail on stashes, merged-but-alive branches and orphan or merged worktrees.
+
+        The one census evaluator owns the verdict; the service only publishes it.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitLaneReport]``.
+
+        """
+        return FlextInfraGitLanes.verify_lanes(request)
 
 
 __all__: list[str] = ["FlextInfraGitService"]

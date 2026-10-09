@@ -12,16 +12,12 @@ import tempfile
 from collections.abc import Iterator
 from contextlib import ExitStack
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import pytest
 from flext_tests import tm
 
 from flext_infra import config, infra, p
 from tests import c, t, u
-
-if TYPE_CHECKING:
-    from flext_cli._utilities import FlextCliUtilitiesCli
 
 # NOTE(flext-p68a.9.4, agent codex): the installed flext-tests pytest11 plugin is
 # the only fixture owner; conftest must not re-export or shadow its fixtures.
@@ -187,7 +183,7 @@ def infra_subprocess() -> p.Cli.CommandRunner:
 
 
 @pytest.fixture
-def infra_toml() -> FlextCliUtilitiesCli:
+def infra_toml() -> u.Cli:
     """Provide the public CLI utility facade for TOML tests.
 
     Returns:

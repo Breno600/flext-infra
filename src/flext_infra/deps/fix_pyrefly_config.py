@@ -18,7 +18,7 @@ from flext_infra.deps._pyrefly_fix_steps import FlextInfraConfigFixerSteps
 class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bool]):
     """Fix pyrefly configuration across workspace projects."""
 
-    _repository_root: Path
+    _repository_root: Path = u.PrivateAttr()
 
     def __init__(self, repository_root: Path | None = None) -> None:
         """Initialize pyrefly settings fixer."""

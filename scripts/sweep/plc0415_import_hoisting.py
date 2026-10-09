@@ -151,35 +151,36 @@ def _plan(root: Path, path: Path) -> _HoistingPlan | None:
     """
     source = path.read_text()
     tree = ast.parse(source)
-    top_names: set[str] = set()
-    for node in tree.body:
-        if isinstance(node, ast.ImportFrom | ast.Import):
-            top_names.update(alias.asname or alias.name for alias in node.names)
+    top_names: set[str] = {
+        alias.asname or alias.name
+        for node in tree.body
+        if isinstance(node, ast.ImportFrom | ast.Import)
+        for alias in node.names
+    }
     deletions: list[tuple[int, int]] = []
     hoists: set[str] = set()
-    functions = (
-        n
-        for n in ast.walk(tree)
-        if isinstance(n, ast.FunctionDef | ast.AsyncFunctionDef)
+    # Only DIRECT children of a function body are candidates; conditional
+    # imports nested under try/if/with/for keep their semantics in place.
+    body_imports = (
+        node
+        for function in ast.walk(tree)
+        if isinstance(function, ast.FunctionDef | ast.AsyncFunctionDef)
+        for node in function.body
+        if isinstance(node, ast.ImportFrom | ast.Import)
     )
-    for function in functions:
-        for node in function.body:
-            if not isinstance(node, ast.ImportFrom | ast.Import):
-                continue
-            span = (node.lineno, node.end_lineno or node.lineno)
-            if isinstance(node, ast.ImportFrom):
-                hoisted = _build_hoisted(root, node, top_names, source)
-                if hoisted is None and all(
-                    (alias.asname or alias.name) in top_names for alias in node.names
-                ):
-                    deletions.append(span)
-                    continue
-                if hoisted is None:
-                    return None
+    for node in body_imports:
+        if isinstance(node, ast.ImportFrom):
+            hoisted = _build_hoisted(root, node, top_names, source)
+            reexport = all(
+                (alias.asname or alias.name) in top_names for alias in node.names
+            )
+            if hoisted is None and not reexport:
+                return None
+            if hoisted is not None:
                 hoists.add(hoisted)
-            else:
-                _hoist_plain_import(node, hoists)
-            deletions.append(span)
+        else:
+            _hoist_plain_import(node, hoists)
+        deletions.append((node.lineno, node.end_lineno or node.lineno))
     if not deletions:
         return None
     return _HoistingPlan(

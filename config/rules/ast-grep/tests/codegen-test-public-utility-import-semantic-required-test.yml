@@ -1,0 +1,6 @@
+id: codegen-test-public-utility-import-semantic-required
+valid:
+  - 'payload = "import tests.utilities"'
+  - from tests import u
+invalid:
+  - import tests.utilities

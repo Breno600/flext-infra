@@ -14,7 +14,6 @@ from flext_infra import c, config, m, t, u
 from flext_infra.codegen._codegen_generation_renderers import (
     FlextInfraCodegenGenerationRenderersMixin,
 )
-from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
 
 
 # Keep lazy loading only at the public package root and
@@ -256,6 +255,8 @@ class FlextInfraCodegenGenerationStandardMixin(
             Validated template data for the generated root initializer.
 
         """
+        from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
+
         lazy_map = cls._lazy_export_map(plan)
         current_pkg = plan.context.current_pkg
         public_type_checking_imports = cls._type_checking_filtered(plan)

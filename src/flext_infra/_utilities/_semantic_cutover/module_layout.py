@@ -10,9 +10,7 @@ import ast
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
-from flext_infra._utilities import (
-    FlextInfraUtilitiesLintRecipes,
-    FlextInfraUtilitiesRopeSource,
+from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
 )
 
@@ -44,6 +42,8 @@ class FlextInfraUtilitiesSemanticCutoverModuleLayout(
             One edit per module whose reported statements do not close it.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesRopeSource
+
         selected: MutableMapping[Path, set[str]] = defaultdict(set)
         for finding in findings:
             selected[(root / finding.file).resolve()].add(finding.text)
@@ -84,6 +84,8 @@ class FlextInfraUtilitiesSemanticCutoverModuleLayout(
             One edit per module whose notice does not close its docstring.
 
         """
+        from flext_infra._utilities import FlextInfraUtilitiesLintRecipes
+
         selected = {(root / finding.file).resolve() for finding in findings}
 
         def rewrite(path: Path, source: str) -> t.Infra.TransformResult:

@@ -12,8 +12,10 @@ from typing import Annotated, Literal, Self
 from flext_cli import m
 
 from flext_infra import t
-from flext_infra._models import (
+from flext_infra._models.deps_tool_config_linters import (
     FlextInfraModelsDepsToolConfigLinters,
+)
+from flext_infra._models.deps_tool_config_type_checkers import (
     FlextInfraModelsDepsToolConfigTypeCheckers,
 )
 
@@ -655,10 +657,9 @@ class FlextInfraModelsDepsToolConfig(
         omit: Annotated[
             t.StrSequence,
             m.Field(
-                default_factory=tuple,
                 description="Glob patterns excluded from coverage collection.",
             ),
-        ]
+        ] = m.Field(default_factory=tuple)
 
     class VultureConfig(m.ArbitraryTypesModel):
         """Vulture production-reachability policy loaded from YAML."""
@@ -700,11 +701,43 @@ class FlextInfraModelsDepsToolConfig(
             description="Glob patterns excluded from Markdown quality checks.",
         )
 
+    class BanditAuthorizedException(m.ArbitraryTypesModel):
+        """One path-scoped bandit check authorization."""
+
+        tests: Annotated[
+            t.StrTuple,
+            m.Field(
+                description="Bandit check IDs authorized for the owner files.",
+            ),
+        ]
+        files: Annotated[
+            t.StrTuple,
+            m.Field(
+                description="Owner file globs the authorization is scoped to.",
+            ),
+        ]
+
+    class BanditConfig(m.ArbitraryTypesModel):
+        """Bandit gate authorization policy.
+
+        The list stays empty unless an operator ruling names a real owner
+        scope; every other module spawns processes through the u.Cli process
+        family.
+        """
+
+        authorized_exceptions: Annotated[
+            t.VariadicTuple[FlextInfraModelsDepsToolConfig.BanditAuthorizedException],
+            m.Field(
+                alias="authorized-exceptions",
+                description="Path-scoped bandit check authorizations.",
+            ),
+        ] = ()
+
     class ToolConfigTools(m.ArbitraryTypesModel):
         """Tool map loaded from YAML."""
 
         bandit: FlextInfraModelsDepsToolConfig.BanditConfig = m.Field(
-            description="Bandit security gate settings",
+            description="Bandit gate authorization policy.",
         )
         codespell: FlextInfraModelsDepsToolConfig.CodespellConfig = m.Field(
             description="Codespell settings",

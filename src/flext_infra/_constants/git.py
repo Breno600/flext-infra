@@ -102,6 +102,12 @@ class FlextInfraConstantsGit:
     GIT_REFS_REMOTES: ClassVar[str] = "refs/remotes/"
     "Remote-tracking ref prefix."
 
+    GIT_REFS_TAGS: ClassVar[str] = "refs/tags/"
+    "Tag ref prefix."
+
+    GIT_REV_PARSE_ABSOLUTE_PATHS: ClassVar[str] = "--path-format=absolute"
+    "``git rev-parse`` option that prints the path queries following it as absolute."
+
     # --- Lane hygiene audit (stashes, merged branches, orphan worktrees) ---
 
     @unique

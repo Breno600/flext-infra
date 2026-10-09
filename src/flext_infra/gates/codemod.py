@@ -122,12 +122,34 @@ class FlextInfraCodemodGate(FlextInfraGate):
             )
 
         rules_by_id = {rule.id: rule for rule in planned.value.rules}
+        binary = u.Infra.managed_mise_binary(c.Infra.SG, self._repository_root)
+        if binary.failure:
+            failure = binary.error
+            if not failure:
+                msg = "managed scanner resolution failed without a diagnostic"
+                raise RuntimeError(msg)
+            return self._build_check_gate_execution(
+                project_dir,
+                passed=False,
+                issues=(
+                    m.Infra.Issue(
+                        file=c.PYPROJECT_FILENAME,
+                        line=1,
+                        column=0,
+                        code=self.gate_id,
+                        message=failure,
+                        severity=str(c.Infra.GateSeverity.ERROR.value),
+                    ),
+                ),
+                raw_output=failure,
+                started=started,
+            )
         findings: list[m.Infra.Issue] = []
         failures: list[m.Infra.Issue] = []
         raw_output: list[str] = []
         for ruleset in planned.value.rulesets:
             scan = self._run(
-                self._scan_command(ruleset, targets),
+                self._scan_command(ruleset, targets, binary.value),
                 project_dir,
                 timeout=self._check_timeout(project_dir, ctx),
             )
@@ -261,6 +283,7 @@ class FlextInfraCodemodGate(FlextInfraGate):
     def _scan_command(
         ruleset: m.Infra.CodemodRuleset,
         targets: t.StrSequence,
+        binary: Path,
     ) -> t.StrSequence:
         """Canonical ast-grep invocation for one composed provider ruleset.
 
@@ -279,7 +302,7 @@ class FlextInfraCodemodGate(FlextInfraGate):
             })
         )
         cmd: list[str] = [
-            c.Infra.SG,
+            str(binary),
             c.Infra.SCAN,
             "--config",
             str(ruleset.config),

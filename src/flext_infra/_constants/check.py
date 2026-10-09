@@ -205,6 +205,12 @@ class FlextInfraConstantsCheck:
     MARKDOWN_FIXED_SUFFIX: ClassVar[str] = "[fixed]"
     "rumdl text-output suffix marking a finding its mutating pass repaired."
     MARKDOWN_FORMAT_DIFF_HEADERS: ClassVar[t.StrPair] = ("--- ", "+++ ")
+    MARKDOWN_FORMAT_RE: ClassVar[t.RegexPattern] = re.compile(
+        # Prettier applies terminal SGR styling to the warning label in CI.
+        r"^\[(?:\x1b\[[0-9;]*m)*warn(?:\x1b\[[0-9;]*m)*\]"
+        r"\s+(?P<file>\S+\.md)\s*$",
+        re.MULTILINE,
+    )
     (
         "``rumdl fmt --check`` unified-diff header pair naming one file the "
         "formatter would rewrite; consecutive lines carry the same path."

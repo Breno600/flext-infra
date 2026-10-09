@@ -296,6 +296,24 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
                 description="Pyrefly errors enabled as strict defaults.",
             ),
         ]
+
+        @m.field_validator("strict_errors")
+        @classmethod
+        def reject_duplicate_strict_errors(cls, errors: t.StrSequence) -> t.StrSequence:
+            """Require one declaration for each rendered diagnostic key.
+
+            Returns:
+                The declared diagnostic sequence without deduplication or reordering.
+
+            Raises:
+                ValueError: If a diagnostic would overwrite another TOML value.
+
+            """
+            if len(errors) != len(set(errors)):
+                msg = "Pyrefly strict-errors rejects duplicate diagnostic declarations"
+                raise ValueError(msg)
+            return errors
+
         project_exclude_globs: Annotated[
             t.StrSequence,
             m.Field(

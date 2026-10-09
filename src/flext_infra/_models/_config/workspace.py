@@ -12,11 +12,9 @@ from typing import Annotated, Literal, Self
 from flext_cli import m
 
 from flext_infra import c, t
-from flext_infra._models import (
-    FlextInfraConfigModelsBeads,
-    FlextInfraConfigModelsContexts,
-    FlextInfraConfigModelsContract,
-)
+from flext_infra._models._config.beads import FlextInfraConfigModelsBeads
+from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
 
 
 class FlextInfraConfigModelsWorkspace:
@@ -174,7 +172,7 @@ class FlextInfraConfigModelsWorkspace:
                 description="Repository-owned documentation audit declarations",
             ),
         ] = m.Field(
-            default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+            default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec
         )
         namespace_scan_dirs: Annotated[
             t.StrSequence,
@@ -373,7 +371,7 @@ class FlextInfraConfigModelsWorkspace:
                 description="Validated local documentation audit declarations",
             ),
         ] = m.Field(
-            default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+            default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec
         )
         beads: Annotated[
             FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
