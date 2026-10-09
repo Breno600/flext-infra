@@ -32,7 +32,7 @@ class TestsFlextInfraLaneUsesPrimaryEnvironment:
         (repository / "Makefile").write_text(
             "PROJECT_ROOT := $(CURDIR)\n"
             "RUNTIME_ROOT := $(PROJECT_ROOT)\n"
-            "RUNTIME_VENV := $(word 2,$(shell git -C \"$(RUNTIME_ROOT)\" "
+            'RUNTIME_VENV := $(word 2,$(shell git -C "$(RUNTIME_ROOT)" '
             "worktree list --porcelain))/"
             f"{c.Infra.ENVIRONMENT_DIRECTORY}\n"
             ".PHONY: setup\n"
@@ -83,7 +83,16 @@ class TestsFlextInfraLaneUsesPrimaryEnvironment:
 
     @staticmethod
     def _lane(repository: Path, branch: str) -> Path:
-        return Path(u.Tests.WorktreeFixture.add_worktree(repository, branch))
+        # A native Git lane placed outside the primary's parent: the environment
+        # contract must hold wherever Git places the lane.
+        lane = repository.parent / "lanes" / branch.replace("/", "-")
+        tm.ok(
+            u.Cli.run_checked(
+                [c.Infra.GIT, "worktree", "add", "-b", branch, str(lane)],
+                cwd=repository,
+            ),
+        )
+        return lane.resolve()
 
     def test_lane_environment_is_the_primary_worktree_environment(
         self,
