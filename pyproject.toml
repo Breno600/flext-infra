@@ -142,9 +142,6 @@ exclude_also = [
   "if _t.TYPE_CHECKING:",
   "if TYPE_CHECKING:",
   "if typing.TYPE_CHECKING:",
-  "if _t.TYPE_CHECKING:",
-  "if TYPE_CHECKING:",
-  "if typing.TYPE_CHECKING:",
 ]
 precision = 2
 show_missing = true
@@ -153,9 +150,6 @@ skip_covered = false
 [tool.coverage.run]
 source = ["src"]
 omit = [
-  "*/dependency_injector/providers.pyx",
-  "*/protocols.py",
-  "*/_protocols/*",
   "*/dependency_injector/providers.pyx",
   "*/protocols.py",
   "*/_protocols/*",
@@ -230,7 +224,7 @@ project-excludes = [
   "typings/**",
   "vendor/**",
 ]
-project-includes = ["scripts/**/*.py*", "src/**/*.py*", "tests/**/*.py*"]
+project-includes = ["src/**/*.py*", "tests/**/*.py*"]
 python-version = "3.13"
 search-path = ["src", "."]
 use-ignore-files = false
@@ -376,10 +370,6 @@ addopts = [
   "--strict-markers",
   "--markdown-docs",
   "--durations=10",
-  "--benchmark-disable",
-  "--strict-markers",
-  "--markdown-docs",
-  "--durations=10",
   "--timeout=10",
 ]
 flext_slow_timeout_seconds = "30"
@@ -390,22 +380,6 @@ filterwarnings = [
   "once::pytest.PytestAssertRewriteWarning",
 ]
 markers = [
-  "smoke: public-interface smoke tests",
-  "unit: unit tests",
-  "integration: integration tests",
-  "functional: functional behavior tests",
-  "performance: performance and benchmark tests",
-  "slow: slow-running tests",
-  "docker: tests requiring Docker",
-  "oracle: tests requiring the shared Oracle database",
-  "remote: tests requiring remote/external network services",
-  "e2e: end-to-end integration tests",
-  "edge_cases: edge case tests",
-  "stress: stress tests",
-  "resilience: resilience tests",
-  "discovery: catalog and stream discovery tests",
-  "singer: Singer protocol contract tests",
-  "requires_engine: native check engine required by this test",
   "smoke: public-interface smoke tests",
   "unit: unit tests",
   "integration: integration tests",
@@ -444,7 +418,7 @@ namespace-packages = ["tests", "examples", "scripts"]
 preview = true
 respect-gitignore = true
 show-fixes = true
-src = ["scripts", "src", "tests"]
+src = ["src", "tests"]
 target-version = "py313"
 
 [tool.ruff.format]
@@ -457,10 +431,7 @@ skip-magic-trailing-comma = false
 [tool.ruff.lint]
 extend-safe-fixes = [
   "camelcase-imported-as-lowercase",
-  "camelcase-imported-as-lowercase",
   "relative-imports",
-  "relative-imports",
-  "typing-only-first-party-import",
   "typing-only-first-party-import",
 ]
 ignore = [
@@ -473,25 +444,16 @@ ignore = [
   "typing-only-standard-library-import",
   "typing-only-third-party-import",
 ]
-select = ["ALL", "ALL"]
+select = ["ALL"]
 unfixable = [
   "duplicate-value",
-  "duplicate-value",
-  "multi-value-repeated-key-literal",
   "multi-value-repeated-key-literal",
   "multi-value-repeated-key-variable",
-  "multi-value-repeated-key-variable",
-  "outdated-version-block",
   "outdated-version-block",
   "p-print",
-  "p-print",
-  "print",
   "print",
   "pytest-duplicate-parametrize-test-cases",
-  "pytest-duplicate-parametrize-test-cases",
   "redefined-while-unused",
-  "redefined-while-unused",
-  "unused-variable",
   "unused-variable",
 ]
 
@@ -514,9 +476,10 @@ runtime-evaluated-base-classes = [
   "flext_core.m.ArbitraryTypesModel",
   "flext_core.m.ContractModel",
   "flext_core.m.FlexibleModel",
-  "flext_core.m.ImmutableValueModel",
   "flext_core.m.RootModel",
   "flext_core.m.StrictBoundaryModel",
+  "flext_infra._models.FlextInfraModelsMixins.ProjectNameMixin",
+  "flext_infra._models.FlextInfraModelsMixins.WriteMixin",
   "flext_infra._models._codegen.fix.BulkFixItem",
   "flext_infra._models._codegen.pipeline.CodegenCommand",
   "flext_infra._models._config.contexts.MakeCommandContext",
@@ -527,6 +490,7 @@ runtime-evaluated-base-classes = [
   "flext_infra._models._config.external_cache.FlextInfraExternalCacheDirectorySpec",
   "flext_infra._models.codegen_render.MkdocsRenderContext",
   "flext_infra._models.git.GitRemoteRequest",
+  "flext_infra._models.git.GitRepoRequest",
   "flext_infra._models.layout._LayoutContract",
   "flext_infra._models.mise_toolchain._ConfigContract",
   "flext_infra._models.mixins.FilePathMixin",

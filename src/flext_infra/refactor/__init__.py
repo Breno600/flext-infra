@@ -43,12 +43,12 @@ if TYPE_CHECKING:
     )
     from flext_infra.refactor._census_render import FlextInfraRefactorCensusRenderMixin
     from flext_infra.refactor._import_ast import FlextInfraImportNormalizationAstMixin
-    from flext_infra.refactor._import_demotion import (
-        FlextInfraImportNormalizationDemotionMixin,
-    )
     from flext_infra.refactor._import_enforcement import FlextInfraImportNormalization
-    from flext_infra.refactor._import_family import (
-        FlextInfraImportNormalizationFamilyMixin,
+    from flext_infra.refactor._import_placement import (
+        FlextInfraImportNormalizationPlacementMixin,
+    )
+    from flext_infra.refactor._import_routes import (
+        FlextInfraImportNormalizationRoutesMixin,
     )
     from flext_infra.refactor._namespace_enforcer_project import (
         FlextInfraNamespaceEnforcerProjectMixin,
@@ -84,8 +84,8 @@ __all__: tuple[str, ...] = (
     "FlextInfraAccessorOriginResolver",
     "FlextInfraImportNormalization",
     "FlextInfraImportNormalizationAstMixin",
-    "FlextInfraImportNormalizationDemotionMixin",
-    "FlextInfraImportNormalizationFamilyMixin",
+    "FlextInfraImportNormalizationPlacementMixin",
+    "FlextInfraImportNormalizationRoutesMixin",
     "FlextInfraNamespaceEnforcer",
     "FlextInfraNamespaceEnforcerProjectMixin",
     "FlextInfraNamespaceRelocationCascade",
@@ -116,8 +116,8 @@ install_lazy_exports(
         "FlextInfraAccessorOriginResolver": "._accessor_origin",
         "FlextInfraImportNormalization": "._import_enforcement",
         "FlextInfraImportNormalizationAstMixin": "._import_ast",
-        "FlextInfraImportNormalizationDemotionMixin": "._import_demotion",
-        "FlextInfraImportNormalizationFamilyMixin": "._import_family",
+        "FlextInfraImportNormalizationPlacementMixin": "._import_placement",
+        "FlextInfraImportNormalizationRoutesMixin": "._import_routes",
         "FlextInfraNamespaceEnforcer": ".namespace_enforcer",
         "FlextInfraNamespaceEnforcerProjectMixin": "._namespace_enforcer_project",
         "FlextInfraNamespaceRelocationCascade": ".namespace_relocations",

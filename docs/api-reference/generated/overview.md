@@ -21,14 +21,14 @@
 - Project class: `infra`
 - Keywords: `automation`, `codegen`, `flext`, `infrastructure`, `tooling`
 - Main facades: `FlextInfra`, `FlextInfraAccessorMigrationOrchestrator`,
-  `FlextInfraAccessorRenamePhase`, `FlextInfraApplyRenames`, `FlextInfraBanditGate`,
-  `FlextInfraCProfileReport`, `FlextInfraCandidateBootstrapService`,
-  `FlextInfraCleanService` (+143 more)
+  `FlextInfraApplyRenames`, `FlextInfraBanditGate`, `FlextInfraCProfileReport`,
+  `FlextInfraCandidateBootstrapService`, `FlextInfraCleanService`, `FlextInfraCli` (+136
+  more)
 - Alias exports: `c`, `d`, `e`, `h`, `m`, `p`, `r`, `s`, `t`, `u`, `x`
 - Public symbol exports: `FlextInfra`, `FlextInfraAccessorMigrationOrchestrator`,
-  `FlextInfraAccessorRenamePhase`, `FlextInfraApplyRenames`, `FlextInfraBanditGate`,
-  `FlextInfraCProfileReport`, `FlextInfraCandidateBootstrapService`,
-  `FlextInfraCleanService`, `FlextInfraCli`, `FlextInfraCliDispatchService` (+145 more)
+  `FlextInfraApplyRenames`, `FlextInfraBanditGate`, `FlextInfraCProfileReport`,
+  `FlextInfraCandidateBootstrapService`, `FlextInfraCleanService`, `FlextInfraCli`,
+  `FlextInfraCliDispatchService`, `FlextInfraCliModProgress` (+138 more)
 - Exported module shortcuts: `check`, `codegen`, `codemod`, `deps`, `docs`, `gates`,
   `maintenance`, `refactor` (+5 more)
 - Generated module pages: `13`
