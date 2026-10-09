@@ -128,11 +128,14 @@ class FlextInfraDepsFloorProfileWriter:
     def _validated_sections(
         document: t.MappingKV[str, t.JsonValue],
         ssot_path: Path,
-    ) -> t.Pair[t.SequenceOf[t.JsonValue], m.Infra.CodegenConfigSpec]:
+    ) -> t.Pair[
+        t.SequenceOf[t.JsonValue],
+        t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec],
+    ]:
         """Navigate to and validate the dependency-profile declaration sections.
 
         Returns:
-            The ``(raw_profiles, validated_spec)`` pair.
+            The ``(raw_profiles, validated_profiles)`` pair.
 
         Raises:
             ValueError: If Infra section missing in; or if Infra.codegen section
@@ -150,7 +153,6 @@ class FlextInfraDepsFloorProfileWriter:
         if not codegen or not isinstance(codegen, dict):
             message = f"Infra.codegen section missing in {ssot_path}"
             raise ValueError(message)
-        validated = m.Infra.CodegenConfigSpec.model_validate(codegen)
         scaffold = codegen.get("scaffold")
         if not scaffold or not isinstance(scaffold, dict):
             message = f"Infra.codegen.scaffold section missing in {ssot_path}"
@@ -163,12 +165,22 @@ class FlextInfraDepsFloorProfileWriter:
         if not profiles or not isinstance(profiles, list):
             message = f"dependency_profiles missing or not a list in {ssot_path}"
             raise ValueError(message)
+        # Dependency modernization precedes generation during an upgrade. Only
+        # the profiles belong to this writer; unrelated sections may still use
+        # the previous generator's schema. Validate every profile before edits.
+        validated = tuple(
+            m.Infra.ScaffoldDependencyProfileSpec.model_validate(profile)
+            for profile in profiles
+        )
         return (profiles, validated)
 
     @classmethod
     def _rewrite_profiles(
         cls,
-        sections: t.Pair[t.SequenceOf[t.JsonValue], m.Infra.CodegenConfigSpec],
+        sections: t.Pair[
+            t.SequenceOf[t.JsonValue],
+            t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec],
+        ],
         ssot_path: Path,
         *,
         resolved_versions: t.MappingKV[str, str],
@@ -188,7 +200,7 @@ class FlextInfraDepsFloorProfileWriter:
         changes: t.MutableSequenceOf[str] = []
         for profile, contract in zip(
             profiles,
-            validated.scaffold.project.dependency_profiles,
+            validated,
             strict=True,
         ):
             if not isinstance(profile, dict):

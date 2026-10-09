@@ -89,6 +89,43 @@ class TestsFlextInfraModernizerFloorOwner:
         if member_path is not None:
             tm.that(self._source(modernizer_workspace).exists(), eq=False)
 
+    def test_upgrade_preserves_unowned_schema_and_comments(
+        self,
+        modernizer_workspace: Path,
+    ) -> None:
+        """Upgrade floors independently of unrelated generator-schema changes."""
+        versions = u.Infra.resolved_dependency_versions()
+        profile, name = next(
+            (profile, name)
+            for profile in config.Infra.codegen.scaffold.project.dependency_profiles
+            for requirement in profile.runtime
+            if (name := u.Infra.dep_name(requirement)) in versions
+        )
+        name = tm.not_none(name)
+        stale = f"{name}>=0.0.0"
+        content = (
+            "# Preserve owner annotation.\n"
+            "Infra:\n"
+            "  codegen:\n"
+            "    toolchain: # Previous generator schema.\n"
+            "      worktree_environment_directory: .legacy-env\n"
+            "    scaffold:\n"
+            "      project:\n"
+            "        dependency_profiles:\n"
+            f"          - upstream: {profile.upstream}\n"
+            "            runtime:\n"
+            f"              - {stale} # Preserve requirement annotation.\n"
+        )
+        source = self._source(modernizer_workspace)
+        source.write_text(content, encoding="utf-8")
+
+        tm.that(self._run(modernizer_workspace), eq=0)
+
+        rendered = source.read_text(encoding="utf-8")
+        tm.that(rendered, eq=content.replace(stale, f"{name}>={versions[name]}"))
+        tm.that(self._run(modernizer_workspace), eq=0)
+        tm.that(source.read_text(encoding="utf-8"), eq=rendered)
+
     @pytest.mark.parametrize(
         "content",
         [
@@ -98,6 +135,20 @@ class TestsFlextInfraModernizerFloorOwner:
             (
                 "Infra:\n  codegen:\n    scaffold:\n      project:\n"
                 "        dependency_profiles: []\n"
+            ),
+            (
+                "Infra:\n  codegen:\n    scaffold:\n      project:\n"
+                "        dependency_profiles:\n"
+                "          - upstream: example\n"
+                "            runtime: []\n"
+            ),
+            (
+                "Infra:\n  codegen:\n    scaffold:\n      project:\n"
+                "        dependency_profiles:\n"
+                "          - upstream: example\n"
+                "            runtime: [example>=0]\n"
+                "          - upstream: example\n"
+                "            runtime: [17]\n"
             ),
         ],
     )
@@ -112,7 +163,7 @@ class TestsFlextInfraModernizerFloorOwner:
 
         with pytest.raises(
             ValueError,
-            match=r"codegen|scaffold|dependency_profiles|flow sequence",
+            match=r"codegen|scaffold|dependency_profiles|flow sequence|runtime",
         ):
             self._run(modernizer_workspace)
 
