@@ -210,11 +210,13 @@ class FlextInfraCodemodGate(FlextInfraGate):
                 )
                 for finding in report.root
                 if u.Infra.codemod_context_admits(
-                    project_dir,
-                    rules_by_id[finding.rule_id],
-                    Path(finding.file),
-                    {**finding.captures, **finding.transformed},
-                    facts,
+                    m.Infra.CodemodAdmission(
+                        root=project_dir,
+                        rule=rules_by_id[finding.rule_id],
+                        file_path=Path(finding.file),
+                        captures={**finding.captures, **finding.transformed},
+                        facts=facts,
+                    ),
                 )
             )
 

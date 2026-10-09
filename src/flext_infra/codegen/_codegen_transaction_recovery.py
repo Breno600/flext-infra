@@ -83,19 +83,53 @@ class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):
         Returns:
             The resulting ``p.Result[bool]``.
         """
-        if self._participant_policy is None:
-            return r[bool].fail("footprint validation requires request authorization")
-        identity = self._planner.scope_identity()
+        identity = self._coordinated_identity()
         if identity.failure:
             return r[bool].from_failure(identity)
-        if identity.value.repo_root != self._participant_policy.scope_root:
-            return r[bool].fail("generation authorization coordination root differs")
         layout = self._planner.journal_layout(identity.value)
         if layout.failure:
             return r[bool].from_failure(layout)
         if layout.value.journal_path != footprint.journal_path:
             return r[bool].fail("generation footprint journal anchor changed")
-        observed = self._inspect_journal(identity.value)
+        anchor = self._footprint_anchor_matches(footprint, identity.value)
+        if anchor.failure:
+            return r[bool].from_failure(anchor)
+        if footprint.journal is not None:
+            return self._authorize_journal(layout.value, footprint.journal)
+        return self._authorize_roots((identity.value.repo_root,))
+
+    def _coordinated_identity(self) -> p.Result[m.Infra.GitIdentityReport]:
+        """Resolve the scope identity and hold it against the participant policy.
+
+        Returns:
+            The scope identity anchored at the authorized coordination root.
+
+        """
+        if self._participant_policy is None:
+            return r[m.Infra.GitIdentityReport].fail(
+                "footprint validation requires request authorization",
+            )
+        identity = self._planner.scope_identity()
+        if identity.failure:
+            return r[m.Infra.GitIdentityReport].from_failure(identity)
+        if identity.value.repo_root != self._participant_policy.scope_root:
+            return r[m.Infra.GitIdentityReport].fail(
+                "generation authorization coordination root differs",
+            )
+        return identity
+
+    def _footprint_anchor_matches(
+        self,
+        footprint: m.Infra.CodegenFootprint,
+        identity: m.Infra.GitIdentityReport,
+    ) -> p.Result[bool]:
+        """Compare the freshly observed journal against the authorized footprint.
+
+        Returns:
+            Success when the observed journal still matches the footprint.
+
+        """
+        observed = self._inspect_journal(identity)
         if observed.failure:
             return r[bool].from_failure(observed)
         if observed.value.snapshot != footprint.snapshot:
@@ -112,9 +146,7 @@ class FlextInfraCodegenTransactionRecovery(FlextInfraCodegenFileLeases):
                 "generation journal changed during footprint inspection; "
                 f"bytes_equal={bytes_equal}; normalized_fields_equal={fields_equal}",
             )
-        if footprint.journal is not None:
-            return self._authorize_journal(layout.value, footprint.journal)
-        return self._authorize_roots((identity.value.repo_root,))
+        return r[bool].ok(value=True)
 
     def _inspect_journal(
         self,

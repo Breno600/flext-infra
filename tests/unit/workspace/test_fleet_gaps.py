@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING
 from flext_tests import tm
 
 from flext_infra import main
+from flext_infra.check import FlextInfraWorkspaceChecker
 from tests import c, m, t, u
 
 if TYPE_CHECKING:
@@ -61,20 +62,6 @@ class TestsFlextInfraWorkspaceFleetGaps:
             u.Cli.atomic_write_text_file(
                 member / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH,
                 '{"findings": 7}\n',
-            ),
-        )
-        pyrefly = (
-            member
-            / c.Infra.REPORTS_DIR_NAME
-            / "check"
-            / member.name
-            / f"{member.name}-pyrefly.json"
-        )
-        tm.ok(u.Cli.atomic_write_text_file(pyrefly, '{"errors": [{}, {}]}\n'))
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                member / c.Infra.REPORTS_DIR_NAME / "check" / "check-report.md",
-                "# Workspace Check Report\n\n- lint: FAIL (4 issues)\n",
             ),
         )
         u.Tests.commit_git_changes(member, "commit published facts")
@@ -134,7 +121,7 @@ class TestsFlextInfraWorkspaceFleetGaps:
             yield log
 
     @staticmethod
-    def _fleet_gaps(root: Path) -> int:
+    def _fleet_gaps(root: Path, *receipts: Path) -> int:
         """Run the public fleet-gaps CLI once.
 
         Returns:
@@ -146,6 +133,11 @@ class TestsFlextInfraWorkspaceFleetGaps:
             c.Infra.FLEET_GAPS_ROUTE_NAME,
             "--repository-root",
             str(root),
+            *(
+                ("--quality-receipts", ",".join(str(path) for path in receipts))
+                if receipts
+                else ()
+            ),
         ])
 
     @staticmethod
@@ -189,8 +181,8 @@ class TestsFlextInfraWorkspaceFleetGaps:
         tm.that(member_row.present, eq=True)
         tm.that(member_row.dirty_paths, eq=("stray.txt",))
         tm.that(member_row.unmerged_branches, eq=1)
-        tm.that(member_row.lint_findings, eq=4)
-        tm.that(member_row.pyrefly_findings, eq=2)
+        tm.that(member_row.lint_findings, eq=None)
+        tm.that(member_row.pyrefly_findings, eq=None)
         tm.that(member_row.codemod_findings, eq=7)
         tm.that(member_row.agents_doc_present, eq=True)
         tm.that(member_row.skills_stamp_present, eq=True)
@@ -203,8 +195,8 @@ class TestsFlextInfraWorkspaceFleetGaps:
         tm.that(consumer_row.present, eq=False)
         tm.that(consumer_row.dirty_paths, eq=())
         tm.that(consumer_row.unmerged_branches, eq=0)
-        tm.that(consumer_row.lint_findings, eq=0)
-        tm.that(consumer_row.pyrefly_findings, eq=0)
+        tm.that(consumer_row.lint_findings, eq=None)
+        tm.that(consumer_row.pyrefly_findings, eq=None)
         tm.that(consumer_row.codemod_findings, eq=0)
         tm.that(consumer_row.agents_doc_present, eq=False)
         tm.that(consumer_row.skills_stamp_present, eq=False)
@@ -254,3 +246,167 @@ class TestsFlextInfraWorkspaceFleetGaps:
         )
         tm.that(member_row.open_pull_requests, eq=())
         tm.that(member_row.dirty_paths, eq=("stray.txt",))
+
+    @staticmethod
+    def _quality_receipt(
+        member: Path,
+        reports: Path,
+        gates: t.StrSequence,
+    ) -> tuple[Path, m.Infra.ProjectResult]:
+        """Publish a real checker invocation and return its exact native receipt.
+
+        Returns:
+            The published SARIF path and the executed project facts.
+        """
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                member / "src" / "sample.py",
+                '"""Sample quality consumer.\n\n'
+                "Copyright (c) 2026 FLEXT Team. All rights reserved.\n"
+                'SPDX-License-Identifier: MIT\n"""\n',
+            )
+        )
+        results = tm.ok(
+            FlextInfraWorkspaceChecker(repository_root=member).run_projects(
+                (m.Infra.CheckProjectTarget(name=member.name, path=member),),
+                gates,
+                reports_dir=reports,
+                fail_fast=False,
+            )
+        )
+        (project,) = results
+        execution = project.gates[gates[0]]
+        native = execution.raw_receipt
+        assert native is not None
+        return native.parent.parent / c.Infra.CHECK_REPORT_SARIF_FILENAME, project
+
+    def test_explicit_invocation_counts_only_its_own_executed_gates(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Exact receipt selection survives another invocation under the same base."""
+        root = tmp_path / "workspace"
+        member = u.Tests.WorktreeFixture.governed_workspace_with_member(
+            root, member=self.MEMBER
+        )
+        selected, project = self._quality_receipt(
+            member, tmp_path / "quality", (c.Infra.LINT, c.Infra.PYREFLY)
+        )
+        other, _ = self._quality_receipt(member, tmp_path / "quality", (c.Infra.LINT,))
+        tm.that(other, ne=selected)
+        with self._gh_on_path(tmp_path, "exit 0\n"):
+            tm.that(self._fleet_gaps(root, selected), eq=0)
+        row = next(row for row in self._receipt(root).repos if row.name == self.MEMBER)
+        tm.that(row.lint_findings, eq=project.gates[c.Infra.LINT].finding_count)
+        tm.that(row.pyrefly_findings, eq=project.gates[c.Infra.PYREFLY].finding_count)
+
+    def test_missing_gate_stays_unknown_and_duplicate_receipts_fail(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A lint invocation cannot invent Pyrefly or aggregate another lint run."""
+        root = tmp_path / "workspace"
+        member = u.Tests.WorktreeFixture.governed_workspace_with_member(
+            root, member=self.MEMBER
+        )
+        selected, project = self._quality_receipt(
+            member, tmp_path / "quality", (c.Infra.LINT,)
+        )
+        with self._gh_on_path(tmp_path, "exit 0\n"):
+            tm.that(self._fleet_gaps(root, selected), eq=0)
+            row = next(
+                row for row in self._receipt(root).repos if row.name == self.MEMBER
+            )
+            tm.that(row.lint_findings, eq=project.gates[c.Infra.LINT].finding_count)
+            tm.that(row.pyrefly_findings, eq=None)
+            before = (root / c.Infra.FLEET_GAPS_REPORT_RELATIVE_PATH).read_bytes()
+            tm.that(self._fleet_gaps(root, selected, selected), ne=0)
+            tm.that(
+                (root / c.Infra.FLEET_GAPS_REPORT_RELATIVE_PATH).read_bytes(), eq=before
+            )
+
+    def test_invalid_selected_receipts_never_publish_green_quality(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Missing, malformed, foreign and missing-native evidence fail causally."""
+        root = tmp_path / "workspace"
+        member = u.Tests.WorktreeFixture.governed_workspace_with_member(
+            root, member=self.MEMBER
+        )
+        selected, project = self._quality_receipt(
+            member, tmp_path / "quality", (c.Infra.LINT,)
+        )
+        malformed = tmp_path / "malformed.sarif"
+        tm.ok(u.Cli.atomic_write_text_file(malformed, "{"))
+        foreign = u.Tests.WorktreeFixture.self_named_project(
+            tmp_path / "foreign", "foreign"
+        )
+        unrelated, _ = self._quality_receipt(
+            foreign, tmp_path / "foreign-quality", (c.Infra.LINT,)
+        )
+        with self._gh_on_path(tmp_path, "exit 0\n"):
+            for invalid in (tmp_path / "missing.sarif", malformed, unrelated):
+                tm.that(self._fleet_gaps(root, invalid), ne=0)
+                tm.that(
+                    (root / c.Infra.FLEET_GAPS_REPORT_RELATIVE_PATH).exists(), eq=False
+                )
+            native = project.gates[c.Infra.LINT].raw_receipt
+            assert native is not None
+            native.unlink()
+            tm.that(self._fleet_gaps(root, selected), ne=0)
+            tm.that((root / c.Infra.FLEET_GAPS_REPORT_RELATIVE_PATH).exists(), eq=False)
+
+    def test_unexecuted_gates_remain_unknown_in_selected_receipt(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A project without Python targets publishes no lint/Pyrefly executions."""
+        root = tmp_path / "workspace"
+        member = u.Tests.WorktreeFixture.governed_workspace_with_member(
+            root, member=self.MEMBER
+        )
+        reports = tmp_path / "quality"
+        results = tm.ok(
+            FlextInfraWorkspaceChecker(repository_root=member).run_projects(
+                (m.Infra.CheckProjectTarget(name=member.name, path=member),),
+                (c.Infra.LINT, c.Infra.PYREFLY),
+                reports_dir=reports,
+            )
+        )
+        (project,) = results
+        tm.that(tuple(project.gates), eq=())
+        (selected,) = reports.glob(f"*/{c.Infra.CHECK_REPORT_SARIF_FILENAME}")
+        with self._gh_on_path(tmp_path, "exit 0\n"):
+            tm.that(self._fleet_gaps(root, selected), eq=0)
+        row = next(row for row in self._receipt(root).repos if row.name == self.MEMBER)
+        tm.that(row.lint_findings, eq=None)
+        tm.that(row.pyrefly_findings, eq=None)
+
+    def test_file_scoped_receipt_never_claims_full_project_quality(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """The public file-gate receipt stays selected but its fleet count is unknown."""
+        root = tmp_path / "workspace"
+        member = u.Tests.WorktreeFixture.governed_workspace_with_member(
+            root, member=self.MEMBER
+        )
+        source = Path("src/sample.py")
+        tm.ok(u.Cli.atomic_write_text_file(member / source, '"""Sample."""\n'))
+        reports = tmp_path / "quality"
+        checker = FlextInfraWorkspaceChecker(repository_root=member)
+        _ = checker.execute_payload(
+            m.Infra.RunCommand(
+                repository_root=member,
+                gates=(c.Infra.LINT,),
+                file=source.as_posix(),
+                reports_dir=str(reports),
+            )
+        )
+        (selected,) = reports.glob(f"*/{c.Infra.CHECK_REPORT_SARIF_FILENAME}")
+        with self._gh_on_path(tmp_path, "exit 0\n"):
+            tm.that(self._fleet_gaps(root, selected), eq=0)
+        row = next(row for row in self._receipt(root).repos if row.name == self.MEMBER)
+        tm.that(row.lint_findings, eq=None)
+        tm.that(row.pyrefly_findings, eq=None)

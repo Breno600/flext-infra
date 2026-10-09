@@ -51,15 +51,9 @@ class FlextInfraCodegenTransaction(
             The resulting ``p.Result[T]``.
 
         """
-        identity = self._planner.scope_identity()
+        identity = self._authorized_run_identity(roots)
         if identity.failure:
             return r[T].from_failure(identity)
-        authorized = self._authorize_roots(tuple(roots.values()))
-        if authorized.failure:
-            return r[T].from_failure(authorized)
-        preflight = self._preflight_journal(identity.value)
-        if preflight.failure:
-            return r[T].from_failure(preflight)
         proposed = self._planner.file_layout(
             identity.value.repo_root,
             roots,
@@ -96,6 +90,27 @@ class FlextInfraCodegenTransaction(
                     prepare=prepare,
                     operation=operation,
                 )
+
+    def _authorized_run_identity(
+        self,
+        roots: t.MappingKV[str, Path],
+    ) -> p.Result[m.Infra.GitIdentityReport]:
+        """Resolve the scope identity and authorize roots and journal for a run.
+
+        Returns:
+            The scope identity report of the transaction scope.
+
+        """
+        identity = self._planner.scope_identity()
+        if identity.failure:
+            return r[m.Infra.GitIdentityReport].from_failure(identity)
+        authorized = self._authorize_roots(tuple(roots.values()))
+        if authorized.failure:
+            return r[m.Infra.GitIdentityReport].from_failure(authorized)
+        preflight = self._preflight_journal(identity.value)
+        if preflight.failure:
+            return r[m.Infra.GitIdentityReport].from_failure(preflight)
+        return identity
 
     def _file_recovery_participants(
         self,

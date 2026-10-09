@@ -31,7 +31,7 @@ class FlextInfraUtilitiesSemanticCutoverModelFieldsBindings(
         required = {"u", "isinstance", "type", "getattr", "object", "dict"}
         for node in ast.walk(tree):
             if not isinstance(node, ast.ImportFrom) and required.intersection(
-                cls._bound_identifiers(node),
+                cls.bound_identifiers(node),
             ):
                 msg = "model-class narrowing conflicts with a local binding"
                 raise ValueError(msg)

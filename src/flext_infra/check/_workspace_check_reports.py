@@ -75,6 +75,7 @@ class FlextInfraWorkspaceCheckReportsMixin:
         cls,
         results: t.SequenceOf[m.Infra.ProjectResult],
         gates: t.StrSequence,
+        summary: m.Infra.CheckReportSummary | None = None,
     ) -> m.Infra.SarifReport:
         """Build the SARIF 2.1.0 report model from workspace gate results.
 
@@ -102,6 +103,7 @@ class FlextInfraWorkspaceCheckReportsMixin:
                     )
                     sarif_results.append(cls._sarif_issue(issue, rule_id))
         return m.Infra.SarifReport(
+            properties=summary,
             runs=(
                 m.Infra.SarifRun(
                     tool_name="flext-infra-check",
@@ -147,6 +149,7 @@ class FlextInfraWorkspaceCheckReportsMixin:
         resolved_gates: t.StrSequence,
         report_base: Path,
         outcome: p.Infra.WorkspaceLoopOutcome,
+        summary: m.Infra.CheckReportSummary,
     ) -> p.Result[t.SequenceOf[m.Infra.ProjectResult]]:
         """Write markdown/SARIF reports and print summary to output.
 
@@ -168,13 +171,14 @@ class FlextInfraWorkspaceCheckReportsMixin:
         if md_write_result.failure:
             return r[t.SequenceOf[m.Infra.ProjectResult]].from_failure(md_write_result)
         sarif_path = report_base / c.Infra.CHECK_REPORT_SARIF_FILENAME
-        sarif_report = cls._generate_sarif(results, resolved_gates)
-        try:
-            u.Infra.export_pydantic_json(sarif_report, sarif_path)
-        except OSError as exc:
-            return r[t.SequenceOf[m.Infra.ProjectResult]].fail(
-                f"failed to write sarif report: {exc}",
-                exception=exc,
+        sarif_report = cls._generate_sarif(results, resolved_gates, summary)
+        sarif_write_result = u.Cli.atomic_write_text_file(
+            sarif_path,
+            sarif_report.model_dump_json(indent=2, round_trip=True),
+        )
+        if sarif_write_result.failure:
+            return r[t.SequenceOf[m.Infra.ProjectResult]].from_failure(
+                sarif_write_result
             )
         total_findings = sum(project.total_findings for project in results)
         success = len(results) - outcome.failed

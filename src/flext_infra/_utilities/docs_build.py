@@ -152,7 +152,7 @@ class FlextInfraUtilitiesDocsBuild:
             / c.Infra.DEFAULT_DOCS_OUTPUT_DIR
             / f"{c.Infra.DIR_SITE}{site_suffix}"
         ).resolve()
-        mkdocs_logger = logging.getLogger(c.Infra.MKDOCS_LOGGER_NAME)
+        mkdocs_logger = u.fetch_logger(c.Infra.MKDOCS_LOGGER_NAME)
         warnings = BufferingHandler(capacity=sys.maxsize)
         warnings.setLevel(logging.WARNING)
         mkdocs_logger.addHandler(warnings)
@@ -187,7 +187,7 @@ class FlextInfraUtilitiesDocsBuild:
             FlextInfraUtilitiesDocsBuild._module_callable(mkdocs_build, "build"),
         )
         site_dir.parent.mkdir(parents=True, exist_ok=True)
-        logger = logging.getLogger("mkdocs")
+        logger = u.fetch_logger("mkdocs")
         diagnostics = logging.StreamHandler()
         diagnostics.setLevel(logging.WARNING)
         logger.addHandler(diagnostics)

@@ -240,7 +240,10 @@ class TestsFlextInfraCodemodGate:
             str(reports),
         ])
         tm.that(code, eq=1 if finding else 0)
-        findings = tm.ok(u.Infra.check_report_findings(project, reports_dir=reports))
+        (report_path,) = reports.glob(f"*/{c.Infra.CHECK_REPORT_SARIF_FILENAME}")
+        findings = tm.ok(
+            u.Infra.check_report_findings(project, reports_dir=report_path.parent),
+        )
         # The bundled policy rules also scan the selected file; the fixture
         # rule proves the scope, because the unselected sibling matches it too.
         tm.that(
@@ -274,6 +277,9 @@ class TestsFlextInfraCodemodGate:
 
         result = results[0]
         tm.that(result.passed, eq=False)
+        receipt = result.gates["codemod"].raw_receipt
+        assert receipt is not None
+        reports = receipt.parent.parent
         markdown = (reports / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME).read_text(
             encoding="utf-8",
         )

@@ -109,10 +109,9 @@ class FlextInfraModelsScan:
         binding_states: Annotated[
             tuple[m.Cli.AtomicFileState, ...],
             m.Field(
-                default_factory=tuple,
                 description="Closed occurrence-binding source receipts",
             ),
-        ]
+        ] = m.Field(default_factory=tuple)
         range: Annotated[
             t.JsonMapping,
             m.Field(description="Exact ast-grep source range payload"),

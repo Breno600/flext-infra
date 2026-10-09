@@ -128,7 +128,10 @@ class TestsFlextInfraCheckReportContract:
         tm.that(self._check_run(project, reports), eq=1)
 
         tm.that(self._sources(project), eq=before)
-        findings = tm.ok(u.Infra.check_report_findings(project, reports_dir=reports))
+        (report_path,) = reports.glob(f"*/{c.Infra.CHECK_REPORT_SARIF_FILENAME}")
+        findings = tm.ok(
+            u.Infra.check_report_findings(project, reports_dir=report_path.parent),
+        )
         tm.that(
             [
                 location.uri

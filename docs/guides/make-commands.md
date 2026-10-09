@@ -143,11 +143,21 @@ Two surfaces compose the per-repository verbs into fleet-scale loops. Both are
   members and external consumers and publishes `.reports/fleet-gaps.json`:
   per repository, its porcelain dirty paths, its open pull requests (a
   failing `gh` degrades to an empty list), its local branches not merged into
-  the integration line, the lint, pyrefly and codemod counts its own
-  `.reports` carry (an absent artifact counts zero), and the standards
+   the integration line, explicitly selected lint/Pyrefly execution counts,
+   the codemod count its own `.reports` carries (an absent mod artifact counts
+   zero), and the standards
   presence columns (`AGENTS.md`, `.agents/skills/.flext-stamp.json` with its
   `distribution_version`, `.beads/config.yaml`). The report carries no
-  timestamp: an unchanged tree re-publishes a byte-identical receipt.
+   timestamp: an unchanged tree re-publishes a byte-identical receipt.
+   `--quality-receipts path/to/check-report.sarif[,other/check-report.sarif]`
+   selects exact published check invocations, with relative paths resolved from
+   `--repository-root`. Their typed SARIF properties bind execution verdicts to
+   canonical project roots. No selection, missing gates, unreached projects and
+   file-scoped checks yield `null` (unknown/not executed), not zero or PASS.
+   Missing/malformed selected receipts, unrelated roots, native tool errors,
+   missing native output and duplicate full-project repo/gate selections fail
+   before hygiene probes. The auditor never searches by time or combines counts
+   from multiple captures of the same repo/gate.
 - `flext-infra refactor violations-sweep` measures the repository's mod scan
   totals, runs the canonical repair sequence (`make fix`, `make fmt`,
   `make mod`) in order, measures again, and publishes

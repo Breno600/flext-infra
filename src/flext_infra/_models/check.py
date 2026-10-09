@@ -74,7 +74,7 @@ class FlextInfraModelsCheck:
             str,
             m.Field(
                 alias="reports-dir",
-                description="Directory used to write check reports",
+                description="Base directory for unique invocation check reports",
             ),
         ] = f"{c.Infra.REPORTS_DIR_NAME}/check"
         check_only: Annotated[
@@ -104,7 +104,7 @@ class FlextInfraModelsCheck:
 
         @property
         def reports_dir_path(self) -> Path:
-            """Resolved reports directory path."""
+            """Resolve the requested base; the checker owns its unique run leaf."""
             reports_dir = Path(self.reports_dir).expanduser()
             if reports_dir.is_absolute():
                 return reports_dir.resolve()
@@ -532,6 +532,19 @@ class FlextInfraModelsCheck:
                 ],
             }
 
+    class CheckReportSummary(m.ContractModel):
+        """Invocation-owned execution facts retained by the published SARIF."""
+
+        targets: t.VariadicTuple[FlextInfraModelsCheck.CheckProjectTarget] = m.Field(
+            description="Canonical project roots selected for this invocation",
+        )
+        results: t.VariadicTuple[FlextInfraModelsCheck.ProjectResult] = m.Field(
+            description="Only executions reached by this invocation",
+        )
+        selected_files: t.VariadicTuple[Path] = m.Field(
+            description="File selection; empty means full-project execution",
+        )
+
     class SarifReport(m.ArbitraryTypesModel):
         """Complete SARIF 2.1.0 report; serializes and validates the same JSON."""
 
@@ -554,6 +567,10 @@ class FlextInfraModelsCheck:
         runs: t.VariadicTuple[FlextInfraModelsCheck.SarifRun] = m.Field(
             default_factory=tuple,
             description="SARIF runs",
+        )
+        properties: FlextInfraModelsCheck.CheckReportSummary | None = m.Field(
+            None,
+            description="Typed invocation targets and executions; absent is unknown",
         )
 
 

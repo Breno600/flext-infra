@@ -15,7 +15,7 @@ class FlextInfraUtilitiesSemanticCutoverBindings:
     """Enumerate language bindings without guessing their runtime values."""
 
     @staticmethod
-    def _bound_identifiers(node: ast.AST) -> t.VariadicTuple[str]:
+    def bound_identifiers(node: ast.AST) -> t.VariadicTuple[str]:
         """Include match, exception, import, type-parameter and scope targets.
 
         Returns:

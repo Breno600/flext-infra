@@ -59,7 +59,10 @@ class TestsFlextInfraGateErrorReporting:
             project.total_findings,
             eq=sum(len(item.issues) for item in project.gates.values()),
         )
-        report = (reports_dir / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME).read_text(
+        receipt = project.gates[gates[0]].raw_receipt
+        assert receipt is not None
+        report_path = receipt.parent.parent / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME
+        report = report_path.read_text(
             encoding="utf-8",
         )
         for gate in gates:
@@ -165,10 +168,11 @@ class TestsFlextInfraGateErrorReporting:
         assert execution.raw_receipt is not None
         tm.that(
             execution.raw_receipt,
-            eq=reports_dir
-            / project_dir.name
+            eq=execution.raw_receipt.parent
             / (f"{c.Infra.SECURITY}{config.Infra.tooling.raw_check_receipt_suffix}"),
         )
+        tm.that(execution.raw_receipt.parent.name, eq=project_dir.name)
+        tm.that(execution.raw_receipt.parent.parent.parent, eq=reports_dir)
         receipt = execution.raw_receipt.read_bytes().decode("utf-8")
         tm.that(receipt, eq=execution.raw_output, has=source_marker)
         tm.that(
@@ -179,7 +183,10 @@ class TestsFlextInfraGateErrorReporting:
             ),
             eq=True,
         )
-        report = (reports_dir / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME).read_text(
+        report_path = (
+            execution.raw_receipt.parent.parent / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME
+        )
+        report = report_path.read_text(
             encoding="utf-8",
         )
         tm.that(
@@ -196,10 +203,10 @@ class TestsFlextInfraGateErrorReporting:
 
     @staticmethod
     @pytest.mark.slow
-    def test_workspace_receipt_write_failure_escapes(
+    def test_workspace_preserves_unowned_receipt_destination(
         tmp_path: Path,
     ) -> None:
-        """A real blocked receipt destination cannot yield a successful check."""
+        """An unowned historical destination is never overwritten or reused."""
         project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
         source_file = (
             project_dir
@@ -220,12 +227,18 @@ class TestsFlextInfraGateErrorReporting:
         )
         blocked_receipt.mkdir(parents=True)
 
-        with pytest.raises(RuntimeError, match=blocked_receipt.name):
+        projects = tm.ok(
             FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
                 [project_dir.name],
                 [c.Infra.SECURITY],
                 reports_dir=reports_dir,
-            )
+            ),
+        )
+        receipt = projects[0].gates[c.Infra.SECURITY].raw_receipt
+        assert receipt is not None
+        tm.that(receipt.is_file(), eq=True)
+        tm.that(receipt, ne=blocked_receipt)
+        tm.that(blocked_receipt.is_dir(), eq=True)
 
     @staticmethod
     @pytest.mark.slow
@@ -312,8 +325,10 @@ class TestsFlextInfraGateErrorReporting:
         tm.that(result.value[0].passed, eq=False)
         captured = capsys.readouterr()
         tm.that(f"{captured.out}\n{captured.err}", has=list(expected))
+        receipt = result.value[0].gates[c.Infra.MARKDOWN].raw_receipt
+        assert receipt is not None
         report = m.Infra.SarifReport.model_validate_json(
-            (tmp_path / "reports" / c.Infra.CHECK_REPORT_SARIF_FILENAME).read_text(
+            (receipt.parent.parent / c.Infra.CHECK_REPORT_SARIF_FILENAME).read_text(
                 encoding="utf-8",
             ),
         )

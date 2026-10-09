@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from flext_cli import u
+
 from flext_infra import c, m, r, t
 
 if TYPE_CHECKING:
@@ -23,29 +25,19 @@ class FlextInfraUtilitiesLogParser:
     def check_report_findings(
         repository_root: Path,
         *,
-        reports_dir: Path | None = None,
+        reports_dir: Path,
     ) -> p.Result[t.VariadicTuple[m.Infra.SarifResult]]:
         """Read the SARIF report ``check run`` wrote into typed findings.
 
-        ``reports_dir`` mirrors ``check run --reports-dir``: a relative value is
-        anchored at ``repository_root``; omitted, it is the canonical project
-        check report directory the checker writes by default.
+        ``reports_dir`` is the exact invocation directory printed by ``check run``,
+        not its shared base. Relative values are anchored at ``repository_root``.
+        No implicit latest report is selected from concurrent or historical runs.
 
         Returns:
             The resulting ``p.Result[t.VariadicTuple[m.Infra.SarifResult]]``.
 
         """
-        from flext_cli import u
-
-        report_dir = (
-            u.Cli.resolve_report_dir(
-                repository_root,
-                c.Infra.PROJECT,
-                c.Infra.VERB_CHECK,
-            )
-            if reports_dir is None
-            else (repository_root / reports_dir).resolve()
-        )
+        report_dir = (repository_root / reports_dir).resolve()
         sarif_path = report_dir / c.Infra.CHECK_REPORT_SARIF_FILENAME
         if not sarif_path.is_file():
             return r[t.VariadicTuple[m.Infra.SarifResult]].fail(
