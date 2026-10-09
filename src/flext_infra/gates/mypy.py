@@ -137,6 +137,10 @@ class FlextInfraMypyGate(FlextInfraGate):
 
         """
         cfg = self._resolve_config(project_dir, ctx)
+        machine_report = self._machine_report_path(project_dir, ctx)
+        # The report file belongs to exactly one run: a stale receipt from a
+        # previous invocation must never masquerade as this run's diagnostics.
+        machine_report.unlink(missing_ok=True)
         profile_output = u.Cli.process_env().get(c.Infra.MYPY_PROFILE_OUTPUT_ENV)
         destination = None
         if profile_output is not None:
@@ -154,7 +158,7 @@ class FlextInfraMypyGate(FlextInfraGate):
                 report_json=True,
                 verbose=True,
                 profile_output=destination,
-                report_file=self._machine_report_path(project_dir, ctx),
+                report_file=machine_report,
             ),
         )
 
