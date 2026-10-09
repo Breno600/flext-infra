@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
+from flext_infra import config
 from flext_infra.__version__ import FlextInfraVersion
 from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
