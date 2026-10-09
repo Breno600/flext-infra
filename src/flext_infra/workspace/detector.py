@@ -84,23 +84,6 @@ class FlextInfraWorkspaceDetector(
         """
         return repository_root / c.CONFIG_DIR_NAME / c.Infra.BEADS_CONFIG_FILENAME
 
-    @staticmethod
-    def _beads_enabled(manifest: m.Infra.WorkspaceManifestSpec) -> bool:
-        """Resolve Beads participation from the manifest's matched policy.
-
-        Returns:
-            The resulting ``bool``.
-
-        """
-        return next(
-            (
-                overlay.beads_enabled
-                for overlay in manifest.repository_policy_overlays
-                if overlay.project == manifest.repository.distribution
-            ),
-            True,
-        )
-
     @classmethod
     def _composed_beads_identity_error(
         cls,
@@ -569,8 +552,9 @@ class FlextInfraWorkspaceDetector(
             The resulting ``p.Result[m.Infra.RepositoryRef | Path]``.
 
         """
-        workspace_beads = context.workspace_beads
         result_type = r[m.Infra.RepositoryRef | Path]
+        if path.is_absolute() or not path.parts or ".." in path.parts:
+            return result_type.fail(f"invalid .gitmodules path: {path.as_posix()}")
         contract = u.Infra.git_submodule_declaration(
             m.Infra.GitSubmoduleContractRequest(
                 repo_root=repository_root,
@@ -579,7 +563,6 @@ class FlextInfraWorkspaceDetector(
         )
         if contract.failure:
             return result_type.from_failure(contract)
-        declared_url = contract.value.url
         if contract.value.managed is False:
             return result_type.ok(path)
         if not u.Infra.gitmodule_branch_is_governed(
@@ -590,7 +573,27 @@ class FlextInfraWorkspaceDetector(
                 "governed subproject branch differs from the workspace "
                 f"integration line: {path.as_posix()}",
             )
-        return result_type.ok(contract.value)
+        subproject_root = cls._validated_subproject_root(repository_root, path)
+        if subproject_root.failure:
+            return result_type.from_failure(subproject_root)
+        if declared_member is not None:
+            member = cls._declared_member_result(
+                subproject_root.value,
+                path,
+                declared_member=declared_member,
+                declared_url=contract.value.url,
+                allow_unprovisioned_members=context.allow_unprovisioned_members,
+            )
+            if member is not None:
+                return member
+        if not subproject_root.value.is_dir():
+            return cls._indexed_gitlink_result(repository_root, path)
+        return cls._governed_member_result(
+            subproject_root.value,
+            path,
+            declared_url=contract.value.url,
+            workspace_beads=context.workspace_beads,
+        )
 
     @staticmethod
     def _validated_subproject_root(

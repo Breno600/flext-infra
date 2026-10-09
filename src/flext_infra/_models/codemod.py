@@ -45,7 +45,7 @@ class FlextInfraModelsCodemod:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         states: Annotated[
-            tuple[cli_m.Cli.AtomicFileState, ...],
+            tuple[m.Cli.AtomicFileState, ...],
             m.Field(description="Consumer and resolved Python import-owner inputs"),
         ]
 

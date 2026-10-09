@@ -462,19 +462,18 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
             module_name,
             name,
         )
-        if not isinstance(result, p.Infra.RopeRuntimeSequence):
+        if not isinstance(result, tuple):
             msg = "Rope add_import returned an invalid source and binding pair"
             raise TypeError(msg)
-        pair = result
-        if not isinstance(result, tuple) or len(pair) != 2:
-            msg = "Rope add_import returned an invalid source and binding pair"
-            raise TypeError(msg)
-        source = pair[0]
-        binding = pair[1]
-        if not isinstance(source, str) or not isinstance(binding, str):
-            msg = "Rope add_import returned non-text source or binding"
-            raise TypeError(msg)
-        return (source, binding)
+        match result:
+            case (source, binding):
+                if not isinstance(source, str) or not isinstance(binding, str):
+                    msg = "Rope add_import returned non-text source or binding"
+                    raise TypeError(msg)
+                return (source, binding)
+            case _:
+                msg = "Rope add_import returned an invalid source and binding pair"
+                raise TypeError(msg)
 
     @classmethod
     def build_string_module(

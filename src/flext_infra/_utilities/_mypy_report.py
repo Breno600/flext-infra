@@ -54,12 +54,7 @@ class FlextInfraMypyReportRunner:
         stderr: str,
         report_path: Path,
     ) -> None:
-        """Classify the checker output into the report file and the error stream.
-
-        Raises:
-            OSError: If the report destination cannot be written.
-
-        """
+        """Classify the checker output into the report file and the error stream."""
         with report_path.open("w", encoding=c.Cli.ENCODING_DEFAULT) as report:
             for line in stdout.splitlines():
                 if cls._is_machine_line(line):

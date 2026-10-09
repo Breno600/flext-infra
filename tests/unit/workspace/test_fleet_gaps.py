@@ -442,7 +442,7 @@ class TestsFlextInfraWorkspaceFleetGaps:
         self,
         tmp_path: Path,
     ) -> None:
-        """The public file-gate receipt stays selected but its fleet count is unknown."""
+        """A public file-gate receipt stays selected; its fleet count is unknown."""
         root = tmp_path / "workspace"
         member = u.Tests.WorktreeFixture.governed_workspace_with_member(
             root, member=self.MEMBER

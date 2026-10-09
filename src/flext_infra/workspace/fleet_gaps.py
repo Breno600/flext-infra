@@ -281,99 +281,142 @@ class FlextInfraWorkspaceFleetGaps(s[m.Infra.FleetGapsReport]):
         Returns:
             Counts keyed by canonical checkout root and executed quality gate.
         """
+        result = r[t.MappingKV[tuple[Path, str], int]]
         counts: dict[tuple[Path, str], int] = {}
         if self.quality_receipts is None:
-            return r[t.MappingKV[tuple[Path, str], int]].ok(counts)
-        roots = {(root / member.path).resolve() for member in workspace.subprojects} | {
-            consumer.root.resolve() for consumer in workspace.external_consumers
-        }
+            return result.ok(counts)
+        roots = frozenset(
+            {(root / member.path).resolve() for member in workspace.subprojects}
+            | {consumer.root.resolve() for consumer in workspace.external_consumers},
+        )
         for selected in self.quality_receipts.split(","):
             if not selected.strip():
-                return r[t.MappingKV[tuple[Path, str], int]].fail(
+                return result.fail(
                     "quality-receipts requires nonempty explicit SARIF paths"
                 )
             path = (root / selected.strip()).resolve()
-            try:
-                report = m.Infra.SarifReport.model_validate_json(path.read_bytes())
-            except (OSError, ValueError) as exc:
-                return r[t.MappingKV[tuple[Path, str], int]].fail(
-                    f"Invalid quality receipt {path}: {exc}", exception=exc
-                )
-            summary = report.properties
+            summary = self._quality_receipt(path, roots)
+            if summary.failure:
+                return result.from_failure(summary)
+            counted = self._receipt_counts(path, summary.value, roots, counts)
+            if counted.failure:
+                return result.from_failure(counted)
+        return result.ok(counts)
+
+    @staticmethod
+    def _quality_receipt(
+        path: Path,
+        roots: frozenset[Path],
+    ) -> p.Result[m.Infra.CheckReportSummary]:
+        """Load one selected native receipt and prove its invocation facts.
+
+        Returns:
+            The typed invocation summary, or the first violated receipt fact.
+        """
+        result = r[m.Infra.CheckReportSummary]
+        try:
+            report = m.Infra.SarifReport.model_validate_json(path.read_bytes())
+        except (OSError, ValueError) as exc:
+            return result.fail(f"Invalid quality receipt {path}: {exc}", exception=exc)
+        summary = report.properties
+        if (
+            summary is None
+            or len(report.runs) != 1
+            or (report.runs[0].tool_name != "flext-infra-check")
+        ):
+            return result.fail(f"Quality receipt lacks native invocation facts: {path}")
+        if len(report.runs[0].results) != sum(
+            project.total_findings for project in summary.results
+        ):
+            return result.fail(
+                f"Quality receipt findings disagree with executions: {path}"
+            )
+        targets = {target.name: target.path for target in summary.targets}
+        if (
+            not targets
+            or len(targets) != len(summary.targets)
+            or any(
+                not target.is_absolute() or target.resolve() not in roots
+                for target in targets.values()
+            )
+        ):
+            return result.fail(
+                f"Unbound or duplicate project targets in quality receipt: {path}"
+            )
+        return result.ok(summary)
+
+    @classmethod
+    def _receipt_counts(
+        cls,
+        path: Path,
+        summary: m.Infra.CheckReportSummary,
+        roots: frozenset[Path],
+        counts: dict[tuple[Path, str], int],
+    ) -> p.Result[bool]:
+        """Add one receipt's full-project lint/Pyrefly counts, refusing ambiguity.
+
+        Returns:
+            True once every executed quality gate of the receipt is counted.
+        """
+        result = r[bool]
+        targets = {target.name: target.path for target in summary.targets}
+        seen: set[str] = set()
+        for project in summary.results:
+            project_root = targets.get(project.project)
             if (
-                summary is None
-                or len(report.runs) != 1
-                or (report.runs[0].tool_name != "flext-infra-check")
+                project_root is None
+                or project_root.resolve() not in roots
+                or project.project in seen
             ):
-                return r[t.MappingKV[tuple[Path, str], int]].fail(
-                    f"Quality receipt lacks native invocation facts: {path}"
+                return result.fail(
+                    f"Unbound or duplicate quality project {project.project}: {path}"
                 )
-            targets = {target.name: target.path for target in summary.targets}
-            if len(report.runs[0].results) != sum(
-                project.total_findings for project in summary.results
-            ):
-                return r[t.MappingKV[tuple[Path, str], int]].fail(
-                    f"Quality receipt findings disagree with executions: {path}"
-                )
-            if (
-                not targets
-                or len(targets) != len(summary.targets)
-                or any(
-                    not target.is_absolute() or target.resolve() not in roots
-                    for target in targets.values()
-                )
-            ):
-                return r[t.MappingKV[tuple[Path, str], int]].fail(
-                    f"Unbound or duplicate project targets in quality receipt: {path}"
-                )
-            seen: set[str] = set()
-            for project in summary.results:
-                project_root = targets.get(project.project)
-                if (
-                    project_root is None
-                    or not project_root.is_absolute()
-                    or (project_root.resolve() not in roots or project.project in seen)
-                ):
-                    return r[t.MappingKV[tuple[Path, str], int]].fail(
-                        f"Unbound or duplicate quality project {project.project}: "
-                        f"{path}"
+            seen.add(project.project)
+            for gate in (c.Infra.LINT, c.Infra.PYREFLY):
+                execution = project.gates.get(gate)
+                if execution is None:
+                    continue
+                if not cls._execution_proven(gate, project.project, execution, path):
+                    return result.fail(
+                        f"Invalid quality execution {project.project}/{gate}: {path}"
                     )
-                seen.add(project.project)
-                for gate in (c.Infra.LINT, c.Infra.PYREFLY):
-                    execution = project.gates.get(gate)
-                    if execution is None:
-                        continue
-                    if execution.result.gate != gate or (
-                        execution.outcome == c.Infra.ToolOutcome.ERROR
-                        or execution.result.project != project.project
-                        or (not execution.result.passed and not execution.issues)
-                        or (
-                            execution.outcome == c.Infra.ToolOutcome.CLEAN
-                            and (execution.issues or not execution.result.passed)
-                        )
-                        or (
-                            execution.outcome == c.Infra.ToolOutcome.FINDINGS
-                            and not execution.issues
-                        )
-                        or execution.raw_receipt is None
-                        or not execution.raw_receipt.is_file()
-                        or not execution.raw_receipt.resolve().is_relative_to(
-                            path.parent
-                        )
-                    ):
-                        return r[t.MappingKV[tuple[Path, str], int]].fail(
-                            f"Invalid quality execution {project.project}/{gate}: "
-                            f"{path}"
-                        )
-                    if summary.selected_files:
-                        continue
-                    key = (project_root.resolve(), gate)
-                    if key in counts:
-                        return r[t.MappingKV[tuple[Path, str], int]].fail(
-                            f"Ambiguous quality receipts for {project_root}/{gate}"
-                        )
-                    counts[key] = execution.finding_count
-        return r[t.MappingKV[tuple[Path, str], int]].ok(counts)
+                if summary.selected_files:
+                    continue
+                key = (project_root.resolve(), gate)
+                if key in counts:
+                    return result.fail(
+                        f"Ambiguous quality receipts for {project_root}/{gate}"
+                    )
+                counts[key] = execution.finding_count
+        return result.ok(value=True)
+
+    @staticmethod
+    def _execution_proven(
+        gate: str,
+        project: str,
+        execution: m.Infra.GateExecution,
+        path: Path,
+    ) -> bool:
+        """Whether one gate execution is a completed native run of this receipt.
+
+        Returns:
+            True only when verdict, outcome, issues and raw receipt agree.
+        """
+        outcome = execution.outcome
+        receipt = execution.raw_receipt
+        facts = (
+            execution.result.gate == gate,
+            outcome != c.Infra.ToolOutcome.ERROR,
+            execution.result.project == project,
+            execution.result.passed or bool(execution.issues),
+            outcome != c.Infra.ToolOutcome.CLEAN
+            or (not execution.issues and execution.result.passed),
+            outcome != c.Infra.ToolOutcome.FINDINGS or bool(execution.issues),
+            receipt is not None
+            and receipt.is_file()
+            and receipt.resolve().is_relative_to(path.parent),
+        )
+        return all(facts)
 
     @staticmethod
     def _codemod_findings(repo_root: Path) -> int:
