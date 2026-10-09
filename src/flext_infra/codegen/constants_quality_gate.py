@@ -13,7 +13,7 @@ from collections.abc import MutableMapping
 from concurrent.futures import Future, ThreadPoolExecutor
 from typing import TYPE_CHECKING, override
 
-from flext_infra import r, c, m, t, u
+from flext_infra import c, m, r, t, u
 from flext_infra.base import s
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
 from flext_infra.refactor.census import FlextInfraRefactorCensus
@@ -443,9 +443,11 @@ class FlextInfraCodegenQualityGate(s[bool]):
             "Current:",
             f"- violations: {after.get('total_violations', 'n/a')}",
             f"- duplicates: {after.get('duplicate_groups', 'n/a')}",
-            f"- projects: {after.get('projects_total', 0)} total, "
-            f"{after.get('projects_passed', 0)} passed, "
-            f"{after.get('projects_failed', 0)} failed",
+            (
+                f"- projects: {after.get('projects_total', 0)} total, "
+                f"{after.get('projects_passed', 0)} passed, "
+                f"{after.get('projects_failed', 0)} failed"
+            ),
         ])
         if duplicate_groups:
             lines.extend(["", "Duplicate Groups:"])

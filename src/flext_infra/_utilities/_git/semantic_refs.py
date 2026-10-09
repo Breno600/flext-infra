@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from git import BadName, GitCommandError
 
-from flext_infra import r, c, m
+from flext_infra import c, m, r
 from flext_infra._utilities._git.worktree import FlextInfraUtilitiesGitWorktreeMixin
 
 if TYPE_CHECKING:

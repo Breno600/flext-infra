@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_infra import r, config, m, p, t, u
+from flext_infra import config, m, p, r, t, u
 
 
 class FlextInfraCodegenLayoutFilesMixin:

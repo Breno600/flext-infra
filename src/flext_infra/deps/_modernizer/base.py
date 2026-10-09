@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Annotated, override
 
-from flext_infra import r, config, m, p, t
+from flext_infra import config, m, p, r, t
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
 from flext_infra.deps._modernizer.document import FlextInfraPyprojectModernizerDocument
 from flext_infra.deps._modernizer.run import FlextInfraPyprojectModernizerRun

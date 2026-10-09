@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from git import GitCommandError, Repo
 
-from flext_infra import r, c, m, t
+from flext_infra import c, m, r, t
 from flext_infra._utilities._git.repo import FlextInfraUtilitiesGitRepo
 
 if TYPE_CHECKING:

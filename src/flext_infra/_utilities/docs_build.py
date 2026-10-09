@@ -153,7 +153,7 @@ class FlextInfraUtilitiesDocsBuild:
         ).resolve()
         try:
             FlextInfraUtilitiesDocsBuild._run_mkdocs_api(settings, site_dir)
-        except Exception as exc:  # ruff: ignore[blind-except] - reported, not swallowed
+        except Exception as exc:
             return m.Infra.DocsPhaseReport(
                 phase="build",
                 scope=scope.name,

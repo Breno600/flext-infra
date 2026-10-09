@@ -20,7 +20,7 @@ from collections.abc import MutableMapping
 from fnmatch import fnmatch
 from pathlib import Path
 
-from flext_infra import r, c, m, p, t, u
+from flext_infra import c, m, p, r, t, u
 from flext_infra._config import FlextInfraConfig
 from flext_infra.codegen import (
     FlextInfraCodegenMiseArtifacts,

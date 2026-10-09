@@ -11,7 +11,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import r, c, m, settings, t, u
+from flext_infra import c, m, r, settings, t, u
 
 if TYPE_CHECKING:
     from flext_infra import p

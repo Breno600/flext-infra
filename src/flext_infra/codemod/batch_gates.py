@@ -13,7 +13,7 @@ import tempfile
 from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 
-from flext_infra import r, c, m, p, settings, t, u
+from flext_infra import c, m, p, r, settings, t, u
 from flext_infra.codemod import FlextInfraCodemodSnapshotReconciler
 
 

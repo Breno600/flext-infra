@@ -14,6 +14,7 @@ from typing import override
 
 from flext_cli import u
 
+from flext_core import c, m, t
 from flext_infra import config
 from flext_infra._utilities import (
     FlextInfraUtilitiesGit,
@@ -22,9 +23,6 @@ from flext_infra._utilities import (
 from flext_infra._utilities.workspace_manifest import (
     FlextInfraUtilitiesWorkspaceManifest,
 )
-from flext_core import c
-from flext_core import m
-from flext_core import t
 
 
 class FlextInfraUtilitiesProjectDiscovery(

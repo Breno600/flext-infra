@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_infra import r, c, m, t
+from flext_infra import c, m, r, t
 from flext_infra._utilities._docs_scope_selection import (
     FlextInfraUtilitiesDocsScopeSelectionMixin,
 )

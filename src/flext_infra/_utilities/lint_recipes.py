@@ -17,6 +17,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import ast
+import operator
 import re
 import textwrap
 from collections.abc import MutableMapping
@@ -171,7 +172,7 @@ class FlextInfraUtilitiesLintRecipes:
                 start, end, raw = cls._literal(lines, module_docstring, path)
                 edits.append((start, end, cls._with_notice(raw, notice)))
         rewritten = source
-        for start, end, text in sorted(edits, key=lambda edit: edit[0], reverse=True):
+        for start, end, text in sorted(edits, key=operator.itemgetter(0), reverse=True):
             rewritten = f"{rewritten[:start]}{text}{rewritten[end:]}"
         return rewritten
 

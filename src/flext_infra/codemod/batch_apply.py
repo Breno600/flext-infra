@@ -10,7 +10,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import override
 
-from flext_infra import r, FlextInfraServiceBase, m, p, t, u
+from flext_infra import FlextInfraServiceBase, m, p, r, t, u
 from flext_infra.codemod import (
     FlextInfraCodemodSemanticApply,
     FlextInfraModGateEngine,

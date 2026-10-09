@@ -10,7 +10,7 @@ import operator
 from collections.abc import MutableMapping
 from pathlib import Path
 
-from flext_infra import r, c, m, p, t, u
+from flext_infra import c, m, p, r, t, u
 from flext_infra.__version__ import FlextInfraVersion
 
 

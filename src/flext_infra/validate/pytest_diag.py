@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, ClassVar, override
 
-from flext_infra import r, c, m, u
+from flext_infra import c, m, r, u
 from flext_infra.base import s
 from flext_infra.validate._pytest_diag_xml import FlextInfraPytestDiagXmlMixin
 

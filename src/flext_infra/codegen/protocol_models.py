@@ -14,7 +14,7 @@ from typing import TypeAliasType, get_args, override
 
 from flext_cli import cli
 
-from flext_infra import r, FlextInfraServiceBase, m, p, t, u
+from flext_infra import FlextInfraServiceBase, m, p, r, t, u
 from flext_infra.codegen._protocol_model_annotations import (
     FlextInfraCodegenProtocolModelAnnotations,
 )

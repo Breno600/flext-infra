@@ -10,7 +10,7 @@ from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, override
 
-from flext_infra import r, c, m, t, u
+from flext_infra import c, m, r, t, u
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
 from flext_infra.codegen._mise_artifacts_derivation import (
     FlextInfraMiseArtifactsDerivation,

@@ -13,7 +13,7 @@ from pathlib import Path
 
 from flext_cli import u
 
-from flext_infra import r, c, m, p, t
+from flext_infra import c, m, p, r, t
 from flext_infra._utilities.git import FlextInfraUtilitiesGit
 from flext_infra._utilities.managed_conflicts import FlextInfraUtilitiesManagedConflicts
 

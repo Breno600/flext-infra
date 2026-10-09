@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, override
 
 from flext_cli import cli
 
-from flext_infra import r, c, m, p, t, u
+from flext_infra import c, m, p, r, t, u
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
 from flext_infra.codegen._lazy_init_generation import (
     FlextInfraCodegenLazyInitGenerationMixin,
@@ -166,8 +166,10 @@ class FlextInfraCodegenPipeline(
                 f"Scaffold: {scaffold_created} files created",
                 f"Auto-fix: {fixed} violations fixed",
                 f"Census after: {after_violations} violations",
-                f"Improvement: {before_violations - after_violations} "
-                f"violations resolved",
+                (
+                    f"Improvement: {before_violations - after_violations} "
+                    f"violations resolved"
+                ),
             ]),
         )
 

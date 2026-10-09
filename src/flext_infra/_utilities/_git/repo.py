@@ -24,7 +24,7 @@ from git import (
     Repo,
 )
 
-from flext_infra import r, c, m
+from flext_infra import c, m, r
 
 if TYPE_CHECKING:
     from flext_infra import p, t

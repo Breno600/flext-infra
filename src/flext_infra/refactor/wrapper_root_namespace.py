@@ -10,7 +10,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, ClassVar, override
 
-from flext_infra import r, c, m, p, t, u
+from flext_infra import c, m, p, r, t, u
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
 from flext_infra.refactor._wrapper_rewrite import (
     FlextInfraWrapperRootNamespaceRewriteMixin,

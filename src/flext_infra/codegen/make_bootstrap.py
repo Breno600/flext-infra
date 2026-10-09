@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
-from flext_infra import r, c, m, u
+from flext_infra import c, m, r, u
 from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 

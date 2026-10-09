@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import r, config
+from flext_infra import config, r
 from flext_infra.docs.server import FlextInfraDocServer
 
 if TYPE_CHECKING:

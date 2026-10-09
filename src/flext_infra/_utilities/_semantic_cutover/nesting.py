@@ -10,7 +10,7 @@ import ast
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
-from flext_infra import r, m, t
+from flext_infra import m, r, t
 from flext_infra._utilities._semantic_cutover.edits import (
     FlextInfraUtilitiesSemanticCutoverEdits,
 )

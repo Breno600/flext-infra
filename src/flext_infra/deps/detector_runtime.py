@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import r, c, m, p, u
+from flext_infra import c, m, p, r, u
 from flext_infra.deps._detector_runtime_steps import (
     FlextInfraDependencyDetectorRuntimeSteps,
 )

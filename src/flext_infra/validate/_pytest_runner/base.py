@@ -55,15 +55,6 @@ class FlextInfraPytestRunnerBase(s[int]):
             description="Explicit profiling child invocation from the outer boundary.",
         ),
     ] = ()
-    profile_enabled: Annotated[
-        bool,
-        m.Field(
-            description=(
-                "Run the suite under the profiling entrypoint bound to this "
-                "invocation's run receipt."
-            ),
-        ),
-    ] = False
     slow_phase: Annotated[
         bool,
         m.Field(
@@ -132,7 +123,7 @@ class FlextInfraPytestRunnerBase(s[int]):
 
     @u.model_validator(mode="after")
     def _validate_paths(self) -> Self:
-        """Require repository-contained target and report paths.
+        r"""Require repository-contained target and report paths.
 
         Returns:
             The resulting ``Self``.

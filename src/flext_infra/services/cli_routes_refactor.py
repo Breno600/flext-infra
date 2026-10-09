@@ -10,7 +10,7 @@ from typing import ClassVar
 
 from flext_cli import cli
 
-from flext_infra import r, infra, m, p, t
+from flext_infra import infra, m, p, r, t
 from flext_infra.codegen.protocol_models import FlextInfraCodegenProtocolModels
 from flext_infra.codemod.ast_scan import FlextInfraCodemodAstScan
 from flext_infra.codemod.snapshot_refresh import FlextInfraCodemodSnapshotRefresh

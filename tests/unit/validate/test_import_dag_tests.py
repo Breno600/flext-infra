@@ -74,7 +74,7 @@ class TestsFlextInfraImportDag:
                 "tests/constants.py": "from tests.typings import t\n",
                 "tests/typings.py": "from tests.protocols import p\n",
                 "tests/protocols.py": "from tests.models import m\n",
-                "tests/models.py": "from tests.utilities import u\n",
+                "tests/models.py": "from tests import u\n",
                 "tests/utilities.py": (
                     "from __future__ import annotations\n"
                     "from typing import TYPE_CHECKING\n"

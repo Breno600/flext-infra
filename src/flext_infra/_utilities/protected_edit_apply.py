@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from flext_cli import u
 
-from flext_infra import r, c, m, t
+from flext_infra import c, m, r, t
 from flext_infra._utilities.protected_edit_preview import (
     FlextInfraUtilitiesProtectedEditPreview,
 )

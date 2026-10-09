@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Annotated, override
 
-from flext_infra import r, c, m, t, u
+from flext_infra import c, m, r, t, u
 from flext_infra.base import s
 
 if TYPE_CHECKING:

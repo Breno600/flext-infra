@@ -10,7 +10,7 @@ from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import r, c, m, u
+from flext_infra import c, m, r, u
 from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
 from flext_infra.transformers import FlextInfraSemanticPublication
 

@@ -303,22 +303,6 @@ class FlextInfraConfigModelsContexts:
             Path | None,
             m.Field(description="Project-relative Hatch custom build hook module"),
         ] = None
-        packaged_data_excludes: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default=(),
-                description=(
-                    "Repository-relative files omitted from declared data directories"
-                ),
-            ),
-        ] = ()
-        docs_audit: Annotated[
-            FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
-            m.Field(
-                default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
-                description="Repository-owned documentation audit declarations",
-            ),
-        ]
         namespace_scan_dirs: Annotated[
             t.StrSequence,
             m.Field(
@@ -439,10 +423,6 @@ class FlextInfraConfigModelsContexts:
         packaged_data_files: Annotated[
             t.StrSequence,
             m.Field(description="Validated individually declared data files"),
-        ]
-        packaged_data_excludes: Annotated[
-            t.StrSequence,
-            m.Field(description="Validated files excluded from packaged data roots"),
         ]
         class_stem: Annotated[
             t.NonEmptyStr,

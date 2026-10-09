@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, override
 
-from flext_infra import r, c, m, p, t, u
+from flext_infra import c, m, p, r, t, u
 from flext_infra.base import s
 from flext_infra.validate.namespace_validator import FlextInfraNamespaceValidator
 

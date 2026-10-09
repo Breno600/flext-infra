@@ -10,7 +10,7 @@ import stat
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import r, c, m, u
+from flext_infra import c, m, r, u
 from flext_infra.codegen._mise_artifacts_derivation import (
     FlextInfraMiseArtifactsDerivation,
 )

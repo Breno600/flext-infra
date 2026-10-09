@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, ClassVar
 from flext_cli import u
 from git import GitCommandError
 
-from flext_infra import r, m
+from flext_infra import m, r
 from flext_infra._utilities._git.remote import FlextInfraUtilitiesGitRemote
 from flext_infra._utilities._git.semantic_identity import (
     FlextInfraUtilitiesGitSemanticIdentityMixin,

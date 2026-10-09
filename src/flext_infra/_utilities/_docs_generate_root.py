@@ -11,7 +11,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import r, c, m, t
+from flext_infra import c, m, r, t
 from flext_infra._utilities._docs_generate_project import (
     FlextInfraUtilitiesDocsGenerateProjectMixin,
 )

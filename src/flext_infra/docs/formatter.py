@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import override
 
-from flext_infra import r, c, m, p, t, u
+from flext_infra import c, m, p, r, t, u
 from flext_infra.docs.base import FlextInfraDocServiceBase
 
 

@@ -19,7 +19,7 @@ from collections import defaultdict
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, Annotated, override
 
-from flext_infra import r, c, config, m, t, u
+from flext_infra import c, config, m, r, t, u
 from flext_infra.base import s
 
 if TYPE_CHECKING:

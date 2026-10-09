@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_infra import r, m, p, t
+from flext_infra import m, p, r, t
 from flext_infra.codegen._layout_files import FlextInfraCodegenLayoutFilesMixin
 from flext_infra.codegen._layout_gitignore import FlextInfraCodegenLayoutGitignoreMixin
 

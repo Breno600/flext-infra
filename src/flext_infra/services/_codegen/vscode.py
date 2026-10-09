@@ -18,7 +18,7 @@ from __future__ import annotations
 from collections.abc import Mapping, MutableMapping
 from typing import TYPE_CHECKING
 
-from flext_infra import r, c, config, t, u
+from flext_infra import c, config, r, t, u
 
 if TYPE_CHECKING:
     from pathlib import Path
