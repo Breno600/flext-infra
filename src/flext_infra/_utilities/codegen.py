@@ -37,10 +37,10 @@ class FlextInfraUtilitiesCodegen(
             The sole typed context every generated ``.envrc`` renders from.
 
         """
-        toolchain = config.Infra.codegen.toolchain
         return m.Infra.EnvrcRenderSpec(
-            worktree_environment_directory=toolchain.worktree_environment_directory,
-            environment_path_prepends=toolchain.environment_path_prepends,
+            environment_path_prepends=(
+                config.Infra.codegen.toolchain.environment_path_prepends
+            ),
         )
 
     @staticmethod

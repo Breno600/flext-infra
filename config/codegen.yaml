@@ -71,11 +71,6 @@ Infra:
       # 3.13.15 stays the resolved patch without a config value the
       # FlextInfraConfig model forbids).
       python_version: "3.13"
-      # Linked Git worktrees keep their physical Python environments beside
-      # the checkout, grouped under this sibling directory. The worktree's
-      # physical basename selects one isolated child; primary checkouts keep
-      # their local .venv.
-      worktree_environment_directory: .venv
       # Supply-chain cooldown (operator 2026-10-01): ONE value for every
       # resolver — the generated mise `minimum_release_age` (so `make upg`
       # never selects a release younger than this, e.g. a Python patch with
