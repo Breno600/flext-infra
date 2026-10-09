@@ -1,7 +1,7 @@
 # @flext-generated: continuous
 # @flext-owner: flext-infra/config/codegen.yaml + flext-infra/src/flext_infra/templates/project/base/Makefile.j2
 # @flext-adjust: edit the owner configuration or template; never this projection
-# @flext-regenerate: make gen APPLY=Y
+# @flext-regenerate: make gen
 # flext-infra — selector-free generated project interface.
 # Managed by flext-infra codegen conform for new and existing repositories.
 # === SECTION: header (managed) ===
@@ -268,8 +268,11 @@ MYPY_PATHS := $(strip $(foreach d,src tests examples,$(if $(wildcard $(PROJECT_R
 # Source: the repository's declared Mise toolchain, provisioned by make setup.
 # Every tool resolves from the mise-managed PATH (direnv activation shims, or
 # the CI provisioned PATH); _builtin_require_mise guards the running mise
-# against the committed mise.lock pin.
-override UV := uv
+# against the committed mise.lock pin. uv is resolved through mise itself when
+# a recipe runs: a workspace environment carries a PyPI `uv` executable (a
+# transitive dependency) ahead of the shims, and only the mise.lock release is
+# the producer the toolchain proof accepts.
+override UV := "$$(mise which uv)"
 CALLER_PATH := $(PATH)
 CALLER_VIRTUAL_ENV := $(patsubst %/,%,$(VIRTUAL_ENV))
 # End SECTION: project tool owner
@@ -421,7 +424,20 @@ _bootstrap_setup_tools:
 	printf 'setup: mise %s provisioned from mise.lock\n' "$$mise_receipt"; \
 	printf 'setup: entering lifecycle (submodules, environment, hooks) make=%s\n' "$(SELF_MAKE_EXECUTABLE)"; \
 	"$$mise_bootstrap_bin" -C "$(PROJECT_ROOT)" exec -- env "PATH=$$(dirname "$$mise_bootstrap_bin"):$${PATH}" "CI=$(CI)" $(SELF_MAKE) $(TOOL_BOOTSTRAP_LIFECYCLE)
+_bootstrap_setup_tools: _builtin_require_upg_lock_owner
 _bootstrap_setup_tools: _builtin_require_network_auth
+
+# `upg` writes the lock of the runtime it resolves in. An attached member
+# resolves inside its workspace runtime, where `uv lock` rewrites the
+# workspace lock and never the member's own, so it stops before any effect.
+# The target-specific TOOL_BOOTSTRAP_RESOLVE reaches this prerequisite only
+# through `upg`; `setup` passes.
+.PHONY: _builtin_require_upg_lock_owner
+_builtin_require_upg_lock_owner:
+	@if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ] && [ "$(PROJECT_ROOT)" != "$(RUNTIME_ROOT)" ]; then \
+		printf 'ERROR[upg] %s is attached to the workspace %s: `uv lock` here rewrites %s/uv.lock, never %s/uv.lock.\n  Right way: an attached member never resolves its own locks.\n  How: run `make upg` in a linked worktree of this member outside %s (a standalone checkout owns its locks), or `make upg` in %s for the workspace lock.\n' "$(PROJECT_ROOT)" "$(RUNTIME_ROOT)" "$(RUNTIME_ROOT)" "$(PROJECT_ROOT)" "$(RUNTIME_ROOT)" "$(RUNTIME_ROOT)" >&2; \
+		exit 2; \
+	fi
 
 .PHONY: _builtin_require_network_auth
 _builtin_require_network_auth:
@@ -459,10 +475,14 @@ SETUP_ENVIRONMENT_RECIPE = set -eu; \
 	fi; \
 	uv_lock_mode=--locked; \
 	if ! uv_lock_report=$$($(UV) lock --check --project "$(UV_PROJECT)" 2>&1); then \
+		if [ "$(strip $(CI))" = "Y" ]; then \
+			printf 'ERROR[setup] uv.lock does not match the manifests of %s:\n%s\n  Right way: CI installs only a lock that satisfies its manifests; a drifted lock is RED, never installed --frozen.\n  How: run `make upg` in %s, then commit uv.lock.\n' "$(UV_PROJECT)" "$$uv_lock_report" "$(PROJECT_ROOT)" >&2; \
+			exit 2; \
+		fi; \
 		printf 'WARNING[setup] uv.lock does not match the manifests of %s:\n%s\n  Right way: only `make upg` writes uv.lock; setup installs the committed lock as-is (--frozen) and never relocks.\n  How: run `make upg` in %s, then commit uv.lock.\n' "$(UV_PROJECT)" "$$uv_lock_report" "$(PROJECT_ROOT)" >&2; \
 		uv_lock_mode=--frozen; \
 	fi; \
-	$$credential_env $(UV) sync --project "$(UV_PROJECT)" --python "3.13" $(UV_SYNC_FLAGS) $$uv_lock_mode --link-mode "$(UV_LINK_MODE)"; \
+	$$credential_env $(UV) sync --project "$(UV_PROJECT)" --python "$$(mise which python)" $(UV_SYNC_FLAGS) $$uv_lock_mode --link-mode "$(UV_LINK_MODE)"; \
 	$(PROJECT_FLEXT_INFRA) workspace sync-environment --repository-root "$(PROJECT_ROOT)"; \
 	if [ "$(strip $(CI))" != "Y" ]; then \
 		for member in $(WORKSPACE_SUBPROJECTS); do \
@@ -513,7 +533,8 @@ override PROJECT_FLEXT_INFRA := $(PROJECT_INFRA_RUN) -m flext_infra
 # Lock law (operator 2026-10-03): only `make upg` writes uv.lock. Setup installs
 # the committed lock and never deletes, creates, or relocks it: a matching lock
 # syncs `--locked`; a drifted lock is reported (cause, right way, how) and
-# synced `--frozen`; a missing lock fails naming `make upg`.
+# synced `--frozen` locally, and fails under CI (law 14: red means red); a
+# missing lock fails naming `make upg`.
 UV_SYNC_FLAGS := --all-extras --all-groups --all-packages
 ifeq ($(strip $(CI)),Y)
 override UV_SYNC_FLAGS := --all-extras --all-groups --all-packages --no-editable
@@ -1024,8 +1045,8 @@ _builtin-pre-commit:
 # must not require an existing environment, and as the only resolver it must
 # not require a satisfied committed mise.lock either. Its bootstrap half runs
 # `mise lock --bump` first (native resolution; no stage and no prior install),
-# then installs from the fresh lock. Native mise locks are workspace-local, so
-# an attached member relocks its own mise.lock exactly like the runtime root.
+# then installs from the fresh lock. Only a lock owner resolves: an attached
+# member stops in _builtin_require_upg_lock_owner before any lock is written.
 upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle
 upg: TOOL_BOOTSTRAP_RESOLVE := 1
 upg: _bootstrap_setup_tools
@@ -1716,7 +1737,7 @@ if [ "$$file_executed" -eq 0 ]; then printf 'ERROR: test-file executed zero requ
 # Export the raw Make value instead of interpolating operator input into shell code.
 export FLEXT_FILE_GATE_FILE := $(value FILE)
 _builtin_file_gate_all: _builtin_require_environment
-	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "lint format pyrefly mypy pyright codemod" --file "$$FLEXT_FILE_GATE_FILE"
+	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "lint,format,pyrefly,mypy,pyright,codemod" --file "$$FLEXT_FILE_GATE_FILE"
 
 _builtin_tests_all: _builtin_require_environment
 	+@$(SELF_MAKE) test
@@ -1958,9 +1979,11 @@ _builtin-fix: _builtin_fix_all
 _builtin-fix-namespace: _builtin_fix_namespace
 _builtin-fix-accessors: _builtin_fix_accessors
 _builtin-audit:
+ifneq ($(CI),Y)
+	@$(PROJECT_FLEXT_INFRA) workspace verify-lanes --repo-root "$(PROJECT_ROOT)"
+endif
 	@$(UV) pip check --python "$(RUNTIME_VENV)"
 	@$(if $(filter Y,$(CI)),$(PROJECT_FLEXT_INFRA) workspace verify-environment --repository-root "$(PROJECT_ROOT)",:)
-	@$(if $(filter Y,$(CI)),:,$(PROJECT_FLEXT_INFRA) workspace verify-lanes --repo-root "$(PROJECT_ROOT)")
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --scope self --mode check
 _builtin-status: _builtin_status_diagnostics
 _builtin-verify-clean: _builtin_require_environment

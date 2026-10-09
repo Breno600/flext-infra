@@ -20,7 +20,6 @@ from flext_cli import u
 from flext_infra import c, config, m, t
 from flext_infra._utilities import (
     FlextInfraUtilitiesDiscovery,
-    FlextInfraUtilitiesProjectDiscovery,
     FlextInfraUtilitiesResourceLimits,
 )
 
@@ -80,9 +79,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
             FileNotFoundError: If the active environment lacks the tool.
 
         """
-        environment = FlextInfraUtilitiesProjectDiscovery.runtime_environment_dir(
-            workspace,
-        )
+        environment = Path(sys.executable).parent
         executable = tool_name + (".exe" if os.name == "nt" else "")
         tool_path = environment / executable
         if not tool_path.is_file():
