@@ -13,10 +13,11 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m, u
+from flext_infra import c, m, t
 from flext_infra.codemod import FlextInfraModTextGateEngine
 from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
+from tests import u
 
 
 class TestsFlextInfraSymbolicTextCutover:
@@ -63,7 +64,7 @@ class TestsFlextInfraSymbolicTextCutover:
             (source.rindex("Public"), False),
         ):
             start_byte = len(source[:start].encode("utf-8"))
-            capture = {
+            capture: t.JsonMapping = {
                 "OWNER": {
                     "text": "Public",
                     "range": {
@@ -93,7 +94,7 @@ class TestsFlextInfraSymbolicTextCutover:
         )
         start = source.index("Public", source.index("value ="))
         start_byte = len(source[:start].encode("utf-8"))
-        positive = {
+        positive: t.JsonMapping = {
             "OWNER": {
                 "text": "Public",
                 "range": {
@@ -211,8 +212,10 @@ class TestsFlextInfraSymbolicTextCutover:
             '\npayload = \'{"status": "TOOL_ERROR"}\'\n'
             'spelling = "utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci"\n'
             'tag: Literal["utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci"]\n'
-            'meta: Annotated[str, "utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci"]\n'
-            "identity_metadata: Annotated[str, utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci]\n"
+            "meta: Annotated[str, "
+            '"utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci"]\n'
+            "identity_metadata: Annotated[str, "
+            "utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci]\n"
             "owned = utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.value\n"
             'outcome = c.Infra.ToolOutcome.ERROR == "TOOL_ERROR"\n'
             "class Other:\n"
@@ -221,8 +224,10 @@ class TestsFlextInfraSymbolicTextCutover:
             "            class Ci:\n"
             "                value = 'independent'\n"
             "def independent(utilities):\n"
-            "    return utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.value\n"
-            "print(json.dumps([json.loads(payload), owned, independent(Other), spelling, __doc__, outcome]))\n"
+            "    return utilities.TestsFlextInfraUtilities."
+            "CodegenTestSupport.Ci.value\n"
+            "print(json.dumps([json.loads(payload), owned, independent(Other), "
+            "spelling, __doc__, outcome]))\n"
         )
         consumer.write_text(source, encoding="utf-8")
         u.Tests.git_bootstrap(mod_workspace, ("add", "tests"))
@@ -280,7 +285,9 @@ class TestsFlextInfraSymbolicTextCutover:
         consumer = mod_workspace / "tests" / "payload.py"
         consumer.parent.mkdir(exist_ok=True)
         consumer.write_text(
-            "import json\npayload = '{\"status\": \"TOOL_ERROR\"}'\nprint(json.loads(payload)['status'])\n",
+            "import json\n"
+            'payload = \'{"status": "TOOL_ERROR"}\'\n'
+            "print(json.loads(payload)['status'])\n",
             encoding="utf-8",
         )
         original = consumer.read_bytes()

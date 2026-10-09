@@ -7,6 +7,10 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from flext_infra import c, m, p, t
+from flext_infra._utilities import (
+    FlextInfraUtilitiesRopeRuntimeRefactors,
+    FlextInfraUtilitiesRopeStructure,
+)
 from flext_infra._utilities._semantic_cutover.family_type_references import (
     FlextInfraUtilitiesSemanticFamilyTypeReferences,
 )
@@ -46,8 +50,6 @@ class FlextInfraUtilitiesSemanticFamilyReferences(
             The resulting ``bool``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors
-
         finder = FlextInfraUtilitiesRopeRuntimeRefactors.create_occurrence_finder(
             flatten.project,
             flatten.wrapper_name,
@@ -137,8 +139,6 @@ class FlextInfraUtilitiesSemanticFamilyReferences(
             The resulting ``m.Infra.SourceRewrite | None``.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntimeRefactors
-
         name, replacement = name_replacement
         start, end = occurrence.get_word_range()
         primary_start, primary_end = (
@@ -178,11 +178,6 @@ class FlextInfraUtilitiesSemanticFamilyReferences(
             The resulting ``list[m.Infra.SourceRewrite]``.
 
         """
-        from flext_infra._utilities import (
-            FlextInfraUtilitiesRopeRuntimeRefactors,
-            FlextInfraUtilitiesRopeStructure,
-        )
-
         runtime = FlextInfraUtilitiesRopeRuntimeRefactors
         statements = FlextInfraUtilitiesRopeStructure.logical_statements(source)
         edits: list[m.Infra.SourceRewrite] = []

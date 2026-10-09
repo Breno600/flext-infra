@@ -10,6 +10,11 @@ import operator
 from pathlib import Path
 
 from flext_infra import t
+from flext_infra._constants import (
+    FlextInfraConstantsNamespace,
+    FlextInfraConstantsSharedInfra,
+)
+from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeCoreResourcesMixin:
@@ -30,8 +35,6 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
             Rope File for a filesystem Path, or None if outside project.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
-
         root_real_path = getattr(getattr(rope_project, "root", None), "real_path", None)
         if not isinstance(root_real_path, str):
             return None
@@ -85,11 +88,6 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
             Whether a path should be exposed as a Python Rope resource.
 
         """
-        from flext_infra._constants import (
-            FlextInfraConstantsNamespace,
-            FlextInfraConstantsSharedInfra,
-        )
-
         return (
             file_path.suffix == FlextInfraConstantsSharedInfra.EXT_PYTHON
             and not (
@@ -111,15 +109,17 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
     @staticmethod
     def python_resources(
         rope_project: t.Infra.RopeProject,
-    ) -> t.SequenceOf[t.Infra.RopeResource]:
+    ) -> t.SequenceOf[t.Infra.RopeFile]:
         """Return Rope's already-filtered Python resources without a path roundtrip.
+
+        Every yielded resource passed the ``file_resource`` predicate, so the
+        element contract is the file shape with content access, not the wider
+        file-or-folder resource.
 
         Returns:
             Rope's already-filtered Python resources without a path roundtrip.
 
         """
-        from flext_infra._utilities import FlextInfraUtilitiesRopeRuntime
-
         return tuple(
             sorted(
                 (

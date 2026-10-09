@@ -29,6 +29,7 @@ class FlextInfraWorkspaceDetector(
 ):
     """Classify a repository only from files and Git facts inside that checkout."""
 
+    @override
     @staticmethod
     def _beads_path(repository_root: Path) -> Path:
         """Return the repository-local Beads identity path when enabled.
@@ -39,6 +40,7 @@ class FlextInfraWorkspaceDetector(
         """
         return repository_root / c.CONFIG_DIR_NAME / c.Infra.BEADS_CONFIG_FILENAME
 
+    @override
     @staticmethod
     def _beads_enabled(manifest: m.Infra.WorkspaceManifestSpec) -> bool:
         """Resolve Beads participation from the manifest's matched policy.
@@ -56,6 +58,7 @@ class FlextInfraWorkspaceDetector(
             True,
         )
 
+    @override
     @classmethod
     def _composed_beads_identity_error(
         cls,
@@ -97,6 +100,7 @@ class FlextInfraWorkspaceDetector(
             )
         return None
 
+    @override
     @classmethod
     def load_beads_spec(
         cls,
@@ -131,6 +135,7 @@ class FlextInfraWorkspaceDetector(
             )
         return r[m.Infra.BeadsProjectSpec].ok(validated.value)
 
+    @override
     @staticmethod
     def _git_origin_url(repository_root: Path) -> p.Result[str]:
         """Read the repository's required origin without inventing one.
@@ -148,6 +153,7 @@ class FlextInfraWorkspaceDetector(
             )
         return r[str].ok(result.value.text.strip())
 
+    @override
     @classmethod
     def _declared_provider_name(
         cls,
@@ -201,6 +207,7 @@ class FlextInfraWorkspaceDetector(
             )
         return r[str].ok(declared.provider)
 
+    @override
     @staticmethod
     def _manifest_git_contradictions(
         declared: m.Infra.RepositoryRef,
@@ -252,6 +259,7 @@ class FlextInfraWorkspaceDetector(
             )
         return contradictions
 
+    @override
     @classmethod
     def _manifest_repository_ref(
         cls,
@@ -343,6 +351,7 @@ class FlextInfraWorkspaceDetector(
             manifest.project,
         ))
 
+    @override
     @staticmethod
     def _gitmodule_contract(
         repository_root: Path,
@@ -364,6 +373,7 @@ class FlextInfraWorkspaceDetector(
             return r[tuple[str, str]].from_failure(contract)
         return r[tuple[str, str]].ok((contract.value.url, contract.value.branch))
 
+    @override
     @classmethod
     def _local_repository_ref(
         cls,
@@ -446,6 +456,7 @@ class FlextInfraWorkspaceDetector(
             ),
         )
 
+    @override
     @classmethod
     def _load_subprojects(
         cls,
@@ -507,6 +518,7 @@ class FlextInfraWorkspaceDetector(
             subprojects.append(loaded.value)
         return result_type.ok((tuple(subprojects), tuple(external)))
 
+    @override
     @classmethod
     def _declared_members(
         cls,
@@ -527,6 +539,7 @@ class FlextInfraWorkspaceDetector(
             for member in manifest.members
         })
 
+    @override
     @classmethod
     def _load_subproject(
         cls,

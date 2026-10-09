@@ -21,13 +21,250 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
     @staticmethod
     def _roots() -> t.StrTuple:
         return tuple(
-            config.Infra.tooling.tools.ruff.lint.flake8_type_checking.runtime_evaluated_roots,
+            dict.fromkeys(
+                config.Infra.tooling.tools.ruff.lint.flake8_type_checking.runtime_evaluated_roots,
+            ),
         )
 
     @classmethod
     def _root_import(cls) -> str:
         module, _, name = cls._roots()[0].rpartition(".")
         return f"from {module} import {name} as RuntimeRoot\n"
+
+    @pytest.mark.parametrize(
+        ("setup", "condition", "selects_model"),
+        [
+            ("from typing import TYPE_CHECKING", "TYPE_CHECKING", False),
+            ("from typing import TYPE_CHECKING as checking", "checking", False),
+            ("import typing as annotations", "annotations.TYPE_CHECKING", False),
+            (
+                "from typing_extensions import TYPE_CHECKING as checking",
+                "checking",
+                False,
+            ),
+            (
+                "from typing import TYPE_CHECKING as original\nchecking = original",
+                "checking",
+                False,
+            ),
+            ("", "True", True),
+            ("", "False", False),
+            (
+                "from typing import TYPE_CHECKING\nTYPE_CHECKING = True",
+                "TYPE_CHECKING",
+                True,
+            ),
+            ("checking: bool = False", "checking", False),
+            ("original = True\nchecking = original", "checking", True),
+        ],
+    )
+    def test_runtime_guard_uses_import_identity_and_boolean_rebindings(
+        self,
+        tmp_path: Path,
+        setup: str,
+        condition: str,
+        *,
+        selects_model: bool,
+    ) -> None:
+        """Only the proven runtime branch supplies the consumer's class alias."""
+        source = self._root_import() + (
+            f"{setup}\n"
+            "class Model(RuntimeRoot): pass\n"
+            "class Plain: pass\n"
+            f"if {condition}:\n    Alias = Model\n"
+            "else:\n    Alias = Plain\n"
+            "class Consumer(Alias): pass\n"
+        )
+        expected = set(self._roots())
+        if selects_model:
+            expected.add("runtime_guard.models.Alias")
+        tm.that(
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {tmp_path / "src" / "runtime_guard" / "models.py": source},
+                self._roots(),
+            ),
+            eq=tuple(sorted(expected)),
+        )
+
+    @pytest.mark.parametrize(
+        ("setup", "condition"),
+        [
+            (
+                (
+                    "from typing import TYPE_CHECKING\n"
+                    "from os import getenv\n"
+                    "TYPE_CHECKING = bool(getenv('COLLECTOR_GUARD'))"
+                ),
+                "TYPE_CHECKING",
+            ),
+            (
+                (
+                    "import typing\nfrom os import getenv\n"
+                    "typing = getenv('COLLECTOR_GUARD')"
+                ),
+                "typing.TYPE_CHECKING",
+            ),
+            ("", "TYPE_CHECKING"),
+        ],
+    )
+    def test_unknown_guard_cannot_borrow_standard_constant_semantics(
+        self,
+        tmp_path: Path,
+        setup: str,
+        condition: str,
+    ) -> None:
+        """Undecidable guards retain the original ambiguous-base failure."""
+        source = self._root_import() + (
+            f"{setup}\n"
+            "class Model(RuntimeRoot): pass\n"
+            "class Plain: pass\n"
+            f"if {condition}:\n    Alias = Model\n"
+            "else:\n    Alias = Plain\n"
+            "class Consumer(Alias): pass\n"
+        )
+        with pytest.raises(ValueError, match="Non-class binding used as a base"):
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {tmp_path / "src" / "unknown_guard" / "models.py": source},
+                self._roots(),
+            )
+
+    @pytest.mark.parametrize(
+        ("setup", "mutation", "condition"),
+        [
+            (
+                "import typing as ty",
+                "ty.TYPE_CHECKING = enabled",
+                "ty.TYPE_CHECKING",
+            ),
+            (
+                "import typing as ty\nreflected = ty",
+                "reflected.TYPE_CHECKING = enabled",
+                "ty.TYPE_CHECKING",
+            ),
+            (
+                "import typing",
+                "typing.TYPE_CHECKING = enabled",
+                "typing.TYPE_CHECKING",
+            ),
+        ],
+    )
+    def test_provider_guard_member_write_fails_before_stale_selection(
+        self,
+        tmp_path: Path,
+        installed_dependency_path: Path,
+        setup: str,
+        mutation: str,
+        condition: str,
+    ) -> None:
+        """Unsupported module stores cannot preserve stale constant provenance."""
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                installed_dependency_path / "guard_provider.py",
+                self._root_import() + f"{setup}\nenabled = True\n{mutation}\n"
+                "class Model(RuntimeRoot): pass\n"
+                "class Plain: pass\n"
+                f"if {condition}:\n    Alias = Model\n"
+                "else:\n    Alias = Plain\n"
+                "class Derived(Alias): pass\n",
+            ),
+        )
+        with pytest.raises(
+            ValueError,
+            match="Unsupported class binding mutation",
+        ) as failure:
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {
+                    tmp_path / "src" / "guard_consumer" / "models.py": (
+                        "from guard_provider import Derived\n"
+                        "class Consumer(Derived): pass\n"
+                    ),
+                },
+                self._roots(),
+            )
+        tm.that(
+            str(failure.value),
+            eq=f"Unsupported class binding mutation in guard_provider: {mutation}",
+        )
+        tm.that("guard_provider" in sys.modules, eq=False)
+
+    @pytest.mark.parametrize("replacement_model", [False, True])
+    def test_provider_class_member_write_updates_exact_aliased_owner(
+        self,
+        tmp_path: Path,
+        installed_dependency_path: Path,
+        *,
+        replacement_model: bool,
+    ) -> None:
+        """Member replacement neither retains old lineage nor changes bare names."""
+        initial_base = "" if replacement_model else "(RuntimeRoot)"
+        replacement = "Model" if replacement_model else "Plain"
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                installed_dependency_path / "namespace_provider.py",
+                self._root_import() + "class Facade:\n"
+                "    class Contract(RuntimeRoot): pass\n"
+                "    class Namespace:\n"
+                f"        class Contract{initial_base}: pass\n"
+                "        class Model(RuntimeRoot): pass\n"
+                "        class Plain: pass\n"
+                "    reflected = Namespace\n"
+                f"    replacement = Namespace.{replacement}\n"
+                "    reflected.Contract = replacement\n",
+            ),
+        )
+        expected = {*self._roots(), "namespace_provider.Facade.Contract"}
+        if replacement_model:
+            expected.add("namespace_provider.Facade.Namespace.Contract")
+        tm.that(
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {
+                    tmp_path / "src" / "namespace_consumer" / "models.py": (
+                        "from namespace_provider import Facade\n"
+                        "class OuterConsumer(Facade.Contract): pass\n"
+                        "class MemberConsumer(Facade.Namespace.Contract): pass\n"
+                    ),
+                },
+                self._roots(),
+            ),
+            eq=tuple(sorted(expected)),
+        )
+
+    def test_provider_boolean_member_preserves_sdk_non_class_failure(
+        self,
+        tmp_path: Path,
+        installed_dependency_path: Path,
+    ) -> None:
+        """A real Boolean member reaches the SDK's original non-class boundary."""
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                installed_dependency_path / "boolean_member_provider.py",
+                "class Facade:\n"
+                "    class Namespace:\n"
+                "        class Contract: pass\n"
+                "    enabled = True\n"
+                "    reflected = Namespace\n"
+                "    reflected.Contract = enabled\n",
+            ),
+        )
+        with pytest.raises(
+            TypeError,
+            match="Rope did not resolve a required base to a class",
+        ):
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {
+                    tmp_path / "src" / "boolean_member_consumer" / "models.py": (
+                        "from boolean_member_provider import Facade\n"
+                        "class Invalid(Facade.Namespace.Contract): pass\n"
+                        "class Later(Missing): pass\n"
+                    ),
+                },
+                self._roots(),
+            )
 
     def test_unpublished_project_is_not_imported_or_created(
         self,
@@ -299,6 +536,97 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                 self._roots(),
             )
 
+    @pytest.mark.parametrize(
+        "import_statement",
+        [
+            "from binding_contract.parts import document as part",
+            "from .parts import document as part",
+            "import binding_contract.parts.document as part",
+        ],
+    )
+    def test_planned_submodule_import_resolves_its_declared_class(
+        self,
+        tmp_path: Path,
+        import_statement: str,
+    ) -> None:
+        """An import-from submodule alias does not require an initializer export."""
+        package = tmp_path / "src" / "binding_contract"
+        planned = {
+            package / "__init__.py": "",
+            package / "parts" / "__init__.py": "",
+            package / "parts" / "document.py": self._root_import()
+            + "class Document(RuntimeRoot): pass\n",
+            package / "facade.py": (
+                f"{import_statement}\nclass Facade(part.Document): pass\n"
+                "class Consumer(Facade): pass\n"
+            ),
+        }
+        tm.that(
+            u.Infra.runtime_evaluated_base_classes(tmp_path, planned, self._roots()),
+            eq=tuple(
+                sorted((
+                    *self._roots(),
+                    "binding_contract.parts.document.Document",
+                    "binding_contract.facade.Facade",
+                )),
+            ),
+        )
+        tm.that(package.exists(), eq=False)
+        tm.that("binding_contract" in sys.modules, eq=False)
+
+    @pytest.mark.parametrize(
+        ("shadow", "diagnostic"),
+        [
+            ("document = 0", r"Unresolved planned base: shadowed_submodule\.document"),
+            ("class document: pass", "Missing inherited class member:"),
+        ],
+    )
+    def test_planned_package_binding_is_not_replaced_by_a_submodule(
+        self,
+        tmp_path: Path,
+        shadow: str,
+        diagnostic: str,
+    ) -> None:
+        """Explicit package values/classes retain precedence over file names."""
+        package = tmp_path / "src" / "shadowed_submodule"
+        planned = {
+            package / "__init__.py": shadow + "\n",
+            package / "document.py": self._root_import()
+            + "class Document(RuntimeRoot): pass\n",
+            package / "consumer.py": (
+                "from . import document as part\nclass Invalid(part.Document): pass\n"
+            ),
+        }
+        with pytest.raises(ValueError, match=diagnostic):
+            u.Infra.runtime_evaluated_base_classes(tmp_path, planned, self._roots())
+
+    def test_planned_submodule_does_not_invent_a_missing_class(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A captured submodule proves its location, not arbitrary class exports."""
+        package = tmp_path / "src" / "missing_submodule_class"
+        with pytest.raises(
+            ValueError,
+            match=(
+                r"Unresolved planned base: missing_submodule_class\.parts"
+                r"\.document\.Missing"
+            ),
+        ):
+            u.Infra.runtime_evaluated_base_classes(
+                tmp_path,
+                {
+                    package / "__init__.py": "",
+                    package / "parts" / "__init__.py": "",
+                    package / "parts" / "document.py": "class Document: pass\n",
+                    package / "consumer.py": (
+                        "from .parts import document as part\n"
+                        "class Invalid(part.Missing): pass\n"
+                    ),
+                },
+                self._roots(),
+            )
+
     @pytest.mark.parametrize("name", ["Structure", "Union", "Array"])
     def test_ctypes_native_private_parents_do_not_require_module_exports(
         self,
@@ -484,7 +812,10 @@ class TestsFlextInfraRuntimeEvaluatedBaseClasses:
                 f"{mutation}\nclass Derived(Contract): pass\n",
             ),
         )
-        with pytest.raises(ValueError) as failure:
+        with pytest.raises(
+            ValueError,
+            match="Unsupported class binding mutation",
+        ) as failure:
             u.Infra.runtime_evaluated_base_classes(
                 tmp_path,
                 {

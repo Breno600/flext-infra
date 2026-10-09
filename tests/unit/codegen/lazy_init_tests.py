@@ -275,7 +275,7 @@ class TestsFlextInfraCodegenLazyInit:
             outside = repository / ("off_scope_" + "_".join(source_roots))
             foreign_paths: set[Path] = set()
             for relative in (
-                "worktrees/member/.flext-venvs/python/bin",
+                "worktrees/member/.venv/python/bin",
                 "skills/provider/scripts",
                 "scratch/demos/examples",
             ):

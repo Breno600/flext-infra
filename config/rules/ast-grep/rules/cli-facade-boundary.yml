@@ -4,8 +4,8 @@
 # elects these rules only for projects whose runtime closure contains
 # flext-cli, so flext-cli itself and the projects below it are never bound.
 #
-# Print calls and subprocess imports are owned by Ruff (print, S404) in every
-# project; they are not repeated here.
+# Print calls are owned by Ruff (print) in every project, and subprocess
+# imports by ban-subprocess-outside-run-owner; they are not repeated here.
 #
 # Detection only: the facade member that replaces a direct use is chosen per
 # call site.

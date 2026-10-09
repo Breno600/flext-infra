@@ -7,13 +7,15 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import os
+import stat
 from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
-from flext_infra import m, p, r
+from flext_infra import config, m, p, r
 from flext_infra.codegen import (
+    FlextInfraMiseArtifactsCandidates,
     FlextInfraMiseArtifactsJournal,
     FlextInfraMiseArtifactsVerification,
     codegen_transaction as transaction,
@@ -136,12 +138,47 @@ class TestsFlextInfraTransactionDirectoryJournal:
         tm.that(recorded.sources[0].link_count, eq=2)
 
     @staticmethod
+    def test_staged_mode_mismatch_preserves_original_configuration(
+        tmp_path: Path,
+    ) -> None:
+        """Reject a real staged mode mismatch without touching the rollback target."""
+        root = u.Tests.git_repository(tmp_path)
+        u.Tests.copy_tracked_mise_seeds(root)
+        owner = FlextInfraCodegenMiseArtifacts(repository_root=root)
+        planner = FlextInfraMiseWorkspacePlanner(owner)
+        layout = tm.ok(planner.layout_from_selectors(root, (".",)))
+        plan = tm.ok(planner.snapshot(layout))
+        config_path = layout.projects[0].config
+        before = tm.ok(u.Cli.atomic_read_binary_file_state(config_path, required=True))
+        desired_mode = next(
+            item.mode
+            for item in config.Infra.codegen.managed_files
+            if item.path == Path(config_path.name)
+        )
+        stage = tmp_path / "stage"
+        stage.mkdir()
+        staged_config = stage / config_path.name
+        staged_config.write_bytes(tm.not_none(before.content))
+        staged_config.chmod(desired_mode ^ stat.S_IWGRP)
+
+        tm.fail(
+            FlextInfraMiseArtifactsCandidates.publication_plan(plan.projects, (stage,)),
+            has="staged Mise artifact mode differs",
+        )
+        tm.that(
+            tm.ok(u.Cli.atomic_read_binary_file_state(config_path, required=True)),
+            eq=before,
+        )
+
+    @staticmethod
     @pytest.mark.slow
     @pytest.mark.parametrize("change_config", [False, True])
+    @pytest.mark.parametrize("alternate_mode", [False, True])
     def test_mise_commit_preserves_unchanged_publications(
         tmp_path: Path,
         *,
         change_config: bool,
+        alternate_mode: bool,
     ) -> None:
         """Journal all staged files without rewriting unchanged live artifacts."""
         root = u.Tests.git_repository(tmp_path)
@@ -155,6 +192,12 @@ class TestsFlextInfraTransactionDirectoryJournal:
             ),
         )
         config_path = layout.projects[0].config
+        declared_mode = next(
+            item.mode
+            for item in config.Infra.codegen.managed_files
+            if item.path == Path(config_path.name)
+        )
+        desired_mode = declared_mode ^ stat.S_IWGRP if alternate_mode else declared_mode
 
         def publish(
             scope_root: Path,
@@ -172,7 +215,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
                 path=config_path,
                 before=before,
                 desired_content=content,
-                desired_mode=before.mode,
+                desired_mode=desired_mode,
                 owner="mise",
             )
             session = tm.ok(owner.begin_locked(scope_root, (plan,), (plan,)))
@@ -182,6 +225,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
             )
 
         tm.ok(owner.run_locked(prepare=True, operation=publish))
+        tm.that(stat.S_IMODE(config_path.stat().st_mode), eq=desired_mode)
         before_state = tm.ok(
             u.Cli.atomic_read_binary_file_state(config_path, required=True),
         )
@@ -209,6 +253,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
             )
         tm.that(layout.journal_path.exists(), eq=False)
         tm.that(layout.state_root.exists(), eq=False)
+        tm.that(stat.S_IMODE(config_path.stat().st_mode), eq=desired_mode)
 
     @staticmethod
     def test_later_phase_backs_up_originals_beside_earlier_phase(
@@ -340,17 +385,27 @@ class TestsFlextInfraTransactionDirectoryJournal:
         )
         target = root / "generated.md"
         cause = OSError("docs preparation raised after begin")
+        config_path = root / ".mise.toml"
+        original = tm.ok(
+            u.Cli.atomic_read_binary_file_state(config_path, required=True),
+        )
+        declared_mode = next(
+            item.mode
+            for item in config.Infra.codegen.managed_files
+            if item.path == Path(config_path.name)
+        )
+        desired_mode = declared_mode ^ stat.S_IWGRP
 
         def failing_phase(
             _session: m.Infra.CodegenTransactionSession,
         ) -> p.Result[bool]:
             tm.that(target.read_bytes(), eq=b"prepared phase\n")
+            tm.that(stat.S_IMODE(config_path.stat().st_mode), eq=desired_mode)
             if raises:
                 raise cause
             return r[bool].fail("docs preparation failed after begin")
 
         def publish(scope_root: Path) -> p.Result[bool]:
-            config_path = root / ".mise.toml"
             before = tm.ok(
                 u.Cli.atomic_read_binary_file_state(config_path, required=True),
             )
@@ -359,7 +414,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
                 path=config_path,
                 before=before,
                 desired_content=before.content,
-                desired_mode=before.mode,
+                desired_mode=desired_mode,
                 owner="mise",
             )
             generated = m.Infra.CodegenFilePlan(
@@ -396,6 +451,10 @@ class TestsFlextInfraTransactionDirectoryJournal:
             eq=False,
         )
         tm.that(target.exists(), eq=False)
+        restored = tm.ok(
+            u.Cli.atomic_read_binary_file_state(config_path, required=True),
+        )
+        tm.that((restored.content, restored.mode), eq=(original.content, original.mode))
         tm.ok(owner.run_locked(prepare=True, operation=r[Path].ok))
 
     @staticmethod

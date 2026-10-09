@@ -1,17 +1,28 @@
 # Detection-only fixed point for the flext-infra -> flext-tests dependency
 # direction law: the declared dependency is flext-tests -> flext-infra, so
-# flext-infra never imports flext_tests at runtime.
+# flext-infra never imports flext_tests at runtime (operator ruling
+# operator-ruling-2026-10-08-subprocess-test-imports, item 2). The scope names
+# flext-infra's own package in both scan contexts: the workspace root
+# (flext-infra/src/...) and the project root (src/...).
 id: ban-infra-runtime-flext-tests-import
 language: Python
 severity: error
 files:
-  - "flext-infra/src/**/*.py"
+  - "flext-infra/src/flext_infra/**/*.py"
+  - "src/flext_infra/**/*.py"
 rule:
   any:
-    - pattern: import flext_tests
-    - pattern: import flext_tests.$MODULE
-    - pattern: from flext_tests import $$$NAMES
-    - pattern: from flext_tests.$MODULE import $$$NAMES
+    - all:
+        - kind: import_statement
+        - has:
+            stopBy: end
+            kind: dotted_name
+            regex: "^flext_tests(?:\\.|$)"
+    - all:
+        - kind: import_from_statement
+        - has:
+            field: module_name
+            regex: "^flext_tests(?:\\.|$)"
     - all:
         - kind: call
           has:
